@@ -1,0 +1,97 @@
+PROJECT CHESS - QUALITY ASSURANCE DOCUMENT
+Version: 1.1
+Last Updated: August 11, 2025
+
+0. Project Structure
+This document references the following file structure. All file names are unique to simplify development in basic text editors.
+
+/ (root directory)
+├── index.html
+├── style.css
+│
+├── js/
+│   ├── main.js             // Main entry point, loads settings & attaches listeners.
+│   ├── game.js             // Core game state, move handling.
+│   ├── ui.js               // Main UI updates (status, move history, etc.).
+│   ├── board.js            // Main game board interaction (drag/drop, clicks).
+│   ├── ai.js               // AI logic (makeAiMove).
+│   ├── timer.js            // Time control logic (tick, start/stop).
+│   ├── sound.js            // Sound playback management.
+│   ├── modals.js           // All pop-up modal definitions.
+│   ├── debug.js            // Draggable debug console logic.
+│   ├── drawing.js          // Shared arrow and highlight drawing functions.
+│   ├── config.js           // Main app settings.
+│   ├── themes.js           // All theme data (UI, board, pieces).
+│   ├── openings.js         // The large list of opening PGNs.
+│   └── constants.js        // Game constants (difficulty, material points).
+│
+├── analysis/
+│   ├── analysis.js         // Main analysis controller.
+│   ├── analysis-engine.js  // Communication with analysis Stockfish.
+│   ├── analysis-eval.js    // Move classification & accuracy logic.
+│   ├── analysis-board.js   // Manages the analysis board instance.
+│   ├── analysis-chart.js   // Manages the evaluation graph.
+│   ├── analysis-review.js  // Renders the move list & summary.
+│   └── analysis-viz.js     // Controls the "Analyzing..." progress modal.
+│
+├── lib/
+│   ├── chart.min.js
+│   ├── chess.min.js
+│   ├── chessboard-1.0.0.min.css
+│   ├── chessboard-1.0.0.min.js
+│   ├── gsap.min.js
+│   ├── howler.min.js
+│   ├── jquery-3.6.0.min.js
+│   ├── sweetalert2.min.js
+│   └── tailwind.min.css
+│
+├── img/
+│   └── (Contains all piece image sets)
+│
+├── icon/
+│   ├── arrow-uturn-left.png
+│   ├── backward.png
+│   ├── chevron-left.png
+│   ├── chevron-right.png
+│   ├── forward.png
+│   ├── speaker-wave.png
+│   └── speaker-x-mark.png
+│
+└── sounds/
+    ├── capture.mp3
+    ├── castle.mp3
+    ├── game-end.mp3
+    ├── game-start.mp3
+    ├── move-check.mp3
+    ├── move-self.mp3
+    └── promote.mp3
+1. Engine and Logic
+1.1. AI Responsiveness: The AI engine must never freeze, hang, or enter an unrecoverable state. It must always produce a legal move promptly according to its difficulty setting.
+1.2. Chess Rule Integrity: The application must flawlessly enforce all rules of chess, including special moves (castling, en passant, promotion) and all draw conditions (stalemate, threefold repetition, etc.).
+1.3. Reliable Startup: The AI engine must load reliably every time. The application must be self-contained and function correctly when opened directly as a file.
+
+2. Visuals and Board State
+2.1. Perfect Synchronization: The visual board must always be an exact mirror of the logical game state. There will be no desynchronized or ghost pieces.
+2.2. Glitch-Free Interface: The UI must be free of flickering, element resizing, or graphical errors during moves, animations, and window resizing.
+
+3. User Interaction
+3.1. Seamless Controls: Drag-and-drop and click-to-move must work together intuitively.
+3.2. Clear Highlighting: Selecting a piece must instantly and accurately highlight all legal moves. Highlights must reliably disappear after an action is completed or canceled.
+3.3. Reliable Premove: Players must be able to input a move during the AI's turn using both drag and click methods. The premove must be clearly indicated and executed correctly.
+3.4. Intuitive Cancellation: Players must have a simple way to cancel an action, such as right-clicking or clicking away from the board.
+
+4. UI State and Feedback
+4.1. Distinct Modes: The application must clearly communicate its current state (Live Play, AI Thinking, Analysis Mode, etc.) to the user.
+4.2. Smart Controls: All buttons and controls must be context-aware, disabling themselves when their action is not available.
+4.3. Accurate Status: All informational text (game status, opening names, analysis data) must be accurate and update instantly.
+4.4. Detailed Game Review: The post-game analysis must provide a comprehensive, move-by-move assessment based on a clear hierarchy of classifications (e.g., Brilliant, Best, Blunder).
+
+5. Stability and Data Persistence
+5.1. Error Resilience: The application must handle potential errors gracefully without crashing and provide clear feedback to the user.
+5.2. Persistent Settings: All user preferences (themes, sound, AI difficulty, etc.) must be saved and correctly reloaded between sessions.
+
+6. Development Constraints and Workflow
+6.1. Single File Updates: Always update one file only. Under no circumstances should an update for more than one file be provided at a time. 
+6.2. A list of all files that require changes for a given task must be presented first, and then each file will be updated sequentially in separate responses.
+6.3. Environment Limitations: All solutions must be compatible with a highly restrictive user environment. The user only has access to a text editor like Notepad and a web browser. 
+6.4. They cannot install software, use a local server, or access the browser's developer console for debugging. All code must be robust enough to function correctly when the index.html file is opened directly from the local filesystem (file:/// protocol).
