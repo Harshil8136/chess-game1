@@ -65,15 +65,16 @@ This document references the following file structure. All file names are unique
 
 
 
+RULES LIST: Chess Application Quality Standards
+This document defines the core quality standards and operational constraints for the chess application. All development must adhere to these rules.
 
-RULES LIST: 
 1. Engine and Logic
 1.1. AI Responsiveness: The AI engine must never freeze, hang, or enter an unrecoverable state. It must always produce a legal move promptly according to its difficulty setting.
 1.2. Chess Rule Integrity: The application must flawlessly enforce all rules of chess, including special moves (castling, en passant, promotion) and all draw conditions (stalemate, threefold repetition, etc.).
 1.3. Reliable Startup: The AI engine must load reliably every time. The application must be self-contained and function correctly when opened directly as a file.
 
 2. Visuals and Board State
-2.1. Perfect Synchronization: The visual board must always be an exact mirror of the logical game state. There will be no desynchronized or ghost pieces.
+2.1. Perfect Synchronisation: The visual board must always be an exact mirror of the logical game state. There will be no desynchronized or ghost pieces.
 2.2. Glitch-Free Interface: The UI must be free of flickering, element resizing, or graphical errors during moves, animations, and window resizing.
 
 3. User Interaction
