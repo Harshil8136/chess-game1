@@ -10,20 +10,17 @@ This document references the following file structure. All file names are unique
 ├── style.css
 │
 ├── js/
-│   ├── main.js             // Main entry point, loads settings & attaches listeners.
-│   ├── game.js             // Core game state, move handling.
-│   ├── ui.js               // Main UI updates (status, move history, etc.).
-│   ├── board.js            // Main game board interaction (drag/drop, clicks).
-│   ├── ai.js               // AI logic (makeAiMove).
-│   ├── timer.js            // Time control logic (tick, start/stop).
-│   ├── sound.js            // Sound playback management.
+│   ├── config.js           // Single, complete config file for simplicity and reliability.
+│   ├── drawing.js          // Shared arrow and highlight drawing functions.
 │   ├── modals.js           // All pop-up modal definitions.
 │   ├── debug.js            // Draggable debug console logic.
-│   ├── drawing.js          // Shared arrow and highlight drawing functions.
-│   ├── config.js           // Main app settings.
-│   ├── themes.js           // All theme data (UI, board, pieces).
-│   ├── openings.js         // The large list of opening PGNs.
-│   └── constants.js        // Game constants (difficulty, material points).
+│   ├── sound.js            // Sound playback management.
+│   ├── timer.js            // Time control logic.
+│   ├── ai.js               // AI logic.
+│   ├── ui.js               // Main UI update functions.
+│   ├── board.js            // Main game board interaction.
+│   ├── game.js             // Core game state and rules management.
+│   └── main.js             // Main entry point, initializes app & event listeners.
 │
 ├── analysis/
 │   ├── analysis.js         // Main analysis controller.
@@ -65,6 +62,11 @@ This document references the following file structure. All file names are unique
     ├── move-check.mp3
     ├── move-self.mp3
     └── promote.mp3
+
+
+
+
+RULES LIST: 
 1. Engine and Logic
 1.1. AI Responsiveness: The AI engine must never freeze, hang, or enter an unrecoverable state. It must always produce a legal move promptly according to its difficulty setting.
 1.2. Chess Rule Integrity: The application must flawlessly enforce all rules of chess, including special moves (castling, en passant, promotion) and all draw conditions (stalemate, threefold repetition, etc.).
@@ -91,7 +93,6 @@ This document references the following file structure. All file names are unique
 5.2. Persistent Settings: All user preferences (themes, sound, AI difficulty, etc.) must be saved and correctly reloaded between sessions.
 
 6. Development Constraints and Workflow
-6.1. Single File Updates: Always update one file only. Under no circumstances should an update for more than one file be provided at a time. 
-6.2. A list of all files that require changes for a given task must be presented first, and then each file will be updated sequentially in separate responses.
-6.3. Environment Limitations: All solutions must be compatible with a highly restrictive user environment. The user only has access to a text editor like Notepad and a web browser. 
-6.4. They cannot install software, use a local server, or access the browser's developer console for debugging. All code must be robust enough to function correctly when the index.html file is opened directly from the local filesystem (file:/// protocol).
+6.1. Atomic Updates: All updates must be atomic, containing code for only one file. For changes affecting multiple files, a list of all required updates must be presented first. Each file will then be provided in a separate, sequential response.
+6.2. Restrictive User Environment: All code must be compatible with a highly restrictive user environment consisting only of a basic text editor and a web browser. No local server, developer console, or software installation can be assumed. The application must run correctly when index.html is opened directly via the file:/// protocol.
+6.3. Simplicity and Reliability: Due to the environmental constraints, design choices must prioritize stability and ease of manual management over architectural purity. Simple, robust code and file consolidation are preferred if they reduce the risk of manual errors. The primary goal is always a functional application.
