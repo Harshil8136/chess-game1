@@ -1,0 +1,74 @@
+/* src/css/base.css */
+
+:root {
+    --light-square-color: #eaefd2;
+    --dark-square-color: #769656;
+    --bg-main: #262522;
+    --bg-panel: #312e2b;
+    --bg-inset: rgba(0,0,0,0.2);
+    --bg-inset-deep: rgba(0,0,0,0.5);
+    --text-light: #f5f5f4;
+    --text-dark: #a8a29e;
+    --text-accent: #5a83b4;
+    --border: #57534e;
+    --btn-primary-bg: #2563eb;
+    --btn-primary-hover: #1d4ed8;
+    --btn-secondary-bg: #57534e;
+    --btn-secondary-hover: #44403c;
+}
+
+/* --- Base & Layout Styles --- */
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-light);
+}
+
+aside {
+    background-color: var(--bg-panel);
+}
+
+#main-game aside, #analysis-room aside {
+  box-sizing: border-box;
+}
+
+#board-main-content {
+    margin: auto;
+    width: 100%;
+    max-width: min(100vh - 120px, 90vw);
+}
+
+@media (min-width: 1024px) {
+    body {
+        overflow: hidden;
+    }
+    
+    #board-area-container,
+    #analysis-room > div:first-child {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    
+    #main-game > aside {
+        height: 100%;
+    }
+}
+
+/* --- Global Helper Classes --- */
+
+.themed-border { border-color: var(--border); }
+.text-dark { color: var(--text-dark); }
+.text-accent { color: var(--text-accent); }
+/* UPDATED: Added !important to ensure this utility class always overrides other display properties */
+.hidden { display: none !important; }
+.bg-inset { background-color: var(--bg-inset); }
+.thinking-animation { animation:pulse 1.5s ease-in-out infinite; } @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+
+/* --- Global Scrollbar Styling --- */
+
+::-webkit-scrollbar { width: 12px; }
+::-webkit-scrollbar-track { background: #3c3a37; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background-color: var(--dark-square-color); border-redux: 10px; border: 3px solid #3c3a37; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--light-square-color); }
+.overflow-y-auto { scrollbar-width: thin; scrollbar-color: var(--dark-square-color) #3c3a37; }
