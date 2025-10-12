@@ -1,0 +1,535 @@
+Great — I love this idea. Below is a complete, professional-grade plan to add a Calabrio-style break/lunch enforcement feature to your Clock module, designed to integrate cleanly with your existing architecture and constraints:
+
+no new external libraries (works under file:///)
+
+respects enterprise security (no telemetry, no policy tampering)
+
+uses existing modules (Anim, DB, loader.js, IndexedDB)
+
+fully configurable via pre-generated month files (e.g. calabrio-oct-2025.js)
+
+accessible, animation-polished, low CPU/RAM
+
+
+I’ll give: goals, UI/UX behavior, data format for month files, exact files to add/modify, initialization & runtime flow, locking strategy (safe and reversible), animations & visual design notes, edge cases & robustness, audits & logging, accessibility, test checklist, and rollout/phase plan. This is a plan only — no code until you say “APPROVE — GENERATE”.
+
+
+---
+
+1) Goals & constraints (short)
+
+Notify users of scheduled breaks/lunches (visual + audio optional) and automatically lock the application UI for the scheduled interval.
+
+Allow safe recovery/override flows that are explicit & auditable.
+
+Keep everything local and explicit (no automatic network, no hidden changes to OS or browser policies).
+
+Use small, smooth animations similar to iOS/SamsungOne styles but implemented with CSS and optional GSAP when present.
+
+Data-driven: schedule files are pre-generated JS files (e.g. calabrio-2025-10.js) that the loader imports.
+
+
+
+---
+
+2) User experience — what the user sees & feels
+
+Normal (non-break) Clock view
+
+Clock UI remains as today with weather widget.
+
+A subtle band below the clock shows the next scheduled event: icon + “Lunch starts in 47m” + small progress bar.
+
+10 minutes before start: subtle in-app nudge (small toast) + soft top-bar pulse.
+
+1 minute before: stronger prompt (modal hint, slide-up) — “Lunch in 60s”.
+
+On scheduled time: full-screen Lock Overlay (see below) appears with tactile iOS-like animation and blur + darken top bar.
+
+
+Lock Overlay (enforced state)
+
+Full-screen overlay with blurred background using backdrop-filter (fall back to semi-opaque dark if unsupported).
+
+Top status bar remains visible but dimmed (“On break — ends in 18:12”) — use a compact top strip that mimics iOS status feel (soft rounded corners, subtle shadow).
+
+Center of overlay:
+
+Large countdown timer (MM:SS) with circular progress ring (CSS + SVG).
+
+Text: “Lunch Break — Enjoy your time. App is locked.”
+
+Two buttons: “I’m Back (Return Early)” and “Request Override” — both gated.
+
+
+“I’m Back” behavior:
+
+If company policy allows early return, allow the user to end break early after a short confirmation and optional reason. Track action in diagnostics log for audit.
+
+Alternatively, restrict “I’m Back” to no effect unless manager override present—configurable.
+
+
+“Request Override” behavior:
+
+Exposes a manual flow to request manager override (creates a local audit entry and shows a persistent toast; no automatic network).
+
+Optionally accept an override code (if you want a simple PIN stored in a manager file or provided by supervisor). Make clear this is admin-only and optional.
+
+
+Overlay is keyboard accessible. All in-app interactions beneath overlay are disabled (by intercepting top-level events and stopping propagation) — this is a UI lock only, no OS-level blocking.
+
+
+Unlock state (after break ends)
+
+Smooth reverse animation: overlay slides down, top bar regains normal color gradually (subtle, 300–450ms).
+
+Small “Welcome back” toast and short animation on Clock area (pulse or soft scale).
+
+
+
+---
+
+3) Data model — pre-generated monthly files
+
+You said you want pre-generated month files (“Gemini will create whole code for a specific separate month”): that works perfectly. Each file is a plain JS file that defines a global schedule object — no JSON, no fetch required.
+
+File naming convention
+/src/data/calabrio-YYYY-MM.js or /src/data/calabrio-oct-2025.js
+
+Data structure (example schema)
+
+/* calabrio-2025-10.js */
+window.CALABRIO_SCHEDULE = window.CALABRIO_SCHEDULE || {};
+window.CALABRIO_SCHEDULE['2025-10'] = {
+  timezone: 'America/Toronto', // optional default; schedule times are in this tz
+  rules: { allowEarlyReturn: false, requireManagerOverride: true, overridePinHash: null }, // optional policy
+  events: [
+    // event-per-day (or multiple events per day)
+    { date: '2025-10-01', intervals: [
+        { start: '11:30', end: '12:00', type: 'lunch', label: 'Lunch', id: '2025-10-01-lunch' },
+        { start: '15:00', end: '15:15', type: 'break', label: 'Afternoon Break', id: '2025-10-01-break1' }
+      ]
+    },
+    { date: '2025-10-02', intervals: [ { start: '12:00', end: '12:30', type: 'lunch', label: 'Lunch', id: '2025-10-02-lunch' } ] },
+    // ...
+  ]
+};
+
+Notes:
+
+Dates + times stored in localized strings. The runtime will combine date + time and interpret in specified timezone using the browser Intl API. If timezone absent, assume local system timezone (but warn if mismatch).
+
+rules allow you to configure behavior per-month: whether early returns are permitted, whether overrides require a manager PIN, etc.
+
+Maker (Gemini) will generate these files so you don't need manual entry.
+
+
+
+---
+
+4) Files to add / modify
+
+Add
+
+src/js/features/calabrio-core.js — main feature controller (initialization, events scheduling, timers, lock/unlock).
+
+src/js/ui/calabrio-ui.js — UI rendering/injection for overlay, preview band in Clock, notifications.
+
+src/css/calabrio.css — styles for overlay, circular timer, top bar dimming, animations.
+
+src/data/calabrio-YYYY-MM.js — monthly schedule files (generated).
+
+src/js/core/calabrio-storage.js — small helper to persist user preferences, last override actions, and audit logs to IndexedDB via your existing DB wrapper.
+
+
+Modify
+
+src/js/features/clock.js (or whichever holds clock) — register a Calabrio feature button / band and call FeatureLoader.load('calabrio') when Clock is opened.
+
+src/js/core/loader.js — add monthly schedule files to asset list OR use dynamic feature loading (FeatureLoader) to fetch them on demand. Because you prefer single HTML and no fetch on file://, include monthly files in JS_ASSETS if you want them always available; otherwise dynamically load via loadScript that loader already supports.
+
+
+
+---
+
+5) Initialization & runtime flow (detailed)
+
+1. Feature load
+
+When user opens the Clock panel (or on app startup if you prefer), call FeatureLoader.load('calabrio') which loads calabrio-core.js and calabrio-ui.js.
+
+calabrio-core reads window.CALABRIO_SCHEDULE for current month key (e.g., 2025-10). If not present, show “No schedule installed” UI.
+
+
+
+2. Schedule parsing
+
+Convert every event entry into canonical Date objects with time zone awareness:
+
+Use new Date(Date.UTC(year, monthIndex, day, hour, min)) + offset if timezone != local, or use Intl.DateTimeFormat to get offset.
+
+
+Store canonical start/end timestamps.
+
+
+
+3. Compute next event
+
+From now, compute the next event and the "state" (upcoming, active, past).
+
+Expose calabrio.getNextEvent() and calabrio.isActive().
+
+
+
+4. Timers & pre-notifications
+
+Create one short-lived timer for pre-notifications (10 min, 1 min) and one precise timer for start/end using setTimeout with computed deltas (clamped to safe maximum).
+
+Use requestAnimationFrame for small visual updates (e.g., countdown smoothness), but the actual timing is controlled via setTimeout to avoid CPU waste.
+
+
+
+5. On start
+
+When an event starts, call calabrio.lockUi(event):
+
+Save current app interaction state to IndexedDB (audit): Diag.pushStep('calabrio:locked', { id, ts }).
+
+Add a top-level DOM overlay element (injected into #app-container) with role="dialog" aria-modal="true".
+
+Add a global event-capture layer that stopImmediatePropagation() for clicks/keyboard events except whitelist keys (Escape for emergency? configurable).
+
+Add a body class calabrio-locked to fade/dim top bar and apply styling.
+
+
+
+
+6. During break
+
+Keep countdown ticking. Provide clear UI controls for allowed actions (I’m Back / Request Override).
+
+Persist state (active event id, startTime) to IndexedDB so reload during break preserves lock.
+
+
+
+7. On end
+
+Remove overlay, remove calabrio-locked CSS class, push audit calabrio:unlocked.
+
+Short “Welcome back” animation via Anim module.
+
+
+
+8. Override / early return
+
+If policy allows:
+
+I’m Back triggers immediate unlock and logs reason. Notify user and keep audit.
+
+
+If manager override required:
+
+Show a modal with a PIN input. If PIN match (local hashed), unlock and audit. Or provide a manager approval code flow (manual).
+
+
+
+
+9. Edge: time drift & sleep
+
+On visibilitychange, resume from sleep, or focus events, re-evaluate current time against schedule and enforce lock/unlock as needed.
+
+If system clock changed (detect performance.now() vs Date.now() skew > threshold), warn user and show instructions to sync time.
+
+
+
+
+
+---
+
+6) Lock implementation (safe & non-invasive)
+
+This is an in-app UI lock only:
+
+It prevents user interaction with your application by intercepting and blocking events at document level.
+
+It does NOT attempt to modify browser, OS, or security settings (explicitly forbidden).
+
+It is reversible, auditable, and user-controlled by configured rules.
+
+
+
+How to implement safely
+
+Add a full-screen <div id="calabrio-lock-overlay" tabindex="-1"> appended to <body> or #app-container.
+
+Add a pointer-events: auto to overlay, and pointer-events: none to the underlying app wrapping container.
+
+Add keyboard global handler that, while overlay active, prevents key actions except allowed ones (Ctrl+Alt+C to open debug console only if allowed, or a configurable emergency key).
+
+Persist overlay state in IndexedDB, so a reload during a locked period re-creates overlay immediately.
+
+
+Audit logs
+
+Use Diag.pushStep() or DB.set() to store calabrio:locked/unlocked/override events with timestamps and user action reasons.
+
+
+
+---
+
+7) Animations & visual polish (iOS-like)
+
+Visual design principles
+
+Soft blur + semi-transparent overlay (backdrop-filter: blur(8px)), rounded UI elements, large legible numeric timer with subtle shadow.
+
+Use a circular progress ring (SVG) that animates smoothly via CSS stroke-dashoffset — very lightweight.
+
+Animate overlay enter/exit with combined transform + opacity (GPU-friendly).
+
+Use Anim module (GSAP) if present for a more cinematic entrance; otherwise use CSS transitions.
+
+Subtle haptics simulation: a tiny bounce using transform on unlock (0.08s scale -> back).
+
+
+Micro-detail ideas
+
+Top bar gloom: apply gradient overlay on top bar using CSS variable and animate opacity from 0 → 0.6.
+
+Pulse countdown: last 5 seconds, add a scale pulse to the timer (scale 1 → 1.05 → 1).
+
+Subtle ambient shadow: the overlay background uses a radial gradient to highlight center.
+
+
+Performance
+
+All animations use transform and opacity only (except backdrop-filter which may be GPU-intensive on some devices — implement a setting to disable blur if on low-spec device).
+
+Use prefers-reduced-motion to reduce or bypass animations.
+
+
+
+---
+
+8) Persistence, audit & privacy
+
+Store all actions locally (IndexedDB via calabrio-storage.js):
+
+events store: {id, type: 'locked'|'unlocked'|'override_request', ts, meta}.
+
+
+Export audit: provide a manual "Export Audit" action that creates a downloadable JSON file (user-initiated) with redaction controls.
+
+Retention: keep last 90 days or last 1000 events — configurable.
+
+Privacy: no network, no telemetry. Exports are manual and redaction-friendly.
+
+
+
+---
+
+9) Edge cases & robustness
+
+Machine sleep or hibernation: re-evaluate schedule on visibilitychange or focus.
+
+User changes system clock: detect large deltas Math.abs(Date.now() - (startup + (performance.now() - perfStart))) and warning message; re-sync schedule calculation.
+
+Time zone mismatch: if schedule timezone != system timezone, show a clear badge and convert times to local view; warn user if mismatch.
+
+Missing monthly file: show a safe UI “Schedule not installed for [month].” Provide a “Load month file” instruction (drag & drop or pick local file).
+
+Multiple user profiles on machine: schedule is local to application, stored in IndexedDB. If shared machines require per-user schedules, let your generated file include user identifiers (opt-in).
+
+
+
+---
+
+10) Accessibility & compliance
+
+Overlay uses role="dialog" and aria-modal="true". Focus trap implemented while overlay active.
+
+Countdown announced via aria-live="polite" updates every minute or at significant changes.
+
+Respect prefers-reduced-motion: disable blur and heavy transitions.
+
+Ensure color contrast for timer and text passes WCAG AA.
+
+Provide keyboard-only workflows for overrides and unlocking.
+
+
+
+---
+
+11) Security & corporate constraints
+
+No networking, no telemetry. All data local.
+
+No attempt to change system or browser policies or re-enable DevTools. Provide clear text in UI: “This feature is local-only and honors company policies.”
+
+Overrides and PINs must be stored as hashed strings if used, and only in local IndexedDB. Optionally store overridePinHash in the monthly file (not recommended). Prefer manager to input PIN manually for each override to avoid storing secrets in files.
+
+
+
+---
+
+12) Auditing, logging & integration with Gemini diagnostics
+
+Each lock/unlock/override event is logged via Diag.pushStep() so your Gemini diagnostic console can show them alongside app errors.
+
+When lock is active and app errors occur, the debug console should still be accessible via an admin keycombo (configurable) for troubleshooting — but default disabled to avoid accidental bypass.
+
+Include calabrio tags in exported diagnostics so IT can quickly filter events.
+
+
+
+---
+
+13) Testing checklist (what to verify)
+
+Start-of-event triggers overlay exactly at scheduled time (test using artificially short intervals).
+
+Pre-notifications at 10m and 1m display correctly.
+
+Overlay prevents in-app interaction but allows debug console if admin key is used (configurable).
+
+Early return allowed/blocked per rules.
+
+Overrides require PIN if configured; wrong PIN is logged and blocked.
+
+Timers persist across reloads and system sleep.
+
+Works under file:/// with schedule file present.
+
+Respect prefers-reduced-motion.
+
+Export audit creates JSON with expected fields and allows redaction.
+
+
+
+---
+
+14) UX design snippets & micro-interactions (for design handoff)
+
+Countdown circle: use an SVG circle with stroke-dasharray and CSS transition for smooth progress; update via requestAnimationFrame every second.
+
+Top band: a soft pill-shaped band with icon + relative time string; clicking opens the full Calabrio UI.
+
+Overlay animations:
+
+Enter: translateY(8%) → 0 and opacity 0 → 1 (ease-out 360ms)
+
+Exit: reverse with small scale pop
+
+
+Button micro-animations: use transform: translateY(-2px) scale(0.995) on press with transition 120ms.
+
+Accessibility: focus outline 3px solid accent-color and aria-describedby for overlay message.
+
+
+
+---
+
+15) Operational & generation workflow for monthly files
+
+You plan for Gemini to generate monthly files. A recommended workflow:
+
+1. Export or provide your weekly/monthly schedule:
+
+Option A: Use raw Calabrio export CSV (timestamps) — a small conversion script (local Node script or a lightweight in-browser generator you run once) converts it to calabrio-YYYY-MM.js.
+
+Option B: Let Gemini produce schedule by analyzing your past logs kept in IndexedDB (requires you to export those logs or allow Gemini to process them locally).
+
+
+
+2. Generation output:
+
+The generator produces calabrio-2025-10.js (as earlier schema) and you drop it into /src/data/.
+
+Update loader.js asset list to include the new file or put it in the dynamic FeatureLoader path so it loads on Clock open.
+
+
+
+3. Validation step:
+
+A small UI in Clock: “Validate schedule for October — [Preview] [Activate]”
+
+Preview shows all events in a calendar list so you can confirm before activation.
+
+
+
+4. Activation:
+
+Once activated, calabrio-core uses the schedule for runtime.
+
+
+
+
+Note: For security and enterprise friendliness, these steps are manual and local-only — no background sync or external services are involved.
+
+
+---
+
+16) Phased rollout & priorities (no time estimates, but small to large)
+
+Phase A — Minimal core
+
+Add calabrio-core.js, calabrio-ui.js, calabrio.css, and one sample calabrio-YYYY-MM.js.
+
+Hook into Clock feature; show next event band; show modal on scheduled start; log events.
+
+
+Phase B — Polished UX + persistence
+
+Smooth animations via Anim (GSAP if present), circular progress ring, top bar dimming, IndexedDB audits, and override flow.
+
+
+Phase C — Admin tooling & generation
+
+Add generator guidance, schedule validation UI, and exportable audit reports.
+
+
+Phase D — Extra polish
+
+Demo mode, presentation-ready animations, per-user personalization (pin favorites), and deep integration with Gemini diagnostics.
+
+
+
+---
+
+17) Final implementation notes & cautions
+
+Keep the overlay “lock” purely in-application. Don’t attempt to block OS or reopen DevTools. Document this clearly in any presentation or README to avoid IT concerns.
+
+Keep all schedule files versioned and signed by owner if needed for audit (e.g., add generatedBy and signature fields for traceability).
+
+Make override flows explicit and visible in the audit log — this makes the system trustworthy to supervisors and auditors.
+
+
+
+---
+
+If you want, I can now:
+
+1. Produce the detailed file skeletons and function signatures for:
+
+calabrio-core.js
+
+calabrio-ui.js
+
+calabrio-storage.js
+
+calabrio.css
+
+A sample calabrio-2025-10.js month file
+
+
+
+
+OR
+
+2. Produce a compact design spec (visual mock CSS + HTML snippets) of the lock overlay and top band so you can hand it to a designer/dev.
+
+
+
+Say which one you want next (A or B). If you choose A, say “APPROVE — GENERATE CALABRIO FILES” and I will output the planned files (ready-to-paste).
+
