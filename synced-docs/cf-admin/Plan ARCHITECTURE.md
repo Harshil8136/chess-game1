@@ -657,7 +657,6 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
   target_id TEXT,
   target_type TEXT,
   details TEXT,
-  ip_hash TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -682,7 +681,6 @@ export interface AuditEntry {
   targetId?: string;
   targetType?: string;
   details?: string;
-  ipHash?: string;
 }
 
 /**
@@ -698,8 +696,8 @@ export function auditLog(
   ctx.waitUntil(
     db.prepare(`
       INSERT INTO admin_audit_log 
-        (user_id, user_email, user_role, action, module, target_id, target_type, details, ip_hash)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        (user_id, user_email, user_role, action, module, target_id, target_type, details)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
     `).bind(
       entry.userId,
       entry.userEmail,
@@ -708,8 +706,7 @@ export function auditLog(
       entry.module,
       entry.targetId ?? null,
       entry.targetType ?? null,
-      entry.details ?? null,
-      entry.ipHash ?? null,
+      entry.details ?? null
     ).run()
   );
 }
@@ -727,8 +724,7 @@ auditLog(ctx, env.DB, {
   module: 'plac',
   targetId: targetUserId,
   targetType: 'user',
-  details: JSON.stringify({ page: pagePath, reason }),
-  ipHash: hashIP(request.headers.get('cf-connecting-ip')),
+  details: JSON.stringify({ page: pagePath, reason })
 });
 ```
 

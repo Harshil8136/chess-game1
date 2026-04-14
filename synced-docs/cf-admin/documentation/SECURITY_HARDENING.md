@@ -13,8 +13,8 @@ This document details the security hardening measures applied across the `cf-adm
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                   LAYER 5: AUDIT INTEGRITY                       │
-│  SHA-256 hash chain on admin_audit_log (tamper detection)        │
-│  HMAC-SHA256 IP hashing (GDPR-safe tracing)                     │
+│  All context-critical mutations tracked (admin_audit_log)        │
+│  Fire-and-forget execution via ctx.waitUntil                     │
 ├──────────────────────────────────────────────────────────────────┤
 │                   LAYER 4: ERROR SANITIZATION                    │
 │  All API endpoints return generic error messages                 │
@@ -158,7 +158,6 @@ The OAuth callback endpoint (`/auth/callback`) includes multiple security layers
 | Protection | Implementation |
 |-----------|----------------|
 | **Provider Validation** | OAuth provider string is validated against a whitelist (`google`, `github`, `facebook`, `email`) |
-| **IP Hashing** | Client IP is hashed via HMAC-SHA256 before being stored in audit logs |
 | **Whitelist Check** | Email is verified against `admin_authorized_users` before session creation |
 | **Session Binding** | Session is bound to user ID, email, role, and creation timestamp |
 
@@ -189,12 +188,12 @@ Applied globally by Cloudflare:
 | File | Security Function |
 |------|-------------------|
 | `src/lib/csrf.ts` | CSRF validation — Origin + Referer checking |
-| `src/lib/audit.ts` | Audit engine + IP hashing + hash chain integrity |
+| `src/lib/audit.ts` | Audit engine for secure logging in `ctx.waitUntil` |
 | `src/lib/auth/rbac.ts` | 5-tier role hierarchy + permission helpers |
 | `src/lib/auth/session.ts` | `__Host-` cookie prefix + session lifecycle |
 | `src/lib/auth/guard.ts` | Server-side auth gate + role enforcement |
 | `src/middleware.ts` | CSRF gate + method restriction + X-Request-ID + PLAC check |
-| `src/pages/auth/callback.astro` | IP hashing + provider validation + whitelist check |
+| `src/pages/auth/callback.astro` | Provider validation + whitelist check |
 | `public/_headers` | Security headers (HSTS, CSP, frame protection) |
 
 ---
@@ -208,7 +207,6 @@ All must be deployed via `wrangler secret put <KEY>`:
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side Supabase admin operations |
 | `PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase auth flows |
 | `REVALIDATION_SECRET` | Authenticates ISR webhooks from cf-admin to cf-astro |
-| `IP_HASH_SECRET` | HMAC key for privacy-safe IP hashing in audit logs |
 | `SITE_URL` | Used for CSRF Origin validation + `__Host-` cookie decision |
 | `UPSTASH_REDIS_REST_URL` | Redis connection for rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | Redis auth token |

@@ -137,7 +137,7 @@ Defined centrally in `src/lib/auth/rbac.ts`. Color hierarchy follows a **thermal
 3. DEV/Owner/SuperAdmin can add users to the whitelist with assigned roles (constrained to their level and below).
 4. **PLAC (Page-Level Access Control)** dynamically overlays explicit `GRANT` and `DENY` parameters to specific pages per user in D1 `admin_page_overrides`. Overrides can now be set **at creation time** via the InviteUserModal page chip grid — the POST `/api/users/manage` endpoint accepts an optional `pageOverrides: { pagePath, granted }[]` array and batch-writes to D1 after the GoTrue user is provisioned.
 5. Access Maps are evaluated via Cloudflare KV with O(1) reads taking <0.5ms on `middleware.ts`. "Deny" values strictly overrule all naturally inherited hierarchies.
-6. **Ghost Audit Engine** logs all sensitive mutations with **SHA-256 hash chain** integrity verification (PLAC parsing, User Management, Content/Media updates) via `ctx.waitUntil()` (accessed through `getCfContext()` from `env.ts`). The audit factory validates table names against `ALLOWED_AUDIT_TABLES` whitelist.
+6. **Ghost Audit Engine** logs all sensitive mutations (PLAC parsing, User Management, Content/Media updates) via `ctx.waitUntil()` (accessed through `getCfContext()` from `env.ts`). The audit factory validates table names against `ALLOWED_AUDIT_TABLES` whitelist.
 7. GoTrue issues JWTs for valid auth attempts; application layer validates the JWT against KV caches and role definitions.
 
 ### Session Security
@@ -344,14 +344,13 @@ All file names must be unique and descriptive:
 - Local dev secrets in `.dev.vars` (gitignored)
 - Production secrets via `wrangler secret put <KEY>`
 - Never commit secrets; `.dev.vars` is in `.gitignore`
-- Required production secrets: `SUPABASE_SERVICE_ROLE_KEY`, `REVALIDATION_SECRET`, `IP_HASH_SECRET`, `SITE_URL`
+- Required production secrets: `SUPABASE_SERVICE_ROLE_KEY`, `REVALIDATION_SECRET`, `SITE_URL`
 
 ### 9.2 Auth Architecture
 - Signup is **DISABLED** in Supabase dashboard
 - Only `admin_authorized_users` whitelist members can authenticate
 - Server-side whitelist check on every auth callback
 - OAuth provider validated against whitelist (`google`, `github`, `facebook`, `email`)
-- IP address hashed (HMAC-SHA256) before storage in audit logs (GDPR compliance)
 - JWT validation + refresh via Supabase client
 - Session cookies use `__Host-` prefix in production (prevents subdomain fixation)
 - Sessions stored in KV with 24-hour hard expiry
@@ -377,10 +376,10 @@ All file names must be unique and descriptive:
 - Turnstile protection on login form (magic link)
 
 ### 9.6 Audit Integrity
-- Every audit log entry includes a `prev_hash` field — a SHA-256 hash chain linking each entry to its predecessor
-- Hash chain enables tamper detection: if any row is modified or deleted, the chain breaks
-- Truncated to 16 hex chars (8 bytes) for storage efficiency while retaining integrity guarantees
-- The `admin_audit_log` table has NO `DELETE` or `UPDATE` endpoints exposed at the application layer
+- Every audit operation runs in `ctx.waitUntil()` to avoid blocking the user flow and maintain sub-10ms logic paths.
+- The system aggregates metrics dynamically via parallel D1 and Supabase calls in `/api/audit/stats` without slowing down individual worker tasks.
+- For maximum operational scaling, granular permissions (sub-features like `/dashboard/logs#export`) map securely under routing strings cleanly without impacting schema constraints.
+- The `admin_audit_log` table has NO `DELETE` or `UPDATE` endpoints exposed at the application layer.
 
 ### 9.7 Security Headers
 Defined in `public/_headers` (hardened 2026-04-10):

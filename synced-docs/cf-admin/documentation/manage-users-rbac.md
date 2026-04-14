@@ -3,7 +3,7 @@
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Supabase GoTrue (Admin API / Service Role)
-> **Last Updated:** 2026-04-12 (Interactive Page Access Overrides at Creation + Preact Modal Rebuild)
+> **Last Updated:** 2026-04-14 (Bug-fix pass: CSRF dev fix, AuthError propagation, force-kick on lock, O(1) DELETE, lazy page fetch)
 
 This document details the exact flow and architecture for managing administrative access within the internal Madagascar Pet Hotel admin portal (`cf-admin`).
 
@@ -90,7 +90,7 @@ The `/api/users/manage` Astro SSR endpoint securely bridges Supabase GoTrue logi
 ### 5.1 Inviting/Authorizing a New User
 When an authorized admin adds a new member from the dashboard:
 1. **Frontend Request:** UI validates inputs (Email, Role, Display Name) via `InviteUserModal.tsx` (Preact island).
-2. **Page Access Fetch:** Modal pre-fetches `GET /api/users/pages` on mount — live page registry from D1, zero hardcoding.
+2. **Page Access Fetch:** Modal lazy-fetches `GET /api/users/pages` on the **first modal open** (not on component mount) — live page registry from D1, zero hardcoding. Cached after first load via `pagesLoadedRef`; full error state and retry button shown on failure.
 3. **CSRF Validation:** Middleware verifies Origin/Referer headers match `SITE_URL`.
 4. **Endpoint Validation:** Endpoint verifies the requesting user has sufficient rank and prevents privilege elevation.
 5. **Whitelist Insertion:** User details are inserted into the `admin_authorized_users` table with `is_active = true`.
@@ -109,7 +109,7 @@ When an authorized admin adds a new member from the dashboard:
    );
    await env.DB.batch(batch);
    ```
-8. **Audit Log:** Mutation is logged via Ghost Audit Engine with SHA-256 hash chain.
+8. **Audit Log:** Mutation is logged via Ghost Audit Engine.
 
 > **Non-fatal override writes:** If the batch override write fails (e.g. GoTrue returned an existing-user result and no UUID was captured), user creation still succeeds. The admin can set page permissions manually via `PageAccessManager` after creation.
 
@@ -122,7 +122,7 @@ The `InviteUserModal.tsx` Preact island renders a "Command Console" two-panel di
 - Email + Display Name inputs, Grant Access + Cancel buttons
 
 **Right panel — Page Access:**
-- **PageChipGrid**: Live page list fetched from `GET /api/users/pages` on modal mount. Grouped by section (MAIN / CONTENT / TOOLS / MANAGEMENT)
+- **PageChipGrid**: Live page list fetched from `GET /api/users/pages` lazily on **first modal open** (not on page load). Grouped by section (MAIN / CONTENT / TOOLS / MANAGEMENT). Error state with retry button displayed if fetch fails.
 - Chips have four states:
   - `default_on` (●) — role naturally has access, no override written
   - `default_off` (○) — role has no natural access, no override written
@@ -137,9 +137,9 @@ Access is managed via the `is_active` flag inside `admin_authorized_users`.
 
 ### 5.4 Revoking / Locking Access
 If a user needs immediate revocation:
-1. **Soft Lock:** Toggle `is_active = false`. Middleware guard check immediately rejects the user without touching Supabase.
-2. **Hard Lock (Force Logout):** Uses the `forceLogoutUser()` reverse index (`user-session:{userId}` → `sessionId` in KV) for O(k) session destruction rather than O(n) KV scan.
-3. **Full Nuke:** Optionally calls `adminClient.auth.admin.deleteUser(uid)` to permanently remove the Supabase auth profile.
+1. **Soft Lock:** `PATCH /api/users/manage` with `is_active: false`. The middleware guard immediately rejects future requests. The GoTrue UUID is resolved via `auth.users` schema query, then `forceLogoutUser()` destroys active KV sessions immediately — no waiting for the next middleware check.
+2. **Hard Lock (Force Logout):** `DELETE /api/users/force-kick` uses the reverse-index KV pattern (`user-session:{userId}:{sessionId}`) for O(k) session destruction rather than O(n) full KV scan.
+3. **Full Nuke:** `DELETE /api/users/manage?email=…` resolves the GoTrue UUID via `auth.users` schema query (O(1) — no 1000-user listUsers scan), force-kicks all KV sessions, then calls `adminClient.auth.admin.deleteUser(uid)` and removes the whitelist row.
 
 ## 6. UI Implementation (Manage Users Dashboard)
 
@@ -176,7 +176,35 @@ All actions within the API routes return specific error states handled by the UI
 - `401 Unauthorized` → Render standard "Session Expired" overlay
 - `403 Forbidden` → Render "Insufficient Permissions / Action Locked" when a user attempts an impossible action
 - `405 Method Not Allowed` → Block manual HTTP verb injections
-- `400 Bad Request` → Return `{ status: 'error', message: 'Invalid request' }` (sanitized — no internal details)
+- `400 Bad Request` → Return `{ success: false, error: '...' }` (sanitized — no internal details)
+
+### Auth Error Propagation (`guard.ts`)
+
+`requireAuth()` throws a typed `AuthError(status, message)` (not a plain `Error`) so callers can
+return the correct HTTP status instead of a generic 500:
+
+```typescript
+// guard.ts
+export class AuthError extends Error {
+  constructor(public readonly status: 401 | 403, message: string) { ... }
+}
+
+// API route catch block
+catch (err) {
+  if (err instanceof AuthError) return jsonErr(err.status, err.message);
+  ...
+}
+```
+
+### Local Dev CSRF
+
+`SITE_URL` **must** be set in `.dev.vars` for local development. If absent, the middleware falls
+back to the production URL from `wrangler.toml [vars]` and every mutation fails with 403.
+
+```
+# .dev.vars — required for local dev
+SITE_URL="http://localhost:4321"
+```
 
 ## 8. Page-Level Access Control (PLAC) System
 
@@ -197,12 +225,12 @@ For detailed PLAC documentation, see [PLAC_AND_AUDIT.md](./PLAC_AND_AUDIT.md).
 | `src/lib/auth/session.ts` | KV-backed sessions with `__Host-` cookie prefix, 30min refresh, 24h expiry |
 | `src/lib/auth/plac.ts` | Page-Level Access Control — compute, cache, check access maps |
 | `src/lib/csrf.ts` | Stateless CSRF protection via Origin + Referer validation |
-| `src/lib/audit.ts` | Ghost Audit Engine — fire-and-forget D1 logging with SHA-256 hash chain |
+| `src/lib/audit.ts` | Ghost Audit Engine — fire-and-forget D1 logging |
 | `src/middleware.ts` | Global auth gate — CSRF check + session validation + PLAC access check + X-Request-ID |
 | `src/pages/api/users/manage.ts` | User CRUD — invite, update role, toggle active, delete |
 | `src/pages/api/users/index.ts` | User list — hidden account filtering, anti-enumeration |
 | `src/pages/api/users/access.ts` | PLAC provisioning — grant/revoke/reset per-user page overrides |
 | `src/pages/api/users/force-kick.ts` | Force logout — reverse-index KV session destruction |
 | `src/pages/api/users/access-data.ts` | PLAC data fetcher for PageAccessManager UI (existing users, requires `userId`) |
-| `src/pages/api/users/pages.ts` | Page registry endpoint — all active `admin_pages` rows without userId (used by InviteUserModal on mount) |
+| `src/pages/api/users/pages.ts` | Page registry endpoint — all active `admin_pages` rows without userId (lazy-fetched by InviteUserModal on first open) |
 | `src/components/admin/users/invite/` | Atomic sub-components for the InviteUserModal: RolePillSelector, HiddenAccountToggle, PageChipGrid |

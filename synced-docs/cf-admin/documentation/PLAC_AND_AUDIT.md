@@ -3,7 +3,7 @@
 > [!NOTE]
 > **System Status:** Production Ready
 > **Target Environment:** Cloudflare Workers V8 Isolates (Edge Computing)
-> **Last Updated:** April 2026 (5-Tier RBAC + SHA-256 Audit Hash Chain)
+> **Last Updated:** April 2026 (5-Tier RBAC + Granular PLAC)
 
 This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Ghost Audit Engine.
 
@@ -117,7 +117,16 @@ When the `computeAccessMap` function fires (in `src/lib/auth/plac.ts`), it resol
 2. **Explicit GRANT (`1`) Overrides:** ACCESS IS ALLOWED.
 3. **Implicit Role Default:** If no override row exists, the system relies on baseline mathematics: `user.RoleLevel <= page.RequiredLevel`.
 
-### 2.4 Provisioning Gatekeepers (Anti-Escalation Measures)
+### 2.4 Granular Permission Model (Sub-Features)
+
+PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micro-capabilities (e.g., exporting CSVs, performing a destructive prune) to be managed by the exact same O(1) mathematical resolution engine without requiring structural schema updates.
+
+* **Pattern:** We append a `#sub-feature` hash to a parent route in the `admin_pages` database (e.g., `/dashboard/logs#export`).
+* **Evaluation:** Standard routing still checks `/dashboard/logs`. The UI buttons (like Export) independently request a PLAC check for `/dashboard/logs#export`.
+* **UI Visualization:** In the InviteUserModal and PageAccessManager chips, sub-features automatically nest under their parent route and are branded as "Features" rather than "Pages" for conceptual clarity.
+* **Cost:** $0. Because the hashmap loads instantly into Cloudflare KV, querying 50 granular capability checks for a single render still operates at `<1ms`.
+
+### 2.5 Provisioning Gatekeepers (Anti-Escalation Measures)
 
 > [!IMPORTANT]
 > The API endpoint handling Access Management (`POST /api/users/access`) contains four ironclad validation gates. Without them, a standard Admin could theoretically grant themselves Dev permissions.
@@ -127,23 +136,23 @@ When the `computeAccessMap` function fires (in `src/lib/auth/plac.ts`), it resol
 * **Gate B: DEV + Owner Ghosting**
   Users with `dev` or `owner` rank are intentionally dropped from UI payloads when requested by non-devs. The DEV and Owner cohort operates completely invisibly to standard administration.
 * **Gate C: Page Visibility Check (`actorHasPage === true`)**
-  Administrators cannot grant another user access to a page they cannot see themselves.
+  Administrators cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
 * **Gate D: Natural Ceiling Enforcement**
   Administrators cannot grant a Staff member access to a tool designed with a `dev` base requirement. Grants are capped at the actor's maximum clearance level.
 
-### 2.5 Auto-Purging Strategies
+### 2.6 Auto-Purging Strategies
 
 * **Instant Discontinuation:** Modifying a user's PLAC map calls `forceLogoutUser(kv, targetId)`. This uses a **reverse-mapping key** (`user-session:{userId}` → `sessionId`) for O(k) session destruction, avoiding the O(n) KV scan that would violate CPU limits at scale.
 * **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers a `DELETE FROM admin_page_overrides WHERE user_id = ?`. A new role implies a new baseline; historical granular rules are destroyed to maintain logical database cleanliness.
 
-### 2.6 Key Files
+### 2.7 Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/lib/auth/plac.ts` | Core PLAC module — `computeAccessMap()`, `checkPageAccess()`, KV cache helpers |
+| `src/lib/auth/plac.ts` | Core PLAC module — `computeAccessMap()`, pseudo-path validation, KV caches |
 | `src/pages/api/users/access.ts` | PLAC provisioning API — grant/revoke/reset with hierarchy enforcement |
 | `src/pages/api/users/access-data.ts` | Data fetcher for PageAccessManager UI (requires `super_admin+`) |
-| `src/components/admin/users/PageAccessManager.tsx` | Preact island — interactive toggle grid for per-user page overrides |
+| `src/components/admin/users/PageAccessManager.tsx` | Preact island — interactive toggle grid with nested feature visualization |
 
 ---
 
@@ -178,45 +187,16 @@ sequenceDiagram
 
 The user experiences unparalleled performance, while the security ledger remains mathematically uncompromised.
 
-### 3.2 SHA-256 Hash Chain Integrity
-
-> [!IMPORTANT]
-> **Tamper Detection:** Each audit entry includes a `prev_hash` field — a SHA-256 hash chain linking every entry to its predecessor.
-
-The hash chain works as follows:
-1. Before inserting a new audit entry, the engine reads the most recent entry's `id` and `prev_hash`
-2. A chain input is computed: `"${prev.id}:${prev.prev_hash}:${entry.action}:${entry.userId}:${timestamp}"`
-3. The chain input is hashed via `crypto.subtle.digest('SHA-256', ...)`
-4. The first 8 bytes (16 hex chars) are stored as `prev_hash` on the new entry
-
-**If any row in the audit table is modified, deleted, or inserted out of sequence, the chain breaks.** This provides cryptographic tamper evidence without relying on external blockchain infrastructure.
-
-### 3.3 Immutability at the Edge
+### 3.2 Immutability at the Edge
 
 > [!WARNING]
 > The `admin_audit_log` table explicitly allows `SELECT` and `INSERT`. **The API layer exposes NO `DELETE` or `UPDATE` endpoints.**
 
 To modify a log, a malicious actor would require Cloudflare Dashboard-level administrative access to run raw D1 queries via the CLI. At the framework level, the ledger is computationally immutable.
 
-**Defense-in-Depth:** The `createAuditLogger()` factory validates the `tableName` config parameter against the `ALLOWED_AUDIT_TABLES` whitelist (`Set(['admin_audit_log'])`). Since D1 does not support parameterized table names, this prevents SQL injection even if the factory config surface is widened in future.
+**Defense-in-Depth:** The `createAuditLogger()` factory validates the `tableName` config parameter against the `ALLOWED_AUDIT_TABLES` whitelist (`Set(['admin_audit_log'])`). Since D1 does not support parameterized table names, this prevents SQL injection out-of-the-box.
 
-### 3.4 Privacy-Preserved Traceability (Edge IP Hashing)
-
-We must trace if a singular geographic IP address is repeatedly attacking the API, but storing raw IPv4 data permanently violates global data privacy regulations (GDPR/LFPDPPP).
-
-The `hashIP()` function (in `src/lib/audit.ts`) solves this at the edge via **cryptographic blinding**:
-
-1. `cf-connecting-ip` is stripped from the request header natively
-2. It is bound to a hardened Environment Secret (`IP_HASH_SECRET`)
-3. An **HMAC-SHA256 signature** is spawned via the V8 WebCrypto API
-4. The result is safely truncated to 12 hex characters
-
-**The Privacy Result:** We can perfectly group abusive traffic *(e.g., "Hash `a4f89d` submitted 500 failed gallery uploads")* without ever saving the raw IP address. It neutralizes privacy liabilities even if the D1 database is entirely compromised. *(Note: Raw SHA-256 is insufficient here; the minimal 4.3B IPv4 space is easily cracked via rainbow tables. HMAC protects the signature).*
-
-> [!IMPORTANT]
-> **Deployment Requirement:** The `IP_HASH_SECRET` must be deployed via `wrangler secret put IP_HASH_SECRET`. If absent, all audit IP hashes silently resolve to `undefined`.
-
-### 3.5 Typed Actions and Modules
+### 3.3 Typed Actions and Modules
 
 The audit system uses strict typed unions (not arbitrary strings) for maximum query reliability:
 
@@ -226,29 +206,27 @@ The audit system uses strict typed unions (not arbitrary strings) for maximum qu
 **Modules (`AuditModule`):**
 `auth`, `plac`, `users`, `content`, `bookings`, `customers`, `pets`, `settings`, `analytics`, `reports`, `logs`, `media`, `debug`, `system`
 
-### 3.6 Operational Payload Tracking
+### 3.4 Operational Payload Tracking
 
 The engine specifically tracks unified JSON payloads representing every state mutation:
 
 * **Identity Signatures:** `user_id`, `user_email`, `user_role`
 * **Behavior Vectors:** `action` (typed enum), `module` (typed enum)
 * **Impact Vectors:** `target_id`, `target_type`, `details` *(granular JSON tracking of exact element changes)*
-* **Environment Vectors:** `ip_hash`
-* **Integrity Chain:** `prev_hash` *(SHA-256 link to previous entry)*
 
-### 3.7 Key Files
+### 3.5 Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/lib/audit.ts` | Core audit module — `auditLog()`, `hashIP()`, `createAuditLogger()`, hash chain logic |
+| `src/lib/audit.ts` | Core audit module — `auditLog()`, `createAuditLogger()` |
 | `src/middleware.ts` | Injects `X-Request-ID` via `crypto.randomUUID()` for audit correlation |
 | `src/pages/api/users/manage.ts` | User mutations — all logged with audit entries |
 | `src/pages/api/users/access.ts` | PLAC provisioning — grant/revoke actions logged |
 | `src/pages/api/content/blocks.ts` | CMS updates — logged with sanitized error responses |
 | `src/pages/api/media/upload.ts` | Media uploads — logged with R2 key tracking |
-| `src/pages/auth/callback.astro` | Login events — IP hashed, provider validated, session created |
+| `src/pages/auth/callback.astro` | Login events — provider validated, session created |
 
-### 3.8 Ubiquitous Navigational Telemetry (Middleware Tracking)
+### 3.6 Ubiquitous Navigational Telemetry (Middleware Tracking)
 
 > [!TIP]
 > **The "In-Accessible Page" Tracer**
