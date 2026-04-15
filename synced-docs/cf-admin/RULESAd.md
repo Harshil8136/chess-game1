@@ -1,6 +1,6 @@
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-13 (v3.4: Sync pipeline fixes — reviews.ts path expansion, Hyperdrive documentation accuracy, env.d.ts phantom binding cleanup)
+> **Last Updated:** 2026-04-15 (v3.5: Chatbot Integration & Secure Admin Proxy Configuration)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
@@ -80,6 +80,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | Project | Role | Relationship |
 |---------|------|-------------|
 | **cf-astro** | Main customer-facing website | Shares Supabase project, D1 database, R2 bucket. Uses Hyperdrive for direct PG (booking, ARCO) |
+| **cf-chatbot** | Cloudflare Workers AI Bot | Operates autonomously on Edge natively interacting with WhatsApp/Web. `cf-admin` serves as its secure configuration proxy and analytics Dashboard. |
 | **admin-app** | Legacy admin portal (Next.js) | Reference for UX/features only — **NEVER copy code** |
 | **nextjs-app** | Legacy main site (Next.js) | Reference only — no code sharing |
 

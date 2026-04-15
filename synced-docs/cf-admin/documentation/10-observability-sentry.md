@@ -13,54 +13,28 @@ We use `@sentry/cloudflare` to provide unified Edge Observability directly at th
 
 The Sentry Edge Observer is centralized in `sentry.server.config.ts`. 
 
-```typescript
-import * as Sentry from '@sentry/cloudflare';
+**Key architectural decisions:**
 
-Sentry.init({
-  // Hardcoded to bypass Cloudflare Worker environment scope issues across Astro
-  dsn: "https://your-dsn-string-here.ingest.us.sentry.io/PROJECT_ID",
+- **Full trace sampling** is enabled to monitor all application executions.
+- **Default browser integrations are disabled** — Cloudflare Workers run on the V8-based `workerd` runtime, NOT a browser environment. Sentry's default integrations include browser-specific tracers (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) that reference `window` and `document`, which do not exist in the `workerd` runtime. These must be disabled to prevent runtime crashes.
+- **Only server-compatible integrations are used** — specifically the Console Capture integration for error and warning levels.
 
-  // Monitor application execution
-  tracesSampleRate: 1.0,
-  
-  // CRITICAL: Disable default browser-based integrations (BrowserTracing, etc.)
-  // They reference `window`/`document` which do not exist in Cloudflare's workerd runtime.
-  // Without this, the Worker crashes on startup with "ReferenceError: window is not defined".
-  defaultIntegrations: false,
-  
-  integrations: [
-    Sentry.captureConsoleIntegration({
-      levels: ['error', 'warn']
-    })
-  ]
-});
-```
-
-> **⚠️ workerd Compatibility Note:** Cloudflare Workers run on the V8-based `workerd` runtime, NOT a browser environment. Sentry's default integrations include browser-specific tracers (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) that reference `window` and `document`. These must be disabled via `defaultIntegrations: false` to prevent runtime crashes. Only server-compatible integrations like `captureConsoleIntegration` should be used.
+> **⚠️ workerd Compatibility Note:** Any future integrations added to the Sentry config must be validated against the `workerd` runtime. Browser-targeting integrations will cause `ReferenceError: window is not defined` crashes at Worker startup.
 
 ### 1.2 "Capture Console" Integration
 
-To simplify the codebase and maintain the "Lean Edge" philosophy, we intentionally avoided littering the API handlers with `Sentry.captureException()` blocks.
+To simplify the codebase and maintain the "Lean Edge" philosophy, we intentionally avoided littering the API handlers with explicit Sentry capture calls.
 
-Instead, we enabled the `captureConsoleIntegration`. Any native `console.error` logs in standard JavaScript automatically trigger an event capture and are immediately securely vaulted in Sentry along with the stack trace, metadata, and user agent info.
+Instead, we enabled the Console Capture integration. Any native `console.error` logs in standard JavaScript automatically trigger an event capture and are immediately securely vaulted in Sentry along with the stack trace, metadata, and user agent info.
 
 ## 2. Hardcoded Public DSN
 
-During implementation, it was discovered that Astro's Cloudflare adapter and vite environment injection (`env.SENTRY_DSN`) suffered from inconsistent scoping during runtime SSR operations. 
+During implementation, it was discovered that Astro's Cloudflare adapter and Vite environment injection suffered from inconsistent scoping during runtime SSR operations. 
 
-**Architectural Decision:** We hardcoded the raw `DSN` value inside the configuration file.
+**Architectural Decision:** We hardcoded the raw DSN value inside the configuration file.
 *   **Security Context:** A Sentry DSN is a public routing key. It is *not* a sensitive cryptographic secret (unlike API keys or JWT signatures). Exposing it purely allows the codebase to push errors to the ingestion endpoint.
 *   **Benefits:** Guarantees 100% telemetry uptime, eliminating missing logs caused by environment binding mismatches in standard `wrangler.toml` setups.
 
 ## 3. Usage inside Endpoints
 
-Thanks to the automated pipeline, if a D1 database query fails during an `API` request, the developer simply uses:
-
-```typescript
-} catch (error) {
-  console.error('[Gallery CMS Error]', error);
-  return jsonError('Failed to process gallery sync');
-}
-```
-
-This naturally triggers the Sentry interceptor with the full stack context attached. 
+Thanks to the automated pipeline, if a database query fails during an API request, the developer simply logs the error using `console.error` with a descriptive module tag. This naturally triggers the Sentry interceptor with the full stack context attached, and a sanitized generic error is returned to the client.

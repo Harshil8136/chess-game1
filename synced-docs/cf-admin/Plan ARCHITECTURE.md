@@ -18,9 +18,10 @@
 6. [PHASE 4 — Ghost Audit Engine (ctx.waitUntil Logging)](#6-phase-4--ghost-audit-engine)
 7. [PHASE 5 — HTTP Caching & ETag Strategy](#7-phase-5--http-caching--etag-strategy)
 8. [PHASE 6 — Preact Signals (Inter-Island Reactivity)](#8-phase-6--preact-signals)
-9. [SCALE-UP VAULT — Enterprise Features (Deferred)](#9-scale-up-vault)
-10. [Risk Analysis & CPU Budget](#10-risk-analysis--cpu-budget)
-11. [File Map & Implementation Order](#11-file-map--implementation-order)
+9. [PHASE 7 — Chatbot UI Proxy Integration (🔥 NEW)](#9-phase-7--chatbot-ui-proxy-integration)
+10. [SCALE-UP VAULT — Enterprise Features (Deferred)](#10-scale-up-vault)
+11. [Risk Analysis & CPU Budget](#11-risk-analysis--cpu-budget)
+12. [File Map & Implementation Order](#12-file-map--implementation-order)
 
 ---
 
@@ -60,10 +61,13 @@ This plan defines the **production architecture** for cf-admin — a secure, lig
 
 ## 2. ARCHITECTURE OVERVIEW
 
-### The 4-Layer "Lean Edge" Stack
+### The 5-Layer "Lean Edge" Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 5: EXTERNAL PROXY                      │
+│  Astro API Gateway (/api/chatbot/*) → Cloudflare Worker AI Bot  │
+├─────────────────────────────────────────────────────────────────┤
 │                    LAYER 4: OBSERVER                            │
 │  Ghost Audit Engine (ctx.waitUntil → D1 admin_audit_log)        │
 │  Post-response, zero-latency, fire-and-forget                   │
@@ -918,7 +922,7 @@ This acts as a "Soft 404" net which ensures:
 
 ---
 
-## 10. SCALE-UP VAULT — ENTERPRISE FEATURES (DEFERRED)
+## 11. SCALE-UP VAULT — ENTERPRISE FEATURES (DEFERRED)
 
 > **Status:** Documented for when cf-admin scales to 100+ users.
 
