@@ -1,3 +1,30 @@
+REMIND TO DO ALL THINS;
+Part A — You must do this manually (Google Cloud Console)
+The Google OAuth verification issue is a dashboard configuration problem, not code. Check these in order:
+
+Fastest fix: Go to Google Cloud Console → OAuth consent screen → switch User Type to "Internal" (admin-only tool = no verification ever needed, no 100-user cap)
+
+If not on Google Workspace: Add your emails as test users (Audience → Add Users: harshil.8136@gmail.com, harshil.cloud8@gmail.com) while verification completes
+
+Critical — verify these redirect URIs in Google Cloud Console → Credentials → your OAuth client:
+
+Authorized redirect URIs: https://zlvmrepvypucvbyfbpjj.supabase.co/auth/v1/callback
+Authorized JavaScript origins: https://secure.madagascarhotelags.com
+Supabase Dashboard → Auth → URL Configuration: confirm https://secure.madagascarhotelags.com/auth/callback is in the redirect allowlist
+
+You must do: fill in the Client ID
+In wrangler.toml, replace the empty string with your actual Google OAuth Client ID:
+
+
+PUBLIC_GOOGLE_CLIENT_ID = "123456789-abc...xyz.apps.googleusercontent.com"
+Also add it to .dev.vars for local dev:
+
+
+PUBLIC_GOOGLE_CLIENT_ID=123456789-abc...xyz.apps.googleusercontent.com
+The Client ID is found in Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web client.
+
+
+
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
 > **Last Updated:** 2026-04-15 (v3.5: Chatbot Integration & Secure Admin Proxy Configuration)
