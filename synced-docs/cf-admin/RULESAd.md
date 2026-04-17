@@ -704,7 +704,7 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 
 - **Queue Binding:** `EMAIL_QUEUE` (mapped to `madagascar-emails`)
 - **Producer:** API Routes push a JSON payload with a unique `trackingId` to the queue and respond immediately.
-- **Consumer:** A standalone Cloudflare Worker (`cf-email-consumer`) consumes the queue batches and executes the Resend API `fetch` completely out of band of the user request.
+- **Consumer:** A standalone Cloudflare Worker (`cf-email-consumer`) consumes the queue batches, processes HTML templates using **Eta** (a lightweight Edge-native framework), and executes the Resend REST API `fetch` completely out of band of the user request. Bloated Node.js SDKs (like `resend` and React Email) are strictly forbidden in the consumer worker.
 - **Audit Logs:** All email payloads, transmission statuses, and Resend webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
 
 > 📖 **Full detailed documentation and Webhook setup guide:** Please refer to the master architecture document located at [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
