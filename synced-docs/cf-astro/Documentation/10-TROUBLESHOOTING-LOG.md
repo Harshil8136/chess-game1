@@ -536,3 +536,88 @@ Updated `public/_headers` `img-src` directive:
 
 - `public/_headers` — Added `cdn.madagascarhotelags.com` to `img-src`; removed obsolete `pet.madagascarhotelags.com`
 
+---
+
+## Issue #13: CMS Updates Never Appeared on Live Site
+
+**Date**: 2026-04-14
+**Severity**: 🔴 Production blocker — ALL CMS sections (Hero, Gallery, Services, Reviews)
+**Phase**: Post-launch CMS operations
+
+### Symptoms
+
+Admin saves changes in cf-admin (hero image upload, gallery push, services pricing, reviews) but the live site at `madagascarhotelags.com` never reflects the updates. The Gallery Manager UI showed "Saved to database, but live sync failed" on every save. D1 and R2 received the data correctly; the site just kept serving stale content indefinitely.
+
+### Root Cause — Primary (Blocked ALL sections)
+
+`PUBLIC_ASTRO_URL` in `cf-admin/wrangler.toml` was set to `https://pet.madagascarhotelags.com`:
+
+```toml
+PUBLIC_ASTRO_URL = "https://pet.madagascarhotelags.com"  # ← Wrong
+```
+
+`pet.madagascarhotelags.com` has a Cloudflare Redirect Rule (301) pointing to `madagascarhotelags.com`. When `revalidateAstro()` sends a `POST` to this URL:
+
+1. Cloudflare edge fires the redirect rule → returns **301**
+2. `fetch()` follows the redirect — but **HTTP spec (RFC 7231) mandates POST + 301 → downgraded to GET**
+3. A `GET /api/revalidate` reaches cf-astro — the endpoint only exports `POST`, so Astro returns **405**
+4. `revalidateAstro()` logs the failure, retries 3×, returns `{ success: false }`
+5. ISR cache is **never purged**, `cms:*` KV keys are **never injected**
+6. The live site serves the 30-day-cached stale HTML forever
+
+The same hardcoded fallback URL inside `revalidateAstro()` in `cms.ts` had the same wrong value, so the bug persisted even if the env var was missing.
+
+### Root Cause — Secondary (D1 replica lag trap)
+
+Even with the primary bug fixed, Hero, Reviews, and Services were still vulnerable: they called `revalidateAstro()` without a `cmsData` payload. This meant:
+1. ISR cache purged correctly
+2. First render after purge hits D1 — which may return **stale data** for several seconds due to read-replica lag
+3. The stale HTML is **re-cached in KV for 30 days**
+4. All requests serve the stale content until the next admin change
+
+Gallery was the only section with KV injection already implemented (introduced in v4.0). Hero, Reviews, and Services were missing it.
+
+### Resolution
+
+**Primary fix** — `cf-admin/wrangler.toml` and `cf-admin/src/lib/cms.ts`:
+```diff
+- PUBLIC_ASTRO_URL = "https://pet.madagascarhotelags.com"
++ PUBLIC_ASTRO_URL = "https://madagascarhotelags.com"
+
+- const astroUrl = env.PUBLIC_ASTRO_URL || 'https://pet.madagascarhotelags.com';
++ const astroUrl = env.PUBLIC_ASTRO_URL || 'https://madagascarhotelags.com';
+```
+
+**Secondary fix** — Added KV injection to all missing sections:
+
+- `cf-admin/src/pages/api/media/upload.ts`: injects `{ 'hero_image': cdnUrl }` for hero slot
+- `cf-admin/src/pages/api/content/reviews.ts`: injects `{ 'happy_clients': JSON.stringify(reviews) }`
+- `cf-admin/src/pages/api/content/services.ts`: injects `{ 'services_pricing': JSON.stringify(pricingData) }`
+- `cf-astro/src/lib/images.ts`: `getImageUrl()` upgraded with optional `kvCache` param — checks `cms:<slotId>` in KV before D1
+- `cf-astro/src/components/sections/Hero.astro`: passes `env.ISR_CACHE` to `getImageUrl()`
+- `cf-astro/src/components/sections/Testimonials.astro`: KV-first block before `getJsonBlock()` D1 call
+- `cf-astro/src/components/sections/Services.astro`: KV-first block before `getJsonBlock()` D1 call
+
+**Bonus fix** — `cf-admin/src/pages/api/media/upload.ts`: Added `owner` role to RBAC check (was missing, causing 403 for Owner-role users on image uploads).
+
+### Files Changed
+
+**cf-admin:**
+- `wrangler.toml` — Fixed `PUBLIC_ASTRO_URL`
+- `src/lib/cms.ts` — Fixed hardcoded fallback URL
+- `src/pages/api/media/upload.ts` — Added KV injection for hero; fixed `owner` RBAC
+- `src/pages/api/content/reviews.ts` — Added KV injection
+- `src/pages/api/content/services.ts` — Added KV injection
+
+**cf-astro:**
+- `src/lib/images.ts` — `getImageUrl()` upgraded to KV-first
+- `src/components/sections/Hero.astro` — Passes `ISR_CACHE` to image resolver
+- `src/components/sections/Testimonials.astro` — KV-first resolution before D1
+- `src/components/sections/Services.astro` — KV-first resolution before D1
+
+### Rule for Future
+
+> **Never use a domain that has a Cloudflare Redirect Rule as a webhook target.** 301/302 redirects silently downgrade POST to GET, breaking any endpoint that only accepts POST. Always point `PUBLIC_ASTRO_URL` directly at the canonical production domain of cf-astro (`https://madagascarhotelags.com`), not any alias or subdomain with a redirect.
+
+> **All CMS write endpoints must inject `cmsData` into `revalidateAstro()`.** Purging the ISR cache without injecting fresh data into KV creates a D1 replica lag window where stale HTML can be re-cached for up to 30 days. See `CMS_AND_BOOKINGS_MANAGEMENT.md` Section 6 for the full KV injection coverage table.
+

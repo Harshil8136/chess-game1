@@ -476,14 +476,15 @@ Astro supports **multiple UI frameworks as islands** — interactive components 
 - Zod v4 conflicts with Astro's internal Zod v3 dependency
 - Pin to `^3.25.0` in package.json
 
-### 6.5 Email: Resend HTTP API via Queue (NOT SMTP/Nodemailer/Brevo)
+### 6.5 Email: Native Fetch + Eta Templates via Queue (NOT React-Email/Resend SDK)
 
-- Cloudflare Workers cannot open raw TCP/SMTP sockets
-- Use `resend` npm package (uses HTTP API under the hood) or direct `fetch()` to Resend REST API
-- Official Cloudflare tutorial: https://developers.cloudflare.com/workers/tutorials/send-emails-with-resend/
+- Cloudflare Workers cannot open raw TCP/SMTP sockets.
+- The `resend` Node.js SDK and `@react-email/components` packages are **FORBIDDEN** due to massive bundle bloat.
+- We use direct `fetch()` calls to the Resend REST API (`https://api.resend.com/emails`).
+- For templates, we use **Eta** (`eta` package, ~2.5KB) for extremely lightweight, fast HTML generation natively on the Edge.
+- Official documentation for Resend API: https://resend.com/docs/api-reference/emails/send-email
 - Store `RESEND_API_KEY` in `.dev.vars` (local) and `wrangler secret put RESEND_API_KEY` (production)
 - Free tier: **3,000 emails/month**, **100 emails/day**
-- Supports React email templates via `@react-email/components` (renders to HTML server-side)
 - **Brevo is NOT used in this project** — Resend is the only email provider
 
 > ⚠️ **QUEUE-FIRST DELIVERY (Active):** All transactional emails are sent **asynchronously via Cloudflare Queues**, NOT inline in API routes. API routes push a typed message to `env.EMAIL_QUEUE`; the sidecar `cf-astro-email-consumer` Worker processes the queue and calls Resend. See **Section 6.13** for full architecture.
@@ -517,7 +518,7 @@ env.EMAIL_QUEUE    // Cloudflare Queue (producer — pushes messages)
 
 Supabase (PG):  Drizzle ORM + `pg` driver via Hyperdrive binding
 Upstash Redis:  `@upstash/redis` with REST API (no TCP needed)
-Resend Email:   `new Resend(env.RESEND_API_KEY)` (consumer worker only)
+Resend Email:   Direct `fetch` API + Eta Templates (consumer worker only)
 
 > ⚠️ **Email is NOT called directly from API routes.** API routes push to `env.EMAIL_QUEUE`. The `cf-astro-email-consumer` worker (in `queue-worker/`) reads from the queue and calls Resend. See **Section 6.13**.
 

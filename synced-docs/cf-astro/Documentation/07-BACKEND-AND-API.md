@@ -2,21 +2,82 @@
 
 ## Overview
 
-All server-side logic runs as **Cloudflare Workers** via Pages Functions. Routes opt into SSR with `export const prerender = false`.
+All server-side logic runs as **Cloudflare Workers** via the `@astrojs/cloudflare` adapter. The project uses `output: 'static'` in `astro.config.ts`; individual routes that need SSR opt in with `export const prerender = false`.
 
-The backend accesses Cloudflare bindings through `locals.runtime.env`:
+### Accessing Cloudflare Bindings
+
+The canonical env accessor is `getEnv()` from `src/lib/env.ts`. It reads from the `cloudflare:workers` module (Astro 6+ standard) and falls back to `import.meta.env` for local dev:
 
 ```typescript
-const env = locals.runtime.env;
-// env.DB      → D1Database
-// env.IMAGES  → R2Bucket
-// env.KV      → KVNamespace
-// env.BREVO_API_KEY → string (secret)
+import { getEnv } from '@lib/env';
+
+// In an .astro frontmatter or API route:
+const env = getEnv(Astro); // or getEnv(context) in API routes
+const db = env.DB;          // → D1Database
+const kv = env.ISR_CACHE;   // → KVNamespace (ISR cache + CMS KV injection)
+const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 ```
+
+> **Do not use `locals.runtime.env`** — this was the Astro 4/5 pattern and throws in Astro 6 with the `@astrojs/cloudflare` adapter. Always use `getEnv()`.
+
+### ISR Caching Middleware
+
+`src/middleware.ts` implements a KV-backed ISR cache for all SSR page routes:
+- **Cache key format:** `isr:<BUILD_ID>:<pathname>` (scoped per deployment to prevent stale-asset 404s)
+- **Cache TTL:** 30 days
+- **Purge mechanism:** `POST /api/revalidate` from cf-admin deletes ISR keys and optionally injects fresh `cms:*` data directly into KV to bypass D1 replica lag
 
 ---
 
 ## API Routes
+
+### `POST /api/revalidate` — ISR Cache Purge & CMS KV Injection
+
+**File**: `src/pages/api/revalidate.ts`
+
+**Auth**: Bearer token (`Authorization: Bearer <REVALIDATION_SECRET>`)
+
+**Purpose**: Called exclusively by `cf-admin` after any CMS content save. Purges the ISR HTML cache for the specified paths and optionally injects fresh CMS data directly into KV, bypassing D1 read-replica lag.
+
+**Request Body**:
+```json
+{
+  "paths": ["/", "/en", "/es"],
+  "cmsData": {
+    "gallery_images": "[{\"id\":\"abc\",\"src\":\"https://cdn...\",\"alt\":\"...\"}]",
+    "hero_image": "https://cdn.madagascarhotelags.com/hero/hero-uuid.jpg"
+  }
+}
+```
+
+**Flow**:
+1. Validates `Authorization: Bearer <REVALIDATION_SECRET>` header — returns 401/500 on failure
+2. For each path in `paths`: deletes `isr:<BUILD_ID>:<path>` from `ISR_CACHE` KV
+3. For each key/value in `cmsData`: writes `cms:<key>` to `ISR_CACHE` KV with 1-hour TTL
+4. Returns counts of purged ISR keys and injected CMS keys
+
+**Response (success)**:
+```json
+{
+  "revalidated": true,
+  "message": "Purged 3 paths, injected 1 CMS keys.",
+  "paths": ["/", "/en", "/es"],
+  "cmsKeysWritten": 1,
+  "now": 1712345678901
+}
+```
+
+**KV Key Conventions**:
+
+| Key | Written by | Read by | TTL |
+|-----|-----------|---------|-----|
+| `isr:<BUILD_ID>:<path>` | ISR middleware (on MISS) | ISR middleware (on HIT) | 30 days |
+| `cms:hero_image` | `POST /api/media/upload` (via revalidate) | `Hero.astro` → `getImageUrl()` | 1 hour |
+| `cms:gallery_images` | `POST /api/media/gallery` (via revalidate) | `Gallery.astro` → `getGalleryImageUrls()` | 1 hour |
+| `cms:services_pricing` | `POST /api/content/services` (via revalidate) | `Services.astro` | 1 hour |
+| `cms:happy_clients` | `POST /api/content/reviews` (via revalidate) | `Testimonials.astro` | 1 hour |
+
+---
 
 ### `POST /api/booking` — Booking Submission
 
