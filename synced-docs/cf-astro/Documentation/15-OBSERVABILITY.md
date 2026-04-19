@@ -52,8 +52,9 @@ init({
     breadcrumbsIntegration({ ... }),
     dedupeIntegration(),
     httpContextIntegration(),
+    browserTracingIntegration({}),
   ],
-  enableTracing: false,            // Saves 5M span budget entirely
+  tracesSampleRate: 0.1,           // 10% sample rate preserves 10K free quota
   sampleRate: 1.0,                 // 100% — low traffic site
   maxBreadcrumbs: 30,
 });
@@ -63,8 +64,8 @@ init({
 
 | Feature | Status | Reason |
 |---------|--------|--------|
-| Tracing | ❌ Disabled | Saves the entire 5M span/month budget |
-| Session Replay | ❌ Disabled | Saves the 50 replay budget; not needed for a marketing site |
+| Tracing & Apdex | ⚠️ Restricted (10%) | Enabled with a `0.1` sample rate to compute valid Apdex scores without exhausting the 10k free transaction limit. |
+| Session Replay | ❌ Disabled | Rejected. Video capturing consumes extreme quota and is entirely unnecessary for the marketing site. |
 | Default Integrations | ❌ Replaced | Using only 4 cherry-picked integrations instead of ~15 defaults |
 | Console Breadcrumbs | ❌ Disabled | Noisy in dev; not useful for production error context |
 
