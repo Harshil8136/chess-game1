@@ -54,7 +54,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Email** | Resend HTTP API (via `resend` SDK or `fetch()`) |
 | **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges) |
 | **Analytics** | PostHog (reverse-proxied) + Cloudflare Web Analytics |
-| **Error Tracking** | Sentry (`@sentry/browser`, lazy-loaded) |
+| **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing) |
 | **Logging** | BetterStack (`@logtail/edge`, server-side structured logging) |
 | **i18n** | Astro built-in (es/en with prefix routing) |
 | **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
@@ -746,10 +746,13 @@ To add a new email type (e.g., `password_reset`, `admin_weekly_report`):
 
 ### Phase 5: Observability ✅ COMPLETE
 - [x] **PostHog** — Full client-side analytics (consent-gated, reverse-proxied)
-- [x] **Sentry** — Browser error tracking (`@sentry/browser`, lazy-loaded via `requestIdleCallback`)
-  - Source map upload via `@sentry/vite-plugin` (conditional on `SENTRY_AUTH_TOKEN`)
-  - Tracing/Replay disabled (preserves free tier budget)
-  - Noise filtering: ResizeObserver, extensions, ad-blockers, View Transitions
+- [x] **Sentry** — Distributed Error Tracking and Observability (`@sentry/browser` + `@sentry/cloudflare`)
+  - Browser script is lazy-loaded via `requestIdleCallback` (zero LCP impact).
+  - Cloudflare Workers integration injects distributed trace headers linking `cf-astro` execution with asynchronous `cf-email-consumer` delivery jobs.
+  - Source map upload via `@sentry/vite-plugin` (conditional on `SENTRY_AUTH_TOKEN`).
+  - **Budget Conscious:** Strict `tracesSampleRate: 0.1` (10%) globally and full Session Replay explicitly disabled to stay safe within the free-tier quote.
+  - Prerendering compatibility achieved by strictly stubbing `cfContext.waitUntil` inside middleware.
+  - Noise filtering: ResizeObserver, extensions, ad-blockers, View Transitions.
 - [x] **BetterStack** — Structured server-side logging (`@logtail/edge`)
   - Booking API instrumented (success/failure/rate-limit)
   - Auto request metadata: IP, country, user-agent, CF-Ray
