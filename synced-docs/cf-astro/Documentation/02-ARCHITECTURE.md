@@ -178,7 +178,7 @@ This complies with Mexico's LFPDPPP (Ley Federal de Protección de Datos Persona
 
 Applied globally via Cloudflare Pages `_headers` file:
 
-- `X-Frame-Options: DENY` — Prevents clickjacking
+- **X-Frame-Options:** Removed to allow PostHog Heatmaps (relies on CSP `frame-ancestors` instead for clickjacking protection)
 - `X-Content-Type-Options: nosniff` — Prevents MIME sniffing
 - `X-XSS-Protection: 1; mode=block` — Legacy XSS filter
 - `Referrer-Policy: strict-origin-when-cross-origin` — Controls referrer leakage
@@ -197,7 +197,7 @@ Applied globally via Cloudflare Pages `_headers` file:
 | `font-src` | `'self'`, `data:`, `fonts.gstatic.com` |
 | `connect-src` | `'self'`, `*.posthog.com`, `*.ingest.us.sentry.io` |
 | `object-src` | `'none'` |
-| `frame-ancestors` | `'none'` |
+| `frame-ancestors` | `'self'`, `https://app.posthog.com`, `https://eu.posthog.com` |
 
 ### Environment Secrets
 
