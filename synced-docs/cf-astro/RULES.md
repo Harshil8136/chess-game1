@@ -48,7 +48,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Framework** | Astro 6.0+ with `@astrojs/cloudflare` adapter |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Pages (unlimited bandwidth, free) |
-| **Database** | Cloudflare D1 (SQLite) + Supabase PostgreSQL (via Hyperdrive) |
+| **Database** | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432) |
 | **Cache** | Cloudflare KV + Upstash Redis |
 | **Storage** | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated) |
 | **Email** | Resend HTTP API (via `resend` SDK or `fetch()`) |
@@ -640,7 +640,11 @@ All transactional emails are delivered **asynchronously** via a Cloudflare Queue
 │  Failure → msg.retry() (up to 3 retries)                        │
 │  Max retries exceeded → Dead Letter Queue (madagascar-emails-dlq)│
 │                                                                 │
+│  Failure Resilience: db.ts connection is NON-FATAL. If DB drops,│
+│  emails still send via Resend and audit logging is safely skipped.│
+│                                                                 │
 │  Secret: RESEND_API_KEY (set via wrangler secret put)           │
+│  Secret: DATABASE_URL (Supavisor pooler string)                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
