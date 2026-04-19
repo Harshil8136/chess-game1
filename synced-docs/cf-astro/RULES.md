@@ -752,6 +752,7 @@ To add a new email type (e.g., `password_reset`, `admin_weekly_report`):
   - Source map upload via `@sentry/vite-plugin` (conditional on `SENTRY_AUTH_TOKEN`).
   - **Budget Conscious:** Strict `tracesSampleRate: 0.1` (10%) globally and full Session Replay explicitly disabled to stay safe within the free-tier quote.
   - Prerendering compatibility achieved by strictly stubbing `cfContext.waitUntil` inside middleware.
+  - **Middleware Constraint:** `@sentry/cloudflare`'s `wrapRequestHandler` immediately executes and evaluates to a `Promise<Response>`. It MUST be awaited and returned immediately, and `src/middleware.ts` MUST enforce Astro's `MiddlewareHandler` types to prevent HTTP 500 crashes resulting from returning a raw Function.
   - Noise filtering: ResizeObserver, extensions, ad-blockers, View Transitions.
 - [x] **BetterStack** — Structured server-side logging (`@logtail/edge`)
   - Booking API instrumented (success/failure/rate-limit)
