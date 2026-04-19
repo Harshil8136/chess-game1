@@ -20,24 +20,12 @@ The CF-Admin portal operates under strict zero-trust principles optimized for Cl
 
 ### Technical Interaction Model
 
-```mermaid
-sequenceDiagram
-    participant Admin as Admin Actor
-    participant API as Admin API (Worker)
-    participant D1 as D1 Database
-    participant KV as Session KV
-    participant Auth as Supabase Auth
-
-    Admin->>API: POST /api/users/manage (Invite)
-    API->>API: Validate CSRF & RBAC Clearance
-    API->>D1: INSERT INTO admin_authorized_users
-    API->>Auth: admin.createUser() via Service Role
-    Auth-->>API: Return User UUID
-    API->>D1: UPDATE authorized_users SET supabase_id
-    API->>D1: INSERT INTO admin_page_overrides (Optional)
-    API->>API: auditLog() (Fire-and-Forget)
-    API-->>Admin: 201 Created (Sanitized JSON)
-```
+1. **Admin Actor** initiates `POST /api/users/manage`.
+2. **Admin API (Worker)** validates CSRF tokens and internal RBAC clearance.
+3. **D1 Database** records the user in the `admin_authorized_users` whitelist.
+4. **Supabase Auth** creates the user record via the Admin Service Role.
+5. **D1 Database** is updated with the returned Supabase UUID and any page overrides.
+6. **Audit Engine** records the event and the API returns a sanitized 201 Created response.
 
 ## 2. Role Hierarchy (5-Tier)
 
@@ -72,26 +60,14 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 
 ### 3.1 Session Revocation Workflow (Ghost Sweep)
 
-When a user's role is changed or their account is deactivated, the system triggers a **Security Cascade** to prevent stale sessions from retaining high-privilege access.
+When a user's role is changed or their account is deactivated, the system triggers a **Security Cascade** to prevent stale sessions from retaining high-privilege access:
 
-```mermaid
-sequenceDiagram
-    participant Admin as Manager
-    participant API as User API
-    participant D1 as D1 Database
-    participant KV as Session KV
-
-    Admin->>API: PATCH /api/users/manage (Role Change)
-    API->>API: Verify Privilege Clearance
-    API->>D1: UPDATE role IN admin_authorized_users
-    API->>D1: DELETE FROM admin_page_overrides WHERE user_id
-    API->>KV: LIST user-session:{userId}:*
-    loop Every Active Session
-        API->>KV: DELETE session:{sessionId}
-        API->>KV: DELETE user-session:{userId}:{sessionId}
-    end
-    API-->>Admin: 200 OK (User Decoupled)
-```
+1. **Verification**: Manager privilege clearance is verified.
+2. **Whitelist Update**: D1 `admin_authorized_users` is updated with the new role/status.
+3. **Override Purge**: Any custom page overrides are deleted to ensure a clean RBAC state.
+4. **KV Sweep**: The system LISTS all sessions via `user-session:{userId}:*`.
+5. **Atomic Deletion**: Matches are deleted from the main session store and the reverse index.
+6. **Decoupling complete**: User is returned to a logged-out state.
 
 **Reverse-Index KV Pattern**: 
 Instead of scanning the entire session KV (which could be thousands of keys), we maintain a secondary index `user-session:{userId}:{sessionId}: '1'`. This allows the API to perform a targeted `LIST` operation and delete only relevant sessions in `O(sessions_per_user)` time instead of `O(total_sessions)`.
