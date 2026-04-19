@@ -1,5 +1,5 @@
 {% raw %}
-﻿# Dashboard Overhaul â€” Real-Data Command Center
+# Dashboard Overhaul â€” Real-Data Command Center
 
 **Last updated:** 2026-04-12
 **Scope:** `cf-admin` project â€” Dashboard page and all supporting analytics infrastructure

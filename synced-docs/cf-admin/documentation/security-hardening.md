@@ -1,5 +1,5 @@
 {% raw %}
-﻿# ðŸ” Security Hardening Architecture
+# ðŸ” Security Hardening Architecture
 
 > **Status:** Production Ready
 > **Last Updated:** April 2026

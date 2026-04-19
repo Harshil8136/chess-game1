@@ -1,5 +1,5 @@
 {% raw %}
-﻿# Edge Observability & Error Tracking
+# Edge Observability & Error Tracking
 
 > **System Status:** Production Ready
 > **Last Updated:** April 2026
