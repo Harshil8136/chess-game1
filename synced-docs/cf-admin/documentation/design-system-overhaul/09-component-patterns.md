@@ -1,3 +1,4 @@
+{% raw %}
 # 09 — Component Design Patterns
 
 > **Goal:** Standardize all UI components to use consistent patterns, tokens, and interaction behaviors.
@@ -544,3 +545,4 @@ All components follow this naming convention:
 | **Conditional** | `.stat-value--danger` | Element + double-hyphen + condition |
 
 > **Rule:** No BEM `__` double underscore. Use single hyphen for children, double hyphen for modifiers/conditions.
+{% endraw %}

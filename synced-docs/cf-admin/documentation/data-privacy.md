@@ -1,3 +1,4 @@
+{% raw %}
 # Data Privacy Dashboard
 
 ## Overview
@@ -37,3 +38,4 @@ All features are tested against:
 1. Strict PLAC denials for insufficient role levels.
 2. Proper edge-compute scaling with optimized database queries minimizing CPU cycles.
 3. Mobile-layout responsiveness utilizing sidebars and grids optimized in CSS.
+{% endraw %}

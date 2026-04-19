@@ -1,3 +1,4 @@
+{% raw %}
 # Theme System & Linear/Vercel Slate Design Spec
 
 ## Goal
@@ -45,3 +46,4 @@ Existing hardcoded inline styles across the application were refactored to utili
 - Run the dev server and navigate through all 6 pages of the Content Studio.
 - Verify that no legacy pitch-black background colors remain.
 - Verify that swapping the `data-theme` attribute correctly changes the underlying color base.
+{% endraw %}

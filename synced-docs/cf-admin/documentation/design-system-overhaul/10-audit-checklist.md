@@ -1,3 +1,4 @@
+{% raw %}
 # 10 — File-by-File Audit Checklist
 
 > **Purpose:** Comprehensive audit of every file that needs modification during the overhaul.  
@@ -474,3 +475,4 @@ Changes:
 20. Visual regression test every page
 21. Lighthouse audit (performance + accessibility scores)
 22. Cross-browser test (Chrome, Firefox, Safari)
+{% endraw %}

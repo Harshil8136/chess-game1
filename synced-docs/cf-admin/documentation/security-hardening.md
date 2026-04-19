@@ -1,4 +1,5 @@
-# 🔐 Security Hardening Architecture
+{% raw %}
+﻿# ðŸ” Security Hardening Architecture
 
 > **Status:** Production Ready
 > **Last Updated:** April 2026
@@ -12,11 +13,11 @@ This document details the security hardening measures applied across the `cf-adm
 
 The system implements a 5-layer defense architecture:
 
-- **Layer 5 — Audit Integrity:** All context-critical mutations are tracked via fire-and-forget deferred execution.
-- **Layer 4 — Error Sanitization:** All API endpoints return generic error messages. No stack traces, SQL errors, or schema details leak.
-- **Layer 3 — CSRF Protection:** Stateless Origin + Referer validation applied globally to all mutating HTTP methods via middleware.
-- **Layer 2 — Session Security:** Host-prefixed cookie (production), 30-minute JWT refresh + 24-hour hard expiry, reverse-index KV session mapping for O(k) force-logout.
-- **Layer 1 — Transport Security:** HSTS (2-year preload) + DENY framing + strict CSP, request ID for audit correlation, HTTP method restriction on public routes (GET/HEAD only).
+- **Layer 5 â€” Audit Integrity:** All context-critical mutations are tracked via fire-and-forget deferred execution.
+- **Layer 4 â€” Error Sanitization:** All API endpoints return generic error messages. No stack traces, SQL errors, or schema details leak.
+- **Layer 3 â€” CSRF Protection:** Stateless Origin + Referer validation applied globally to all mutating HTTP methods via middleware.
+- **Layer 2 â€” Session Security:** Host-prefixed cookie (production), 30-minute JWT refresh + 24-hour hard expiry, reverse-index KV session mapping for O(k) force-logout.
+- **Layer 1 â€” Transport Security:** HSTS (2-year preload) + DENY framing + strict CSP, request ID for audit correlation, HTTP method restriction on public routes (GET/HEAD only).
 
 ---
 
@@ -28,11 +29,11 @@ Stateless CSRF validation using the browser's automatic Origin and Referer heade
 
 | Step | Check | Action |
 |------|-------|--------|
-| 1 | Method is `GET`, `HEAD`, or `OPTIONS` | Skip — safe methods don't mutate state |
-| 2 | `Origin` header matches site URL | ✅ Allow |
-| 3 | `Origin` header doesn't match | ❌ Deny — origin mismatch |
-| 4 | No `Origin`, but `Referer` starts with site URL | ✅ Allow (fallback) |
-| 5 | No `Referer` either | ❌ Deny — missing origin headers (fail-closed) |
+| 1 | Method is `GET`, `HEAD`, or `OPTIONS` | Skip â€” safe methods don't mutate state |
+| 2 | `Origin` header matches site URL | âœ… Allow |
+| 3 | `Origin` header doesn't match | âŒ Deny â€” origin mismatch |
+| 4 | No `Origin`, but `Referer` starts with site URL | âœ… Allow (fallback) |
+| 5 | No `Referer` either | âŒ Deny â€” missing origin headers (fail-closed) |
 
 ### Integration
 
@@ -57,10 +58,10 @@ When the site URL is not configured (local dev), CSRF validation is skipped enti
 
 In production, session cookies use a browser-enforced security prefix. This prefix enforces:
 
-- ✅ Cookie must be set with `Secure` flag
-- ✅ Cookie must be set from the host (not a subdomain)
-- ✅ Cookie path must be `/`
-- ✅ Cookie cannot be set by a subdomain of the same top-level domain
+- âœ… Cookie must be set with `Secure` flag
+- âœ… Cookie must be set from the host (not a subdomain)
+- âœ… Cookie path must be `/`
+- âœ… Cookie cannot be set by a subdomain of the same top-level domain
 
 This prevents **subdomain fixation attacks** where an attacker on a malicious subdomain attempts to inject a session cookie for the secure admin domain.
 
@@ -74,25 +75,34 @@ Public routes (homepage and auth callback) are restricted to `GET` and `HEAD` me
 
 ---
 
-## 5. Request Tracing
+## 5. Ghost Protection Session Sweeps
+
+Role mutations and permission changes trigger a synchronous **Ghost Protection Session Sweep**. When an administrator alters a user's role:
+1. \esetUserOverrides\ is called immediately to purge stale PLAC overrides.
+2. \orceLogoutUser\ is called to instantly destroy the target user's active KV session.
+
+This guarantees that modified users are instantly expelled and forced to re-authenticate under their new context, completely blocking privilege escalation via lingering session tokens.
+---
+
+## 6. Request Tracing
 
 Every request receives a unique request ID header generated via `crypto.randomUUID()`. This ID can be correlated with audit log entries to trace the lifecycle of any request from ingress through mutation to audit write.
 
 ---
 
-## 6. Error Sanitization
+## 7. Error Sanitization
 
 All API endpoints follow a strict error response policy:
 
 ### Rules
-1. **Never expose** raw error messages from caught exceptions — they may contain SQL errors, file paths, or internal state.
+1. **Never expose** raw error messages from caught exceptions â€” they may contain SQL errors, file paths, or internal state.
 2. **Always return** generic error messages to the client.
 3. **Log the real error** server-side for observability (Sentry/Cloudflare logs).
-4. **Uniform 404 shape** for hidden account queries — whether the account exists or not, unauthorized roles see the same response.
+4. **Uniform 404 shape** for hidden account queries â€” whether the account exists or not, unauthorized roles see the same response.
 
 ---
 
-## 7. Auth Callback Hardening
+## 8. Auth Callback Hardening
 
 The OAuth callback endpoint includes multiple security layers:
 
@@ -104,7 +114,7 @@ The OAuth callback endpoint includes multiple security layers:
 
 ---
 
-## 8. Security Headers
+## 9. Security Headers
 
 Applied globally by Cloudflare:
 
@@ -118,11 +128,20 @@ Applied globally by Cloudflare:
 | `Cross-Origin-Resource-Policy` | Blocks cross-origin data reads (same-origin) |
 | `Permissions-Policy` | Disables unnecessary browser APIs (camera, microphone, geolocation, payment) |
 | `Strict-Transport-Security` | 2-year HSTS with preload |
-| `Content-Security-Policy` | Nonce-based via Astro 6 — no `unsafe-eval` or `unsafe-inline` |
+| `Content-Security-Policy` | Nonce-based via Astro 6 â€” no `unsafe-eval` or `unsafe-inline` |
 
 ---
 
-## 9. Required Production Secrets
+
+## 9. Strict Content Security Policy (CSP)
+
+The admin portal implements a Strict Content Security Policy that outright bans \unsafe-inline\ styles and scripts. 
+
+### 9.1 Data-Attribute Driven CSS
+To achieve strict CSP compliance without sacrificing modern UI interactivity, the dashboard utilizes **Data-Attribute Driven CSS**. Dynamic UI state (e.g., expanded sidebars, active tabs, dialog visibility) is controlled entirely via data attributes (e.g., \data-state="expanded"\, \data-active="true"\) instead of inline \style={{...}}\ properties. This decoupling of presentation state from JavaScript ensures malicious inline injections are blocked while maintaining a robust "Main Workspace + Sidebar Architecture".
+
+---
+## 10. Required Production Secrets
 
 All must be deployed as Worker secrets via Wrangler:
 
@@ -139,3 +158,4 @@ All must be deployed as Worker secrets via Wrangler:
 | Cloudflare Zone ID | Specific CF zone for Dashboard HTTP metrics |
 | Resend API Key | Outgoing emails & dashboard metrics |
 | Sentry Auth Token | Sentry API for dashboard error feed |
+{% endraw %}

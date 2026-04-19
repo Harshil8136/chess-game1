@@ -1,3 +1,4 @@
+{% raw %}
 # CMS, Image & Bookings Management — Technical Documentation
 
 > **Version:** 4.2 (Full KV Injection Parity — Hero, Reviews, Services; `PUBLIC_ASTRO_URL` Bug Fix)
@@ -304,3 +305,4 @@ Sync path fixes, revalidation secret alignment documentation.
 
 ### v4.0 — 2026-04-XX
 Initial 2-tier KV injection strategy for Gallery. Resiliency engine with 3× exponential backoff. Retry Sync UI button in GalleryManager.
+{% endraw %}

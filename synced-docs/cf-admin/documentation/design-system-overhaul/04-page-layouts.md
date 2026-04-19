@@ -1,3 +1,4 @@
+{% raw %}
 # 04 — Page Layout Strategy
 
 > **Philosophy:** "Each page gets the density its content demands."  
@@ -406,3 +407,4 @@ For components that need to adapt to their container width rather than viewport 
 ```
 
 This is especially valuable for the dashboard's bento grid, where card width varies based on grid configuration, not viewport width.
+{% endraw %}

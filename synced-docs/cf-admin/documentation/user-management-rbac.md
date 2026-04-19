@@ -1,3 +1,4 @@
+{% raw %}
 # Manage Users & RBAC Architecture
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
@@ -168,4 +169,7 @@ For detailed PLAC documentation, see the dedicated [PLAC & Audit document](./PLA
 - The Page Access Manager renders a toggle grid showing all pages and their access state for a target user.
 - Changes save immediately via optimistic UI with toast confirmation.
 - Pages the actor cannot modify are shown locked (grayed out with lock icon).
-- Role changes trigger automatic override reset (all historical overrides are purged for the user).
+- **Role Mutation Pipeline (Ghost Protection Invalidation):** Changing a user's role is a high-risk event. Any role update triggers a synchronous security cascade:
+  1. `resetUserOverrides`: Purges all historical custom page overrides, returning the user to a clean RBAC state.
+  2. `forceLogoutUser`: Immediately destroys the user's active KV session to prevent privilege escalation via stale tokens.
+{% endraw %}

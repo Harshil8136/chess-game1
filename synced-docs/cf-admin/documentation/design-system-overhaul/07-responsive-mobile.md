@@ -1,3 +1,4 @@
+{% raw %}
 # 07 — Responsive & Mobile Strategy
 
 > **Philosophy:** "Progressive adaptation — core pages fully responsive, CRUD pages functional but simplified."  
@@ -397,3 +398,4 @@ Already present in `AdminLayout.astro`. No `maximum-scale` restriction — users
 - [ ] Verify charts degrade gracefully at small widths
 - [ ] Test landscape orientation on phones
 - [ ] Verify no horizontal scroll on any page at any breakpoint
+{% endraw %}

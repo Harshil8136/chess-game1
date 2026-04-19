@@ -1,3 +1,4 @@
+{% raw %}
 # CF-ADMIN CHATBOT INTEGRATION
 
 > **Status:** ✅ IMPLEMENTED  
@@ -46,3 +47,4 @@ The chatbot integration relies strictly on decoupled islands mapped heavily insi
 - The UI maintains the `Midnight Slate` aesthetics per standard `cf-admin` rules.
 - **NEVER** expose the true endpoint URLs of `cf-chatbot` to the client boundary.
 - **NEVER** cache sensitive analytical payloads in the client framework; use the `refetch()` trigger from `useChatbotApi` post-mutations to maintain single-source-of-truth from the backend D1 container.
+{% endraw %}

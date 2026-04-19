@@ -1,3 +1,4 @@
+{% raw %}
 # 🎨 CF-ADMIN — PREMIUM COLOR PALETTES
 
 > **🚨 DEPRECATED:** This multi-color section identity system (Obsidian Spectrum) has been replaced globally by the unified **"Midnight Slate" (Cyan Accent)** theme! DO NOT USE VIOLET ACCENTS OR SECTION COLORS.
@@ -180,3 +181,4 @@ The following palettes from V1 remain as **supplementary references** for non-se
 ---
 
 *End of Premium Color Palettes v2.0 — "Obsidian Spectrum"*
+{% endraw %}

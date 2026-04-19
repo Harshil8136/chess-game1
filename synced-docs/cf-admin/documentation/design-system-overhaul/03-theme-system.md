@@ -1,3 +1,4 @@
+{% raw %}
 # 03 — Theme System (Dark + Light)
 
 > **Goal:** Ship dark and light themes simultaneously with a persistent toggle, system preference detection, and zero Flash of Wrong Theme (FOWT).
@@ -315,3 +316,4 @@ The gradient orbs in `AdminLayout.astro` need theme-aware colors:
 13. [ ] Test: System preference auto-switches (when no cookie)
 14. [ ] Test: No FOWT on hard refresh
 15. [ ] Test: Charts re-render on theme change
+{% endraw %}

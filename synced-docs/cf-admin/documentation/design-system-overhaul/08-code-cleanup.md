@@ -1,3 +1,4 @@
+{% raw %}
 # 08 — Codebase Cleanup & Refactoring
 
 > **Goal:** Eliminate all technical debt during the design system migration.  
@@ -379,3 +380,4 @@ The cleanup should be done in this order to minimize merge conflicts:
 5. **Fifth:** Split monolith CSS files
 6. **Sixth:** Optimize Preact components (memo, lazy, types)
 7. **Last:** Visual regression test every page
+{% endraw %}

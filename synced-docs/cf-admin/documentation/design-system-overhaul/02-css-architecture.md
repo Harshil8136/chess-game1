@@ -1,3 +1,4 @@
+{% raw %}
 # 02 — CSS Architecture
 
 > **Goal:** Transform the current four-paradigm mess into a clean, two-paradigm system that leverages Astro's automatic per-route code splitting.
@@ -255,3 +256,4 @@ Tailwind v4 handles this automatically. The `@layer base` in `dark.css`/`light.c
 - [ ] Update all component imports
 - [ ] Remove `placeholder.css` import from `AdminLayout.astro`
 - [ ] Visual regression test every page
+{% endraw %}

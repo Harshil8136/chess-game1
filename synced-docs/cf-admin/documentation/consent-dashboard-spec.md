@@ -1,3 +1,4 @@
+{% raw %}
 # Consent Records Dashboard Rebuild — Design Spec
 
 > **Date:** 2026-04-17  
@@ -201,3 +202,4 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 ```
+{% endraw %}
