@@ -191,6 +191,8 @@ pages_build_output_dir = "./dist"
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST auth token |
 | `REVALIDATION_SECRET` | Shared secret for cf-admin → cf-astro ISR cache purge |
+| `BETTERSTACK_SOURCE_TOKEN` | BetterStack Logtail source token (structured logging) |
+| `SENTRY_AUTH_TOKEN` | Sentry auth token (build-time only, for source map upload) |
 
 ---
 
@@ -211,6 +213,8 @@ interface Env {
   SENDER_EMAIL: string;     // Secret
   REVALIDATION_SECRET: string; // Shared ISR purge secret
   SUPABASE_SERVICE_ROLE_KEY: string; // Secret
+  BETTERSTACK_SOURCE_TOKEN: string; // BetterStack logging
+  SENTRY_DSN: string;       // Sentry client DSN
   SITE_URL: string;         // Public var
   DEFAULT_LOCALE: string;   // Public var
 }

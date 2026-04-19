@@ -54,8 +54,8 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Email** | Resend HTTP API (via `resend` SDK or `fetch()`) |
 | **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges) |
 | **Analytics** | PostHog (reverse-proxied) + Cloudflare Web Analytics |
-| **Error Tracking** | Sentry (browser SDK) |
-| **Logging** | BetterStack (to be added last) |
+| **Error Tracking** | Sentry (`@sentry/browser`, lazy-loaded) |
+| **Logging** | BetterStack (`@logtail/edge`, server-side structured logging) |
 | **i18n** | Astro built-in (es/en with prefix routing) |
 | **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
 
@@ -744,10 +744,16 @@ To add a new email type (e.g., `password_reset`, `admin_weekly_report`):
   - Semantic search across FAQ/content
   - Pet breed recommendations
 
-### Phase 5: Observability (Added Last)
-- [ ] **PostHog** — Full client-side analytics
-- [ ] **Sentry** — Browser error tracking (`@sentry/browser`)
-- [ ] **BetterStack** — Log aggregation and uptime monitoring
+### Phase 5: Observability ✅ COMPLETE
+- [x] **PostHog** — Full client-side analytics (consent-gated, reverse-proxied)
+- [x] **Sentry** — Browser error tracking (`@sentry/browser`, lazy-loaded via `requestIdleCallback`)
+  - Source map upload via `@sentry/vite-plugin` (conditional on `SENTRY_AUTH_TOKEN`)
+  - Tracing/Replay disabled (preserves free tier budget)
+  - Noise filtering: ResizeObserver, extensions, ad-blockers, View Transitions
+- [x] **BetterStack** — Structured server-side logging (`@logtail/edge`)
+  - Booking API instrumented (success/failure/rate-limit)
+  - Auto request metadata: IP, country, user-agent, CF-Ray
+  - Console fallback in dev mode
 
 ---
 
@@ -785,8 +791,10 @@ All file names must be unique and descriptive across the project:
 ### 9.1 Secrets Management
 - Local dev secrets in `.dev.vars` (gitignored)
 - Production secrets via `wrangler secret put <KEY>`
+- Build-time secrets via system environment variables (e.g. `SENTRY_AUTH_TOKEN`)
 - Never commit secrets; `.dev.vars` is in `.gitignore`
-- Required secrets: `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`
+- Required secrets: `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `BETTERSTACK_SOURCE_TOKEN`
+- Build-time only: `SENTRY_AUTH_TOKEN` (for source map upload — not needed at runtime)
 
 ### 9.2 Input Validation
 - All API endpoints validate with Zod schemas before processing
@@ -802,7 +810,7 @@ All file names must be unique and descriptive across the project:
 Defined in `public/_headers` for all origins:
 - `default-src 'self'`
 - `script-src 'self' 'unsafe-inline' *.posthog.com challenges.cloudflare.com`
-- `connect-src 'self' *.posthog.com *.ingest.us.sentry.io *.supabase.co api.resend.com api.indexnow.org`
+- `connect-src 'self' *.posthog.com *.ingest.us.sentry.io in.logs.betterstack.com *.supabase.co api.resend.com api.indexnow.org`
 - `img-src 'self' blob: data: *.r2.dev cdn.madagascarhotelags.com`
 
 **Critical**: `cdn.madagascarhotelags.com` (custom R2 CDN domain) MUST stay in `img-src`. Removing it silently blocks all R2-served images in the browser. Any new image domain (R2 aliases, external CDNs) must be added here before deployment. See Issue #12 in [10-TROUBLESHOOTING-LOG.md](./Documentation/10-TROUBLESHOOTING-LOG.md).
@@ -1017,6 +1025,7 @@ Always refer to the appropriate skill guidelines to ensure high-quality and cons
 | **Upstash** | Redis (rate limiting) | 10K commands/day, 256 MB | **$0** |
 | **PostHog** | Product analytics | 1M events/month | **$0** |
 | **Sentry** | Error tracking | 5K errors/month | **$0** |
+| **BetterStack** | Structured logging + uptime | 3GB logs (3-day retention), 100K exceptions | **$0** |
 | **GitHub** | Source control + CI | Unlimited private repos | **$0** |
 | | | **TOTAL MONTHLY COST** | **$0.00** |
 

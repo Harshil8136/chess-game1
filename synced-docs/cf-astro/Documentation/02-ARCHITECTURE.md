@@ -23,10 +23,10 @@
                               │
                     ┌─────────┴──────────┐
                     │  External Services     │
-                    │  - Brevo (booking email)│
-                    │  - Formspree (contact)  │
-                    │  - PostHog (proxy)      │
+                    │  - Resend (email)       │
+                    │  - PostHog (analytics)  │
                     │  - Sentry (errors)      │
+                    │  - BetterStack (logs)   │
                     │  - Google Fonts         │
                     │  - Google Maps (embeds) │
                     └─────────────────────────┘
@@ -195,7 +195,7 @@ Applied globally via Cloudflare Pages `_headers` file:
 | `style-src` | `'self'`, `'unsafe-inline'`, `fonts.googleapis.com` |
 | `img-src` | `'self'`, `blob:`, `data:`, `*.r2.dev`, `madagascarhotelags.com` |
 | `font-src` | `'self'`, `data:`, `fonts.gstatic.com` |
-| `connect-src` | `'self'`, `*.posthog.com`, `*.ingest.us.sentry.io` |
+| `connect-src` | `'self'`, `*.posthog.com`, `*.ingest.us.sentry.io`, `in.logs.betterstack.com` |
 | `object-src` | `'none'` |
 | `frame-ancestors` | `'self'`, `https://app.posthog.com`, `https://eu.posthog.com` |
 
@@ -208,5 +208,6 @@ Secrets are stored in `.dev.vars` (local dev) and `wrangler secret put` (product
 - `SENDER_EMAIL` — From address for outbound emails
 - `POSTHOG_KEY` — PostHog project API key
 - `SENTRY_DSN` — Sentry client DSN
+- `BETTERSTACK_SOURCE_TOKEN` — BetterStack Logtail source token
 
 **These are never committed to git** (`.dev.vars` is in `.gitignore`).
