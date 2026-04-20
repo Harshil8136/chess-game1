@@ -137,126 +137,13 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ---
 
-## 3. RBAC Ã¢â‚¬â€ ROLE-BASED ACCESS CONTROL
+## 3. RBAC — ROLE-BASED ACCESS CONTROL
 
-### Role Hierarchy (5-Tier Ã¢â‚¬â€ lower number = higher privilege)
+> 📖 **Full technical details:** [`documentation/user-management-rbac.md`](./documentation/user-management-rbac.md)
 
-Defined centrally in `src/lib/auth/rbac.ts`. Color hierarchy follows a **thermal gradient** designed for dark UI legibility:
+## 4. INFRASTRUCTURE FREE TIER LIMITS
 
-| Role | Level | Icon | Badge Color | Hex | Permissions |
-|------|-------|------|-------------|-----|-------------|
-| **DEV** | 0 | Ã¢Å¡Â¡ | Red | `#ef4444` | Absolute system access + dev tools + DB admin + hidden account creation |
-| **Owner** | 1 | Ã°Å¸â€™Å½ | Emerald | `#10b981` | Project ownership + billing + API keys + view hidden accounts |
-| **SuperAdmin** | 2 | Ã°Å¸â€˜â€˜ | Amber | `#f59e0b` | Full access + user management + settings |
-| **Admin** | 3 | Ã°Å¸â€ºÂ¡Ã¯Â¸Â | Purple | `#8b5cf6` | Content management + bookings + reports |
-| **Staff** | 4 | Ã°Å¸â€˜Â¤ | Blue | `#3b82f6` | Read bookings + basic operations |
-
-### Ghost Protection (DEV + Owner Isolation)
-- **DEV accounts** are "Ghosts" Ã¢â‚¬â€ invisible to SuperAdmin and below in user listings and API queries
-- **Owner accounts** are "Protected" Ã¢â‚¬â€ cannot be modified or deleted by SuperAdmin or below
-- Only a logged-in DEV can see/manage other DEV and Owner accounts
-- Both DEV and Owner accounts can view **hidden accounts** (see below)
-
-### Hidden Accounts System
-- DEV can create accounts with `is_hidden: true` flag in `admin_authorized_users` (Supabase)
-- Hidden accounts are completely invisible to SuperAdmin, Admin, and Staff in the user list API (`GET /api/users`)
-- Only DEV and Owner roles can view hidden accounts
-- Hidden accounts receive identical 404 responses when queried by unauthorized roles (anti-enumeration)
-- The **HiddenAccountToggle** UI component only renders in `InviteUserModal` when `activeRole === 'dev' || activeRole === 'owner'` (mirrors the `isOwnerOrDev()` server guard in `rbac.ts`)
-
-### Authorization Model (RBAC + PLAC)
-1. **Ghost Protection Session Sweep:** When a user's role is updated, the system MUST synchronously call \esetUserOverrides\ to purge previous overrides, and \orceLogoutUser\ to immediately terminate their active session, preventing privilege escalation using stale tokens.
-1. **Supabase signup is DISABLED** in dashboard settings
-2. Only users listed in `admin_authorized_users` table can access the portal. They are assigned a natural hierarchy level above.
-3. DEV/Owner/SuperAdmin can add users to the whitelist with assigned roles (constrained to their level and below).
-4. **PLAC (Page-Level Access Control)** dynamically overlays explicit `GRANT` and `DENY` parameters to specific pages per user in D1 `admin_page_overrides`. Overrides can now be set **at creation time** via the InviteUserModal page chip grid Ã¢â‚¬â€ the POST `/api/users/manage` endpoint accepts an optional `pageOverrides: { pagePath, granted }[]` array and batch-writes to D1 after the GoTrue user is provisioned.
-5. Access Maps are evaluated via Cloudflare KV with O(1) reads taking <0.5ms on `middleware.ts`. "Deny" values strictly overrule all naturally inherited hierarchies.
-6. **Ghost Audit Engine** logs all sensitive mutations (PLAC parsing, User Management, Content/Media updates) via `ctx.waitUntil()` (accessed through `getCfContext()` from `env.ts`). The audit factory validates table names against `ALLOWED_AUDIT_TABLES` whitelist.
-7. GoTrue issues JWTs for valid auth attempts; application layer validates the JWT against KV caches and role definitions.
-
-### Session Security
-| Setting | Value | Rationale |
-|---------|-------|-----------|
-| JWT Refresh | Every 30 minutes | `SESSION_REFRESH_INTERVAL_MS=1800000` |
-| Max Session | 24 hours | `SESSION_MAX_LIFETIME_MS=86400000` |
-| Cookie Prefix | `__Host-admin_session` (production) | Prevents subdomain fixation attacks |
-| Storage | Cloudflare KV (Astro Sessions) | Edge-local, fast reads |
-| SignOut | Destroys KV entry + revokes Supabase tokens globally | No lingering tokens |
-
-### Environment Bindings Rule (Astro 6)
-- **`src/lib/env.ts`** is the **single source of truth** for all Cloudflare Workers env bindings
-- `getEnv(context)` returns typed `CfEnv` with Proxy fallback to `process.env` for local dev
-- `getRawEnv()` provides direct env object access for session/auth modules
-- `getKVBinding()` returns the `SESSION` KV namespace directly
-- **NEVER import `cloudflare:workers` in any other file** Ã¢â‚¬â€ always import from `env.ts`
-- `getCfContext(context)` provides `waitUntil()` for background tasks (replaces deprecated `locals.runtime`)
-
----
-
-## 4. CLOUDFLARE FREE TIER Ã¢â‚¬â€ EXACT LIMITS & QUOTAS
-
-> Identical to cf-astro. All data verified against official Cloudflare documentation (March 2026).
-
-### 4.1 Workers (Compute)
-
-| Metric | Free Limit |
-|--------|-----------|
-| Requests | **100,000/day** |
-| CPU time per request | **10 ms** |
-| Memory | 128 MB |
-| Subrequests per request | 50 |
-| Worker script size | 3 MB |
-| Number of Workers | 100 per account |
-
-### 4.2 KV (Sessions)
-
-| Metric | Free Limit |
-|--------|-----------|
-| Keys read | **100,000/day** |
-| Keys written | **1,000/day** |
-| Storage per account | **1 GB** |
-
-### 4.3 D1 Database (SQLite)
-
-| Metric | Free Limit |
-|--------|-----------|
-| Rows read | **5 million/day** |
-| Rows written | **100,000/day** |
-| Storage | **5 GB** |
-
-### 4.4 R2 Object Storage
-
-| Metric | Free Limit |
-|--------|-----------|
-| Storage | **10 GB/month** |
-| Reads | **10 million/month** |
-| Writes | **1 million/month** |
-| Egress | **FREE (always $0)** |
-
----
-
-## 5. SUPABASE FREE TIER
-
-| Metric | Free Limit |
-|--------|-----------|
-| Projects | **2 active** (cf-astro + cf-admin share 1 project) |
-| PostgreSQL size | **500 MB** |
-| Auth MAUs | **50,000** |
-| File storage | **1 GB** |
-| Edge Functions | **500,000/month** |
-| RLS policies | **Unlimited** |
-
----
-
-## 6. UPSTASH FREE TIER
-
-| Metric | Free Limit |
-|--------|-----------|
-| Commands per day | **10,000** |
-| Max data size | **256 MB** |
-| Concurrent connections | 10 |
-| Databases | 1 |
-
+> 📖 **Full technical details:** [documentation/infrastructure-limits.md](./documentation/infrastructure-limits.md)
 ---
 
 ## 7. TECHNOLOGY STACK
@@ -339,199 +226,35 @@ src/
 
 ## 8. CODE QUALITY RULES
 
-### 8.1 TypeScript Strictness
-- `moduleResolution: "bundler"` in tsconfig.json
-- `any` type is **FORBIDDEN** (unless bypassing upstream type bug, documented)
-- All Cloudflare bindings typed
-
-### 8.2 File Naming
-All file names must be unique and descriptive:
-- Ã¢Å“â€¦ `LoginForm.tsx`, `AuthLayout.astro`, `rbac.ts`
-- Ã¢ÂÅ’ `Form.tsx` (ambiguous), `index.tsx` (without context)
-
-### 8.3 Component Architecture ("LEGO-Style" Atomic Design)
-- **Strict Composition Rule:** Components must follow Atomic Design + Island Architecture. Never create monolithic files.
-- **Atoms/Molecules:** Tiny, focused, reusable sub-components (e.g. `SidebarHeader.tsx`, `SidebarProfile.tsx`, `NavIcon.tsx`).
-- **Organisms (Islands):** The primary Preact component that orchestrates atoms/molecules (e.g., `SidebarMenu.tsx`).
-- **Astro Shells (`.astro`):** For server-rendered layouts and server-side data fetching.
-- **Preact islands (`.tsx`):** Only for interactive UI.
-- Use `client:load` for above-fold critical interactivity (like navigation)
-- Use `client:idle` for below-fold widgets
-
-### 8.4 Error Handling & Resilience
-
-#### 8.4.1 Core Rules
-- Never show white screens Ã¢â‚¬â€ use `ErrorBoundary` component from `src/components/ui/ErrorBoundary.tsx`
-- Section-level boundaries: one broken widget **never** crashes the page
-- API routes return structured JSON errors with proper HTTP status codes
-- Users always have navigation to recover
-
-#### 8.4.2 Ã°Å¸Å¡Â¨ SSR Safety Ã¢â‚¬â€ The 3 Crash Patterns
-When using `client:load`, the component is rendered *synchronously* during Astro SSR. These 3 patterns will **silently kill the entire HTML stream**, producing a blank page with no error visible to the user:
-
-| # | Pattern | Example | Fix |
-|---|---------|---------|-----|
-| 1 | **Missing default export** | `export function Widget()` | Must be `export default function Widget()` |
-| 2 | **Wrong API route** | `fetch('/api/admin/analytics')` (404) | Verify endpoint exists in `src/pages/api/` |
-| 3 | **Unguarded property access** | `data!.property` or `data.nested.value` | Always: `if (!data) return <Skeleton />` first |
-
-**ALWAYS use strict null guards and early returns before accessing any data props in Preact components.**
-
-#### 8.4.3 Mandatory ErrorBoundary Wrapping
-Every widget group inside a `client:load` island must be wrapped in `<ErrorBoundary sectionName="...">`:
-
-```tsx
-import { ErrorBoundary } from '../ui/ErrorBoundary';
-
-// Ã¢Å“â€¦ CORRECT Ã¢â‚¬â€ crash in WidgetA doesn't affect WidgetB
-<ErrorBoundary sectionName="Widget A">
-  <WidgetA data={data} />
-</ErrorBoundary>
-<ErrorBoundary sectionName="Widget B">
-  <WidgetB data={data} />
-</ErrorBoundary>
-
-// Ã¢ÂÅ’ WRONG Ã¢â‚¬â€ crash in WidgetA takes down WidgetB too
-<WidgetA data={data} />
-<WidgetB data={data} />
-```
-
-#### 8.4.4 Error Capture Infrastructure (Deployed)
-Three-layer error shield, all core-level (survives any page/widget changes):
-
-| Layer | What | Where |
-|-------|------|-------|
-| **Sentry `@sentry/astro`** | Framework-level server + client auto-capture | `astro.config.ts`, `sentry.*.config.ts` |
-| **ErrorBoundary Ã¢â€ â€™ Sentry** | Per-widget crash capture with section tags | `src/components/ui/ErrorBoundary.tsx` |
-| **Global `window.onerror`** | Pre-boot safety net (catches hydration failures) | `AdminLayout.astro` inline `<script>` |
-
-All errors automatically appear in the Sentry dashboard with:
-- Section name tag (which widget crashed)
-- Component stack trace (where in the Preact tree)
-- Deduplication (same error won't flood)
-
-#### 8.4.5 Pre-Deploy Checklist for Preact Islands
-Before deploying any new or modified `client:load` component:
-- [ ] Component uses `export default function ...`
-- [ ] All data props typed with `| null | undefined`
-- [ ] Early `if (!data) return <Loading />` guard before any property access
-- [ ] No `!` non-null assertions crossing component boundaries
-- [ ] No `window`/`document` access outside `useEffect`
-- [ ] Widget wrapped in `<ErrorBoundary sectionName="...">` in parent
-
-### 8.5 Animation Standards
-- All interactive elements must have smooth transitions
-- Use `var(--duration-normal)` (200ms) for hover/focus states
-- Use `var(--duration-slow)` (350ms) for page transitions
-- Respect `prefers-reduced-motion` media query
+> 📖 **Full code quality & architecture standards:** [`documentation/coding-standards.md`](./documentation/coding-standards.md)
 
 ---
 
 ## 9. SECURITY RULES
 
-### 9.1 Secrets Management
-- Local dev secrets in `.dev.vars` (gitignored)
-- Production secrets via `wrangler secret put <KEY>`
-- Never commit secrets; `.dev.vars` is in `.gitignore`
-- Required production secrets: `SUPABASE_SERVICE_ROLE_KEY`, `REVALIDATION_SECRET`, `SITE_URL`
+> 🔒 **Full security architecture & protocols:** [`documentation/security-protocols.md`](./documentation/security-protocols.md)
 
-### 9.2 Auth Architecture
-- Signup is **DISABLED** in Supabase dashboard
-- Only `admin_authorized_users` whitelist members can authenticate
-- Server-side whitelist check on every auth callback
-- OAuth provider validated against whitelist (`google`, `github`, `facebook`, `email`)
-- JWT validation + refresh via Supabase client
-- Session cookies use `__Host-` prefix in production (prevents subdomain fixation)
-- Sessions stored in KV with 24-hour hard expiry
+## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
 
-### 9.3 Route Protection
-- Astro middleware checks session on EVERY non-public route
-- Public routes: `/` (login), `/auth/callback` Ã¢â‚¬â€ restricted to `GET`/`HEAD` only
-- Everything else requires valid session + role check
-- Failed auth Ã¢â€ â€™ redirect to login with error message
-- **X-Request-ID** header injected on every request via `crypto.randomUUID()` for audit correlation
+The dashboard utilizes a unified premium dark UI with Arctic Cyan accents, transitioning away from the legacy multi-color section identities.
 
-### 9.4 CSRF Protection
-- **Stateless CSRF** via `src/lib/csrf.ts` Ã¢â‚¬â€ Origin + Referer header validation
-- Applied globally by `middleware.ts` to all mutation requests (`POST`, `PUT`, `PATCH`, `DELETE`)
-- Fail-closed: if both Origin and Referer headers are missing, the request is denied
-- Cost: <0.05ms CPU, 0 KV reads, 0 client-side JavaScript
-- Fail-open in development only (when `SITE_URL` is not configured)
-
-### 9.5 Input Validation
-- All form inputs validated server-side before processing
-- Parameterized queries only Ã¢â‚¬â€ never string concatenation
-- All API error messages are sanitized Ã¢â‚¬â€ no internal stack traces or schema details leak to the client
-- Turnstile protection on login form (magic link)
-
-### 9.6 Audit Integrity
-- Every audit operation runs in `ctx.waitUntil()` to avoid blocking the user flow and maintain sub-10ms logic paths.
-- The system aggregates metrics dynamically via parallel D1 and Supabase calls in `/api/audit/stats` without slowing down individual worker tasks.
-- For maximum operational scaling, granular permissions (sub-features like `/dashboard/logs#export`) map securely under routing strings cleanly without impacting schema constraints.
-- The `admin_audit_log` table has NO `DELETE` or `UPDATE` endpoints exposed at the application layer.
-
-### 9.7 Security Headers
-Defined in `public/_headers` (hardened 2026-04-10):
-- `X-Frame-Options: DENY` Ã¢â‚¬â€ prevents clickjacking
-- `X-Content-Type-Options: nosniff` Ã¢â‚¬â€ prevents MIME sniffing
-- `X-XSS-Protection: 0` Ã¢â‚¬â€ disabled (CSP supersedes it; `1; mode=block` leaks data)
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Cross-Origin-Opener-Policy: same-origin` Ã¢â‚¬â€ isolates browsing context
-- `Cross-Origin-Resource-Policy: same-origin` Ã¢â‚¬â€ blocks cross-origin data reads
-- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()`
-- `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` Ã¢â‚¬â€ 2-year HSTS
-- `Content-Security-Policy` Ã¢â‚¬â€ `'unsafe-eval'` and `'unsafe-inline'` completely removed. Fully secured via Astro 6 native CSP nonces (`data-astro-csp` and `security.csp` config).
+> 📖 **Full design system specifications:** [`documentation/theme-system-design.md`](./documentation/theme-system-design.md)
+> 🎨 **Legacy color palettes:** [`documentation/color-palettes.md`](./documentation/color-palettes.md)
 
 ---
 
-## 10. DESIGN SYSTEM Ã¢â‚¬â€ "MIDNIGHT SLATE"
+### 10.1 Login Portal — "Midnight Slate"
 
-> **Evolved from "Obsidian Clarity / Spectrum" Ã¢â€ â€™ "Midnight Slate"**
-> We have abandoned the multi-color section identity system. The entire portal operates under a unified premium dark UI with **Arctic Cyan** (`#22d3ee`) primary accents.
-
-### Core Surface Palette
-
-| Token | Dark Value | Purpose |
-|-------|-----------|---------|
-| `surface-base` | `#060a0e` | Page background |
-| `surface-raised` | `#0c1117` | Card/panel background |
-| `surface-overlay` | `#131a22` | Modal/dropdown background |
-| `surface-glass` | `rgba(12,17,23,0.72)` | Glassmorphism panels |
-| `text-primary` | `#f0f4f8` | Headings, important text |
-| `text-secondary` | `#8b9ab5` | Body text, labels |
-| `text-tertiary` | `#5a6b83` | Hints, captions |
-
-### Arctic Cyan Accent System
-Violet is fully removed from all primary interactions. All active elements, focus rings, and primary highlights use **Arctic Cyan** (`#22d3ee` / `rgba(34, 211, 238, *)`).
-
-| Element | Idle State | Active/Hover State |
-|---------|-----------|-------------------|
-| **Social Buttons** | `border-white/[0.08]` + `bg-white/[0.04]` | `hover:bg-cyan-500/[0.06]` + `hover:border-cyan-400/[0.2]` |
-| **Input Focus Ring** | `border-white/[0.1]` | `border: rgba(34,211,238,0.4)` + `box-shadow: 0 0 0 3px rgba(34,211,238,0.15)` |
-| **Active Nav Items**| `rgba(255,255,255,0.02)`| `rgba(34,211,238,0.12)` + `cyan` glowing dot + `cyan` vertical accent line |
-
-### Typography
-- Primary: `Inter` (Google Fonts) Ã¢â‚¬â€ 400, 500, 600, 700, 800
-- Mono: `JetBrains Mono` Ã¢â‚¬â€ code blocks, technical data
-
-### Motion
-- Fast: 120ms (micro-interactions)
-- Normal: 200ms (hover, focus)
-- Slow: 350ms (page transitions)
-- Spring: `cubic-bezier(0.34, 1.56, 0.64, 1)` (bouncy elements)
-
-### 10.1 Login Portal Ã¢â‚¬â€ "Midnight Slate"
-
-The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar Ã¢â‚¬â€ just a pristine glassmorphic card on a warm dark canvas.
+The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar — just a pristine glassmorphic card on a warm dark canvas.
 
 #### Background & Ambient System
 
 | Element | Spec |
 |---------|------|
-| **Base** | `#09090b` (zinc-950) Ã¢â‚¬â€ set via inline `style` on `<body>`, not Tailwind class |
-| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` Ã¢â€ â€™ `rgba(8,145,178,0.15)` |
-| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` Ã¢â€ â€™ `rgba(30,41,59,0.15)` |
-| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` Ã¢â€ â€™ `rgba(29,78,216,0.1)` |
+| **Base** | `#09090b` (zinc-950) — set via inline `style` on `<body>`, not Tailwind class |
+| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` —> `rgba(8,145,178,0.15)` |
+| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` —> `rgba(30,41,59,0.15)` |
+| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` —> `rgba(29,78,216,0.1)` |
 | **Noise Texture** | SVG `feTurbulence` overlay at `opacity-[0.015]` for grain |
 
 All orbs are `position: absolute` inside a `fixed inset-0 pointer-events-none z-0` container, animated via CSS.
@@ -566,6 +289,7 @@ The dashboard implements a modular **Hover-Expand Sidebar**.
 #### TopBar & Modals
 - **Command Palette:** `Ctrl+K` triggers a robust search palette via Preact signals. Focus states utilize Midnight Slate cyan glow boundaries.
 - **TopBar:** Follows general glass logic (`blur(24px)`).
+> 📖 **Full technical architecture:** [`documentation/cms-isr-architecture.md`](./documentation/cms-isr-architecture.md)
 
 #### Unbuilt Modules & Soft 404
 - Unbuilt portal paths (e.g. `/dashboard/customers` or `/dashboard/analytics`) are intercepted by a Catch-All spread route at `src/pages/dashboard/[...slug].astro`.
@@ -582,47 +306,9 @@ The dashboard implements a modular **Hover-Expand Sidebar**.
 
 ## 11. DYNAMIC CMS & ISG/ISR ARCHITECTURE (cf-admin <> cf-astro)
 
-cf-admin securely mutates data for the public-facing cf-astro site via a precise "$0 ISR Edge-Cache" mechanism.
+cf-admin securely mutates data for the public-facing cf-astro site via a precise $0 ISR Edge-Cache mechanism.
 
-### 11.1 The Shared Data Layer
-- **Structured Content**: All CMS content (text, prices, reviews) is stored in the D1 `cms_content` table (shared with cf-astro).
-- **Media/Images**: Uploaded and managed securely through the shared Cloudflare R2 `IMAGES` Bucket (`madagascar-images`).
-- **RBAC**: Any mutation query is strictly gated by the active session role (`Admin` or higher Ã¢â‚¬â€ Owner, SuperAdmin, DEV).
-
-### 11.2 KV-Backed ISR Gateway (How it works)
-We intentionally bypass native Cloudflare Cache API purging (which requires privileged Account-level Tokens) in favor of a KV-backed manual revalidation Gateway.
-1. Admin saves changes in cf-admin UI (Hero, Gallery, Services, or Reviews).
-2. cf-admin writes updates to the D1 `cms_content` table or R2.
-3. cf-admin calls the **unified `revalidateAstro(env, ['/'])`** helper in `src/lib/cms.ts`.
-4. The helper **auto-expands** base paths to include all locale variants (`/` Ã¢â€ â€™ `['/', '/en', '/es']`).
-5. The helper fires `POST {PUBLIC_ASTRO_URL}/api/revalidate` with `Authorization: Bearer {REVALIDATION_SECRET}`.
-6. cf-astro receives the webhook, verifies the secret, and deletes the requested paths from its `ISR_CACHE` KV namespace.
-7. The next request to cf-astro triggers an SSR rebuild using the fresh D1 data, delivering high performance (sub-10ms cache hits) and true CMS dynamism.
-
-> Ã°Å¸Å¡Â¨ **CRITICAL SYNC RULE**: For this gateway to function, the target pages on `cf-astro` (e.g., `index.astro`) MUST have `export const prerender = false;` explicitly defined. If `cf-astro` is locked to static generation, the webhook will succeed but the site will blindly serve static files without hitting the ISR middleware, making UI updates impossible.
-
-### 11.3 Unified Revalidation Helper (Single Source of Truth)
-
-All 5 Content Studio API routes call a **single function** in `src/lib/cms.ts`:
-
-```typescript
-// Signature:
-export async function revalidateAstro(
-  env: { PUBLIC_ASTRO_URL?: string; REVALIDATION_SECRET?: string },
-  basePaths: string[]
-): Promise<boolean>
-
-// Usage (identical in every endpoint):
-await revalidateAstro(env, ['/']);
-```
-
-**Path Expansion Engine:** `SITE_LOCALES = ['en', 'es']` Ã¢â‚¬â€ the helper automatically generates:
-- `'/'` Ã¢â€ â€™ `['/', '/en', '/es']`
-- `'/services'` Ã¢â€ â€™ `['/services', '/en/services', '/es/services']`
-
-> Ã¢Å¡Â Ã¯Â¸Â To add a new locale (e.g., French), update ONLY the `SITE_LOCALES` array in `src/lib/cms.ts`. Zero changes to any API route.
-
-| API Route | CMS Function | Revalidation Call |
+> 📖 **Full technical architecture:** [documentation/cms-isr-architecture.md](./documentation/cms-isr-architecture.md)
 |-----------|-------------|-------------------|
 | `POST /api/content/blocks` | Update text blocks | `revalidateAstro(env, [basePath])` |
 | `POST /api/content/reviews` | Update happy clients JSON | `revalidateAstro(env, ['/'])` |
@@ -742,9 +428,9 @@ documentation/
 
 ---
 
-## 16. CMS IMAGE MANAGEMENT Ã¢â‚¬â€ cf-admin Ã¢â€ â€ cf-astro BRIDGE
+## 16. CMS IMAGE MANAGEMENT — cf-admin <-> cf-astro BRIDGE
 
-The CMS Image Management system enables authorized admin users to upload and replace images (Hero background, Gallery 1Ã¢â‚¬â€œ6) on `cf-astro` from the `cf-admin` dashboard. All infrastructure remains $0.
+The CMS Image Management system enables authorized admin users to upload and manage an UNLIMITED array of images for the gallery and update the Hero background on cf-astro from the cf-admin dashboard. All infrastructure remains .
 
 ### Architecture Summary
 
@@ -752,39 +438,12 @@ The CMS Image Management system enables authorized admin users to upload and rep
 |-----------|------|
 | **R2 Bucket** (`madagascar-images`) | Stores uploaded image binaries |
 | **CDN Domain** (`cdn.madagascarhotelags.com`) | Public edge-cached delivery of R2 images |
-| **D1 Table** (`cms_content`) | Stores CDN URLs with cache-busting timestamps |
-| **ISR KV Cache** | HTML cache in cf-astro Ã¢â‚¬â€ purged on image update |
+| **Cloudflare Transformations** | /cdn-cgi/image/ handles responsive sizing, WebP/AVIF auto-formats, and optimization on-the-fly |
+| **D1 Table** (cms_content) | Stores pure CDN URLs; caching architecture mitigates D1 read-replica lag |
+| **KV Cache (cf-astro-isr-cache)** | 7-DAY durability for injected CMS data. Dramatically increases resilience and performance. |
 | **Revalidation Webhook** | `POST /api/revalidate` on cf-astro, protected by `REVALIDATION_SECRET` |
 
-### Key Files
-
-| File | Project | Purpose |
-|------|---------|----------|
-| `src/lib/cms.ts` | cf-admin | Upload to R2, write D1, **unified revalidation helper** |
-| `src/pages/api/media/upload.ts` | cf-admin | Image upload API endpoint |
-| `src/pages/api/media/gallery.ts` | cf-admin | Gallery JSON array CRUD + revalidation |
-| `src/pages/api/content/blocks.ts` | cf-admin | Text block CMS updates + revalidation |
-| `src/pages/api/content/services.ts` | cf-admin | Services/pricing JSON updates + revalidation |
-| `src/pages/api/content/reviews.ts` | cf-admin | Happy clients reviews JSON + revalidation |
-| `src/pages/dashboard/content/` | cf-admin | Content Studio UI (Hero, Gallery, Services, Reviews tabs) |
-| `src/lib/images.ts` | cf-astro | Dynamic image URL resolver |
-| `src/components/sections/Hero.astro` | cf-astro | Dynamic hero background |
-| `src/components/sections/Gallery.astro` | cf-astro | Dynamic gallery carousel |
-| `src/pages/api/revalidate.ts` | cf-astro | ISR cache purge webhook (receives calls from cf-admin) |
-
-### Ã¢Å¡Â Ã¯Â¸Â Critical Deployment Rules (DO NOT SKIP)
-
-1. **`REVALIDATION_SECRET` must be deployed on BOTH Workers.** The secret is the shared key that authenticates the revalidation webhook from cf-admin to cf-astro. If missing from cf-astro, the `/api/revalidate` endpoint returns 500, revalidation silently fails, and the live site serves stale HTML indefinitely.
-   ```bash
-   wrangler secret put REVALIDATION_SECRET --name cf-admin-madagascar  # sender
-   wrangler secret put REVALIDATION_SECRET --name cf-astro              # receiver
-   ```
-
-2. **Hero images use unique UUID R2 keys per upload** (e.g. `hero/hero-{uuid}.jpg`), matching the gallery pattern. This prevents Cloudflare's CDN from permanently serving a stale cached version after replacement. The `cacheControl` is `public, max-age=31536000` (without `immutable`) so manual purges remain possible.
-
-> Ã°Å¸â€œâ€“ **Full documentation:** [`documentation/CMS_IMAGE_MANAGEMENT.md`](./documentation/CMS_IMAGE_MANAGEMENT.md)
-
----
+> 📖 **Full documentation:** [documentation/CMS_IMAGE_MANAGEMENT.md](./documentation/CMS_IMAGE_MANAGEMENT.md)
 
 ## 17. ASYNC EMAIL QUEUES & AUDIT ARCHITECTURE
 

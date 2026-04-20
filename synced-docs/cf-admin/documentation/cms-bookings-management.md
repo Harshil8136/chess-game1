@@ -242,6 +242,38 @@ PUBLIC_ASTRO_URL = "https://madagascarhotelags.com"   # ✅ Correct
 
 The fallback value inside `revalidateAstro()` in `cf-admin/src/lib/cms.ts` is set to the same correct URL as a safety net.
 
+### 🔴 LOCAL DEV RULE — Do NOT Set `PUBLIC_ASTRO_URL` in `cf-admin/.dev.vars`
+
+**Why:** cf-admin local dev runs via `dotenv -e .dev.vars -- astro dev` (pure Vite, no Miniflare). The `cloudflare:workers` module is unavailable in this mode, so `env.ts` reads exclusively from `process.env` populated by `dotenv-cli`. If `PUBLIC_ASTRO_URL` is set in `.dev.vars` (e.g. to `http://localhost:4321`), it **silently overrides** the correct production value in `wrangler.toml [vars]` and causes every CMS save to self-loop back into cf-admin's own CSRF protection, returning `403 {"error":"Forbidden"}`.
+
+**`cms.ts` already has a hardcoded production fallback:**
+```typescript
+const astroUrl = env.PUBLIC_ASTRO_URL || 'https://madagascarhotelags.com';
+```
+
+When `PUBLIC_ASTRO_URL` is absent from `.dev.vars`, this fallback kicks in unconditionally and revalidation fires against the correct production cf-astro. There is no reason to ever set this variable in `.dev.vars`.
+
+**Architectural guard:** `revalidateAstro()` in `cms.ts` contains a self-reference guard that detects when `PUBLIC_ASTRO_URL` matches `SITE_URL` (cf-admin's own origin). If triggered, it fails immediately with a clear error message instead of wasting 3 retry attempts with 300ms/600ms/900ms backoff.
+
+| Variable | Where to set | Command |
+|----------|-------------|---------|
+| `REVALIDATION_SECRET` | cf-admin (production) | `wrangler secret put REVALIDATION_SECRET --name cf-admin-madagascar` |
+| `REVALIDATION_SECRET` | cf-astro (production) | `wrangler pages secret put REVALIDATION_SECRET --project-name cf-astro` |
+| `PUBLIC_ASTRO_URL` | cf-admin wrangler.toml [vars] only | Already set to `https://madagascarhotelags.com` — do not override in `.dev.vars` |
+
+### 🟡 LOCAL DEV RULE — Image Uploads Require `npm run cf:dev`
+
+`npm run dev` (`astro dev` + Vite, no Miniflare) has no Cloudflare Workers runtime. The `IMAGES` R2 binding is unavailable. Any upload attempt will fail immediately with:
+
+> *"R2 IMAGES binding not available. Run `npm run cf:dev` instead of `npm run dev` to use R2 in local development."*
+
+For any CMS work that involves image uploads, use:
+```bash
+npm run cf:dev   # wrangler dev — full Workers runtime with local R2 simulation
+```
+
+Gallery images reference `https://cdn.madagascarhotelags.com/...` URLs. Once the R2 custom domain is configured in the Cloudflare Dashboard (R2 → `madagascar-images` → Settings → Custom Domains → `cdn.madagascarhotelags.com`), these URLs resolve correctly from both local dev and production.
+
 ### Binding Integrity Checklist (wrangler.toml)
 1. **cf-admin:** Must have `DB` mapped to the shared D1 database, and `IMAGES` mapped to the shared R2 Bucket.
 2. **cf-astro:** Must have `DB` mapped to the shared D1 database, `IMAGES` attached, and **crucially** `ISR_CACHE` targeted at the KV Namespace used for both ISR HTML caching and CMS data injection.
