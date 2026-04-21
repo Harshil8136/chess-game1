@@ -181,4 +181,5 @@ The following palettes from V1 remain as **supplementary references** for non-se
 ---
 
 *End of Premium Color Palettes v2.0 — "Obsidian Spectrum"*
+
 {% endraw %}

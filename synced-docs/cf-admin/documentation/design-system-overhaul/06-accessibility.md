@@ -391,4 +391,5 @@ Every form input MUST have a visible or `aria-label`ed label:
 - [ ] Contrast ratios verified with browser devtools
 - [ ] Charts have text fallback for screen readers
 - [ ] Toast notifications are `aria-live="polite"`
+
 {% endraw %}

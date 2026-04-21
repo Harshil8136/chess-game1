@@ -70,4 +70,5 @@ R2 buckets are referenced by **name**, not UUID, so they're stable.
 2. **Never `wrangler d1 create`** a new database with the same name — it creates a new UUID, leaving `wrangler.toml` pointing at the old one.
 3. **Never `wrangler kv namespace create`** without updating BOTH projects' `wrangler.toml`.
 4. **If IDs look wrong**, verify via Cloudflare Dashboard → Workers → KV/D1 → copy the UUID from there.
+
 {% endraw %}

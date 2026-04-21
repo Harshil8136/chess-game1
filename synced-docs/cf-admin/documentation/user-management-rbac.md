@@ -4,7 +4,7 @@
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Supabase GoTrue (Admin API / Service Role)
-> **Last Updated:** 2026-04-14 (Bug-fix pass: CSRF dev fix, AuthError propagation, force-kick on lock, O(1) DELETE, lazy page fetch)
+> **Last Updated:** 2026-04-21 (Owner role CHECK fix, RLS hardening, application-level VALID_ROLES allowlist)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -256,4 +256,5 @@ The system is designed to "fail-closed" across various infrastructure disruption
 | **JWT Validity** | 30 Minutes | High-pulse refresh ensures role changes propagate quickly. |
 | **Hard Expiry** | 24 Hours | All sessions must re-authenticate via Magic Link/SSO daily. |
 | **KV Expiry** | 24 Hours | Session keys are set with `expirationTtl` matching max lifetime. |
+
 {% endraw %}

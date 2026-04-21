@@ -84,4 +84,5 @@ These are kept and refined:
 - Sidebar hover-expand + pin behavior
 - Command Palette (Ctrl+K)
 - PLAC-driven navigation
+
 {% endraw %}

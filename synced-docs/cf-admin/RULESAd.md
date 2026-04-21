@@ -1,17 +1,17 @@
 {% raw %}
 REMIND TO DO ALL THINS;
-Part A Ã¢â‚¬â€ You must do this manually (Google Cloud Console)
+Part A — You must do this manually (Google Cloud Console)
 The Google OAuth verification issue is a dashboard configuration problem, not code. Check these in order:
 
-Fastest fix: Go to Google Cloud Console Ã¢â€ â€™ OAuth consent screen Ã¢â€ â€™ switch User Type to "Internal" (admin-only tool = no verification ever needed, no 100-user cap)
+Fastest fix: Go to Google Cloud Console → OAuth consent screen → switch User Type to "Internal" (admin-only tool = no verification ever needed, no 100-user cap)
 
-If not on Google Workspace: Add your emails as test users (Audience Ã¢â€ â€™ Add Users: harshil.8136@gmail.com, harshil.cloud8@gmail.com) while verification completes
+If not on Google Workspace: Add your emails as test users (Audience → Add Users: harshil.8136@gmail.com, harshil.cloud8@gmail.com) while verification completes
 
-Critical Ã¢â‚¬â€ verify these redirect URIs in Google Cloud Console Ã¢â€ â€™ Credentials Ã¢â€ â€™ your OAuth client:
+Critical — verify these redirect URIs in Google Cloud Console → Credentials → your OAuth client:
 
 Authorized redirect URIs: https://zlvmrepvypucvbyfbpjj.supabase.co/auth/v1/callback
 Authorized JavaScript origins: https://secure.madagascarhotelags.com
-Supabase Dashboard Ã¢â€ â€™ Auth Ã¢â€ â€™ URL Configuration: confirm https://secure.madagascarhotelags.com/auth/callback is in the redirect allowlist
+Supabase Dashboard → Auth → URL Configuration: confirm https://secure.madagascarhotelags.com/auth/callback is in the redirect allowlist
 
 You must do: fill in the Client ID
 In wrangler.toml, replace the empty string with your actual Google OAuth Client ID:
@@ -22,40 +22,40 @@ Also add it to .dev.vars for local dev:
 
 
 PUBLIC_GOOGLE_CLIENT_ID=123456789-abc...xyz.apps.googleusercontent.com
-The Client ID is found in Google Cloud Console Ã¢â€ â€™ APIs & Services Ã¢â€ â€™ Credentials Ã¢â€ â€™ your OAuth 2.0 Web client.
+The Client ID is found in Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web client.
 
 
 
-# CF-ADMIN PROJECT Ã¢â‚¬â€ OPERATIONAL RULES & ARCHITECTURE BIBLE
+# CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-15 (v3.5: Chatbot Integration & Secure Admin Proxy Configuration)
+> **Last Updated:** 2026-04-21 (v3.7: Search Engine Isolation + Security Hardening)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
 
-## Ã°Å¸Å¡Â¨ RULE #0 Ã¢â‚¬â€ THE ABSOLUTE LAW (NEVER VIOLATE)
+## 🚨 RULE #0 — THE ABSOLUTE LAW (NEVER VIOLATE)
 
-**cf-admin is the Cloudflare-native version of admin-app. We can deeply review, understand how everything looks, works, and is designed in admin-app Ã¢â‚¬â€ however, WE NEVER, like NEVER, copy any single file or code from there.**
+**cf-admin is the Cloudflare-native version of admin-app. We can deeply review, understand how everything looks, works, and is designed in admin-app — however, WE NEVER, like NEVER, copy any single file or code from there.**
 
 This is the **STRICTEST** rule and MUST be followed at ALL times:
 
-- Ã¢Å“â€¦ **ALLOWED:** Reference admin-app to understand features, flows, UX patterns, business logic concepts
-- Ã¢Å“â€¦ **ALLOWED:** Use MCP tools (Cloudflare Docs, Supabase, Tavily) and SKILLs to find the best Cloudflare-native approach
-- Ã¢Å“â€¦ **ALLOWED:** Build equivalent functionality from scratch using Cloudflare-optimized patterns
-- Ã¢ÂÅ’ **FORBIDDEN:** Copy-pasting any file, component, function, hook, schema, or code block from admin-app
-- Ã¢ÂÅ’ **FORBIDDEN:** Duplicating CSS, design tokens, or configuration verbatim from admin-app
-- Ã¢ÂÅ’ **FORBIDDEN:** Using admin-app files as templates with "find and replace" modifications
+- ✅ **ALLOWED:** Reference admin-app to understand features, flows, UX patterns, business logic concepts
+- ✅ **ALLOWED:** Use MCP tools (Cloudflare Docs, Supabase, Tavily) and SKILLs to find the best Cloudflare-native approach
+- ✅ **ALLOWED:** Build equivalent functionality from scratch using Cloudflare-optimized patterns
+- ❌ **FORBIDDEN:** Copy-pasting any file, component, function, hook, schema, or code block from admin-app
+- ❌ **FORBIDDEN:** Duplicating CSS, design tokens, or configuration verbatim from admin-app
+- ❌ **FORBIDDEN:** Using admin-app files as templates with "find and replace" modifications
 
 **Every line of code in cf-admin must be written fresh, optimized for the Cloudflare + Astro + Preact stack.**
 
 ---
 
-## Ã°Å¸Å¡Â¨ RULE #0.5 Ã¢â‚¬â€ NO FAKE DATA OR PLACEHOLDERS
+## 🚨 RULE #0.5 — NO FAKE DATA OR PLACEHOLDERS
 
 **ALL data and presented information MUST be real and accurate, sourced from active databases (Supabase/D1) or actual API telemetry (Cloudflare Analytics/Resend/etc).**
 
-- Ã¢ÂÅ’ **FORBIDDEN:** Randomly generated chart data (e.g. `Math.random()`), hardcoded dashboard metrics (`sessionCount = 24`), or mock user activity logs.
-- Ã¢ÂÅ’ **FORBIDDEN:** "Under Construction" placeholder pages masking incomplete features.
+- ❌ **FORBIDDEN:** Randomly generated chart data (e.g. `Math.random()`), hardcoded dashboard metrics (`sessionCount = 24`), or mock user activity logs.
+- ❌ **FORBIDDEN:** "Under Construction" placeholder pages masking incomplete features.
 - If a feature requires data that cannot be currently provided by the backend, the feature MUST NOT be built with mock data. Instead, either:
   1. Omit the feature entirely from the UI, OR
   2. Implement the full backend pipeline to fetch the real data.
@@ -63,18 +63,18 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ---
 
-## Ã°Å¸ÂÂ¢ PROJECT MISSION Ã¢â‚¬â€ SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
+## 🏢 PROJECT MISSION — SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
 
-**cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** This is a standard admin product Ã¢â‚¬â€ architected so any project with a main site can plug in a professional admin portal. Designed to:
+**cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** This is a standard admin product — architected so any project with a main site can plug in a professional admin portal. Designed to:
 
-- Ã¢Å“â€¦ Manage content, bookings, users, and site settings via secure dashboard
-- Ã¢Å“â€¦ Enforce multi-level RBAC (DEV > Owner > SuperAdmin > Admin > Staff) on every route
-- Ã¢Å“â€¦ Authenticate via Supabase GoTrue (Magic Link + Google/GitHub/Facebook OAuth)
-- Ã¢Å“â€¦ Block ALL unauthorized access Ã¢â‚¬â€ signup disabled, whitelist-only entry
-- Ã¢Å“â€¦ Refresh JWT tokens every 30 minutes, hard-expire sessions at 24 hours
-- Ã¢Å“â€¦ Run 24/7 at **$0/month** total infrastructure cost
-- Ã¢Å“â€¦ Deliver premium, animated, dark-themed admin experience
-- Ã¢Å“â€¦ Meet professional security, accessibility, and performance standards
+- ✅ Manage content, bookings, users, and site settings via secure dashboard
+- ✅ Enforce multi-level RBAC (DEV > Owner > SuperAdmin > Admin > Staff) on every route
+- ✅ Authenticate via Supabase GoTrue (Magic Link + Google/GitHub/Facebook OAuth)
+- ✅ Block ALL unauthorized access — signup disabled, whitelist-only entry
+- ✅ Refresh JWT tokens every 30 minutes, hard-expire sessions at 24 hours
+- ✅ Run 24/7 at **$0/month** total infrastructure cost
+- ✅ Deliver premium, animated, dark-themed admin experience
+- ✅ Meet professional security, accessibility, and performance standards
 
 **Every architectural decision optimizes for: maximum security + maximum quality + exactly ZERO ongoing cost.**
 
@@ -84,19 +84,19 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 | Property | Value |
 |----------|-------|
-| **Name** | cf-admin (Madagascar Pet Hotel Ã¢â‚¬â€ Admin Portal) |
+| **Name** | cf-admin (Madagascar Pet Hotel — Admin Portal) |
 | **Purpose** | Cloudflare-native admin portal equivalent to admin-app |
 | **Framework** | Astro 6.0+ with `@astrojs/cloudflare` adapter |
-| **Rendering** | Full SSR (`output: 'server'`) Ã¢â‚¬â€ every route requires auth |
+| **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
 | **Auth** | Supabase GoTrue (Magic Link + OAuth providers) |
 | **Database** | Supabase PostgreSQL (shared project `zlvmrepvypucvbyfbpjj`) |
 | **Session Store** | Cloudflare KV (via Astro Sessions API) |
-| **Cache** | Upstash Redis (free tier Ã¢â‚¬â€ 10K commands/day) |
-| **Storage** | Cloudflare R2 (CMS image uploads Ã¢â‚¬â€ `madagascar-images` bucket Ã¢â€ â€™ `cdn.madagascarhotelags.com`) |
+| **Cache** | Upstash Redis (free tier — 10K commands/day) |
+| **Storage** | Cloudflare R2 (CMS image uploads — `madagascar-images` bucket → `cdn.madagascarhotelags.com`) |
 | **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
-| **Design System** | "Midnight Slate" Ã¢â‚¬â€ dark-first with Arctic Cyan primary accents |
+| **Design System** | "Midnight Slate" — dark-first with Arctic Cyan primary accents |
 | **Domain** | `secure.madagascarhotelags.com` (provisioned at v1.0) |
 | **GitHub** | `mascotasmadagascar-cmd/cf-admin-madagascar` (private) |
 | **Worker Name** | `cf-admin-madagascar` (Mascotas Cloudflare account) |
@@ -113,13 +113,13 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 |---------|------|-------------|
 | **cf-astro** | Main customer-facing website | Shares Supabase project, D1 database, R2 bucket. Uses Hyperdrive for direct PG (booking, ARCO) |
 | **cf-chatbot** | Cloudflare Workers AI Bot | Operates autonomously on Edge natively interacting with WhatsApp/Web. `cf-admin` serves as its secure configuration proxy and analytics Dashboard. |
-| **admin-app** | Legacy admin portal (Next.js) | Reference for UX/features only Ã¢â‚¬â€ **NEVER copy code** |
-| **nextjs-app** | Legacy main site (Next.js) | Reference only Ã¢â‚¬â€ no code sharing |
+| **admin-app** | Legacy admin portal (Next.js) | Reference for UX/features only — **NEVER copy code** |
+| **nextjs-app** | Legacy main site (Next.js) | Reference only — no code sharing |
 
 ### Shared Resources
 - **Supabase Project:** `zlvmrepvypucvbyfbpjj` (same PostgreSQL instance)
-- **D1 Database:** `madagascar-db` (ID: `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2`) Ã¢â‚¬â€ shared between both projects
-- **R2 Bucket:** `madagascar-images` Ã¢â€ â€™ `cdn.madagascarhotelags.com` (CMS images, shared read/write)
+- **D1 Database:** `madagascar-db` (ID: `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2`) — shared between both projects
+- **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Cloudflare Account:** Mascotas Madagascar
 
 ### KV Namespaces (Isolated per project)
@@ -150,46 +150,22 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ## 7. TECHNOLOGY STACK
 
-> Ã°Å¸Å¡Â¨ **THE WHITELIST ARCHITECTURE POLICY:** We employ a strict "whitelisting" approach to technology additions. Anything not explicitly listed in this document is considered **BLACKLISTED** by default to protect our <50KB "Lean Edge" budget. If an AI agent or developer wishes to introduce a new library (e.g., React 19, Recharts, shadcn/ui, Hono), it must be explicitly proposed with a strong "why it's needed" justification. The new dependency can ONLY be used if the USER explicitly approves the proposal.
+> 🚨 **THE WHITELIST ARCHITECTURE POLICY:** We employ a strict "whitelisting" approach to technology additions. Anything not explicitly listed in this document is considered **BLACKLISTED** by default to protect our <50KB "Lean Edge" budget. If an AI agent or developer wishes to introduce a new library (e.g., React 19, Recharts, shadcn/ui, Hono), it must be explicitly proposed with a strong "why it's needed" justification. The new dependency can ONLY be used if the USER explicitly approves the proposal.
 
 ### 7.1 Framework: Astro 6.0+ (Full SSR for Admin)
 
-- `output: 'server'` Ã¢â‚¬â€ ALL routes are server-rendered (auth check required)
+- `output: 'server'` — ALL routes are server-rendered (auth check required)
 - Cloudflare adapter with native binding access
 - Astro Sessions API backed by Cloudflare KV for session persistence
-- No static pages Ã¢â‚¬â€ admin portal has zero public content
+- No static pages — admin portal has zero public content
 
 ### 7.2 UI: Preact Islands
-
-- 3KB gzipped vs 45KB+ for React runtime
-- Full React API compatibility via `preact/compat`
-- Use `client:load` for auth-critical UI (login form)
-- Use `client:idle` for dashboard widgets
-
-### 7.3 CSS: Tailwind CSS v4
-
-- Runs via `@tailwindcss/vite` as a Vite plugin
-- Uses `@theme` in `src/styles/global.css` for design tokens
-- Dark-first "Midnight Slate" design system with Arctic Cyan primary accents.
-
-### 7.4 Auth: Supabase GoTrue
-
-- Client-side: `@supabase/supabase-js` for login flows
-- Server-side: service_role client for whitelist verification
-- Providers: Magic Link, Google, GitHub, Facebook
-- JWT refresh every 30 min, hard session expiry at 24 hours
-
-### 7.5 Database Access
-
-- Supabase PostgreSQL via REST client (@supabase/supabase-js) Ã¢â‚¬â€ Hyperdrive is NOT used by cf-admin
-- Admin tables: `admin_authorized_users`, `admin_sessions`
-- All tables have RLS enabled Ã¢â‚¬â€ service_role only
-- D1 for non-PII operational data (future)
+> 📖 **Full RLS policy matrix:** [documentation/database-rls-policy.md](./documentation/database-rls-policy.md)
 
 ### 7.6 Environment Variables
 
 ```
-# .dev.vars (local Ã¢â‚¬â€ gitignored)
+# .dev.vars (local — gitignored)
 PUBLIC_SUPABASE_URL=https://zlvmrepvypucvbyfbpjj.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -208,14 +184,14 @@ To prevent architectural entropy as `cf-admin` grows, every new feature area mus
 **Directory Structure:**
 ```text
 src/
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ pages/
-  Ã¢â€â€š    Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ [module_name]/
-  Ã¢â€â€š         Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ index.astro       # Main entry point (SSR)
-  Ã¢â€â€š         Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ [sub_route].astro # Nested routes
-  Ã¢â€â€š         Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ _components/      # Module-specific islands (Preact)
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ styles/
-       Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ [module_name]/
-            Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ [component].css   # Module-isolated CSS
+  ├── pages/
+  │    └── [module_name]/
+  │         ├── index.astro       # Main entry point (SSR)
+  │         ├── [sub_route].astro # Nested routes
+  │         └── _components/      # Module-specific islands (Preact)
+  └── styles/
+       └── [module_name]/
+            └── [component].css   # Module-isolated CSS
 ```
 
 **Implementation Rules:**
@@ -235,6 +211,7 @@ src/
 ## 9. SECURITY RULES
 
 > 🔒 **Full security architecture & protocols:** [`documentation/security-protocols.md`](./documentation/security-protocols.md)
+> 🛡️ **Supabase RLS policy matrix:** [`documentation/database-rls-policy.md`](./documentation/database-rls-policy.md)
 
 ## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
 
@@ -407,13 +384,13 @@ astro build && wrangler deploy  # Build + deploy to Cloudflare
 ```
 
 ### Git Workflow
-> Ã°Å¸Å¡Â¨ **CRITICAL: See `../../GITHUB_RULES.md` for all Git deployment commands.**
+> 🚨 **CRITICAL: See `../../GITHUB_RULES.md` for all Git deployment commands.**
 > You must ALWAYS verify your directory with `git remote -v` and push directly to `origin main`. Do not create branches.
 
 ### Environment
-- `wrangler.toml` Ã¢â‚¬â€ Cloudflare bindings (D1, KV, R2, Queues)
-- `.dev.vars` Ã¢â‚¬â€ Local secrets (gitignored)
-- `wrangler secret put <KEY>` Ã¢â‚¬â€ Production secrets
+- `wrangler.toml` — Cloudflare bindings (D1, KV, R2, Queues)
+- `.dev.vars` — Local secrets (gitignored)
+- `wrangler secret put <KEY>` — Production secrets
 
 ---
 
@@ -421,7 +398,7 @@ astro build && wrangler deploy  # Build + deploy to Cloudflare
 
 | File/Folder | Purpose |
 |-------------|---------|
-| `RULESAd.md` | This file Ã¢â‚¬â€ operational bible |
+| `RULESAd.md` | This file — operational bible |
 | `ToDoAdmin.md` | Living progress tracker (what's done, what's next) |
 | `README.md` | Quick start guide for developers |
 | `documentation/` | Detailed technical documentation |
@@ -430,15 +407,16 @@ astro build && wrangler deploy  # Build + deploy to Cloudflare
 ### Documentation Folder Structure
 ```
 documentation/
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ user-management-rbac.md          # RBAC hierarchy, user lifecycle, ghost protection, hidden accounts
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ plac-and-audit.md             # PLAC access control + Ghost Audit Engine + SHA-256 hash chain
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ security-hardening.md         # CSRF, cookie security, error sanitization, request tracing
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ data-privacy.md               # Privacy dashboard, consent records, GDPR/LFPDPPP compliance
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ cms-bookings-management.md  # CMS content studio + bookings architecture
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ observability-sentry.md    # Sentry integration for error tracking + edge observability
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ theme-system-design.md  # Midnight Slate theme design system decisions
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ color-palettes.md     # Color palette reference for the design system
+├── user-management-rbac.md          # RBAC hierarchy, user lifecycle, ghost protection, hidden accounts
+├── plac-and-audit.md             # PLAC access control + Ghost Audit Engine + SHA-256 hash chain
+├── security-hardening.md         # CSRF, cookie security, error sanitization, request tracing
+├── data-privacy.md               # Privacy dashboard, consent records, GDPR/LFPDPPP compliance
+├── cms-bookings-management.md  # CMS content studio + bookings architecture
+├── observability-sentry.md    # Sentry integration for error tracking + edge observability
+├── theme-system-design.md  # Midnight Slate theme design system decisions
+└── color-palettes.md     # Color palette reference for the design system
 ├── cloudflare-bindings-registry.md # Immutable registry of all Cloudflare D1/KV binding IDs
+├── database-rls-policy.md         # Supabase RLS policy matrix, service_role patterns, index coverage
 ```
 
 ---
@@ -466,18 +444,18 @@ documentation/
 | `cloudflare/SKILL.md` | Cloudflare product selection, limits |
 | `tailwind-design-system/SKILL.md` | Tailwind v4 @theme, component patterns |
 | `systematic-debugging/SKILL.md` | First response to ANY bugs |
-| `brainstorming/SKILL.md` | Design process (brainstorm Ã¢â€ â€™ plan Ã¢â€ â€™ build) |
+| `brainstorming/SKILL.md` | Design process (brainstorm → plan → build) |
 
-### 14.3 Perplexity MCP Ã¢â‚¬â€ PAID SERVICE
+### 14.3 Perplexity MCP — PAID SERVICE
 
 `@mcp:perplexity-ask` costs real money. Use ONLY as last resort after exhausting all free tools.
 
 **Priority Order:**
-1. RULES.md Ã¢â€ â€™ 2. SKILL.md files Ã¢â€ â€™ 3. `@mcp:cloudflare-docs` Ã¢â€ â€™ 4. `@mcp:tavily` Ã¢â€ â€™ 5. Pre-trained knowledge Ã¢â€ â€™ 6. `@mcp:perplexity-ask` (Ã°Å¸â€™Â° LAST)
+1. RULES.md → 2. SKILL.md files → 3. `@mcp:cloudflare-docs` → 4. `@mcp:tavily` → 5. Pre-trained knowledge → 6. `@mcp:perplexity-ask` (💰 LAST)
 
 ---
 
-## 15. TOTAL MONTHLY COST Ã¢â‚¬â€ $0
+## 15. TOTAL MONTHLY COST — $0
 
 | Service | What We Use | Monthly Cost |
 |---------|------------|-------------|
@@ -527,9 +505,10 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 - **Audit Logs:** All email payloads, transmission statuses, and Resend webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
   - **Referential Integrity:** The `booking_id` foreign key constraint enforces `ON DELETE CASCADE`, ensuring that atomic "Hard Wipes" of bookings cleanly and automatically purge associated audit records without referential blocking errors.
 
-> Ã°Å¸â€œâ€“ **Full detailed documentation and Webhook setup guide:** Please refer to the master architecture document located at [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
+> 📖 **Full detailed documentation and Webhook setup guide:** Please refer to the master architecture document located at [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
 
 ---
 *DEV-harshil.8136@gmail.com*
 *End of Rules. These constraints must be acknowledged and followed for every task in cf-admin.*
+
 {% endraw %}

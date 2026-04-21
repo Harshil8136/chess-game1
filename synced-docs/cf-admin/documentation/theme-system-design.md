@@ -48,9 +48,9 @@ Existing hardcoded inline styles across the application were refactored to utili
 - Verify that swapping the `data-theme` attribute correctly changes the underlying color base.
 
 
-## 10. DESIGN SYSTEM Ã¢â‚¬â€ "MIDNIGHT SLATE"
+## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
 
-> **Evolved from "Obsidian Clarity / Spectrum" Ã¢â€ â€™ "Midnight Slate"**
+> **Evolved from "Obsidian Clarity / Spectrum" → "Midnight Slate"**
 > We have abandoned the multi-color section identity system. The entire portal operates under a unified premium dark UI with **Arctic Cyan** (`#22d3ee`) primary accents.
 
 ### Core Surface Palette
@@ -75,8 +75,8 @@ Violet is fully removed from all primary interactions. All active elements, focu
 | **Active Nav Items**| `rgba(255,255,255,0.02)`| `rgba(34,211,238,0.12)` + `cyan` glowing dot + `cyan` vertical accent line |
 
 ### Typography
-- Primary: `Inter` (Google Fonts) Ã¢â‚¬â€ 400, 500, 600, 700, 800
-- Mono: `JetBrains Mono` Ã¢â‚¬â€ code blocks, technical data
+- Primary: `Inter` (Google Fonts) — 400, 500, 600, 700, 800
+- Mono: `JetBrains Mono` — code blocks, technical data
 
 ### Motion
 - Fast: 120ms (micro-interactions)
@@ -84,18 +84,18 @@ Violet is fully removed from all primary interactions. All active elements, focu
 - Slow: 350ms (page transitions)
 - Spring: `cubic-bezier(0.34, 1.56, 0.64, 1)` (bouncy elements)
 
-### 10.1 Login Portal Ã¢â‚¬â€ "Midnight Slate"
+### 10.1 Login Portal — "Midnight Slate"
 
-The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar Ã¢â‚¬â€ just a pristine glassmorphic card on a warm dark canvas.
+The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar — just a pristine glassmorphic card on a warm dark canvas.
 
 #### Background & Ambient System
 
 | Element | Spec |
 |---------|------|
-| **Base** | `#09090b` (zinc-950) Ã¢â‚¬â€ set via inline `style` on `<body>`, not Tailwind class |
-| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` Ã¢â€ â€™ `rgba(8,145,178,0.15)` |
-| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` Ã¢â€ â€™ `rgba(30,41,59,0.15)` |
-| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` Ã¢â€ â€™ `rgba(29,78,216,0.1)` |
+| **Base** | `#09090b` (zinc-950) — set via inline `style` on `<body>`, not Tailwind class |
+| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` → `rgba(8,145,178,0.15)` |
+| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` → `rgba(30,41,59,0.15)` |
+| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` → `rgba(29,78,216,0.1)` |
 | **Noise Texture** | SVG `feTurbulence` overlay at `opacity-[0.015]` for grain |
 
 All orbs are `position: absolute` inside a `fixed inset-0 pointer-events-none z-0` container, animated via CSS.
@@ -143,4 +143,5 @@ The dashboard implements a modular **Hover-Expand Sidebar**.
 | **SystemHealthBar** | Minimalist background, strict tabular data display |
 
 ---
+
 {% endraw %}

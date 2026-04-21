@@ -256,4 +256,5 @@ Tailwind v4 handles this automatically. The `@layer base` in `dark.css`/`light.c
 - [ ] Update all component imports
 - [ ] Remove `placeholder.css` import from `AdminLayout.astro`
 - [ ] Visual regression test every page
+
 {% endraw %}

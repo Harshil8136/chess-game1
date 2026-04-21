@@ -88,4 +88,5 @@ Before deploying any new or modified `client:load` component:
 - Use `var(--duration-normal)` (200ms) for hover/focus states
 - Use `var(--duration-slow)` (350ms) for page transitions
 - Respect `prefers-reduced-motion` media query
+
 {% endraw %}

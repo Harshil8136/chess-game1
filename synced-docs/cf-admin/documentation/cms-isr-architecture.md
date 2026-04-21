@@ -59,4 +59,5 @@ await revalidateAstro(env, ['/']);
 | `POST /api/content/services` | Update pricing data | `revalidateAstro(env, ['/'])` |
 | `POST /api/media/gallery` | Update gallery JSON array | `revalidateAstro(env, ['/'])` |
 | `POST /api/media/upload` | Upload image to R2 + D1 | `revalidateAstro(env, ['/'])` |
+
 {% endraw %}

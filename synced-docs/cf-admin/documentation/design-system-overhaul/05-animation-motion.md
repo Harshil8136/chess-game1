@@ -396,4 +396,5 @@ All motion must be disabled or minimized when the user has `prefers-reduced-moti
 3. **Cap animation duration:** Nothing over 500ms. Users perceive anything longer as sluggish.
 4. **Debounce resize-triggered animations:** ResizeObserver callbacks that trigger re-renders should be debounced to 100ms.
 5. **Lazy-load chart library:** uPlot is loaded via dynamic `import()` only when the chart card is in viewport.
+
 {% endraw %}

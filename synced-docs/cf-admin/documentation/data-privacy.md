@@ -34,10 +34,12 @@ Following the PLAC (Page Level Access Control) architecture and the 5-tier RBAC 
 The admin dashboard reads privacy analytics from Supabase using the official Supabase client library.
 1. **D1 Binding**: The admin pages registry includes the privacy module alongside security metrics.
 2. **Supabase Binding**: The API route securely queries the consent records, with robust pagination mapped for massive scaling up to 10k+ records/month.
+3. **RLS Policy**: The `consent_records` table allows anonymous INSERT (for the cookie consent banner on cf-astro) but restricts all SELECT/UPDATE/DELETE to `service_role` only. See [`database-rls-policy.md`](./database-rls-policy.md) for the full policy matrix.
 
 ## Verification Protocol
 All features are tested against:
 1. Strict PLAC denials for insufficient role levels.
 2. Proper edge-compute scaling with optimized database queries minimizing CPU cycles.
 3. Mobile-layout responsiveness utilizing sidebars and grids optimized in CSS.
+
 {% endraw %}

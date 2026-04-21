@@ -95,6 +95,17 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 * **UI Visualization:** In the invite flows and permission managers, sub-features automatically nest under their parent route and are branded as "Features" rather than "Pages" for conceptual clarity.
 * **Cost:** $0. Because the hashmap loads instantly into Cloudflare KV, querying 50 granular capability checks for a single render still operates at <1ms.
 
+**Registered Pseudo-Paths:**
+
+| Pseudo-Path | Default Access | Description |
+|-------------|---------------|-------------|
+| `/dashboard/logs#export` | DEV, Owner | Export audit logs as CSV |
+| `/dashboard/logs#prune` | DEV | Destructive prune of logs >30 days |
+| `/dashboard/logs#security` | DEV, Owner | View Login Forensics tab (contains PII: IP, User-Agent, Geo) |
+
+> [!TIP]
+> For comprehensive documentation of the Login Forensics subsystem (D1 schema, API endpoints, UI, alert emails), see **[login-forensics.md](./login-forensics.md)**.
+
 ### 2.5 Provisioning Gatekeepers (Anti-Escalation Measures)
 
 > [!IMPORTANT]
@@ -164,4 +175,5 @@ Every non-API navigation inside the dashboard is intercepted:
 3. **Ghost Telemetry:** The middleware fires an async deferred task pushing a "view" ledger entry.
 
 The details payload contains a `granted` boolean. This allows Devs to scan the audit table for denied entries to instantly uncover repeated unauthorized access attempts.
+
 {% endraw %}

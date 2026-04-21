@@ -48,4 +48,5 @@ Every operation inside this specification—whether a Hard Delete, a Soft Delete
 - **UI Integrations:** Action buttons will be strategically injected directly into the `BookingSlideDrawer` settings clusters using the glassmorphic UX mapping developed previously.
 
 *This specification serves as the foundation for the implementation phase.*
+
 {% endraw %}

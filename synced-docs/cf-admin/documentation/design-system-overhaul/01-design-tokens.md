@@ -362,4 +362,5 @@ Exact search-and-replace targets for the codebase cleanup:
 | `#22d3ee` (interactive) | `var(--theme-accent)` | Various component files |
 | `#d946ef` (fuchsia chart) | `var(--color-section-rose)` | `DashboardController.tsx` |
 | `cyan-500/50` Tailwind class | `blue-500/50` | `DashboardController.tsx` |
+
 {% endraw %}

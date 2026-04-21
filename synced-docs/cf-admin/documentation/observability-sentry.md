@@ -17,10 +17,10 @@ The Sentry Edge Observer is centralized in `sentry.server.config.ts`.
 **Key architectural decisions:**
 
 - **Full trace sampling** is enabled to monitor all application executions.
-- **Default browser integrations are disabled** â€” Cloudflare Workers run on the V8-based `workerd` runtime, NOT a browser environment. Sentry's default integrations include browser-specific tracers (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) that reference `window` and `document`, which do not exist in the `workerd` runtime. These must be disabled to prevent runtime crashes.
-- **Only server-compatible integrations are used** â€” specifically the Console Capture integration for error and warning levels.
+- **Default browser integrations are disabled** — Cloudflare Workers run on the V8-based `workerd` runtime, NOT a browser environment. Sentry's default integrations include browser-specific tracers (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) that reference `window` and `document`, which do not exist in the `workerd` runtime. These must be disabled to prevent runtime crashes.
+- **Only server-compatible integrations are used** — specifically the Console Capture integration for error and warning levels.
 
-> **âš ï¸ workerd Compatibility Note:** Any future integrations added to the Sentry config must be validated against the `workerd` runtime. Browser-targeting integrations will cause `ReferenceError: window is not defined` crashes at Worker startup.
+> **⚠️ workerd Compatibility Note:** Any future integrations added to the Sentry config must be validated against the `workerd` runtime. Browser-targeting integrations will cause `ReferenceError: window is not defined` crashes at Worker startup.
 
 ### 1.2 "Capture Console" Integration
 
@@ -50,4 +50,5 @@ A global front-end safety net (\window.onerror\ and \window.onunhandledrejection
 ### 4.2 Preact ErrorBoundary Integration
 High-risk UI components (such as interactive data widgets, charts, and API-bound tables) are wrapped in a generic Preact \ErrorBoundary\. 
 If a sub-component experiences a rendering exception (e.g., trying to map over an undefined variable due to a malformed API response), the boundary catches the error, sends a detailed crash report to Sentry silently, and gracefully renders a fallback UI component ("Widget Failure") instead of propagating the crash and taking down the entire dashboard structure.
+
 {% endraw %}

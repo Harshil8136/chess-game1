@@ -29,4 +29,5 @@ We will transition the dashboard into a strict Bento Box masonry-lite structure.
 ## 4. Implementation Constraints
 - Preserve all existing tailwind classes for Dark/Light mode (`dark:bg-white/[0.02]`).
 - Ensure no data metrics are lost during the refactor.
+
 {% endraw %}

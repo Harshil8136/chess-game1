@@ -69,4 +69,5 @@ All data verified against official Cloudflare documentation (March 2026).
 | Max data size | **256 MB** |
 | Concurrent connections | 10 |
 | Databases | 1 |
+
 {% endraw %}

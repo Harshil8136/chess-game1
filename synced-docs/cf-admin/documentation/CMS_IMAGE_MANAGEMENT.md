@@ -92,7 +92,7 @@ When deploying or updating the image pipeline:
 | `src/components/sections/Gallery.astro` | cf-astro | Dynamic gallery carousel |
 | `src/pages/api/revalidate.ts` | cf-astro | ISR cache purge webhook (receives calls from cf-admin) |
 
-### Ã¢Å¡Â Ã¯Â¸Â Critical Deployment Rules (DO NOT SKIP)
+### ⚠️ Critical Deployment Rules (DO NOT SKIP)
 
 1. **`REVALIDATION_SECRET` must be deployed on BOTH Workers.** The secret is the shared key that authenticates the revalidation webhook from cf-admin to cf-astro. If missing from cf-astro, the `/api/revalidate` endpoint returns 500, revalidation silently fails, and the live site serves stale HTML indefinitely.
    ```bash
@@ -102,7 +102,8 @@ When deploying or updating the image pipeline:
 
 2. **Image Transformations must be ENABLED in Cloudflare Dashboard.** Without this feature enabled for the zone, the /cdn-cgi/image/ requests will result in 404 or 403 errors. Free tier supports 5,000 unique transformations/month.
 
-> Ã°Å¸â€œâ€“ **Full documentation:** [`documentation/CMS_IMAGE_MANAGEMENT.md`](./documentation/CMS_IMAGE_MANAGEMENT.md)
+> 📖 **Full documentation:** [`documentation/CMS_IMAGE_MANAGEMENT.md`](./documentation/CMS_IMAGE_MANAGEMENT.md)
 
 ---
+
 {% endraw %}

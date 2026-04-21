@@ -26,4 +26,5 @@ Overhaul the visual appearance and functionality of the "Servicios / Requisitos 
 - Ensure auto-rotation pauses on user-hover.
 - Verify transition cross-fade of the body panels remains smooth.
 - Confirm visual alignment at 320px and 768px widths.
+
 {% endraw %}

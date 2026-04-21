@@ -2,7 +2,8 @@
 # CF-ADMIN CHATBOT INTEGRATION
 
 > **Status:** ✅ IMPLEMENTED  
-> **Last Updated:** 2026-04-15
+> **Last Updated:** 2026-04-21 (RLS hardened)  
+> **RLS Policy:** All chatbot tables (`chat_analytics`, `contacts`, `conversations`, `messages`) are locked to `service_role` only. See [database-rls-policy.md](./database-rls-policy.md).
 
 ## 1. Overview
 
@@ -47,4 +48,5 @@ The chatbot integration relies strictly on decoupled islands mapped heavily insi
 - The UI maintains the `Midnight Slate` aesthetics per standard `cf-admin` rules.
 - **NEVER** expose the true endpoint URLs of `cf-chatbot` to the client boundary.
 - **NEVER** cache sensitive analytical payloads in the client framework; use the `refetch()` trigger from `useChatbotApi` post-mutations to maintain single-source-of-truth from the backend D1 container.
+
 {% endraw %}

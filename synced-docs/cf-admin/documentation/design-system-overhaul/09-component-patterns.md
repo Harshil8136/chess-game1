@@ -545,4 +545,5 @@ All components follow this naming convention:
 | **Conditional** | `.stat-value--danger` | Element + double-hyphen + condition |
 
 > **Rule:** No BEM `__` double underscore. Use single hyphen for children, double hyphen for modifiers/conditions.
+
 {% endraw %}

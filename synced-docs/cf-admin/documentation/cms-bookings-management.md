@@ -338,4 +338,5 @@ Sync path fixes, revalidation secret alignment documentation.
 
 ### v4.0 — 2026-04-XX
 Initial 2-tier KV injection strategy for Gallery. Resiliency engine with 3× exponential backoff. Retry Sync UI button in GalleryManager.
+
 {% endraw %}

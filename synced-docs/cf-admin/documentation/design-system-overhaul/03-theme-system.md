@@ -316,4 +316,5 @@ The gradient orbs in `AdminLayout.astro` need theme-aware colors:
 13. [ ] Test: System preference auto-switches (when no cookie)
 14. [ ] Test: No FOWT on hard refresh
 15. [ ] Test: Charts re-render on theme change
+
 {% endraw %}

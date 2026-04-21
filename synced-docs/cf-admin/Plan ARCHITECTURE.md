@@ -1,9 +1,9 @@
 {% raw %}
-# CF-ADMIN â€” PRODUCTION ARCHITECTURE PLAN
+# CF-ADMIN — PRODUCTION ARCHITECTURE PLAN
 
-> **Version:** 3.5 (Sync Pipeline & Secret Standardization)  
-> **Last Updated:** 2026-04-13  
-> **Status:** APPROVED â€” Phase 1-6 Implemented, Phase A (Security), B (Performance), and C (Modularity) Applied  
+> **Version:** 3.6 (Search Engine Isolation + Security Hardening)  
+> **Last Updated:** 2026-04-21  
+> **Status:** APPROVED — Phase 1-6 Implemented, Phase A (Security), B (Performance), and C (Modularity) Applied  
 > **Research Sources:** Perplexity Deep Research, Cloudflare Docs MCP, Codebase Audit  
 > **Stack:** Astro 6 SSR + Cloudflare Workers (Free) + Preact Islands + D1 + KV + R2
 
@@ -12,15 +12,15 @@
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Architecture Overview â€” The "Lean Edge" Philosophy](#2-architecture-overview)
-3. [PHASE 1 â€” RBAC + Declarative ACM (âœ… IMPLEMENTED)](#3-phase-1--rbac--declarative-acm)
-4. [PHASE 2 â€” Page-Level Access Control (PLAC) System (ðŸ”¥ NEW)](#4-phase-2--page-level-access-control-plac)
-5. [PHASE 3 â€” Astro View Transitions (SPA-Feel Navigation)](#5-phase-3--astro-view-transitions)
-6. [PHASE 4 â€” Ghost Audit Engine (ctx.waitUntil Logging)](#6-phase-4--ghost-audit-engine)
-7. [PHASE 5 â€” HTTP Caching & ETag Strategy](#7-phase-5--http-caching--etag-strategy)
-8. [PHASE 6 â€” Preact Signals (Inter-Island Reactivity)](#8-phase-6--preact-signals)
-9. [PHASE 7 â€” Chatbot UI Proxy Integration (ðŸ”¥ NEW)](#9-phase-7--chatbot-ui-proxy-integration)
-10. [SCALE-UP VAULT â€” Enterprise Features (Deferred)](#10-scale-up-vault)
+2. [Architecture Overview — The "Lean Edge" Philosophy](#2-architecture-overview)
+3. [PHASE 1 — RBAC + Declarative ACM (✅ IMPLEMENTED)](#3-phase-1--rbac--declarative-acm)
+4. [PHASE 2 — Page-Level Access Control (PLAC) System (🔥 NEW)](#4-phase-2--page-level-access-control-plac)
+5. [PHASE 3 — Astro View Transitions (SPA-Feel Navigation)](#5-phase-3--astro-view-transitions)
+6. [PHASE 4 — Ghost Audit Engine (ctx.waitUntil Logging)](#6-phase-4--ghost-audit-engine)
+7. [PHASE 5 — HTTP Caching & ETag Strategy](#7-phase-5--http-caching--etag-strategy)
+8. [PHASE 6 — Preact Signals (Inter-Island Reactivity)](#8-phase-6--preact-signals)
+9. [PHASE 7 — Chatbot UI Proxy Integration (🔥 NEW)](#9-phase-7--chatbot-ui-proxy-integration)
+10. [SCALE-UP VAULT — Enterprise Features (Deferred)](#10-scale-up-vault)
 11. [Risk Analysis & CPU Budget](#11-risk-analysis--cpu-budget)
 12. [File Map & Implementation Order](#12-file-map--implementation-order)
 
@@ -28,7 +28,7 @@
 
 ## 1. EXECUTIVE SUMMARY
 
-This plan defines the **production architecture** for cf-admin â€” a secure, lightning-fast admin portal running on Cloudflare's $0 free tier. It was validated through deep research (Perplexity, Cloudflare Docs, industry analysis) against the original "Lego MFE" proposal.
+This plan defines the **production architecture** for cf-admin — a secure, lightning-fast admin portal running on Cloudflare's $0 free tier. It was validated through deep research (Perplexity, Cloudflare Docs, industry analysis) against the original "Lego MFE" proposal.
 
 ### Design Philosophy: "Lean Edge"
 
@@ -38,7 +38,7 @@ This plan defines the **production architecture** for cf-admin â€” a secure
 
 | Component | Approach | CPU Cost | JS Bundle |
 |-----------|----------|----------|-----------|
-| RBAC + ACM | âœ… Already implemented â€” hierarchical integers + route registry | <0.1ms | 0 KB |
+| RBAC + ACM | ✅ Already implemented — hierarchical integers + route registry | <0.1ms | 0 KB |
 | **Page-Level Access (PLAC)** | **KV-cached access maps + D1 overrides + Auto-reset on role change** | **<0.5ms** | **~3 KB** |
 | **Module Manifest** | **Domain-grouped module silos (Customers, Pets, Analytics, Reports)** | **0ms (build-time)** | **0 KB** |
 | SPA Navigation | Astro View Transitions API | 0ms (browser-native) | 0 KB |
@@ -48,7 +48,7 @@ This plan defines the **production architecture** for cf-admin â€” a secure
 | API Caching | HTTP ETag + Cache-Control headers | 0ms | 0 KB |
 | Island Communication | Preact Signals (`useApi()`, global `<ToastProvider />`) | 0ms | ~1 KB |
 
-### What We Defer (Scale-Up Vault â€” when 100+ users)
+### What We Defer (Scale-Up Vault — when 100+ users)
 
 | Component | Why Deferred |
 |-----------|-------------|
@@ -65,26 +65,26 @@ This plan defines the **production architecture** for cf-admin â€” a secure
 ### The 5-Layer "Lean Edge" Stack
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                    LAYER 5: EXTERNAL PROXY                      â”‚
-â”‚  Astro API Gateway (/api/chatbot/*) â†’ Cloudflare Worker AI Bot  â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                    LAYER 4: OBSERVER                            â”‚
-â”‚  Ghost Audit Engine (ctx.waitUntil â†’ D1 admin_audit_log)        â”‚
-â”‚  Post-response, zero-latency, fire-and-forget                   â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                    LAYER 3: CACHE                               â”‚
-â”‚  HTTP ETag + Cache-Control headers on API responses             â”‚
-â”‚  KV hot cache for PLAC access maps + expensive queries          â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                    LAYER 2: ACCESS CONTROL                      â”‚
-â”‚  Hierarchical RBAC (rbac.ts) + Route ACM (registry.ts)          â”‚
-â”‚  + Page-Level Access Control (PLAC) with KV-cached overrides    â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                    LAYER 1: TRANSPORT                           â”‚
-â”‚  Astro 6 SSR + ClientRouter + Preact Islands + Signals          â”‚
-â”‚  Cloudflare Workers â†’ D1 / KV / R2 (Hyperdrive: DISABLED)       â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 5: EXTERNAL PROXY                      │
+│  Astro API Gateway (/api/chatbot/*) → Cloudflare Worker AI Bot  │
+├─────────────────────────────────────────────────────────────────┤
+│                    LAYER 4: OBSERVER                            │
+│  Ghost Audit Engine (ctx.waitUntil → D1 admin_audit_log)        │
+│  Post-response, zero-latency, fire-and-forget                   │
+├─────────────────────────────────────────────────────────────────┤
+│                    LAYER 3: CACHE                               │
+│  HTTP ETag + Cache-Control headers on API responses             │
+│  KV hot cache for PLAC access maps + expensive queries          │
+├─────────────────────────────────────────────────────────────────┤
+│                    LAYER 2: ACCESS CONTROL                      │
+│  Hierarchical RBAC (rbac.ts) + Route ACM (registry.ts)          │
+│  + Page-Level Access Control (PLAC) with KV-cached overrides    │
+├─────────────────────────────────────────────────────────────────┤
+│                    LAYER 1: TRANSPORT                           │
+│  Astro 6 SSR + ClientRouter + Preact Islands + Signals          │
+│  Cloudflare Workers → D1 / KV / R2 (Hyperdrive: DISABLED)       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Architecture: "Atomic Islands"
@@ -99,36 +99,36 @@ To ensure "LEGO-like" composability and restrict large monolithic UI files, all 
 
 ```
 Browser Request
-    â”‚
+    │
     â–¼
-â”Œâ”€â”€ MIDDLEWARE (middleware.ts) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  1. Is route public? (/login, /auth/*) â†’ PASS             â”‚
-â”‚  2. Get session from KV (cookie â†’ session:uuid)            â”‚
-â”‚  3. Session expired? â†’ Redirect to /                       â”‚
-â”‚  4. Need JWT refresh? (30min interval) â†’ Refresh tokens    â”‚
-â”‚  5. Get PLAC access map from KV (plac:{userId})            â”‚
-â”‚  6. Check access: role hierarchy + page overrides           â”‚
-â”‚  7. Denied? â†’ Redirect /dashboard?error=insufficient       â”‚
-â”‚  8. Inject user + permissions into Astro.locals             â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-    â”‚
+┌── MIDDLEWARE (middleware.ts) ──────────────────────────────┐
+│  1. Is route public? (/login, /auth/*) → PASS             │
+│  2. Get session from KV (cookie → session:uuid)            │
+│  3. Session expired? → Redirect to /                       │
+│  4. Need JWT refresh? (30min interval) → Refresh tokens    │
+│  5. Get PLAC access map from KV (plac:{userId})            │
+│  6. Check access: role hierarchy + page overrides           │
+│  7. Denied? → Redirect /dashboard?error=insufficient       │
+│  8. Inject user + permissions into Astro.locals             │
+└────────────────────────────────────────────────────────────┘
+    │
     â–¼
-â”Œâ”€â”€ PAGE RENDER (Astro SSR) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  Server-side data fetch (D1/Supabase via REST client)      â”‚
-â”‚  Render HTML + Preact island placeholders                  â”‚
-â”‚  Set ETag + Cache-Control headers                          â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-    â”‚
+┌── PAGE RENDER (Astro SSR) ────────────────────────────────┐
+│  Server-side data fetch (D1/Supabase via REST client)      │
+│  Render HTML + Preact island placeholders                  │
+│  Set ETag + Cache-Control headers                          │
+└────────────────────────────────────────────────────────────┘
+    │
     â–¼
-â”Œâ”€â”€ POST-RESPONSE (ctx.waitUntil) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  Ghost Audit: log action to D1 admin_audit_log             â”‚
-â”‚  (Runs AFTER response is sent â€” zero user latency)         â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌── POST-RESPONSE (ctx.waitUntil) ──────────────────────────┐
+│  Ghost Audit: log action to D1 admin_audit_log             │
+│  (Runs AFTER response is sent — zero user latency)         │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. PHASE 1 â€” RBAC + DECLARATIVE ACM (âœ… IMPLEMENTED)
+## 3. PHASE 1 — RBAC + DECLARATIVE ACM (✅ IMPLEMENTED)
 
 > **Status:** Already implemented and production-ready. No changes needed.
 
@@ -136,29 +136,29 @@ Browser Request
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `src/lib/auth/rbac.ts` | Role hierarchy (DEV:0 > Owner:1 > SuperAdmin:2 > Admin:3 > Staff:4) | âœ… Complete |
-| `src/lib/auth/registry.ts` | Declarative route â†’ minimum role mapping (ACM) | âœ… Complete |
-| `src/lib/auth/guard.ts` | Server-side auth gate with ACM + token refresh | âœ… Complete |
-| `src/lib/auth/session.ts` | KV-backed sessions with 30min refresh + 24h expiry (env via centralized `env.ts`) | âœ… Complete |
-| `src/middleware.ts` | Global auth gate on every non-public route | âœ… Complete |
+| `src/lib/auth/rbac.ts` | Role hierarchy (DEV:0 > Owner:1 > SuperAdmin:2 > Admin:3 > Staff:4) | ✅ Complete |
+| `src/lib/auth/registry.ts` | Declarative route → minimum role mapping (ACM) | ✅ Complete |
+| `src/lib/auth/guard.ts` | Server-side auth gate with ACM + token refresh | ✅ Complete |
+| `src/lib/auth/session.ts` | KV-backed sessions with 30min refresh + 24h expiry (env via centralized `env.ts`) | ✅ Complete |
+| `src/middleware.ts` | Global auth gate on every non-public route | ✅ Complete |
 
 ### 3.2 Why This Is Already Optimal
 
 The `hasPermission()` function uses a simple integer comparison:
 
 ```typescript
-// rbac.ts â€” O(1), <0.01ms, zero allocations
+// rbac.ts — O(1), <0.01ms, zero allocations
 export function hasPermission(userRole: Role, requiredRole: Role): boolean {
   return ROLE_LEVEL[userRole] <= ROLE_LEVEL[requiredRole];
 }
 ```
 
-**Research confirmed:** At 5 roles and ~20 routes, this integer hierarchy is identical in security to bitmask systems but with zero debugging complexity. Bitwise operations save ~0.9Î¼s per check â€” irrelevant when D1 queries take 5-8ms.
+**Research confirmed:** At 5 roles and ~20 routes, this integer hierarchy is identical in security to bitmask systems but with zero debugging complexity. Bitwise operations save ~0.9μs per check — irrelevant when D1 queries take 5-8ms.
 
 ### 3.3 Current Route Registry
 
 ```typescript
-// registry.ts â€” Declarative ACM (longest-prefix matching)
+// registry.ts — Declarative ACM (longest-prefix matching)
 export const ROUTE_REGISTRY: Record<string, RouteDefinition> = {
   '/dashboard/users':    { minRole: ROLES.SUPER_ADMIN },
   '/dashboard/settings': { minRole: ROLES.SUPER_ADMIN },
@@ -171,9 +171,9 @@ This registry defines the **default baseline** for role-based access. PLAC (Phas
 
 ---
 
-## 4. PHASE 2 â€” PAGE-LEVEL ACCESS CONTROL (PLAC) SYSTEM (ðŸ”¥ NEW)
+## 4. PHASE 2 — PAGE-LEVEL ACCESS CONTROL (PLAC) SYSTEM (🔥 NEW)
 
-> **Priority:** HIGH â€” This is the primary new feature.  
+> **Priority:** HIGH — This is the primary new feature.  
 > **Research:** Validated via Perplexity against Clerk, WorkOS, and Oso patterns (2026).
 
 ### 4.1 What PLAC Does
@@ -184,14 +184,14 @@ PLAC enables **per-user, full-page access overrides** on top of hierarchical RBA
 - A **SuperAdmin** can revoke an Admin's access to `/dashboard/settings`
 - A **SuperAdmin** CANNOT grant access to pages they don't have access to
 - A **SuperAdmin** CANNOT modify a DEV's access (hierarchy enforcement)
-- **Deny always wins** â€” if an explicit deny override exists, role-based access is ignored
-- All overrides are **auditable** â€” who granted/revoked, when, and for whom
+- **Deny always wins** — if an explicit deny override exists, role-based access is ignored
+- All overrides are **auditable** — who granted/revoked, when, and for whom
 
 ### 4.2 Design Principles
 
 | Principle | Implementation |
 |-----------|---------------|
-| **Lightning fast** | KV-cached access maps â€” zero D1 queries per request |
+| **Lightning fast** | KV-cached access maps — zero D1 queries per request |
 | **Deny wins** | Explicit deny override trumps both role default and grant override |
 | **Hierarchy-enforced** | API validates actor rank > target rank before any mutation |
 | **Cannot grant upward** | Actor cannot grant access to pages they don't have access to |
@@ -201,9 +201,9 @@ PLAC enables **per-user, full-page access overrides** on top of hierarchical RBA
 ### 4.3 Database Schema (D1)
 
 ```sql
--- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- ═══════════════════════════════════════════════════════════════
 -- PLAC: Page-Level Access Control Tables
--- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- ═══════════════════════════════════════════════════════════════
 
 -- Table 1: Page Registry (pre-populated with all dashboard pages)
 -- This is the single source of truth for what pages exist and
@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS admin_pages (
 );
 
 -- Table 2: Per-User Page Access Overrides (junction table)
--- Normalized â€” NOT a JSON array in the user row.
+-- Normalized — NOT a JSON array in the user row.
 -- Research confirmed: junction table enables indexed O(1) lookups,
 -- hierarchy enforcement via granted_by, and clean provisioning queries.
 CREATE TABLE IF NOT EXISTS admin_page_overrides (
@@ -249,12 +249,12 @@ CREATE INDEX IF NOT EXISTS idx_overrides_grantor
 
 ```sql
 INSERT OR IGNORE INTO admin_pages (path, label, icon, required_role, description, sort_order) VALUES
-  -- â•â•â• CORE â•â•â•
+  -- ═══ CORE ═══
   ('/dashboard',              'Dashboard',         'layout-dashboard', 'staff',       'Home dashboard with KPIs and activity feed',        0),
   ('/dashboard/bookings',     'Bookings',          'calendar',         'staff',       'View and manage pet boarding reservations',          1),
   ('/dashboard/customers',    'Customers',         'contact',          'staff',       'Customer profiles and contact information',          2),
   ('/dashboard/pets',         'Pet Profiles',      'paw-print',        'staff',       'Pet records, breeds, medical notes',                 3),
-  -- â•â•â• CONTENT MANAGEMENT â•â•â•
+  -- ═══ CONTENT MANAGEMENT ═══
   ('/dashboard/content',      'Content Studio',    'palette',          'admin',       'CMS hub for managing public site content',           4),
   ('/dashboard/content/hero', 'Hero Editor',       'image',            'admin',       'Hero background and headline management',            5),
   ('/dashboard/content/gallery','Gallery Manager', 'images',           'admin',       'Photo gallery drag-and-drop manager',                6),
@@ -263,36 +263,36 @@ INSERT OR IGNORE INTO admin_pages (path, label, icon, required_role, description
   ('/dashboard/content/testimonials','Testimonials','message-square',  'admin',       'Customer testimonials and reviews',                   9),
   ('/dashboard/content/faq',  'FAQ Editor',        'help-circle',      'admin',       'Frequently asked questions management',               10),
   ('/dashboard/content/about','About Page',        'info',             'admin',       'About page content and team information',             11),
-  -- â•â•â• ANALYTICS & REPORTS â•â•â•
+  -- ═══ ANALYTICS & REPORTS ═══
   ('/dashboard/analytics',    'Analytics',         'bar-chart-3',      'admin',       'Traffic, engagement, and usage analytics',            12),
   ('/dashboard/reports',      'Reports',           'file-bar-chart',   'super_admin', 'Financial and operational reports',                   13),
-  -- â•â•â• OPERATIONS â•â•â•
+  -- ═══ OPERATIONS ═══
   ('/dashboard/logs',         'Activity Logs',     'scroll-text',      'staff',       'Admin action audit trail and system logs',            14),
-  -- â•â•â• ADMINISTRATION â•â•â•
+  -- ═══ ADMINISTRATION ═══
   ('/dashboard/users',        'User Management',   'users',            'super_admin', 'Admin user accounts, roles, and page access',        15),
   ('/dashboard/settings',     'Site Settings',     'settings',         'super_admin', 'General portal and site configuration',               16),
   ('/dashboard/settings/email','Email Templates',  'mail',             'super_admin', 'Email notification template management',              17),
   ('/dashboard/settings/integrations','Integrations','plug',           'super_admin', 'Third-party service connections',                     18),
-  -- â•â•â• DEV TOOLS â•â•â•
+  -- ═══ DEV TOOLS ═══
   ('/dashboard/debug',        'Debug Tools',       'bug',              'dev',         'Developer diagnostics, cache inspection, D1 viewer',  19);
 ```
 
 ### 4.4 Resolution Algorithm (The "Merge" Logic)
 
-The access map is **precomputed at login and on provisioning changes**, then cached in KV. The middleware only reads from KV â€” zero D1 queries per request.
+The access map is **precomputed at login and on provisioning changes**, then cached in KV. The middleware only reads from KV — zero D1 queries per request.
 
 ```
 RESOLUTION RULE (per page, per user):
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Check explicit override for this user + page:
-   â†’ If override exists AND granted = 0 (DENY):  ACCESS = FALSE  (deny ALWAYS wins)
-   â†’ If override exists AND granted = 1 (GRANT):  ACCESS = TRUE
+   → If override exists AND granted = 0 (DENY):  ACCESS = FALSE  (deny ALWAYS wins)
+   → If override exists AND granted = 1 (GRANT):  ACCESS = TRUE
 
 2. If no override exists, fall back to role hierarchy:
-   â†’ ROLE_LEVEL[user.role] <= ROLE_LEVEL[page.required_role]
-   â†’ DEV(0) and Owner(1) can access everything
-   â†’ Staff(4) can only access Staff-level pages
+   → ROLE_LEVEL[user.role] <= ROLE_LEVEL[page.required_role]
+   → DEV(0) and Owner(1) can access everything
+   → Staff(4) can only access Staff-level pages
 
 RESULT: A flat Record<string, boolean> object cached in KV as plac:{userId}
 ```
@@ -306,7 +306,7 @@ import type { Role } from './rbac';
 import { ROLE_LEVEL } from './rbac';
 
 export interface PageAccessMap {
-  /** Map of page path â†’ boolean access. True = allowed, False = denied */
+  /** Map of page path → boolean access. True = allowed, False = denied */
   pages: Record<string, boolean>;
   /** Unix ms timestamp of when this map was computed */
   computedAt: number;
@@ -346,13 +346,13 @@ export async function computeAccessMap(
   
   for (const row of result.results) {
     if (row.granted === 0) {
-      // DENY override â€” always wins, regardless of role
+      // DENY override — always wins, regardless of role
       pages[row.path] = false;
     } else if (row.granted === 1) {
-      // GRANT override â€” explicit access
+      // GRANT override — explicit access
       pages[row.path] = true;
     } else {
-      // No override â€” fall back to role hierarchy
+      // No override — fall back to role hierarchy
       pages[row.path] = ROLE_LEVEL[userRole] <= ROLE_LEVEL[row.required_role as Role];
     }
   }
@@ -402,7 +402,7 @@ export async function invalidateAccessMap(
 
 /**
  * Check if a user can access a specific page path.
- * Uses the cached access map (KV) â€” zero D1 queries.
+ * Uses the cached access map (KV) — zero D1 queries.
  * Falls back to role hierarchy if path not in map.
  * 
  * Cost: <0.3ms (KV read + object lookup)
@@ -426,7 +426,7 @@ export function checkPageAccess(
     }
   }
 
-  // Unknown page â€” deny by default
+  // Unknown page — deny by default
   return false;
 }
 ```
@@ -445,15 +445,15 @@ const session = await getSession(context);
 let accessMap = await getCachedAccessMap(env.SESSION, session.userId);
 
 if (!accessMap || accessMap.role !== session.role) {
-  // Cache miss or role changed â€” recompute from D1
+  // Cache miss or role changed — recompute from D1
   accessMap = await computeAccessMap(env.DB, session.userId, session.role);
   // Cache in background (don't block response)
-  // NOTE: Astro 6 removed locals.runtime â€” use getCfContext() from env.ts
+  // NOTE: Astro 6 removed locals.runtime — use getCfContext() from env.ts
   const cfCtx = getCfContext(context);
   cfCtx?.waitUntil(cacheAccessMap(env.SESSION, session.userId, accessMap));
 }
 
-// 2. Check page access (O(1) hashmap lookup â€” <0.1ms)
+// 2. Check page access (O(1) hashmap lookup — <0.1ms)
 if (!checkPageAccess(accessMap, pathname)) {
   return context.redirect('/dashboard?error=insufficient_permissions');
 }
@@ -479,7 +479,7 @@ Content-Type: application/json
 **Server-side hierarchy enforcement rules:**
 
 ```typescript
-// src/pages/api/users/access.ts â€” Provisioning endpoint
+// src/pages/api/users/access.ts — Provisioning endpoint
 
 // Rule 1: Actor must have higher role level than target
 if (ROLE_LEVEL[actorRole] >= ROLE_LEVEL[targetRole]) {
@@ -491,7 +491,7 @@ if (!checkPageAccess(actorAccessMap, pagePath)) {
   return error(403, 'Cannot grant access to pages you do not have access to');
 }
 
-// Rule 3: DEV and Owner users are "ghosts" â€” invisible to SuperAdmin and below
+// Rule 3: DEV and Owner users are "ghosts" — invisible to SuperAdmin and below
 if ((targetRole === 'dev' || targetRole === 'owner') && actorRole !== 'dev') {
   return error(403, 'Cannot modify DEV/Owner user access');
 }
@@ -506,7 +506,7 @@ if (ROLE_LEVEL[actorRole] > ROLE_LEVEL[pageDefinition.required_role]) {
 
 ### 4.7 Auto-Reset on Role Change
 
-When a user's role changes (e.g., Staff â†’ Admin), their overrides are automatically cleared because a new role implies a new access baseline:
+When a user's role changes (e.g., Staff → Admin), their overrides are automatically cleared because a new role implies a new access baseline:
 
 ```typescript
 // When role changes, reset all overrides and rebuild access map
@@ -541,24 +541,24 @@ The UI renders a responsive toggle grid showing all pages with their access stat
 - The "Reset" button removes the override and reverts to role default
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  ðŸ” Page Access for: Maria GarcÃ­a (Admin)               â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ ðŸ“Š Dashboard         â”‚ â”‚ ðŸ“… Bookings              â”‚  â”‚
-â”‚  â”‚ â— Role Default       â”‚ â”‚ â— Role Default           â”‚  â”‚
-â”‚  â”‚ [====ON====]         â”‚ â”‚ [====ON====]             â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ ðŸŽ¨ Content Studio    â”‚ â”‚ ðŸ“œ Activity Logs         â”‚  â”‚
-â”‚  â”‚ â— Role Default       â”‚ â”‚ â— Role Default           â”‚  â”‚
-â”‚  â”‚ [====ON====]         â”‚ â”‚ [====ON====]             â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ ðŸ‘¥ User Management   â”‚ â”‚ âš™ï¸ Settings              â”‚  â”‚
-â”‚  â”‚ ðŸ”’ Above clearance   â”‚ â”‚ ðŸ”’ Above clearance       â”‚  â”‚
-â”‚  â”‚ [---LOCKED---]       â”‚ â”‚ [---LOCKED---]           â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────┐
+│  🔐 Page Access for: Maria García (Admin)               │
+│  ┌──────────────────────┐ ┌──────────────────────────┐  │
+│  │ 📊 Dashboard         │ │ 📅 Bookings              │  │
+│  │ ● Role Default       │ │ ● Role Default           │  │
+│  │ [====ON====]         │ │ [====ON====]             │  │
+│  └──────────────────────┘ └──────────────────────────┘  │
+│  ┌──────────────────────┐ ┌──────────────────────────┐  │
+│  │ 🎨 Content Studio    │ │ 📜 Activity Logs         │  │
+│  │ ● Role Default       │ │ ● Role Default           │  │
+│  │ [====ON====]         │ │ [====ON====]             │  │
+│  └──────────────────────┘ └──────────────────────────┘  │
+│  ┌──────────────────────┐ ┌──────────────────────────┐  │
+│  │ 👥 User Management   │ │ ⚙️ Settings              │  │
+│  │ 🔒 Above clearance   │ │ 🔒 Above clearance       │  │
+│  │ [---LOCKED---]       │ │ [---LOCKED---]           │  │
+│  └──────────────────────┘ └──────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### 4.9 PLAC Performance Budget
@@ -575,9 +575,9 @@ The UI renders a responsive toggle grid showing all pages with their access stat
 
 ---
 
-## 5. PHASE 3 â€” ASTRO VIEW TRANSITIONS (SPA-FEEL NAVIGATION)
+## 5. PHASE 3 — ASTRO VIEW TRANSITIONS (SPA-FEEL NAVIGATION)
 
-> **Status:** âœ… IMPLEMENTED â€” Using Astro 6's `ClientRouter` (renamed from `ViewTransitions`).
+> **Status:** ✅ IMPLEMENTED — Using Astro 6's `ClientRouter` (renamed from `ViewTransitions`).
 
 ### 5.1 What It Does
 
@@ -609,10 +609,10 @@ import { ClientRouter } from 'astro:transitions';
 | Aspect | Custom Fragments (Original Plan) | View Transitions (This Plan) |
 |--------|--------------------------------|------------------------------|
 | JavaScript needed | ~15-20 KB custom loader + DOM swap logic | 0 KB (browser-native) |
-| Hydration risk | High â€” Preact islands can desync | Zero â€” Astro manages islands |
+| Hydration risk | High — Preact islands can desync | Zero — Astro manages islands |
 | Animation | Manual CSS transitions | Browser-native morphing |
 | Prefetching | Manual `fetch()` calls | Automatic `<link rel="prefetch">` |
-| SSR compatibility | Complex â€” must handle partial HTML | Built-in â€” designed for SSR |
+| SSR compatibility | Complex — must handle partial HTML | Built-in — designed for SSR |
 
 ### 5.4 Sidebar Navigation Enhancement
 
@@ -627,13 +627,13 @@ With View Transitions, sidebar links become instant:
 </a>
 ```
 
-The main content area morphs between pages. The sidebar and topbar persist across navigations â€” true SPA feel with zero custom code.
+The main content area morphs between pages. The sidebar and topbar persist across navigations — true SPA feel with zero custom code.
 
 ---
 
-## 6. PHASE 4 â€” GHOST AUDIT ENGINE (ctx.waitUntil LOGGING)
+## 6. PHASE 4 — GHOST AUDIT ENGINE (ctx.waitUntil LOGGING)
 
-> **Status:** âœ… IMPLEMENTED â€” Critical for security and compliance. Active across PLAC, User Management, and CMS APIs.
+> **Status:** ✅ IMPLEMENTED — Critical for security and compliance. Active across PLAC, User Management, and CMS APIs.
 > **Hardening (v3.1):** Audit factory `createAuditLogger()` now validates table names against `ALLOWED_AUDIT_TABLES` whitelist to prevent SQL injection via config surface expansion.
 
 ### 6.1 How It Works
@@ -641,11 +641,11 @@ The main content area morphs between pages. The sidebar and topbar persist acros
 The Ghost Audit Engine uses Cloudflare Workers' `ctx.waitUntil()` to log every admin action **after** the HTTP response is sent. The user sees instant feedback; the audit log writes happen in the background.
 
 ```
-User clicks "Save" â†’ API processes â†’ Response sent â†’ User sees "âœ… Saved!"
-                                                        â”‚
+User clicks "Save" → API processes → Response sent → User sees "✅ Saved!"
+                                                        │
                                               (connection closed)
-                                                        â”‚
-                                              Worker stays alive â”€â”€â†’ D1 INSERT audit log
+                                                        │
+                                              Worker stays alive ──→ D1 INSERT audit log
                                               (invisible to user)
 ```
 
@@ -690,7 +690,7 @@ export interface AuditEntry {
 
 /**
  * Fire-and-forget audit log via ctx.waitUntil().
- * Runs AFTER the response is sent â€” zero user latency.
+ * Runs AFTER the response is sent — zero user latency.
  * Uses D1 prepared statements to stay under 10ms CPU.
  */
 export function auditLog(
@@ -745,20 +745,20 @@ auditLog(ctx, env.DB, {
 
 ### 6.6 DEV-Only Log Pruning
 
-Audit logs are immutable â€” no user (including SuperAdmin) can delete them. Only DEV-level users can trigger a purge via a protected endpoint:
+Audit logs are immutable — no user (including SuperAdmin) can delete them. Only DEV-level users can trigger a purge via a protected endpoint:
 
 ```
 POST /api/audit/prune (DEV only)
-â†’ Archives logs older than 6 months to R2 as compressed JSON
-â†’ Deletes archived rows from D1
-â†’ Logs the prune action itself to the audit log
+→ Archives logs older than 6 months to R2 as compressed JSON
+→ Deletes archived rows from D1
+→ Logs the prune action itself to the audit log
 ```
 
 ---
 
-## 7. PHASE 5 â€” HTTP CACHING & ETAG STRATEGY
+## 7. PHASE 5 — HTTP CACHING & ETAG STRATEGY
 
-> **Status:** âœ… IMPLEMENTED â€” Optimization reduces D1 reads on repeated API calls via 304 Not Modified responses.
+> **Status:** ✅ IMPLEMENTED — Optimization reduces D1 reads on repeated API calls via 304 Not Modified responses.
 
 ### 7.1 How It Replaces IndexedDB + SWR
 
@@ -771,7 +771,7 @@ const etag = `"${hashData(data)}"`;
 
 // Check if client already has this version
 if (request.headers.get('If-None-Match') === etag) {
-  return new Response(null, { status: 304 }); // Not Modified â€” 0 bytes sent
+  return new Response(null, { status: 304 }); // Not Modified — 0 bytes sent
 }
 
 return new Response(JSON.stringify(data), {
@@ -792,9 +792,9 @@ return new Response(JSON.stringify(data), {
 
 ---
 
-## 8. PHASE 6 â€” PREACT SIGNALS (INTER-ISLAND REACTIVITY)
+## 8. PHASE 6 — PREACT SIGNALS (INTER-ISLAND REACTIVITY)
 
-> **Priority:** LOW â€” Only needed when multiple islands on one page need to communicate.
+> **Priority:** LOW — Only needed when multiple islands on one page need to communicate.
 
 ### 8.1 What It Solves
 
@@ -817,7 +817,7 @@ Both islands import from the same shared module. When one island writes to the s
 
 ## 9. FEATURE-SLICED MODULE ARCHITECTURE (ACTIVE)
 
-> **Status:** ACTIVE â€” 30 pages across ~15 modules triggers this pattern.
+> **Status:** ACTIVE — 30 pages across ~15 modules triggers this pattern.
 
 With 30 pages, domain-grouped module organization is essential for maintainability. Each module owns its pages, components, and API handlers as a self-contained unit. Removing a feature = deleting its folder + its entry in `admin_pages`.
 
@@ -825,87 +825,87 @@ With 30 pages, domain-grouped module organization is essential for maintainabili
 
 ```
 src/
-â”œâ”€â”€ pages/dashboard/
-â”‚   â”œâ”€â”€ index.astro                    â† Dashboard home
-â”‚   â”œâ”€â”€ bookings/
-â”‚   â”‚   â”œâ”€â”€ index.astro                â† Booking list/calendar
-â”‚   â”‚   â””â”€â”€ [id].astro                 â† Booking detail (future)
-â”‚   â”œâ”€â”€ customers/
-â”‚   â”‚   â””â”€â”€ index.astro                â† Customer profiles
-â”‚   â”œâ”€â”€ pets/
-â”‚   â”‚   â””â”€â”€ index.astro                â† Pet records
-â”‚   â”œâ”€â”€ content/
-â”‚   â”‚   â”œâ”€â”€ index.astro                â† Content Studio hub
-â”‚   â”‚   â”œâ”€â”€ hero.astro                 â† Hero editor
-â”‚   â”‚   â”œâ”€â”€ gallery.astro              â† Gallery manager
-â”‚   â”‚   â”œâ”€â”€ services.astro             â† Services editor
-â”‚   â”‚   â”œâ”€â”€ pricing.astro              â† Pricing tables
-â”‚   â”‚   â”œâ”€â”€ testimonials.astro         â† Testimonials
-â”‚   â”‚   â”œâ”€â”€ faq.astro                  â† FAQ editor
-â”‚   â”‚   â””â”€â”€ about.astro                â† About page editor
-â”‚   â”œâ”€â”€ analytics/
-â”‚   â”‚   â””â”€â”€ index.astro                â† Analytics dashboard
-â”‚   â”œâ”€â”€ reports/
-â”‚   â”‚   â””â”€â”€ index.astro                â† Financial reports
-â”‚   â”œâ”€â”€ logs/
-â”‚   â”‚   â””â”€â”€ index.astro                â† Activity audit logs
-â”‚   â”œâ”€â”€ users/
-â”‚   â”‚   â””â”€â”€ index.astro                â† User management + PLAC
-â”‚   â”œâ”€â”€ settings/
-â”‚   â”‚   â”œâ”€â”€ index.astro                â† General settings
-â”‚   â”‚   â”œâ”€â”€ email.astro                â† Email templates
-â”‚   â”‚   â””â”€â”€ integrations.astro         â† Third-party connections
-â”‚   â””â”€â”€ debug/
-â”‚       â””â”€â”€ index.astro                â† Dev tools (DEV only)
-â”œâ”€â”€ components/
-â”‚   â”œâ”€â”€ admin/
-â”‚   â”‚   â”œâ”€â”€ bookings/                  â† Booking-specific Preact islands
-â”‚   â”‚   â”œâ”€â”€ customers/                 â† Customer Preact islands
-â”‚   â”‚   â”œâ”€â”€ pets/                      â† Pet management islands
-â”‚   â”‚   â”œâ”€â”€ content/                   â† CMS Preact islands (GalleryManager, etc.)
-â”‚   â”‚   â”œâ”€â”€ analytics/                 â† Analytics chart islands
-â”‚   â”‚   â”œâ”€â”€ users/                     â† User management + PageAccessManager
-â”‚   â”‚   â””â”€â”€ settings/                  â† Settings form islands
-â”‚   â”œâ”€â”€ navigation/                    â† Sidebar, TopBar
-â”‚   â”œâ”€â”€ dashboard/                     â† Home dashboard widgets
-â”‚   â””â”€â”€ ui/                            â† Shared UI primitives (Toast, Modal, etc.)
-â”œâ”€â”€ pages/api/
-â”‚   â”œâ”€â”€ auth/                          â† Auth callbacks
-â”‚   â”œâ”€â”€ users/                         â† User management + PLAC provisioning
-â”‚   â”œâ”€â”€ content/                       â† CMS content APIs
-â”‚   â””â”€â”€ media/                         â† Media upload/gallery APIs
-â””â”€â”€ lib/
-    â”œâ”€â”€ auth/                          â† RBAC, PLAC, sessions, guards
-    â”œâ”€â”€ env.ts                         â† Single source of truth for Cloudflare env bindings
-    â”œâ”€â”€ audit.ts                       â† Ghost Audit Engine (table name whitelisted)
-    â”œâ”€â”€ cms.ts                         â† CMS helpers: revalidateAstro(), locale expansion
-    â””â”€â”€ supabase.ts                    â† Supabase client factory (anon + admin)
+├── pages/dashboard/
+│   ├── index.astro                    ← Dashboard home
+│   ├── bookings/
+│   │   ├── index.astro                ← Booking list/calendar
+│   │   └── [id].astro                 ← Booking detail (future)
+│   ├── customers/
+│   │   └── index.astro                ← Customer profiles
+│   ├── pets/
+│   │   └── index.astro                ← Pet records
+│   ├── content/
+│   │   ├── index.astro                ← Content Studio hub
+│   │   ├── hero.astro                 ← Hero editor
+│   │   ├── gallery.astro              ← Gallery manager
+│   │   ├── services.astro             ← Services editor
+│   │   ├── pricing.astro              ← Pricing tables
+│   │   ├── testimonials.astro         ← Testimonials
+│   │   ├── faq.astro                  ← FAQ editor
+│   │   └── about.astro                ← About page editor
+│   ├── analytics/
+│   │   └── index.astro                ← Analytics dashboard
+│   ├── reports/
+│   │   └── index.astro                ← Financial reports
+│   ├── logs/
+│   │   └── index.astro                ← Activity audit logs
+│   ├── users/
+│   │   └── index.astro                ← User management + PLAC
+│   ├── settings/
+│   │   ├── index.astro                ← General settings
+│   │   ├── email.astro                ← Email templates
+│   │   └── integrations.astro         ← Third-party connections
+│   └── debug/
+│       └── index.astro                ← Dev tools (DEV only)
+├── components/
+│   ├── admin/
+│   │   ├── bookings/                  ← Booking-specific Preact islands
+│   │   ├── customers/                 ← Customer Preact islands
+│   │   ├── pets/                      ← Pet management islands
+│   │   ├── content/                   ← CMS Preact islands (GalleryManager, etc.)
+│   │   ├── analytics/                 ← Analytics chart islands
+│   │   ├── users/                     ← User management + PageAccessManager
+│   │   └── settings/                  ← Settings form islands
+│   ├── navigation/                    ← Sidebar, TopBar
+│   ├── dashboard/                     ← Home dashboard widgets
+│   └── ui/                            ← Shared UI primitives (Toast, Modal, etc.)
+├── pages/api/
+│   ├── auth/                          ← Auth callbacks
+│   ├── users/                         ← User management + PLAC provisioning
+│   ├── content/                       ← CMS content APIs
+│   └── media/                         ← Media upload/gallery APIs
+└── lib/
+    ├── auth/                          ← RBAC, PLAC, sessions, guards
+    ├── env.ts                         ← Single source of truth for Cloudflare env bindings
+    ├── audit.ts                       ← Ghost Audit Engine (table name whitelisted)
+    ├── cms.ts                         ← CMS helpers: revalidateAstro(), locale expansion
+    └── supabase.ts                    ← Supabase client factory (anon + admin)
 ```
 
 ### 9.2 Module Isolation Rules
 
-1. **Pages** live in `src/pages/dashboard/{module}/` â€” Astro handles routing
-2. **Preact islands** live in `src/components/admin/{module}/` â€” co-located with their domain
-3. **API routes** live in `src/pages/api/{module}/` â€” server-side handlers
-4. **Shared UI** lives in `src/components/ui/` â€” reusable across all modules
-5. **Auth + PLAC** lives in `src/lib/auth/` â€” the "Baseplate" that gates all modules
+1. **Pages** live in `src/pages/dashboard/{module}/` — Astro handles routing
+2. **Preact islands** live in `src/components/admin/{module}/` — co-located with their domain
+3. **API routes** live in `src/pages/api/{module}/` — server-side handlers
+4. **Shared UI** lives in `src/components/ui/` — reusable across all modules
+5. **Auth + PLAC** lives in `src/lib/auth/` — the "Baseplate" that gates all modules
 6. Adding a module = create folder + add to `admin_pages` table + add to registry
 7. Removing a module = delete folder + remove from `admin_pages` + remove from registry
 
 ### 9.3 The "Baseplate" Principle
 
-The auth system (middleware + PLAC + registry) is the "Lego baseplate." It doesn't care what modules exist â€” it reads from `admin_pages` (D1) and enforces access. New bricks snap in without modifying the baseplate.
+The auth system (middleware + PLAC + registry) is the "Lego baseplate." It doesn't care what modules exist — it reads from `admin_pages` (D1) and enforces access. New bricks snap in without modifying the baseplate.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚           BASEPLATE (Auth Middleware)            â”‚
-â”‚  registry.ts + plac.ts + middleware.ts           â”‚
-â”‚  Reads admin_pages from D1 â†’ enforces access    â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚ ðŸ“Š   â”‚ ðŸ“…   â”‚ ðŸŽ¨   â”‚ ðŸ‘¥   â”‚ âš™ï¸   â”‚ ðŸ“ˆ   â”‚ ðŸ›   â”‚
-â”‚ Home â”‚ Book â”‚ CMS  â”‚Users â”‚ Set  â”‚ Ana  â”‚Debug  â”‚
-â”‚      â”‚ ings â”‚      â”‚      â”‚tings â”‚lyticsâ”‚       â”‚
-â””â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────┐
+│           BASEPLATE (Auth Middleware)            │
+│  registry.ts + plac.ts + middleware.ts           │
+│  Reads admin_pages from D1 → enforces access    │
+├──────┬──────┬──────┬──────┬──────┬──────┬───────┤
+│ 📊   │ 📅   │ 🎨   │ 👥   │ ⚙️   │ 📈   │ 🐛   │
+│ Home │ Book │ CMS  │Users │ Set  │ Ana  │Debug  │
+│      │ ings │      │      │tings │lytics│       │
+└──────┴──────┴──────┴──────┴──────┴──────┴───────┘
   Each brick is a self-contained module folder.
   The baseplate enforces access for ALL bricks.
 ```
@@ -923,7 +923,7 @@ This acts as a "Soft 404" net which ensures:
 
 ---
 
-## 11. SCALE-UP VAULT â€” ENTERPRISE FEATURES (DEFERRED)
+## 11. SCALE-UP VAULT — ENTERPRISE FEATURES (DEFERRED)
 
 > **Status:** Documented for when cf-admin scales to 100+ users.
 
@@ -967,21 +967,21 @@ CURRENT (without PLAC):
   Registry lookup:    ~0.1ms
   SSR render:         ~3-5ms
   D1 data query:      ~2-4ms
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  TOTAL:              ~6-10ms âœ…
+  ─────────────────────────
+  TOTAL:              ~6-10ms ✅
 
 WITH PLAC (30 pages, ~20 entries in access map):
   Session KV read:    ~0.5ms
   JWT validation:     ~0.2ms
-  PLAC KV read:       ~0.3ms  â† NEW (cached access map, ~2KB JSON)
-  Page access check:  ~0.1ms  â† NEW (hashmap lookup, O(1))
+  PLAC KV read:       ~0.3ms  ← NEW (cached access map, ~2KB JSON)
+  Page access check:  ~0.1ms  ← NEW (hashmap lookup, O(1))
   SSR render:         ~3-5ms
   D1 data query:      ~2-4ms
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  TOTAL:              ~6-10ms âœ… (PLAC adds only ~0.4ms even at 30 pages)
+  ─────────────────────────
+  TOTAL:              ~6-10ms ✅ (PLAC adds only ~0.4ms even at 30 pages)
 ```
 
-> **Note:** The access map grows linearly with pages. At 30 pages, the KV-stored JSON is ~2KB â€” well within KV's 25MB value limit. The hashmap lookup remains O(1) regardless of page count.
+> **Note:** The access map grows linearly with pages. At 30 pages, the KV-stored JSON is ~2KB — well within KV's 25MB value limit. The hashmap lookup remains O(1) regardless of page count.
 
 ### 11.2 KV Budget (1,000 writes/day)
 
@@ -1006,10 +1006,10 @@ WITH PLAC (30 pages, ~20 entries in access map):
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
-| KV cache miss â†’ D1 fallback on every request | ðŸŸ¡ Medium | `waitUntil()` background cache rebuild; 1hr TTL |
-| PLAC map stale after role change | ðŸŸ¡ Medium | Role change triggers `invalidateAccessMap()` |
-| Cold start CPU spike | ðŸŸ¡ Medium | Keep middleware logic simple; no dynamic imports |
-| Audit log D1 storage growth | ðŸŸ¢ Low | 6-month auto-archive to R2 via CRON |
+| KV cache miss → D1 fallback on every request | 🟡 Medium | `waitUntil()` background cache rebuild; 1hr TTL |
+| PLAC map stale after role change | 🟡 Medium | Role change triggers `invalidateAccessMap()` |
+| Cold start CPU spike | 🟡 Medium | Keep middleware logic simple; no dynamic imports |
+| Audit log D1 storage growth | 🟢 Low | 6-month auto-archive to R2 via CRON |
 
 ---
 
@@ -1024,9 +1024,9 @@ WITH PLAC (30 pages, ~20 entries in access map):
 | 3 | `src/components/admin/users/PageAccessManager.tsx` | Preact island: page access toggle grid (existing users) | Phase 2 |
 | 4 | `src/lib/audit.ts` | Ghost audit engine helper | Phase 4 |
 | 5 | `src/lib/signals.ts` | Shared Preact Signals for inter-island reactivity | Phase 6 |
-| 6 | `src/pages/api/users/pages.ts` | Page registry endpoint â€” all active pages without userId; powers InviteUserModal chip grid | Post-Phase 6 |
+| 6 | `src/pages/api/users/pages.ts` | Page registry endpoint — all active pages without userId; powers InviteUserModal chip grid | Post-Phase 6 |
 | 7 | `src/components/admin/users/InviteUserModal.tsx` | Two-panel "Command Console" Preact island replacing InviteUserModal.astro | Post-Phase 6 |
-| 8 | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: 2Ã—2 role pill grid with RBAC-gated availability | Post-Phase 6 |
+| 8 | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: 2×2 role pill grid with RBAC-gated availability | Post-Phase 6 |
 | 9 | `src/components/admin/users/invite/HiddenAccountToggle.tsx` | Atomic: ghost-mode toggle (DEV/Owner only) | Post-Phase 6 |
 | 10 | `src/components/admin/users/invite/PageChipGrid.tsx` | Atomic: interactive page chip grid (4 states) grouped by section | Post-Phase 6 |
 
@@ -1068,4 +1068,5 @@ STEP 10: Documentation in cf-admin/documentation/
 
 ---
 
-*End of Architecture Plan. This plan must be followed for all architectural decisions in cf-admin. Deferred features (Scale-Up Vault) should only be implemented when their trigger conditions are met.*{% endraw %}
+*End of Architecture Plan. This plan must be followed for all architectural decisions in cf-admin. Deferred features (Scale-Up Vault) should only be implemented when their trigger conditions are met.*
+{% endraw %}

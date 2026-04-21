@@ -35,4 +35,5 @@ Unlike the previous iteration where one card held one numeric value, these cards
 ## Data Flow
 - All data remains sourced through `/api/dashboard/metrics`.
 - The frontend will utilize aggressive styling compression (`text-[10px]`, `gap-1`, `leading-none`) to maximize the usage of the fetched JSON payload.
+
 {% endraw %}
