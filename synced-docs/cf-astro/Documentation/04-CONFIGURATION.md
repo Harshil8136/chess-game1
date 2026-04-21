@@ -1,3 +1,4 @@
+{% raw %}
 # 04 — Configuration
 
 Detailed breakdown of every configuration file in the project.
@@ -221,3 +222,5 @@ interface Env {
 ```
 
 This enables typed access to bindings in API routes via `import { env } from "cloudflare:workers"` (Astro 6 pattern).
+
+{% endraw %}

@@ -1,3 +1,4 @@
+{% raw %}
 # 15 — Observability (Sentry + BetterStack)
 
 > **Added:** 2026-04-19
@@ -296,3 +297,5 @@ This is already used in the cf-admin project's dashboard widgets and can be appl
 1. Ensure `SENTRY_AUTH_TOKEN` is set as a system env var (not `.dev.vars`)
 2. Token must have `org:read` and `project:releases` scopes
 3. Check build output for "Sentry" lines indicating upload status
+
+{% endraw %}

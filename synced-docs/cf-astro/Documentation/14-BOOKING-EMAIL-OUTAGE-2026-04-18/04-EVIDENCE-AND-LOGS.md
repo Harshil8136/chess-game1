@@ -1,3 +1,4 @@
+{% raw %}
 # Evidence and Logs — Raw Captured Output
 
 Verbatim output from the probes. Kept here so the investigation is reproducible without re-running the commands.
@@ -223,3 +224,5 @@ Queue madagascar-emails (2 messages) - Ok @ 2026-04-17, 11:01:45 p.m.
 ```
 
 **This is the smoking gun.** The error identifier string `"Code generation from strings disallowed for this context"` is the verbatim message V8 produces when `new Function(...)` or `eval(...)` is invoked in an isolate with `AllowCodeGenerationFromStrings = false`.
+
+{% endraw %}

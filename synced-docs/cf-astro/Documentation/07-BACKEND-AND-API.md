@@ -1,3 +1,4 @@
+{% raw %}
 # 07 — Backend & API
 
 ## Overview
@@ -428,3 +429,5 @@ Generates references like `MAD-20260317-A1B2`:
 - Prefix: `MAD-`
 - Date stamp: `YYYYMMDD`
 - Random suffix: 4 alphanumeric characters (base-36)
+
+{% endraw %}

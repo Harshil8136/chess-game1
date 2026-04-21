@@ -1,3 +1,4 @@
+{% raw %}
 # Audit Report: LFPDPPP Consent System
 
 **Date:** April 7, 2026
@@ -40,3 +41,5 @@ LFPDPPP requires knowing exactly what terms the user agreed to at the moment of 
 
 ## Conclusion
 The system successfully enforces state-of-the-art privacy mechanisms, natively configured for Cloudflare's edge pipeline, providing heavy forensic metrics to Supabase, all while introducing minimal load to the browser framework. Compliance is fully sealed.
+
+{% endraw %}

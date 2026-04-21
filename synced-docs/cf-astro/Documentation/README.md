@@ -1,3 +1,4 @@
+{% raw %}
 # cf-astro — Madagascar Pet Hotel (Cloudflare Edition)
 
 ## Documentation Index
@@ -54,3 +55,5 @@ npm run cf:deploy
 - **Animation**: IntersectionObserver scroll-reveal system (`data-animate`)
 - **Live Site**: [madagascarhotelags.com](https://madagascarhotelags.com)
 - **Status**: ✅ Live in production — SEO/AEO/GEO overhaul 2026-04-13
+
+{% endraw %}

@@ -1,3 +1,4 @@
+{% raw %}
 # Booking Email Outage — 2026-04-18 Incident Report
 
 > **Status:** Root cause identified. Fix not yet applied.
@@ -46,3 +47,5 @@ The user suspected the `pet.madagascarhotelags.com → madagascarhotelags.com` m
 - The booking page, bundle, and API all live on the apex domain and respond correctly.
 - The consumer worker talks server-to-server to Supabase + Resend; it never touches the public domain.
 - `pet.` is still live (the Dashboard redirect rules were never created) — tracked as a separate P4 cleanup, not a blocker.
+
+{% endraw %}

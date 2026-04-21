@@ -1,3 +1,4 @@
+{% raw %}
 # 11 — Next Steps
 
 ## Current Status Summary
@@ -145,3 +146,5 @@ All required Cloudflare resources (D1, R2, KV) have been created in the `Mascota
 | Image serving | R2 custom domain vs *.r2.dev | Custom domain (better branding, same cost) |
 | Caching strategy | KV vs Worker Cache API | KV for persistent data, Cache API for HTTP cache |
 | Chatbot | Vanilla JS facade vs Preact island | Vanilla JS (lazy-loaded, not critical) |
+
+{% endraw %}

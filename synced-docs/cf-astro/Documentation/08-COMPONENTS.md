@@ -1,3 +1,4 @@
+{% raw %}
 # 08 — Components
 
 ## Component Architecture
@@ -427,3 +428,5 @@ Custom service worker with:
   - Network-only for `/api/*` and `/ingest/*` routes
   - Cache-first for everything else (with runtime cache population)
   - Offline fallback: serves cached `/es/` for navigation requests
+
+{% endraw %}

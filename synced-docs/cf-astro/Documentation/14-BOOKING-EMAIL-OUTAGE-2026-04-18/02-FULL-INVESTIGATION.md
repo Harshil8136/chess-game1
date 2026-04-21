@@ -1,3 +1,4 @@
+{% raw %}
 # Full Investigation — Step by Step
 
 This document reconstructs the exact sequence of probes used to diagnose the outage, so future incidents can be debugged the same way.
@@ -234,3 +235,5 @@ Queue madagascar-emails (2 messages) - Ok @ 2026-04-17, 10:51:35 p.m.
 ```
 
 **Root cause confirmed.** See [03-ROOT-CAUSE-ANALYSIS.md](./03-ROOT-CAUSE-ANALYSIS.md) for the mechanism.
+
+{% endraw %}

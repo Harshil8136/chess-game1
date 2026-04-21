@@ -1,3 +1,4 @@
+{% raw %}
 # Root Cause Analysis — Eta `renderString()` on Cloudflare Workers
 
 ## One-line statement
@@ -116,3 +117,5 @@ The conclusion is falsifiable in two ways:
 2. **Shim `globalThis.Function` with a logger** in a throwaway deploy. Every queue message would log a call-site that includes Eta internals. Not necessary given (1) is both the test and the fix, but it exists if anyone wants independent confirmation.
 
 Given the captured error matches the documented Workers failure mode verbatim, and given the identical pattern (`new Eta(); eta.renderString(...)`) is known to fail on Workers in multiple upstream issues, confidence is **≥95%**.
+
+{% endraw %}

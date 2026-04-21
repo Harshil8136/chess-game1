@@ -1,3 +1,4 @@
+{% raw %}
 # Prevention — Making This Class of Bug Impossible
 
 The outage wasn't one mistake — it was one mistake (Eta on Workers) that stayed invisible because three layers of safety net were missing. Fix the library issue *and* the safety nets.
@@ -199,3 +200,5 @@ Each `as any` hides a schema mismatch. That's how this outage became invisible. 
 | P-9 (no-any rule) | Fails CI on the exact cast that hid the bug |
 
 Ship all of these. They are cheap individually, and together they make this *class* of failure non-recurring.
+
+{% endraw %}

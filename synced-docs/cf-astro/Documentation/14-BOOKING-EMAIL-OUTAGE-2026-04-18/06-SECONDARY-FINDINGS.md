@@ -1,3 +1,4 @@
+{% raw %}
 # Secondary Findings
 
 Bugs uncovered during this investigation that are **not** the root cause of the email outage, but are worth addressing.
@@ -112,3 +113,5 @@ The outage is not one bug — it's three bugs compounding:
 3. No DLQ monitoring, no consumer smoke test, and no "zero emails in 24h" alert meant nothing detected the failure for a full day.
 
 Any one of those three being fixed would have made this a 15-minute incident instead of a 24-hour one. Fix all three in this remediation.
+
+{% endraw %}

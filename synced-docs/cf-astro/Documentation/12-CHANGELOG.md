@@ -1,3 +1,4 @@
+{% raw %}
 # Changelog
 
 Chronological record of feature additions, design refactors, and improvements to the `cf-astro` project. For bug fixes, see [10-TROUBLESHOOTING-LOG.md](./10-TROUBLESHOOTING-LOG.md).
@@ -156,3 +157,5 @@ Files changed:
 - SEO: JSON-LD structured data, meta tags, sitemap, robots.txt
 - Privacy: Cookie consent banner, terms of service, privacy policy pages
 - Deployment: Cloudflare Pages with Wrangler CLI
+
+{% endraw %}

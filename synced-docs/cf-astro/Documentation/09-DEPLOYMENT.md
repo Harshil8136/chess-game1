@@ -1,3 +1,4 @@
+{% raw %}
 # 09 — Deployment
 
 ## Build & Deploy Pipeline
@@ -242,3 +243,5 @@ No DNS changes needed. The site is currently live at:
 - [ ] Domain redirects: `pet.` and `www.` → apex (check 301 status)
 - [ ] Google Search Console: Domain property verified, sitemap submitted
 - [ ] Bing Webmaster: Imported from GSC, sitemap submitted
+
+{% endraw %}

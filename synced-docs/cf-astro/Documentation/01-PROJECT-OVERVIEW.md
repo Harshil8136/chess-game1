@@ -1,3 +1,4 @@
+{% raw %}
 # 01 — Project Overview
 
 ## Business Context
@@ -105,3 +106,5 @@ The migration to Cloudflare was driven by:
 **Problem**: Installing Zod v4 alongside Astro (which internally uses Zod v3) caused build conflicts.
 
 **Resolution**: Pinned Zod to `^3.25.0` in `package.json`.
+
+{% endraw %}

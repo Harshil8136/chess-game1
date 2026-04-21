@@ -1,3 +1,4 @@
+{% raw %}
 # 03 — File Inventory
 
 Complete listing of every file in the `cf-astro/` project with its purpose, status, and key details.
@@ -168,3 +169,5 @@ Complete listing of every file in the `cf-astro/` project with its purpose, stat
 |---|---|---|
 | `build_error.txt` | 5.7KB | Captured output from a failed build for debugging |
 | `debug_build.txt` | 213KB | Verbose build log captured during Tailwind v4 crash investigation |
+
+{% endraw %}

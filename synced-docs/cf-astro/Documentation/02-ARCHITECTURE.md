@@ -1,3 +1,4 @@
+{% raw %}
 # 02 — Architecture
 
 ## High-Level Architecture
@@ -211,3 +212,5 @@ Secrets are stored in `.dev.vars` (local dev) and `wrangler secret put` (product
 - `BETTERSTACK_SOURCE_TOKEN` — BetterStack Logtail source token
 
 **These are never committed to git** (`.dev.vars` is in `.gitignore`).
+
+{% endraw %}

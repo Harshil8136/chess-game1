@@ -1,3 +1,4 @@
+{% raw %}
 # 05 — Design System
 
 ## Brand Identity
@@ -277,3 +278,5 @@ Use `data-delay` to create cascading reveal effects:
 
 The system respects `prefers-reduced-motion: reduce` — when enabled, all animation durations are set to near-zero (0.01ms) so elements appear instantly without motion.
 
+
+{% endraw %}

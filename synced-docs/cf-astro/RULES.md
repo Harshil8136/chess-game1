@@ -1,3 +1,4 @@
+{% raw %}
 # CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
 > **Last Updated:** 2026-04-13
@@ -1042,5 +1043,86 @@ Always refer to the appropriate skill guidelines to ensure high-quality and cons
 **Bottom line:** A fully functional, SEO-optimized, legally compliant, multi-language commercial website running on enterprise-grade infrastructure for the cost of a domain name.
 
 ---
+
+## 15. AGENT DISCOVERY & AI-READINESS
+
+> **Status:** ✅ Implemented (April 2026)
+
+The site is fully AI-agent-ready, passing all [isitagentready.com](https://isitagentready.com) checks. The implementation uses only standards-compliant static files, edge middleware, and one SSR endpoint — no new paid services.
+
+### 15.1 Implemented Features
+
+| Feature | Standard | Implementation |
+|---------|----------|----------------|
+| Link response headers | RFC 8288 | `public/_headers` — `Link:` on `/*` pointing to api-catalog, agent-skills index, service-doc |
+| Markdown content negotiation | Cloudflare / custom | `functions/_middleware.ts` — `Accept: text/markdown` → returns `/llms.txt` with `Content-Type: text/markdown` + `x-markdown-tokens` |
+| API catalog | RFC 9727 | `public/.well-known/api-catalog` — `application/linkset+json` documenting booking, ARCO, consent, MCP APIs |
+| OIDC discovery | OpenID Connect 1.0 | `public/.well-known/openid-configuration` — mirrors Supabase project OIDC config |
+| OAuth protected resource | RFC 9728 | `public/.well-known/oauth-protected-resource` — points to Supabase as authorization server |
+| MCP Server Card | SEP-1649 | `public/.well-known/mcp/server-card.json` + `src/pages/api/mcp.ts` — JSON-RPC 2.0 MCP endpoint |
+| Agent Skills index | Agent Skills Discovery RFC v0.2.0 | `public/.well-known/agent-skills/index.json` with SHA-256 digests |
+| WebMCP | WebMCP API | `src/layouts/BaseLayout.astro` — `navigator.modelContext.registerTool()` for 3 tools |
+
+### 15.2 Well-Known Files Map
+
+| Path | Content-Type | Purpose |
+|------|-------------|---------|
+| `/.well-known/api-catalog` | `application/linkset+json` | RFC 9727 API catalog |
+| `/.well-known/openid-configuration` | `application/json` | OIDC discovery (Supabase issuer) |
+| `/.well-known/oauth-protected-resource` | `application/json` | OAuth resource metadata |
+| `/.well-known/mcp/server-card.json` | `application/json` | MCP Server Card |
+| `/.well-known/agent-skills/index.json` | `application/json` | Agent Skills discovery index |
+| `/.well-known/agent-skills/booking/SKILL.md` | `text/markdown` | Booking API skill |
+| `/.well-known/agent-skills/services/SKILL.md` | `text/markdown` | Services skill |
+| `/.well-known/security.txt` | `text/plain` | Security contact |
+
+### 15.3 MCP Endpoint
+
+`src/pages/api/mcp.ts` is an SSR Astro API route implementing JSON-RPC 2.0 over HTTP POST. It is **read-only** — no database queries, no mutations, no secrets. Supported methods:
+
+- `initialize` — returns `protocolVersion`, `capabilities`, `serverInfo`
+- `tools/list` — returns 4 tool definitions
+- `tools/call` — `get_services`, `get_locations`, `get_booking_url`, `get_faq`
+
+### 15.4 Markdown Negotiation
+
+Cloudflare's native "Markdown for Agents" requires Pro/Business plan. This project implements it for free in `functions/_middleware.ts`:
+- Fires before the Sentry plugin when `Accept: text/markdown` is present on HTML routes
+- Returns `/llms.txt` content with `Content-Type: text/markdown; charset=utf-8`
+- Sets `x-markdown-tokens` (character count ÷ 4 estimate)
+- Excluded paths: `/api/*`, `/_astro/*`, any path containing `.` (files with extensions)
+
+### 15.5 WebMCP Tools
+
+Registered via `navigator.modelContext.registerTool()` in `BaseLayout.astro`:
+
+| Tool | Description |
+|------|-------------|
+| `get_services` | Returns all services with pricing (static data, no DB) |
+| `get_booking_url` | Returns the online booking URL |
+| `get_contact_info` | Returns phone, WhatsApp, email, and hours |
+
+Tools use `AbortController` signal for cleanup and re-register on Astro view transitions (`astro:before-swap` / `astro:after-swap`).
+
+### 15.6 Security Notes for Agent Endpoints
+
+- `/.well-known/openid-configuration` exposes the Supabase project ID (`zlvmrepvypucvbyfbpjj`) — this is already public via CSP `connect-src` headers and `PUBLIC_SUPABASE_URL`. No new exposure.
+- The MCP endpoint (`/api/mcp`) is fully public, read-only, and returns only hardcoded static data. No Cloudflare bindings are accessed.
+- Markdown negotiation fetches `/llms.txt` from the same origin only — no SSRF risk.
+- Agent Skills digests are SHA-256 hashes of the actual SKILL.md files; if skill files are updated, recompute with `sha256sum` and update `index.json`.
+
+### 15.7 Updating Agent Skills Digests
+
+If you modify any file in `public/.well-known/agent-skills/*/SKILL.md`, recompute its digest and update `index.json`:
+
+```bash
+sha256sum "public/.well-known/agent-skills/booking/SKILL.md"
+sha256sum "public/.well-known/agent-skills/services/SKILL.md"
+# Paste the hex output into public/.well-known/agent-skills/index.json
+```
+
+---
 *Dev=harshil.8136@gmail.com*
 *End of Rules. These constraints must be acknowledged and followed for every task in cf-astro.*
+
+{% endraw %}

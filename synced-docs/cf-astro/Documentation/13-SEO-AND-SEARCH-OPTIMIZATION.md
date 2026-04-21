@@ -1,3 +1,4 @@
+{% raw %}
 # 13 — SEO, AEO, GEO, SXO, AIO — Complete Optimization Guide
 
 > **Last Updated:** 2026-04-13  
@@ -702,3 +703,5 @@ After deploy, verify:
 - [ ] [Schema.org Validator](https://validator.schema.org) — no errors on @graph
 - [ ] Lighthouse SEO score ≥ 95
 - [ ] `robots.txt` 301 redirects (pet.→apex, www.→apex) working
+
+{% endraw %}

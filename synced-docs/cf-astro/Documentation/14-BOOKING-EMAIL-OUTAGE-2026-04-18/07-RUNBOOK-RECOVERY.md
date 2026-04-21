@@ -1,3 +1,4 @@
+{% raw %}
 # Runbook — Recovering the 10+ Lost Customer Confirmations
 
 **Prerequisite:** P0 fix from [05-FIX-PLAN.md](./05-FIX-PLAN.md) deployed and verified. Do not attempt recovery before that — re-queuing into a broken consumer just grows the DLQ.
@@ -152,3 +153,5 @@ Close the loop in the incident tracker: link the Supabase row list from Step 2 a
 | `Duplicate email` warning from Resend | Same `Idempotency-Key` reused | OK — Resend dedupes; treat as success |
 | Customer reports two confirmation emails | Recovery script ran twice | Acknowledge; it's a cosmetic issue, not a data issue |
 | Row stays `failed` with new error text | Different bug | Investigate as new incident |
+
+{% endraw %}

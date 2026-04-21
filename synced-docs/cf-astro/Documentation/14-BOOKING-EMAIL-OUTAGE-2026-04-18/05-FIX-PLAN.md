@@ -1,3 +1,4 @@
+{% raw %}
 # Fix Plan — P0 → P5
 
 All priorities apply to the `cf-email-consumer` sidecar unless noted. Each priority is independent; P0 alone unblocks production.
@@ -181,3 +182,5 @@ Details in [08-PREVENTION.md](./08-PREVENTION.md). Summary:
 | **P5** | Prevention | ~1–2 h | Same class of bug recurs invisibly |
 
 Do P0 → P1 → P2 in one sitting. P3–P5 can land in follow-up PRs the same week.
+
+{% endraw %}

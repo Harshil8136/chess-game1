@@ -1,3 +1,4 @@
+{% raw %}
 # Executive Summary
 
 ## What the user observed
@@ -44,3 +45,5 @@ Replace `eta.renderString(tpl, data)` calls in `cf-email-consumer/src/index.ts` 
 ## Recommended next step
 
 Execute P0 from [05-FIX-PLAN.md](./05-FIX-PLAN.md): convert the 3 templates in `cf-email-consumer/src/templates.ts` to template-literal functions, redeploy the consumer, verify end-to-end via a test booking, then re-queue the failed emails per [07-RUNBOOK-RECOVERY.md](./07-RUNBOOK-RECOVERY.md).
+
+{% endraw %}

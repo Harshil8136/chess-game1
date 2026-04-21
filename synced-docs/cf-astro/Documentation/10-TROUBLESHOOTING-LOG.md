@@ -1,3 +1,4 @@
+{% raw %}
 # 10 — Troubleshooting Log
 
 Chronological record of every bug, build error, and resolution encountered during development.
@@ -621,3 +622,5 @@ Gallery was the only section with KV injection already implemented (introduced i
 
 > **All CMS write endpoints must inject `cmsData` into `revalidateAstro()`.** Purging the ISR cache without injecting fresh data into KV creates a D1 replica lag window where stale HTML can be re-cached for up to 30 days. See `CMS_AND_BOOKINGS_MANAGEMENT.md` Section 6 for the full KV injection coverage table.
 
+
+{% endraw %}

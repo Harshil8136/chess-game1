@@ -1,3 +1,4 @@
+{% raw %}
 # Email Infrastructure & Consent Pipeline
 
 This document details the high-integrity email delivery and consent tracking architecture for `cf-astro`.
@@ -28,3 +29,5 @@ Resend dispatches delivery events (`email.delivered`, `email.bounced`, etc.).
 We receive these in `cf-astro/src/pages/api/webhooks/resend.ts`.
 Since standard webhook SDKs like `svix` use Node.js `crypto` un-supported by edge variants, we verify the signature manually using the native `crypto.subtle.verify` (Web Crypto API) with HMAC-SHA256.
 Once verified, the payload is appended to the `email_audit_logs.delivery_events` JSONB array in Supabase.
+
+{% endraw %}
