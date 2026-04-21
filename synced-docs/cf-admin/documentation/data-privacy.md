@@ -24,7 +24,9 @@ Following the PLAC (Page Level Access Control) architecture and the 5-tier RBAC 
     - Features glowing state cards animated to draw executive attention.
 
 3. **Forensic Ledger**
-    - An infinite-scroll-ready, paginated deep forensic view.
+    - An infinite-scroll-ready, paginated deep forensic view employing a strict "No Blank Loading Screens" policy via `SkeletonBlock` shimmer placeholders.
+    - High-density header layout standardized to a 4-column metadata grid (`Captured`, `Origin`, `Device`, `Analysis`) to prevent UI zig-zagging.
+    - Detailed expansion organized into a 3-pillar forensic architecture: **Client Environment** (Blue), **Interaction Telemetry** (Indigo), and **Security & Ledger** (Rose/Emerald).
     - Exposes interaction proofs (IP region mappings, browser hashes, micro-timestamps, specific mechanisms).
     - Ensures non-repudiable audit tracks.
 

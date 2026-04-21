@@ -73,6 +73,7 @@ When deploying or updating the image pipeline:
 2. Ensure the R2 bucket (`madagascar-images`) is correctly bound in `wrangler.toml`.
 3. Ensure `REVALIDATION_SECRET` is set on both the `cf-admin` and `cf-astro` Workers.
 4. Test a full upload cycle: Upload Image -> Save Changes -> Verify Webhook Success -> Verify `cdn-cgi` Transform on Frontend.
+5. **⚠ BINDING IDS:** Verify ALL D1/KV binding IDs in `wrangler.toml` match the real Cloudflare resources. See [`cloudflare-bindings-registry.md`](./cloudflare-bindings-registry.md) for the canonical verified IDs and `curl` verification commands. A mismatch caused a full CMS pipeline outage in April 2026.
 
 
 ### Key Files

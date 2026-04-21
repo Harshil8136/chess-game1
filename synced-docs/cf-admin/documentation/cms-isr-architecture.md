@@ -8,6 +8,8 @@ cf-admin securely mutates data for the public-facing cf-astro site via a precise
 - **Media/Images**: Uploaded and managed securely through the shared Cloudflare R2 `IMAGES` Bucket (`madagascar-images`).
 - **RBAC**: Any mutation query is strictly gated by the active session role (`Admin` or higher — Owner, SuperAdmin, DEV).
 
+> ⚠️ **Binding IDs are operational-critical.** All D1/KV/R2 binding UUIDs must match the actual Cloudflare resources. See [`cloudflare-bindings-registry.md`](./cloudflare-bindings-registry.md) for the canonical verified IDs.
+
 ## 2. KV-Backed ISR Gateway (How it works)
 We intentionally bypass native Cloudflare Cache API purging (which requires privileged Account-level Tokens) in favor of a KV-backed manual revalidation Gateway.
 1. Admin saves changes in cf-admin UI (Hero, Gallery, Services, or Reviews).

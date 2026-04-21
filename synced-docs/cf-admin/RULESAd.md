@@ -118,16 +118,18 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ### Shared Resources
 - **Supabase Project:** `zlvmrepvypucvbyfbpjj` (same PostgreSQL instance)
-- **D1 Database:** `madagascar-db` (ID: `7fca2a07-d7b4-449d-b446-408f9187d3ca`) Ã¢â‚¬â€ shared between both projects
+- **D1 Database:** `madagascar-db` (ID: `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2`) Ã¢â‚¬â€ shared between both projects
 - **R2 Bucket:** `madagascar-images` Ã¢â€ â€™ `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Cloudflare Account:** Mascotas Madagascar
 
 ### KV Namespaces (Isolated per project)
 | Namespace | ID | Project | Purpose |
 |-----------|-----|---------|---------|
-| `cf-admin-session` | `ba82eecc6f5a4956ad63178b203a268f` | cf-admin | Astro session store |
-| `cf-astro-session` | `bee123e795504473accf58ac5b6de13d` | cf-astro | Astro session store |
-| `cf-astro-isr-cache` | `d9cea8c7e20f4b328b8cb3b04104138c` | cf-astro | ISR HTML cache |
+| `cf-admin-session` | `c81d1970f3d548b8a53a0e6c870b7685` | cf-admin | Astro session store |
+| `cf-astro-session` | `9da1ac5253a54ea1bf236c6fe514dd02` | cf-astro | Astro session store |
+| `cf-astro-isr-cache` | `e31f413bb1224f559a8de105248da6cc` | cf-astro | ISR HTML cache |
+
+> ⚠️ **OPERATIONAL CRITICAL:** These IDs were verified against the Cloudflare API on 2026-04-20. A prior mismatch caused a full CMS pipeline outage. See [`documentation/cloudflare-bindings-registry.md`](./documentation/cloudflare-bindings-registry.md) for the canonical registry and verification commands.
 
 ### Isolation Rules
 - Admin tables use `admin_` prefix to avoid collision with cf-astro tables
@@ -294,6 +296,66 @@ The dashboard implements a modular **Hover-Expand Sidebar**.
 #### Unbuilt Modules & Soft 404
 - Unbuilt portal paths (e.g. `/dashboard/customers` or `/dashboard/analytics`) are intercepted by a Catch-All spread route at `src/pages/dashboard/[...slug].astro`.
 - Because Astro resolves exact physical paths first, this route organically serves as a fallback.
+## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
+
+The dashboard utilizes a unified premium dark UI with Arctic Cyan accents, transitioning away from the legacy multi-color section identities.
+
+> 📖 **Full design system specifications:** [`documentation/theme-system-design.md`](./documentation/theme-system-design.md)
+> 🎨 **Legacy color palettes:** [`documentation/color-palettes.md`](./documentation/color-palettes.md)
+
+---
+
+### 10.1 Login Portal — "Midnight Slate"
+
+The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar — just a pristine glassmorphic card on a warm dark canvas.
+
+#### Background & Ambient System
+
+| Element | Spec |
+|---------|------|
+| **Base** | `#09090b` (zinc-950) — set via inline `style` on `<body>`, not Tailwind class |
+| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` —> `rgba(8,145,178,0.15)` |
+| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` —> `rgba(30,41,59,0.15)` |
+| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` —> `rgba(29,78,216,0.1)` |
+| **Noise Texture** | SVG `feTurbulence` overlay at `opacity-[0.015]` for grain |
+
+All orbs are `position: absolute` inside a `fixed inset-0 pointer-events-none z-0` container, animated via CSS.
+
+#### Glassmorphic Card Setup
+
+```css
+background:  rgba(255,255,255,0.035)
+border:      1px solid rgba(255,255,255,0.08)
+backdrop:    blur(40px)
+box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
+             0 20px 50px rgba(0,0,0,0.5),
+             0 0 80px rgba(34,211,238,0.06)
+```
+
+### 10.2 Dashboard & Navigation Architecture
+
+The dashboard implements a modular **Hover-Expand Sidebar**.
+
+#### Sidebar Mechanics (Hover & Pin)
+- **Default State:** Collapsed (72px wide), showing only icons. Nav labels are hidden.
+- **Hover State:** Sidebar immediately expands to full width (~280px).
+- **Pin State:** Users can click a "Lock/Unlock" icon at the bottom of the sidebar to persist the expanded layout. This state is saved to `localStorage`.
+- **Layout Sync:** The `AdminLayout.astro` utilizes a synchronous inline script to read `localStorage` and inject the `sidebar-expanded` class into the `<body>` before hydration. The `.admin-content-area` margin shifts cleanly via a 300ms CSS transition matching the sidebar's width.
+
+#### Sidebar Visuals
+- **Background:** Glassmorphic with `@supports` fallback (solid `surface-raised`).
+- **Logo icon:** Cyan gradient shield with blur glow + `rgba(34,211,238,0.08)` bg.
+- **Active Navigation:** Cyan muted bg (12%) + cyan icon + cyan glowing dot + 2px accent bar.
+- **Collapsed tooltips:** Rendered conditionally using Preact `createPortal` to the `document.body` for overflow escaping.
+
+#### TopBar & Modals
+- **Command Palette:** `Ctrl+K` triggers a robust search palette via Preact signals. Focus states utilize Midnight Slate cyan glow boundaries.
+- **TopBar:** Follows general glass logic (`blur(24px)`).
+> 📖 **Full technical architecture:** [`documentation/cms-isr-architecture.md`](./documentation/cms-isr-architecture.md)
+
+#### Unbuilt Modules & Soft 404
+- Unbuilt portal paths (e.g. `/dashboard/customers` or `/dashboard/analytics`) are intercepted by a Catch-All spread route at `src/pages/dashboard/[...slug].astro`.
+- Because Astro resolves exact physical paths first, this route organically serves as a fallback.
 - It leverages the `AdminLayout` cleanly so that sidebar state is preserved, injecting a Midnight Slate "Module Under Construction" card in the main view rather than breaking the Single-Page Application sequence.
 
 #### Dashboard Widgets
@@ -301,6 +363,15 @@ The dashboard implements a modular **Hover-Expand Sidebar**.
 |--------|---------------|
 | **StatCard** | Glass bg, `cyan-400` top accent line (2px), `translateY(-3px)` lift on hover |
 | **SystemHealthBar** | Minimalist background, strict tabular data display |
+
+### 10.3 Loading States & Data Hydration
+
+The dashboard enforces a strict "No Blank Loading Screens" policy to maintain a professional, high-performance aesthetic.
+
+- **Skeleton Loading is Mandatory:** ALL client-side data fetching components (Preact islands with `client:load` or `client:idle`) MUST display a Skeleton Screen during their initial `loading` state.
+- **No Text-Only Loading:** Using plain text like `"Loading records..."`, `"Syncing..."`, or simple spinners alone is FORBIDDEN for primary data fetches.
+- **Generic Implementation:** Use the `SkeletonBlock` component from `src/components/dashboard/widgets/WidgetSharedV2.tsx` to construct shimmering placeholders that mirror the expected layout of the loaded content.
+- **Immediate Feedback:** Skeleton screens must render immediately upon mount before the API request completes.
 
 ---
 
@@ -367,6 +438,7 @@ documentation/
 Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ observability-sentry.md    # Sentry integration for error tracking + edge observability
 Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ theme-system-design.md  # Midnight Slate theme design system decisions
 Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ color-palettes.md     # Color palette reference for the design system
+├── cloudflare-bindings-registry.md # Immutable registry of all Cloudflare D1/KV binding IDs
 ```
 
 ---
@@ -453,6 +525,7 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 - **Producer:** API Routes push a JSON payload with a unique `trackingId` to the queue and respond immediately.
 - **Consumer:** A standalone Cloudflare Worker (`cf-email-consumer`) consumes the queue batches, processes HTML templates using **Eta** (a lightweight Edge-native framework), and executes the Resend REST API `fetch` completely out of band of the user request. Bloated Node.js SDKs (like `resend` and React Email) are strictly forbidden in the consumer worker.
 - **Audit Logs:** All email payloads, transmission statuses, and Resend webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
+  - **Referential Integrity:** The `booking_id` foreign key constraint enforces `ON DELETE CASCADE`, ensuring that atomic "Hard Wipes" of bookings cleanly and automatically purge associated audit records without referential blocking errors.
 
 > Ã°Å¸â€œâ€“ **Full detailed documentation and Webhook setup guide:** Please refer to the master architecture document located at [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
 

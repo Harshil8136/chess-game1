@@ -35,9 +35,11 @@ When using `client:load`, the component is rendered *synchronously* during Astro
 |---|---------|---------|-----|
 | 1 | **Missing default export** | `export function Widget()` | Must be `export default function Widget()` |
 | 2 | **Wrong API route** | `fetch('/api/admin/analytics')` (404) | Verify endpoint exists in `src/pages/api/` |
-| 3 | **Unguarded property access** | `data!.property` or `data.nested.value` | Always: `if (!data) return <Skeleton />` first |
+| 3 | **Unguarded property access** | `data!.property` or `data.nested.value` | Always: `if (!data) return <SkeletonBlock />` first |
 
 **ALWAYS use strict null guards and early returns before accessing any data props in Preact components.**
+
+> **Note on Loading States:** The dashboard enforces a strict "No Blank Loading Screens" policy. Do not use plain text (e.g., "Loading...") or unstyled spinners for primary data fetches. Always use `SkeletonBlock` from `src/components/dashboard/widgets/WidgetSharedV2.tsx` to provide immediate, structure-matching shimmer placeholders.
 
 ### 4.3 Mandatory ErrorBoundary Wrapping
 Every widget group inside a `client:load` island must be wrapped in `<ErrorBoundary sectionName="...">`:

@@ -62,6 +62,7 @@ The Booking Management interface is a Preact Island designed to provide real-tim
 - **Summary Dashboard Stats:** The main `/dashboard` features live Key Performance Indicators (KPIs) showing **Total Bookings** and **Total Pets** directly bound to the database.
 - **Server-Side Pagination & Search:** The backend gracefully filters pet names and customer info prior to transit, reducing payload overhead.
 - **Expandable Detail Row:** Each row expands inline via a collapsible UI, providing immediate context for medical, dietary, and behavioral notes without requiring navigation.
+- **Atomic Hard Wipes:** DEV-level "Hard Wipes" of bookings operate atomically. The underlying Supabase schema utilizes `ON DELETE CASCADE` on the `email_audit_logs.booking_id` foreign key, ensuring referential integrity while safely destroying all trace data.
 
 ---
 
