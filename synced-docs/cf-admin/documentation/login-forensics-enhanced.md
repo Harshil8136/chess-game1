@@ -15,15 +15,15 @@ This document details the complete v2 enhancement of the Login Forensics subsyst
 
 ```
 NETWORK ORIGIN
-IP Address     99.227.185.25
-City           Scarborough
-Country        CA
-Region         ON
-Coordinates    43.768, -79.2142
-Timezone       America/Toronto
-Postal Code    M1P
-ISP / ASN      AT&T Services Inc. (7018)
-Data Center    YYZ
+IP Address     203.0.113.45
+City           Sample City
+Country        US
+Region         NY
+Coordinates    40.7128, -74.0060
+Timezone       America/New_York
+Postal Code    10001
+ISP / ASN      Example ISP Inc. (12345)
+Data Center    JFK
 Protocol       HTTP/2 · TLSv1.3
 RTT            12 ms
 
