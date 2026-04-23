@@ -178,38 +178,8 @@ The v2 system distinguishes between two classes of forensic data based on their 
 
 ### 2.2 Migration SQL
 
-```sql
--- Network / Geo (Tier 1 — Cloudflare request.cf object)
-ALTER TABLE admin_login_logs ADD COLUMN latitude TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN longitude TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN postal_code TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN timezone TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN continent TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN asn INTEGER;
-ALTER TABLE admin_login_logs ADD COLUMN asn_org TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN colo TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN tls_version TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN http_protocol TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN client_rtt_ms INTEGER;
-
--- Hardware Telemetry (Tier 2 — client-reported)
-ALTER TABLE admin_login_logs ADD COLUMN cores INTEGER;
-ALTER TABLE admin_login_logs ADD COLUMN ram_gb REAL;
-ALTER TABLE admin_login_logs ADD COLUMN screen_res TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN color_depth INTEGER;
-ALTER TABLE admin_login_logs ADD COLUMN platform TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN browser_time TEXT;
-
--- Behavioral Trust Signals (Tier 2 — client-reported)
-ALTER TABLE admin_login_logs ADD COLUMN is_webdriver INTEGER;
-ALTER TABLE admin_login_logs ADD COLUMN was_pasted INTEGER;
-ALTER TABLE admin_login_logs ADD COLUMN keystroke_avg_iki_ms REAL;
-ALTER TABLE admin_login_logs ADD COLUMN keystroke_entropy REAL;
-
--- Email Delivery (Tier 1 — server-measured)
-ALTER TABLE admin_login_logs ADD COLUMN email_sent_at TEXT;
-ALTER TABLE admin_login_logs ADD COLUMN email_latency_ms INTEGER;
-```
+**Migration Implementation:**
+The schema is extended to support Tier 1 (Server-measured) fields for network geolocation and email delivery telemetry, alongside Tier 2 (Client-reported) fields for hardware profiling and behavioral trust signals. All new columns are nullable to maintain compatibility with existing records and non-browser clients (e.g., OAuth flows).
 
 ---
 
@@ -223,24 +193,12 @@ The `LoginForm` is a `client:only="preact"` island — JavaScript always runs he
 
 ### 3.2 Behavioral Signal Collection
 
-```typescript
-// Attached to email <input> on mount — before user types anything
-let wasPasted = false;
-let keyTimestamps: number[] = [];
-
-emailInput.addEventListener('paste', () => { wasPasted = true; });
-emailInput.addEventListener('keydown', () => { keyTimestamps.push(Date.now()); });
-```
+**Data Collection Logic:**
+Behavioral signals are captured by attaching event listeners (`paste`, `keydown`) to the email input field on component mount. These listeners silently accumulate keystroke timestamps and paste indicators before the user interacts with the form.
 
 **Keystroke entropy calculation (on submit):**
-```typescript
-const ikis = keyTimestamps.slice(1).map((t, i) => t - keyTimestamps[i]);
-const avgIki = ikis.length ? ikis.reduce((a, b) => a + b, 0) / ikis.length : 0;
-const variance = ikis.length
-  ? ikis.reduce((s, v) => s + (v - avgIki) ** 2, 0) / ikis.length
-  : 0;
-const entropy = Math.sqrt(variance); // std deviation of inter-keystroke intervals
-```
+**Keystroke Entropy Calculation:**
+Upon form submission, the system calculates the Inter-Keystroke Interval (IKI) statistics. The standard deviation of these intervals generates an entropy score, which serves as a heuristic to differentiate between machine-like regularity (bot) and variable human typing.
 
 **Entropy interpretation:**
 | Entropy Value | Interpretation |
@@ -253,29 +211,8 @@ const entropy = Math.sqrt(variance); // std deviation of inter-keystroke interva
 
 ### 3.3 Hardware Telemetry Collection
 
-```typescript
-function collectTelemetry(wasPasted: boolean, keyTimestamps: number[]) {
-  // IKI stats
-  const ikis = keyTimestamps.slice(1).map((t, i) => t - keyTimestamps[i]);
-  const avgIki = ikis.length ? ikis.reduce((a, b) => a + b, 0) / ikis.length : 0;
-  const variance = ikis.length
-    ? ikis.reduce((s, v) => s + (v - avgIki) ** 2, 0) / ikis.length : 0;
-
-  const nav = navigator as any;
-  return {
-    cores: navigator.hardwareConcurrency ?? null,
-    ram_gb: nav.deviceMemory ?? null,        // undefined on Firefox/Safari → null
-    screen_res: `${screen.width}x${screen.height}`,
-    color_depth: screen.colorDepth ?? null,
-    platform: nav.userAgentData?.platform ?? navigator.platform ?? '',
-    browser_time: new Date().toISOString(),
-    is_webdriver: navigator.webdriver ?? false,
-    was_pasted: wasPasted,
-    keystroke_avg_iki_ms: ikis.length > 1 ? Math.round(avgIki) : null,
-    keystroke_entropy: ikis.length > 1 ? Math.round(Math.sqrt(variance) * 100) / 100 : null,
-  };
-}
-```
+**Hardware Telemetry Assembly:**
+The `collectTelemetry` function aggregates the calculated IKI statistics alongside data extracted from `navigator` and `screen` APIs (such as hardware concurrency, device memory, screen resolution, and webdriver status). This payload is packaged into a standard schema for transmission.
 
 **Browser compatibility:**
 
@@ -290,14 +227,7 @@ function collectTelemetry(wasPasted: boolean, keyTimestamps: number[]) {
 
 ### 3.4 Transmission
 
-Client telemetry is added to the existing magic-link POST body:
-```typescript
-body: JSON.stringify({
-  email: targetEmail.toLowerCase(),
-  redirectTo: `${siteUrl}/auth/callback`,
-  clientTelemetry: collectTelemetry(wasPasted, keyTimestamps),  // NEW
-})
-```
+Client telemetry is serialized and appended to the existing magic-link POST body as a `clientTelemetry` object, ensuring seamless integration with the existing authentication payload.
 
 `clientTelemetry` is optional on the server — if absent (e.g., OAuth path, programmatic call), all Tier 2 fields are NULL. This is safe and expected.
 
@@ -440,47 +370,7 @@ The SELECT query is updated to include all 35 columns. No other changes needed �
 
 ### 8.1 Updated LoginLog Interface
 
-```typescript
-interface LoginLog {
-  // v1 fields (unchanged)
-  id: string;
-  email: string;
-  event_type: string;
-  success: number;
-  is_authorized_email: number;
-  failure_reason: string | null;
-  ip_address: string | null;
-  user_agent: string | null;
-  geo_location: string | null;
-  login_method: string | null;
-  created_at: string;
-
-  // v2 additions
-  latitude: string | null;
-  longitude: string | null;
-  postal_code: string | null;
-  timezone: string | null;
-  continent: string | null;
-  asn: number | null;
-  asn_org: string | null;
-  colo: string | null;
-  tls_version: string | null;
-  http_protocol: string | null;
-  client_rtt_ms: number | null;
-  cores: number | null;
-  ram_gb: number | null;
-  screen_res: string | null;
-  color_depth: number | null;
-  platform: string | null;
-  browser_time: string | null;
-  is_webdriver: number | null;
-  was_pasted: number | null;
-  keystroke_avg_iki_ms: number | null;
-  keystroke_entropy: number | null;
-  email_sent_at: string | null;
-  email_latency_ms: number | null;
-}
-```
+The `LoginLog` type definition is updated to explicitly include all 35 columns, combining the existing v1 baseline fields (identity, outcome, and network basics) with the new v2 telemetry fields (extended network geo, hardware signatures, behavioral trust signals, and delivery metrics). All v2 fields are strongly typed as nullable.
 
 ### 8.2 Expanded Detail Panel — 4 Sections
 

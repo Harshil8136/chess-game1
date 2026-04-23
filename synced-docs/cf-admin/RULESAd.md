@@ -5,13 +5,13 @@ The Google OAuth verification issue is a dashboard configuration problem, not co
 
 Fastest fix: Go to Google Cloud Console → OAuth consent screen → switch User Type to "Internal" (admin-only tool = no verification ever needed, no 100-user cap)
 
-If not on Google Workspace: Add your emails as test users (Audience → Add Users: harshil.8136@gmail.com, harshil.cloud8@gmail.com) while verification completes
+If not on Google Workspace: Add your emails as test users (Audience → Add Users: admin@example.com, test@example.com) while verification completes
 
 Critical — verify these redirect URIs in Google Cloud Console → Credentials → your OAuth client:
 
-Authorized redirect URIs: https://zlvmrepvypucvbyfbpjj.supabase.co/auth/v1/callback
-Authorized JavaScript origins: https://secure.madagascarhotelags.com
-Supabase Dashboard → Auth → URL Configuration: confirm https://secure.madagascarhotelags.com/auth/callback is in the redirect allowlist
+Authorized redirect URIs: https://[PROJECT_REF].supabase.co/auth/v1/callback
+Authorized JavaScript origins: https://admin.example.com
+Supabase Dashboard → Auth → URL Configuration: confirm https://admin.example.com/auth/callback is in the redirect allowlist
 
 You must do: fill in the Client ID
 In wrangler.toml, replace the empty string with your actual Google OAuth Client ID:
@@ -97,7 +97,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Storage** | Cloudflare R2 (CMS image uploads — `madagascar-images` bucket → `cdn.madagascarhotelags.com`) |
 | **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
 | **Design System** | "Midnight Slate" — dark-first with Arctic Cyan primary accents |
-| **Domain** | `secure.madagascarhotelags.com` (provisioned at v1.0) |
+| **Domain** | `admin.example.com` (provisioned at v1.0) |
 | **GitHub** | `mascotasmadagascar-cmd/cf-admin-madagascar` (private) |
 | **Worker Name** | `cf-admin-madagascar` (Mascotas Cloudflare account) |
 
@@ -117,7 +117,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **nextjs-app** | Legacy main site (Next.js) | Reference only — no code sharing |
 
 ### Shared Resources
-- **Supabase Project:** `zlvmrepvypucvbyfbpjj` (same PostgreSQL instance)
+- **Supabase Project:** `[PROJECT_REF]` (same PostgreSQL instance)
 - **D1 Database:** `madagascar-db` (ID: `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2`) — shared between both projects
 - **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Cloudflare Account:** Mascotas Madagascar
@@ -166,13 +166,13 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ```
 # .dev.vars (local — gitignored)
-PUBLIC_SUPABASE_URL=https://zlvmrepvypucvbyfbpjj.supabase.co
+PUBLIC_SUPABASE_URL=https://[PROJECT_REF].supabase.co
 PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 TURNSTILE_SECRET_KEY=...
-SITE_URL=https://secure.madagascarhotelags.com
+SITE_URL=https://admin.example.com
 ```
 
 Secrets in production: `wrangler secret put <KEY>`
@@ -197,8 +197,8 @@ src/
 **Implementation Rules:**
 1. **Entry Point (`index.astro`):** Must wrap content in `<AdminLayout title="ModuleName">` and call `requireAuth(Astro)`.
 2. **Dynamic Sidebar Auto-Registry:** A module is ONLY visible in the sidebar if its path exists in the D1 `admin_pages` table and the user's role has PLAC authorization. You do NOT hardcode nav links in the UI.
-3. **CSS Code Splitting:** Do not dump styles directly into `global.css`. Create a module-specific CSS file and import it directly into the `.astro` page (`import '../../styles/module.css';`).
-4. **Data Fetching:** Fetch server-side within the `.astro` frontmatter. Pass static initial state to Preact islands as props.
+3. **CSS Code Splitting & Scoping:** Monolithic global CSS (e.g., `global.css`, `dashboard.css`) is strictly forbidden. Essential dashboard styles must be scoped via Astro components (like `DashboardStyles.astro`) or inline component `<style>` blocks to ensure zero style bleeding and an optimal payload size.
+4. **Data Access Layer (DAL):** Never write raw D1 SQL queries directly inside `.astro` frontmatter. All data fetching must go through Repository classes (e.g., `DashboardRepository.ts` in `src/lib/dal/`) to ensure separation of concerns, security, and testability. Pass the fetched static initial state to Preact islands as props.
 
 ---
 
@@ -508,7 +508,7 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 > 📖 **Full detailed documentation and Webhook setup guide:** Please refer to the master architecture document located at [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
 
 ---
-*DEV-harshil.8136@gmail.com*
+*DEV-admin@example.com*
 *End of Rules. These constraints must be acknowledged and followed for every task in cf-admin.*
 
 {% endraw %}

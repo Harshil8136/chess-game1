@@ -16,12 +16,7 @@ This document is the canonical reference for all Row-Level Security (RLS) polici
 All administrative and backend-originated operations use the `service_role` key, which **bypasses RLS entirely**. This is the only key stored as a Worker secret (`SUPABASE_SERVICE_ROLE_KEY`). The anon key is exposed to the frontend for auth flows only.
 
 **Standard policy pattern (optimized):**
-```sql
-CREATE POLICY "service_role_full_access" ON table_name
-  FOR ALL TO authenticated
-  USING ((select auth.role()) = 'service_role')
-  WITH CHECK ((select auth.role()) = 'service_role');
-```
+All RLS policies strictly enforce `service_role` access by wrapping the `auth.role()` function in a subquery to guarantee performance optimization, ensuring the anon key cannot bypass the access control list.
 
 ### 1.2 The `(select auth.role())` Optimization
 
@@ -31,11 +26,7 @@ CREATE POLICY "service_role_full_access" ON table_name
 
 ### 1.3 Public-Facing INSERT Pattern
 
-Tables that accept anonymous form submissions from the public website (cf-astro) use a deliberately permissive INSERT policy:
-```sql
-CREATE POLICY "anon_insert" ON table_name
-  FOR INSERT TO anon WITH CHECK (true);
-```
+Tables that accept anonymous form submissions from the public website (cf-astro) use a deliberately permissive INSERT policy for the anon role, allowing inserts without restriction while restricting all reads.
 This is **intentional by design** — these tables are write-only from the public perspective. All reads are gated behind `service_role`.
 
 ---
@@ -96,10 +87,7 @@ These tables accept anonymous submissions from the cf-astro public website. The 
 This RPC function returns aggregated usage statistics for the admin dashboard.
 
 **Hardened on 2026-04-21:**
-```sql
-ALTER FUNCTION public.get_usage_metrics()
-  SET search_path = public;
-```
+The RPC function execution context has been explicitly pinned to the `public` schema.
 
 **Why:** Without an explicit `search_path`, a malicious actor could inject a schema containing a poisoned function with the same name, causing the RPC to execute attacker-controlled code. Pinning `search_path = public` eliminates this vector.
 

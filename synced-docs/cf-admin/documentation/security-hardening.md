@@ -171,12 +171,7 @@ All Supabase PostgreSQL tables enforce Row-Level Security (RLS). The hardening p
 All admin and chatbot tables are locked to `service_role` access only. The publicly-exposed `anon` key cannot read, update, or delete any administrative data.
 
 **Standardized policy pattern:**
-```sql
-CREATE POLICY "service_role_full_access" ON table_name
-  FOR ALL TO authenticated
-  USING ((select auth.role()) = 'service_role')
-  WITH CHECK ((select auth.role()) = 'service_role');
-```
+All RLS policies strictly enforce `service_role` access by wrapping the `auth.role()` function in a subquery to guarantee performance optimization, ensuring the anon key cannot bypass the access control list.
 
 ### 11.2 Critical Fixes Applied
 

@@ -14,15 +14,17 @@
 1. [Executive Summary](#1-executive-summary)
 2. [Architecture Overview — The "Lean Edge" Philosophy](#2-architecture-overview)
 3. [PHASE 1 — RBAC + Declarative ACM (✅ IMPLEMENTED)](#3-phase-1--rbac--declarative-acm)
-4. [PHASE 2 — Page-Level Access Control (PLAC) System (🔥 NEW)](#4-phase-2--page-level-access-control-plac)
-5. [PHASE 3 — Astro View Transitions (SPA-Feel Navigation)](#5-phase-3--astro-view-transitions)
+4. [PHASE 2 — Page-Level Access Control (PLAC) System (✅ IMPLEMENTED)](#4-phase-2--page-level-access-control-plac)
+5. [PHASE 3 — Astro ClientRouter (SPA-Feel Navigation)](#5-phase-3--astro-clientrouter)
 6. [PHASE 4 — Ghost Audit Engine (ctx.waitUntil Logging)](#6-phase-4--ghost-audit-engine)
 7. [PHASE 5 — HTTP Caching & ETag Strategy](#7-phase-5--http-caching--etag-strategy)
 8. [PHASE 6 — Preact Signals (Inter-Island Reactivity)](#8-phase-6--preact-signals)
-9. [PHASE 7 — Chatbot UI Proxy Integration (🔥 NEW)](#9-phase-7--chatbot-ui-proxy-integration)
-10. [SCALE-UP VAULT — Enterprise Features (Deferred)](#10-scale-up-vault)
-11. [Risk Analysis & CPU Budget](#11-risk-analysis--cpu-budget)
-12. [File Map & Implementation Order](#12-file-map--implementation-order)
+9. [PHASE 7 — Data Access Layer (DAL) Pattern (✅ NEW)](#9-phase-7--data-access-layer-dal-pattern)
+10. [PHASE 8 — Scoped CSS Architecture (✅ NEW)](#10-phase-8--scoped-css-architecture)
+11. [FEATURE-SLICED MODULE ARCHITECTURE](#11-feature-sliced-module-architecture-active)
+12. [SCALE-UP VAULT — Enterprise Features (Deferred)](#12-scale-up-vault)
+13. [Risk Analysis & CPU Budget](#13-risk-analysis--cpu-budget)
+14. [File Map & Implementation Order](#14-file-map--implementation-order)
 
 ---
 
@@ -42,7 +44,7 @@ This plan defines the **production architecture** for cf-admin — a secure, lig
 | **Page-Level Access (PLAC)** | **KV-cached access maps + D1 overrides + Auto-reset on role change** | **<0.5ms** | **~3 KB** |
 | **Module Manifest** | **Domain-grouped module silos (Customers, Pets, Analytics, Reports)** | **0ms (build-time)** | **0 KB** |
 | SPA Navigation | Astro View Transitions API | 0ms (browser-native) | 0 KB |
-| CSS Architecture | Modular CSS under 14KB (splits lazy-loaded locally per-component) | 0ms | 0 KB |
+| CSS Architecture | Component-scoped inline styles & centralized Astro style utilities. No monolithic global CSS files. | 0ms | 0 KB |
 | Security | Data-Attribute Driven CSS architecture enforcing Strict CSP without unsafe-inline | 0ms | 0 KB |
 | Audit Logging | ctx.waitUntil() fire-and-forget D1 writes | 0ms (post-response) | 0 KB |
 | API Caching | HTTP ETag + Cache-Control headers | 0ms | 0 KB |
@@ -114,16 +116,34 @@ Browser Request
     │
     â–¼
 ┌── PAGE RENDER (Astro SSR) ────────────────────────────────┐
-│  Server-side data fetch (D1/Supabase via REST client)      │
+│  Data Access Layer (DAL) via Repository pattern (native D1)│
 │  Render HTML + Preact island placeholders                  │
 │  Set ETag + Cache-Control headers                          │
-└────────────────────────────────────────────────────────────┘
     │
-    â–¼
+    ▼
+┌── MIDDLEWARE (middleware.ts) ───────────────────────────┐
+│  1. Is route public? (/login, /auth/*) → PASS             │
+│  2. Get session from KV (cookie → session:uuid)            │
+│  3. Session expired? → Redirect to /                       │
+│  4. Need JWT refresh? (30min interval) → Refresh tokens    │
+│  5. Get PLAC access map from KV (plac:{userId})            │
+│  6. Check access: role hierarchy + page overrides           │
+│  7. Denied? → Redirect /dashboard?error=insufficient       │
+│  8. Inject user + permissions into Astro.locals             │
+└───────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌── PAGE RENDER (Astro SSR) ────────────────────────────────┐
+│  Data Access Layer (DAL) via Repository pattern (native D1)│
+│  Render HTML + Preact island placeholders                  │
+│  Set ETag + Cache-Control headers                          │
+└───────────────────────────────────────────────────────────┘
+    │
+    ▼
 ┌── POST-RESPONSE (ctx.waitUntil) ──────────────────────────┐
 │  Ghost Audit: log action to D1 admin_audit_log             │
 │  (Runs AFTER response is sent — zero user latency)         │
-└────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -144,14 +164,7 @@ Browser Request
 
 ### 3.2 Why This Is Already Optimal
 
-The `hasPermission()` function uses a simple integer comparison:
-
-```typescript
-// rbac.ts — O(1), <0.01ms, zero allocations
-export function hasPermission(userRole: Role, requiredRole: Role): boolean {
-  return ROLE_LEVEL[userRole] <= ROLE_LEVEL[requiredRole];
-}
-```
+The RBAC check logic evaluates access by comparing numerical hierarchical levels, allowing extremely fast O(1) validations.
 
 **Research confirmed:** At 5 roles and ~20 routes, this integer hierarchy is identical in security to bitmask systems but with zero debugging complexity. Bitwise operations save ~0.9μs per check — irrelevant when D1 queries take 5-8ms.
 
@@ -200,61 +213,18 @@ PLAC enables **per-user, full-page access overrides** on top of hierarchical RBA
 
 ### 4.3 Database Schema (D1)
 
-```sql
--- ═══════════════════════════════════════════════════════════════
--- PLAC: Page-Level Access Control Tables
--- ═══════════════════════════════════════════════════════════════
-
--- Table 1: Page Registry (pre-populated with all dashboard pages)
--- This is the single source of truth for what pages exist and
--- their default minimum role requirement.
-CREATE TABLE IF NOT EXISTS admin_pages (
-  path TEXT PRIMARY KEY,
-  label TEXT NOT NULL,
-  icon TEXT NOT NULL DEFAULT 'file',
-  required_role TEXT NOT NULL CHECK (
-    required_role IN ('dev', 'owner', 'super_admin', 'admin', 'staff')
-  ),
-  description TEXT,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  is_active INTEGER NOT NULL DEFAULT 1
-);
-
--- Table 2: Per-User Page Access Overrides (junction table)
--- Normalized — NOT a JSON array in the user row.
--- Research confirmed: junction table enables indexed O(1) lookups,
--- hierarchy enforcement via granted_by, and clean provisioning queries.
-CREATE TABLE IF NOT EXISTS admin_page_overrides (
-  user_id TEXT NOT NULL,
-  page_path TEXT NOT NULL,
-  granted INTEGER NOT NULL CHECK (granted IN (0, 1)),
-  granted_by TEXT NOT NULL,
-  granted_by_email TEXT NOT NULL,
-  reason TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  PRIMARY KEY (user_id, page_path)
-);
-
--- Index for fast lookups by user (middleware cache rebuild)
-CREATE INDEX IF NOT EXISTS idx_overrides_user 
-  ON admin_page_overrides (user_id);
-
--- Index for fast lookups by grantor (audit: "what did this admin provision?")
-CREATE INDEX IF NOT EXISTS idx_overrides_grantor 
-  ON admin_page_overrides (granted_by);
-```
+The database schema uses a central page registry to define site structure and a junction table to store granular user-specific access overrides.
 
 **Seed data for admin_pages:**
 
 ```sql
 INSERT OR IGNORE INTO admin_pages (path, label, icon, required_role, description, sort_order) VALUES
-  -- ═══ CORE ═══
+  -- ••• CORE •••
   ('/dashboard',              'Dashboard',         'layout-dashboard', 'staff',       'Home dashboard with KPIs and activity feed',        0),
   ('/dashboard/bookings',     'Bookings',          'calendar',         'staff',       'View and manage pet boarding reservations',          1),
   ('/dashboard/customers',    'Customers',         'contact',          'staff',       'Customer profiles and contact information',          2),
   ('/dashboard/pets',         'Pet Profiles',      'paw-print',        'staff',       'Pet records, breeds, medical notes',                 3),
-  -- ═══ CONTENT MANAGEMENT ═══
+  -- ••• CONTENT MANAGEMENT •••
   ('/dashboard/content',      'Content Studio',    'palette',          'admin',       'CMS hub for managing public site content',           4),
   ('/dashboard/content/hero', 'Hero Editor',       'image',            'admin',       'Hero background and headline management',            5),
   ('/dashboard/content/gallery','Gallery Manager', 'images',           'admin',       'Photo gallery drag-and-drop manager',                6),
@@ -263,12 +233,12 @@ INSERT OR IGNORE INTO admin_pages (path, label, icon, required_role, description
   ('/dashboard/content/testimonials','Testimonials','message-square',  'admin',       'Customer testimonials and reviews',                   9),
   ('/dashboard/content/faq',  'FAQ Editor',        'help-circle',      'admin',       'Frequently asked questions management',               10),
   ('/dashboard/content/about','About Page',        'info',             'admin',       'About page content and team information',             11),
-  -- ═══ ANALYTICS & REPORTS ═══
+  -- ••• ANALYTICS & REPORTS •••
   ('/dashboard/analytics',    'Analytics',         'bar-chart-3',      'admin',       'Traffic, engagement, and usage analytics',            12),
   ('/dashboard/reports',      'Reports',           'file-bar-chart',   'super_admin', 'Financial and operational reports',                   13),
-  -- ═══ OPERATIONS ═══
+  -- ••• OPERATIONS •••
   ('/dashboard/logs',         'Activity Logs',     'scroll-text',      'staff',       'Admin action audit trail and system logs',            14),
-  -- ═══ ADMINISTRATION ═══
+  -- ••• ADMINISTRATION •••
   ('/dashboard/users',        'User Management',   'users',            'super_admin', 'Admin user accounts, roles, and page access',        15),
   ('/dashboard/settings',     'Site Settings',     'settings',         'super_admin', 'General portal and site configuration',               16),
   ('/dashboard/settings/email','Email Templates',  'mail',             'super_admin', 'Email notification template management',              17),
@@ -802,20 +772,64 @@ When the "User Management" Preact island updates a user's role, the "Activity Fe
 
 ### 8.2 Implementation
 
-```typescript
-// src/lib/signals.ts
-import { signal } from '@preact/signals';
-
-/** Shared reactive state between Preact islands */
-export const userUpdated = signal<string | null>(null);
-export const toastMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
-```
+Preact signals are used to establish shared reactive state between distinct islands, replacing complex global event buses.
 
 Both islands import from the same shared module. When one island writes to the signal, the other re-renders automatically. **1 KB total, type-safe, no event bus complexity.**
 
 ---
 
-## 9. FEATURE-SLICED MODULE ARCHITECTURE (ACTIVE)
+## 9. PHASE 7 — DATA ACCESS LAYER (DAL) PATTERN (✅ NEW)
+
+> **Status:** ✅ IMPLEMENTED TODAY — All direct database calls decoupled from UI layers.
+
+### 9.1 The Problem It Solves
+
+Historically, raw D1 SQL queries were embedded directly within `.astro` frontmatter or API handlers. This created tight coupling, making testing impossible, queries hard to reuse, and future multi-tenant migrations dangerous.
+
+### 9.2 The Solution: Repository Pattern
+
+We introduced a strict **Data Access Layer (DAL)** located in `src/lib/dal/`.
+
+- **Controllers (.astro / API):** ONLY handle HTTP logic, auth, and rendering.
+- **Repositories (.ts):** ONLY handle database connectivity, query construction, and D1 execution.
+
+**Example implementation:**
+```typescript
+// src/lib/dal/DashboardRepository.ts
+export class DashboardRepository {
+  constructor(private db: D1Database) {}
+
+  async getRecentActivity(limit = 10) {
+    return await this.db.prepare(
+      `SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT ?`
+    ).bind(limit).all();
+  }
+}
+```
+
+### 9.3 Security & Multi-Tenancy Benefits
+- **Zero SQL in UI:** Eradicates the risk of leaking schemas in components.
+- **Isolated Migrations:** As we shift to multi-tenant environments, only the Repository layer needs to understand the tenant-id context, rather than auditing 30+ UI files.
+
+---
+
+## 10. PHASE 8 — SCOPED CSS ARCHITECTURE (✅ NEW)
+
+> **Status:** ✅ IMPLEMENTED TODAY — Zero global CSS pollution.
+
+### 10.1 The Decommissioning of Monoliths
+
+We formally decommissioned all legacy, monolithic global CSS files (e.g., `dashboard.css`, `activity-feed.css`). Global stylesheets caused unmanageable "style bleeding" across the modular dashboard pages, violating the Lego-brick isolation principle.
+
+### 10.2 Approach A: Component-Scoped & Centralized Styling
+
+1. **Astro Scoped `<style>`:** All component-specific aesthetics are now securely encapsulated within the component's own file. Astro automatically generates unique scoping hashes to prevent leakage.
+2. **`DashboardStyles.astro`:** Shared essential utilities (like animations, variables, and typography) are managed in a single, strictly controlled utility component (`DashboardStyles.astro`). This ensures a unified "Midnight Slate" theme without polluting the global DOM namespace.
+3. **Payload Optimization:** By removing 14KB+ of unused global CSS, initial paint times drop drastically, aligning perfectly with the "Lean Edge" philosophy.
+
+---
+
+## 11. FEATURE-SLICED MODULE ARCHITECTURE (ACTIVE)
 
 > **Status:** ACTIVE — 30 pages across ~15 modules triggers this pattern.
 
@@ -923,7 +937,7 @@ This acts as a "Soft 404" net which ensures:
 
 ---
 
-## 11. SCALE-UP VAULT — ENTERPRISE FEATURES (DEFERRED)
+## 12. SCALE-UP VAULT — ENTERPRISE FEATURES (DEFERRED)
 
 > **Status:** Documented for when cf-admin scales to 100+ users.
 
@@ -933,14 +947,7 @@ These features are architecturally sound but not yet needed. Each has a **trigge
 
 **Trigger:** When you need >20 granular sub-feature permissions within the same page.
 
-```typescript
-// Future: Sub-feature gating within a page
-const CAN_VIEW    = 0b0001;
-const CAN_EDIT    = 0b0010;
-const CAN_DELETE  = 0b0100;
-const CAN_EXPORT  = 0b1000;
-if (user.permissionMask & CAN_DELETE) { /* show delete button */ }
-```
+Future enterprise scaling may rely on bitmask entitlements to support highly granular sub-feature gating within individual modules.
 
 ### 10.2 IndexedDB + SWR + Web Crypto Vault
 
@@ -956,7 +963,7 @@ if (user.permissionMask & CAN_DELETE) { /* show delete button */ }
 
 ---
 
-## 11. RISK ANALYSIS & CPU BUDGET
+## 13. RISK ANALYSIS & CPU BUDGET
 
 ### 11.1 CPU Budget per Request (10ms limit)
 
@@ -1013,7 +1020,7 @@ WITH PLAC (30 pages, ~20 entries in access map):
 
 ---
 
-## 12. FILE MAP & IMPLEMENTATION ORDER
+## 14. FILE MAP & IMPLEMENTATION ORDER
 
 ### 12.1 New Files Created
 

@@ -189,54 +189,10 @@ For detailed PLAC documentation, see the dedicated [PLAC & Audit document](./PLA
 All administrative user management actions are performed via `POST`, `PATCH`, and `DELETE` methods on the `/api/users/manage` endpoint.
 
 ### 9.1 POST /api/users/manage (Invite User)
-
-**Request Payload:**
-```json
-{
-  "email": "user@example.com",
-  "displayName": "John Doe",
-  "role": "admin",
-  "is_hidden": false,
-  "pageOverrides": [
-    { "pagePath": "/dashboard/settings", "granted": true }
-  ]
-}
-```
-
-**Success Response (201):**
-```json
-{
-  "success": true,
-  "message": "User authorized successfully."
-}
-```
-
-**Common Error (403):**
-```json
-{
-  "success": false,
-  "error": "Target role exceeds your authorization clearance"
-}
-```
+Accepts email, display name, role, hidden status, and any initial page overrides. Returns a sanitized success/error message without exposing internal stack traces.
 
 ### 9.2 PATCH /api/users/manage (Modify User)
-
-**Request Payload:**
-```json
-{
-  "email": "user@example.com",
-  "is_active": false,
-  "display_name": "John Updated",
-  "role": "staff"
-}
-```
-
-**Success Response (200):**
-```json
-{
-  "success": true
-}
-```
+Accepts updates for active status, display name, and role. Mutates the D1 whitelist and triggers the synchronous session invalidation cascade if roles change.
 
 ## 10. Operational Resilience & Failure Modes
 

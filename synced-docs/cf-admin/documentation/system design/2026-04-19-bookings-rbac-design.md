@@ -44,7 +44,7 @@ When an Owner attempts to delete, the cognitive overhead is removed. The "Delete
 Every operation inside this specification—whether a Hard Delete, a Soft Delete, or merely a check-in status toggle—will trigger a `ctx.waitUntil()` invocation connecting precisely to the `admin_audit_log` Ghost Audit Engine. Full forensic timeline coverage is guaranteed.
 
 ## 6. Implementation Notes
-- **D1 Table Provisioning:** Requires executing a fast SQL instantiation `CREATE TABLE IF NOT EXISTS admin_booking_state` containing `booking_id (PK)`, `is_deleted`, `operational_status`, and `internal_notes`.
+- **D1 Table Provisioning:** Requires instantiating a shadow table containing fields for deletion status, operational status, and internal notes.
 - **UI Integrations:** Action buttons will be strategically injected directly into the `BookingSlideDrawer` settings clusters using the glassmorphic UX mapping developed previously.
 
 *This specification serves as the foundation for the implementation phase.*
