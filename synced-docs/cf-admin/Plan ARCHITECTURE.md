@@ -170,15 +170,7 @@ The RBAC check logic evaluates access by comparing numerical hierarchical levels
 
 ### 3.3 Current Route Registry
 
-```typescript
-// registry.ts — Declarative ACM (longest-prefix matching)
-export const ROUTE_REGISTRY: Record<string, RouteDefinition> = {
-  '/dashboard/users':    { minRole: ROLES.SUPER_ADMIN },
-  '/dashboard/settings': { minRole: ROLES.SUPER_ADMIN },
-  '/dashboard/content':  { minRole: ROLES.ADMIN },
-  '/dashboard':          { minRole: ROLES.STAFF },
-};
-```
+The route registry acts as the **default baseline** for role-based access. It maps top-level routes to their minimum required role (e.g., `/dashboard/content` requires `Admin`). PLAC (Phase 2) adds granular, per-user overrides on top of this foundation.
 
 This registry defines the **default baseline** for role-based access. PLAC (Phase 2) adds per-user overrides on top of this foundation.
 
@@ -267,231 +259,26 @@ RESOLUTION RULE (per page, per user):
 RESULT: A flat Record<string, boolean> object cached in KV as plac:{userId}
 ```
 
-**TypeScript implementation:**
-
-```typescript
-// src/lib/auth/plac.ts
-
-import type { Role } from './rbac';
-import { ROLE_LEVEL } from './rbac';
-
-export interface PageAccessMap {
-  /** Map of page path → boolean access. True = allowed, False = denied */
-  pages: Record<string, boolean>;
-  /** Unix ms timestamp of when this map was computed */
-  computedAt: number;
-  /** The user's role at time of computation (for staleness detection) */
-  role: Role;
-}
-
-/**
- * Compute full access map for a user by merging role defaults + overrides.
- * Called at login and when a provisioning change targets this user.
- * 
- * Cost: 1 D1 query (batched JOIN), ~2ms. Cached in KV for 1 hour.
- */
-export async function computeAccessMap(
-  db: D1Database,
-  userId: string,
-  userRole: Role
-): Promise<PageAccessMap> {
-  // Single batched query: all pages LEFT JOIN user's overrides
-  const result = await db.prepare(`
-    SELECT 
-      p.path,
-      p.required_role,
-      o.granted
-    FROM admin_pages p
-    LEFT JOIN admin_page_overrides o 
-      ON o.user_id = ?1 AND o.page_path = p.path
-    WHERE p.is_active = 1
-    ORDER BY p.sort_order
-  `).bind(userId).all<{
-    path: string;
-    required_role: Role;
-    granted: number | null;
-  }>();
-
-  const pages: Record<string, boolean> = {};
-  
-  for (const row of result.results) {
-    if (row.granted === 0) {
-      // DENY override — always wins, regardless of role
-      pages[row.path] = false;
-    } else if (row.granted === 1) {
-      // GRANT override — explicit access
-      pages[row.path] = true;
-    } else {
-      // No override — fall back to role hierarchy
-      pages[row.path] = ROLE_LEVEL[userRole] <= ROLE_LEVEL[row.required_role as Role];
-    }
-  }
-
-  return {
-    pages,
-    computedAt: Date.now(),
-    role: userRole,
-  };
-}
-
-/**
- * Get access map from KV cache. Returns null on miss.
- * Key format: plac:{userId}
- * TTL: 3600s (1 hour)
- */
-export async function getCachedAccessMap(
-  kv: KVNamespace,
-  userId: string
-): Promise<PageAccessMap | null> {
-  const raw = await kv.get(`plac:${userId}`, { type: 'json' });
-  return raw as PageAccessMap | null;
-}
-
-/**
- * Write access map to KV cache.
- */
-export async function cacheAccessMap(
-  kv: KVNamespace,
-  userId: string,
-  map: PageAccessMap
-): Promise<void> {
-  await kv.put(`plac:${userId}`, JSON.stringify(map), {
-    expirationTtl: 3600, // 1 hour
-  });
-}
-
-/**
- * Invalidate a user's cached access map (called after provisioning changes).
- */
-export async function invalidateAccessMap(
-  kv: KVNamespace,
-  userId: string
-): Promise<void> {
-  await kv.delete(`plac:${userId}`);
-}
-
-/**
- * Check if a user can access a specific page path.
- * Uses the cached access map (KV) — zero D1 queries.
- * Falls back to role hierarchy if path not in map.
- * 
- * Cost: <0.3ms (KV read + object lookup)
- */
-export function checkPageAccess(
-  accessMap: PageAccessMap,
-  pathname: string
-): boolean {
-  // Exact match
-  if (pathname in accessMap.pages) {
-    return accessMap.pages[pathname];
-  }
-  
-  // Prefix match (for sub-routes like /dashboard/content/gallery)
-  const paths = Object.keys(accessMap.pages)
-    .sort((a, b) => b.length - a.length);
-  
-  for (const registeredPath of paths) {
-    if (pathname.startsWith(registeredPath + '/') || pathname === registeredPath) {
-      return accessMap.pages[registeredPath];
-    }
-  }
-
-  // Unknown page — deny by default
-  return false;
-}
-```
+The PLAC module exposes a suite of pure functions dedicated to computing, caching, and evaluating user access maps. When a user's session is initialized or modified, the system queries the `admin_page_overrides` table, merging role-based baselines with explicit user grants or denials. The resulting flat boolean map is then serialized and cached in Cloudflare KV for O(1) retrieval during subsequent middleware checks.
 
 ### 4.5 Middleware Integration
 
-The middleware is updated to check PLAC on every request:
-
-```typescript
-// Updated middleware.ts flow (pseudocode)
-
-// After session validation...
-const session = await getSession(context);
-
-// 1. Get or compute PLAC access map
-let accessMap = await getCachedAccessMap(env.SESSION, session.userId);
-
-if (!accessMap || accessMap.role !== session.role) {
-  // Cache miss or role changed — recompute from D1
-  accessMap = await computeAccessMap(env.DB, session.userId, session.role);
-  // Cache in background (don't block response)
-  // NOTE: Astro 6 removed locals.runtime — use getCfContext() from env.ts
-  const cfCtx = getCfContext(context);
-  cfCtx?.waitUntil(cacheAccessMap(env.SESSION, session.userId, accessMap));
-}
-
-// 2. Check page access (O(1) hashmap lookup — <0.1ms)
-if (!checkPageAccess(accessMap, pathname)) {
-  return context.redirect('/dashboard?error=insufficient_permissions');
-}
-
-// 3. Inject into locals for downstream pages/islands
-context.locals.user = { ...session, accessMap: accessMap.pages };
-```
+The Astro middleware is responsible for evaluating the KV-cached PLAC map on every non-public request. If a cache miss occurs (or a role discrepancy is detected), the middleware intercepts the request, computes the fresh map via D1, and asynchronously replenishes the KV cache via `ctx.waitUntil` to maintain strict low-latency constraints. Finally, the resolved access map is injected into `Astro.locals` for downstream component evaluation.
 
 ### 4.6 Provisioning API (Hierarchy-Enforcing)
 
-```
-POST /api/users/access
-Content-Type: application/json
+The provisioning API enforces strict structural integrity before permitting any access overrides. Requests must specify the target user, the affected page, the intended action (grant, revoke, or reset), and a documented reason for the audit log. The API systematically validates the requesting actor's hierarchical authority to execute the specified operation.
 
-{
-  "targetUserId": "uuid-xxx",
-  "pagePath": "/dashboard/content",
-  "action": "grant" | "revoke" | "reset",
-  "reason": "Needed for content updates during Q2 campaign"
-}
-```
-
-**Server-side hierarchy enforcement rules:**
-
-```typescript
-// src/pages/api/users/access.ts — Provisioning endpoint
-
-// Rule 1: Actor must have higher role level than target
-if (ROLE_LEVEL[actorRole] >= ROLE_LEVEL[targetRole]) {
-  return error(403, 'Cannot modify access for users at or above your level');
-}
-
-// Rule 2: Actor must have access to the page they're granting
-if (!checkPageAccess(actorAccessMap, pagePath)) {
-  return error(403, 'Cannot grant access to pages you do not have access to');
-}
-
-// Rule 3: DEV and Owner users are "ghosts" — invisible to SuperAdmin and below
-if ((targetRole === 'dev' || targetRole === 'owner') && actorRole !== 'dev') {
-  return error(403, 'Cannot modify DEV/Owner user access');
-}
-
-// Rule 4: Cannot elevate target above their role's natural ceiling
-// (e.g., granting a Staff user DEV-only pages would require DEV actor)
-const pageDefinition = await getPageDefinition(db, pagePath);
-if (ROLE_LEVEL[actorRole] > ROLE_LEVEL[pageDefinition.required_role]) {
-  return error(403, 'Cannot grant access to pages above your clearance');
-}
-```
+**Server-Side Hierarchy Enforcement Rules:**
+The provisioning API enforces strict structural integrity before permitting any override:
+1. **Lateral/Upward Mutability Ban:** An actor cannot modify the access of a user at or above their own hierarchical level.
+2. **Blind Grant Ban:** An actor cannot grant access to a page they themselves do not possess access to.
+3. **Ghost Mode Integrity:** SuperAdmins cannot modify DEV or Owner accounts.
+4. **Ceiling Enforcement:** An actor cannot elevate a target above the target's natural role ceiling unless the actor inherently outranks that ceiling.
 
 ### 4.7 Auto-Reset on Role Change
 
-When a user's role changes (e.g., Staff → Admin), their overrides are automatically cleared because a new role implies a new access baseline:
-
-```typescript
-// When role changes, reset all overrides and rebuild access map
-async function onRoleChange(db: D1Database, kv: KVNamespace, userId: string, newRole: Role) {
-  // 1. Delete all existing overrides for this user
-  await db.prepare('DELETE FROM admin_page_overrides WHERE user_id = ?')
-    .bind(userId).run();
-  
-  // 2. Invalidate cached access map (forces recompute on next request)
-  await invalidateAccessMap(kv, userId);
-  
-  // 3. Audit the reset
-  // (audit entry is logged by the caller via ctx.waitUntil)
-}
-```
+When a user's role undergoes a mutation (e.g., promotion from Staff to Admin), the system automatically triggers a comprehensive reset of their PLAC overrides. This is critical because a new role establishes an entirely different access baseline. The system purges all associated records in `admin_page_overrides`, issues a KV cache invalidation, and logs the reset operation via the Ghost Audit Engine.
 
 ### 4.8 UI: Page Access Manager (Preact Island)
 
@@ -619,89 +406,17 @@ User clicks "Save" → API processes → Response sent → User sees "✅ Saved!
                                               (invisible to user)
 ```
 
-### 6.2 D1 Audit Table
+### 6.2 D1 Audit Infrastructure
 
-```sql
-CREATE TABLE IF NOT EXISTS admin_audit_log (
-  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  user_id TEXT NOT NULL,
-  user_email TEXT NOT NULL,
-  user_role TEXT NOT NULL,
-  action TEXT NOT NULL,
-  module TEXT NOT NULL,
-  target_id TEXT,
-  target_type TEXT,
-  details TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_user 
-  ON admin_audit_log (user_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_audit_module 
-  ON admin_audit_log (module, created_at DESC);
-```
+The `admin_audit_log` table serves as an immutable append-only ledger. It records the actor's identity (`user_id`, `user_email`, `user_role`), the precise `action` executed, the affected `module`, target identifiers, and a structured `details` payload. Dedicated compound indices on `(user_id, created_at)` and `(module, created_at)` ensure highly performant temporal querying within the forensic dashboard.
 
 ### 6.3 Audit Helper
 
-```typescript
-// src/lib/audit.ts
-
-export interface AuditEntry {
-  userId: string;
-  userEmail: string;
-  userRole: string;
-  action: string;      // 'create' | 'update' | 'delete' | 'login' | 'logout' | 'grant_access' | 'revoke_access'
-  module: string;      // 'auth' | 'users' | 'content' | 'bookings' | 'settings' | 'plac'
-  targetId?: string;
-  targetType?: string;
-  details?: string;
-}
-
-/**
- * Fire-and-forget audit log via ctx.waitUntil().
- * Runs AFTER the response is sent — zero user latency.
- * Uses D1 prepared statements to stay under 10ms CPU.
- */
-export function auditLog(
-  ctx: ExecutionContext,
-  db: D1Database,
-  entry: AuditEntry
-): void {
-  ctx.waitUntil(
-    db.prepare(`
-      INSERT INTO admin_audit_log 
-        (user_id, user_email, user_role, action, module, target_id, target_type, details)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-    `).bind(
-      entry.userId,
-      entry.userEmail,
-      entry.userRole,
-      entry.action,
-      entry.module,
-      entry.targetId ?? null,
-      entry.targetType ?? null,
-      entry.details ?? null
-    ).run()
-  );
-}
-```
+The internal `audit.ts` library provides a centralized interface for logging. It utilizes parameterized D1 queries to prevent SQL injection and is strictly bound to `ctx.waitUntil()`. By executing the database write entirely outside the critical path of the HTTP response cycle, the helper guarantees that comprehensive compliance logging introduces zero computational overhead to the user experience.
 
 ### 6.4 Usage in API Endpoints
 
-```typescript
-// Example: PLAC provisioning audit
-auditLog(ctx, env.DB, {
-  userId: actor.userId,
-  userEmail: actor.email,
-  userRole: actor.role,
-  action: 'grant_access',
-  module: 'plac',
-  targetId: targetUserId,
-  targetType: 'user',
-  details: JSON.stringify({ page: pagePath, reason })
-});
-```
+Audit logging is injected into API handlers exclusively via the `createAuditLogger` factory (or directly via `auditLog` in specific legacy contexts). Every destructive or sensitive mutation—such as granting access, deleting a user, or modifying content—must emit a corresponding event payload containing context-aware details before completing the request cycle.
 
 ### 6.5 Audit Performance
 
@@ -732,26 +447,7 @@ POST /api/audit/prune (DEV only)
 
 ### 7.1 How It Replaces IndexedDB + SWR
 
-Instead of building a client-side IndexedDB vault with Web Crypto encryption (100+ KB of JavaScript), we use standard HTTP caching headers that browsers handle natively with **zero client code**:
-
-```typescript
-// API response with caching headers
-const data = await fetchFromD1(env.DB);
-const etag = `"${hashData(data)}"`;
-
-// Check if client already has this version
-if (request.headers.get('If-None-Match') === etag) {
-  return new Response(null, { status: 304 }); // Not Modified — 0 bytes sent
-}
-
-return new Response(JSON.stringify(data), {
-  headers: {
-    'Content-Type': 'application/json',
-    'ETag': etag,
-    'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
-  },
-});
-```
+Instead of building a client-side IndexedDB vault with Web Crypto encryption (100+ KB of JavaScript), we leverage standard HTTP caching headers natively processed by the browser. By generating deterministic `ETag` hashes of the API payload and responding with `304 Not Modified` when appropriate, the edge server eliminates redundant D1 reads and payload transmission entirely, achieving "zero-invocation" efficiency without shipping a single byte of client-side logic.
 
 ### 7.2 Comparison
 
@@ -793,19 +489,8 @@ We introduced a strict **Data Access Layer (DAL)** located in `src/lib/dal/`.
 - **Controllers (.astro / API):** ONLY handle HTTP logic, auth, and rendering.
 - **Repositories (.ts):** ONLY handle database connectivity, query construction, and D1 execution.
 
-**Example implementation:**
-```typescript
-// src/lib/dal/DashboardRepository.ts
-export class DashboardRepository {
-  constructor(private db: D1Database) {}
-
-  async getRecentActivity(limit = 10) {
-    return await this.db.prepare(
-      `SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT ?`
-    ).bind(limit).all();
-  }
-}
-```
+**Implementation Paradigm:**
+Each domain module corresponds to a specific Repository class (e.g., `DashboardRepository`, `ContentRepository`). These classes encapsulate all prepared statements, ensuring that controller layers only interface with high-level asynchronous methods that return strongly-typed results.
 
 ### 9.3 Security & Multi-Tenancy Benefits
 - **Zero SQL in UI:** Eradicates the risk of leaking schemas in components.
