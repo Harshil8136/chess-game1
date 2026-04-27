@@ -1,39 +1,12 @@
 {% raw %}
-REMIND TO DO ALL THINS;
-Part A — You must do this manually (Google Cloud Console)
-The Google OAuth verification issue is a dashboard configuration problem, not code. Check these in order:
-
-Fastest fix: Go to Google Cloud Console → OAuth consent screen → switch User Type to "Internal" (admin-only tool = no verification ever needed, no 100-user cap)
-
-If not on Google Workspace: Add your emails as test users (Audience → Add Users: admin@example.com, test@example.com) while verification completes
-
-Critical — verify these redirect URIs in Google Cloud Console → Credentials → your OAuth client:
-
-Authorized redirect URIs: https://[PROJECT_REF].supabase.co/auth/v1/callback
-Authorized JavaScript origins: https://admin.example.com
-Supabase Dashboard → Auth → URL Configuration: confirm https://admin.example.com/auth/callback is in the redirect allowlist
-
-You must do: fill in the Client ID
-In wrangler.toml, replace the empty string with your actual Google OAuth Client ID:
-
-
-PUBLIC_GOOGLE_CLIENT_ID = "123456789-abc...xyz.apps.googleusercontent.com"
-Also add it to .dev.vars for local dev:
-
-
-PUBLIC_GOOGLE_CLIENT_ID=123456789-abc...xyz.apps.googleusercontent.com
-The Client ID is found in Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web client.
-
-
-
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-21 (v3.7: Search Engine Isolation + Security Hardening)
+> **Last Updated:** 2026-04-26 (v3.9: Minor trigger update)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
 
-## 🚨 RULE #0 — THE ABSOLUTE LAW (NEVER VIOLATE)
+## 🛡️ RULE #0 — THE ABSOLUTE LAW (NEVER VIOLATE)
 
 **cf-admin is the Cloudflare-native version of admin-app. We can deeply review, understand how everything looks, works, and is designed in admin-app — however, WE NEVER, like NEVER, copy any single file or code from there.**
 
@@ -50,7 +23,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ---
 
-## 🚨 RULE #0.5 — NO FAKE DATA OR PLACEHOLDERS
+## 🛡️ RULE #0.5 — NO FAKE DATA OR PLACEHOLDERS
 
 **ALL data and presented information MUST be real and accurate, sourced from active databases (Supabase/D1) or actual API telemetry (Cloudflare Analytics/Resend/etc).**
 
@@ -63,9 +36,9 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ---
 
-## 🏢 PROJECT MISSION — SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
+## PROJECT MISSION — SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
 
-**cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** This is a standard admin product — architected so any project with a main site can plug in a professional admin portal. Designed to:
+**cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** Designed to:
 
 - ✅ Manage content, bookings, users, and site settings via secure dashboard
 - ✅ Enforce multi-level RBAC (DEV > Owner > SuperAdmin > Admin > Staff) on every route
@@ -96,16 +69,24 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Cache** | Upstash Redis (free tier — 10K commands/day) |
 | **Storage** | Cloudflare R2 (CMS image uploads — `madagascar-images` bucket → `cdn.madagascarhotelags.com`) |
 | **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
-| **Design System** | "Midnight Slate" — dark-first with Arctic Cyan primary accents |
+| **Design System** | "Midnight Slate" — dark-first with Blue-500 primary accents |
 | **Domain** | `admin.example.com` (provisioned at v1.0) |
 | **GitHub** | `mascotasmadagascar-cmd/cf-admin-madagascar` (private) |
 | **Worker Name** | `cf-admin-madagascar` (Mascotas Cloudflare account) |
 
 ---
 
-## 2. STRICT CONTENT SECURITY POLICY (CSP)
+## 2. STRICT HTTP SECURITY HEADERS & CSP
 
-**NO INLINE STYLES ALLOWED:** The dashboard enforces a strict CSP which bans \unsafe-inline\. All dynamic state representing UI presentation MUST use Data-Attribute Driven CSS architecture (e.g. \data-expanded\, \data-active\) instead of inline \style={{...}}\ properties.
+**EDGE-INJECTED SECURITY:** The dashboard enforces strict HTTP security headers injected globally at the edge via Astro middleware `sequence`.
+
+- **Content-Security-Policy (CSP):** Allows `self`, `unsafe-inline` styles (for Tailwind v4), and `unsafe-inline`/`unsafe-eval` scripts strictly for Preact/Astro island hydration and Sentry tracking.
+- **X-Frame-Options: DENY** (Blocks Clickjacking)
+- **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
+- **Referrer-Policy: strict-origin-when-cross-origin**
+- **Strict-Transport-Security: max-age=31536000; includeSubDomains; preload**
+
+→ See [SECURITY.md](./documentation/SECURITY.md) for the full security architecture.
 
 ## 2. RELATIONSHIP TO OTHER PROJECTS
 
@@ -117,21 +98,24 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **nextjs-app** | Legacy main site (Next.js) | Reference only — no code sharing |
 
 ### Shared Resources
+
 - **Supabase Project:** `[PROJECT_REF]` (same PostgreSQL instance)
 - **D1 Database:** `madagascar-db` (ID: `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2`) — shared between both projects
 - **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Cloudflare Account:** Mascotas Madagascar
 
 ### KV Namespaces (Isolated per project)
+
 | Namespace | ID | Project | Purpose |
 |-----------|-----|---------|---------|
-| `cf-admin-session` | `c81d1970f3d548b8a53a0e6c870b7685` | cf-admin | Astro session store |
+| `cf-admin-session` | ⚠️ VERIFY — see OPERATIONS.md §1 | cf-admin | Astro session store |
 | `cf-astro-session` | `9da1ac5253a54ea1bf236c6fe514dd02` | cf-astro | Astro session store |
 | `cf-astro-isr-cache` | `e31f413bb1224f559a8de105248da6cc` | cf-astro | ISR HTML cache |
 
-> ⚠️ **OPERATIONAL CRITICAL:** These IDs were verified against the Cloudflare API on 2026-04-20. A prior mismatch caused a full CMS pipeline outage. See [`documentation/cloudflare-bindings-registry.md`](./documentation/cloudflare-bindings-registry.md) for the canonical registry and verification commands.
+> ⚠️ **SESSION KV ID DISCREPANCY:** The `cf-admin-session` ID has a mismatch between the registry and `wrangler.toml`. **Verify via Cloudflare Dashboard before next deploy.** See [OPERATIONS.md](./documentation/OPERATIONS.md) §1 for the full binding registry and verification commands.
 
 ### Isolation Rules
+
 - Admin tables use `admin_` prefix to avoid collision with cf-astro tables
 - cf-admin has its own KV namespace for sessions (`cf-admin-session`, separate from cf-astro)
 - cf-admin has its own Worker deployment (not shared with cf-astro)
@@ -141,16 +125,19 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ## 3. RBAC — ROLE-BASED ACCESS CONTROL
 
-> 📖 **Full technical details:** [`documentation/user-management-rbac.md`](./documentation/user-management-rbac.md)
+→ See [USER-MANAGEMENT.md](./documentation/USER-MANAGEMENT.md) for the full RBAC hierarchy, user lifecycle, ghost protection, and hidden accounts.
+
+---
 
 ## 4. INFRASTRUCTURE FREE TIER LIMITS
 
-> 📖 **Full technical details:** [documentation/infrastructure-limits.md](./documentation/infrastructure-limits.md)
+→ See [OPERATIONS.md](./documentation/OPERATIONS.md) for Cloudflare binding IDs, free tier quotas, and the pre-flight deploy checklist.
+
 ---
 
 ## 7. TECHNOLOGY STACK
 
-> 🚨 **THE WHITELIST ARCHITECTURE POLICY:** We employ a strict "whitelisting" approach to technology additions. Anything not explicitly listed in this document is considered **BLACKLISTED** by default to protect our <50KB "Lean Edge" budget. If an AI agent or developer wishes to introduce a new library (e.g., React 19, Recharts, shadcn/ui, Hono), it must be explicitly proposed with a strong "why it's needed" justification. The new dependency can ONLY be used if the USER explicitly approves the proposal.
+> 🛡️ **THE WHITELIST ARCHITECTURE POLICY:** We employ a strict "whitelisting" approach to technology additions. Anything not explicitly listed in this document is considered **BLACKLISTED** by default to protect our <50KB "Lean Edge" budget. If an AI agent or developer wishes to introduce a new library (e.g., React 19, Recharts, shadcn/ui, Hono), it must be explicitly proposed with a strong "why it's needed" justification. The new dependency can ONLY be used if the USER explicitly approves the proposal.
 
 ### 7.1 Framework: Astro 6.0+ (Full SSR for Admin)
 
@@ -160,7 +147,10 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 - No static pages — admin portal has zero public content
 
 ### 7.2 UI: Preact Islands
-> 📖 **Full RLS policy matrix:** [documentation/database-rls-policy.md](./documentation/database-rls-policy.md)
+
+- Preact (~3KB) for all interactive components — React-compatible, no React overhead
+- Islands hydrate with `client:load` (immediate) or `client:idle` (deferred)
+- Cross-island state via Preact Signals; no global event bus needed at current scale
 
 ### 7.6 Environment Variables
 
@@ -182,19 +172,20 @@ Secrets in production: `wrangler secret put <KEY>`
 To prevent architectural entropy as `cf-admin` grows, every new feature area must be encapsulated using the **Module Manifest** pattern. Code should be organized into self-contained vertical slices.
 
 **Directory Structure:**
-```text
+```
 src/
   ├── pages/
-  │    └── [module_name]/
-  │         ├── index.astro       # Main entry point (SSR)
-  │         ├── [sub_route].astro # Nested routes
-  │         └── _components/      # Module-specific islands (Preact)
+  │   └── [module_name]/
+  │       ├── index.astro       # Main entry point (SSR)
+  │       ├── [sub_route].astro # Nested routes
+  │       └── _components/      # Module-specific islands (Preact)
   └── styles/
-       └── [module_name]/
-            └── [component].css   # Module-isolated CSS
+      └── [module_name]/
+          └── [component].css   # Module-isolated CSS
 ```
 
 **Implementation Rules:**
+
 1. **Entry Point (`index.astro`):** Must wrap content in `<AdminLayout title="ModuleName">` and call `requireAuth(Astro)`.
 2. **Dynamic Sidebar Auto-Registry:** A module is ONLY visible in the sidebar if its path exists in the D1 `admin_pages` table and the user's role has PLAC authorization. You do NOT hardcode nav links in the UI.
 3. **CSS Code Splitting & Scoping:** Monolithic global CSS (e.g., `global.css`, `dashboard.css`) is strictly forbidden. Essential dashboard styles must be scoped via Astro components (like `DashboardStyles.astro`) or inline component `<style>` blocks to ensure zero style bleeding and an optimal payload size.
@@ -204,219 +195,91 @@ src/
 
 ## 8. CODE QUALITY RULES
 
-> 📖 **Full code quality & architecture standards:** [`documentation/coding-standards.md`](./documentation/coding-standards.md)
+→ See [CODING-STANDARDS.md](./documentation/CODING-STANDARDS.md) for the full code quality and architecture standards.
 
 ---
 
 ## 9. SECURITY RULES
 
-> 🔒 **Full security architecture & protocols:** [`documentation/security-protocols.md`](./documentation/security-protocols.md)
-> 🛡️ **Supabase RLS policy matrix:** [`documentation/database-rls-policy.md`](./documentation/database-rls-policy.md)
+→ See [SECURITY.md](./documentation/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, and Ghost Protection.
+
+---
 
 ## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
 
-The dashboard utilizes a unified premium dark UI with Arctic Cyan accents, transitioning away from the legacy multi-color section identities.
+The dashboard uses a unified premium dark UI with Blue-500 primary accents, 5-level surface elevation, OKLCH color tokens, and component-scoped CSS. Both dark and light themes are fully supported.
 
-> 📖 **Full design system specifications:** [`documentation/theme-system-design.md`](./documentation/theme-system-design.md)
-> 🎨 **Legacy color palettes:** [`documentation/color-palettes.md`](./documentation/color-palettes.md)
-
----
-
-### 10.1 Login Portal — "Midnight Slate"
-
-The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar — just a pristine glassmorphic card on a warm dark canvas.
-
-#### Background & Ambient System
-
-| Element | Spec |
-|---------|------|
-| **Base** | `#09090b` (zinc-950) — set via inline `style` on `<body>`, not Tailwind class |
-| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` —> `rgba(8,145,178,0.15)` |
-| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` —> `rgba(30,41,59,0.15)` |
-| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` —> `rgba(29,78,216,0.1)` |
-| **Noise Texture** | SVG `feTurbulence` overlay at `opacity-[0.015]` for grain |
-
-All orbs are `position: absolute` inside a `fixed inset-0 pointer-events-none z-0` container, animated via CSS.
-
-#### Glassmorphic Card Setup
-
-```css
-background:  rgba(255,255,255,0.035)
-border:      1px solid rgba(255,255,255,0.08)
-backdrop:    blur(40px)
-box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
-             0 20px 50px rgba(0,0,0,0.5),
-             0 0 80px rgba(34,211,238,0.06)
-```
-
-### 10.2 Dashboard & Navigation Architecture
-
-The dashboard implements a modular **Hover-Expand Sidebar**.
-
-#### Sidebar Mechanics (Hover & Pin)
-- **Default State:** Collapsed (72px wide), showing only icons. Nav labels are hidden.
-- **Hover State:** Sidebar immediately expands to full width (~280px).
-- **Pin State:** Users can click a "Lock/Unlock" icon at the bottom of the sidebar to persist the expanded layout. This state is saved to `localStorage`.
-- **Layout Sync:** The `AdminLayout.astro` utilizes a synchronous inline script to read `localStorage` and inject the `sidebar-expanded` class into the `<body>` before hydration. The `.admin-content-area` margin shifts cleanly via a 300ms CSS transition matching the sidebar's width.
-
-#### Sidebar Visuals
-- **Background:** Glassmorphic with `@supports` fallback (solid `surface-raised`).
-- **Logo icon:** Cyan gradient shield with blur glow + `rgba(34,211,238,0.08)` bg.
-- **Active Navigation:** Cyan muted bg (12%) + cyan icon + cyan glowing dot + 2px accent bar.
-- **Collapsed tooltips:** Rendered conditionally using Preact `createPortal` to the `document.body` for overflow escaping.
-
-#### TopBar & Modals
-- **Command Palette:** `Ctrl+K` triggers a robust search palette via Preact signals. Focus states utilize Midnight Slate cyan glow boundaries.
-- **TopBar:** Follows general glass logic (`blur(24px)`).
-> 📖 **Full technical architecture:** [`documentation/cms-isr-architecture.md`](./documentation/cms-isr-architecture.md)
-
-#### Unbuilt Modules & Soft 404
-- Unbuilt portal paths (e.g. `/dashboard/customers` or `/dashboard/analytics`) are intercepted by a Catch-All spread route at `src/pages/dashboard/[...slug].astro`.
-- Because Astro resolves exact physical paths first, this route organically serves as a fallback.
-## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
-
-The dashboard utilizes a unified premium dark UI with Arctic Cyan accents, transitioning away from the legacy multi-color section identities.
-
-> 📖 **Full design system specifications:** [`documentation/theme-system-design.md`](./documentation/theme-system-design.md)
-> 🎨 **Legacy color palettes:** [`documentation/color-palettes.md`](./documentation/color-palettes.md)
+→ See [DESIGN-SYSTEM.md](./documentation/DESIGN-SYSTEM.md) for design tokens, login portal spec, sidebar mechanics, component patterns, animation, accessibility, and responsive layout.
 
 ---
 
-### 10.1 Login Portal — "Midnight Slate"
+## 11. DYNAMIC CMS & ISR ARCHITECTURE (cf-admin ↔ cf-astro)
 
-The login page uses a **single-column, centered card** layout inspired by Clerk/Vercel auth flows. No split-screen, no sidebar — just a pristine glassmorphic card on a warm dark canvas.
+cf-admin securely mutates content for cf-astro via a 2-tier KV injection pipeline that bypasses D1 read-replica lag. All revalidation uses `revalidateAstro(env, basePaths, cmsData?)` with 3× exponential backoff.
 
-#### Background & Ambient System
-
-| Element | Spec |
-|---------|------|
-| **Base** | `#09090b` (zinc-950) — set via inline `style` on `<body>`, not Tailwind class |
-| **Orb 1 (Cyan)** | `radial-gradient` of `rgba(34,211,238,0.4)` —> `rgba(8,145,178,0.15)` |
-| **Orb 2 (Slate)** | `radial-gradient` of `rgba(51,65,85,0.5)` —> `rgba(30,41,59,0.15)` |
-| **Orb 3 (Deep Blue)** | `radial-gradient` of `rgba(59,130,246,0.3)` —> `rgba(29,78,216,0.1)` |
-| **Noise Texture** | SVG `feTurbulence` overlay at `opacity-[0.015]` for grain |
-
-All orbs are `position: absolute` inside a `fixed inset-0 pointer-events-none z-0` container, animated via CSS.
-
-#### Glassmorphic Card Setup
-
-```css
-background:  rgba(255,255,255,0.035)
-border:      1px solid rgba(255,255,255,0.08)
-backdrop:    blur(40px)
-box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
-             0 20px 50px rgba(0,0,0,0.5),
-             0 0 80px rgba(34,211,238,0.06)
-```
-
-### 10.2 Dashboard & Navigation Architecture
-
-The dashboard implements a modular **Hover-Expand Sidebar**.
-
-#### Sidebar Mechanics (Hover & Pin)
-- **Default State:** Collapsed (72px wide), showing only icons. Nav labels are hidden.
-- **Hover State:** Sidebar immediately expands to full width (~280px).
-- **Pin State:** Users can click a "Lock/Unlock" icon at the bottom of the sidebar to persist the expanded layout. This state is saved to `localStorage`.
-- **Layout Sync:** The `AdminLayout.astro` utilizes a synchronous inline script to read `localStorage` and inject the `sidebar-expanded` class into the `<body>` before hydration. The `.admin-content-area` margin shifts cleanly via a 300ms CSS transition matching the sidebar's width.
-
-#### Sidebar Visuals
-- **Background:** Glassmorphic with `@supports` fallback (solid `surface-raised`).
-- **Logo icon:** Cyan gradient shield with blur glow + `rgba(34,211,238,0.08)` bg.
-- **Active Navigation:** Cyan muted bg (12%) + cyan icon + cyan glowing dot + 2px accent bar.
-- **Collapsed tooltips:** Rendered conditionally using Preact `createPortal` to the `document.body` for overflow escaping.
-
-#### TopBar & Modals
-- **Command Palette:** `Ctrl+K` triggers a robust search palette via Preact signals. Focus states utilize Midnight Slate cyan glow boundaries.
-- **TopBar:** Follows general glass logic (`blur(24px)`).
-> 📖 **Full technical architecture:** [`documentation/cms-isr-architecture.md`](./documentation/cms-isr-architecture.md)
-
-#### Unbuilt Modules & Soft 404
-- Unbuilt portal paths (e.g. `/dashboard/customers` or `/dashboard/analytics`) are intercepted by a Catch-All spread route at `src/pages/dashboard/[...slug].astro`.
-- Because Astro resolves exact physical paths first, this route organically serves as a fallback.
-- It leverages the `AdminLayout` cleanly so that sidebar state is preserved, injecting a Midnight Slate "Module Under Construction" card in the main view rather than breaking the Single-Page Application sequence.
-
-#### Dashboard Widgets
-| Widget | Key Treatment |
-|--------|---------------|
-| **StatCard** | Glass bg, `cyan-400` top accent line (2px), `translateY(-3px)` lift on hover |
-| **SystemHealthBar** | Minimalist background, strict tabular data display |
-
-### 10.3 Loading States & Data Hydration
-
-The dashboard enforces a strict "No Blank Loading Screens" policy to maintain a professional, high-performance aesthetic.
-
-- **Skeleton Loading is Mandatory:** ALL client-side data fetching components (Preact islands with `client:load` or `client:idle`) MUST display a Skeleton Screen during their initial `loading` state.
-- **No Text-Only Loading:** Using plain text like `"Loading records..."`, `"Syncing..."`, or simple spinners alone is FORBIDDEN for primary data fetches.
-- **Generic Implementation:** Use the `SkeletonBlock` component from `src/components/dashboard/widgets/WidgetSharedV2.tsx` to construct shimmering placeholders that mirror the expected layout of the loaded content.
-- **Immediate Feedback:** Skeleton screens must render immediately upon mount before the API request completes.
-
----
-
-## 11. DYNAMIC CMS & ISG/ISR ARCHITECTURE (cf-admin <> cf-astro)
-
-cf-admin securely mutates data for the public-facing cf-astro site via a precise $0 ISR Edge-Cache mechanism.
-
-> 📖 **Full technical architecture:** [documentation/cms-isr-architecture.md](./documentation/cms-isr-architecture.md)
-|-----------|-------------|-------------------|
-| `POST /api/content/blocks` | Update text blocks | `revalidateAstro(env, [basePath])` |
-| `POST /api/content/reviews` | Update happy clients JSON | `revalidateAstro(env, ['/'])` |
-| `POST /api/content/services` | Update pricing data | `revalidateAstro(env, ['/'])` |
-| `POST /api/media/gallery` | Update gallery JSON array | `revalidateAstro(env, ['/'])` |
-| `POST /api/media/upload` | Upload image to R2 + D1 | `revalidateAstro(env, ['/'])` |
+→ See [CMS.md](./documentation/CMS.md) for the full ISR architecture, KV injection strategy, upload flow, and configuration constraints.
 
 ---
 
 ## 12. DEPLOYMENT RULES
 
 ### Build & Deploy
+
 ```bash
 # Development
-astro dev                    # Local dev with .dev.vars
+npm run dev              # Local dev (wrangler dev)
+npm run cf:dev           # Full CF runtime with R2 simulation (required for image uploads)
 
 # Type Check
-astro check                  # TypeScript validation
+astro check              # TypeScript validation
 
-# Build
-astro build                  # Production build to ./dist
-
-# Deploy
-astro build && wrangler deploy  # Build + deploy to Cloudflare
+# Build & Deploy
+astro build && wrangler deploy   # Build + deploy to Cloudflare
 ```
 
 ### Git Workflow
-> 🚨 **CRITICAL: See `../../GITHUB_RULES.md` for all Git deployment commands.**
+
+> 🛡️ **CRITICAL: See `../../GITHUB_RULES.md` for all Git deployment commands.**
 > You must ALWAYS verify your directory with `git remote -v` and push directly to `origin main`. Do not create branches.
 
 ### Environment
+
 - `wrangler.toml` — Cloudflare bindings (D1, KV, R2, Queues)
-- `.dev.vars` — Local secrets (gitignored)
+- `.dev.vars` — Local secrets (gitignored) — **never set `PUBLIC_ASTRO_URL` here** (causes CMS revalidation loop)
 - `wrangler secret put <KEY>` — Production secrets
+
+→ See [OPERATIONS.md](./documentation/OPERATIONS.md) for binding IDs, secrets checklist, and deploy verification steps.
 
 ---
 
 ## 13. DOCUMENTATION ARCHITECTURE
 
-| File/Folder | Purpose |
-|-------------|---------|
-| `RULESAd.md` | This file — operational bible |
-| `ToDoAdmin.md` | Living progress tracker (what's done, what's next) |
+| File | Purpose |
+|------|---------|
+| `RULESAd.md` | This file — operational rules and quick-reference pointers |
 | `README.md` | Quick start guide for developers |
-| `documentation/` | Detailed technical documentation |
-| `.agents/context/` | AI agent reference files |
+| `AI_CODE_MAINTENANCE.md` | AI agent maintenance guidelines |
+| `documentation/` | Detailed technical documentation (14 files) |
 
 ### Documentation Folder Structure
+
 ```
 documentation/
-├── user-management-rbac.md          # RBAC hierarchy, user lifecycle, ghost protection, hidden accounts
-├── plac-and-audit.md             # PLAC access control + Ghost Audit Engine + SHA-256 hash chain
-├── security-hardening.md         # CSRF, cookie security, error sanitization, request tracing
-├── data-privacy.md               # Privacy dashboard, consent records, GDPR/LFPDPPP compliance
-├── cms-bookings-management.md  # CMS content studio + bookings architecture
-├── observability-sentry.md    # Sentry integration for error tracking + edge observability
-├── theme-system-design.md  # Midnight Slate theme design system decisions
-└── color-palettes.md     # Color palette reference for the design system
-├── cloudflare-bindings-registry.md # Immutable registry of all Cloudflare D1/KV binding IDs
-├── database-rls-policy.md         # Supabase RLS policy matrix, service_role patterns, index coverage
+├── ARCHITECTURE.md          # Lean Edge stack, request lifecycle, module map, CPU budget
+├── SECURITY.md              # Auth, CSRF, cookies, headers, RLS matrix, Ghost Protection
+├── PLAC-AND-AUDIT.md        # PLAC access control + Ghost Audit Engine + hash chain
+├── USER-MANAGEMENT.md       # RBAC hierarchy, user lifecycle, ghost protection, hidden accounts
+├── CMS.md                   # CMS content studio, bookings, ISR, KV injection, R2/CDN
+├── DASHBOARD.md             # Dashboard home, KPI widgets, bento grid, analytics
+├── PRIVACY.md               # Privacy dashboard, consent records, GDPR/LFPDPPP, Forensic Blue spec
+├── CHATBOT.md               # Workers AI pipeline, proxy architecture, admin UI, analytics
+├── LOGIN-FORENSICS.md       # Login forensics v2, 35-column schema, behavioral telemetry
+├── DESIGN-SYSTEM.md         # Midnight Slate tokens, CSS architecture, components, login portal, sidebar
+├── OPERATIONS.md            # Binding IDs (D1/KV/R2), free tier limits, Sentry, deploy commands
+├── CODING-STANDARDS.md      # DAL pattern, TypeScript standards, component rules, naming
+├── DEV-TOOLS.md             # Edge Command Center — debug tools, diagnostics, dev utilities
+└── errors/
+    └── ssr-silent-blank-screen.md  # Known issue: SSR silent blank screen diagnosis
 ```
 
 ---
@@ -469,31 +332,15 @@ documentation/
 | GitHub | Source control | **$0** |
 | | **TOTAL** | **$0.00** |
 
-### Only Paid Service
+### Only Paid Services
 
 | Service | Cost | Note |
 |---------|------|------|
 | Domain name | ~$10-15/year | One-time, shared with cf-astro |
+| Anthropic (Claude Haiku fallback) | ~$0.01-0.50/month | Chatbot fallback only |
 | Perplexity MCP | Per-query | Minimize usage |
 
 ---
-
-## 16. CMS IMAGE MANAGEMENT — cf-admin <-> cf-astro BRIDGE
-
-The CMS Image Management system enables authorized admin users to upload and manage an UNLIMITED array of images for the gallery and update the Hero background on cf-astro from the cf-admin dashboard. All infrastructure remains .
-
-### Architecture Summary
-
-| Component | Role |
-|-----------|------|
-| **R2 Bucket** (`madagascar-images`) | Stores uploaded image binaries |
-| **CDN Domain** (`cdn.madagascarhotelags.com`) | Public edge-cached delivery of R2 images |
-| **Cloudflare Transformations** | /cdn-cgi/image/ handles responsive sizing, WebP/AVIF auto-formats, and optimization on-the-fly |
-| **D1 Table** (cms_content) | Stores pure CDN URLs; caching architecture mitigates D1 read-replica lag |
-| **KV Cache (cf-astro-isr-cache)** | 7-DAY durability for injected CMS data. Dramatically increases resilience and performance. |
-| **Revalidation Webhook** | `POST /api/revalidate` on cf-astro, protected by `REVALIDATION_SECRET` |
-
-> 📖 **Full documentation:** [documentation/CMS_IMAGE_MANAGEMENT.md](./documentation/CMS_IMAGE_MANAGEMENT.md)
 
 ## 17. ASYNC EMAIL QUEUES & AUDIT ARCHITECTURE
 
@@ -505,10 +352,10 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 - **Audit Logs:** All email payloads, transmission statuses, and Resend webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
   - **Referential Integrity:** The `booking_id` foreign key constraint enforces `ON DELETE CASCADE`, ensuring that atomic "Hard Wipes" of bookings cleanly and automatically purge associated audit records without referential blocking errors.
 
-> 📖 **Full detailed documentation and Webhook setup guide:** Please refer to the master architecture document located at [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
+> 📎 **Full detailed documentation and Webhook setup guide:** See [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
 
 ---
-*DEV-admin@example.com*
+
 *End of Rules. These constraints must be acknowledged and followed for every task in cf-admin.*
 
 {% endraw %}

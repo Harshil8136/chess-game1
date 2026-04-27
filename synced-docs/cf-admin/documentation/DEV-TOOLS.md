@@ -27,21 +27,26 @@ Every sensitive page uses a strict **server-side role check** in the Astro front
 
 ```astro
 ---
+import { requireAuth } from '../../../lib/auth/guard';
+import { isDev, type Role } from '../../../lib/auth/rbac';
+
 const user = await requireAuth(Astro);
-if (user.role !== 'dev') {
+if (!isDev(user.role as Role)) {
   return Astro.redirect('/dashboard?error=unauthorized');
 }
 ---
 ```
 
-**Why SSR, not client-side?** Client-side checks (e.g., `{user.role === 'dev' && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the HTML is never generated at all — the server returns a 302 redirect before any markup reaches the wire.
+**Why SSR, not client-side?** Client-side checks (e.g., `{isDev(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the HTML is never generated at all — the server returns a 302 redirect before any markup reaches the wire.
 
 ### 2.2 API Route Protection
 
 Every API endpoint backing these features enforces the same guard:
 
 ```typescript
-if (sessionUser.role !== 'dev') {
+import { isDev, type Role } from '../../../lib/auth/rbac';
+
+if (!isDev(sessionUser.role as Role)) {
   return new Response(
     JSON.stringify({ error: 'Insufficient permissions: DEV only' }),
     { status: 403 }

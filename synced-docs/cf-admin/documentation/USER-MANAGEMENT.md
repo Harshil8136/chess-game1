@@ -4,7 +4,7 @@
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Supabase GoTrue (Admin API / Service Role)
-> **Last Updated:** 2026-04-21 (Owner role CHECK fix, RLS hardening, application-level VALID_ROLES allowlist)
+> **Last Updated:** 2026-04-26 (Complete RBAC helper migration — all server-side hardcoded role checks replaced with centralized helpers)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -49,6 +49,9 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 - **Logic**: `ROLE_LEVEL[userRole] <= ROLE_LEVEL[requiredRole]`
 - **Implementation**: `src/lib/auth/rbac.ts`
 
+> [!IMPORTANT]
+> **No Hardcoded Strings:** You must **never** use hardcoded string comparisons (e.g., `user.role === 'dev'`) for authorization checks in Astro pages or API routes. Always use the hierarchical helper functions (`isDev`, `isOwner`, `isAdmin`, etc.) to ensure that new roles are automatically accounted for without causing unexpected `unauthorized` errors.
+
 | Function | Logic | Purpose |
 |----------|-------|---------|
 | `hasPermission` | `userLvl <= reqLvl` | Core O(1) gatekeeper |
@@ -57,6 +60,28 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 | `isOwnerOrDev` | `userLvl <= 1` | Access to hidden/ghost account visibility |
 | `isSuperAdmin` | `userLvl <= 2` | User Management clearance |
 | `isAdmin` | `userLvl <= 3` | Content & Bookings clearance |
+
+### 2.1 Enforcement Coverage
+
+All server-side authorization gates (API routes and Astro SSR pages) **must** use the helpers above. The following files have been fully migrated:
+
+| File | Helper(s) Used | Gate Purpose |
+|------|---------------|--------------|
+| `src/pages/api/users/manage.ts` | `isDev`, `isOwnerOrDev` | Role mutation, ghost protection |
+| `src/pages/api/users/access.ts` | `isDev`, `isOwnerOrDev` | PLAC provisioning |
+| `src/pages/api/users/force-kick.ts` | `isOwnerOrDev` | Session termination |
+| `src/pages/api/users/activity.ts` | `isOwnerOrDev` | Ghost protection on activity logs |
+| `src/pages/api/features/toggle.ts` | `isDev` | Feature flag mutation |
+| `src/pages/api/diagnostics/ping.ts` | `isDev` | System diagnostics |
+| `src/pages/api/audit/consent.ts` | `isOwnerOrDev` | Consent record deletion |
+| `src/pages/api/audit/logs.ts` | `isOwnerOrDev` | Audit log deletion |
+| `src/pages/api/audit/emails.ts` | `isOwnerOrDev` | Email log deletion |
+| `src/pages/api/audit/prune.ts` | `isDev` | Log pruning |
+| `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` | Feature flag computation |
+| `src/pages/dashboard/users/[id]/access.astro` | `isDev`, `isOwnerOrDev` | Hidden account visibility, privilege gate |
+
+> [!NOTE]
+> **Client-side Preact components** (e.g., `DangerZone.tsx`, `ExpandedRow.tsx`, `UsersRegistry.tsx`) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (ghost protection badges, filter tabs). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
 
 ### 3.1 Session Revocation Workflow (Ghost Sweep)
 
@@ -174,7 +199,7 @@ The site URL **must** be set in the local development environment. If absent, th
 
 ## 8. Page-Level Access Control (PLAC) System
 
-For detailed PLAC documentation, see the dedicated [PLAC & Audit document](./PLAC_AND_AUDIT.md).
+For detailed PLAC documentation, see the dedicated [PLAC-AND-AUDIT.md](./PLAC-AND-AUDIT.md).
 
 **Key integration with User Management:**
 - The Page Access Manager renders a toggle grid showing all pages and their access state for a target user.

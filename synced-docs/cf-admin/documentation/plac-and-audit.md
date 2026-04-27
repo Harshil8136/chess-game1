@@ -104,7 +104,7 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 | `/dashboard/logs#security` | DEV, Owner | View Login Forensics tab (contains PII: IP, User-Agent, Geo) |
 
 > [!TIP]
-> For comprehensive documentation of the Login Forensics subsystem (D1 schema, API endpoints, UI, alert emails), see **[login-forensics.md](./login-forensics.md)**.
+> For comprehensive documentation of the Login Forensics subsystem (D1 schema, API endpoints, UI, alert emails), see **[LOGIN-FORENSICS.md](./LOGIN-FORENSICS.md)**.
 
 ### 2.5 Provisioning Gatekeepers (Anti-Escalation Measures)
 
@@ -120,6 +120,18 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 
 * **Instant Discontinuation:** Modifying a user's PLAC map triggers a force-logout action. This uses a **reverse-mapping key** pattern for O(k) session destruction, avoiding the O(n) KV scan that would violate CPU limits at scale.
 * **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers a complete purge of historical granular rules. A new role implies a new baseline; historical overrides are destroyed to maintain logical database cleanliness.
+
+### 2.7 Admin Pages Registry Manager
+
+To ensure full administrative oversight over the PLAC system itself, the **Admin Pages Registry Manager** is implemented at `/dashboard/debug/pages`. This interface is exclusively accessible to DEV and operates under a rigorous 5-layer security stack:
+
+1. **SSR Gating**: Enforced by the `isDev` helper in the Astro page component, instantly rejecting any unauthorized rendering.
+2. **API-Level Auth**: All mutations via `/api/system/pages.ts` and `/api/system/preview.ts` undergo `requireAuth(context, 'dev')`.
+3. **Rate Limiting**: Enforced via Upstash Redis to prevent abuse.
+4. **Schema Validation**: The D1 schema incorporates a hardened `CHECK` constraint guaranteeing valid required roles (including `owner`), automatically resolving legacy migration issues (e.g., Migration 0018).
+5. **Ghost Audit Logging**: All mutations to the registry log a `registry_update` action in the Ghost Audit Engine.
+
+The manager includes an **Impact Analysis Engine** that performs pre-mutation dry-runs, calculating aggregate access gains or losses globally across the user base before any role changes are committed to the D1 schema.
 
 ---
 
