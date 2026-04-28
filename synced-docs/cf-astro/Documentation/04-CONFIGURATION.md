@@ -165,11 +165,11 @@ pages_build_output_dir = "./dist"
 
 | Binding | Type | Name/ID | Usage |
 |---|---|---|---|
-| `DB` | D1 Database | `madagascar-db`<br>`bbca7ba8-87b0-4998-a17d-248bb8d9a0a2` | Bookings, pets, consent, privacy requests, CMS content |
+| `DB` | D1 Database | `madagascar-db`<br>`7fca2a07-d7b4-449d-b446-408f9187d3ca` | Bookings, pets, consent, privacy requests, CMS content |
 | `IMAGES` | R2 Bucket | `madagascar-images` | Pet photos, gallery images, hero backgrounds |
 | `ARCO_DOCS` | R2 Bucket | `arco-documents` | ARCO legal document storage (private, no public access) |
-| `SESSION` | KV Namespace | `cf-astro-session`<br>`9da1ac5253a54ea1bf236c6fe514dd02` | Astro session store |
-| `ISR_CACHE` | KV Namespace | `cf-astro-isr-cache`<br>`e31f413bb1224f559a8de105248da6cc` | CMS ISR HTML cache (purged via cf-admin webhook) |
+| `SESSION` | KV Namespace | `SESSION`<br>`bee123e795504473accf58ac5b6de13d` | Astro session store |
+| `ISR_CACHE` | KV Namespace | `ISR_CACHE`<br>`d9cea8c7e20f4b328b8cb3b04104138c` | CMS ISR HTML cache (purged via cf-admin webhook) |
 | `HYPERDRIVE` | Hyperdrive | `ba5b0db89b2e4591b5f4614e7f0839df` | Supabase PostgreSQL connection pooling |
 
 ### Public Variables (`[vars]`)
