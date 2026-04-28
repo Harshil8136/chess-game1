@@ -35,7 +35,7 @@ The dashboard is composed of the following visual rows, from top to bottom:
 1. **Setup Banner** — Amber, dismissible — only visible if analytics token is missing
 2. **Dashboard Header** — "Overview" title + Health Orb Dropdown + Refresh Button
 3. **Row 1 (2-column):** Cloudflare Workers (cf-admin vs cf-astro) | Usage Limits (6 quota cells, 3-col grid)
-4. **Row 2 (2-column):** Edge Analytics 24h chart (responsive) | Supabase Cluster (Tabbed Widget: PostgreSQL Performance + GoTrue Auth)
+4. **Row 2 (2-column):** Edge Analytics 24h chart (responsive) | Supabase Cluster (Tabbed Widget: PostgreSQL Performance + Auth Metrics)
 5. **Storage & Queues** — Full-width (R2 + D1 + Email Queue)
 6. **Quick Actions** — Full-width action buttons
 7. **Audit Log Feed** — Full-width, 8 recent entries
@@ -63,7 +63,7 @@ All 8 providers run in parallel using `Promise.allSettled`. A single provider cr
 4. **Queue Info** — Fetches queue metadata (name, consumer count) from the Cloudflare REST API.
 
 5. **Supabase PostgreSQL Metrics** — Fetches Prometheus metrics from Supabase (18+ metrics including tuple activity, cache hit ratio, deadlocks, WAL, and disk utilization).
-6. **Supabase Auth (GoTrue)** — Fetches total registered users, MAU (derived directly from `last_sign_in_at`), recent signups (7d), and auth provider breakdown using the GoTrue Admin API.
+6. **Supabase Auth Metrics** — Fetches total registered users, MAU (derived from `last_sign_in_at`), recent signups (7d), and auth provider breakdown using the Supabase Admin API. Note: these metrics reflect users registered in Supabase's `auth.users` table (used for DB access); authentication itself is now handled by Cloudflare Zero Trust.
 
 7. **Sentry Error Count** — Fetches error event counts from the Sentry API.
 

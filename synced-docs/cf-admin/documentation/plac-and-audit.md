@@ -4,7 +4,7 @@
 > [!NOTE]
 > **System Status:** Production Ready
 > **Target Environment:** Cloudflare Workers V8 Isolates (Edge Computing)
-> **Last Updated:** April 2026 (5-Tier RBAC + Granular PLAC)
+> **Last Updated:** 2026-04-27 (Break-glass admin renamed; forceLogoutUser upgraded to 3-layer CF Zero Trust revocation)
 
 This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Ghost Audit Engine.
 
@@ -34,13 +34,19 @@ Badge colors follow a deliberate **thermal gradient** for dark UI legibility —
 
 Each role has full display metadata including color, background color, icon, and label.
 
-### 1.3 The Hardcoded Emergency Fallback
+### 1.3 The Break-Glass Emergency Fallback
 
 > [!CAUTION]
 > **Anti-Lockout Mechanism**
-> To prevent catastrophic administrative lockouts (e.g., if D1 drops, migrations fail, or a vicious actor strips rights), the system relies on a hardcoded array of emergency super-admin email addresses.
+> To prevent catastrophic administrative lockouts (e.g., if Supabase is down, whitelist is corrupted, or a vicious actor strips rights), the system relies on `BREAK_GLASS_EMAILS` — a hardcoded array of emergency email addresses in `src/lib/auth/rbac.ts`.
 
-If an authenticated email matches the emergency array, the Cloudflare worker natively forces super-admin properties during token minting, bypassing the D1 role validation entirely. This ensures administrative access even during complete database failure.
+`BREAK_GLASS_EMAILS = ['harshil.8136@gmail.com', 'team@madagascarhotelags.com']`
+
+If a CF-authenticated email matches the array, the Worker force-grants super_admin properties and bypasses the Supabase whitelist check during session bootstrap. `isBreakGlassAdmin()` logs `console.warn` every invocation for auditability.
+
+**Legacy aliases (backwards compatibility — deprecated, do not use in new code):**
+- `SUPER_ADMIN_EMAILS` = `BREAK_GLASS_EMAILS`
+- `isHardcodedSuperAdmin` = `isBreakGlassAdmin`
 
 ### 1.4 Helper Functions
 
@@ -53,7 +59,7 @@ If an authenticated email matches the emergency array, the Cloudflare worker nat
 | `isSuperAdmin` | SuperAdmin or higher |
 | `isAdmin` | Admin or higher |
 | `isValidRole` | Type guard for string validation |
-| `isHardcodedSuperAdmin` | Anti-lockout fallback check |
+| `isBreakGlassAdmin` | Anti-lockout fallback check (replaces `isHardcodedSuperAdmin` — legacy alias still exported) |
 
 ---
 
@@ -118,8 +124,11 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 
 ### 2.6 Auto-Purging Strategies
 
-* **Instant Discontinuation:** Modifying a user's PLAC map triggers a force-logout action. This uses a **reverse-mapping key** pattern for O(k) session destruction, avoiding the O(n) KV scan that would violate CPU limits at scale.
-* **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers a complete purge of historical granular rules. A new role implies a new baseline; historical overrides are destroyed to maintain logical database cleanliness.
+* **Instant Discontinuation:** Modifying a user's PLAC map triggers `forceLogoutUser()` — a **3-layer revocation** cascade:
+  1. **Layer 1** — KV session deletion via reverse-mapping key pattern for O(k) destruction
+  2. **Layer 2** — KV revocation flag (`revoked:{userId}`) prevents re-bootstrap via still-valid CF Access cookie
+  3. **Layer 3** — CF API `DELETE /access/users/{cfSubId}/active_sessions` invalidates the CF_Authorization cookie at the edge immediately
+* **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers `resetUserOverrides(env.DB, userId)` — complete purge of all D1 historical PLAC overrides. A new role implies a new baseline; historical overrides are destroyed. The 3-layer force-kick fires immediately after to apply the new role.
 
 ### 2.7 Admin Pages Registry Manager
 

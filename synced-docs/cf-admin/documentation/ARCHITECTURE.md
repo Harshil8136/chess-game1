@@ -1,8 +1,9 @@
 {% raw %}
 # CF-Admin Architecture
 
-> **Status:** Production Active (v3.6)
+> **Status:** Production Active (v4.0 — CF Zero Trust Auth)
 > **Stack:** Astro 6 SSR + Cloudflare Workers (Free) + Preact Islands + D1 + KV + R2
+> **Last Updated:** 2026-04-27 (GoTrue removed; CF Zero Trust replaces all Supabase auth)
 
 ---
 
@@ -55,18 +56,40 @@
 ## 3. Request Lifecycle
 
 ```
-Browser Request
+Browser Request → CF Zero Trust Edge (CF_Authorization cookie validation)
+    │
+    ▼  CF injects: CF-Access-Authenticated-User-Email + CF-Access-JWT-Assertion headers
     │
     ▼
 ┌── MIDDLEWARE (middleware.ts) ──────────────────────────────────────┐
-│  1. Is route public? (/login, /auth/*) → PASS                      │
-│  2. Get session from KV (cookie → session:uuid)                     │
-│  3. Session expired? → Redirect to /                                │
-│  4. Need JWT refresh? (30min interval) → Refresh tokens             │
-│  5. Get PLAC access map from KV (plac:{userId})                     │
-│  6. Check access: role hierarchy + page overrides                   │
-│  7. Denied? → Redirect /dashboard?error=insufficient                │
-│  8. Inject user + permissions into Astro.locals                     │
+│  1. Is route public? (/privacy, /terms) → PASS (GET/HEAD only)     │
+│  2. CSRF check on mutations (Origin/Referer vs SITE_URL)            │
+│  3. Read KV session by cookie                                        │
+│                                                                      │
+│  ── KV session FOUND (fast path) ──────────────────────────────── │
+│  3a. createdAt > 24h? → destroySession() → 401 (hard expiry)       │
+│  3b. lastRoleCheckedAt > 30min? → re-fetch role from D1             │
+│      · is_active=false → destroySession() + 3-layer kick → 401     │
+│      · role changed → update session + re-compute PLAC map          │
+│      · unchanged → update lastRoleCheckedAt, continue              │
+│  3c. Session valid → skip to PLAC check                             │
+│                                                                      │
+│  ── No KV session, CF-Access-JWT-Assertion header PRESENT ──────── │
+│  4a. verifyZeroTrustJwt(jwt, CF_ACCESS_AUD) — RS256 signature       │
+│  4b. Check KV revocation flag: revoked:{userId} → 403 if set       │
+│  4c. Lookup email in admin_authorized_users (Supabase) → id, role   │
+│  4d. Not whitelisted or is_active=false → 403                       │
+│  4e. createSession({ userId, cfSubId, email, role, loginMethod })   │
+│  4f. computeAccessMap() → embed PLAC in KV session                  │
+│  4g. logLoginAttempt() + sendSecurityAlertEmail() via waitUntil()   │
+│  4h. Write cf_sub_id to admin_authorized_users on first login        │
+│      (idempotent — .is('cf_sub_id', null) guard)                    │
+│                                                                      │
+│  ── No KV session, no CF headers → 401 (defense-in-depth) ──────── │
+│                                                                      │
+│  5. PLAC check: role hierarchy + page overrides (O(1) hashmap)      │
+│  6. Denied? → Redirect /dashboard?error=insufficient                │
+│  7. Inject user + permissions into Astro.locals                     │
 └───────────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -193,13 +216,14 @@ Workers AI (Qwen3-30B-A3B) → Claude Haiku 4.5 fallback → static. Proxy at `/
 
 ```
 Session KV read:    ~0.5ms
-JWT validation:     ~0.2ms
+CF JWT verify:      ~1-2ms   ← RS256 — only on bootstrap (no active KV session)
 PLAC KV read:       ~0.3ms   ← cached access map (~2KB JSON)
+D1 role re-check:   ~2-3ms   ← every 30min only; 0ms on fast-path requests
 Page access check:  ~0.1ms   ← O(1) hashmap lookup
 SSR render:         ~3-5ms
 D1 data query:      ~2-4ms
 ──────────────────────────
-TOTAL:              ~6-10ms  ✅ (PLAC adds only ~0.4ms)
+TOTAL:              ~6-10ms  ✅ (CF JWT verify adds cost only on first bootstrap)
 ```
 
 ### Daily Resource Budget

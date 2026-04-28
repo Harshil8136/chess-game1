@@ -3,29 +3,31 @@
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
-> **Auth Provider:** Supabase GoTrue (Admin API / Service Role)
-> **Last Updated:** 2026-04-26 (Complete RBAC helper migration — all server-side hardcoded role checks replaced with centralized helpers)
+> **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
+> **Last Updated:** 2026-04-27 (v4.0: GoTrue fully removed; CF Zero Trust replaces all Supabase auth flows)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
 ## 1. System Overview & Security Posture
 
-The CF-Admin portal operates under strict zero-trust principles optimized for Cloudflare's serverless environment:
-- **Signups Disabled:** General signups are completely disabled in the Supabase GoTrue dashboard. Nobody can randomly create an account.
-- **Whitelist-Driven Authentication:** Application access is heavily gated by a custom authorization whitelist table in D1.
-- **Service-Role Isolation:** Magic links, User Creations, and Roles are managed exclusively via the `service_role` key accessed *only* server-side within the Cloudflare Worker.
+The CF-Admin portal enforces a strict separation between **identity** (who you are) and **authorization** (what you can do):
+
+- **Identity — Cloudflare Zero Trust Access:** CF Access validates the user's identity at the edge (Google/GitHub/OTP). No login form, no magic links, no client-side secrets. The Worker receives `CF-Access-Authenticated-User-Email` + `CF-Access-JWT-Assertion` headers on every authenticated request — CF handles the entire OAuth flow.
+- **Authorization — Supabase Whitelist:** Only emails in `admin_authorized_users` (Supabase PostgreSQL) with `is_active = true` can create a KV session. CF authenticating a user does NOT grant them access — the whitelist check is the second gate.
+- **Service-Role Isolation:** All Supabase operations (whitelist reads/writes, bookings, chatbot, consent) use `SUPABASE_SERVICE_ROLE_KEY`, accessed only server-side — bypasses RLS entirely, never exposed to the client.
+- **No GoTrue:** `auth.admin.createUser()`, `auth.admin.deleteUser()`, `supabase.auth.signInWithOtp()`, and the `admin_sessions` table have been fully removed from all code paths.
 - **CSRF Protection:** All mutation requests are validated via stateless Origin + Referer header checking, applied globally by middleware.
 - **Error Sanitization:** All API error responses return generic messages — no internal stack traces, SQL errors, or schema details leak to the client.
-- **Ghost Protection (Session Sweep):** Role mutations trigger a synchronous session invalidation across KV to prevent privilege persistence.
+- **Ghost Protection (3-Layer Force-Kick):** Role mutations trigger a synchronous security cascade across KV + CF API to prevent privilege persistence via stale sessions.
 
-### Technical Interaction Model
+### Technical Interaction Model (Authorize a New User)
 
 1. **Admin Actor** initiates `POST /api/users/manage`.
 2. **Admin API (Worker)** validates CSRF tokens and internal RBAC clearance.
-3. **D1 Database** records the user in the `admin_authorized_users` whitelist.
-4. **Supabase Auth** creates the user record via the Admin Service Role.
-5. **D1 Database** is updated with the returned Supabase UUID and any page overrides.
-6. **Audit Engine** records the event and the API returns a sanitized 201 Created response.
+3. **Supabase `admin_authorized_users`** is INSERT'd with email, display_name, role, is_active.
+4. **Returned UUID** (`id`) is used to write any initial page overrides to D1 `admin_page_overrides`.
+5. **Audit Engine** records the event via Ghost Audit Engine (`waitUntil`) and the API returns a sanitized 201 Created response.
+6. **On next login:** CF Access authenticates the user → Worker sees their email in whitelist → creates KV session → writes `cf_sub_id` to Supabase idempotently.
 
 ## 2. Role Hierarchy (5-Tier)
 
@@ -83,19 +85,19 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 > [!NOTE]
 > **Client-side Preact components** (e.g., `DangerZone.tsx`, `ExpandedRow.tsx`, `UsersRegistry.tsx`) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (ghost protection badges, filter tabs). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
 
-### 3.1 Session Revocation Workflow (Ghost Sweep)
+### 3.1 Session Revocation Workflow (3-Layer Ghost Sweep)
 
-When a user's role is changed or their account is deactivated, the system triggers a **Security Cascade** to prevent stale sessions from retaining high-privilege access:
+When a user's role is changed or their account is deactivated, the system triggers a **3-Layer Security Cascade** to prevent stale sessions from retaining high-privilege access at any layer:
 
 1. **Verification**: Manager privilege clearance is verified.
-2. **Whitelist Update**: D1 `admin_authorized_users` is updated with the new role/status.
-3. **Override Purge**: Any custom page overrides are deleted to ensure a clean RBAC state.
-4. **KV Sweep**: The system LISTS all sessions via `user-session:{userId}:*`.
-5. **Atomic Deletion**: Matches are deleted from the main session store and the reverse index.
-6. **Decoupling complete**: User is returned to a logged-out state.
+2. **Whitelist Update**: Supabase `admin_authorized_users` is updated with the new role/status.
+3. **Override Purge**: `resetUserOverrides(env.DB, userId)` deletes all D1 page overrides → clean RBAC state.
+4. **Layer 1 — KV Session Deletion**: LISTS `user-session:{userId}:*` (reverse-index pattern, O(k)) → deletes all matching session keys. User's KV session is gone.
+5. **Layer 2 — KV Revocation Flag**: Writes `revoked:{userId}` → `'1'` to KV with 24h TTL. Middleware checks this flag before any new session bootstrap — prevents the "CF Access cookie still valid → auto-bootstrap" gap.
+6. **Layer 3 — CF Access API Revocation**: `DELETE /accounts/{accountId}/access/users/{cfSubId}/active_sessions` — invalidates the CF_Authorization cookie at the CF edge immediately. User's next request is intercepted by CF Access → redirect to login. `cfSubId` read from KV session; falls back to `admin_authorized_users.cf_sub_id` if no active session.
 
-**Reverse-Index KV Pattern**: 
-Instead of scanning the entire session KV (which could be thousands of keys), we maintain a secondary index `user-session:{userId}:{sessionId}: '1'`. This allows the API to perform a targeted `LIST` operation and delete only relevant sessions in `O(sessions_per_user)` time instead of `O(total_sessions)`.
+**Reverse-Index KV Pattern:**
+Secondary index `user-session:{userId}:{sessionId}: '1'` allows targeted `LIST` for O(k) deletion instead of O(total_sessions) full-namespace scan.
 
 ## 4. Hidden Accounts System
 
@@ -118,12 +120,13 @@ When an authorized admin adds a new member from the dashboard:
 2. **Page Access Fetch:** Modal lazy-fetches the page registry on the **first modal open** (not on component mount) — live page list from D1, zero hardcoding. Cached after first load; full error state and retry button shown on failure.
 3. **CSRF Validation:** Middleware verifies Origin/Referer headers match the site URL.
 4. **Endpoint Validation:** Endpoint verifies the requesting user has sufficient rank and prevents privilege elevation.
-5. **Whitelist Insertion:** User details are inserted into the authorization table with active status enabled.
-6. **GoTrue Admin Creation:** The Worker calls the Supabase Admin API to register the user, confirming email and setting role metadata.
-7. **Page Override Batch Write:** If the admin customised page access during creation, overrides are batch-inserted using the new user's GoTrue UUID. Batch is capped at 50 overrides.
-8. **Audit Log:** Mutation is logged via Ghost Audit Engine.
+5. **Whitelist Insertion:** `INSERT INTO admin_authorized_users (email, display_name, role, is_active, is_hidden)` via Supabase admin client. Returns the new UUID (`id`) via `.select('id').single()`.
+6. **Page Override Batch Write:** If the admin customised page access during creation, D1 overrides are batch-inserted (`INSERT OR REPLACE INTO admin_page_overrides`) using the new user's Supabase UUID. Batch is capped at 50 overrides.
+7. **Audit Log:** Mutation is logged via Ghost Audit Engine (`waitUntil`).
+8. **CF Access whitelist (manual):** The new user must also be added to the CF Access policy (Emails allowed list) in the Cloudflare Zero Trust dashboard if not covered by a wildcard policy. **This is a manual step — the Worker API only manages the Supabase whitelist.**
 
 > **Non-fatal override writes:** If the batch override write fails, user creation still succeeds. The admin can set page permissions manually via the Page Access Manager after creation.
+> **No GoTrue:** There is no call to `auth.admin.createUser()`. The user receives no invitation email from the Worker. CF Access sends its own authentication email/redirect when the user first tries to access `admin.madagascarhotelags.com`.
 
 ### 5.2 Role Selection UI (Invite Modal)
 The Invite Modal renders a "Command Console" two-panel dialog:
@@ -148,9 +151,10 @@ Access is managed via the active flag in the authorization table. When set to tr
 
 ### 5.4 Revoking / Locking Access
 If a user needs immediate revocation:
-1. **Soft Lock:** PATCH the user management endpoint with active flag set to false. The middleware guard immediately rejects future requests. The GoTrue UUID is resolved via the auth schema, then force-logout destroys active KV sessions immediately.
-2. **Hard Lock (Force Logout):** Uses the reverse-index KV pattern for O(k) session destruction rather than O(n) full KV scan.
-3. **Full Nuke:** Resolves the GoTrue UUID via the auth schema (O(1) — no full user list scan), force-kicks all KV sessions, then calls the Supabase Admin API to delete the user and removes the whitelist row.
+1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The middleware `lastRoleCheckedAt` 30-min re-check detects `is_active = false` → destroys session. 3-layer force-kick fires immediately on the PATCH itself to kick all active sessions right away (not waiting for the 30-min refresh window).
+2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV delete + KV revocation flag + CF API session DELETE). User is ejected within seconds.
+3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
+4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
 
 ## 6. UI Implementation (Manage Users Dashboard)
 
@@ -232,10 +236,24 @@ The system is designed to "fail-closed" across various infrastructure disruption
 
 ### Session Timing Matrix
 
-| Component | Duration | Logic |
-|-----------|----------|-------|
-| **JWT Validity** | 30 Minutes | High-pulse refresh ensures role changes propagate quickly. |
-| **Hard Expiry** | 24 Hours | All sessions must re-authenticate via Magic Link/SSO daily. |
-| **KV Expiry** | 24 Hours | Session keys are set with `expirationTtl` matching max lifetime. |
+| Component | Duration | How Enforced |
+|-----------|----------|--------------|
+| **CF Access cookie** | 24 Hours | CF Dashboard → App Session Duration (must be set manually) |
+| **Global CF session** | 24 Hours | CF Dashboard → Settings → Auth → Global Session Timeout |
+| **KV TTL** | 24 Hours | `expirationTtl: 86400` on KV session write |
+| **Hard expiry guard** | 24 Hours | `createdAt` check in middleware fast-path (defense-in-depth) |
+| **Role re-check** | 30 Minutes | `lastRoleCheckedAt` → D1 re-fetch of `admin_authorized_users` |
+| **CF JWT assertion** | ~1 Minute | Auto-refreshed by CF edge — Worker does not manage this |
+| **Force-kick propagation** | Immediate | 3-layer: CF API DELETE + KV revocation flag + KV session delete |
+
+### Failure Modes
+
+| Failure Event | System Impact | Mitigation |
+|---------------|---------------|------------|
+| **KV Read Timeout** | Session cannot be verified | Request rejected (401). Fail-closed — no unauthorized access on cache failure. |
+| **D1 Write Failure** | Permission change not saved | API returns 500. No state change. |
+| **Layer 1 KV Kick Fails** | Sessions not deleted | Layer 2 revocation flag still blocks re-bootstrap. Layer 3 blocks at CF edge. |
+| **Layer 3 CF API Fails** | CF_Authorization cookie remains valid | Layer 2 revocation flag prevents new session. On natural expiry (≤24h), fully locked out. |
+| **Supabase Outage** | Invitation/role change fails | API returns 500. No whitelist mutation. User remains at previous access level. |
 
 {% endraw %}

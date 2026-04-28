@@ -2,30 +2,78 @@
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
-> **Last Updated:** 2026-04-25 (v3: edge headers hardening)
+> **Last Updated:** 2026-04-27 (v4.0: Cloudflare Zero Trust Auth — GoTrue fully removed)
 > **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Ghost Protection, Error Sanitization
 
 ---
 
 ## 1. Auth Architecture
 
-- **Signups disabled** in Supabase GoTrue dashboard — no self-registration possible
-- **Whitelist-driven:** Only emails in `admin_authorized_users` (D1) can authenticate
-- **Service-role isolation:** Magic links, user creation, and role mutations use `SUPABASE_SERVICE_ROLE_KEY`, accessed only server-side in the Cloudflare Worker — never exposed to the client
-- **OAuth provider validation:** Provider string validated against allowlist (`google`, `github`, `facebook`, `email`) at callback
-- **Hardcoded emergency fallback:** `harshil.8136@gmail.com` and `team@madagascarhotelags.com` are force-granted super_admin properties at JWT mint, bypassing D1 — prevents total lockout if D1 fails
+CF-Admin uses **Cloudflare Zero Trust Access** for identity (who you are) and a custom **Supabase authorization whitelist** for access decisions (what you're allowed to do). Supabase GoTrue has been fully removed — no magic links, no OAuth callbacks, no anon key on the client.
 
-### Session Timing Matrix
+### 1.1 Identity Layer — Cloudflare Zero Trust
 
-| Component | Duration | Logic |
-|-----------|----------|-------|
-| JWT validity | 30 minutes | High-pulse refresh ensures role changes propagate quickly |
-| Hard expiry | 24 hours | All sessions must re-authenticate daily via Magic Link / SSO |
-| KV TTL | 24 hours | Session keys set with `expirationTtl` matching max lifetime |
+- **CF Access Application** protects all routes at the CF edge, before any request reaches the Worker
+- **Identity providers:** Google, GitHub, One-Time PIN (OTP)
+- **CF injects on every authenticated request:**
+  - `CF-Access-Authenticated-User-Email` — verified user email
+  - `CF-Access-JWT-Assertion` — short-lived RS256 JWT (~1 min) with `sub` (CF user UUID), `iat`, `exp`, IdP info
+  - `CF-RAY` — Cloudflare Ray ID (links to CF dashboard trace)
+- **JWKS verification:** Worker verifies JWT signature via public keys fetched from `https://{team}.cloudflareaccess.com/cdn-cgi/access/certs`, cached in memory for 1h per isolate lifecycle
+- **No client-side secrets:** CF Access cookie (`CF_Authorization`) is managed entirely by the CF edge. No anon key, no OAuth credentials ever reach the browser.
+
+### 1.2 Authorization Layer — Supabase Whitelist
+
+- **Whitelist-only entry:** Only emails present in `admin_authorized_users` (Supabase PostgreSQL) with `is_active = true` can create a KV session
+- **Service-role isolation:** All Supabase queries use `SUPABASE_SERVICE_ROLE_KEY`, accessed only server-side — bypasses RLS entirely, never exposed to the client
+- **Break-glass admin:** `harshil.8136@gmail.com` and `team@madagascarhotelags.com` are hardcoded in `BREAK_GLASS_EMAILS` (`src/lib/auth/rbac.ts`). If D1 or Supabase is unreachable, these emails are force-granted access. `isBreakGlassAdmin()` logs a `console.warn` every invocation. (Legacy alias: `isHardcodedSuperAdmin` = deprecated, still exported for backwards compatibility.)
+
+### 1.3 Session Design
+
+Sessions are stored in **Cloudflare KV** with a dual-key pattern:
+
+- Primary: `session:{uuid}` → JSON `AdminSession` object
+- Reverse index: `user-session:{userId}:{sessionId}` → `'1'` (enables O(k) force-logout without scanning the full KV namespace)
+
+**`AdminSession` interface (`src/lib/auth/session.ts`):**
+```typescript
+interface AdminSession {
+  userId: string;           // admin_authorized_users UUID (D1/Supabase)
+  cfSubId: string;          // CF Access user UUID (JWT sub claim) — needed for Layer 3 revocation
+  email: string;
+  displayName: string;
+  role: Role;
+  loginMethod: 'google' | 'github' | 'otp';
+  createdAt: number;        // Unix ms — 24h hard expiry anchor
+  lastRoleCheckedAt: number;// Unix ms — 30-min D1 role re-check anchor
+  accessMap?: PageAccessMap;
+  auditSilenced?: boolean;
+}
+```
+
+**`cfSubId` persistence:** Stored in `admin_authorized_users.cf_sub_id` (TEXT column, Supabase migration `supabase_0001_add_cf_sub_id`). Written idempotently on first CF ZT login via `waitUntil()`. Enables Layer 3 revocation even when no active KV session exists (natural expiry edge case).
+
+### 1.4 Session Timing Matrix
+
+| Component | Duration | How Enforced |
+|-----------|----------|--------------|
+| CF Access cookie (`CF_Authorization`) | **24 hours** | CF Dashboard → App Session Duration |
+| Global CF session | **24 hours** | CF Dashboard → Settings → Authentication → Global Session Timeout |
+| KV session TTL | **24 hours** | `expirationTtl: 86400` on `SESSION.put()` |
+| Hard expiry guard | **24 hours** | `createdAt` check in middleware fast-path (defense-in-depth) |
+| Role re-check | **30 minutes** | `lastRoleCheckedAt` check → D1 re-fetch of `admin_authorized_users` |
+| CF JWT assertion | **~1 minute** | Auto-refreshed by CF edge on every request — Worker does not manage this |
+| Force-kick propagation | **Immediate** | 3-layer revocation (see §5) |
+
+Sessions are **fixed-duration from creation** — no rolling extension. A session created at 09:00 expires at 09:00 next day regardless of activity.
 
 ### Astro Sessions API
 
 Session cookies use the `__Host-` prefix in production (enforces `Secure`, host-bound, `path=/`). In local dev (no `SITE_URL`), plain cookie name is used without the prefix.
+
+### Local Development Bypass
+
+CF Access requires a live domain. For local dev (`npm run dev`): middleware reads email from `X-Dev-User-Email` header or falls back to `env.LOCAL_DEV_ADMIN_EMAIL` in `.dev.vars`. Creates a real KV session — all RBAC/PLAC/audit works normally in dev.
 
 ---
 
@@ -33,13 +81,13 @@ Session cookies use the `__Host-` prefix in production (enforces `Secure`, host-
 
 Every non-public route is gated by `src/middleware.ts`. Public routes are restricted to `GET`/`HEAD` only:
 
-| Public Route | Method Restriction |
-|---|---|
-| `/` (login) | GET, HEAD only |
-| `/auth/callback` | GET, HEAD only |
-| `/privacy`, `/terms` | GET, HEAD only |
+| Public Route | Method Restriction | Notes |
+|---|---|---|
+| `/privacy`, `/terms` | GET, HEAD only | Static legal pages |
 
-Any other method on these routes returns `405 Method Not Allowed`. Everything else requires a valid session + PLAC access check.
+`/` (root) and `/auth/*` routes are protected by CF Access at the edge — they never reach the Worker unauthenticated. `index.astro` at `/` only redirects to `/dashboard` once a KV session exists.
+
+Any mutation method on public routes returns `405 Method Not Allowed`. Everything else requires a valid KV session + PLAC access check.
 
 ---
 
@@ -78,19 +126,36 @@ Although CSP allows `'unsafe-inline'` styles for Tailwind v4 compatibility, dyna
 
 ---
 
-## 5. Ghost Protection — Session Sweeps
+## 5. Ghost Protection — 3-Layer Force-Kick
 
-Role mutations and permission changes trigger a synchronous security cascade that prevents privilege escalation via stale tokens.
+Role mutations, account deactivation, and PLAC changes trigger a 3-layer security cascade that immediately revokes access at every layer of the stack. Implemented in `src/lib/auth/plac.ts` → `forceLogoutUser()`.
 
-**Trigger events:** role change, account deactivation, PLAC override modification
+**Trigger events:** role change, account deactivation, PLAC override modification, manual force-kick
 
-**Cascade sequence:**
-1. `resetUserOverrides` — purges all historical PLAC overrides, returning user to clean RBAC baseline
-2. `forceLogoutUser` — immediately destroys all active KV sessions for the target user
+**Layer 1 — KV Session Deletion (O(k)):**
+- LISTs `user-session:{userId}:*` in the reverse index → deletes all matching KV session keys
+- Also deletes the reverse-index pointers
+- **Reverse-index KV pattern:** Sessions indexed at `user-session:{userId}:{sessionId}: '1'` — targeted LIST is O(sessions_per_user), not O(total_sessions)
 
-**Reverse-index KV pattern:** Sessions are indexed at `user-session:{userId}:{sessionId}: '1'`. Force-logout uses a targeted LIST on this prefix for O(k) deletion (O(sessions_per_user)) instead of scanning the full KV namespace (O(total_sessions)).
+**Layer 2 — KV Revocation Flag:**
+- Writes `revoked:{userId}` → `'1'` to KV with `expirationTtl: 86400` (24h auto-expiry)
+- Middleware checks this flag on every bootstrap attempt (no active KV session but CF headers present)
+- If flag exists → returns 403 immediately, refuses to create a new session
+- Prevents the "CF Access cookie still valid → Worker auto-bootstraps new session" gap
 
-**Failure mode:** If KV write fails during force-logout, the user remains logged in until their next 30-minute JWT refresh, at which point the role mismatch is detected and they are ejected. The audit log preserves the attempted logout.
+**Layer 3 — CF Access API Hard Revocation (nuclear, immediate):**
+- Calls CF API: `DELETE /accounts/{CF_ACCOUNT_ID}/access/users/{cfSubId}/active_sessions`
+- Invalidates the `CF_Authorization` cookie at the CF edge
+- User's next request is intercepted by CF Access → redirected to login — Worker never receives it
+- `cfSubId` sourced from active KV session; falls back to reading `cf_sub_id` from Supabase `admin_authorized_users` if no active session exists
+- Requires `CF_API_TOKEN_ZT_WRITE` secret (Zero Trust: Edit permission — account scope only)
+- Fired via `ctx.waitUntil()` — zero latency on the actor's response
+
+**Cascade sequence (role change or deactivation):**
+1. `resetUserOverrides(env.DB, targetUser.id)` — purges all PLAC overrides → clean RBAC baseline
+2. `forceLogoutUser(env.SESSION, targetUser.id, env)` — all 3 layers above
+
+**Failure mode:** If KV write fails during Layer 1, Layer 2 still blocks re-bootstrap. If Layer 3 CF API call fails (non-fatal, logged), the CF Access cookie remains valid but Layer 2 revocation flag prevents session creation. On CF session natural expiry (max 24h), the user is fully locked out.
 
 ---
 
@@ -111,36 +176,55 @@ Every request receives a unique `X-Request-ID` header generated via `crypto.rand
 
 ---
 
-## 8. Auth Callback Hardening
+## 8. CF Zero Trust Middleware Bootstrap Hardening
 
 | Protection | Implementation |
 |-----------|----------------|
-| Provider validation | OAuth provider validated against allowlist before processing |
-| Whitelist check | Email verified against `admin_authorized_users` (D1) before session creation |
-| Session binding | Session bound to user ID, email, role, and creation timestamp |
+| JWT signature verification | RS256 via JWKS from `https://{team}.cloudflareaccess.com/cdn-cgi/access/certs` |
+| Audience validation | `aud` claim matched against `CF_ACCESS_AUD` env var (app-specific tag) |
+| Whitelist check | Email verified against `admin_authorized_users` (Supabase) before session creation |
+| Revocation check | `revoked:{userId}` KV flag checked before any new session bootstrap |
+| Active status check | `is_active = false` → 403 even for CF-authenticated users |
+| Session binding | Session bound to userId, cfSubId, email, role, loginMethod, createdAt |
+| Idempotent cfSubId | `cf_sub_id` written to Supabase on first login with `.is('cf_sub_id', null)` guard |
 
 ---
 
-## 9. Required Production Secrets
+## 9. Required Production Secrets & Vars
 
-All must be deployed as Worker secrets via `wrangler secret put <KEY>`:
+Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
+
+### Secrets (never committed)
 
 | Secret | Purpose |
 |--------|---------|
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-side Supabase admin operations |
-| `PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase auth flows |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase DB operations (no GoTrue — authorization whitelist + bookings/chatbot/RLS) |
 | `REVALIDATION_SECRET` | Authenticates ISR webhooks (cf-admin → cf-astro) |
 | `SITE_URL` | CSRF Origin validation + cookie prefix decision |
 | `UPSTASH_REDIS_REST_URL` | Redis connection for rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | Redis auth token |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile captcha verification |
 | `CF_API_TOKEN` | Cloudflare GraphQL analytics access |
+| `CF_API_TOKEN_ZT_WRITE` | Zero Trust: Edit — Layer 3 force-kick (DELETE active sessions via CF API) |
+| `CF_API_TOKEN_READ_LOGS` | Zero Trust: Read — audit log cron polling (5-min failed-login sync) |
 | `CF_ZONE_ID` | Specific CF zone for HTTP metrics |
 | `RESEND_API_KEY` | Outgoing emails + dashboard metrics |
 | `SENTRY_AUTH_TOKEN` | Sentry API for error feed |
 | `IP_HASH_SECRET` | Privacy-safe IP hashing for login forensics |
 | `CHATBOT_WORKER_URL` | cf-chatbot Worker endpoint |
 | `CHATBOT_ADMIN_API_KEY` | 64-character key securing cf-chatbot access |
+
+### Vars (in wrangler.toml)
+
+| Var | Purpose |
+|-----|---------|
+| `PUBLIC_SUPABASE_URL` | Supabase project URL (DB queries — not auth) |
+| `CF_TEAM_NAME` | Zero Trust team name (e.g. `mascotas`) for logout redirect URL construction |
+| `CF_ACCESS_AUD` | CF Access Application Audience tag — required for RS256 JWT audience check |
+| `CF_ACCOUNT_ID` | Cloudflare account ID (already used for analytics; also needed for audit log cron + Layer 3) |
+
+**Removed secrets (no longer in codebase):**
+- `PUBLIC_SUPABASE_ANON_KEY` — GoTrue client-side auth removed
+- `TURNSTILE_SECRET_KEY` — Turnstile CAPTCHA removed (no login form)
 
 ---
 
@@ -165,9 +249,10 @@ All must be deployed as Worker secrets via `wrangler secret put <KEY>`:
 
 | Table | SELECT | INSERT | UPDATE | DELETE | Notes |
 |-------|--------|--------|--------|--------|-------|
-| `admin_authorized_users` | service_role | service_role | service_role | service_role | Whitelist — foundation of auth |
-| `admin_sessions` | service_role | service_role | service_role | service_role | KV-backed session metadata |
+| `admin_authorized_users` | service_role | service_role | service_role | service_role | Authorization whitelist — `cf_sub_id` column added for CF ZT Layer 3 revocation |
 | `email_audit_logs` | service_role | service_role | service_role | service_role | Email dispatch audit; CASCADE on booking delete |
+
+> **`admin_sessions` table removed:** GoTrue session metadata table is no longer used. Sessions are stored exclusively in Cloudflare KV. The `admin_sessions` Supabase table has been removed from all code paths.
 
 #### Chatbot Tables (service_role only — hardened 2026-04-21)
 
@@ -224,11 +309,30 @@ Duplicate removed: `idx_consent_records_consent_id` (superseded by the UNIQUE co
 | `rls_policy_always_true` INSERT | `bookings`, `booking_pets`, `booking_quality_metadata` | Public booking form requires anon INSERT |
 | `rls_policy_always_true` INSERT | `consent_records`, `legal_requests`, `privacy_requests` | Public site forms |
 
-### 10.6 Pending Manual Action
+### 10.6 Required Manual Actions (Phase 0 — CF Dashboard Setup)
 
-> **Enable Leaked Password Protection:**
-> Supabase Dashboard → Authentication → Password Security → Enable "Check passwords against HaveIBeenPwned"
-> URL: `https://supabase.com/dashboard/project/zlvmrepvypucvbyfbpjj/auth/settings`
+> These are one-time setup steps required before the CF Zero Trust auth flow goes live. They cannot be automated — they require manual actions in CF and Google/GitHub dashboards.
+
+**Cloudflare Zero Trust Application:**
+1. Zero Trust → Access → Applications → Add Self-Hosted App
+2. Application domain: `admin.madagascarhotelags.com` with path `/*`
+3. Session Duration: **24 hours** (must match KV TTL)
+4. Identity providers: Google, GitHub, One-Time PIN only
+5. Note the **Application Audience (AUD)** tag → add to `wrangler.toml` as `CF_ACCESS_AUD`
+
+**Global Session Timeout:**
+- Zero Trust → Settings → Authentication → Global Session Timeout: **24 hours**
+
+**CF API Tokens (dash.cloudflare.com → My Profile → API Tokens):**
+- `CF_API_TOKEN_READ_LOGS`: Account → Zero Trust → **Read** permission only
+- `CF_API_TOKEN_ZT_WRITE`: Account → Zero Trust → **Edit** permission only
+
+**Google Cloud Console — OAuth Redirect:**
+- Add: `https://{team}.cloudflareaccess.com/cdn-cgi/access/callback`
+- Remove: old Supabase redirect URIs
+
+**GitHub OAuth App:**
+- Authorization callback URL: `https://{team}.cloudflareaccess.com/cdn-cgi/access/callback`
 
 ---
 

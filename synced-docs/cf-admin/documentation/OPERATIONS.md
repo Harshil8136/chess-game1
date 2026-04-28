@@ -2,7 +2,7 @@
 # Operations — Infrastructure, Bindings & Observability
 
 > **Status:** Production Active
-> **Last Updated:** 2026-04-23
+> **Last Updated:** 2026-04-27 (CF Zero Trust migration: new secrets added, anon key + Turnstile removed)
 > **Scope:** Cloudflare binding IDs, free tier limits, Sentry observability, build/deploy
 
 ---
@@ -17,14 +17,14 @@
 
 | Binding | DB Name | Verified UUID |
 |---------|---------|---------------|
-| `DB` | `madagascar-db` | `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2` |
+| `DB` | `madagascar-db` | `7fca2a07-d7b4-449d-b446-408f9187d3ca` |
 
 Both `cf-admin` and `cf-astro` share this single D1 database.
 
 **Verification:**
 ```bash
 curl -sH "Authorization: Bearer $CF_API_TOKEN" \
-  "https://api.cloudflare.com/client/v4/accounts/320d1ebab5143958d2acd481ea465f52/d1/database/bbca7ba8-87b0-4998-a17d-248bb8d9a0a2" | jq .result.name
+  "https://api.cloudflare.com/client/v4/accounts/320d1ebab5143958d2acd481ea465f52/d1/database/7fca2a07-d7b4-449d-b446-408f9187d3ca" | jq .result.name
 # Must return: "madagascar-db"
 ```
 
@@ -32,13 +32,11 @@ curl -sH "Authorization: Bearer $CF_API_TOKEN" \
 
 | Binding | Title | Verified UUID | Used By |
 |---------|-------|---------------|---------|
-| `SESSION` (cf-admin) | `cf-admin-session` | ⚠️ VERIFY — see note below | cf-admin |
-| `SESSION` (cf-astro) | `cf-astro-session` | `9da1ac5253a54ea1bf236c6fe514dd02` | cf-astro |
-| `ISR_CACHE` | `cf-astro-isr-cache` | `e31f413bb1224f559a8de105248da6cc` | cf-astro |
+| `SESSION` (cf-admin) | `ADMIN_SESSION` | `ba82eecc6f5a4956ad63178b203a268f` | cf-admin |
+| `SESSION` (cf-astro) | `SESSION` | `bee123e795504473accf58ac5b6de13d` | cf-astro |
+| `ISR_CACHE` | `ISR_CACHE` | `d9cea8c7e20f4b328b8cb3b04104138c` | cf-astro |
 
-> **⚠️ KV SESSION ID DISCREPANCY (user action required):**
-> `cloudflare-bindings-registry.md` (verified 2026-04-20) recorded `cf-admin-session` as `c81d1970f3d548b8a53a0e6c870b7685`, but the actual `wrangler.toml` contains `bee123e795504473accf58ac5b6de13d`.
-> **Before next deploy, check the Cloudflare Dashboard → Workers & Pages → KV and confirm the correct ID. Then update this file.**
+> **✅ VERIFIED (2026-04-28):** All IDs in the table above now match the LIVE Cloudflare environment. `ADMIN_SESSION` is used for isolation in `cf-admin`. `SESSION` is used for `cf-astro`.
 
 ### R2 Buckets
 
@@ -157,7 +155,42 @@ High-risk Preact components (data widgets, charts, API-bound tables) are wrapped
 
 ---
 
-## 5. Build & Deploy Commands
+## 5. Required Secrets Reference (CF Zero Trust v4.0)
+
+All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [vars]`.
+
+### 5.1 Secrets (wrangler secret put)
+
+| Secret | Status | Purpose |
+|--------|--------|---------|
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Active | Supabase DB ops — authorization whitelist, bookings, chatbot, consent (no GoTrue) |
+| `REVALIDATION_SECRET` | ✅ Active | ISR webhook auth (cf-admin → cf-astro) |
+| `SITE_URL` | ✅ Active | CSRF Origin validation + `__Host-` cookie prefix decision |
+| `UPSTASH_REDIS_REST_URL` | ✅ Active | Redis rate limiting |
+| `UPSTASH_REDIS_REST_TOKEN` | ✅ Active | Redis auth token |
+| `CF_API_TOKEN` | ✅ Active | Cloudflare GraphQL analytics (read-only) |
+| `CF_API_TOKEN_ZT_WRITE` | 🔴 **NEW — needed** | Zero Trust: Edit — Layer 3 force-kick (DELETE active CF sessions via API) |
+| `CF_API_TOKEN_READ_LOGS` | 🔴 **NEW — needed** | Zero Trust: Read — CF Audit Log API polling (5-min cron for failed logins) |
+| `CF_ZONE_ID` | ✅ Active | CF zone for HTTP metrics |
+| `RESEND_API_KEY` | ✅ Active | Outgoing emails + dashboard metrics |
+| `SENTRY_AUTH_TOKEN` | ✅ Active | Sentry error feed |
+| `IP_HASH_SECRET` | ✅ Active | Privacy-safe IP hashing in login forensics |
+| `CHATBOT_WORKER_URL` | ✅ Active | cf-chatbot Worker endpoint |
+| `CHATBOT_ADMIN_API_KEY` | ✅ Active | 64-char key securing cf-chatbot access |
+| `PUBLIC_SUPABASE_ANON_KEY` | ❌ **REMOVED** | GoTrue client-side auth removed — `wrangler secret delete PUBLIC_SUPABASE_ANON_KEY` |
+| `TURNSTILE_SECRET_KEY` | ❌ **REMOVED** | CAPTCHA on login form — form deleted — `wrangler secret delete TURNSTILE_SECRET_KEY` |
+
+### 5.2 Vars (wrangler.toml [vars])
+
+| Var | Status | Purpose |
+|-----|--------|---------|
+| `PUBLIC_SUPABASE_URL` | ✅ Active | Supabase project URL (DB queries only) |
+| `CF_ACCOUNT_ID` | ✅ Active | Cloudflare account ID (analytics + CF API calls) |
+| `CF_TEAM_NAME` | 🔴 **NEW — needed** | Zero Trust team name for CF logout URL (`https://{CF_TEAM_NAME}.cloudflareaccess.com/cdn-cgi/access/logout`) |
+| `CF_ACCESS_AUD` | 🔴 **NEW — needed** | CF Access Application Audience tag — required for RS256 JWT audience verification |
+| `PUBLIC_TURNSTILE_SITE_KEY` | ❌ **REMOVED** | No login form — remove from wrangler.toml vars |
+
+## 6. Build & Deploy Commands
 
 ```bash
 # cf-admin
@@ -168,8 +201,15 @@ wrangler deploy       # Deploy to Cloudflare Workers
 # D1 migrations (run in order, --remote for production)
 wrangler d1 execute madagascar-db --file=migrations/0001_*.sql --remote
 
+# Pending CF Zero Trust migration
+wrangler d1 execute madagascar-db --file=migrations/0020_cf_zero_trust_schema.sql --remote
+
 # Secrets management
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+wrangler secret put CF_API_TOKEN_ZT_WRITE     # NEW — required for Layer 3 force-kick
+wrangler secret put CF_API_TOKEN_READ_LOGS    # NEW — required for cron audit log polling
+wrangler secret delete PUBLIC_SUPABASE_ANON_KEY  # REMOVED
+wrangler secret delete TURNSTILE_SECRET_KEY      # REMOVED
 wrangler secret list
 
 # Verify bindings are live
@@ -177,7 +217,7 @@ wrangler d1 list
 wrangler kv namespace list
 ```
 
-For full secrets list, see [SECURITY.md](./SECURITY.md) §9.
+For full secrets + vars reference, see [SECURITY.md](./SECURITY.md) §9.
 
 ---
 

@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-26 (v3.9: Minor trigger update)
+> **Last Updated:** 2026-04-27 (v4.0: Cloudflare Zero Trust auth migration — GoTrue fully removed)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
@@ -42,9 +42,9 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 - ✅ Manage content, bookings, users, and site settings via secure dashboard
 - ✅ Enforce multi-level RBAC (DEV > Owner > SuperAdmin > Admin > Staff) on every route
-- ✅ Authenticate via Supabase GoTrue (Magic Link + Google/GitHub/Facebook OAuth)
-- ✅ Block ALL unauthorized access — signup disabled, whitelist-only entry
-- ✅ Refresh JWT tokens every 30 minutes, hard-expire sessions at 24 hours
+- ✅ Authenticate via Cloudflare Zero Trust Access (Google/GitHub/OTP — no Supabase GoTrue)
+- ✅ Block ALL unauthorized access — identity at CF edge, authorization whitelist in Supabase
+- ✅ Role re-check every 30 minutes via D1 re-fetch, hard-expire sessions at 24 hours (KV TTL + CF session duration + createdAt guard)
 - ✅ Run 24/7 at **$0/month** total infrastructure cost
 - ✅ Deliver premium, animated, dark-themed admin experience
 - ✅ Meet professional security, accessibility, and performance standards
@@ -63,7 +63,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
-| **Auth** | Supabase GoTrue (Magic Link + OAuth providers) |
+| **Auth** | Cloudflare Zero Trust Access (Google / GitHub / OTP — CF edge identity) |
 | **Database** | Supabase PostgreSQL (shared project `zlvmrepvypucvbyfbpjj`) |
 | **Session Store** | Cloudflare KV (via Astro Sessions API) |
 | **Cache** | Upstash Redis (free tier — 10K commands/day) |
@@ -100,7 +100,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 ### Shared Resources
 
 - **Supabase Project:** `[PROJECT_REF]` (same PostgreSQL instance)
-- **D1 Database:** `madagascar-db` (ID: `bbca7ba8-87b0-4998-a17d-248bb8d9a0a2`) — shared between both projects
+- **D1 Database:** `madagascar-db` (ID: `7fca2a07-d7b4-449d-b446-408f9187d3ca`) — shared between both projects
 - **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Cloudflare Account:** Mascotas Madagascar
 
@@ -108,11 +108,11 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 | Namespace | ID | Project | Purpose |
 |-----------|-----|---------|---------|
-| `cf-admin-session` | ⚠️ VERIFY — see OPERATIONS.md §1 | cf-admin | Astro session store |
-| `cf-astro-session` | `9da1ac5253a54ea1bf236c6fe514dd02` | cf-astro | Astro session store |
-| `cf-astro-isr-cache` | `e31f413bb1224f559a8de105248da6cc` | cf-astro | ISR HTML cache |
+| `cf-admin-session` | `ba82eecc6f5a4956ad63178b203a268f` | cf-admin | Astro session store |
+| `cf-astro-session` | `bee123e795504473accf58ac5b6de13d` | cf-astro | Astro session store |
+| `cf-astro-isr-cache` | `d9cea8c7e20f4b328b8cb3b04104138c` | cf-astro | ISR HTML cache |
 
-> ⚠️ **SESSION KV ID DISCREPANCY:** The `cf-admin-session` ID has a mismatch between the registry and `wrangler.toml`. **Verify via Cloudflare Dashboard before next deploy.** See [OPERATIONS.md](./documentation/OPERATIONS.md) §1 for the full binding registry and verification commands.
+> ✅ **SESSION KV IDs VERIFIED:** The `cf-admin-session` (`ba82...`) and `cf-astro-session` (`bee1...`) IDs are verified against the LIVE environment.
 
 ### Isolation Rules
 
@@ -157,12 +157,17 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 ```
 # .dev.vars (local — gitignored)
 PUBLIC_SUPABASE_URL=https://[PROJECT_REF].supabase.co
-PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...         # DB operations only (no GoTrue auth)
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
-TURNSTILE_SECRET_KEY=...
 SITE_URL=https://admin.example.com
+# CF Zero Trust
+CF_TEAM_NAME=mascotas                 # your-team.cloudflareaccess.com
+CF_ACCESS_AUD=...                     # Application Audience tag from CF dashboard
+CF_API_TOKEN_ZT_WRITE=...             # Zero Trust Edit — Layer 3 force-kick
+CF_API_TOKEN_READ_LOGS=...            # Zero Trust Read — audit log cron polling
+LOCAL_DEV_ADMIN_EMAIL=harshil.8136@gmail.com  # dev-only auth bypass
+# REMOVED: PUBLIC_SUPABASE_ANON_KEY, TURNSTILE_SECRET_KEY (no longer used)
 ```
 
 Secrets in production: `wrangler secret put <KEY>`
@@ -265,17 +270,17 @@ astro build && wrangler deploy   # Build + deploy to Cloudflare
 
 ```
 documentation/
-├── ARCHITECTURE.md          # Lean Edge stack, request lifecycle, module map, CPU budget
-├── SECURITY.md              # Auth, CSRF, cookies, headers, RLS matrix, Ghost Protection
-├── PLAC-AND-AUDIT.md        # PLAC access control + Ghost Audit Engine + hash chain
-├── USER-MANAGEMENT.md       # RBAC hierarchy, user lifecycle, ghost protection, hidden accounts
+├── ARCHITECTURE.md          # Lean Edge stack, CF ZT request lifecycle, module map, CPU budget
+├── SECURITY.md              # CF Zero Trust auth, CSRF, sessions, HTTP headers, RLS matrix, 3-layer force-kick
+├── PLAC-AND-AUDIT.md        # PLAC access control + Ghost Audit Engine + break-glass admin
+├── USER-MANAGEMENT.md       # RBAC hierarchy, user lifecycle (CF ZT), 3-layer ghost protection, hidden accounts
 ├── CMS.md                   # CMS content studio, bookings, ISR, KV injection, R2/CDN
 ├── DASHBOARD.md             # Dashboard home, KPI widgets, bento grid, analytics
 ├── PRIVACY.md               # Privacy dashboard, consent records, GDPR/LFPDPPP, Forensic Blue spec
 ├── CHATBOT.md               # Workers AI pipeline, proxy architecture, admin UI, analytics
-├── LOGIN-FORENSICS.md       # Login forensics v2, 35-column schema, behavioral telemetry
+├── LOGIN-FORENSICS.md       # Login forensics v3 (CF ZT), Tier 1-only schema, CF Access fields
 ├── DESIGN-SYSTEM.md         # Midnight Slate tokens, CSS architecture, components, login portal, sidebar
-├── OPERATIONS.md            # Binding IDs (D1/KV/R2), free tier limits, Sentry, deploy commands
+├── OPERATIONS.md            # Binding IDs (D1/KV/R2), secrets registry (CF ZT new secrets), deploy commands
 ├── CODING-STANDARDS.md      # DAL pattern, TypeScript standards, component rules, naming
 ├── DEV-TOOLS.md             # Edge Command Center — debug tools, diagnostics, dev utilities
 └── errors/
