@@ -93,9 +93,9 @@ The migration to Cloudflare was driven by:
 
 ### Decision 4: Email Transport
 
-**Problem**: Cloudflare Workers cannot open raw TCP/SMTP sockets (required by Nodemailer).
+**Problem**: Cloudflare Workers cannot open raw TCP/SMTP sockets (required by Nodemailer), and embedding massive provider SDKs bloats the edge bundle.
 
-**Resolution**: Switched to Brevo's HTTP Transactional Email API (`https://api.brevo.com/v3/smtp/email`). Same Brevo account, same templates, but using `fetch()` instead of SMTP.
+**Resolution**: Switched to Resend's HTTP API via a dedicated, decoupled Cloudflare Queue worker (`cf-email-consumer`). The main project produces queue messages, ensuring 0ms latency impact on API responses.
 
 ### Decision 5: Booking Wizard UI Framework
 

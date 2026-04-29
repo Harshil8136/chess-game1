@@ -124,10 +124,9 @@ POST /api/booking  (Cloudflare Worker)
     │ 5. Insert bookings → D1          │
     │ 6. Insert booking_pets → D1      │
     │ 7. Insert quality_metadata → D1  │
-    │ 8. Send staff email → Brevo API  │
-    │ 9. Send customer email → Brevo   │
-    │ 10. Update email status → D1     │
-    │ 11. Return JSON response         │
+    │ 8. Push message to EMAIL_QUEUE   │
+    │ 9. Update email status → D1      │
+    │ 10. Return JSON response         │
     │     { bookingRef, whatsappUrl }   │
     └──────────────────────────────────┘
          │
@@ -204,7 +203,7 @@ Applied globally via Cloudflare Pages `_headers` file:
 
 Secrets are stored in `.dev.vars` (local dev) and `wrangler secret put` (production):
 
-- `BREVO_API_KEY` — Brevo transactional email API key
+- `RESEND_API_KEY` — Resend transactional email API key (for the `cf-email-consumer` worker)
 - `ADMIN_EMAIL` — Admin notification email
 - `SENDER_EMAIL` — From address for outbound emails
 - `POSTHOG_KEY` — PostHog project API key

@@ -93,9 +93,8 @@ const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 5. Insert booking into `bookings` table (D1)
 6. Insert each pet into `booking_pets` table (D1)
 7. Insert quality metadata into `booking_quality_metadata` table (D1)
-8. Send staff notification email via Brevo HTTP API (non-blocking via `Promise.allSettled`)
-9. Send customer receipt email via Brevo HTTP API (non-blocking)
-10. Update `bookings.admin_email_sent` and `bookings.user_email_sent` flags in D1
+8. Push `booking_confirmation` message to `env.EMAIL_QUEUE` (contains data for both staff and customer emails)
+9. Update `bookings.admin_email_sent` and `bookings.user_email_sent` flags in D1
 11. Return JSON response with `bookingRef` and `whatsappUrl` fallback
 
 **Response (success)**:
@@ -297,45 +296,42 @@ const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 
 ## Email Integration
 
-### Brevo HTTP API (`src/lib/email/send-email.ts`)
+### Cloudflare Queues (`env.EMAIL_QUEUE`)
 
-Replaces Nodemailer SMTP because Cloudflare Workers cannot open raw TCP sockets.
+Replaces inline HTTP calls (which block responses and bloat bundles) with an asynchronous message queue.
 
 ```typescript
-const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-  method: 'POST',
-  headers: {
-    'api-key': apiKey,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    sender: { email: 'team@madagascarhotelags.com', name: 'Hotel Madagascar' },
-    to: [{ email: recipientEmail }],
-    subject: 'Subject Line',
-    htmlContent: '<html>...</html>',
-  }),
+await env.EMAIL_QUEUE.send({
+  type: 'booking_confirmation',
+  data: {
+    bookingRef,
+    customerEmail,
+    // ... other data
+  }
 });
 ```
 
-### Email Templates (`src/lib/email/templates.ts`)
+All actual email delivery is handled by the isolated `cf-email-consumer` worker via the Resend HTTP API.
 
-Two HTML email templates:
+### Email Templates (`queue-worker/src/templates/`)
 
-1. **Staff Notification** (`buildStaffEmailHtml`) — Sent to admin email when new booking arrives
+Templates are stored in the consumer worker (not in `cf-astro` directly) to keep the main edge bundle small. They use the **Eta** template engine:
+
+1. **Staff Notification** — Sent to admin email when new booking arrives
    - Green gradient header with booking ref
    - Owner details table
    - Service details table
    - Pet breakdown table
    - Special instructions block
 
-2. **Customer Receipt** (`buildCustomerReceiptHtml`) — Sent to customer after booking
+2. **Customer Receipt** — Sent to customer after booking
    - Green gradient header
    - Personalized greeting
    - Booking summary card (ref, service, date, pets)
    - WhatsApp contact link
    - Footer with business name
 
-Both templates use inline CSS for email client compatibility (no Tailwind in emails).
+Both templates use inline CSS for email client compatibility.
 
 ---
 
@@ -343,11 +339,11 @@ Both templates use inline CSS for email client compatibility (no Tailwind in ema
 
 ### Overview
 
-The Contact section uses **Formspree** for general inquiry submissions. This is separate from the Brevo booking email system.
+The Contact section uses **Formspree** for general inquiry submissions. This is separate from the Cloudflare Queue / Resend booking email system.
 
 | System | Purpose | Mechanism | Endpoint |
 |---|---|---|---|
-| **Brevo** | Booking confirmations (staff + customer) | Programmatic `fetch()` from Worker | `https://api.brevo.com/v3/smtp/email` |
+| **Queues + Resend** | Booking confirmations (staff + customer) | Async `EMAIL_QUEUE.send()` | Resend HTTP API (via consumer) |
 | **Formspree** | General contact inquiries | Standard HTML `<form>` POST | `https://formspree.io/f/xbjnrvnq` |
 
 ### Why Formspree?
