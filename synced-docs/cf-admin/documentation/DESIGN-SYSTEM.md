@@ -35,7 +35,7 @@ The cf-admin design system delivers a professional command center aesthetic riva
 - `rgba(139,92,246,...)` violet interactive accents
 - `zoom: 1.1` on DashboardController
 - `data-theme="slate"` attribute → replaced by `data-theme="dark"`
-- Inline `style={{}}` objects in Preact components (~200 lines)
+- Inline `style={{}}` objects in Preact components (~200 lines; reduced to near-zero after Phase 7C — only dynamic computed values remain)
 - `window.location.reload()` for dashboard refresh
 
 ---
@@ -159,7 +159,51 @@ Applied via `data-section` attribute; children consume `var(--section-color)` et
 
 **Type scale:** `display` (32px/800) → `headline` (24px/700) → `title` (18px/650) → `subtitle` (15px/600) → `body` (14px/400) → `body-sm` (13px/400) → `caption` (12px/500) → `micro` (11px/600) → `mono-data` (14px/500, JetBrains)
 
-### 2.10 Spacing, Radius, Shadow, Motion
+### 2.10 Component Badge Color Tokens
+
+**File:** `src/styles/themes/dark.css`
+
+A full set of semantic badge color tokens for status badges across the admin UI. Each color family has three variants: text color, background fill, and border color.
+
+```css
+/* Emerald — active, yes, success states */
+--color-badge-emerald:        #34d399;
+--color-badge-emerald-bg:     rgba(16, 185, 129, 0.15);
+--color-badge-emerald-border: rgba(16, 185, 129, 0.3);
+
+/* Amber — escalated, no, warning states */
+--color-badge-amber:          #fbbf24;
+--color-badge-amber-bg:       rgba(251, 191, 36, 0.15);
+--color-badge-amber-border:   rgba(251, 191, 36, 0.3);
+
+/* Blue — info, relocation service */
+--color-badge-blue:           #60a5fa;
+--color-badge-blue-bg:        rgba(59, 130, 246, 0.15);
+--color-badge-blue-border:    rgba(59, 130, 246, 0.3);
+
+/* Slate — neutral, unknown states */
+--color-badge-slate:          #94a3b8;
+--color-badge-slate-bg:       rgba(100, 116, 139, 0.15);
+--color-badge-slate-border:   rgba(100, 116, 139, 0.3);
+
+/* Red — danger, error, cancelled */
+--color-badge-red:            #f87171;
+--color-badge-red-bg:         rgba(248, 113, 113, 0.15);
+--color-badge-red-border:     rgba(248, 113, 113, 0.3);
+
+/* Purple — hotel service, special states */
+--color-badge-purple:         #c084fc;
+--color-badge-purple-bg:      rgba(192, 132, 252, 0.15);
+--color-badge-purple-border:  rgba(192, 132, 252, 0.3);
+```
+
+**Usage:** In `src/styles/components/chatbot/buttons-badges.css`, all `.chatbot-badge-*` selectors now reference these variables. No raw hex values in component CSS.
+
+**Rule:** When adding a new badge color, add the three-variant token group here first, then reference `var(--color-badge-*)` in component CSS. Never write raw hex values for badge colors.
+
+---
+
+### 2.11 Spacing, Radius, Shadow, Motion
 
 ```css
 /* 4px grid spacing */
@@ -195,20 +239,26 @@ Applied via `data-section` attribute; children consume `var(--section-color)` et
 src/styles/
 ├── global.css              ← @import orchestrator + @theme bridge + base resets
 ├── themes/
-│   ├── dark.css            ← :root dark tokens
+│   ├── dark.css            ← :root dark tokens (includes --color-badge-* variables)
 │   └── light.css           ← :root[data-theme="light"] tokens
 ├── sections.css            ← data-section attribute color resolution
 ├── utilities.css           ← Custom utility classes (.sr-only, etc.)
 ├── components/             ← Component-scoped CSS modules
 │   ├── bento.css, stat-card.css, health-bar.css, button.css
 │   ├── badge.css, input.css, table.css, toast.css, modal.css
-│   └── command-palette.css, activity-feed.css ...
+│   ├── command-palette.css, activity-feed.css ...
+│   └── chatbot/
+│       ├── buttons-badges.css   ← .chatbot-badge-* (uses --color-badge-* vars; no raw hex)
+│       ├── stats.css            ← .ad-* analytics dashboard classes (20+ extracted from AnalyticsDashboard.tsx)
+│       └── [other chatbot css files]
 └── pages/                  ← Page-level overrides
     ├── dashboard.css, chatbot.css, audit.css
     └── login-forensics.css
 ```
 
 Component and page CSS are **NOT** imported in `global.css`. Each component/page imports its own CSS — Astro handles per-route code splitting automatically. This reduces per-page CSS payload by 67–86% vs the previous monolithic approach.
+
+**Note on widget shared utilities:** The canonical shared widget file is `src/components/dashboard/widgets/WidgetShared.tsx`. The former `WidgetSharedV2.tsx` was merged into it and deleted (Phase 3B). All imports must reference `WidgetShared`, never `WidgetSharedV2`.
 
 **CSS layer precedence:** `@layer base` → `@layer components` → `@layer utilities` (Tailwind utilities win).
 

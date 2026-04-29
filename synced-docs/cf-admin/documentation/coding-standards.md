@@ -13,12 +13,33 @@ All file names must be unique and descriptive:
 
 ## 3. Component Architecture ("LEGO-Style" Atomic Design)
 - **Strict Composition Rule:** Components must follow Atomic Design + Island Architecture. Never create monolithic files.
+- **Hard size limit: No component file may exceed 200 lines.** If a file grows past this threshold, split it immediately.
 - **Atoms/Molecules:** Tiny, focused, reusable sub-components (e.g. `SidebarHeader.tsx`, `SidebarProfile.tsx`, `NavIcon.tsx`).
 - **Organisms (Islands):** The primary Preact component that orchestrates atoms/molecules (e.g., `SidebarMenu.tsx`).
 - **Astro Shells (`.astro`):** For server-rendered layouts and server-side data fetching.
 - **Preact islands (`.tsx`):** Only for interactive UI.
 - Use `client:load` for above-fold critical interactivity (like navigation)
 - Use `client:idle` for below-fold widgets
+
+### Component Split Pattern
+
+When a component grows too large, follow this three-step extraction pattern:
+
+1. **Shared types file** — Create `[Module]Types.ts` (or `shared.tsx` for co-located micro-components). Move all interfaces, type aliases, constants, and utility functions here. This eliminates circular imports.
+2. **Section components** — Extract each logical section of the UI into a focused `[Module][Section].tsx` file. Each receives only the props it needs.
+3. **Thin orchestrator** — The original file becomes the orchestrator: it fetches data, manages top-level state, and renders the section components. Target: ≤ 150 lines.
+
+**Example applied (BookingSlideDrawer):**
+```
+bookings/
+├── types.ts                     ← BookingRow, BookingPet, SERVICE_LABELS, ...
+├── BookingCustomerSection.tsx   ← name, email, phone
+├── BookingPetSection.tsx        ← pet profiles
+├── BookingOperationsSection.tsx ← service, dates, status
+├── BookingAuditSection.tsx      ← email log
+├── BookingDangerZoneSection.tsx ← destructive actions
+└── BookingSlideDrawer.tsx       ← orchestrator (~115 lines)
+```
 
 ## 4. Error Handling & Resilience
 
@@ -39,7 +60,7 @@ When using `client:load`, the component is rendered *synchronously* during Astro
 
 **ALWAYS use strict null guards and early returns before accessing any data props in Preact components.**
 
-> **Note on Loading States:** The dashboard enforces a strict "No Blank Loading Screens" policy. Do not use plain text (e.g., "Loading...") or unstyled spinners for primary data fetches. Always use `SkeletonBlock` from `src/components/dashboard/widgets/WidgetSharedV2.tsx` to provide immediate, structure-matching shimmer placeholders.
+> **Note on Loading States:** The dashboard enforces a strict "No Blank Loading Screens" policy. Do not use plain text (e.g., "Loading...") or unstyled spinners for primary data fetches. Always use `SkeletonBlock` from `src/components/dashboard/widgets/WidgetShared.tsx` (canonical — `WidgetSharedV2` was merged and deleted) to provide immediate, structure-matching shimmer placeholders.
 
 ### 4.3 Mandatory ErrorBoundary Wrapping
 Every widget group inside a `client:load` island must be wrapped in `<ErrorBoundary sectionName="...">`:
@@ -83,7 +104,127 @@ Before deploying any new or modified `client:load` component:
 - [ ] No `window`/`document` access outside `useEffect`
 - [ ] Widget wrapped in `<ErrorBoundary sectionName="...">` in parent
 
-## 5. Animation Standards
+## 5. TypeScript Fetch Patterns
+
+### Typed JSON responses
+
+TypeScript strict mode enforces a specific pattern when typing `fetch` responses. The type annotation must go on the `json()` call itself — NOT on the callback parameter.
+
+```typescript
+// CORRECT — type cast at json(), then destructure in next .then()
+fetch('/api/some-endpoint')
+  .then(r => r.json() as Promise<MyResponseType>)
+  .then(data => {
+    // data is typed as MyResponseType here
+    console.log(data.someField);
+  });
+
+// WRONG — TypeScript strict mode rejects annotating the callback param
+fetch('/api/some-endpoint')
+  .then((data: MyResponseType) => {  // ❌ ERROR: Parameter 'data' implicitly has an 'any' type
+    console.log(data.someField);
+  });
+```
+
+**Why:** `Response.prototype.json()` returns `Promise<any>`. Annotating the `.then()` callback parameter does not narrow the type — TypeScript requires the cast to be applied to the `Promise` itself via `as Promise<T>`.
+
+### Typed interfaces for all API responses
+
+Never use `const data: any = await res.json()`. Always define a response interface:
+
+```typescript
+interface BookingListResponse {
+  bookings: BookingRow[];
+  total: number;
+  page: number;
+}
+
+const data = await res.json() as BookingListResponse;
+```
+
+For D1 query results that the TypeScript compiler cannot narrow directly, use the double-cast pattern:
+```typescript
+const { results } = await stmt.all();
+const rows = results as unknown as MyRowType[];
+```
+
+---
+
+## 6. Accessibility Requirements
+
+### Interactive non-button elements
+
+Any non-`<button>` element that is click-activated (e.g., `<tr>`, `<div>`) must have the full interactive triad:
+
+```tsx
+<tr
+  role="button"
+  tabIndex={0}
+  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
+  aria-label="View booking BK-00123"
+>
+```
+
+- `role="button"` — tells assistive technology this is interactive
+- `tabIndex={0}` — makes it keyboard-reachable
+- `onKeyDown` — activates on Enter and Space (the keyboard equivalents of click)
+- `aria-label` — describes the action when the visual text is insufficient
+
+### Icon-only buttons
+
+Every button that contains only an icon (no visible text) must have `aria-label`. The icon itself must have `aria-hidden="true"`.
+
+```tsx
+<button aria-label="Close drawer">
+  <X className="w-4 h-4" aria-hidden="true" />
+</button>
+```
+
+Using `title=` alone is not sufficient — `title` is not announced by all screen readers and is hidden on mobile.
+
+### Tab components
+
+Tab navigation must use the WAI-ARIA tab pattern:
+
+```tsx
+<div role="tablist" aria-label="Log Categories">
+  <button
+    role="tab"
+    aria-selected={activeTab === 'audit'}
+    aria-controls="tabpanel-audit"
+    id="tab-audit"
+  >
+    Audit
+  </button>
+</div>
+<div
+  id="tabpanel-audit"
+  role="tabpanel"
+  aria-labelledby="tab-audit"
+  hidden={activeTab !== 'audit'}
+>
+  ...
+</div>
+```
+
+### Sortable table columns
+
+Sortable `<th>` elements must have `aria-sort`:
+
+```tsx
+<th
+  aria-sort={sortField === 'name'
+    ? (sortDir === 'asc' ? 'ascending' : 'descending')
+    : 'none'}
+  onClick={() => handleSort('name')}
+>
+  Name
+</th>
+```
+
+---
+
+## 7. Animation Standards
 - All interactive elements must have smooth transitions
 - Use `var(--duration-normal)` (200ms) for hover/focus states
 - Use `var(--duration-slow)` (350ms) for page transitions

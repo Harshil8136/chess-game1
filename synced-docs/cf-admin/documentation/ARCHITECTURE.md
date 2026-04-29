@@ -144,18 +144,56 @@ src/
 │   ├── debug/index.astro              ← DEV only
 │   └── [...slug].astro                ← Spread Route / Soft 404
 ├── components/
-│   ├── admin/{bookings,customers,pets,content,analytics,users,chatbot,logs}/
+│   ├── admin/
+│   │   ├── bookings/
+│   │   │   ├── BookingDashboard.tsx           ← booking list + search
+│   │   │   ├── BookingSlideDrawer.tsx          ← thin orchestrator (~115 lines)
+│   │   │   ├── types.ts                        ← BookingRow, BookingPet, BookingDetails, SERVICE_LABELS, PET_TYPE_ICONS
+│   │   │   ├── BookingCustomerSection.tsx
+│   │   │   ├── BookingPetSection.tsx
+│   │   │   ├── BookingOperationsSection.tsx
+│   │   │   ├── BookingAuditSection.tsx
+│   │   │   └── BookingDangerZoneSection.tsx
+│   │   ├── chatbot/
+│   │   │   ├── BotConfig.tsx                  ← orchestrator (~200 lines)
+│   │   │   ├── BotConfigShared.tsx            ← ConfigSection, Field, InfoIcon primitives
+│   │   │   ├── BotConfigThinkingSection.tsx   ← ThinkingConfig interface + component
+│   │   │   ├── AnalyticsDashboard.tsx
+│   │   │   ├── ConversationsBrowser.tsx
+│   │   │   ├── KnowledgeBase.tsx
+│   │   │   └── PromptsEditor.tsx
+│   │   ├── users/
+│   │   │   ├── UsersTable.tsx                 ← slim orchestrator
+│   │   │   ├── roleColors.ts                  ← getRoleBorderHex, getRoleBgGrad, getRelativeTime, getInitials
+│   │   │   ├── UserTableRow.tsx               ← SortIcon, UserAvatar, UserTableRow (desktop)
+│   │   │   ├── UserCardStack.tsx              ← mobile card layout
+│   │   │   └── atoms/                         ← pre-existing atom components
+│   │   ├── logs/
+│   │   │   ├── ActivityCenter.tsx             ← orchestrator (imports shared.tsx)
+│   │   │   └── shared.tsx                     ← AuditLog, EmailLog, ConsentRecord, LoginLog, Stats, TabId, TABS, formatTimestamp, tryParseJSON, buildQueryString, JSONViewer, DetailPanel, TableFooter
+│   │   ├── debug/
+│   │   │   ├── PageRegistryManager.tsx        ← orchestrator (significantly reduced)
+│   │   │   └── PageRegistryConfirmModal.tsx   ← extracted 150-line confirmation modal
+│   │   ├── customers/, pets/, content/, analytics/
 │   ├── navigation/                    ← Sidebar, TopBar
-│   ├── dashboard/                     ← Home widgets
-│   └── ui/                            ← Toast, Modal, Skeleton, Badge
+│   ├── dashboard/
+│   │   └── widgets/
+│   │       └── WidgetShared.tsx       ← CANONICAL: formatBytes, formatNumber, Dot, WarningDot, ModernCard, SkeletonBlock, DashboardSkeleton, EmptyState, TrendPill, etc.
+│   └── ui/                            ← Toast, Modal, Skeleton, Badge, ErrorBoundary, SlideDrawer
 ├── pages/api/
 │   ├── auth/, users/, content/, media/, bookings/, chatbot/
 │   └── audit/, privacy/, diagnostics/
 └── lib/
     ├── auth/                          ← RBAC, PLAC, sessions, guards
+    ├── bookings/
+    │   └── constants.ts               ← getServiceBadgeStyle() — canonical service badge colors
+    ├── analytics/
+    │   └── providers.ts               ← GraphQLResponse<T> interface; Cloudflare + Supabase analytics fetch
     ├── env.ts                         ← Single source of truth for CF env bindings
     ├── audit.ts                       ← Ghost Audit Engine (table name whitelisted)
-    ├── cms.ts                         ← revalidateAstro(), locale expansion
+    ├── cms.ts                         ← revalidateAstro(), locale expansion (CmsBlock imported from shared-schema.ts)
+    ├── formatters.ts                  ← formatDateTime(), formatDateShort() — shared date formatting
+    ├── shared-schema.ts               ← CmsBlock interface (canonical), CmsContentType
     └── supabase.ts                    ← Supabase client factory (anon + admin)
 ```
 
