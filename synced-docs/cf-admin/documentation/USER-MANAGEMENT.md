@@ -256,4 +256,100 @@ The system is designed to "fail-closed" across various infrastructure disruption
 | **Layer 3 CF API Fails** | CF_Authorization cookie remains valid | Layer 2 revocation flag prevents new session. On natural expiry (≤24h), fully locked out. |
 | **Supabase Outage** | Invitation/role change fails | API returns 500. No whitelist mutation. User remains at previous access level. |
 
+---
+
+## 11. CF Zero Trust ↔ Supabase Visibility Suite
+
+### 11.1 Architecture Overview (OTP-Open Model)
+
+The admin portal uses **CF Zero Trust with an OTP-open policy** — any email address can authenticate via OTP, Google, or GitHub. CF Access handles identity verification only; it does NOT restrict which emails can proceed. The Supabase whitelist is the single authorization gate.
+
+```
+CF Access OTP/OAuth → (any email authenticates) → Worker middleware
+  → email in admin_authorized_users AND is_active = true → KV session created ✅
+  → email NOT in whitelist → LOGIN_FAILED logged → 403 Forbidden ❌
+```
+
+**Implication:** "Syncing" CF Access and Supabase does not mean maintaining an email allowlist in CF. It means maintaining visibility into the gap between who has authenticated via CF (anyone) and who is authorized in Supabase (whitelisted only).
+
+### 11.2 The cfLinked Boolean
+
+Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access internal UUID for the user (`sub` claim from the CF JWT). This is written idempotently on the user's **first** successful login.
+
+- `cf_sub_id IS NOT NULL` → **CF Linked**: user has authenticated via CF ZT at least once; their CF identity is bound; Layer 3 force-kick (CF API session revocation) is available.
+- `cf_sub_id IS NULL` → **CF Pending**: user was invited in Supabase but has never logged in; only Layers 1 + 2 of force-kick are available.
+
+**Security:** `cf_sub_id` UUID is **never returned to the client** in any API response. The server derives a `cfLinked: boolean` and strips the UUID before serialization.
+
+### 11.3 CF ZT Visibility — New API Endpoints
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /api/users` | super_admin+ | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
+| `GET /api/users/[id]/session-status` | owner+ | Live KV session count + method/age per session |
+| `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
+| `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
+| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist |
+
+### 11.4 Login Intelligence Panel (ExpandedRow)
+
+When an admin expands a user row in the User Registry, the bottom of the expanded panel shows a "Login Intelligence" section (Owner+ only, on-demand fetch). It displays the last 15 login events from `admin_login_logs` with:
+
+| Column | Source | Notes |
+|--------|--------|-------|
+| Outcome | `event_type` + `success` | SUCCESS (emerald) / FAILED / BLOCKED (red) |
+| Method | `cf_access_method` or `login_method` | OTP (sky) / Google (blue) / GitHub |
+| Location | `geo_location` + `colo` | "City, Country (CF data center)" |
+| Bot Score | `cf_bot_score` | CF bot management score; emerald < 20, amber 20–49, red ≥ 50 |
+| CF Ray | `cf_ray_id` | First 10 chars of CF Ray ID (full value in tooltip) |
+| IP | `ip_address` | Masked to `X.X.***.***` for non-dev actors; full IP for DEV |
+| Date | `created_at` | Relative ("2h ago") with absolute ISO tooltip |
+
+The `summary` shows total login count, success count, and failure count across all time for this email.
+
+### 11.5 Access Probe Feed
+
+The `AccessProbePanel` component (rendered below the User Registry for Owner+ only, `client:idle`) surfaces emails that successfully authenticated via CF OTP but were blocked by the Supabase whitelist gate. These are genuine CF-authenticated users who don't have access — the most actionable security signal in an OTP-open deployment.
+
+Each probe row shows: email | attempt count | last seen | CF access method | bot score | geo location. A "+ Whitelist" button pre-fills the InviteUserModal with the probed email for immediate onboarding.
+
+### 11.6 CF Access Audit Cross-Reference
+
+The "CF Audit" button in the Registry Toolbar (Owner+ only) opens `CfAuditDrawer`, which fetches live data from the CF Access users API and cross-references with the Supabase whitelist:
+
+| Tab | Description |
+|-----|-------------|
+| **Linked** | In Supabase whitelist AND have a CF sub_id linked. Layer 3 kick available. |
+| **Awaiting Login** | In Supabase whitelist but have never logged in via CF. No CF sub_id yet. |
+| **CF Orphans** | Authenticated via CF but NOT in Supabase whitelist. Were blocked at middleware. |
+
+The CF Orphans tab is automatically selected if any orphans exist (highest-priority signal).
+
+### 11.7 DB Indexes
+
+Two indexes support these queries:
+
+```sql
+-- D1 (migrations/0022_login_logs_probe_index.sql)
+CREATE INDEX IF NOT EXISTS idx_login_logs_unauthorized
+  ON admin_login_logs(is_authorized_email, created_at DESC)
+  WHERE is_authorized_email = 0;
+
+-- Supabase (migrations/supabase_0002_cf_status_index.sql)
+CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
+  ON admin_authorized_users(cf_sub_id)
+  WHERE cf_sub_id IS NOT NULL;
+```
+
+### 11.8 Security Constraints Summary
+
+| Data | Exposure | Rationale |
+|------|----------|-----------|
+| `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
+| Session IDs | Server-only | KV key names never returned to client |
+| Full IP addresses | DEV actor only | PII — other actors see masked `X.X.***.***` |
+| `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
+| Probe emails | Owner+ only | Reveals who is probing the system |
+| CF audit cross-reference | Owner+ only | Reveals CF Access org-level user list |
+
 {% endraw %}

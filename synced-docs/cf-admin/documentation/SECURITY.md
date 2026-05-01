@@ -2,8 +2,8 @@
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
-> **Last Updated:** 2026-04-27 (v4.0: Cloudflare Zero Trust Auth — GoTrue fully removed)
-> **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Ghost Protection, Error Sanitization
+> **Last Updated:** 2026-04-29 (v4.1: Deep RLS & ACL lockdown — anon role fully stripped)
+> **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization
 
 ---
 
@@ -69,7 +69,9 @@ Sessions are **fixed-duration from creation** — no rolling extension. A sessio
 
 ### Astro Sessions API
 
-Session cookies use the `__Host-` prefix in production (enforces `Secure`, host-bound, `path=/`). In local dev (no `SITE_URL`), plain cookie name is used without the prefix.
+Session cookies use the `__Host-` prefix in production (enforces `Secure`, host-bound, `path=/`). In local dev, plain cookie name is used without the prefix.
+
+> **⚠️ Fail-Secure Local Dev Detection (v4.1):** The `isLocalDev` check in `middleware.ts`, `dev-login.ts`, and `index.astro` uses `!!siteUrl && (siteUrl.includes('localhost') || ...)` — if `SITE_URL` is missing or misconfigured, the system defaults to **production mode** (fail-secure), never to dev mode. This prevents a missing env var from accidentally bypassing Cloudflare Zero Trust authentication.
 
 ### Local Development Bypass
 
@@ -230,84 +232,109 @@ Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
 
 ## 10. Supabase RLS Policy Reference
 
-> **Last Audited:** 2026-04-21 (via Supabase Advisor API)
+> **Last Audited:** 2026-04-29 (via Supabase Advisor API — 0 security warnings)
 > **Database:** `zlvmrepvypucvbyfbpjj` (shared with cf-astro)
 
 ### 10.1 Design Principles
 
-**Service-Role Pattern:** All admin and backend operations use `SUPABASE_SERVICE_ROLE_KEY`, which bypasses RLS entirely. The anon key is exposed to the frontend for auth flows only.
+**Zero Anon Access:** The `anon` role has **zero table-level grants**, **zero RLS policies**, and **zero function EXECUTE privileges** across the entire `public` schema. Default privileges are also revoked so future tables inherit this lockdown.
 
-**`(select auth.role())` optimization:** Always wrap `auth.role()` in a subquery. Without it, PostgreSQL evaluates per-row (O(n) InitPlan). The subquery forces a single evaluation per query — critical on large tables.
+**Service-Role Exclusive:** All 3 applications (`cf-admin`, `cf-chatbot`, `cf-astro`) access the database via either `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS) or direct `DATABASE_URL` PostgreSQL connection (bypasses PostgREST). No application code uses the Supabase anon key.
 
-**Public INSERT pattern:** Tables that accept anonymous form submissions retain permissive INSERT for the anon role. All reads are gated behind `service_role`.
+**Defense-in-Depth:** Even though `service_role` bypasses RLS (via `bypassrls = true`), every table has an explicit `service_role`-only RLS policy. This creates a documented deny-by-default posture for `anon`/`authenticated` roles and prevents accidental exposure if a new code path is added.
 
 ---
 
 ### 10.2 Table Policy Matrix
 
-#### Admin Tables (service_role only)
+All 17 public tables have RLS **enabled** and a single `"Service role full access"` policy restricted to `TO service_role`. No table has any policy granting access to `anon` or `authenticated`.
 
-| Table | SELECT | INSERT | UPDATE | DELETE | Notes |
-|-------|--------|--------|--------|--------|-------|
-| `admin_authorized_users` | service_role | service_role | service_role | service_role | Authorization whitelist — `cf_sub_id` column added for CF ZT Layer 3 revocation |
-| `email_audit_logs` | service_role | service_role | service_role | service_role | Email dispatch audit; CASCADE on booking delete |
+#### Admin & Session Tables
 
-> **`admin_sessions` table removed:** GoTrue session metadata table is no longer used. Sessions are stored exclusively in Cloudflare KV. The `admin_sessions` Supabase table has been removed from all code paths.
+| Table | Policy | Roles | Notes |
+|-------|--------|-------|-------|
+| `admin_authorized_users` | ALL | service_role | Authorization whitelist — `cf_sub_id` for Layer 3 revocation |
+| `admin_sessions` | ALL | service_role | Session metadata (KV is primary store) |
+| `email_audit_logs` | ALL | service_role | Email dispatch audit; CASCADE on booking delete |
 
-#### Chatbot Tables (service_role only — hardened 2026-04-21)
+#### Chatbot & Analytics Tables (PII — customer data)
 
-Previously had `USING(true)` — publicly-exposed anon key could read ALL chatbot data including customer contacts and conversation history. Fixed.
+| Table | Policy | Roles | Notes |
+|-------|--------|-------|-------|
+| `contacts` | ALL | service_role | Customer PII (names, emails, phones) |
+| `conversations` | ALL | service_role | Chat history linked to contacts |
+| `messages` | ALL | service_role | Message content |
+| `chat_analytics` | ALL | service_role | Aggregate analytics |
+| `conversation_metrics` | ALL | service_role | Performance metrics |
+| `feedback_events` | ALL | service_role | User feedback signals |
+| `intent_events` | ALL | service_role | Intent classification data |
+| `kb_gaps` | ALL | service_role | Knowledge base gap analysis |
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|-------|--------|--------|--------|--------|
-| `chat_analytics` | service_role | service_role | — | — |
-| `contacts` | service_role | service_role | service_role | service_role |
-| `conversations` | service_role | service_role | service_role | service_role |
-| `messages` | service_role | service_role | service_role | service_role |
+#### Booking & Compliance Tables
 
-#### Public-Facing Tables (anon INSERT + service_role read)
+| Table | Policy | Roles | Notes |
+|-------|--------|-------|-------|
+| `bookings` | ALL + UPDATE | service_role | Pet boarding reservations |
+| `booking_pets` | ALL | service_role | Pets linked to bookings |
+| `booking_quality_metadata` | ALL | service_role | Booking quality signals |
+| `consent_records` | ALL | service_role | GDPR/LFPDPPP consent receipts |
+| `legal_requests` | ALL + SELECT | service_role | ARCO rights requests |
+| `privacy_requests` | ALL | service_role | Privacy deletion requests |
 
-| Table | SELECT | INSERT | UPDATE | DELETE | Notes |
-|-------|--------|--------|--------|--------|-------|
-| `bookings` | service_role | anon (public form) | service_role | service_role | Pet boarding reservations |
-| `booking_pets` | service_role | anon (public form) | — | — | Pets linked to bookings |
-| `booking_quality_metadata` | service_role | anon (public form) | — | — | Booking quality signals |
-| `consent_records` | service_role | anon (cookie banner) | — | — | GDPR/LFPDPPP consent receipts |
-| `legal_requests` | service_role | anon (legal form) | — | — | ARCO rights requests |
-| `privacy_requests` | service_role | anon (privacy form) | — | — | Privacy deletion requests |
-
-> **Note on bookings UPDATE:** Previously had `USING(true)/WITH CHECK(true)` for anon — anyone with the anon key could modify any booking field. Fixed 2026-04-21 to service_role only.
+> **Historical note (removed 2026-04-29):** Tables `bookings`, `booking_pets`, `booking_quality_metadata`, `consent_records`, `privacy_requests`, and `legal_requests` previously had `anon` INSERT policies for public forms. These were vestigial — GoTrue auth was removed, and no application uses the anon key. All anon policies have been dropped.
 
 ---
 
 ### 10.3 Function Security
 
-**`public.get_usage_metrics()`** — hardened 2026-04-21 with `SET search_path = public`.
+All public functions have `SET search_path = public` to prevent search-path hijacking, and EXECUTE has been **revoked from `anon`, `authenticated`, and `PUBLIC`**. Only `service_role` and `postgres` retain execution privileges.
 
-Without an explicit `search_path`, a poisoned schema could inject a function with the same name. Pinning eliminates this vector.
+| Function | Signature | search_path | EXECUTE Revoked From |
+|----------|-----------|-------------|---------------------|
+| `get_command_center_analytics` | `(p_days integer)` | `public` | anon, authenticated, PUBLIC |
+| `get_kb_clusters` | `(p_resolved boolean)` | `public` | anon, authenticated, PUBLIC |
+| `get_usage_metrics` | `(p_days_ago integer)` | `public` | anon, authenticated, PUBLIC |
+| `increment_conversation_metrics` | `(uuid, text, bool, int, numeric)` | `public` | anon, authenticated, PUBLIC |
+| `increment_conversation_metrics` | `(uuid, text, bool, int, numeric, text)` | `public` | anon, authenticated, PUBLIC |
+| `rls_auto_enable` | (trigger) | `pg_catalog` | anon, authenticated, PUBLIC |
 
 ---
 
-### 10.4 Index Coverage
+### 10.4 Table-Level Grant Lockdown
+
+**All DML privileges have been revoked from `anon` on all public tables:**
+
+```sql
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+```
+
+This means even if an RLS policy is accidentally misconfigured in the future, `anon` won't have the underlying table privilege to exploit it.
+
+---
+
+### 10.5 Index Coverage
 
 All foreign keys have covering indexes to prevent sequential scans during JOINs and CASCADE operations.
 
 | Table | Column | Index | Added |
 |-------|--------|-------|-------|
+| `booking_pets` | `booking_id` | `idx_booking_pets_booking_id` | 2026-04-29 |
+| `chat_analytics` | `contact_id` | `idx_chat_analytics_contact_id` | 2026-04-29 |
 | `chat_analytics` | `conversation_id` | `idx_chat_analytics_conversation_id` | 2026-04-21 |
 | `email_audit_logs` | `booking_id` | `idx_email_audit_logs_booking_id` | 2026-04-21 |
-| `email_audit_logs` | `template_id` | `idx_email_audit_logs_template_id` | 2026-04-21 |
+| `feedback_events` | `contact_id` | `idx_feedback_events_contact_id` | 2026-04-29 |
+| `feedback_events` | `message_id` | `idx_feedback_events_message_id` | 2026-04-29 |
+| `feedback_events` | `conversation_id` | `idx_feedback_events_conversation_id` | 2026-04-29 |
+| `intent_events` | `contact_id` | `idx_intent_events_contact_id` | 2026-04-29 |
+| `intent_events` | `message_id` | `idx_intent_events_message_id` | 2026-04-29 |
+| `intent_events` | `conversation_id` | `idx_intent_events_conversation_id` | 2026-04-29 |
+| `kb_gaps` | `contact_id` | `idx_kb_gaps_contact_id` | 2026-04-29 |
+| `kb_gaps` | `conversation_id` | `idx_kb_gaps_conversation_id` | 2026-04-29 |
 
-Duplicate removed: `idx_consent_records_consent_id` (superseded by the UNIQUE constraint's implicit index).
+Removed: 20+ unused indexes dropped to save Free Tier storage (2026-04-29). Duplicate `idx_consent_records_consent_id` removed (2026-04-21).
 
 ---
-
-### 10.5 Accepted Risk Advisories
-
-| Advisory | Table | Rationale |
-|----------|-------|-----------|
-| `rls_policy_always_true` INSERT | `bookings`, `booking_pets`, `booking_quality_metadata` | Public booking form requires anon INSERT |
-| `rls_policy_always_true` INSERT | `consent_records`, `legal_requests`, `privacy_requests` | Public site forms |
 
 ### 10.6 Required Manual Actions (Phase 0 — CF Dashboard Setup)
 
@@ -317,7 +344,7 @@ Duplicate removed: `idx_consent_records_consent_id` (superseded by the UNIQUE co
 1. Zero Trust → Access → Applications → Add Self-Hosted App
 2. Application domain: `admin.madagascarhotelags.com` with path `/*`
 3. Session Duration: **24 hours** (must match KV TTL)
-4. Identity providers: Google, GitHub, One-Time PIN only
+4. Identity providers: Google, GitHub, One-Time Pin only
 5. Note the **Application Audience (AUD)** tag → add to `wrangler.toml` as `CF_ACCESS_AUD`
 
 **Global Session Timeout:**
@@ -336,7 +363,34 @@ Duplicate removed: `idx_consent_records_consent_id` (superseded by the UNIQUE co
 
 ---
 
-## 11. Hardening Migrations Applied (2026-04-21)
+## 11. Defense-in-Depth Architecture
+
+The Supabase database is protected by **three independent layers**. Even if one layer is compromised or misconfigured, the other two prevent unauthorized PII access.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 1: TABLE-LEVEL GRANTS                             │
+│  anon has ZERO grants on any table in public schema      │
+│  Default privileges revoked for future tables             │
+│  → PostgREST returns 404 for anon on any table           │
+├─────────────────────────────────────────────────────────┤
+│  LAYER 2: ROW-LEVEL SECURITY (RLS)                       │
+│  All 19 policies restricted to service_role only          │
+│  No policy matches anon or authenticated                  │
+│  → Even with grants, RLS would deny all rows             │
+├─────────────────────────────────────────────────────────┤
+│  LAYER 3: FUNCTION ACLs                                  │
+│  EXECUTE revoked from anon, authenticated, PUBLIC         │
+│  All functions have pinned search_path                    │
+│  → RPC calls via PostgREST return permission denied       │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 12. Hardening Migrations Applied
+
+### Phase 1 (2026-04-21)
 
 | Migration | Description |
 |-----------|-------------|
@@ -345,5 +399,13 @@ Duplicate removed: `idx_consent_records_consent_id` (superseded by the UNIQUE co
 | `fix_rls_initplan_performance` | Wrapped `auth.role()` in subquery for 3 admin tables |
 | `fix_function_search_path` | Pinned search_path on `get_usage_metrics()` |
 | `add_fk_indexes_drop_duplicate` | 3 FK indexes added, 1 duplicate dropped |
+
+### Phase 2 (2026-04-29) — Deep Lockdown
+
+| Migration | Description |
+|-----------|-------------|
+| `lock_down_rls_policies` | Restricted 9 tables' RLS from PUBLIC→service_role; removed 6 vestigial anon INSERT policies; added 6 replacement service_role policies |
+| `revoke_anon_function_and_table_access` | Revoked EXECUTE on 4 functions (5 overloads) from anon/authenticated/PUBLIC; revoked ALL table grants from anon; locked default privileges |
+| `add_remaining_fk_indexes` | Added 6 covering indexes for remaining unindexed foreign keys |
 
 {% endraw %}

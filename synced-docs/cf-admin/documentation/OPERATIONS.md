@@ -2,7 +2,7 @@
 # Operations — Infrastructure, Bindings & Observability
 
 > **Status:** Production Active
-> **Last Updated:** 2026-04-27 (CF Zero Trust migration: new secrets added, anon key + Turnstile removed)
+> **Last Updated:** 2026-04-29 (v4.1: Deep RLS lockdown; anon key fully stripped from codebase & DB)
 > **Scope:** Cloudflare binding IDs, free tier limits, Sentry observability, build/deploy
 
 ---
@@ -168,17 +168,17 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | `SITE_URL` | ✅ Active | CSRF Origin validation + `__Host-` cookie prefix decision |
 | `UPSTASH_REDIS_REST_URL` | ✅ Active | Redis rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | ✅ Active | Redis auth token |
-| `CF_API_TOKEN` | ✅ Active | Cloudflare GraphQL analytics (read-only) |
-| `CF_API_TOKEN_ZT_WRITE` | 🔴 **NEW — needed** | Zero Trust: Edit — Layer 3 force-kick (DELETE active CF sessions via API) |
-| `CF_API_TOKEN_READ_LOGS` | 🔴 **NEW — needed** | Zero Trust: Read — CF Audit Log API polling (5-min cron for failed logins) |
-| `CF_ZONE_ID` | ✅ Active | CF zone for HTTP metrics |
-| `RESEND_API_KEY` | ✅ Active | Outgoing emails + dashboard metrics |
+| `CLOUDFLARE_API_TOKEN` | ✅ Active | Cloudflare GraphQL analytics (read-only) |
+| `CLOUDFLARE_ZONE_ID` | ✅ Active | CF zone ID for HTTP metrics |
+| `CF_API_TOKEN_READ_LOGS` | ✅ Active (2026-04-30) | Zero Trust Audit Read — CF Audit Log API polling (5-min cron for failed logins). Token name: `cf-admin: Zero Trust Audit Read` |
+| `CF_API_TOKEN_ZT_WRITE` | ✅ Active (2026-04-30) | Zero Trust Session Revoke — Layer 3 force-kick (DELETE active CF sessions via API). Token name: `cf-admin: Zero Trust Session Revoke` |
+| `RESEND_API_KEY` | ✅ Active (2026-04-30) | Outgoing security alert emails via Resend API |
 | `SENTRY_AUTH_TOKEN` | ✅ Active | Sentry error feed |
 | `IP_HASH_SECRET` | ✅ Active | Privacy-safe IP hashing in login forensics |
 | `CHATBOT_WORKER_URL` | ✅ Active | cf-chatbot Worker endpoint |
 | `CHATBOT_ADMIN_API_KEY` | ✅ Active | 64-char key securing cf-chatbot access |
 | `PUBLIC_SUPABASE_ANON_KEY` | ❌ **REMOVED** | GoTrue client-side auth removed — `wrangler secret delete PUBLIC_SUPABASE_ANON_KEY` |
-| `TURNSTILE_SECRET_KEY` | ❌ **REMOVED** | CAPTCHA on login form — form deleted — `wrangler secret delete TURNSTILE_SECRET_KEY` |
+| `TURNSTILE_SECRET_KEY` | ❌ **REMOVED** (2026-04-30) | CAPTCHA on login form — form deleted — deleted via `wrangler secret delete TURNSTILE_SECRET_KEY` |
 
 ### 5.2 Vars (wrangler.toml [vars])
 
@@ -186,11 +186,62 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 |-----|--------|---------|
 | `PUBLIC_SUPABASE_URL` | ✅ Active | Supabase project URL (DB queries only) |
 | `CF_ACCOUNT_ID` | ✅ Active | Cloudflare account ID (analytics + CF API calls) |
-| `CF_TEAM_NAME` | 🔴 **NEW — needed** | Zero Trust team name for CF logout URL (`https://{CF_TEAM_NAME}.cloudflareaccess.com/cdn-cgi/access/logout`) |
-| `CF_ACCESS_AUD` | 🔴 **NEW — needed** | CF Access Application Audience tag — required for RS256 JWT audience verification |
+| `CF_TEAM_NAME` | ✅ Active (`mascotas`) | Zero Trust team name — constructs JWKS URL + CF logout URL |
+| `CF_ACCESS_AUD` | ✅ Active | CF Access Application Audience tag — RS256 JWT audience verification |
+| `LOCAL_DEV_ADMIN_EMAIL` | ✅ Active | Dev bypass email for localhost (no CF Access headers in `npm run dev`) |
 | `PUBLIC_TURNSTILE_SITE_KEY` | ❌ **REMOVED** | No login form — remove from wrangler.toml vars |
 
-## 6. Build & Deploy Commands
+## 6. Cloudflare API Token Registry
+
+> **Last updated:** 2026-04-30. All tokens created under `Mascotasmadagascar@gmail.com's Account` (ID: `320d1ebab5143958d2acd481ea465f52`).
+> To view/rotate: Cloudflare Dashboard → My Profile → API Tokens.
+
+### Token: `cf-admin: Zero Trust Audit Read`
+**Worker secret:** `CF_API_TOKEN_READ_LOGS`
+**Used by:** `src/workers/scheduled-log-sync.ts` — 5-min cron polling of CF Access Audit Log API for failed logins
+
+| Permission | Scope |
+|------------|-------|
+| Access: Audit Logs | Read |
+| Access: SCIM Logs | Read |
+| Logs | Read |
+
+**API endpoint:** `GET /accounts/{id}/access/logs/access-requests?since={ts}&limit=100`
+
+---
+
+### Token: `cf-admin: Zero Trust Session Revoke`
+**Worker secret:** `CF_API_TOKEN_ZT_WRITE`
+**Used by:** `src/lib/auth/plac.ts` — Layer 3 Ghost Protection force-kick (`DELETE /accounts/{id}/access/users/{cfSubId}/active_sessions`)
+
+| Permission | Scope |
+|------------|-------|
+| Access: Organizations | Write + Read + Revoke |
+| Access: Organizations, Identity Providers, and Groups | Write + Read + Revoke |
+| Access: Apps and Policies | Write + Read + Revoke |
+| Access: Apps | Write + Read + Revoke |
+| Access: Users | Write + Read |
+| Access: Identity Providers | Write + Read |
+| Access: Service Tokens | Write + Read |
+| Access: Policies | Write + Read |
+| Access: Custom Pages | Write + Read |
+| Access: Device Posture | Write |
+| Access: Audit Logs | Read |
+| Access: Policy Test | Write + Read |
+| Zero Trust | Write |
+| Zero Trust: Seats | Write |
+| Zero Trust: PII | Read |
+| Zero Trust Resilience | Write |
+| Cloudflare Zero Trust Secure DNS Locations | Write |
+| Logs | Write + Read |
+| Account Analytics | Read |
+| Cloudflare CDS Compute Account | Write + Read |
+
+> **Note:** This token has broad Zero Trust permissions. It is scoped to the `Mascotasmadagascar@gmail.com` account only (not zone-level). The critical permission for Layer 3 force-kick is `Access: Organizations Revoke` — this allows deleting active CF Access sessions via API.
+
+---
+
+## 7. Build & Deploy Commands
 
 ```bash
 # cf-admin
@@ -199,17 +250,13 @@ npm run build         # Production build
 wrangler deploy       # Deploy to Cloudflare Workers
 
 # D1 migrations (run in order, --remote for production)
-wrangler d1 execute madagascar-db --file=migrations/0001_*.sql --remote
-
-# Pending CF Zero Trust migration
-wrangler d1 execute madagascar-db --file=migrations/0020_cf_zero_trust_schema.sql --remote
+# ✅ All migrations through 0020 applied as of 2026-04-30
+wrangler d1 execute madagascar-db --file=migrations/0021_*.sql --remote  # next migration
 
 # Secrets management
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-wrangler secret put CF_API_TOKEN_ZT_WRITE     # NEW — required for Layer 3 force-kick
-wrangler secret put CF_API_TOKEN_READ_LOGS    # NEW — required for cron audit log polling
-wrangler secret delete PUBLIC_SUPABASE_ANON_KEY  # REMOVED
-wrangler secret delete TURNSTILE_SECRET_KEY      # REMOVED
+wrangler secret put CF_API_TOKEN_READ_LOGS    # see §6 for token permissions
+wrangler secret put CF_API_TOKEN_ZT_WRITE     # see §6 for token permissions
 wrangler secret list
 
 # Verify bindings are live
@@ -221,7 +268,7 @@ For full secrets + vars reference, see [SECURITY.md](./SECURITY.md) §9.
 
 ---
 
-## 6. Monthly Cost Reference
+## 8. Monthly Cost Reference
 
 | Service | Cost |
 |---------|------|

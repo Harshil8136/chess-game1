@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-27 (v4.0: Cloudflare Zero Trust auth migration — GoTrue fully removed)
+> **Last Updated:** 2026-04-29 (v4.1: Deep RLS & ACL lockdown — anon role fully stripped from DB)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
@@ -48,6 +48,8 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 - ✅ Run 24/7 at **$0/month** total infrastructure cost
 - ✅ Deliver premium, animated, dark-themed admin experience
 - ✅ Meet professional security, accessibility, and performance standards
+- ✅ Enforce **3-layer defense-in-depth** on Supabase: zero table grants + zero RLS policies + zero function ACLs for `anon`
+- ✅ **Fail-secure** dev mode detection — missing `SITE_URL` defaults to production mode, never bypasses auth
 
 **Every architectural decision optimizes for: maximum security + maximum quality + exactly ZERO ongoing cost.**
 
@@ -206,7 +208,15 @@ src/
 
 ## 9. SECURITY RULES
 
-→ See [SECURITY.md](./documentation/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, and Ghost Protection.
+### Security Invariants (v4.1)
+
+1. **Supabase `anon` role has ZERO access** — no table grants, no RLS policies, no function EXECUTE privileges.
+2. **Default privileges locked** — `ALTER DEFAULT PRIVILEGES` prevents future tables from auto-granting to `anon`.
+3. **All 3 apps use `service_role` or direct PG** — `cf-admin` and `cf-chatbot` use `SUPABASE_SERVICE_ROLE_KEY`; `cf-astro` uses `DATABASE_URL` via Drizzle.
+4. **Fail-secure dev detection** — `isLocalDev()` returns `false` unless `SITE_URL` explicitly contains a local dev domain.
+5. **6 functions hardened** — EXECUTE revoked from `anon`, `authenticated`, and `PUBLIC` on all public schema functions; `search_path` pinned.
+
+→ See [SECURITY.md](./documentation/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, defense-in-depth, and Ghost Protection.
 
 ---
 
@@ -235,8 +245,9 @@ cf-admin securely mutates content for cf-astro via a 2-tier KV injection pipelin
 npm run dev              # Local dev (wrangler dev)
 npm run cf:dev           # Full CF runtime with R2 simulation (required for image uploads)
 
-# Type Check
+# Type & Dependency Check
 astro check              # TypeScript validation
+npx knip                 # Static analysis (must be 100% clean - no unused exports/files)
 
 # Build & Deploy
 astro build && wrangler deploy   # Build + deploy to Cloudflare

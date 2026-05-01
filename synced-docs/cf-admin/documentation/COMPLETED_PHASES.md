@@ -573,4 +573,104 @@ npm run build    →  ✓ Complete! — 0 errors
 
 All 8 phases complete. The codebase went from ~27 `any` types in core libs, 1,436-line monoliths, ~200 inline style objects, hardcoded hex badge values, and missing ARIA attributes — to a fully typed, componentized, CSS-variable-driven, accessible admin portal.
 
+---
+
+## Phase 9 — Security Lockdown & Codebase Pruning (v4.1) ✅
+
+**Objective:** Conduct a comprehensive defense-in-depth lockdown and shrink the codebase payload ("Lean Edge" budget).
+
+### Phase 9A: Defense-in-Depth Lockdown
+- **0 Anon Privileges:** Verified and enforced that the Supabase `anon` role has exactly 0 table grants, 0 RLS policies, and 0 function EXECUTE permissions.
+- **Fail-Secure Local Dev:** Hardened `isLocalDev()` in `src/middleware.ts`. If `SITE_URL` is omitted, the application falls back to production behavior (CF Zero Trust enforced) instead of bypassing authentication.
+
+### Phase 9B: Vite Optimization & Dependency Pruning
+- **Vite Warning Resolved:** Refactored dynamic `import()` calls for `createAdminClient` into static imports in `src/lib/auth/plac.ts` and `src/pages/api/users/force-kick.ts`, eliminating all Vite build-time warnings during SSR generation.
+- **Unused Dependencies Removed:** Removed 6 obsolete packages (`@sentry/cloudflare`, `uplot`, etc.) to shrink the `node_modules` footprint. `zod` was retained for shared schemas.
+
+### Phase 9C: Dead Code & Export Elimination (100% Clean `knip`)
+- **Deleted 18+ Legacy Components:** Pruned unused components (e.g., `PageChipGrid`, `RoleAccessCard`, obsolete settings modules, legacy `auth.css`) leftover from the Next.js migration and prior refactoring phases.
+- **Unused Export Removal:** Stripped `export` keywords from internal schemas, unused interfaces, and internal utility functions (`src/lib/shared-schema.ts`, `src/lib/chatbot-proxy.ts`, `src/lib/auth/session.ts`) to satisfy static analysis.
+- **Verification:** Ran `npx knip` repeatedly until achieving a 100% clean report.
+
+**Final Verification:**
+```
+npx knip         →  No unused files, dependencies, or exports.
+npx astro check  →  0 errors, 0 warnings.
+npm run build    →  ✓ Complete! — production ready.
+```
+
+---
+
+## Phase 10 — CF Zero Trust ↔ Supabase Visibility Suite ✅
+
+**Objective:** Surface CF Zero Trust data inside the User Registry — connection status, live sessions, unauthorized probe attempts, and per-user login forensics. The CF Access policy is OTP-open (any email can authenticate); the Supabase whitelist is the only authorization gate. This phase added visibility into the gap between who has CF-authenticated and who is whitelisted.
+
+### Phase 10A: CF Status Column (cfLinked / CF Pending)
+
+**Files modified:**
+- `src/pages/api/users/index.ts` — Added `cf_sub_id` to SELECT; derived `cfLinked: boolean` server-side; stripped UUID from response
+- `src/components/admin/users/types.ts` — Added `cfLinked?: boolean` to `AuthorizedUser`
+- `src/components/admin/users/UserTableRow.tsx` — Stacked indicator in Status cell: active/suspended + CF Linked (sky) / CF Pending (amber)
+- `src/components/admin/users/UserCardStack.tsx` — CF badge in mobile card badge row
+
+**Constraint:** `cf_sub_id` UUID never sent to client. CF Pending = user invited but never logged in; CF Linked = cf_sub_id populated, Layer 3 force-kick available.
+
+### Phase 10B: Live KV Session Status
+
+**Files created:**
+- `src/pages/api/users/[id]/session-status.ts` — Owner+ auth; lists `user-session:{userId}:*` KV reverse-index; returns count + session metadata (no session IDs)
+
+**Files modified:**
+- `src/components/admin/users/ExpandedRow.tsx` — "Check Active Sessions" button (sky) in Command Center; shows session count + login method + age
+
+### Phase 10C: Access Probe Feed
+
+**Files created:**
+- `src/pages/api/users/probes.ts` — Owner+ auth; D1 query groups unauthorized login attempts by email; returns email/count/last attempt/method/bot score/location
+- `src/components/admin/users/AccessProbePanel.tsx` — Collapsible panel below User Registry; shows probe table; "+ Whitelist" button dispatches `modal:open-invite` with pre-filled email
+
+**Files modified:**
+- `src/components/admin/users/InviteUserModal.tsx` — `open` handler accepts optional `CustomEvent.detail.email` pre-fill
+- `src/pages/dashboard/users/index.astro` — Added `AccessProbePanel` (Owner+, `client:idle`)
+
+**Migration created:** `migrations/0022_login_logs_probe_index.sql` (D1 partial index on `is_authorized_email = 0`)
+
+### Phase 10D: CF Access Audit Cross-Reference
+
+**Files created:**
+- `src/pages/api/users/cf-access-audit.ts` — Owner+ auth; parallel fetch: CF Access users list API + Supabase whitelist; cross-references into three groups (linked / awaiting login / CF orphans)
+- `src/components/admin/users/CfAuditDrawer.tsx` — `<dialog>` modal; 3-tab interface (Linked / Awaiting Login / CF Orphans); auto-selects Orphans tab if orphans > 0; dispatched by `cf-audit:open` CustomEvent
+
+**Files modified:**
+- `src/components/admin/users/RegistryToolbar.tsx` — Added `activeRole` prop; "CF Audit" button (violet) for Owner+ dispatches `cf-audit:open`
+- `src/components/admin/users/UsersRegistry.tsx` — Passes `activeRole` down to `RegistryToolbar`
+- `src/pages/dashboard/users/index.astro` — Added `CfAuditDrawer` (Owner+, `client:load`)
+
+**Migration created:** `migrations/supabase_0002_cf_status_index.sql` (Supabase partial index on `cf_sub_id IS NOT NULL`)
+
+### Phase 10E: Login Intelligence Panel
+
+**Files created:**
+- `src/pages/api/users/[id]/login-history.ts` — Owner+ auth; ghost protection; fetches last 15 login events from `admin_login_logs` by user email + lifetime summary counts; masks IPs for non-dev actors
+
+**Files modified:**
+- `src/components/admin/users/ExpandedRow.tsx`:
+  - Added `last_login_at` row in Identity Profile column (between Created and CF Identity)
+  - Added `LoginHistoryEntry` / `LoginHistoryResponse` interfaces
+  - Added `formatRelativeDate`, `MethodBadge`, `BotScoreBadge` helpers
+  - Added `loginHistory` state + `handleLoadLoginHistory` callback
+  - Added full-width "Login Intelligence" section below the 3-column grid (on-demand, Owner+ only)
+
+**Data shown in Login Intelligence:**
+- Outcome (SUCCESS emerald / FAILED|BLOCKED red), Method badge (OTP/Google/GitHub), Location (geo + CF colo), Bot score (color-coded: emerald < 20, amber 20–49, red ≥ 50), CF Ray ID (truncated, full in tooltip), IP (masked), Date (relative)
+- Summary: total logins, success count, failure count
+- Header shows "Last: Xh ago" from `user.last_login_at` without requiring a fetch
+
+**Final Verification:**
+```
+npx astro check  →  0 errors, 0 warnings (181 files)
+```
+
+Both D1 and Supabase migrations applied via MCP (no deploy required for index-only operations).
+
 {% endraw %}

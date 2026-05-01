@@ -13,6 +13,7 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 - Add missing error boundaries around independent data-fetching islands
 - Improve CSS architecture (CSS variables over hard-coded colors)
 - Fix accessibility gaps (interactive table rows, icon-only buttons, ARIA)
+- Phase 9: Security Lockdown & Codebase Pruning (v4.1) — strict 0 anon privileges, dead code elimination, and 100% clean `knip` static analysis.
 
 ## Stack (do not change)
 - **Framework:** Astro 6 SSR + Cloudflare Workers adapter
@@ -68,6 +69,8 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 | 8A | Fix accessibility on clickable table rows | ✅ DONE |
 | 8B | Add aria-label to icon-only buttons | ✅ DONE |
 | 8C | (Subsumed into 8A/8B — ARIA for tabs/headers covered there) | ✅ DONE |
+| 9A | Security Lockdown (3-layer defense-in-depth, 0 anon privileges, fail-secure SITE_URL) | ✅ DONE |
+| 9B | Codebase Pruning (Removed 18+ dead components, Vite dynamic import fix, 100% clean `npx knip` report) | ✅ DONE |
 
 See `COMPLETED_PHASES.md` for full implementation detail on all phases.
 See `PENDING_PHASES.md` — all phases complete; file now contains a completion notice.

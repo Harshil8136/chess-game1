@@ -3,7 +3,7 @@
 
 > **Status:** Production Active (v4.0 — CF Zero Trust Auth)
 > **Stack:** Astro 6 SSR + Cloudflare Workers (Free) + Preact Islands + D1 + KV + R2
-> **Last Updated:** 2026-04-27 (GoTrue removed; CF Zero Trust replaces all Supabase auth)
+> **Last Updated:** 2026-04-29 (v4.1: Deep RLS & ACL lockdown; fail-secure dev mode)
 
 ---
 
@@ -194,7 +194,7 @@ src/
     ├── cms.ts                         ← revalidateAstro(), locale expansion (CmsBlock imported from shared-schema.ts)
     ├── formatters.ts                  ← formatDateTime(), formatDateShort() — shared date formatting
     ├── shared-schema.ts               ← CmsBlock interface (canonical), CmsContentType
-    └── supabase.ts                    ← Supabase client factory (anon + admin)
+    └── supabase.ts                    ← Supabase client factory (service_role only)
 ```
 
 ### The "Baseplate" Principle
