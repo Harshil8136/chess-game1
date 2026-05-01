@@ -3,7 +3,7 @@
 
 ## Current Status Summary
 
-As of **2026-04-13**, here is the phase completion status:
+As of **2026-04-30**, here is the phase completion status:
 
 | Phase | Description | Status |
 |---|---|---|
@@ -11,17 +11,20 @@ As of **2026-04-13**, here is the phase completion status:
 | Phase 2 | Design system & global styles | ✅ Complete |
 | Phase 3 | i18n setup (es/en locale routing + translation files) | ✅ Complete |
 | Phase 4 | Layout components (Header, Navbar, Footer, MobileMenu) | ✅ Complete — Header refactored to slim h-14 with glassmorphism scroll (2026-03-28) |
-| Phase 5 | Marketing homepage (all sections) | ✅ Complete — Services rebuilt with AutoTabs, Contact rebuilt with Formspree + Maps (2026-03-28) |
+| Phase 5 | Marketing homepage (all sections) | ✅ Complete — Services rebuilt with AutoTabs, Contact rebuilt with Resend queue + Maps |
 | Phase 6 | D1 database schema + migration scripts | ✅ Complete |
-| Phase 7 | R2 bucket for images + image serving utilities | ⏳ Planned |
+| Phase 7 | R2 bucket for images + image serving utilities | ✅ Complete — CDN migration to `cdn.madagascarhotelags.com` (2026-04-30) |
 | Phase 8 | Booking system (wizard UI + API route + D1 logging) | ✅ Complete |
-| Phase 9 | Email integration (Resend via Cloudflare Queues + cf-email-consumer) | ✅ Complete |
-| Phase 10 | Privacy & compliance (cookie banner, ARCO, consent) | 🔨 API done, UI pending |
-| Phase 11 | SEO/AEO/GEO/SXO/AIO (schema graph, sitemaps, robots, meta, llms.txt) | ✅ Massively Upgraded 2026-04-13 |
+| Phase 9 | Email integration (Resend via Cloudflare Queues + cf-email-consumer) | ✅ Complete — `cf-email-consumer` deployed (April 2026) |
+| Phase 10 | Privacy & compliance (cookie banner, ARCO, consent, RLS) | 🔨 API done, UI + RLS in progress (2026-04-30) |
+| Phase 11 | SEO/AEO/GEO/SXO/AIO (schema graph, sitemaps, robots, meta, llms.txt) | ✅ Massively Upgraded 2026-04-13 + IndexNow push indexing 2026-04-30 |
 | Phase 12 | PWA (manifest + service worker + shortcuts + screenshots) | ✅ Complete |
-| Phase 13 | Analytics proxy (PostHog reverse proxy) | ✅ Complete |
+| Phase 13 | Analytics proxy (PostHog reverse proxy + consent-gated) | ✅ Complete — PostHog live, consent-gated (LFPDPPP compliant) |
 | Phase 14 | Security headers (_headers file) | ✅ Complete |
 | Phase 15 | Verification & testing | ⏳ Planned |
+| Phase 16 | Cron automation (IndexNow daily + analytics digest) | 🔨 In progress (2026-04-30) |
+| Phase 17 | Analytics Engine expansion (full funnel tracking) | 🔨 In progress (2026-04-30) |
+| Phase 18 | Workers AI (FAQ generation + blog drafts) | 🔨 In progress (2026-04-30) |
 
 ---
 
@@ -72,27 +75,17 @@ See [13-SEO-AND-SEARCH-OPTIMIZATION.md](./13-SEO-AND-SEARCH-OPTIMIZATION.md) for
 
 All required Cloudflare resources (D1, R2, KV) have been created in the `Mascotasmadagascar@gmail.com` account. `wrangler.toml` is up to date with real IDs. Initial D1 migration was successful and production secrets are set.
 
-#### 5. PostHog Client-Side Initialization
+#### 5. ✅ PostHog Client-Side Initialization — COMPLETE
 
-**What needs to be done**:
-- Add PostHog `posthog-js` SDK to the client
-- Initialize with project API key pointing to `/api/ingest` (reverse proxy)
-- Track page views, booking funnel events, and CTA clicks
-- Pass `posthogSessionId` to booking API for attribution
+PostHog `posthog-js` initialized via `src/scripts/analytics-loader.ts`. Reverse-proxied via `/api/ingest`. Consent-gated (LFPDPPP compliant) — only fires if user accepts cookies. Booking funnel tracking active.
 
-#### 6. Sentry Client-Side Error Tracking
+#### 6. ✅ Sentry Client-Side Error Tracking — COMPLETE
 
-**What needs to be done**:
-- Add `@sentry/browser` SDK
-- Initialize in `BaseLayout.astro` with DSN from env
-- Configure sampling rate for production
+`@sentry/browser` initialized in `BaseLayout.astro` via `requestIdleCallback` (zero LCP impact). 10% trace sampling. `@sentry/cloudflare` in `functions/_middleware.ts` for edge-level distributed tracing.
 
-#### 7. Cloudflare Turnstile (Bot Protection)
+#### 7. ✅ Cloudflare Turnstile (Bot Protection) — COMPLETE
 
-**What needs to be done**:
-- Add Turnstile widget to booking form
-- Validate Turnstile token server-side in `/api/booking`
-- Cloudflare Turnstile is free and unlimited
+Turnstile on booking form (Invisible mode) and ARCO form (Managed mode). Server-side token verification in `/api/booking` and `/api/arco/submit`.
 
 ---
 

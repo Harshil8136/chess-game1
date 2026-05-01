@@ -52,13 +52,14 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Database** | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432) |
 | **Cache** | Cloudflare KV + Upstash Redis |
 | **Storage** | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated) |
-| **Email** | Resend HTTP API (via `resend` SDK or `fetch()`) |
+| **Email** | Resend HTTP API (direct `fetch()` — consumer worker only) |
 | **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges) |
-| **Analytics** | PostHog (reverse-proxied) + Cloudflare Web Analytics |
+| **Analytics** | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine |
 | **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing) |
 | **Logging** | BetterStack (`@logtail/edge`, server-side structured logging) |
 | **i18n** | Astro built-in (es/en with prefix routing) |
-| **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
+| **CSS** | Tailwind CSS **v3** via `@astrojs/tailwind` (v4 blocked — see §6.3) |
+| **AI** | Cloudflare Workers AI (10,000 neurons/day free — FAQ generation, blog drafts) |
 
 ---
 
@@ -130,6 +131,8 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | Connection pooling | Global connection pools to PostgreSQL/MySQL |
 | Cost | **FREE** |
 | Minimum connections | 5 per configuration |
+
+> ⚠️ **Status in cf-astro: Provisioned but disabled.** Hyperdrive was removed from `wrangler.toml` (April 2026) because the customer base is in Mexico and Supabase is in us-east-1 — the geographic proximity benefit was negligible and added deployment complexity. The project uses a direct `postgres.js` connection via `DATABASE_URL` instead. Re-evaluate if Supabase moves to a Latin America region.
 
 ### 2.6 Pages (Static Hosting)
 
@@ -319,7 +322,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 │  Astro Pages (SSG) ──→ CDN (zero compute)                   │
 │                                                              │
 │  Workers (SSR/API) ──→ D1 (fast edge queries)               │
-│                    ──→ Hyperdrive ──→ Supabase PG (complex)  │
+│                    ──→ postgres.js direct ──→ Supabase PG    │
 │                    ──→ KV (edge cache)                       │
 │                    ──→ R2 (images/files)                     │
 │                    ──→ Upstash Redis (rate limit/sessions)   │
@@ -466,23 +469,26 @@ Astro supports **multiple UI frameworks as islands** — interactive components 
 | `client:media` | When media query matches | Mobile-only components |
 | `client:only="preact"` | Client-only (no SSR) | WebSocket, localStorage-dependent |
 
-### 6.3 CSS: Tailwind CSS v4
+### 6.3 CSS: Tailwind CSS v3
 
-- Tailwind CSS v4 runs via `@tailwindcss/vite` as a Vite plugin inside `astro.config.ts`
-- Uses `@theme extend` in `src/styles/global.css` for design tokens
-- When styling scoped Astro components in `<style>`, MUST import theme variables via `@reference "../../styles/global.css";`
+- **Tailwind CSS v3** via `@astrojs/tailwind` integration in `astro.config.ts`
+- Config: `tailwind.config.mjs` — maps CSS variables to utility classes
+- Uses `@layer base { :root { ... } }` in `src/styles/global.css` for design tokens
+- When styling scoped Astro components in `<style>`, import variables via `@import "../../styles/global.css";`
+
+> ⚠️ **Why NOT v4:** Tailwind CSS v4 + `@tailwindcss/vite` was trialed and caused **silent SSR build crashes** in the Astro + Cloudflare adapter pipeline (see Issue #4 in `Documentation/10-TROUBLESHOOTING-LOG.md`). The `@tailwindcss/vite` plugin intercepts CSS in a way that conflicts with Astro's internal Vite SSR bundling and the Workers bundler. **Do not attempt to upgrade to v4** until official Astro/Cloudflare adapter compatibility is confirmed.
 
 ### 6.4 Validation: Zod v3 (NOT v4)
 
 - Zod v4 conflicts with Astro's internal Zod v3 dependency
 - Pin to `^3.25.0` in package.json
 
-### 6.5 Email: Native Fetch + Eta Templates via Queue (NOT React-Email/Resend SDK)
+### 6.5 Email: Native Fetch via Queue (NOT React-Email/Resend SDK)
 
 - Cloudflare Workers cannot open raw TCP/SMTP sockets.
 - The `resend` Node.js SDK and `@react-email/components` packages are **FORBIDDEN** due to massive bundle bloat.
 - We use direct `fetch()` calls to the Resend REST API (`https://api.resend.com/emails`).
-- For templates, we use **Eta** (`eta` package, ~2.5KB) for extremely lightweight, fast HTML generation natively on the Edge.
+- For templates, the current `cf-email-consumer` worker uses **direct HTML string builders** (no external template engine). **Eta** (`eta` package, ~2.5KB) is on the approved whitelist if template complexity grows, but is not currently installed.
 - Official documentation for Resend API: https://resend.com/docs/api-reference/emails/send-email
 - Store `RESEND_API_KEY` in `.dev.vars` (local) and `wrangler secret put RESEND_API_KEY` (production)
 - Free tier: **3,000 emails/month**, **100 emails/day**
@@ -513,13 +519,16 @@ import { env } from "cloudflare:workers";
 env.DB             // Cloudflare D1 (non-PII only)
 env.IMAGES         // Cloudflare R2
 env.ARCO_DOCS      // Cloudflare R2 (ARCO identity docs)
-env.KV             // Cloudflare KV
+env.ISR_CACHE      // Cloudflare KV (ISR page cache + CMS blocks)
+env.SESSION        // Cloudflare KV (Astro adapter sessions — auto-managed)
 env.EMAIL_QUEUE    // Cloudflare Queue (producer — pushes messages)
+env.AI             // Workers AI (10,000 neurons/day free)
+env.ANALYTICS      // Analytics Engine (dataset: madagascar_analytics)
 ```
 
-Supabase (PG):  Drizzle ORM + `pg` driver via Hyperdrive binding
+Supabase (PG):  Drizzle ORM + `postgres.js` driver — **direct connection via `DATABASE_URL`** (no Hyperdrive)
 Upstash Redis:  `@upstash/redis` with REST API (no TCP needed)
-Resend Email:   Direct `fetch` API + Eta Templates (consumer worker only)
+Resend Email:   Direct `fetch` API + HTML string builders (consumer worker only)
 
 > ⚠️ **Email is NOT called directly from API routes.** API routes push to `env.EMAIL_QUEUE`. The `cf-astro-email-consumer` worker (in `queue-worker/`) reads from the queue and calls Resend. See **Section 6.13**.
 
@@ -589,12 +598,14 @@ The following frameworks have official or community Cloudflare deployment suppor
 
 ### 6.11 ORM: Drizzle ORM (Required for Database Setups)
 
-- **Standard ORM**: All database interactions (whether D1 or Supabase PostgreSQL via Hyperdrive) **must** use **Drizzle ORM**.
+- **Standard ORM**: All database interactions **must** use **Drizzle ORM**.
 - **Why Drizzle over Prisma/Others**:
   - Extremely lightweight and edge-compatible (perfect for Cloudflare Workers/Pages).
   - No Rust engines or heavy binaries; runs natively on V8 isolates.
   - SQL-like syntax gives full control over performance-critical edge queries.
   - Excellent TypeScript support, schema management, and type safety.
+- **D1 (SQLite)**: Uses Drizzle with the `@drizzle-orm/d1` driver. Migrations via `drizzle-kit` → applied with `wrangler d1 execute`.
+- **Supabase PostgreSQL**: Uses Drizzle with `postgres.js` driver and a **direct connection string** (`DATABASE_URL` secret). No Hyperdrive — direct `postgres.js` connection works reliably for the Mexico → us-east-1 round trip.
 - **D1 Migrations**: Use `drizzle-kit` to generate raw SQL migrations, which are then applied using `wrangler d1 execute`.
 
 ### 6.13 Cloudflare Queues & Webhook Email Architecture (Active)
@@ -876,12 +887,15 @@ astro build && wrangler deploy
 # Deploy (Email Queue Consumer Worker — separate deployment)
 cd queue-worker && npx wrangler deploy
 
+# Deploy (Cron Worker — daily IndexNow + weekly analytics digest)
+cd cron-worker && npx wrangler deploy
+
 # D1 Migrations
 wrangler d1 execute madagascar-db --local --file=./db/migrations/XXXX.sql
 wrangler d1 execute madagascar-db --remote --file=./db/migrations/XXXX.sql
 ```
 
-> ⚠️ **Two deployments required:** The main Astro site and the `queue-worker` are deployed **independently**. If you change email templates or add new email types, you MUST also redeploy `queue-worker`. Use `npx wrangler tail cf-astro-email-consumer` to monitor queue processing in real-time.
+> ⚠️ **Three deployments required:** The main Astro site, `queue-worker` (email consumer), and `cron-worker` are deployed **independently**. If you change email templates or add new email types, you MUST also redeploy `queue-worker`. If you change the IndexNow key or cron schedule, redeploy `cron-worker`. Use `npx wrangler tail cf-astro-email-consumer` and `npx wrangler tail cf-astro-cron` to monitor their logs in real-time.
 
 ### 11.1 ISR Cache Safety Checklist (MANDATORY)
 
@@ -892,8 +906,10 @@ Before EVERY deployment, verify:
 1. **`astro.config.ts`** contains `__BUILD_ID__: JSON.stringify(Date.now().toString(36))` in `vite.define` — this ensures each build auto-scopes ISR cache keys.
 2. **`src/middleware.ts`** uses `__BUILD_ID__` (NOT `env.CF_PAGES_COMMIT_SHA`) for the `deployHash` variable.
 3. **`src/pages/api/revalidate.ts`** uses the same `__BUILD_ID__` pattern for cache key construction.
-4. **`env.d.ts`** declares `declare const __BUILD_ID__: string;`.
+4. **`env.d.ts`** declares `declare const __BUILD_ID__: string;` and `declare const __LAST_UPDATED__: string;`.
 5. After `astro build`, verify the compiled middleware contains a **hardcoded string** (e.g., `deployHash = "mnwdkora"`) — NOT a runtime variable lookup.
+6. **IndexNow key file** is accessible: `GET https://madagascarhotelags.com/a7f3b2e1d8c4f5a0b9e2d1c8f3a6b4e7.txt` must return the key string.
+7. **Cron worker** deployed: `cd cron-worker && npx wrangler deploy` (after any change to schedule or IndexNow key).
 
 **Red flags that indicate regression:**
 - Any reference to `CF_PAGES_COMMIT_SHA` in `src/` → ❌ This is a Pages-only var, always undefined in Workers.
@@ -901,8 +917,9 @@ Before EVERY deployment, verify:
 - The string `'v1'` as a fallback for deploy hash → ❌ This was the exact bug that caused the outage.
 
 ### Environment
-- `wrangler.toml` — All bindings (D1, R2, KV, Hyperdrive, Queues producer)
+- `wrangler.toml` — All bindings (D1, R2, KV, Queues producer, Analytics Engine, Workers AI)
 - `queue-worker/wrangler.toml` — Consumer worker bindings (Queue consumer)
+- `cron-worker/wrangler.toml` — Cron worker bindings (D1, ISR_CACHE KV)
 - `.dev.vars` — Local secrets (gitignored): `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENDER_EMAIL`, Supabase keys
 - `wrangler secret put <KEY>` — Production secrets (main project)
 - `cd queue-worker && wrangler secret put RESEND_API_KEY` — Consumer worker secrets
