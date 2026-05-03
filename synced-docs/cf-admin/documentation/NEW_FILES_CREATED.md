@@ -115,7 +115,7 @@ All net-new files introduced during this refactoring session.
 - `getRoleBgGrad(role: number): string` — gradient background for a role avatar
 - `getRoleBorderColor(role: number): string` — CSS border color string
 - `getRelativeTime(ts: string): string` — "2 hours ago" style relative timestamp
-- `getInitials(name: string): string` — first two initials from a full name
+- `getInitials(name: string, email: string): string` — first two initials from display name, falls back to email prefix
 
 ---
 

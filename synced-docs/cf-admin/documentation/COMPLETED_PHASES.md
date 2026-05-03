@@ -673,4 +673,36 @@ npx astro check  →  0 errors, 0 warnings (181 files)
 
 Both D1 and Supabase migrations applied via MCP (no deploy required for index-only operations).
 
+---
+
+## Phase 4 (Post-Refactor Audit) — Code Quality & Documentation ✅
+
+**Completed:** 2026-05-02
+
+### Item 2 — ActivityCenter Fetch Timeouts ✅
+Added 5-second `AbortController` timeout to all 5 fetch calls in `ActivityCenter.tsx`. Prevents the logs panel from hanging indefinitely when a tab API is slow or the Worker is cold-starting.
+
+### Item 3 — Breadcrumb Accessibility Fix ✅
+Changed the current-page breadcrumb from an `<a>` element to a `<span aria-current="page">` in `AdminLayout.astro`. An anchor pointing to the current page is an accessibility anti-pattern.
+
+### Item 4 — Silent Catches in User Management ✅
+**Files:** `ExpandedRow.tsx`, `UsersTable.tsx`
+- `handleCheckSessions`, `handleLoadLoginHistory`: now set visible error state instead of swallowing exceptions
+- `actionError` signal now displayed in `ExpandedRow` action panel
+- `handleRoleChange`, `handleSuspend`, `handleDelete` in `UsersTable`: now surface error messages to UI
+
+### Item 5 — cfBotScore Gate ✅ (⛔ N/A)
+D1 query confirmed all 23 production `admin_login_logs` rows have `cf_bot_score = null`. Bot Management (`request.cf.botManagementScore`) is not available on the Cloudflare free Workers plan. Gate implementation blocked. Column retained in schema for future paid-plan use.
+
+### Item 8 — DashboardController Props Cleanup ✅
+Removed the SSR D1 query from `src/pages/dashboard/index.astro` and all associated props from `DashboardController.tsx`. The controller is now props-free and fetches all data client-side. Eliminates unnecessary server-side D1 query on every dashboard load.
+
+### Item 9 — Pricing Magic Numbers → Named Constants ✅
+Replaced hardcoded `286` and `200` in `src/pages/api/content/services.ts` with named constants `DEFAULT_PRICE_DOGS_CATS = 286` and `DEFAULT_PRICE_DAYCARE = 200`.
+
+**Final Verification:**
+```
+npx tsc --noEmit  →  0 errors
+```
+
 {% endraw %}

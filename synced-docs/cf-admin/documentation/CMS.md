@@ -1,8 +1,8 @@
 {% raw %}
 # CMS, Image & Bookings Management
 
-> **Version:** 4.2 (Full KV Injection Parity — Hero, Reviews, Services)
-> **Last Updated:** 2026-04-14
+> **Version:** 4.5
+> **Last Updated:** 2026-05-02 (BookingList.tsx replaced by BookingDashboard.tsx + BookingSlideDrawer.tsx)
 > **Projects:** `cf-admin` (writes), `cf-astro` (reads)
 
 ---
@@ -33,7 +33,7 @@ All four CMS sections use the full 2-tier KV-first resolution strategy:
 
 ## 2. Booking Management
 
-**Component:** `src/components/admin/BookingList.tsx`
+**Components:** `src/components/admin/bookings/BookingDashboard.tsx` (list + search) + `BookingSlideDrawer.tsx` (detail orchestrator)
 **API:** `src/pages/api/bookings/index.ts`
 **Data Source:** Supabase PostgreSQL (`bookings` + `booking_pets` tables)
 **Access:** Admin+ (admin, super_admin, owner, dev)
@@ -41,8 +41,10 @@ All four CMS sections use the full 2-tier KV-first resolution strategy:
 **Features:**
 - **Live KPIs** on the main dashboard — Total Bookings, Total Pets
 - **Server-side pagination & search** — filters pet names and customer info before transit
-- **Expandable detail rows** — medical, dietary, behavioral notes inline without navigation
+- **Slide drawer** — `BookingSlideDrawer.tsx` orchestrates 5 section components (`BookingCustomerSection`, `BookingPetSection`, `BookingOperationsSection`, `BookingAuditSection`, `BookingDangerZoneSection`)
 - **Atomic hard wipes** — DEV-only. Schema uses `ON DELETE CASCADE` on `email_audit_logs.booking_id`, so all trace data is destroyed atomically
+
+> **Note:** `BookingList.tsx` was deleted during Phase 3 refactoring and replaced by the `BookingDashboard.tsx` + `BookingSlideDrawer.tsx` architecture.
 
 ---
 

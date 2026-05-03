@@ -4,7 +4,7 @@
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-04-27 (v4.0: GoTrue fully removed; CF Zero Trust replaces all Supabase auth flows)
+> **Last Updated:** 2026-05-02 (v4.5: documentation audit pass; content verified against live codebase)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 

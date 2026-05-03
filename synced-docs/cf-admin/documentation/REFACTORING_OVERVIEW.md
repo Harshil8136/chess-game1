@@ -72,6 +72,13 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 | 9A | Security Lockdown (3-layer defense-in-depth, 0 anon privileges, fail-secure SITE_URL) | ✅ DONE |
 | 9B | Codebase Pruning (Removed 18+ dead components, Vite dynamic import fix, 100% clean `npx knip` report) | ✅ DONE |
 
+| P4-2 | ActivityCenter fetch timeouts (5s AbortController on all 5 fetches) | ✅ DONE |
+| P4-3 | Breadcrumb `<a>` → `<span aria-current="page">` (a11y fix) | ✅ DONE |
+| P4-4 | Silent catches in ExpandedRow.tsx + UsersTable.tsx surfaced to UI | ✅ DONE |
+| P4-5 | cfBotScore gate | ⛔ N/A (free plan — all 23 rows null) |
+| P4-8 | DashboardController props removed; index.astro SSR query removed | ✅ DONE |
+| P4-9 | Pricing magic numbers → named constants in services.ts | ✅ DONE |
+
 See `COMPLETED_PHASES.md` for full implementation detail on all phases.
 See `PENDING_PHASES.md` — all phases complete; file now contains a completion notice.
 

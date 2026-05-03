@@ -1,7 +1,7 @@
 {% raw %}
-# Dashboard Overhaul — Real-Data Command Center
+# Dashboard — Real-Data Command Center
 
-**Last updated:** 2026-04-12
+**Last updated:** 2026-05-02 (v4.5: DashboardController is now props-free; uplot reference corrected)
 **Scope:** `cf-admin` project — Dashboard page and all supporting analytics infrastructure
 
 ---
@@ -146,7 +146,7 @@ When unconfigured → progress bar shows striped pattern, value area shows "Toke
 - No known statuses → "Awaiting Data"
 
 ### Dashboard Controller
-The main orchestrator Preact island receives initial SSR data (active users count, recent audit activity, user RBAC level). Global welcome messages have been purged for a true "Command Center" aesthetic.
+The main orchestrator Preact island (`DashboardController.tsx`) is **props-free** — it receives no SSR data from `index.astro`. All data (analytics, audit log, user info) is fetched client-side after mount via the analytics API. Global welcome messages have been purged for a true "Command Center" aesthetic.
 
 **Responsive chart:** Uses ResizeObserver to dynamically adjust chart width to match container dimensions.
 
@@ -206,10 +206,10 @@ After every Cloudflare GraphQL response, the code checks for errors before readi
 Each widget is a standalone Preact component receiving analytics data and loading state props. No widget fetches its own data. All data flows from the dashboard controller after a single API call. This keeps state in one place and makes skeleton loading states trivial.
 
 ### Active App Users Source
-Active users is the only SSR-sourced metric on the dashboard — it comes from a D1 query counting distinct users in the audit log over the last 24 hours. This is intentional: D1 can be queried server-side at page load for near-instant first paint without waiting for the client-side analytics fetch.
+Active users count is fetched client-side as part of the analytics API call (Phase 4 Item 8 removed the SSR D1 query). `index.astro` no longer performs any database queries — `DashboardController` is mounted with `client:load` and receives zero props.
 
 ### No New Dependencies
-The entire overhaul uses only existing dependencies: uplot for charts, CSS for quota bars and progress animations, native `fetch` for all API calls.
+The entire overhaul uses only existing approved dependencies: CSS for quota bars and progress animations, native `fetch` for all API calls, and the Dual-Axis chart is implemented with pure SVG/Canvas — no third-party chart library (`uplot` is **not** in `package.json` and is not used).
 
 ### Dual-Axis Edge Analytics Chart
 - Upgraded to a highly dense **Dual-Axis Chart**.

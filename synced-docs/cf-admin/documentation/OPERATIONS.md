@@ -2,7 +2,7 @@
 # Operations — Infrastructure, Bindings & Observability
 
 > **Status:** Production Active
-> **Last Updated:** 2026-04-29 (v4.1: Deep RLS lockdown; anon key fully stripped from codebase & DB)
+> **Last Updated:** 2026-05-02 (v4.5: SITE_URL reclassified as [vars]; SENTRY_ORG_SLUG/SENTRY_PROJECT_SLUG added; Analytics Engine binding documented)
 > **Scope:** Cloudflare binding IDs, free tier limits, Sentry observability, build/deploy
 
 ---
@@ -138,7 +138,8 @@ The entire project operates at $0/month. These quotas dictate caching strategies
 
 Sentry is integrated at the Cloudflare Edge layer (CDN-native). Key decisions:
 
-- **Full trace sampling** enabled — all executions monitored
+- **10% trace sampling** (`tracesSampleRate: 0.1`) — sufficient for performance monitoring without exhausting free tier quota; 100% sampling was excessive and costly
+- **`sendDefaultPii: false`** — prevents IP addresses, cookies, and auth headers from being forwarded to Sentry (GDPR/LFPDPPP compliance)
 - **Default browser integrations disabled** — Cloudflare Workers run on V8 `workerd` runtime, NOT a browser. Browser integrations (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) reference `window`/`document` which don't exist in `workerd` — they cause `ReferenceError: window is not defined` at Worker startup
 - **Console Capture integration only** — `console.error` calls automatically trigger Sentry event capture with stack trace, metadata, and user-agent info; no explicit `Sentry.captureException()` scattered through handlers
 - **Hardcoded DSN** — Astro's Cloudflare adapter had inconsistent Vite env injection during SSR. DSN is a public routing key, not a secret, so hardcoding is safe and guarantees 100% telemetry uptime
@@ -165,7 +166,6 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 |--------|--------|---------|
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Active | Supabase DB ops — authorization whitelist, bookings, chatbot, consent (no GoTrue) |
 | `REVALIDATION_SECRET` | ✅ Active | ISR webhook auth (cf-admin → cf-astro) |
-| `SITE_URL` | ✅ Active | CSRF Origin validation + `__Host-` cookie prefix decision |
 | `UPSTASH_REDIS_REST_URL` | ✅ Active | Redis rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | ✅ Active | Redis auth token |
 | `CLOUDFLARE_API_TOKEN` | ✅ Active | Cloudflare GraphQL analytics (read-only) |
@@ -173,7 +173,10 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | `CF_API_TOKEN_READ_LOGS` | ✅ Active (2026-04-30) | Zero Trust Audit Read — CF Audit Log API polling (5-min cron for failed logins). Token name: `cf-admin: Zero Trust Audit Read` |
 | `CF_API_TOKEN_ZT_WRITE` | ✅ Active (2026-04-30) | Zero Trust Session Revoke — Layer 3 force-kick (DELETE active CF sessions via API). Token name: `cf-admin: Zero Trust Session Revoke` |
 | `RESEND_API_KEY` | ✅ Active (2026-04-30) | Outgoing security alert emails via Resend API |
-| `SENTRY_AUTH_TOKEN` | ✅ Active | Sentry error feed |
+| `SECURITY_ALERT_EMAIL` | ✅ Optional | Override recipient for login security alert emails (defaults to `mascotasmadagascar@gmail.com` if not set) |
+| `SENTRY_AUTH_TOKEN` | ✅ Active | Sentry error feed (build-time source maps upload) |
+| `SENTRY_ORG_SLUG` | ✅ Active | Sentry organization slug (build-time config) |
+| `SENTRY_PROJECT_SLUG` | ✅ Active | Sentry project slug (build-time config) |
 | `IP_HASH_SECRET` | ✅ Active | Privacy-safe IP hashing in login forensics |
 | `CHATBOT_WORKER_URL` | ✅ Active | cf-chatbot Worker endpoint |
 | `CHATBOT_ADMIN_API_KEY` | ✅ Active | 64-char key securing cf-chatbot access |
@@ -184,8 +187,12 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 
 | Var | Status | Purpose |
 |-----|--------|---------|
+| `SITE_URL` | ✅ Active | `https://secure.madagascarhotelags.com` — CSRF Origin validation + `__Host-` cookie prefix decision |
 | `PUBLIC_SUPABASE_URL` | ✅ Active | Supabase project URL (DB queries only) |
-| `CF_ACCOUNT_ID` | ✅ Active | Cloudflare account ID (analytics + CF API calls) |
+| `CF_ACCOUNT_ID` | ✅ Active | Cloudflare account ID (analytics + CF API calls, Layer 3 revocation) |
+| `CF_D1_DATABASE_ID` | ✅ Active | D1 database UUID for GraphQL analytics queries |
+| `CF_R2_BUCKET_NAME` | ✅ Active | R2 bucket name for usage analytics |
+| `CF_QUEUE_NAME` | ✅ Active | Queue name for queue stats analytics |
 | `CF_TEAM_NAME` | ✅ Active (`mascotas`) | Zero Trust team name — constructs JWKS URL + CF logout URL |
 | `CF_ACCESS_AUD` | ✅ Active | CF Access Application Audience tag — RS256 JWT audience verification |
 | `LOCAL_DEV_ADMIN_EMAIL` | ✅ Active | Dev bypass email for localhost (no CF Access headers in `npm run dev`) |

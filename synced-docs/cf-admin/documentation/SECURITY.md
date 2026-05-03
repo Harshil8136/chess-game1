@@ -2,8 +2,8 @@
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
-> **Last Updated:** 2026-04-29 (v4.1: Deep RLS & ACL lockdown — anon role fully stripped)
-> **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization
+> **Last Updated:** 2026-05-02 (v4.5: Phase 4 complete — UA truncation 512 chars; silent catches fixed in ExpandedRow + UsersTable; ActivityCenter fetch timeouts; breadcrumb aria-current; DashboardController props cleanup; pricing magic-number constants)
+> **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization, IDOR Prevention, Rate Limiting, Input Validation
 
 ---
 
@@ -167,8 +167,88 @@ Role mutations, account deactivation, and PLAC changes trigger a 3-layer securit
 - Parameterized D1 queries only — never string concatenation
 - `VALID_ROLES` application-level allowlist rejects invalid role values before DB insertion
 - Cloudflare Turnstile on magic link request form
-- **All API error responses return generic messages** — no stack traces, SQL errors, schema details, or internal paths leak to the client
+- **All API error responses return generic messages** — no stack traces, SQL errors, schema details, or internal paths leak to the client. Never do `return jsonError(500, error.message)` — always use a static string.
 - Hidden accounts return identical 404 response shape whether they exist or not — prevents enumeration
+
+---
+
+## 6a. API Route Access Control — IDOR Prevention
+
+Every API route that returns user data, PII, or privileged records **must** both capture and enforce a minimum role from `requireAuth`. Discarding the return value is a bug.
+
+**Correct pattern:**
+```typescript
+// Captures user AND enforces 'admin' minimum role — 403 if below
+try {
+  await requireAuth(context, 'admin');
+} catch (err) {
+  if (err instanceof AuthError) return jsonError(err.status, err.message);
+  return jsonError(401, 'Unauthorized');
+}
+```
+
+**Wrong pattern (IDOR vulnerability):**
+```typescript
+try {
+  await requireAuth(context);  // ❌ result discarded, no role check
+} catch {
+  return jsonError(401, 'Unauthorized');
+}
+```
+
+| Route | Minimum Role | Reason |
+|-------|-------------|--------|
+| `GET /api/bookings/[id]` | `admin` | Returns consent records, email audit logs, quality metadata (PII) |
+| `GET /api/bookings` | authenticated | Booking list |
+| `GET /api/media/gallery` | `admin` | Gallery management |
+| `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
+| `GET /api/users` | `super_admin` | Full user list |
+| `POST /api/audit/silence` | `dev` | Modifies audit suppression |
+| `POST /api/features/toggle` | `dev` | Feature flag mutations |
+| `GET /api/diagnostics/ping` | `dev` | Infrastructure probe |
+
+---
+
+## 6b. Input Validation & Rate Limit Coverage
+
+### Rate-Limited API Routes
+
+| Route | Limit | Identifier | Key |
+|-------|-------|-----------|-----|
+| `GET /api/bookings/[id]` | 60/min | `bookings-detail` | `user.userId` |
+| `GET /api/users` | 30/min | `users-list` | `session.userId` |
+| `POST /api/system/preview` | 20/min | `system-preview` | `actor.userId` |
+| `POST /api/system/pages` (PATCH) | 3/min | `registry` | `actor.userId` |
+| `POST/PATCH/DELETE /api/users/manage` | 10/h | `users-manage` | `session.userId` |
+| `POST /api/content/reviews` | 30/h | `content-reviews` | `user.userId` |
+| `POST /api/content/services` | 30/h | `content-services` | `user.userId` |
+| `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
+| `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
+| `POST /api/users/access` | 5/min | `plac` | `session.userId` |
+
+Rate limiting uses Upstash Redis sliding-window via `src/lib/ratelimit.ts`. Falls back to allow-all in local dev (missing Upstash credentials).
+
+### Zod Schema Validation
+
+| Route | Schema | Validates |
+|-------|--------|----------|
+| `POST /api/content/reviews` | `ReviewsSchema` | `Array<{ id, name, text: string; rating: int 1-5 }>`, max 50 items |
+| `POST /api/content/services` | `ServicesBodySchema` | `{ dogs?, cats?, daycare?: string(max 100); currency?: string(max 10) }` |
+
+The `services.ts` POST no longer spreads `rawBody` directly — only validated fields are written to D1.
+
+### Email Format Validation
+
+`POST/PATCH/DELETE /api/users/manage` — all three verbs validate the email parameter with `EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/` before any DB lookup.
+
+### Bounded Queries
+
+- `GET /api/users` — Supabase query is bounded with `.limit(200)` to prevent unbounded scans.
+- `PageRegistryRepository.updatePage` — `required_role` validation uses `!== undefined` check so empty strings (`''`) are correctly rejected instead of silently bypassing the allowlist.
+
+### Analytics Provider Timeouts
+
+All 8 analytics providers in `src/lib/analytics/providers.ts` use `AbortSignal.timeout(5000)` on every external `fetch()`. This prevents a slow upstream (Cloudflare GraphQL, Supabase metrics, Sentry, Resend) from consuming the entire 10 ms CPU budget on a Workers free-tier request.
 
 ---
 
@@ -182,6 +262,7 @@ Every request receives a unique `X-Request-ID` header generated via `crypto.rand
 
 | Protection | Implementation |
 |-----------|----------------|
+| JWT absence → 401 | **Fail-close**: absent `CF-Access-JWT-Assertion` returns 401 immediately — no session bootstrap possible without the JWT |
 | JWT signature verification | RS256 via JWKS from `https://{team}.cloudflareaccess.com/cdn-cgi/access/certs` |
 | Audience validation | `aud` claim matched against `CF_ACCESS_AUD` env var (app-specific tag) |
 | Whitelist check | Email verified against `admin_authorized_users` (Supabase) before session creation |

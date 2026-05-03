@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-29 (v4.1: Deep RLS & ACL lockdown — anon role fully stripped from DB)
+> **Last Updated:** 2026-05-02 (v4.5: cfBotScore N/A confirmed; full documentation audit)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
@@ -61,7 +61,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 |----------|-------|
 | **Name** | cf-admin (Madagascar Pet Hotel — Admin Portal) |
 | **Purpose** | Cloudflare-native admin portal equivalent to admin-app |
-| **Framework** | Astro 6.0+ with `@astrojs/cloudflare` adapter |
+| **Framework** | Astro 6.1.2 with `@astrojs/cloudflare` adapter (`^13.1.6`) |
 | **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
@@ -72,7 +72,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Storage** | Cloudflare R2 (CMS image uploads — `madagascar-images` bucket → `cdn.madagascarhotelags.com`) |
 | **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
 | **Design System** | "Midnight Slate" — dark-first with Blue-500 primary accents |
-| **Domain** | `admin.example.com` (provisioned at v1.0) |
+| **Domain** | `secure.madagascarhotelags.com` (`SITE_URL` wrangler.toml var) |
 | **GitHub** | `mascotasmadagascar-cmd/cf-admin-madagascar` (private) |
 | **Worker Name** | `cf-admin-madagascar` (Mascotas Cloudflare account) |
 
@@ -101,10 +101,12 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ### Shared Resources
 
-- **Supabase Project:** `[PROJECT_REF]` (same PostgreSQL instance)
+- **Supabase Project:** `zlvmrepvypucvbyfbpjj` (same PostgreSQL instance)
 - **D1 Database:** `madagascar-db` (ID: `7fca2a07-d7b4-449d-b446-408f9187d3ca`) — shared between both projects
 - **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
-- **Cloudflare Account:** Mascotas Madagascar
+- **Analytics Engine:** `ANALYTICS` binding → dataset `madagascar_analytics` (shared, both projects)
+- **Queue:** `EMAIL_QUEUE` → `madagascar-emails` (async email dispatch)
+- **Cloudflare Account:** Mascotas Madagascar (ID: `320d1ebab5143958d2acd481ea465f52`)
 
 ### KV Namespaces (Isolated per project)
 
@@ -150,29 +152,54 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ### 7.2 UI: Preact Islands
 
-- Preact (~3KB) for all interactive components — React-compatible, no React overhead
+- Preact 10.29.0 for all interactive components — React-compatible, no React overhead
 - Islands hydrate with `client:load` (immediate) or `client:idle` (deferred)
-- Cross-island state via Preact Signals; no global event bus needed at current scale
+- Cross-island state via `@preact/signals` (`^2.9.0`); no global event bus needed at current scale
+
+### 7.3 Approved Dependency Whitelist
+
+All packages below are **explicitly approved**. Anything NOT listed here is blacklisted by default.
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `preact` | `^10.29.0` | UI islands |
+| `@preact/signals` | `^2.9.0` | Cross-island reactive state |
+| `lucide-preact` | `^1.7.0` | Icon library (Preact-native, no extra weight) |
+| `zod` | `^4.4.1` | Runtime schema validation in API routes |
+| `@upstash/ratelimit` | `^2.0.8` | Edge-compatible rate limiting |
+| `@upstash/redis` | `^1.37.0` | Redis client for Upstash |
+| `@supabase/supabase-js` | `^2.101.1` | Supabase client (service_role only) |
+| `@sentry/astro` | `^10.51.0` | Error tracking (build-time integration) |
+| `@sentry/cloudflare` | `^10.51.0` | Error tracking (Workers runtime, V8 workerd only) |
+| `@tailwindcss/vite` | `^4.2.2` | Tailwind CSS v4 via Vite plugin |
+
+> **Icon usage:** Always import from `lucide-preact` (NOT `lucide-react`). The package is Preact-native — importing from the wrong package will cause hydration mismatches.
 
 ### 7.6 Environment Variables
 
 ```
 # .dev.vars (local — gitignored)
-PUBLIC_SUPABASE_URL=https://[PROJECT_REF].supabase.co
+# Secrets (not in wrangler.toml)
 SUPABASE_SERVICE_ROLE_KEY=...         # DB operations only (no GoTrue auth)
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
-SITE_URL=https://admin.example.com
-# CF Zero Trust
-CF_TEAM_NAME=mascotas                 # your-team.cloudflareaccess.com
-CF_ACCESS_AUD=...                     # Application Audience tag from CF dashboard
-CF_API_TOKEN_ZT_WRITE=...             # Zero Trust Edit — Layer 3 force-kick
-CF_API_TOKEN_READ_LOGS=...            # Zero Trust Read — audit log cron polling
-LOCAL_DEV_ADMIN_EMAIL=harshil.8136@gmail.com  # dev-only auth bypass
+REVALIDATION_SECRET=...
+CLOUDFLARE_API_TOKEN=...              # Read-only analytics token
+CLOUDFLARE_ZONE_ID=...
+CF_API_TOKEN_READ_LOGS=...            # Zero Trust Audit Read — cron log polling
+CF_API_TOKEN_ZT_WRITE=...            # Zero Trust Session Revoke — Layer 3 force-kick
+RESEND_API_KEY=...
+SENTRY_AUTH_TOKEN=...
+IP_HASH_SECRET=...
+CHATBOT_WORKER_URL=https://charlar.madagascarhotelags.com
+CHATBOT_ADMIN_API_KEY=...
+
 # REMOVED: PUBLIC_SUPABASE_ANON_KEY, TURNSTILE_SECRET_KEY (no longer used)
 ```
 
-Secrets in production: `wrangler secret put <KEY>`
+> **Note — wrangler.toml `[vars]` entries (NOT .dev.vars secrets):** `PUBLIC_SUPABASE_URL`, `SITE_URL` (`https://secure.madagascarhotelags.com`), `CF_TEAM_NAME` (`mascotas`), `CF_ACCESS_AUD` (audience tag), `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, `CF_QUEUE_NAME`, `LOCAL_DEV_ADMIN_EMAIL` (`harshil.8136@gmail.com`), `PUBLIC_ASTRO_URL`, `PUBLIC_CDN_URL`. These are non-secret config values; do **not** put them in `.dev.vars` or treat them as secrets.
+
+Secrets in production: `wrangler secret put <KEY>` — see [OPERATIONS.md §5](./documentation/OPERATIONS.md) for the full registry.
 
 ### 7.7 The "Module Manifest" Pattern
 
@@ -208,7 +235,7 @@ src/
 
 ## 9. SECURITY RULES
 
-### Security Invariants (v4.1)
+### Security Invariants (v4.5)
 
 1. **Supabase `anon` role has ZERO access** — no table grants, no RLS policies, no function EXECUTE privileges.
 2. **Default privileges locked** — `ALTER DEFAULT PRIVILEGES` prevents future tables from auto-granting to `anon`.

@@ -2,9 +2,9 @@
 # Login Forensics — Security Audit Subsystem
 
 > **Status:** Production Active (v3 — CF Zero Trust)
-> **Last Updated:** 2026-04-27 (GoTrue removed; CF Zero Trust replaces Magic Link + OAuth callback flow)
+> **Last Updated:** 2026-05-02 (v4.5: migration 0020 confirmed deployed — 23 live rows; cf_bot_score confirmed N/A on free plan)
 > **Access Gate:** DEV/Owner default; grantable via PLAC pseudo-path `/dashboard/logs#security`
-> **Migrations:** `0014_create_admin_login_logs_table.sql`, `0015_enhance_admin_login_logs.sql`, `0020_cf_zero_trust_schema.sql` (pending deploy)
+> **Migrations:** `0014_create_admin_login_logs_table.sql`, `0015_enhance_admin_login_logs.sql`, `0020_cf_zero_trust_schema.sql` (✅ deployed — 23 live rows confirmed 2026-05-02)
 > **Related:** `supabase_0001_add_cf_sub_id.sql` (adds `cf_sub_id` to `admin_authorized_users` — executed 2026-04-27)
 
 Dedicated security pipeline that captures, stores, and surfaces all authentication events against the `cf-admin` portal. Operates independently from the general-purpose Ghost Audit Engine (`admin_audit_log`). v3 removes all GoTrue/Supabase Auth coupling and Tier 2 client-side telemetry; replaces with CF Zero Trust edge data.
@@ -135,7 +135,7 @@ All data captured in v3 is **Tier 1 — server-trusted** (cannot be spoofed by c
 | `cf_access_method` ★ | TEXT | CF ZT | IdP name from JWT claims (`google` / `github` / `otp`) | Tier 1 |
 | `cf_identity_provider` ★ | TEXT | CF ZT | Full IdP descriptor from JWT (`idp.id` + `idp.type`) | Tier 1 |
 | `cf_jwt_tail` ★ | TEXT | CF ZT | Last 16 chars of JWT assertion (audit reference — not full token) | Tier 1 |
-| `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagementScore` if available | Tier 1 |
+| `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagementScore` — **⛔ N/A on free Workers plan** — all 23 production rows are `null`; Bot Management requires paid Cloudflare plan | Tier 1 |
 
 ★ = Added in v3 (migration `0020_cf_zero_trust_schema.sql`). All nullable.
 

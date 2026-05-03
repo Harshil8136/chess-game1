@@ -1,9 +1,9 @@
 {% raw %}
 # CF-Admin Architecture
 
-> **Status:** Production Active (v4.0 — CF Zero Trust Auth)
-> **Stack:** Astro 6 SSR + Cloudflare Workers (Free) + Preact Islands + D1 + KV + R2
-> **Last Updated:** 2026-04-29 (v4.1: Deep RLS & ACL lockdown; fail-secure dev mode)
+> **Status:** Production Active (v4.5)
+> **Stack:** Astro 6.1.2 SSR + Cloudflare Workers (Free) + Preact 10.29.0 Islands + D1 + KV + R2 + Queues + Analytics Engine
+> **Last Updated:** 2026-05-02 (v4.5: documentation audit; cfBotScore N/A confirmed)
 
 ---
 
@@ -47,7 +47,8 @@
 ├─────────────────────────────────────────────────────────────────────┤
 │                    LAYER 1: TRANSPORT                               │
 │  Astro 6 SSR + ClientRouter + Preact Islands + Signals              │
-│  Cloudflare Workers → D1 / KV / R2 (Hyperdrive: DISABLED)          │
+│  Cloudflare Workers → D1 / KV / R2 / Queues / Analytics Engine     │
+│  (Hyperdrive: DISABLED — free tier; Observability: logs + traces ✅) │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -189,6 +190,7 @@ src/
     │   └── constants.ts               ← getServiceBadgeStyle() — canonical service badge colors
     ├── analytics/
     │   └── providers.ts               ← GraphQLResponse<T> interface; Cloudflare + Supabase analytics fetch
+    │                                     Uses ANALYTICS binding (Analytics Engine dataset: `madagascar_analytics`)
     ├── env.ts                         ← Single source of truth for CF env bindings
     ├── audit.ts                       ← Ghost Audit Engine (table name whitelisted)
     ├── cms.ts                         ← revalidateAstro(), locale expansion (CmsBlock imported from shared-schema.ts)
@@ -289,6 +291,31 @@ These are architecturally sound but not needed until trigger conditions are met.
 ---
 
 ## 9. Infrastructure & Operations
+
+### Cloudflare Bindings (cf-admin)
+
+| Binding | Type | Name / UUID |
+|---------|------|-------------|
+| `DB` | D1 | `madagascar-db` (`7fca2a07-d7b4-449d-b446-408f9187d3ca`) |
+| `SESSION` | KV | `ADMIN_SESSION` (`ba82eecc6f5a4956ad63178b203a268f`) |
+| `IMAGES` | R2 | `madagascar-images` |
+| `EMAIL_QUEUE` | Queue | `madagascar-emails` |
+| `ANALYTICS` | Analytics Engine | dataset `madagascar_analytics` |
+
+**Observability** — enabled in wrangler.toml: invocation logs + traces (both `true`). Available in Cloudflare dashboard → Workers → Logs.
+
+**Bot Management score** (`request.cf.botManagementScore`) — NOT available on the free Workers plan. All production `cf_bot_score` rows are `null`. Gate implementation blocked until paid plan.
+
+### Key Approved Packages
+
+| Package | Version | Role |
+|---------|---------|------|
+| `preact` | `^10.29.0` | UI islands |
+| `@preact/signals` | `^2.9.0` | Cross-island state |
+| `lucide-preact` | `^1.7.0` | Icon library (Preact-native) |
+| `zod` | `^4.4.1` | API route validation |
+| `@upstash/ratelimit` | `^2.0.8` | Rate limiting |
+| `@sentry/cloudflare` | `^10.51.0` | Error tracking (workerd-safe) |
 
 → See [OPERATIONS.md](./OPERATIONS.md) for Cloudflare binding IDs, free tier limits, Sentry integration, and deploy commands
 
