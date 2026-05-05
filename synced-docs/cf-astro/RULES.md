@@ -544,6 +544,28 @@ Resend Email:   Direct `fetch` API + HTML string builders (consumer worker only)
 | **RLS Enabled** | ✅ On ALL public tables |
 | **PII Storage** | Bookings, pets, consent, privacy requests |
 
+### 6.12.1 Dual-Role Database Connection Strategy (Security)
+
+cf-astro uses **two connection strings** with the principle of least privilege:
+
+| Variable | Role | Permissions | When Used |
+|----------|------|-------------|-----------|
+| `DATABASE_URL` | `cf_astro_writer` | INSERT on PII tables; SELECT+UPDATE on `email_audit_logs`; SELECT on `legal_requests` | All API routes (default) |
+| `DATABASE_URL_ADMIN` | `postgres` | Full access, bypasses RLS | Emergency admin operations only — not used by any API route |
+
+**Connection string format for `cf_astro_writer`:**
+```
+# Direct (preferred — avoids Supavisor double-pooling):
+postgresql://cf_astro_writer:<pw>@db.zlvmrepvypucvbyfbpjj.supabase.co:5432/postgres
+
+# Pooler (if direct hits connection limits):
+postgresql://cf_astro_writer.zlvmrepvypucvbyfbpjj:<pw>@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+```
+
+**Why this matters:** If `DATABASE_URL` leaks, an attacker gets INSERT-only on PII tables with zero read-back. They cannot dump bookings, consent records, or any customer data. Combined with RLS policies enforced at the Postgres level (not application level), this is true defence-in-depth.
+
+**NEVER use `DATABASE_URL_ADMIN` in API routes.** It is for CLI-only emergency operations.
+
 ### 6.8 Cloudflare Framework Support Comparison (Why Astro Won)
 
 The following frameworks have official or community Cloudflare deployment support:
@@ -803,45 +825,92 @@ All file names must be unique and descriptive across the project:
 
 ## 9. SECURITY RULES
 
+> **Full audit details:** [`Documentation/18-SECURITY-HARDENING.md`](./Documentation/18-SECURITY-HARDENING.md)
+> **Last hardened:** 2026-05-04
+
 ### 9.1 Secrets Management
-- Local dev secrets in `.dev.vars` (gitignored)
-- Production secrets via `wrangler secret put <KEY>`
+
+- Local dev secrets in `.dev.vars` (gitignored — NEVER commit)
+- Production secrets via `wrangler pages secret put <KEY>`
 - Build-time secrets via system environment variables (e.g. `SENTRY_AUTH_TOKEN`)
-- Never commit secrets; `.dev.vars` is in `.gitignore`
-- Required secrets: `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `BETTERSTACK_SOURCE_TOKEN`
-- Build-time only: `SENTRY_AUTH_TOKEN` (for source map upload — not needed at runtime)
+- `PUBLIC_SUPABASE_ANON_KEY` is the only Supabase key in `[vars]` — safe because RLS denies all anon-role reads on every PII table
+
+**Required secrets (production):**
+
+| Secret | Purpose |
+|--------|---------|
+| `DATABASE_URL` | cf_astro_writer PG connection (least-privilege) |
+| `DATABASE_URL_ADMIN` | postgres superuser (emergency only, never in API routes) |
+| `REVALIDATION_SECRET` | `/api/revalidate` + `/api/analytics/summary` |
+| `ADMIN_AI_SECRET` | `/api/admin/generate-*` (blog, FAQs) |
+| `HEALTH_CHECK_SECRET` | `/api/health` + `/api/test-services` |
+| `ARCO_ADMIN_SECRET` | `/api/arco/get-document` |
+| `RESEND_API_KEY` | cf-email-consumer only (not cf-astro main Worker) |
+| `RESEND_WEBHOOK_SECRET` | Svix HMAC verification for Resend webhooks |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile server verification |
+| `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
+| `BETTERSTACK_SOURCE_TOKEN` | Structured logging |
 
 ### 9.2 Input Validation
 - All API endpoints validate with Zod schemas before processing
 - Sanitize user input before D1/Supabase queries
-- Use parameterized queries (prepared statements) — never string concatenation
+- Use parameterized queries (Drizzle ORM) — never string concatenation in SQL
 
 ### 9.3 Bot Protection
-- Cloudflare Turnstile on all forms (booking, contact, ARCO)
-- Server-side token verification via Turnstile Siteverify API
-- Rate limiting via Upstash Redis on all API endpoints
+- Cloudflare Turnstile on all user-facing forms (booking, contact, ARCO)
+- Server-side token verification via Turnstile Siteverify API (fail-closed — missing secret = 500)
+- Rate limiting via Upstash Redis on all API endpoints (sliding window, per-IP)
+- Rate limit fallback: in-memory per-isolate when Upstash unreachable; UUID fallback for no-IP requests
 
 ### 9.4 Content Security Policy
 Defined in `public/_headers` for all origins:
 - `default-src 'self'`
-- `script-src 'self' 'unsafe-inline' *.posthog.com challenges.cloudflare.com`
-- `connect-src 'self' *.posthog.com *.ingest.us.sentry.io in.logs.betterstack.com *.supabase.co api.resend.com api.indexnow.org`
+- `script-src 'self' 'unsafe-inline' 'unsafe-eval' ...` (`unsafe-inline` required by Astro island hydration — known limitation, no user input reflected in HTML)
+- `connect-src 'self' *.posthog.com *.ingest.us.sentry.io in.logs.betterstack.com ...`
 - `img-src 'self' blob: data: *.r2.dev cdn.madagascarhotelags.com`
 
-**Critical**: `cdn.madagascarhotelags.com` (custom R2 CDN domain) MUST stay in `img-src`. Removing it silently blocks all R2-served images in the browser. Any new image domain (R2 aliases, external CDNs) must be added here before deployment. See Issue #12 in [10-TROUBLESHOOTING-LOG.md](./Documentation/10-TROUBLESHOOTING-LOG.md).
+**Critical**: `cdn.madagascarhotelags.com` (custom R2 CDN domain) MUST stay in `img-src`. Removing it silently blocks all R2-served images in the browser. See Issue #12 in [10-TROUBLESHOOTING-LOG.md](./Documentation/10-TROUBLESHOOTING-LOG.md).
 
-**Additional cross-origin headers** (added 2026-04-13):
+**Cross-origin headers** (added 2026-04-13):
 - `Cross-Origin-Opener-Policy: same-origin`
 - `Cross-Origin-Embedder-Policy: unsafe-none`
-- `Cross-Origin-Resource-Policy: same-site`
+- `Cross-Origin-Resource-Policy: cross-origin` (changed from same-site to allow CDN images)
 
-**Sitemap Architecture Note**: Custom TypeScript endpoints (`src/pages/sitemap-*.xml.ts`) replace `@astrojs/sitemap`. They emit `xhtml:link` hreflang per URL, dynamic lastmod, and Google Image sitemap format. Do NOT re-add `@astrojs/sitemap` to `astro.config.ts` — it cannot produce per-URL hreflang annotations.
+**Sitemap Architecture Note**: Custom TypeScript endpoints (`src/pages/sitemap-*.xml.ts`) replace `@astrojs/sitemap`. They emit `xhtml:link` hreflang per URL, dynamic lastmod, and Google Image sitemap format. Do NOT re-add `@astrojs/sitemap` to `astro.config.ts`.
 
-### 9.5 Auth Architecture
-- Supabase Auth for user identity (JWT-based)
-- JWT validation in Workers without Supabase SDK (verify with public key)
-- RLS on all Supabase tables - no admin bypass in client code
-- Admin routes protected server-side before rendering
+### 9.5 Auth Architecture — Admin Endpoints
+
+**One secret per endpoint** (no shared admin key — compromising one secret does not expose all admin operations):
+
+| Endpoint | Secret | Auth Function |
+|----------|--------|---------------|
+| `/api/health` | `HEALTH_CHECK_SECRET` | `timingSafeEq()` |
+| `/api/test-services` | `HEALTH_CHECK_SECRET` | `timingSafeEq()` |
+| `/api/revalidate` | `REVALIDATION_SECRET` | `timingSafeEq()` |
+| `/api/analytics/summary` | `REVALIDATION_SECRET` | `timingSafeEq()` (rate-limited first) |
+| `/api/admin/generate-*` | `ADMIN_AI_SECRET` | direct comparison |
+| `/api/arco/get-document` | `ARCO_ADMIN_SECRET` | `timingSafeEq()` |
+| `/api/webhooks/resend` | `RESEND_WEBHOOK_SECRET` | Svix HMAC-SHA256 |
+
+**Rule:** ALL Bearer token comparisons MUST use `timingSafeEq()` from `src/lib/security.ts`. Direct `===` comparison is a timing attack vector — never use it for secrets.
+
+### 9.6 Database Security — Principle of Least Privilege
+
+`DATABASE_URL` connects as `cf_astro_writer` — a custom PostgreSQL role with minimal permissions:
+- **INSERT only** on PII tables (bookings, consent, pets, privacy, legal)
+- **INSERT + SELECT + UPDATE** on email_audit_logs (webhook processing)
+- **SELECT** on legal_requests (ARCO document retrieval)
+- **Zero access** to cross-project tables (admin_sessions, conversations, etc.)
+- **No BYPASSRLS** — RLS is enforced as an additional layer on top of GRANTs
+
+Full rationale and role setup: [`Documentation/18-SECURITY-HARDENING.md §4.1`](./Documentation/18-SECURITY-HARDENING.md).
+
+### 9.7 PII Minimization Rules
+
+- **`emailAuditLogs.payload`**: Store only non-PII metadata (`bookingRef`, `service`, `petCount`, `hasTransport`, `locale`). The full payload is transient (queue message) and the bookingId FK links to authoritative data already in `bookings`.
+- **Analytics Engine blobs**: Never write exception strings, PII, or internal error messages to Analytics Engine. Event labels only.
+- **Error responses**: Admin endpoints return generic error messages to callers. Internal details go to `console.error()` (captured by Sentry/Workers Observability). Never expose stack traces, DB errors, or AI service messages to clients.
+- **Rate limit key fallback**: UUID per-request (not `'anonymous'`) to prevent shared bucket abuse.
 
 ---
 

@@ -25,6 +25,7 @@ As of **2026-04-30**, here is the phase completion status:
 | Phase 16 | Cron automation (IndexNow daily + analytics digest) | 🔨 In progress (2026-04-30) |
 | Phase 17 | Analytics Engine expansion (full funnel tracking) | 🔨 In progress (2026-04-30) |
 | Phase 18 | Workers AI (FAQ generation + blog drafts) | 🔨 In progress (2026-04-30) |
+| Phase 19 | Security hardening — DB least-privilege, PII audit strip, timing-safe auth | ✅ Complete (2026-05-04) — see [18-SECURITY-HARDENING.md](./18-SECURITY-HARDENING.md) |
 
 ---
 

@@ -6,6 +6,8 @@
 > **Security Scan Source:** Cloudflare Security Insights export — 18 active alerts across 6 domains
 > **Scores at audit time:** Performance 73 / Accessibility 95 / Best Practices 77 / SEO 92
 > **Status:** Code fixes applied and documented. Cloudflare dashboard steps required to resolve the persistent scanner alerts.
+>
+> **2026-05-04 Update:** Additional hardening applied (DB least-privilege role, PII audit log stripping, timing-safe auth, rate limit hardening). See [18-SECURITY-HARDENING.md](./18-SECURITY-HARDENING.md) for the full deep audit and manual steps required.
 
 ---
 
