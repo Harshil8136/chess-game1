@@ -5,6 +5,16 @@ Chronological record of feature additions, design refactors, and improvements to
 
 ---
 
+## 2026-05-05 — Gallery Stability and Memory Leak Fix
+
+**Overview**: Resolved critical performance issues causing infinite render loops and browser tab freezes in the gallery component. Implemented robust state bailouts, ref callback memoization, and migrated loaded-state tracking from array indices to immutable source URLs to ensure long-term stability against data mutations. Fixed a memory leak in the lightbox component that prevented body scroll restoration.
+
+**Files Modified**:
+- `src/components/islands/InfiniteGalleryIsland.tsx` — Added ref caching, state bailouts, and URL-based tracking.
+- `src/components/islands/LightboxIsland.tsx` — Fixed `useEffect` cleanup memory leak and added state bailouts.
+
+---
+
 ## 2026-04-13 — Full SEO/AEO/GEO/SXO/AIO Production Overhaul
 
 **Overview**: Complete search and AI optimization overhaul for production launch on `madagascarhotelags.com`. Replaced `@astrojs/sitemap` with a custom 4-file sitemap system, implemented full JSON-LD schema graph, rewrote `BaseLayout.astro` with all meta disciplines, created `llms.txt` AI context files, and configured domain migration redirects.

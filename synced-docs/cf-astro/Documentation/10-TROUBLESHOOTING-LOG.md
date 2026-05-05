@@ -622,5 +622,37 @@ Gallery was the only section with KV injection already implemented (introduced i
 
 > **All CMS write endpoints must inject `cmsData` into `revalidateAstro()`.** Purging the ISR cache without injecting fresh data into KV creates a D1 replica lag window where stale HTML can be re-cached for up to 30 days. See `CMS_AND_BOOKINGS_MANAGEMENT.md` Section 6 for the full KV injection coverage table.
 
+---
+
+## Issue #14: Gallery Infinite Render Loop & Browser Freeze
+
+**Date**: 2026-05-05
+**Severity**: 🔴 Production blocker (Browser crash)
+**Phase**: Production
+
+### Symptoms
+
+When clicking an image in the gallery, the browser tab would become completely unresponsive and eventually crash. The main thread was blocked due to an infinite render loop in Preact hydration.
+
+### Root Cause
+
+The `InfiniteGalleryIsland` was generating a new `imgRefCallback` reference on every render. This triggered a `handleImgLoad` call on every cycle. The `handleImgLoad` function unconditionally updated state with a `new Set()`, which caused another render, creating an infinite loop. Additionally, tracking loaded state by array index was fragile and susceptible to bugs if the parent array mutated. Lastly, `LightboxIsland.tsx` had a memory leak where `document.body.style.overflow = "hidden"` was not reliably cleared.
+
+### Resolution
+
+1. **Ref Caching**: Introduced `useRef(new Map())` to memoize ref callbacks in `InfiniteGalleryIsland`, ensuring `ref` triggers only happen when the DOM element is initially attached.
+2. **State Bailout**: Implemented `if (prev.has(src)) return prev;` in all state updaters to force render aborts when state hasn't changed.
+3. **Immutable Tracking**: Refactored state tracking from array indices to exact image `src` URL strings. This ensures the gallery remains stable even if the parent component filters or sorts the image array at runtime.
+4. **Memory Leak Fix**: Fixed the race condition in `LightboxIsland.tsx` by correcting the cleanup logic in the `useEffect` hook to ensure body scroll is restored.
+
+### Files Changed
+
+- `src/components/islands/InfiniteGalleryIsland.tsx`
+- `src/components/islands/LightboxIsland.tsx`
+
+### Rule for Future
+
+> **Always memoize ref callbacks and implement state bailouts in list-rendering components.** When passing inline arrow functions to `ref` attributes in Preact/React, a new function is created on every render, triggering the ref callback again. Combining this with an unconditional state update creates an infinite loop. Always bail out if the new state matches the previous state.
+
 
 {% endraw %}
