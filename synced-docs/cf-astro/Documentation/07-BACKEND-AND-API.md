@@ -313,7 +313,7 @@ await env.EMAIL_QUEUE.send({
 
 All actual email delivery is handled by the isolated `cf-email-consumer` worker via the Resend HTTP API.
 
-### Email Templates (`queue-worker/src/templates/`)
+### Email Templates (`../cf-email-consumer/src/templates/`)
 
 Templates are stored in the consumer worker (not in `cf-astro` directly) to keep the main edge bundle small. They use the **Eta** template engine:
 

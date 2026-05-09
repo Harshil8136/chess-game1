@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-04-13
+> **Last Updated:** 2026-05-06
 > **Research Sources:** Cloudflare Docs MCP, Perplexity MCP, Cloudflare Bindings MCP, Official Documentation
 
 ---
@@ -58,7 +58,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing) |
 | **Logging** | BetterStack (`@logtail/edge`, server-side structured logging) |
 | **i18n** | Astro built-in (es/en with prefix routing) |
-| **CSS** | Tailwind CSS **v3** via `@astrojs/tailwind` (v4 blocked — see §6.3) |
+| **CSS** | Tailwind CSS **v4** via `@tailwindcss/vite` Vite plugin (see §6.3) |
 | **AI** | Cloudflare Workers AI (10,000 neurons/day free — FAQ generation, blog drafts) |
 
 ---
@@ -469,14 +469,15 @@ Astro supports **multiple UI frameworks as islands** — interactive components 
 | `client:media` | When media query matches | Mobile-only components |
 | `client:only="preact"` | Client-only (no SSR) | WebSocket, localStorage-dependent |
 
-### 6.3 CSS: Tailwind CSS v3
+### 6.3 CSS: Tailwind CSS v4
 
-- **Tailwind CSS v3** via `@astrojs/tailwind` integration in `astro.config.ts`
-- Config: `tailwind.config.mjs` — maps CSS variables to utility classes
-- Uses `@layer base { :root { ... } }` in `src/styles/global.css` for design tokens
+- **Tailwind CSS v4** via `@tailwindcss/vite` Vite plugin in `astro.config.ts`
+- No `tailwind.config.mjs` — v4 uses CSS-first configuration via `@theme` in `src/styles/global.css`
+- Design tokens are defined as CSS custom properties under `@theme { ... }` (or `:root` for runtime values)
 - When styling scoped Astro components in `<style>`, import variables via `@import "../../styles/global.css";`
+- The plugin is cast to `PluginOption` in `astro.config.ts` to satisfy Vite's type system: `tailwindcss() as unknown as import('vite').PluginOption`
 
-> ⚠️ **Why NOT v4:** Tailwind CSS v4 + `@tailwindcss/vite` was trialed and caused **silent SSR build crashes** in the Astro + Cloudflare adapter pipeline (see Issue #4 in `Documentation/10-TROUBLESHOOTING-LOG.md`). The `@tailwindcss/vite` plugin intercepts CSS in a way that conflicts with Astro's internal Vite SSR bundling and the Workers bundler. **Do not attempt to upgrade to v4** until official Astro/Cloudflare adapter compatibility is confirmed.
+> ✅ **v4 is the current production version.** The earlier trial crash (Issue #4) was resolved and v4 is now stable in the Astro + Cloudflare adapter pipeline at `tailwindcss@^4.2.2`.
 
 ### 6.4 Validation: Zod v3 (NOT v4)
 
@@ -498,8 +499,8 @@ Astro supports **multiple UI frameworks as islands** — interactive components 
 >
 > **If you modify email templates, Resend config, or add new email types:**
 > 1. Update `src/lib/email/queue-types.ts` (message type definitions)
-> 2. Update `queue-worker/src/index.ts` (consumer logic + email HTML builders)
-> 3. Redeploy the consumer worker: `cd queue-worker && npx wrangler deploy`
+> 2. Update `../cf-email-consumer/src/index.ts` (consumer logic + email HTML builders)
+> 3. Redeploy the consumer worker: `cd ../cf-email-consumer && npx wrangler deploy`
 
 ### 6.6 Image Processing: Passthrough (NOT Sharp)
 
@@ -530,7 +531,7 @@ Supabase (PG):  Drizzle ORM + `postgres.js` driver — **direct connection via `
 Upstash Redis:  `@upstash/redis` with REST API (no TCP needed)
 Resend Email:   Direct `fetch` API + HTML string builders (consumer worker only)
 
-> ⚠️ **Email is NOT called directly from API routes.** API routes push to `env.EMAIL_QUEUE`. The `cf-astro-email-consumer` worker (in `queue-worker/`) reads from the queue and calls Resend. See **Section 6.13**.
+> ⚠️ **Email is NOT called directly from API routes.** API routes push to `env.EMAIL_QUEUE`. The `cf-astro-email-consumer` worker (in `../cf-email-consumer/`) reads from the queue and calls Resend. See **Section 6.13**.
 
 ### 6.12 Supabase Project Configuration
 
@@ -704,7 +705,7 @@ type EmailQueueMessage =
 
 To add a new email type (e.g., `password_reset`, `admin_weekly_report`):
 1. Add the new variant to `EmailQueueMessage` in `src/lib/email/queue-types.ts`
-2. Add a matching `case` in the consumer's `switch` block in `queue-worker/src/index.ts`
+2. Add a matching `case` in the consumer's `switch` block in `../cf-email-consumer/src/index.ts`
 3. Mirror the type in the consumer (types are duplicated to keep the worker dependency-free)
 4. Push from the relevant API route: `env.EMAIL_QUEUE.send({ type: 'new_type', data: {...} })`
 
@@ -716,7 +717,7 @@ To add a new email type (e.g., `password_reset`, `admin_weekly_report`):
 | Max batch size | 10 | Process up to 10 messages per invocation |
 | Max retries | 3 | Handles transient Resend failures |
 | Dead letter queue | `madagascar-emails-dlq` | Failed messages after 3 retries are preserved |
-| Consumer worker | `cf-astro-email-consumer` | Deployed from `queue-worker/` directory |
+| Consumer worker | `cf-astro-email-consumer` | Deployed from `../cf-email-consumer/` directory |
 
 #### ⚠️ Cross-Reference Warnings
 
@@ -727,7 +728,7 @@ To add a new email type (e.g., `password_reset`, `admin_weekly_report`):
 > | **6.5** (Resend/Email config) | Consumer uses Resend SDK | Update consumer if API key format, sender domain, or SDK version changes |
 > | **6.7** (Service bindings) | `EMAIL_QUEUE` binding name | If binding name changes, update `env.d.ts`, all producers, and `wrangler.toml` |
 > | **6.12** (Supabase config) | Consumer does NOT access Supabase | No impact — but if email status tracking is needed later, consumer would need DB access |
-> | **9.1** (Secrets) | Consumer needs `RESEND_API_KEY` | Must be set separately: `cd queue-worker && wrangler secret put RESEND_API_KEY` |
+> | **9.1** (Secrets) | Consumer needs `RESEND_API_KEY` | Must be set separately: `cd ../cf-email-consumer && wrangler secret put RESEND_API_KEY` |
 > | **9.4** (CSP) | No impact | Queue is server-to-server, no browser CSP involvement |
 > | **11** (Deployment) | Two separate deployments | Main site AND consumer worker must be deployed when email logic changes |
 > | API route changes | Producer payloads | If booking/ARCO data shape changes, update `queue-types.ts` AND consumer |
@@ -888,7 +889,7 @@ Defined in `public/_headers` for all origins:
 | `/api/test-services` | `HEALTH_CHECK_SECRET` | `timingSafeEq()` |
 | `/api/revalidate` | `REVALIDATION_SECRET` | `timingSafeEq()` |
 | `/api/analytics/summary` | `REVALIDATION_SECRET` | `timingSafeEq()` (rate-limited first) |
-| `/api/admin/generate-*` | `ADMIN_AI_SECRET` | direct comparison |
+| `/api/admin/generate-*` | `ADMIN_AI_SECRET` | `timingSafeEq()` |
 | `/api/arco/get-document` | `ARCO_ADMIN_SECRET` | `timingSafeEq()` |
 | `/api/webhooks/resend` | `RESEND_WEBHOOK_SECRET` | Svix HMAC-SHA256 |
 
@@ -954,7 +955,7 @@ astro build                        # Outputs to ./dist
 astro build && wrangler deploy
 
 # Deploy (Email Queue Consumer Worker — separate deployment)
-cd queue-worker && npx wrangler deploy
+cd ../cf-email-consumer && npx wrangler deploy
 
 # Deploy (Cron Worker — daily IndexNow + weekly analytics digest)
 cd cron-worker && npx wrangler deploy
@@ -964,7 +965,7 @@ wrangler d1 execute madagascar-db --local --file=./db/migrations/XXXX.sql
 wrangler d1 execute madagascar-db --remote --file=./db/migrations/XXXX.sql
 ```
 
-> ⚠️ **Three deployments required:** The main Astro site, `queue-worker` (email consumer), and `cron-worker` are deployed **independently**. If you change email templates or add new email types, you MUST also redeploy `queue-worker`. If you change the IndexNow key or cron schedule, redeploy `cron-worker`. Use `npx wrangler tail cf-astro-email-consumer` and `npx wrangler tail cf-astro-cron` to monitor their logs in real-time.
+> ⚠️ **Three deployments required:** The main Astro site, `cf-email-consumer` (email consumer), and `cron-worker` are deployed **independently**. If you change email templates or add new email types, you MUST also redeploy `../cf-email-consumer/`. If you change the IndexNow key or cron schedule, redeploy `cron-worker`. Use `npx wrangler tail cf-astro-email-consumer` and `npx wrangler tail cf-astro-cron` to monitor their logs in real-time.
 
 ### 11.1 ISR Cache Safety Checklist (MANDATORY)
 
@@ -987,11 +988,11 @@ Before EVERY deployment, verify:
 
 ### Environment
 - `wrangler.toml` — All bindings (D1, R2, KV, Queues producer, Analytics Engine, Workers AI)
-- `queue-worker/wrangler.toml` — Consumer worker bindings (Queue consumer)
+- `../cf-email-consumer/wrangler.toml` — Consumer worker bindings (Queue consumer)
 - `cron-worker/wrangler.toml` — Cron worker bindings (D1, ISR_CACHE KV)
 - `.dev.vars` — Local secrets (gitignored): `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENDER_EMAIL`, Supabase keys
 - `wrangler secret put <KEY>` — Production secrets (main project)
-- `cd queue-worker && wrangler secret put RESEND_API_KEY` — Consumer worker secrets
+- `cd ../cf-email-consumer && wrangler secret put RESEND_API_KEY` — Consumer worker secrets
 
 ### Dashboard Bindings (Cannot Be Set in wrangler.toml for Pages)
 - **Hyperdrive** — Must be bound via Cloudflare Dashboard → Pages → Settings → Bindings

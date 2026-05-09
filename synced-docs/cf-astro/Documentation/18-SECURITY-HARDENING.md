@@ -325,7 +325,7 @@ All secrets set via `wrangler pages secret put` or Cloudflare Pages dashboard:
 | `ADMIN_AI_SECRET` | /api/admin/generate-* | Pages dashboard |
 | `HEALTH_CHECK_SECRET` | /api/health + /api/test-services | Pages dashboard |
 | `ARCO_ADMIN_SECRET` | /api/arco/get-document | Pages dashboard |
-| `RESEND_API_KEY` | cf-email-consumer worker only | `cd queue-worker && wrangler secret put` |
+| `RESEND_API_KEY` | cf-email-consumer worker only | `cd ../cf-email-consumer && wrangler secret put` |
 | `RESEND_WEBHOOK_SECRET` | /api/webhooks/resend (Svix HMAC) | Pages dashboard |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile server verify | Pages dashboard |
 | `UPSTASH_REDIS_REST_TOKEN` | Rate limiting | Pages dashboard |
