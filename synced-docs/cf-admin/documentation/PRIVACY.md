@@ -1,7 +1,7 @@
 {% raw %}
 # Data Privacy Dashboard
 
-> **Status:** Production Active (Project Forensic Blue rebuild spec pending)
+> **Status:** Production Active — v2 rebuild complete (2026-05-06)
 > **Route:** `/dashboard/privacy/`
 > **Access:** SuperAdmin (Level 2) minimum
 > **Compliance:** LFPDPPP, GDPR, CCPA
@@ -38,111 +38,116 @@ See [SECURITY.md](./SECURITY.md) §10 for the full RLS policy matrix.
 
 ---
 
-## 3. Current Dashboard Architecture
+## 3. Dashboard Architecture (v2 — Current)
+
+### Shared Types (`src/components/dashboard/privacy/types.ts`)
+
+Single source of truth for all privacy component interfaces:
+
+```typescript
+ConsentRecord       — full row shape from consent_records table
+FingerprintData     — fingerprint_data JSONB column structure
+InteractionProof    — interaction_proof JSONB column structure
+ConsentMetrics      — aggregated metrics returned by API
+ReceiptsApiResponse — full GET /api/audit/receipts response shape
+```
+
+No `any` types anywhere in the privacy module.
+
+### API (`src/pages/api/audit/receipts.ts`)
+
+`GET /api/audit/receipts` — SuperAdmin minimum. Returns:
+
+```typescript
+{
+  records: ConsentRecord[],          // paginated, searchable
+  pagination: { total, globalTotal, limit, offset },
+  metrics: {
+    totalConsents: number,
+    activeGrants: number,
+    revocations: number,
+    revocationRate: number,          // percentage
+    dailyCounts: { date, count }[],  // last 7 days, all gaps filled
+    last24hVolume: number,
+    lastConsentDate: string | null
+  }
+}
+```
+
+5 parallel Supabase queries (total, granted, revoked, 7-day window, last record) — all lightweight `head: true` counts except the window query.
 
 ### Route Controller (`src/pages/dashboard/privacy/index.astro`)
 
-SSR entry point: auth-gating, Midnight Slate layout, "Security Cyan" section tint. Static Astro boundaries around Preact islands maintain <10ms load times.
+SSR entry point. Auth-gated via `requireAuth(Astro, ROLES.SUPER_ADMIN)`. Mounts both islands with `client:idle`. Section tint: `data-section="cyan"`.
 
-### PrivacyMetrics Island (`client:idle`)
+### ConsentMetrics Island (`src/components/dashboard/privacy/PrivacyMetrics.tsx`)
 
-Fetches live aggregations from Supabase via `GET /api/privacy/logs?limit=1`:
-- Total Interactions, Active Consents, Revocations
-- Animated glowing state cards for executive attention
+`client:idle` — props-free, self-fetching.
 
-### Forensic Ledger (`src/components/dashboard/privacy/ForensicFeed.tsx`)
+**Page Header:** Shield icon + pinging live-dot + `[Active]` emerald badge + compliance subtitle + refresh button.
 
-- Infinite-scroll-ready, server-side paginated
-- "No Blank Loading Screens" policy — `SkeletonBlock` shimmer placeholders
-- 4-column metadata header: `Captured`, `Origin`, `Device`, `Analysis`
-- Expandable 3-pillar forensic architecture per record:
-  - **Client Environment** (Blue) — platform, screen, UA hash
-  - **Interaction Telemetry** (Indigo) — time-to-click, cursor travel, consent mechanism
-  - **Security & Ledger** (Rose/Emerald) — bot checks, WebDriver, headless detection, revocation notes
+**4 Metric Cards in a segmented panel (Linear style):**
+| Card | Variant | Icon |
+|------|---------|------|
+| Total Receipts | indigo | Shield |
+| Active Consents | emerald | CheckCircle |
+| Revocations | rose | Activity |
+| Last 24h | amber | Zap |
+
+Each card:
+- `data-mounted` attribute drives mount animation (CSS only — no inline `opacity`/`transform`)
+- rAF count-up animation (800ms ease-out cubic)
+- Data-driven SVG sparkline using `dailyCounts[]` — smooth quadratic bezier, `currentColor` for both fill gradient and stroke (inherits from variant CSS class)
+- All colors via CSS variant selectors `.consent-metric-card--{variant}` — no `colorVar` prop
+
+### ConsentFeed (`src/components/dashboard/privacy/ForensicFeed.tsx`)
+
+`client:idle` — paginated at 15 records/page.
+
+- Glassmorphic control bar: "Audit Ledger" title + pulsing sync badge + search + refresh + record count + paginator
+- Three distinct states: skeleton (initial load), loading overlay (pagination), empty state
+- Error state with rose styling
+- `search` passed as URL param on Enter keypress or refresh
+
+### FeedItem (`src/components/dashboard/privacy/FeedItem.tsx`)
+
+Expandable consent record row. All dynamic state via data-attributes — zero inline styles.
+
+**Data-attribute patterns:**
+- `data-revoked={isRevoked}` — on shield icon and status badge (emerald → rose)
+- `data-bot-risk={isBotDetected}` — on analysis dot, label, security panel header/body, bot risk label
+- `data-safe={safe}` — on individual bot check badges (CLEAN / DETECTED)
+
+**Collapsed row:** Status badge + email + 4-column metadata grid (Captured / Origin / Device / Analysis).
+
+**Expanded 3-panel forensic view:**
+| Panel | Color | Contents |
+|-------|-------|----------|
+| Client Environment | Cyan | Platform, browser, screen res, location, UA (monospace + copy) |
+| Interaction Telemetry | Indigo | Notice version, time-to-click, cursor travel px, mechanism bar |
+| Security & Ledger | Emerald/Rose | Bot likelihood, WebDriver + Headless checks, SHA-256 hash, revocation note |
+
+Expand/collapse driven by `revealDown` CSS keyframe (0.35s spring).
+
+Full keyboard accessibility: `role="button"`, `tabIndex={0}`, `onKeyDown` Enter/Space handler, `aria-expanded`.
 
 ---
 
-## 4. Planned Enhancement — Project Forensic Blue
+## 4. CSS Architecture (`src/styles/pages/privacy-dashboard.css`)
 
-> **Date scoped:** 2026-04-17
-> **Status:** Spec complete, implementation pending
-> **Goal:** Rebuild to match admin-app `consent-integrity` module quality
+All styles use design tokens — no raw hex values, no hardcoded pixel colors.
 
-### Problem
+**Key patterns:**
+- Variant colors: `.consent-metric-card--{variant} .consent-metric-icon/title` selectors
+- Data-attribute dynamic states: `[data-revoked="true"]`, `[data-bot-risk="true"]`, `[data-safe="true/false"]`, `[data-mounted="true"]`
+- Sparklines: `currentColor` on SVG stroke/fill inherits from variant class
+- `consent-feed-list--loading`: border/shadow stripped for skeleton layout
 
-Current dashboard has static non-data-driven sparklines, hardcoded hex colors (cyan instead of Blue-500 tokens), no 7-day trend charts, no animated counters, no status hero panel, and inline styles inconsistent with the Midnight Slate system.
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/pages/api/privacy/logs.ts` | Add `daily_counts`, `last_24h_volume`, `revocation_rate`, `last_consent_date` |
-| `src/components/dashboard/privacy/PrivacyMetrics.tsx` | Rewrite: status hero + 4 metric cards with SVG sparklines + animated counters |
-| `src/components/dashboard/privacy/ForensicFeed.tsx` | Rewrite: glassmorphic control bar, loading overlay, empty states |
-| `src/components/dashboard/privacy/FeedItem.tsx` | Rewrite: 3-panel forensic view, bot analysis, mechanism badges |
-| `src/styles/pages/privacy-dashboard.css` | New: page styles using design tokens only |
-| `src/pages/dashboard/privacy/index.astro` | Import new CSS, layout adjustments |
-
-### API Enhancement
-
-`GET /api/privacy/logs` extended to return:
-```typescript
-metrics: {
-  totalConsents: number,
-  activeGrants: number,
-  revocations: number,
-  daily_counts: { date: string, count: number }[],   // last 7 days
-  last_24h_volume: number,
-  revocation_rate: number,
-  last_consent_date: string
-}
-```
-
-### PrivacyMetrics Rebuild
-
-**Status Hero Panel:** Gradient background + shield icon + pinging live-dot + `[Active]` emerald badge + compliance status text.
-
-**4 Metric Cards:**
-- Total Receipts (indigo), Active Consents (emerald), Revocations (rose), Last 24h (amber)
-- Each: icon, animated value counter (800ms ease-out `rAF` loop), subtitle, data-driven SVG sparkline from `daily_counts[]`
-- Hover: glow via `box-shadow` transition
-
-### ForensicFeed Rebuild
-
-- Sticky control bar with `backdrop-blur-md`, search input, sync-active pulsing dot, paginator
-- Loading: spinner; Empty: dashed border card; Pagination transitions: semi-transparent blur overlay
-
-### FeedItem Rebuild — 3-Panel Forensic View
-
-| Panel | Color | Contents |
-|-------|-------|----------|
-| Device Context | Indigo | Platform, screen res, privacy notice version, UA (monospace + copy btn) |
-| Network Registry | Cyan → Blue-500 | Region/City, "IP Not Stored" badge, consent hash (SHA-256) |
-| Human Proof & Bot Analysis | Rose | Time-to-click, cursor travel, consent mechanism bar, WebDriver/Headless CLEAN/DETECTED badges, revocation note callout |
-
-Expand/collapse uses existing `.animate-reveal-down` CSS class — no animation library.
-
-### Constraints
-
-| Constraint | Requirement |
-|-----------|-------------|
-| Zero new npm dependencies | Pure SVG, rAF, CSS keyframes |
-| No admin-app code copying | Fresh Preact implementations |
-| Design tokens only | All colors via `var(--color-*)` |
-| JS budget | <50KB (no Recharts, Framer Motion, date-fns) |
-| Hydration | `client:idle` |
-| Themes | Both dark + light — all tokens are theme-aware |
-
-**Inline date formatting (no date-fns):**
-```typescript
-function timeAgo(dateStr: string): string {
-  const s = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
-```
+**Keyframes defined:**
+- `heroLivePulse` — live-dot beacon on page header
+- `dotPulse` — sync badge dot
+- `revealDown` — forensic panel expand animation
+- `pulse` — skeleton shimmer (via Tailwind)
 
 ---
 
