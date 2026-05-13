@@ -798,5 +798,37 @@ ph.onSessionId((_sessionId: string) => {
 
 > **Only call PostHog stub methods that are in the stub's method list.** The PostHog snippet creates a stub object with a fixed set of methods (listed in the `o` variable in the snippet). Any method NOT in that list will throw TypeError when called before the real SDK loads. Always verify against the snippet's method list before adding new PostHog API calls.
 
+---
+
+## Issue #17: Premature Validation Errors on Booking Wizard Step 3
+
+**Date**: 2026-05-13
+**Severity**: 🟡 UX Regression
+**Phase**: Production
+
+### Symptoms
+
+Users navigating to Step 3 of the `BookingWizard` immediately saw a "wall of red errors" (validation messages) before they even interacted with any inputs.
+
+### Root Cause
+
+1. **Ghost-Clicks/Rapid Navigation**: The `onSubmit` handler for Step 3 was firing immediately upon mount if the user double-clicked the "Next" button on Step 2 or if a fast navigation event bubbled up before the component was fully hydrated. 
+2. **Strict Typing Violations**: Event handlers in `Step2Pet.tsx` and `Step3Owner.tsx` were using `any` types for events, which bypassed TypeScript's strict checks and allowed uncontrolled event propagation.
+
+### Resolution
+
+1. **Mount Safety Lock**: Implemented a 500ms `isMounted` state lock in `Step3Owner.tsx`. Submissions are ignored if `!isMounted`, effectively discarding any ghost-clicks from the previous step.
+2. **Strict Event Typing**: Replaced all `any` event types with `(e: Event)` and cast targets properly (e.g., `const target = e.currentTarget as HTMLInputElement;`).
+3. **Isolated Validation**: Ensured that the wizard components (`Step2` and `Step3`) validate only their local state during interactions, rather than relying on the global schema too early.
+
+### Files Changed
+
+- `src/components/booking/Step2Pet.tsx` — Fixed event typing.
+- `src/components/booking/Step3Owner.tsx` — Added mount safety lock and fixed event typing.
+
+### Rule for Future
+
+> **Implement mount safety locks on multi-step forms.** Always add a short debounce or `isMounted` lock (e.g., 500ms) on wizard steps to prevent ghost-clicks or rapid navigation from triggering premature validation errors when the component first renders. Ensure all event handlers use strict generic typing to maintain component integrity.
+
 
 {% endraw %}

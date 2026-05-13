@@ -865,6 +865,11 @@ All file names must be unique and descriptive across the project:
 - API routes return structured JSON errors with proper HTTP status codes
 - Errors logged silently to Sentry/PostHog; users see friendly messages
 
+### 8.6 Form Architecture & Validation
+- **Mount Safety Lock**: Implement a short debounce or safety lock (e.g., `isMounted` timeout of 500ms) on multi-step forms to prevent ghost-clicks or rapid navigation from triggering premature validation errors when the component first renders.
+- **Strict Event Typing**: Event handlers MUST use strict generic typing (e.g., `(e: Event)` and `e.currentTarget as HTMLInputElement`). Never use `any` for input events.
+- **Isolated State**: Keep form state and validation isolated within individual step components in a wizard. Perform validation checks locally before propagating submission upstream.
+
 ---
 
 ## 9. SECURITY RULES
