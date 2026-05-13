@@ -340,6 +340,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | Consent records | **Supabase** | Legal compliance, PII-adjacent, RLS-protected |
 | Privacy/ARCO requests | **Supabase** | Contains PII (name, email), RLS-protected |
 | Booking quality metadata | **Supabase** | Linked to bookings, RLS-protected |
+| Booking attempts (audit) | **D1** | Dead-letter audit log — no network hop, survives Supabase outages |
 | Site settings | **D1** | KV-like settings cache, no PII |
 | User accounts/profiles | **Supabase** | Auth + RLS required |
 | Admin users | **Supabase** | Auth + role-based access |
@@ -349,6 +350,48 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | Audit logs | **Supabase** | RLS-protected, retention policies |
 
 > **PII Security Rule:** Any table containing personally identifiable information (name, email, phone, address) MUST be stored in Supabase with RLS enabled. D1 is reserved for non-PII operational data only.
+
+### 5.3 Booking Resilience Architecture (CRITICAL)
+
+> 🚨 **OUTAGE PREVENTION** — This architecture exists because a booking FK constraint failure caused 100% booking failures for 17 days in May 2026 (Issue #15 in Troubleshooting Log). **Never weaken these safeguards.**
+
+#### Atomic Transaction Guarantee
+
+The `POST /api/booking` handler wraps ALL database inserts in a **single Drizzle `db.transaction()`**. The insert order is strictly enforced to satisfy Foreign Key constraints:
+
+```
+1. bookings           ← Creates booking_ref (FK target)
+2. consent_records    ← FK: booking_ref → bookings.booking_ref
+3. booking_pets       ← FK: booking_id → bookings.id
+4. quality_metadata   ← FK: booking_id → bookings.id
+5. email_audit_logs   ← FK: booking_id → bookings.id
+```
+
+**If ANY insert fails, the ENTIRE transaction rolls back** — no partial data, no orphaned records.
+
+> ⚠️ **NEVER reorder these inserts.** The FK `consent_records.booking_ref → bookings.booking_ref` requires the booking to exist first. The original outage was caused by inserting consent BEFORE booking.
+
+#### D1 Dead-Letter Audit Table (`booking_attempts`)
+
+Every booking request is durably logged to D1 **before** any Supabase interaction:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | TEXT PK | UUID — correlates with Sentry spans |
+| `booking_ref` | TEXT | The generated MAD-YYYYMMDD-XXXX ref |
+| `status` | TEXT | `attempt` → `validated` → `db_success` → `complete` (or error states) |
+| `owner_email` | TEXT | For recovery if Supabase is down |
+| `request_body` | TEXT | Sanitized JSON (no fingerprint/proof data, ≤4KB) |
+| `error_code` | TEXT | Error classification code |
+| `error_message` | TEXT | Truncated error message |
+| `error_stack` | TEXT | Truncated stack trace (≤2KB) |
+| `created_at` | TEXT | ISO timestamp |
+
+**Key properties:**
+- D1 is **local to the Worker** — zero network hop, zero external dependency
+- D1 write failures **never block** the booking flow (wrapped in try/catch)
+- Provides an immutable audit trail even if Supabase is 100% unreachable
+- Status progression enables precise failure classification in post-mortems
 
 ### Storage Responsibility Matrix
 

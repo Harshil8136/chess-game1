@@ -55,9 +55,24 @@ init({
     httpContextIntegration(),
     browserTracingIntegration({}),
   ],
-  tracesSampleRate: 0.1,           // 10% sample rate preserves 10K free quota
-  sampleRate: 1.0,                 // 100% — low traffic site
+  tracesSampler: (samplingContext) => {
+    const url = samplingContext?.transactionContext?.name || '';
+    if (/\/(booking|api\/contact)/.test(url)) return 0.5;  // 50% on critical paths
+    if (/\/api\//.test(url)) return 0.1;                    // 10% on general APIs
+    return 0;                                               // 0% on static/marketing
+  },
+  sampleRate: 1.0,                 // 100% error capture — low traffic site
   maxBreadcrumbs: 30,
+  ignoreErrors: [
+    'ResizeObserver loop',
+    'Error invoking postMessage: Java object is gone', // Android IAB noise (CF-ASTRO-5)
+    /AbortError.*View Transition/,
+  ],
+  denyUrls: [
+    /^chrome-extension:\/\//i,
+    /^moz-extension:\/\//i,
+    /^iabjs:\/\//i,
+  ],
 });
 ```
 
@@ -65,9 +80,9 @@ init({
 
 | Feature | Status | Reason |
 |---------|--------|--------|
-| Tracing & Apdex | ⚠️ Restricted (10%) | Enabled with a `0.1` sample rate to compute valid Apdex scores without exhausting the 10k free transaction limit. |
+| Tracing & Apdex | ⚠️ Surgical sampling | `tracesSampler` routes 50% on booking/contact, 10% on APIs, 0% on marketing pages. Preserves Apdex without wasting the 10K free transaction quota. |
 | Session Replay | ❌ Disabled | Rejected. Video capturing consumes extreme quota and is entirely unnecessary for the marketing site. |
-| Default Integrations | ❌ Replaced | Using only 4 cherry-picked integrations instead of ~15 defaults |
+| Default Integrations | ❌ Replaced | Using only 5 cherry-picked integrations instead of ~15 defaults |
 | Console Breadcrumbs | ❌ Disabled | Noisy in dev; not useful for production error context |
 
 ### Noise Filtering
@@ -251,8 +266,32 @@ export const POST: APIRoute = async ({ request }) => {
 
 | Service | Budget | Strategy |
 |---------|--------|----------|
-| **Sentry** | 5,000 errors/month | Tracing/Replay disabled. Noise filtering via `ignoreErrors`/`denyUrls`. Sample rate 1.0 (low traffic). |
+| **Sentry** | 5,000 errors/month | `tracesSampler` routes 50%→booking/contact, 10%→APIs, 0%→marketing. Noise filtering via `ignoreErrors`/`denyUrls`. Error sample rate 1.0 (low traffic). |
 | **BetterStack** | 3GB logs/month | Only critical API routes instrumented. No middleware-level logging. Short user-agent strings (120 char max). |
+
+### Workers Observability Sampling
+
+> 🚨 **UPDATED 2026-05-13**: Raised from `0.05` → `1.0` after 17-day booking outage went undetected.
+
+```toml
+# wrangler.toml
+[observability]
+enabled = true
+head_sampling_rate = 1  # 100% — NEVER lower this on a low-traffic site
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+```
+
+**Rule**: At ~50 requests/day, 100% sampling is well within free tier limits. Only lower `head_sampling_rate` if the site exceeds 10K+ requests/day.
 
 ### Monitoring Usage
 

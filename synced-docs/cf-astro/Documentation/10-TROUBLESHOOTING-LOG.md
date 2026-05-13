@@ -654,5 +654,149 @@ The `InfiniteGalleryIsland` was generating a new `imgRefCallback` reference on e
 
 > **Always memoize ref callbacks and implement state bailouts in list-rendering components.** When passing inline arrow functions to `ref` attributes in Preact/React, a new function is created on every render, triggering the ref callback again. Combining this with an unconditional state update creates an infinite loop. Always bail out if the new state matches the previous state.
 
+---
+
+## Issue #15: Booking FK Constraint Failure — 100% Booking Outage
+
+**Date**: 2026-05-13 (discovered; active since ~April 26)
+**Severity**: 🔴🔴 CRITICAL — Business-blocking (17 days of silent failure)
+**Phase**: Production
+
+### Symptoms
+
+Every booking submission at `madagascarhotelags.com/es/booking/` returned:
+```
+Internal server error. Please try again or contact us via WhatsApp.
+```
+
+Chrome console showed:
+```
+POST https://madagascarhotelags.com/api/booking 500 (Internal Server Error)
+```
+
+Sentry captured 3 errors related to the booking endpoint. All booking attempts for approximately 17 days failed silently with a 500 response.
+
+### Root Cause
+
+The `POST /api/booking` handler inserted `consent_records` **before** `bookings`. The Supabase PostgreSQL schema has a Foreign Key constraint:
+
+```
+consent_records.booking_ref → bookings.booking_ref
+```
+
+This FK requires the referenced `bookings.booking_ref` to exist **before** a `consent_records` row can reference it. The handler was doing:
+
+```typescript
+// ❌ WRONG ORDER — FK violation on every request
+await db.insert(schema.consentRecords).values({ bookingRef, ... }); // FK target doesn't exist yet!
+await db.insert(schema.bookings).values({ bookingRef, ... });       // Too late — consent already failed
+```
+
+**Why it went undetected for 17 days:**
+1. `wrangler.toml` had `head_sampling_rate = 0.05` (5% observability sampling)
+2. At ~50 requests/day, 95% of error evidence was silently dropped
+3. The Supabase error message was a generic FK violation, not surfaced to any dashboard
+4. No D1 audit trail existed to catch the gap
+
+### Resolution
+
+**4 files changed:**
+
+1. **`src/pages/api/booking.ts`** (complete rewrite):
+   - Wrapped ALL inserts in a single `db.transaction()` for atomicity
+   - **Reversed insert order**: booking FIRST, then consent (satisfies FK)
+   - Added D1 `booking_attempts` audit table writes before and after Supabase operations
+   - Status progression: `attempt` → `validated` → `db_success` → `complete` (or error states)
+
+2. **`src/lib/db/client.ts`**:
+   - Added `createRawClient()` export for manual transaction control
+   - Fixed `prepare: false` detection for Supavisor pooler connections (port 6543)
+
+3. **`src/scripts/analytics-loader.ts`**:
+   - Fixed PostHog bridge: replaced `onFeatureFlags()` (NOT stubbed) with `onSessionId()` (IS stubbed)
+   - Added polling fallback for edge cases
+   - Fixes Sentry issues CF-ASTRO-5 and CF-ASTRO-6
+
+4. **`wrangler.toml`**:
+   - Raised `head_sampling_rate` from `0.05` → `1.0` (100% observability)
+   - Added `[observability.traces]` section with `persist = true`
+
+**D1 Migration applied:**
+```sql
+-- db/migrations/0005_booking_attempts.sql
+CREATE TABLE IF NOT EXISTS booking_attempts (
+  id TEXT PRIMARY KEY,
+  booking_ref TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'attempt',
+  owner_email TEXT,
+  service TEXT,
+  pet_count INTEGER DEFAULT 0,
+  request_ip TEXT,
+  user_agent TEXT,
+  request_body TEXT,
+  error_code TEXT,
+  error_message TEXT,
+  error_stack TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_ba_status ON booking_attempts(status);
+CREATE INDEX IF NOT EXISTS idx_ba_created ON booking_attempts(created_at);
+```
+
+### Files Changed
+
+- `src/pages/api/booking.ts` — Atomic transaction, correct FK order, D1 audit
+- `src/lib/db/client.ts` — Added `createRawClient()`, fixed pooler detection
+- `src/scripts/analytics-loader.ts` — Fixed PostHog bridge TypeError
+- `wrangler.toml` — 100% observability sampling
+- `db/migrations/0005_booking_attempts.sql` — New D1 audit table
+
+### Rules for Future
+
+> **NEVER insert consent_records before bookings.** The FK `consent_records.booking_ref → bookings.booking_ref` requires the booking to exist first. Always follow the insert order documented in RULES.md §5.3.
+
+> **NEVER lower `head_sampling_rate` below `1.0` on a low-traffic site (<1000 req/day).** At 5% sampling, a bug that fires on every request can go undetected for weeks. 100% sampling is well within free tier limits.
+
+> **ALL business-critical endpoints MUST have D1 audit tables.** D1 is local to the Worker (zero network hop) and survives external DB outages. Booking, contact, and consent endpoints should all have dead-letter audit trails.
+
+> **Wrap ALL multi-table inserts in a single `db.transaction()`.** Individual inserts without transaction wrapping leave the database in an inconsistent state if any insert fails mid-sequence.
+
+---
+
+## Issue #16: PostHog Bridge TypeError — `onFeatureFlags is not a function`
+
+**Date**: 2026-05-13
+**Severity**: 🟡 Non-blocking (diagnostic noise in Sentry)
+**Phase**: Production
+
+### Symptoms
+
+Sentry captured recurring `TypeError: window.posthog.onFeatureFlags is not a function` errors (issues CF-ASTRO-5 and CF-ASTRO-6). The errors appeared in the browser console but did not affect site functionality.
+
+### Root Cause
+
+The `bridgePostHogToSentry()` function in `analytics-loader.ts` called `posthog.onFeatureFlags()`. However, `onFeatureFlags` is **not** in the PostHog stub's method list — it only exists on the fully-loaded SDK. When the bridge fires before the real SDK loads (which is the common case with `requestIdleCallback` loading), the stub object throws a TypeError.
+
+### Resolution
+
+Replaced `onFeatureFlags()` with `onSessionId()`, which **IS** in the PostHog stub's method list. Added a polling fallback for edge cases where even `onSessionId` is unavailable:
+
+```typescript
+// ✅ CORRECT — onSessionId IS in the stub
+ph.onSessionId((_sessionId: string) => {
+  const distinctId = ph.get_distinct_id?.();
+  if (distinctId) setTag('posthog_id', distinctId);
+});
+```
+
+### Files Changed
+
+- `src/scripts/analytics-loader.ts` — Replaced `onFeatureFlags` with `onSessionId` + polling fallback
+
+### Rule for Future
+
+> **Only call PostHog stub methods that are in the stub's method list.** The PostHog snippet creates a stub object with a fixed set of methods (listed in the `o` variable in the snippet). Any method NOT in that list will throw TypeError when called before the real SDK loads. Always verify against the snippet's method list before adding new PostHog API calls.
+
 
 {% endraw %}

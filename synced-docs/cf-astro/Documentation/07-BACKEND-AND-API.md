@@ -82,27 +82,41 @@ const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 
 ### `POST /api/booking` — Booking Submission
 
-**File**: `src/pages/api/booking.ts` (5.5KB, 139 lines)
+**File**: `src/pages/api/booking.ts` (~17KB, 461 lines)
+
+> 🚨 **CRITICAL — ATOMIC TRANSACTION ARCHITECTURE** (Implemented 2026-05-13 after Issue #15 outage)
 
 **Flow**:
 
-1. Parse JSON body from request
-2. Validate with `bookingSchema` (Zod) — returns `400` with field errors on failure
-3. Generate booking reference: `MAD-YYYYMMDD-XXXX` (e.g., `MAD-20260317-A1B2`)
-4. Insert consent record into `consent_records` table (D1)
-5. Insert booking into `bookings` table (D1)
-6. Insert each pet into `booking_pets` table (D1)
-7. Insert quality metadata into `booking_quality_metadata` table (D1)
-8. Push `booking_confirmation` message to `env.EMAIL_QUEUE` (contains data for both staff and customer emails)
-9. Update `bookings.admin_email_sent` and `bookings.user_email_sent` flags in D1
-11. Return JSON response with `bookingRef` and `whatsappUrl` fallback
+1. Origin check (`assertOrigin()`) — rejects cross-origin requests
+2. Rate limit check (5 submissions / 60s / IP via Upstash)
+3. Verify `DATABASE_URL` environment variable is set
+4. Parse JSON body from request
+5. Validate with `bookingSchema` (Zod) — returns `400` with field errors on failure
+6. Generate booking reference: `MAD-YYYYMMDD-XXXX` (e.g., `MAD-20260317-A1B2`)
+7. **D1 Audit**: Record attempt in `booking_attempts` table (BEFORE any Supabase operation)
+8. **ATOMIC TRANSACTION** (single `db.transaction()` — all-or-nothing):
+   1. Insert booking into `bookings` table ← **MUST be first** (creates FK target)
+   2. Insert consent record into `consent_records` table ← FK: `booking_ref → bookings.booking_ref`
+   3. Insert pets into `booking_pets` table ← FK: `booking_id → bookings.id`
+   4. Insert quality metadata into `booking_quality_metadata` table
+   5. Insert email audit logs (×2: admin + customer)
+9. **D1 Audit**: Update attempt status to `db_success`
+10. Push email messages to `env.EMAIL_QUEUE` (Sentry trace propagation included)
+11. **D1 Audit**: Update attempt status to `complete`
+12. Return JSON response with `bookingRef` and `whatsappUrl` fallback
+
+> ⚠️ **INSERT ORDER IS CRITICAL**: The booking MUST be inserted BEFORE consent_records. The FK `consent_records.booking_ref → bookings.booking_ref` requires the booking to exist first. Reversing this order caused the May 2026 outage (see Troubleshooting Log Issue #15).
+
+**D1 Dead-Letter Audit**: Every booking attempt is logged to D1 (`booking_attempts` table) *before* any Supabase interaction. D1 is local to the Worker (zero network hop) and survives Supabase outages. See RULES.md §5.3 for the full table schema.
 
 **Response (success)**:
 ```json
 {
   "success": true,
   "bookingRef": "MAD-20260317-A1B2",
-  "emailsSent": { "admin": true, "customer": true },
+  "consentId": "uuid",
+  "emailsQueued": true,
   "whatsappUrl": "https://wa.me/5214494485486?text=..."
 }
 ```
@@ -198,7 +212,7 @@ const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 
 ## D1 Database Schema
 
-**Migration file**: `db/migrations/0001_initial_schema.sql` (3.3KB, 92 lines)
+**Migration files**: `db/migrations/0001_initial_schema.sql` (3.3KB), `db/migrations/0005_booking_attempts.sql`
 
 ### Tables
 
@@ -261,6 +275,27 @@ const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 | `consent_type` | TEXT | 'booking' (default) |
 | `granted` | INTEGER | Boolean: consent given |
 
+#### `booking_attempts` — D1 Dead-Letter Audit Log (Added 2026-05-13)
+
+> 🚨 This table is the last line of defense against booking data loss. It captures every attempt BEFORE Supabase is contacted.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | TEXT PK | UUID — correlates with Sentry spans |
+| `booking_ref` | TEXT | Generated MAD-YYYYMMDD-XXXX ref |
+| `status` | TEXT | Lifecycle: `attempt` → `validated` → `db_success` → `complete` (or `validation_error`, `db_error`, `queue_error`, `unknown_error`) |
+| `owner_email` | TEXT | For recovery if Supabase is down |
+| `service` | TEXT | hotel / daycare / transport |
+| `pet_count` | INTEGER | Number of pets in booking |
+| `request_ip` | TEXT | cf-connecting-ip |
+| `user_agent` | TEXT | Truncated UA string |
+| `request_body` | TEXT | Sanitized JSON (≤4KB, no fingerprint/proof data) |
+| `error_code` | TEXT | Error classification (nullable) |
+| `error_message` | TEXT | Truncated error message (nullable) |
+| `error_stack` | TEXT | Truncated stack trace ≤2KB (nullable) |
+| `created_at` | TEXT | DEFAULT datetime('now') |
+| `updated_at` | TEXT | Last status update |
+
 #### `privacy_requests` — ARCO requests
 
 | Column | Type | Description |
@@ -291,6 +326,8 @@ const r2 = env.IMAGES;      // → R2Bucket (CMS images)
 | `idx_booking_pets_booking` | booking_pets | booking_id | Join performance |
 | `idx_consent_email` | consent_records | email | Privacy lookups |
 | `idx_privacy_status` | privacy_requests | status | Filter by status |
+| `idx_ba_status` | booking_attempts | status | Filter failed attempts |
+| `idx_ba_created` | booking_attempts | created_at | Date-range queries |
 
 ---
 
