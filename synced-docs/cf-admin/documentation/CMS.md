@@ -1,8 +1,8 @@
 {% raw %}
 # CMS, Image & Bookings Management
 
-> **Version:** 4.5
-> **Last Updated:** 2026-05-02 (BookingList.tsx replaced by BookingDashboard.tsx + BookingSlideDrawer.tsx)
+> **Version:** 4.6
+> **Last Updated:** 2026-05-13 (FAQ + About/Stats CMS sections live; Media Library browser; KV resilience audit; Promise.allSettled fix)
 > **Projects:** `cf-admin` (writes), `cf-astro` (reads)
 
 ---
@@ -20,14 +20,18 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 
 ### KV Injection Coverage
 
-All four CMS sections use the full 2-tier KV-first resolution strategy:
+All six CMS sections use the full 3-tier KV-first resolution strategy:
 
-| Section | D1 Key | KV Key | Injected by |
-|---------|--------|--------|-------------|
-| Hero Image | `hero_image` (page: `home`) | `cms:hero_image` | `POST /api/media/upload` |
-| Gallery | `gallery_images` (page: `home`) | `cms:gallery_images` | `POST /api/media/gallery` |
-| Services Pricing | `services_pricing` (page: `home`) | `cms:services_pricing` | `POST /api/content/services` |
-| Reviews | `happy_clients` (page: `global`) | `cms:happy_clients` | `POST /api/content/reviews` |
+| Section | D1 id (page) | KV Key | Writer Endpoint | cf-astro Reader |
+|---------|-------------|--------|-----------------|-----------------|
+| Hero Image | `hero_image` (`home`) | `cms:hero_image` | `POST /api/media/upload` | `Hero.astro` |
+| Gallery | `gallery_images` (`home`) | `cms:gallery_images` | `POST /api/media/gallery` | `Gallery.astro` |
+| Services Pricing | `services_pricing` (`home`) | `cms:services_pricing` | `POST /api/content/services` | `Services.astro` via `pricing.ts` |
+| Reviews | `happy_clients` (`global`) | `cms:happy_clients` | `POST /api/content/reviews` | `Testimonials.astro` |
+| FAQ | `faq_items` (`global`) | `cms:faqs` | `POST /api/content/faqs` | `FAQ.astro` |
+| About / Stats | `about_stats` (`global`) | `cms:about` | `POST /api/content/stats` | `About.astro` |
+
+> **Key naming note (FAQ & About):** The D1 record `id` and the KV key differ by design — D1 uses descriptive ids (`faq_items`, `about_stats`) while KV uses short namespace keys (`faqs`, `about`). Both layers are correct; `revalidateAstro()` auto-prefixes KV keys with `cms:`. This is intentional and documented here to prevent confusion during debugging.
 
 ---
 
@@ -92,28 +96,31 @@ Four modules, all backed by D1. Changes propagate to cf-astro via the ISR revali
 
 ---
 
-## 6. Defense-in-Depth Sync Pipeline — 2-Tier KV Strategy
+## 6. Defense-in-Depth Sync Pipeline — 3-Tier Cache Strategy
 
-**The problem:** D1 read replica lag. cf-admin writes to the primary D1 node. If cf-astro immediately renders after an ISR cache purge, it may hit a stale replica — locking that stale HTML into KV for 30 days.
+**The problem:** D1 read replica lag. cf-admin writes to the primary D1 node. If cf-astro immediately renders after a cache purge, it may hit a stale replica — locking that stale HTML into the cache.
 
-**The solution (v4.0+):** cf-admin passes the fresh `cmsData` payload to cf-astro *inside the webhook body*. cf-astro writes it directly to a `cms:*` KV key. On render, each CMS section checks KV first:
+**The solution (v4.5+):** cf-astro now uses a **3-Tier Defense-in-Depth** caching strategy. cf-admin passes the fresh `cmsData` payload to cf-astro *inside the webhook body*. cf-astro writes it directly to a `cms:*` KV key and then issues a Cloudflare API **Cache-Tag** purge.
+
+On render, each CMS section resolves data in this order:
 
 ```
-1. ISR_CACHE.get('cms:<key>')    → KV Layer (1hr TTL, injected by cf-admin webhook)
-2. getCmsContent(db, page, id)   → D1 Layer (source of truth, may lag)
-3. hardcoded fallback            → Static defaults
+1. Cloudflare Tiered Cache   → Edge Layer (24hr TTL via s-maxage=86400, purged by Cache-Tag)
+2. ISR_CACHE.get('cms:<key>')→ KV Layer (Fallback if Edge drops, prevents D1 replica lag)
+3. getCmsContent(db)         → D1 Layer (Ultimate source of truth, may lag)
+4. hardcoded fallback        → Static defaults
 ```
 
 **cf-astro resolvers:**
 
-| Section | Resolver | KV Key Read |
-|---------|----------|-------------|
-| Hero | `getImageUrl(db, 'hero_image', fallback, ISR_CACHE)` in `Hero.astro` | `cms:hero_image` |
-| Gallery | `getGalleryImageUrls(db, ISR_CACHE)` in `Gallery.astro` | `cms:gallery_images` |
-| Services | KV-first block in `Services.astro` frontmatter | `cms:services_pricing` |
-| Reviews | KV-first block in `Testimonials.astro` frontmatter | `cms:happy_clients` |
+| Section | Resolver | KV Key Read | Cache-Tag Purged |
+|---------|----------|-------------|------------------|
+| Hero | `getImageUrl(db, ...)` in `Hero.astro` | `cms:hero_image` | `page-/` |
+| Gallery | `getGalleryImageUrls(db)` in `Gallery.astro` | `cms:gallery_images` | `page-/` |
+| Services | KV-first block in `Services.astro` | `cms:services_pricing` | `page-/` |
+| Reviews | KV-first block in `Testimonials.astro` | `cms:happy_clients` | `page-/` |
 
-> **cf-astro requirement:** Target pages (e.g. `index.astro`) MUST have `export const prerender = false`. Without this, the ISR middleware never runs — the webhook succeeds but the site serves static files and never picks up the new data.
+> **cf-astro requirement:** Target pages MUST have `export const prerender = false`. We rely entirely on `Cache-Control: public, s-maxage=86400, stale-while-revalidate=86400` headers injected by Astro middleware.
 
 ---
 
@@ -194,17 +201,25 @@ For CMS work involving uploads: `npm run cf:dev` (full Workers runtime with loca
 
 ### cf-admin
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/media/gallery` | Admin+ | Read gallery_images from D1 |
-| `POST` | `/api/media/gallery` | Admin+ | Write gallery array to D1 + KV injection |
-| `POST` | `/api/media/upload` | Admin+ | Upload to R2, inject hero_image to KV |
-| `POST` | `/api/media/revalidate` | Admin+ | Force KV injection retry |
-| `GET` | `/api/content/services` | Admin+ | Read services_pricing from D1 |
-| `POST` | `/api/content/services` | Admin+ | Write pricing to D1 + KV injection |
-| `GET` | `/api/content/reviews` | Admin+ | Read happy_clients from D1 |
-| `POST` | `/api/content/reviews` | Admin+ | Write testimonials to D1 + KV injection |
-| `POST` | `/api/content/blocks` | Admin+ | Update text blocks in D1 + purge (no KV inject) |
+| Method | Path | Auth | Description | Revalidation response field |
+|--------|------|------|-------------|----------------------------|
+| `GET` | `/api/media/gallery` | Admin+ | Read gallery_images from D1 | — |
+| `POST` | `/api/media/gallery` | Admin+ | Write gallery array to D1 + KV injection | — |
+| `POST` | `/api/media/upload` | Admin+ | Upload to R2, inject hero_image to KV | `revalidation.purged` |
+| `POST` | `/api/media/revalidate` | Admin+ | Force KV injection retry | — |
+| `GET` | `/api/media/library` | Admin+ | List all R2 assets (gallery/ + hero/ prefixes) | — |
+| `DELETE` | `/api/media/library` | Owner/Dev | Delete R2 asset by key | — |
+| `GET` | `/api/content/services` | Admin+ | Read services_pricing from D1 | — |
+| `POST` | `/api/content/services` | Admin+ | Write pricing to D1 + KV injection | `revalidated` |
+| `GET` | `/api/content/reviews` | Admin+ | Read happy_clients from D1 | — |
+| `POST` | `/api/content/reviews` | Admin+ | Write testimonials to D1 + KV injection | `revalidated` + `message` |
+| `GET` | `/api/content/faqs` | Admin+ | Read faq_items from D1 | — |
+| `POST` | `/api/content/faqs` | Admin+ | Write bilingual FAQs to D1 + KV injection | `revalidated` + `message` |
+| `GET` | `/api/content/stats` | Admin+ | Read about_stats from D1 | — |
+| `POST` | `/api/content/stats` | Admin+ | Write homepage stats to D1 + KV injection | — |
+| `POST` | `/api/content/blocks` | Admin+ | Update text blocks in D1 + purge (no KV inject) | — |
+
+> **Revalidation response transparency:** Endpoints that include `revalidated` in their response let the admin UI distinguish between "saved to D1" and "edge cache also purged". A `revalidated: false` response means D1 has the new data but the KV/edge cache wasn't updated — the public site will serve the new content once the KV TTL expires (≤1 hour) via D1 fallback.
 
 ### cf-astro
 
@@ -220,5 +235,108 @@ For CMS work involving uploads: `npm run cf:dev` (full Workers runtime with loca
 - **Binding IDs (D1/KV/R2 UUIDs)** → See [OPERATIONS.md](./OPERATIONS.md) §1
 - **RBAC gates** → See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md)
 - **ISR_CACHE KV binding** → See [OPERATIONS.md](./OPERATIONS.md) §1 (KV Namespaces table)
+- **KV quota limits, exhaustion behaviour & fallback chain** → See [KV-RESILIENCE.md](./KV-RESILIENCE.md)
+
+---
+
+## 11. Content Section Fallback Chain
+
+Every CMS-driven section on cf-astro resolves data in exactly this order. The site **never crashes** regardless of which layers fail.
+
+```
+Request arrives at cf-astro
+│
+├─ Layer 1: ISR_CACHE.get('cms:<key>')          ← KV edge read (10M reads/day)
+│  Hit → serve immediately, no D1 query
+│  Miss or error → fall through (error is caught and logged, never thrown)
+│
+├─ Layer 2: D1 query (cms_content table)         ← always has latest data (written first)
+│  Hit → serve, log source
+│  Miss → fall through
+│
+└─ Layer 3: Hardcoded / i18n defaults            ← always succeeds
+   Used on first deploy before any CMS content is saved
+```
+
+### Per-Section Fallback Details
+
+| Section | KV Key | D1 id / page | Layer 3 Default |
+|---------|--------|--------------|-----------------|
+| Hero Image | `cms:hero_image` | `hero_image` / `home` | Hardcoded local image |
+| Gallery | `cms:gallery_images` | `gallery_images` / `home` | Empty grid |
+| Services | `cms:services_pricing` | `services_pricing` / `home` | Hardcoded pricing tiers |
+| Testimonials | `cms:happy_clients` | `happy_clients` / `global` | i18n `Testimonials.items` (6 real reviews) |
+| FAQ | `cms:faqs` | `faq_items` / `global` | i18n `FAQ.items` (5 static entries) |
+| About Stats | `cms:about` | `about_stats` / `global` | Hardcoded: `30+` / `5000+` / `24/7` / `100%` |
+
+### First-Deploy Behaviour
+
+On a fresh production deploy with an empty D1, all sections fall to Layer 3. The site is fully functional with placeholder/i18n content. To activate CMS control:
+
+1. Go to each admin editor page
+2. Save content once → D1 is written, KV is injected, edge cache is purged
+3. All subsequent renders are KV-first
+
+---
+
+## 12. KV Quota & Resilience
+
+> Full deep-dive → [KV-RESILIENCE.md](./KV-RESILIENCE.md)
+
+### Write Budget Per Publish
+
+One content publish triggers `revalidateAstro()` which calls `POST /api/revalidate` on cf-astro. That endpoint performs:
+
+- `n` ISR key deletes (one per cached path variant — typically 3: `/`, `/en`, `/es`)
+- 1 CMS data write (`cms:<key>`)
+
+**Total: ~4 KV write operations per publish.**
+
+| Tier | Daily write limit | Publishes before limit |
+|------|------------------|----------------------|
+| Workers Free | 1,000 writes/day | ~250 publishes/day |
+| Workers Paid ($5/mo) | ~33,000 writes/day (1M/month) | ~8,000 publishes/day |
+
+A hotel CMS performing 250 content publishes in a single day is not a realistic scenario. **The limit is effectively not a concern in production.**
+
+### What Happens If KV Writes Exhaust
+
+```
+Admin clicks Save
+│
+├─ D1 write ──── SUCCEEDS (always runs first, independently)
+│
+└─ revalidateAstro() → POST /api/revalidate → ISR_CACHE.put() THROWS
+   │
+   ├─ Promise.allSettled() catches per-promise failure (does NOT abort batch)
+   ├─ Error logged to BetterStack
+   ├─ All 3 retries in revalidateAstro() fail
+   └─ Returns { success: false, message: "..." }
+      │
+      ├─ reviews.ts / faqs.ts → Response includes { revalidated: false, message: "..." }
+      │  Admin sees: "Saved to database, but edge cache sync failed"
+      └─ services.ts / upload.ts → Response includes { revalidated: false }
+         Admin sees sync failure flag in UI
+```
+
+**Public site impact when KV writes are exhausted:**
+
+| KV state | Public site behaviour |
+|----------|-----------------------|
+| KV key still warm (within 1hr TTL) | Serves **stale** KV content |
+| KV key expired (TTL elapsed) | Falls to D1 → serves **correct** content |
+| KV completely down (reads + writes) | Falls to D1 → serves correct content |
+| D1 also down | Falls to hardcoded defaults → **site stays up** |
+
+**Maximum stale window: 1 hour** (KV TTL on `cms:*` keys is `expirationTtl: 3600`).
+
+### Bugs Fixed (2026-05-13)
+
+| File | Bug | Fix |
+|------|-----|-----|
+| `cf-astro/api/revalidate.ts` | `Promise.all()` — one KV failure aborted entire batch | Changed to `Promise.allSettled()` with per-promise `.catch()` |
+| `cf-admin/api/content/reviews.ts` | Revalidation failure silently swallowed → misleading HTTP 200 | Now returns `{ revalidated: bool, message: string }` |
+| `cf-admin/api/content/faqs.ts` | Same as reviews.ts | Same fix |
+| `cf-astro/api/revalidate.ts` | `happy_clients` and `hero_image` missing from KV allowlist | Added to `CMS_KEY_ALLOWLIST` |
 
 {% endraw %}
