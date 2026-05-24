@@ -26,7 +26,7 @@ CF-Admin uses **Cloudflare Zero Trust Access** for identity (who you are) and a 
 
 - **Whitelist-only entry:** Only emails present in `admin_authorized_users` (Supabase PostgreSQL) with `is_active = true` can create a KV session
 - **Service-role isolation:** All Supabase queries use `SUPABASE_SERVICE_ROLE_KEY`, accessed only server-side — bypasses RLS entirely, never exposed to the client
-- **Break-glass admin:** `harshil.8136@gmail.com` and `team@madagascarhotelags.com` are hardcoded in `BREAK_GLASS_EMAILS` (`src/lib/auth/rbac.ts`). If D1 or Supabase is unreachable, these emails are force-granted access. `isBreakGlassAdmin()` logs a `console.warn` every invocation. (Legacy alias: `isHardcodedSuperAdmin` = deprecated, still exported for backwards compatibility.)
+- **No hardcoded bypass accounts:** The break-glass mechanism (`BREAK_GLASS_EMAILS`, `isBreakGlassAdmin`, `isHardcodedSuperAdmin`) was intentionally removed. All access is gated exclusively through the `admin_authorized_users` whitelist — there are zero hardcoded emails or fallback grants in the codebase.
 
 ### 1.3 Session Design
 
@@ -488,5 +488,36 @@ The Supabase database is protected by **three independent layers**. Even if one 
 | `lock_down_rls_policies` | Restricted 9 tables' RLS from PUBLIC→service_role; removed 6 vestigial anon INSERT policies; added 6 replacement service_role policies |
 | `revoke_anon_function_and_table_access` | Revoked EXECUTE on 4 functions (5 overloads) from anon/authenticated/PUBLIC; revoked ALL table grants from anon; locked default privileges |
 | `add_remaining_fk_indexes` | Added 6 covering indexes for remaining unindexed foreign keys |
+
+---
+
+## 13. Security Audit Log — 2026-05-24 Deep Review
+
+Full report: [`documentation/SECURITY-REVIEW-2026-05-24.md`](./SECURITY-REVIEW-2026-05-24.md)
+
+### Vulnerabilities Patched
+
+| Severity | File | Vulnerability | Fix |
+|----------|------|--------------|-----|
+| 🔴 Critical | `src/components/admin/logs/shared.tsx` | **Stored XSS** — `JSON.stringify` does not HTML-escape `<>& `; raw data passed to `dangerouslySetInnerHTML` in JSONViewer. Exploitable via crafted URL paths stored in audit log. | Added `escapeHtml()` applied per matched regex token before `<span>` insertion |
+| 🔴 High | `src/lib/auth/security-logging.ts` | **HTML injection in security alert emails** — `userAgent`, `email`, `geoLocation`, `cfIdentityProvider`, `failureReason` interpolated raw into HTML email. Unauthenticated attacker can inject HTML via `User-Agent` header. | Added `escHtml()` helper; applied to all 5 user-controlled fields |
+| 🔴 High | `src/lib/cms.ts` | **MIME type bypass** — `file.type` (client-controlled multipart header) trusted without verifying actual file bytes. Attacker could upload HTML/SVG as `image/jpeg`. | Added `validateImageMagicBytes()` (JPEG/PNG/WebP/AVIF signatures); replaced filename-based extension with hardcoded `MIME_TO_EXT` map |
+| 🟠 Medium | `src/pages/api/bookings/index.ts` | **PostgREST filter injection** — `search` param interpolated raw into `.or()` filter string | Added `sanitizeSearchTerm()` stripping PostgREST operator chars |
+| 🟠 Medium | `src/pages/api/users/force-kick.ts` | **Supabase filter injection** — `.or(`id.eq.${userId}`)` with attacker-controlled `userId` | Replaced with `.eq('id', userId).limit(1)` |
+| 🟠 Medium | `src/lib/auth/session.ts` | **Session cookie `SameSite: lax`** — Admin cookie sent on cross-origin top-level navigation | Changed to `SameSite: strict` on both `createSession` and `destroySession` |
+| 🟠 Medium | `src/lib/auth/session.ts` | **patchSession resets KV TTL** — every 30-min role recheck extended KV entry lifetime to now+24h | Now uses `remainingMs = maxLifetime − (now − session.createdAt)` with 60s floor |
+| 🟡 Low | `src/pages/api/users/manage.ts` | **No `displayName` length limit** — unbounded string stored in D1 + audit log | Added 120-char limit |
+| 🟡 Low | `src/pages/api/settings/user.ts` | **Theme cookie missing `Secure` attribute** | Added `Secure` to both set and clear `Set-Cookie` headers |
+| 🟡 Low | `src/pages/api/auth/logout.ts` | **No rate limit on logout** — KV delete + audit write unbounded | Added 10 req/min per IP via `getRateLimiter` |
+| 🟡 Low | `wrangler.toml` | **Developer email in committed `[vars]`** — `LOCAL_DEV_ADMIN_EMAIL` should be in gitignored `.dev.vars` | Removed from `[vars]`; replaced with comment pointing to `.dev.vars` |
+| 🟡 Low | `documentation/SECURITY.md` | **Stale break-glass docs** — referenced `BREAK_GLASS_EMAILS` / `isBreakGlassAdmin()` that no longer exist | Replaced with accurate statement that no hardcoded bypasses exist |
+
+### Items Not Patched (Require Architectural Decision)
+
+| Item | Reason |
+|------|--------|
+| `Content-Security-Policy: unsafe-inline unsafe-eval` | Removing these requires nonce-based CSP + Astro build changes — tracked separately |
+| Security docs synced to public repo via `sync-docs.yml` | Policy decision: exclude `SECURITY.md`, `ARCHITECTURE.md`, `login-forensics.md` from sync paths |
+
 
 {% endraw %}
