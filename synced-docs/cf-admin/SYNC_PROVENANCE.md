@@ -4,13 +4,11 @@
 | Field | Value |
 |-------|-------|
 | source_repo | mascotasmadagascar-cmd/cf-admin-madagascar |
-| source_commit | 86034103db747faef6f3316e6aae329a03d8281b |
+| source_commit | 5eea57269bda6ce8d1dcbee769c5f766c1630653 |
 | source_ref | main |
 | triggered_by | push |
-| synced_at | 2026-05-24T19:00:27Z |
-| files_copied | 17 |
-| files_skipped | 9 |
-
-> Security-sensitive files are excluded from this sync.
+| synced_at | 2026-05-24T19:13:36Z |
+| files_copied | 25 |
+| files_skipped | 1 |
 
 {% endraw %}
