@@ -2,7 +2,7 @@
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-24 (v4.6: CSP Phase 1 hardening — 5 new directives, sentry wildcard fix, Permissions-Policy header, Report-Only CSP → Sentry; Chart.js version pinned; sync-docs security exclusions; docs audit trail updated)
+> **Last Updated:** 2026-05-25 (session-status auth gate change (owner→super_admin), Ghost Protection at DB boundary, SessionForensicsDrawer per-session revocation)
 > **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization, IDOR Prevention, Rate Limiting, Input Validation
 
 ---
@@ -171,7 +171,7 @@ Dynamic UI state is controlled via data attributes (`data-state="expanded"`, `da
 
 Role mutations, account deactivation, and PLAC changes trigger a 3-layer security cascade that immediately revokes access at every layer of the stack. Implemented in `src/lib/auth/plac.ts` → `forceLogoutUser()`.
 
-**Trigger events:** role change, account deactivation, PLAC override modification, manual force-kick
+**Trigger events:** role change, account deactivation, PLAC override modification, manual force-kick, per-session revocation via Session Forensics Drawer
 
 **Layer 1 — KV Session Deletion (O(k)):**
 - LISTs `user-session:{userId}:*` in the reverse index → deletes all matching KV session keys
@@ -245,6 +245,7 @@ try {
 | `POST /api/audit/silence` | `dev` | Modifies audit suppression |
 | `POST /api/features/toggle` | `dev` | Feature flag mutations |
 | `GET /api/diagnostics/ping` | `dev` | Infrastructure probe |
+| `GET /api/users/[id]/session-status` | `super_admin` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
 
 ---
 

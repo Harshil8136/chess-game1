@@ -4,7 +4,7 @@
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-05-02 (v4.5: documentation audit pass; content verified against live codebase)
+> **Last Updated:** 2026-05-25 (v4.6: Session Forensics Drawer, session-status telemetry expansion, auth gate lowered to super_admin+)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -73,6 +73,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/users/access.ts` | `isDev`, `isOwnerOrDev` | PLAC provisioning |
 | `src/pages/api/users/force-kick.ts` | `isOwnerOrDev` | Session termination |
 | `src/pages/api/users/activity.ts` | `isOwnerOrDev` | Ghost protection on activity logs |
+| `src/pages/api/users/[id]/session-status.ts` | `isSuperAdmin` | Session telemetry + per-session revocation |
 | `src/pages/api/features/toggle.ts` | `isDev` | Feature flag mutation |
 | `src/pages/api/diagnostics/ping.ts` | `isDev` | System diagnostics |
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` | Consent record deletion |
@@ -160,15 +161,16 @@ If a user needs immediate revocation:
 
 The interface is composed of multiple Preact islands:
 
-| Component | Purpose |
-|-----------|---------|
-| **Users Manager** | Main orchestrator — user list, search, role filtering. Dispatches events to open invite modal |
-| **User Card** | Individual user card with role badge, actions, permission display |
-| **Page Access Manager** | Per-user PLAC override toggle grid (for existing users) |
-| **Invite User Modal** | Two-panel "Command Console" Preact island |
-| **Role Pill Selector** | Atomic: 2×2 role pill grid with RBAC-gated availability |
-| **Hidden Account Toggle** | Atomic: ghost-mode toggle (DEV/Owner only) |
-| **Page Chip Grid** | Atomic: interactive chip grid grouped by section, 4 chip states |
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Users Manager** | | Main orchestrator — user list, search, role filtering. Dispatches events to open invite modal |
+| **User Card** | | Individual user card with role badge, actions, permission display |
+| **Page Access Manager** | | Per-user PLAC override toggle grid (for existing users) |
+| **Invite User Modal** | | Two-panel "Command Console" Preact island |
+| **Role Pill Selector** | | Atomic: 2×2 role pill grid with RBAC-gated availability |
+| **Hidden Account Toggle** | | Atomic: ghost-mode toggle (DEV/Owner only) |
+| **Page Chip Grid** | | Atomic: interactive chip grid grouped by section, 4 chip states |
+| **Session Forensics Drawer** | `SessionForensicsDrawer.tsx` | Premium HUD slide-in panel: device identity (browser/OS via zero-dep UA parser), connection telemetry (IP, geo, Ray ID), live 24h session countdown, per-session revocation |
 
 ### Event Bus (Cross-Island Communication)
 The modal uses CustomEvents for decoupled island-to-island messaging:
@@ -286,7 +288,7 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
 | `GET /api/users` | super_admin+ | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
-| `GET /api/users/[id]/session-status` | owner+ | Live KV session count + method/age per session |
+| `GET /api/users/[id]/session-status` | super_admin+ | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
 | `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist |
@@ -306,6 +308,8 @@ When an admin expands a user row in the User Registry, the bottom of the expande
 | Date | `created_at` | Relative ("2h ago") with absolute ISO tooltip |
 
 The `summary` shows total login count, success count, and failure count across all time for this email.
+
+**Check Active Sessions:** The ExpandedRow also renders a "Check Active Sessions" button (super_admin+) which opens the `SessionForensicsDrawer` — a side-panel HUD providing real-time session telemetry (device identity, connection metadata, live 24h countdown) with per-session revocation controls. See §6 UI Implementation table for component details.
 
 ### 11.5 Access Probe Feed
 
@@ -346,7 +350,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | Data | Exposure | Rationale |
 |------|----------|-----------|
 | `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
-| Session IDs | Server-only | KV key names never returned to client |
+| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned to super_admin+ via the `session-status` API — only the session ID itself remains server-only. |
 | Full IP addresses | DEV actor only | PII — other actors see masked `X.X.***.***` |
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |

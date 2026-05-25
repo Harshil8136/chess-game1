@@ -3,7 +3,7 @@
 
 > **Status:** Production Active (v4.5)
 > **Stack:** Astro 6.1.2 SSR + Cloudflare Workers (Free) + Preact 10.29.0 Islands + D1 + KV + R2 + Queues + Analytics Engine
-> **Last Updated:** 2026-05-02 (v4.5: documentation audit; cfBotScore N/A confirmed)
+> **Last Updated:** 2026-05-25 (v4.5: documentation audit; cfBotScore N/A confirmed)
 
 ---
 
@@ -168,6 +168,8 @@ src/
 │   │   │   ├── roleColors.ts                  ← getRoleBorderHex, getRoleBgGrad, getRelativeTime, getInitials
 │   │   │   ├── UserTableRow.tsx               ← SortIcon, UserAvatar, UserTableRow (desktop)
 │   │   │   ├── UserCardStack.tsx              ← mobile card layout
+│   │   │   ├── sessions/
+│   │   │   │   └── SessionForensicsDrawer.tsx  ← HUD slide-in: device ID, telemetry, session countdown, per-session revoke
 │   │   │   └── atoms/                         ← pre-existing atom components
 │   │   ├── logs/
 │   │   │   ├── ActivityCenter.tsx             ← orchestrator (imports shared.tsx)

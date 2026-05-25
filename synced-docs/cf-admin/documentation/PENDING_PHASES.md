@@ -3,7 +3,7 @@
 
 ## All Refactoring Phases Are Complete
 
-All phases 1A through 8B have been implemented and verified. There are no remaining pending phases.
+All phases 1A through 11 have been implemented and verified. There are no remaining pending phases.
 
 ### Final Verification Results
 
@@ -25,6 +25,8 @@ npm run build    →  ✓ Complete! — 0 errors
 | 6A–6C | Error boundaries + loading | ErrorBoundary wrappers verified; SkeletonBlock added to SupabaseAuthWidget |
 | 7A–7C | CSS architecture | Badge CSS variables added; duplicate selectors consolidated; 20+ inline styles extracted |
 | 8A–8B | Accessibility | ARIA roles on interactive rows and tabs; aria-label on all icon-only buttons |
+| 10B | Session Forensics | session-status.ts auth gate lowered to super_admin; full telemetry expansion; SessionForensicsDrawer HUD panel created (345 lines) |
+| 11 | Theme Hardening | Dark theme hardcoded as default; OS prefers-color-scheme detection removed from theme-init.js and ThemeToggle.tsx |
 
 See `COMPLETED_PHASES.md` for full implementation detail on every phase.
 

@@ -417,6 +417,8 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 | `src/pages/api/audit/stats.ts` | Stats API (login metrics) |
 | `src/pages/dashboard/logs/index.astro` | `canViewSecurity` PLAC gate |
 | `src/components/admin/logs/ActivityCenter.tsx` | SecurityForensicsTable + 3-section forensic panel |
+| `src/pages/api/users/[id]/session-status.ts` | Session telemetry API (super_admin+ auth; returns IP, UA, geo, Ray ID, lastActiveAt; Ghost Protection at DB boundary) |
+| `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | Premium HUD drawer for live session forensics (device, connection telemetry, countdown, per-session revoke) |
 | `src/styles/pages/audit.css` | CSS — `.lf-forensic-*` prefix, token-only values |
 
 **Deleted files (v3):**
@@ -434,6 +436,7 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 - **RBAC tiers** → See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md)
 - **CF Zero Trust session lifecycle** → See [SECURITY.md](./SECURITY.md) §1
 - **3-Layer Force-Kick** → See [SECURITY.md](./SECURITY.md) §5
+- **Session Forensics Drawer** (live session telemetry) → See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md) §11.3, §11.4
 - **Migration plan** → See plan file `i-like-he-concept-moonlit-pumpkin.md` (Phases 1–8)
 
 {% endraw %}

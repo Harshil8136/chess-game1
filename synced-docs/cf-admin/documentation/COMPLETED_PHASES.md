@@ -618,10 +618,11 @@ npm run build    →  ✓ Complete! — production ready.
 ### Phase 10B: Live KV Session Status
 
 **Files created:**
-- `src/pages/api/users/[id]/session-status.ts` — Owner+ auth; lists `user-session:{userId}:*` KV reverse-index; returns count + session metadata (no session IDs)
+- `src/pages/api/users/[id]/session-status.ts` — super_admin+ auth; lists `user-session:{userId}:*` KV reverse-index; returns count + session metadata (IP, UA, geo, CF Ray ID, lastActiveAt); Ghost Protection at DB boundary
+- `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` — 345-line premium HUD drawer: device identity, connection telemetry, 24h countdown, per-session revocation
 
 **Files modified:**
-- `src/components/admin/users/ExpandedRow.tsx` — "Check Active Sessions" button (sky) in Command Center; shows session count + login method + age
+- `src/components/admin/users/ExpandedRow.tsx` — "Check Active Sessions" button (sky) in Command Center; opens SessionForensicsDrawer with full session telemetry
 
 ### Phase 10C: Access Probe Feed
 
@@ -704,5 +705,17 @@ Replaced hardcoded `286` and `200` in `src/pages/api/content/services.ts` with n
 ```
 npx tsc --noEmit  →  0 errors
 ```
+
+---
+
+## Phase 11 — Theme Default Hardening ✅
+
+**Rationale:** First-time visitors with light OS preference were seeing the white theme instead of the canonical Midnight Slate dark theme with cyan/blue ambient orbs.
+
+**Files modified:**
+- `public/scripts/theme-init.js` — Removed OS `prefers-color-scheme` auto-detection; dark is now the hardcoded default when no cookie exists
+- `src/components/navigation/ThemeToggle.tsx` — Removed `matchMedia` OS preference listener; theme toggles are now purely cookie-based explicit user choice
+
+**Verification:** `astro check` — 0 errors, 0 warnings, 0 hints (223 files)
 
 {% endraw %}

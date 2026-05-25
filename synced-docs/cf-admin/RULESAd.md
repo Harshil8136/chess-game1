@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-05-02 (v4.5: cfBotScore N/A confirmed; full documentation audit)
+> **Last Updated:** 2026-05-25 (v4.6: SessionForensicsDrawer + session-status telemetry expansion + theme default hardening)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
@@ -320,7 +320,12 @@ documentation/
 ├── DESIGN-SYSTEM.md         # Midnight Slate tokens, CSS architecture, components, login portal, sidebar
 ├── OPERATIONS.md            # Binding IDs (D1/KV/R2), secrets registry (CF ZT new secrets), deploy commands
 ├── CODING-STANDARDS.md      # DAL pattern, TypeScript standards, component rules, naming
+├── SECURITY-REVIEW-2026-05-24.md  # CSP Phase 1 hardening audit results
 ├── DEV-TOOLS.md             # Edge Command Center — debug tools, diagnostics, dev utilities
+├── PENDING_PHASES.md        # Phase completion scope (1A through 11)
+├── COMPLETED_PHASES.md      # Full implementation log of all completed phases
+├── NEW_FILES_CREATED.md     # Registry of all new files created during refactoring
+├── ToDoList.md              # Phase 4 hardening backlog tracker
 └── errors/
     └── ssr-silent-blank-screen.md  # Known issue: SSR silent blank screen diagnosis
 ```

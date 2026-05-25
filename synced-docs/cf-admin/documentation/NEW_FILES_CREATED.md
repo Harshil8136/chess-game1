@@ -144,6 +144,21 @@ All net-new files introduced during this refactoring session.
 
 ---
 
+## src/components/admin/users/sessions/SessionForensicsDrawer.tsx
+
+**Purpose:** Premium HUD slide-in panel showing live session forensics for a target user.
+
+**Features:**
+- Device identity (browser/OS parsed via zero-dependency RegExp UA parser)
+- Connection telemetry (IP address, geolocation, CF Ray ID)
+- Live 24h session expiration countdown with progress bar
+- Per-session revocation (disabled for self-session protection)
+
+**Access:** `super_admin+` (accessible via 'Check Active Sessions' button in ExpandedRow)
+**Lines:** 345
+
+---
+
 ## Files Deleted
 
 | File | Lines | Reason |

@@ -2,7 +2,7 @@
 # Design System — "Midnight Slate"
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-02 (v4.5: documentation audit pass; content verified accurate)
+> **Last Updated:** 2026-05-25 (v4.6: theme default changed to hardcoded dark; OS detection removed)
 > **Codename:** Project Midnight Blue
 
 ---
@@ -24,7 +24,7 @@ The cf-admin design system delivers a professional command center aesthetic riva
 |----------|--------|-----------|
 | **Aesthetic Direction** | Linear/Raycast minimal | Professional, content-first |
 | **Primary Accent** | Blue-500 (`#3b82f6`) | Linear's actual accent. Works on both themes. |
-| **Theme Strategy** | Dark (default) + Light toggle | Cookie-persisted, SSR-compatible, system detection |
+| **Theme Strategy** | Dark (default) + Light toggle | Cookie-persisted, SSR-compatible, dark hardcoded default (no OS detection) |
 | **CSS Architecture** | Two paradigms: Tailwind utilities + Component CSS with tokens | Kill inline styles, kill raw hex values |
 | **Animation** | Purposeful only — every animation shows real data | No decorative-only effects |
 
@@ -269,14 +269,13 @@ Component and page CSS are **NOT** imported in `global.css`. Each component/page
 ### 4.1 Detection Cascade
 
 ```
-1. Cookie cf_admin_theme → "dark" | "light"     (user's explicit choice)
-2. prefers-color-scheme media query              (OS/browser setting)
-3. Default: "dark"
+1. Cookie cf_admin_theme → "dark" | "light"     (user's explicit toggle choice)
+2. Default: "dark"                                   (hardcoded — OS preference NOT respected)
 ```
 
 ### 4.2 Zero-FOWT SSR Integration
 
-`data-theme` lives on `<html>` (the `:root`). A blocking `<script is:inline>` in `<head>` reads the cookie and sets the attribute synchronously before paint — ~200 bytes, negligible blocking cost.
+`data-theme` lives on `<html>` (the `:root`). A blocking `<script is:inline>` in `<head>` (`theme-init.js`) reads the cookie and, if no cookie exists, defaults to dark. It no longer checks `prefers-color-scheme`. The attribute is set synchronously before paint — ~200 bytes, negligible blocking cost.
 
 ```css
 /* dark.css */
@@ -288,7 +287,7 @@ Component and page CSS are **NOT** imported in `global.css`. Each component/page
 
 ### 4.3 ThemeToggle Component
 
-Lives in `TopBar.tsx`. On toggle: updates `document.documentElement.dataset.theme` immediately, sets `cf_admin_theme` cookie (1 year, SameSite=Lax), dispatches `CustomEvent('theme-change')` for canvas-based components (uPlot charts) that need explicit re-rendering.
+Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `TopBar`). On toggle: updates `document.documentElement.dataset.theme` immediately, sets `cf_admin_theme` cookie (1 year, SameSite=Lax), dispatches `CustomEvent('theme-change')` for canvas-based components (uPlot charts) that need explicit re-rendering. The OS preference `matchMedia` listener was removed — the component no longer reacts to system-level theme changes.
 
 ---
 
