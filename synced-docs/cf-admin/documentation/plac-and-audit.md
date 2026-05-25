@@ -4,7 +4,7 @@
 > [!NOTE]
 > **System Status:** Production Ready
 > **Target Environment:** Cloudflare Workers V8 Isolates (Edge Computing)
-> **Last Updated:** 2026-05-02 (v4.5: documentation audit pass; content verified against live codebase)
+> **Last Updated:** 2026-05-25 (v4.6: deep-review hardening — Gates A/B now use DB-verified target role; Gate E added; API-route PLAC enforcement via `placDenyResponse`; stale break-glass section removed since `BREAK_GLASS_EMAILS`/`isBreakGlassAdmin` no longer exist in `rbac.ts`)
 
 This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Ghost Audit Engine.
 
@@ -34,19 +34,15 @@ Badge colors follow a deliberate **thermal gradient** for dark UI legibility —
 
 Each role has full display metadata including color, background color, icon, and label.
 
-### 1.3 The Break-Glass Emergency Fallback
+### 1.3 No Hardcoded Bypass
 
-> [!CAUTION]
-> **Anti-Lockout Mechanism**
-> To prevent catastrophic administrative lockouts (e.g., if Supabase is down, whitelist is corrupted, or a vicious actor strips rights), the system relies on `BREAK_GLASS_EMAILS` — a hardcoded array of emergency email addresses in `src/lib/auth/rbac.ts`.
+> [!IMPORTANT]
+> **There is no break-glass list, no hardcoded super-admin emails, no fallback grant path.** Every authenticated request must clear (a) Cloudflare Zero Trust at the edge, (b) the `admin_authorized_users` whitelist with `is_active = true`, and (c) the relevant role/PLAC gate. A previously-existing `BREAK_GLASS_EMAILS` array and the `isBreakGlassAdmin()` / `isHardcodedSuperAdmin()` helpers were removed from `src/lib/auth/rbac.ts` — confirmed by the 2026-05-24 deep review (see `SECURITY-REVIEW-2026-05-24.md`) and re-verified in the 2026-05-25 review.
 
-`BREAK_GLASS_EMAILS = ['[DEVELOPER_EMAIL]', 'team@madagascarhotelags.com']`
-
-If a CF-authenticated email matches the array, the Worker force-grants super_admin properties and bypasses the Supabase whitelist check during session bootstrap. `isBreakGlassAdmin()` logs `console.warn` every invocation for auditability.
-
-**Legacy aliases (backwards compatibility — deprecated, do not use in new code):**
-- `SUPER_ADMIN_EMAILS` = `BREAK_GLASS_EMAILS`
-- `isHardcodedSuperAdmin` = `isBreakGlassAdmin`
+Lockout recovery is now operational rather than code-level:
+- If the whitelist row for a stranded admin is wrong, a still-active admin updates it via `/dashboard/users`.
+- If every admin is locked out, the row is fixed directly in Supabase (Studio or `psql`) using `SUPABASE_SERVICE_ROLE_KEY`.
+- The 3-layer force-kick cascade (§2.6) propagates the change inside seconds.
 
 ### 1.4 Helper Functions
 
@@ -54,12 +50,12 @@ If a CF-authenticated email matches the array, the Worker force-grants super_adm
 |----------|-------------|
 | `hasPermission` | O(1) integer comparison — core gatekeeper |
 | `isDev` | Exact DEV check |
-| `isOwner` | Owner or higher (DEV/Owner) |
-| `isOwnerOrDev` | Specific check for hidden account visibility |
+| `isOwnerOrDev` | DEV-or-Owner — used for hidden-account visibility (`is_hidden`) and ghost protection |
 | `isSuperAdmin` | SuperAdmin or higher |
 | `isAdmin` | Admin or higher |
-| `isValidRole` | Type guard for string validation |
-| `isBreakGlassAdmin` | Anti-lockout fallback check (replaces `isHardcodedSuperAdmin` — legacy alias still exported) |
+| `requireAuth(context, minRole?)` | (in `guard.ts`) Server-side auth gate for pages and API routes. Returns the user on success; throws `AuthError(401\|403)` on failure. |
+| `requirePageAccess(user, pagePath)` | (in `guard.ts`) Throws `AuthError(403)` if the actor's PLAC map denies `pagePath` (exact match, then longest-prefix). DEV is exempt. |
+| `placDenyResponse(user, pagePath)` | (in `guard.ts`) Response-returning wrapper around `requirePageAccess`. Returns `null` if allowed, or a fully-formed `403` JSON `Response` if denied. Used by API routes that prefer early-return over try/catch. |
 
 ---
 
@@ -115,14 +111,41 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 ### 2.5 Provisioning Gatekeepers (Anti-Escalation Measures)
 
 > [!IMPORTANT]
-> The API endpoint handling Access Management contains four ironclad validation gates. Without them, a standard Admin could theoretically grant themselves Dev permissions.
+> The Access Management API (`POST /api/users/access`) enforces **five ironclad gates**. Without them, an Admin could lock out a higher-tier user, or a user with a PLAC deny could self-administer their way back in.
 
-* **Gate A: Rank Supremacy** — Administrators can never manipulate the access array of users at their own level or higher.
-* **Gate B: DEV + Owner Ghosting** — Users with DEV or Owner rank are intentionally dropped from UI payloads when requested by non-devs. The DEV and Owner cohort operates completely invisibly to standard administration.
-* **Gate C: Page Visibility Check** — Administrators cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
-* **Gate D: Natural Ceiling Enforcement** — Administrators cannot grant a Staff member access to a tool designed with a DEV base requirement. Grants are capped at the actor's maximum clearance level.
+* **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `SECURITY-REVIEW-2026-05-25.md` finding C-1.
+* **Gate B: DEV + Owner Ghosting** — Users with DEV or Owner rank are intentionally dropped from UI payloads requested by non-DEV actors and are rejected outright by this endpoint. Same DB-verified-role hardening as Gate A. The `/api/users/access-data` endpoint received an equivalent guard in the same review (non-DEV actors cannot enumerate a DEV/Owner PLAC matrix even by directly querying with a known userId).
+* **Gate C: Page Visibility Check** — The actor cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
+* **Gate D: Natural Ceiling Enforcement** — Grants are capped at the actor's clearance ceiling. An Admin cannot grant a Staff member access to a DEV-required tool.
+* **Gate E: No Self-Modification (new 2026-05-25)** — `actor.userId === targetUserId` is rejected outright. Denies must not be self-removable and grants must not be self-administered. A user denied a page via PLAC needs a higher-tier actor to lift it.
 
-### 2.6 Auto-Purging Strategies
+### 2.6 PLAC enforcement on API routes (`placDenyResponse`)
+
+The Astro middleware (`src/middleware.ts`) deliberately allows every `/api/*` request through the page-level PLAC gate — each API route picks its own auth posture. That left a gap: a super_admin with a PLAC deny on `/dashboard/users` could still hit `/api/users/manage`, `/api/users/force-kick`, etc. directly.
+
+The 2026-05-25 review closed this for the highest-risk routes via the `placDenyResponse(actor, pagePath)` helper in `src/lib/auth/guard.ts`. The helper:
+
+1. Skips the check for DEV (break-glass tier).
+2. Falls through if the actor has no `accessMap` (defensive — the route's own role check still runs).
+3. Looks up `accessMap[pagePath]`. Exact match → use it. Otherwise longest-prefix match. Any `false` denies; any other state allows.
+4. On deny: returns a fully-formed `403` JSON `Response` (no-store / nosniff headers). On allow: returns `null`.
+
+Usage in a route handler:
+
+```typescript
+import { placDenyResponse } from '@/lib/auth/guard';
+
+const actor = locals.user;
+if (!actor) return jsonError(401, 'Unauthorized');
+// ... other role checks ...
+
+const denied = placDenyResponse(actor, '/dashboard/logs');
+if (denied) return denied;
+```
+
+**Routes wired in PR #2 (2026-05-25):** all `/api/audit/*` data endpoints (`emails`, `sessions`, `stats`, `logs`, `consent`, `receipts`) + `audit/prune`, plus `users/manage`, `users/force-kick`, `users/access-data`. See `SECURITY.md` §6a for the full table and the routes still pending.
+
+### 2.7 Auto-Purging Strategies
 
 * **Instant Discontinuation:** Modifying a user's PLAC map triggers `forceLogoutUser()` — a **3-layer revocation** cascade:
   1. **Layer 1** — KV session deletion via reverse-mapping key pattern for O(k) destruction
@@ -130,7 +153,7 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
   3. **Layer 3** — CF API `DELETE /access/users/{cfSubId}/active_sessions` invalidates the CF_Authorization cookie at the edge immediately
 * **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers `resetUserOverrides(env.DB, userId)` — complete purge of all D1 historical PLAC overrides. A new role implies a new baseline; historical overrides are destroyed. The 3-layer force-kick fires immediately after to apply the new role.
 
-### 2.7 Admin Pages Registry Manager
+### 2.8 Admin Pages Registry Manager
 
 To ensure full administrative oversight over the PLAC system itself, the **Admin Pages Registry Manager** is implemented at `/dashboard/debug/pages`. This interface is exclusively accessible to DEV and operates under a rigorous 5-layer security stack:
 

@@ -539,4 +539,83 @@ For the full record of what was fixed in Phases 1–3, see:
 - `documentation/SECURITY.md` — §6a (IDOR patterns), §6b (rate limits, Zod schemas, email validation, bounded queries, provider timeouts), §8 (cfJwt fail-close)
 - `documentation/OPERATIONS.md` — §5.2 (vars table), §6 (API token registry)
 
+---
+
+# Section II — 2026-05-25 Deep Review Backlog
+
+> **Added:** 2026-05-25, post-merge of PR #2 to `main` (commit `3f8cd78`).
+>
+> The 2026-05-25 deep review surfaced 35 new findings: 2 Critical, 5 High, 14 Medium, 14 Low. The 2 Critical and 5 High items already shipped (see `COMPLETED_PHASES.md` § Phase 12 and `SECURITY-REVIEW-2026-05-25.md`). The 14 Medium + 14 Low items below remain.
+>
+> The same items are tracked in tabular form with full context in `PENDING_PHASES.md`. This section is the lightweight quick-pick checklist.
+
+## Item 10 — Bound `operational_status` to an enum allowlist 🟡
+**File:** `src/pages/api/bookings/[id]/state.ts:112`
+**Why:** Any string today is accepted; garbage values leak into D1 and the UI.
+**Fix:** `const VALID = ['pending','confirmed','checked_in','checked_out','cancelled','completed']; if (operational_status && !VALID.includes(operational_status)) return jsonError(400, 'Invalid status');`
+
+## Item 11 — Wrap `JSON.parse` in `content/reviews.ts:33` 🟡
+**Why:** A single corrupted row in `cms_content` crashes the GET endpoint.
+**Fix:** Mirror the try/catch pattern from `gallery.ts:26-30`; default to `[]`.
+
+## Item 12 — Consolidate `writeRevocationFlag` TTL 🟡
+**Files:** `src/lib/auth/session.ts:281`, `src/lib/auth/plac.ts:363`
+**Why:** Two hardcoded copies of `86400`; doesn't track `SESSION_MAX_LIFETIME_MS`.
+**Fix:** One helper that reads the env var; remove the duplicate.
+
+## Item 13 — Remove `DELETE /api/audit/logs` 🟡
+**File:** `src/pages/api/audit/logs.ts:113–174`
+**Why:** Audit log should be append-only. `audit/prune` covers retention. Removing eliminates a self-incrimination escape hatch.
+**Caveat:** Check ActivityCenter UI's "Delete Selected" button — may need replacement UX.
+
+## Item 14 — Validate `pageOverrides` on user creation 🟡
+**File:** `src/pages/api/users/manage.ts:100–121`
+**Fix:** Validate each `pagePath` exists in `admin_pages`; apply Gate D (ceiling) to grants.
+
+## Item 15 — Drop XFF IP fallback in session creation 🟡
+**File:** `src/lib/auth/session.ts:130`
+**Fix:** `request.headers.get('CF-Connecting-IP') ?? 'unknown'`.
+
+## Item 16 — Simplify `effectiveSiteUrl` in middleware 🟡
+**File:** `src/middleware.ts:170`
+**Fix:** `const effectiveSiteUrl = env.SITE_URL;` — drop the `process.env` branch.
+
+## Item 17 — Add `cms_content_history` cleanup trigger 🟡
+**File:** `migrations/0026_cms_content_history.sql`
+**Why:** Comment promises trigger-based cleanup; trigger is missing → unbounded growth.
+**Fix:** New migration with `CREATE TRIGGER ... AFTER INSERT ... DELETE FROM cms_content_history WHERE (id, page, saved_at) NOT IN (SELECT ... LIMIT 10)`.
+
+## Item 18 — Fail-closed default for chatbot proxy minRole 🟡
+**File:** `src/pages/api/chatbot/[...path].ts:54`
+**Fix:** `return 'dev';` instead of `'admin'`.
+
+## Item 19 — Batch alert emails in `scheduled-log-sync` 🟡
+**File:** `src/workers/scheduled-log-sync.ts:181–191`
+**Why:** Currently one email per failed login → inbox flood / cost amplification.
+**Fix:** Group by `(email, ip, hour)`; send one summary per group. Or throttle to ≤1 alert per recipient per 15 min using KV.
+
+## Item 20 — Use `isAdmin()` in `media/upload.ts:39` 🟡
+**Fix:** Replace hardcoded role allowlist with the helper.
+
+## Item 21 — Reconcile `_headers` vs middleware CSP 🟡
+**Files:** `public/_headers:11`, `src/middleware.ts:510`
+**Fix:** Delete the CSP line from `_headers` (middleware is authoritative) or sync them exactly.
+
+## Item 22 — `cf_admin_theme` cookie SameSite consistency 🟡
+**File:** `src/pages/api/settings/user.ts:157,163`
+**Fix:** Switch to `SameSite=Strict` to match the session cookie.
+
+## Item 23 — Apply `placDenyResponse` to remaining routes 🟡
+**Routes:** `settings/portal`, `content/*`, `media/*`, `users/probes`, `users/cf-access-audit`, `users/active-sessions`, `users/active-revocations`.
+**Pattern:** see `audit/emails.ts` (canonical example after PR #2).
+
+## Item 24 — `npm audit fix` + bump direct deps 🔵
+**Commands:** `npm update astro @astrojs/cloudflare wrangler @cloudflare/workers-types && npm audit fix`.
+**Why:** 16 vulns flagged: astro XSS (moderate), @astrojs/cloudflare SSRF (low), transitive vite/devalue/fast-uri/postcss/yaml/ws/brace-expansion. Re-run `npm run check` after.
+
+## Item 25 — Misc low items 🔵
+Logout URL parsing (L-1), JWT `nbf` defense-in-depth (L-2), `dashboard/metrics` rate limit (L-3), `hero.astro` innerHTML → textContent (L-4), scheduled-log-sync wall-clock deadline (L-5), `audit.ts` details field convention (L-6), chatbot proxy slug path-traversal reject (L-7), Supabase advisor: leaked-password protection (L-8), drop 28 unused indexes after confirming cross-app usage (L-9), `ModelsCatalog` `dangerouslySetInnerHTML` → JSX (L-10), broaden `sync-docs.yml` PII regex (L-12). See `PENDING_PHASES.md` for full details.
+
+**Recommended ordering:** Item 24 → Item 23 → Items 10+11+20 (single PR) → Items 17+12 → Item 19 → Item 13. Then opportunistic.
+
 {% endraw %}

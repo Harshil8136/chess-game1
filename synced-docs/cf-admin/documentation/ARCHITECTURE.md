@@ -1,9 +1,9 @@
 {% raw %}
 # CF-Admin Architecture
 
-> **Status:** Production Active (v4.5)
+> **Status:** Production Active (v4.6)
 > **Stack:** Astro 6.1.2 SSR + Cloudflare Workers (Free) + Preact 10.29.0 Islands + D1 + KV + R2 + Queues + Analytics Engine
-> **Last Updated:** 2026-05-25 (v4.5: documentation audit; cfBotScore N/A confirmed)
+> **Last Updated:** 2026-05-25 (v4.6: deep-review fixes — DB-verified PLAC gates, CSRF Referer anchored, audit-silence self-protection, cron pattern fix, JWKS cleanup, `placDenyResponse` helper applied to audit + users API routes. See `SECURITY-REVIEW-2026-05-25.md` and `COMPLETED_PHASES.md` § Phase 12)
 
 ---
 

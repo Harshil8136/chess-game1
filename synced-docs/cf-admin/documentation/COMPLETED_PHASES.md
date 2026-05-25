@@ -718,4 +718,81 @@ npx tsc --noEmit  →  0 errors
 
 **Verification:** `astro check` — 0 errors, 0 warnings, 0 hints (223 files)
 
+---
+
+## Phase 12 — 2026-05-25 Deep Security Review Fixes ✅
+
+**Date:** 2026-05-25
+**Shipped:** PR #2 → `main` (merge commit `3f8cd78`), 7 atomic commits on `claude/codebase-security-review-LhIkr`.
+**Full report:** `documentation/SECURITY-REVIEW-2026-05-25.md`
+
+The 2026-05-25 deep-review pass surfaced 35 new findings on top of the 2026-05-24 review. Phase 12 lands the 2 Critical and 5 High items. 14 Medium + 14 Low items are tracked in `PENDING_PHASES.md` and `ToDoList.md` Section II.
+
+### Commits
+
+| Commit | Severity | Subject |
+|---|---|---|
+| `d89ceae` | 🔴 Critical (C-2) | `fix(cron): match wrangler's "SUN" cron pattern in scheduled dispatcher` |
+| `208bc13` | 🟠 High (H-5) | `refactor(auth): simplify JWKS cache-bust path in CF Access JWT verifier` |
+| `7a69d23` | 🟠 High (H-1) | `security(csrf): fix Referer prefix-match bypass` |
+| `29c5445` | 🟠 High (H-2) | `security(settings): enforce target-role hierarchy on cross-user edits` |
+| `777727b` | 🔴 Critical (C-1) | `security(plac): verify target role from DB; forbid self-modification` |
+| `7e04bf4` | 🟠 High (H-3) | `security(audit): forbid DEV self-silencing; preserve session TTL on patch` |
+| `8132ec6` | 🟠 High (H-4) | `security(plac): enforce page-level access on highest-risk API routes` |
+
+### C-1 — PLAC bypass via spoofed `targetUserRole` (`src/pages/api/users/access.ts`)
+
+Hierarchy Gates A and B read `targetUserRole` from the request body. An admin (level 3) could send `{ targetUserId: <super_admin_id>, targetUserRole: "staff", action: "revoke", pagePath: "/dashboard/users" }`: Gate A (`3 >= 4`) returned false and passed, Gate B (`isOwnerOrDev('staff')`) returned false and passed, the super_admin lost access. A user previously denied a page via PLAC could also self-grant within their own clearance using the same trick.
+
+**Fix:** Fetch the target's verified `role` and `email` from `admin_authorized_users` on every call. Use those DB-verified values for Gates A and B and the audit log payload. Added Gate E: reject `actor.userId === targetUserId`. `body.targetUserRole` and `body.targetUserEmail` are now informational only.
+
+### C-2 — Asset-cleanup cron never fired (`src/workers/cf-entry.ts`)
+
+`wrangler.toml` triggers Sunday at 02:00 with `"0 2 * * SUN"` (Cloudflare rejects the numeric `0` form per commit `f96c560`), but the dispatcher only matched `"0 2 * * 0"`. CF echoes the original pattern string back on `ScheduledEvent`, so the equality check failed and the weekly handler never ran — R2 was growing without bound.
+
+**Fix:** Dispatcher accepts both `"0 2 * * SUN"` and `"0 2 * * 0"`.
+
+### H-1 — CSRF Referer prefix bypass (`src/lib/csrf.ts`)
+
+`referer.startsWith(siteUrl)` accepted `https://secure.example.com.attacker.com/...` when `SITE_URL` was `https://secure.example.com`. Modern browsers send Origin on cross-origin mutations so the exposure was narrow (some webviews / older clients strip Origin on same-origin redirects), but the bypass was real and easy to fix.
+
+**Fix:** Anchored Referer match — exact equality to the normalized SITE_URL, or a prefix followed by `/`. Origin check unchanged.
+
+### H-2 — Settings cross-user edit ignored target hierarchy (`src/pages/api/settings/user.ts`)
+
+`POST /api/settings/user` accepts `targetUserId` so admins can edit subordinates' theme / display_name. The check verified the editor was admin+ but never looked at the target's role. An admin could rewrite a super_admin's `display_name` (rendered in TopBar, UserTable, ExpandedRow, audit drawers, etc.) — visual impersonation inside the portal.
+
+**Fix:** When `targetUserId` differs from `user.userId`, fetch the target's role from `admin_authorized_users` and reject unless the editor strictly outranks (lower numeric level). DEV remains exempt.
+
+### H-3 — DEV self-silence + KV TTL rejuvenation (`src/pages/api/audit/silence.ts`)
+
+Two issues:
+1. A compromised DEV could mute their own audit trail by passing their own `userId`. The silencing entry itself was the only record; subsequent actions left no log.
+2. `propagateAuditSilence` wrote every active KV session back with `expirationTtl = SESSION_MAX_LIFETIME` (24h from now), rejuvenating sessions past their `createdAt`-anchored hard expiry. Same bug previously fixed in `patchSession`.
+
+**Fix:** Reject `targetUserId === session.userId` (requires a second DEV). Compute remaining TTL from `session.createdAt`, floor at 60 s; read `SESSION_MAX_LIFETIME_MS` from env instead of hard-coding.
+
+### H-4 — Most API routes bypassed PLAC entirely (`src/lib/auth/guard.ts` + 10 routes)
+
+Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own auth posture). Some routes had ad-hoc PLAC checks; most data-bearing routes relied only on role and ignored explicit denies on the corresponding dashboard page. A super_admin with a PLAC deny on `/dashboard/users` could still call `/api/users/manage`, `/api/users/force-kick`, etc. with full effect.
+
+**Fix:**
+- Added `requirePageAccess(user, pagePath)` and `placDenyResponse(user, pagePath)` helpers in `src/lib/auth/guard.ts`. Both honor the deny resolution rules (exact-match → longest-prefix), exempt DEV (break-glass tier), and fall through when no access map exists.
+- Wired `placDenyResponse` into the highest-risk routes: all `/api/audit/*` data endpoints (`emails`, `sessions`, `stats`, `logs`, `consent`, `receipts`) + `audit/prune`, plus `users/{manage, force-kick, access-data}`.
+- **Bundled:** `access-data.ts` ghost protection — non-DEV actors get 403 when querying a DEV/Owner's PLAC matrix. Closes the back door around the `/api/users` ghost-hiding.
+- **Bundled:** `audit/prune.ts` `days` parameter is NaN-safe and bounded to 1–3650. Previous `Math.max(1, parseInt('abc'))` was producing `NaN` → silent SQL no-ops.
+
+**Routes left for follow-up (tracked as PENDING M-14):** `settings/portal`, `content/*`, `media/*`, `users/probes`, `users/cf-access-audit`, `users/active-{sessions,revocations}`.
+
+### H-5 — JWKS cache cleanup (`src/lib/auth/cloudflare-access.ts`)
+
+The previous bust-and-retry path fetched fresh keys into a local variable it never used, then fell through to a third `fetchPublicKeys()` call (which served from the freshly-warmed cache). Functionally correct but confusing and one redundant round-trip per rotation. Worse: the next reviewer would read this as "use stale key" — exactly what almost happened in this audit.
+
+**Fix:** Single reassignable variable; behavior otherwise identical.
+
+### Verification
+
+- `npm run check` — 0 errors / 0 warnings / 0 hints across 223 files, both before and after the fixes.
+- All 7 commits land on `main` via merge commit `3f8cd78` (PR #2).
+
 {% endraw %}

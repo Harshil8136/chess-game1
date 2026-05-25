@@ -2,7 +2,7 @@
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-25 (session-status auth gate change (owner→super_admin), Ghost Protection at DB boundary, SessionForensicsDrawer per-session revocation)
+> **Last Updated:** 2026-05-25 (deep-review fixes — see §14: PLAC verified-role gates, CSRF Referer anchored, audit silence self-protection, cron pattern fix, JWKS cleanup, `placDenyResponse` helper applied to audit + users API routes)
 > **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization, IDOR Prevention, Rate Limiting, Input Validation
 
 ---
@@ -100,10 +100,12 @@ Stateless CSRF via `src/lib/csrf.ts` — Origin + Referer header validation. No 
 | Step | Check | Action |
 |------|-------|--------|
 | 1 | Method is GET, HEAD, or OPTIONS | Skip — safe methods don't mutate state |
-| 2 | `Origin` header matches `SITE_URL` | ✅ Allow |
+| 2 | `Origin` header matches `SITE_URL` (or `SITE_URL` without trailing `/`) | ✅ Allow |
 | 3 | `Origin` doesn't match | ❌ Deny — origin mismatch |
-| 4 | No `Origin`, but `Referer` starts with `SITE_URL` | ✅ Allow (fallback) |
+| 4 | No `Origin`, but `Referer` is **exactly** `SITE_URL` (no trailing slash) OR begins with `SITE_URL + "/"` | ✅ Allow (fallback) |
 | 5 | Neither header present | ❌ Deny — fail-closed |
+
+> **Referer match is boundary-anchored (2026-05-25 hardening — see §14 H-1).** Earlier versions used a plain `referer.startsWith(siteUrl)`, which would accept `https://secure.example.com.attacker.com/...` when `SITE_URL` was `https://secure.example.com`. Modern browsers send Origin on cross-origin mutations so the exposure was narrow (some webviews / older clients strip Origin on same-origin redirects), but the check is now hardened: an exact equality to the normalized URL, or a prefix followed by `/`.
 
 **Performance:** <0.05ms CPU, 0 KV reads, 0 bytes client JS.
 
@@ -246,6 +248,33 @@ try {
 | `POST /api/features/toggle` | `dev` | Feature flag mutations |
 | `GET /api/diagnostics/ping` | `dev` | Infrastructure probe |
 | `GET /api/users/[id]/session-status` | `super_admin` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
+
+### Page-Level Access Control on API routes (`placDenyResponse`)
+
+Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own auth posture; see §6 of `plac-and-audit.md`). To make sure an explicit PLAC deny on a dashboard page also blocks the underlying API calls, sensitive routes opt in via the `placDenyResponse(actor, pagePath)` helper from `src/lib/auth/guard.ts`. The helper:
+
+- Returns `null` (allow) for any DEV actor — DEV is the break-glass tier; PLAC denies on DEV are meaningless.
+- Returns `null` when the actor has no PLAC map (defensive — falls back to the role check the route already performed).
+- Honors the same resolution rules as page navigation: exact-match wins, then longest-prefix-match. An explicit `false` denies; any other state allows.
+- Returns a fully-formed `403` JSON `Response` when denied (no-store / nosniff headers included) so callers can early-return: `const denied = placDenyResponse(actor, '/dashboard/logs'); if (denied) return denied;`
+
+**Routes wired in PR #2 (2026-05-25):**
+
+| Route | Page check | Notes |
+|---|---|---|
+| `GET /api/audit/emails` (+ `DELETE`) | `/dashboard/logs` | Replaces the prior inline `accessMap[]` check; consistent across the audit endpoints. |
+| `GET /api/audit/sessions` | `/dashboard/logs` | |
+| `GET /api/audit/stats` | `/dashboard/logs` | |
+| `GET /api/audit/logs` (+ `DELETE`) | `/dashboard/logs` | |
+| `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | |
+| `GET /api/audit/receipts` | `/dashboard/privacy` | Privacy dashboard surface. |
+| `DELETE /api/audit/prune` | `/dashboard/logs` | DEV-only + PLAC. |
+| `POST /api/audit/silence` | DEV-only role check + self-silencing forbidden | No PLAC check — DEV is exempt anyway; the self-silence forbid is the meaningful guard. |
+| `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | |
+| `DELETE /api/users/force-kick` | `/dashboard/users` | |
+| `GET /api/users/access-data` | `/dashboard/users` | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
+
+**Routes pending (tracked in `PENDING_PHASES.md`):** `settings/portal`, `content/*`, `media/*`, `users/{probes, cf-access-audit, active-sessions, active-revocations}`. Each has its own role gate; PLAC wiring is mechanical.
 
 ---
 
@@ -567,6 +596,44 @@ Full report: [`documentation/SECURITY-REVIEW-2026-05-24.md`](./SECURITY-REVIEW-2
 | `script-src 'unsafe-eval'` | Retained pending verification Sentry v10 doesn't use `eval()` for stack trace processing in Workers | After collecting ≥ 2 weeks of Report-Only data with no `unsafe-eval` violations: remove it from enforced CSP. If violations appear: upgrade Sentry or disable the offending integration |
 | `style-src 'unsafe-inline'` | Preact SSR emits `style="..."` attributes in HTML for ~20 components using dynamic `style={{ }}` props (`ExpandedRow.tsx`, `SystemDiagnosticsHistory.tsx`, `AccessPolicyGrid.tsx`, and others) | Convert ~20 `style={{ }}` prop usages to Tailwind utility classes or CSS custom properties. Many use runtime-computed role colors — those need CSS variable injection instead |
 | Chart.js CDN — no SRI hash | `cdn.jsdelivr.net/npm/chart.js@4.4.7` lacks `integrity` attribute | Compute: `curl -s https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js \| openssl dgst -sha384 -binary \| openssl base64 -A` then add `integrity="sha384-{hash}"` to `usage.astro:8`. Or move chart.js to `package.json` and bundle it via Vite (eliminates CDN dependency) |
+
+---
+
+## 14. Security Audit Log — 2026-05-25 Deep Review
+
+Full report: [`documentation/SECURITY-REVIEW-2026-05-25.md`](./SECURITY-REVIEW-2026-05-25.md)
+Shipped on `main` via PR #2 (merge commit `3f8cd78`) as 7 atomic commits.
+
+### Vulnerabilities Patched
+
+| Severity | File | Vulnerability | Fix |
+|----------|------|--------------|-----|
+| 🔴 Critical | `src/pages/api/users/access.ts` | **PLAC bypass via spoofed `targetUserRole`** — Hierarchy Gates A (rank) and B (ghost) read `targetUserRole` from the request body. An admin (level 3) could send `{ targetUserId: <super_admin_id>, targetUserRole: "staff", action: "revoke" }` to lockout a super_admin from a dashboard page; a user with a PLAC deny could self-grant within their own clearance. | Fetch verified role + email from `admin_authorized_users` on every call; use DB values for all gates and audit payload. Forbid `actor.userId === targetUserId` — denies must not be self-removable. `body.targetUserRole` treated as informational only. |
+| 🔴 Critical | `src/workers/cf-entry.ts` | **Weekly asset-cleanup cron never ran** — wrangler.toml triggers `"0 2 * * SUN"` (CF rejects the numeric `0` form), but the dispatcher only matched `"0 2 * * 0"`. CF echoes the original pattern back, so the equality failed and R2 grew unbounded. | Dispatcher accepts both `"0 2 * * SUN"` and `"0 2 * * 0"`. |
+| 🟠 High | `src/lib/csrf.ts` | **CSRF Referer prefix bypass** — `referer.startsWith(siteUrl)` accepted `https://secure.example.com.attacker.com/...`. Modern browsers send Origin so exposure was narrow, but the bypass was real. | Anchored match: exact equality to normalized SITE_URL, or prefix followed by `/`. |
+| 🟠 High | `src/pages/api/settings/user.ts` | **Cross-user settings edit ignored target hierarchy** — POST checked editor was admin+ but never the target's role. An admin could rewrite a super_admin's `display_name`, enabling visual impersonation in any UI surface that renders display_name. | When editing another user, fetch target role and reject unless editor strictly outranks target. DEV exempt. |
+| 🟠 High | `src/pages/api/audit/silence.ts` | **DEV self-silence + KV TTL rejuvenation** — DEV could mute their own audit trail by passing their own userId. `propagateAuditSilence` also rewrote every active session with `expirationTtl = SESSION_MAX_LIFETIME` (same bug previously fixed in `patchSession`). | Reject `targetUserId === session.userId` (requires a second DEV). Compute remaining TTL from `session.createdAt`, floor at 60s; read `SESSION_MAX_LIFETIME_MS` from env. |
+| 🟠 High | `src/lib/auth/guard.ts` + 10 routes | **Most API routes bypass PLAC entirely** — Middleware skips PLAC for `/api/*`; many data routes ignored explicit denies on the corresponding page. A super_admin denied `/dashboard/users` could still call `/api/users/manage` etc. | Added `requirePageAccess()` + `placDenyResponse()` helpers. Wired into highest-risk routes (all `/api/audit/*` data endpoints, `audit/prune`, `users/{manage, force-kick, access-data}`). See §6a above. |
+| 🟠 High | `src/lib/auth/cloudflare-access.ts` | **JWKS cache double-fetch on rotation** — Bust-and-retry path fetched fresh keys into an unused variable then fell through to a third `fetchPublicKeys()` call. Functionally correct but confusing — next reviewer would misread as "use stale key". | Single reassignable variable; behavior identical. |
+
+### Additional fixes bundled with the PLAC PR
+
+- `access-data.ts` ghost-protection: non-DEV actors get 403 when querying a DEV/Owner's PLAC matrix (was a back door around the `/api/users` ghost-hiding).
+- `audit/prune.ts` `days` parameter: NaN-safe and bounded to 1–3650. Previous `Math.max(1, parseInt('abc'))` produced silent SQL no-ops.
+
+### Items Remaining (Tracked in `PENDING_PHASES.md`)
+
+14 Medium + 14 Low findings. Highlights:
+
+| Area | Finding |
+|---|---|
+| Validation | `bookings/[id]/state.ts` `operational_status` accepts arbitrary strings (enum allowlist needed). `content/reviews.ts` GET crashes on corrupted JSON row. `audit/prune` days bound applied; remaining endpoints need similar bounding. |
+| API hardening | Apply `placDenyResponse` to `settings/portal`, `content/*`, `media/*`, remaining `users/*` routes. `chatbot/[...path]` default minRole fail-closed. |
+| DB / data lifecycle | `cms_content_history` missing the cleanup trigger its own comment promises. `writeRevocationFlag` TTL hardcoded in two places — consolidate and read `SESSION_MAX_LIFETIME_MS`. Supabase: 28 unused indexes flagged. |
+| Workers | `scheduled-log-sync` sends one alert email per failed login (amplification risk). |
+| Frontend | `ModelsCatalog` numeric-only `dangerouslySetInnerHTML` — structurally fragile. `hero.astro` `statusEl.innerHTML` — currently safe but fragile. |
+| Dependencies | `npm audit`: 16 vulns (3 high, 12 moderate, 1 low). Direct: `astro <6.1.10` (XSS), `@astrojs/cloudflare <13.1.10` (SSRF). Transitive: `vite`, `devalue`, `fast-uri`, `postcss`, `yaml`, `ws`, `brace-expansion`. Fix path: `npm update astro @astrojs/cloudflare wrangler && npm audit fix`. |
+| Supabase advisor | `auth_leaked_password_protection` disabled — not relevant for cf-admin (uses CF Access) but worth enabling for any sibling project that uses Supabase Auth. |
 
 
 {% endraw %}
