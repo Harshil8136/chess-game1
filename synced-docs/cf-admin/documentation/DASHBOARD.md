@@ -1,4 +1,3 @@
-{% raw %}
 # Dashboard — Real-Data Command Center
 
 **Last updated:** 2026-05-02 (v4.5: DashboardController is now props-free; uplot reference corrected)
@@ -19,7 +18,7 @@ The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero
 - No distinction between "token missing" and "genuine zero value"
 
 ### After
-- **10 live services** in SystemHealthBar, all derived from analytics data
+- **ServiceStatusStrip** (replaced SystemHealthBar) displays 6 live services (Network, D1, Security, Resend, Sentry, Queues) using real telemetry data
 - **8 parallel analytics providers** via parallel settlement (never crashes if one fails)
 - **`_unconfigured` flag pattern** on every provider — UI shows `—` / "Setup Required" instead of zeros when token is missing
 - **Dismissible setup banner** when API token is not configured
@@ -123,27 +122,22 @@ Renders full-width using the teal-tinted bento card variant.
 
 When unconfigured → progress bar shows striped pattern, value area shows "Token required".
 
-### System Health Bar
-**10 Services and their status logic:**
+### Service Status Strip
+**6 Telemetry Cards (Horizontal Scrollable Row):**
 
-| Service | Operational | Degraded | Outage | Unknown |
-|---------|-------------|----------|--------|---------|
-| API Gateway | error rate ≤ 1% | 1–5% | > 5% | workers unconfigured |
-| cf-astro Worker | error rate ≤ 1% | 1–5% | > 5% | workers unconfigured |
-| Database (D1) | configured | — | — | unconfigured |
-| Session KV | always operational | — | — | never unknown |
-| R2 Storage | configured | — | — | unconfigured |
-| Email Queue | queue present | — | — | queue absent |
-| Supabase DB | cpuLoad ≤ 2 AND cacheHitRatio ≥ 0.90 AND ramUsedPct ≤ 0.90 | cpuLoad > 2 OR cacheHitRatio < 0.90 OR ramUsedPct > 0.90 | deadlocks > 0 OR cpuLoad > 4 | unconfigured |
-| GoTrue Auth | configured | — | — | unconfigured |
-| Resend Email | configured | — | — | unconfigured |
-| Sentry | configured | — | — | unconfigured |
+| Service | Data Displayed | Target Console |
+|---------|----------------|----------------|
+| Network | Requests, Bandwidth, Reliability %, Top Countries | Cloudflare Zone Traffic |
+| D1 DB | Reads, Writes, Rows per Query, Read/Write Ratio | Cloudflare D1 Console |
+| Security | Threats Blocked, WAF Actions, R2 Object Count | Cloudflare WAF / R2 |
+| Resend | Sent, Bounced, 3K/mo Limit Progress | Resend Emails Console |
+| Sentry | Error Count (pulses if >0), Project Slug | Sentry Issues Console |
+| Queues | Backlog Count, Backlog Size, DLQ Status, Active Consumers | Cloudflare Queues |
 
-**Overall label logic:**
-- Any outage → "Partial Outage"
-- Any degraded → "Degraded"
-- All known operational → "All Systems Operational"
-- No known statuses → "Awaiting Data"
+**Visual States:**
+- Active/Normal: Distinct accent color per service (e.g. Network Blue, D1 Cyan, Security Rose)
+- Outage/Errors: Red pulse or specific warning text (e.g. Sentry issues, DLQ backlog)
+- Unconfigured: Dashed border with "Add env token to enable" placeholder
 
 ### Dashboard Controller
 The main orchestrator Preact island (`DashboardController.tsx`) is **props-free** — it receives no SSR data from `index.astro`. All data (analytics, audit log, user info) is fetched client-side after mount via the analytics API. Global welcome messages have been purged for a true "Command Center" aesthetic.
@@ -163,8 +157,8 @@ The main orchestrator Preact island (`DashboardController.tsx`) is **props-free*
 - **Gradient variants** — blue-tinted (Workers), teal-tinted (Storage), amber/green-tinted (Quota), green-tinted (Supabase)
 
 ### Health Bar Visual States
-- Green = Operational | Amber = Degraded | Red = Outage | Gray = Unknown
-- Animated pulse on active status dots
+- Custom accent colors per service with background tints
+- Micro-animations for degraded states (e.g., Sentry errors or Queue DLQ backlog trigger an animated pulse)
 
 ### Removed
 - All "Business Engine" ticket card CSS was deleted when the card was removed
@@ -228,7 +222,7 @@ After adding environment tokens and restarting the dev server:
 
 - [ ] Dashboard loads without JavaScript errors in browser console
 - [ ] Setup banner does NOT appear (tokens configured)
-- [ ] SystemHealthBar shows 10 services with colored status dots (not all gray)
+- [ ] ServiceStatusStrip shows 6 service cards with real telemetry data
 - [ ] WorkersWidget shows two side-by-side cards for both workers
 - [ ] WorkersWidget cards show non-zero request counts
 - [ ] UsageLimits widget shows 3-column grid with 6 cells and real percentage fills
@@ -244,7 +238,7 @@ After adding environment tokens and restarting the dev server:
 - [ ] All CF-dependent values show `—` instead of `0`
 - [ ] WorkersWidget shows "Workers Analytics Unavailable" setup state
 - [ ] Quota cells with missing tokens show striped bar + "Token required"
-- [ ] SystemHealthBar shows CF-dependent services as gray "unknown" dots
+- [ ] ServiceStatusStrip shows unconfigured placeholder cards for missing services
 - [ ] No uncaught JavaScript errors
 
 ---
@@ -260,5 +254,3 @@ After adding environment tokens and restarting the dev server:
 4. **Workers script name matching** — The analytics API returns all scripts on the account. The provider filters client-side to known script names. If a worker is renamed in the Cloudflare dashboard, update the script list in the provider configuration.
 
 5. **Supabase Prometheus endpoint** — The privileged metrics endpoint is a non-public API. It provides 20+ crucial infrastructure metrics, but since it's in early beta/internal use, Supabase could change or restrict it without notice. String parsing logic must fail safely.
-
-{% endraw %}

@@ -1,4 +1,3 @@
-{% raw %}
 # CMS UI Redesign: Content Studio & Gallery
 
 **Date:** 2026-05-13
@@ -43,5 +42,3 @@ The current "Push to Live Site" action is confusingly placed and its state is no
 2. **Layout Refactor:** Refactor `ContentTabs.astro` and `index.astro` to create the Consolidated Sticky Header.
 3. **Gallery Overhaul:** Rewrite `gallery.astro` and its associated Preact components to remove the sidebar, implement the full-width grid, and add the inline "Add Photo" tile.
 4. **State Wiring:** Connect the Preact state (unsaved changes) to the new global "Publish" button in the header.
-
-{% endraw %}

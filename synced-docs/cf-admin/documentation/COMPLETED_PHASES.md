@@ -1,4 +1,3 @@
-{% raw %}
 # cf-admin Refactoring — Completed Phases (Full Detail)
 
 ---
@@ -794,5 +793,3 @@ The previous bust-and-retry path fetched fresh keys into a local variable it nev
 
 - `npm run check` — 0 errors / 0 warnings / 0 hints across 223 files, both before and after the fixes.
 - All 7 commits land on `main` via merge commit `3f8cd78` (PR #2).
-
-{% endraw %}

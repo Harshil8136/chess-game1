@@ -1,4 +1,3 @@
-{% raw %}
 # CF-Admin Architecture
 
 > **Status:** Production Active (v4.6)
@@ -320,5 +319,3 @@ These are architecturally sound but not needed until trigger conditions are met.
 | `@sentry/cloudflare` | `^10.51.0` | Error tracking (workerd-safe) |
 
 → See [OPERATIONS.md](./OPERATIONS.md) for Cloudflare binding IDs, free tier limits, Sentry integration, and deploy commands
-
-{% endraw %}

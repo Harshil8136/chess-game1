@@ -1,4 +1,3 @@
-{% raw %}
 # Operations — Infrastructure, Bindings & Observability
 
 > **Status:** Production Active
@@ -286,5 +285,3 @@ For full secrets + vars reference, see [SECURITY.md](./SECURITY.md) §9.
 | Resend (email) | $0 (free tier, <3K/month) |
 | Anthropic (Claude Haiku fallback) | ~$0.01–0.50/month |
 | **Total** | **~$0.50/month max** |
-
-{% endraw %}

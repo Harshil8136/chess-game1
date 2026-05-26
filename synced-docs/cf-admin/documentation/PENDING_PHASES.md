@@ -1,4 +1,3 @@
-{% raw %}
 # cf-admin — Pending Hardening Items
 
 > **Last Updated:** 2026-05-25 (post deep-review PR #2 merge to `main`)
@@ -70,5 +69,3 @@ Phases 1A–11 of the original refactor (SQL injection, rate limiting, dead code
 2026-05-24 deep review's 7 patches — see `SECURITY-REVIEW-2026-05-24.md`.
 
 2026-05-25 deep review's Critical + High patches (C-1, C-2, H-1..H-5) — see `SECURITY-REVIEW-2026-05-25.md` and `COMPLETED_PHASES.md` § Phase 12.
-
-{% endraw %}

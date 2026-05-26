@@ -1,4 +1,3 @@
-{% raw %}
 # Design System — "Midnight Slate"
 
 > **Status:** Production Active
@@ -569,5 +568,3 @@ Base `.btn` minimum height: 36px. Sizes: `.btn--sm` (28px), `.btn--lg` (44px). A
 - **Chatbot admin component inventory** → See [CHATBOT.md](./CHATBOT.md)
 - **Login forensics CSS module** → See [LOGIN-FORENSICS.md](./LOGIN-FORENSICS.md) §7
 - **CSP + security headers** → See [SECURITY.md](./SECURITY.md) §4
-
-{% endraw %}

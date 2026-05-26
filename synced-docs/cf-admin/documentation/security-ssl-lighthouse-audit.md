@@ -1,4 +1,3 @@
-{% raw %}
 # Security, SSL/TLS, HTTPS & Lighthouse Audit
 
 > **Date:** 2026-04-22
@@ -526,5 +525,3 @@ The fix to static path handling in `transformImageUrl` does not affect cf-admin'
 - Google robots.txt specification — supported and unsupported directives
 - Lighthouse 13 audit documentation — Best Practices and SEO checks
 - W3C Content Security Policy Level 3 — `upgrade-insecure-requests`, `frame-ancestors`
-
-{% endraw %}

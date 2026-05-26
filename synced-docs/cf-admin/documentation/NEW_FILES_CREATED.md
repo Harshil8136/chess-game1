@@ -1,4 +1,3 @@
-{% raw %}
 # New Files Created During Refactoring
 
 All net-new files introduced during this refactoring session.
@@ -194,5 +193,3 @@ All net-new files introduced during this refactoring session.
 | User role visual utilities | `src/components/admin/users/roleColors.ts` |
 | BotConfig UI primitives | `src/components/admin/chatbot/BotConfigShared.tsx` |
 | Badge CSS variables | `src/styles/themes/dark.css` — `--color-badge-*` |
-
-{% endraw %}

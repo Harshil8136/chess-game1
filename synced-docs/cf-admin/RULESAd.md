@@ -1,4 +1,3 @@
-{% raw %}
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
 > **Last Updated:** 2026-05-25 (v4.6: SessionForensicsDrawer + session-status telemetry expansion + theme default hardening)
@@ -405,5 +404,3 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 ---
 
 *End of Rules. These constraints must be acknowledged and followed for every task in cf-admin.*
-
-{% endraw %}

@@ -1,4 +1,3 @@
-{% raw %}
 # Manage Users & RBAC Architecture
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
@@ -355,5 +354,3 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |
 | CF audit cross-reference | Owner+ only | Reveals CF Access org-level user list |
-
-{% endraw %}

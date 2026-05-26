@@ -1,4 +1,3 @@
-{% raw %}
 # Chatbot Integration & AI Infrastructure — CF-Admin
 
 > **Status:** ✅ Deployed
@@ -238,5 +237,3 @@ Analytics shifted from tracking raw technical metrics to tracking **customer out
 - ❌ Get Anthropic-quality for free via Cloudflare
 - ❌ Use AI Gateway to bypass Anthropic billing — it's a proxy, not a credit substitute
 - ❌ Use Gemini 3.1 Pro on free tier — paid-only
-
-{% endraw %}

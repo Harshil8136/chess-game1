@@ -1,4 +1,3 @@
-{% raw %}
 # Login Forensics — Security Audit Subsystem
 
 > **Status:** Production Active (v3 — CF Zero Trust)
@@ -438,5 +437,3 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 - **3-Layer Force-Kick** → See [SECURITY.md](./SECURITY.md) §5
 - **Session Forensics Drawer** (live session telemetry) → See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md) §11.3, §11.4
 - **Migration plan** → See plan file `i-like-he-concept-moonlit-pumpkin.md` (Phases 1–8)
-
-{% endraw %}

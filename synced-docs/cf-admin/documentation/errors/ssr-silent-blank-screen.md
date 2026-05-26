@@ -1,4 +1,3 @@
-{% raw %}
 # Silent Blank Screen (SSR Hydration Failure)
 
 > **Status:** Resolved & Permanently Hardened (April 2026)  
@@ -102,5 +101,3 @@ If a blank screen recurs, follow this checklist in order:
    - Does it avoid `window`/`document` outside `useEffect`?
 5. **Check Cloudflare Workers logs** — Real-time via Wrangler or Cloudflare dashboard
 6. **Inspect the HTML** — View page source; if `<body>` is missing or truncated, the SSR pipeline crashed
-
-{% endraw %}

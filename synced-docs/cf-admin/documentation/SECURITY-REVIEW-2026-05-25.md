@@ -1,4 +1,3 @@
-{% raw %}
 # Security Vulnerability Review — CF-Admin Madagascar
 **Date:** 2026-05-25
 **Reviewer:** Automated deep scan
@@ -111,5 +110,3 @@ All 7 commits land on `main` via merge commit `3f8cd78` (PR #2).
 4. Add `cms_content_history` cleanup trigger (Medium #8) before this table sees any real volume.
 5. Consolidate `writeRevocationFlag` TTL into a single helper that reads `SESSION_MAX_LIFETIME_MS` (Medium #3).
 6. Email-throttling on `scheduled-log-sync` (Medium #10) — only matters once you have inbound traffic that can fail-login at scale.
-
-{% endraw %}

@@ -1,4 +1,3 @@
-{% raw %}
 # Booking Dashboard Header Redesign Spec
 > **Date:** 2026-05-12
 > **Topic:** Booking Manager UX/UI Makeover
@@ -49,5 +48,3 @@ This spec is restricted entirely to:
 1. `cf-admin/src/pages/dashboard/bookings/index.astro` (Static wrapper changes)
 2. `cf-admin/src/components/admin/bookings/BookingDashboard.tsx` (Component internals and CSS class adjustments)
 3. Corresponding CSS files. No database, API, or global layout changes required.
-
-{% endraw %}

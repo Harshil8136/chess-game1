@@ -1,4 +1,3 @@
-{% raw %}
 # Edge Command Center — Architecture & Security Reference
 
 > **Scope**: `cf-admin` — Covers System Debugging, Feature Configuration, Audit Suppression, and the Ghost Audit Engine.
@@ -250,5 +249,3 @@ Ghost Mode creates a window where DEV actions are unlogged. Mitigation:
 ### 8.3 DEV-Only Restriction
 
 Feature Configuration and System Debugging are now **DEV-exclusive**. SuperAdmin users who previously had access will be redirected. This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators.
-
-{% endraw %}

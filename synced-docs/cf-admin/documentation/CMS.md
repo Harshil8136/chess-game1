@@ -1,4 +1,3 @@
-{% raw %}
 # CMS, Image & Bookings Management
 
 > **Version:** 4.6
@@ -338,5 +337,3 @@ Admin clicks Save
 | `cf-admin/api/content/reviews.ts` | Revalidation failure silently swallowed → misleading HTTP 200 | Now returns `{ revalidated: bool, message: string }` |
 | `cf-admin/api/content/faqs.ts` | Same as reviews.ts | Same fix |
 | `cf-astro/api/revalidate.ts` | `happy_clients` and `hero_image` missing from KV allowlist | Added to `CMS_KEY_ALLOWLIST` |
-
-{% endraw %}

@@ -1,4 +1,3 @@
-{% raw %}
 # 🛡️ System Architecture: RBAC, PLAC & Ghost Audit
 
 > [!NOTE]
@@ -219,5 +218,3 @@ Every non-API navigation inside the dashboard is intercepted:
 3. **Ghost Telemetry:** The middleware fires an async deferred task pushing a "view" ledger entry.
 
 The details payload contains a `granted` boolean. This allows Devs to scan the audit table for denied entries to instantly uncover repeated unauthorized access attempts.
-
-{% endraw %}

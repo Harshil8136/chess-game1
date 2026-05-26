@@ -1,4 +1,3 @@
-{% raw %}
 # Code Quality Rules
 
 ## 1. TypeScript Strictness
@@ -229,5 +228,3 @@ Sortable `<th>` elements must have `aria-sort`:
 - Use `var(--duration-normal)` (200ms) for hover/focus states
 - Use `var(--duration-slow)` (350ms) for page transitions
 - Respect `prefers-reduced-motion` media query
-
-{% endraw %}

@@ -1,4 +1,3 @@
-{% raw %}
 # Portal Settings Module Design Specification
 
 ## 1. Overview
@@ -78,5 +77,3 @@ Following the strict < 200 lines and atomic design standards:
 *   **Database Failure:** If D1 fails, the system falls back to default settings (Dark mode) without crashing.
 *   **Permission Bypasses:** The API endpoints strictly check `ROLE_LEVEL` comparisons before permitting user B to edit user A's settings.
 *   **Validation:** All settings values will be strictly validated via Zod schemas before database insertion to prevent injection or corruption of the JSON structures.
-
-{% endraw %}

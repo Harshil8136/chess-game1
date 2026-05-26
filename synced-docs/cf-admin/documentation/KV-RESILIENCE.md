@@ -1,4 +1,3 @@
-{% raw %}
 # KV Resilience & Fallback Chain
 
 > **Version:** 1.0
@@ -235,5 +234,3 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 - **Revalidation secret config** → [CMS.md §8](./CMS.md#8-configuration--environment-constraints)
 - **cf-astro revalidate endpoint** → `cf-astro/src/pages/api/revalidate.ts`
 - **revalidateAstro() helper** → `cf-admin/src/lib/cms.ts` — `revalidateAstro()`
-
-{% endraw %}

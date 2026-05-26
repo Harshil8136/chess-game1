@@ -1,4 +1,3 @@
-{% raw %}
 # cf-admin — Phase 4 Hardening Backlog
 
 > **Context:** This document tracks all remaining hardening items from the senior dev + security audit conducted 2026-05-02. Phases 1–3 of the audit are complete (see `SECURITY.md` for a full record of what was fixed). Everything here is Phase 4: lower-severity polish, defensive hardening, and cleanup that carries no immediate incident risk but should be resolved before any significant traffic spike or security review.
@@ -617,5 +616,3 @@ For the full record of what was fixed in Phases 1–3, see:
 Logout URL parsing (L-1), JWT `nbf` defense-in-depth (L-2), `dashboard/metrics` rate limit (L-3), `hero.astro` innerHTML → textContent (L-4), scheduled-log-sync wall-clock deadline (L-5), `audit.ts` details field convention (L-6), chatbot proxy slug path-traversal reject (L-7), Supabase advisor: leaked-password protection (L-8), drop 28 unused indexes after confirming cross-app usage (L-9), `ModelsCatalog` `dangerouslySetInnerHTML` → JSX (L-10), broaden `sync-docs.yml` PII regex (L-12). See `PENDING_PHASES.md` for full details.
 
 **Recommended ordering:** Item 24 → Item 23 → Items 10+11+20 (single PR) → Items 17+12 → Item 19 → Item 13. Then opportunistic.
-
-{% endraw %}

@@ -1,4 +1,3 @@
-{% raw %}
 # cf-admin Codebase Refactoring — Project Overview
 
 > **REFACTORING COMPLETE** — All 8 phases (1A through 8B) are done. Final verification: `npx astro check` and `npm run build` both pass with **0 errors**. Build output: `✓ Complete!`
@@ -81,5 +80,3 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 
 See `COMPLETED_PHASES.md` for full implementation detail on all phases.
 See `PENDING_PHASES.md` — all phases complete; file now contains a completion notice.
-
-{% endraw %}

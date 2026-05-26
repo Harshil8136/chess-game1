@@ -1,4 +1,3 @@
-{% raw %}
 # Security Vulnerability Review — CF-Admin Madagascar
 **Date:** 2026-05-24  
 **Reviewer:** Claude (automated deep scan)  
@@ -240,5 +239,3 @@ The following security controls were verified to be correctly implemented:
 | 4 | `src/pages/api/bookings/index.ts` | Added `sanitizeSearchTerm()` to strip PostgREST operator chars |
 | 5 | `src/pages/api/users/force-kick.ts` | Changed `.or(`id.eq.${userId}`)` → `.eq('id', userId)` |
 | 6 | `src/lib/auth/session.ts` | Changed `sameSite: 'lax'` → `sameSite: 'strict'`; fixed KV TTL to use remaining lifetime |
-
-{% endraw %}

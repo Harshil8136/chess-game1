@@ -1,4 +1,3 @@
-{% raw %}
 # Data Privacy Dashboard
 
 > **Status:** Production Active — v2 rebuild complete (2026-05-06)
@@ -157,5 +156,3 @@ All styles use design tokens — no raw hex values, no hardcoded pixel colors.
 - **PLAC gate documentation** → See [PLAC-AND-AUDIT.md](./PLAC-AND-AUDIT.md)
 - **RBAC hierarchy** → See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md)
 - **Design tokens** → See [DESIGN-SYSTEM.md](./DESIGN-SYSTEM.md)
-
-{% endraw %}

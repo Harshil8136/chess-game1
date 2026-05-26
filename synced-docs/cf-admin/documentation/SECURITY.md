@@ -1,4 +1,3 @@
-{% raw %}
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
@@ -634,5 +633,3 @@ Shipped on `main` via PR #2 (merge commit `3f8cd78`) as 7 atomic commits.
 | Dependencies | `npm audit`: 16 vulns (3 high, 12 moderate, 1 low). Direct: `astro <6.1.10` (XSS), `@astrojs/cloudflare <13.1.10` (SSRF). Transitive: `vite`, `devalue`, `fast-uri`, `postcss`, `yaml`, `ws`, `brace-expansion`. Fix path: `npm update astro @astrojs/cloudflare wrangler && npm audit fix`. |
 | Supabase advisor | `auth_leaked_password_protection` disabled — not relevant for cf-admin (uses CF Access) but worth enabling for any sibling project that uses Supabase Auth. |
 
-
-{% endraw %}
