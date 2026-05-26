@@ -1,7 +1,7 @@
 # CMS, Image & Bookings Management
 
-> **Version:** 4.6
-> **Last Updated:** 2026-05-13 (FAQ + About/Stats CMS sections live; Media Library browser; KV resilience audit; Promise.allSettled fix)
+> **Version:** 4.7
+> **Last Updated:** 2026-05-26 (all writer endpoints now enforce PLAC via `placDenyResponse(user, '/dashboard/content')` or `'/dashboard/media'`; GET handlers in `reviews.ts` / `faqs.ts` / `stats.ts` wrap `JSON.parse` in try/catch so a single corrupt D1 row no longer 500s the dashboard; `bookings/[id]/state.ts` `operational_status` is now allow-listed and `internal_notes` length-capped at 2000 chars)
 > **Projects:** `cf-admin` (writes), `cf-astro` (reads)
 
 ---

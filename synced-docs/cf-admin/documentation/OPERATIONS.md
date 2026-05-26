@@ -1,7 +1,7 @@
 # Operations — Infrastructure, Bindings & Observability
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-02 (v4.5: SITE_URL reclassified as [vars]; SENTRY_ORG_SLUG/SENTRY_PROJECT_SLUG added; Analytics Engine binding documented)
+> **Last Updated:** 2026-05-26 (v4.7: `scheduled-log-sync` email fan-out capped at 5/batch with a digest line — prevents Resend quota burn on failed-login bursts; `writeRevocationFlag` TTL now reads `SESSION_MAX_LIFETIME_MS` instead of being hard-coded; production `npm audit` is clean — see SECURITY-REVIEW-2026-05-26.md)
 > **Scope:** Cloudflare binding IDs, free tier limits, Sentry observability, build/deploy
 
 ---
@@ -213,6 +213,8 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | Logs | Read |
 
 **API endpoint:** `GET /accounts/{id}/access/logs/access-requests?since={ts}&limit=100`
+
+**Email fan-out (2026-05-26 hardening):** For every batch returned by the audit poll, only the first **5 failed-login entries** trigger a Resend `sendSecurityAlertEmail` call; the 5th email appends a digest line noting how many additional failures were suppressed (with a pointer to D1 `admin_login_logs` for the complete set). All failures still write to D1 via `logLoginAttempt` regardless of email-cap state. This prevents a misconfigured IdP or password-spraying bot from amplifying one batch into 100+ alert emails and burning the Resend free-tier quota.
 
 ---
 

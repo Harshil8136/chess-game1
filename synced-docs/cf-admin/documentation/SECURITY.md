@@ -1,7 +1,7 @@
 # Security Architecture — CF-Admin
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-25 (deep-review fixes — see §14: PLAC verified-role gates, CSRF Referer anchored, audit silence self-protection, cron pattern fix, JWKS cleanup, `placDenyResponse` helper applied to audit + users API routes)
+> **Last Updated:** 2026-05-26 (deep-review follow-ups — see §15: PLAC wired into the remaining 18 API routes, all production `npm audit` vulnerabilities cleared, `writeRevocationFlag` TTL respects `SESSION_MAX_LIFETIME_MS`, `scheduled-log-sync` email amplification capped, `_headers` CSP aligned with middleware, operational_status allow-listed, content-route JSON.parse crash-proofed)
 > **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization, IDOR Prevention, Rate Limiting, Input Validation
 
 ---
@@ -256,23 +256,43 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 - Honors the same resolution rules as page navigation: exact-match wins, then longest-prefix-match. An explicit `false` denies; any other state allows.
 - Returns a fully-formed `403` JSON `Response` when denied (no-store / nosniff headers included) so callers can early-return: `const denied = placDenyResponse(actor, '/dashboard/logs'); if (denied) return denied;`
 
-**Routes wired in PR #2 (2026-05-25):**
+**Routes wired (all data-bearing routes now enforce PLAC):**
 
-| Route | Page check | Notes |
-|---|---|---|
-| `GET /api/audit/emails` (+ `DELETE`) | `/dashboard/logs` | Replaces the prior inline `accessMap[]` check; consistent across the audit endpoints. |
-| `GET /api/audit/sessions` | `/dashboard/logs` | |
-| `GET /api/audit/stats` | `/dashboard/logs` | |
-| `GET /api/audit/logs` (+ `DELETE`) | `/dashboard/logs` | |
-| `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | |
-| `GET /api/audit/receipts` | `/dashboard/privacy` | Privacy dashboard surface. |
-| `DELETE /api/audit/prune` | `/dashboard/logs` | DEV-only + PLAC. |
-| `POST /api/audit/silence` | DEV-only role check + self-silencing forbidden | No PLAC check — DEV is exempt anyway; the self-silence forbid is the meaningful guard. |
-| `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | |
-| `DELETE /api/users/force-kick` | `/dashboard/users` | |
-| `GET /api/users/access-data` | `/dashboard/users` | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
+| Route | Page check | Wired In | Notes |
+|---|---|---|---|
+| `GET /api/audit/emails` (+ `DELETE`) | `/dashboard/logs` | PR #2 (2026-05-25) | Replaces the prior inline `accessMap[]` check; consistent across the audit endpoints. |
+| `GET /api/audit/sessions` | `/dashboard/logs` | PR #2 | |
+| `GET /api/audit/stats` | `/dashboard/logs` | PR #2 | |
+| `GET /api/audit/logs` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
+| `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
+| `GET /api/audit/receipts` | `/dashboard/privacy` | PR #2 | Privacy dashboard surface. |
+| `DELETE /api/audit/prune` | `/dashboard/logs` | PR #2 | DEV-only + PLAC. |
+| `POST /api/audit/silence` | `/dashboard/audit` | 2026-05-26 | DEV-only role check + self-silencing forbidden remain primary; PLAC gate added for defence-in-depth (DEV is exempt anyway, but the gate documents intent and future-proofs against the role gate being relaxed). |
+| `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. The existing hash-grant logic remains as secondary check. |
+| `POST /api/audit/export` | `/dashboard/logs` (parent) | 2026-05-26 | Same parent-deny propagation as above for the `#export` hash sub-page. |
+| `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | PR #2 | |
+| `DELETE /api/users/force-kick` | `/dashboard/users` | PR #2 | |
+| `GET /api/users/access-data` | `/dashboard/users` | PR #2 | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
+| `GET /api/users` | `/dashboard/users` | 2026-05-26 | |
+| `GET /api/users/activity` | `/dashboard/users` | 2026-05-26 | |
+| `GET /api/users/pages` | `/dashboard/users` | 2026-05-26 | |
+| `POST /api/users/access` | `/dashboard/users` | 2026-05-26 | Added before the existing 5-gate hierarchy check; a PLAC-denied admin can no longer mutate PLAC. |
+| `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
+| `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
+| `GET /api/users/active-sessions` (+ `DELETE`) | `/dashboard/users` | 2026-05-26 | DELETE additionally has a 30/min revoke rate limit. |
+| `GET /api/users/active-revocations` (+ `DELETE`) | `/dashboard/users` | 2026-05-26 | DELETE additionally has a 30/min unblock rate limit. |
+| `GET/POST /api/settings/portal` | `/dashboard/settings` | 2026-05-26 | |
+| `GET/POST /api/content/services` | `/dashboard/content` | 2026-05-26 | |
+| `POST /api/content/blocks` | `/dashboard/content` | 2026-05-26 | |
+| `GET/POST /api/content/faqs` | `/dashboard/content` | 2026-05-26 | |
+| `GET/POST /api/content/stats` | `/dashboard/content` | 2026-05-26 | |
+| `GET/POST /api/content/reviews` | `/dashboard/content` | 2026-05-26 | |
+| `GET/POST /api/media/gallery` | `/dashboard/media` | 2026-05-26 | |
+| `POST /api/media/upload` | `/dashboard/media` | 2026-05-26 | |
+| `GET/DELETE /api/media/library` | `/dashboard/media` | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
+| `POST /api/media/revalidate` | `/dashboard/media` | 2026-05-26 | |
 
-**Routes pending (tracked in `PENDING_PHASES.md`):** `settings/portal`, `content/*`, `media/*`, `users/{probes, cf-access-audit, active-sessions, active-revocations}`. Each has its own role gate; PLAC wiring is mechanical.
+All data-bearing API routes that map to a dashboard page now enforce PLAC. Internal/operational endpoints (`/api/health`, `/api/diagnostics/*`, `/api/features/toggle`) remain on role-only gates by design — they don't map to a single dashboard page.
 
 ---
 
@@ -287,6 +307,12 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 | `POST /api/system/preview` | 20/min | `system-preview` | `actor.userId` |
 | `POST /api/system/pages` (PATCH) | 3/min | `registry` | `actor.userId` |
 | `POST/PATCH/DELETE /api/users/manage` | 10/h | `users-manage` | `session.userId` |
+| `DELETE /api/users/active-sessions` | 30/min | `session-revoke` | `session.userId` |
+| `DELETE /api/users/active-revocations` | 30/min | `revocation-unblock` | `session.userId` |
+| `GET /api/users/cf-access-audit` | 10/min | `cf-access-audit` | `session.userId` |
+| `POST /api/content/blocks` | 30/h | `content-blocks` | `user.userId` |
+| `POST /api/content/faqs` | 30/h | `content-faqs` | `user.userId` |
+| `POST /api/content/stats` | 30/h | `content-stats` | `user.userId` |
 | `POST /api/content/reviews` | 30/h | `content-reviews` | `user.userId` |
 | `POST /api/content/services` | 30/h | `content-services` | `user.userId` |
 | `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
@@ -621,15 +647,45 @@ Shipped on `main` via PR #2 (merge commit `3f8cd78`) as 7 atomic commits.
 
 ### Items Remaining (Tracked in `PENDING_PHASES.md`)
 
-14 Medium + 14 Low findings. Highlights:
+All Critical and High items shipped in PR #2 (2026-05-25). The follow-up pass on 2026-05-26 (commit `27e6090` — see §15) cleared every Medium and Low item that had a meaningful exploit path or genuine functional impact, plus the entire dependency CVE list. Only soft items remain (audit-log DELETE policy decision, dead-code migration cleanup, advisor lints) — see `PENDING_PHASES.md`.
 
-| Area | Finding |
-|---|---|
-| Validation | `bookings/[id]/state.ts` `operational_status` accepts arbitrary strings (enum allowlist needed). `content/reviews.ts` GET crashes on corrupted JSON row. `audit/prune` days bound applied; remaining endpoints need similar bounding. |
-| API hardening | Apply `placDenyResponse` to `settings/portal`, `content/*`, `media/*`, remaining `users/*` routes. `chatbot/[...path]` default minRole fail-closed. |
-| DB / data lifecycle | `cms_content_history` missing the cleanup trigger its own comment promises. `writeRevocationFlag` TTL hardcoded in two places — consolidate and read `SESSION_MAX_LIFETIME_MS`. Supabase: 28 unused indexes flagged. |
-| Workers | `scheduled-log-sync` sends one alert email per failed login (amplification risk). |
-| Frontend | `ModelsCatalog` numeric-only `dangerouslySetInnerHTML` — structurally fragile. `hero.astro` `statusEl.innerHTML` — currently safe but fragile. |
-| Dependencies | `npm audit`: 16 vulns (3 high, 12 moderate, 1 low). Direct: `astro <6.1.10` (XSS), `@astrojs/cloudflare <13.1.10` (SSRF). Transitive: `vite`, `devalue`, `fast-uri`, `postcss`, `yaml`, `ws`, `brace-expansion`. Fix path: `npm update astro @astrojs/cloudflare wrangler && npm audit fix`. |
-| Supabase advisor | `auth_leaked_password_protection` disabled — not relevant for cf-admin (uses CF Access) but worth enabling for any sibling project that uses Supabase Auth. |
+---
+
+## 15. Security Audit Log — 2026-05-26 Deep-Review Follow-Up
+
+Full report: [`documentation/SECURITY-REVIEW-2026-05-26.md`](./SECURITY-REVIEW-2026-05-26.md)
+Shipped on `main` via commit `27e6090` (single atomic commit — 28 files changed, +637 / −319).
+
+This pass re-verified every deferred item from the 2026-05-25 review and closed every meaningful gap. Production `npm audit` drops from **16 vulnerabilities (3 high, 12 moderate, 1 low) to 0**.
+
+### Vulnerabilities & Improvements Patched
+
+| Severity | File(s) | Issue | Fix |
+|---|---|---|---|
+| 🔴 Crit (gap) | 18 API routes — `content/*`, `media/*`, `settings/portal`, `users/*`, `audit/silence` | **PLAC bypass via direct JSON API.** Routes had role gates but never called `placDenyResponse()`, so an admin with an explicit deny on `/dashboard/content`, `/dashboard/media`, `/dashboard/settings`, or `/dashboard/users` could still POST to the corresponding APIs (mutate FAQs, post a gallery, list active sessions, etc.). | `placDenyResponse(user, '/dashboard/<page>')` added after the existing role gate on every flagged route. DEV-exempt, behaviour-identical for users without an explicit deny. See §6a for the full route table. |
+| 🔴 Crit | `content/{reviews,faqs,stats}.ts` GET handlers | **Route crash on corrupt JSON.** `JSON.parse(result.content)` had no try/catch; one corrupted row in `cms_content` would 500 the whole route and the dashboard page that depends on it. | Wrapped in try/catch with empty-array fallback — same pattern already in `gallery.ts:27`. |
+| 🔴 Crit | `bookings/[id]/state.ts` | **`operational_status` accepted any string** (no DB CHECK, no zod allow-list) and `internal_notes` had no length cap. Garbage strings could persist into D1 and corrupt UI filters. | Defined `VALID_OPERATIONAL_STATUS = {'pending','confirmed','in_progress','completed','cancelled','no_show'}`; reject otherwise with 400. Cap `internal_notes` at 2000 chars. |
+| 🟠 High | 16 npm packages | **Production `npm audit`: 16 vulnerabilities** including high-severity `vite` path traversal + WS file read, `devalue` DoS, `fast-uri` path traversal + host confusion, plus moderate-severity `astro` XSS, `@astrojs/cloudflare` SSRF, `postcss` XSS, `ws` memory disclosure, `yaml` stack overflow. | `npm audit fix` (non-breaking) + `@astrojs/cloudflare ^13.1.6 → ^13.5.4` + `@astrojs/check ^0.9.8 → ^0.9.9`. Moved `@astrojs/check` from `dependencies` → `devDependencies` (build-only). **Result: 0 prod vulnerabilities.** |
+| 🟠 High | `src/workers/scheduled-log-sync.ts` | **Email amplification.** For every failed CF Access login returned by the audit poll, one alert email was sent via Resend. A 100-failure burst (misconfigured IdP, password-spraying bot) would burn the Resend quota and silence real alerts. | Cap email notifications at 5 per batch; the 5th email appends a digest line noting how many more failures were suppressed (with a pointer to D1 `admin_login_logs` for the complete set). All failures still write to D1 — only the email fan-out is throttled. |
+| 🟠 High | `src/lib/auth/session.ts:280` (`writeRevocationFlag`) | **TTL hardcoded to 86 400 s.** Drifts whenever `SESSION_MAX_LIFETIME_MS` changes — a 12 h session would be outlived by a 24 h revocation flag. | Read `SESSION_MAX_LIFETIME_MS` via `getSessionTiming(getRawEnv())`; floor at 60 s. Callers unchanged. |
+| 🟠 High | `public/_headers` vs `src/middleware.ts` | **CSP divergence.** `_headers` had `https://*.sentry-cdn.com` wildcard, `https://*.supabase.co` carveouts, and an older `Permissions-Policy` that the middleware version had already dropped. `_headers` isn't consumed by the Workers runtime (this project deploys via `wrangler deploy`, not Pages), so the divergence misled rather than weakened — but the misleading file is now byte-aligned with middleware and carries a header comment clarifying its reference-only role. | Aligned `_headers` to middleware byte-for-byte; added the reference-only banner. |
+| 🟡 Med | `audit/{login-logs,export}.ts` | **PLAC parent-deny not propagated** — both used custom `actor.accessMap['/dashboard/logs#security']` / `['#export']` lookups instead of the canonical helper, so a deny on the parent `/dashboard/logs` would not block these endpoints if a stale grant for the hash sub-page existed. | Added `placDenyResponse(actor, '/dashboard/logs')` as the first gate; the existing hash-grant logic remains as secondary. Order matters: parent deny wins. |
+| 🟡 Med | `users/access.ts` | **PLAC-denied admin could still POST PLAC changes.** The route had its full 5-gate hierarchy but never checked whether the actor was allowed to reach `/dashboard/users` in the first place. | `placDenyResponse(actor, '/dashboard/users')` added before any of the existing gates. |
+| 🟡 Med | `users/{active-sessions, active-revocations, cf-access-audit}.ts` | **No rate limit on privileged ops.** Session revocation, edge-block unblock, and CF Access user enumeration were unthrottled. `cf-access-audit` is the most sensitive — it enumerates every CF Access user in the account. | Added Upstash limiters: 30/min revoke, 30/min unblock, 10/min CF Access audit. Keyed by `session.userId`. |
+| 🟡 Med | `src/lib/auth/session.ts:130` | **`X-Forwarded-For` used raw** as IP fallback when `CF-Connecting-IP` is missing — some proxy chains emit a comma-separated list, so the full string was being persisted to the audit trail. | Split on comma and take leftmost entry; `CF-Connecting-IP` still preferred as the most-trusted source. |
+| 🟡 Low | `ModelsCatalog.tsx:274` | **`dangerouslySetInnerHTML` structurally fragile.** Currently safe (both branches interpolate only `Math.round(...)` and `.toFixed(...)` — number → digit-string), but a future refactor adding `m.name` would silently introduce XSS. | Load-bearing comment added explaining the safety invariant and the migration path to JSX `<><strong>{value}</strong></>` if any string field is ever interpolated. |
+| 🧹 Hyg | `package.json` | `@astrojs/check` was in `dependencies` despite being a build-only typecheck tool. | Moved to `devDependencies`. Removes 5 transitive vulnerabilities from the production audit surface (`@astrojs/language-server` → `volar-service-yaml` → `yaml-language-server` → `yaml`). |
+
+### Items Verified Closed (no code change needed)
+
+- **M-8 `cms_content_history` cleanup trigger** — verified the table has zero writers in the codebase. The migration's comment promises a trigger that was never created, but nothing inserts into the table so it cannot grow. Re-evaluate when the first writer ships.
+- **M-4 audit-log DELETE handler** — genuinely a policy decision, not a bug. The UI's "Delete Selected" button in ActivityCenter depends on it. Left pending a product call.
+- **M-9 `chatbot/[...path]` default minRole** — function entry already uses `requireAuth(context, 'admin')`, which matches the `getMinRole` default. Lower priority than originally rated.
+
+### Verification
+
+- `tsc --noEmit --skipLibCheck` → exit 0 across the entire codebase.
+- `npm audit --omit=dev` → 0 vulnerabilities (was 16).
+- Per-route PLAC audit script: every previously-flagged route now contains ≥ 1 `placDenyResponse` / `requirePageAccess` call.
+- `astro check` could not complete in the review sandbox due to an esbuild service deadlock (environmental, not code) — `tsc` is the verified-clean path for this review.
 

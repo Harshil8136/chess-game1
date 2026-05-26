@@ -548,71 +548,63 @@ For the full record of what was fixed in Phases 1–3, see:
 >
 > The same items are tracked in tabular form with full context in `PENDING_PHASES.md`. This section is the lightweight quick-pick checklist.
 
-## Item 10 — Bound `operational_status` to an enum allowlist 🟡
-**File:** `src/pages/api/bookings/[id]/state.ts:112`
-**Why:** Any string today is accepted; garbage values leak into D1 and the UI.
-**Fix:** `const VALID = ['pending','confirmed','checked_in','checked_out','cancelled','completed']; if (operational_status && !VALID.includes(operational_status)) return jsonError(400, 'Invalid status');`
+## Item 10 — Bound `operational_status` to an enum allowlist ✅ DONE 2026-05-26
+**File:** `src/pages/api/bookings/[id]/state.ts`
+**Resolution:** `VALID_OPERATIONAL_STATUS` set defined (`pending`, `confirmed`, `in_progress`, `completed`, `cancelled`, `no_show`); reject otherwise with 400. `internal_notes` capped at 2000 chars. Commit `27e6090`.
 
-## Item 11 — Wrap `JSON.parse` in `content/reviews.ts:33` 🟡
-**Why:** A single corrupted row in `cms_content` crashes the GET endpoint.
-**Fix:** Mirror the try/catch pattern from `gallery.ts:26-30`; default to `[]`.
+## Item 11 — Wrap `JSON.parse` in `content/reviews.ts:33` ✅ DONE 2026-05-26
+**Resolution:** try/catch with empty-array fallback added to `reviews.ts`, `faqs.ts`, and `stats.ts` GET handlers. Mirrors the pattern from `gallery.ts:27`. Commit `27e6090`.
 
-## Item 12 — Consolidate `writeRevocationFlag` TTL 🟡
-**Files:** `src/lib/auth/session.ts:281`, `src/lib/auth/plac.ts:363`
-**Why:** Two hardcoded copies of `86400`; doesn't track `SESSION_MAX_LIFETIME_MS`.
-**Fix:** One helper that reads the env var; remove the duplicate.
+## Item 12 — Consolidate `writeRevocationFlag` TTL ✅ DONE 2026-05-26
+**File:** `src/lib/auth/session.ts:280` — TTL now reads `SESSION_MAX_LIFETIME_MS` via `getSessionTiming(getRawEnv())`, floor 60 s. **Note:** the cited duplicate at `plac.ts:363` did not exist in the codebase — that 2026-05-25 finding was speculative. Only the `session.ts` copy was real. Commit `27e6090`.
 
-## Item 13 — Remove `DELETE /api/audit/logs` 🟡
+## Item 13 — Remove `DELETE /api/audit/logs` 🟡 (policy decision pending)
 **File:** `src/pages/api/audit/logs.ts:113–174`
-**Why:** Audit log should be append-only. `audit/prune` covers retention. Removing eliminates a self-incrimination escape hatch.
-**Caveat:** Check ActivityCenter UI's "Delete Selected" button — may need replacement UX.
+**Status:** Still open — needs product sign-off because the UI's "Delete Selected" button in `ActivityCenter` depends on this endpoint. PLAC gate has been wired in PR #2 so the immediate exploit path is closed; the remaining question is purely policy (append-only audit ledger vs. interactive UI).
 
 ## Item 14 — Validate `pageOverrides` on user creation 🟡
 **File:** `src/pages/api/users/manage.ts:100–121`
 **Fix:** Validate each `pagePath` exists in `admin_pages`; apply Gate D (ceiling) to grants.
 
-## Item 15 — Drop XFF IP fallback in session creation 🟡
+## Item 15 — Drop XFF IP fallback in session creation ✅ DONE 2026-05-26
 **File:** `src/lib/auth/session.ts:130`
-**Fix:** `request.headers.get('CF-Connecting-IP') ?? 'unknown'`.
+**Resolution:** Split `X-Forwarded-For` on comma and take leftmost entry instead of using the raw header (some proxy chains emit CSVs). `CF-Connecting-IP` still preferred as the most-trusted source. Commit `27e6090`.
 
 ## Item 16 — Simplify `effectiveSiteUrl` in middleware 🟡
 **File:** `src/middleware.ts:170`
 **Fix:** `const effectiveSiteUrl = env.SITE_URL;` — drop the `process.env` branch.
 
-## Item 17 — Add `cms_content_history` cleanup trigger 🟡
+## Item 17 — Add `cms_content_history` cleanup trigger ⏭️ Deferred (dead table)
 **File:** `migrations/0026_cms_content_history.sql`
-**Why:** Comment promises trigger-based cleanup; trigger is missing → unbounded growth.
-**Fix:** New migration with `CREATE TRIGGER ... AFTER INSERT ... DELETE FROM cms_content_history WHERE (id, page, saved_at) NOT IN (SELECT ... LIMIT 10)`.
+**Status:** Re-verified 2026-05-26 — the table has **zero writers** in the codebase. The migration's comment promises a trigger that was never built, but nothing inserts into the table so it cannot grow. Either ship the version-history feature (writers + UI + the trigger) or drop the migration. Currently a maintenance trap, not a runtime bug.
 
 ## Item 18 — Fail-closed default for chatbot proxy minRole 🟡
 **File:** `src/pages/api/chatbot/[...path].ts:54`
-**Fix:** `return 'dev';` instead of `'admin'`.
+**Fix:** `return 'dev';` instead of `'admin'`. (Lower priority than originally rated — `requireAuth(ctx, 'admin')` at function entry currently matches the default, so not fail-open today.)
 
-## Item 19 — Batch alert emails in `scheduled-log-sync` 🟡
-**File:** `src/workers/scheduled-log-sync.ts:181–191`
-**Why:** Currently one email per failed login → inbox flood / cost amplification.
-**Fix:** Group by `(email, ip, hour)`; send one summary per group. Or throttle to ≤1 alert per recipient per 15 min using KV.
+## Item 19 — Batch alert emails in `scheduled-log-sync` ✅ DONE 2026-05-26
+**File:** `src/workers/scheduled-log-sync.ts`
+**Resolution:** Capped at 5 alert emails per batch; the 5th email appends a digest line noting how many additional failures were suppressed (with a pointer to D1 `admin_login_logs`). All failures still write to D1 regardless of email-cap state. Commit `27e6090`.
 
 ## Item 20 — Use `isAdmin()` in `media/upload.ts:39` 🟡
-**Fix:** Replace hardcoded role allowlist with the helper.
+**Fix:** Replace hardcoded role allowlist with the helper. (Still open — separate from the PLAC wiring that already shipped on this route.)
 
-## Item 21 — Reconcile `_headers` vs middleware CSP 🟡
-**Files:** `public/_headers:11`, `src/middleware.ts:510`
-**Fix:** Delete the CSP line from `_headers` (middleware is authoritative) or sync them exactly.
+## Item 21 — Reconcile `_headers` vs middleware CSP ✅ DONE 2026-05-26
+**Files:** `public/_headers`, `src/middleware.ts`
+**Resolution:** Aligned `_headers` CSP byte-for-byte with the middleware CSP; added a reference-only banner clarifying that `_headers` is not consumed at runtime on Workers deploys (only middleware is). Commit `27e6090`.
 
 ## Item 22 — `cf_admin_theme` cookie SameSite consistency 🟡
 **File:** `src/pages/api/settings/user.ts:157,163`
-**Fix:** Switch to `SameSite=Strict` to match the session cookie.
+**Fix:** Switch to `SameSite=Strict` to match the session cookie. UI preference only, no security impact.
 
-## Item 23 — Apply `placDenyResponse` to remaining routes 🟡
-**Routes:** `settings/portal`, `content/*`, `media/*`, `users/probes`, `users/cf-access-audit`, `users/active-sessions`, `users/active-revocations`.
-**Pattern:** see `audit/emails.ts` (canonical example after PR #2).
+## Item 23 — Apply `placDenyResponse` to remaining routes ✅ DONE 2026-05-26
+**Resolution:** All 18 routes wired: `settings/portal`, `content/{services, blocks, faqs, stats, reviews}`, `media/{gallery, upload, library, revalidate}`, `users/{index, activity, pages, access, probes, cf-access-audit, active-sessions, active-revocations}`, plus `audit/silence`. Also added parent-deny propagation on `audit/{login-logs, export}`. Full route table in `SECURITY.md` §6a. Commit `27e6090`.
 
-## Item 24 — `npm audit fix` + bump direct deps 🔵
-**Commands:** `npm update astro @astrojs/cloudflare wrangler @cloudflare/workers-types && npm audit fix`.
-**Why:** 16 vulns flagged: astro XSS (moderate), @astrojs/cloudflare SSRF (low), transitive vite/devalue/fast-uri/postcss/yaml/ws/brace-expansion. Re-run `npm run check` after.
+## Item 24 — `npm audit fix` + bump direct deps ✅ DONE 2026-05-26
+**Resolution:** Production `npm audit` cleared (16 → 0 vulns) via `npm audit fix` + `@astrojs/cloudflare ^13.5.4` + `@astrojs/check ^0.9.9` + reclassification of `@astrojs/check` to `devDependencies`. The reclassification alone removes the entire `@astrojs/language-server` → `volar-service-yaml` → `yaml` chain from the production audit surface. Commit `27e6090`.
 
-## Item 25 — Misc low items 🔵
-Logout URL parsing (L-1), JWT `nbf` defense-in-depth (L-2), `dashboard/metrics` rate limit (L-3), `hero.astro` innerHTML → textContent (L-4), scheduled-log-sync wall-clock deadline (L-5), `audit.ts` details field convention (L-6), chatbot proxy slug path-traversal reject (L-7), Supabase advisor: leaked-password protection (L-8), drop 28 unused indexes after confirming cross-app usage (L-9), `ModelsCatalog` `dangerouslySetInnerHTML` → JSX (L-10), broaden `sync-docs.yml` PII regex (L-12). See `PENDING_PHASES.md` for full details.
+## Item 25 — Misc low items 🔵 / partially resolved
+- L-10 `ModelsCatalog` `dangerouslySetInnerHTML` → JSX — **partially resolved 2026-05-26**: load-bearing comment added explaining the numeric-only safety invariant and the migration path to JSX. Full JSX conversion still open.
+- L-1, L-2, L-3, L-4, L-5, L-6, L-7, L-8, L-9, L-12 — still open. See `PENDING_PHASES.md` for full details.
 
-**Recommended ordering:** Item 24 → Item 23 → Items 10+11+20 (single PR) → Items 17+12 → Item 19 → Item 13. Then opportunistic.
+**Updated recommended ordering:** Item 13 (audit-log DELETE policy) → Item 14 (pageOverrides validation) → Items 16+18+20+22 (single hygiene PR) → Item 17 (decide ship-or-drop on `cms_content_history`) → Item 25 batch.

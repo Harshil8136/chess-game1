@@ -3,7 +3,7 @@
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-05-25 (v4.6: Session Forensics Drawer, session-status telemetry expansion, auth gate lowered to super_admin+)
+> **Last Updated:** 2026-05-26 (v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -64,23 +64,35 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 
 ### 2.1 Enforcement Coverage
 
-All server-side authorization gates (API routes and Astro SSR pages) **must** use the helpers above. The following files have been fully migrated:
+All server-side authorization gates (API routes and Astro SSR pages) **must** use the helpers above. The following files have been fully migrated. Routes marked **+PLAC** also call `placDenyResponse(actor, '/dashboard/<page>')` so an explicit page-level deny blocks the underlying API call too.
 
-| File | Helper(s) Used | Gate Purpose |
-|------|---------------|--------------|
-| `src/pages/api/users/manage.ts` | `isDev`, `isOwnerOrDev` | Role mutation, ghost protection |
-| `src/pages/api/users/access.ts` | `isDev`, `isOwnerOrDev` | PLAC provisioning |
-| `src/pages/api/users/force-kick.ts` | `isOwnerOrDev` | Session termination |
-| `src/pages/api/users/activity.ts` | `isOwnerOrDev` | Ghost protection on activity logs |
-| `src/pages/api/users/[id]/session-status.ts` | `isSuperAdmin` | Session telemetry + per-session revocation |
-| `src/pages/api/features/toggle.ts` | `isDev` | Feature flag mutation |
-| `src/pages/api/diagnostics/ping.ts` | `isDev` | System diagnostics |
-| `src/pages/api/audit/consent.ts` | `isOwnerOrDev` | Consent record deletion |
-| `src/pages/api/audit/logs.ts` | `isOwnerOrDev` | Audit log deletion |
-| `src/pages/api/audit/emails.ts` | `isOwnerOrDev` | Email log deletion |
-| `src/pages/api/audit/prune.ts` | `isDev` | Log pruning |
-| `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` | Feature flag computation |
-| `src/pages/dashboard/users/[id]/access.astro` | `isDev`, `isOwnerOrDev` | Hidden account visibility, privilege gate |
+| File | Helper(s) Used | Gate Purpose | +PLAC |
+|------|---------------|--------------|:---:|
+| `src/pages/api/users/manage.ts` | `isDev`, `isOwnerOrDev` | Role mutation, ghost protection | ✅ `/dashboard/users` |
+| `src/pages/api/users/access.ts` | `isDev`, `isOwnerOrDev` | PLAC provisioning | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/force-kick.ts` | `isOwnerOrDev` | Session termination | ✅ `/dashboard/users` |
+| `src/pages/api/users/index.ts` | (super_admin) | User registry list | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/activity.ts` | `isOwnerOrDev` | Ghost protection on activity logs | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/pages.ts` | (super_admin) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/probes.ts` | (owner) | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/cf-access-audit.ts` | (owner) | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
+| `src/pages/api/users/active-sessions.ts` | (super_admin) | KV active session list + revoke | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
+| `src/pages/api/users/active-revocations.ts` | (super_admin) | KV revocation block list + unblock | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
+| `src/pages/api/users/access-data.ts` | `isOwnerOrDev` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
+| `src/pages/api/users/[id]/session-status.ts` | `isSuperAdmin` | Session telemetry + per-session revocation | (role-only — single-user, not dashboard-scoped) |
+| `src/pages/api/features/toggle.ts` | `isDev` | Feature flag mutation | (role-only — DEV is PLAC-exempt) |
+| `src/pages/api/diagnostics/ping.ts` | `isDev` | System diagnostics | (role-only — DEV is PLAC-exempt) |
+| `src/pages/api/audit/consent.ts` | `isOwnerOrDev` | Consent record deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/logs.ts` | `isOwnerOrDev` | Audit log deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/emails.ts` | `isOwnerOrDev` | Email log deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/sessions.ts` | (admin) | Session audit trail | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/stats.ts` | (admin) | Audit summary stats | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/login-logs.ts` | role-or-grant | Login forensics (PII) | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
+| `src/pages/api/audit/export.ts` | role-or-grant | CSV export | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
+| `src/pages/api/audit/prune.ts` | `isDev` | Log pruning | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/silence.ts` | `isDev` | Audit silencing | ✅ `/dashboard/audit` (defence-in-depth; 2026-05-26) |
+| `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` | Feature flag computation | (page-level — uses middleware PLAC) |
+| `src/pages/dashboard/users/[id]/access.astro` | `isDev`, `isOwnerOrDev` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
 
 > [!NOTE]
 > **Client-side Preact components** (e.g., `DangerZone.tsx`, `ExpandedRow.tsx`, `UsersRegistry.tsx`) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (ghost protection badges, filter tabs). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.

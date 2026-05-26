@@ -1,8 +1,8 @@
 # CF-Admin Architecture
 
-> **Status:** Production Active (v4.6)
-> **Stack:** Astro 6.1.2 SSR + Cloudflare Workers (Free) + Preact 10.29.0 Islands + D1 + KV + R2 + Queues + Analytics Engine
-> **Last Updated:** 2026-05-25 (v4.6: deep-review fixes — DB-verified PLAC gates, CSRF Referer anchored, audit-silence self-protection, cron pattern fix, JWKS cleanup, `placDenyResponse` helper applied to audit + users API routes. See `SECURITY-REVIEW-2026-05-25.md` and `COMPLETED_PHASES.md` § Phase 12)
+> **Status:** Production Active (v4.7)
+> **Stack:** Astro 6.1.3 SSR + Cloudflare Workers (Free) + Preact 10.29.0 Islands + D1 + KV + R2 + Queues + Analytics Engine
+> **Last Updated:** 2026-05-26 (v4.7: deep-review follow-up — PLAC wired into all remaining data-bearing API routes (`content/*`, `media/*`, `settings/portal`, `users/*`, `audit/{login-logs, export, silence}`); production `npm audit` cleared (16 → 0 vulns); `writeRevocationFlag` TTL now reads `SESSION_MAX_LIFETIME_MS`; `scheduled-log-sync` email fan-out capped at 5/batch; content-route GETs crash-proofed; CSP between `_headers` and middleware aligned. See `SECURITY-REVIEW-2026-05-26.md` and `COMPLETED_PHASES.md` § Phase 13)
 
 ---
 

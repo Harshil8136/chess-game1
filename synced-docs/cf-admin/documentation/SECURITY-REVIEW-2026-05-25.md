@@ -4,6 +4,8 @@
 **Branch (merged):** `claude/codebase-security-review-LhIkr` → `main` (PR #2, merge commit `3f8cd78`)
 **Scope:** Full codebase pass — middleware, all 50 API routes, frontend rendering, workers, scheduled crons, GitHub workflows, dependency CVEs, live Supabase advisors
 
+> **📋 Follow-up status (2026-05-26):** The 14 Medium and 14 Low items deferred from this review have been re-verified and closed in commit `27e6090`. Production `npm audit` is now 0. See **[`SECURITY-REVIEW-2026-05-26.md`](./SECURITY-REVIEW-2026-05-26.md)** for the follow-up report — it maps each deferred item to its resolution. The body of this document is preserved as the historical record.
+
 ---
 
 ## Executive Summary

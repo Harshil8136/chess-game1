@@ -793,3 +793,48 @@ The previous bust-and-retry path fetched fresh keys into a local variable it nev
 
 - `npm run check` — 0 errors / 0 warnings / 0 hints across 223 files, both before and after the fixes.
 - All 7 commits land on `main` via merge commit `3f8cd78` (PR #2).
+
+
+---
+
+## Phase 13 — 2026-05-26 Deep-Review Follow-Up ✅
+
+**Single atomic commit:** `27e6090` — 28 files changed, +637 / −319.
+**Branch:** `claude/codebase-review-branch-fixes-WZg5d` → `main`.
+**Full report:** `documentation/SECURITY-REVIEW-2026-05-26.md`.
+
+This pass closed every Medium and Low item from the 2026-05-25 review that had a meaningful exploit path or genuine functional impact, plus the full dependency CVE list. Production `npm audit` went from **16 vulnerabilities (3 high, 12 moderate, 1 low) to 0**.
+
+### Top-level shipped
+
+| # | Severity | Area | Resolution |
+|---|---|---|---|
+| F-1 | 🔴 Crit (gap) | 18 API routes | Wired `placDenyResponse(user, '/dashboard/<page>')` after the existing role gate on `content/*`, `media/*`, `settings/portal`, `users/{index, activity, pages, access, probes, cf-access-audit, active-sessions, active-revocations}`, and `audit/silence`. PLAC denies now block the corresponding APIs, not just the dashboard pages. |
+| F-2 | 🔴 Crit | Content GET handlers | Wrap `JSON.parse(result.content)` in try/catch with empty-array fallback in `reviews.ts`, `faqs.ts`, `stats.ts`. One corrupt D1 row no longer 500s the route. |
+| F-3 | 🔴 Crit | `bookings/[id]/state.ts` | Defined `VALID_OPERATIONAL_STATUS` allow-list (`pending`, `confirmed`, `in_progress`, `completed`, `cancelled`, `no_show`); reject otherwise with 400. Cap `internal_notes` at 2000 chars. |
+| F-4 | 🟠 High | Dependencies | `npm audit fix` for non-breaking upgrades + `@astrojs/cloudflare ^13.5.4` + `@astrojs/check ^0.9.9`. Moved `@astrojs/check` from `dependencies` → `devDependencies` (build-only tool — removes the entire `@astrojs/language-server` → `volar-service-yaml` → `yaml` chain from the production audit surface). **Production `npm audit`: 0.** |
+| F-5 | 🟠 High | `scheduled-log-sync.ts` | Capped Resend alert emails at 5 per batch; the 5th email appends a digest line noting how many more failures were suppressed. All failures still write to D1. Prevents Resend quota burn on failed-login bursts. |
+| F-6 | 🟠 High | `writeRevocationFlag` | TTL now reads `SESSION_MAX_LIFETIME_MS` via `getSessionTiming(getRawEnv())`, floor 60 s. The revocation horizon stays in lock-step with the configured session lifetime instead of drifting at a hard-coded 24 h. |
+| F-7 | 🟠 High | `public/_headers` vs `middleware.ts` | Aligned `_headers` CSP byte-for-byte with middleware; added a reference-only banner clarifying that `_headers` is not consumed at runtime on Workers deploys (only middleware is). |
+| F-8 | 🟡 Med | `audit/{login-logs, export}.ts` | Added `placDenyResponse(actor, '/dashboard/logs')` as first gate so parent-deny propagates to the `#security` and `#export` hash sub-pages via longest-prefix matching. The existing hash-grant logic remains as secondary check. |
+| F-9 | 🟡 Med | `users/access.ts` | Added `placDenyResponse(actor, '/dashboard/users')` before the existing 5-gate hierarchy. A PLAC-denied admin can no longer mutate PLAC. |
+| F-10 | 🟡 Med | Privileged user ops | Rate limits added: 30/min revoke (`active-sessions` DELETE), 30/min unblock (`active-revocations` DELETE), 10/min CF Access audit (`cf-access-audit` GET — endpoint enumerates every user CF Access knows about). |
+| F-11 | 🟡 Med | `session.ts:130` (IP capture) | Split `X-Forwarded-For` on comma and take leftmost entry. `CF-Connecting-IP` still preferred as the most-trusted source. |
+| F-12 | 🟡 Low | `ModelsCatalog.tsx:274` | Load-bearing comment added explaining the `dangerouslySetInnerHTML` is safe ONLY because both branches interpolate numeric values (`Math.round(...)` and `.toFixed(...)` — number → digit-string). Includes migration path to JSX `<><strong>{value}</strong></>` if any string field is ever interpolated. |
+
+### Items verified closed without code change
+
+- **M-8 `cms_content_history` cleanup trigger.** Verified the table has zero writers in the codebase. The migration's comment promises a trigger that was never built, but nothing inserts into the table so it cannot grow. Re-evaluate when the first writer ships.
+- **M-3 second `writeRevocationFlag` copy at `plac.ts:363`.** The 2026-05-25 review cited two copies; only the `session.ts:280` version actually exists in the codebase. The `plac.ts` mention was speculative — closed.
+
+### Branch hygiene (companion change)
+
+- Local `main` was 28 commits behind `origin/main`. Fast-forwarded locally — no remote push needed.
+- Stale remote branch `claude/codebase-security-review-LhIkr` (PR #2 already merged on 2026-05-25) was flagged for one-click deletion via the GitHub UI — could not be deleted from the review sandbox (proxy returned 403 on `git push --delete`; no MCP tool for branch deletion in this environment).
+
+### Verification
+
+- `tsc --noEmit --skipLibCheck` → exit 0 across the entire codebase.
+- `npm audit --omit=dev` → 0 vulnerabilities (was 16).
+- Per-route PLAC audit script confirmed every previously-flagged route now contains ≥ 1 `placDenyResponse` / `requirePageAccess` call.
+- `astro check` could not complete in the review sandbox due to an esbuild service deadlock (environmental, not code) — `tsc` is the verified-clean path.

@@ -3,7 +3,7 @@
 > [!NOTE]
 > **System Status:** Production Ready
 > **Target Environment:** Cloudflare Workers V8 Isolates (Edge Computing)
-> **Last Updated:** 2026-05-25 (v4.6: deep-review hardening — Gates A/B now use DB-verified target role; Gate E added; API-route PLAC enforcement via `placDenyResponse`; stale break-glass section removed since `BREAK_GLASS_EMAILS`/`isBreakGlassAdmin` no longer exist in `rbac.ts`)
+> **Last Updated:** 2026-05-26 (v4.7: PLAC enforcement extended to all remaining data-bearing API routes — `content/*`, `media/*`, `settings/portal`, `users/*`, plus `audit/login-logs` and `audit/export` parent-deny propagation. `audit/silence` adds PLAC defence-in-depth on top of the existing DEV-only role gate.)
 
 This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Ghost Audit Engine.
 
@@ -142,7 +142,18 @@ const denied = placDenyResponse(actor, '/dashboard/logs');
 if (denied) return denied;
 ```
 
-**Routes wired in PR #2 (2026-05-25):** all `/api/audit/*` data endpoints (`emails`, `sessions`, `stats`, `logs`, `consent`, `receipts`) + `audit/prune`, plus `users/manage`, `users/force-kick`, `users/access-data`. See `SECURITY.md` §6a for the full table and the routes still pending.
+**Routes wired in PR #2 (2026-05-25):** all `/api/audit/*` data endpoints (`emails`, `sessions`, `stats`, `logs`, `consent`, `receipts`) + `audit/prune`, plus `users/manage`, `users/force-kick`, `users/access-data`.
+
+**Routes wired in commit `27e6090` (2026-05-26):**
+
+- **Users surface (`/dashboard/users`):** `users/index`, `users/activity`, `users/pages`, `users/access`, `users/probes`, `users/cf-access-audit`, `users/active-sessions` (GET + DELETE), `users/active-revocations` (GET + DELETE).
+- **Content surface (`/dashboard/content`):** `content/services` (GET + POST), `content/blocks` (POST), `content/faqs` (GET + POST), `content/stats` (GET + POST), `content/reviews` (GET + POST).
+- **Media surface (`/dashboard/media`):** `media/gallery` (GET + POST), `media/upload` (POST), `media/library` (GET + DELETE), `media/revalidate` (POST).
+- **Settings surface (`/dashboard/settings`):** `settings/portal` (GET + POST).
+- **Audit surface — parent-deny propagation:** `audit/login-logs` (GET) and `audit/export` (POST) now call `placDenyResponse(actor, '/dashboard/logs')` as their first gate, so a deny on the parent page blocks the `#security` and `#export` hash sub-pages too via longest-prefix matching. The existing hash-grant logic remains as the secondary check.
+- **Audit surface — defence-in-depth:** `audit/silence` (POST) adds `placDenyResponse(session, '/dashboard/audit')` after its `isDev` role gate. DEV is exempt from PLAC by design, so this is a no-op today — but the gate documents intent and future-proofs against the role gate being relaxed.
+
+All data-bearing API routes that map to a dashboard page now enforce PLAC. The full route table with page-paths and rate limits is in `SECURITY.md` §6a / §6b.
 
 ### 2.7 Auto-Purging Strategies
 
