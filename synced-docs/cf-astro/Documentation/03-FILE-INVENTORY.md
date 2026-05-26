@@ -106,7 +106,7 @@ Complete listing of every file in the `cf-astro/` project with its purpose, stat
 
 | File | Size | Status | Purpose |
 |---|---|---|---|
-| `src/pages/api/booking.ts` | 5.5KB | ✅ | POST handler: Zod validation → D1 insert → Queue push → WhatsApp fallback |
+| `src/pages/api/booking.ts` | 5.5KB | ✅ | POST handler: Zod validation → D1 audit → Supabase TX → Queue push → WhatsApp fallback |
 | `src/pages/api/ingest/[...path].ts` | 1.3KB | ✅ | PostHog reverse proxy (ad-blocker bypass) |
 | `src/pages/api/privacy/arco.ts` | 1.7KB | ✅ | ARCO privacy data request handler (Mexican data protection law) |
 
@@ -140,7 +140,7 @@ Complete listing of every file in the `cf-astro/` project with its purpose, stat
 
 | File | Size | Status | Purpose |
 |---|---|---|---|
-| `db/migrations/0001_initial_schema.sql` | 3.3KB | ✅ | Full D1 schema: bookings, booking_pets, quality_metadata, consent_records, privacy_requests, site_settings + indexes |
+| `db/migrations/0001_initial_schema.sql` | 3.3KB | ✅ | D1 schema: cms_content, site_settings, admin_feat_flags, booking_attempts audit logs + indexes |
 
 ---
 

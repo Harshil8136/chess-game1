@@ -107,7 +107,7 @@ npm run db:migrate:remote
 ### Inspect Local Database
 
 ```bash
-npx wrangler d1 execute madagascar-db --local --command="SELECT * FROM bookings"
+npx wrangler d1 execute madagascar-db --local --command="SELECT * FROM booking_attempts"
 ```
 
 ---
@@ -220,7 +220,7 @@ No DNS changes needed. The site is currently live at:
 - [ ] Language toggle switches between `/es/` and `/en/`
 - [ ] CSS styles are applied (Tailwind processed correctly)
 - [ ] Images load from R2 bucket (`cdn.madagascarhotelags.com`)
-- [ ] Booking form submits to `/api/booking` (check D1 dashboard)
+- [ ] Booking form submits to `/api/booking` (check Supabase dashboard)
 - [ ] Emails sent via Resend (via Queue → cf-email-consumer worker)
 - [ ] Privacy/ARCO form works at `/api/privacy/arco`
 - [ ] Analytics events flow through `/api/ingest/`

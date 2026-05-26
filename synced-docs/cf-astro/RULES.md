@@ -1,8 +1,32 @@
 {% raw %}
 # CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-05-06
+> **Last Updated:** 2026-05-25
 > **Research Sources:** Cloudflare Docs MCP, Perplexity MCP, Cloudflare Bindings MCP, Official Documentation
+
+---
+
+> ## ⚠️ REMINDER — BETTERSTACK SOURCE TOKEN ROTATION OUTSTANDING
+>
+> Cloudflare Observability has been flagging `Error: Unauthorized` (level=error,
+> outcome=ok) on every request that emits a log. Root cause: the
+> `BETTERSTACK_SOURCE_TOKEN` Worker secret is invalid/rotated/malformed, and
+> `@logtail/edge` is rejecting log shipments at BetterStack's ingest endpoint
+> with 401 then calling `console.error(new Error("Unauthorized"))` — which
+> Cloudflare logs.
+>
+> **Defensive code (`src/lib/logger.ts`)** now (a) format-guards the token and
+> (b) passes `ignoreExceptions: true` to the Logtail constructor, so the symptom
+> is hidden — **but the token is still bad**. While it's bad, no structured
+> logs are being shipped to BetterStack at all.
+>
+> **To rotate (user action):**
+> 1. BetterStack dashboard → Sources → cf-astro → rotate source token
+> 2. `wrangler pages secret put BETTERSTACK_SOURCE_TOKEN`
+> 3. Trigger any redeploy (or wait for the next one)
+> 4. Verify: `wrangler tail --format=json | grep BetterStack` shows no auth errors
+>
+> Same TODO lives in `wrangler.toml` next to the secret list.
 
 ---
 

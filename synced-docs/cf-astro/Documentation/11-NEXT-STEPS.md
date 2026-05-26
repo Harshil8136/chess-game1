@@ -14,7 +14,7 @@ As of **2026-04-30**, here is the phase completion status:
 | Phase 5 | Marketing homepage (all sections) | ✅ Complete — Services rebuilt with AutoTabs, Contact rebuilt with Resend queue + Maps |
 | Phase 6 | D1 database schema + migration scripts | ✅ Complete |
 | Phase 7 | R2 bucket for images + image serving utilities | ✅ Complete — CDN migration to `cdn.madagascarhotelags.com` (2026-04-30) |
-| Phase 8 | Booking system (wizard UI + API route + D1 logging) | ✅ Complete |
+| Phase 8 | Booking system (wizard UI + API route + Supabase TX + D1 audit) | ✅ Complete |
 | Phase 9 | Email integration (Resend via Cloudflare Queues + cf-email-consumer) | ✅ Complete — `cf-email-consumer` deployed (April 2026) |
 | Phase 10 | Privacy & compliance (cookie banner, ARCO, consent, RLS) | 🔨 API done, UI + RLS in progress (2026-04-30) |
 | Phase 11 | SEO/AEO/GEO/SXO/AIO (schema graph, sitemaps, robots, meta, llms.txt) | ✅ Massively Upgraded 2026-04-13 + IndexNow push indexing 2026-04-30 |
@@ -125,7 +125,7 @@ Turnstile on booking form (Invisible mode) and ARCO form (Managed mode). Server-
 1. **No server-side sessions** — Booking form is stateless. Multi-step wizard state is client-side only.
 2. **No user accounts** — The pet hotel doesn't need user login; bookings are tracked by email.
 3. **No payment processing** — Payments are handled separately (cash/transfer). The form is a booking request, not a purchase.
-4. **No admin panel yet** — Bookings are viewable through the D1 dashboard or direct SQL queries.
+4. **No admin panel yet** — Bookings are viewable through the Supabase dashboard or direct SQL queries.
 5. **Image optimization deferred** — Using `passthroughImageService()` means no server-side optimization. Images should be pre-optimized before upload to R2.
 
 ---

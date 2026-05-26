@@ -165,12 +165,12 @@ pages_build_output_dir = "./dist"
 
 | Binding | Type | Name/ID | Usage |
 |---|---|---|---|
-| `DB` | D1 Database | `madagascar-db`<br>`7fca2a07-d7b4-449d-b446-408f9187d3ca` | Bookings, pets, consent, privacy requests, CMS content |
+| `DB` | D1 Database | `madagascar-db`<br>`7fca2a07-d7b4-449d-b446-408f9187d3ca` | CMS content, feature flags, booking_attempts audit logs |
 | `IMAGES` | R2 Bucket | `madagascar-images` | Pet photos, gallery images, hero backgrounds |
 | `ARCO_DOCS` | R2 Bucket | `arco-documents` | ARCO legal document storage (private, no public access) |
 | `SESSION` | KV Namespace | `SESSION`<br>`bee123e795504473accf58ac5b6de13d` | Astro session store |
 | `ISR_CACHE` | KV Namespace | `ISR_CACHE`<br>`d9cea8c7e20f4b328b8cb3b04104138c` | CMS ISR HTML cache (purged via cf-admin webhook) |
-| `HYPERDRIVE` | Hyperdrive | `ba5b0db89b2e4591b5f4614e7f0839df` | Supabase PostgreSQL connection pooling |
+| `EMAIL_QUEUE` | Queue | `madagascar-emails` | Async email delivery pipeline |
 
 ### Public Variables (`[vars]`)
 
@@ -208,7 +208,8 @@ interface Env {
   ARCO_DOCS: R2Bucket;      // Cloudflare R2 binding (ARCO legal docs)
   SESSION: KVNamespace;     // Astro session KV
   ISR_CACHE: KVNamespace;   // ISR HTML cache KV
-  HYPERDRIVE: Hyperdrive;   // Supabase PostgreSQL pooler
+  EMAIL_QUEUE: Queue;       // Email queue producer
+  DATABASE_URL: string;     // Supabase Postgres connection
   RESEND_API_KEY: string;   // Secret
   ADMIN_EMAIL: string;      // Secret
   SENDER_EMAIL: string;     // Secret

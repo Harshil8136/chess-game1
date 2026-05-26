@@ -120,14 +120,17 @@ POST /api/booking  (Cloudflare Worker)
     │ 2. Validate with Zod schema      │
     │ 3. Generate booking ref          │
     │    (MAD-YYYYMMDD-XXXX)           │
-    │ 4. Insert consent_records → D1   │
-    │ 5. Insert bookings → D1          │
-    │ 6. Insert booking_pets → D1      │
-    │ 7. Insert quality_metadata → D1  │
-    │ 8. Push message to EMAIL_QUEUE   │
-    │ 9. Update email status → D1      │
-    │ 10. Return JSON response         │
-    │     { bookingRef, whatsappUrl }   │
+    │ 4. Insert booking_attempts → D1  │
+    │    (Dead-letter audit log)       │
+    │ 5. Execute Supabase TX           │
+    │    - insert bookings             │
+    │    - insert consent_records      │
+    │    - insert booking_pets         │
+    │    - insert quality_metadata     │
+    │    - insert email_audit_logs     │
+    │ 6. Push message to EMAIL_QUEUE   │
+    │ 7. Return JSON response          │
+    │    { bookingRef, whatsappUrl }   │
     └──────────────────────────────────┘
          │
          ▼
