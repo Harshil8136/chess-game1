@@ -125,7 +125,7 @@ Applied globally at the Cloudflare Edge via Astro's `sequence` middleware (`secu
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | 1-year HSTS with preload eligibility |
 | `Permissions-Policy` | `camera=(), microphone=(), payment=(), geolocation=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()` | Disables all browser hardware APIs not used by the admin portal |
 | `Content-Security-Policy` | See enforced policy below | Resource restriction; `unsafe-inline`/`unsafe-eval` retained in Phase 1 (see §13) |
-| `Content-Security-Policy-Report-Only` | Hardened policy without `unsafe-inline`/`unsafe-eval` + Sentry `report-uri` | Violation collection for Phase 2 promotion; zero enforcement risk |
+| `Content-Security-Policy-Report-Only` | **RETIRED 2026-05-26** | Retired due to excessive console noise and client-side ad-blockers blocking Sentry reports |
 
 ### Enforced CSP (Phase 1 — 2026-05-24)
 
@@ -152,17 +152,16 @@ upgrade-insecure-requests
 - **`script-src unsafe-eval`:** Retained pending verification that Sentry v10 does not use `eval()` for stack trace symbolication in Workers. Source maps are uploaded (`sentry.server.config.ts`) which normally eliminates the need. Investigate after Report-Only data is collected.
 - **`style-src unsafe-inline`:** Preact's SSR renderer emits `style="..."` attributes directly in the initial HTML for all components using `style={{ }}` props (dynamic gradients, animations, colors). These appear in the HTML document, not in JavaScript. Approximately 20 instances across `ExpandedRow.tsx`, `SystemDiagnosticsHistory.tsx`, `AccessPolicyGrid.tsx`, and others require conversion to CSS utility classes before this can be removed.
 
-### Report-Only CSP (Phase 2 target — collecting violations since 2026-05-24)
+### Report-Only CSP (Phase 2 target — Retired 2026-05-26)
 
-The `Content-Security-Policy-Report-Only` header runs the hardened policy (no `unsafe-inline`, no `unsafe-eval`, tightened `connect-src`) and sends all violations to Sentry. Review reports at **Sentry → Security → CSP Reports**.
+The `Content-Security-Policy-Report-Only` header was previously deployed with the hardened policy (no `unsafe-inline`, no `unsafe-eval`) reporting violations to Sentry via a `report-uri` endpoint. 
 
-**Promotion checklist** (before enforcing the Report-Only policy):
-- [ ] Zero `script-src` violations for ≥ 2 weeks of real admin usage
-- [ ] Zero `style-src` violations for ≥ 2 weeks
-- [ ] All `connect-src` violations in the tightened explicit-origin list resolved
-- [ ] Sentry `@sentry/astro` inline init script handled (nonce via build hook, or SHA-256 hash)
-- [ ] ~20 Preact `style={{ }}` props converted to CSS classes (`unsafe-inline` style-src removal)
-- [ ] `unsafe-eval` confirmed not needed by Sentry v10 in Workers environment
+On 2026-05-26, this header was **fully retired** because:
+1. Sentry's client-side initialization script and Preact's server-side rendered inline style attributes trigger hundreds of warning reports per user session.
+2. The browser console becomes cluttered with loud warnings that degrade admin user experience.
+3. Client-side ad-blockers and privacy suites block Sentry's ingest endpoint (`*.sentry.io`), converting harmless CSP warnings into red network post failure logs (`ERR_BLOCKED_BY_CLIENT`).
+
+The primary enforced `Content-Security-Policy` header remains fully active with robust protections while ensuring a perfectly silent, secure, and warning-free browser console for system administrators.
 
 ### Data-Attribute Driven CSS
 Dynamic UI state is controlled via data attributes (`data-state="expanded"`, `data-active="true"`) wherever possible — `style={{ }}` props are only used for values that cannot be expressed as static CSS (runtime-computed gradients, role-specific color tokens). Remaining inline-style props are the primary blocker for `style-src unsafe-inline` removal.
