@@ -5,6 +5,36 @@ Chronological record of feature additions, design refactors, and improvements to
 
 ---
 
+## 2026-05-29 — Legal Pages: Professional Tone & Plain Layout (Pass 3)
+
+**Overview**: Reworked the Privacy Policy and Terms pages to read as a formal legal
+document and look plain/static, per owner feedback. No booking/Turnstile/connector,
+`wrangler.toml`, `public/_headers`, or API changes.
+
+**Layout (plain, non-animated)**:
+- New `src/layouts/LegalLayout.astro` — keeps the site Header + Footer for navigation
+  but omits the pulsing `FloatingWhatsApp` button and the scroll-reveal script.
+- New `.legal-doc` typography in `src/styles/global.css` (clean, static) replaces the
+  Tailwind `prose` class on `PrivacyContent.astro` / `TermsContent.astro`.
+- The 4 legal pages (`{en,es}/privacy.astro`, `{en,es}/terms.astro`) now use
+  `LegalLayout`. All other pages keep `MarketingLayout`.
+
+**Professional copy (`src/i18n/translations/{es,en}.json`)**:
+- Removed the casual "Your Data at a Glance / Our Promise / Tier System" block (the
+  formal intro paragraph remains).
+- Removed ALL-CAPS emphasis, the 📍 emoji from contact addresses, marketing phrases
+  ("Defense-in-Depth", "Privacy First", "reputable", HMAC-SHA256 detail), and the
+  "…not by brand name" meta-commentary.
+- Collapsed the redundant version banner into a single "Last updated: <date>" line.
+- Fixed `TermsContent.astro` rendering Spanish strings on the English page (now
+  locale-aware labels + dict-driven date/copyright); genericized the GitHub-Actions
+  paragraph to match the category-based disclosure policy.
+
+**Invariant recorded** in [`AGENTS.md`](../AGENTS.md) #9 so AI tools keep legal pages
+plain/formal and on `LegalLayout`.
+
+---
+
 ## 2026-05-29 — Privacy Notice Rewrite & Safe Hardening (Pass 2)
 
 **Overview**: Implemented the safe, non-breaking fixes from the security review.
