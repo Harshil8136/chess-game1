@@ -5,6 +5,14 @@
 **Target Architecture:** Cloudflare Edge (cf-astro) + Supabase
 **Focus:** Privacy Compliance (LFPDPPP/GDPR), Performance (Mobile & Desktop), System Design Implementation.
 
+> **2026-05-29 review note:** the consent/booking flow stores raw **IP address**,
+> **device fingerprint**, and **interaction proof** in `consent_records`. The public
+> **privacy notice must disclose these by category** (purpose: security / anti-fraud /
+> consent proof) with **retention periods**. Disclosure should be category-based — no
+> vendor names / architecture (see
+> [19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md)
+> §4.2 & §5). This is a privacy-text follow-up pending owner approval.
+
 ---
 
 ## 1. Zero-Cost Analytics Isolation & Strict Opt-In

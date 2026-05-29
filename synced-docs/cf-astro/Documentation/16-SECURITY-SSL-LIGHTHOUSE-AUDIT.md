@@ -8,6 +8,11 @@
 > **Status:** Code fixes applied and documented. Cloudflare dashboard steps required to resolve the persistent scanner alerts.
 >
 > **2026-05-04 Update:** Additional hardening applied (DB least-privilege role, PII audit log stripping, timing-safe auth, rate limit hardening). See [18-SECURITY-HARDENING.md](./18-SECURITY-HARDENING.md) for the full deep audit and manual steps required.
+>
+> **2026-05-29 Update:** Deep security & compliance review — see
+> [19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md).
+> Outstanding header item: the CSP still allows `'unsafe-inline'`/`'unsafe-eval'` in
+> `script-src` (`public/_headers`); a nonce/hash-based migration is on the roadmap.
 
 ---
 

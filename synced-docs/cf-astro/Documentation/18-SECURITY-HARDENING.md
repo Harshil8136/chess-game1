@@ -3,6 +3,18 @@
 
 > **Audit Date:** 2026-05-04
 > **Status:** Applied. See §Manual Steps for actions that require dashboard/CLI access.
+>
+> **2026-05-29 follow-up review:** see
+> [19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md)
+> for the latest findings + roadmap. Open hardening items (documented, not yet
+> implemented — each preserves existing booking/Turnstile/connector behavior):
+> 1. Per-IP in-memory burst guard **before** the D1 audit write in `booking.ts` /
+>    `consent.ts` (caps write-amplification while keeping audit-first for real traffic).
+> 2. Nonce/hash-based CSP to remove `'unsafe-inline'`/`'unsafe-eval'` from `script-src`.
+> 3. Email-retry cron worker scanning `booking_attempts WHERE status='queue_error'`.
+> 4. CI security: `npm audit` / Dependabot / CodeQL / secret-scanning.
+> 5. Ops: rotate `BETTERSTACK_SOURCE_TOKEN` (currently 401); enable Supabase
+>    leaked-password protection.
 
 ---
 

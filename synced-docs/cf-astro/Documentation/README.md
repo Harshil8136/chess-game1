@@ -22,6 +22,14 @@ This folder contains comprehensive project documentation for the **cf-astro** mi
 | [11-NEXT-STEPS.md](./11-NEXT-STEPS.md) | Remaining work, pending phases, and future enhancements |
 | [12-CHANGELOG.md](./12-CHANGELOG.md) | Chronological record of feature additions, design refactors, and improvements |
 | [13-SEO-AND-SEARCH-OPTIMIZATION.md](./13-SEO-AND-SEARCH-OPTIMIZATION.md) | Complete SEO/AEO/GEO/SXO/AIO guide: schema graph, sitemaps, robots.txt, llms.txt, domain migration |
+| [14-BOOKING-EMAIL-OUTAGE-2026-04-18/](./14-BOOKING-EMAIL-OUTAGE-2026-04-18/00-INDEX.md) | Post-mortem of the 2026-04-18 booking/email outage: investigation, RCA, fix plan, runbook, prevention |
+| [15-OBSERVABILITY.md](./15-OBSERVABILITY.md) | Logging, tracing, error monitoring, and sampling strategy |
+| [16-SECURITY-SSL-LIGHTHOUSE-AUDIT.md](./16-SECURITY-SSL-LIGHTHOUSE-AUDIT.md) | SSL config, Lighthouse scores, and security header audit |
+| [17-EDGE-FEATURE-ROUTING.md](./17-EDGE-FEATURE-ROUTING.md) | Feature flags and edge routing patterns |
+| [18-SECURITY-HARDENING.md](./18-SECURITY-HARDENING.md) | Least-privilege DB role, RLS, secret segregation, and the hardening roadmap |
+| [19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | 2026-05-29 deep security & compliance review: findings, severity, privacy-disclosure philosophy, roadmap |
+
+> **AI coding tools:** start with [`../AGENTS.md`](../AGENTS.md) — the invariants that must not be undone.
 
 ### Quick Start
 

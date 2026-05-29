@@ -5,6 +5,61 @@ Chronological record of feature additions, design refactors, and improvements to
 
 ---
 
+## 2026-05-29 — Privacy Notice Rewrite & Safe Hardening (Pass 2)
+
+**Overview**: Implemented the safe, non-breaking fixes from the security review.
+**Booking, Turnstile, and all service connectors were not touched**; no changes to
+`wrangler.toml`, `public/_headers`, or the booking/contact/consent request flow.
+
+**Privacy Notice (es + en) — `src/i18n/translations/{es,en}.json`**:
+- Rewrote the public notice to **category-based disclosure** — removed all vendor
+  names + internal architecture (Vercel, Supabase, Brevo, Google Workspace, Upstash,
+  GitHub Actions, honeypots, AES/TLS/bcrypt specifics).
+- **Fixed factual errors**: "Vercel" hosting and database "UE (Frankfurt)" (the real
+  stack is Cloudflare + Supabase us-east-1) → corrected to US/category language.
+- Added "provider categories available on request"; fixed a stray contact email;
+  unified version/date to **v3.1, effective 2026-05-29**.
+- Removed the dead/duplicate `Legal.privacy` dict.
+
+**Terms (es + en)**: appended a strictly-additive LFPC carve-out to §2 (non-waivable
+consumer rights unaffected). No commercial term changed.
+
+**Code / CI**:
+- `src/pages/api/arco/get-document.ts` — defensive `Content-Disposition` filename
+  sanitization.
+- `.github/dependabot.yml` — weekly npm + github-actions update PRs (additive).
+
+**Branch**: `claude/security-compliance-fixes-cqa4S` (clean descendant of `main`).
+See [19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) §8.
+
+---
+
+## 2026-05-29 — Security & Compliance Review (docs-only)
+
+**Overview**: Completed a deep security, connector/MCP, and legal-compliance review
+of the codebase. No runtime code was changed. Confirmed a well-hardened system
+(RLS on all 18 tables, least-privilege DB role, fail-closed rate limiting,
+timing-safe comparisons, Svix webhook verification, magic-byte file validation, no
+committed secrets). Documented findings + a remediation roadmap, and established a
+**category-based privacy disclosure** policy (disclose recipient categories +
+purposes + US transfer + safeguards; do **not** publish vendor names/architecture;
+specific sub-processor list available on request). Flagged (not changed): privacy
+notice inaccuracies (names "Vercel"/"Frankfurt" vs. the real Cloudflare/us-east-1
+stack) and the Terms refund/no-show clause (possible LFPC consumer-law risk).
+
+**New Files Created**:
+- `AGENTS.md` — repo-root invariants for AI coding tools (Antigravity/Codex/Claude)
+- `.env.example` — full env var/binding reference (placeholders only)
+- `Documentation/19-SECURITY-COMPLIANCE-REVIEW-2026-05.md` — the formal report
+
+**Files Modified**:
+- `SECURITY.md`, `Documentation/18-SECURITY-HARDENING.md`,
+  `Documentation/16-SECURITY-SSL-LIGHTHOUSE-AUDIT.md`,
+  `Documentation/Consent_System_Audit.md`, `Documentation/README.md`,
+  `AI_CODE_MAINTENANCE.md`, `ToDo.md`, `README.md` — review cross-links + roadmap
+
+---
+
 ## 2026-05-05 — Gallery Stability and Memory Leak Fix
 
 **Overview**: Resolved critical performance issues causing infinite render loops and browser tab freezes in the gallery component. Implemented robust state bailouts, ref callback memoization, and migrated loaded-state tracking from array indices to immutable source URLs to ensure long-term stability against data mutations. Fixed a memory leak in the lightbox component that prevented body scroll restoration.
