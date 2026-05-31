@@ -1,67 +1,72 @@
 {% raw %}
-# cf-astro — Madagascar Pet Hotel (Cloudflare Edition)
+# Madagascar Pet Hotel (Cloudflare Edition) — Documentation Index
 
-## Documentation Index
+Welcome to the consolidated technical reference suite for **cf-astro** (Madagascar Pet Hotel on Cloudflare Pages). 
 
-This folder contains comprehensive project documentation for the **cf-astro** migration — a full rebuild of the `nextjs-app` pet hotel website using **Astro 5** on **Cloudflare Pages**, leveraging exclusively Cloudflare's free tier services.
+This folder contains high-fidelity, production-grade documentation tailored specifically for both **human developers** (technical and non-technical stakeholders) and **future agentic AI models** to read, understand, and update with complete precision.
 
-### Documents
+---
 
-| Document | Description |
-|---|---|
-| [01-PROJECT-OVERVIEW.md](./01-PROJECT-OVERVIEW.md) | Business context, goals, migration rationale, and stack mapping |
-| [02-ARCHITECTURE.md](./02-ARCHITECTURE.md) | System architecture, rendering strategy, data flow, and component hierarchy |
-| [03-FILE-INVENTORY.md](./03-FILE-INVENTORY.md) | Complete file tree with every file's purpose, status, and key details |
-| [04-CONFIGURATION.md](./04-CONFIGURATION.md) | All config files explained: Astro, Tailwind, TypeScript, Wrangler, env vars |
-| [05-DESIGN-SYSTEM.md](./05-DESIGN-SYSTEM.md) | Design tokens, colors, typography, CSS architecture, and Tailwind setup |
-| [06-I18N.md](./06-I18N.md) | Internationalization system: routing, translation files, helper functions |
-| [07-BACKEND-AND-API.md](./07-BACKEND-AND-API.md) | API routes, D1 database schema, email integration, analytics proxy, privacy |
-| [08-COMPONENTS.md](./08-COMPONENTS.md) | All Astro components: layouts, sections, SEO, and layout components |
-| [09-DEPLOYMENT.md](./09-DEPLOYMENT.md) | Build process, Cloudflare Pages deployment, Wrangler CLI, and free tier budget |
-| [10-TROUBLESHOOTING-LOG.md](./10-TROUBLESHOOTING-LOG.md) | Chronological log of all bugs encountered and how they were resolved |
-| [11-NEXT-STEPS.md](./11-NEXT-STEPS.md) | Remaining work, pending phases, and future enhancements |
-| [12-CHANGELOG.md](./12-CHANGELOG.md) | Chronological record of feature additions, design refactors, and improvements |
-| [13-SEO-AND-SEARCH-OPTIMIZATION.md](./13-SEO-AND-SEARCH-OPTIMIZATION.md) | Complete SEO/AEO/GEO/SXO/AIO guide: schema graph, sitemaps, robots.txt, llms.txt, domain migration |
-| [14-BOOKING-EMAIL-OUTAGE-2026-04-18/](./14-BOOKING-EMAIL-OUTAGE-2026-04-18/00-INDEX.md) | Post-mortem of the 2026-04-18 booking/email outage: investigation, RCA, fix plan, runbook, prevention |
-| [15-OBSERVABILITY.md](./15-OBSERVABILITY.md) | Logging, tracing, error monitoring, and sampling strategy |
-| [16-SECURITY-SSL-LIGHTHOUSE-AUDIT.md](./16-SECURITY-SSL-LIGHTHOUSE-AUDIT.md) | SSL config, Lighthouse scores, and security header audit |
-| [17-EDGE-FEATURE-ROUTING.md](./17-EDGE-FEATURE-ROUTING.md) | Feature flags and edge routing patterns |
-| [18-SECURITY-HARDENING.md](./18-SECURITY-HARDENING.md) | Least-privilege DB role, RLS, secret segregation, and the hardening roadmap |
-| [19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | 2026-05-29 deep security & compliance review: findings, severity, privacy-disclosure philosophy, roadmap |
+## 🗺️ Master Documentation Directory
 
-> **AI coding tools:** start with [`../AGENTS.md`](../AGENTS.md) — the invariants that must not be undone.
+Rather than having dozens of small, scattered files, the system is fully consolidated into **3 Master Reference Manuals**, **1 Master Incident Post-Mortem**, and **1 Deep Security Audit**:
 
-### Quick Start
+| Document | Category | Stakeholder Context | Focus Areas |
+|---|---|---|---|
+| [System Architecture & Operations](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/SYSTEM-ARCHITECTURE.md) | Technical | Developers, DevOps, AI Models | Edge compute SSR, bindings (D1, KV, R2), API specs, 3-tier fallback, async emails, and manual provisioning. |
+| [Frontend, PWA & Search Engine Optimization](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/FRONTEND-AND-SEO.md) | Functional | Designers, Marketers, SEOs, AI | Design tokens, Tailwind CSS v4, hydration islands, PWAs, sitemap graphs, custom sitemaps, and Sentry budgets. |
+| [Security, Compliance & System History](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/COMPLIANCE-SECURITY-AND-HISTORY.md) | Administrative | Legal, Auditors, Developers, Owners | CSRF, Turnstile, timing-attack proofing, least-privilege Roles, LFPDPPP compliance, WAF checklists, and full changelog. |
+| [Incident Report: Email Outage (2026-04-18)](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/INCIDENT-2026-04-18-EMAIL-OUTAGE.md) | Incidents | Ops, Support, DevOps | Forensic review of the V8 isolate Eta `EvalError` failure, database schema correction, and queue recovery runbooks. |
+| [Security & Compliance Deep Review (2026-05-29)](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | Audit | Security Auditors, AI | Deep security review report covering vulnerabilities, compliance gaps, privacy notices rewrites, and the security roadmap. |
+
+---
+
+## ⚡ Execution Quick Start
+
+During local development or pre-commit checks, use these commands inside `cf-astro`:
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Run dev server (Astro + Vite)
+# 2. Run dev server (Astro + Vite)
 npm run dev
 
-# Build for production
+# 3. Compile production build (verifies sourcemaps & sitemaps)
 npm run build
 
-# Preview with Cloudflare bindings (D1, R2, KV)
+# 4. Preview with Cloudflare bindings (D1 SQLite, R2 object, KV cache)
 npm run cf:dev
 
-# Deploy to Cloudflare Pages
-npm run cf:deploy
+# 5. Type-check and Astro diagnostics check (0 errors guarantee)
+npm run check
+
+# 6. Apply schemas to local D1 instance
+npm run db:migrate
+
+# 7. Apply schemas to production D1 instance
+npm run db:migrate:remote
 ```
 
-### Key Facts
+---
 
-- **Business**: Hotel para Mascotas Madagascar — pet hotel in Aguascalientes, Mexico
-- **Framework**: Astro 6.0+ with `@astrojs/cloudflare` adapter
-- **Styling**: Tailwind CSS v4 via `@tailwindcss/vite` Vite plugin
-- **Languages**: Spanish (default) + English
-- **Database**: Cloudflare D1 (SQLite) + Supabase PostgreSQL
-- **Images**: Cloudflare R2 bucket (served via `cdn.madagascarhotelags.com`)
-- **Email**: Resend HTTP API via Cloudflare Queues + `cf-email-consumer` sidecar worker
-- **Analytics**: PostHog (via reverse proxy) + Cloudflare Web Analytics
-- **Animation**: IntersectionObserver scroll-reveal system (`data-animate`)
-- **Live Site**: [madagascarhotelags.com](https://madagascarhotelags.com)
-- **Status**: ✅ Live in production — SEO/AEO/GEO overhaul 2026-04-13
+## 📋 System Metrics & Identity
+
+- **Business Entity**: Hotel para Mascotas Madagascar — Aguascalientes, Mexico.
+- **Apex Production URL**: [madagascarhotelags.com](https://madagascarhotelags.com)
+- **Tech Stack**: Astro 6.1.2+ with `@astrojs/cloudflare` edge adapter.
+- **Styling Model**: Tailwind CSS v4 compiled natively via Vite plugins.
+- **Bilingual Support**: Spanish (default, `/es/`) and English (`/en/`).
+- **Edge databases**: Cloudflare D1 (SQLite) and Supabase PostgreSQL.
+- **Email Gateway**: Resend REST API triggered asynchronously via Cloudflare Queues.
+
+---
+
+## 🎯 Guidelines for AI Models & Future Updates
+
+To preserve the architectural integrity of this project, future updates must strictly observe the **System Invariants** documented in:
+1. [SYSTEM-ARCHITECTURE.md §10](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/SYSTEM-ARCHITECTURE.md#L225) (Image processors, email consumers separation, and trailing slash enforcement).
+2. [FRONTEND-AND-SEO.md §6](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/FRONTEND-AND-SEO.md#L112) (Schema `@id` graph rules, AI crawler allowances, and inline json scripts).
+3. [COMPLIANCE-SECURITY-AND-HISTORY.md §7](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/COMPLIANCE-SECURITY-AND-HISTORY.md#L112) (PII boundaries, logging rules, and DB credentials handling).
 
 {% endraw %}
