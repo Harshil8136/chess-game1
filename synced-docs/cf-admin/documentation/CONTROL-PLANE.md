@@ -3,7 +3,7 @@
 > **Status:** Production Active
 > **Surface:** `/dashboard/control-plane` (cf-admin) — RBAC + PLAC gated
 > **Scope:** Manages runtime configuration and provider settings for **both** cf-admin and cf-astro
-> **Last Updated:** 2026-06-04
+> **Last Updated:** 2026-06-05
 
 > **Audience note:** This document is an architecture-level overview for AI IDE agents and
 > contributors. It intentionally omits all environment-specific values — resource IDs, account
@@ -163,6 +163,31 @@ UI edits a row ──▶ optimistic local update ──▶ PATCH config
 Both fail soft: if the public site is briefly unreachable, the local change still succeeds and the
 result reports the flush outcome separately.
 
+### 4.4 Route policy — per-route telemetry rules
+
+Most Layer-A knobs are scalar (one rate or toggle). One key is **structured**: a JSON **route policy**
+that makes cf-astro's Sentry/PostHog sampling *per-route* and runtime-tunable, so adding a route or
+retuning one is a config edit rather than a redeploy.
+
+- **Shape** — `{ version, rules[] }`. Each rule has a unique `id`, an optional `label`, a list of
+  `match` patterns (substring match; a trailing `*`/`/` acts as a prefix), and any subset of
+  per-signal overrides: client `traces`, server `tracesServer`, `replaySession`, `replayError`, and a
+  `posthog` block (`pageview`, `autocapture`, `recording`). Every rate is clamped to `[0,1]`.
+- **Resolution (two-tier, fail-safe)** — cf-astro reads the existing scalar keys as the **baseline**
+  for unmatched routes; the first matching rule (first-match-wins, in order) layers its specified
+  fields on top. An empty or corrupt policy resolves entirely through the legacy buckets — i.e.
+  today's exact behaviour. (Replay and PostHog capture are session/init-time, so their per-route
+  resolution uses the entry route; client and server traces are truly per-transaction.)
+- **Validation** — a schema `validate` hook runs on write (and client-side before the PATCH): shape,
+  0–1 rate bounds, caps (≤50 rules, ≤20 patterns/rule, id ≤64 / label ≤120 / pattern ≤128 chars), and
+  a duplicate-id guard. JSON is canonicalised on write so equivalent policies never read as drift.
+- **Parity** — the seed migration's default is byte-identical to the schema's canonical default, which
+  reproduces the pre-engine behaviour exactly, so applying it is behaviour-neutral.
+- **Editing** — a dedicated structured editor (`RoutePolicyEditor`, not a raw JSON box): reorderable
+  rule cards with match-pattern chips, per-signal rate inputs with inherit/override toggles, tri-state
+  PostHog controls, and a per-rule "≈ N events/day at this rate" estimate. It batches a draft and
+  commits through the same optimistic-concurrency write path as every other key.
+
 ---
 
 ## 5. Layer B — Provider Control
@@ -172,6 +197,14 @@ as Worker secrets. Every call returns a **discriminated result** — success, er
 — so a missing token renders a friendly "configure this to enable control" notice rather than
 breaking the page. Writes are gated behind the `#provider-write` capability and only render in the UI
 for operators who hold it.
+
+**Failure classification.** A failed provider call is not automatically a server error. The shared
+result carries the HTTP status the endpoint should return: an *unconfigured* token or a provider
+**4xx** (typically a 401/403 token-scope problem) is **our** misconfiguration and maps to **400**
+with an actionable message (e.g. "check API token permissions"), logged at `warn`; only a genuine
+upstream **5xx** or a network/timeout failure maps to **502**, logged at `error`. This keeps expected
+misconfigurations from being reported to Cloudflare Workers Observability as server errors. See
+[CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) for the per-connector reference.
 
 | Provider    | Reads (visibility)                                              | Writes (Owner+ only)                                  |
 |-------------|----------------------------------------------------------------|-------------------------------------------------------|
@@ -249,6 +282,7 @@ library (the Phase-6 redesign):
 |-------------------|----------------------------------------------------------------------------|
 | `ConfigEditor`    | Layer-A editor island: grouped rows, optimistic UI, rollback, conflict handling |
 | `ConfigRow`       | One config item — toggle for booleans, slider + numeric input for rates, locked display for read-only |
+| `RoutePolicyEditor` | Structured editor for the JSON route-policy key — reorderable rule cards, per-signal rate overrides, tri-state PostHog controls, per-rule traffic estimate |
 | `ProviderControls`| Layer-B panel island: fetches a service's provider data and renders per-provider views |
 | `StatCard` / `MetricGrid` | KPI card (accent bar, loading/empty states) + responsive 1→2→3→4 grid |
 | `SectionCard`     | Consistent section container (title, accent, body)                          |
@@ -279,6 +313,7 @@ operators who hold the relevant capability.
 
 ## 10. Cross-References
 
+- [CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) — Layer-B connector reference: provider management APIs, the shared result contract + failure classification, token scopes, config propagation, and how the connectors relate to MCP tooling
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — the "Lean Edge" stack, request lifecycle, DAL pattern
 - [USER-MANAGEMENT.md](./USER-MANAGEMENT.md) — RBAC role hierarchy and user lifecycle
 - [plac-and-audit.md](./plac-and-audit.md) — PLAC resolution algorithm and the Ghost Audit Engine
