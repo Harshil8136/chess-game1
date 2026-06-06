@@ -60,7 +60,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 |----------|-------|
 | **Name** | cf-admin (Madagascar Pet Hotel — Admin Portal) |
 | **Purpose** | Cloudflare-native admin portal equivalent to admin-app |
-| **Framework** | Astro 6.1.2 with `@astrojs/cloudflare` adapter (`^13.1.6`) |
+| **Framework** | Astro 6.3.7 with `@astrojs/cloudflare` adapter (`^13.5.4`) |
 | **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
@@ -87,7 +87,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 - **Referrer-Policy: strict-origin-when-cross-origin**
 - **Strict-Transport-Security: max-age=31536000; includeSubDomains; preload**
 
-→ See [SECURITY.md](./documentation/SECURITY.md) for the full security architecture.
+→ See [SECURITY.md](./documentation/security/SECURITY.md) for the full security architecture.
 
 ## 2. RELATIONSHIP TO OTHER PROJECTS
 
@@ -128,13 +128,13 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ## 3. RBAC — ROLE-BASED ACCESS CONTROL
 
-→ See [USER-MANAGEMENT.md](./documentation/USER-MANAGEMENT.md) for the full RBAC hierarchy, user lifecycle, ghost protection, and hidden accounts.
+→ See [USER-MANAGEMENT.md](./documentation/features/USER-MANAGEMENT.md) for the full RBAC hierarchy, user lifecycle, ghost protection, and hidden accounts.
 
 ---
 
 ## 4. INFRASTRUCTURE FREE TIER LIMITS
 
-→ See [OPERATIONS.md](./documentation/OPERATIONS.md) for Cloudflare binding IDs, free tier quotas, and the pre-flight deploy checklist.
+→ See [OPERATIONS.md](./documentation/operations/OPERATIONS.md) for Cloudflare binding IDs, free tier quotas, and the pre-flight deploy checklist.
 
 ---
 
@@ -198,7 +198,7 @@ CHATBOT_ADMIN_API_KEY=...
 
 > **Note — wrangler.toml `[vars]` entries (NOT .dev.vars secrets):** `PUBLIC_SUPABASE_URL`, `SITE_URL` (`https://secure.madagascarhotelags.com`), `CF_TEAM_NAME` (`mascotas`), `CF_ACCESS_AUD` (audience tag), `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, `CF_QUEUE_NAME`, `LOCAL_DEV_ADMIN_EMAIL` (`[DEVELOPER_EMAIL]`), `PUBLIC_ASTRO_URL`, `PUBLIC_CDN_URL`. These are non-secret config values; do **not** put them in `.dev.vars` or treat them as secrets.
 
-Secrets in production: `wrangler secret put <KEY>` — see [OPERATIONS.md §5](./documentation/OPERATIONS.md) for the full registry.
+Secrets in production: `wrangler secret put <KEY>` — see [OPERATIONS.md §5](./documentation/operations/OPERATIONS.md) for the full registry.
 
 ### 7.7 The "Module Manifest" Pattern
 
@@ -228,7 +228,7 @@ src/
 
 ## 8. CODE QUALITY RULES
 
-→ See [CODING-STANDARDS.md](./documentation/CODING-STANDARDS.md) for the full code quality and architecture standards.
+→ See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
 ---
 
@@ -242,7 +242,7 @@ src/
 4. **Fail-secure dev detection** — `isLocalDev()` returns `false` unless `SITE_URL` explicitly contains a local dev domain.
 5. **6 functions hardened** — EXECUTE revoked from `anon`, `authenticated`, and `PUBLIC` on all public schema functions; `search_path` pinned.
 
-→ See [SECURITY.md](./documentation/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, defense-in-depth, and Ghost Protection.
+→ See [SECURITY.md](./documentation/security/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, defense-in-depth, and Ghost Protection.
 
 ---
 
@@ -250,7 +250,7 @@ src/
 
 The dashboard uses a unified premium dark UI with Blue-500 primary accents, 5-level surface elevation, OKLCH color tokens, and component-scoped CSS. Both dark and light themes are fully supported.
 
-→ See [DESIGN-SYSTEM.md](./documentation/DESIGN-SYSTEM.md) for design tokens, login portal spec, sidebar mechanics, component patterns, animation, accessibility, and responsive layout.
+→ See [DESIGN-SYSTEM.md](./documentation/reference/DESIGN-SYSTEM.md) for design tokens, login portal spec, sidebar mechanics, component patterns, animation, accessibility, and responsive layout.
 
 ---
 
@@ -258,7 +258,7 @@ The dashboard uses a unified premium dark UI with Blue-500 primary accents, 5-le
 
 cf-admin securely mutates content for cf-astro via a 2-tier KV injection pipeline that bypasses D1 read-replica lag. All revalidation uses `revalidateAstro(env, basePaths, cmsData?)` with 3× exponential backoff.
 
-→ See [CMS.md](./documentation/CMS.md) for the full ISR architecture, KV injection strategy, upload flow, and configuration constraints.
+→ See [CMS.md](./documentation/features/CMS.md) for the full ISR architecture, KV injection strategy, upload flow, and configuration constraints.
 
 ---
 
@@ -290,7 +290,7 @@ astro build && wrangler deploy   # Build + deploy to Cloudflare
 - `.dev.vars` — Local secrets (gitignored) — **never set `PUBLIC_ASTRO_URL` here** (causes CMS revalidation loop)
 - `wrangler secret put <KEY>` — Production secrets
 
-→ See [OPERATIONS.md](./documentation/OPERATIONS.md) for binding IDs, secrets checklist, and deploy verification steps.
+→ See [OPERATIONS.md](./documentation/operations/OPERATIONS.md) for binding IDs, secrets checklist, and deploy verification steps.
 
 ---
 
@@ -300,33 +300,33 @@ astro build && wrangler deploy   # Build + deploy to Cloudflare
 |------|---------|
 | `RULESAd.md` | This file — operational rules and quick-reference pointers |
 | `README.md` | Quick start guide for developers |
+| `main.md` | AI entry pointer into `documentation/` |
 | `AI_CODE_MAINTENANCE.md` | AI agent maintenance guidelines |
-| `documentation/` | Detailed technical documentation (14 files) |
+| `GITHUB_RULES.md` | Git workflow rules |
+| `documentation/` | All detailed technical documentation (governed tree — see [`documentation/README.md`](./documentation/README.md)) |
+
+> **Single source of truth for the doc map:** [`documentation/README.md`](./documentation/README.md)
+> is the authoritative, always-current index (CI enforces index ↔ filesystem
+> parity). Naming and front-matter rules live in
+> [`documentation/CONTRIBUTING-DOCS.md`](./documentation/CONTRIBUTING-DOCS.md).
 
 ### Documentation Folder Structure
 
 ```
 documentation/
-├── ARCHITECTURE.md          # Lean Edge stack, CF ZT request lifecycle, module map, CPU budget
-├── SECURITY.md              # CF Zero Trust auth, CSRF, sessions, HTTP headers, RLS matrix, 3-layer force-kick
-├── PLAC-AND-AUDIT.md        # PLAC access control + Ghost Audit Engine + break-glass admin
-├── USER-MANAGEMENT.md       # RBAC hierarchy, user lifecycle (CF ZT), 3-layer ghost protection, hidden accounts
-├── CMS.md                   # CMS content studio, bookings, ISR, KV injection, R2/CDN
-├── DASHBOARD.md             # Dashboard home, KPI widgets, bento grid, analytics
-├── PRIVACY.md               # Privacy dashboard, consent records, GDPR/LFPDPPP, Forensic Blue spec
-├── CHATBOT.md               # Workers AI pipeline, proxy architecture, admin UI, analytics
-├── LOGIN-FORENSICS.md       # Login forensics v3 (CF ZT), Tier 1-only schema, CF Access fields
-├── DESIGN-SYSTEM.md         # Midnight Slate tokens, CSS architecture, components, login portal, sidebar
-├── OPERATIONS.md            # Binding IDs (D1/KV/R2), secrets registry (CF ZT new secrets), deploy commands
-├── CODING-STANDARDS.md      # DAL pattern, TypeScript standards, component rules, naming
-├── SECURITY-REVIEW-2026-05-24.md  # CSP Phase 1 hardening audit results
-├── DEV-TOOLS.md             # Edge Command Center — debug tools, diagnostics, dev utilities
-├── PENDING_PHASES.md        # Phase completion scope (1A through 11)
-├── COMPLETED_PHASES.md      # Full implementation log of all completed phases
-├── NEW_FILES_CREATED.md     # Registry of all new files created during refactoring
-├── ToDoList.md              # Phase 4 hardening backlog tracker
-└── errors/
-    └── ssr-silent-blank-screen.md  # Known issue: SSR silent blank screen diagnosis
+├── README.md                 # Doc index & map (start here)
+├── CONTRIBUTING-DOCS.md      # Naming, front-matter, folder governance
+├── MAINTENANCE.md            # Single live backlog of open items
+├── _templates/               # Canonical doc template
+├── architecture/             # ARCHITECTURE.md, KV-RESILIENCE.md, plac-and-audit.md
+├── security/                 # SECURITY.md, PRIVACY.md, login-forensics.md
+│   └── reviews/              # Dated security/SSL audit snapshots (historical)
+├── features/                 # DASHBOARD, USER-MANAGEMENT, CMS, CHATBOT, CONTROL-PLANE(+CONNECTORS)
+├── operations/               # OPERATIONS.md (binding IDs/secrets/deploy), DEV-TOOLS.md
+├── reference/                # coding-standards.md, DESIGN-SYSTEM.md, control-plane-design/
+├── specs/                    # Dated design specs
+├── runbooks/                 # Operational error playbooks (e.g. ssr-silent-blank-screen.md)
+└── archive/                  # Superseded status/tracking docs (kept verbatim)
 ```
 
 ---

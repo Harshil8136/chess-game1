@@ -1,0 +1,52 @@
+---
+title: "Maintenance Backlog"
+status: active
+audience: [ai, technical]
+last_verified: 2026-06-06
+verified_against: [code]
+owner: harshil
+related_docs: [archive/ToDoList.md, archive/PENDING_PHASES.md, security/SECURITY.md]
+tags: [maintenance, backlog]
+---
+
+# Maintenance Backlog
+
+> **TL;DR (non-technical):** A single, honest list of the small engineering tasks
+> that are still open. Anything finished lives in the historical files under
+> [`archive/`](archive/), not here.
+
+This is the **one live backlog**. It reconciles the previously-conflicting status
+files (`ToDoList.md`, `PENDING_PHASES.md`, `REFACTORING_OVERVIEW.md`), which are
+now archived as historical snapshots. Items below were open as of the 2026-05-26
+deep-review follow-up; **each must be re-verified against current code before
+work** (line numbers are from the original audit and may have drifted).
+
+> Note: this backlog is documentation-only. It does not modify code. Use it to
+> track real code follow-ups discovered during the docs audit and from the
+> 2026-05-25 deep review's remaining Medium/Low items.
+
+## Open items (from the 2026-05-25 deep review)
+
+| # | Item | File (verify lines) | Severity | Notes |
+|---|------|---------------------|----------|-------|
+| 13 | Decide policy on `DELETE /api/audit/logs` (append-only ledger vs. interactive "Delete Selected" UI) | `src/pages/api/audit/logs.ts` | 🟡 policy | PLAC gate already wired; remaining question is product policy. Needs sign-off. |
+| 14 | Validate `pageOverrides` on user creation (each `pagePath` exists in `admin_pages`; apply Gate D ceiling to grants) | `src/pages/api/users/manage.ts` | 🟡 | — |
+| 16 | Simplify `effectiveSiteUrl` (`const effectiveSiteUrl = env.SITE_URL;` — drop the `process.env` branch) | `src/middleware.ts` | 🟡 | Hygiene |
+| 18 | Fail-closed default for chatbot proxy `minRole` (`return 'dev'` instead of `'admin'`) | `src/pages/api/chatbot/[...path].ts` | 🟡 | Not fail-open today (entry `requireAuth(ctx,'admin')` matches default); defensive |
+| 20 | Use `isAdmin()` helper instead of a hardcoded role allowlist | `src/pages/api/media/upload.ts` | 🟡 | Separate from the already-shipped PLAC wiring |
+| 22 | `cf_admin_theme` cookie → `SameSite=Strict` to match session cookie | `src/pages/api/settings/user.ts` | 🟢 | UI preference only, no security impact |
+| 25 | Misc low items (L-1…L-12). Notably `ModelsCatalog` `dangerouslySetInnerHTML` → JSX (partially resolved: load-bearing comment added; full JSX conversion still open) | `src/components/admin/chatbot/ModelsCatalog.tsx` + others | 🔵 | See `archive/PENDING_PHASES.md` for the full L-item detail |
+
+**Suggested ordering:** 13 (policy) → 14 (validation) → 16+18+20+22 (single hygiene PR) → 25 batch.
+
+## Documentation follow-ups discovered during the audit
+
+| Item | Where | Notes |
+|------|-------|-------|
+| `cms_content_history` is a dead table (zero writers) | `migrations/0026_cms_content_history.sql` | Either ship the version-history feature (writers + UI + trigger) or drop the migration. Currently a maintenance trap, not a runtime bug. |
+
+## How to close an item
+
+When an item is fixed in code, move its row out of this file and record it in the
+relevant doc (e.g. `security/SECURITY.md` for security fixes) — do not edit the
+archived snapshots.

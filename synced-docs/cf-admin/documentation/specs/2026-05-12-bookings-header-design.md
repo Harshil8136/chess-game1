@@ -1,3 +1,13 @@
+---
+title: "Booking Dashboard Header Redesign Spec"
+status: historical
+audience: [technical]
+last_verified: 2026-06-06
+verified_against: [code]
+owner: harshil
+tags: []
+---
+
 # Booking Dashboard Header Redesign Spec
 > **Date:** 2026-05-12
 > **Topic:** Booking Manager UX/UI Makeover

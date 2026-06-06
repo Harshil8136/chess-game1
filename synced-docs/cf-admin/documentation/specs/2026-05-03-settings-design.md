@@ -1,3 +1,13 @@
+---
+title: "Portal Settings Module Design Specification"
+status: historical
+audience: [technical]
+last_verified: 2026-06-06
+verified_against: [code]
+owner: harshil
+tags: []
+---
+
 # Portal Settings Module Design Specification
 
 ## 1. Overview
