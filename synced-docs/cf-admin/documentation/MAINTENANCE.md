@@ -47,6 +47,20 @@ work** (line numbers are from the original audit and may have drifted).
 | Email Portal schema not provisioned by migrations | `src/pages/api/emails/drafts.ts`, `templates.ts`; `migrations/` | `admin_email_drafts`, `admin_email_templates`, the `/dashboard/emails` PLAC page seed, and the `custom_email_max_recipients` portal setting are referenced by code but have no migration file. Add a migration (and seed) so the feature provisions cleanly. See [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) §10. |
 | Drafts "autosave" copy vs. behavior | `src/components/admin/emails/_components/EmailPortal.tsx` (Drafts instructions), `Composer.tsx` | UI copy claims drafts auto-save every 15s; the implementation saves on the explicit **Save Draft** action only. Either add the timer or correct the copy. |
 
+## Email Portal hardening backlog (2026-06-07 review)
+
+Code follow-ups from the deep review of `src/components/admin/emails/` and
+`src/pages/api/emails/`. See [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md).
+
+| # | Item | Where | Severity | Notes |
+|---|------|-------|----------|-------|
+| E-1 | Weekly R2 sweep can delete email attachments | `src/workers/scheduled-asset-cleanup.ts` | 🔴 data-loss | The Sunday cron treats any `IMAGES` object not referenced in `cms_content` as orphaned. `email-attachments/` blobs are never in `cms_content`, so they can be deleted out from under saved drafts / in-flight sends. Exclude the prefix or honour draft+ledger references; only then use it to GC truly-orphaned uploads. |
+| E-2 | Sanitize composed email HTML (defense-in-depth) | `RichEditor.tsx`, `QueueTracker.tsx`, `logs/shared.tsx`, `api/emails/send.ts` | 🟠 | Operator-authored HTML is stored and previewed without sanitization. Add server + client sanitization and restrict link schemes to `http`/`https`/`mailto`. (Portal is admin-only, so impact is bounded, but this is standard hardening.) |
+| E-3 | Hash sender IP at rest in the email ledger | `src/pages/api/emails/send.ts` | 🟡 privacy | `email_audit_logs.sender_ip` currently stores the raw `cf-connecting-ip` despite a "hashing for privacy" comment. Hash it (Web Crypto SHA-256) and fix the comment. |
+| E-4 | Tighten the attachments endpoint | `src/pages/api/emails/attachments.ts` | 🟡 | Gate on the `#attachments` capability (currently only the broad page PLAC), add a server-side MIME allowlist, a cumulative-size cap enforced at send time, and filename sanitization. |
+| E-5 | Move email SQL to the DAL + close audit gaps | `src/pages/api/emails/{drafts,templates}.ts` | 🟡 | Replace inline `env.DB.prepare(...)` with `EmailDraftRepository` / `EmailTemplateRepository` (per `coding-standards.md`); add Ghost-Audit coverage for draft and attachment actions (send/cancel/templates already audit). |
+| E-6 | Validate recipient addresses, not just count | `src/pages/api/emails/send.ts`, `Composer.tsx` | 🟡 | `parseRecipientCount` only counts; invalid addresses flow into the queue payload. Add a shared zod validator used by the API and the composer. |
+
 ## How to close an item
 
 When an item is fixed in code, move its row out of this file and record it in the

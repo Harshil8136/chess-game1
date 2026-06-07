@@ -138,6 +138,24 @@ draft/template, cancel schedule) confirm first. The **Queue Logs** tab is hidden
 entirely for operators without the capability — and the API enforces the same gate,
 so the tab and its data cannot drift apart.
 
+### Composer capabilities
+
+- **Recipients** — To/CC/BCC are chip inputs that split pasted text on
+  comma/semicolon/tab/newline; each chip is validated against an email pattern and
+  invalid entries are flagged inline. CC and BCC are revealed on demand.
+- **Sender** — a prefix selector in front of the fixed `@madagascarhotelags.com`
+  domain; the field is locked to `info`/`booking` unless the operator holds
+  `#custom-sender`.
+- **Body** — `RichEditor`, a lightweight `contenteditable` WYSIWYG with a toolbar for
+  bold, italic, H1/H2, normal text, bullet/numbered lists, link insertion, and
+  clear-formatting (plus Ctrl/⌘+B and Ctrl/⌘+I shortcuts).
+- **Attachments** — drag-and-drop or file-picker upload with client-side guardrails: a
+  type allowlist (`.md`, `.txt`, `.pdf`, `.png`, `.jpg`), a per-file 5 MB cap, and a
+  magic-number signature check before upload. Staged files can be removed before
+  sending; the server re-checks size on upload (see §5).
+- **Scheduling** — an optional future send time (`datetime-local`), validated
+  server-side to a 1-minute–30-day window.
+
 ---
 
 ## 4. Access Control (RBAC + PLAC)
@@ -196,8 +214,9 @@ specific status and message (no throws leak to the client):
     within **30 days** (`400` otherwise).
 
 On success: a `trackingId` (UUID) is generated, the ledger row is inserted
-(`status: queued` or `scheduled`, recipient + hashed sender IP + full payload), the
-job is enqueued with Sentry trace/baggage headers for distributed tracing, and a
+(`status: queued` or `scheduled`, with the recipient list, the sender's IP, and the
+full payload), the job is enqueued with Sentry trace/baggage headers for distributed
+tracing, and a
 post-response Ghost Audit entry is written (`module: logs`, `targetType: custom_email`)
 via `ctx.waitUntil` — zero added latency. See
 [plac-and-audit.md](../architecture/plac-and-audit.md) for the audit engine.
@@ -235,6 +254,11 @@ active draft id). *(The composer's helper copy mentions 15-second autosave; the
 current implementation saves on demand, not on a timer — tracked in
 [MAINTENANCE.md](../MAINTENANCE.md).)*
 
+**Brand baseline for presets.** The platform's transactional emails under
+`email-templates/` (`confirmation`, `invite`, `magiclink`, `recovery`, …) share a
+common brand header, an emerald→amber gradient bar, and a footer. That styling is the
+reference for operator presets and the intended source for seeded starter presets.
+
 ---
 
 ## 7. Queue Logs (delivery tracking)
@@ -249,6 +273,12 @@ timeline). The tab requests `cache: no-store` so operators see live status.
   `/dashboard/logs` denies for `super_admin`+.
 - **Statuses:** `queued` → `sent_to_resend`/`sent` → `delivered`, plus `scheduled`,
   `failed`, `bounced`, `cancelled`.
+- **Ledger columns:** `id` (tracking UUID), `project_source`, `purpose`, `status`,
+  `recipient_email`, `resend_id`, `email_error`, `sender_ip`, `payload` (JSON),
+  `delivery_events` (JSON), `booking_id` (nullable FK), `created_at`, `updated_at`.
+- **`delivery_events`** is an append-only array of provider webhook records
+  (`event_type` such as `email.sent`/`email.delivered`/`email.bounced`, `timestamp`,
+  `resend_email_id`, `raw_data`), rendered as the per-message timeline.
 - **Deletion:** `DELETE /api/audit/emails` is **DEV/OWNER-only** (bulk by id),
   audited. See [USER-MANAGEMENT.md](USER-MANAGEMENT.md) for the logs-route guard map.
 
@@ -309,6 +339,16 @@ canonical registry.
   key, never a public URL.
 - **Ledger is the source of truth for "did it send".** The composer's success toast
   means *enqueued*, not *delivered* — confirm final state in Queue Logs.
+- **Attachment orphan sweep (action needed).** The weekly R2 cleanup
+  (`src/workers/scheduled-asset-cleanup.ts`, Sunday cron) reconciles bucket objects only
+  against `cms_content` references. Email attachments live under `email-attachments/`
+  and are **not** in `cms_content`, so until the sweeper is taught to exclude that prefix
+  (or to honor draft/ledger references) it must not be relied on to garbage-collect
+  them — and must not delete in-use attachments. Tracked in
+  [MAINTENANCE.md](../MAINTENANCE.md).
+- **No send idempotency yet.** Each `POST /api/emails/send` mints a fresh `trackingId`,
+  so a double-submit enqueues two messages. Operators should confirm in Queue Logs
+  rather than re-sending. Tracked in [MAINTENANCE.md](../MAINTENANCE.md).
 
 ---
 
@@ -317,6 +357,7 @@ canonical registry.
 | Date       | Checked by | Method                         | Result |
 |------------|-----------|--------------------------------|--------|
 | 2026-06-07 | claude    | code read (`src/pages/api/emails/*`, `src/components/admin/emails/*`, `wrangler.toml`, `src/env.d.ts`) | pass — schema-provisioning gap noted in §10 |
+| 2026-06-07 | claude    | deep UI + backend review (`Composer`/`RichEditor`, `scheduled-asset-cleanup.ts`) | corrected sender-IP wording (stored raw, not hashed); added Composer/editor + ledger detail; logged orphan-sweep + idempotency caveats |
 
 ---
 
@@ -329,5 +370,3 @@ canonical registry.
 - [OPERATIONS.md](../operations/OPERATIONS.md) — bindings, queue, secrets registry, free-tier limits
 - [SECURITY.md](../security/SECURITY.md) — CSRF, session model, security posture
 - [`cf-email-consumer/README.md`](../cf-email-consumer/README.md) — external queue-consumer worker (separate repo)
-</content>
-</invoke>
