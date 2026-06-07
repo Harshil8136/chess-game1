@@ -75,6 +75,11 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 |---------|------------|---------|
 | `EMAIL_QUEUE` | `madagascar-emails` | cf-admin, cf-astro |
 
+`EMAIL_QUEUE` is the producer side of the async email pipeline; the Email Portal
+(`/dashboard/emails`) enqueues custom sends onto it and the external
+`cf-astro-email-consumer` worker drains it. See
+[`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md).
+
 ### Analytics Engine
 
 | Binding | Dataset | Used By |
@@ -194,7 +199,7 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | `CLOUDFLARE_ZONE_ID` | ✅ Active | CF zone ID for HTTP metrics |
 | `CF_API_TOKEN_READ_LOGS` | ✅ Active (2026-04-30) | Zero Trust Audit Read — CF Audit Log API polling (5-min cron for failed logins). Token name: `cf-admin: Zero Trust Audit Read` |
 | `CF_API_TOKEN_ZT_WRITE` | ✅ Active (2026-04-30) | Zero Trust Session Revoke — Layer 3 force-kick (DELETE active CF sessions via API). Token name: `cf-admin: Zero Trust Session Revoke` |
-| `RESEND_API_KEY` | ✅ Active (2026-04-30) | Outgoing security alert emails via Resend API |
+| `RESEND_API_KEY` | ✅ Active (2026-04-30) | Resend API key — login security-alert emails, Email Portal scheduled-send cancellation, and DEV-only local send emulation (production custom sends are dispatched by the queue consumer). See [`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md) |
 | `SECURITY_ALERT_EMAIL` | ✅ Optional | Override recipient for login security alert emails (defaults to `mascotasmadagascar@gmail.com` if not set) |
 | `SENTRY_AUTH_TOKEN` | ✅ Active | Sentry error feed (build-time source maps upload) |
 | `SENTRY_ORG_SLUG` | ✅ Active | Sentry organization slug (build-time config) |

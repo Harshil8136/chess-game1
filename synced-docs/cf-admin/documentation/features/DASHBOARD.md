@@ -109,7 +109,8 @@ Both providers now also check for GraphQL errors before attempting to read data.
 2. **D1 Database** — read queries, write queries, rows read, rows written
 3. **Email Queue** — green status dot, queue name, consumers count
 
-Renders full-width using the teal-tinted bento card variant.
+Renders full-width using the teal-tinted bento card variant. The queue shown here
+(`madagascar-emails`) is the same one the [Email Portal](EMAIL-PORTAL.md) produces to.
 
 ### Supabase Cluster Widget (formerly SupabaseAuthWidget)
 **Tabbed Layout:**

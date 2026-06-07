@@ -59,6 +59,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/USER-MANAGEMENT.md`](features/USER-MANAGEMENT.md) | RBAC hierarchy, user lifecycle, ghost protection, sessions | ai, technical | active |
 | [`features/CMS.md`](features/CMS.md) | Content studio, ISR revalidation, KV injection, R2/CDN | ai, technical | active |
 | [`features/CHATBOT.md`](features/CHATBOT.md) | AI pipeline, proxy architecture, admin UI, analytics | ai, technical | active |
+| [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) | Email Portal: compose/send, drafts, templates, scheduling, queue delivery tracking; RBAC+PLAC gating | non-technical, ai, technical, operator | active |
 | [`features/CONTROL-PLANE.md`](features/CONTROL-PLANE.md) | Service Control Plane: two-layer model, access, API surface | ai, technical | active |
 | [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
 
