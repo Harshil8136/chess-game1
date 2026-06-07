@@ -26,7 +26,7 @@ tags: [runbook, cron, workers, observability, sentry]
 > never see *why*. This runbook explains the cause and the fix: make the job
 > crash-proof and make its failures visible.
 
-> **Status:** Diagnosed 2026-06-07 — fix pending (see §5)
+> **Status:** Diagnosed & remediated 2026-06-07 (Phases 1–3 implemented — see §5)
 > **Surface:** Cloudflare Worker `cf-admin-madagascar`, cron trigger `*/5 * * * *`
 
 ---
@@ -116,7 +116,10 @@ So the failure can only be seen in Cloudflare Observability, never in Sentry.
 
 ## 5. Remediation
 
-### Phase 1 — make the cron crash-proof (stops the exception)
+> All three phases below are implemented. The `updateWatermark()` / `safeKv` reference
+> is the non-throwing KV-write helper added in `scheduled-log-sync.ts`.
+
+### Phase 1 — make the cron crash-proof (stops the exception) ✅ implemented
 - Wrap the entire `scheduled()` body in `cf-entry.ts` in `try/catch`; a failed cron run
   should log and no-op until the next tick (crons are idempotent/retryable), never
   surface as a worker exception.
@@ -125,18 +128,24 @@ So the failure can only be seen in Cloudflare Observability, never in Sentry.
   (`isNaN(lastSynced.getTime())` → fall back to the default window) **before**
   `toISOString()`.
 
-### Phase 2 — fix the observability gap
-- In the `scheduled` catch, `Sentry.captureException(err, { tags: { cron: event.cron } })`
-  and **`ctx.waitUntil(Sentry.flush(2000))`** (flush is mandatory in Workers or events
-  are dropped).
-- Recommended: add Sentry **cron check-ins** (`Sentry.captureCheckIn`) so *missed* or
-  *failing* runs alert — today a silently-stuck cron is invisible.
+### Phase 2 — fix the observability gap ✅ implemented
+- In the `scheduled` catch, `Sentry.captureException(err, { tags: { cron, handler } })`
+  and **`ctx.waitUntil(Promise.resolve(Sentry.flush(2000)))`** (flush is mandatory in
+  Workers or events are dropped; `flush` returns a `PromiseLike`, hence the
+  `Promise.resolve` wrap for `waitUntil`).
+- Still optional: Sentry **cron check-ins** (`Sentry.captureCheckIn`) so *missed* runs
+  alert — not yet added.
 
-### Phase 3 — correctness hardening
-- **Idempotency:** if `kv.put` fails after a fetch, the next run re-queries the same
-  window and `logLoginAttempt` has no unique key → duplicate failed-login rows. Dedupe on
-  the CF audit entry `id` / `cf_ray_id`, or advance the watermark first.
-- Apply the same top-level guard to `scheduled-asset-cleanup.ts` (Sunday cron).
+### Phase 3 — correctness hardening ✅ implemented (dedupe)
+- **Idempotency:** because the watermark write is best-effort, a prior run may have
+  logged some failures while failing to advance the watermark, and the overlapping
+  `since` window re-surfaces them. The cron now queries `admin_login_logs` for the
+  batch's `cf_ray_id`s and skips any already present (CF assigns each audit entry a
+  unique ray_id) — no schema migration, no global UNIQUE constraint on the shared
+  inline-login path. Dedupe failure falls through to logging everything (at worst one
+  duplicate row).
+- `scheduled-asset-cleanup.ts` already wraps its body in try/catch; the new
+  `cf-entry.ts` top-level guard covers it as defense-in-depth.
 
 **Files:** `src/workers/cf-entry.ts`, `src/workers/scheduled-log-sync.ts`,
 `src/workers/scheduled-asset-cleanup.ts`.
