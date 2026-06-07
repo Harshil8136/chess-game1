@@ -44,8 +44,8 @@ work** (line numbers are from the original audit and may have drifted).
 | Item | Where | Notes |
 |------|-------|-------|
 | `cms_content_history` is a dead table (zero writers) | `migrations/0026_cms_content_history.sql` | Either ship the version-history feature (writers + UI + trigger) or drop the migration. Currently a maintenance trap, not a runtime bug. |
-| Email Portal schema not provisioned by migrations | `src/pages/api/emails/drafts.ts`, `templates.ts`; `migrations/` | `admin_email_drafts`, `admin_email_templates`, the `/dashboard/emails` PLAC page seed, and the `custom_email_max_recipients` portal setting are referenced by code but have no migration file. Add a migration (and seed) so the feature provisions cleanly. See [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) §10. |
-| Drafts "autosave" copy vs. behavior | `src/components/admin/emails/_components/EmailPortal.tsx` (Drafts instructions), `Composer.tsx` | UI copy claims drafts auto-save every 15s; the implementation saves on the explicit **Save Draft** action only. Either add the timer or correct the copy. |
+| Email Portal schema not provisioned by migrations | `src/pages/api/emails/drafts.ts`, `templates.ts`; `migrations/` | `admin_email_drafts`, `admin_email_templates`, the `/dashboard/emails` PLAC page seed, and the `custom_email_max_recipients` portal setting are referenced by code but have no migration file. Add a migration (and seed) so the feature provisions cleanly. The 2026-06 mobile redesign adds two new PLAC sub-capabilities — `#preview` and `#contacts` — that likewise need seeding (default-granted, so no behavior change until an explicit deny is added). See [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) §10. |
+| ~~Drafts "autosave" copy vs. behavior~~ (RESOLVED 2026-06) | `src/components/admin/emails/_components/EmailPortal.tsx` | Real debounced autosave (~10s after the last edit, dirty-tracked via a content snapshot) now backs the "autosaves as you type" copy, reusing `POST /api/emails/drafts`. A "Saving…/Draft saved" indicator surfaces the state. |
 
 ## Email Portal hardening backlog (2026-06-07 review)
 

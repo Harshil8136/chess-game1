@@ -8,11 +8,20 @@ owner: harshil
 related_code:
   - src/pages/dashboard/emails/index.astro
   - src/components/admin/emails/_components/EmailPortal.tsx
+  - src/components/admin/emails/_components/Composer.tsx
+  - src/components/admin/emails/_components/MobileComposer.tsx
+  - src/components/admin/emails/_components/MobileTabBar.tsx
+  - src/components/admin/emails/_components/EmailPreviewModal.tsx
+  - src/components/admin/emails/atoms/RecipientInput.tsx
+  - src/components/admin/emails/atoms/LinkPopover.tsx
+  - src/components/admin/emails/hooks/useEmailAttachments.ts
+  - src/components/ui/BottomSheet.tsx
   - src/pages/api/emails/send.ts
   - src/pages/api/emails/cancel.ts
   - src/pages/api/emails/drafts.ts
   - src/pages/api/emails/templates.ts
   - src/pages/api/emails/attachments.ts
+  - src/pages/api/emails/contacts.ts
   - src/pages/api/audit/emails.ts
 related_docs:
   - ../architecture/ARCHITECTURE.md
@@ -138,11 +147,40 @@ draft/template, cancel schedule) confirm first. The **Queue Logs** tab is hidden
 entirely for operators without the capability — and the API enforces the same gate,
 so the tab and its data cannot drift apart.
 
+### Responsive layout (desktop vs. mobile)
+
+The island renders one component tree and switches presentation at the `lg`
+(1024px) breakpoint:
+
+- **Desktop (`lg+`)** — top tab bar (Composer / Drafts / Presets / Queue Logs) with
+  a two-column composer: fields + body on the left, delivery settings / attachments /
+  actions on the right (`Composer.tsx`).
+- **Mobile (`<lg`)** — a Gmail/Outlook-style shell: a fixed **bottom tab bar** for the
+  lists plus a floating **Compose FAB** (`MobileTabBar.tsx`). The FAB opens a
+  **full-screen composer** (`MobileComposer.tsx`) with an app-bar (close · attach ·
+  overflow ⋮ · Send), minimal field rows, a full-height body editor, and advanced
+  delivery options (sender alias, schedule, save-draft/preset, preview) in a
+  bottom sheet (`BottomSheet.tsx`). A `matchMedia` check gates the full-screen mount so
+  it never runs on desktop.
+
+Responsive panels: `DraftsPanel` shows a table at `md+` and a card stack below;
+`QueueTracker` and `DraftsPanel` both expose client-side **search**, and Queue Logs
+adds **status filter chips**.
+
 ### Composer capabilities
 
-- **Recipients** — To/CC/BCC are chip inputs that split pasted text on
-  comma/semicolon/tab/newline; each chip is validated against an email pattern and
-  invalid entries are flagged inline. CC and BCC are revealed on demand.
+- **Recipients** — To/CC/BCC are chip inputs (`RecipientInput.tsx`) that split pasted
+  text on comma/semicolon/tab/newline; each chip is validated against an email pattern
+  and invalid entries are flagged inline. CC and BCC are revealed on demand. With
+  `#contacts`, recent recipients (from the ledger via `GET /api/emails/contacts`) drive
+  an autocomplete dropdown.
+- **Autosave** — the composer autosaves to Drafts ~10s after the last edit (dirty-tracked
+  via a content snapshot, reusing `POST /api/emails/drafts`), with a "Saving…/Draft saved"
+  indicator. Manual **Save Draft** still works on demand.
+- **Preview & test** — with `#preview`, operators can preview the rendered email in a
+  sandboxed `<iframe>` (`EmailPreviewModal.tsx`) and **send a test copy to themselves**
+  (a normal single-recipient send through the standard pipeline; counts against the rate
+  limit).
 - **Sender** — a prefix selector in front of the fixed `@madagascarhotelags.com`
   domain; the field is locked to `info`/`booking` unless the operator holds
   `#custom-sender`.
@@ -180,6 +218,8 @@ Every entry point is gated by the platform's two-engine model
 | `…#custom-sender`                   | Send from a non-default alias (prefix other than `info`/`booking`) |
 | `…#bulk-send`                       | Send to more than one recipient in a single message          |
 | `…#queue-logs`                      | View the delivery-queue timeline                             |
+| `…#preview`                         | Preview the rendered email and send a test copy to oneself   |
+| `…#contacts`                        | Recent-recipient autocomplete suggestions (`GET /api/emails/contacts`) |
 
 **DEV/OWNER bypass.** `dev` and `owner` bypass the per-hour send rate limit and the
 recipient-count cap. All other gates still apply to them.
@@ -249,10 +289,11 @@ registered it with Resend.
 | Audited | no | yes (create/update/delete → Ghost Audit) |
 | Fields | sender/recipient/subject/`body_html`/cc/bcc/attachments(JSON)/`updated_at` | name/subject/`body_html`/`created_by` |
 
-Drafts persist via the explicit **Save Draft** action (create or update keyed on the
-active draft id). *(The composer's helper copy mentions 15-second autosave; the
-current implementation saves on demand, not on a timer — tracked in
-[MAINTENANCE.md](../MAINTENANCE.md).)*
+Drafts persist both on the explicit **Save Draft** action and via **debounced
+autosave** (~10s after the last edit), creating or updating the row keyed on the active
+draft id. Autosave is dirty-tracked against a content snapshot so it never re-saves
+unchanged content and never fires for an empty composer; loading a draft seeds the
+snapshot so it does not immediately re-save.
 
 **Brand baseline for presets.** The platform's transactional emails under
 `email-templates/` (`confirmation`, `invite`, `magiclink`, `recovery`, …) share a
@@ -358,6 +399,7 @@ canonical registry.
 |------------|-----------|--------------------------------|--------|
 | 2026-06-07 | claude    | code read (`src/pages/api/emails/*`, `src/components/admin/emails/*`, `wrangler.toml`, `src/env.d.ts`) | pass — schema-provisioning gap noted in §10 |
 | 2026-06-07 | claude    | deep UI + backend review (`Composer`/`RichEditor`, `scheduled-asset-cleanup.ts`) | corrected sender-IP wording (stored raw, not hashed); added Composer/editor + ledger detail; logged orphan-sweep + idempotency caveats |
+| 2026-06-07 | claude    | mobile-first redesign (`astro check` + `astro build` pass) | bottom tab bar + Compose FAB + full-screen `MobileComposer`; extracted `RecipientInput`/`useEmailAttachments`; `BottomSheet`, `LinkPopover`, `EmailPreviewModal`; real autosave; recipient autocomplete (`/api/emails/contacts`) + Drafts/Queue search; new `#preview`/`#contacts` PLAC anchors |
 
 ---
 
