@@ -89,6 +89,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
+| [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 
 ## Archive (historical — kept verbatim)
 | Doc | Purpose | Status |
