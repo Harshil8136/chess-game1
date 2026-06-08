@@ -367,12 +367,20 @@ canonical registry.
 - **Provider misconfig is fail-soft on cancel/dev only.** Production sends never call
   Resend in-request; a Resend outage delays delivery (jobs stay queued) but does not
   error the operator's send.
-- **Schema provisioning gap.** `admin_email_drafts`, `admin_email_templates`, the
-  `/dashboard/emails` PLAC page seed, and the `custom_email_max_recipients` portal
-  setting are referenced by code but have **no migration file** under `migrations/`.
-  They must be provisioned out-of-band until a migration is added — tracked in
-  [MAINTENANCE.md](../MAINTENANCE.md). If drafts/templates 500 with a missing-table
-  error, this is the cause.
+- **Schema provisioning (resolved).** `admin_email_drafts` and `admin_email_templates`
+  are created by `migrations/0032_create_admin_email_tables.sql`, which also seeds
+  `custom_email_max_recipients` and the `#preview`/`#contacts` PLAC rows. Because the
+  shared `madagascar-db` reserves the default `d1_migrations` table for **cf-astro**,
+  cf-admin migrations are applied **directly/out-of-band** (e.g. via the Cloudflare
+  D1 API), not through `wrangler d1 migrations apply`; 0032 is idempotent
+  (`CREATE TABLE IF NOT EXISTS` / `INSERT OR IGNORE`). If drafts/templates ever 500
+  with `no such table: admin_email_drafts`, re-apply 0032 to the live DB.
+- **Server-side errors go to Sentry via `@sentry/cloudflare`.** The worker is wrapped
+  with `withSentry` in `src/workers/cf-entry.ts`; server code captures through
+  `@/lib/sentry` (re-exports `@sentry/cloudflare`). The Node-based `@sentry/astro`
+  server SDK does **not** run in workerd — using it for server capture is a silent
+  no-op (the historical reason server errors like the missing-table 500 never reached
+  Sentry). Only browser/island code may import `@sentry/astro`.
 - **Recipient cap is a runtime setting**, not a constant — adjust
   `custom_email_max_recipients` in portal settings rather than editing code.
 - **Attachments are private.** They live under a private R2 prefix and are resolved
