@@ -76,6 +76,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`reference/DESIGN-SYSTEM.md`](reference/DESIGN-SYSTEM.md) | Midnight Slate tokens, CSS architecture, components | ai, technical | active |
 | [`reference/control-plane-design/PLAN.md`](reference/control-plane-design/PLAN.md) | Control-plane design doc (provider API specs, phases) | ai, technical | active |
 | [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](reference/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview | ai, technical | active |
+| [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
 
 ## Specs (dated design records)
 | Doc | Purpose | Status |

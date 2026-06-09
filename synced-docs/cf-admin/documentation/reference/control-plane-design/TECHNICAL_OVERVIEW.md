@@ -128,7 +128,14 @@ Every configuration read uses three tiers for optimal performance and resilience
 
 3. **Database (Source of Truth)**
    - Shared D1 database
-   - Version-tracked for change detection
+   - Version-tracked for change detection: each `service_config` row has a
+     monotonic integer `version` bumped on every write (migration 0034). The
+     global change token is `SUM(version)`, which increments by exactly 1 per
+     update — immune to the same-second collisions a timestamp would have.
+   - Optimistic concurrency: `PATCH /api/control-plane/config` accepts the
+     expected version via the `If-Match` header (or `expected_version` in the
+     body) and returns `409` if another writer changed the row first, so two
+     admins editing the same key can't silently clobber each other.
    - Fallback: hardcoded defaults on failure
 
 ---
