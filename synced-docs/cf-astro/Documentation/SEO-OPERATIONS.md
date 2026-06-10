@@ -151,6 +151,14 @@ Google Business Profile**:
   `src/content/blog/`), Spanish first, English translation second.
 - Keep prices in `llms-full.txt` and the CMS in sync — AI assistants quote
   these numbers verbatim.
+- **Real photos (pending)**: the repo intentionally ships ZERO stock
+  photography — service pages are text-first, blog posts have no cover
+  images, and the image sitemap was removed. When real facility photos are
+  taken: upload via cf-admin (hero + gallery slots), add `heroImage` back to
+  entries in `src/data/servicePages.ts`, add `coverImage` to blog
+  frontmatter, and restore `src/pages/sitemap-images.xml.ts` (see git
+  history) pointing at the real R2 URLs. Real photos are a significant
+  local-SEO and GBP trust signal — prioritize this.
 
 ## 9. What NOT to do (changed recently — older advice is wrong)
 
