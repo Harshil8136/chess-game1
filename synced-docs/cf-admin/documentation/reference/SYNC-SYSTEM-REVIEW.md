@@ -128,6 +128,15 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
   breaks: `CMS_KEY_ALLOWLIST` (astro) vs admin's emitted keys; `SITE_LOCALES`
   (admin `cms.ts`) vs astro routes; `DEFAULTS` (astro) vs hardcoded source values.
   No shared contract, no test enforcing it.
+  - **Partially addressed (Phase 3.1):** a dependency-free `sync-contract.ts` leaf
+    module now exists in **both** repos as the single source for `SITE_LOCALES`,
+    `RATE_LIMIT_MAX`, and `CMS_KEY_ALLOWLIST`. Within cf-astro, `RATE_LIMITS`,
+    `DEFAULTS.ratelimit`, and the revalidate allowlist all derive from it, so that
+    `DEFAULTS`-vs-source drift is now **structurally impossible** (no test needed).
+    cf-admin's `SITE_LOCALES` derives from its mirror. **Remaining:** the two
+    `sync-contract.ts` files are kept in agreement by hand (no shared package, by
+    the $0-infra invariant) — keep them identical when editing; and cf-admin's
+    `CONFIG_SPECS` sentry/rate-limit defaults are not yet single-sourced.
 
 ### 🟡 Smaller but real
 
@@ -264,33 +273,38 @@ Tracking which roadmap items have shipped to the review branch
 | 0.5 — cache-tag `/api/runtime-config` + purge on `{kind:'config'}` | ✅ shipped | `cf-astro/src/pages/api/{runtime-config,revalidate}.ts` |
 | 1.3 — wire `cms_content_history` (append + prune to last 10) | ✅ shipped | `cf-admin/src/lib/cms.ts` (`recordCmsHistory`) |
 | 1.3b — history read + **rollback** endpoint (republishes via revalidate) | ✅ shipped | `cf-admin/src/pages/api/content/history.ts` |
-| 0.1 — rotate `BETTERSTACK_SOURCE_TOKEN` | ⏳ needs dashboard/secret access (owner) | — |
-| 0.2 — Supabase leaked-password protection | ⏳ needs dashboard toggle (owner) | — |
+| 0.1 — rotate `BETTERSTACK_SOURCE_TOKEN` | ✅ done — rotated in both workers (2026-06-10); observability restored | — |
+| 0.2 — Supabase leaked-password protection | ⛔ not applicable — Pro-plan-only feature; project is Free tier ($0-infra invariant). Recorded as an accepted limitation. | — |
 | 0.4 — dead config keys (wire/delete + assertion) | ⏳ todo (Phase 3 contract territory) | — |
 | 0.6 — align self-healing clocks (ISR vs `cms:*` TTL) | ⏸ deferred — superseded by 1.1 redrive (owner decision) | — |
-| 1.1 — outbox + Queue-driven revalidation (DLQ) | ✅ shipped — **needs deploy steps below** | `cf-admin`: `sync-outbox.ts`, `workers/sync-revalidate-consumer.ts`, `cms.ts`, `cf-entry.ts`, `wrangler.toml`, migration `0033` |
+| 1.1 — outbox + Queue-driven revalidation (DLQ) | ✅ shipped + **live in prod** (queues created, config un-gated, migration `0033` applied 2026-06-10) | `cf-admin`: `sync-outbox.ts`, `workers/sync-revalidate-consumer.ts`, `cms.ts`, `cf-entry.ts`, `wrangler.toml`, migration `0033` |
 | 1.2 — `/api/cms-status` read-back verification | ✅ shipped | `cf-astro/src/pages/api/cms-status.ts`; `cf-admin/src/lib/cms-status.ts` (`verifyCmsLive`), surfaced as `verified` on save/rollback responses |
 | 1.4 — `service_config.version` + optimistic concurrency | ✅ shipped | `cf-admin`: migration `0034`, `ServiceConfigRepository`, `api/control-plane/config.ts`; doc claims reconciled in `TECHNICAL_OVERVIEW.md` |
 | 2.2 — cron watermark + pagination hardening (S3) | ✅ shipped | `cf-admin/src/workers/scheduled-log-sync.ts` |
-| 2.1 — booking email-retry reconciler (R4) | ✅ shipped | `cf-astro`: migration `0008`, `d1-attempts.ts`, `booking.ts`; `cf-admin`: `workers/scheduled-booking-retry.ts` wired into the 5-min cron |
+| 2.1 — booking email-retry reconciler (R4) | ✅ shipped + **live in prod** (migration `0008` applied 2026-06-10; reconciler hardened to skip quietly if the columns are ever absent) | `cf-astro`: migration `0008`, `d1-attempts.ts`, `booking.ts`; `cf-admin`: `workers/scheduled-booking-retry.ts` wired into the 5-min cron |
+| 3.1 — shared sync-contract module (C4, partial) | ✅ shipped (in-repo single-source) | `sync-contract.ts` in both repos; cf-astro `RATE_LIMITS` + `DEFAULTS.ratelimit` + CMS allowlist and cf-admin `SITE_LOCALES` now derive from it. Cross-repo agreement = keep the two files in sync (see C4 note below). Sentry defaults vs cf-admin `CONFIG_SPECS` and exact 1.2 hashing still pending. |
 
-> **⚠ Deploy steps for 1.1 (one-time, before the next cf-admin deploy).** The
-> Cloudflare Queues are not auto-created and the worker now declares them as
-> consumers, so deploying without them will fail:
-> ```
-> wrangler queues create madagascar-sync-revalidate
-> wrangler queues create madagascar-sync-revalidate-dlq
-> npx wrangler d1 migrations apply madagascar-db --remote   # applies 0033 + 0034
-> ```
+> **✅ Production status (verified 2026-06-10 against live `madagascar-db`
+> `7fca2a07…`).** All deployment steps are complete and the durability pipeline is
+> live:
+> - Queues `madagascar-sync-revalidate` + `…-dlq` created; `SYNC_QUEUE` producer +
+>   consumers un-gated in `wrangler.toml` and deployed.
+> - Migrations applied & tracked in `d1_migrations`: `0033` (sync_outbox), `0034`
+>   (service_config.version), and cf-astro `0008` (booking_attempts email-retry).
+> - Verified columns/tables exist: `sync_outbox`, `service_config.version`,
+>   `booking_attempts.email_payload` + `retry_count`.
+> - `BETTERSTACK_SOURCE_TOKEN` rotated → observability restored.
 >
-> Full owner runbook (queues + un-gating wrangler.toml + both repos' migrations +
-> dashboard tasks): **`RULESAd.md` § "PENDING OPS"** at the repo root.
-> The fast path (in-request `revalidateAstroOnce`) is unchanged, so until the
-> queue exists the only effect is a logged warning on a failed publish (the
-> outbox row still persists as `pending` for a future reconciler). **Phase 1.2**
-> (`/api/cms-status` read-back to flip the consumer's verification from "HTTP 200"
-> to "bytes confirmed live") is the natural next step — `content_hash` is already
-> stored on each outbox row for it.
+> **Note on the early "no such column: email_payload" cron errors:** between the
+> cf-admin deploy (booking-retry cron went live) and the cf-astro `0008` apply,
+> the 5-min reconciler logged that error each tick. It stopped once `0008` was
+> applied. The reconciler is now hardened (`scheduled-booking-retry.ts`) to detect
+> a missing column and **warn-and-skip** instead of erroring, so any future
+> deploy-before-migrate window is fail-soft (mirrors the `service_config.version`
+> fallback in `ServiceConfigRepository`).
+>
+> The one-time provisioning runbook previously lived in `RULESAd.md § "PENDING
+> OPS"`; it has been removed now that the steps are done.
 
 > Note on 1.2: verification compares the SHA-256 of the published value against
 > the SHA-256 of the value cf-astro stored in `cms:*` KV. These match unless
