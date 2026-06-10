@@ -224,6 +224,19 @@ src/
 3. **CSS Code Splitting & Scoping:** Monolithic global CSS (e.g., `global.css`, `dashboard.css`) is strictly forbidden. Essential dashboard styles must be scoped via Astro components (like `DashboardStyles.astro`) or inline component `<style>` blocks to ensure zero style bleeding and an optimal payload size.
 4. **Data Access Layer (DAL):** Never write raw D1 SQL queries directly inside `.astro` frontmatter. All data fetching must go through Repository classes (e.g., `DashboardRepository.ts` in `src/lib/dal/`) to ensure separation of concerns, security, and testability. Pass the fetched static initial state to Preact islands as props.
 
+### 7.8 Preact `<astro-island>` Layout Quirks (The "Squished Card" Bug)
+
+**The Bug:** When rendering a Preact component (like a `.tsx` file) using `client:load` or `client:idle`, Astro automatically wraps the HTML output in a custom `<astro-island>` element. By default, browsers treat unknown custom elements as `display: inline`. This fundamentally breaks Tailwind flexbox/grid wrappers, causing inner block elements (like `w-full` cards) to violently shrink-wrap to their text content (often ~120px wide).
+
+**The Solution:**
+If a UI component is suffering from the "squished card" bug and standard CSS (`w-full`, `max-w-md`) is mysteriously failing, **DO NOT** attempt to fight the CSS with arbitrary selectors, `min-width`, or `absolute inset-0`. 
+
+You MUST use one of the two architectural escapes:
+1. **Convert to Pure Astro (Recommended for static/mostly-static views):** Rewrite the `.tsx` component as a `.astro` file. This removes the `client:*` directive and completely eliminates the `<astro-island>` wrapper, returning native block-level HTML to the DOM. (Client-side logic must be moved to a native `<script>` tag).
+2. **The `<dialog>` Breakout (Recommended for heavy interactive modals):** If it MUST remain a Preact `.tsx` component, convert the root element into a `<dialog open className="fixed inset-0 z-50 ...">`. This elevates the component into the browser's Top Layer, forcefully breaking it out of the `<astro-island>` flow restrictions (See `InviteUserModal.tsx` for reference).
+
+> ⚠️ **CRITICAL DEV WORKFLOW:** If you change a component's architecture from `.tsx` to `.astro` to fix this, Vite's Hot Module Replacement (HMR) will often cache the old ghost `.tsx` component in memory. **You MUST instruct the user to kill and restart the dev server (`npm run dev`) and hard-refresh the browser for the structural fix to appear.**
+
 ---
 
 ## 8. CODE QUALITY RULES
