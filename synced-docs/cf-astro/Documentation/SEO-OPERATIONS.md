@@ -57,6 +57,33 @@ what our robots.txt says.
    - **Page indexing** report — every sitemap URL should be "Indexed".
    - **Core Web Vitals** — targets: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1.
 
+### 2a. Page-indexing statuses that are NOT errors (do not "Validate Fix")
+
+GSC lists most URLs under "Why pages aren't indexed" even when everything is
+working. Clicking **Validate Fix** on these always ends in "Validation
+Failed", because the URLs are *supposed* to stay in that state:
+
+- **"Page with redirect"** — e.g. `http://…` (→ https),
+  `…/es/booking` without trailing slash (→ `…/es/booking/`),
+  `madagascarhotelags.com/` (→ `/es/`), `www.`/`pet.` hosts (→ apex).
+  These redirects are intentional canonicalization. Healthy.
+- **"Alternate page with proper canonical tag"** — e.g.
+  `/es/booking/?service=hotel` or old `/es/services/?q={search_term_string}`
+  crawls. The page tells Google its canonical is the clean URL and Google
+  agrees. That is the system working; the URLs never become "Indexed".
+  The `{search_term_string}` ones are leftovers from removed
+  Sitelinks-SearchBox markup and will fade out on their own.
+
+What WOULD be a real problem (act on these):
+- Sitemap URLs (the 32 in sitemap-es/en) showing anything other than
+  **Indexed** — especially "Crawled — currently not indexed" for weeks,
+  "Duplicate, Google chose different canonical", "Soft 404", or "Blocked by
+  robots.txt".
+- "Page with redirect" on a URL that is IN the sitemaps (sitemaps must only
+  contain final, trailing-slash, https URLs — they do).
+- Indexed URLs on `pet.madagascarhotelags.com` or `www.` — means the
+  dashboard redirect rules (§1.6) are missing.
+
 ## 3. Bing Webmaster Tools — bing.com/webmasters
 
 Bing matters disproportionately: **ChatGPT search citations overlap ~87% with
