@@ -6,27 +6,16 @@
 
 ---
 
-> ## ⚠️ REMINDER — BETTERSTACK SOURCE TOKEN ROTATION OUTSTANDING
+> ## ✅ RESOLVED (2026-06-13) — BetterStack source token rotated
 >
-> Cloudflare Observability has been flagging `Error: Unauthorized` (level=error,
-> outcome=ok) on every request that emits a log. Root cause: the
-> `BETTERSTACK_SOURCE_TOKEN` Worker secret is invalid/rotated/malformed, and
-> `@logtail/edge` is rejecting log shipments at BetterStack's ingest endpoint
-> with 401 then calling `console.error(new Error("Unauthorized"))` — which
-> Cloudflare logs.
+> The `BETTERSTACK_SOURCE_TOKEN` was rotated by the owner on **2026-06-13**, clearing
+> the prior `Error: Unauthorized` (401) log-shipping failures. Structured logs ship
+> again. The defensive guards in `src/lib/logger.ts` (token format-guard +
+> `ignoreExceptions: true`) remain as belt-and-suspenders.
 >
-> **Defensive code (`src/lib/logger.ts`)** now (a) format-guards the token and
-> (b) passes `ignoreExceptions: true` to the Logtail constructor, so the symptom
-> is hidden — **but the token is still bad**. While it's bad, no structured
-> logs are being shipped to BetterStack at all.
->
-> **To rotate (user action):**
-> 1. BetterStack dashboard → Sources → cf-astro → rotate source token
-> 2. `wrangler pages secret put BETTERSTACK_SOURCE_TOKEN`
-> 3. Trigger any redeploy (or wait for the next one)
-> 4. Verify: `wrangler tail --format=json | grep BetterStack` shows no auth errors
->
-> Same TODO lives in `wrangler.toml` next to the secret list.
+> Do **not** re-open this as a finding in future reviews. If 401s ever reappear,
+> re-rotate via BetterStack dashboard → Sources → cf-astro, then
+> `wrangler … secret put BETTERSTACK_SOURCE_TOKEN` and redeploy.
 
 ---
 

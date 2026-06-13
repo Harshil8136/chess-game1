@@ -9,7 +9,7 @@ This folder contains high-fidelity, production-grade documentation tailored spec
 
 ## 🗺️ Master Documentation Directory
 
-Rather than having dozens of small, scattered files, the system is fully consolidated into **3 Master Reference Manuals**, **1 Master Incident Post-Mortem**, and **1 Deep Security Audit**:
+Rather than having dozens of small, scattered files, the system is fully consolidated into **3 Master Reference Manuals**, **1 Master Incident Post-Mortem**, **2 Security Audits**, and **1 Platform Status Summary**:
 
 | Document | Category | Stakeholder Context | Focus Areas |
 |---|---|---|---|
@@ -17,7 +17,9 @@ Rather than having dozens of small, scattered files, the system is fully consoli
 | [Frontend, PWA & Search Engine Optimization](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/FRONTEND-AND-SEO.md) | Functional | Designers, Marketers, SEOs, AI | Design tokens, Tailwind CSS v4, hydration islands, PWAs, sitemap graphs, custom sitemaps, and Sentry budgets. |
 | [Security, Compliance & System History](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/COMPLIANCE-SECURITY-AND-HISTORY.md) | Administrative | Legal, Auditors, Developers, Owners | CSRF, Turnstile, timing-attack proofing, least-privilege Roles, LFPDPPP compliance, WAF checklists, and full changelog. |
 | [Incident Report: Email Outage (2026-04-18)](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/INCIDENT-2026-04-18-EMAIL-OUTAGE.md) | Incidents | Ops, Support, DevOps | Forensic review of the V8 isolate Eta `EvalError` failure, database schema correction, and queue recovery runbooks. |
-| [Security & Compliance Deep Review (2026-05-29)](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | Audit | Security Auditors, AI | Deep security review report covering vulnerabilities, compliance gaps, privacy notices rewrites, and the security roadmap. |
+| [Security & Compliance Deep Review (2026-05-29)](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | Audit | Security Auditors, AI | Deep security review report covering vulnerabilities, compliance gaps, privacy notices rewrites, and the security roadmap. |
+| [Security Review & Remediation (2026-06-13)](./20-SECURITY-REVIEW-REMEDIATION-2026-06.md) | Audit | Security Auditors, Owners, AI | Scored review + full remediation pass (B → **A− 90/100**); 0 critical/high open. Includes scorecard, scale/system-design context, and build verification. |
+| [Platform Status & Security Summary (2026-06-13)](./21-PLATFORM-STATUS-SUMMARY-2026-06.md) | Summary | Everyone (non-technical, technical, AI) | Cross-repo executive summary: ratings (both A−), where we stand, scale & capacity, benchmarks, and **cost analysis + optimization**. |
 
 ---
 
