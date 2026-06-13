@@ -22,6 +22,7 @@ listed here (the CI index-drift check enforces both).
 
 ## Start here
 
+- **Executive status, ratings, scale & cost (both repos)** → [`2026-06-13-platform-status-summary.md`](2026-06-13-platform-status-summary.md)
 - **New to the project?** → root [`README.md`](../README.md)
 - **Operating rules & policy** → root [`RULESAd.md`](../RULESAd.md)
 - **System architecture** → [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md)
@@ -47,7 +48,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/SECURITY.md`](security/SECURITY.md) | Canonical current security posture (CSRF, headers, sessions, RLS, force-kick) | ai, technical | active |
 | [`security/PRIVACY.md`](security/PRIVACY.md) | Privacy dashboard, consent records, GDPR/LFPDPPP | ai, technical, operator | active |
 | [`security/login-forensics.md`](security/login-forensics.md) | Login forensics subsystem (schema, telemetry, alerts) | ai, technical | active |
-| [`security/reviews/2026-05-26-security-review.md`](security/reviews/2026-05-26-security-review.md) | Latest security review (follow-up) | technical | historical |
+| [`security/reviews/2026-06-13-security-review.md`](security/reviews/2026-06-13-security-review.md) | Latest security review + remediation, scored (A− 91/100) — full fix pass | technical, operator | historical |
+| [`security/reviews/2026-05-26-security-review.md`](security/reviews/2026-05-26-security-review.md) | Security review (follow-up) | technical | historical |
 | [`security/reviews/2026-05-25-security-review.md`](security/reviews/2026-05-25-security-review.md) | Deep security review | technical | historical |
 | [`security/reviews/2026-05-24-security-review.md`](security/reviews/2026-05-24-security-review.md) | CSP phase 1 hardening audit | technical | historical |
 | [`security/reviews/2026-04-24-ssl-lighthouse-audit.md`](security/reviews/2026-04-24-ssl-lighthouse-audit.md) | SSL / Lighthouse audit | technical | historical |
