@@ -35,6 +35,11 @@ listed here (the CI index-drift check enforces both).
 `active` = current & maintained · `historical` = point-in-time snapshot (kept for
 record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 
+## Business / Strategy
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture ("how many countries"), AI-replicability/moat, sell as-is vs. upgrade, tiered model + sales appendix | non-technical, owner, operator, technical, ai | historical |
+
 ## Architecture
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
