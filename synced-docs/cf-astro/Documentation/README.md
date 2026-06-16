@@ -1,75 +1,127 @@
 {% raw %}
-# Madagascar Pet Hotel (Cloudflare Edition) — Documentation Index
-
-Welcome to the consolidated technical reference suite for **cf-astro** (Madagascar Pet Hotel on Cloudflare Pages). 
-
-This folder contains high-fidelity, production-grade documentation tailored specifically for both **human developers** (technical and non-technical stakeholders) and **future agentic AI models** to read, understand, and update with complete precision.
-
+---
+title: "Documentation Index & Map"
+status: active
+audience: [non-technical, ai, technical]
+last_verified: 2026-06-06
+verified_against: [code]
+owner: harshil
+related_docs: [CONTRIBUTING-DOCS.md, ../README.md, ../RULESAd.md]
+tags: [meta, index]
 ---
 
-## 🗺️ Master Documentation Directory
+# cf-admin Documentation
 
-Rather than having dozens of small, scattered files, the system is fully consolidated into **3 Master Reference Manuals**, **1 Master Incident Post-Mortem**, **2 Security Audits**, and **1 Platform Status Summary**:
+> **TL;DR (non-technical):** This is the map of all project documentation. Each
+> entry says what a document is for and whether it's current. Start with the
+> "Start here" links below.
 
-| Document | Category | Stakeholder Context | Focus Areas |
-|---|---|---|---|
-| [System Architecture & Operations](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/SYSTEM-ARCHITECTURE.md) | Technical | Developers, DevOps, AI Models | Edge compute SSR, bindings (D1, KV, R2), API specs, 3-tier fallback, async emails, and manual provisioning. |
-| [Frontend, PWA & Search Engine Optimization](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/FRONTEND-AND-SEO.md) | Functional | Designers, Marketers, SEOs, AI | Design tokens, Tailwind CSS v4, hydration islands, PWAs, sitemap graphs, custom sitemaps, and Sentry budgets. |
-| [Security, Compliance & System History](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/COMPLIANCE-SECURITY-AND-HISTORY.md) | Administrative | Legal, Auditors, Developers, Owners | CSRF, Turnstile, timing-attack proofing, least-privilege Roles, LFPDPPP compliance, WAF checklists, and full changelog. |
-| [Incident Report: Email Outage (2026-04-18)](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/INCIDENT-2026-04-18-EMAIL-OUTAGE.md) | Incidents | Ops, Support, DevOps | Forensic review of the V8 isolate Eta `EvalError` failure, database schema correction, and queue recovery runbooks. |
-| [Security & Compliance Deep Review (2026-05-29)](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | Audit | Security Auditors, AI | Deep security review report covering vulnerabilities, compliance gaps, privacy notices rewrites, and the security roadmap. |
-| [Security Review & Remediation (2026-06-13)](./20-SECURITY-REVIEW-REMEDIATION-2026-06.md) | Audit | Security Auditors, Owners, AI | Scored review + full remediation pass (B → **A− 90/100**); 0 critical/high open. Includes scorecard, scale/system-design context, and build verification. |
-| [Platform Status & Security Summary (2026-06-13)](./21-PLATFORM-STATUS-SUMMARY-2026-06.md) | Summary | Everyone (non-technical, technical, AI) | Cross-repo executive summary: ratings (both A−), where we stand, scale & capacity, benchmarks, and **cost analysis + optimization**. |
-| [Business Viability & Compliance Assessment (2026-06-16)](./22-BUSINESS-VIABILITY-AND-COMPLIANCE-ASSESSMENT-2026-06.md) | Strategy | Owners, Business, Legal, AI | Viability of selling the platform to businesses, multi-jurisdiction compliance posture ("how many countries"), AI-replicability/moat, sell as-is vs. upgrade, tiered model + buyer-facing sales appendix. |
+Single index for every document under `documentation/`. See
+[`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) for naming and front-matter rules.
+Every doc listed here must exist, and every doc under `documentation/` must be
+listed here (the CI index-drift check enforces both).
 
----
+## Start here
 
-## ⚡ Execution Quick Start
+- **Executive status, ratings, scale & cost (both repos)** → [`2026-06-13-platform-status-summary.md`](2026-06-13-platform-status-summary.md)
+- **New to the project?** → root [`README.md`](../README.md)
+- **Operating rules & policy** → root [`RULESAd.md`](../RULESAd.md)
+- **System architecture** → [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md)
+- **Security posture** → [`security/SECURITY.md`](security/SECURITY.md)
+- **Infrastructure & deploy** → [`operations/OPERATIONS.md`](operations/OPERATIONS.md)
+- **Open maintenance items** → [`MAINTENANCE.md`](MAINTENANCE.md)
 
-During local development or pre-commit checks, use these commands inside `cf-astro`:
+## Status legend
 
-```bash
-# 1. Install dependencies
-npm install
+`active` = current & maintained · `historical` = point-in-time snapshot (kept for
+record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 
-# 2. Run dev server (Astro + Vite)
-npm run dev
+## Business / Strategy
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture ("how many countries"), AI-replicability/moat, sell as-is vs. upgrade, tiered model + sales appendix | non-technical, owner, operator, technical, ai | historical |
 
-# 3. Compile production build (verifies sourcemaps & sitemaps)
-npm run build
+## Architecture
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Lean Edge stack, request lifecycle, module pattern, CPU budget | ai, technical | active |
+| [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) | KV caching strategy, quotas, fail-safe fallback chain | ai, technical | active |
+| [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
 
-# 4. Preview with Cloudflare bindings (D1 SQLite, R2 object, KV cache)
-npm run cf:dev
+## Security
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`security/SECURITY.md`](security/SECURITY.md) | Canonical current security posture (CSRF, headers, sessions, RLS, force-kick) | ai, technical | active |
+| [`security/PRIVACY.md`](security/PRIVACY.md) | Privacy dashboard, consent records, GDPR/LFPDPPP | ai, technical, operator | active |
+| [`security/login-forensics.md`](security/login-forensics.md) | Login forensics subsystem (schema, telemetry, alerts) | ai, technical | active |
+| [`security/reviews/2026-06-13-security-review.md`](security/reviews/2026-06-13-security-review.md) | Latest security review + remediation, scored (A− 91/100) — full fix pass | technical, operator | historical |
+| [`security/reviews/2026-05-26-security-review.md`](security/reviews/2026-05-26-security-review.md) | Security review (follow-up) | technical | historical |
+| [`security/reviews/2026-05-25-security-review.md`](security/reviews/2026-05-25-security-review.md) | Deep security review | technical | historical |
+| [`security/reviews/2026-05-24-security-review.md`](security/reviews/2026-05-24-security-review.md) | CSP phase 1 hardening audit | technical | historical |
+| [`security/reviews/2026-04-24-ssl-lighthouse-audit.md`](security/reviews/2026-04-24-ssl-lighthouse-audit.md) | SSL / Lighthouse audit | technical | historical |
 
-# 5. Type-check and Astro diagnostics check (0 errors guarantee)
-npm run check
+## Features
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`features/DASHBOARD.md`](features/DASHBOARD.md) | Dashboard home, analytics providers, widgets | ai, technical | active |
+| [`features/USER-MANAGEMENT.md`](features/USER-MANAGEMENT.md) | RBAC hierarchy, user lifecycle, ghost protection, sessions | ai, technical | active |
+| [`features/CMS.md`](features/CMS.md) | Content studio, ISR revalidation, KV injection, R2/CDN | ai, technical | active |
+| [`features/CHATBOT.md`](features/CHATBOT.md) | AI pipeline, proxy architecture, admin UI, analytics | ai, technical | active |
+| [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) | Email Portal: compose/send, drafts, templates, scheduling, queue delivery tracking; RBAC+PLAC gating | non-technical, ai, technical, operator | active |
+| [`features/CONTROL-PLANE.md`](features/CONTROL-PLANE.md) | Service Control Plane: two-layer model, access, API surface | ai, technical | active |
+| [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
 
-# 6. Apply schemas to local D1 instance
-npm run db:migrate
+## Operations
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | Binding IDs, free-tier limits, secrets registry, deploy | ai, technical, operator | active |
+| [`operations/DEV-TOOLS.md`](operations/DEV-TOOLS.md) | Edge Command Center — debug tools, diagnostics | ai, technical | active |
 
-# 7. Apply schemas to production D1 instance
-npm run db:migrate:remote
-```
+## Reference
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`reference/coding-standards.md`](reference/coding-standards.md) | DAL pattern, TypeScript standards, component rules, naming | ai, technical | active |
+| [`reference/DESIGN-SYSTEM.md`](reference/DESIGN-SYSTEM.md) | Midnight Slate tokens, CSS architecture, components | ai, technical | active |
+| [`reference/control-plane-design/PLAN.md`](reference/control-plane-design/PLAN.md) | Control-plane design doc (provider API specs, phases) | ai, technical | active |
+| [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](reference/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview | ai, technical | active |
+| [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
 
----
+## Specs (dated design records)
+| Doc | Purpose | Status |
+|-----|---------|--------|
+| [`specs/2026-04-25-user-registry-design.md`](specs/2026-04-25-user-registry-design.md) | User registry "Midnight Command" redesign | historical |
+| [`specs/2026-05-03-settings-design.md`](specs/2026-05-03-settings-design.md) | Settings dashboard design | historical |
+| [`specs/2026-05-12-bookings-header-design.md`](specs/2026-05-12-bookings-header-design.md) | Bookings page header redesign | historical |
+| [`specs/2026-05-13-cms-ui-redesign.md`](specs/2026-05-13-cms-ui-redesign.md) | CMS UI redesign | historical |
 
-## 📋 System Metrics & Identity
+## Runbooks
+| Doc | Purpose | Status |
+|-----|---------|--------|
+| [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
+| [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 
-- **Business Entity**: Hotel para Mascotas Madagascar — Aguascalientes, Mexico.
-- **Apex Production URL**: [madagascarhotelags.com](https://madagascarhotelags.com)
-- **Tech Stack**: Astro 6.1.2+ with `@astrojs/cloudflare` edge adapter.
-- **Styling Model**: Tailwind CSS v4 compiled natively via Vite plugins.
-- **Bilingual Support**: Spanish (default, `/es/`) and English (`/en/`).
-- **Edge databases**: Cloudflare D1 (SQLite) and Supabase PostgreSQL.
-- **Email Gateway**: Resend REST API triggered asynchronously via Cloudflare Queues.
+## Archive (historical — kept verbatim)
+| Doc | Purpose | Status |
+|-----|---------|--------|
+| [`archive/COMPLETED_PHASES.md`](archive/COMPLETED_PHASES.md) | Full implementation log of completed phases | historical |
+| [`archive/PENDING_PHASES.md`](archive/PENDING_PHASES.md) | Post-review tracker (superseded by MAINTENANCE.md) | historical |
+| [`archive/ToDoList.md`](archive/ToDoList.md) | Phase 4 hardening backlog (superseded by MAINTENANCE.md) | historical |
+| [`archive/NEW_FILES_CREATED.md`](archive/NEW_FILES_CREATED.md) | Refactor-session file snapshot | historical |
+| [`archive/REFACTORING_OVERVIEW.md`](archive/REFACTORING_OVERVIEW.md) | Refactoring project overview | historical |
 
----
+## Meta
+| Doc | Purpose | Status |
+|-----|---------|--------|
+| [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) | Documentation conventions & governance | active |
+| [`_templates/doc-template.md`](_templates/doc-template.md) | Canonical doc template | active |
+| [`MAINTENANCE.md`](MAINTENANCE.md) | Single live maintenance backlog | active |
 
-## 🎯 Guidelines for AI Models & Future Updates
-
-To preserve the architectural integrity of this project, future updates must strictly observe the **System Invariants** documented in:
-1. [SYSTEM-ARCHITECTURE.md §10](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/SYSTEM-ARCHITECTURE.md#L225) (Image processors, email consumers separation, and trailing slash enforcement).
-2. [FRONTEND-AND-SEO.md §6](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/FRONTEND-AND-SEO.md#L112) (Schema `@id` graph rules, AI crawler allowances, and inline json scripts).
-3. [COMPLIANCE-SECURITY-AND-HISTORY.md §7](file:///e:/1/Madagascar%20Project/cf-astro/Documentation/COMPLIANCE-SECURITY-AND-HISTORY.md#L112) (PII boundaries, logging rules, and DB credentials handling).
-
+## Root-level entry docs (stay at root, exempt from front-matter)
+| Doc | Purpose |
+|-----|---------|
+| [`../README.md`](../README.md) | Project entry point / quick start |
+| [`../RULESAd.md`](../RULESAd.md) | Operational Rules Bible + policy contract |
+| [`../main.md`](../main.md) | AI entry pointer into `documentation/` |
+| [`../AI_CODE_MAINTENANCE.md`](../AI_CODE_MAINTENANCE.md) | AI-agent code-maintenance rules |
+| [`../GITHUB_RULES.md`](../GITHUB_RULES.md) | Git workflow rules |
 {% endraw %}

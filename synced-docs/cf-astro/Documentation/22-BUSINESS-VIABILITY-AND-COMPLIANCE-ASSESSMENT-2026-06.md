@@ -312,5 +312,4 @@ See **§6** — reuse directly.
 
 *Point-in-time assessment (2026-06-16). Published to both repositories. No application behavior
 was changed by producing it.*
-
 {% endraw %}
