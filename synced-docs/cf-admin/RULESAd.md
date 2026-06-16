@@ -224,18 +224,136 @@ src/
 3. **CSS Code Splitting & Scoping:** Monolithic global CSS (e.g., `global.css`, `dashboard.css`) is strictly forbidden. Essential dashboard styles must be scoped via Astro components (like `DashboardStyles.astro`) or inline component `<style>` blocks to ensure zero style bleeding and an optimal payload size.
 4. **Data Access Layer (DAL):** Never write raw D1 SQL queries directly inside `.astro` frontmatter. All data fetching must go through Repository classes (e.g., `DashboardRepository.ts` in `src/lib/dal/`) to ensure separation of concerns, security, and testability. Pass the fetched static initial state to Preact islands as props.
 
-### 7.8 Preact `<astro-island>` Layout Quirks (The "Squished Card" Bug)
+### 7.8 Modals, Dialogs & The "Squished Card" Bug — MANDATORY READING
 
-**The Bug:** When rendering a Preact component (like a `.tsx` file) using `client:load` or `client:idle`, Astro automatically wraps the HTML output in a custom `<astro-island>` element. By default, browsers treat unknown custom elements as `display: inline`. This fundamentally breaks Tailwind flexbox/grid wrappers, causing inner block elements (like `w-full` cards) to violently shrink-wrap to their text content (often ~120px wide).
+> 🔴 **READ THIS ENTIRE SECTION before building ANY modal, dialog, popup, overlay, or full-screen panel inside a Preact island.**
 
-**The Solution:**
-If a UI component is suffering from the "squished card" bug and standard CSS (`w-full`, `max-w-md`) is mysteriously failing, **DO NOT** attempt to fight the CSS with arbitrary selectors, `min-width`, or `absolute inset-0`. 
+There are **THREE** separate CSS bugs that can squish modals/dialogs inside Preact islands. Each has a different root cause. You must defend against ALL three simultaneously.
 
-You MUST use one of the two architectural escapes:
-1. **Convert to Pure Astro (Recommended for static/mostly-static views):** Rewrite the `.tsx` component as a `.astro` file. This removes the `client:*` directive and completely eliminates the `<astro-island>` wrapper, returning native block-level HTML to the DOM. (Client-side logic must be moved to a native `<script>` tag).
-2. **The `<dialog>` Breakout (Recommended for heavy interactive modals):** If it MUST remain a Preact `.tsx` component, convert the root element into a `<dialog open className="fixed inset-0 z-50 ...">`. This elevates the component into the browser's Top Layer, forcefully breaking it out of the `<astro-island>` flow restrictions (See `InviteUserModal.tsx` for reference).
+---
 
-> ⚠️ **CRITICAL DEV WORKFLOW:** If you change a component's architecture from `.tsx` to `.astro` to fix this, Vite's Hot Module Replacement (HMR) will often cache the old ghost `.tsx` component in memory. **You MUST instruct the user to kill and restart the dev server (`npm run dev`) and hard-refresh the browser for the structural fix to appear.**
+#### Bug #1: The `<astro-island>` Inline Display Bug
+
+**Root Cause:** Astro wraps every `client:load` / `client:idle` component in a custom `<astro-island>` element. Browsers default custom elements to `display: inline`, which causes block children (`w-full`, flexbox containers) to shrink-wrap to their text content width (~100-200px).
+
+**Our Global Fix:** We apply `astro-island, astro-slot { display: contents; }` in `global.css` (line ~168). This removes the `<astro-island>` from the layout tree, so its children inherit the parent's full width. This fix is already in place — **do NOT re-apply it or add redundant overrides.**
+
+---
+
+#### Bug #2: The `overflow` Containing-Block Trap
+
+**Root Cause:** `.admin-main-content` has `overflow-y: auto` (in `AdminLayout.css`), which creates a new CSS **containing block** for `position: fixed` descendants. Any `<div className="fixed inset-0 ...">` overlay rendered inside this scroll container will be **clipped to the scroll container's bounds**, not the viewport. It may appear to work on large screens but will break on smaller viewports or deeply nested components.
+
+**Why `<dialog open>` DOES NOT fix this:** The declarative `<dialog open>` attribute simply makes the dialog visible in-place (like `display: block`). It does **NOT** use the browser's Top Layer. The element stays trapped inside the scroll container's containing block.
+
+**The ONLY reliable fix:** Use `dialog.showModal()` (imperative JavaScript), which promotes the `<dialog>` element into the browser's **Top Layer** — a rendering layer that sits above ALL other content, ignoring ALL containing blocks, overflow clips, stacking contexts, and z-index hierarchies.
+
+---
+
+#### Bug #3: Tailwind v4 `@layer` vs Browser UA Specificity (The Silent Width Killer)
+
+**Root Cause:** The browser's User-Agent stylesheet sets `width: fit-content` on `<dialog>` elements. In Tailwind CSS v4, utility classes are placed inside `@layer utilities`, which has **lower cascade priority** than unlayered UA defaults. This means Tailwind classes like `w-full`, `max-w-2xl`, etc. applied via `className` on a `<dialog>` element **silently lose the specificity battle** to the browser's `width: fit-content`, causing the dialog to shrink-wrap to its content width.
+
+**The fix:** Use **inline `style={{ }}` attributes** for ALL layout-critical properties on the `<dialog>` element itself. Inline styles have the highest CSS specificity and always beat UA defaults.
+
+---
+
+#### ✅ THE CORRECT PATTERN (MANDATORY)
+
+Every modal/dialog in a Preact island **MUST** follow this exact pattern. Reference implementations: `ConfirmDialog.tsx`, `InviteUserModal.tsx`, `TemplatesPanel.tsx`.
+
+```tsx
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+
+function MyModal() {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Open: ALWAYS use showModal() — NEVER use <dialog open> or toggle className
+  const openDialog = useCallback(() => {
+    dialogRef.current?.showModal();
+  }, []);
+
+  // Close: ALWAYS use .close()
+  const closeDialog = useCallback(() => {
+    dialogRef.current?.close();
+  }, []);
+
+  // Handle native Escape key
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleCancel = (e: Event) => { e.preventDefault(); closeDialog(); };
+    dialog.addEventListener('cancel', handleCancel);
+    return () => dialog.removeEventListener('cancel', handleCancel);
+  }, [closeDialog]);
+
+  // Click-outside (backdrop click)
+  const handleBackdropClick = (e: MouseEvent) => {
+    if (e.target === dialogRef.current) closeDialog();
+  };
+
+  return (
+    <>
+      {/* Backdrop styling — MUST use unique ID selector */}
+      <style>{`
+        #myModalId::backdrop {
+          background: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+      `}</style>
+
+      {/* DIALOG — inline style is MANDATORY for width/maxWidth/padding/margin */}
+      <dialog
+        id="myModalId"
+        ref={dialogRef}
+        onClick={handleBackdropClick}
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          padding: 0,
+          margin: 'auto',
+          width: '100%',
+          maxWidth: '672px',   // Adjust per use case
+          zIndex: 99999,
+          outline: 'none',
+        }}
+      >
+        {/* Inner visual container — Tailwind classes are safe HERE */}
+        <div
+          className="bg-[var(--theme-surface)] border border-[var(--theme-border-subtle)] w-full rounded-2xl shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal content goes here */}
+        </div>
+      </dialog>
+    </>
+  );
+}
+```
+
+#### 🚫 BANNED PATTERNS (Will cause squished modals)
+
+| ❌ BANNED | Why It Fails |
+|-----------|-------------|
+| `<dialog open className="w-full max-w-2xl">` | `open` attr = no Top Layer; Tailwind `w-full` loses to UA `fit-content` |
+| `<dialog open className="fixed inset-0">` | Same: not in Top Layer, trapped in scroll container |
+| `<div className="fixed inset-0 z-50">` as overlay | Trapped by `overflow-y: auto` containing block |
+| `className="w-full"` on `<dialog>` | Tailwind v4 `@layer` loses to UA specificity |
+| `setIsOpen(true)` + conditional `{isOpen && <div>...}` | No Top Layer escape, no native focus trap |
+
+#### ✅ REQUIRED CHECKLIST (Before merging any modal)
+
+- [ ] Uses `<dialog>` element (not a `<div>`)
+- [ ] Opens via `dialogRef.current?.showModal()` (not `<dialog open>`)
+- [ ] Closes via `dialogRef.current?.close()` (not DOM removal)
+- [ ] Width/maxWidth set via **inline `style={{ }}`** (not Tailwind className)
+- [ ] Has `::backdrop` styling via `<style>` tag with unique ID
+- [ ] Handles `cancel` event (Escape key)
+- [ ] Handles backdrop click (`e.target === dialogRef.current`)
+- [ ] Inner content div uses `onClick={e => e.stopPropagation()}`
+
+> ⚠️ **CRITICAL DEV WORKFLOW:** If you change a component's architecture from `.tsx` to `.astro` to fix layout bugs, Vite's Hot Module Replacement (HMR) will often cache the old ghost `.tsx` component in memory. **You MUST instruct the user to kill and restart the dev server (`npm run dev`) and hard-refresh the browser for the structural fix to appear.**
 
 ---
 
