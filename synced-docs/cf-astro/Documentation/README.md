@@ -20,6 +20,7 @@ Rather than having dozens of small, scattered files, the system is fully consoli
 | [Security & Compliance Deep Review (2026-05-29)](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md) | Audit | Security Auditors, AI | Deep security review report covering vulnerabilities, compliance gaps, privacy notices rewrites, and the security roadmap. |
 | [Security Review & Remediation (2026-06-13)](./20-SECURITY-REVIEW-REMEDIATION-2026-06.md) | Audit | Security Auditors, Owners, AI | Scored review + full remediation pass (B → **A− 90/100**); 0 critical/high open. Includes scorecard, scale/system-design context, and build verification. |
 | [Platform Status & Security Summary (2026-06-13)](./21-PLATFORM-STATUS-SUMMARY-2026-06.md) | Summary | Everyone (non-technical, technical, AI) | Cross-repo executive summary: ratings (both A−), where we stand, scale & capacity, benchmarks, and **cost analysis + optimization**. |
+| [Business Viability & Compliance Assessment (2026-06-16)](./22-BUSINESS-VIABILITY-AND-COMPLIANCE-ASSESSMENT-2026-06.md) | Strategy | Owners, Business, Legal, AI | Viability of selling the platform to businesses, multi-jurisdiction compliance posture ("how many countries"), AI-replicability/moat, sell as-is vs. upgrade, tiered model + buyer-facing sales appendix. |
 
 ---
 
