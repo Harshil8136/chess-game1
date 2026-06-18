@@ -41,6 +41,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Lean Edge stack, request lifecycle, module pattern, CPU budget | ai, technical | active |
 | [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) | KV caching strategy, quotas, fail-safe fallback chain | ai, technical | active |
 | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
+| [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | active |
 
 ## Security
 | Doc | Purpose | Audience | Status |
