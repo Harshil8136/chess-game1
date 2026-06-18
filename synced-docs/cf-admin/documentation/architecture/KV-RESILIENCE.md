@@ -1,4 +1,5 @@
 ---
+
 title: "KV Resilience & Fallback Chain"
 status: active
 audience: [ai, technical]
@@ -195,6 +196,7 @@ await Promise.allSettled(promises);
 ```
 
 This ensures:
+
 - A single delete failure doesn't block the CMS data write
 - All operations that can succeed do succeed
 - All failures are individually logged to BetterStack

@@ -1,4 +1,5 @@
 ---
+
 title: "Security, SSL/TLS, HTTPS & Lighthouse Audit"
 status: historical
 audience: [technical]
@@ -22,6 +23,7 @@ tags: []
 The single most important finding of this audit: **Cloudflare Security Insights does not read HTTP response headers to determine compliance.** It reads Cloudflare zone settings stored in the dashboard. This explains why hours of iteration on `public/_headers` produced zero movement in the scanner.
 
 Concretely:
+
 - The `_headers` file sets `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` correctly for every HTTP response. The scanner does not look at this.
 - The Cloudflare Security Insights tool checks whether **SSL/TLS → Edge Certificates → HTTP Strict Transport Security** is enabled in the dashboard. Until that toggle is ON, every HSTS alert remains Active regardless of response headers.
 - The same principle applies to "Always Use HTTPS" and "TLS Encryption mode." These are zone-level settings, not headers.
@@ -128,6 +130,7 @@ Even though the `_headers` file in cf-astro already sets this header in every re
 **`pet.madagascarhotelags.com`:** Find the DNS record. Change cloud icon from gray to orange. The existing Redirect Rule then fires and TLS is handled by Cloudflare.
 
 **`charlar.madagascarhotelags.com` and `chat.madagascarhotelags.com`:** Two options:
+
 1. Delete the DNS records entirely (recommended until cf-chatbot is deployed to these routes)
 2. Deploy cf-chatbot as a Cloudflare Worker with a route binding for these hostnames
 
@@ -252,6 +255,7 @@ After the code fixes applied in this audit, the remaining Best Practices issues 
 
 **"Ensure CSP is effective against XSS attacks"** (`'unsafe-inline'` and `'unsafe-eval'` in `script-src`)
 These directives are required by the current architecture:
+
 - `'unsafe-inline'` is needed because `BaseLayout.astro` contains `<script is:inline>` tags for language-switch scroll preservation, vite:preloadError recovery, and WebMCP tool registration. These inline scripts cannot be extracted without architectural refactoring.
 - `'unsafe-eval'` is needed by Preact's runtime hydration in development mode, and potentially by some polyfills.
 
@@ -265,6 +269,7 @@ Current: `Cross-Origin-Opener-Policy: same-origin-allow-popups`. This setting is
 After removing `Host:` and `Crawl-delay:` from `robots.txt`, the only remaining Lighthouse SEO finding is:
 
 **"Additional items to manually check"** — These are not automated failures. They are recommendations to manually verify:
+
 - Structured data markup is valid (verify via Google's Rich Results Test)
 - Links have descriptive text
 - Content is readable at all viewport sizes
@@ -364,11 +369,13 @@ Cloudflare Images (the storage product) must never be adopted in this project. I
 **What counts as "unique":** One combination of (source image URL + transformation options string). The same hero image at the `hero` preset = 1 transformation, regardless of how many visitors load it or how many times it is cached and re-served. It is counted once, on first computation, never again.
 
 **What does NOT increment the counter:**
+
 - Cache hits for an already-computed transformation
 - Re-requests within the same month for the same (URL + options) pair
 - Requests for already-transformed images even after a new deployment
 
 **Overage behaviour when 5,000 is exceeded:**
+
 - New transformation requests (cache misses requiring computation) return HTTP **error 9422** with message "The transformation request is rejected because the usage limit was reached"
 - Already-cached transformations continue serving normally — no degradation for images already seen by at least one visitor
 - No automatic charge, no upsell prompt, no service interruption
@@ -400,6 +407,7 @@ Cloudflare Images (the storage product) must never be adopted in this project. I
 | CMS images in R2 (typical) | 5–15 | JPEG/PNG uploaded via cf-admin |
 
 **Worst-case unique transformations per month:**
+
 ```
 5 presets × 24 images = 120 unique transformations
 120 / 5,000 = 2.4% of the free cap
@@ -425,6 +433,7 @@ Cloudflare edge receives request
 ```
 
 For static fallback images routed through the same pipeline:
+
 ```
 GET /cdn-cgi/image/width=1600,.../https://madagascarhotelags.com/images/boarding.jpg
 
@@ -474,18 +483,21 @@ File: `src/lib/images.ts` — `transformImageUrl()` function
 The function was extended to handle three source categories instead of one:
 
 **Category 1 — CMS images (CDN absolute URL) — was already handled:**
+
 ```
 Input:  https://cdn.madagascarhotelags.com/gallery/abc.jpg
 Output: https://madagascarhotelags.com/cdn-cgi/image/width=800,quality=80,format=auto,fit=cover/https://cdn.madagascarhotelags.com/gallery/abc.jpg
 ```
 
 **Category 2 — Static fallback images (root-relative path) — newly handled:**
+
 ```
 Input:  /images/boarding.jpg
 Output: https://madagascarhotelags.com/cdn-cgi/image/width=1600,quality=85,format=auto,fit=cover/https://madagascarhotelags.com/images/boarding.jpg
 ```
 
 **Category 3 — Unsafe or external URLs — passed through unchanged (safety guard):**
+
 ```
 Input:  data:image/... or blob:... or https://external-domain.com/img.jpg
 Output: unchanged
@@ -512,6 +524,7 @@ Without this toggle: every `/cdn-cgi/image/` URL silently returns the original u
 | CMS images from R2 | Already optimised | No change | No change |
 
 **Lighthouse:**
+
 - "Improve image delivery — Est. savings of 176 KiB" → expected to clear completely
 - LCP: hero download on Slow 4G drops from ~300ms to ~100–140ms — contributing approximately 0.2–0.5s LCP improvement
 - Combined with the still-pending hero preload fix (passing `heroImageSrc` as `preloadImage` to `BaseLayout`), LCP can realistically move from 5.3s toward 3.5–4.5s

@@ -205,6 +205,7 @@ Secrets in production: `wrangler secret put <KEY>` — see [OPERATIONS.md §5](.
 To prevent architectural entropy as `cf-admin` grows, every new feature area must be encapsulated using the **Module Manifest** pattern. Code should be organized into self-contained vertical slices.
 
 **Directory Structure:**
+
 ```
 src/
   ├── pages/
@@ -492,6 +493,7 @@ documentation/
 `@mcp:perplexity-ask` costs real money. Use ONLY as last resort after exhausting all free tools.
 
 **Priority Order:**
+
 1. RULES.md → 2. SKILL.md files → 3. `@mcp:cloudflare-docs` → 4. `@mcp:tavily` → 5. Pre-trained knowledge → 6. `@mcp:perplexity-ask` (💰 LAST)
 
 ---

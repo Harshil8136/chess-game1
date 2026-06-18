@@ -1,4 +1,5 @@
 ---
+
 title: "Platform Status & Security Summary — Madagascar Pet Hotel (2026-06-13)"
 status: historical
 audience: [non-technical, technical, operator, owner, ai]

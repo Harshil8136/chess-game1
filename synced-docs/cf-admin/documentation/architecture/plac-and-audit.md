@@ -1,4 +1,5 @@
 ---
+
 title: "System Architecture: RBAC, PLAC & Ghost Audit"
 status: active
 audience: [ai, technical]
@@ -51,6 +52,7 @@ Each role has full display metadata including color, background color, icon, and
 > **There is no break-glass list, no hardcoded super-admin emails, no fallback grant path.** Every authenticated request must clear (a) Cloudflare Zero Trust at the edge, (b) the `admin_authorized_users` whitelist with `is_active = true`, and (c) the relevant role/PLAC gate. A previously-existing `BREAK_GLASS_EMAILS` array and the `isBreakGlassAdmin()` / `isHardcodedSuperAdmin()` helpers were removed from `src/lib/auth/rbac.ts` — confirmed by the 2026-05-24 deep review (see `SECURITY-REVIEW-2026-05-24.md`) and re-verified in the 2026-05-25 review.
 
 Lockout recovery is now operational rather than code-level:
+
 - If the whitelist row for a stranded admin is wrong, a still-active admin updates it via `/dashboard/users`.
 - If every admin is locked out, the row is fixed directly in Supabase (Studio or `psql`) using `SUPABASE_SERVICE_ROLE_KEY`.
 - The 3-layer force-kick cascade (§2.6) propagates the change inside seconds.
@@ -87,9 +89,9 @@ Querying D1 for page permissions on every single navigation event would consume 
 
 PLAC relies on two database constructs:
 
-* **Page Registry** (The Source of Truth for Routing) — Defines every page that exists in the interface including path, required role, and active status. The required role is validated against all 5 role tiers.
+- **Page Registry** (The Source of Truth for Routing) — Defines every page that exists in the interface including path, required role, and active status. The required role is validated against all 5 role tiers.
 
-* **Override Table** (The Delta State) — Holds specific overrides from the natural hierarchy via composite keys (user identifier + page path) and a boolean granted parameter.
+- **Override Table** (The Delta State) — Holds specific overrides from the natural hierarchy via composite keys (user identifier + page path) and a boolean granted parameter.
 
 ### 2.3 The "Deny Wins" Resolution Algorithm
 
@@ -103,10 +105,10 @@ When the access map computation fires, it resolves permissions through strict pr
 
 PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micro-capabilities (e.g., exporting CSVs, performing a destructive prune) to be managed by the exact same O(1) mathematical resolution engine without requiring structural schema updates.
 
-* **Pattern:** A hash-fragment sub-feature is appended to a parent route in the page registry.
-* **Evaluation:** Standard routing still checks the base path. The UI buttons independently request a PLAC check for the sub-feature path.
-* **UI Visualization:** In the invite flows and permission managers, sub-features automatically nest under their parent route and are branded as "Features" rather than "Pages" for conceptual clarity.
-* **Cost:** $0. Because the hashmap loads instantly into Cloudflare KV, querying 50 granular capability checks for a single render still operates at <1ms.
+- **Pattern:** A hash-fragment sub-feature is appended to a parent route in the page registry.
+- **Evaluation:** Standard routing still checks the base path. The UI buttons independently request a PLAC check for the sub-feature path.
+- **UI Visualization:** In the invite flows and permission managers, sub-features automatically nest under their parent route and are branded as "Features" rather than "Pages" for conceptual clarity.
+- **Cost:** $0. Because the hashmap loads instantly into Cloudflare KV, querying 50 granular capability checks for a single render still operates at <1ms.
 
 **Registered Pseudo-Paths:**
 
@@ -124,11 +126,11 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 > [!IMPORTANT]
 > The Access Management API (`POST /api/users/access`) enforces **five ironclad gates**. Without them, an Admin could lock out a higher-tier user, or a user with a PLAC deny could self-administer their way back in.
 
-* **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `SECURITY-REVIEW-2026-05-25.md` finding C-1.
-* **Gate B: DEV + Owner Ghosting** — Users with DEV or Owner rank are intentionally dropped from UI payloads requested by non-DEV actors and are rejected outright by this endpoint. Same DB-verified-role hardening as Gate A. The `/api/users/access-data` endpoint received an equivalent guard in the same review (non-DEV actors cannot enumerate a DEV/Owner PLAC matrix even by directly querying with a known userId).
-* **Gate C: Page Visibility Check** — The actor cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
-* **Gate D: Natural Ceiling Enforcement** — Grants are capped at the actor's clearance ceiling. An Admin cannot grant a Staff member access to a DEV-required tool.
-* **Gate E: No Self-Modification (new 2026-05-25)** — `actor.userId === targetUserId` is rejected outright. Denies must not be self-removable and grants must not be self-administered. A user denied a page via PLAC needs a higher-tier actor to lift it.
+- **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `SECURITY-REVIEW-2026-05-25.md` finding C-1.
+- **Gate B: DEV + Owner Ghosting** — Users with DEV or Owner rank are intentionally dropped from UI payloads requested by non-DEV actors and are rejected outright by this endpoint. Same DB-verified-role hardening as Gate A. The `/api/users/access-data` endpoint received an equivalent guard in the same review (non-DEV actors cannot enumerate a DEV/Owner PLAC matrix even by directly querying with a known userId).
+- **Gate C: Page Visibility Check** — The actor cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
+- **Gate D: Natural Ceiling Enforcement** — Grants are capped at the actor's clearance ceiling. An Admin cannot grant a Staff member access to a DEV-required tool.
+- **Gate E: No Self-Modification (new 2026-05-25)** — `actor.userId === targetUserId` is rejected outright. Denies must not be self-removable and grants must not be self-administered. A user denied a page via PLAC needs a higher-tier actor to lift it.
 
 ### 2.6 PLAC enforcement on API routes (`placDenyResponse`)
 
@@ -169,11 +171,11 @@ All data-bearing API routes that map to a dashboard page now enforce PLAC. The f
 
 ### 2.7 Auto-Purging Strategies
 
-* **Instant Discontinuation:** Modifying a user's PLAC map triggers `forceLogoutUser()` — a **3-layer revocation** cascade:
+- **Instant Discontinuation:** Modifying a user's PLAC map triggers `forceLogoutUser()` — a **3-layer revocation** cascade:
   1. **Layer 1** — KV session deletion via reverse-mapping key pattern for O(k) destruction
   2. **Layer 2** — KV revocation flag (`revoked:{userId}`) prevents re-bootstrap via still-valid CF Access cookie
   3. **Layer 3** — CF API `DELETE /access/users/{cfSubId}/active_sessions` invalidates the CF_Authorization cookie at the edge immediately
-* **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers `resetUserOverrides(env.DB, userId)` — complete purge of all D1 historical PLAC overrides. A new role implies a new baseline; historical overrides are destroyed. The 3-layer force-kick fires immediately after to apply the new role.
+- **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers `resetUserOverrides(env.DB, userId)` — complete purge of all D1 historical PLAC overrides. A new role implies a new baseline; historical overrides are destroyed. The 3-layer force-kick fires immediately after to apply the new role.
 
 ### 2.8 Admin Pages Registry Manager
 
@@ -224,9 +226,9 @@ The audit system uses strict typed unions (not arbitrary strings) for maximum qu
 
 The engine specifically tracks unified JSON payloads representing every state mutation:
 
-* **Identity Signatures:** user identifier, user email, user role
-* **Behavior Vectors:** action (typed enum), module (typed enum)
-* **Impact Vectors:** target identifier, target type, details (granular JSON tracking of exact element changes)
+- **Identity Signatures:** user identifier, user email, user role
+- **Behavior Vectors:** action (typed enum), module (typed enum)
+- **Impact Vectors:** target identifier, target type, details (granular JSON tracking of exact element changes)
 
 ### 3.5 Ubiquitous Navigational Telemetry (Middleware Tracking)
 

@@ -1,4 +1,5 @@
 ---
+
 title: "Security Vulnerability Review — CF-Admin Madagascar"
 status: historical
 audience: [technical]
@@ -9,6 +10,7 @@ tags: []
 ---
 
 # Security Vulnerability Review — CF-Admin Madagascar
+
 **Date:** 2026-05-26
 **Reviewer:** Automated deep scan (follow-up pass on top of 2026-05-25 review)
 **Branch:** `claude/codebase-review-branch-fixes-WZg5d` → `main` (commit `27e6090`)
@@ -23,6 +25,7 @@ This review re-verified every deferred item from the 2026-05-25 review (14 Mediu
 The most consequential finding is that **18 API routes had no PLAC enforcement** — they relied solely on the role gate, so an admin with an explicit page-level deny could still call the underlying JSON endpoints. All 18 are now wired with `placDenyResponse()`. The deny resolution is identical to dashboard navigation (DEV-exempt, exact-match then longest-prefix), so the only behavioural change is the intended one: PLAC denies now block their corresponding API paths.
 
 Two items remain genuinely deferred (not done):
+
 - `cms_content_history` cleanup trigger — the table is created by migration 0026 but has **zero writers** in the codebase. There is nothing to clean up. Building the trigger now would be premature; the table is dead until a writer ships.
 - `astro check` hangs in the sandbox where this review ran (esbuild service deadlock — known environmental issue, not a code issue). `tsc --noEmit --skipLibCheck` passes cleanly across all 28 modified files, so type safety is verified through the alternate path.
 
@@ -49,7 +52,7 @@ Two items remain genuinely deferred (not done):
 ### Branch hygiene (companion change)
 
 - Local `main` was 28 commits behind `origin/main`. Fast-forwarded locally via `git update-ref refs/heads/main refs/remotes/origin/main` (no remote push needed; remote was already current).
-- Stale remote branch `claude/codebase-security-review-LhIkr` (PR #2 already merged into main on 2026-05-25) **could not be deleted from the review sandbox** — `git push --delete` returned 403 from the local proxy, and no `delete_branch` MCP tool is available in this environment. Flagged for one-click deletion at https://github.com/mascotasmadagascar-cmd/cf-admin-madagascar/branches.
+- Stale remote branch `claude/codebase-security-review-LhIkr` (PR #2 already merged into main on 2026-05-25) **could not be deleted from the review sandbox** — `git push --delete` returned 403 from the local proxy, and no `delete_branch` MCP tool is available in this environment. Flagged for one-click deletion at <https://github.com/mascotasmadagascar-cmd/cf-admin-madagascar/branches>.
 
 ---
 

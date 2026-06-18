@@ -1,4 +1,5 @@
 ---
+
 title: "Service Control Plane — Connectors (Layer B)"
 status: active
 audience: [ai, technical]

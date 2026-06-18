@@ -1,4 +1,5 @@
 ---
+
 title: "CMS, Image & Bookings Management"
 status: active
 audience: [ai, technical]
@@ -23,6 +24,7 @@ tags: []
 cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). All content changes flow from this portal.
 
 **Core Stack:**
+
 - **CMS Database:** Cloudflare D1 (`cms_content` table, shared with cf-astro)
 - **Bookings Database:** Supabase PostgreSQL
 - **Asset Storage:** Cloudflare R2 (`madagascar-images`, served via `cdn.madagascarhotelags.com`)
@@ -54,6 +56,7 @@ All six CMS sections use the full 3-tier KV-first resolution strategy:
 **Access:** Admin+ (admin, super_admin, owner, dev)
 
 **Features:**
+
 - **Live KPIs** on the main dashboard — Total Bookings, Total Pets
 - **Server-side pagination & search** — filters pet names and customer info before transit
 - **Slide drawer** — `BookingSlideDrawer.tsx` orchestrates 5 section components (`BookingCustomerSection`, `BookingPetSection`, `BookingOperationsSection`, `BookingAuditSection`, `BookingDangerZoneSection`)
@@ -99,6 +102,7 @@ Four modules, all backed by D1. Changes propagate to cf-astro via the ISR revali
 - **Cache-Control:** `public, max-age=31536000` (no `immutable` — allows manual CDN purges if needed)
 
 **Upload flow:**
+
 1. Image selected in GalleryManager → `POST /api/media/upload`
 2. Validated: `image/jpeg,png,webp,avif`, ≤5MB
 3. Stored as `gallery/{uuid}.ext` in R2
@@ -149,6 +153,7 @@ revalidateAstro(
 ```
 
 **Path expansion:** Automatically generates locale variants.
+
 - `['/']` → `['/', '/en', '/es']`
 - `['/services']` → `['/services', '/en/services', '/es/services']`
 

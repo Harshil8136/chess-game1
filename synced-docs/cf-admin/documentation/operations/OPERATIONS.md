@@ -1,4 +1,5 @@
 ---
+
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
@@ -44,6 +45,7 @@ tags: [operations, bindings, cloudflare]
 Both `cf-admin` and `cf-astro` share this single D1 database.
 
 **Verification:**
+
 ```bash
 curl -sH "Authorization: Bearer $CF_API_TOKEN" \
   "https://api.cloudflare.com/client/v4/accounts/320d1ebab5143958d2acd481ea465f52/d1/database/7fca2a07-d7b4-449d-b446-408f9187d3ca" | jq .result.name
@@ -231,6 +233,7 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 > To view/rotate: Cloudflare Dashboard → My Profile → API Tokens.
 
 ### Token: `cf-admin: Zero Trust Audit Read`
+
 **Worker secret:** `CF_API_TOKEN_READ_LOGS`
 **Used by:** `src/workers/scheduled-log-sync.ts` — 5-min cron polling of CF Access Audit Log API for failed logins
 
@@ -247,6 +250,7 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 ---
 
 ### Token: `cf-admin: Zero Trust Session Revoke`
+
 **Worker secret:** `CF_API_TOKEN_ZT_WRITE`
 **Used by:** `src/lib/auth/plac.ts` — Layer 3 Ghost Protection force-kick (`DELETE /accounts/{id}/access/users/{cfSubId}/active_sessions`)
 

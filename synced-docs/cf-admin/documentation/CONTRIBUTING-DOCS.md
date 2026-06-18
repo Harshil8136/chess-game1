@@ -1,11 +1,12 @@
 ---
+
 title: "Documentation Conventions & Governance"
 status: active
 audience: [ai, technical]
 last_verified: 2026-06-06
 verified_against: [code]
 owner: harshil
-related_docs: [README.md, _templates/doc-template.md]
+related_docs: [README.md,_templates/doc-template.md]
 tags: [meta, governance, conventions]
 ---
 

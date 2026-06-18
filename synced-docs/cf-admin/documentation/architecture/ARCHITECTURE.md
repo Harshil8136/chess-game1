@@ -1,4 +1,5 @@
 ---
+
 title: "CF-Admin Architecture"
 status: active
 audience: [ai, technical]

@@ -1,4 +1,5 @@
 ---
+
 title: "Security Vulnerability Review — CF-Admin Madagascar"
 status: historical
 audience: [technical]
@@ -9,6 +10,7 @@ tags: []
 ---
 
 # Security Vulnerability Review — CF-Admin Madagascar
+
 **Date:** 2026-05-25
 **Reviewer:** Automated deep scan
 **Branch (merged):** `claude/codebase-security-review-LhIkr` → `main` (PR #2, merge commit `3f8cd78`)

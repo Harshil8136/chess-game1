@@ -1,4 +1,5 @@
 ---
+
 title: "Login Forensics — Security Audit Subsystem"
 status: active
 audience: [ai, technical]
@@ -54,6 +55,7 @@ Dedicated security pipeline that captures, stores, and surfaces all authenticati
 ```
 
 **Key architectural differences from v2:**
+
 - No `LoginForm.tsx` — CF Access shows its own login UI; no client-side telemetry collection
 - No `magic-link.ts` proxy — CF Access handles OTP dispatch
 - No `callback.astro` — CF Access handles OAuth callback
@@ -262,6 +264,7 @@ Fetches paginated, filtered login forensics from D1.
 ### `GET /api/audit/stats`
 
 Returns login forensic metrics to users with security clearance:
+
 - **Total Login Logs** — cumulative count
 - **Failed Logins Today** — count of `LOGIN_FAILED` + `LOGIN_BLOCKED` today
 
@@ -278,6 +281,7 @@ Returns recent authentication events for a target user (used in User Activity pa
 ### 6.1 Access Control
 
 Login Forensics contains PII (full IPs, UA fingerprints, geo location, CF Ray IDs). Double-layer defense:
+
 - Tab is **conditionally hidden** from UI for unauthorized users
 - API **independently enforces** the same role/PLAC check
 
@@ -295,6 +299,7 @@ Login Forensics contains PII (full IPs, UA fingerprints, geo location, CF Ray ID
 | Ray ID | CF-RAY (links to CF dashboard trace) |
 
 **Visual indicators:**
+
 - 🔴 Rose left-border — failed login
 - 🟡 Amber left-border — blocked / unauthorized email attempt
 - ⚠ UNAUTH chip — email not in authorized users list
@@ -302,6 +307,7 @@ Login Forensics contains PII (full IPs, UA fingerprints, geo location, CF Ray ID
 ### 6.3 Expanded Forensic Detail Panel (3 Sections)
 
 **Section 1 — IDENTITY & AUTH (CF Zero Trust)**
+
 ```
 Email          [email used]
 Event Type     LOGIN_SUCCESS / LOGIN_FAILED / LOGIN_BLOCKED
@@ -314,6 +320,7 @@ Bot Score      [cfBotScore] / N/A
 ```
 
 **Section 2 — NETWORK ORIGIN** (Tier 1 — unchanged from v2)
+
 ```
 IP Address     [full unmasked IP]
 City           [cf-ipcity]
@@ -329,6 +336,7 @@ RTT            [clientTcpRtt] ms
 ```
 
 **Section 3 — CF ZERO TRUST CONTEXT** (replaces Behavioral + Hardware + Email Delivery from v2)
+
 ```
 Auth Source    Cloudflare Zero Trust Access
 Login Method   [cfAccessMethod]
@@ -338,6 +346,7 @@ Bot Protection [cfBotScore] or "Not available"
 ```
 
 **Design rules:**
+
 - All sections use `data-attribute` CSS — zero inline styles (strict CSP)
 - Null fields render `—` (em dash), never `undefined` or empty string
 - CSS scoped to `.lf-forensic-*` prefix, uses only `var(--color-*)` tokens
@@ -353,6 +362,7 @@ Email search, event type dropdown (`LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLO
 ## 7. Security Alert Emails
 
 Every login attempt (success and failure) triggers a Midnight Slate branded email to the admin inbox via Resend API:
+
 - Dispatched via `ctx.waitUntil()` — zero latency impact
 - Contains: event type, email, masked IP, geo location, CF Ray ID, CF access method, timestamp, success/failure
 - Inline HTML template (no external dependencies)
@@ -433,6 +443,7 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 | `src/styles/pages/audit.css` | CSS — `.lf-forensic-*` prefix, token-only values |
 
 **Deleted files (v3):**
+
 - `src/pages/api/auth/magic-link.ts` — CF Access handles OTP
 - `src/pages/auth/callback.astro` — CF Access handles OAuth callback
 - `src/components/auth/LoginForm.tsx` — No login form (CF Access UI)

@@ -1,4 +1,5 @@
 ---
+
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
@@ -59,6 +60,7 @@ The badge colors follow a **thermal gradient** designed for maximum readability 
 ### Hierarchy Logic Gate
 
 Permission checks are performed using an integer-based comparison of the `ROLE_LEVEL` map.
+
 - **Logic**: `ROLE_LEVEL[userRole] <= ROLE_LEVEL[requiredRole]`
 - **Implementation**: `src/lib/auth/rbac.ts`
 
@@ -139,7 +141,9 @@ A special feature allowing **completely invisible** admin accounts for covert op
 The user management API endpoint securely bridges Supabase GoTrue logic. All mutations are gated by CSRF validation and RBAC hierarchy checks.
 
 ### 5.1 Inviting/Authorizing a New User
+
 When an authorized admin adds a new member from the dashboard:
+
 1. **Frontend Request:** UI validates inputs (Email, Role, Display Name) via the Invite Modal (Preact island).
 2. **Page Access Fetch:** Modal lazy-fetches the page registry on the **first modal open** (not on component mount) — live page list from D1, zero hardcoding. Cached after first load; full error state and retry button shown on failure.
 3. **CSRF Validation:** Middleware verifies Origin/Referer headers match the site URL.
@@ -153,14 +157,17 @@ When an authorized admin adds a new member from the dashboard:
 > **No GoTrue:** There is no call to `auth.admin.createUser()`. The user receives no invitation email from the Worker. CF Access sends its own authentication email/redirect when the user first tries to access `admin.madagascarhotelags.com`.
 
 ### 5.2 Role Selection UI (Invite Modal)
+
 The Invite Modal renders a "Command Console" two-panel dialog:
 
 **Left panel — Identity:**
+
 - **Role Pill Selector**: 2×2 pill grid with role-specific colors. Roles at or above actor's level are greyed-out/disabled (server enforces this too).
 - **Hidden Account Toggle**: Ghost-mode toggle only rendered for DEV and Owner actors.
 - Email + Display Name inputs, Grant Access + Cancel buttons.
 
 **Right panel — Page Access:**
+
 - **Page Chip Grid**: Live page list fetched lazily on first modal open. Grouped by section (MAIN / CONTENT / TOOLS / MANAGEMENT). Error state with retry button displayed if fetch fails.
 - Chips have four states:
   - `default_on` (●) — role naturally has access, no override written
@@ -171,10 +178,13 @@ The Invite Modal renders a "Command Console" two-panel dialog:
 - Override count badge shown when customisations are active.
 
 ### 5.3 Restoring / Enabling Access
+
 Access is managed via the active flag in the authorization table. When set to true, the login portal accepts the user's JWT.
 
 ### 5.4 Revoking / Locking Access
+
 If a user needs immediate revocation:
+
 1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The middleware `lastRoleCheckedAt` 30-min re-check detects `is_active = false` → destroys session. 3-layer force-kick fires immediately on the PATCH itself to kick all active sessions right away (not waiting for the 30-min refresh window).
 2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV delete + KV revocation flag + CF API session DELETE). User is ejected within seconds.
 3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
@@ -196,6 +206,7 @@ The interface is composed of multiple Preact islands:
 | **Session Forensics Drawer** | `SessionForensicsDrawer.tsx` | Premium HUD slide-in panel: device identity (browser/OS via zero-dep UA parser), connection telemetry (IP, geo, Ray ID), live 24h session countdown, per-session revocation |
 
 ### Event Bus (Cross-Island Communication)
+
 The modal uses CustomEvents for decoupled island-to-island messaging:
 
 | Event | Direction | Purpose |
@@ -204,6 +215,7 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 | User invited | Invite Modal → Users Manager | Triggers user list refresh |
 
 ### Filter Tabs
+
 | Tab | Shows |
 |-----|-------|
 | **All** | All visible users (excluding hidden unless DEV/Owner) |
@@ -213,6 +225,7 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 ## 7. Security Boilerplates & Error Flow
 
 All actions within the API routes return specific error states handled by the UI:
+
 - `401 Unauthorized` → Render standard "Session Expired" overlay
 - `403 Forbidden` → Render "Insufficient Permissions / Action Locked" message
 - `405 Method Not Allowed` → Block manual HTTP verb injections
@@ -231,6 +244,7 @@ The site URL **must** be set in the local development environment. If absent, th
 For detailed PLAC documentation, see the dedicated [PLAC-AND-AUDIT.md](../architecture/plac-and-audit.md).
 
 **Key integration with User Management:**
+
 - The Page Access Manager renders a toggle grid showing all pages and their access state for a target user.
 - Changes save immediately via optimistic UI with toast confirmation.
 - Pages the actor cannot modify are shown locked (grayed out with lock icon).
@@ -243,9 +257,11 @@ For detailed PLAC documentation, see the dedicated [PLAC-AND-AUDIT.md](../archit
 All administrative user management actions are performed via `POST`, `PATCH`, and `DELETE` methods on the `/api/users/manage` endpoint.
 
 ### 9.1 POST /api/users/manage (Invite User)
+
 Accepts email, display name, role, hidden status, and any initial page overrides. Returns a sanitized success/error message without exposing internal stack traces.
 
 ### 9.2 PATCH /api/users/manage (Modify User)
+
 Accepts updates for active status, display name, and role. Mutates the D1 whitelist and triggers the synchronous session invalidation cascade if roles change.
 
 ## 10. Operational Resilience & Failure Modes

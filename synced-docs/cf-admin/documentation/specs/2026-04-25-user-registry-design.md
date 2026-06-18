@@ -1,4 +1,5 @@
 ---
+
 title: "User Registry Transformation — 'Midnight Command' Design Spec"
 status: historical
 audience: [technical]
@@ -101,6 +102,7 @@ A single glassmorphic bar spanning the full width, containing all controls.
 | **Right** | Stats pills (N total, N active, N suspended) + "Add User" CTA button |
 
 **Styling:**
+
 - Background: `bg-surface-elevated/80 backdrop-blur-lg`
 - Border: `border border-border-subtle rounded-xl`
 - Shadow: `shadow-elevated`
@@ -125,11 +127,13 @@ A proper `<table>` element with semantic HTML, sticky header, and hover states.
 | 5 | Actions | 48px | right | no | Overflow menu (⋮) |
 
 **Row Behavior:**
+
 - Hover: `bg-surface-subtle/40` + subtle left accent border flash (role-colored)
 - Click anywhere on row: toggles expand (same as current)
 - Expanded state: row gains `bg-surface-overlay` + bottom border removed, expanded panel slides in below
 
 **Table Header:**
+
 - `sticky top-0 z-20 bg-surface-subtle/90 backdrop-blur-sm`
 - Column headers: `text-[11px] uppercase tracking-wider text-text-muted font-semibold`
 - Sort indicators: chevron icons that rotate on active sort
@@ -166,6 +170,7 @@ When a row is expanded, a panel slides down below the row with a smooth `max-hei
 | **Right (40%)** | **Access Summary Card** — Role badge, "{X} routes accessible", "{Y} custom overrides". Below: **"Manage Full Access →"** link button that navigates to `/dashboard/users/{id}/access`. |
 
 **Styling:**
+
 - Panel bg: `bg-surface-overlay/60 backdrop-blur-sm`
 - Inner cards: `bg-surface-raised border border-border-subtle rounded-lg p-4`
 - Danger Zone: `border-red-500/20 bg-red-500/5` wrapper with warning icon
@@ -175,6 +180,7 @@ When a row is expanded, a panel slides down below the row with a smooth `max-hei
 Appears on hover or click of the Actions column. Uses a dropdown/popover pattern.
 
 **Menu Items:**
+
 1. **View Details** — expands the row (same as clicking)
 2. **Manage Access** — navigates to `/dashboard/users/[id]/access`
 3. **Separator**
@@ -188,6 +194,7 @@ All destructive actions show a confirmation modal with clear warning text.
 On mobile, the table is completely hidden. Users are rendered as stacked cards.
 
 **Card Layout:**
+
 ```
 ┌─────────────────────────────────────┐
 │ [Avatar]  Jane Doe         [⋮ menu] │
@@ -211,6 +218,7 @@ On mobile, the table is completely hidden. Users are rendered as stacked cards.
 **File:** `src/pages/dashboard/users/[id]/access.astro`
 
 **SSR Logic:**
+
 1. `requireAuth(Astro)` — validate session
 2. Fetch target user by `Astro.params.id` from D1
 3. Validate: does `session.role` have sufficient clearance to view/edit this user's access?
@@ -269,6 +277,7 @@ Each row in the access page shows:
 | **Reset** | "Reset to default" link — only visible when an override exists |
 
 **Access State Colors:**
+
 - Inherited (natural): `text-text-muted` + muted dot
 - Granted (override): `text-emerald-400` + green dot
 - Revoked (override): `text-red-400` + red dot + strikethrough on label
@@ -295,6 +304,7 @@ Each category is a collapsible section with a header showing the category name a
 ### 4.6 Footer Summary
 
 Sticky footer bar showing aggregate stats:
+
 - "X of Y routes accessible"
 - "Z custom overrides active"
 - "Last modified by {email} · {relative_time}"
@@ -306,18 +316,21 @@ Sticky footer bar showing aggregate stats:
 The two-panel `InviteUserModal` is kept but visually overhauled:
 
 ### 5.1 Left Panel (Identity)
+
 - Same fields: Email, Display Name, Role pills, Hidden toggle
 - **Improved:** Role pills now include a one-line description below each option
 - **Improved:** Labels use consistent Tailwind typography tokens
 - **Removed:** All inline `style={{...}}` — pure Tailwind classes
 
 ### 5.2 Right Panel (Quick Access)
+
 - Same `PageChipGrid` component concept
 - **Improved:** Chips are grouped by category (matching the dedicated access page)
 - **Improved:** A callout at the top: "Configure basic access now. Fine-tune on the dedicated access page after creation."
 - **Improved:** Each chip shows the page icon + label + required role badge
 
 ### 5.3 Styling
+
 - Modal background: `bg-surface-overlay border border-border-subtle rounded-xl`
 - Accent line at top: `bg-gradient-to-r from-transparent via-accent to-transparent`
 - All inline styles replaced with Tailwind classes
@@ -541,11 +554,13 @@ Reusable abstractions in `@layer components`:
 ## 11. Verification Plan
 
 ### Automated Checks
+
 1. `astro check` — TypeScript validation passes
 2. `astro build` — Production build succeeds without errors
 3. Visual inspection on dev server at `localhost:4321/dashboard/users`
 
 ### Manual Testing (by user)
+
 1. **Table rendering:** All users appear in the data table with correct role badges and status indicators
 2. **Sorting:** Click column headers to sort by name, role, status, last seen
 3. **Search:** Type in search bar — table filters in real-time

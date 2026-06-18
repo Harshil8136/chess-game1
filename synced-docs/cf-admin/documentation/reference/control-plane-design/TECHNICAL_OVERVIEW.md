@@ -1,4 +1,5 @@
 ---
+
 title: "Service Control Plane — Technical Overview"
 status: active
 audience: [ai, technical]
@@ -22,6 +23,7 @@ tags: []
 The Service Control Plane is a unified admin interface that enables real-time management of observability, analytics, rate-limiting, and infrastructure settings across the Madagascar Hotel ecosystem—without requiring application redeployment.
 
 **Key Benefits:**
+
 - Single dashboard for all service metrics and configuration
 - Runtime tuning of sampling rates, analytics capture, and rate limits
 - Audit trail for all configuration changes
@@ -70,6 +72,7 @@ The Service Control Plane is a unified admin interface that enables real-time ma
 ```
 
 **Layer A (Remote Config):** Settings owned and managed by the application
+
 - Sampling rates (Sentry traces, PostHog sessions)
 - Error rate limits
 - Feature toggles
@@ -77,6 +80,7 @@ The Service Control Plane is a unified admin interface that enables real-time ma
 - Stored in shared database, cached locally
 
 **Layer B (Provider Control):** Settings owned by external providers
+
 - Sentry dynamic sampling rules, client-key rate limits, spike protection
 - PostHog project settings, session recording configuration
 - Cloudflare cache policies and worker observability
@@ -168,6 +172,7 @@ The system uses a 5-tier role hierarchy with escalating permissions:
 The control plane appears in the **MANAGEMENT** section alongside Settings and Users management.
 
 Sub-pages are accessible through in-page tabs (not sidebar):
+
 - Sentry — observability and error tracking
 - Cloudflare — edge infrastructure and caching
 - PostHog — analytics and user tracking
@@ -189,6 +194,7 @@ Sub-pages are accessible through in-page tabs (not sidebar):
 ### 4.2 Configuration Schema
 
 Each configuration item includes:
+
 - **Key**: Unique identifier (e.g., `sentry.cf_astro.traces.booking`)
 - **Value**: Current setting
 - **Type**: `number`, `boolean`, `string`, or `json`
@@ -198,6 +204,7 @@ Each configuration item includes:
 - **Description**: Human-readable purpose
 
 Example:
+
 ```
 key: sentry.cf_astro.traces.booking
 value: 0.5
@@ -211,6 +218,7 @@ description: "Trace sample rate for booking pages (50%)"
 ### 4.3 Current Configuration Values
 
 **Sentry Observability (cf-astro)**
+
 - `/booking` pages: 50% trace sampling
 - `/api/*` routes: 10% trace sampling
 - All other routes: 0% trace sampling
@@ -219,17 +227,20 @@ description: "Trace sample rate for booking pages (50%)"
 - Server-side: 10% trace sampling
 
 **Sentry Observability (cf-admin)**
+
 - Server-side: 10% trace sampling
 - Error events: 100% sampling
 - Replay: Disabled
 
 **PostHog Analytics (cf-astro)**
+
 - Enabled: Yes
 - Page views: Auto-captured
 - Session recording: Disabled (0% sample)
 - Form interactions: Auto-captured
 
 **Rate Limits (cf-astro)**
+
 - Booking endpoint: 20 requests / 60 seconds
 - Consent endpoint: 20 requests / 60 seconds
 - Contact form: 10 requests / 60 seconds
@@ -243,6 +254,7 @@ description: "Trace sample rate for booking pages (50%)"
 ### 5.1 Sentry Error Tracking
 
 **Metrics Available:**
+
 - Total events received in 24 hours
 - Error rate (events per minute)
 - Top unresolved issues
@@ -250,6 +262,7 @@ description: "Trace sample rate for booking pages (50%)"
 - Browser/device breakdown
 
 **Tunable Settings:**
+
 - Trace sampling rate (0-100%)
 - Error event sampling (0-100%)
 - Client-key rate limits
@@ -257,12 +270,14 @@ description: "Trace sample rate for booking pages (50%)"
 - Spike protection toggle
 
 **Read-Only Settings:**
+
 - Dynamic sampling rules (managed by Sentry)
 - Alert rules (view and link to Sentry for edits)
 
 ### 5.2 PostHog Analytics
 
 **Metrics Available:**
+
 - Pageview counts by day
 - Unique visitor counts
 - Session duration trends
@@ -270,6 +285,7 @@ description: "Trace sample rate for booking pages (50%)"
 - Quota remaining (% used)
 
 **Tunable Settings:**
+
 - Global enable/disable
 - Page view capture
 - Form interaction capture
@@ -279,6 +295,7 @@ description: "Trace sample rate for booking pages (50%)"
 ### 5.3 Cloudflare Infrastructure
 
 **Metrics Available:**
+
 - Total requests (24h)
 - Error rate (5xx, 4xx)
 - Cache hit ratio
@@ -286,6 +303,7 @@ description: "Trace sample rate for booking pages (50%)"
 - Average response time
 
 **Tunable Settings:**
+
 - Cache purge (single URL or all)
 - Worker observability (read-only, requires redeploy)
 - KV storage operations
@@ -346,12 +364,14 @@ src/components/admin/control-plane/
 ### 7.1 Configuration Endpoints
 
 **GET /api/control-plane/config**
+
 - List all configurations
 - Response: Array of configuration items
 - Authentication: `super_admin`
 - Caching: 60 seconds
 
 **PATCH /api/control-plane/config**
+
 - Update single configuration
 - Body: `{ key, value, reason }`
 - Authentication: `admin` + `#edit-sampling`
@@ -359,6 +379,7 @@ src/components/admin/control-plane/
 - Audited: Yes
 
 **POST /api/control-plane/purge-cache**
+
 - Invalidate configuration caches
 - Effect: Both cf-astro and cf-admin re-pull immediately
 - Authentication: `admin` + `#purge-config`
@@ -367,24 +388,28 @@ src/components/admin/control-plane/
 ### 7.2 Metrics Endpoints
 
 **GET /api/control-plane/sentry**
+
 - Sentry metrics and statistics
 - Response: Last 24h event volume, error rate, top issues
 - Authentication: `super_admin`
 - No caching (fresh data)
 
 **GET /api/control-plane/posthog**
+
 - PostHog analytics summary
 - Response: Pageviews, unique users, session count
 - Authentication: `super_admin`
 - Cached: 5 minutes
 
 **GET /api/control-plane/cloudflare**
+
 - Cloudflare edge metrics
 - Response: Requests, errors, cache ratio, bandwidth
 - Authentication: `super_admin`
 - Cached: 5 minutes
 
 **GET /api/control-plane/supabase**
+
 - Database health and metrics
 - Response: Row counts, query performance, storage usage
 - Authentication: `super_admin`
@@ -393,12 +418,14 @@ src/components/admin/control-plane/
 ### 7.3 Provider Operations
 
 **POST /api/control-plane/sentry** (Layer B)
+
 - Apply changes directly to Sentry organization
 - Examples: Update client-key rate limits, toggle spike protection
 - Authentication: `owner` + `#provider-write`
 - Audited: Yes
 
 **POST /api/control-plane/cloudflare** (Layer B)
+
 - Purge cache, update settings
 - Authentication: `owner` + `#provider-write`
 - Audited: Yes
@@ -410,6 +437,7 @@ src/components/admin/control-plane/
 ### 8.1 Change Tracking
 
 Every configuration change is logged with:
+
 - **Who**: User ID, email, and role
 - **What**: Configuration key, old value, new value
 - **When**: Exact timestamp
@@ -419,6 +447,7 @@ Every configuration change is logged with:
 ### 8.2 Audit Log Queries
 
 Find all changes to error sampling:
+
 ```sql
 SELECT * FROM admin_audit_log
 WHERE action = 'config_change'
@@ -427,6 +456,7 @@ ORDER BY created_at DESC
 ```
 
 Find all Layer B operations:
+
 ```sql
 SELECT * FROM admin_audit_log
 WHERE action = 'provider_write'
@@ -437,6 +467,7 @@ ORDER BY created_at DESC
 ### 8.3 History and Rollback
 
 The system maintains a complete history of all configuration values. Admins can:
+
 - View the before/after for any change
 - See who made the change and when
 - Revert to a previous value (which creates a new audit entry)
@@ -477,16 +508,19 @@ Browser scripts need configuration before initializing observability tools:
 ### 9.3 Sentry Integration
 
 **Server-Side:**
+
 - Trace sampling reads from config at startup
 - Automatically refreshes every 10 seconds
 - First request may use hardcoded default
 
 **Client-Side:**
+
 - Trace sampling configured via callback function
 - Different rates for different routes
 - Error sampling applied in `beforeSend` hook
 
 Example trace sampling:
+
 ```
 /booking → 50% of traces captured
 /api/* → 10% of traces captured
@@ -496,11 +530,13 @@ others → 0% of traces captured
 ### 9.4 PostHog Integration
 
 **Initialization:**
+
 - Check config for enabled status
 - If disabled, skip loading PostHog entirely
 - No network requests, no analytics captured
 
 **Configuration:**
+
 - Page view capture: Controlled by config
 - Form capture: Controlled by config
 - Session recording: Disabled by default
@@ -508,6 +544,7 @@ others → 0% of traces captured
 ### 9.5 Rate Limiting
 
 Rate limits are applied per endpoint based on configuration:
+
 - Booking: 20 requests per minute per IP
 - Contact form: 10 requests per minute per IP
 - Analytics: 60 requests per minute per IP
@@ -532,6 +569,7 @@ Limits can be adjusted without redeployment.
 ### 10.2 Deployment Checklist
 
 Before going live:
+
 - [ ] Run defaults-parity test (verify config matches hardcoded values)
 - [ ] Test fail-safe: Disable database access and verify startup succeeds
 - [ ] Verify cache propagation: Edit config and observe updates in both apps
@@ -543,6 +581,7 @@ Before going live:
 ### 10.3 Kill Switches
 
 Each service has a master kill-switch to disable it immediately:
+
 - `sentry.cf_astro.enabled` = false → No Sentry in public site
 - `sentry.cf_admin.enabled` = false → No Sentry in admin panel
 - `posthog.enabled` = false → No analytics captured
@@ -557,6 +596,7 @@ Toggling any kill-switch propagates within 60 seconds.
 ### 11.1 Monitoring and Alerts
 
 Monitor these metrics to detect issues:
+
 - Configuration version change rate (should be stable)
 - Cache hit rate (target > 95%)
 - Config propagation latency (target < 5s)
@@ -565,6 +605,7 @@ Monitor these metrics to detect issues:
 ### 11.2 Common Operations
 
 **Reduce sampling to save quota:**
+
 ```
 Edit: sentry.cf_astro.traces.* 
 From: 0.5 / 0.1 / 0
@@ -573,6 +614,7 @@ Reason: "Reducing to 50% to stay within Sentry free tier"
 ```
 
 **Disable observability during performance issues:**
+
 ```
 Edit: sentry.cf_astro.enabled
 From: true
@@ -581,6 +623,7 @@ Reason: "Temporary disable during incident investigation"
 ```
 
 **Enable session recording for debugging:**
+
 ```
 Edit: posthog.session_recording.sample_rate
 From: 0
@@ -591,18 +634,21 @@ Reason: "Enabling 10% session recording to debug user flows"
 ### 11.3 Troubleshooting
 
 **Config not propagating:**
+
 1. Check `/api/control-plane/config` on cf-admin (should show new value)
 2. Check `/api/runtime-config` on cf-astro
 3. Verify cache version is incrementing
 4. Manually trigger purge: `POST /api/control-plane/purge-cache`
 
 **Configuration reverted unexpectedly:**
+
 1. Check audit log for who changed it and when
 2. Review `service_config_history` table for complete timeline
 3. Verify user has `#edit-sampling` permission
 4. Check for conflicting automated processes
 
 **Metrics not updating:**
+
 1. Verify provider tokens are configured
 2. Check provider connectivity (test endpoint)
 3. Verify auth scopes (e.g., Sentry token has `org:read`)
@@ -615,6 +661,7 @@ Reason: "Enabling 10% session recording to debug user flows"
 ### 12.1 Secrets Management
 
 Sensitive credentials are stored securely:
+
 - Never displayed in logs
 - Never visible in UI
 - Only shown as "configured" or "missing" status
@@ -624,6 +671,7 @@ Sensitive credentials are stored securely:
 ### 12.2 Validation and Bounds
 
 All configuration values are validated:
+
 - **Numeric ranges**: Rates clamped to [0, 1], counts to [1, 1000]
 - **Type checking**: Wrong types rejected
 - **Proto-pollution protection**: `__proto__` and `constructor` rejected
@@ -632,6 +680,7 @@ All configuration values are validated:
 ### 12.3 Audit Security
 
 Audit logs cannot be modified or deleted:
+
 - Append-only data structure
 - Cryptographic checksums on entries
 - Regular export for external archival
@@ -640,6 +689,7 @@ Audit logs cannot be modified or deleted:
 ### 12.4 Configuration Safety
 
 The fail-safe invariant ensures production stability:
+
 - **Missing config**: Uses hardcoded default (no crash)
 - **Corrupt config**: Detected and rejected
 - **Bad values**: Clamped to valid range
@@ -652,6 +702,7 @@ The fail-safe invariant ensures production stability:
 ### For Product & Business Teams
 
 The Service Control Plane allows the team to:
+
 1. **Monitor system health** — See error rates, performance metrics, and user analytics in one place
 2. **Respond to incidents** — Turn off data collection or disable features without redeployment
 3. **Optimize costs** — Reduce trace sampling to control observability spend
@@ -659,6 +710,7 @@ The Service Control Plane allows the team to:
 5. **Manage access** — Team members see only what their role permits
 
 **Key Benefits:**
+
 - **Faster incident response**: 60-second propagation instead of 30-minute redeploy
 - **Cost control**: Tune observability spending without engineering effort
 - **Team transparency**: All changes logged and traceable
@@ -667,6 +719,7 @@ The Service Control Plane allows the team to:
 ### For Operators and SREs
 
 The control plane provides:
+
 1. **Centralized observability dashboard** — All metrics in one place
 2. **Runtime configuration** — Change behavior without deployments
 3. **Incident response tools** — Kill switches and rate limit adjustments
@@ -674,6 +727,7 @@ The control plane provides:
 5. **Fail-safe architecture** — Production stability guaranteed
 
 **Common Use Cases:**
+
 - Emergency quota management during traffic spikes
 - Debugging performance issues without redeployment
 - A/B testing observability tuning
@@ -683,6 +737,7 @@ The control plane provides:
 ### For Developers
 
 The control plane enables:
+
 1. **Local development** — Test with production config values
 2. **Gradual rollout** — Enable new features for percentage of users
 3. **Feature flags** — Disable features without code changes
@@ -690,6 +745,7 @@ The control plane enables:
 5. **Debugging** — Increase sampling rates to capture rare issues
 
 **Integration Points:**
+
 - Use `GET /api/runtime-config` in tests
 - Check config version for cache invalidation
 - Read config in middleware for request-level decisions
@@ -702,6 +758,7 @@ The control plane enables:
 ### 14.1 From Manual Changes
 
 **Before:** Editing `wrangler.toml` and redeploying
+
 ```
 1. Change sampling rate in source code
 2. Create git commit
@@ -711,6 +768,7 @@ The control plane enables:
 ```
 
 **After:** Using the control plane
+
 ```
 1. Open control plane dashboard
 2. Adjust sampling slider
@@ -721,12 +779,14 @@ The control plane enables:
 ### 14.2 Configuration Migration
 
 All existing hardcoded values are automatically migrated to the control plane:
+
 - Sentry sampling rates from source files
 - Rate limits from middleware
 - Feature flags from code
 - PostHog configuration from initialization
 
 The control plane defaults match current production values exactly, so:
+
 - **Zero functional change** on day one
 - **Rollback is optional** — can always revert to hardcoded values
 - **Gradual adoption** — use control plane for new changes only
@@ -738,6 +798,7 @@ The control plane defaults match current production values exactly, so:
 ### Why did we build this?
 
 **Before:** Changing any observability setting required:
+
 - Code modification
 - Git commit and review
 - CI pipeline run
@@ -750,6 +811,7 @@ The control plane defaults match current production values exactly, so:
 ### What if something goes wrong?
 
 Every change is reversible:
+
 1. Immediately toggle a kill switch (disables system entirely)
 2. Revert to previous value (full undo with audit trail)
 3. Reset to application defaults (guaranteed safe state)
@@ -758,6 +820,7 @@ Every change is reversible:
 ### How do I verify a change propagated?
 
 Check the live metrics dashboard:
+
 - **cf-astro**: Observe new trace/error counts in Sentry
 - **cf-admin**: Observe new metrics in control plane
 - **Latency**: 60 seconds maximum (usually 5-10 seconds)
@@ -765,6 +828,7 @@ Check the live metrics dashboard:
 ### Can I test this in staging?
 
 Yes, each environment has its own:
+
 - Database configuration
 - Audit logs
 - Kill switches
@@ -775,6 +839,7 @@ Changes in staging don't affect production.
 ### What if a provider API is down?
 
 Configuration falls back to last-known-good values:
+
 1. App uses cached value from memory
 2. If cache expired, uses edge-cached value
 3. If edge cache expired, uses hardcoded default
@@ -794,16 +859,19 @@ Configuration falls back to last-known-good values:
 ## 16. Contact and Support
 
 ### Technical Questions
+
 - **Architecture**: See section on system design
 - **API Reference**: See section on endpoints
 - **Implementation**: Check source files in `src/lib/control-plane/`
 
 ### Operational Questions
+
 - **How to make a change**: See maintenance and operations section
 - **Troubleshooting**: See troubleshooting guide
 - **Incident response**: Use kill switches or reduce sampling
 
 ### Access and Permissions
+
 - **Requesting access**: Contact your manager and security team
 - **Permission levels**: See role hierarchy section
 - **Audit of changes**: Review audit log in admin panel

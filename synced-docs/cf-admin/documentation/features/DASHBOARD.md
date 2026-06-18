@@ -1,4 +1,5 @@
 ---
+
 title: "Dashboard — Real-Data Command Center"
 status: active
 audience: [ai, technical]
@@ -22,6 +23,7 @@ tags: []
 The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero data into a **live infrastructure command center** that reads from every active Cloudflare binding and Supabase service.
 
 ### Before
+
 - ~6 bento cards with hardcoded or zero values
 - Chart had fixed width (caused overflow)
 - SystemHealthBar had hardcoded "operational" entries regardless of reality
@@ -30,6 +32,7 @@ The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero
 - No distinction between "token missing" and "genuine zero value"
 
 ### After
+
 - **ServiceStatusStrip** (replaced SystemHealthBar) displays 6 live services (Network, D1, Security, Resend, Sentry, Queues) using real telemetry data
 - **8 parallel analytics providers** via parallel settlement (never crashes if one fails)
 - **`_unconfigured` flag pattern** on every provider — UI shows `—` / "Setup Required" instead of zeros when token is missing
@@ -97,6 +100,7 @@ Both providers now also check for GraphQL errors before attempting to read data.
 ## Component Details
 
 ### Workers Widget
+
 - When unconfigured → renders a "Workers Analytics Unavailable" setup state
 - When loading → skeleton spans inside each worker card
 - Display map controls name and accent color per script
@@ -104,7 +108,9 @@ Both providers now also check for GraphQL errors before attempting to read data.
 - 4 stats per card: Requests (24h), Errors, CPU p50, CPU p99 (all in ms)
 
 ### Storage Widget
+
 **Three sections (separated by dividers):**
+
 1. **R2 Images** — object count + formatted bytes vs 10 GB limit
 2. **D1 Database** — read queries, write queries, rows read, rows written
 3. **Email Queue** — green status dot, queue name, consumers count
@@ -113,11 +119,14 @@ Renders full-width using the teal-tinted bento card variant. The queue shown her
 (`madagascar-emails`) is the same one the [Email Portal](EMAIL-PORTAL.md) produces to.
 
 ### Supabase Cluster Widget (formerly SupabaseAuthWidget)
+
 **Tabbed Layout:**
+
 - **Tab 1: PostgreSQL Performance** — Comprehensive performance overview including a 4-column load/RAM/connections grid, prominent Buffer Cache Hit Ratio bar, transaction counters (commits, rollbacks, deadlocks), tuple activity, and disk/WAL utilization bars. Progress bar against 500 MB plan limit.
 - **Tab 2: GoTrue Auth** — Total Registered, Active Now (24h) with pulse dot, MAU (30d), and Recent Signups (7d). Includes an Auth Provider Breakdown horizontal bar chart showing Google/Email/Phone/etc identities.
 
 ### Quota Monitor Widget
+
 **Layout:** 3-column grid, 6 entries in 2 rows. Each cell contains a colored dot, service name, metric label, percentage badge, 4px progress bar, and value/limit in monospace.
 
 **6 Quota Cells:**
@@ -136,6 +145,7 @@ Renders full-width using the teal-tinted bento card variant. The queue shown her
 When unconfigured → progress bar shows striped pattern, value area shows "Token required".
 
 ### Service Status Strip
+
 **6 Telemetry Cards (Horizontal Scrollable Row):**
 
 | Service | Data Displayed | Target Console |
@@ -148,11 +158,13 @@ When unconfigured → progress bar shows striped pattern, value area shows "Toke
 | Queues | Backlog Count, Backlog Size, DLQ Status, Active Consumers | Cloudflare Queues |
 
 **Visual States:**
+
 - Active/Normal: Distinct accent color per service (e.g. Network Blue, D1 Cyan, Security Rose)
 - Outage/Errors: Red pulse or specific warning text (e.g. Sentry issues, DLQ backlog)
 - Unconfigured: Dashed border with "Add env token to enable" placeholder
 
 ### Dashboard Controller
+
 The main orchestrator Preact island (`DashboardController.tsx`) is **props-free** — it receives no SSR data from `index.astro`. All data (analytics, audit log, user info) is fetched client-side after mount via the analytics API. Global welcome messages have been purged for a true "Command Center" aesthetic.
 
 **Responsive chart:** Uses ResizeObserver to dynamically adjust chart width to match container dimensions.
@@ -164,16 +176,19 @@ The main orchestrator Preact island (`DashboardController.tsx`) is **props-free*
 ## CSS Architecture
 
 ### Layout Classes
+
 - **2-column bento row** — collapses to 1-column at ≤1100px viewport
 - **Workers split** — 2-column side-by-side cards (collapses to 1-column at ≤640px)
 - **Quota grid** — 3-column grid with cubic-bezier animated progress bars
 - **Gradient variants** — blue-tinted (Workers), teal-tinted (Storage), amber/green-tinted (Quota), green-tinted (Supabase)
 
 ### Health Bar Visual States
+
 - Custom accent colors per service with background tints
 - Micro-animations for degraded states (e.g., Sentry errors or Queue DLQ backlog trigger an animated pulse)
 
 ### Removed
+
 - All "Business Engine" ticket card CSS was deleted when the card was removed
 
 ---
@@ -194,6 +209,7 @@ A Cloudflare API Token is required with the following permission scopes:
 | Analytics Engine: Read | Account | D1 analytics |
 
 ### Production Secrets
+
 All analytics-related secrets must be deployed via Wrangler secret management. This includes tokens/keys for Cloudflare API, Supabase, Sentry, and Resend.
 
 ---
@@ -201,30 +217,38 @@ All analytics-related secrets must be deployed via Wrangler secret management. T
 ## Architecture Decisions
 
 ### `_unconfigured` Flag Pattern
+
 Every analytics provider returns a typed object with an optional `_unconfigured` field. When the API token is missing or a fetch fails, this flag is set to `true` instead of throwing. The UI renders `—` or a "Setup Required" state rather than `0` or crashing. This keeps the distinction between **zero** (real data, no activity) and **unknown** (no credentials or unreachable endpoint) explicit in the type system.
 
 ### Parallel Provider Settlement
+
 All 8 analytics providers run in parallel. A single provider failing (network error, 401, wrong token scope) returns its typed fallback and the rest of the dashboard continues unaffected.
 
 ### GraphQL Error Checking
+
 After every Cloudflare GraphQL response, the code checks for errors before reading data. Cloudflare returns HTTP 200 with an errors array when the query is malformed or a filter field name is wrong — not a non-200 status. Skipping this check causes silent data loss.
 
 ### Component Isolation
+
 Each widget is a standalone Preact component receiving analytics data and loading state props. No widget fetches its own data. All data flows from the dashboard controller after a single API call. This keeps state in one place and makes skeleton loading states trivial.
 
 ### Active App Users Source
+
 Active users count is fetched client-side as part of the analytics API call (Phase 4 Item 8 removed the SSR D1 query). `index.astro` no longer performs any database queries — `DashboardController` is mounted with `client:load` and receives zero props.
 
 ### No New Dependencies
+
 The entire overhaul uses only existing approved dependencies: CSS for quota bars and progress animations, native `fetch` for all API calls, and the Dual-Axis chart is implemented with pure SVG/Canvas — no third-party chart library (`uplot` is **not** in `package.json` and is not used).
 
 ### Dual-Axis Edge Analytics Chart
+
 - Upgraded to a highly dense **Dual-Axis Chart**.
 - **Left Axis**: Total Requests (Cyan) and Cached Requests (Deep Blue) for Cache Hit metrics visualization.
 - **Right Axis**: Bandwidth / Data Transfer in auto-scaled units (Magenta), independently scaled.
 - **Midnight Slate integration**: Custom CSS applied for glassmorphic legend transparency on dark backgrounds.
 
 ### Bento Grid System
+
 2-column grid is the primary layout primitive — a simple equal-width grid per row. Each row is independent so column counts can differ, responsive collapse is per-row, and no item unexpectedly spans across sections.
 
 ---
@@ -247,6 +271,7 @@ After adding environment tokens and restarting the dev server:
 - [ ] At narrow viewport: all 2-column rows collapse to single column cleanly
 
 **Without tokens (graceful degradation):**
+
 - [ ] Setup banner appears with amber styling and dismiss × button
 - [ ] All CF-dependent values show `—` instead of `0`
 - [ ] WorkersWidget shows "Workers Analytics Unavailable" setup state

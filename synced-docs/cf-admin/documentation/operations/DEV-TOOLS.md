@@ -1,4 +1,5 @@
 ---
+
 title: "Edge Command Center — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
@@ -171,6 +172,7 @@ Audit Suppression is managed **exclusively** through the **User Management** pag
 ### 5.5 How Audit Suppression Works
 
 **Middleware level** (`middleware.ts`):
+
 ```typescript
 if (!isApiRoute && cfCtx?.waitUntil && !session.auditSilenced) {
   // page-view audit log — skipped when suppression is ON
@@ -178,6 +180,7 @@ if (!isApiRoute && cfCtx?.waitUntil && !session.auditSilenced) {
 ```
 
 **API level** (e.g., `toggle.ts`, `ping.ts`):
+
 ```typescript
 const auditLogger = createAuditLogger({
   db,
@@ -248,6 +251,7 @@ Page titles (rendered in `<h1>` tags) were also updated:
 ### 8.1 Ghost Mode Risk
 
 Ghost Mode creates a window where DEV actions are unlogged. Mitigation:
+
 - The toggle event itself is always logged (immutable meta-trail)
 - Only DEV role can activate it (SSR + API enforced)
 - Supabase persistence means the state is visible to other DEVs via the User Management dashboard

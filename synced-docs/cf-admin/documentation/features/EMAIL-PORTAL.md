@@ -6,31 +6,33 @@ last_verified: 2026-06-07
 verified_against: [code]
 owner: harshil
 related_code:
-  - src/pages/dashboard/emails/index.astro
-  - src/components/admin/emails/_components/EmailPortal.tsx
-  - src/components/admin/emails/_components/Composer.tsx
-  - src/components/admin/emails/_components/MobileComposer.tsx
-  - src/components/admin/emails/_components/MobileTabBar.tsx
-  - src/components/admin/emails/_components/EmailPreviewModal.tsx
-  - src/components/admin/emails/atoms/RecipientInput.tsx
-  - src/components/admin/emails/atoms/LinkPopover.tsx
-  - src/components/admin/emails/hooks/useEmailAttachments.ts
-  - src/components/ui/BottomSheet.tsx
-  - src/pages/api/emails/send.ts
-  - src/pages/api/emails/cancel.ts
-  - src/pages/api/emails/drafts.ts
-  - src/pages/api/emails/templates.ts
-  - src/pages/api/emails/attachments.ts
-  - src/pages/api/emails/contacts.ts
-  - src/pages/api/audit/emails.ts
+
+- src/pages/dashboard/emails/index.astro
+- src/components/admin/emails/_components/EmailPortal.tsx
+- src/components/admin/emails/_components/Composer.tsx
+- src/components/admin/emails/_components/MobileComposer.tsx
+- src/components/admin/emails/_components/MobileTabBar.tsx
+- src/components/admin/emails/_components/EmailPreviewModal.tsx
+- src/components/admin/emails/atoms/RecipientInput.tsx
+- src/components/admin/emails/atoms/LinkPopover.tsx
+- src/components/admin/emails/hooks/useEmailAttachments.ts
+- src/components/ui/BottomSheet.tsx
+- src/pages/api/emails/send.ts
+- src/pages/api/emails/cancel.ts
+- src/pages/api/emails/drafts.ts
+- src/pages/api/emails/templates.ts
+- src/pages/api/emails/attachments.ts
+- src/pages/api/emails/contacts.ts
+- src/pages/api/audit/emails.ts
 related_docs:
-  - ../architecture/ARCHITECTURE.md
-  - ../architecture/plac-and-audit.md
-  - USER-MANAGEMENT.md
-  - DASHBOARD.md
-  - ../operations/OPERATIONS.md
-  - ../security/SECURITY.md
+- ../architecture/ARCHITECTURE.md
+- ../architecture/plac-and-audit.md
+- USER-MANAGEMENT.md
+- DASHBOARD.md
+- ../operations/OPERATIONS.md
+- ../security/SECURITY.md
 tags: [feature, email, queue, resend, plac, rbac]
+
 ---
 
 # Email Portal

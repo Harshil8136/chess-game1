@@ -1,4 +1,5 @@
 ---
+
 title: "Business Viability & Multi-Jurisdiction Compliance Assessment — Madagascar Pet Hotel Platform"
 status: historical
 audience: [non-technical, technical, operator, owner, ai]

@@ -6,16 +6,18 @@ last_verified: 2026-06-07
 verified_against: [code, infra]
 owner: harshil
 related_code:
-  - src/workers/cf-entry.ts
-  - src/workers/scheduled-log-sync.ts
-  - src/workers/scheduled-asset-cleanup.ts
-  - src/lib/auth/security-logging.ts
-  - sentry.server.config.ts
+
+- src/workers/cf-entry.ts
+- src/workers/scheduled-log-sync.ts
+- src/workers/scheduled-asset-cleanup.ts
+- src/lib/auth/security-logging.ts
+- sentry.server.config.ts
 related_docs:
-  - ../operations/OPERATIONS.md
-  - ../security/login-forensics.md
-  - ../architecture/ARCHITECTURE.md
+- ../operations/OPERATIONS.md
+- ../security/login-forensics.md
+- ../architecture/ARCHITECTURE.md
 tags: [runbook, cron, workers, observability, sentry]
+
 ---
 
 # Cron Scheduled-Handler Exception (CF Access Audit Poller)
@@ -68,6 +70,7 @@ read/update one KV key (`cf-audit-last-synced`) and return.
 Two compounding issues:
 
 ### 3.1 The cron is not crash-proof
+
 Neither `cf-entry.ts` `scheduled()` nor `handleScheduled()` has a **top-level
 try/catch**. The only statements in the common (empty-batch) path that are *not* already
 guarded are KV/date operations:
@@ -86,6 +89,7 @@ leaves the unguarded KV `get`/`put` (intermittent) or `toISOString()` on a bad v
 `outcome: exception`.
 
 ### 3.2 The cron is an observability blind spot
+
 `sentry.server.config.ts` only instruments Astro's **fetch/SSR** path. The hand-rolled
 `scheduled` export is **never wrapped by Sentry**, and nothing calls `Sentry.flush()` in
 the cron's `waitUntil`. Result (verified via Sentry MCP on the `cf-admin` project):
@@ -120,6 +124,7 @@ So the failure can only be seen in Cloudflare Observability, never in Sentry.
 > is the non-throwing KV-write helper added in `scheduled-log-sync.ts`.
 
 ### Phase 1 — make the cron crash-proof (stops the exception) ✅ implemented
+
 - Wrap the entire `scheduled()` body in `cf-entry.ts` in `try/catch`; a failed cron run
   should log and no-op until the next tick (crons are idempotent/retryable), never
   surface as a worker exception.
@@ -129,6 +134,7 @@ So the failure can only be seen in Cloudflare Observability, never in Sentry.
   `toISOString()`.
 
 ### Phase 2 — fix the observability gap ✅ implemented
+
 - In the `scheduled` catch, `Sentry.captureException(err, { tags: { cron, handler } })`
   and **`ctx.waitUntil(Promise.resolve(Sentry.flush(2000)))`** (flush is mandatory in
   Workers or events are dropped; `flush` returns a `PromiseLike`, hence the
@@ -137,6 +143,7 @@ So the failure can only be seen in Cloudflare Observability, never in Sentry.
   alert — not yet added.
 
 ### Phase 3 — correctness hardening ✅ implemented (dedupe)
+
 - **Idempotency:** because the watermark write is best-effort, a prior run may have
   logged some failures while failing to advance the watermark, and the overlapping
   `since` window re-surfaces them. The cron now queries `admin_login_logs` for the

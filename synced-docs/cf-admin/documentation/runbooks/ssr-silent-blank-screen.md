@@ -1,4 +1,5 @@
 ---
+
 title: "Silent Blank Screen (SSR Hydration Failure)"
 status: active
 audience: [ai, technical]
@@ -16,7 +17,9 @@ tags: []
 > **Prevention System:** 3-Layer Error Shield deployed to core infrastructure
 
 ## The Symptom
+
 When navigating to the dashboard (or any route doing server-side rendering of Preact islands), the page abruptly loaded as a completely **blank white screen**.
+
 - Normal HTTP 200 response returned by the server.
 - No network errors in the browser console.
 - Missing HTML `<body>` tags in the DOM completely (HTML streaming was aborted midway).
@@ -29,6 +32,7 @@ Astro SSR renders `client:load` components **synchronously** on the server. Any 
 We have identified **3 distinct patterns** that cause this silent crash:
 
 ### Pattern 1: Missing Default Export
+
 **Severity:** Fatal — Astro imports `undefined` and the entire render aborts.
 
 ```tsx
@@ -42,6 +46,7 @@ export default function DashboardController() { ... }
 **How it happens:** Astro's island loader does `import Component from './Component'`. If the file only has a named export, `Component` resolves to `undefined`. When Astro tries to render `undefined`, the stream dies.
 
 ### Pattern 2: Non-Existent API Route
+
 **Severity:** Functional failure — Dashboard renders but stays stuck on loading forever.
 
 ```tsx
@@ -55,6 +60,7 @@ const res = await fetch('/api/dashboard/metrics');
 **How it happens:** API call 404s silently. The component never transitions out of the loading state. Combined with other issues, can contribute to a page that appears blank.
 
 ### Pattern 3: Unguarded Property Access
+
 **Severity:** Fatal — TypeError crashes the SSR pipeline mid-stream.
 
 ```tsx
@@ -74,12 +80,14 @@ const ramUsedPct = fmtPct((pg.ramTotal ?? 0) - (pg.ramAvailable ?? 0), pg.ramTot
 ## Postmortem: April 2026 Dashboard Incident
 
 **Timeline:**
+
 1. `DashboardController` was created with a **named export** (Pattern 1)
 2. It fetched from `/api/admin/analytics` which **did not exist** (Pattern 2)
 3. `initialStats` props from the Astro page were **ignored** (not wired into component)
 4. Previously, `SupabaseAuthWidget > PostgresTab` had **unguarded `pg!` access** (Pattern 3)
 
 **Resolution applied:**
+
 - Changed to `export default function DashboardController`
 - Fixed API URL to `/api/dashboard/metrics`
 - Wired `initialStats` props into component state
@@ -88,15 +96,19 @@ const ramUsedPct = fmtPct((pg.ramTotal ?? 0) - (pg.ramAvailable ?? 0), pg.ramTot
 ## Prevention Infrastructure (Deployed)
 
 ### Layer 1: ErrorBoundary → Sentry
+
 Every dashboard widget is now wrapped in `<ErrorBoundary sectionName="...">`. When a widget crashes:
+
 - User sees "X is temporarily unavailable" + "Try Again" button
 - Error is reported to Sentry with section tag and component stack
 - Other widgets continue working normally
 
 ### Layer 2: Global `window.onerror` Safety Net
+
 An inline `<script>` in `AdminLayout.astro` captures errors **before** any Preact island hydrates. This catches hydration failures that no ErrorBoundary can catch.
 
 ### Layer 3: Sentry `@sentry/astro` Integration
+
 Framework-level capture via `sentry.server.config.ts` and `sentry.client.config.ts`. All `console.error` calls are automatically captured via the CaptureConsole integration.
 
 ## Diagnostic Playbook — Debugging Future Blank Screens

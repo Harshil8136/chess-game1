@@ -1,4 +1,5 @@
 ---
+
 title: "Code Quality Rules"
 status: active
 audience: [ai, technical]
@@ -13,16 +14,20 @@ tags: []
 > **TL;DR (non-technical):** The coding rules every contributor (human or AI) follows: data-access patterns, TypeScript strictness, component structure, and naming.
 
 ## 1. TypeScript Strictness
+
 - `moduleResolution: "bundler"` in `tsconfig.json`
 - `any` type is **FORBIDDEN** (unless bypassing upstream type bug, documented)
 - All Cloudflare bindings must be strictly typed.
 
 ## 2. File Naming
+
 All file names must be unique and descriptive:
+
 - ✅ `LoginForm.tsx`, `AuthLayout.astro`, `rbac.ts`
 - ❌ `Form.tsx` (ambiguous), `index.tsx` (without context)
 
 ## 3. Component Architecture ("LEGO-Style" Atomic Design)
+
 - **Strict Composition Rule:** Components must follow Atomic Design + Island Architecture. Never create monolithic files.
 - **Hard size limit: No component file may exceed 200 lines.** If a file grows past this threshold, split it immediately.
 - **Atoms/Molecules:** Tiny, focused, reusable sub-components (e.g. `SidebarHeader.tsx`, `SidebarProfile.tsx`, `NavIcon.tsx`).
@@ -41,6 +46,7 @@ When a component grows too large, follow this three-step extraction pattern:
 3. **Thin orchestrator** — The original file becomes the orchestrator: it fetches data, manages top-level state, and renders the section components. Target: ≤ 150 lines.
 
 **Example applied (BookingSlideDrawer):**
+
 ```
 bookings/
 ├── types.ts                     ← BookingRow, BookingPet, SERVICE_LABELS, ...
@@ -55,12 +61,14 @@ bookings/
 ## 4. Error Handling & Resilience
 
 ### 4.1 Core Rules
+
 - Never show white screens — use `ErrorBoundary` component from `src/components/ui/ErrorBoundary.tsx`
 - Section-level boundaries: one broken widget **never** crashes the page
 - API routes return structured JSON errors with proper HTTP status codes
 - Users always have navigation to recover
 
 ### 4.2 🚨 SSR Safety — The 3 Crash Patterns
+
 When using `client:load`, the component is rendered *synchronously* during Astro SSR. These 3 patterns will **silently kill the entire HTML stream**, producing a blank page with no error visible to the user:
 
 | # | Pattern | Example | Fix |
@@ -74,6 +82,7 @@ When using `client:load`, the component is rendered *synchronously* during Astro
 > **Note on Loading States:** The dashboard enforces a strict "No Blank Loading Screens" policy. Do not use plain text (e.g., "Loading...") or unstyled spinners for primary data fetches. Always use `SkeletonBlock` from `src/components/dashboard/widgets/WidgetShared.tsx` (canonical — `WidgetSharedV2` was merged and deleted) to provide immediate, structure-matching shimmer placeholders.
 
 ### 4.3 Mandatory ErrorBoundary Wrapping
+
 Every widget group inside a `client:load` island must be wrapped in `<ErrorBoundary sectionName="...">`:
 
 ```tsx
@@ -93,6 +102,7 @@ import { ErrorBoundary } from '../ui/ErrorBoundary';
 ```
 
 ### 4.4 Error Capture Infrastructure (Deployed)
+
 Three-layer error shield, all core-level (survives any page/widget changes):
 
 | Layer | What | Where |
@@ -102,12 +112,15 @@ Three-layer error shield, all core-level (survives any page/widget changes):
 | **Global `window.onerror`** | Pre-boot safety net (catches hydration failures) | `AdminLayout.astro` inline `<script>` |
 
 All errors automatically appear in the Sentry dashboard with:
+
 - Section name tag (which widget crashed)
 - Component stack trace (where in the Preact tree)
 - Deduplication (same error won't flood)
 
 ### 4.5 Pre-Deploy Checklist for Preact Islands
+
 Before deploying any new or modified `client:load` component:
+
 - [ ] Component uses `export default function ...`
 - [ ] All data props typed with `| null | undefined`
 - [ ] Early `if (!data) return <Loading />` guard before any property access
@@ -154,6 +167,7 @@ const data = await res.json() as BookingListResponse;
 ```
 
 For D1 query results that the TypeScript compiler cannot narrow directly, use the double-cast pattern:
+
 ```typescript
 const { results } = await stmt.all();
 const rows = results as unknown as MyRowType[];
@@ -236,6 +250,7 @@ Sortable `<th>` elements must have `aria-sort`:
 ---
 
 ## 7. Animation Standards
+
 - All interactive elements must have smooth transitions
 - Use `var(--duration-normal)` (200ms) for hover/focus states
 - Use `var(--duration-slow)` (350ms) for page transitions

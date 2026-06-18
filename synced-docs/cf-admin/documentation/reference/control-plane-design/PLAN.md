@@ -1,4 +1,5 @@
 ---
+
 title: "Unified Service Control Plane — Design & Implementation Plan"
 status: active
 audience: [ai, technical]
@@ -41,6 +42,7 @@ as static assets — **`src/middleware.ts` does not run on them and `Astro.local
 time** — yet `BaseLayout.astro` (used by those pages) is exactly where the client Sentry
 (`initSentry`, line ~232) and PostHog (`loadAnalytics`, line ~212) scripts load. A per-request
 server-injected JSON island would therefore be frozen at build time on static pages.
+
 - **Fix:** add a tiny SSR endpoint **`GET /api/runtime-config`** in cf-astro (`prerender = false`)
   returning the client-safe config JSON (rates/toggles only, **never secrets**), reading shared D1
   `service_config` via the same 3-layer cache cf-astro already uses for feature flags (isolate 10s →
@@ -54,6 +56,7 @@ server-injected JSON island would therefore be frozen at build time on static pa
 impossible as written.** Verified: cf-admin has only `SESSION` (`getKVBinding()` returns `SESSION`);
 cf-astro has `SESSION` + `ISR_CACHE`. KV namespaces are per-binding and isolated. The only shared
 substrate is **D1 `madagascar-db`** (already how `admin_feature_flags` propagates).
+
 - **Fix:** D1 `service_config` is the single source of truth; **each app reads D1 and caches locally**
   (cf-astro via CF Cache API + isolate memory like `admin_feature_flags`; cf-admin via its `SESSION`
   KV under a `cfg:` key prefix, or in-isolate memory). The **cross-app cache-bust** ("Purge config
@@ -250,6 +253,7 @@ value can never crash Sentry init or break a site.
 ## 3. Per-service capability matrix
 
 ### 3.1 Sentry (projects: cf-astro, cf-admin; org pet-hotel-madagascar)
+
 - **Read (metrics):** extend `fetchSentry()` → issues count, events/min, error rate, transactions,
   **quota/usage**, top issues, release health. Per project. (Sentry REST with `SENTRY_AUTH_TOKEN`.)
 - **Write — Layer A (`service_config`):**
@@ -263,6 +267,7 @@ value can never crash Sentry init or break a site.
   via `beforeSend` (`Math.random() < rate ? event : null`). `tracesSampler` is natively dynamic.
 
 ### 3.2 Cloudflare
+
 - **Read (metrics):** reuse CF GraphQL Analytics — requests, errors, CPU, cache-hit ratio,
   bandwidth, R2 ops/storage, Queue backlog, D1 rows read/written.
 - **Write — Layer B (CF API):** cache purge (exists in cf-astro `/api/revalidate`), Zero Trust
@@ -274,6 +279,7 @@ value can never crash Sentry init or break a site.
   `Zone: Analytics:Read`) as a cf-admin secret for any CF writes/full reads.
 
 ### 3.3 PostHog (cf-astro)
+
 - **Read (metrics):** PostHog Query/Insights API → pageviews, uniques, funnels, session counts,
   event volume vs quota.
 - **Write — Layer A (`service_config`, injected into `analytics-loader.ts`):**
@@ -283,12 +289,14 @@ value can never crash Sentry init or break a site.
   autocapture toggle. New secret: `POSTHOG_PERSONAL_API_KEY`.
 
 ### 3.4 Supabase
+
 - **Read:** Postgres Prometheus metrics (exists), Auth user counts, table row/size counts,
   **advisors** (security/perf), slow queries/logs.
 - **Write:** operational only (surface advisories, run vetted maintenance). **Schema changes stay
   migration-only** — do NOT expose arbitrary SQL in the panel.
 
 ### 3.5 D1 / R2 / KV / Queues / Analytics Engine
+
 - **Read:** D1 tables + row counts + size; R2 object counts/storage (needs token scope); KV key
   counts; Queue depth/throughput; Analytics Engine datasets. Most already in `fetchAllAnalytics` +
   `/api/diagnostics/infrastructure`.
@@ -296,6 +304,7 @@ value can never crash Sentry init or break a site.
   re-pull), Queue retry/peek, R2 orphan cleanup (cron exists).
 
 ### 3.6 Upstash / Resend / Chatbot
+
 - **Upstash:** read `dbsize`/`ping` (exists); manage rate-limit tables via Layer A
   `ratelimit.<endpoint>.{limit,window}`.
 - **Resend:** read send/delivery/bounce stats (exists); webhook health.
@@ -318,6 +327,7 @@ Confirmed mechanics (`src/lib/auth/{rbac,plac,guard}.ts`, `src/middleware.ts`,
 - Mutations call `auditLog(...)` (Ghost Audit, append-only `admin_audit_log`).
 
 **AuthZ model for the control plane:**
+
 | Capability | Required role | PLAC pseudo-path |
 |---|---|---|
 | View control-plane + metrics | `super_admin` | page rows |
@@ -425,6 +435,7 @@ VALUES
 ```
 
 **Why these `required_role` values:**
+
 - Top-level + sub-pages: `super_admin` — matches settings/users pages pattern. Owner+DEV inherit.
 - `#edit-sampling`: `admin` — lower barrier for sampling rate tweaks (safe, bounded 0..1).
 - `#provider-write`: `owner` — highest for writes that hit external APIs (billing risk).
@@ -515,6 +526,7 @@ The sidebar config already has `MANAGEMENT: { label: 'Management', color: 'blue'
 [Sidebar/config.ts](file:///e:/1/Madagascar%20Project/cf-admin/src/components/navigation/Sidebar/config.ts#L21).
 
 **Mirror deriveSection in 3 files `[v2.1 — verified: only 3 real copies]`** (each has its own copy):
+
 1. `src/lib/auth/plac.ts` → `deriveSection()` (line 88)
 2. `src/components/admin/users/shared/AccessPolicyGrid.tsx` → `deriveSection()` (line 40)
 3. `src/components/admin/users/AccessPolicyManager.tsx` → `deriveSection()` (line 26)
@@ -525,6 +537,7 @@ The sidebar config already has `MANAGEMENT: { label: 'Management', color: 'blue'
 > every future one — is made once instead of three times.
 
 **Only the top-level path appears in sidebar nav.** `computeNavItems()` filters:
+
 - `path.includes('#')` → skipped (sub-features like `#edit-sampling`)
 - `segments.length > 2` → skipped (sub-pages like `/control-plane/sentry`)
 
@@ -540,6 +553,7 @@ ALL mutation methods (POST/PUT/PATCH/DELETE). It validates `Origin` or `Referer`
 `SITE_URL`. New API routes at `/api/control-plane/*` are **automatically covered** — no opt-in.
 
 **Client-side requirement:** All Preact islands making API calls must include credentials:
+
 ```ts
 fetch('/api/control-plane/config', {
   method: 'POST',
@@ -680,6 +694,7 @@ const [configs, history] = await Promise.all([
 ```
 
 **Key points:**
+
 - `AdminLayout` wraps everything — provides sidebar, header, auth context, theme CSS vars.
 - `client:load` hydration directive for Preact islands (interactive components).
 - `canEdit` prop gates UI controls (shows read-only vs editable).
@@ -758,6 +773,7 @@ values only) before initializing Sentry/PostHog, with hardcoded fallback on fail
 is an optional fast-path for genuinely-SSR pages only.
 
 **Files modified and why:**
+
 - **cf-astro `src/scripts/sentry.ts`** — `tracesSampler` reads config from JSON island;
   `beforeSend` adds runtime error sampling. See §11.3.
 - **cf-astro `functions/_middleware.ts`** — `tracesSampleRate: 0.1` → `tracesSampler` reading
@@ -861,40 +877,49 @@ one TTL (≤60s), no redeploy.
 **Org slug:** `pet-hotel-madagascar` | **Projects:** `cf-astro`, `cf-admin`
 
 #### 10.1.1 Project Stats (events received/dropped/quota) `[v2 — prefer stats_v2]`
+
 **Preferred (accurate quota/usage):**
+
 ```
 GET /api/0/organizations/{org}/stats_v2/?field=sum(quantity)&groupBy=outcome&category=error&statsPeriod=24h
 ```
+
 Outcomes: `accepted, filtered, rate_limited, invalid, abuse, client_discard, cardinality_limited`.
 Scope: `org:read`. Use `category=transaction` for trace volume.
 **Legacy fallback (per project):** `GET /api/0/projects/{org}/{project}/stats/?stat=received&stat=rejected&resolution=1h`.
 **Extend existing `fetchSentry()` in `providers.ts` to call stats_v2 grouped by outcome.**
 
 #### 10.1.2 Client Key Rate Limits
+
 ```
 PUT /api/0/projects/{org}/{project}/keys/{key_id}/
 Body: { "rateLimit": { "window": 3600, "count": 1000 } }
 ```
+
 Response: full key object including `dsn`, `isActive`, `rateLimit`.
 Scope: `project:write`. Window is in seconds; count is max events per window.
 **List keys first:** `GET /api/0/projects/{org}/{project}/keys/` to get `key_id`.
 
 #### 10.1.3 Inbound Data Filters
+
 ```
 PUT /api/0/projects/{org}/{project}/filters/{filter_id}/
 Body: { "active": true }
 ```
+
 Valid `filter_id` values: `browser-extensions`, `localhost`, `legacy-browsers`, `web-crawlers`,
 `filtered-transaction`. Each filter is updated independently (not bulk).
 Scope: `project:write`.
 
 #### 10.1.4 Dynamic Sampling — NOT a public API
+>
 > **CRITICAL FINDING:** Sentry does NOT expose a public REST endpoint for CRUD on dynamic
 > sampling rules. Dynamic sampling is an automated feature managed by Sentry's Relay internally.
 > You can toggle between `Automatic` mode (Sentry manages rates) and `Manual` mode (static
 > baseline) via the Sentry UI.
 >
 > **What we CAN do via API:**
+>
 > - **SDK-level sampling** (Layer A) — `tracesSampler` / `beforeSend` with runtime-resolved rates
 > - **Client-key rate limits** (§10.1.2) — cap events/sec per DSN
 > - **Inbound data filters** (§10.1.3) — toggle built-in noise filters
@@ -903,25 +928,32 @@ Scope: `project:write`.
 > "Dynamic Sampling mode" badge (Automatic/Manual) and link to Sentry UI for changes.
 
 #### 10.1.5 Spike Protection `[v2 — corrected endpoint]`
+
 Org-level dedicated endpoint (NOT a project-options PUT):
+
 ```
 POST   /api/0/organizations/{org}/spike-protections/   Body: { "projects": ["$all"] }   # enable (201)
 DELETE /api/0/organizations/{org}/spike-protections/   Body: { "projects": ["$all"] }   # disable
 ```
+
 Use specific project slugs instead of `$all` to target one project. Scope: `project:read|write|admin`.
 **May not be available on all plans — preflight before exposing the toggle.**
 
 #### 10.1.6 Alert Rules (read-only listing)
+
 ```
 GET /api/0/projects/{org}/{project}/rules/
 ```
+
 Response: array of `{ id, name, conditions, actions, status, dateCreated }`.
 Scope: `project:read`. Display in panel as read-only; link to Sentry UI for editing.
 
 #### 10.1.7 Issues (extend metrics)
+
 ```
 GET /api/0/projects/{org}/{project}/issues/?query=is:unresolved&sort=freq&limit=5
 ```
+
 Response: array of `{ id, title, shortId, count, userCount, lastSeen, level }`.
 Use for "Top 5 unresolved issues" card on dashboard.
 
@@ -933,6 +965,7 @@ Use for "Top 5 unresolved issues" card on dashboard.
 **Rate limit:** ~480 req/min for CRUD endpoints.
 
 #### 10.2.1 Project Settings — Session Recording + Autocapture
+>
 > **IMPORTANT FINDING:** PostHog operates on a **project-level** for these settings. There is no
 > separate "environment" API. If you need different sample rates for dev/prod, you use separate
 > PostHog projects. Since we only use PostHog in cf-astro (production), one project suffices.
@@ -946,6 +979,7 @@ Body: {
   "autocapture_opt_out": false                            // true = disable autocapture
 }
 ```
+
 `[v2 — corrected]` The sample rate is **nested in `session_replay_config`** and serialized as a
 **string**, not a flat `session_recording_sample_rate` float. Response: full project object.
 Scope: Personal API Key with project admin permissions.
@@ -953,6 +987,7 @@ Scope: Personal API Key with project admin permissions.
 migrating settings to environments — prefer the environments endpoint where present.
 
 #### 10.2.2 Query API (HogQL)
+
 ```
 POST /api/projects/{project_id}/query/
 Body: {
@@ -962,23 +997,28 @@ Body: {
   }
 }
 ```
+
 Response: `{ results: [[day, count], ...], columns: [...], types: [...] }`.
 Use for pageview counts, unique users (`count(DISTINCT distinct_id)`), event volume trends.
 **Gotcha:** queries are expensive — cache results in KV with 5-min TTL.
 
 #### 10.2.3 Feature Flags
+
 ```
 GET    /api/projects/{project_id}/feature_flags/                    # list all
 GET    /api/projects/{project_id}/feature_flags/{id}/               # read one (id = numeric)
 PATCH  /api/projects/{project_id}/feature_flags/{id}/               # update
 Body:  { "active": true, "filters": { "groups": [{ "rollout_percentage": 50 }] } }
 ```
+
 **Note:** `id` is the numeric ID, not the flag key. List first to resolve key → id.
 
 #### 10.2.4 Billing / Quota `[v2 — org-level, not project-level]`
+
 ```
 GET /api/organizations/{organization_id}/billing/
 ```
+
 Response: `{ plan, current_usage, products: [{ type, current_usage, usage_limit, percentage_usage }] }`.
 Use for "X% of Y quota used" gauge. Billing is an **organization** resource — `/api/projects/{id}/billing/`
 does not exist. **Gotcha:** PostHog Cloud only, not self-hosted.
@@ -991,23 +1031,28 @@ does not exist. **Gotcha:** PostHog Cloud only, not self-hosted.
 **Zone ID:** `c73b1ccd7f03999ea419ef8177fa68d4`
 
 #### 10.3.1 Cache Purge (runtime, no redeploy)
+
 ```
 POST /zones/{zone_id}/purge_cache
 Body: { "purge_everything": true }       # or { "files": ["https://…/page"] }
 ```
+
 Response: `{ success: true, result: { id: "..." } }`.
 Scope: `Cache Purge`. **Already exists in cf-astro `/api/revalidate` — this adds it to the panel.**
 
 #### 10.3.2 KV Write/Delete (runtime)
+
 ```
 PUT    /accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/{key_name}
        Body: raw value (string)
 DELETE /accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/{key_name}
 ```
+
 Scope: `Workers KV Storage:Edit`. Use for the "Purge config cache" action → delete
 `config:global` key to force both apps to re-pull from D1.
 
 #### 10.3.3 Worker Observability (`head_sampling_rate`)
+>
 > **CONFIRMED: NOT runtime-configurable.** `head_sampling_rate` is part of `wrangler.toml`
 > `[observability]` config and requires script redeployment. The Workers Script Settings API
 > (`/accounts/{account_id}/workers/scripts/{name}/settings`) only supports `logpush` and
@@ -1017,17 +1062,21 @@ Scope: `Workers KV Storage:Edit`. Use for the "Purge config cache" action → de
 > value parsed from `wrangler.toml` (cf-astro: `head_sampling_rate=1`, cf-admin: enabled).
 
 #### 10.3.4 Analytics GraphQL datasets (beyond what exists)
+
 Additional datasets available: `firewallEventsAdaptive`, `r2OperationsAdaptive`,
 `botManagementAdaptive`, `dnsAnalyticsAdaptive`. Currently using: `httpRequests1hGroups`,
 `workersInvocationsAdaptive`, `d1AnalyticsAdaptiveGroups`. **Add R2 ops metrics in Phase 1.**
 
 #### 10.3.5 Zero Trust Session Revoke (runtime)
+
 ```
 DELETE /accounts/{account_id}/access/users/{user_id}/active_sessions
 ```
+
 Already exists in cf-admin with `CF_API_TOKEN_ZT_WRITE`. Surface in panel for convenience.
 
 #### 10.3.6 Token Scopes Required for `CONTROL_PLANE_CF_TOKEN`
+
 ```
 Zone:    Cache Purge, Analytics:Read
 Account: Workers Scripts:Read, R2:Read, D1:Read   (extended read-only metrics)
@@ -1043,10 +1092,12 @@ Account: Workers KV Storage:Edit                  # [v2] ONLY if you adopt the o
 `Basic service_role:` auth to `/{projectRef}.supabase.co/customer/v1/privileged/metrics`.
 
 **Management API (optional Phase 4+):**
+
 ```
 GET https://api.supabase.com/v1/projects/{ref}/health       # uptime status
 GET https://api.supabase.com/v1/projects/{ref}/advisors     # security/perf recommendations
 ```
+
 `[v2 — corrected auth]` Auth: `Authorization: Bearer {SUPABASE_ACCESS_TOKEN}` — a Supabase
 **Personal Access Token (`sbp_…`)** or OAuth token. The **`service_role` key does NOT work** on
 `api.supabase.com`. Alternative (no new secret): derive advisors by running the advisor lint queries
@@ -1100,6 +1151,7 @@ reach them from the server. **Pattern (SSR pages only): JSON island.**
 ```
 
 **Why this pattern:**
+
 - CSP-safe: `<script type="application/json">` does NOT execute — no `unsafe-inline` needed.
 - Works with current `script-src 'self'` policy.
 - Client reads via `JSON.parse(document.getElementById('__svc_cfg')?.textContent || '{}')`.
@@ -1144,6 +1196,7 @@ bounds propagation; the "Purge config cache" action additionally purges this pat
 ### 11.3 Sentry SDK refactors
 
 #### cf-astro `src/scripts/sentry.ts` (client-side)
+
 ```ts
 // BEFORE (hardcoded):
 tracesSampler: (ctx) => {
@@ -1175,6 +1228,7 @@ dynamically control error sampling is via `beforeSend` callback doing probabilis
 `tracesSampler` is natively dynamic (called per transaction).
 
 #### cf-astro `functions/_middleware.ts` (server-side)
+
 ```ts
 // BEFORE: tracesSampleRate: 0.1 (hardcoded scalar)
 // AFTER: tracesSampler reading from KV-cached config via context.env
@@ -1201,6 +1255,7 @@ first request after a cold start uses the hardcoded default. This keeps the hot 
 and never blocks Sentry init on I/O.
 
 #### cf-admin (server-side)
+
 cf-admin's Sentry is initialized in `src/workers/cf-entry.ts` or equivalent server entry point.
 Same pattern: read `sentry.cf_admin.traces` from D1/KV config, pass to `tracesSampler`.
 cf-admin already has D1 access in every request context, so no special injection needed.
@@ -1238,6 +1293,7 @@ If `enabled: false`, we skip `init()` entirely → no PostHog script loads → z
 ### 11.5 Rate-limit refactors
 
 #### cf-astro `src/lib/rate-limit.ts`
+
 ```ts
 // BEFORE: RATE_LIMITS is a const object with hardcoded values
 // AFTER: read from config with hardcoded fallbacks
@@ -1320,6 +1376,7 @@ Add to `src/lib/audit.ts`:
 
 Every mutation records both `admin_audit_log` (Ghost Audit) AND `service_config_history`
 (structured before/after diff). Example audit details JSON:
+
 ```json
 {
   "key": "sentry.cf_astro.traces.booking",
@@ -1346,6 +1403,7 @@ Every mutation records both `admin_audit_log` (Ghost Audit) AND `service_config_
 | `SUPABASE_SERVICE_ROLE_KEY` | cf-admin wrangler secret | Supabase privileged metrics + Auth admin + PostgREST | Existing |
 
 **Creating new secrets:**
+
 ```sh
 # PostHog: create at https://us.posthog.com/settings/user-api-keys
 # Required scopes: project:admin (for session recording + autocapture + billing reads)
@@ -1413,6 +1471,7 @@ wrangler secret put CONTROL_PLANE_CF_TOKEN --name cf-admin-madagascar
 The control plane changes runtime behaviour of two production apps, so each phase ships behind a gate.
 
 **Unit / static tests (cf-admin):**
+
 - **Defaults-parity test (critical):** assert every default in `config-schema.ts` equals the current
   hardcoded value in source (Sentry `tracesSampler` thresholds, `sampleRate`, rate-limit table,
   PostHog opts). This guarantees that a missing/empty `service_config` row reproduces today's exact

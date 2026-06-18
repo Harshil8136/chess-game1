@@ -1,4 +1,5 @@
 ---
+
 title: "Chatbot Integration & AI Infrastructure — CF-Admin"
 status: active
 audience: [ai, technical]
@@ -25,6 +26,7 @@ tags: []
 **Proxy endpoint:** `src/pages/api/chatbot/[...path].ts`
 
 Every request through the proxy:
+
 1. Blocks unauthenticated requests (session check)
 2. Validates user RBAC clearance against required role
 3. Appends `CHATBOT_ADMIN_API_KEY` to securely handshake with `cf-chatbot`
@@ -46,6 +48,7 @@ Every request through the proxy:
 All chatbot admin panels are Preact islands co-located in `src/components/admin/chatbot/`. Reads use standard component mounts; writes use the `mutate()` pipeline inside `useChatbotApi.ts`.
 
 **Custom hook:** `src/components/admin/chatbot/hooks/useChatbotApi.ts`
+
 - `useChatbotApi('analytics')` — fetches data on mount
 - `mutate(method, path, body)` — fires POST/PUT/DELETE; calls `refetch()` on success
 - Never caches sensitive payloads client-side — always re-fetches from the proxy
@@ -201,43 +204,51 @@ Analytics shifted from tracking raw technical metrics to tracking **customer out
 ### 3-Pillar Dashboard Layout
 
 **Tier 1 — Executive ROI:**
+
 - Containment Rate (AI-resolved without human escalation)
 - Global CSAT (average satisfaction score)
 - Cost per Resolution (total API cost ÷ contained sessions)
 - Average Handle Time
 
 **Tier 2 — AI Quality & Diagnostics:**
+
 - Volume, Fallback Rate, Escalation Rate, Abandonment Rate
 - Model Distribution (which LLM handles what share of traffic, latency, KB hit rates)
 - Top Intents (semantic intent bar chart)
 
 **Tier 3 — Actionable Intelligence (Clustered KB Gaps):**
+
 - Grouped topic clusters of failed queries with volume, sample queries, last-seen timestamp
 - Enables prioritizing the most impactful knowledge base additions
 
 ### Backend Architecture
 
 **Supabase schema additions (Migration 0004):**
+
 - `feedback_events` table — CSAT scores/comments tied to conversations
 - `conversation_metrics` extensions — `containment_status`, `csat_score`, `fallback_count`, `user_device`, `user_country`
 - `kb_gaps` extensions — `cluster_topic` column for grouping
 
 **Mega-RPCs (two reads per page load):**
+
 - `get_command_center_analytics(p_days)` — aggregates executive/operations/model/intent data for a given period
 - `get_kb_clusters(p_resolved)` — groups kb_gaps by cluster_topic using `jsonb_agg`
 
 **Zero-blocking telemetry:** `cf-chatbot/src/storage/supabase.ts` uses `Promise.allSettled` for fire-and-forget inserts after response is sent — zero latency added to chat experience.
 
 **Admin API routes** (protected by `X-Admin-Key`):
+
 - `GET /admin/analytics/command-center?days=N`
 - `GET /admin/analytics/kb-clusters?resolved=false`
 
 ### Cost Impact
+
 - Zero additional AI tokens (SQL aggregations only)
 - Two optimized RPC reads per dashboard load
 - Zero additional Worker costs
 
 ### Future Enhancements
+
 1. **CSAT UI Widget** — thumbs up/down widget in chat interface to populate `feedback_events`
 2. **Background AI Clustering Cron** — scheduled Worker to assign `cluster_topic` to unclustered `kb_gaps` rows
 

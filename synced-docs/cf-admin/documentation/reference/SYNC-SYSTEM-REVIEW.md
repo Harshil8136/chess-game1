@@ -1,4 +1,5 @@
 ---
+
 title: "Sync System — Architecture Review & Improvement Plan"
 status: active
 audience: [ai, technical]
@@ -253,6 +254,7 @@ outbox (1.1) lands, since draft/scheduled publishing and the health dashboard al
 reuse it.
 
 **The sync is "robust" when:**
+
 1. Every publish either reaches **Verified live** or appears in a **DLQ** within N
    seconds — no silent multi-hour lag.
 2. Both content and config have **version history + rollback**.
@@ -287,6 +289,7 @@ Tracking which roadmap items have shipped to the review branch
 > **✅ Production status (verified 2026-06-10 against live `madagascar-db`
 > `7fca2a07…`).** All deployment steps are complete and the durability pipeline is
 > live:
+>
 > - Queues `madagascar-sync-revalidate` + `…-dlq` created; `SYNC_QUEUE` producer +
 >   consumers un-gated in `wrangler.toml` and deployed.
 > - Migrations applied & tracked in `d1_migrations`: `0033` (sync_outbox), `0034`

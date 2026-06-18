@@ -1,4 +1,5 @@
 ---
+
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
@@ -79,6 +80,7 @@ Sessions are stored in **Cloudflare KV** with a dual-key pattern:
 - Reverse index: `user-session:{userId}:{sessionId}` → `'1'` (enables O(k) force-logout without scanning the full KV namespace)
 
 **`AdminSession` interface (`src/lib/auth/session.ts`):**
+
 ```typescript
 interface AdminSession {
   userId: string;           // admin_authorized_users UUID (D1/Supabase)
@@ -197,9 +199,10 @@ upgrade-insecure-requests
 
 ### Report-Only CSP (Phase 2 target — Retired 2026-05-26)
 
-The `Content-Security-Policy-Report-Only` header was previously deployed with the hardened policy (no `unsafe-inline`, no `unsafe-eval`) reporting violations to Sentry via a `report-uri` endpoint. 
+The `Content-Security-Policy-Report-Only` header was previously deployed with the hardened policy (no `unsafe-inline`, no `unsafe-eval`) reporting violations to Sentry via a `report-uri` endpoint.
 
 On 2026-05-26, this header was **fully retired** because:
+
 1. Sentry's client-side initialization script and Preact's server-side rendered inline style attributes trigger hundreds of warning reports per user session.
 2. The browser console becomes cluttered with loud warnings that degrade admin user experience.
 3. Client-side ad-blockers and privacy suites block Sentry's ingest endpoint (`*.sentry.io`), converting harmless CSP warnings into red network post failure logs (`ERR_BLOCKED_BY_CLIENT`).
@@ -207,6 +210,7 @@ On 2026-05-26, this header was **fully retired** because:
 The primary enforced `Content-Security-Policy` header remains fully active with robust protections while ensuring a perfectly silent, secure, and warning-free browser console for system administrators.
 
 ### Data-Attribute Driven CSS
+
 Dynamic UI state is controlled via data attributes (`data-state="expanded"`, `data-active="true"`) wherever possible — `style={{ }}` props are only used for values that cannot be expressed as static CSS (runtime-computed gradients, role-specific color tokens). Remaining inline-style props are the primary blocker for `style-src unsafe-inline` removal.
 
 ---
@@ -218,17 +222,20 @@ Role mutations, account deactivation, and PLAC changes trigger a 3-layer securit
 **Trigger events:** role change, account deactivation, PLAC override modification, manual force-kick, per-session revocation via Session Forensics Drawer
 
 **Layer 1 — KV Session Deletion (O(k)):**
+
 - LISTs `user-session:{userId}:*` in the reverse index → deletes all matching KV session keys
 - Also deletes the reverse-index pointers
 - **Reverse-index KV pattern:** Sessions indexed at `user-session:{userId}:{sessionId}: '1'` — targeted LIST is O(sessions_per_user), not O(total_sessions)
 
 **Layer 2 — KV Revocation Flag:**
+
 - Writes `revoked:{userId}` → `'1'` to KV with `expirationTtl: 86400` (24h auto-expiry)
 - Middleware checks this flag on every bootstrap attempt (no active KV session but CF headers present)
 - If flag exists → returns 403 immediately, refuses to create a new session
 - Prevents the "CF Access cookie still valid → Worker auto-bootstraps new session" gap
 
 **Layer 3 — CF Access API Hard Revocation (nuclear, immediate):**
+
 - Calls CF API: `DELETE /accounts/{CF_ACCOUNT_ID}/access/users/{cfSubId}/active_sessions`
 - Invalidates the `CF_Authorization` cookie at the CF edge
 - User's next request is intercepted by CF Access → redirected to login — Worker never receives it
@@ -237,6 +244,7 @@ Role mutations, account deactivation, and PLAC changes trigger a 3-layer securit
 - Fired via `ctx.waitUntil()` — zero latency on the actor's response
 
 **Cascade sequence (role change or deactivation):**
+
 1. `resetUserOverrides(env.DB, targetUser.id)` — purges all PLAC overrides → clean RBAC baseline
 2. `forceLogoutUser(env.SESSION, targetUser.id, env)` — all 3 layers above
 
@@ -260,6 +268,7 @@ Role mutations, account deactivation, and PLAC changes trigger a 3-layer securit
 Every API route that returns user data, PII, or privileged records **must** both capture and enforce a minimum role from `requireAuth`. Discarding the return value is a bug.
 
 **Correct pattern:**
+
 ```typescript
 // Captures user AND enforces 'admin' minimum role — 403 if below
 try {
@@ -271,6 +280,7 @@ try {
 ```
 
 **Wrong pattern (IDOR vulnerability):**
+
 ```typescript
 try {
   await requireAuth(context);  // ❌ result discarded, no role check
@@ -443,6 +453,7 @@ Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
 | `CF_ACCOUNT_ID` | Cloudflare account ID (already used for analytics; also needed for audit log cron + Layer 3) |
 
 **Removed secrets (no longer in codebase):**
+
 - `PUBLIC_SUPABASE_ANON_KEY` — GoTrue client-side auth removed
 - `TURNSTILE_SECRET_KEY` — Turnstile CAPTCHA removed (no login form)
 
@@ -559,6 +570,7 @@ Removed: 20+ unused indexes dropped to save Free Tier storage (2026-04-29). Dupl
 > These are one-time setup steps required before the CF Zero Trust auth flow goes live. They cannot be automated — they require manual actions in CF and Google/GitHub dashboards.
 
 **Cloudflare Zero Trust Application:**
+
 1. Zero Trust → Access → Applications → Add Self-Hosted App
 2. Application domain: `admin.madagascarhotelags.com` with path `/*`
 3. Session Duration: **24 hours** (must match KV TTL)
@@ -566,17 +578,21 @@ Removed: 20+ unused indexes dropped to save Free Tier storage (2026-04-29). Dupl
 5. Note the **Application Audience (AUD)** tag → add to `wrangler.toml` as `CF_ACCESS_AUD`
 
 **Global Session Timeout:**
+
 - Zero Trust → Settings → Authentication → Global Session Timeout: **24 hours**
 
 **CF API Tokens (dash.cloudflare.com → My Profile → API Tokens):**
+
 - `CF_API_TOKEN_READ_LOGS`: Account → Zero Trust → **Read** permission only
 - `CF_API_TOKEN_ZT_WRITE`: Account → Zero Trust → **Edit** permission only
 
 **Google Cloud Console — OAuth Redirect:**
+
 - Add: `https://{team}.cloudflareaccess.com/cdn-cgi/access/callback`
 - Remove: old Supabase redirect URIs
 
 **GitHub OAuth App:**
+
 - Authorization callback URL: `https://{team}.cloudflareaccess.com/cdn-cgi/access/callback`
 
 ---
@@ -636,7 +652,7 @@ Full report: [`security/reviews/2026-05-24-security-review.md`](./reviews/2026-0
 
 | Severity | File | Vulnerability | Fix |
 |----------|------|--------------|-----|
-| 🔴 Critical | `src/components/admin/logs/shared.tsx` | **Stored XSS** — `JSON.stringify` does not HTML-escape `<>& `; raw data passed to `dangerouslySetInnerHTML` in JSONViewer. Exploitable via crafted URL paths stored in audit log. | Added `escapeHtml()` applied per matched regex token before `<span>` insertion |
+| 🔴 Critical | `src/components/admin/logs/shared.tsx` | **Stored XSS** — `JSON.stringify` does not HTML-escape `<>&`; raw data passed to `dangerouslySetInnerHTML` in JSONViewer. Exploitable via crafted URL paths stored in audit log. | Added `escapeHtml()` applied per matched regex token before `<span>` insertion |
 | 🔴 High | `src/lib/auth/security-logging.ts` | **HTML injection in security alert emails** — `userAgent`, `email`, `geoLocation`, `cfIdentityProvider`, `failureReason` interpolated raw into HTML email. Unauthenticated attacker can inject HTML via `User-Agent` header. | Added `escHtml()` helper; applied to all 5 user-controlled fields |
 | 🔴 High | `src/lib/cms.ts` | **MIME type bypass** — `file.type` (client-controlled multipart header) trusted without verifying actual file bytes. Attacker could upload HTML/SVG as `image/jpeg`. | Added `validateImageMagicBytes()` (JPEG/PNG/WebP/AVIF signatures); replaced filename-based extension with hardcoded `MIME_TO_EXT` map |
 | 🟠 Medium | `src/pages/api/bookings/index.ts` | **PostgREST filter injection** — `search` param interpolated raw into `.or()` filter string | Added `sanitizeSearchTerm()` stripping PostgREST operator chars |
