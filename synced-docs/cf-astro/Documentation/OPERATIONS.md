@@ -5,7 +5,7 @@
 This document outlines the core infrastructure bindings and the CLI commands used to manage and verify the Cloudflare resources attached to `cf-astro`.
 
 ## 1. Authentication
-All Cloudflare commands are authenticated via an OAuth Token for `mascotasmadagascar@gmail.com` (Account ID: `320d1ebab5143958d2acd481ea465f52`).
+All Cloudflare commands are authenticated via an OAuth Token for `mascotasmadagascar@gmail.com` (Account ID: `REDACTED_VIA_OAUTH`).
 
 **Verify access:**
 ```bash
