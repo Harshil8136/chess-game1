@@ -1,4 +1,5 @@
 ---
+
 title: "Documentation Index & Map"
 status: active
 audience: [non-technical, ai, technical]
@@ -35,7 +36,14 @@ listed here (the CI index-drift check enforces both).
 `active` = current & maintained · `historical` = point-in-time snapshot (kept for
 record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 
+## Business / Strategy
+
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture | non-technical, owner | historical |
+
 ## Architecture
+
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
 | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Lean Edge stack, request lifecycle, module pattern, CPU budget | ai, technical | active |
@@ -44,6 +52,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | active |
 
 ## Security
+
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
 | [`security/SECURITY.md`](security/SECURITY.md) | Canonical current security posture (CSRF, headers, sessions, RLS, force-kick) | ai, technical | active |
@@ -56,6 +65,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/reviews/2026-04-24-ssl-lighthouse-audit.md`](security/reviews/2026-04-24-ssl-lighthouse-audit.md) | SSL / Lighthouse audit | technical | historical |
 
 ## Features
+
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
 | [`features/DASHBOARD.md`](features/DASHBOARD.md) | Dashboard home, analytics providers, widgets | ai, technical | active |
@@ -67,12 +77,14 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
 
 ## Operations
+
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
 | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | Binding IDs, free-tier limits, secrets registry, deploy | ai, technical, operator | active |
 | [`operations/DEV-TOOLS.md`](operations/DEV-TOOLS.md) | Edge Command Center — debug tools, diagnostics | ai, technical | active |
 
 ## Reference
+
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
 | [`reference/coding-standards.md`](reference/coding-standards.md) | DAL pattern, TypeScript standards, component rules, naming | ai, technical | active |
@@ -82,6 +94,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
 
 ## Specs (dated design records)
+
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`specs/2026-04-25-user-registry-design.md`](specs/2026-04-25-user-registry-design.md) | User registry "Midnight Command" redesign | historical |
@@ -90,12 +103,14 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`specs/2026-05-13-cms-ui-redesign.md`](specs/2026-05-13-cms-ui-redesign.md) | CMS UI redesign | historical |
 
 ## Runbooks
+
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
 | [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 
 ## Archive (historical — kept verbatim)
+
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`archive/COMPLETED_PHASES.md`](archive/COMPLETED_PHASES.md) | Full implementation log of completed phases | historical |
@@ -105,6 +120,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`archive/REFACTORING_OVERVIEW.md`](archive/REFACTORING_OVERVIEW.md) | Refactoring project overview | historical |
 
 ## Meta
+
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) | Documentation conventions & governance | active |
@@ -112,6 +128,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`MAINTENANCE.md`](MAINTENANCE.md) | Single live maintenance backlog | active |
 
 ## Root-level entry docs (stay at root, exempt from front-matter)
+
 | Doc | Purpose |
 |-----|---------|
 | [`../README.md`](../README.md) | Project entry point / quick start |
