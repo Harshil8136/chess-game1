@@ -82,8 +82,8 @@ separate repo) beyond the contract this app depends on.
 ## 2. Architecture / How it works
 
 Sending is **decoupled** from the provider call: cf-admin never blocks the operator's
-request on Resend. It writes a ledger row, enqueues a job, and returns. An external
-consumer worker drains the queue and talks to Resend; provider webhooks then update
+request on Brevo. It writes a ledger row, enqueues a job, and returns. An external
+consumer worker drains the queue and talks to Brevo; provider webhooks then update
 the same ledger row, which the Queue Logs tab reads back.
 
 ```
@@ -99,16 +99,16 @@ the same ledger row, which the Queue Logs tab reads back.
                       │
                       ▼
         cf-astro-email-consumer  (external worker, repo cf-email-consumer)
-                      │  calls Resend API (carries Sentry trace headers)
+                      │  calls Brevo API (carries Sentry trace headers)
                       ▼
-                   Resend  ──④── delivery webhooks ──▶ update email_audit_logs
+                   Brevo   ──④── delivery webhooks ──▶ update email_audit_logs
                                                        (status + delivery_events)
                       ▲
         Queue Logs tab ─⑤─ GET /api/audit/emails?purpose=custom_email
                             (reads the ledger row + delivery_events timeline)
 ```
 
-**Why a queue.** Resend calls are pushed off the request lifecycle so a slow or
+**Why a queue.** Brevo calls are pushed off the request lifecycle so a slow or
 failing provider never degrades the admin UI, and bursts are smoothed. The
 producer binding (`EMAIL_QUEUE` → `madagascar-emails`) is declared in
 `wrangler.toml`; the consumer lives in a separate worker/repo. See
@@ -116,7 +116,7 @@ producer binding (`EMAIL_QUEUE` → `madagascar-emails`) is declared in
 
 **Local dev has no consumer.** When `import.meta.env.DEV` is set, `send.ts` runs an
 inline emulation (`runLocalDispatch`) that resolves attachments from local R2, calls
-Resend directly, and writes **mock** `email.sent` / `email.delivered` events so the
+Brevo directly, and writes **mock** `email.sent` / `email.delivered` events so the
 Queue Logs timeline is testable without the queue or webhooks. This branch is
 `DEV`-only and never runs in production.
 
@@ -274,10 +274,10 @@ references. Limits: **5 MB** per file (`400` over), rate limit `20` uploads / `1
 
 A scheduled send lands in the ledger with `status: scheduled` and is dispatched to
 Resend with a future `scheduledAt`. `POST /api/emails/cancel` (PLAC `#compose`) looks
-up the row, refuses anything not currently `scheduled`, calls Resend's
-`/emails/{resend_id}/cancel`, and flips the ledger row to `cancelled` (audited). It
-requires a stored `resend_id`, so a job can only be cancelled once the consumer has
-registered it with Resend.
+up the row, refuses anything not currently `scheduled`, calls Brevo's
+API to cancel, and flips the ledger row to `cancelled` (audited). It
+requires a stored `resend_id` (legacy column name storing Brevo ID), so a job can only be cancelled once the consumer has
+registered it with Brevo.
 
 ---
 
@@ -320,8 +320,8 @@ timeline). The tab requests `cache: no-store` so operators see live status.
   `recipient_email`, `resend_id`, `email_error`, `sender_ip`, `payload` (JSON),
   `delivery_events` (JSON), `booking_id` (nullable FK), `created_at`, `updated_at`.
 - **`delivery_events`** is an append-only array of provider webhook records
-  (`event_type` such as `email.sent`/`email.delivered`/`email.bounced`, `timestamp`,
-  `resend_email_id`, `raw_data`), rendered as the per-message timeline.
+  (`event_type` such as `delivered`/`bounced`/`spam`, `timestamp`,
+  `resend_email_id` (Brevo messageId), `raw_data`), rendered as the per-message timeline.
 - **Deletion:** `DELETE /api/audit/emails` is **DEV/OWNER-only** (bulk by id),
   audited. See [USER-MANAGEMENT.md](USER-MANAGEMENT.md) for the logs-route guard map.
 
@@ -357,7 +357,8 @@ canonical registry.
 | `DB` | D1 | Drafts, templates, Ghost Audit rows, recipient-cap setting |
 | `IMAGES` | R2 bucket | Attachment storage under `email-attachments/` |
 | `SESSION` | KV | Session + PLAC access map (auth) |
-| `RESEND_API_KEY` | secret | Provider key — cancellation and DEV-only local emulation (production sends go through the consumer) |
+| `BREVO_API_KEY` | secret | Provider key — cancellation and DEV-only local emulation (production sends go through the consumer) |
+| `BREVO_WEBHOOK_SECRET` | secret | Used to authenticate incoming webhook payloads in `/api/emails/webhook` |
 | `SENDER_EMAIL` | var | Default `from`; must be on `@madagascarhotelags.com` |
 | `ADMIN_EMAIL` | var | Platform contact address |
 | Upstash Redis (`UPSTASH_REDIS_REST_*`) | secret | Backs the send + upload rate limiters |
@@ -367,7 +368,7 @@ canonical registry.
 ## 10. Operational notes / Runbook
 
 - **Provider misconfig is fail-soft on cancel/dev only.** Production sends never call
-  Resend in-request; a Resend outage delays delivery (jobs stay queued) but does not
+  Brevo in-request; a Brevo outage delays delivery (jobs stay queued) but does not
   error the operator's send.
 - **Schema provisioning (resolved).** `admin_email_drafts` and `admin_email_templates`
   are created by `migrations/0032_create_admin_email_tables.sql`, which also seeds
@@ -391,12 +392,9 @@ canonical registry.
 - **Ledger is the source of truth for "did it send".** The composer's success toast
   means *enqueued*, not *delivered* — confirm final state in Queue Logs.
 - **Attachment orphan sweep (action needed).** The weekly R2 cleanup
-  (`src/workers/scheduled-asset-cleanup.ts`, Sunday cron) reconciles bucket objects only
-  against `cms_content` references. Email attachments live under `email-attachments/`
-  and are **not** in `cms_content`, so until the sweeper is taught to exclude that prefix
-  (or to honor draft/ledger references) it must not be relied on to garbage-collect
-  them — and must not delete in-use attachments. Tracked in
-  [MAINTENANCE.md](../MAINTENANCE.md).
+  (`src/workers/scheduled-asset-cleanup.ts`, Sunday cron) safely reconciles bucket objects
+  against `cms_content`, active `admin_email_drafts`, and `email_audit_logs`. It now garbage collects
+  orphaned attachments under `email-attachments/` without touching active files.
 - **No send idempotency yet.** Each `POST /api/emails/send` mints a fresh `trackingId`,
   so a double-submit enqueues two messages. Operators should confirm in Queue Logs
   rather than re-sending. Tracked in [MAINTENANCE.md](../MAINTENANCE.md).
@@ -418,7 +416,7 @@ canonical registry.
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — Lean Edge stack, request lifecycle, DAL pattern
 - [plac-and-audit.md](../architecture/plac-and-audit.md) — PLAC resolution + Ghost Audit Engine
 - [USER-MANAGEMENT.md](USER-MANAGEMENT.md) — RBAC hierarchy, logs-route guard map (incl. `api/audit/emails.ts`)
-- [DASHBOARD.md](DASHBOARD.md) — Email Queue health widget + Resend delivery stats
+- [DASHBOARD.md](DASHBOARD.md) — Email Queue health widget + Brevo delivery stats
 - [OPERATIONS.md](../operations/OPERATIONS.md) — bindings, queue, secrets registry, free-tier limits
 - [SECURITY.md](../security/SECURITY.md) — CSRF, session model, security posture
 - [`cf-email-consumer/README.md`](../cf-email-consumer/README.md) — external queue-consumer worker (separate repo)
