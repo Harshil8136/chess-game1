@@ -22,7 +22,7 @@ The problems cluster in four areas:
 3. **A missing engineering safety net** — effectively zero tests, no CI gate for typecheck/build/test, watch-mode-only test script (HIGH-3).
 4. **Scaling/robustness debt** — per-request Postgres pools that are never closed, no idempotency on booking, unratelimited admin endpoints, PII stored pre-origin-check with no retention policy (MED-6…13).
 
-**Overall rating: as-found 5.5 / 10 (C) → post-remediation 7.5 / 10 (B)** (transparent weighted computation in §5.1; phases 0–4 were applied on this branch — see §4.1). The request-path code you'd bet the business on (booking, consent, ARCO) was already B+/A− quality; the meta-layer around it (docs, tests, CI, dead code, config truth) was D-grade and is where the remediation work went.
+**Overall rating: as-found 5.5 / 10 (C) → wave 1 7.5 / 10 (B) → wave 2 8.3 / 10 (B+)** (transparent weighted computation in §5.1/§5.1.1; remediation logs in §4.1/§4.2). The request-path code you'd bet the business on (booking, consent, ARCO) was already B+/A− quality; the meta-layer around it (docs, tests, CI, dead code, config truth) was D-grade and is where the remediation work went.
 
 ---
 
@@ -288,6 +288,33 @@ Also fixed en route: `npm audit fix` cleared the high-severity undici/ws/@babel/
 
 ---
 
+## 4.2 Second remediation wave (2026-07-05 PM — roadmap execution)
+
+Everything in §5.10 executable from the repository, shipped same-day:
+
+| Item | What shipped |
+|---|---|
+| Server-side Sentry on Workers (R1 structural) | `Sentry.wrapRequestHandler` + async-context strategy wrapping the Astro middleware; release tied to `__BUILD_ID__`; 10% traces. The old Pages-only layer is bypassed-safe. Live event verification remains an owner step. |
+| Doc-accuracy enforcement | `test/doc-accuracy.test.ts`: SECURITY.md §4 limits and §8 allowlist checked against `sync-contract.ts`; regression tripwires for the fail-open wording and the phantom webhook. Caught and fixed 4 undocumented allowlist keys on first run. |
+| Endpoint-handler tests | `test/endpoints.test.ts`: booking (origin 403 / Zod 400 / oversize 413 / bad JSON 400), contact, consent, analytics-track (403/400/204), health 401, get-document 401 + ticket-format 400 — real handlers in workerd, dummy bindings, no external I/O. Suite: **44 tests**. |
+| Deploy pipeline | `.github/workflows/deploy.yml` — build + `wrangler deploy` on main; self-skips until the `CLOUDFLARE_API_TOKEN` secret exists. |
+| D1 retention purge (R3) | `db/retention-purge.sql` (validated locally) + `.github/workflows/retention-purge.yml` weekly cron; 90-day window documented; consent evidence untouched. |
+| Self-hosted fonts (R7) | DM Sans + Outfit variable woff2 (95 KB total, latin subset incl. es diacritics) in `public/fonts/` + `@font-face`/preload; Google Fonts links, preconnects, and CSP hosts removed; `/fonts/*` immutable-cached. Built HTML verified: 0 googleapis references. |
+| Honest aggregateRating (R5) | Computed from the on-page reviews' real `rating` fields; schema omitted entirely when no rated reviews exist; hardcoded 4.7/231 removed. |
+| Island a11y i18n | `ImageLightbox` gained a typed `labels` API (aria + hints), `InfiniteGallery` forwards it plus `viewImageLabel`; es/en dictionaries extended (parity test keeps them locked); dead `mobileHintText` prop removed. |
+| Live dark-mode inconsistency | 5 `dark:` utilities removed — with no `@custom-variant dark`, Tailwind's media-based variant was ACTIVATING partial dark styles for dark-OS users on the forced-light site. |
+| Booking hot path | `db_success`/`complete` audit-state writes moved to `waitUntil` (2 fewer sequential D1 round-trips before the response). |
+| Type & module hygiene | `getEnv()` returns `Env` (was `any`); cms/pricing loggers now lazy request-scoped; knip config fully clean and enforced in CI. |
+| Decision records | ADR-0001 (fail-open limits), ADR-0002 (no CAPTCHA on booking), ADR-0003 (audit-first dead-letter) in `docs/adr/`; `db/README.md` documents the two migration trees; `Documentation/ARCO-DSR-RUNBOOK.md` operationalizes the 20-day DSR window. |
+
+Deliberately NOT done, with reasons: `wrangler types` CI drift-check (generated
+output differs across wrangler versions → pure noise); merging the migration
+trees (they target different databases — documented instead); vitest coverage
+gate (unsupported by the workers pool today); ESLint baseline, Playwright E2E,
+RULES.md split, CSP nonces (each needs staged time, not blocked on anything).
+
+---
+
 ## 5. Ratings — full multi-benchmark scorecard
 
 Two columns throughout: **As-found** = state at commit `e2e4e09` (review baseline).
@@ -319,6 +346,34 @@ Weights: Security(code) ×2, Reliability ×2, Testing ×1.5, CI/CD ×1.5, all ot
 | 11 | Frontend & SEO quality | 1.0 | 7.5 | **7.9** | +touch-icon 404 gone, JSON-LD sinks consistent, scroll-restore revived; − fabricated aggregateRating, island i18n open |
 | 12 | Infrastructure & config hygiene | 1.0 | 6.0 | **7.2** | +Stale artifacts deleted, Brevo aligned everywhere, audit highs cleared; − dual migration systems, knip unwired |
 | | **Weighted overall** | | **5.5 / 10 (C)** | **7.5 / 10 (B)** | Computed: Σ(score×weight)/15 — 82.0/15 and 112.95/15. *(Corrects the v1 headline figure of 6.4, which did not match its own arithmetic.)* |
+
+### 5.1.1 Re-score — second remediation wave (2026-07-05 PM)
+
+The owner approved executing the §5.10 roadmap; every item achievable from the
+repository was implemented the same day (see §4.2). Third snapshot:
+
+| # | Dimension | As-found | Wave 1 | **Wave 2** | What moved it |
+|---|---|:--:|:--:|:--:|---|
+| 1 | Security — code | 5.5→8.0 | 8.8 | **9.0 (A)** | CSP: Google Fonts hosts dropped from style-src/font-src; doc claims now CI-enforced |
+| 2 | Security — docs & process | 3.0 | 7.5 | **8.5 (A−)** | `test/doc-accuracy.test.ts` fails CI when SECURITY.md drifts from sync-contract.ts (and immediately caught 4 missing allowlist keys) |
+| 3 | Reliability & error handling | 7.0 | 7.8 | **8.4 (B+)** | `Sentry.wrapRequestHandler` in Astro middleware — server-side capture now structurally works on the Workers deploy (R1); non-terminal audit writes backgrounded |
+| 4 | Architecture & design | 6.5 | 7.3 | **7.9 (B)** | 3 ADRs pin the load-bearing invariants; db/README.md ends the migration-tree confusion |
+| 5 | Code quality & maintainability | 6.0 | 7.0 | **7.8 (B)** | `getEnv()` typed against `Env`; lazy request-scoped loggers; live `dark:` inconsistencies removed; dead `mobileHintText` prop replaced by a real labels API |
+| 6 | Performance & caching | 6.5 | 7.2 | **7.9 (B)** | Self-hosted variable fonts: 95 KB / 2 files / first-party+preload replaces 10 remote files via 2 Google connections |
+| 7 | Testing | 1.5 | 6.0 | **7.5 (B)** | 44 tests: direct handler tests exercise the real origin/Zod/auth pipeline in workerd; doc-accuracy suite; cms round-trip guard |
+| 8 | CI/CD & DevOps | 2.5 | 7.5 | **8.3 (B+)** | deploy.yml + retention-purge.yml (activate by adding CLOUDFLARE_API_TOKEN); knip blocking in CI |
+| 9 | Documentation accuracy | 3.5 | 7.8 | **8.6 (A−)** | The drift-prone tables are now machine-checked; §8 allowlist corrected |
+| 10 | Privacy / GDPR-LFPDPPP | 7.0 | 7.6 | **8.5 (A−)** | 90-day retention purge implemented + scheduled (R3); Google-Fonts IP disclosure eliminated (R7); ARCO/DSR runbook written |
+| 11 | Frontend & SEO quality | 7.5 | 7.9 | **8.4 (B+)** | aggregateRating now computed from on-page reviews or omitted (R5); lightbox/gallery aria + hints localized es/en; font swap |
+| 12 | Infrastructure & config hygiene | 6.0 | 7.2 | **7.8 (B)** | retention SQL + workflows; knip enforced; migration trees documented (deliberately not merged — different databases) |
+| | **Weighted overall** | **5.5 (C)** | **7.5 (B)** | **8.3 (B+)** | Σ(score×weight)/15 = 123.9/15 |
+
+**What still separates 8.3 from A− (8.5+):** items that need the owner or a
+live environment — add the `CLOUDFLARE_API_TOKEN` repo secret (activates
+deploys + purge), enable branch protection, verify one real Sentry event in
+production, audit the consumer worker's Brevo webhook, Lighthouse/field data,
+ESLint baseline, Playwright E2E, and the RULES.md split. All remain itemized
+in §5.10 with the done items marked.
 
 ### 5.2 Sub-criteria detail (evidence-anchored)
 
@@ -558,9 +613,11 @@ Legend: 🔧 = code change in this repo · 🖥️ = owner action (dashboard/oth
 
 #### Sequencing — three sprints to a straight-A board
 
-- **Sprint 1 (≈1 week, biggest score jump):** Sentry verification + `functions/` decision · endpoint-handler tests + coverage gate · deploy pipeline + branch protection · doc-accuracy test. → Testing ~8.0, CI/CD ~8.5, Reliability ~8.3, Docs ~8.4.
-- **Sprint 2 (≈1 week):** D1 retention purge · self-hosted fonts · CSP nonces · consumer webhook audit · Lighthouse CI. → Security 9.2+, Privacy 8.5, Performance 8.2.
-- **Sprint 3 (≈1 week, polish):** ESLint · typed getEnv · booking-service extraction · RULES.md split · aggregateRating + island i18n · Playwright E2E. → everything remaining ≥8.0–8.5.
+- **Sprint 1:** ✅ Sentry Workers-path wiring (live verification still owner) · ✅ endpoint-handler tests (coverage gate blocked: vitest-pool-workers doesn't support coverage yet) · ✅ deploy pipeline (🖥️ needs CLOUDFLARE_API_TOKEN secret; branch protection is dashboard-only) · ✅ doc-accuracy test.
+- **Sprint 2:** ✅ D1 retention purge (workflow + SQL; activates with the same secret) · ✅ self-hosted fonts (+ CSP font hosts removed) · ⏳ CSP nonces (needs staged prod testing) · 🖥️ consumer webhook audit (other repo) · ⏳ Lighthouse CI.
+- **Sprint 3:** ⏳ ESLint baseline · ✅ typed getEnv · ⏳ booking-service extraction · ⏳ RULES.md split · ✅ aggregateRating + island i18n · ⏳ Playwright E2E.
+
+**Result: weighted 8.3/10 (B+) — see §5.1.1.** Executed 2026-07-05, same day as the review.
 
 **Projected board after all three sprints: weighted ≈ 8.6/10 (A−), no dimension below B+ (8.0).** The only items capping A+ are external-verification ones (pen test, real-user Web Vitals history, staged rollouts) that simply take calendar time.
 
@@ -600,6 +657,9 @@ Every runnable check for this project was executed. Results:
 | 14 | CI on GitHub runners | `ci.yml` run #1 on main | ✅ success (88 s: check + build + tests) |
 | 15 | Security workflow | `security.yml` on main | ✅ success (audit now blocking) |
 | 16 | Docs mirror | `sync-docs.yml` on main | ✅ success — Documentation/ incl. this report published to the mirror |
+| 17 | Wave-2 test suite | `vitest run` after roadmap execution | ✅ 44/44 (7 files) — incl. handler-level and doc-accuracy suites |
+| 18 | Wave-2 typecheck/build | `astro check` + `astro build` | ✅ 0 errors; build clean; `dist/client/fonts/` contains both woff2; 0 `fonts.googleapis` refs in built HTML |
+| 19 | Retention purge SQL | `wrangler d1 execute --local --file db/retention-purge.sql` | ✅ executes cleanly |
 
 Not runnable from this environment (documented, not skipped silently): live Sentry
 event verification (needs production traffic + dashboard), Lighthouse/Web-Vitals
