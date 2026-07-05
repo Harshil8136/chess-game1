@@ -453,7 +453,118 @@ Weights: Security(code) ×2, Reliability ×2, Testing ×1.5, CI/CD ×1.5, all ot
 | R6 | Dual migration systems drift (db/ vs drizzle/) | Medium | Medium | Declare one source of truth in README |
 | R7 | Google Fonts IP leak inconsistent with privacy posture | Certain (by design today) | Low | Self-host subset fonts |
 
-### 5.10 The one-paragraph verdict (updated post-remediation)
+### 5.10 Roadmap to A-grade — how each dimension gets to A+/A/A− (or B+ minimum)
+
+Grade bands used throughout: **A+ ≥ 9.5 · A 9.0–9.4 · A− 8.5–8.9 · B+ 8.0–8.4 · B 7.0–7.9 · C 5.0–6.9 · D 3.0–4.9 · F < 3.0**
+
+Legend: 🔧 = code change in this repo · 🖥️ = owner action (dashboard/other repo/legal) · ⏱ = rough effort.
+
+#### 1. Security — code: 8.8 (A−) → target A/A+ (9.2–9.6)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🖥️ Audit `cf-astro-email-consumer`'s Brevo webhook: confirm signature verification with `timingSafeEq` + replay window (closes R2) | +0.2 | 1–2 h |
+| 🔧 CSP: replace `unsafe-inline`/`unsafe-eval` in `script-src` with nonces/hashes; verify PostHog compat in staging (closes R4; already a ToDo item) | +0.3 | 0.5–1 d |
+| 🖥️ Put Cloudflare Access (or IP allowlist via WAF rule) in front of `/api/arco/get-document/` — second factor beyond the header secret for the identity-document endpoint | +0.2 | 1 h |
+| 🖥️ Enable Supabase leaked-password protection + schedule annual secret rotation for the 4 admin secrets (calendar entry is enough) | +0.1 | 30 m |
+**A+ extra:** third-party penetration test or at least an automated DAST pass (OWASP ZAP baseline scan in CI against a preview URL).
+
+#### 2. Security — docs & process: 7.5 (B) → target A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 Make doc-accuracy machine-checked: a small vitest that imports `RATE_LIMIT_MAX`/`CMS_KEY_ALLOWLIST` from `sync-contract.ts` and asserts the SECURITY.md §4 table contains the same numbers (parse the markdown). Docs can then never silently drift again — the CI gate fails instead | +0.5 | 2–3 h |
+| 🔧 Generate the secret-inventory table (§7/§13) from a single JSON source rendered into both SECURITY.md and `.env.example` comments | +0.3 | 2 h |
+| 🖥️ Quarterly 30-minute doc-vs-code review on the calendar; record date in SECURITY.md header (this review models the format) | +0.2 | recurring |
+
+#### 3. Reliability & error handling: 7.8 (B) → target A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧🖥️ **Verify server-side Sentry end-to-end** (top residual risk R1): trigger a deliberate error on a low-traffic admin endpoint in production and confirm the event arrives. If it doesn't: init `@sentry/cloudflare` in the Worker entry (the `functions/` Pages layer never runs on a Workers deploy) and delete the dead layer | +0.4 | 2–4 h |
+| 🖥️ Uptime monitoring: BetterStack heartbeat hitting `/api/health/` with the bearer secret every 5 min + alert channel | +0.2 | 30 m |
+| 🖥️ DLQ alerting: notification when `madagascar-emails-dlq` receives a message (queue metrics → email/webhook) | +0.1 | 30 m |
+| 🔧 `waitUntil` the non-terminal D1 audit writes in booking (keep audit-first for the initial PENDING row) | +0.1 | 1 h |
+**A extra:** synthetic booking canary — a cron that runs a full booking against a staging path and alerts on failure.
+
+#### 4. Architecture & design: 7.3 (B) → target B+/A− (8.0–8.5)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 Resolve the `functions/` layer after the Sentry verification above: either it runs (Pages) and docs change back, or it doesn't (Workers) and the file is deleted with its llms.txt/URI logic moved into `src/middleware.ts` | +0.4 | 2 h |
+| 🔧 Collapse to ONE migration system: declare `db/migrations/` (D1) + `drizzle/` (Postgres) explicitly in a `db/README.md` — they serve different databases, so the fix is documentation + naming, not deletion | +0.2 | 1 h |
+| 🔧 Extract `booking.ts` (460+ lines) into `src/lib/booking-service.ts` steps (audit / validate / persist / dispatch) — testability improves with it | +0.3 | 0.5 d |
+| 🔧 Write 3 one-page ADRs for the load-bearing invariants (fail-open limits, no-CAPTCHA booking, audit-first) so the reasoning survives tool/AI churn | +0.1 | 2 h |
+
+#### 5. Code quality & maintainability: 7.0 (B) → target B+/A− (8.0–8.5)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 Type `getEnv()` against the generated `Env` from `worker-configuration.d.ts` (kill the `any`) and fix the fallout | +0.4 | 0.5 d |
+| 🔧 Add ESLint (`eslint-plugin-astro` + typescript-eslint) + Prettier check to CI | +0.3 | 2–3 h |
+| 🔧 Remove module-scope `getEnv()`/logger captures in `cms.ts`/`pricing.ts` (move into request scope) | +0.2 | 1 h |
+| 🔧 Strip unreachable `dark:` variants + dark tokens (or re-enable dark mode deliberately) | +0.1 | 2 h |
+
+#### 6. Performance & caching: 7.2 (B) → target B+/A− (8.0–8.5)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 Self-host fonts: subset DM Sans + Outfit to ≤4 weights total, `@font-face` with `font-display: swap` (also closes privacy risk R7) | +0.4 | 3–4 h |
+| 🔧 Lighthouse CI in Actions against a preview deploy with budget assertions — converts this whole dimension from static guesses to measured fact | +0.3 | 3 h |
+| 🔧 `waitUntil` non-terminal audit writes (shared with dim 3) | +0.1 | — |
+| 🖥️ Enable Smart Placement on the worker (D1/Supabase calls dominate; placement near ENAM helps) | +0.1 | 15 m |
+
+#### 7. Testing: 6.0 (C) → target B+ (8.0), then A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 Endpoint-handler tests via the workerd pool's `SELF` fetch: booking/contact/consent 403 (bad origin), 400 (Zod), 413 (oversize), health/get-document 401 — none of these paths need Postgres, so they run today | +0.8 | 1 d |
+| 🔧 Coverage reporting (`vitest --coverage`) with a ratcheting threshold (start 50%, raise 5 pts per month to 75%) enforced in CI | +0.5 | 2 h |
+| 🔧 Playwright E2E: boot `wrangler dev --local` in CI (proven to work — this review's smoke test did exactly that) and drive the booking wizard to the validation step; assert consent banner gating of PostHog | +0.7 | 1–2 d |
+**A territory** additionally needs: a mocked-Postgres (or staging-DB) happy-path booking test and queue-consumer contract tests in the consumer repo.
+
+#### 8. CI/CD & DevOps: 7.5 (B) → target A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧🖥️ Deploy pipeline: `wrangler deploy` from Actions on main (needs `CLOUDFLARE_API_TOKEN` repo secret) — removes the manual `cf:deploy` from a laptop; keep `[ai]` intact there since the token is present | +0.5 | 2–3 h |
+| 🔧🖥️ Per-PR preview deploys (`wrangler versions upload` → preview URL posted to the PR); the Origin allowlist already accepts `*.mascotasmadagascar.workers.dev` | +0.3 | 3 h |
+| 🖥️ Branch protection on `main`: require the CI check, forbid force-push (Settings → Branches — cannot be done from this session) | +0.2 | 10 m |
+| 🔧 Add Lighthouse CI + coverage gates (shared with dims 6–7) | — | — |
+**A+ extra:** staged rollout with `wrangler versions` gradual deployment + automatic rollback on error-rate spike.
+
+#### 9. Documentation accuracy: 7.8 (B) → target A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 The machine-checked doc test from dim 2 (biggest single lever — accuracy becomes enforced, not aspirational) | +0.4 | — |
+| 🔧 Prune RULES.md (70 KB): split into `RULES.md` (current, <15 KB) + `Documentation/ARCHIVE-RULES-HISTORY.md`; fix any claims contradicted by code found during the split | +0.3 | 0.5 d |
+| 🔧 One `Documentation/README.md` index with a freshness date per doc; delete or merge the 3 overlapping status docs (20/21/22 series overlap) | +0.2 | 2 h |
+
+#### 10. Privacy / GDPR-LFPDPPP: 7.6 (B) → target A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧🖥️ D1 retention purge (closes R3): scheduled job on cf-admin — `DELETE FROM booking_attempts/consent_attempts WHERE created_at < date('now','-90 days')` (keep consent_records in Postgres forever — legal evidence); document the 90-day window in the privacy notice | +0.4 | 3 h |
+| 🔧 Self-hosted fonts (closes R7, shared with dim 6) | +0.2 | — |
+| 🖥️ DSR (ARCO) runbook: a one-pager for who does what within the 20-business-day window when a request arrives | +0.2 | 2 h |
+| 🖥️ Annual LFPDPPP notice review date with counsel (ToDo already tracks the clause revision) | +0.1 | recurring |
+
+#### 11. Frontend & SEO quality: 7.9 (B) → target A− (8.5+)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 aggregateRating (closes R5): render from real review data via CMS (`happy_clients` block already exists) with a real count, or remove the block — never a hardcoded 4.7/231 | +0.3 | 2 h |
+| 🔧 Localize island a11y text: pass aria-labels/hints from the i18n dicts as props into `InfiniteGallery`/`ImageLightbox`; render or delete `mobileHintText` | +0.2 | 2–3 h |
+| 🔧 Measured Core Web Vitals via Lighthouse CI (shared with dim 6) + fix what it finds | +0.2 | — |
+| 🖥️ GSC monitoring cadence for the canonical/redirect fixes already shipped | +0.1 | recurring |
+
+#### 12. Infrastructure & config hygiene: 7.2 (B) → target B+/A− (8.0–8.5)
+| Action | Points | ⏱ |
+|---|:--:|:--:|
+| 🔧 `wrangler types` regeneration check in CI (fail if `worker-configuration.d.ts` is stale vs wrangler.toml) | +0.3 | 1 h |
+| 🔧 knip in CI as a non-blocking report first, blocking once clean for a month (config is now clean — this review fixed the last 3 hints) | +0.2 | 1 h |
+| 🔧 db/README.md declaring the two migration systems' scopes (shared with dim 4) | +0.2 | — |
+| 🔧 Single generated env-var inventory (shared with dim 2) | +0.2 | — |
+
+#### Sequencing — three sprints to a straight-A board
+
+- **Sprint 1 (≈1 week, biggest score jump):** Sentry verification + `functions/` decision · endpoint-handler tests + coverage gate · deploy pipeline + branch protection · doc-accuracy test. → Testing ~8.0, CI/CD ~8.5, Reliability ~8.3, Docs ~8.4.
+- **Sprint 2 (≈1 week):** D1 retention purge · self-hosted fonts · CSP nonces · consumer webhook audit · Lighthouse CI. → Security 9.2+, Privacy 8.5, Performance 8.2.
+- **Sprint 3 (≈1 week, polish):** ESLint · typed getEnv · booking-service extraction · RULES.md split · aggregateRating + island i18n · Playwright E2E. → everything remaining ≥8.0–8.5.
+
+**Projected board after all three sprints: weighted ≈ 8.6/10 (A−), no dimension below B+ (8.0).** The only items capping A+ are external-verification ones (pen test, real-user Web Vitals history, staged rollouts) that simply take calendar time.
+
+### 5.11 The one-paragraph verdict (updated post-remediation)
 
 As found, this was **good code with no safety net and a documentation layer that
 lied about it** — a transparent weighted 5.5/10 where the request-path
@@ -464,6 +575,36 @@ zero tests) are gone, and what remains is a short, known list — verify server
 Sentry delivery, audit the consumer webhook, add the D1 retention purge,
 tighten CSP, and finish the frontend polish items. None of the remaining items
 is silent: each is named in §5.9 with an owner-actionable path.
+
+---
+
+## 6. Full verification battery — run log (2026-07-05, main @ 8918a89 + this commit)
+
+Every runnable check for this project was executed. Results:
+
+| # | Check | Command | Result |
+|---|---|---|---|
+| 1 | Unit + integration tests (workerd pool) | `npm test` (`vitest run`) | ✅ 26/26 passed, 5 files |
+| 2 | Typecheck | `astro check` | ✅ 0 errors, 0 warnings (129 files; 35 hints) |
+| 3 | Production build | `astro build` | ✅ complete (~26 s) |
+| 4 | Prod-dependency audit | `npm audit --omit=dev --audit-level=high` | ✅ pass — no high/critical |
+| 5 | Full-tree audit (informational) | `npm audit` | ⚠️ 6 low/moderate, all in the esbuild→astro chain; fix requires Astro major |
+| 6 | Dead code / dependency scan | `npm run knip` | ✅ clean (3 stale config hints found & fixed in this commit) |
+| 7 | D1 migration validity | `wrangler d1 migrations apply --local` | ✅ all 8 migrations apply cleanly |
+| 8 | Deploy config + bundle validation | `wrangler deploy --dry-run` | ✅ bundles; every binding + var resolves |
+| 9 | Runtime smoke — pages | `wrangler dev --local` + curl | ✅ `/` → 301 `/es/` · `/es/`, `/en/` → 200 · robots/sitemap → 200 |
+| 10 | Runtime smoke — ISR cache | second hit on `/es/` | ✅ `X-ISR-Cache: HIT`, correct `CDN-Cache-Control` |
+| 11 | Runtime smoke — CSRF fail-closed | POST `/api/booking/` without/with evil Origin | ✅ 403 both (production-build behavior) |
+| 12 | Runtime smoke — admin auth | GET `/api/arco/get-document/` without secret | ✅ 401 |
+| 13 | Runtime smoke — secret hygiene | GET `/api/health/` in secretless env | ✅ 500 "Secret not configured" (correct fail-closed message, no leak) |
+| 14 | CI on GitHub runners | `ci.yml` run #1 on main | ✅ success (88 s: check + build + tests) |
+| 15 | Security workflow | `security.yml` on main | ✅ success (audit now blocking) |
+| 16 | Docs mirror | `sync-docs.yml` on main | ✅ success — Documentation/ incl. this report published to the mirror |
+
+Not runnable from this environment (documented, not skipped silently): live Sentry
+event verification (needs production traffic + dashboard), Lighthouse/Web-Vitals
+field data (needs deployed URL access), Supabase advisor scan (connector
+approval-gated), and consumer-worker webhook audit (separate repo).
 
 ---
 
