@@ -41,7 +41,8 @@ graph TD
         Edge_Worker -->|Analytics proxy| PostHog[PostHog Analytics]
         Edge_Worker -->|Error tracking| Sentry[Sentry Observability]
         Email_Queue -->|Async Worker Consumer| Sidecar_Worker[cf-email-consumer Worker]
-        Sidecar_Worker -->|Send Mail HTTP API| Resend[Resend Email Provider]
+        Sidecar_Worker -->|Project: cf-astro| Resend[Resend Email API]
+        Sidecar_Worker -->|Project: cf-admin| Brevo[Brevo SMTP API]
     end
 ```
 
@@ -68,7 +69,7 @@ Establishes the core compilation rules, internationalization routing, and build 
 ### 3.2 `wrangler.toml`
 Defines the Cloudflare Pages environment, build directory (`./dist`), compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
 - **`DB` (D1 Database)**: Binds the local SQLite engine for fast content delivery and dead-letter queue audits.
-- **`ISR_CACHE` (KV Namespace)**: Caches HTML page structures and CMS content blocks.
+- **`ISR_CACHE` (KV Namespace)**: Caches HTML page structures and CMS content blocks. *(Note: standard static assets like images and fonts bypass KV entirely and are cached natively by Cloudflare's CDN using `public, max-age=31536000, immutable`).*
 - **`SESSION` (KV Namespace)**: Stores transient session ids and validation state.
 - **`EMAIL_QUEUE` (Queue)**: Handles async email payloads to protect the user from booking timeouts.
 
@@ -142,7 +143,7 @@ The booking API route constructs two email payloads (one for customer confirmati
 An isolated, lightweight worker sidecar consumes the queue:
 - **Absolute Code Isolation**: The consumer worker is completely decoupled from `cf-astro`. It must never import Drizzle ORM schemas or Astro layouts to prevent cyclic compilation failures.
 - **Email Assembly**: Uses the high-performance **Eta** template engine to format elegant HTML layouts.
-- **Provider**: Delivers emails via **Resend**'s HTTP REST API.
+- **Dual-SMTP Provider Router**: The consumer dynamically inspects the `projectSource` of the payload. It delivers `cf-astro` emails via **Resend's HTTP API** and `cf-admin` emails via **Brevo's SMTP API**, maximizing deliverability and leveraging higher quotas.
 
 ### 6.3 Delivery Webhooks & Observability
 - **Webhook Endpoint**: `POST /api/webhooks/resend` captures delivery, bounces, and complaints.
