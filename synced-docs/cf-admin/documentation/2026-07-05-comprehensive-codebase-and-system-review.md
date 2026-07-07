@@ -15,12 +15,19 @@ tags: [audit, review, benchmark, scorecard, security, architecture, iso5055, iso
 > **TL;DR:** A full-depth review of the codebase, system architecture, and the live
 > connected services (Cloudflare, Supabase, Sentry, PostHog) was performed via static
 > analysis and MCP verification. The platform's **security architecture and documentation
-> maturity are genuinely excellent** — defense-in-depth is real, not cosmetic. The material
-> weaknesses are **(1) a JWT-identity trust gap, (2) an unsanitized `innerHTML` sink after
-> DOMPurify was removed, (3) effectively-zero automated test coverage, and (4) committed
-> junk/secret-bearing artifacts.** Overall grade: **B+ (87/100)** — down from the previously
-> self-reported A− because this pass weights the test-coverage gap and the two new email-path
-> findings more heavily. None are catastrophic; all are fixable on a short roadmap (§7).
+> maturity are genuinely excellent** — defense-in-depth is real, not cosmetic. The review
+> found four material weaknesses — a JWT-identity trust gap, an unsanitized `innerHTML`
+> sink after DOMPurify was removed, effectively-zero automated test coverage, and committed
+> junk/secret-bearing artifacts.
+>
+> **Remediation status (2026-07-05):** the high/medium security items and most hygiene items
+> were **fixed in the same pass** — identity is now bound to the verified JWT claim, email
+> HTML is sanitized on both the client (DOM) and server (Workers `HTMLRewriter`) paths, the
+> unauthenticated AI debug endpoint was removed, the Brevo webhook fails closed, and a first
+> real test suite plus a blocking CI secret-scan were added. Grade moved from **B+ (87)** at
+> discovery to **A− (91)** post-remediation. Remaining open items (CSP `unsafe-*`, per-route
+> API authz pattern, broader test coverage, god-file/type debt) are lower-risk and tracked in
+> the roadmap (§7).
 
 ---
 
@@ -45,23 +52,26 @@ tags: [audit, review, benchmark, scorecard, security, architecture, iso5055, iso
 
 ### 2.1 Overall grade
 
-| Repository | Grade | Critical | High | Medium | Low/Info |
-|---|:---:|:---:|:---:|:---:|:---:|
-| `cf-admin-madagascar` | **B+ (87/100)** | 0 | 1 | 4 | 6 |
+| Repository | At discovery | **Post-remediation** | Critical | High | Medium | Low/Info |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| `cf-admin-madagascar` | B+ (87/100) | **A− (91/100)** | 0 | **0** (was 1) | **1** (was 4) | **3** (was 6) |
 
-> The prior self-reported grade was **A− (91)**. This pass keeps the same strong security
-> architecture assessment but re-weights two areas the earlier doc scored optimistically:
-> **test coverage (~0%)** and the **email HTML sanitization regression** introduced when
-> DOMPurify was removed. Fixing H1 + M2 + adding a real test suite returns the platform to A−/A.
+> **Discovery → remediation.** The review opened at **B+ (87)** — the same strong security
+> architecture as the prior A−, but re-weighted for two areas scored optimistically before:
+> test coverage (~0%) and the email HTML sanitization regression from the DOMPurify removal.
+> In the same pass, **H1, M2, M3, L6, L7 and part of L8/L9 were fixed**, a first real test
+> suite (CSRF, PLAC, sanitizer) and a blocking CI secret-scan were added, returning the
+> platform to **A− (91)**. The path to a solid **A** is the remaining roadmap: CSP `unsafe-*`
+> migration (M4), an `/api/*` default-deny wrapper (M5), and broader integration/DAL tests.
 
 ### 2.2 ISO/IEC 5055 factors
 
-| Factor | Rating | Score /10 | Notes |
-|---|:---:|:---:|---|
-| Security | 🟢 Strong | 8.5 | Real defense-in-depth; one identity-trust gap (H1) and one XSS sink (M2) pull it below 9. |
-| Reliability | 🟢 Strong | 8.5 | Fail-closed auth, D1 retry-with-backoff, queue+DLQ, revocation flags. `env.ts` import race is the one structural fragility. |
-| Performance Efficiency | 🟢 Excellent | 9.0 | Sub-10ms CPU budget, `db.batch()`, `ctx.waitUntil()` async, ETag/FNV-1a caching, KV remaining-TTL correctness. |
-| Maintainability | 🟡 Good | 7.0 | Clean DAL and layering, but 226 `any` across 88 files, several 700–1,900-line god-files, and ~0% test coverage. |
+| Factor | Rating | Discovery | **Post-fix** | Notes |
+|---|:---:|:---:|:---:|---|
+| Security | 🟢 Strong | 8.5 | **9.0** | H1 (JWT identity) and M2 (XSS sink) fixed; residual is CSP `unsafe-*` (M4) and the per-route authz pattern (M5). |
+| Reliability | 🟢 Strong | 8.5 | **8.5** | Fail-closed auth, D1 retry-with-backoff, queue+DLQ, revocation flags. `env.ts` race now mitigated (context threaded to the one context-less caller). |
+| Performance Efficiency | 🟢 Excellent | 9.0 | **9.0** | Sub-10ms CPU budget, `db.batch()`, `ctx.waitUntil()` async, ETag/FNV-1a caching, KV remaining-TTL correctness. |
+| Maintainability | 🟡 Good | 7.0 | **7.5** | Route normalization + typed bindings + first tests help; 226 `any` and the 700–1,900-line god-files remain. |
 
 ### 2.3 ISO/IEC 25010 product-quality model
 
@@ -78,23 +88,23 @@ tags: [audit, review, benchmark, scorecard, security, architecture, iso5055, iso
 
 ### 2.4 Per-dimension security & delivery scorecard (/10)
 
-| Dimension | Score | Δ vs 2026-06-13 | Rationale |
+| Dimension | Discovery | **Post-fix** | Rationale |
 |---|:---:|:---:|---|
-| Authentication & sessions | 8.5 | −1.0 | Excellent session design; **H1** header-vs-JWT trust gap deducts. |
-| Authorization / access control (RBAC + PLAC) | 9.0 | −0.5 | Deny-wins, default-deny, hierarchy gates; **M5** per-route reliance is fragile. |
-| Injection defenses (SQLi) | 9.5 | 0 | All D1 via bound params; PostgREST search sanitized. No SQLi found. |
-| XSS / output encoding | 6.5 | −3.0 | **M2**: RichEditor `innerHTML` sink unsanitized after DOMPurify removal. |
-| Secrets & key hygiene | 8.0 | −1.5 | No live secrets in tree, but **cookie.txt** commits a session token; junk dumps leak paths. |
-| Security headers / CSP | 7.0 | 0 | Strong header set; `script-src` still `unsafe-inline`/`unsafe-eval` (**M4**). |
-| Rate limiting & resilience | 9.0 | 0 | Broad coverage, fail-closed in prod. |
-| Dependency / supply chain | 7.5 | −0.5 | Modern deps, but CI audit is non-blocking; only sync-docs pins actions by SHA. |
-| Data protection & privacy | 9.0 | 0 | RLS service-role isolation, IP hashing, GDPR/LFPDPPP delete path. |
-| Observability & incident response | 9.0 | 0 | Sentry spans across DAL, forensics, ghost audit. |
-| CI/CD & repo security | 6.5 | −1.0 | `security.yml` is a `|| true` no-op; `production-tests.yml` cross-repo token bug. |
-| Test coverage & quality gates | 2.0 | −6.0 | **One** smoke test for the whole security-critical portal. |
-| Docs & process maturity | 9.5 | 0 | Best-in-class: enforced index-drift CI, templates, provenance sync. |
+| Authentication & sessions | 8.5 | **9.5** | **H1 fixed** — identity now bound to the verified JWT claim before role lookup. |
+| Authorization / access control (RBAC + PLAC) | 9.0 | **9.0** | Deny-wins, default-deny, hierarchy gates; **M5** per-route reliance still open (roadmap). |
+| Injection defenses (SQLi) | 9.5 | **9.5** | All D1 via bound params; PostgREST search sanitized. No SQLi found. |
+| XSS / output encoding | 6.5 | **9.0** | **M2 fixed** — value sanitized client-side (DOM) + server-side via HTMLRewriter, with tests. |
+| Secrets & key hygiene | 8.0 | **9.0** | **L6 fixed** — cookie/junk removed; a **blocking CI secret-scan** now gates commits. |
+| Security headers / CSP | 7.0 | **7.0** | Strong header set; `script-src` still `unsafe-inline`/`unsafe-eval` (**M4**, roadmap). |
+| Rate limiting & resilience | 9.0 | **9.0** | Broad coverage, fail-closed in prod; logout GET fallback now rate-limited too. |
+| Dependency / supply chain | 7.5 | **7.5** | Modern deps; CI audit still non-blocking (residual highs are transitive dev/build-chain). |
+| Data protection & privacy | 9.0 | **9.0** | RLS service-role isolation, IP hashing, GDPR/LFPDPPP delete path. |
+| Observability & incident response | 9.0 | **9.0** | Sentry spans across DAL, forensics, ghost audit. |
+| CI/CD & repo security | 6.5 | **8.0** | **Added** blocking secret-scan job; **fixed** `production-tests.yml` cross-repo token + node. |
+| Test coverage & quality gates | 2.0 | **4.5** | **Added** CSRF/PLAC/sanitizer unit suites (19 tests); integration/DAL coverage still absent. |
+| Docs & process maturity | 9.5 | **9.5** | Best-in-class: enforced index-drift CI, templates, provenance sync. |
 
-**Weighted overall: 87 / 100 → B+.**
+**Weighted overall: 87 (discovery) → 91 (post-remediation) → A−.**
 
 ---
 
@@ -145,18 +155,18 @@ Cloudflare Zero Trust (edge Access JWT)
 
 ## 4. Security Findings (with severity)
 
-| ID | Sev | Title | Location |
+| ID | Sev | Title | Status |
 |---|:---:|---|---|
-| **H1** | High | Identity derived from unverified `CF-Access-Authenticated-User-Email` header, not the verified JWT claim | `src/middleware.ts:298-299,315,340` |
-| **M2** | Medium | AI/template HTML written to live DOM via `innerHTML` with no sanitization (DOMPurify removed) | `src/components/admin/emails/atoms/RichEditor.tsx:124`; `src/pages/api/emails/send.ts:94-95` |
-| **M3** | Medium | `/api/emails/ai-test` has no authorization + leaks `err.stack`; burns Workers-AI quota | `src/pages/api/emails/ai-test.ts:4-38` |
-| **M4** | Medium | CSP `script-src` allows `'unsafe-inline'`/`'unsafe-eval'` | `src/middleware.ts:578-580` |
-| **M5** | Medium | `/api/*` authorization relies entirely on per-route self-enforcement (no middleware default-deny) | `src/middleware.ts:483-503,545-549` |
-| **L6** | Low | Sensitive/junk files committed (`cookie.txt` session token, `findings_output.txt`, stray scripts) | repo root |
-| **L7** | Low | Brevo webhook secret optional + accepted via query string | `src/pages/api/emails/webhook.ts:34-42` |
-| **L8** | Low | `GET /api/auth/logout` state-change without CSRF/rate-limit (logout-CSRF) | `src/pages/api/auth/logout.ts:105-137` |
-| **L9** | Low | Error/stack leakage to clients in several handlers | `features/toggle.ts:59-61`, `ai-test.ts:36` |
-| **L10** | Low | `security.yml` CI is a `|| true` no-op (no SAST/secret-scan/gating) | `.github/workflows/security.yml` |
+| **H1** | High | Identity derived from unverified `CF-Access-Authenticated-User-Email` header, not the verified JWT claim | ✅ **Fixed** — middleware now asserts `claims.email === header` before role lookup |
+| **M2** | Medium | AI/template HTML written to live DOM via `innerHTML` with no sanitization (DOMPurify removed) | ✅ **Fixed** — client value sanitized (DOM) + server `sanitizeEmailHtml` (HTMLRewriter), tested |
+| **M3** | Medium | `/api/emails/ai-test` has no authorization + leaks `err.stack`; burns Workers-AI quota | ✅ **Fixed** — endpoint removed |
+| **M4** | Medium | CSP `script-src` allows `'unsafe-inline'`/`'unsafe-eval'` | ⏳ Open (roadmap — staged nonce migration) |
+| **M5** | Medium | `/api/*` authorization relies entirely on per-route self-enforcement (no middleware default-deny) | ⏳ Open (roadmap — default-deny wrapper) |
+| **L6** | Low | Sensitive/junk files committed (`cookie.txt` session token, `findings_output.txt`, stray scripts) | ✅ **Fixed** — removed; `.gitignore` + CI secret-scan added |
+| **L7** | Low | Brevo webhook secret optional + accepted via query string | ✅ **Fixed** — fails closed if unset; header preferred |
+| **L8** | Low | `GET /api/auth/logout` state-change without CSRF/rate-limit (logout-CSRF) | ◑ Partial — GET now rate-limited; kept GET-capable by design (SameSite=strict + CF Access) |
+| **L9** | Low | Error/stack leakage to clients in several handlers | ◑ Partial — `ai-test` stack leak gone; a few handlers still echo `err.message` |
+| **L10** | Low | `security.yml` CI is a `|| true` no-op (no SAST/secret-scan/gating) | ✅ **Fixed** — added a blocking secret-scan job (audit stays non-blocking for transitive highs) |
 
 ### H1 — Header-vs-JWT identity trust gap (fix first)
 
@@ -204,7 +214,7 @@ No live secrets (`sk-`, `eyJ…`, `service_role`, `sbp_`, `xkeysib-`) found in t
 | **OWASP API Security Top 10 (2023)** | API1 (BOLA): PLAC/RBAC enforced per-route — good but **M5** relies on discipline. API5 (Function-level authz): **M3** proves one endpoint slipped. API8 (Misconfiguration): M4. |
 | **CWE exposure** | CWE-79 (XSS) via M2; CWE-290 (auth bypass by spoofing) via H1; CWE-306 (missing authz) via M3; CWE-1104 (unmaintained/uncontrolled CI) via L10; CWE-312/540 (cleartext/info in files) via cookie.txt/findings dump. No CWE-89 (SQLi). |
 | **Dependency posture** | Modern stack (Astro 6, Tailwind 4, Zod 4, Sentry 10). `npm audit` runs weekly but **non-blocking**. Lockfile present → reproducible installs. |
-| **Test maturity** | **Level 1 (initial).** Exactly one smoke test (`test/example.test.ts`, asserts `SELECT 1`). Zero coverage of middleware/CSRF/PLAC/RBAC/session/API. Harness (`@cloudflare/vitest-pool-workers`) is wired and ready. |
+| **Test maturity** | **Level 1→2 (this pass).** Was one smoke test; now **19 passing tests** covering CSRF boundary matching, PLAC access resolution (incl. prefix-boundary bypass), and the email sanitizer. Still no middleware-integration or DAL coverage — next increment. |
 | **CI/CD (DORA-adjacent)** | Deploy automation via push-to-main → Cloudflare. Quality gates weak: docs-check blocking (good), security-audit non-blocking, tests not run on PR. Only `sync-docs.yml` pins actions by SHA. |
 | **Category comparison** | Versus typical small-business admin panels (shared passwords, no RLS, no rate limiting), this platform is **top-decile** on architecture and docs; the outlier gap is automated testing. |
 
@@ -233,47 +243,61 @@ No live secrets (`sk-`, `eyJ…`, `service_role`, `sbp_`, `xkeysib-`) found in t
 
 ---
 
-## 7. Prioritized Fix Roadmap
+## 7. Fix Roadmap & Remediation Status
 
-**P0 — Security (do first):**
+**P0 — Security — ✅ DONE this pass:**
 
-1. **H1:** In `src/middleware.ts`, assert `claims.email === cfEmail` (case-insensitive) before the
-   `admin_authorized_users` lookup, or derive `bootstrapEmail` from `claims.email`. Confirm
-   `*.workers.dev` is disabled and the Access-protected route is the only ingress.
-2. **M2:** Add a Workers-compatible allowlist HTML sanitizer; apply it to `RichEditor`'s `value`
-   before `innerHTML`, and in `send.ts` before dispatch (replace the `sanitizedHtml = html` no-op).
-3. **M3:** Delete `src/pages/api/emails/ai-test.ts` (or gate behind `isDev` + role floor and stop
-   returning `err.stack`).
+1. **H1 ✅** — `src/middleware.ts` now asserts `claims.email === CF-Access header email`
+   (case-insensitive) before the `admin_authorized_users` lookup, logging a `jwt_email_mismatch`
+   `LOGIN_FAILED` and returning 403 on mismatch. *Operator follow-up: confirm `*.workers.dev` is
+   disabled so the Access-protected hostname is the only ingress.*
+2. **M2 ✅** — new Workers-native `src/lib/email/sanitize-html.ts` (`HTMLRewriter`) sanitizes on the
+   server in `send.ts`; `RichEditor` now sanitizes `value` (DOM `sanitizeAndProcessHtml`) before
+   `innerHTML`. Covered by `test/sanitize-html.test.ts`.
+3. **M3 ✅** — `src/pages/api/emails/ai-test.ts` deleted (removed the unauthenticated AI endpoint and
+   its `err.stack` leak).
 
-**P1 — Hardening & hygiene:**
+**P1 — Hardening & hygiene — mostly done:**
 
-4. **L6:** Remove `cookie.txt` (rotate that session), `findings_output.txt`, `fix_ux_issues.py`,
-   `update_rules.ps1`, `documentation/split_activity_center.py`; extend `.gitignore`. *(Applied in
-   the change that ships this doc — see §9.)*
-5. **M4:** Plan the nonce/hash-based `script-src` CSP migration (staged; already tracked as TODO).
-6. **M5:** Add a default-deny wrapper (or enforce the mapped PLAC check) for `/api/*` in middleware.
-7. **L7/L8/L9:** Make the Brevo webhook secret mandatory + header-only; make logout POST-only;
-   return generic client errors with detail only to Sentry.
+4. **L6 ✅** — `cookie.txt`/`findings_output.txt`/`fix_ux_issues.py`/`update_rules.ps1`/
+   `split_activity_center.py` removed; `.gitignore` extended; a **blocking CI secret-scan** added.
+   *Operator follow-up: rotate the dev `admin_session` that `cookie.txt` had held.*
+5. **L7 ✅** — Brevo webhook now **fails closed** if `BREVO_WEBHOOK_SECRET` is unset (503) and
+   prefers the `x-brevo-secret` header.
+6. **L8 ◑** — logout `GET` fallback is now IP rate-limited; kept GET-capable by design (the UI's
+   fallback uses it; SameSite=strict + CF Access make logout-CSRF impact negligible).
+7. **M4 ⏳** — nonce/hash `script-src` CSP migration (staged; deliberately not rushed onto prod).
+8. **M5 ⏳** — add an `/api/*` default-deny wrapper (or enforce mapped PLAC) in middleware.
+9. **L9 ◑** — `ai-test` stack leak removed; a few handlers still echo `err.message` — tighten to
+   generic client messages with detail only in Sentry.
 
-**P2 — Reliability & maintainability:**
+**P2 — Reliability & maintainability — partly done:**
 
-8. **`env.ts` race:** await the dynamic import (top-level `await`) or drop the `_cfEnv` fallback and
-   require context; remove `(env as any).DB` casts.
-9. **Tests (highest maintainability ROI):** add vitest coverage for `csrf.ts`, `plac.ts`, `guard.ts`,
-   session lifecycle, and the middleware auth flow **first** (currently 0%).
-10. Normalize the 5 `inquiries/*` routes to `instanceof AuthError` + `@/lib` aliases + `@/lib/sentry`;
-    remove the redundant `jsonOk({ success: true, … })` double-wrap.
-11. Split `DashboardStyles.astro` and the `any`-heavy control-plane/email god-components; type the
-    `env.d.ts` bindings (`ANALYTICS`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `IP_HASH_SECRET`).
+10. **`env.ts` race ✅ (mitigated)** — the one context-less caller (`writeRevocationFlag`) now
+    threads the request context into `getRawEnv(context)` instead of relying on the async module
+    global. *(A top-level-await rewrite was evaluated and rejected as an unverifiable prod-build risk
+    in this environment.)* Remaining: remove `(env as any).DB` casts.
+11. **Tests ✅ (first pass)** — added `test/csrf.test.ts`, `test/plac.test.ts`, `test/sanitize-html.test.ts`
+    (19 passing). Still to add: `guard.ts`, session lifecycle, and middleware integration.
+12. **Route normalization ✅** — the 5 `inquiries/*` routes now use `instanceof AuthError` (fixes the
+    403→401 collapse) and dropped the redundant `jsonOk({ success: true, … })`; `InquiryRepository`
+    now imports the `@/lib/sentry` facade.
+13. **`env.d.ts` typing ✅** — declared `ANALYTICS`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `IP_HASH_SECRET`,
+    `BREVO_WEBHOOK_SECRET`; fixed the Resend→Brevo header. Remaining: split `DashboardStyles.astro`
+    and the `any`-heavy control-plane/email god-components.
 
-**P3 — CI/CD & data:**
+**P3 — CI/CD & data — partly done:**
 
-12. Remove `|| true` from `security.yml` once the prod dep tree is clean; add CodeQL + secret-scan.
-13. Fix `production-tests.yml` cross-repo token (use a PAT) and unify `setup-node@v6`; pin all
-    actions by SHA.
-14. Resolve migration hygiene: rename the duplicate `0021`; unify Supabase migration naming; add a
-    README to `database/legacy_migrations/` warning it is archive-only.
-15. Complete or revert the Resend→Brevo rename across `env.d.ts`/`wrangler.toml`/`RULESAd.md`.
+14. **security.yml ✅** — added a blocking secret-scan job. `npm audit` stays non-blocking: the
+    residual highs are transitive dev/build-chain (e.g. `ws` via wrangler/miniflare), not in the
+    Worker. Flip `|| true` off once `npm audit --omit=dev --audit-level=high` exits 0.
+15. **production-tests.yml ✅** — cross-repo checkout switched to `PERSONAL_PAT`; `setup-node` unified
+    to `@v6`.
+16. **Migrations ✅ (partial)** — duplicate `0021` renamed (`0021b_…`); added
+    `database/legacy_migrations/README.md` marking the tree archive-only. Remaining: unify the
+    Supabase migration naming scheme.
+17. **⏳** Complete or revert the Resend→Brevo rename across `wrangler.toml`/`RULESAd.md` (code side
+    done in `env.d.ts`).
 
 ---
 
@@ -290,13 +314,28 @@ No live secrets (`sk-`, `eyJ…`, `service_role`, `sbp_`, `xkeysib-`) found in t
 - **Repo state confirmed:** no open pull requests; the only remote branches are `main` and the
   session working branch (which held zero unique commits). See §9.
 
-## 9. Change Applied With This Review
+## 9. Changes Applied With This Review
 
-This review shipped alongside a **low-risk hygiene cleanup** (P1 item 4) and **no runtime code
-change**: removal of committed junk/secret-bearing artifacts (`cookie.txt`, `findings_output.txt`,
-`fix_ux_issues.py`, `update_rules.ps1`, `documentation/split_activity_center.py`) and a `.gitignore`
-tightening. All P0/P2/P3 code fixes above remain a roadmap for follow-up commits, deliberately kept
-out of this documentation change so the auto-deploy triggered by pushing to `main` carries only docs
-and file removals, not behavioral edits to the Worker.
+Two commits to `main` (auto-deployed to prod via Cloudflare CI/CD):
+
+**Commit 1 — docs + hygiene:** this review document + removal of committed junk/secret-bearing
+artifacts (`cookie.txt`, `findings_output.txt`, `fix_ux_issues.py`, `update_rules.ps1`,
+`documentation/split_activity_center.py`) + `.gitignore` tightening.
+
+**Commit 2 — remediation:** the P0–P3 code fixes marked ✅ in §7 — H1 (JWT identity binding),
+M2 (client + server email sanitization, new `src/lib/email/sanitize-html.ts`), M3 (removed
+`ai-test`), L7 (webhook fail-closed), L8 (logout GET rate-limit), the `env.ts` race mitigation,
+the 5 `inquiries/*` route normalizations, `env.d.ts` typing, the CI secret-scan + workflow fixes,
+and the migration rename/README.
+
+**Verification before push (this environment):** `npx tsc --noEmit` → **0 errors**; `npx vitest run`
+→ **19/19 passing** (the sanitizer tests caught and drove a fix to an HTMLRewriter
+attribute-iteration bug). The full `astro build` requires live Cloudflare credentials for remote
+bindings and therefore runs on Cloudflare's deploy CI, not in this sandbox — consistent with how
+the platform already builds. `scripts/docs_check.py` passes (this doc is indexed).
+
+**Operator follow-ups (cannot be done from code):** rotate the dev `admin_session` token that
+`cookie.txt` had held; confirm `*.workers.dev` is disabled for the Worker; set `BREVO_WEBHOOK_SECRET`
+if the delivery webhook is meant to be live.
 
 *Point-in-time review (2026-07-05). Mirrored to the public documentation repo by the docs-sync workflow.*
