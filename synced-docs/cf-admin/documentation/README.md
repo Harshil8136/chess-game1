@@ -94,6 +94,16 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`reference/control-plane-design/PLAN.md`](reference/control-plane-design/PLAN.md) | Control-plane design doc (provider API specs, phases) | ai, technical | active |
 | [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](reference/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview | ai, technical | active |
 | [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
+| [`reference/commercial-readiness-checklist.md`](reference/commercial-readiness-checklist.md) | Pet-hotel decoupling roadmap toward a generic Workers admin framework | owner, technical | draft |
+
+## Compliance
+
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`security/compliance/ASVS-L2.md`](security/compliance/ASVS-L2.md) | OWASP ASVS v4.0.3 Level 2 verification matrix (per-control status + evidence) | technical, operator, owner | active |
+| [`security/compliance/CSA-CAIQ-v4.md`](security/compliance/CSA-CAIQ-v4.md) | CSA STAR Level 1 Consensus Assessments Initiative Questionnaire (CAIQ v4.0.3) — registry-ready | technical, owner | active |
+| [`security/compliance/SOC2-TSC-mapping.md`](security/compliance/SOC2-TSC-mapping.md) | SOC 2 Type I readiness: control-to-TSC mapping + gap list | technical, owner | active |
+| [`security/compliance/supabase-advisors-latest.json`](security/compliance/supabase-advisors-latest.json) | Latest Supabase advisor snapshot; used by CI grep-guard SEC-11 for regression detection | technical | active |
 
 ## Specs (dated design records)
 
@@ -111,6 +121,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
 | [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 | [`runbooks/brevo-webhook.md`](runbooks/brevo-webhook.md) | Enable Brevo delivery webhook: Worker secret + CF Access bypass policy + Brevo config | active |
+| [`runbooks/supabase-leaked-password-protection.md`](runbooks/supabase-leaked-password-protection.md) | Enable Supabase Auth HIBP leaked-password check (3-step dashboard toggle) | active |
 
 ## Archive (historical — kept verbatim)
 

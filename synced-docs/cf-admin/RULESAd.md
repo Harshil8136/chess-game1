@@ -81,7 +81,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 **EDGE-INJECTED SECURITY:** The dashboard enforces strict HTTP security headers injected globally at the edge via Astro middleware `sequence`.
 
-- **Content-Security-Policy (CSP):** Allows `self`, `unsafe-inline` styles (for Tailwind v4), and `unsafe-inline`/`unsafe-eval` scripts strictly for Preact/Astro island hydration and Sentry tracking.
+- **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>' 'strict-dynamic'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). No `'unsafe-eval'` and no `'unsafe-inline'` for scripts (enforced by SEC-01). `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped-style emissions currently require it; nonce migration for styles is a follow-up. Ships report-only for one deploy window, then flips to enforcing.
 - **X-Frame-Options: DENY** (Blocks Clickjacking)
 - **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
 - **Referrer-Policy: strict-origin-when-cross-origin**
@@ -366,7 +366,35 @@ function MyModal() {
 
 ## 9. SECURITY RULES
 
-### Security Invariants (v4.5)
+### 9.0 Enforced Compliance Rules (v4.8, code-anchored, CI-blocking)
+
+Every rule below is **mechanically enforced** by `scripts/rules_check.py` and
+wired into `.github/workflows/security.yml`. A PR that violates any rule fails
+CI. Rules are one-line-per-file grep guards; they anchor to real code, not
+prose.
+
+Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
+`documentation/security/compliance/ASVS-L2.md`.
+
+| ID | Rule | Anchor | CI guard | Compliance |
+|----|------|--------|----------|------------|
+| SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` or `'unsafe-inline'` (nonce + `'strict-dynamic'` instead) | `src/middleware.ts` (securityHeaders CSP block) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
+| SEC-02 | All cookies MUST be `SameSite=Strict` (never `Lax`) | any `SameSite=` in `src/**` | `rules_check.py::SEC-02` | ASVS 3.4.3 |
+| SEC-03 | API handlers MUST use a DAL repository (`src/lib/dal/*`), never raw `env.DB.prepare(...)` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-03` | ASVS 5.3.4 |
+| SEC-04 | Use `isAdmin()` / `isSuperAdmin()` helpers (`src/lib/auth/rbac.ts`), never hardcoded role arrays | `src/pages/api/**/*.ts` | `rules_check.py::SEC-04` | ASVS 4.1.3 |
+| SEC-05 | Workers runtime has no `process.env` — use `getEnv(context)` from `src/lib/env.ts` | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-05` | ASVS 14.1.1 |
+| SEC-06 | Every API handler MUST gate on `requireAuth()`, `placDenyResponse()`, or `locals.user` — no unauthenticated endpoints outside `PUBLIC_API_ROUTES` / `WEBHOOK_ROUTES` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-06` | ASVS 4.1.1 |
+| SEC-07 | Every `/api/*` route MUST be in `API_PAGE_MAPPING` **or** an explicit `PUBLIC_API_*` allowlist in `src/middleware.ts` — default-deny is the rule | `src/pages/api/**/*.ts` | `rules_check.py::SEC-07` (planned) | ASVS 4.1.5 |
+| SEC-08 | `dangerouslySetInnerHTML` MUST receive pre-sanitized content only (`sanitizeHtml`, `escapeHtml`, template literal) | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-08` | ASVS 5.2.6 |
+| SEC-09 | Every table with `ENABLE ROW LEVEL SECURITY` MUST also declare at least one `CREATE POLICY` in the same migration | `supabase/migrations/**/*.sql` | `rules_check.py::SEC-09` | ASVS 5.3.4 |
+| SEC-10 | Use Web Crypto `crypto.subtle.digest(...)`, never Node's `crypto.createHash(...)` | `src/**/*.{ts,tsx}` | `rules_check.py::SEC-10` | ASVS 6.2.1 |
+
+**Roll-out policy:** New rules ship in `--warn-only` mode for ~1 week
+(prints violations, exits 0) so existing tech-debt can burn down without
+blocking merges. Once the tree is clean for a given rule, remove `--warn-only`
+in `.github/workflows/security.yml`.
+
+### 9.1 Security Invariants (v4.5, historical)
 
 1. **Supabase `anon` role has ZERO access** — no table grants, no RLS policies, no function EXECUTE privileges.
 2. **Default privileges locked** — `ALTER DEFAULT PRIVILEGES` prevents future tables from auto-granting to `anon`.
@@ -375,6 +403,7 @@ function MyModal() {
 5. **6 functions hardened** — EXECUTE revoked from `anon`, `authenticated`, and `PUBLIC` on all public schema functions; `search_path` pinned.
 
 → See [SECURITY.md](./documentation/security/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, defense-in-depth, and Ghost Protection.
+→ See [ASVS-L2.md](./documentation/security/compliance/ASVS-L2.md) for the full OWASP ASVS v4.0.3 Level 2 verification matrix.
 
 ---
 

@@ -62,6 +62,21 @@ Code follow-ups from the deep review of `src/components/admin/emails/` and
 | E-5 | Move email SQL to the DAL + close audit gaps | `src/pages/api/emails/{drafts,templates}.ts` | 🟡 | Replace inline `env.DB.prepare(...)` with `EmailDraftRepository` / `EmailTemplateRepository` (per `coding-standards.md`); add Ghost-Audit coverage for draft and attachment actions (send/cancel/templates already audit). |
 | E-6 | Validate recipient addresses, not just count | `src/pages/api/emails/send.ts`, `Composer.tsx` | 🟡 | `parseRecipientCount` only counts; invalid addresses flow into the queue payload. Add a shared zod validator used by the API and the composer. |
 
+## 2026-07-08 Compliance-wave — CI-enforced burn-down
+
+Surfaced by `scripts/rules_check.py` when the invariants in `RULESAd.md §9.0`
+were first enforced. Shipped in **warn-only** mode; each PR should nibble at
+the list. Once a rule reaches 0 violations, remove its exemption in
+`.github/workflows/security.yml`.
+
+| SEC | Debt | Count | Where | Fix pattern |
+|-----|------|:-----:|-------|-------------|
+| SEC-03 | Raw `env.DB.prepare(...)` in API handlers instead of DAL repositories | 25 | `src/pages/api/audit/**`, `bookings/**`, `system/**`, `users/**`, `auth/logout.ts`, `chatbot/**` | Move SQL to a repository under `src/lib/dal/*Repository.ts` per `coding-standards.md`; import + use in the handler. |
+| SEC-04 | Hardcoded `['dev','owner','super_admin','admin']` role arrays | 12 | `src/pages/api/emails/*.ts`, `src/pages/api/media/revalidate.ts` | Replace with `isAdmin(user.role as Role)` from `src/lib/auth/rbac.ts`. |
+
+Track progress by re-running `python3 scripts/rules_check.py` locally.
+Once both drop to 0, flip CI to blocking (`security.yml::rules-check` remove `--warn-only`).
+
 ## How to close an item
 
 When an item is fixed in code, move its row out of this file and record it in the
