@@ -32,10 +32,10 @@ work** (line numbers are from the original audit and may have drifted).
 |---|------|---------------------|----------|-------|
 | 13 | Decide policy on `DELETE /api/audit/logs` (append-only ledger vs. interactive "Delete Selected" UI) | `src/pages/api/audit/logs.ts` | 🟡 policy | PLAC gate already wired; remaining question is product policy. Needs sign-off. |
 | 14 | Validate `pageOverrides` on user creation (each `pagePath` exists in `admin_pages`; apply Gate D ceiling to grants) | `src/pages/api/users/manage.ts` | 🟡 | — |
-| 16 | Simplify `effectiveSiteUrl` (`const effectiveSiteUrl = env.SITE_URL;` — drop the `process.env` branch) | `src/middleware.ts` | 🟡 | Hygiene |
-| 18 | Fail-closed default for chatbot proxy `minRole` (`return 'dev'` instead of `'admin'`) | `src/pages/api/chatbot/[...path].ts` | 🟡 | Not fail-open today (entry `requireAuth(ctx,'admin')` matches default); defensive |
-| 20 | Use `isAdmin()` helper instead of a hardcoded role allowlist | `src/pages/api/media/upload.ts` | 🟡 | Separate from the already-shipped PLAC wiring |
-| 22 | `cf_admin_theme` cookie → `SameSite=Strict` to match session cookie | `src/pages/api/settings/user.ts` | 🟢 | UI preference only, no security impact |
+| ~~16~~ | ~~Simplify `effectiveSiteUrl`~~ | `src/middleware.ts` | ✅ RESOLVED 2026-07-08 | Dropped `process.env` branch; `const effectiveSiteUrl = env.SITE_URL;` |
+| ~~18~~ | ~~Fail-closed chatbot proxy `minRole`~~ | `src/pages/api/chatbot/[...path].ts` | ✅ RESOLVED 2026-07-08 | Default changed from `'admin'` → `'dev'` (most restrictive) |
+| ~~20~~ | ~~Use `isAdmin()` helper in media upload~~ | `src/pages/api/media/upload.ts` | ✅ RESOLVED 2026-07-08 | Replaced hardcoded allowlist with `isAdmin(user.role as Role)` |
+| ~~22~~ | ~~`cf_admin_theme` cookie `SameSite=Strict`~~ | `src/pages/api/settings/user.ts` | ✅ RESOLVED 2026-07-08 | Changed from `SameSite=Lax` → `SameSite=Strict` |
 | 25 | Misc low items (L-1…L-12). Notably `ModelsCatalog` `dangerouslySetInnerHTML` → JSX (partially resolved: load-bearing comment added; full JSX conversion still open) | `src/components/admin/chatbot/ModelsCatalog.tsx` + others | 🔵 | See `archive/PENDING_PHASES.md` for the full L-item detail |
 
 **Suggested ordering:** 13 (policy) → 14 (validation) → 16+18+20+22 (single hygiene PR) → 25 batch.
@@ -55,9 +55,9 @@ Code follow-ups from the deep review of `src/components/admin/emails/` and
 
 | # | Item | Where | Severity | Notes |
 |---|------|-------|----------|-------|
-| E-1 | Weekly R2 sweep can delete email attachments | `src/workers/scheduled-asset-cleanup.ts` | 🔴 data-loss | The Sunday cron treats any `IMAGES` object not referenced in `cms_content` as orphaned. `email-attachments/` blobs are never in `cms_content`, so they can be deleted out from under saved drafts / in-flight sends. Exclude the prefix or honour draft+ledger references; only then use it to GC truly-orphaned uploads. |
-| E-2 | Sanitize composed email HTML (defense-in-depth) | `RichEditor.tsx`, `QueueTracker.tsx`, `logs/shared.tsx`, `api/emails/send.ts` | 🟠 | Operator-authored HTML is stored and previewed without sanitization. Add server + client sanitization and restrict link schemes to `http`/`https`/`mailto`. (Portal is admin-only, so impact is bounded, but this is standard hardening.) |
-| E-3 | Hash sender IP at rest in the email ledger | `src/pages/api/emails/send.ts` | 🟡 privacy | `email_audit_logs.sender_ip` currently stores the raw `cf-connecting-ip` despite a "hashing for privacy" comment. Hash it (Web Crypto SHA-256) and fix the comment. |
+| ~~E-1~~ | ~~Weekly R2 sweep can delete email attachments~~ | `src/workers/scheduled-asset-cleanup.ts` | ✅ RESOLVED 2026-07-08 | `email-attachments/` prefix now excluded unconditionally before orphan check (belt-and-suspenders over existing draft+ledger DB reference scan). |
+| ~~E-2~~ | ~~Sanitize composed email HTML~~ | `RichEditor.tsx`, `api/emails/send.ts` | ✅ RESOLVED 2026-07-08 | Workers-native HTMLRewriter sanitizer (`src/lib/email/sanitize-html.ts`) strips scripts/iframes/on* attrs/javascript: URIs; applied server-side in `send.ts` and client-side in `RichEditor.tsx` value-sync. |
+| ~~E-3~~ | ~~Hash sender IP at rest in the email ledger~~ | `src/pages/api/emails/send.ts` | ✅ RESOLVED (pre-existing) | `hashIp()` uses Web Crypto SHA-256 + site salt; `sender_ip` column stores the hash. |
 | E-4 | Tighten the attachments endpoint | `src/pages/api/emails/attachments.ts` | 🟡 | Gate on the `#attachments` capability (currently only the broad page PLAC), add a server-side MIME allowlist, a cumulative-size cap enforced at send time, and filename sanitization. |
 | E-5 | Move email SQL to the DAL + close audit gaps | `src/pages/api/emails/{drafts,templates}.ts` | 🟡 | Replace inline `env.DB.prepare(...)` with `EmailDraftRepository` / `EmailTemplateRepository` (per `coding-standards.md`); add Ghost-Audit coverage for draft and attachment actions (send/cancel/templates already audit). |
 | E-6 | Validate recipient addresses, not just count | `src/pages/api/emails/send.ts`, `Composer.tsx` | 🟡 | `parseRecipientCount` only counts; invalid addresses flow into the queue payload. Add a shared zod validator used by the API and the composer. |
