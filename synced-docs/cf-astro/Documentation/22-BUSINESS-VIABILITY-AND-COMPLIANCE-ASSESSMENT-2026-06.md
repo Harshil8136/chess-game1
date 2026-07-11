@@ -7,7 +7,7 @@
 > **Bottom line:** The platform is **genuinely good** — well above a typical small-business
 > site + admin panel — and it **is** sellable to other businesses. What's sellable is the
 > **productized** version, not the current single-business instance. On law: the engineering
-> is already **"GDPR-grade,"** so you are *technically close* to the requirements of **~40+
+> is already **"GDPR-grade,"** so you are _technically close_ to the requirements of **~40+
 > countries** that follow GDPR-style rules — but "technically close" is **not** "legally
 > compliant." You are fully, defensibly compliant in **one** country today (Mexico, pending a
 > small Terms fix). On "can AI just build this?": AI clones a **demo** in a weekend but not
@@ -38,34 +38,35 @@ appointment/booking business**, in two cooperating Cloudflare-edge apps:
   Sentry, PostHog, Cloudflare, and Supabase.
 
 Both are **stateless edge isolates** sharing one backbone: Cloudflare **D1 + KV + R2 + Queues
-+ Analytics Engine** and **Supabase Postgres** (row-level security on every PII table). It
-runs for ~**$0–30/month** with ~**2,000× traffic headroom** (see
-[`21-PLATFORM-STATUS-SUMMARY-2026-06.md`](./21-PLATFORM-STATUS-SUMMARY-2026-06.md)).
 
-**Re-framed as a product:** *"A fast, cheap-to-run, security- and privacy-hardened booking +
+- Analytics Engine** and **Supabase Postgres** (row-level security on every PII table). It
+  runs for ~**$0–30/month** with ~**2,000× traffic headroom** (see
+  [`21-PLATFORM-STATUS-SUMMARY-2026-06.md`](./21-PLATFORM-STATUS-SUMMARY-2026-06.md)).
+
+**Re-framed as a product:** _"A fast, cheap-to-run, security- and privacy-hardened booking +
 back-office platform for small service businesses (pet care, clinics, salons, studios,
-tutoring, trades) — deployable per client or as multi-tenant SaaS."*
+tutoring, trades) — deployable per client or as multi-tenant SaaS."_
 
 ---
 
 ## 2. Is it viable to sell? (Go / No-Go)
 
 **Verdict: Viable — GO, with the right packaging.** The asset is strong; the gap is
-*productization*, not quality.
+_productization_, not quality.
 
 ### 2.1 What is genuinely strong (why a buyer would pay)
 
-| Strength | Evidence | Why a buyer cares |
-|---|---|---|
-| Security maturity | A−/A− (90–91/100), 0 critical/high/medium open; RBAC + PLAC; anti-escalation gates; CSRF; RLS everywhere | SMB software is usually insecure; this is top-decile |
-| Cost & scale | ~$0–30/mo, edge-native, ~2,000× headroom | High margin; no infra team needed |
-| Privacy engineering | Consent proof + ARCO + category-based disclosure; consent-gated analytics; PII redaction | Compliance is a sales objection-killer |
-| AI-agent readiness | Public MCP server, `.well-known/` discovery, WebMCP, RFC metadata | A real 2026 differentiator vs. legacy SMB tools |
-| Operational maturity | Audit, login forensics, runbooks, incident post-mortems, CI-enforced doc governance | Signals a system that can be operated, not just demoed |
+| Strength             | Evidence                                                                                                 | Why a buyer cares                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Security maturity    | A−/A− (90–91/100), 0 critical/high/medium open; RBAC + PLAC; anti-escalation gates; CSRF; RLS everywhere | SMB software is usually insecure; this is top-decile   |
+| Cost & scale         | ~$0–30/mo, edge-native, ~2,000× headroom                                                                 | High margin; no infra team needed                      |
+| Privacy engineering  | Consent proof + ARCO + category-based disclosure; consent-gated analytics; PII redaction                 | Compliance is a sales objection-killer                 |
+| AI-agent readiness   | Public MCP server, `.well-known/` discovery, WebMCP, RFC metadata                                        | A real 2026 differentiator vs. legacy SMB tools        |
+| Operational maturity | Audit, login forensics, runbooks, incident post-mortems, CI-enforced doc governance                      | Signals a system that can be operated, not just demoed |
 
 ### 2.2 Honest weaknesses (what blocks "sell as-is")
 
-- **Single-tenant.** Wired for *one* business (one D1/Supabase project, one domain, one
+- **Single-tenant.** Wired for _one_ business (one D1/Supabase project, one domain, one
   Zero-Trust team, hardcoded prices/locations/copy). No second customer without multi-tenant work.
 - **No automated tests.** Quality held by TypeScript + `astro check` + manual review — a
   liability once you ship changes on customers' behalf.
@@ -77,7 +78,7 @@ tutoring, trades) — deployable per client or as multi-tenant SaaS."*
 ### 2.3 Market read
 
 - **Vertical wedge:** pet boarding/daycare — domain truth is baked in (species, vaccination
-  entry rules, multi-pet bookings). Sell to *other pet hotels* first.
+  entry rules, multi-pet bookings). Sell to _other pet hotels_ first.
 - **Adjacent verticals (same engine):** grooming, vet clinics, salons, studios, tutoring,
   physiotherapy, trades — any "book + run a small back office" business.
 - **Competition:** site builders + booking plugins, vertical SaaS, and "an agency builds you
@@ -88,22 +89,22 @@ tutoring, trades) — deployable per client or as multi-tenant SaaS."*
 
 ## 3. Can AI — or anyone — just rebuild this easily? (Moat analysis)
 
-**Short answer: a weekend AI build gets a convincing *demo*, not this *trustworthy production
-system*. The moat is real but *perishable*.**
+**Short answer: a weekend AI build gets a convincing _demo_, not this _trustworthy production
+system_. The moat is real but _perishable_.**
 
 ### 3.1 The ~20% AI/anyone reproduces cheaply (days)
 
 An Astro + Cloudflare booking site, a CRUD admin, a booking form, a consent banner, Tailwind
-UI, a Supabase schema — near-commodity now. An LLM scaffolds it quickly and it *looks* done.
+UI, a Supabase schema — near-commodity now. An LLM scaffolds it quickly and it _looks_ done.
 
 ### 3.2 The ~80% that is the actual moat (months of accumulated correctness)
 
 - **Authorization done right:** page-level "deny-wins" access control, anti-escalation gates,
   hidden-account protection, immediate force-kick — exactly what AI-generated admin panels get
-  *wrong* (IDOR, privilege escalation, missing re-checks).
+  _wrong_ (IDOR, privilege escalation, missing re-checks).
 - **Audit & forensics:** async audit logging and login forensics — easy to omit, hard to
   retrofit, first thing a security buyer asks about.
-- **Compliance nuance:** category-based disclosure vs. naming sub-processors, consent *proof*
+- **Compliance nuance:** category-based disclosure vs. naming sub-processors, consent _proof_
   (interaction telemetry + text hash), ARCO/retention, fail-closed defaults — legal craft in code.
 - **Operational scar tissue:** migrations, incident post-mortems, runbooks, KV-resilience
   fallbacks, queue/DLQ durability — the bugs already paid for.
@@ -113,9 +114,9 @@ UI, a Supabase schema — near-commodity now. An LLM scaffolds it quickly and it
 
 **Barrier to a demo: low. Barrier to a system a business trusts with customer PII and money:
 high** — but it **erodes** as AI tooling improves and as detail is published. Your durable
-moat is therefore *not the code* — it is **packaging**: a hardened repeatable template,
+moat is therefore _not the code_ — it is **packaging**: a hardened repeatable template,
 **brand/trust**, **SLA + support**, **compliance operations** (DPAs, region choice, breach
-response), and **domain depth**. Sell the *trust + service*, not the source. **Keep the repo
+response), and **domain depth**. Sell the _trust + service_, not the source. **Keep the repo
 private** — an open-source release would hand most of the moat away.
 
 ---
@@ -123,8 +124,8 @@ private** — an open-source release would hand most of the moat away.
 ## 4. Multi-jurisdiction compliance — "close to how many countries?"
 
 > **Read carefully — the most over-claimed area in SMB software.** There is a large gap
-> between *"our engineering matches what these laws require"* (true here) and *"we are legally
-> compliant in country X"* (a paperwork + configuration + counsel exercise code never
+> between _"our engineering matches what these laws require"_ (true here) and _"we are legally
+> compliant in country X"_ (a paperwork + configuration + counsel exercise code never
 > satisfies alone). **Not legal advice.**
 
 ### 4.1 Where you stand today
@@ -144,41 +145,41 @@ private** — an open-source release would hand most of the moat away.
 Legend: **Controls present** = the technical machinery the law expects largely exists ·
 **Gap to "compliant"** = the legal/config work still required.
 
-| Jurisdiction / regime | Law | Controls present | Gap to "compliant" | Effort |
-|---|---|---|---|---|
-| **Mexico** | LFPDPPP + LFPC | ✅ Notice, ARCO, consent proof, retention, RLS | LFPC Terms review (counsel); breach process | **Low** |
-| **EU / EEA (27)** | GDPR | ✅ Art. 13 categories, DSR machinery, Art. 32 security, consent gating | **EU data residency**, SCC/DPF for US transfer, DPA per customer, RoPA (Art. 30), EU **representative** (Art. 27), 72h breach workflow, DPIA | **Med–High** |
-| **United Kingdom** | UK GDPR + DPA 2018 | ✅ (mirrors GDPR) | UK representative, ICO breach reporting, IDTA/UK addendum | **Medium** |
-| **United States** | CCPA/CPRA + state patchwork | ⚠️ Partial — disclosure + opt-out concepts | "Do Not Sell/Share" + GPC handling, per-state notices (CO/VA/CT/…), data-broker stance | **Medium** |
-| **Canada** | PIPEDA (+ Québec Law 25) | ✅ Consent, access, safeguards | Breach record-keeping, Law 25 specifics (privacy officer, transfer assessments) | **Medium** |
-| **Brazil** | LGPD | ✅ (GDPR-modeled) | Legal basis mapping, DPO ("encarregado"), ANPD breach reporting | **Medium** |
-| **GDPR-modeled others** (Switzerland nFADP, South Africa POPIA, Australia Privacy Act, Japan APPI, etc.) | various | ✅ Largely (same control families) | Local notice text, local representative/registration, transfer mechanism | **Medium** |
+| Jurisdiction / regime                                                                                    | Law                         | Controls present                                                       | Gap to "compliant"                                                                                                                           | Effort       |
+| -------------------------------------------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **Mexico**                                                                                               | LFPDPPP + LFPC              | ✅ Notice, ARCO, consent proof, retention, RLS                         | LFPC Terms review (counsel); breach process                                                                                                  | **Low**      |
+| **EU / EEA (27)**                                                                                        | GDPR                        | ✅ Art. 13 categories, DSR machinery, Art. 32 security, consent gating | **EU data residency**, SCC/DPF for US transfer, DPA per customer, RoPA (Art. 30), EU **representative** (Art. 27), 72h breach workflow, DPIA | **Med–High** |
+| **United Kingdom**                                                                                       | UK GDPR + DPA 2018          | ✅ (mirrors GDPR)                                                      | UK representative, ICO breach reporting, IDTA/UK addendum                                                                                    | **Medium**   |
+| **United States**                                                                                        | CCPA/CPRA + state patchwork | ⚠️ Partial — disclosure + opt-out concepts                             | "Do Not Sell/Share" + GPC handling, per-state notices (CO/VA/CT/…), data-broker stance                                                       | **Medium**   |
+| **Canada**                                                                                               | PIPEDA (+ Québec Law 25)    | ✅ Consent, access, safeguards                                         | Breach record-keeping, Law 25 specifics (privacy officer, transfer assessments)                                                              | **Medium**   |
+| **Brazil**                                                                                               | LGPD                        | ✅ (GDPR-modeled)                                                      | Legal basis mapping, DPO ("encarregado"), ANPD breach reporting                                                                              | **Medium**   |
+| **GDPR-modeled others** (Switzerland nFADP, South Africa POPIA, Australia Privacy Act, Japan APPI, etc.) | various                     | ✅ Largely (same control families)                                     | Local notice text, local representative/registration, transfer mechanism                                                                     | **Medium**   |
 
 ### 4.3 The honest "how many" answer
 
-- **Technically *close to* ~40+ jurisdictions.** The engineering is GDPR-grade, and the GDPR
+- **Technically _close to_ ~40+ jurisdictions.** The engineering is GDPR-grade, and the GDPR
   template is echoed across the EEA (27) + UK + dozens of LGPD/PIPEDA/POPIA/nFADP-style
-  regimes, so the *control families* those laws demand are **already in the product** — you're
+  regimes, so the _control families_ those laws demand are **already in the product** — you're
   "~80% there" technically for a large slice of the world.
 - **Fully, defensibly compliant in ~1 today (Mexico).** Reaching "compliant" elsewhere needs
   the same recurring kit — work single-tenant software structurally can't do for many customers
   at once:
   1. **Per-customer/region data residency** (one US region today).
   2. **Localized legal text** (notice, consent, terms) per jurisdiction + language.
-  3. **Signed paperwork:** DPA + SCC/DPF/IDTA between *you* (processor) and *each customer*
+  3. **Signed paperwork:** DPA + SCC/DPF/IDTA between _you_ (processor) and _each customer_
      (controller), sub-processor list, RoPA.
   4. **Roles & process:** EU/UK representative or DPO where required, **breach-notification
      workflow** (e.g. GDPR 72h), DSR-intake SLA, DPIA for higher-risk processing.
   5. **Counsel sign-off** per target market.
 
-**Bottom line:** market it as **"privacy-by-design, GDPR-grade architecture"** — *not*
+**Bottom line:** market it as **"privacy-by-design, GDPR-grade architecture"** — _not_
 "compliant in 40 countries." The first is true and sells; the second is a legal claim you
 cannot yet back and would create liability.
 
-### 4.4 The one hard *technical* blocker
+### 4.4 The one hard _technical_ blocker
 
 **Data residency.** D1 and Supabase data live in the **US (us-east)**. GDPR permits US
-transfer under SCCs/Data Privacy Framework, so it's *not fatal* — but residency-sensitive
+transfer under SCCs/Data Privacy Framework, so it's _not fatal_ — but residency-sensitive
 buyers (EU public sector, healthcare-adjacent, some enterprises) will require an **EU region**.
 Cloudflare and Supabase **both support EU regions**, so this is **architecturally closeable**
 (a deployment/config track), but **not configured today** — the single biggest infra item for
@@ -188,15 +189,15 @@ serious EU sales.
 
 ## 5. Sell it as-is, upgraded, or downgraded?
 
-**Neither "as-is" nor "downgrade."** Sell a **selectively upgraded** product: *upgrade* the
-productization layer (multi-customer, config, legal kit), *downgrade* (strip) the hardcoded
+**Neither "as-is" nor "downgrade."** Sell a **selectively upgraded** product: _upgrade_ the
+productization layer (multi-customer, config, legal kit), _downgrade_ (strip) the hardcoded
 Madagascar-specific content. Three paths:
 
-| Path | What you sell | Eng effort | Time-to-revenue | Margin / scale | Best when |
-|---|---|---|---|---|---|
-| **(A) Managed per-client template** | A dedicated copy per customer (their domain/CF/Supabase/branding), you operate it | **Low** | **Now** | Services-heavy, lower scale | Validate demand, bank early cash |
-| **(B) Multi-tenant SaaS** | One platform, many tenants self-serve | **High** (tenant isolation, per-tenant secrets/region/branding/legal, billing) | 2–4+ months | High margin, real scale | Proven demand; the actual venture |
-| **(C) Open-core / source license** | Sell/lease source or template | Low | Now | **Lowest moat** | Not recommended — gives away the moat (§3) |
+| Path                                | What you sell                                                                     | Eng effort                                                                     | Time-to-revenue | Margin / scale              | Best when                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------- | --------------------------- | ------------------------------------------ |
+| **(A) Managed per-client template** | A dedicated copy per customer (their domain/CF/Supabase/branding), you operate it | **Low**                                                                        | **Now**         | Services-heavy, lower scale | Validate demand, bank early cash           |
+| **(B) Multi-tenant SaaS**           | One platform, many tenants self-serve                                             | **High** (tenant isolation, per-tenant secrets/region/branding/legal, billing) | 2–4+ months     | High margin, real scale     | Proven demand; the actual venture          |
+| **(C) Open-core / source license**  | Sell/lease source or template                                                     | Low                                                                            | Now             | **Lowest moat**             | Not recommended — gives away the moat (§3) |
 
 **Recommendation: start with (A)** to prove customers will pay (near-zero new engineering),
 then **invest into (B)** for scale. Avoid (C). Do the **§7 must-fix** items before onboarding
@@ -208,17 +209,17 @@ paying customers.
 
 Indicative bands — starting points to validate against local willingness-to-pay, **not a quote.**
 
-| Tier | Who it's for | Includes | Indicative price |
-|---|---|---|---|
-| **Starter** | Solo / micro business | Hosted bilingual **booking + marketing site**, consent banner, email confirmations, SEO, their branding | ~$29–79 / mo |
-| **Pro** | Growing SMB | Starter **+ admin/CRM** (users, bookings, CMS), email portal/templates, analytics dashboard | ~$99–249 / mo |
-| **Business** | Multi-staff ops | Pro **+ RBAC/PLAC roles**, audit log, **service control plane**, **AI chatbot + MCP/AI-agent surface**, priority support | ~$299–699 / mo |
-| **Enterprise** | Compliance-sensitive / multi-site | Business **+ data-region choice (EU/US), DPA/SCC kit, SSO (Zero Trust/SAML), SLA, breach-response support, custom legal text** | Custom (annual) |
+| Tier           | Who it's for                      | Includes                                                                                                                       | Indicative price |
+| -------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| **Starter**    | Solo / micro business             | Hosted bilingual **booking + marketing site**, consent banner, email confirmations, SEO, their branding                        | ~$29–79 / mo     |
+| **Pro**        | Growing SMB                       | Starter **+ admin/CRM** (users, bookings, CMS), email portal/templates, analytics dashboard                                    | ~$99–249 / mo    |
+| **Business**   | Multi-staff ops                   | Pro **+ RBAC/PLAC roles**, audit log, **service control plane**, **AI chatbot + MCP/AI-agent surface**, priority support       | ~$299–699 / mo   |
+| **Enterprise** | Compliance-sensitive / multi-site | Business **+ data-region choice (EU/US), DPA/SCC kit, SSO (Zero Trust/SAML), SLA, breach-response support, custom legal text** | Custom (annual)  |
 
 **Add-ons:** extra languages/jurisdictions, white-glove migration, custom integrations,
 dedicated region, audit-support package.
 
-**Pricing logic:** lower tiers monetize the *cheap-to-run* edge stack (high margin); the top
+**Pricing logic:** lower tiers monetize the _cheap-to-run_ edge stack (high margin); the top
 tier monetizes **compliance + assurance** — exactly the work §4 says is missing — so roadmap
 and pricing align.
 
@@ -268,10 +269,10 @@ and pricing align.
 
 ### 8.2 "Why not just have AI build it?" (objection rebuttal)
 
-> AI can scaffold a *demo* in a weekend. It cannot cheaply reproduce the **trust layer** — the
+> AI can scaffold a _demo_ in a weekend. It cannot cheaply reproduce the **trust layer** — the
 > access control, audit, privacy engineering, incident-tested resilience, and operational
 > support — that decides whether you can safely hand it customer data and money. You're buying
-> *the hardened, supported, compliant version*, plus someone accountable when it matters.
+> _the hardened, supported, compliant version_, plus someone accountable when it matters.
 
 ### 8.3 Compliance one-pager (buyer-facing)
 
@@ -279,8 +280,8 @@ and pricing align.
 - Encryption in transit; least-privilege data access; row-level security on personal data.
 - Audit logging of sensitive actions; rapid staff access revocation.
 - **Data-region choice (EU/US) and a Data Processing Agreement available on Enterprise.**
-- *We provide privacy-respecting engineering; final legal compliance is established together
-  with your counsel for your jurisdiction.* **(Not legal advice.)**
+- _We provide privacy-respecting engineering; final legal compliance is established together
+  with your counsel for your jurisdiction._ **(Not legal advice.)**
 
 ### 8.4 Tier pricing table
 
@@ -295,7 +296,7 @@ See **§6** — reuse directly.
   security/compliance/status documents below. **No live customer data was accessed and no
   application/runtime code, `wrangler.toml`, or `public/_headers` was changed by producing
   this report.**
-- **Scope:** strategic viability + multi-jurisdiction compliance *posture* + go-to-market /
+- **Scope:** strategic viability + multi-jurisdiction compliance _posture_ + go-to-market /
   tiering. **Not** a legal compliance certification.
 - **Disclaimer:** business/strategy/compliance analysis — **not legal or financial advice.**
   Engage qualified counsel and a privacy professional for each target jurisdiction before
@@ -310,6 +311,7 @@ See **§6** — reuse directly.
 - [`SYSTEM-ARCHITECTURE.md`](./SYSTEM-ARCHITECTURE.md) — edge SSR, bindings, API specs
 - Canonical CI-governed twin in `cf-admin-madagascar`: `documentation/2026-06-16-business-viability-and-compliance-assessment.md`
 
-*Point-in-time assessment (2026-06-16). Published to both repositories. No application behavior
-was changed by producing it.*
+_Point-in-time assessment (2026-06-16). Published to both repositories. No application behavior
+was changed by producing it._
+
 {% endraw %}

@@ -7,10 +7,10 @@ form; both notify `booking@madagascarhotelags.com` through the email queue.
 
 ## Where requests land
 
-| Channel | Storage | Notification |
-|---|---|---|
-| ARCO form with identity document | Postgres `legal_requests` (ticket `ARCO-NNNNNN`, status `PENDING`) + document in R2 `arco-documents` | Admin email via queue |
-| Simple privacy request (`/api/privacy/arco`) | Postgres `privacy_requests` | — (poll the table) |
+| Channel                                      | Storage                                                                                              | Notification          |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
+| ARCO form with identity document             | Postgres `legal_requests` (ticket `ARCO-NNNNNN`, status `PENDING`) + document in R2 `arco-documents` | Admin email via queue |
+| Simple privacy request (`/api/privacy/arco`) | Postgres `privacy_requests`                                                                          | — (poll the table)    |
 
 ## Step-by-step
 
@@ -42,6 +42,7 @@ form; both notify `booking@madagascarhotelags.com` through the email queue.
    (`wrangler r2 object delete arco-documents/<key>`).
 
 ## Escalation
+
 Anything ambiguous (partial deletion requests, disputes about consent records,
 requests on behalf of another person) → hold the clock position, consult
 counsel, and answer within the window even if the answer is "we need X to

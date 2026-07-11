@@ -6,6 +6,7 @@
 ## 🏢 PROJECT MISSION — COMMERCIAL-GRADE, $0 INFRASTRUCTURE
 
 **cf-astro is a production-ready, commercial-grade pet hotel website built entirely on FREE tier services.** This is a real business application designed to:
+
 - Handle real customer bookings with email confirmations
 - Run 24/7 at **$0/month** total infrastructure cost
 - Deliver Lighthouse 95+ performance on mobile
@@ -31,21 +32,21 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 ## 1. PROJECT IDENTITY
 
-| Property | Value |
-|----------|-------|
-| **Framework** | Astro 6.0+ with `@astrojs/cloudflare` adapter |
-| **UI Islands** | Preact (3KB, React-compatible) for interactive components |
-| **Hosting** | Cloudflare Pages (unlimited bandwidth, free) |
-| **Database** | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432) |
-| **Cache** | Cloudflare KV + Upstash Redis |
-| **Storage** | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated) |
-| **Email** | Dual-SMTP via Cloudflare Queue (Resend for `cf-astro`, Brevo for `cf-admin`) |
-| **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges) |
-| **Analytics** | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine |
-| **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing) |
-| **Logging** | BetterStack (`@logtail/edge`, server-side structured logging) |
-| **i18n** | Astro built-in (es/en with prefix routing) |
-| **CSS** | Tailwind CSS **v4** via `@tailwindcss/vite` Vite plugin |
+| Property           | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Framework**      | Astro 6.0+ with `@astrojs/cloudflare` adapter                                |
+| **UI Islands**     | Preact (3KB, React-compatible) for interactive components                    |
+| **Hosting**        | Cloudflare Pages (unlimited bandwidth, free)                                 |
+| **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)        |
+| **Cache**          | Cloudflare KV + Upstash Redis                                                |
+| **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)        |
+| **Email**          | Dual-SMTP via Cloudflare Queue (Resend for `cf-astro`, Brevo for `cf-admin`) |
+| **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges)                            |
+| **Analytics**      | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine      |
+| **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing)        |
+| **Logging**        | BetterStack (`@logtail/edge`, server-side structured logging)                |
+| **i18n**           | Astro built-in (es/en with prefix routing)                                   |
+| **CSS**            | Tailwind CSS **v4** via `@tailwindcss/vite` Vite plugin                      |
 
 ---
 

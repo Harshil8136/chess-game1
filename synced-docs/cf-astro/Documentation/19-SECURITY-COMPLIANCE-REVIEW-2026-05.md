@@ -31,7 +31,7 @@ Severity legend: 🔴 act soon · 🟡 improve · 🟢 minor/hygiene.
   **read-only** tools (`get_services`, `get_locations`, `get_booking_url`,
   `get_faq`). Rate-limited 60/60s; no auth by design (public data, non-browser
   clients). Connected dev MCP servers observed: a Supabase MCP (read/write to the
-  project) and the GitHub MCP — these are *tooling*, not part of the deployed app.
+  project) and the GitHub MCP — these are _tooling_, not part of the deployed app.
 - **Defenses:** `assertOrigin()` CSRF guard + `timingSafeEq()` + `sanitizeHtml()`
   (`src/lib/security.ts`); per-endpoint rate limits (`src/lib/rate-limit.ts`);
   security headers + CSP (`public/_headers`).
@@ -40,14 +40,14 @@ Severity legend: 🔴 act soon · 🟡 improve · 🟢 minor/hygiene.
 
 ## 2. Security vulnerabilities / risks
 
-| # | Sev | Finding | Location | Recommendation |
-|---|-----|---------|----------|----------------|
-| 1 | 🟡 | D1 audit row written **before** rate-limit → write-amplification / cost-DoS under flood | `api/booking.ts:69-74`; `api/consent.ts` | Add a cheap in-memory per-IP burst pre-check **before** the D1 write; keep audit-first for legitimate traffic |
-| 2 | 🟡 | CSP allows `'unsafe-inline'` + `'unsafe-eval'` in `script-src` | `public/_headers:7` | Migrate to nonce/hash CSP (Astro middleware nonce + PostHog tweak). Test carefully |
-| 3 | 🔴(ops) | BetterStack token returns 401 → structured logs silently dropped | noted in code + `ToDo.md` | Rotate `BETTERSTACK_SOURCE_TOKEN` |
-| 4 | 🟢 | Supabase "leaked password protection" disabled | live security advisor | Enable in dashboard (only matters if Supabase Auth is used by admin app) |
-| 5 | 🟢 | MCP endpoint unauthenticated | `api/mcp.ts` | Acceptable (public read-only, rate-limited). Document threat model only |
-| 6 | 🟢 | `Content-Disposition` filename not quote-escaped | `api/arco/get-document.ts:97` | Low risk (server-derived path). Escape opportunistically |
+| #   | Sev     | Finding                                                                                 | Location                                 | Recommendation                                                                                                |
+| --- | ------- | --------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 1   | 🟡      | D1 audit row written **before** rate-limit → write-amplification / cost-DoS under flood | `api/booking.ts:69-74`; `api/consent.ts` | Add a cheap in-memory per-IP burst pre-check **before** the D1 write; keep audit-first for legitimate traffic |
+| 2   | 🟡      | CSP allows `'unsafe-inline'` + `'unsafe-eval'` in `script-src`                          | `public/_headers:7`                      | Migrate to nonce/hash CSP (Astro middleware nonce + PostHog tweak). Test carefully                            |
+| 3   | 🔴(ops) | BetterStack token returns 401 → structured logs silently dropped                        | noted in code + `ToDo.md`                | Rotate `BETTERSTACK_SOURCE_TOKEN`                                                                             |
+| 4   | 🟢      | Supabase "leaked password protection" disabled                                          | live security advisor                    | Enable in dashboard (only matters if Supabase Auth is used by admin app)                                      |
+| 5   | 🟢      | MCP endpoint unauthenticated                                                            | `api/mcp.ts`                             | Acceptable (public read-only, rate-limited). Document threat model only                                       |
+| 6   | 🟢      | `Content-Disposition` filename not quote-escaped                                        | `api/arco/get-document.ts:97`            | Low risk (server-derived path). Escape opportunistically                                                      |
 
 **Confirmed NON-issues** (do not "fix"): public keys in `wrangler.toml`
 (Turnstile site key, Supabase publishable key, PostHog key, Sentry DSN) are public
@@ -73,7 +73,9 @@ deliberate.
 ## 4. Compliance — lawful, fair, business-protective
 
 ### 4.1 Privacy notice is inaccurate AND over-disclosed 🔴
+
 `src/i18n/translations/{es,en}.json` (`Privacy` object, ~lines 973-1132) currently:
+
 - Names **"Vercel"** as hosting — the stack is **Cloudflare** (factually wrong).
 - States the database is in **"UE (Frankfurt)"** — it is **Supabase us-east-1 (US)**
   (factually wrong; misstates the country of an international transfer).
@@ -85,12 +87,14 @@ vendor/architecture detail is an attacker reconnaissance map. **See §5 for the
 recommended rewrite.**
 
 ### 4.2 Privacy notice under-discloses actual collection 🟡
+
 The app stores raw **IP address**, **device fingerprint**, and **interaction proof**
 in `consent_records` (`booking.ts:205-211`, `api/consent.ts`). The notice must
 disclose these **by category**, with purposes (security / anti-fraud / consent
 proof) and **retention periods**.
 
 ### 4.3 Terms — refund / no-show clause 🟡 (flagged, not edited)
+
 `Legal.terms` §2 ("no refunds; no-shows forfeit the full amount") may be deemed
 abusive/void under Mexico's **LFPC** (consumer protection) and PROFECO practice.
 The 3-month booking credit is fine; the **absolute forfeiture** is the risk.
@@ -98,6 +102,7 @@ Per owner decision this is **flagged only** — recommend counsel review and, wh
 Terms is next revised, the same category-based treatment for §12 (GitHub Actions).
 
 ### 4.4 Legacy duplicate privacy text 🟢
+
 A second, short `privacy` dict (`es.json:1134`, lowercase, `section1/2/3`) appears
 unused/contradictory. Verify it is not surfaced to users; remove if dead.
 
@@ -107,22 +112,24 @@ unused/contradictory. Verify it is not surfaced to users; remove if dead.
 
 **Goal:** satisfy LFPDPPP (México) + GDPR-grade transparency **without publishing
 the exact tech stack or sub-processors.** This is lawful, not "security by
-obscurity" — every control stays in place; only the *public enumeration* of
+obscurity" — every control stays in place; only the _public enumeration_ of
 vendors/architecture is reduced.
 
 **Legal basis:**
-- **GDPR Art. 13(1)(e)** explicitly permits disclosing *"recipients or **categories
-  of recipients**"* — individual vendors need not be named.
-- **LFPDPPP** distinguishes *remisiones* (to *encargados*/processors acting on the
-  controller's behalf — hosting, email, analytics) from *transferencias* (to
+
+- **GDPR Art. 13(1)(e)** explicitly permits disclosing _"recipients or **categories
+  of recipients**"_ — individual vendors need not be named.
+- **LFPDPPP** distinguishes _remisiones_ (to _encargados_/processors acting on the
+  controller's behalf — hosting, email, analytics) from _transferencias_ (to
   independent third-party controllers). Processors need **not** be individually
   named publicly; you must state purposes, categories of recipients, that
   international transfer to the US occurs, and the safeguards.
 - A privacy notice **must remain user-accessible** (it cannot be hidden); `noIndex`
-  + robots `Disallow` on `/privacy` & `/terms` already reduce scraping. The real
-  protection is the **wording**.
+  - robots `Disallow` on `/privacy` & `/terms` already reduce scraping. The real
+    protection is the **wording**.
 
 **Recommended notice structure (drafted; apply on owner approval):**
+
 1. Controller identity + contact (keep — required).
 2. **Categories of data** including technical data: IP address, approximate
    location, device/technical identifiers, interaction/consent records — with
@@ -177,6 +184,7 @@ connectors were not touched.** No changes to `wrangler.toml`, `public/_headers`,
 the booking/contact/consent request flow.
 
 ### ✅ Done
+
 - **Privacy notice rewrite (es + en)** — `src/i18n/translations/{es,en}.json`:
   - Removed all vendor names + architecture from the **publicly rendered** text
     (Vercel, Supabase, Brevo, Google Workspace, Upstash, GitHub Actions, honeypots,
@@ -203,6 +211,7 @@ the booking/contact/consent request flow.
   required check, never blocks merges).
 
 ### ⏳ Remaining roadmap (intentionally NOT done — needs care/approval)
+
 - **Booking/consent burst-guard before D1 write** (§2 #1) — deferred. The booking
   path is revenue/emergency-critical; the DoS is largely mitigated by Cloudflare
   edge DDoS protection, and any change here risks the protected flow. Implement only

@@ -61,7 +61,7 @@ what our robots.txt says.
 
 GSC lists most URLs under "Why pages aren't indexed" even when everything is
 working. Clicking **Validate Fix** on these always ends in "Validation
-Failed", because the URLs are *supposed* to stay in that state:
+Failed", because the URLs are _supposed_ to stay in that state:
 
 - **"Page with redirect"** — e.g. `http://…` (→ https),
   `…/es/booking` without trailing slash (→ `…/es/booking/`),
@@ -75,6 +75,7 @@ Failed", because the URLs are *supposed* to stay in that state:
   Sitelinks-SearchBox markup and will fade out on their own.
 
 What WOULD be a real problem (act on these):
+
 - Sitemap URLs (the 32 in sitemap-es/en) showing anything other than
   **Indexed** — especially "Crawled — currently not indexed" for weeks,
   "Duplicate, Google chose different canonical", "Soft 404", or "Blocked by
@@ -190,7 +191,7 @@ Google Business Profile**:
 ## 9. What NOT to do (changed recently — older advice is wrong)
 
 - **No FAQPage / HowTo markup** — Google retired FAQ rich results entirely
-  (May 2026); HowTo died 2023. FAQ *content* in HTML stays (AI engines quote
+  (May 2026); HowTo died 2023. FAQ _content_ in HTML stays (AI engines quote
   it); the markup is pointless.
 - **No Sitelinks SearchBox markup** — feature removed Nov 2024.
 - **No `<priority>`/`<changefreq>` in sitemaps** — Google ignores both.

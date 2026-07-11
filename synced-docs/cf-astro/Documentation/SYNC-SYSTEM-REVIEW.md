@@ -13,14 +13,14 @@ faster than D1 read-replica lag.
 
 ## What lives on this side
 
-| Concern | File | Behavior |
-|---|---|---|
-| CMS read + 3-tier fallback | section `.astro` resolvers | edge tag → `cms:*` KV (1h) → D1 `cms_content` → i18n defaults |
-| Revalidation webhook | `src/pages/api/revalidate.ts` | Bearer-auth; purge `isr:*`, inject allowlisted+sanitized `cms:*`, IndexNow, CF tag purge |
-| Service config read | `src/lib/service-config.ts` | mem 10s → Cache-API 60s → D1 `service_config` → hardcoded `DEFAULTS` |
-| Route-policy resolver | `src/lib/route-policy.ts` | first-match-wins, clamped `[0,1]`, fail-safe to legacy |
-| Client runtime config | `src/pages/api/runtime-config.ts`, `src/scripts/runtime-config-client.ts` | secret-free subset, CDN-cached 60s |
-| Booking dual-write | `src/pages/api/booking.ts` | D1 `booking_attempts` (dead-letter) + Supabase + `EMAIL_QUEUE` |
+| Concern                    | File                                                                      | Behavior                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| CMS read + 3-tier fallback | section `.astro` resolvers                                                | edge tag → `cms:*` KV (1h) → D1 `cms_content` → i18n defaults                            |
+| Revalidation webhook       | `src/pages/api/revalidate.ts`                                             | Bearer-auth; purge `isr:*`, inject allowlisted+sanitized `cms:*`, IndexNow, CF tag purge |
+| Service config read        | `src/lib/service-config.ts`                                               | mem 10s → Cache-API 60s → D1 `service_config` → hardcoded `DEFAULTS`                     |
+| Route-policy resolver      | `src/lib/route-policy.ts`                                                 | first-match-wins, clamped `[0,1]`, fail-safe to legacy                                   |
+| Client runtime config      | `src/pages/api/runtime-config.ts`, `src/scripts/runtime-config-client.ts` | secret-free subset, CDN-cached 60s                                                       |
+| Booking dual-write         | `src/pages/api/booking.ts`                                                | D1 `booking_attempts` (dead-letter) + Supabase + `EMAIL_QUEUE`                           |
 
 ## Top priority: durability (Phase 1)
 
@@ -33,9 +33,10 @@ TTL) / 24h (ISR `s-maxage`) with no automatic redrive.
 1. **Outbox + Queue-driven revalidation** with retries + DLQ + auto-redrive — live
    (cf-admin consumer; `sync_outbox` migration applied). Guarantees propagate-or-DLQ.
 2. **`GET /api/cms-status` read-back** — shipped, so cf-admin verifies content is
-   *actually* live (not just "saved").
+   _actually_ live (not just "saved").
 
 cf-astro-side work — all shipped:
+
 - ✅ `GET /api/cms-status` read-back endpoint.
 - ✅ `config` cache-tag on `/api/runtime-config`, purged on `{kind:'config'}`.
 - ✅ booking email-retry: `booking_attempts` carries the email payload (migration
