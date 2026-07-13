@@ -151,7 +151,7 @@ When an authorized admin adds a new member from the dashboard:
 5. **Whitelist Insertion:** `INSERT INTO admin_authorized_users (email, display_name, role, is_active, is_hidden)` via Supabase admin client. Returns the new UUID (`id`) via `.select('id').single()`.
 6. **Page Override Batch Write:** If the admin customised page access during creation, D1 overrides are batch-inserted (`INSERT OR REPLACE INTO admin_page_overrides`) using the new user's Supabase UUID. Batch is capped at 50 overrides.
 7. **Audit Log:** Mutation is logged via Ghost Audit Engine (`waitUntil`).
-8. **CF Access whitelist (manual):** The new user must also be added to the CF Access policy (Emails allowed list) in the Cloudflare Zero Trust dashboard if not covered by a wildcard policy. **This is a manual step — the Worker API only manages the Supabase whitelist.**
+8. **CF Access whitelist (Automated):** The CF Access Group ("Admin Portal Authorized Users") is automatically synchronized with the Supabase whitelist via a background task (`cf-access-sync.ts`) hooked into the Worker API. No manual intervention is needed in the Cloudflare dashboard.
 
 > **Non-fatal override writes:** If the batch override write fails, user creation still succeeds. The admin can set page permissions manually via the Page Access Manager after creation.
 > **No GoTrue:** There is no call to `auth.admin.createUser()`. The user receives no invitation email from the Worker. CF Access sends its own authentication email/redirect when the user first tries to access `admin.madagascarhotelags.com`.
@@ -301,17 +301,23 @@ The system is designed to "fail-closed" across various infrastructure disruption
 
 ## 11. CF Zero Trust ↔ Supabase Visibility Suite
 
-### 11.1 Architecture Overview (OTP-Open Model)
+### 11.1 Architecture Overview (Automated Access Group Model)
 
-The admin portal uses **CF Zero Trust with an OTP-open policy** — any email address can authenticate via OTP, Google, or GitHub. CF Access handles identity verification only; it does NOT restrict which emails can proceed. The Supabase whitelist is the single authorization gate.
+The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker API automatically synchronizes the Supabase `admin_authorized_users` whitelist with a Cloudflare Access Group named "Admin Portal Authorized Users". This means unauthorized emails are blocked at the Cloudflare edge *before* they reach the Worker middleware, saving resources and increasing security.
 
 ```
-CF Access OTP/OAuth → (any email authenticates) → Worker middleware
-  → email in admin_authorized_users AND is_active = true → KV session created ✅
-  → email NOT in whitelist → LOGIN_FAILED logged → 403 Forbidden ❌
+Admin Portal Add/Update/Delete User 
+  → Worker API (`manage.ts`) + `syncCfAccessGroup`
+  → CF Access Group ("Admin Portal Authorized Users") is automatically updated
+
+Login Flow:
+CF Access → (checks Access Group) 
+  → user NOT in group → BLOCKED AT EDGE (Worker never sees it) ❌
+  → user IN group → Authenticated by CF → Worker middleware
+  → checks Supabase admin_authorized_users AND is_active = true → KV session created ✅
 ```
 
-**Implication:** "Syncing" CF Access and Supabase does not mean maintaining an email allowlist in CF. It means maintaining visibility into the gap between who has authenticated via CF (anyone) and who is authorized in Supabase (whitelisted only).
+**Implication:** By automating the Cloudflare Access Group, we guarantee that no unauthorized user can even reach the Worker to receive an OTP or probe the application. This provides a strict dual-gate security model without any double-entry management.
 
 ### 11.2 The cfLinked Boolean
 
@@ -352,7 +358,9 @@ The `summary` shows total login count, success count, and failure count across a
 
 ### 11.5 Access Probe Feed
 
-The `AccessProbePanel` component (rendered below the User Registry for Owner+ only, `client:idle`) surfaces emails that successfully authenticated via CF OTP but were blocked by the Supabase whitelist gate. These are genuine CF-authenticated users who don't have access — the most actionable security signal in an OTP-open deployment.
+The `AccessProbePanel` component (rendered below the User Registry for Owner+ only, `client:idle`) surfaces emails that successfully authenticated via CF OTP but were blocked by the Supabase whitelist gate. 
+
+> **Note on Edge Blocking:** Since the system now uses automated Cloudflare Access Group synchronization (blocking unauthorized emails at the CF Edge), the Worker middleware will rarely see unauthorized attempts, meaning the Access Probe Feed will likely remain empty unless the CFZT policy is temporarily changed to OTP-Open.
 
 Each probe row shows: email | attempt count | last seen | CF access method | bot score | geo location. A "+ Whitelist" button pre-fills the InviteUserModal with the probed email for immediate onboarding.
 
