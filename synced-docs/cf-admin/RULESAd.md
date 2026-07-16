@@ -358,7 +358,16 @@ function MyModal() {
 
 ---
 
-## 8. CODE QUALITY RULES
+## 8. CODE QUALITY RULES & ARCHITECTURAL GUARDRAILS
+
+### 8.1 File Size & Complexity Limits (Anti-Bloat)
+
+To keep the architecture lightweight and lightning fast, `cf-admin` enforces strict file size limits via `eslint.config.js`.
+
+- **`max-lines`: 500 lines per file** (hard error).
+- Exceptions: Only highly complex orchestrators (e.g., `src/lib/auth/session.ts` or `SessionCommandCenter.tsx`) may exceed this up to a 600-line warning limit, but this must be explicitly whitelisted in `eslint.config.js`.
+- **Enforcement:** If a file grows beyond 500 lines, you MUST refactor it by extracting logic into modular files (e.g., extracting routing constants, security headers, or sub-components) rather than disabling the linter rule.
+- **Goal:** Zero ongoing file bloat, 100% modular architecture.
 
 → See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
