@@ -40,6 +40,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
+| [`2026-07-17-compliance-standing-and-market-positioning.md`](2026-07-17-compliance-standing-and-market-positioning.md) | Quantified compliance % per standard (instant/close/far) + market positioning, verticals, and monetization | owner, non-technical, technical | active |
 | [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture | non-technical, owner | historical |
 
 ## Architecture
