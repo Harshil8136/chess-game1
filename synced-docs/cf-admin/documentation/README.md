@@ -59,6 +59,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/SECURITY.md`](security/SECURITY.md) | Canonical current security posture (CSRF, headers, sessions, RLS, force-kick) | ai, technical | active |
 | [`security/PRIVACY.md`](security/PRIVACY.md) | Privacy dashboard, consent records, GDPR/LFPDPPP | ai, technical, operator | active |
 | [`security/login-forensics.md`](security/login-forensics.md) | Login forensics subsystem (schema, telemetry, alerts) | ai, technical | active |
+| [`security/reviews/2026-07-17-full-platform-audit.md`](security/reviews/2026-07-17-full-platform-audit.md) | Full-platform OWASP/SOC2/GDPR/CCPA audit + zero-cost roadmap + multi-tenant readiness | technical, operator | active |
 | [`security/reviews/2026-06-13-security-review.md`](security/reviews/2026-06-13-security-review.md) | Latest security review + remediation, scored (A− 91/100) — full fix pass | technical, operator | historical |
 | [`security/reviews/2026-05-26-security-review.md`](security/reviews/2026-05-26-security-review.md) | Security review (follow-up) | technical | historical |
 | [`security/reviews/2026-05-25-security-review.md`](security/reviews/2026-05-25-security-review.md) | Deep security review | technical | historical |
