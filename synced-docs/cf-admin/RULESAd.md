@@ -148,6 +148,12 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 - Cloudflare adapter with native binding access
 - Astro Sessions API backed by Cloudflare KV for session persistence
 - No static pages — admin portal has zero public content
+- ❌ **FORBIDDEN:** `export const prerender = true` on ANY page under `src/pages/dashboard/**`
+  - Reason: Pre-rendering a dashboard page means Astro builds it as a static file served directly
+    from the Cloudflare edge cache, **bypassing the auth middleware entirely**. This strips
+    `Astro.locals.user`, `Astro.locals.cspNonce`, and the PLAC access check — making the page
+    unauthenticated and breaking CSP nonce injection. Use `prerender = false` (or omit the export).
+  - **Enforcement:** `eslint.config.js` contains a `no-restricted-syntax` rule that hard-errors on this.
 
 ### 7.2 UI: Preact Islands
 
