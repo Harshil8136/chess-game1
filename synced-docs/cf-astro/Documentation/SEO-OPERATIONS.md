@@ -57,7 +57,24 @@ what our robots.txt says.
    - **Page indexing** report — every sitemap URL should be "Indexed".
    - **Core Web Vitals** — targets: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1.
 
-### 2a. Page-indexing statuses that are NOT errors (do not "Validate Fix")
+### 2a. Weekly GSC report triage — 30-second read of "Page indexing"
+
+GSC emails a "not indexed" list weekly. Most categories are the system
+working, not problems. Triage table (July 2026 state):
+
+| GSC category                                                                     | Verdict                       | What to do                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Page with redirect**                                                           | ✅ Healthy by design          | Nothing. `/` → `/es/`, slashless → slash, `?q=`/`?service=` legacy URLs. Google re-checks known URLs for months — this list never empties on any site.                                                                                                                        |
+| **Blocked by robots.txt**                                                        | ✅ Healthy by design          | Nothing. `/api/` and legacy param URLs are blocked deliberately.                                                                                                                                                                                                              |
+| **Alternate page with proper canonical tag**                                     | ✅ Healthy by design          | Nothing. Canonicalization working exactly as intended.                                                                                                                                                                                                                        |
+| **Excluded by 'noindex' tag** (legal pages)                                      | ⏳ Transitional               | Fixed in code July 2026 (noindex removed). Press **Validate Fix** once; URL-inspect a legal page to accelerate recrawl. Should reach zero.                                                                                                                                    |
+| **Not found (404)**                                                              | 🔧 Was real — fixed July 2026 | Root causes removed (language-switcher slug bug, `/legal/privacy` link) + 301s added for every known URL. Press **Validate Fix**. Should reach zero. A build-time link checker (`npm run check:links`, in CI) now blocks any commit that reintroduces a broken internal link. |
+| Sitemap URLs not "Indexed" (Crawled/Discovered–not indexed, Soft 404, Duplicate) | 🚨 Real — investigate         | The only category worth alarm. See below.                                                                                                                                                                                                                                     |
+
+After any deploy that fixes report-listed URLs: open the matching report →
+**Validate Fix**, and URL-inspect the four service landing pages.
+
+### 2b. Page-indexing statuses that are NOT errors (background)
 
 GSC lists most URLs under "Why pages aren't indexed" even when everything is
 working. Clicking **Validate Fix** on these always ends in "Validation
@@ -129,6 +146,9 @@ single most important field**.
 
 ## 5. Other listings (do once, keep NAP identical)
 
+> Full off-page program — targets, Spanish outreach templates, NAP block,
+> tracking table — lives in [BACKLINKS-PLAYBOOK.md](./BACKLINKS-PLAYBOOK.md).
+
 Name **"Hotel para mascotas Madagascar"**, address(es) exactly as on the site,
 phone **+52 449 448 5486**, WhatsApp link, site URL with `/es/`:
 
@@ -144,6 +164,8 @@ phone **+52 449 448 5486**, WhatsApp link, site URL with `/es/`:
 
 ## 6. Earned media & local links (strongest LLM-citation signal)
 
+> Pitch templates and quarterly cadence: [BACKLINKS-PLAYBOOK.md](./BACKLINKS-PLAYBOOK.md) §3–6.
+
 AI engines systematically prefer third-party corroboration over brand-owned
 pages. Target 2–3 of these per quarter:
 
@@ -157,17 +179,23 @@ pages. Target 2–3 of these per quarter:
 
 ## 7. Review schema sync (recurring, monthly)
 
-`src/data/business.ts` hardcodes `aggregateRating` (currently 4.9 / 231) and
-`SchemaMarkup.astro` embeds 8 named reviews. These **must mirror the live
-Google Business Profile**:
+Review markup is no longer hardcoded anywhere. `SchemaMarkup.astro` derives
+`aggregateRating` + `review[]` at render time from the same testimonials
+source the visible carousel uses (`src/lib/testimonials.ts`: KV/D1 CMS
+`happy_clients` block, falling back to the i18n `Testimonials.items`). The
+markup therefore always matches the on-page content automatically.
 
-1. Open the GBP listing, note current rating + review count.
-2. Update `aggregateRating` in `src/data/business.ts` if drifted.
-3. If any embedded review was deleted on Google, remove it from
-   `SchemaMarkup.astro`.
-4. Never add a review here that doesn't exist on GBP — fabricated review
-   markup is a structured-data spam violation that can trigger a manual
-   action.
+The monthly job is now purely editorial — keep the CMS mirroring the live
+Google Business Profile:
+
+1. Open the GBP listing; compare its reviews with the `happy_clients` block
+   in cf-admin (and the i18n fallback lists in
+   `src/i18n/translations/{es,en}.json`).
+2. If a review was deleted on Google, remove it from the CMS/fallback; add
+   recent real GBP reviews (name + text + rating exactly as published).
+3. Never seed a review that doesn't exist on GBP — fabricated review markup
+   is a structured-data spam violation that can trigger a manual action.
+   (This is why the schema layer refuses hardcoded entries.)
 
 ## 8. Content cadence (GEO freshness)
 
