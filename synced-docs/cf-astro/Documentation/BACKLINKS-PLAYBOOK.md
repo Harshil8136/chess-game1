@@ -146,6 +146,17 @@ conversations, 2–3 Tier-3 pitches. Track here (or a sheet):
 
 ## 7. Owner checklist (one-time, cannot be done from code)
 
+- [ ] 🚨 **URGENT — turn OFF Cloudflare Managed robots.txt** (live-verified ON
+      2026-07-18, blocking GPTBot/ClaudeBot/CCBot/Google-Extended and more
+      with `Disallow: /`): Cloudflare dashboard → zone → **AI Crawl Control**
+      (or Security → Bots) → "Manage AI bots robots.txt" → **OFF**, and set
+      each AI crawler listed in SEO-OPERATIONS.md §1.1 to **Allow**. Verify:
+      `https://madagascarhotelags.com/robots.txt` must start with the
+      "Madagascar Pet Hotel" comment — no "BEGIN Cloudflare Managed content".
+- [ ] **Workers Builds deploy command**: Workers & Pages → cf-astro →
+      Settings → Build → Deploy command:
+      `npx wrangler deploy && node scripts/indexnow-ping.mjs`; also turn ON
+      Caching → Configuration → Crawler Hints.
 - [ ] **Bing Webmaster Tools**: register at bing.com/webmasters ("Import
       from Google Search Console"), then paste the `msvalidate.01` code into
       the commented placeholder in `src/layouts/BaseLayout.astro` (search

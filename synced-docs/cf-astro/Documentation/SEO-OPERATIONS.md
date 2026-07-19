@@ -12,6 +12,15 @@ Verified against official guidance, June 2026. Re-check quarterly.
 
 ## 1. Cloudflare dashboard — CRITICAL, do first
 
+> [!CAUTION]
+> **Live-verified 2026-07-18: Managed robots.txt is currently ON.** The
+> production `/robots.txt` is being served with a prepended
+> "BEGIN Cloudflare Managed content" block containing `Disallow: /` for
+> GPTBot, ClaudeBot, CCBot, Google-Extended, meta-externalagent, Amazonbot,
+> Applebot-Extended and Bytespider, plus `Content-Signal: ai-train=no` —
+> contradicting our own Allow groups below it. Fix per §1.2, then confirm
+> the managed block is gone from `https://madagascarhotelags.com/robots.txt`.
+
 Since **July 2025 Cloudflare blocks AI crawlers by default**. If any of these
 are on, the site is invisible to ChatGPT, Claude, Perplexity, etc., no matter
 what our robots.txt says.
@@ -110,8 +119,15 @@ Bing's top results**, and Copilot is Bing-native.
 1. Sign in and use **"Import from Google Search Console"** (one click).
 2. Confirm sitemap was imported; if not, submit `sitemap-index.xml`.
 3. IndexNow is already wired: key file `/a7f3b2e1d8c4f5a0b9e2d1c8f3a6b4e7.txt`,
-   deploy ping via `npm run cf:deploy`, plus per-publish pings from
-   `/api/revalidate`. Check Webmaster Tools → IndexNow for received URLs.
+   plus per-publish pings from `/api/revalidate`. Check Webmaster Tools →
+   IndexNow for received URLs.
+   **Deploy path changed July 2026:** the site now auto-deploys via
+   **Cloudflare Workers Builds** on every push to `main` (laptop
+   `npm run cf:deploy` no longer required). Workers Builds does NOT run the
+   deploy-time IndexNow ping — either append it in the dashboard
+   (Workers & Pages → cf-astro → Settings → Build → Deploy command:
+   `npx wrangler deploy && node scripts/indexnow-ping.mjs`) or rely on
+   Crawler Hints (§1.5) which auto-pings IndexNow on cache change.
 4. Monitor the **AI Performance report** (Feb 2026 feature) — shows how often
    pages are cited in Copilot/Bing AI answers.
 
