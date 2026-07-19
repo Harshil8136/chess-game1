@@ -52,7 +52,7 @@ Instead of using the default PostgreSQL administrative superuser (`postgres`), t
 
 ### 2.2 PII Minimization in Audit Logs
 
-- **No PII in D1 Logs**: The local SQLite database is used strictly for technical performance and CMS blocks. The `booking_attempts` dead-letter queue logs transaction errors but explicitly strips out customer names, emails, and phone numbers before writing to D1.
+- **PII Minimization in D1 Logs (corrected 2026-07)**: The `booking_attempts`/`consent_attempts` dead-letter queues store a limited, operational set of PII in dedicated columns — `owner_email`, `request_ip` / `ip_address`, `user_agent` — bound raw, not redacted. `redactPii()` (`src/lib/db/d1-attempts.ts`) only scrubs known PII keys (email/phone/name/fingerprint/ip) out of the free-form `request_body` JSON blob, not these structured columns. **No data is auto-purged (owner policy, 2026-07):** these tables have a 90-day retention *target*, but deletion only happens via explicit admin/owner action — the audited manual tool at cf-admin `/dashboard/retention`, or a manually-triggered run of `db/retention-purge.sql` — never on a timer. These remain short-lived operational recovery tables in intent, not the legal consent-evidence store (that's Supabase `consent_records`, retained per the Privacy Notice §6, also deletion-by-policy-decision only, not automatic).
 - **No PII in Email Metadata**: Suppresses customer personal information inside `email_audit_logs` payloads, saving only booking references, services, and language locale slugs.
 
 ---
@@ -134,7 +134,7 @@ To prevent security regressions, any AI model or human operator modifying the ap
 > [!CAUTION]
 > **Core Security Invariants**
 >
-> 1. **Do Not Store PII in D1**: D1 is an unencrypted local SQLite engine. Never modify schemas or booking logic to insert customer names, passwords, plain emails, or phone numbers into D1 tables. Keep all PII locked inside the Supabase PostgreSQL instance.
+> 1. **Minimize PII in D1, and never add more than what's already there**: D1 is an unencrypted local SQLite engine. It already stores `owner_email`/`request_ip`/`user_agent` in the `booking_attempts`/`consent_attempts` dead-letter tables (bounded by a 90-day auto-purge) — do not add further PII (passwords, phone numbers, pet/medical details, payment data) beyond this existing, already-reviewed set. Keep all other PII locked inside the Supabase PostgreSQL instance.
 > 2. **Never Log Authorizations**: When auditing or handling exceptions inside API routes, never log the `Authorization` header, even partially. Substrings of `Bearer <secret>` expose secret prefixes to logs, breaking API token confidentiality.
 > 3. **Never Query Supabase via administrative `postgres` User**: All write operations in Astro SSR must connect via `cf_astro_writer`. Never override this role to bypass least-privilege write isolation rules.
 

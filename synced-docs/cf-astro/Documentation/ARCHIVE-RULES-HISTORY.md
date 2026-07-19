@@ -1,5 +1,16 @@
 {% raw %}
-# CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
+# CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE (ARCHIVED)
+
+> **⚠️ Archival notice (added 2026-07):** This is a frozen snapshot of `RULES.md`
+> prior to its 2026-07 pruning (see doc 23, §5.10 dimension 9). It is kept for
+> historical reference only. **Several statements below have since been proven
+> false against the live codebase** and must not be cited as current fact —
+> most notably the D1 "PII Security Rule" (§5.2 area): `booking_attempts` /
+> `consent_attempts` do store `owner_email`/`request_ip`/`user_agent` in
+> dedicated columns (bounded by a 90-day auto-purge), contrary to the rule as
+> stated here. See `COMPLIANCE-SECURITY-AND-HISTORY.md` §2.2 for the corrected,
+> current description. Current, authoritative rules live in root `RULES.md` and
+> `AGENTS.md`.
 
 > **Last Updated:** 2026-05-25
 > **Research Sources:** Cloudflare Docs MCP, Perplexity MCP, Cloudflare Bindings MCP, Official Documentation

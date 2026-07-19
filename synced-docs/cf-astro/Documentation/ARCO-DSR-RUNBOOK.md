@@ -1,16 +1,23 @@
 {% raw %}
 # ARCO / Data-Subject-Request Runbook
 
-**Legal deadline: respond within 20 business days of receipt (LFPDPPP).**
-Requests arrive via the ARCO form (`/es/legal/arco/`) or the simple privacy
-form; both notify `booking@madagascarhotelags.com` through the email queue.
+**Legal deadline: respond within 20 business days of receipt (LFPDPPP: 20
+business days to decide + up to 15 additional business days to implement).**
+Requests arrive via the ARCO form (`/es/legal/arco/`), which notifies
+`booking@madagascarhotelags.com` through the email queue.
+
+> **2026-07 update:** `/api/privacy/arco` (an orphaned, no-Turnstile, no
+> identity-verification endpoint with zero frontend callers and zero rows
+> ever written) was removed. The `privacy_requests` table it wrote to is
+> deprecated — the ARCO form (`/api/arco/submit`) is the only intake channel.
+> If `privacy_requests` still has historical rows, check it once during
+> cleanup, then it can be dropped in a future migration.
 
 ## Where requests land
 
 | Channel                                      | Storage                                                                                              | Notification          |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
 | ARCO form with identity document             | Postgres `legal_requests` (ticket `ARCO-NNNNNN`, status `PENDING`) + document in R2 `arco-documents` | Admin email via queue |
-| Simple privacy request (`/api/privacy/arco`) | Postgres `privacy_requests`                                                                          | — (poll the table)    |
 
 ## Step-by-step
 
@@ -22,7 +29,9 @@ form; both notify `booking@madagascarhotelags.com` through the email queue.
 3. **Locate the data** (by requester email):
    - Postgres: `bookings`, `booking_pets`, `consent_records`,
      `email_audit_logs`, `contact_messages`, `legal_requests`, `privacy_requests`
-   - D1: `booking_attempts` / `consent_attempts` (auto-purged after 90 days)
+   - D1: `booking_attempts` / `consent_attempts` (90-day retention target, deleted
+     only via manual/admin action — see cf-admin `/dashboard/retention` or
+     `db/retention-purge.sql` — never automatically, per 2026-07 policy)
    - PostHog: person profile (identified by email) — delete via PostHog UI
    - Brevo: contact/log entries — handle in Brevo dashboard
 4. **Execute by request type**:
