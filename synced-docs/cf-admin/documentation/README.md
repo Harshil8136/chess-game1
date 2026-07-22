@@ -52,6 +52,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
 | [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | active |
 | [`2026-07-05-comprehensive-codebase-and-system-review.md`](2026-07-05-comprehensive-codebase-and-system-review.md) | Full multi-benchmark scorecard (ISO 5055/25010, OWASP, CWE), findings + prioritized fix roadmap | ai, technical, operator, owner | active |
+| [`2026-07-22-architecture-improvement-summary.md`](2026-07-22-architecture-improvement-summary.md) | 12-commit architecture pass: SEC-03/SEC-04 closed, CSP guard fixed, 4 god-files split, before/after benchmark scorecard | non-technical, ai, technical, operator | active |
 
 ## Security
 
