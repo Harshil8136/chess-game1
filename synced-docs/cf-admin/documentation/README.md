@@ -108,6 +108,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/compliance/CSA-CAIQ-v4.md`](security/compliance/CSA-CAIQ-v4.md) | CSA STAR Level 1 Consensus Assessments Initiative Questionnaire (CAIQ v4.0.3) — registry-ready | technical, owner | active |
 | [`security/compliance/SOC2-TSC-mapping.md`](security/compliance/SOC2-TSC-mapping.md) | SOC 2 Type I readiness: control-to-TSC mapping + gap list | technical, owner | active |
 | [`security/compliance/supabase-advisors-latest.json`](security/compliance/supabase-advisors-latest.json) | Latest Supabase advisor snapshot; used by CI grep-guard SEC-11 for regression detection | technical | active |
+| [`2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md) | Full-spectrum audit across 45+ frameworks (SOC 1/2/3, ISO 27001/27017/27018/27701/22301/9001/42001, NIST CSF/800-53/AI RMF, CSA STAR, HITRUST, FedRAMP, WCAG/ADA, EU AI Act, GDPR/CCPA/20-state US patchwork + global privacy law, HIPAA/PCI/GLBA/SOX scope notes) with scoring, gap register, and a phased sellability roadmap | owner, non-technical, technical, operator, ai | active |
 
 ## Specs (dated design records)
 
