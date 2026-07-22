@@ -77,6 +77,18 @@ the list. Once a rule reaches 0 violations, remove its exemption in
 Track progress by re-running `python3 scripts/rules_check.py` locally.
 Once both drop to 0, flip CI to blocking (`security.yml::rules-check` remove `--warn-only`).
 
+## CSP hardening — pending operator verification (2026-07-22)
+
+A same-day commit (`2f93119`) had reverted the 2026-07-08 nonce-based
+`script-src` hardening (removed `'strict-dynamic'`, added `'unsafe-inline'`)
+to fix a Sentry issue (CF-ADMIN-9). Re-reviewed and partially fixed same day:
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `'unsafe-inline'` removed from production `script-src` | ✅ Done | Was already inert — any browser that honors the response's `nonce-` source ignores `'unsafe-inline'` regardless of `'strict-dynamic'`. Zero behavior change, closes the flagged literal string. |
+| `SEC-01` glob fixed (`src/middleware.ts` → `src/lib/security/csp.ts`) | ✅ Done | The rule had been structurally blind to the file that actually holds the CSP string since CSP construction moved out of `middleware.ts`; it reported 0 violations even during today's regression. |
+| Re-add `'strict-dynamic'` | 🟡 Blocked on operator | Suspected root cause of the original incident: Cloudflare zone-level auto-injected scripts (Web Analytics/Browser Insights beacon, Rocket Loader — both serve from `static.cloudflareinsights.com` / `/cdn-cgi/`, already in the host allowlist) are injected *after* the Worker response leaves the Worker, so they never receive this middleware's nonce. `'strict-dynamic'` makes browsers stop trusting host-allowlist/`'self'` entries for non-nonced scripts, which would break them again. **Operator action needed:** check the Cloudflare dashboard (Zone → Speed → Optimization for Rocket Loader; Zone → Analytics → Web Analytics/Browser Insights) for `secure.madagascarhotelags.com`. If either is enabled and not needed (Sentry + PostHog already cover telemetry), disable it, then re-add `'strict-dynamic'` behind a short (~24h, not the usual week — a duplicate `Report-Only` header double-counts every Sentry violation report) `Content-Security-Policy-Report-Only` canary before flipping to enforcing. If needed and can't be disabled, leave `'strict-dynamic'` off permanently and document why in `csp.ts`. |
+
 ## How to close an item
 
 When an item is fixed in code, move its row out of this file and record it in the

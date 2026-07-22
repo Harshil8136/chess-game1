@@ -393,7 +393,7 @@ Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
 
 | ID | Rule | Anchor | CI guard | Compliance |
 |----|------|--------|----------|------------|
-| SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` or `'unsafe-inline'` (nonce + `'strict-dynamic'` instead) | `src/middleware.ts` (securityHeaders CSP block) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
+| SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` or `'unsafe-inline'` (nonce required; see §2 for current `'strict-dynamic'` status) | `src/lib/security/csp.ts` (`securityHeaders` CSP block) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
 | SEC-02 | All cookies MUST be `SameSite=Strict` (never `Lax`) | any `SameSite=` in `src/**` | `rules_check.py::SEC-02` | ASVS 3.4.3 |
 | SEC-03 | API handlers MUST use a DAL repository (`src/lib/dal/*`), never raw `env.DB.prepare(...)` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-03` | ASVS 5.3.4 |
 | SEC-04 | Use `isAdmin()` / `isSuperAdmin()` helpers (`src/lib/auth/rbac.ts`), never hardcoded role arrays | `src/pages/api/**/*.ts` | `rules_check.py::SEC-04` | ASVS 4.1.3 |
