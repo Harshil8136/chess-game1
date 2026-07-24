@@ -75,6 +75,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 |-----|---------|----------|--------|
 | [`features/DASHBOARD.md`](features/DASHBOARD.md) | Dashboard home, analytics providers, widgets | ai, technical | active |
 | [`features/USER-MANAGEMENT.md`](features/USER-MANAGEMENT.md) | RBAC hierarchy, user lifecycle, ghost protection, sessions | ai, technical | active |
+| [`features/CF-ACCESS-SYNC.md`](features/CF-ACCESS-SYNC.md) | CF Access Group whitelist sync: architecture, 2026-07-24 root-cause fix, durability (log + cron self-heal), Users-tab visibility, runbook | ai, technical, operator | active |
 | [`features/SESSION-MANAGEMENT.md`](features/SESSION-MANAGEMENT.md) | Security → Sessions page: live sessions, forensics, revocations, KV-budget discipline | ai, technical, operator | active |
 | [`features/CMS.md`](features/CMS.md) | Content studio, ISR revalidation, KV injection, R2/CDN | ai, technical | active |
 | [`features/CHATBOT.md`](features/CHATBOT.md) | AI pipeline, proxy architecture, admin UI, analytics | ai, technical | active |

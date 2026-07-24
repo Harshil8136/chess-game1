@@ -3,9 +3,10 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
-verified_against: [code]
+last_verified: 2026-07-24
+verified_against: [code, infra]
 owner: harshil
+related_docs: [CF-ACCESS-SYNC.md]
 tags: []
 ---
 
@@ -16,7 +17,7 @@ tags: []
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-05-26 (v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
+> **Last Updated:** 2026-07-24 (v4.8: CF Access Group sync hardened — root-cause fix for a silent-failure bug in `syncCfAccessGroup`'s response validation, durable per-attempt logging, 5-minute cron self-heal, per-user sync-status pill, Force Re-sync action, and live Group-membership drift detection; see `CF-ACCESS-SYNC.md`. Previously v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -303,21 +304,32 @@ The system is designed to "fail-closed" across various infrastructure disruption
 
 ### 11.1 Architecture Overview (Automated Access Group Model)
 
-The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker API automatically synchronizes the Supabase `admin_authorized_users` whitelist with a Cloudflare Access Group named "Admin Portal Authorized Users". This means unauthorized emails are blocked at the Cloudflare edge *before* they reach the Worker middleware, saving resources and increasing security.
+> **See [`CF-ACCESS-SYNC.md`](CF-ACCESS-SYNC.md) for the full architecture,**
+> **a 2026-07-24 root-cause fix (a silent-failure bug in the sync's response**
+> **validation), and the durability/visibility hardening now in place**
+> **(sync-attempt logging, 5-minute cron self-heal, per-user status pill,**
+> **Force Re-sync, live Group-membership drift detection). This section is a**
+> **summary only — that document is the source of truth going forward.**
+
+The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker API synchronizes the Supabase `admin_authorized_users` whitelist with a Cloudflare Access Group named "Admin Portal Authorized Users" on every user create/update/delete, **and on a 5-minute cron reconciliation pass** (not purely event-driven — see `CF-ACCESS-SYNC.md`). This means unauthorized emails are intended to be blocked at the Cloudflare edge *before* they reach the Worker middleware — **contingent on the CF Access Application's Policy actually including this Group**, which is dashboard-side configuration this codebase cannot verify automatically (see `CF-ACCESS-SYNC.md`'s "Known limitation").
 
 ```
 Admin Portal Add/Update/Delete User 
   → Worker API (`manage.ts`) + `syncCfAccessGroup`
-  → CF Access Group ("Admin Portal Authorized Users") is automatically updated
+  → CF Access Group ("Admin Portal Authorized Users") is updated
+  → outcome logged to D1 `cf_access_sync_log` + swept to `cf_sync_status` on every active user
+
+Self-heal: every 5 minutes (cron), `reconcileCfAccessGroup()` unconditionally
+re-runs the sync regardless of whether the last inline attempt succeeded.
 
 Login Flow:
-CF Access → (checks Access Group) 
+CF Access → (checks Access Group, if the Policy is wired to it) 
   → user NOT in group → BLOCKED AT EDGE (Worker never sees it) ❌
   → user IN group → Authenticated by CF → Worker middleware
   → checks Supabase admin_authorized_users AND is_active = true → KV session created ✅
 ```
 
-**Implication:** By automating the Cloudflare Access Group, we guarantee that no unauthorized user can even reach the Worker to receive an OTP or probe the application. This provides a strict dual-gate security model without any double-entry management.
+**Implication:** By automating the Cloudflare Access Group, we guarantee that no unauthorized user can even reach the Worker to receive an OTP or probe the application — **when the Policy is correctly wired to this Group**. This provides a strict dual-gate security model without any double-entry management, backed by a durable attempt log and a self-healing cron pass rather than a single best-effort call.
 
 ### 11.2 The cfLinked Boolean
 
@@ -336,7 +348,8 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | `GET /api/users/[id]/session-status` | super_admin+ | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
-| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist |
+| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `groupMembershipDrift` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
+| `POST /api/users/cf-resync` | owner+ | Force an immediate whitelist → CF Access Group resync (see `CF-ACCESS-SYNC.md`) |
 
 ### 11.4 Login Intelligence Panel (ExpandedRow)
 
