@@ -11,6 +11,16 @@ tags: [security, rls, auth]
 
 # Security Architecture — CF-Admin
 
+> [!IMPORTANT]
+> **Role names changed on 2026-07-27.** The ladder is now
+> `vendor_support > owner > admin > manager > staff > viewer` (six tiers,
+> including a read-only Viewer). The database still holds the previous values
+> and they are translated in code, so `super_admin` in a stored row means
+> **Admin** (level 2) and `admin` in a stored row means **Manager** (level 3).
+> Any role name below that has not been updated refers to the pre-rename
+> vocabulary. See `architecture/plac-and-audit.md` §1.1-1.2, which is the
+> authoritative reference and covers the collision this rename creates.
+
 > **TL;DR (non-technical):** The complete security picture for the admin portal: how users are authenticated, how requests are protected, how data is locked down, and what the current security posture is.
 
 > **Status:** Production Active

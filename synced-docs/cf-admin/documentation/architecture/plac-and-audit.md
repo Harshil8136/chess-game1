@@ -28,23 +28,46 @@ Designed specifically to operate within Cloudflare's strict 10ms–50ms CPU limi
 
 RBAC forms the "natural baseline" of the CF-Admin authentication system. It assigns an absolute integer weight to users, establishing a rigid command hierarchy.
 
-### 1.1 The 5-Tier Role Hierarchy Matrix
+### 1.1 The Six-Tier Role Hierarchy
 
-Roles are defined centrally and scored such that a **lower number equals higher privilege**. Any permission check evaluates if `ActorLevel <= TargetLevel`.
+Roles are defined centrally in `src/lib/auth/rbac.ts` and scored such that a **lower number equals higher privilege**. Any permission check evaluates `ActorLevel <= TargetLevel`.
 
-| Level | Role | Capabilities | Badge Color | Icon | Target Audience |
-| :---: | :--- | :--- | :--- | :---: | :--- |
-| **0** | **DEV** | Vendor support tier. Can execute database prunes, mutate other DEV accounts, and view raw logs. **Visible in the customer's user list and access-review export** as of 2026-07-26; it was previously filtered out of both, which is not a defensible position for a supplier account sitting above the customer on the customer's own data. | Red | | Vendor operations |
-| **1** | **Owner** | **Project Ownership.** Can manage billing, API keys, and view all hidden accounts. Protected from modification by SuperAdmin and below. | Emerald | 💎 | Business Owners |
-| **2** | **Super Admin** | **Full Operational Access.** Can manage users (at or below their level), alter global settings, and grant PLAC privileges. Cannot see hidden accounts. | Amber | 👑 | Senior Managers |
-| **3** | **Admin** | **Manager-Level Access.** Can manage content (Hero, Gallery, Reviews), view customers, and read generalized audit logs. | Purple | 🛡️ | Operations Managers |
-| **4** | **Staff** | **Restricted Access.** Designed for read-only operations and basic daily front-desk interactions. | Blue | 👤 | Front Desk & Support |
+| Level | Role | Capabilities | Badge | Assignable? |
+| :---: | :--- | :--- | :--- | :--- |
+| **0** | **Vendor Support** | Our support tier. Database prunes, raw log access, and edits to other privileged accounts. **Listed in the customer's user registry and access-review export** as of 2026-07-26; it was previously filtered out of both, which is not a defensible position for a supplier account sitting above the customer on the customer's own data. Disclosed in prose on the Velox `/security` page. | Red | **No.** Absent from `ASSIGNABLE_ROLES`, so it cannot appear in an invite picker or a role-change menu, and `/api/users/manage` refuses to assign it unless the actor already holds it. |
+| **1** | **Owner** | The customer's account holder. Full access including user administration. Protected from modification by every tier below. | Emerald | Yes |
+| **2** | **Admin** | Second in command. Full operational control, including platform settings and users at or below their level. | Amber | Yes |
+| **3** | **Manager** | Runs day-to-day operations: bookings, content, customers, generalized audit logs. No user or platform administration. | Violet | Yes |
+| **4** | **Staff** | Works in their own area. Cannot change settings or other people. | Blue | Yes |
+| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (see §1.2). | Slate | Yes |
 
-### 1.2 Color System: Thermal Gradient
+### 1.2 Naming, and why stored values differ from labels
 
-Badge colors follow a deliberate **thermal gradient** for dark UI legibility — progressing from Red (danger/system) through Emerald (ownership), Amber (authority), Purple (management), to Blue (operations).
+The tiers were previously `dev > owner > super_admin > admin > staff`. That had three problems: "Super Admin" sitting *below* "Admin" reads backwards to anyone outside the codebase, `dev` is an internal word for a production security boundary, and there was no read-only tier at all, which every comparable product ships and every buyer expects. The Velox marketing site had meanwhile published a five-role matrix naming Manager and Viewer, neither of which existed.
 
-Each role has full display metadata including color, background color, icon, and label.
+**The database has not been migrated.** `normalizeRole()` translates stored values on read and `toStoredRole()` translates back on write, behind a single `ROLE_VOCABULARY` flag:
+
+| Stored (legacy) | Canonical | Level |
+| :--- | :--- | :---: |
+| `dev` | `vendor_support` | 0 |
+| `owner` | `owner` | 1 |
+| `super_admin` | `admin` | 2 |
+| `admin` | `manager` | 3 |
+| `staff` | `staff` | 4 |
+| *(none)* | `viewer` | 5 |
+
+> [!WARNING]
+> **The rename collides.** `super_admin` becomes `admin` while `admin` becomes `manager`, so the string "admin" means level 3 before the migration and level 2 after it. There is no way to look at a bare `admin` row and know which it is. A naive two-statement migration (`UPDATE … SET role='admin' WHERE role='super_admin'` then `UPDATE … SET role='manager' WHERE role='admin'`) **silently collapses both tiers into `manager`**. Any migration must use a single `CASE` expression, and must count rows per role before and after.
+
+Translating in code means there is never a moment where the deployed Worker and the database disagree about what a role means. The migration is then data hygiene rather than a privilege-boundary change. `viewer` cannot be assigned until it runs: `toStoredRole()` throws rather than write a different role.
+
+**Two stores hold role values,** and both translate at their own boundary: the Supabase `admin_authorized_users` whitelist, and D1's `admin_pages.required_role`. Each has its own CHECK constraint pinning the legacy names.
+
+**The rule, stated once:** canonical above the database edge, stored values only inside it. `normalizeRole()` on every read, `toStoredRole()` on every write. A value that will not translate returns `null` and the caller refuses; it is never guessed at, because `ROLE_LEVEL[undefined]` makes every `<=` comparison false and turns a clearance check into a rubber stamp.
+
+**The ladder is written down once,** in `rbac.ts`. It previously existed in seven places, all typed with an index signature so the compiler could not object when they drifted; two were still on the old ladder after the rename shipped. `test/rbac-roles.test.ts` fails the build on any file outside `rbac.ts` that writes it out again.
+
+**Viewer is enforced, not merely absent.** `resolveApiAuthz()` derives API permission from *page* access, so a viewer granted a page would otherwise inherit its mutations. `src/lib/auth/pipeline.ts` refuses `viewer` on any non-idempotent method regardless of page grants, before the page-access rewrite and covering page routes as well as `/api/*`. It is deliberately not staged behind `API_DENY_MODE`: that flag exists to protect legitimate traffic on 87 pre-existing routes, and a new tier has none.
 
 ### 1.3 No Hardcoded Bypass
 

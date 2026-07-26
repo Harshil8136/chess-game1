@@ -12,7 +12,17 @@ tags: []
 
 # Manage Users & RBAC Architecture
 
-> **TL;DR (non-technical):** How admin users are managed: the five role tiers, how accounts are invited/changed/removed, how higher-privilege accounts are protected, and how active sessions are controlled.
+> [!IMPORTANT]
+> **Role names changed on 2026-07-27.** The ladder is now
+> `vendor_support > owner > admin > manager > staff > viewer` (six tiers,
+> including a read-only Viewer). The database still holds the previous values
+> and they are translated in code, so `super_admin` in a stored row means
+> **Admin** (level 2) and `admin` in a stored row means **Manager** (level 3).
+> Any role name below that has not been updated refers to the pre-rename
+> vocabulary. See `architecture/plac-and-audit.md` §1.1-1.2, which is the
+> authoritative reference and covers the collision this rename creates.
+
+> **TL;DR (non-technical):** How admin users are managed: the six role tiers, how accounts are invited/changed/removed, how higher-privilege accounts are protected, and how active sessions are controlled.
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
