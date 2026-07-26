@@ -105,7 +105,6 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/audit/login-logs.ts` | role-or-grant | Login forensics (PII) | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
 | `src/pages/api/audit/export.ts` | role-or-grant | CSV export | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
 | `src/pages/api/audit/prune.ts` | `isDev` | Log pruning | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/silence.ts` | `isDev` | Audit silencing | ✅ `/dashboard/audit` (defence-in-depth; 2026-05-26) |
 | `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` | Feature flag computation | (page-level — uses middleware PLAC) |
 | `src/pages/dashboard/users/[id]/access.astro` | `isDev`, `isOwnerOrDev` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
 

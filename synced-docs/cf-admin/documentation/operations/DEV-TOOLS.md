@@ -13,7 +13,7 @@ tags: []
 
 > **TL;DR (non-technical):** The built-in developer and debug tools inside the admin portal — diagnostics, health checks, and the page-registry manager.
 
-> **Scope**: `cf-admin` — Covers System Debugging, Feature Configuration, Audit Suppression, and the Ghost Audit Engine.
+> **Scope**: `cf-admin` — Covers System Debugging, Feature Configuration, and the Audit Engine.
 >
 > **Last Updated**: 2026-04-25
 
@@ -139,69 +139,37 @@ When a flag is toggled in `cf-admin`, `cf-astro` picks it up within 60 seconds v
 
 ---
 
-## 5. Audit Suppression
+## 5. Audit Suppression (removed)
 
-### 5.1 What It Is
+Audit suppression was **deleted on 2026-07-26**, along with the
+`/api/audit/silence` endpoint, the `AuditSilencePanel` toggle, the
+`auditSilenced` session field and the `is_audit_silenced` column.
 
-Audit Suppression allows a DEV user to suppress activity logging for a specific user. When enabled, the middleware and API audit loggers skip D1 writes for that user's actions.
+### 5.1 Why
 
-### 5.2 Where It Is Managed
+The feature was documented as suppressing only `view` and `export` telemetry.
+It did not. `isActionSilenceable()` in `src/lib/audit.ts` had degraded to
+`return true`, so it covered `delete`, `role_change`, `grant_access`,
+`revoke_access`, `prune` and `config_change` as well. Self-silencing was
+explicitly permitted, so the actor being logged could switch off their own
+logging. And the bulk-delete path in `api/audit/logs.ts` snapshotted rows with
+the comment *"a compromised Owner cannot silently erase evidence of their own
+actions"* and then passed the same flag into the write, discarding the
+snapshot.
 
-Audit Suppression is managed **exclusively** through the **User Management** page (`/dashboard/users`) via the `AuditSilencePanel` in `UserCard.tsx`. The System Debugging page shows a **read-only status indicator** for the current DEV user's audit state, with a link to User Management for toggling.
+There is no configuration of a vendor-controlled audit switch that survives a
+security review, and its existence contradicted the audit guarantees the
+product is sold on.
 
-> **Design Decision**: An earlier iteration placed a duplicate toggle on the System Debugging page. This was removed to avoid maintaining two separate UI components and API endpoints for the same feature. The single source of truth is `POST /api/audit/silence`.
+### 5.2 If you need test-data separation again
 
-### 5.3 Security Guarantees
-
-1. **The toggle action itself is ALWAYS logged** — even when enabling suppression, the act of enabling it creates an immutable audit trail entry
-2. **User-scoped** — Suppression only affects the targeted user; other users' logs are unaffected
-3. **Persistent** — The `is_audit_silenced` flag is stored in Supabase (`admin_authorized_users` table), so it survives re-login
-4. **KV-propagated** — The flag is pushed to all active KV sessions for the user, taking immediate effect without re-login
-
-### 5.4 Toggle Flow
-
-```
-[DEV clicks Audit Silence in User Management] → POST /api/audit/silence
-  → DEV role check (403 if not DEV)
-  → auditLog() — ALWAYS writes the toggle event (no silent flag)
-  → Supabase UPDATE admin_authorized_users.is_audit_silenced
-  → KV propagation to all active sessions
-  → 200 OK
-```
-
-### 5.5 How Audit Suppression Works
-
-**Middleware level** (`middleware.ts`):
-
-```typescript
-if (!isApiRoute && cfCtx?.waitUntil && !session.auditSilenced) {
-  // page-view audit log — skipped when suppression is ON
-}
-```
-
-**API level** (e.g., `toggle.ts`, `ping.ts`):
-
-```typescript
-const auditLogger = createAuditLogger({
-  db,
-  waitUntil: cfCtx.waitUntil.bind(cfCtx),
-  silenced: sessionUser.auditSilenced,  // Suppression awareness
-});
-```
-
-### 5.6 File Map
-
-| File | Purpose |
-|------|---------|
-| `components/admin/users/UserCard.tsx` | `AuditSilencePanel` toggle UI (DEV-only) |
-| `pages/api/audit/silence.ts` | API: toggles audit suppression for any user |
-| `lib/auth/session.ts` | `updateSessionAuditSilenced()` KV helper |
-| `middleware.ts` | Reads `session.auditSilenced` for page-view logging |
-| `lib/audit.ts` | `createAuditLogger({ silenced })` factory |
+Add an `environment` column to `admin_audit_log` and filter on **read**. Do not
+reintroduce a write-side suppression flag: the value of an audit log is that
+its contents are not a function of who was being audited.
 
 ---
 
-## 6. Ghost Audit Engine (`ctx.waitUntil`)
+## 6. Audit Engine (`ctx.waitUntil`)
 
 ### 6.1 Zero-Latency Logging
 
@@ -259,7 +227,7 @@ Ghost Mode creates a window where DEV actions are unlogged. Mitigation:
 ### 8.2 Performance Impact
 
 - **None measurable** — all audit operations are post-response via `ctx.waitUntil()`
-- Ghost Mode adds a single boolean check (`if (silenced) return;`) which is negligible
+- There is no suppression check on the write path at all; every entry is written
 - No additional KV reads — the flag is part of the existing session object
 
 ### 8.3 DEV-Only Restriction

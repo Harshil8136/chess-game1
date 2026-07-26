@@ -1,6 +1,6 @@
 ---
 
-title: "System Architecture: RBAC, PLAC & Ghost Audit"
+title: "System Architecture: RBAC, PLAC & the Audit Engine"
 status: active
 audience: [ai, technical]
 last_verified: 2026-06-06
@@ -9,16 +9,16 @@ owner: harshil
 tags: []
 ---
 
-# 🛡️ System Architecture: RBAC, PLAC & Ghost Audit
+# System Architecture: RBAC, PLAC & the Audit Engine
 
 > **TL;DR (non-technical):** How the portal decides who can see and do what (roles plus per-page permissions), and how it records every sensitive action for accountability — all without slowing pages down.
 
 > [!NOTE]
 > **System Status:** Production Ready
 > **Target Environment:** Cloudflare Workers V8 Isolates (Edge Computing)
-> **Last Updated:** 2026-05-26 (v4.7: PLAC enforcement extended to all remaining data-bearing API routes — `content/*`, `media/*`, `settings/portal`, `users/*`, plus `audit/login-logs` and `audit/export` parent-deny propagation. `audit/silence` adds PLAC defence-in-depth on top of the existing DEV-only role gate.)
+> **Last Updated:**  2026-07-27 (audit suppression removed entirely; DEV/Owner accounts are no longer hidden from lower tiers in the user list, the access-review export or active revocations)
 
-This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Ghost Audit Engine.
+This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Audit Engine.
 
 Designed specifically to operate within Cloudflare's strict 10ms–50ms CPU limits, this triad provides enterprise-grade administrative security with **zero user-perceived latency** and an effective **$0 infrastructure cost**.
 
@@ -34,7 +34,7 @@ Roles are defined centrally and scored such that a **lower number equals higher 
 
 | Level | Role | Capabilities | Badge Color | Icon | Target Audience |
 | :---: | :--- | :--- | :--- | :---: | :--- |
-| **0** | **DEV (Ghost)** | **Absolute System Supremacy.** Can execute database prunes, create hidden accounts, mutate other devs, and view raw cryptolocked logs. Hidden entirely from lower tiers. | Red | ⚡ | System Architects |
+| **0** | **DEV** | Vendor support tier. Can execute database prunes, mutate other DEV accounts, and view raw logs. **Visible in the customer's user list and access-review export** as of 2026-07-26; it was previously filtered out of both, which is not a defensible position for a supplier account sitting above the customer on the customer's own data. | Red | | Vendor operations |
 | **1** | **Owner** | **Project Ownership.** Can manage billing, API keys, and view all hidden accounts. Protected from modification by SuperAdmin and below. | Emerald | 💎 | Business Owners |
 | **2** | **Super Admin** | **Full Operational Access.** Can manage users (at or below their level), alter global settings, and grant PLAC privileges. Cannot see hidden accounts. | Amber | 👑 | Senior Managers |
 | **3** | **Admin** | **Manager-Level Access.** Can manage content (Hero, Gallery, Reviews), view customers, and read generalized audit logs. | Purple | 🛡️ | Operations Managers |
@@ -63,7 +63,7 @@ Lockout recovery is now operational rather than code-level:
 |----------|-------------|
 | `hasPermission` | O(1) integer comparison — core gatekeeper |
 | `isDev` | Exact DEV check |
-| `isOwnerOrDev` | DEV-or-Owner — used for hidden-account visibility (`is_hidden`) and ghost protection |
+| `isOwnerOrDev` | DEV-or-Owner, used for privileged-account edit protection |
 | `isSuperAdmin` | SuperAdmin or higher |
 | `isAdmin` | Admin or higher |
 | `requireAuth(context, minRole?)` | (in `guard.ts`) Server-side auth gate for pages and API routes. Returns the user on success; throws `AuthError(401\|403)` on failure. |
@@ -127,7 +127,7 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 > The Access Management API (`POST /api/users/access`) enforces **five ironclad gates**. Without them, an Admin could lock out a higher-tier user, or a user with a PLAC deny could self-administer their way back in.
 
 - **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `SECURITY-REVIEW-2026-05-25.md` finding C-1.
-- **Gate B: DEV + Owner Ghosting** — Users with DEV or Owner rank are intentionally dropped from UI payloads requested by non-DEV actors and are rejected outright by this endpoint. Same DB-verified-role hardening as Gate A. The `/api/users/access-data` endpoint received an equivalent guard in the same review (non-DEV actors cannot enumerate a DEV/Owner PLAC matrix even by directly querying with a known userId).
+- **Gate B: privileged-account edit protection** — DEV and Owner accounts cannot be *mutated* by lower ranks, and this endpoint rejects such attempts outright. They are no longer *hidden* from lower ranks: as of 2026-07-26 every account appears in the user list and in the access-review export regardless of who is asking. Concealing a supplier account from the customer whose data it can reach is the finding most likely to end a security review, and "you cannot edit it" is the control that was actually wanted.
 - **Gate C: Page Visibility Check** — The actor cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
 - **Gate D: Natural Ceiling Enforcement** — Grants are capped at the actor's clearance ceiling. An Admin cannot grant a Staff member access to a DEV-required tool.
 - **Gate E: No Self-Modification (new 2026-05-25)** — `actor.userId === targetUserId` is rejected outright. Denies must not be self-removable and grants must not be self-administered. A user denied a page via PLAC needs a higher-tier actor to lift it.
@@ -165,7 +165,7 @@ if (denied) return denied;
 - **Media surface (`/dashboard/media`):** `media/gallery` (GET + POST), `media/upload` (POST), `media/library` (GET + DELETE), `media/revalidate` (POST).
 - **Settings surface (`/dashboard/settings`):** `settings/portal` (GET + POST).
 - **Audit surface — parent-deny propagation:** `audit/login-logs` (GET) and `audit/export` (POST) now call `placDenyResponse(actor, '/dashboard/logs')` as their first gate, so a deny on the parent page blocks the `#security` and `#export` hash sub-pages too via longest-prefix matching. The existing hash-grant logic remains as the secondary check.
-- **Audit surface — defence-in-depth:** `audit/silence` (POST) adds `placDenyResponse(session, '/dashboard/audit')` after its `isDev` role gate. DEV is exempt from PLAC by design, so this is a no-op today — but the gate documents intent and future-proofs against the role gate being relaxed.
+- **Audit surface:** `audit/silence` was **deleted** on 2026-07-26 along with the suppression feature behind it. See §3.
 
 All data-bearing API routes that map to a dashboard page now enforce PLAC. The full route table with page-paths and rate limits is in `SECURITY.md` §6a / §6b.
 
@@ -185,15 +185,15 @@ To ensure full administrative oversight over the PLAC system itself, the **Admin
 2. **API-Level Auth**: All mutations via `/api/system/pages.ts` and `/api/system/preview.ts` undergo `requireAuth(context, 'dev')`.
 3. **Rate Limiting**: Enforced via Upstash Redis to prevent abuse.
 4. **Schema Validation**: The D1 schema incorporates a hardened `CHECK` constraint guaranteeing valid required roles (including `owner`), automatically resolving legacy migration issues (e.g., Migration 0018).
-5. **Ghost Audit Logging**: All mutations to the registry log a `registry_update` action in the Ghost Audit Engine.
+5. **Audit Logging**: All mutations to the registry log a `registry_update` action in the Audit Engine.
 
 The manager includes an **Impact Analysis Engine** that performs pre-mutation dry-runs, calculating aggregate access gains or losses globally across the user base before any role changes are committed to the D1 schema.
 
 ---
 
-## 3. The Ghost Audit Engine
+## 3. The Audit Engine
 
-The Ghost Audit Engine is the overarching forensic surveillance system covering `cf-admin`. Because we do not rely on a monolithic backend, traditional blocking loggers would severely degrade Edge performance. The Ghost Engine resolves this.
+The Audit Engine is the forensic record for `cf-admin`. Because there is no monolithic backend, a blocking logger would sit on the Edge hot path, so writes are deferred until after the response is sent. That is the only thing "async" changes here: every action is recorded, and there is no path that skips a write.
 
 ### 3.1 The Concept: Deferred Execution
 
@@ -240,6 +240,6 @@ Every non-API navigation inside the dashboard is intercepted:
 
 1. **Access Evaluation:** The middleware checks the PLAC map.
 2. **Synchronous Transition:** The user is either allowed to load the page or bounced to a 403 error screen.
-3. **Ghost Telemetry:** The middleware fires an async deferred task pushing a "view" ledger entry.
+3. **Deferred telemetry:** The middleware fires an async deferred task pushing a "view" ledger entry.
 
 The details payload contains a `granted` boolean. This allows Devs to scan the audit table for denied entries to instantly uncover repeated unauthorized access attempts.

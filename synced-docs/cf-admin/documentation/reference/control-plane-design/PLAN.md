@@ -587,7 +587,6 @@ if (cfCtx?.waitUntil) {
   const auditLogger = createAuditLogger({
     db: env.DB,
     waitUntil: cfCtx.waitUntil.bind(cfCtx),
-    silenced: user.auditSilenced,          // DEV audit silence feature
   });
 
   auditLogger({
