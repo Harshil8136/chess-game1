@@ -42,6 +42,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 |-----|---------|----------|--------|
 | [`2026-07-17-compliance-standing-and-market-positioning.md`](2026-07-17-compliance-standing-and-market-positioning.md) | Quantified compliance % per standard (instant/close/far) + market positioning, verticals, and monetization | owner, non-technical, technical | active |
 | [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture | non-technical, owner | historical |
+| [`2026-07-27-go-to-market-prospecting-and-roadmap.md`](2026-07-27-go-to-market-prospecting-and-roadmap.md) | GTM: the two sales motions and how they differ, ICP/anti-ICP, eight prospecting plays, the funnel end to end, the fleet capacity gate that bounds growth, a phased roadmap with gates, what to measure, risk register, and what is safe to say to a prospect | owner, non-technical, technical, operator, ai | active |
 
 ## Architecture
 

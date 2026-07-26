@@ -6,7 +6,7 @@ audience: [owner, technical, operator, ai]
 last_verified: 2026-07-26
 verified_against: [code, config, web]
 owner: harshil
-related_docs: [2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md, 2026-07-17-compliance-standing-and-market-positioning.md, 2026-06-16-business-viability-and-compliance-assessment.md, reference/commercial-readiness-checklist.md, security/RoPA.md, security/compliance/data-residency.md, MAINTENANCE.md]
+related_docs: [2026-07-27-go-to-market-prospecting-and-roadmap.md, 2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md, 2026-07-17-compliance-standing-and-market-positioning.md, 2026-06-16-business-viability-and-compliance-assessment.md, reference/commercial-readiness-checklist.md, security/RoPA.md, security/compliance/data-residency.md, MAINTENANCE.md]
 tags: [commercial, pricing, costing, unit-economics, scale, fleet, gtm, strategy]
 ---
 
@@ -499,6 +499,10 @@ customer conversation.
 
 ## 12. Validation plan
 
+Sequenced into a dated plan, alongside the prospecting plays that generate the
+conversations these experiments need, in
+[`2026-07-27-go-to-market-prospecting-and-roadmap.md`](2026-07-27-go-to-market-prospecting-and-roadmap.md) §6.
+
 The fastest way to replace A4, A6 and A7 with evidence:
 
 1. **Time the next real update** (closes A4). One measurement, highest-leverage number
@@ -558,6 +562,9 @@ problem is positioning, not price.
 4. **Floor ~$180/month, recommended $250–900, ceiling ~$1,500** post-SOC 2. Retire the old
    $29 Starter band — it is below cost.
 5. **Sell to agencies first.** The per-deployment model is already how they work.
+   *(Refined 2026-07-27: agencies are the higher-leverage motion but must be
+   sequenced after fleet tooling exists, since what they buy is repeatability.
+   Direct SMB runs first. See the GTM doc §1 and §5.)*
 6. **SOC 2 Type I ($12k–$40k) is the single highest-value unlock** for larger buyers, and
    ~4–5 Trust-tier clients fund it in a year.
 7. **Every price here is modelled, not validated.** §12 is how that changes — and timing
