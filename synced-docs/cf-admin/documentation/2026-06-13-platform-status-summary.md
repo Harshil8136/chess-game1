@@ -168,8 +168,12 @@ Estimated monthly cost at current traffic (USD):
   inactivity pause; Free ($0) is technically viable at this traffic but pauses after a week
   idle and has no point-in-time recovery. **Recommendation:** keep Pro *only if* backup/uptime
   guarantees matter for the booking database — this is a reliability choice, not a scaling need.
-- **Keep Cloudflare Workers Paid ($5).** It is the floor for Queues; do not drop the queue
-  decoupling to save $5.
+- **Keep Cloudflare Workers Paid ($5).** ~~It is the floor for Queues~~ — **superseded
+  2026-07-26:** Cloudflare Queues now has a free tier (10,000 operations/day), so Queues
+  no longer forces Workers Paid. The $5 is still worth paying, for different reasons:
+  free-tier Queues caps message retention at **24 hours, non-configurable** (vs 4–14 days
+  on Paid), and Paid removes the daily hard caps. Do not drop the queue
+  decoupling to save $5. See `2026-07-26-commercial-model-costing-pricing-and-scale.md` §5.
 - **Minor hygiene:** prune the ~26 unused Supabase indexes (negligible cost, small write-perf win).
 - **Verdict:** the stack is **already near cost-optimal**. No urgent action; growing 100–1,000×
   stays within current tiers or adds only metered Cloudflare cents.

@@ -126,3 +126,18 @@ Context: `documentation/security/compliance/ACCESSIBILITY.md`.
 | C-6 | **No IR/DR drill has ever been run.** | `documentation/runbooks/` | 🟠 | Both runbooks exist and both say so explicitly. SOC 2 CC7.5 / A1.3 require evidence the plan works — the drill, not the document. RTO/RPO figures are estimates until measured. |
 | C-7 | **OpenAPI schema not generated.** Gap G10 — still open. | — | 🟡 | Zod schemas now cover 100% of JSON-body routes, so the input for a generator exists. Would close SOC2 IPY-02 and OWASP API9. |
 | C-8 | **No prod/staging separation.** Gap G14. | `wrangler.toml` | 🟡 | Needs new Cloudflare resources; `GITHUB_RULES.md` §6 makes inventing binding UUIDs a production-outage risk, so this is an operator decision. |
+
+
+## Commercial follow-ups (2026-07-26)
+
+From `2026-07-26-commercial-model-costing-pricing-and-scale.md`. The delivery model is
+**one dedicated deployment per client** — multi-tenancy is explicitly not being built.
+
+| # | Item | Severity | Notes |
+|---|------|----------|-------|
+| M-1 | **Fleet tooling does not exist.** No `wrangler.template.toml`, no provisioning script, no fleet migration runner, no version/drift inventory. | 🟠 | **The binding constraint on the business.** Manual updates cap the fleet at ~10–15 clients; past that, updates stop happening, which is a compliance problem (unpatched CVEs, stale security rules). ~2–4 weeks of work — the highest-ROI engineering investment available, and far cheaper than the 2–4 months multi-tenancy would have cost. |
+| M-2 | **Time one real update** to replace assumption A4. | 🟠 | 30 min/client is an estimate that has never been measured, and it drives 60–70% of modelled cost-to-serve. One measurement on the next deploy fixes the largest unknown in the pricing model. |
+| M-3 | Pet-hotel domain not extracted from the framework. | 🟡 | `booking_pets`/`booking_quality_metadata` schema, hardcoded copy, `madagascar-*` binding names. Every new client deployment inherits tables it does not need. Phases A–E in `reference/commercial-readiness-checklist.md` — unstarted. |
+| M-4 | Pricing has **zero customer validation**. | 🟡 | $250/$500/$900 tiers are derived from cost and competitor rates only. Validation plan in §12 of the commercial doc. |
+| M-5 | Track support/incident hours for 90 days (assumption A6). | 🟡 | Currently modelled as $0. Could add 50–100% to true cost-to-serve. |
+| M-6 | D1 storage is summed **per Cloudflare account**, not per database. | 🟡 | 5 GB included across the whole fleet. At 20 client databases that is ~250 MB each. Retention windows in `src/lib/retention-tables.ts` are a cost control, not only a privacy control. |

@@ -12,6 +12,15 @@ tags: [viability, compliance, business, strategy, assessment, gtm, tiering]
 
 # Business Viability & Multi-Jurisdiction Compliance Assessment
 
+> **Superseded in part, 2026-07-26.** This document's product category — a booking
+> platform for small service businesses — has been replaced by a horizontal
+> **admin/control-plane framework** positioning, and its multi-tenant SaaS
+> recommendation has been rejected in favour of a deliberate **one-deployment-per-client**
+> fleet model. Its tier price bands ($29–79 / $99–249 / $299–699) do not transfer:
+> the Starter band sits below cost-to-serve under the new model. Current commercial
+> analysis: `2026-07-26-commercial-model-costing-pricing-and-scale.md`.
+> The compliance and jurisdiction analysis in this document still stands.
+
 **Date:** 2026-06-16 · **Covers both repositories:** `cf-admin-madagascar` (admin/CRM/CMS/control-plane) and `cf-astro` (public booking + marketing site).
 
 > **TL;DR (non-technical):** The platform you built is **genuinely good** — far above the

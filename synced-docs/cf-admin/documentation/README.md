@@ -116,6 +116,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/compliance/data-residency.md`](security/compliance/data-residency.md) | Data residency, cross-border transfer mechanisms, GPC scope | technical, owner, operator | active |
 | [`security/compliance/supabase-advisors-latest.json`](security/compliance/supabase-advisors-latest.json) | Supabase advisor baseline (2026-07-08). SEC-11 regression guard is **planned, not implemented**; baseline is stale as of 2026-07-25 — see MAINTENANCE.md | technical | active |
 | [`2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md) | Full-spectrum audit across 45+ frameworks (SOC 1/2/3, ISO 27001/27017/27018/27701/22301/9001/42001, NIST CSF/800-53/AI RMF, CSA STAR, HITRUST, FedRAMP, WCAG/ADA, EU AI Act, GDPR/CCPA/20-state US patchwork + global privacy law, HIPAA/PCI/GLBA/SOX scope notes) with scoring, gap register, and a phased sellability roadmap | owner, non-technical, technical, operator, ai | active |
+| [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md) | Commercial model: per-deployment fleet costing, unit economics, pricing floor/recommended/ceiling, scale ceilings, ICP, modularity fact-check | owner, technical, operator, ai | active |
 
 ## Specs (dated design records)
 

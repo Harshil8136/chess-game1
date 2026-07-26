@@ -600,6 +600,13 @@ table update, not a rewrite.
 
 ## 8. Setup & infrastructure cost
 
+> **Annotated 2026-07-26:** the ~$0.50 figure is technically correct but materially
+> incomplete. It describes an all-free-tier posture, which caps Queue message
+> retention at 24 hours (non-configurable) and leaves Supabase without PITR and
+> subject to idle-pause. The production-grade posture is **~$30/month**
+> (Workers Paid $5/account + Supabase Pro $25/org). See
+> `2026-07-26-commercial-model-costing-pricing-and-scale.md` §5.2.
+
 No change from the existing operations baseline (re-confirmed, not
 re-derived): **~$0.50/month maximum**, entirely free-tier Cloudflare
 (Workers/D1/KV/R2/Queues/Analytics Engine) + free-tier Supabase + free-tier
