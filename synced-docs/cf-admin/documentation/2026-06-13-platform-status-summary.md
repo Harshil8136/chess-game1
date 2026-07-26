@@ -123,7 +123,7 @@ migration, and adding CodeQL — both low-priority at current scale.
 | | Now | Ceiling before any code change | Headroom |
 |---|---|---|---|
 | Traffic | ~50 requests/day | Cloudflare free allotment **100,000 req/day** | **~2,000×** |
-| Compute | edge SSR isolates | Workers Paid: 10M req/mo included, then ~$0.30/M | effectively unbounded |
+| Compute | edge SSR isolates | Free (**current plan**): 100k req/day, 10 ms CPU/request, 3 MB worker. Workers Paid: 10M req/mo included, then ~$0.30/M | effectively unbounded |
 | Database | tiny | D1 5 GB / millions of reads/day; Supabase pooled | very large |
 | Email | low | Resend free 3k/mo (100/day); queue-buffered | large |
 
@@ -154,13 +154,20 @@ Estimated monthly cost at current traffic (USD):
 
 | Service | Tier | Est. $/mo | Usage vs limit |
 |---|---|:---:|---|
-| Cloudflare Workers/Pages (incl. D1, KV, R2, Queues, Workers AI, Analytics Engine) | Workers Paid (floor for Queues) | **~$5** | ~50 req/day vs 100k/day free-included |
+| Cloudflare Workers/Pages (incl. D1, KV, R2, Queues, Workers AI, Analytics Engine) | ~~Workers Paid (floor for Queues)~~ **Workers Free** — *superseded 2026-07-26* | ~~**~$5**~~ **$0** | ~50 req/day vs 100k/day free-included |
 | Supabase (PostgreSQL) | Free **or** Pro | **$0–25** | small DB; the main cost variable |
 | Upstash Redis (rate limiting) | Free | $0 | low vs 10k commands/day |
 | Resend (transactional email) | Free | $0 | low vs 3k emails/mo |
 | Sentry / PostHog / BetterStack (errors, analytics, logs) | Free / Developer | $0 | low vs free quotas |
 | Domain | registrar | ~$1 | — |
-| **Total** | | **≈ $5–30 / mo** | |
+| **Total** | | ~~**≈ $5–30 / mo**~~ **≈ $1 / mo** — *superseded 2026-07-26* | |
+
+> **Superseded 2026-07-26 (owner-confirmed):** the account is on **Workers Free** and
+> **Supabase Free** — every Cloudflare and Supabase line above is $0 today. The `$5–30`
+> range describes the *recommended production-grade posture*, not current spend. Canonical
+> current cost: [`operations/OPERATIONS.md`](operations/OPERATIONS.md) §8 and
+> [`RULESAd.md`](../RULESAd.md) §15. Plan-choice rationale:
+> [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md) §5.2.
 
 **Optimization (if decided):**
 
@@ -168,12 +175,15 @@ Estimated monthly cost at current traffic (USD):
   inactivity pause; Free ($0) is technically viable at this traffic but pauses after a week
   idle and has no point-in-time recovery. **Recommendation:** keep Pro *only if* backup/uptime
   guarantees matter for the booking database — this is a reliability choice, not a scaling need.
-- **Keep Cloudflare Workers Paid ($5).** ~~It is the floor for Queues~~ — **superseded
-  2026-07-26:** Cloudflare Queues now has a free tier (10,000 operations/day), so Queues
-  no longer forces Workers Paid. The $5 is still worth paying, for different reasons:
-  free-tier Queues caps message retention at **24 hours, non-configurable** (vs 4–14 days
-  on Paid), and Paid removes the daily hard caps. Do not drop the queue
-  decoupling to save $5. See `2026-07-26-commercial-model-costing-pricing-and-scale.md` §5.
+- **~~Keep~~ Consider buying Cloudflare Workers Paid ($5).** ~~It is the floor for Queues~~ —
+  **superseded 2026-07-26:** Cloudflare Queues now has a free tier (10,000 operations/day), so
+  Queues no longer forces Workers Paid — **and the account is in fact on Workers Free today.**
+  The $5 is still worth paying, for different reasons: free-tier Queues caps message retention
+  at **24 hours, non-configurable** (vs 4–14 days on Paid), which is a real data-loss exposure
+  if `cf-astro-email-consumer` is down over a weekend; and Paid lifts the daily hard caps and
+  the 10 ms CPU ceiling. Do not drop the queue decoupling to save $5.
+  See `2026-07-26-commercial-model-costing-pricing-and-scale.md` §5 and
+  `specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md` §5.4.
 - **Minor hygiene:** prune the ~26 unused Supabase indexes (negligible cost, small write-perf win).
 - **Verdict:** the stack is **already near cost-optimal**. No urgent action; growing 100–1,000×
   stays within current tiers or adds only metered Cloudflare cents.

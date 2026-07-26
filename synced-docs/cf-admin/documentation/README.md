@@ -127,6 +127,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`specs/2026-05-03-settings-design.md`](specs/2026-05-03-settings-design.md) | Settings dashboard design | historical |
 | [`specs/2026-05-12-bookings-header-design.md`](specs/2026-05-12-bookings-header-design.md) | Bookings page header redesign | historical |
 | [`specs/2026-05-13-cms-ui-redesign.md`](specs/2026-05-13-cms-ui-redesign.md) | CMS UI redesign | historical |
+| [`specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) | Payload CMS evaluation (MIT ✓, Cloudflare ✓, Workers-Paid-only ✗) + alternatives + recommended $0 dynamic-blog blueprint on the existing D1 CMS | active |
 
 ## Runbooks
 
