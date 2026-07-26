@@ -61,6 +61,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 |-----|---------|----------|--------|
 | [`security/SECURITY.md`](security/SECURITY.md) | Canonical current security posture (CSRF, headers, sessions, RLS, force-kick) | ai, technical | active |
 | [`security/PRIVACY.md`](security/PRIVACY.md) | Privacy dashboard, consent records, GDPR/LFPDPPP | ai, technical, operator | active |
+| [`security/RoPA.md`](security/RoPA.md) | Record of Processing Activities (GDPR Art. 30) — data inventory, legal bases, sub-processors | owner, operator, technical, ai | active |
+| [`security/THREAT-MODEL.md`](security/THREAT-MODEL.md) | STRIDE threat model + data-flow diagram + residual-risk ranking | technical, operator, ai, owner | active |
 | [`security/login-forensics.md`](security/login-forensics.md) | Login forensics subsystem (schema, telemetry, alerts) | ai, technical | active |
 | [`security/reviews/2026-07-17-full-platform-audit.md`](security/reviews/2026-07-17-full-platform-audit.md) | Full-platform OWASP/SOC2/GDPR/CCPA audit + zero-cost roadmap + multi-tenant readiness | technical, operator | active |
 | [`security/reviews/2026-06-13-security-review.md`](security/reviews/2026-06-13-security-review.md) | Latest security review + remediation, scored (A− 91/100) — full fix pass | technical, operator | historical |
@@ -108,7 +110,11 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/compliance/ASVS-L2.md`](security/compliance/ASVS-L2.md) | OWASP ASVS v4.0.3 Level 2 verification matrix (per-control status + evidence) | technical, operator, owner | active |
 | [`security/compliance/CSA-CAIQ-v4.md`](security/compliance/CSA-CAIQ-v4.md) | CSA STAR Level 1 Consensus Assessments Initiative Questionnaire (CAIQ v4.0.3) — registry-ready | technical, owner | active |
 | [`security/compliance/SOC2-TSC-mapping.md`](security/compliance/SOC2-TSC-mapping.md) | SOC 2 Type I readiness: control-to-TSC mapping + gap list | technical, owner | active |
-| [`security/compliance/supabase-advisors-latest.json`](security/compliance/supabase-advisors-latest.json) | Latest Supabase advisor snapshot; used by CI grep-guard SEC-11 for regression detection | technical | active |
+| [`security/compliance/AI-GOVERNANCE.md`](security/compliance/AI-GOVERNANCE.md) | AI model inventory, human-oversight statement, EU AI Act deployer position, NIST AI RMF self-map | technical, owner, operator | active |
+| [`security/compliance/ACCESSIBILITY.md`](security/compliance/ACCESSIBILITY.md) | WCAG 2.2 AA conformance statement + A11Y rule crosswalk (non-conformant; open defects listed) | technical, owner, operator | active |
+| [`security/compliance/ISO-27017-27018.md`](security/compliance/ISO-27017-27018.md) | Cloud shared-responsibility (27017) and PII-in-cloud processor (27018) statements | technical, owner | active |
+| [`security/compliance/data-residency.md`](security/compliance/data-residency.md) | Data residency, cross-border transfer mechanisms, GPC scope | technical, owner, operator | active |
+| [`security/compliance/supabase-advisors-latest.json`](security/compliance/supabase-advisors-latest.json) | Supabase advisor baseline (2026-07-08). SEC-11 regression guard is **planned, not implemented**; baseline is stale as of 2026-07-25 — see MAINTENANCE.md | technical | active |
 | [`2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md) | Full-spectrum audit across 45+ frameworks (SOC 1/2/3, ISO 27001/27017/27018/27701/22301/9001/42001, NIST CSF/800-53/AI RMF, CSA STAR, HITRUST, FedRAMP, WCAG/ADA, EU AI Act, GDPR/CCPA/20-state US patchwork + global privacy law, HIPAA/PCI/GLBA/SOX scope notes) with scoring, gap register, and a phased sellability roadmap | owner, non-technical, technical, operator, ai | active |
 
 ## Specs (dated design records)
@@ -125,6 +131,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
+| [`runbooks/incident-response.md`](runbooks/incident-response.md) | Incident response + GDPR Art. 33 72-hour breach notification (severity, containment, notification matrix) | active |
+| [`runbooks/disaster-recovery.md`](runbooks/disaster-recovery.md) | Backup/restore per store, RTO/RPO targets, scenario playbooks (drill outstanding) | active |
 | [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 | [`runbooks/brevo-webhook.md`](runbooks/brevo-webhook.md) | Enable Brevo delivery webhook: Worker secret + CF Access bypass policy + Brevo config | active |
 | [`runbooks/supabase-leaked-password-protection.md`](runbooks/supabase-leaked-password-protection.md) | Enable Supabase Auth HIBP leaked-password check (3-step dashboard toggle) | active |

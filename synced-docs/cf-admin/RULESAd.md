@@ -81,7 +81,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 **EDGE-INJECTED SECURITY:** The dashboard enforces strict HTTP security headers injected globally at the edge via Astro middleware `sequence`.
 
-- **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>' 'strict-dynamic'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). No `'unsafe-eval'` and no `'unsafe-inline'` for scripts (enforced by SEC-01). `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped-style emissions currently require it; nonce migration for styles is a follow-up. Ships report-only for one deploy window, then flips to enforcing.
+- **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). `'unsafe-eval'` is forbidden and absent (SEC-01, no exemptions). `'unsafe-inline'` is **still present on the enforcing policy**; a `Content-Security-Policy-Report-Only` canary ships the hardened directive without it, pinned by SEC-01b, and is promoted once it reports clean (blocked on operator verification of Cloudflare Rocket Loader — see MAINTENANCE.md). `'strict-dynamic'` is off for the same reason. `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped styles require it. Also sets COOP, CORP and `X-Robots-Tag`, which `public/_headers` declared but never shipped (that file is Pages-only; this deploys as a Worker, and it has been deleted).
 - **X-Frame-Options: DENY** (Blocks Clickjacking)
 - **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
 - **Referrer-Policy: strict-origin-when-cross-origin**
@@ -393,13 +393,14 @@ Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
 
 | ID | Rule | Anchor | CI guard | Compliance |
 |----|------|--------|----------|------------|
-| SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` or `'unsafe-inline'` (nonce required; see §2 for current `'strict-dynamic'` status) | `src/lib/security/csp.ts` (`securityHeaders` CSP block) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
+| SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` — **no exemptions** | `src/lib/security/csp.ts` (`SCRIPT_SRC_ENFORCING`) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
+| SEC-01b | The Report-Only canary `script-src` MUST stay free of `'unsafe-inline'`/`'unsafe-eval'` | `src/lib/security/csp.ts` (`SCRIPT_SRC_CANARY`) | `rules_check.py::SEC-01b` | ASVS 14.4.3 |
 | SEC-02 | All cookies MUST be `SameSite=Strict` (never `Lax`) | any `SameSite=` in `src/**` | `rules_check.py::SEC-02` | ASVS 3.4.3 |
 | SEC-03 | API handlers MUST use a DAL repository (`src/lib/dal/*`), never raw `env.DB.prepare(...)` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-03` | ASVS 5.3.4 |
 | SEC-04 | Use `isAdmin()` / `isSuperAdmin()` helpers (`src/lib/auth/rbac.ts`), never hardcoded role arrays | `src/pages/api/**/*.ts` | `rules_check.py::SEC-04` | ASVS 4.1.3 |
 | SEC-05 | Workers runtime has no `process.env` — use `getEnv(context)` from `src/lib/env.ts` | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-05` | ASVS 14.1.1 |
 | SEC-06 | Every API handler MUST gate on `requireAuth()`, `placDenyResponse()`, or `locals.user` — no unauthenticated endpoints outside `PUBLIC_API_ROUTES` / `WEBHOOK_ROUTES` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-06` | ASVS 4.1.1 |
-| SEC-07 | Every `/api/*` route MUST be in `API_PAGE_MAPPING` **or** an explicit `PUBLIC_API_*` allowlist in `src/middleware.ts` — default-deny is the rule | `src/pages/api/**/*.ts` | `rules_check.py::SEC-07` (planned) | ASVS 4.1.5 |
+| SEC-07 | Every `/api/*` route MUST resolve via `resolveApiAuthz()` — `API_PAGE_MAPPING` prefix or an explicit `PUBLIC_API_*`/`WEBHOOK` allowlist. Default-deny is enforced at runtime by `API_DENY_MODE` | `src/lib/auth/routes.ts`, `src/pages/api/**/*.ts` | `rules_check.py::SEC-07` ✅ implemented 2026-07-25 | ASVS 4.1.5 |
 | SEC-08 | `dangerouslySetInnerHTML` MUST receive pre-sanitized content only (`sanitizeHtml`, `escapeHtml`, template literal) | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-08` | ASVS 5.2.6 |
 | SEC-09 | Every table with `ENABLE ROW LEVEL SECURITY` MUST also declare at least one `CREATE POLICY` in the same migration | `supabase/migrations/**/*.sql` | `rules_check.py::SEC-09` | ASVS 5.3.4 |
 | SEC-10 | Use Web Crypto `crypto.subtle.digest(...)`, never Node's `crypto.createHash(...)` | `src/**/*.{ts,tsx}` | `rules_check.py::SEC-10` | ASVS 6.2.1 |
@@ -408,6 +409,22 @@ Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
 (prints violations, exits 0) so existing tech-debt can burn down without
 blocking merges. Once the tree is clean for a given rule, remove `--warn-only`
 in `.github/workflows/security.yml`.
+
+**Status (2026-07-25): `rules_check.py` is BLOCKING** — 11 rules, 0 violations.
+The SEC-03/SEC-04 debt is fully burned down.
+
+> ⚠️ **An exemption that is disabled by the condition it detects is worse than
+> no rule.** SEC-01 previously carried `exempt_line=r"unsafe-eval"`, rationalised
+> as sparing a local-dev branch that did not exist. Because the repo has exactly
+> one `script-src` — the production one — that exemption swallowed the only line
+> the rule guarded, and *adding* `'unsafe-eval'` is what silenced the
+> `'unsafe-inline'` beside it. The guard reported "0 violations" against a CSP
+> with both. When adding an exemption, first prove the rule still fails without
+> it: every rule in this table now has a negative test.
+
+**Accessibility rules (A11Y-01…06)** live in `scripts/a11y_check.py` and run in
+`.github/workflows/quality.yml`, currently `--warn-only` — see
+`documentation/security/compliance/ACCESSIBILITY.md`.
 
 ### 9.1 Security Invariants (v4.5, historical)
 

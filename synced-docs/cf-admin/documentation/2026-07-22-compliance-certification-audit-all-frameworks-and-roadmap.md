@@ -660,6 +660,46 @@ do the cheap items now regardless of whether the expensive certification is ever
 | G17 | No data-residency/region pinning (single US region for D1 + Supabase) | GDPR/UK GDPR residency-sensitive buyers, ISO 27018 | Architectural | $0 (Cloudflare/Supabase both support EU regions) | Open |
 | G18 | ARCO SLA-deadline math and retention-purge safety invariants have zero test coverage | GDPR Art.15-17 evidentiary strength | 3–5 days | $0 | Open — **newly tracked this pass**, surfaced by 07-22 review §2.3 |
 
+
+### 9.1 Gap-register status after the 2026-07-25 remediation pass
+
+Updated against code, not against the previous status column. Verify with
+`npm run verify`.
+
+| ID | Gap | Status |
+|---|---|---|
+| G1 | Breach-notification runbook | ✅ **Closed** — `runbooks/incident-response.md` (drill outstanding) |
+| G2 | Record of Processing Activities | ✅ **Closed** — `security/RoPA.md` |
+| G3 | DR/backup-restore runbook | 🟡 **Partial** — `runbooks/disaster-recovery.md` written; RTO/RPO are estimates until the first drill runs |
+| G4 | Incident-response runbook / drills | 🟡 **Partial** — runbook closed, drill cadence defined, **no drill has been run** |
+| G5 | `List-Unsubscribe` + suppression list | 🔴 **Open** — MAINTENANCE.md C-4 |
+| G6 | GPC signal handling | 🟡 **Partial** — detected and tested here (`src/lib/security/gpc.ts`); consumer-facing enforcement belongs to `cf-astro` |
+| G7 | API middleware not fail-closed | ✅ **Closed** — `resolveApiAuthz` + `API_DENY_MODE`; route-inventory test + SEC-07. Shipped in `shadow`; flip tracked as C-2 |
+| G8 | Threat model / DFD | ✅ **Closed** — `security/THREAT-MODEL.md` |
+| G9 | WCAG/ADA audit + CI scanner | 🟡 **Partial** — `scripts/a11y_check.py` in CI; A11Y-03/06 fixed; 45 findings open; **conformance NOT claimed** |
+| G10 | OpenAPI schema | 🔴 **Open** — zod now covers 100% of JSON-body routes, so the input exists (C-7) |
+| G11 | SBOM in CI | ✅ **Closed** — CycloneDX artifact via `npm sbom`, no new dependency |
+| G12 | External penetration test | 🔴 **Open** — requires budget |
+| G13 | `npm audit` gate non-blocking | ✅ **Closed** — `scripts/audit_gate.py` blocking, with evidenced exceptions that expire |
+| G14 | No prod/staging separation | 🔴 **Open** — operator decision (C-8) |
+| G15 | AI governance documentation | ✅ **Closed** — `compliance/AI-GOVERNANCE.md` + model-selection hardening |
+| G16 | EU AI Act transparency disclosure | 🟡 **Partial** — satisfied for the email feature; **chatbot UI unverified**, lives in `cf-chatbot` |
+| G17 | Data residency | 🟡 **Documented** — `compliance/data-residency.md`; no EU deployment exists |
+| G18 | ARCO SLA / retention test coverage | ✅ **Closed** — 60 tests (`test/arco-sla.test.ts`, `test/retention-invariants.test.ts`) |
+
+**Found during remediation, not in the original register:**
+
+| ID | Finding | Status |
+|---|---|---|
+| N1 | **Production `script-src` carried both `'unsafe-inline'` and `'unsafe-eval'`**, and SEC-01 could not detect it — the rule exempted any line containing `'unsafe-eval'`, so adding it silenced the `'unsafe-inline'` beside it. Three documents recorded this CSP as hardened while it was not. | 🟡 `'unsafe-eval'` removed, guard fixed + negative-tested; `'unsafe-inline'` on a Report-Only canary (C-3) |
+| N2 | 8 high-severity npm advisories in the production tree, never surfaced because the CI gate was `\|\| true` | ✅ Reduced to 2, both evidenced and expiring (C-1) |
+| N3 | COOP, CORP and `X-Robots-Tag` declared in `public/_headers` but never shipped — that file is Pages-only and this deploys as a Worker | ✅ Set in middleware; `_headers` deleted |
+| N4 | Mass assignment in `/api/inquiries/edit` — `updates: any` spread into a Supabase `.update()`, making every column writable | ✅ `.strict()` allowlist + tests |
+| N5 | `modelId` accepted any `openrouter/*` string, forwarded verbatim to a paid third party | ✅ Closed enum + bounded pattern |
+| N6 | No lint, typecheck, test or build job in CI at all | ✅ `quality.yml` |
+| N7 | SEC-11 Supabase advisor guard documented as active but never implemented; baseline stale (2 live findings absent from it) | 🔴 Open (C-5) |
+
+
 Items resolved since the 07-17 audit (do not re-open): DSAR/erasure admin workflow (closed via
 ARCO queue), manual retention-purge tool (closed, by policy design rather than automation), fail-
 closed CSP nonce partial hardening, SEC-03/SEC-04 rule violations (26+12 → 0), Sentry PII scrubber,

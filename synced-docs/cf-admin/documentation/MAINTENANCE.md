@@ -3,7 +3,7 @@
 title: "Maintenance Backlog"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-07-25
 verified_against: [code]
 owner: harshil
 related_docs: [archive/ToDoList.md, archive/PENDING_PHASES.md, security/SECURITY.md]
@@ -69,13 +69,16 @@ were first enforced. Shipped in **warn-only** mode; each PR should nibble at
 the list. Once a rule reaches 0 violations, remove its exemption in
 `.github/workflows/security.yml`.
 
-| SEC | Debt | Count | Where | Fix pattern |
-|-----|------|:-----:|-------|-------------|
-| SEC-03 | Raw `env.DB.prepare(...)` in API handlers instead of DAL repositories | 25 | `src/pages/api/audit/**`, `bookings/**`, `system/**`, `users/**`, `auth/logout.ts`, `chatbot/**` | Move SQL to a repository under `src/lib/dal/*Repository.ts` per `coding-standards.md`; import + use in the handler. |
-| SEC-04 | Hardcoded `['dev','owner','super_admin','admin']` role arrays | 12 | `src/pages/api/emails/*.ts`, `src/pages/api/media/revalidate.ts` | Replace with `isAdmin(user.role as Role)` from `src/lib/auth/rbac.ts`. |
+| SEC | Debt | Count | Status |
+|-----|------|:-----:|--------|
+| SEC-03 | Raw `env.DB.prepare(...)` in API handlers instead of DAL repositories | ~~25~~ **0** | ✅ CLOSED (verified 2026-07-25) |
+| SEC-04 | Hardcoded `['dev','owner','super_admin','admin']` role arrays | ~~12~~ **0** | ✅ CLOSED (verified 2026-07-25) |
 
-Track progress by re-running `python3 scripts/rules_check.py` locally.
-Once both drop to 0, flip CI to blocking (`security.yml::rules-check` remove `--warn-only`).
+✅ **Burn-down complete and CI is now blocking.** `scripts/rules_check.py`
+reports 0 violations across all 11 rules, and `security.yml::rules-check` no
+longer passes `--warn-only`. This table had listed both as open long after they
+were actually fixed — re-verify against `python3 scripts/rules_check.py` rather
+than trusting a status table.
 
 ## CSP hardening — pending operator verification (2026-07-22)
 
@@ -85,7 +88,7 @@ to fix a Sentry issue (CF-ADMIN-9). Re-reviewed and partially fixed same day:
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `'unsafe-inline'` removed from production `script-src` | ✅ Done | Was already inert — any browser that honors the response's `nonce-` source ignores `'unsafe-inline'` regardless of `'strict-dynamic'`. Zero behavior change, closes the flagged literal string. |
+| `'unsafe-inline'` removed from production `script-src` | ❌ **This entry was FALSE** — corrected 2026-07-25 | The directive still contained BOTH `'unsafe-inline'` and `'unsafe-eval'` on 2026-07-25, and SEC-01 could not detect it: the rule carried `exempt_line=r"unsafe-eval"`, so adding `'unsafe-eval'` silenced the `'unsafe-inline'` beside it. `'unsafe-eval'` is now removed (proven unused in `src/**` and in the built bundles) and the exemption is gone. `'unsafe-inline'` remains on the ENFORCING policy, with a `Content-Security-Policy-Report-Only` canary shipping the hardened directive — see the row below. |
 | `SEC-01` glob fixed (`src/middleware.ts` → `src/lib/security/csp.ts`) | ✅ Done | The rule had been structurally blind to the file that actually holds the CSP string since CSP construction moved out of `middleware.ts`; it reported 0 violations even during today's regression. |
 | Re-add `'strict-dynamic'` | 🟡 Blocked on operator | Suspected root cause of the original incident: Cloudflare zone-level auto-injected scripts (Web Analytics/Browser Insights beacon, Rocket Loader — both serve from `static.cloudflareinsights.com` / `/cdn-cgi/`, already in the host allowlist) are injected *after* the Worker response leaves the Worker, so they never receive this middleware's nonce. `'strict-dynamic'` makes browsers stop trusting host-allowlist/`'self'` entries for non-nonced scripts, which would break them again. **Operator action needed:** check the Cloudflare dashboard (Zone → Speed → Optimization for Rocket Loader; Zone → Analytics → Web Analytics/Browser Insights) for `secure.madagascarhotelags.com`. If either is enabled and not needed (Sentry + PostHog already cover telemetry), disable it, then re-add `'strict-dynamic'` behind a short (~24h, not the usual week — a duplicate `Report-Only` header double-counts every Sentry violation report) `Content-Security-Policy-Report-Only` canary before flipping to enforcing. If needed and can't be disabled, leave `'strict-dynamic'` off permanently and document why in `csp.ts`. |
 
@@ -94,3 +97,32 @@ to fix a Sentry issue (CF-ADMIN-9). Re-reviewed and partially fixed same day:
 When an item is fixed in code, move its row out of this file and record it in the
 relevant doc (e.g. `security/SECURITY.md` for security fixes) — do not edit the
 archived snapshots.
+
+
+## Accessibility burn-down (2026-07-25)
+
+`scripts/a11y_check.py` ships `--warn-only`, matching the SEC-03/SEC-04 rollout
+pattern above. A11Y-02/03/05/06 are at zero. Remaining:
+
+| Rule | WCAG | Count | Fix |
+|------|------|:-----:|-----|
+| A11Y-01 | 4.1.2 | 39 | Add `aria-label` to each icon-only `<button>` |
+| A11Y-04 | 2.4.4 | 6 | Add `aria-label` to each icon-only link |
+
+Each needs an individually written label, so this cannot be automated
+meaningfully. Once both reach 0, drop `--warn-only` from
+`.github/workflows/quality.yml::accessibility`.
+Context: `documentation/security/compliance/ACCESSIBILITY.md`.
+
+## Open items surfaced by the 2026-07-25 compliance pass
+
+| # | Item | Where | Severity | Notes |
+|---|------|-------|----------|-------|
+| C-1 | **Astro 6 → 7 upgrade.** 3 high XSS advisories are excepted with evidence in `.audit-exceptions.json`; the exceptions **expire 2026-10-23** and `audit_gate.py` fails the build on an expired entry. | `package.json` | 🟠 | Breaking major: also moves `@astrojs/cloudflare` 13→14 and `@astrojs/preact` 4→6. Verified non-exploitable today (no `transition:*`, no spread attrs, no ClientRouter). |
+| C-2 | **`API_DENY_MODE` flip to `enforce`.** Currently `shadow`. | `wrangler.toml` | 🟠 | Query `SELECT request_path, COUNT(*) FROM admin_audit_log WHERE action='api_authz_shadow_deny' GROUP BY request_path;` — flip once it shows no legitimate traffic. |
+| C-3 | **CSP `'unsafe-inline'` removal.** Report-Only canary is live. | `src/lib/security/csp.ts` | 🟠 | Blocked on operator verification of Cloudflare Rocket Loader (zone → Speed → Optimization). Once the canary reports no `script-src` violations, promote `SCRIPT_SRC_CANARY` and delete the Report-Only header. |
+| ~~C-4~~ | ~~`List-Unsubscribe` + suppression list~~ | `src/pages/api/emails/{send,unsubscribe}.ts` | ✅ **CLOSED 2026-07-26** | RFC 8058 headers minted per recipient, D1 suppression table (`migrations/0008_email_suppression.sql`), HMAC one-click endpoint, pre-enqueue suppression check. **Two follow-ups:** (1) apply the migration out-of-band — `wrangler d1 execute madagascar-db --remote --file=migrations/0008_email_suppression.sql`; (2) the `cf-email-consumer` worker must forward `data.unsubscribeHeaders[recipient]` onto the outbound Brevo/Resend send, and a visible unsubscribe footer belongs in that worker's templates — the header alone satisfies one-click but a visible link is also expected for marketing mail. |
+| C-5 | **SEC-11 Supabase advisor guard is planned, not implemented**, and the 2026-07-08 baseline is stale. | `scripts/rules_check.py`, `documentation/security/compliance/supabase-advisors-latest.json` | 🟡 | A live `get_advisors` run on 2026-07-25 found 2 findings absent from the baseline: `increment_conversation_metrics` has a mutable `search_path` (contradicting RULESAd §9.1's "6 functions hardened"), and `tool_call_events` has an `ALL` RLS policy with `USING(true) WITH CHECK(true)`. Both objects belong to `cf-chatbot` in the shared project. |
+| C-6 | **No IR/DR drill has ever been run.** | `documentation/runbooks/` | 🟠 | Both runbooks exist and both say so explicitly. SOC 2 CC7.5 / A1.3 require evidence the plan works — the drill, not the document. RTO/RPO figures are estimates until measured. |
+| C-7 | **OpenAPI schema not generated.** Gap G10 — still open. | — | 🟡 | Zod schemas now cover 100% of JSON-body routes, so the input for a generator exists. Would close SOC2 IPY-02 and OWASP API9. |
+| C-8 | **No prod/staging separation.** Gap G14. | `wrangler.toml` | 🟡 | Needs new Cloudflare resources; `GITHUB_RULES.md` §6 makes inventing binding UUIDs a production-outage risk, so this is an operator decision. |
