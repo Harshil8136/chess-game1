@@ -17,8 +17,19 @@ tags: [compliance, owasp, asvs, self-attestation]
 > handling sensitive data. This matrix maps each in-scope control to real
 > evidence in our code, config, or MCP-verified infra state. Rows are marked
 > ✅ verified, 🟡 partial / accepted-risk, or ❌ open gap. As of 2026-07-08,
-> the platform is ~92% Level 2 with 2 documented gaps (residual style-src
-> `'unsafe-inline'` + a DAL migration backlog tracked in `MAINTENANCE.md`).
+> **105 of ~115 in-scope controls are verified (~91%), with 8 partials and 0 open
+> gaps** — see the summary at the end of this document for the breakdown.
+>
+> ⚠️ **This is an AI-assisted self-assessment, not an independent audit.** The
+> mapping and the percentage were produced by an AI assistant reviewing this
+> codebase, then reviewed by the owner. No external assessor has verified any
+> row. Quote it as a self-assessment and never as a certification or audit
+> result.
+>
+> *Corrected 2026-07-29: the TL;DR previously read "~92% … with 2 documented
+> gaps" while the summary said ~91% with 8 partials and 0 open gaps. The two
+> "gaps" were in fact two of the 8 partials. 105/115 = 91.3%, so ~91% is the
+> arithmetic, and the open-gap count is 0.*
 
 ## Scope
 
@@ -58,7 +69,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 1.6.1–1.6.4 | Crypto architecture | ✅ | Web Crypto only (`crypto.subtle.digest`); enforced by SEC-10. |
 | 1.7.1–1.7.2 | Errors, logging, audit architecture | ✅ | Ghost Audit Engine (`documentation/architecture/plac-and-audit.md`); Sentry error tracking; login forensics table. |
 | 1.8.1–1.8.2 | Data protection architecture | ✅ | KV for sessions (1h TTL), Supabase RLS (SEC-09), R2 for CMS assets, IP hashing (`hashIp` in `src/pages/api/emails/send.ts`). |
-| 1.9.1–1.9.2 | Communications architecture | ✅ | HTTPS-only, HSTS `max-age=63072000; preload` (SECURITY.md), TLS enforced by Cloudflare edge. |
+| 1.9.1–1.9.2 | Communications architecture | ✅ | HTTPS-only, HSTS `max-age=63072000; includeSubDomains; preload` — set in `src/lib/security/csp.ts:78`, documented in `security/SECURITY.md` §4. TLS enforced by Cloudflare edge. |
 | 1.10.1 | Source code control | ✅ | GitHub + branch policy in `GITHUB_RULES.md`. |
 | 1.11.1–1.11.2 | Business-logic architecture | ✅ | Documented in feature docs + `plac-and-audit.md`. |
 | 1.12.1–1.12.2 | File upload architecture | ✅ | R2 for CMS images (`src/pages/api/media/upload.ts` with MIME allowlist + 5MB cap); email attachments in R2 with quota-managed cleanup. |
@@ -224,7 +235,22 @@ tags: [compliance, owasp, asvs, self-attestation]
 - **❌ Open gaps:** 0
 - **🚫 N/A:** ~6 (mobile/native controls)
 
-**Overall ASVS Level 2 self-attestation: ~91% verified, 0 hard gaps.**
+**Overall ASVS Level 2 self-attestation: ~91% verified (105/115), 8 partials, 0 hard gaps.**
 Residual partials are documented and tracked in `MAINTENANCE.md`.
+
+> **Provenance and how to quote this.** This assessment was produced by an AI
+> assistant reading the codebase and verifying infrastructure state through MCP
+> connectors, then reviewed by the owner. It has **not** been reviewed by an
+> external assessor, and ASVS has no certification scheme — there is no such
+> thing as being "ASVS certified."
+>
+> Approved phrasing: *"Controls map to OWASP ASVS Level 2; AI-assisted
+> self-assessment puts ~91% of in-scope controls as verified, with the mapping
+> available on request."*
+>
+> Not approved: any bare "~95% ASVS L2" figure (that number appears in older
+> documents and does not match this file's arithmetic), "ASVS certified",
+> "ASVS audited", or presenting the percentage without the self-assessment
+> qualifier.
 
 _Refreshed 2026-07-08 post-compliance-wave._

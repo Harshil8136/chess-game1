@@ -435,11 +435,23 @@ Inherits commercial §13 and extends it to the GTM claims.
 - "Your data is exportable in standard formats at any time, including if you
   leave, and that is in the contract."
 - "For your first three months, any defect in what we built is fixed at our cost."
-- "Security controls map to OWASP ASVS Level 2 and the OWASP Top 10,
-  self-assessed at roughly 95%."
+- "Security controls map to OWASP ASVS Level 2 and the OWASP Top 10. An AI-assisted
+  self-assessment puts roughly 91% of in-scope controls as verified, and the control
+  mapping is available on request."
+  *(Corrected 2026-07-29: was "self-assessed at roughly 95%". 95% matched no derivation
+  in `compliance/ASVS-L2.md`, which reports 105 of ~115 controls = ~91%. Always carry the
+  self-assessment qualifier — ASVS has no certification scheme, so "ASVS certified" is
+  not a thing anyone can be.)*
 - "Every mutation is audit-logged with actor, role, path and hashed IP."
-- "Row-level security on 100% of tables holding personal data, with zero
-  anonymous access."
+- "On the production database, row-level security is enabled on 100% of tables holding
+  personal data, with zero anonymous access."
+  *(Scoped 2026-07-29. Verified live against the production Supabase project
+  `zlvmrepvypucvbyfbpjj`, which returns a single advisory — leaked-password protection,
+  tracked as L-8 and not applicable since authentication is Cloudflare Access, not Supabase
+  Auth. The qualifier matters: a separate, dormant Supabase project from an earlier product
+  version exists on the account pending export and decommission, and it does **not** meet
+  this bar. Say "the production database", never "our infrastructure" — and re-verify the
+  claim per deployment, since each client runs their own Supabase project.)*
 - "Data-subject rights fulfilment has a working, audited admin workflow with
   statutory SLA tracking." *(Live and test-covered.)*
 - "We do not sell, rent or share customer data."

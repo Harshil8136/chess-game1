@@ -15,8 +15,22 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 > **TL;DR:** This is our internal control-to-TSC mapping — the artifact a
 > SOC 2 Type I auditor would ask for on day one. It shows how our engineering
 > controls line up with the AICPA Trust Services Criteria (2017, as revised).
-> We are **not currently in a Type I audit engagement**; this doc puts us in
-> "audit-ready" posture so we can start one with minimal ramp-up cost.
+> We are **not currently in a Type I audit engagement**; this doc exists so one
+> can be started with minimal ramp-up cost.
+>
+> ⚠️ **Read this before quoting any row.** This is an AI-assisted
+> self-assessment reviewed by the owner. No auditor has examined any control
+> here, and a ✅ means "we believe the control operates", not "an assessor
+> confirmed it". **A correction pass on 2026-07-29 downgraded five rows** —
+> CC1.5, CC4.1, CC7.4, CC8.1 and CC9.1 — that asserted controls which either
+> did not exist when written or have no sampleable evidence. Each carries an
+> inline note explaining what changed and why. Two rows (CC3.4, CC7.4) now carry
+> an explicit effective date, because no CI existed before 2026-07-25 and the
+> incident-response runbook did not exist before then either.
+>
+> The honest summary of readiness: **the technical controls are largely real;
+> the evidence trail is thin, and the single-operator model means there is no
+> separation of duties.** Both are things an auditor will raise first.
 
 ## Scope
 
@@ -47,7 +61,7 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 | CC1.2 | Board exercises independent oversight | 🟡 | Owner is single point of executive review; documented in `RULESAd.md`. Small-team acceptable per SOC 2 Type I "commensurate with the size + complexity". |
 | CC1.3 | Management establishes structures, reporting lines, authorities | ✅ | RBAC hierarchy + `documentation/features/USER-MANAGEMENT.md`. |
 | CC1.4 | Commitment to attract, develop, retain competent individuals | 🟡 | Owner + AI-agent execution model; ongoing training encoded in `RULESAd.md` + `AI_CODE_MAINTENANCE.md`. |
-| CC1.5 | Individuals held accountable for internal controls | ✅ | Ghost Audit Engine logs every privileged action; owner reviews weekly. |
+| CC1.5 | Individuals held accountable for internal controls | 🟡 | The audit engine logs every privileged action to `admin_audit_log` (1,025 rows as of 2026-07-29) — that part is real and verifiable. **The "owner reviews weekly" half has no evidence artifact:** no review log, no sign-off record, nothing an assessor could sample. A review log starts 2026-07-29; this returns to ✅ once it holds a sampleable history. Downgraded 2026-07-29. |
 
 ## CC2 — Communication & Information
 
@@ -64,13 +78,13 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 | CC3.1 | Specifies objectives with clarity | ✅ | Mission statement in `RULESAd.md`. |
 | CC3.2 | Identifies risks to objectives | ✅ | `documentation/2026-07-05-comprehensive-codebase-and-system-review.md` scorecard. |
 | CC3.3 | Considers potential for fraud | ✅ | Ghost Audit Engine surfaces all privileged actions; force-kick + revocation flows. |
-| CC3.4 | Assesses changes that could affect internal controls | ✅ | Every PR runs `docs_check` + `rules_check` + `tsc` + `vitest` + `npm audit`. |
+| CC3.4 | Assesses changes that could affect internal controls | ✅ *(since 2026-07-25)* | `quality.yml` runs `astro check` + `eslint` + `vitest` + `astro build` + SBOM; `security.yml` runs `npm audit` → `audit_gate.py`, a secret scan, and `rules_check.py`; `docs-quality.yml` runs `docs_check.py`. **Effective date matters:** no lint, typecheck, test or build job existed in CI at all before 2026-07-25 (finding N6 in `2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`), so this control cannot be evidenced for any period before that date. Re-dated 2026-07-29 — it previously carried an unqualified ✅ written on 2026-07-08. |
 
 ## CC4 — Monitoring Activities
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC4.1 | Ongoing + periodic evaluations of controls | ✅ | Monthly security reviews (`documentation/security/reviews/`); weekly `npm audit` cron; automated CI gates. |
+| CC4.1 | Ongoing + periodic evaluations of controls | 🟡 | Automated evaluation is real and continuous: weekly `npm audit` cron, `rules_check.py` on every push, `audit_gate.py` failing on undocumented or expired advisories. **Human periodic review is ad-hoc, not monthly** — the actual review dates (2026-04-24, 05-24, 05-25, 05-26, 06-13, 07-17) show an irregular cadence. `CSA-CAIQ-v4.md` GRC-03 now states quarterly, which is what a single-operator team can sustain and evidence. Downgraded 2026-07-29. |
 | CC4.2 | Communicates + acts on deficiencies | ✅ | `MAINTENANCE.md` open-items table; each PR closes findings with commit hash. |
 
 ## CC5 — Control Activities
@@ -101,20 +115,20 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 | CC7.1 | Uses detection + monitoring procedures to identify anomalies | ✅ | Sentry + login-forensics suspicious flagging (`sessionRisk.ts`). |
 | CC7.2 | Monitors system components for anomalies | ✅ | `/api/health` + Cloudflare Analytics + Sentry. |
 | CC7.3 | Evaluates security events for impact | ✅ | Owner reviews Sentry alerts + `documentation/security/reviews/`. |
-| CC7.4 | Responds to identified security incidents | ✅ | Runbooks in `documentation/runbooks/`; SEF-01 in CAIQ. |
+| CC7.4 | Responds to identified security incidents | 🟡 *(since 2026-07-25)* | `documentation/runbooks/incident-response.md` exists and covers the GDPR 72-hour clock, and five further runbooks cover specific failure modes. Two limits keep this at partial: the runbook **states on its own first page that it is untested**, and no incident-response drill has ever been run (`MAINTENANCE.md` C-6). **Effective date matters:** the 2026-07-22 audit verified that four runbooks existed and *none* covered incident response or breach notification; `incident-response.md` was written 17 days after this row's original ✅. Corrected and re-dated 2026-07-29. |
 | CC7.5 | Identifies + develops activities to recover from identified security incidents | ✅ | Rollback recipes in each runbook + `documentation/2026-07-05-...` risks section. |
 
 ## CC8 — Change Management
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | ✅ | Every change goes through PR + CI (`tsc`, `vitest`, `docs_check`, `rules_check`, `npm audit`, `secret-scan`); branch protection on `main`. |
+| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `vitest` (347 tests), then `rules_check.py`, `docs_check.py`, `a11y_check.py`, `audit_gate.py` — and the same gates re-run in CI on push to `main` (`quality.yml`, `security.yml`, `docs-quality.yml`). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `GITHUB_RULES.md` mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** CI gates are blocking, so a failing change is visible immediately after push rather than approved before it. Branch protection on `main` with CI as a required status check is authorised and pending enablement. Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `GITHUB_RULES.md` and the repo's own audit. |
 
 ## CC9 — Risk Mitigation
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC9.1 | Identifies + implements activities to mitigate risks from partners + vendors | ✅ | Vendor DPAs on file (Cloudflare, Supabase, Upstash, Sentry, Brevo); `documentation/features/CONTROL-PLANE-CONNECTORS.md`. |
+| CC9.1 | Identifies + implements activities to mitigate risks from partners + vendors | 🟡 | Sub-processors are enumerated with transfer mechanisms in `security/RoPA.md` and `compliance/data-residency.md`, each vendor's published DPA terms apply, and connector scopes are documented in `features/CONTROL-PLANE-CONNECTORS.md`. **Countersigned DPAs are being collected individually and are not yet held** — `data-residency.md` flags this as an outstanding action and notes that published terms are weaker evidence than a signed agreement when an assessor asks. Downgraded 2026-07-29 — the prior ✅ read "DPAs on file". |
 | CC9.2 | Assesses + manages risks associated with vendors + business partners | ✅ | STA-01/02 in CAIQ; weekly npm audit + Supabase advisor MCP. |
 
 ## A1 — Availability (partial coverage)

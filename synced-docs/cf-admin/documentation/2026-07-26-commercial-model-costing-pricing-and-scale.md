@@ -527,7 +527,11 @@ problem is positioning, not price.
 
 - "Each client gets a dedicated, physically isolated deployment — your data lives in your
   own database, not a shared one."
-- "Security controls map to OWASP ASVS Level 2 and the OWASP Top 10, self-assessed ~95%."
+- "Security controls map to OWASP ASVS Level 2 and the OWASP Top 10. An AI-assisted
+  self-assessment puts ~91% of in-scope controls as verified (105 of 115), with the
+  mapping available on request." *(Corrected 2026-07-29 — previously "self-assessed ~95%",
+  a figure that matched no derivation in `compliance/ASVS-L2.md`. Never quote the
+  percentage without the self-assessment qualifier; ASVS has no certification scheme.)*
 - "Data-subject-rights fulfilment — access, rectification, erasure — has a working, audited
   admin workflow with SLA tracking." *(Live and test-covered.)*
 - "Every mutation is audit-logged with actor, role, path and hashed IP."

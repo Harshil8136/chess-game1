@@ -185,7 +185,7 @@ All audit writes use Cloudflare's `ctx.waitUntil()` API, which schedules work **
 |-----------|----------|
 | Page view audit (middleware) | 0ms on hot path |
 | API action audit | 0ms on hot path |
-| Ghost Mode check | ~0.01ms (boolean read from session) |
+| ~~Ghost Mode check~~ | *Removed — the suppression path no longer exists (§8.1)* |
 
 ### 6.3 Design Decision: Why Not a Queue?
 
@@ -216,13 +216,32 @@ Page titles (rendered in `<h1>` tags) were also updated:
 
 ## 8. Drawbacks & Considerations
 
-### 8.1 Ghost Mode Risk
+### 8.1 Ghost Mode — REMOVED, no longer a risk
 
-Ghost Mode creates a window where DEV actions are unlogged. Mitigation:
+**Ghost Mode no longer exists.** It has been fully removed and this section is retained only
+so the history is legible.
 
-- The toggle event itself is always logged (immutable meta-trail)
-- Only DEV role can activate it (SSR + API enforced)
-- Supabase persistence means the state is visible to other DEVs via the User Management dashboard
+It allowed a `vendor_support`/DEV actor to suppress audit writes for their own session. Its
+removal happened in three steps:
+
+1. **2026-07-26** — the suppression gate was removed from `src/lib/audit.ts` and the
+   user-management toggle was deleted. `audit.ts` now records: *"Every action is logged;
+   there is no suppression path."*
+2. **2026-07-27** — migration `supabase/migrations/20260727000000_drop_audit_silence.sql`
+   dropped `admin_authorized_users.is_audit_silenced`. Its rationale is candid about why the
+   feature was indefensible: the gate had degraded to `isActionSilenceable() { return true }`,
+   self-silencing was permitted, and the bulk-delete evidence snapshot was discarded through
+   the same flag.
+3. **2026-07-29** — `src/pages/api/audit/silence.ts` was deleted. It had survived the earlier
+   passes: still a live `POST` handler, still writing the dropped column, and gated on
+   `placDenyResponse(session, '/dashboard/audit')` — a path that exists neither on disk nor
+   in `admin_pages`, so `requirePageAccess` matched nothing and the gate silently passed.
+   Two orphaned doc-comments left behind in `env.d.ts` and `session.ts` were removed at the
+   same time.
+
+The previous mitigation bullet claimed the toggle event produced an "immutable meta-trail".
+No part of the audit log is immutable — see
+[`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.2.
 
 ### 8.2 Performance Impact
 

@@ -226,12 +226,39 @@ Writing to a physical D1 SQL database takes approximately 5ms to 15ms. Waiting f
 
 The API endpoint processes the user's request, returns the HTTP response immediately, and then the V8 isolate is kept alive to perform the asynchronous audit log write to D1. The user experiences unparalleled performance, while the security ledger remains mathematically uncompromised.
 
-### 3.2 Immutability at the Edge
+### 3.2 Write-path restriction at the edge (not immutability)
 
 > [!WARNING]
-> The audit log table explicitly allows reads and inserts only. **No delete or update endpoints are exposed.**
+> The audit engine exposes **inserts and reads only** — there is no update path, and no
+> endpoint lets a user edit an existing entry.
 
-To modify a log, a malicious actor would require Cloudflare Dashboard-level administrative access to run raw D1 queries via the CLI. At the framework level, the ledger is computationally immutable.
+**What this does give you.** An actor cannot alter history through the application. There is
+no update endpoint, the logger factory validates table names against an internal allowlist,
+and every write goes through `auditLog()`.
+
+**What it does not give you — and do not claim otherwise.** The log is **not immutable and
+not tamper-evident.** Specifically:
+
+- There is **no hash chain, no sequence number, no digital signature, and no WORM storage**,
+  so a modification leaves no detectable trace.
+- `admin_audit_log` is itself listed as a purge target in `src/lib/retention-tables.ts`, so
+  the application *can* delete audit rows — via `/api/audit/prune`, `/api/audit/delete` and
+  `/api/audit/delete-targeted`.
+- Anyone with Cloudflare dashboard or API access can run arbitrary D1 SQL against the table.
+  For a single-operator deployment that is the same person who owns the audit trail, so
+  there is no separation of duties protecting it.
+
+`documentation/security/THREAT-MODEL.md` scores this correctly as a Medium residual risk —
+"an Owner could delete evidence" — and `MAINTENANCE.md` C-9 tracks building real
+tamper-evidence.
+
+> **Terminology rule (2026-07-29).** Do not describe this log as *immutable*,
+> *append-only*, *tamper-evident*, *tamper-proof*, or *a ledger*, in engineering docs or in
+> customer-facing copy. Velox's `copy-lint.test.ts` already fails the marketing build on
+> those words. The accurate phrasing is: **"every privileged action is audit-logged with
+> actor, role, path and hashed IP, through an insert-only application path."** That is a
+> strong, true claim. This section previously ended "at the framework level, the ledger is
+> computationally immutable", which was not.
 
 **Defense-in-Depth:** The audit logger factory validates table name configuration against an internal whitelist. Since D1 does not support parameterized table names, this prevents SQL injection out-of-the-box.
 

@@ -679,12 +679,26 @@ All configuration values are validated:
 
 ### 12.3 Audit Security
 
-Audit logs cannot be modified or deleted:
+**Corrected 2026-07-29.** This section previously read "Audit logs cannot be modified or
+deleted", and listed an append-only data structure and cryptographic checksums. None of
+that was accurate — there are no checksums, no hash chain, no sequence numbers and no WORM
+storage, and the log *can* be deleted through the retention tooling.
 
-- Append-only data structure
-- Cryptographic checksums on entries
-- Regular export for external archival
-- Compliance with regulatory requirements
+What is actually true:
+
+- **Insert-only application path.** No update endpoint exists; every write goes through
+  `auditLog()`, whose logger factory validates the table name against an internal allowlist.
+- **Deletion is possible and deliberate.** `admin_audit_log` is a purge target in
+  `src/lib/retention-tables.ts`, reachable via `/api/audit/prune`, `/api/audit/delete` and
+  `/api/audit/delete-targeted` — retention is a privacy and cost requirement, so this is by
+  design rather than an oversight.
+- **Export exists** for external archival (`/api/audit/export`).
+- **No tamper-evidence.** A direct D1 modification by anyone holding Cloudflare API or
+  dashboard access would leave no detectable trace. Tracked as `MAINTENANCE.md` C-9 and
+  scored a Medium residual risk in `security/THREAT-MODEL.md`.
+
+See [`architecture/plac-and-audit.md`](../../architecture/plac-and-audit.md) §3.2 for the
+canonical statement and the terminology rule that governs how this may be described.
 
 ### 12.4 Configuration Safety
 

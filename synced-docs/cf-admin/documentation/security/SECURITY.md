@@ -177,7 +177,7 @@ Applied globally at the Cloudflare Edge via Astro's `sequence` middleware (`secu
 | `X-Frame-Options` | `DENY` | Prevents clickjacking (legacy; `frame-ancestors` in CSP is primary) |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME-type sniffing attacks |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Leaks only origin on cross-origin navigation |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | 1-year HSTS with preload eligibility |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | 2-year HSTS with preload eligibility. Source of truth: `src/lib/security/csp.ts:78`. Corrected 2026-07-29 — this row read `31536000` while the deployed header has been `63072000`; three compliance documents cited the correct value and this file did not. |
 | `Permissions-Policy` | `camera=(), microphone=(), payment=(), geolocation=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()` | Disables all browser hardware APIs not used by the admin portal |
 | `Content-Security-Policy` | See enforced policy below | Resource restriction; `unsafe-inline`/`unsafe-eval` retained in Phase 1 (see §13) |
 | `Content-Security-Policy-Report-Only` | **RETIRED 2026-05-26** | Retired due to excessive console noise and client-side ad-blockers blocking Sentry reports |

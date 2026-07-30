@@ -324,7 +324,7 @@ Confirmed mechanics (`src/lib/auth/{rbac,plac,guard}.ts`, `src/middleware.ts`,
   auto-computed from `admin_pages`; `/api/*` is exempt from middleware PLAC → API routes
   self-enforce with `requireAuth` + `placDenyResponse`.
 - Action-level gating uses `#`-suffixed pseudo-paths (e.g. `/dashboard/logs#export`).
-- Mutations call `auditLog(...)` (Ghost Audit, append-only `admin_audit_log`).
+- Mutations call `auditLog(...)` (Ghost Audit, insert-only path into `admin_audit_log`).
 
 **AuthZ model for the control plane:**
 

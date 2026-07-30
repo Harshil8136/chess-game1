@@ -43,6 +43,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`2026-07-17-compliance-standing-and-market-positioning.md`](2026-07-17-compliance-standing-and-market-positioning.md) | Quantified compliance % per standard (instant/close/far) + market positioning, verticals, and monetization | owner, non-technical, technical | active |
 | [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture | non-technical, owner | historical |
 | [`2026-07-27-go-to-market-prospecting-and-roadmap.md`](2026-07-27-go-to-market-prospecting-and-roadmap.md) | GTM: the two sales motions and how they differ, ICP/anti-ICP, eight prospecting plays, the funnel end to end, the fleet capacity gate that bounds growth, a phased roadmap with gates, what to measure, risk register, and what is safe to say to a prospect | owner, non-technical, technical, operator, ai | active |
+| [`2026-07-29-review-findings-and-open-questions.md`](2026-07-29-review-findings-and-open-questions.md) | Live-verified review across all three repos and every connected service (Cloudflare, both Supabase projects, Sentry, PostHog), the 14 contradictions with a buyer or auditor on the other side, and a 150-question bank to answer before the correction pass | owner, non-technical, technical, operator, ai | active |
 
 ## Architecture
 
@@ -128,6 +129,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`specs/2026-05-12-bookings-header-design.md`](specs/2026-05-12-bookings-header-design.md) | Bookings page header redesign | historical |
 | [`specs/2026-05-13-cms-ui-redesign.md`](specs/2026-05-13-cms-ui-redesign.md) | CMS UI redesign | historical |
 | [`specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) | Payload CMS evaluation (MIT ✓, Cloudflare ✓, Workers-Paid-only ✗) + alternatives + recommended $0 dynamic-blog blueprint on the existing D1 CMS | active |
+| [`specs/2026-07-29-content-and-ai-visibility-engine.md`](specs/2026-07-29-content-and-ai-visibility-engine.md) | Tiptap authoring + Workers AI analysis as a paid module: Tiptap licensing fact-check, measured neuron costs (≈162/post), nine capability additions with the measurement half prioritised first, 110–150 h effort breakdown, and a pricing correction from $14.99+$24.99 to a single $79–129/mo flagship | active |
 
 ## Runbooks
 
@@ -139,6 +141,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 | [`runbooks/brevo-webhook.md`](runbooks/brevo-webhook.md) | Enable Brevo delivery webhook: Worker secret + CF Access bypass policy + Brevo config | active |
 | [`runbooks/supabase-leaked-password-protection.md`](runbooks/supabase-leaked-password-protection.md) | Enable Supabase Auth HIBP leaked-password check (3-step dashboard toggle) | active |
+| [`runbooks/supabase-account-advisor-sweep.md`](runbooks/supabase-account-advisor-sweep.md) | Quarterly account-wide advisor sweep: enumerate every Supabase project before checking any, triage table, 2026-07-29 baseline (production 1 finding vs superseded project 128), and the export-before-pause ordering | active |
 
 ## Archive (historical — kept verbatim)
 

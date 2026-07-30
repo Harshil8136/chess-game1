@@ -85,7 +85,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 - **X-Frame-Options: DENY** (Blocks Clickjacking)
 - **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
 - **Referrer-Policy: strict-origin-when-cross-origin**
-- **Strict-Transport-Security: max-age=31536000; includeSubDomains; preload**
+- **Strict-Transport-Security: max-age=63072000; includeSubDomains; preload** (2 years; set in `src/lib/security/csp.ts:78` — corrected 2026-07-29, previously documented here as `31536000`)
 
 → See [SECURITY.md](./documentation/security/SECURITY.md) for the full security architecture.
 

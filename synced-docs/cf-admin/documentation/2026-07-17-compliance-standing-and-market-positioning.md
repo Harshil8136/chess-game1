@@ -45,7 +45,7 @@ not engineering.
 | Standard | Technical readiness | Certifiable/claimable **now**? | Distance |
 |----------|:---:|---|---|
 | OWASP ASVS 4.0.3 **L1** | ~98% | Yes — self-attest today | 🟢 Instant |
-| OWASP ASVS 4.0.3 **L2** | ~95% (was ~92%, +this pass) | Yes — self-attest; 2 minor gaps | 🟢 Instant–Close |
+| OWASP ASVS 4.0.3 **L2** | **~91%** (105/115) | Yes — AI-assisted self-assessment; 8 partials, 0 open gaps | 🟢 Instant–Close |
 | OWASP **Top 10 (2021)** | ~95% | Yes — would pass a pentest scan | 🟢 Instant |
 | **GDPR** | ~80% | Partly — technical yes, process gaps | 🟡 Close |
 | **CCPA / CPRA** | ~78% | Partly — same DSAR/opt-out gaps | 🟡 Close |
@@ -69,7 +69,7 @@ close — plus **time** for the two audited standards.
 ### OWASP ASVS L1 / L2 — 🟢 Instant (~95–98%)
 - **In place:** CF Access RS256 JWT verify, `__Host-` strict cookies, opaque KV sessions,
   RBAC+PLAC deny-wins, fail-closed CSRF, nonce CSP + HSTS preload, parameterized SQL, HTML
-  sanitization, rate limiting, append-only audit, HMAC IP hashing, PII log scrubbing.
+  sanitization, rate limiting, insert-only audit logging, HMAC IP hashing, PII log scrubbing.
 - **Missing (minor):** residual CSP `unsafe-inline`; some handlers still cast
   `request.json() as T` instead of zod; a formal threat model doc.
 - **To pass fully:** finish nonce/CSP migration + standardize zod on mutation bodies +
@@ -168,7 +168,7 @@ audit/consent/forensics tooling that most competitors sell as add-ons.
 1. **Cost curve** — Workers + KV + D1 + R2 free/cheap tiers → very high gross margin; scales
    to 1000+ users without capacity planning.
 2. **Security & compliance as *built-in*, not bolt-on** — Zero Trust, `__Host-` sessions,
-   deny-wins PLAC, append-only "Ghost Audit," consent forensics, PII scrubbing.
+   deny-wins PLAC, insert-only "Ghost Audit," consent forensics, PII scrubbing.
 3. **Granularity** — page-level access control with per-user overrides (10k+ permission
    entries stay O(1) at request time via precomputed access maps).
 4. **Edge latency + region pinning** — sub-ms auth checks; data residency via D1

@@ -318,7 +318,7 @@ operators who hold the relevant capability.
 - **No throws across boundaries.** The data layer and provider clients return typed results; the UI
   degrades gracefully (notice, skeleton, or empty state) instead of erroring.
 - **Everything sensitive is gated and audited.** Reads, role floors, PLAC capabilities, same-origin
-  mutation guards, and an immutable change history apply uniformly to both layers.
+  mutation guards, and a versioned change history apply uniformly to both layers.
 - **Secrets never surface.** Provider tokens are Worker secrets used server-side only; the UI knows
   whether a token *exists*, never what it is.
 

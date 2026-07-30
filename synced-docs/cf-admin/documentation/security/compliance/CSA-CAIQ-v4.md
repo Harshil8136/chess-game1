@@ -47,7 +47,7 @@ CSA-canonical column headers.
 | A&A-02 | Are independent audits performed? | Partial | Internal deep reviews on a monthly cadence; external audit not yet engaged. |
 | A&A-03 | Is a risk-based audit plan documented? | Yes | `MAINTENANCE.md` + `documentation/2026-07-05-comprehensive-codebase-and-system-review.md`. |
 | A&A-04 | Are audit findings tracked to resolution? | Yes | `MAINTENANCE.md` open-items table with severity + status. |
-| A&A-05 | Are audit reports made available to customers? | Yes | Public repo for cf-admin-madagascar; `documentation/` sync'd via `sync-docs.yml`. |
+| A&A-05 | Are audit reports made available to customers? | Partial | Self-assessments (this file, `SOC2-TSC-mapping.md`, `ASVS-L2.md`) are available on request. The `cf-admin-madagascar` repository is **private**; no third-party audit report exists to share. Corrected 2026-07-29 — the prior answer read "Public repo", which was wrong. |
 | A&A-06 | Is a self-attestation available? | Yes | This document + `ASVS-L2.md` + `SOC2-TSC-mapping.md`. |
 
 ### AIS — Application & Interface Security
@@ -59,19 +59,19 @@ CSA-canonical column headers.
 | AIS-03 | Are inputs validated at every boundary? | Yes | Zod schemas at every API handler. |
 | AIS-04 | Is output encoded to prevent injection? | Yes | Preact/Astro auto-escape; `src/lib/email/sanitize-html.ts` HTMLRewriter sanitizer. |
 | AIS-05 | Is CSRF protection in place for state-changing ops? | Yes | `src/lib/csrf.ts::validateCsrf()` on all mutation methods. |
-| AIS-06 | Are dependencies scanned for vulnerabilities? | Yes | `npm audit --omit=dev --audit-level=high` on every push + weekly cron. |
+| AIS-06 | Are dependencies scanned for vulnerabilities? | Yes | `npm audit --omit=dev --audit-level=high` on every push + weekly Monday cron, gated by `scripts/audit_gate.py`, which fails the build on any undocumented high/critical advisory **and** on an expired exception. Blocking since **2026-07-25**; before that date the step was suffixed `|| true` and could not fail. Date added 2026-07-29. |
 | AIS-07 | Are APIs protected by strong authentication + rate limiting? | Yes | `requireAuth()` + Upstash Redis rate limiting (`src/lib/ratelimit.ts`). |
 
 ### BCR — Business Continuity Management & Operational Resilience
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| BCR-01 | Is a BC/DR plan in place? | Partial | Cloudflare's edge redundancy + Supabase point-in-time backups provide baseline recovery; formal BC plan is documented at high level in `documentation/architecture/ARCHITECTURE.md`. |
+| BCR-01 | Is a BC/DR plan in place? | Partial | Cloudflare edge redundancy + Supabase point-in-time backups provide baseline recovery. Procedures are written in `documentation/runbooks/disaster-recovery.md`, which states plainly that **they have never been executed** and that its RTO/RPO figures are vendor estimates, not measurements. No formal business-continuity plan exists. Corrected 2026-07-29 — the prior answer cited `architecture/ARCHITECTURE.md`, which contains no BC/DR content. |
 | BCR-02 | Are BC/DR tests conducted? | Partial | Sentry alerts for degraded state; formal DR drills not automated. |
-| BCR-03 | Are backups encrypted and tested? | Yes | Supabase native backup encryption; D1 point-in-time recovery. |
+| BCR-03 | Are backups encrypted and tested? | Partial | Backups **are** encrypted — Supabase native backup encryption and D1 point-in-time recovery, both provider-managed. They have **never been restore-tested**: `documentation/runbooks/disaster-recovery.md` and `MAINTENANCE.md` C-6 both record that no DR drill has ever been run. Corrected 2026-07-29 — the prior answer was "Yes … tested", which the encryption half supports and the testing half does not. |
 | BCR-04 | Are systems monitored for outages? | Yes | Sentry error tracking + Cloudflare native monitoring + `/api/health` endpoint. |
 | BCR-05 | Is capacity monitored? | Yes | KV budget monitoring (`documentation/architecture/KV-RESILIENCE.md`); free-tier limits documented in `documentation/operations/OPERATIONS.md`. |
-| BCR-06 | Are dependencies mapped for continuity? | Yes | Dependencies + service bindings enumerated in `documentation/architecture/ARCHITECTURE.md`. |
+| BCR-06 | Are dependencies mapped for continuity? | Partial | Runtime dependencies are enumerated in `package.json` and a CycloneDX SBOM is produced on every CI run. Sub-processors are listed in `documentation/security/RoPA.md`. Cloudflare bindings are registered in `wrangler.toml` and `documentation/operations/OPERATIONS.md` §1 — though that section is known to be incomplete. No continuity-specific dependency mapping (single points of failure, provider exit paths) exists; `compliance/ISO-27017-27018.md` records the missing provider exit plan as an open gap. Corrected 2026-07-29 — the prior answer cited `architecture/ARCHITECTURE.md`, which enumerates neither dependencies nor service bindings. |
 
 ### CCC — Change Control & Configuration Management
 
@@ -110,7 +110,7 @@ CSA-canonical column headers.
 | DSP-04 | Are logs privacy-safe? | Yes | Sentry `sendDefaultPii: false`; IP hashed via `hashIp()` (`src/pages/api/emails/send.ts`). |
 | DSP-05 | Are cross-border transfers governed? | Yes | Data resides in US-East (Supabase) + Cloudflare's global edge; PII limited to authorized-user emails + admin-generated content. |
 | DSP-06 | Is data deleted on request? | Yes | Privacy request handler + Supabase RLS-enforced deletes. |
-| DSP-07 | Are data-sharing agreements documented? | Yes | Third parties: Cloudflare, Supabase, Upstash, Sentry, Brevo — DPAs on file. |
+| DSP-07 | Are data-sharing agreements documented? | Partial | Sub-processors (Cloudflare, Supabase, Upstash, Sentry, Brevo) are enumerated with transfer mechanisms in `documentation/security/RoPA.md` and `compliance/data-residency.md`, and each vendor's published DPA terms apply. **Countersigned DPAs are being collected individually and are available on request once held.** `data-residency.md` notes that relying on published terms is weaker evidence than a signed agreement. Corrected 2026-07-29 — the prior answer read "DPAs on file". |
 
 ### GRC — Governance, Risk & Compliance
 
@@ -118,7 +118,7 @@ CSA-canonical column headers.
 |---|----------|-----|----------|
 | GRC-01 | Is a compliance/governance program in place? | Yes | `RULESAd.md` — governance codified as CI-enforced rules. |
 | GRC-02 | Are regulatory obligations tracked? | Yes | GDPR + Mexican LFPDPPP tracked in `documentation/security/PRIVACY.md`. |
-| GRC-03 | Are internal audits conducted? | Yes | Monthly cadence — `documentation/security/reviews/`. |
+| GRC-03 | Are internal audits conducted? | Yes | **Quarterly cadence**, plus an ad-hoc review on any significant architectural change. Evidence: dated snapshots in `documentation/security/reviews/`. Corrected 2026-07-29 — the prior answer claimed a monthly cadence that the actual review dates (2026-04-24, 05-24, 05-25, 05-26, 06-13, 07-17) do not support. Quarterly is what a single-operator team can sustain and evidence. |
 
 ### HRS — Human Resources
 
