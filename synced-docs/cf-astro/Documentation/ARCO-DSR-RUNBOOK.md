@@ -15,9 +15,9 @@ Requests arrive via the ARCO form (`/es/legal/arco/`), which notifies
 
 ## Where requests land
 
-| Channel                                      | Storage                                                                                              | Notification          |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
-| ARCO form with identity document             | Postgres `legal_requests` (ticket `ARCO-NNNNNN`, status `PENDING`) + document in R2 `arco-documents` | Admin email via queue |
+| Channel                          | Storage                                                                                              | Notification          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
+| ARCO form with identity document | Postgres `legal_requests` (ticket `ARCO-NNNNNN`, status `PENDING`) + document in R2 `arco-documents` | Admin email via queue |
 
 ## Step-by-step
 

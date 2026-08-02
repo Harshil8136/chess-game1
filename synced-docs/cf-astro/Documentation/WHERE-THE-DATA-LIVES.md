@@ -2,7 +2,7 @@
 # Where the data lives — read this BEFORE declaring "we have zero X"
 
 Written after the 2026-07-19 false alarm: the owner saw "zero consent logs /
-no traffic", but every backend was healthy. The page used to *view* consent
+no traffic", but every backend was healthy. The page used to _view_ consent
 logs (cf-admin `/dashboard/privacy`) was broken, and an empty **legacy** D1
 table named `consent_records` read as "zero consents" in the Cloudflare
 console. Two hours of forensics later: not a single record was ever lost.
@@ -15,10 +15,10 @@ daily at 07:00 Aguascalientes and emails you if consent writes stop or error.
 
 ## Consent data
 
-| What | Store | Table | Notes |
-| --- | --- | --- | --- |
-| **Legal consent evidence** (the real records) | **Supabase Postgres** | `consent_records` | Written by cf-astro `/api/consent` via Drizzle. THE source of truth. |
-| Attempt audit trail (dead-letter) | Cloudflare D1 `madagascar-db` | `consent_attempts` | Written BEFORE validation; every click lands here even if the Postgres write later fails. 90-day target retention. |
+| What                                          | Store                         | Table              | Notes                                                                                                              |
+| --------------------------------------------- | ----------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| **Legal consent evidence** (the real records) | **Supabase Postgres**         | `consent_records`  | Written by cf-astro `/api/consent` via Drizzle. THE source of truth.                                               |
+| Attempt audit trail (dead-letter)             | Cloudflare D1 `madagascar-db` | `consent_attempts` | Written BEFORE validation; every click lands here even if the Postgres write later fails. 90-day target retention. |
 
 There is **no** `consent_records` table in D1 anymore. It was a legacy,
 always-empty leftover from the Supabase migration; it was dropped 2026-07-19
@@ -50,11 +50,11 @@ broken, fix immediately (the heartbeat workflow alerts on exactly this).
 
 ## Traffic data
 
-| Lens | Counts | Caveat |
-| --- | --- | --- |
-| **PostHog** | Only visitors who clicked **Accept** | Loads after consent, so PostHog ≈ accept-rate × real traffic. ~5–15 pageviews/day here is NORMAL for this site. Zero-looking mornings are usually just low absolute volume. |
-| **Cloudflare** (zone Analytics / Web Analytics) | Everyone, cookieless | The only complete traffic number. |
-| Booking funnel events | PostHog (`booking_wizard_started`, `booking_step_reached`, `booking_submitted_success`) | Same consent caveat. |
+| Lens                                            | Counts                                                                                  | Caveat                                                                                                                                                                      |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PostHog**                                     | Only visitors who clicked **Accept**                                                    | Loads after consent, so PostHog ≈ accept-rate × real traffic. ~5–15 pageviews/day here is NORMAL for this site. Zero-looking mornings are usually just low absolute volume. |
+| **Cloudflare** (zone Analytics / Web Analytics) | Everyone, cookieless                                                                    | The only complete traffic number.                                                                                                                                           |
+| Booking funnel events                           | PostHog (`booking_wizard_started`, `booking_step_reached`, `booking_submitted_success`) | Same consent caveat.                                                                                                                                                        |
 
 There is deliberately **no** consent event in PostHog — rejected-consent
 clicks must not feed an analytics tool. Consent volume lives only in the two
