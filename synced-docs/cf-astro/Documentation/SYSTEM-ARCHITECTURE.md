@@ -41,9 +41,9 @@ graph TD
         Edge_Worker -->|Secure transaction| Supabase_Postgres[(Supabase PostgreSQL)]
         Edge_Worker -->|Analytics proxy| PostHog[PostHog Analytics]
         Edge_Worker -->|Error tracking| Sentry[Sentry Observability]
-        Email_Queue -->|Async Worker Consumer| Sidecar_Worker[cf-email-consumer Worker]
-        Sidecar_Worker -->|Project: cf-astro| Resend[Resend Email API]
-        Sidecar_Worker -->|Project: cf-admin| Brevo[Brevo SMTP API]
+        Email_Queue -->|Async Worker Consumer| Sidecar_Worker[cf-astro-email-consumer Worker]
+        Sidecar_Worker -->|Primary, all projects| Brevo[Brevo Email API]
+        Sidecar_Worker -->|Failover if Brevo throws| Resend[Resend Email API]
     end
 ```
 
@@ -147,18 +147,18 @@ To prevent slow third-party API networks from causing booking timeouts, the emai
 
 The booking API route constructs two email payloads (one for customer confirmation, one for admin alerts) and pushes them to `env.EMAIL_QUEUE`. The booking route returns `200 OK` instantly, bypassing synchronous wait states.
 
-### 6.2 Queue Consumer (`cf-email-consumer`)
+### 6.2 Queue Consumer (`cf-astro-email-consumer`)
 
-An isolated, lightweight worker sidecar consumes the queue:
+An isolated, lightweight worker sidecar consumes the queue on behalf of **both** cf-astro and cf-admin (one shared worker, one shared queue — `madagascar-emails`):
 
 - **Absolute Code Isolation**: The consumer worker is completely decoupled from `cf-astro`. It must never import Drizzle ORM schemas or Astro layouts to prevent cyclic compilation failures.
 - **Email Assembly**: Uses the high-performance **Eta** template engine to format elegant HTML layouts.
-- **Dual-SMTP Provider Router**: The consumer dynamically inspects the `projectSource` of the payload. It delivers `cf-astro` emails via **Resend's HTTP API** and `cf-admin` emails via **Brevo's SMTP API**, maximizing deliverability and leveraging higher quotas.
+- **Hybrid-SMTP Provider, not project-routed**: The consumer calls **Brevo's API first for every send**, regardless of `projectSource` (cf-astro or cf-admin). **Resend is wired in only as an automatic same-request failover** if the Brevo call throws — there is no per-project routing split; `RESEND_API_KEY` lives in this worker's own secrets.
 
 ### 6.3 Delivery Webhooks & Observability
 
-- **Webhook Endpoint**: `POST /api/webhooks/resend` captures delivery, bounces, and complaints.
-- **Security**: Because the Edge Worker lacks standard Node.js crypto binaries, signature verification is computed manually using the **Web Crypto API** (`crypto.subtle.verify`) matching Svix HMAC-SHA256 headers.
+- **Webhook Endpoint**: `POST /api/webhooks/brevo` (cf-astro) captures delivery, bounces, and complaints from the primary provider.
+- **Security**: Because the Edge Worker lacks standard Node.js crypto binaries, signature verification is computed manually using the **Web Crypto API** (`crypto.subtle.verify`).
 - **Audit Log**: Verified webhook events are pushed into the `email_audit_logs` Supabase table inside a JSONB `delivery_events` array for auditing.
 
 ---
@@ -207,7 +207,8 @@ npx wrangler kv:namespace create SESSION
 
 # 4. Bind Secrets to Pages Worker
 npx wrangler secret put DATABASE_URL        # Supabase postgres:// URL
-npx wrangler secret put RESEND_API_KEY      # Resend API Auth Token
+# Note: BREVO_API_KEY (primary) and RESEND_API_KEY (failover) are secrets on
+# the shared cf-astro-email-consumer worker, not on cf-astro itself.
 npx wrangler secret put REVALIDATION_SECRET  # Webhook bearer key
 npx wrangler secret put SENTRY_AUTH_TOKEN    # Sentry source map uploader token
 ```

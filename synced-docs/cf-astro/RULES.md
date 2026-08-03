@@ -12,7 +12,7 @@
 - Deliver Lighthouse 95+ performance on mobile
 - Meet professional SEO, accessibility, and security standards
 
-Every architectural decision optimizes for one goal: maximum professional quality at exactly ZERO ongoing cost. We combine Cloudflare's free tier (Workers, D1, R2, KV, Pages) with Resend, Supabase, Upstash, PostHog, and Sentry free tiers.
+Every architectural decision optimizes for one goal: maximum professional quality at exactly ZERO ongoing cost. We combine Cloudflare's free tier (Workers, D1, R2, KV, Pages) with Brevo (+ Resend failover), Supabase, Upstash, PostHog, and Sentry free tiers.
 
 ---
 
@@ -40,7 +40,7 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 | **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)        |
 | **Cache**          | Cloudflare KV + Upstash Redis                                                |
 | **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)        |
-| **Email**          | Dual-SMTP via Cloudflare Queue (Resend for `cf-astro`, Brevo for `cf-admin`) |
+| **Email**          | Async via Cloudflare Queue → shared `cf-astro-email-consumer` worker. Brevo is primary for every send (cf-astro and cf-admin alike); Resend is an automatic same-request failover if Brevo throws — not a per-project split. |
 | **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges)                            |
 | **Analytics**      | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine      |
 | **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing)        |
@@ -55,7 +55,7 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 - **Edge-First**: The application is designed to execute as close to the user as possible using Cloudflare Workers.
 - **Failover / Resiliency**: We use D1 as a dead-letter/audit queue for bookings. If Supabase fails, data is retained in D1 for delayed execution.
 - **Islands Architecture**: We limit client-side JS by utilizing Astro islands with Preact only where interactivity is required.
-- **Dual-SMTP Async Email**: All email dispatch is non-blocking via Cloudflare Queues (`cf-email-consumer`). The consumer dynamically routes `cf-astro` traffic to **Resend** and `cf-admin` traffic to **Brevo** based on the `projectSource` payload.
+- **Hybrid-SMTP Async Email**: All email dispatch (from both cf-astro and cf-admin) is non-blocking via one shared Cloudflare Queue (`madagascar-emails`) consumed by one shared worker, `cf-astro-email-consumer`. **Brevo is the primary provider for every send regardless of `projectSource`**; **Resend is wired in only as an automatic same-request failover** if the Brevo call throws — there is no per-project routing split.
 
 > For historical constraints and deprecated patterns, see `Documentation/ARCHIVE-RULES-HISTORY.md`.
 
