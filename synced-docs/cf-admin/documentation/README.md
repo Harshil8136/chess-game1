@@ -3,7 +3,7 @@
 title: "Documentation Index & Map"
 status: active
 audience: [non-technical, ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-03
 verified_against: [code]
 owner: harshil
 related_docs: [CONTRIBUTING-DOCS.md, ../README.md, ../RULESAd.md]
@@ -27,6 +27,8 @@ listed here (the CI index-drift check enforces both).
 - **New to the project?** → root [`README.md`](../README.md)
 - **Operating rules & policy** → root [`RULESAd.md`](../RULESAd.md)
 - **System architecture** → [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md)
+- **Dynamic D1 Blog & Workers AI RAG Architecture** → [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md)
+- **Blog AI/SEO/AIO/GEO — complete reference (current, verified)** → [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md)
 - **Security posture** → [`security/SECURITY.md`](security/SECURITY.md)
 - **Infrastructure & deploy** → [`operations/OPERATIONS.md`](operations/OPERATIONS.md)
 - **Open maintenance items** → [`MAINTENANCE.md`](MAINTENANCE.md)
@@ -50,6 +52,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
 | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Lean Edge stack, request lifecycle, module pattern, CPU budget | ai, technical | active |
+| [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md) | System blueprint for D1 Blog, Workers AI RAG context retrieval, ISR cache purge, and Edge SSR | ai, technical, operator | active |
 | [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) | KV caching strategy, quotas, fail-safe fallback chain | ai, technical | active |
 | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
 | [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | active |
@@ -57,6 +60,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`2026-07-22-architecture-improvement-summary.md`](2026-07-22-architecture-improvement-summary.md) | 12-commit architecture pass: SEC-03/SEC-04 closed, CSP guard fixed, 4 god-files split, before/after benchmark scorecard | non-technical, ai, technical, operator | active |
 | [`2026-07-22-codebase-services-architecture-and-setup-review.md`](2026-07-22-codebase-services-architecture-and-setup-review.md) | Live-verified deep review: codebase health, service topology, DB structure, CI/CD & cross-repo docs-sync pipeline, dependency freshness, findings punch list | owner, non-technical, technical, operator, ai | active |
 | [`2026-08-02-ui-consolidation-and-security-remediation.md`](2026-08-02-ui-consolidation-and-security-remediation.md) | 15-commit pass: stored-XSS regression in the email editor closed, fabricated dashboard KPIs removed (RULE #0.5), shared Preact UI primitives relocated + made theme-aware and rolled out to Sessions/Debug/Bookings (652 → 0 raw colour values), new Menu primitive, 4 god-files split, before/after ratings + explicit verification gaps | non-technical, ai, technical, operator | active |
+| [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | Cross-repo blog AI-generation → publish → SEO/AIO/GEO reference: full workflow, time-to-live tables, quality gate + cadence-lock safety rails, service coordination map, and the security/data-integrity fixes (stored-XSS, silent slug-save bug) found and closed in the same pass | non-technical, ai, technical, operator, owner | active |
 
 ## Security
 
