@@ -74,21 +74,111 @@ Below are three operational scale models for Madagascar Pet Hotel staff usage:
 
 To prevent storage bloat and abuse, the subsystem enforces role-based storage quotas and granular per-user overrides.
 
-### 3.1 Role Allowance Matrix
+### 3.1 Worker Runtime Limits vs. Direct R2 Presigned Limits
 
-| Role (`admin_users.role`) | Default Storage Allowance | Max File Upload Size | Shared Folder Creation |
-| :--- | :--- | :--- | :--- |
-| **Staff** | 1 GB | 25 MB | Read / Upload to Shared |
-| **Admin** | 5 GB | 100 MB | Full Access |
-| **SuperAdmin** | 25 GB | 500 MB | Full Management |
-| **Owner / DEV** | 100 GB (or Unlimited) | 2 GB | Full Administrative Control |
+Understanding platform limits is critical for selecting the right architecture:
 
-### 3.2 Quota Enforcement Lifecycle
+| Dimension | Worker Proxy Route (`/api/upload`) | Direct R2 Presigned S3 URL |
+| :--- | :--- | :--- |
+| **Max HTTP Request Body** | **100 MB** (Cloudflare Worker limit) | **5 GB** (Single PUT) / **5 TB** (S3 Multipart) |
+| **Worker RAM Overhead** | High (Streams through 128 MB RAM) | **Zero (0 MB Worker RAM used)** |
+| **Worker Execution CPU Time** | Billed per ms during stream | 1–2 ms (only generates presigned signature) |
+| **Recommended Max File Size** | **<= 10 MB** (Small thumbnails/logs only) | **100 MB – 1 GB** (PDFs, Videos, Contracts) |
 
-1. **Pre-Upload Check:** When a user initiates a file upload, client requests an upload ticket from `/api/storage/presign`.
-2. **Atomic Quota Validation:** The API queries `admin_user_storage` to compare `(bytes_used + requested_file_size) <= max_bytes_limit`.
-3. **Rejection:** If the upload exceeds allowance, the server immediately responds with HTTP 413 (Quota Exceeded) before any byte reaches R2.
-4. **Post-Upload Sync:** Upon successful upload verification, the atomic counter in `admin_user_storage` is incremented.
+> ⚡ **Architectural Directive:** All file uploads/downloads in `cf-admin` MUST use **Direct R2 Presigned URLs** (`@aws-sdk/s3-request-presigner`). Routing binary file payloads through Cloudflare Worker memory is strictly forbidden for files > 10 MB.
+
+### 3.2 Granular Multi-Role Access Control Matrix (RBAC & Shared Access)
+
+The storage subsystem enforces strict data isolation by default while supporting controlled cross-tenant and vendor access:
+
+```
++---------------------------------------------------------------------------------------------------------------+
+| User Role       | Own Personal Bucket | Shared Dept Folders | Other Users' Buckets | Vendor / External Share  |
++---------------------------------------------------------------------------------------------------------------+
+| Staff           | Full Access (1 GB)  | Read / Upload       | ❌ BLOCKED           | ❌ Disabled              |
+| Admin           | Full Access (5 GB)  | Full Management     | Read / View Only     | Presigned Link (Max 24h) |
+| SuperAdmin      | Full Access (25 GB) | Full Management     | Full Admin Access    | Presigned Link (Max 7d)  |
+| Owner / DEV     | Unlimited           | Full Management     | Full Admin Access    | Presigned Link (Unlimited)|
+| Vendor / Guest  | ❌ No Bucket        | ❌ No Access        | ❌ No Access         | Read-Only (Token Gated)  |
++---------------------------------------------------------------------------------------------------------------+
+```
+
+#### Granular Access Scenarios:
+1. **Default Isolated Bucket (`private/`):** A standard staff member can *only* browse, upload, or delete files inside `staff-storage/{tenant_id}/{user_id}/private/*`.
+2. **Elevated Oversight (`Owner` / `SuperAdmin` / `Admin`):** Privileged roles can browse other users' storage trees via `/api/storage/admin/inspect?user_id=...` for security auditing and management.
+3. **Vendor & Partner Access (`vendor_shared/`):** When a staff member shares a pet medical log with a vet clinic or vendor:
+   - A short-lived, cryptographically signed GET link (`/api/storage/share?token=...`) is generated.
+   - The token checks `expires_at` and passcode hash stored in Supabase `admin_storage_shares`.
+   - Access is read-only and logged in the audit telemetry table.
+
+### 3.3 Additional Operational Restrictions & Edge Safeguards
+
+To maintain system integrity and prevent abuse, the following security constraints apply:
+
+- **File Extension & MIME Sanitization:**
+  - **Allowed:** `.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.docx`, `.xlsx`, `.csv`, `.mp4`, `.zip`.
+  - **Forbidden (Hard Rejected):** `.html`, `.htm`, `.svg` (prevents Stored XSS via inline rendering), `.exe`, `.js`, `.sh`, `.bat`, `.php`.
+- **Rate-Limiting on Presigned Ticket Generation:**
+  - Protected via Upstash Redis (`@upstash/ratelimit`).
+  - Max **30 presigned upload tickets per minute per IP / User Session** to prevent presigned URL spam.
+- **Content-Disposition Enforcement:**
+  - Presigned GET download links force `response-content-disposition: attachment; filename="..."` for document files to force a browser download rather than raw inline execution.
+
+### 3.4 Dual-Layer Real-Time Telemetry & Accounting Engine
+
+Cloudflare R2 bucket-level metrics report total aggregate operations across the bucket, but do not provide per-user breakdowns. To track **individual user Class A operations (PUT, POST, DELETE), Class B operations (GET, HEAD), and Egress/Download volume**, `cf-admin` implements a **Dual-Layer Accounting Engine**:
+
+```
++---------------------------------------------------------------------------------------------------+
+| LAYER 1: REAL-TIME API GATEWAY TELEMETRY                                                          |
+| - Intercepts every /api/storage/presign, /download, /delete request.                             |
+| - Logs Class A (writes/deletes) and Class B (reads/downloads) into admin_storage_operation_logs. |
+| - Enforces per-user daily/monthly limits BEFORE issuing presigned R2 tickets.                     |
++---------------------------------------------------------------------------------------------------+
+                                                  |
+                                                  v
++---------------------------------------------------------------------------------------------------+
+| LAYER 2: CLOUDFLARE CRON RECONCILIATION WORKER (Nightly / Hourly)                                  |
+| - Executes env.R2.list({ prefix: 'staff-storage/madagascar/{user_id}/' }).                       |
+| - Reconciles physical R2 byte counts and object totals against DB records.                        |
+| - Detects and corrects drift caused by failed uploads or aborted multipart sessions.             |
++---------------------------------------------------------------------------------------------------+
+```
+
+#### Individual Operational Metric Tracking:
+1. **Class A Operations Counter (Upload, Mutate, Delete):** Incremented whenever a user requests an upload presigned URL or executes a file deletion/rename.
+2. **Class B Operations Counter (Read, Preview, Download):** Incremented whenever a user generates a download link or previews a document.
+3. **Estimated Egress Volume Counter:** Tracks estimated byte transfers requested per user for download requests, allowing SuperAdmins to spot bandwidth spikes.
+
+---
+
+### 3.5 Granular Configuration Engine (System Defaults vs User Overrides)
+
+The storage subsystem supports flexible configuration rules managed via SuperAdmin settings:
+
+#### A. System Global Defaults (`admin_storage_global_config`):
+- **Default Role Quotas:** Storage space, Class A ops/day, Class B ops/day, Egress bytes/month.
+- **Global Allowed Extensions:** Whitelist of allowed extensions (`.pdf`, `.png`, `.jpeg`, `.docx`, etc.).
+- **Global Blocked Extensions:** Blacklist of dangerous extensions (`.exe`, `.js`, `.html`, `.svg`, `.sh`, `.bat`).
+
+#### B. Individual User Overrides & Extension Exemptions (`admin_user_storage_overrides`):
+SuperAdmins can grant custom exceptions for specific staff or developer users:
+- **Custom Quota Bump:** Expand User X's allowance (e.g. 1 GB $\rightarrow$ 50 GB).
+- **Custom Operational Ceiling:** Expand Class A / Class B daily operation limits for power users.
+- **File Extension Exemption Whitelist:** Explicitly allow a specific user (e.g. an Admin or Developer) to upload a blocked file extension (e.g., `.js`, `.svg`, or `.exe`) for legitimate business requirements, while logging a high-priority security audit event.
+
+---
+
+### 3.6 Forbidden Access & Security Violation Telemetry
+
+Every blocked upload, unauthorized access attempt, or policy violation is logged to `admin_storage_violations` for security review:
+
+- **Violation Triggers:**
+  - `FORBIDDEN_FILE_EXTENSION` (Attempted upload of blocked extension without exemption).
+  - `MIME_TYPE_MISMATCH` (File header does not match claimed file extension).
+  - `QUOTA_EXCEEDED` (Storage or Class A/B request ceiling reached).
+  - `UNAUTHORIZED_USER_INSPECTION` (Non-admin attempting to view another user's bucket).
+- **Admin Alerting:** High-severity violations (e.g. `.exe` upload attempts or cross-user bucket access) trigger instant alerts in the Edge Command Center.
 
 ---
 
@@ -206,6 +296,73 @@ CREATE TABLE IF NOT EXISTS public.admin_storage_files (
 
 CREATE INDEX idx_admin_storage_files_owner ON public.admin_storage_files(owner_user_id, folder_path) WHERE NOT is_deleted;
 CREATE INDEX idx_admin_storage_files_r2_key ON public.admin_storage_files(r2_key);
+```
+
+### 6.3 `admin_storage_global_config` (System-Wide Storage & Limit Defaults)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.admin_storage_global_config (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Default Config Baseline:
+-- key: 'role_defaults' -> { "staff": { "quota_mb": 1024, "class_a_daily": 500, "class_b_daily": 2000, "egress_mb_monthly": 5120 }, ... }
+-- key: 'allowed_extensions' -> [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".docx", ".xlsx", ".csv", ".mp4", ".zip"]
+-- key: 'blocked_extensions' -> [".exe", ".js", ".html", ".htm", ".svg", ".sh", ".bat", ".php", ".dll", ".cmd"]
+```
+
+### 6.4 `admin_user_storage_overrides` (Individual User Limits & Extension Exemptions)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.admin_user_storage_overrides (
+    user_id UUID PRIMARY KEY REFERENCES public.admin_users(id) ON DELETE CASCADE,
+    custom_max_bytes BIGINT,               -- Custom storage quota override
+    custom_class_a_daily INT,              -- Custom write/upload daily limit
+    custom_class_b_daily INT,              -- Custom read/download daily limit
+    custom_egress_monthly_bytes BIGINT,    -- Custom egress limit override
+    allowed_extension_exemptions TEXT[],   -- Array of exempt extensions (e.g. ARRAY['.js', '.svg'])
+    granted_by UUID REFERENCES public.admin_users(id),
+    reason TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 6.5 `admin_storage_operation_logs` (Class A & Class B Request Telemetry)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.admin_storage_operation_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.admin_users(id) ON DELETE CASCADE,
+    operation_class TEXT NOT NULL CHECK (operation_class IN ('CLASS_A', 'CLASS_B')),
+    operation_type TEXT NOT NULL,          -- 'PRESIGN_PUT', 'DELETE', 'LIST', 'PRESIGN_GET', 'SHARE'
+    file_id UUID REFERENCES public.admin_storage_files(id) ON DELETE SET NULL,
+    bytes_transferred BIGINT DEFAULT 0,
+    ip_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_storage_ops_user_time ON public.admin_storage_operation_logs(user_id, created_at DESC);
+CREATE INDEX idx_storage_ops_class ON public.admin_storage_operation_logs(operation_class, created_at DESC);
+```
+
+### 6.6 `admin_storage_violations` (Security Audit & Forbidden Block Logs)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.admin_storage_violations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.admin_users(id) ON DELETE SET NULL,
+    violation_type TEXT NOT NULL,          -- 'FORBIDDEN_FILE_EXTENSION', 'MIME_TYPE_MISMATCH', 'QUOTA_EXCEEDED', 'UNAUTHORIZED_ACCESS'
+    attempted_filename TEXT,
+    attempted_mime TEXT,
+    ip_hash TEXT NOT NULL,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_storage_violations_time ON public.admin_storage_violations(created_at DESC);
 ```
 
 ---
