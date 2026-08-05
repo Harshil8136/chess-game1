@@ -70,6 +70,7 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 |---------|-------------|---------|
 | `IMAGES` | `madagascar-images` | cf-admin, cf-astro |
 | `ARCO_DOCS` | `arco-documents` | cf-astro |
+| `STAFF_STORAGE` | `madagascar-staff-storage` | cf-admin (created 2026-08-05) — **private, no CDN custom domain** (unlike `IMAGES`). Staff Managed Storage file drive; access only via Worker-issued presigned PUT (aws4fetch, `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets scoped to this bucket only) and Worker-proxied GET. See [`features/STAFF-MANAGED-STORAGE.md`](../features/STAFF-MANAGED-STORAGE.md). |
 
 ### Queues
 
@@ -209,6 +210,8 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | `IP_HASH_SECRET` | ✅ Active | Privacy-safe IP hashing in login forensics |
 | `CHATBOT_WORKER_URL` | ✅ Active | cf-chatbot Worker endpoint |
 | `CHATBOT_ADMIN_API_KEY` | ✅ Active | 64-char key securing cf-chatbot access |
+| `R2_ACCESS_KEY_ID` | 🟡 Pending owner setup (2026-08-05) | R2 S3-compatible credential, scoped ONLY to `madagascar-staff-storage`. Used by `aws4fetch` to sign presigned upload PUT URLs for the Staff Managed Storage feature. Structurally different from `CLOUDFLARE_API_TOKEN` (Bearer format) — S3 SigV4 signing requires this credential shape, no substitute. Create via Cloudflare dashboard → R2 → Manage API Tokens, scoped to this bucket only. |
+| `R2_SECRET_ACCESS_KEY` | 🟡 Pending owner setup (2026-08-05) | Paired secret for `R2_ACCESS_KEY_ID` above. |
 | `PUBLIC_SUPABASE_ANON_KEY` | ❌ **REMOVED** | GoTrue client-side auth removed — `wrangler secret delete PUBLIC_SUPABASE_ANON_KEY` |
 | `TURNSTILE_SECRET_KEY` | ❌ **REMOVED** (2026-04-30) | CAPTCHA on login form — form deleted — deleted via `wrangler secret delete TURNSTILE_SECRET_KEY` |
 
