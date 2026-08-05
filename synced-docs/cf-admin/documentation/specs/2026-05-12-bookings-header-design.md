@@ -1,5 +1,4 @@
 ---
-
 title: "Booking Dashboard Header Redesign Spec"
 status: historical
 audience: [technical]

@@ -375,6 +375,8 @@ To keep the architecture lightweight and lightning fast, `cf-admin` enforces str
 - **Enforcement:** If a file grows beyond 500 lines, you MUST refactor it by extracting logic into modular files (e.g., extracting routing constants, security headers, or sub-components) rather than disabling the linter rule.
 - **Goal:** Zero ongoing file bloat, 100% modular architecture.
 
+=======
+>>>>>>> Stashed changes
 → See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
 ---
