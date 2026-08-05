@@ -255,3 +255,37 @@ Sortable `<th>` elements must have `aria-sort`:
 - Use `var(--duration-normal)` (200ms) for hover/focus states
 - Use `var(--duration-slow)` (350ms) for page transitions
 - Respect `prefers-reduced-motion` media query
+
+---
+
+## 8. Config Storage — Reuse the Universal Scoped Table
+
+**Before creating a new D1 table for a feature's settings, check here first.** `admin_portal_settings`
+was widened (migration `0037_widen_admin_portal_settings_scoped.sql`, shipped alongside
+[Staff Managed Storage](../features/STAFF-MANAGED-STORAGE.md)) into a general-purpose scoped
+config store, specifically so features stop each reaching for their own settings table.
+
+The table holds `(setting_key, scope_type, scope_id) → value` rows, where `scope_type` is one of
+`'global' | 'role' | 'user'` (`scope_id = ''` for global). `setting_type = 'json'` lets one row hold a
+whole bundle of related fields — a single read returns everything a feature's config needs, instead of
+one row per field.
+
+**When this fits:** any feature needing global defaults, and/or per-role or per-user overrides of
+those defaults. Storage's own config is the reference example — one global row
+(`storage_config` / `scope_type='global'`) holds every default (quotas, allowed file types, link
+lifetime ceilings, the weekly-cleanup policy), and per-user overrides are additional rows under the
+same key with `scope_type='user'`, created only for users who actually have one.
+
+**When it doesn't fit:** data that isn't config — an entity registry (files, bookings, users) still
+gets its own table, exactly as before. Storage's own `storage_files` table is the counterexample: file
+metadata is not settings, so it's a real table, not a `admin_portal_settings` row.
+
+**How to use it:** `src/lib/dal/PortalSettingsRepository.ts` — `getScopedSetting`,
+`listScopedSettings`, `upsertScopedSetting`, `deleteScopedSetting`. The original unscoped methods
+(`getSetting`, `getAllSettings`, `getSettingsByCategory`) still work unchanged and are implicitly
+scoped to `global` — existing callers needed zero changes when this shipped.
+
+**Note:** `service_config` (migration `0028`) is a second, older generic config table already in this
+codebase, used by the cf-astro/cf-chatbot control plane. The two are not yet consolidated — that's a
+separate cleanup, not something to solve by picking whichever one is more convenient in the moment.
+For a *new* feature, prefer `admin_portal_settings` going forward; it's the one with scoping support.

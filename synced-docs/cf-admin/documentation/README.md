@@ -91,7 +91,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) | Email Portal: compose/send, drafts, templates, scheduling, queue delivery tracking; RBAC+PLAC gating | non-technical, ai, technical, operator | active |
 | [`features/CONTROL-PLANE.md`](features/CONTROL-PLANE.md) | Service Control Plane: two-layer model, access, API surface | ai, technical | active |
 | [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
-| [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: Cloudflare R2 direct-to-edge uploads, storage quotas, presigned URLs, and RBAC isolation | non-technical, ai, technical, operator | draft |
+| [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: private per-role file drive, external vendor sharing with email delivery, weekly drift reconciliation, admin quota/config controls — shipped 2026-08-05 | non-technical, ai, technical, operator | active |
 
 ## Operations
 
