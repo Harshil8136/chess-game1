@@ -20,7 +20,7 @@ related_docs:
 - USER-MANAGEMENT.md
 - ../operations/OPERATIONS.md
 - ../security/SECURITY.md
-- ../runbooks/storage-share-cf-access-bypass.md
+- ../runbooks/public-share-links-domain-isolation.md
 - ../reference/coding-standards.md
 tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing]
 
@@ -96,7 +96,7 @@ This is the feature most likely to touch someone outside the company, so it's wo
 
 **Who can do this.** Sharing (create/recreate/resend/revoke) requires Manager or higher — Staff can use their own drive but cannot generate external links, matching the judgment that link creation is a slightly more sensitive action than simply storing a file. Manager and Admin get shorter maximum link lifetimes than Owner by default, on the theory that longer-lived links sitting in someone's inbox are a bigger risk the higher they go unreviewed. An Owner can also grant one specific person permission to create longer-lived links than their role would normally allow, the same way any other individual permission is granted in this portal — without changing that person's role.
 
-**⚠️ A real, currently-open item.** The admin portal itself requires everyone to log in through Cloudflare's Zero Trust identity check before they can reach *any* page or address on the portal's domain — that's the whole point of the portal being locked down. An external vendor clicking a share link has no such login, by design. Making that one specific web address reachable without a login requires one additional configuration step in Cloudflare's own security dashboard — a deliberately manual, security-sensitive change that isn't something the portal's code can safely make on its own. **Until that step is done, share links will show recipients a login wall instead of the file.** The exact steps are written up in [`runbooks/storage-share-cf-access-bypass.md`](../runbooks/storage-share-cf-access-bypass.md). While reviewing this, the same gap was found to already exist, unrelated to this feature, on the portal's email-unsubscribe link — that's flagged in the same runbook since it's the clearest live proof of the issue.
+**Resolved 2026-08-05.** The admin portal itself requires everyone to log in through Cloudflare's Zero Trust identity check before they can reach *any* page or address on the portal's domain — that's the whole point of the portal being locked down, and an external vendor clicking a share link has no such login, by design. Share links (and the portal's email-unsubscribe link, which had the identical gap) are now served from a dedicated hostname, `share.madagascarhotelags.com`, that is deliberately never enrolled in Cloudflare Zero Trust Access. See [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) for the full mechanism, including a real bug this uncovered and fixed along the way (the portal's own code was redirecting anonymous requests to these routes before ever checking whether they were supposed to be public).
 
 ## 7. Weekly Reconciliation
 
@@ -148,7 +148,7 @@ Written down honestly rather than left to be discovered:
 - **No resumable/chunked upload.** A single file upload is a single continuous transfer, capped at 5 GB. This comfortably covers documents, photos, and most video, but there's no support for pausing and resuming a very large transfer.
 - **Folders are lightweight.** Creating an empty folder with nothing in it yet won't survive a page refresh — folders exist as a property of the files inside them, not as their own stored thing.
 - **"Require review" doesn't yet have a one-click action.** As described in §7, it currently behaves the same as "log only" — an Admin+ has to act on the weekly report manually via Inspect rather than clicking an "approve cleanup" button.
-- **External sharing needs one more manual setup step.** See the callout in §6 — this is the one item standing between "built" and "fully working end-to-end for an outside recipient."
+- ~~**External sharing needs one more manual setup step.**~~ Resolved 2026-08-05 — see [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md).
 
 ## 11. Where Things Live (for engineers / AI agents)
 
@@ -164,7 +164,7 @@ No database schema here by design — see the migration files themselves (`migra
 
 ## 12. Related
 
-- [`runbooks/storage-share-cf-access-bypass.md`](../runbooks/storage-share-cf-access-bypass.md) — the one remaining setup step for external sharing, and the related pre-existing gap it uncovered
+- [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) — how external sharing and unsubscribe links are made reachable without Cloudflare Access
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — how roles and per-user permission grants work portal-wide
 - [`reference/coding-standards.md`](../reference/coding-standards.md) — the universal scoped-config pattern this feature established for future features to reuse
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) — bucket and secret registry
