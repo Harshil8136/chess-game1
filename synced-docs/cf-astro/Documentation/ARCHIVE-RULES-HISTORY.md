@@ -607,11 +607,11 @@ Resend Email: Direct `fetch` API + HTML string builders (consumer worker only)
 
 | Property          | Value                                               |
 | ----------------- | --------------------------------------------------- |
-| **Project ID**    | `zlvmrepvypucvbyfbpjj`                              |
+| **Project ID**    | `[SUPABASE_PROJECT_REF]`                            |
 | **Project Name**  | cf-astro                                            |
 | **Region**        | us-east-1                                           |
-| **Database Host** | `db.zlvmrepvypucvbyfbpjj.supabase.co`               |
-| **REST API**      | `https://zlvmrepvypucvbyfbpjj.supabase.co/rest/v1/` |
+| **Database Host** | `db.[SUPABASE_PROJECT_REF].supabase.co`             |
+| **REST API**      | `https://[SUPABASE_PROJECT_REF].supabase.co/rest/v1/` |
 | **RLS Enabled**   | ✅ On ALL public tables                             |
 | **PII Storage**   | Bookings, pets, consent, privacy requests           |
 
@@ -628,10 +628,10 @@ cf-astro uses **two connection strings** with the principle of least privilege:
 
 ```
 # Direct (preferred — avoids Supavisor double-pooling):
-postgresql://cf_astro_writer:<pw>@db.zlvmrepvypucvbyfbpjj.supabase.co:5432/postgres
+postgresql://cf_astro_writer:<pw>@db.[SUPABASE_PROJECT_REF].supabase.co:5432/postgres
 
 # Pooler (if direct hits connection limits):
-postgresql://cf_astro_writer.zlvmrepvypucvbyfbpjj:<pw>@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://cf_astro_writer.[SUPABASE_PROJECT_REF]:<pw>@aws-0-us-east-1.pooler.supabase.com:6543/postgres
 ```
 
 **Why this matters:** If `DATABASE_URL` leaks, an attacker gets INSERT-only on PII tables with zero read-back. They cannot dump bookings, consent records, or any customer data. Combined with RLS policies enforced at the Postgres level (not application level), this is true defence-in-depth.
@@ -1076,7 +1076,7 @@ Before EVERY deployment, verify:
 3. **`src/pages/api/revalidate.ts`** uses the same `__BUILD_ID__` pattern for cache key construction.
 4. **`env.d.ts`** declares `declare const __BUILD_ID__: string;` and `declare const __LAST_UPDATED__: string;`.
 5. After `astro build`, verify the compiled middleware contains a **hardcoded string** (e.g., `deployHash = "mnwdkora"`) — NOT a runtime variable lookup.
-6. **IndexNow key file** is accessible: `GET https://madagascarhotelags.com/a7f3b2e1d8c4f5a0b9e2d1c8f3a6b4e7.txt` must return the key string.
+6. **IndexNow key file** is accessible: `GET https://madagascarhotelags.com/[INDEXNOW_KEY].txt` must return the key string.
 7. **Cron worker** deployed: `cd cron-worker && npx wrangler deploy` (after any change to schedule or IndexNow key).
 
 **Red flags that indicate regression:**
@@ -1302,7 +1302,7 @@ Tools use `AbortController` signal for cleanup and re-register on Astro view tra
 
 ### 15.6 Security Notes for Agent Endpoints
 
-- `/.well-known/openid-configuration` exposes the Supabase project ID (`zlvmrepvypucvbyfbpjj`) — this is already public via CSP `connect-src` headers and `PUBLIC_SUPABASE_URL`. No new exposure.
+- `/.well-known/openid-configuration` exposes the Supabase project ID (`[SUPABASE_PROJECT_REF]`) — this is already public via CSP `connect-src` headers and `PUBLIC_SUPABASE_URL`. No new exposure.
 - The MCP endpoint (`/api/mcp`) is fully public, read-only, and returns only hardcoded static data. No Cloudflare bindings are accessed.
 - Markdown negotiation fetches `/llms.txt` from the same origin only — no SSRF risk.
 - Agent Skills digests are SHA-256 hashes of the actual SKILL.md files; if skill files are updated, recompute with `sha256sum` and update `index.json`.
@@ -1319,7 +1319,7 @@ sha256sum "public/.well-known/agent-skills/services/SKILL.md"
 
 ---
 
-_Dev=harshil.8136@gmail.com_
+_Dev=[OWNER_PERSONAL_EMAIL]_
 _End of Rules. These constraints must be acknowledged and followed for every task in cf-astro._
 
 {% endraw %}

@@ -63,7 +63,7 @@ The application maps runtime environments, variables, and resources via three pr
 
 ### 3.1 `astro.config.ts`
 
-Establishes the core compilation rules, internationalization routing, and build plugins:
+Establishes the core compilation rules, [SUPABASE_PROJECT_REF] routing, and build plugins:
 
 - **`trailingSlash: 'always'`**: Enforces trailing slashes on all routes to prevent duplicate indexation and split canonical authority in search engines.
 - **`i18n`**: Configured with `defaultLocale: 'es'` (Spanish) and `locales: ['es', 'en']` (English) with `prefixDefaultLocale: true` (ensuring URLs always start with explicit locale slugs, e.g., `/es/` or `/en/`).
@@ -255,7 +255,7 @@ To ensure this codebase remains perfectly editable, maintainable, and robust for
 > **System Architectural Invariants**
 >
 > 1. **Do Not Introduce Local Image Processors**: Never replace `passthroughImageService()` with `@astrojs/image` or standard Sharp compilation. Doing so will break static SSR execution limits on Cloudflare Pages Workers (1MB container limit).
-> 2. **Never Import Database Schemas in Email Consumer**: The `cf-email-consumer` worker must remain 100% decoupled from `cf-astro/src/db` and Drizzle schemas. Any imports between them will break build cycles and cause module resolution crashes during bundle packaging.
+> 2. **Never Import Database Schemas in Email Consumer**: The `cf-astro-email-consumer` worker must remain 100% decoupled from `cf-astro/src/db` and Drizzle schemas. Any imports between them will break build cycles and cause module resolution crashes during bundle packaging.
 > 3. **Preserve `trailingSlash: 'always'`**: All page-level generation logic, routing hooks, and canonical calculations rely on trailing slashes. Changing this parameter will immediately throw 404/301 loops in production.
 
 {% endraw %}

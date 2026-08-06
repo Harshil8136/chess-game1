@@ -7,7 +7,7 @@ This document outlines the core infrastructure bindings and the CLI commands use
 
 ## 1. Authentication
 
-All Cloudflare commands are authenticated via an OAuth Token for `mascotasmadagascar@gmail.com` (Account ID: `REDACTED_VIA_OAUTH`).
+All Cloudflare commands are authenticated via an OAuth Token for `[CF_ACCOUNT_EMAIL]` (Account ID: `REDACTED_VIA_OAUTH`).
 
 **Verify access:**
 
@@ -19,7 +19,7 @@ npx wrangler whoami
 
 Serves as the authoritative source for non-PII configurations and queues.
 
-- **Binding ID:** `7fca2a07-d7b4-449d-b446-408f9187d3ca`
+- **Binding ID:** `[D1_MADAGASCAR_DB_ID]`
 - **Region:** ENAM
 - **Verify status:**
 

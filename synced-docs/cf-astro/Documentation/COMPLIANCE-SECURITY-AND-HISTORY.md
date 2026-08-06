@@ -134,7 +134,7 @@ To prevent security regressions, any AI model or human operator modifying the ap
 > [!CAUTION]
 > **Core Security Invariants**
 >
-> 1. **Minimize PII in D1, and never add more than what's already there**: D1 is an unencrypted local SQLite engine. It already stores `owner_email`/`request_ip`/`user_agent` in the `booking_attempts`/`consent_attempts` dead-letter tables (bounded by a 90-day auto-purge) — do not add further PII (passwords, phone numbers, pet/medical details, payment data) beyond this existing, already-reviewed set. Keep all other PII locked inside the Supabase PostgreSQL instance.
+> 1. **Minimize PII in D1, and never add more than what's already there**: D1 is an unencrypted local SQLite engine. It already stores `owner_email`/`request_ip`/`user_agent` in the `booking_attempts`/`consent_attempts` dead-letter tables (90-day retention target, purge is admin/owner-triggered only — see §2.2, never automatic on a timer) — do not add further PII (passwords, phone numbers, pet/medical details, payment data) beyond this existing, already-reviewed set. Keep all other PII locked inside the Supabase PostgreSQL instance.
 > 2. **Never Log Authorizations**: When auditing or handling exceptions inside API routes, never log the `Authorization` header, even partially. Substrings of `Bearer <secret>` expose secret prefixes to logs, breaking API token confidentiality.
 > 3. **Never Query Supabase via administrative `postgres` User**: All write operations in Astro SSR must connect via `cf_astro_writer`. Never override this role to bypass least-privilege write isolation rules.
 

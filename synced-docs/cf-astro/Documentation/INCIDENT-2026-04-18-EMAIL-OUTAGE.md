@@ -9,7 +9,7 @@ This master post-mortem consolidates the full investigation, root cause analysis
 
 - **Severity**: **P0** (Critical, client-facing silent failure).
 - **Incident Period**: **2026-04-17 02:02:16 UTC** to **2026-04-22 18:30:00 UTC**.
-- **Trigger Event**: Redeployment of the `cf-astro-email-consumer` worker (version `e0a88e0f-b1aa-4ef3-9546-5a7048b84b7a`) via `wrangler deploy`.
+- **Trigger Event**: Redeployment of the `cf-astro-email-consumer` worker (version `[D1_DATABASE_ID]`) via `wrangler deploy`.
 - **First Impacted Booking**: `MAD-20260418-JA69` (User booking request submitted by Harshil).
 - **Blast Radius**: 100% of customer booking requests submitted since the redeploy. Booking details were correctly written to the Supabase database, and the frontend wizard correctly displayed the green "Booking Request Sent!" success screen; however, neither customers nor administrators received any email notifications.
 
@@ -128,11 +128,11 @@ All dynamic `eta.renderString()` calls inside `cf-email-consumer/src/templates.t
 **Before (Failing):**
 
 ```typescript
-export const adminBookingTemplate = `
+export const [SUPABASE_PROJECT_REF] = `
   <h1>Booking Alert: <%= it.bookingRef %></h1>
   <p>Owner: <%= it.ownerName %></p>
 `;
-// Rendered via: eta.renderString(adminBookingTemplate, data)
+// Rendered via: eta.renderString([SUPABASE_PROJECT_REF], data)
 ```
 
 **After (Hardened & 100% Safe):**

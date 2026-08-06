@@ -118,7 +118,7 @@ Bing's top results**, and Copilot is Bing-native.
 
 1. Sign in and use **"Import from Google Search Console"** (one click).
 2. Confirm sitemap was imported; if not, submit `sitemap-index.xml`.
-3. IndexNow is already wired: key file `/a7f3b2e1d8c4f5a0b9e2d1c8f3a6b4e7.txt`,
+3. IndexNow is already wired: key file `/[INDEXNOW_KEY].txt`,
    plus per-publish pings from `/api/revalidate`. Check Webmaster Tools →
    IndexNow for received URLs.
    **Deploy path changed July 2026:** the site now auto-deploys via
