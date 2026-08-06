@@ -16,7 +16,7 @@ tags: []
 > **Version:** 1.0
 > **Last Updated:** 2026-05-13
 > **Projects:** `cf-admin` (writer), `cf-astro` (reader)
-> **Namespace:** `ISR_CACHE` — ID `[CF_HEX_ID]`
+> **Namespace:** `ISR_CACHE` — ID `[KV_ISR_CACHE_ID]`
 
 ---
 
@@ -248,3 +248,4 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 - **Revalidation secret config** → [CMS.md §8](../features/CMS.md#8-configuration--environment-constraints)
 - **cf-astro revalidate endpoint** → `cf-astro/src/pages/api/revalidate.ts`
 - **revalidateAstro() helper** → `cf-admin/src/lib/cms.ts` — `revalidateAstro()`
+- **Same KV+D1 pattern proposed for system-wide settings** → [`GLOBAL-CONFIG.md`](GLOBAL-CONFIG.md) (research reference, not implemented)
