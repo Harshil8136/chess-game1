@@ -3,7 +3,7 @@
 title: "Documentation Index & Map"
 status: active
 audience: [non-technical, ai, technical]
-last_verified: 2026-08-03
+last_verified: 2026-08-05
 verified_against: [code]
 owner: harshil
 related_docs: [CONTRIBUTING-DOCS.md, ../README.md, ../RULESAd.md]
@@ -54,6 +54,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Lean Edge stack, request lifecycle, module pattern, CPU budget | ai, technical | active |
 | [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md) | System blueprint for D1 Blog, Workers AI RAG context retrieval, ISR cache purge, and Edge SSR | ai, technical, operator | active |
 | [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) | KV caching strategy, quotas, fail-safe fallback chain | ai, technical | active |
+| [`architecture/GLOBAL-CONFIG.md`](architecture/GLOBAL-CONFIG.md) | Research reference (not implemented): dynamic system-wide settings (session timing, theme default, page notices) via a KV-cached, D1-backed config layer — found the D1/UI plumbing already exists but is disconnected from runtime enforcement; fact-checks a JWT-delivery alternative, plus full cost/latency/long-run-maintenance analysis | ai, technical, owner | draft |
 | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
 | [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | active |
 | [`2026-07-05-comprehensive-codebase-and-system-review.md`](2026-07-05-comprehensive-codebase-and-system-review.md) | Full multi-benchmark scorecard (ISO 5055/25010, OWASP, CWE), findings + prioritized fix roadmap | ai, technical, operator, owner | active |
@@ -61,6 +62,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`2026-07-22-codebase-services-architecture-and-setup-review.md`](2026-07-22-codebase-services-architecture-and-setup-review.md) | Live-verified deep review: codebase health, service topology, DB structure, CI/CD & cross-repo docs-sync pipeline, dependency freshness, findings punch list | owner, non-technical, technical, operator, ai | active |
 | [`2026-08-02-ui-consolidation-and-security-remediation.md`](2026-08-02-ui-consolidation-and-security-remediation.md) | 15-commit pass: stored-XSS regression in the email editor closed, fabricated dashboard KPIs removed (RULE #0.5), shared Preact UI primitives relocated + made theme-aware and rolled out to Sessions/Debug/Bookings (652 → 0 raw colour values), new Menu primitive, 4 god-files split, before/after ratings + explicit verification gaps | non-technical, ai, technical, operator | active |
 | [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | Cross-repo blog AI-generation → publish → SEO/AIO/GEO reference: full workflow, time-to-live tables, quality gate + cadence-lock safety rails, service coordination map, and the security/data-integrity fixes (stored-XSS, silent slug-save bug) found and closed in the same pass | non-technical, ai, technical, operator, owner | active |
+| [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](2026-08-06-data-infrastructure-audit-and-reuse-policy.md) | Live D1 + Supabase table inventory (row counts, dead-table findings: `admin_sessions`, `privacy_requests`, `cms_content_history`) plus the reuse-before-creation policy this drove — see `RULESAd.md` RULE #0.6 | ai, technical, owner | active |
 
 ## Security
 
@@ -110,6 +112,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](reference/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview | ai, technical | active |
 | [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
 | [`reference/commercial-readiness-checklist.md`](reference/commercial-readiness-checklist.md) | Pet-hotel decoupling roadmap toward a generic Workers admin framework | owner, technical | draft |
+| [`reference/RBAC-AT-SCALE.md`](reference/RBAC-AT-SCALE.md) | Research reference (not implemented): scaling permissions from 6 roles/small staff to 100+ roles/1000+ staff — fact-checks a proposed design, covers RBAC/PBAC/ABAC/ReBAC/bitmask models, verified Cloudflare KV/D1/Durable Objects consistency + pricing, and a recommended blueprint | ai, technical, owner | draft |
 
 ## Compliance
 

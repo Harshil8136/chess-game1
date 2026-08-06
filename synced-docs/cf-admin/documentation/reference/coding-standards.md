@@ -289,3 +289,31 @@ scoped to `global` — existing callers needed zero changes when this shipped.
 codebase, used by the cf-astro/cf-chatbot control plane. The two are not yet consolidated — that's a
 separate cleanup, not something to solve by picking whichever one is more convenient in the moment.
 For a *new* feature, prefer `admin_portal_settings` going forward; it's the one with scoping support.
+`admin_feature_flags` is a **third**, narrower (boolean-only) mechanism for the same general idea —
+same rule applies: don't add a fourth.
+
+### 8.1 The same check applies beyond D1 config tables
+
+This section used to cover only "don't add a new settings table." The check is broader than that, and
+it's worth stating explicitly because it's already been skipped three times in this codebase's history
+(`service_config` → `admin_portal_settings` → `admin_feature_flags`, none consolidated) — see
+[`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md)
+for the live audit that found this, plus two confirmed-dead tables (`admin_sessions`,
+`privacy_requests`) that existed only because nobody checked before adding the next thing.
+
+**Before creating any new D1 table, Supabase table, KV namespace, or external service integration:**
+
+1. Check whether something that already exists covers it (this section, the audit doc above, and a
+   grep of `src/` for related repository/table names).
+2. If nothing existing fits, check whether a free, open-source, or **already-integrated** service
+   (this project already has active connectors for Supabase, Cloudflare, Sentry, PostHog) solves it
+   better than bespoke D1/KV plumbing — evaluated honestly per-case, not defaulted either direction.
+   The audit doc's §4 has three worked examples (feature flags → adopt PostHog when real targeting is
+   needed; ReBAC-style permissions → don't adopt a hosted graph-auth service, it's a new production
+   dependency for a need this project doesn't have yet; system config → don't adopt a third-party
+   config SaaS, extend the table that already exists).
+3. If new infrastructure is genuinely the right call, say why in one line in the PR/commit. This is
+   the entire mechanism that keeps this list from growing a fourth entry.
+
+This is now also RULE #0.6 in `RULESAd.md` — a full rules-bible entry, not just a coding-standards note,
+because the pattern it guards against has already recurred enough times to earn one.
