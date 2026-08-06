@@ -24,7 +24,7 @@ against the compromised-password corpus and rejected on match.
 ## Steps
 
 1. Open the Supabase Dashboard for the `Cloudflare` project
-   (project ref `zlvmrepvypucvbyfbpjj`).
+   (project ref `[SUPABASE_PROJECT_REF]`).
 2. Navigate to **Authentication → Providers → Email**.
 3. Scroll to **"Password Protection"**.
 4. Enable **"Leaked Password Protection"** (a.k.a. HIBP check).
@@ -36,7 +36,7 @@ Run the security-advisor MCP call after the toggle propagates (a few seconds):
 
 ```json
 mcp__Supabase__get_advisors({
-  "project_id": "zlvmrepvypucvbyfbpjj",
+  "project_id": "[SUPABASE_PROJECT_REF]",
   "type": "security"
 })
 ```

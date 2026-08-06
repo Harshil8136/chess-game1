@@ -446,7 +446,7 @@ Inherits commercial §13 and extends it to the GTM claims.
 - "On the production database, row-level security is enabled on 100% of tables holding
   personal data, with zero anonymous access."
   *(Scoped 2026-07-29. Verified live against the production Supabase project
-  `zlvmrepvypucvbyfbpjj`, which returns a single advisory — leaked-password protection,
+  `[SUPABASE_PROJECT_REF]`, which returns a single advisory — leaked-password protection,
   tracked as L-8 and not applicable since authentication is Cloudflare Access, not Supabase
   Auth. The qualifier matters: a separate, dormant Supabase project from an earlier product
   version exists on the account pending export and decommission, and it does **not** meet

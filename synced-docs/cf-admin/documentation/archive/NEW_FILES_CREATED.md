@@ -18,7 +18,7 @@ All net-new files introduced during this refactoring session.
 **Purpose:** Single source of truth for booking service badge styles.
 
 **Exports:**
-- `getServiceBadgeStyle(service: string): { background, color, borderColor }` — returns inline style object for a service type. Used in `BookingDashboard.tsx` and `BookingSlideDrawer.tsx`.
+- `[SUPABASE_PROJECT_REF](service: string): { background, color, borderColor }` — returns inline style object for a service type. Used in `BookingDashboard.tsx` and `BookingSlideDrawer.tsx`.
 
 **Service colors:**
 - `relocation` → blue (#60a5fa)

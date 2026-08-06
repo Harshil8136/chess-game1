@@ -172,7 +172,7 @@ src/
 │   │   │   ├── BotConfigShared.tsx            ← ConfigSection, Field, InfoIcon primitives
 │   │   │   ├── BotConfigThinkingSection.tsx   ← ThinkingConfig interface + component
 │   │   │   ├── AnalyticsDashboard.tsx
-│   │   │   ├── ConversationsBrowser.tsx
+│   │   │   ├── [SUPABASE_PROJECT_REF].tsx
 │   │   │   ├── KnowledgeBase.tsx
 │   │   │   └── PromptsEditor.tsx
 │   │   ├── users/
@@ -201,7 +201,7 @@ src/
 └── lib/
     ├── auth/                          ← RBAC, PLAC, sessions, guards
     ├── bookings/
-    │   └── constants.ts               ← getServiceBadgeStyle() — canonical service badge colors
+    │   └── constants.ts               ← [SUPABASE_PROJECT_REF]() — canonical service badge colors
     ├── analytics/
     │   └── providers.ts               ← GraphQLResponse<T> interface; Cloudflare + Supabase analytics fetch
     │                                     Uses ANALYTICS binding (Analytics Engine dataset: `madagascar_analytics`)
@@ -310,8 +310,8 @@ These are architecturally sound but not needed until trigger conditions are met.
 
 | Binding | Type | Name / UUID |
 |---------|------|-------------|
-| `DB` | D1 | `madagascar-db` (`7fca2a07-d7b4-449d-b446-408f9187d3ca`) |
-| `SESSION` | KV | `ADMIN_SESSION` (`ba82eecc6f5a4956ad63178b203a268f`) |
+| `DB` | D1 | `madagascar-db` (`[D1_MADAGASCAR_DB_ID]`) |
+| `SESSION` | KV | `ADMIN_SESSION` (`[KV_ADMIN_SESSION_ID]`) |
 | `IMAGES` | R2 | `madagascar-images` |
 | `EMAIL_QUEUE` | Queue | `madagascar-emails` |
 | `ANALYTICS` | Analytics Engine | dataset `madagascar_analytics` |

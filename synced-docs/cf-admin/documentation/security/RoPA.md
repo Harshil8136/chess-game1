@@ -137,7 +137,7 @@ that store is still in use.
 |---|---|
 | Purpose | None ongoing. Residual data from an earlier product version, retained pending export and disposal |
 | Status | **Dormant.** No application, worker or API connects to it. Latest write 2026-06-22 (`admin_audit_logs`, `access_login_attempts`); most tables last written between February and April 2026 |
-| Location | Supabase project `anpagfigqkorxubnyanj` ("supabase-pink-village"), us-east-1, created 2026-01-01 |
+| Location | Supabase project `[SUPABASE_PROJECT_REF]` ("supabase-pink-village"), us-east-1, created 2026-01-01 |
 | Categories of subject | Staff/administrators of the earlier version; data subjects who submitted consent or ARCO requests to it |
 | Categories of data | 37 tables. Materially: `email_master_log` (577 rows), `email_journey_hops` (774), `admin_audit_logs` (232), `forensic_access_log` (192), `consent_receipts` (105), `admin_sessions` (96), `access_login_attempts` (41), `admin_permission_logs` (39), `consent_logs` (14), `admin_users` (8), `access_authorized_emails` (6), **`legal_requests` (2 — ARCO requests, PII by its own table comment)** |
 | Legal basis for retention | Art. 6(1)(c) / Art. 17(3)(b) — retention pending verification that no outstanding data-subject obligation attaches to the ARCO rows, then disposal |

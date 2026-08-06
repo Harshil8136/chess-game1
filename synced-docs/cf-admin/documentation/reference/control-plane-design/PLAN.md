@@ -163,15 +163,15 @@ today** in both apps. This plan converts them into runtime-resolved values so th
 | Auth | None (per-endpoint bearer secrets) | Cloudflare Zero Trust + 5-tier RBAC + PLAC + Ghost Audit |
 | DB | Supabase Postgres **direct** (postgres.js + Drizzle), role `cf_astro_writer` | Supabase service-role REST (`@supabase/supabase-js`) |
 
-**Shared (one CF account `320d1ebab5143958d2acd481ea465f52`):** D1 `madagascar-db`
-(`7fca2a07-d7b4-449d-b446-408f9187d3ca`), R2 `madagascar-images`, Queue `madagascar-emails`,
-Analytics Engine `madagascar_analytics`, Supabase project `zlvmrepvypucvbyfbpjj` (us-east-1),
+**Shared (one CF account `[CF_ACCOUNT_ID]`):** D1 `madagascar-db`
+(`[D1_MADAGASCAR_DB_ID]`), R2 `madagascar-images`, Queue `madagascar-emails`,
+Analytics Engine `madagascar_analytics`, Supabase project `[SUPABASE_PROJECT_REF]` (us-east-1),
 Sentry org `pet-hotel-madagascar` (`o4510752043761664`).
 **Isolated:** KV sessions (`SESSION` vs `ADMIN_SESSION`), Sentry projects (`cf-astro` vs `cf-admin`).
 **Related external workers:** `cf-chatbot` (`charlar.madagascarhotelags.com`), `cf-astro-email-consumer`.
 
 **Live-confirmed (MCP):** Sentry org `pet-hotel-madagascar` → projects `cf-admin`, `cf-astro`.
-Supabase `zlvmrepvypucvbyfbpjj` tables incl. `admin_authorized_users` (6), `admin_sessions` (28),
+Supabase `[SUPABASE_PROJECT_REF]` tables incl. `admin_authorized_users` (6), `admin_sessions` (28),
 `bookings`, `consent_records` (78), chatbot `conversations`/`messages`/`chat_analytics`,
 `email_audit_logs`; `auth.users` = 6. D1 list: `madagascar-db`, `chatbot-kb`, `whatsapp-chatbot`.
 KV: `ADMIN_SESSION`, `SESSION`, `ISR_CACHE`, `CHATBOT_CACHE`, `CHATBOT_KV`.
@@ -1026,8 +1026,8 @@ does not exist. **Gotcha:** PostHog Cloud only, not self-hosted.
 
 **Base URL:** `https://api.cloudflare.com/client/v4/`
 **Auth:** `Authorization: Bearer {CONTROL_PLANE_CF_TOKEN}` — new scoped token.
-**Account ID:** `320d1ebab5143958d2acd481ea465f52`
-**Zone ID:** `c73b1ccd7f03999ea419ef8177fa68d4`
+**Account ID:** `[CF_ACCOUNT_ID]`
+**Zone ID:** `[CF_ZONE_ID]`
 
 #### 10.3.1 Cache Purge (runtime, no redeploy)
 
@@ -1062,8 +1062,8 @@ Scope: `Workers KV Storage:Edit`. Use for the "Purge config cache" action → de
 
 #### 10.3.4 Analytics GraphQL datasets (beyond what exists)
 
-Additional datasets available: `firewallEventsAdaptive`, `r2OperationsAdaptive`,
-`botManagementAdaptive`, `dnsAnalyticsAdaptive`. Currently using: `httpRequests1hGroups`,
+Additional datasets available: `firewallEventsAdaptive`, `[SUPABASE_PROJECT_REF]`,
+`botManagementAdaptive`, `[SUPABASE_PROJECT_REF]`. Currently using: `[SUPABASE_PROJECT_REF]`,
 `workersInvocationsAdaptive`, `d1AnalyticsAdaptiveGroups`. **Add R2 ops metrics in Phase 1.**
 
 #### 10.3.5 Zero Trust Session Revoke (runtime)
@@ -1448,13 +1448,13 @@ wrangler secret put CONTROL_PLANE_CF_TOKEN --name cf-admin-madagascar
 
 | Resource | Identifier |
 |---|---|
-| CF account | `320d1ebab5143958d2acd481ea465f52` |
-| CF zone (madagascarhotelags.com) | `c73b1ccd7f03999ea419ef8177fa68d4` |
-| D1 (shared) | `madagascar-db` / `7fca2a07-d7b4-449d-b446-408f9187d3ca` |
+| CF account | `[CF_ACCOUNT_ID]` |
+| CF zone (madagascarhotelags.com) | `[CF_ZONE_ID]` |
+| D1 (shared) | `madagascar-db` / `[D1_MADAGASCAR_DB_ID]` |
 | KV namespaces | `SESSION` `bee123…`, `ISR_CACHE` `d9cea8…`, `ADMIN_SESSION` `ba82ee…` |
 | R2 buckets | `madagascar-images` (shared), `arco-documents` (cf-astro, private) |
 | Queue / Analytics Engine | `madagascar-emails` / `madagascar_analytics` |
-| Supabase | project `zlvmrepvypucvbyfbpjj` (us-east-1) |
+| Supabase | project `[SUPABASE_PROJECT_REF]` (us-east-1) |
 | Sentry org | `pet-hotel-madagascar` (`o4510752043761664`); projects `cf-astro`, `cf-admin` |
 | Sentry DSN cf-astro | `…@o4510752043761664.ingest.us.sentry.io/4511247514861568` |
 | Sentry DSN cf-admin | `389bb420…@o4510752043761664.ingest.us.sentry.io/4511193333760000` |

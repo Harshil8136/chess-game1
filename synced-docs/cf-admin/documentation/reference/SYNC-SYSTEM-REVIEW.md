@@ -20,7 +20,7 @@ tags: [sync, cms, control-plane, reliability, roadmap]
 > **Scope:** the content / config / log sync that flows cf-admin ⇄ cf-astro
 > through Cloudflare (D1 / KV / R2 / Queues / edge cache) and Supabase.
 > **Grounded against:** live production D1 (`madagascar-db`, `7fca2a07…`), live
-> Supabase (`zlvmrepvypucvbyfbpjj`), and the code on both repos as of 2026-06-09.
+> Supabase (`[SUPABASE_PROJECT_REF]`), and the code on both repos as of 2026-06-09.
 > **Projects:** `cf-admin` (writer), `cf-astro` (reader).
 
 ---
@@ -28,7 +28,7 @@ tags: [sync, cms, control-plane, reliability, roadmap]
 ## 0. The system as it really is
 
 Three sync planes ride on **one shared substrate**: D1 `madagascar-db`
-(`7fca2a07-d7b4-449d-b446-408f9187d3ca`) is bound by **both** workers (see both
+(`[D1_MADAGASCAR_DB_ID]`) is bound by **both** workers (see both
 `wrangler.toml` files), so cf-astro reads cf-admin's `cms_content` and
 `service_config` tables **directly**. KV, the edge cache, and the
 `/api/revalidate` webhook exist only to **bust caches faster than D1 read-replica

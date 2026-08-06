@@ -24,8 +24,8 @@ tags: [operations, bindings, cloudflare]
 | Date | Method | Result |
 |------|--------|--------|
 | 2026-06-06 | Cloudflare MCP `kv_namespaces_list` | `ADMIN_SESSION` `ba82…`, cf-astro `SESSION` `bee1…`, `ISR_CACHE` `d9ce…` — all match ✅ |
-| 2026-06-06 | Cloudflare MCP `d1_databases_list` | `madagascar-db` `7fca2a07-d7b4-449d-b446-408f9187d3ca` — match ✅ |
-| 2026-06-06 | Supabase MCP `list_projects` | project `zlvmrepvypucvbyfbpjj` ACTIVE_HEALTHY — match ✅ |
+| 2026-06-06 | Cloudflare MCP `d1_databases_list` | `madagascar-db` `[D1_MADAGASCAR_DB_ID]` — match ✅ |
+| 2026-06-06 | Supabase MCP `list_projects` | project `[SUPABASE_PROJECT_REF]` ACTIVE_HEALTHY — match ✅ |
 | 2026-06-06 | Cloudflare MCP `r2_buckets_list` | not verified — analytics token lacks R2:List scope (R2 referenced by name, no UUID needed) |
 
 ---
@@ -40,7 +40,7 @@ tags: [operations, bindings, cloudflare]
 
 | Binding | DB Name | Verified UUID |
 |---------|---------|---------------|
-| `DB` | `madagascar-db` | `7fca2a07-d7b4-449d-b446-408f9187d3ca` |
+| `DB` | `madagascar-db` | `[D1_MADAGASCAR_DB_ID]` |
 
 Both `cf-admin` and `cf-astro` share this single D1 database.
 
@@ -48,7 +48,7 @@ Both `cf-admin` and `cf-astro` share this single D1 database.
 
 ```bash
 curl -sH "Authorization: Bearer $CF_API_TOKEN" \
-  "https://api.cloudflare.com/client/v4/accounts/320d1ebab5143958d2acd481ea465f52/d1/database/7fca2a07-d7b4-449d-b446-408f9187d3ca" | jq .result.name
+  "https://api.cloudflare.com/client/v4/accounts/[CF_ACCOUNT_ID]/d1/database/[D1_MADAGASCAR_DB_ID]" | jq .result.name
 # Must return: "madagascar-db"
 ```
 
@@ -56,9 +56,9 @@ curl -sH "Authorization: Bearer $CF_API_TOKEN" \
 
 | Binding | Title | Verified UUID | Used By |
 |---------|-------|---------------|---------|
-| `SESSION` (cf-admin) | `ADMIN_SESSION` | `ba82eecc6f5a4956ad63178b203a268f` | cf-admin |
-| `SESSION` (cf-astro) | `SESSION` | `bee123e795504473accf58ac5b6de13d` | cf-astro |
-| `ISR_CACHE` | `ISR_CACHE` | `d9cea8c7e20f4b328b8cb3b04104138c` | cf-astro |
+| `SESSION` (cf-admin) | `ADMIN_SESSION` | `[KV_ADMIN_SESSION_ID]` | cf-admin |
+| `SESSION` (cf-astro) | `SESSION` | `[KV_ASTRO_SESSION_ID]` | cf-astro |
+| `ISR_CACHE` | `ISR_CACHE` | `[KV_ISR_CACHE_ID]` | cf-astro |
 
 > **✅ VERIFIED (2026-04-28):** All IDs in the table above now match the LIVE Cloudflare environment. `ADMIN_SESSION` is used for isolation in `cf-admin`. `SESSION` is used for `cf-astro`.
 
@@ -178,7 +178,7 @@ Sentry is integrated at the Cloudflare Edge layer (CDN-native). Key decisions:
 
 ### 4.2 SSR Hydration Guard
 
-`AdminLayout.astro` injects a global `window.onerror` + `window.onunhandledrejection` safety net. Unhandled client-side exceptions report to Sentry and trigger a recovery UI rather than a silent blank page crash loop.
+`AdminLayout.astro` injects a global `window.onerror` + `window.[SUPABASE_PROJECT_REF]` safety net. Unhandled client-side exceptions report to Sentry and trigger a recovery UI rather than a silent blank page crash loop.
 
 ### 4.3 ErrorBoundary
 
@@ -232,7 +232,7 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 
 ## 6. Cloudflare API Token Registry
 
-> **Last updated:** 2026-04-30. All tokens created under `Mascotasmadagascar@gmail.com's Account` (ID: `320d1ebab5143958d2acd481ea465f52`).
+> **Last updated:** 2026-04-30. All tokens created under `[CF_ACCOUNT_EMAIL]'s Account` (ID: `[CF_ACCOUNT_ID]`).
 > To view/rotate: Cloudflare Dashboard → My Profile → API Tokens.
 
 ### Token: `cf-admin: Zero Trust Audit Read`
@@ -280,7 +280,7 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | Account Analytics | Read |
 | Cloudflare CDS Compute Account | Write + Read |
 
-> **Note:** This token has broad Zero Trust permissions. It is scoped to the `Mascotasmadagascar@gmail.com` account only (not zone-level). The critical permission for Layer 3 force-kick is `Access: Organizations Revoke` — this allows deleting active CF Access sessions via API.
+> **Note:** This token has broad Zero Trust permissions. It is scoped to the `[CF_ACCOUNT_EMAIL]` account only (not zone-level). The critical permission for Layer 3 force-kick is `Access: Organizations Revoke` — this allows deleting active CF Access sessions via API.
 
 ---
 

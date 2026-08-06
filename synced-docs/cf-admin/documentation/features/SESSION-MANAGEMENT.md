@@ -32,7 +32,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 ## Components (code-split)
 
 `src/components/admin/users/sessions/`
-- `SessionCommandCenter.tsx` — shell: KPI ribbon, tabs, filters, export, auto-refresh.
+- `[SUPABASE_PROJECT_REF].tsx` — shell: KPI ribbon, tabs, filters, export, auto-refresh.
 - `SessionDetailDrawer.tsx` — per-session detail; desktop side-panel, **mobile
   bottom-sheet** (`src/components/ui/BottomSheet.tsx`). Full IP shown here only.
 - `sessionRisk.ts` — pure suspicious-session heuristics (unit-tested).

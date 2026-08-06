@@ -59,7 +59,7 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 | **BotConfig** | `BotConfig.tsx` | AI hyperparameters (`temperature`, `max_history_turns`), model dropdowns, fallback messages |
 | **ModelsCatalog** | `ModelsCatalog.tsx` | Authorized model grid with Set Primary / Set Fallback actions |
 | **KnowledgeBase** | `KnowledgeBase.tsx` | CRUD for KB entries across `content_en` / `content_es` |
-| **ConversationsManagement** | `ConversationsBrowser.tsx` | End-to-end session viewer, deep context retrieval, cron session sweeping |
+| **ConversationsManagement** | `[SUPABASE_PROJECT_REF].tsx` | End-to-end session viewer, deep context retrieval, cron session sweeping |
 | **PromptsEditor** | `PromptsEditor.tsx` | System prompt management |
 | **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking |
 

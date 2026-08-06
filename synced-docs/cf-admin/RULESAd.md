@@ -35,6 +35,21 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ---
 
+## 🛡️ RULE #0.6 — REUSE BEFORE CREATION (D1/Supabase/KV/services)
+
+**Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order — see [`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) for the full live audit and reasoning this rule is based on.**
+
+This exists because the pattern has already recurred: `service_config` → `admin_portal_settings` → `admin_feature_flags` are three separate, never-consolidated mechanisms for the same general idea, and a live audit on 2026-08-06 found two confirmed-dead Supabase tables (`admin_sessions`, `privacy_requests`) that existed only because nobody checked for an existing fit before adding the next one.
+
+1. **Does something that already exists cover this?** Check [`documentation/reference/coding-standards.md`](./documentation/reference/coding-standards.md) §8 (config tables — `admin_portal_settings` covers most global/per-role/per-user config needs already), the audit doc's live table inventory, and a grep of `src/` for related repository/table names.
+2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** This project already has active connectors for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case (the audit doc has three worked examples: adopt PostHog for feature flags needing real targeting; don't adopt a hosted ReBAC/graph-auth engine for permissions this project doesn't need yet; don't adopt a third-party config SaaS for system settings that already have a home in D1).
+3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.** That's the entire mechanism that prevents this list from needing a fourth entry.
+
+- ❌ **FORBIDDEN:** Creating a new table/namespace/service integration without first checking for an existing one that already fits.
+- ✅ **ALLOWED, and expected:** Creating new infrastructure when the check comes back negative — this rule is about checking first, not about never building anything new.
+
+---
+
 ## PROJECT MISSION — SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
 
 **cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** Designed to:
@@ -65,7 +80,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
 | **Auth** | Cloudflare Zero Trust Access (Google / GitHub / OTP — CF edge identity) |
-| **Database** | Supabase PostgreSQL (shared project `zlvmrepvypucvbyfbpjj`) |
+| **Database** | Supabase PostgreSQL (shared project `[SUPABASE_PROJECT_REF]`) |
 | **Session Store** | Cloudflare KV (via Astro Sessions API) |
 | **Cache** | Upstash Redis (free tier — 10K commands/day) |
 | **Storage** | Cloudflare R2 (CMS image uploads — `madagascar-images` bucket → `cdn.madagascarhotelags.com`) |
@@ -100,20 +115,20 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 ### Shared Resources
 
-- **Supabase Project:** `zlvmrepvypucvbyfbpjj` (same PostgreSQL instance)
-- **D1 Database:** `madagascar-db` (ID: `7fca2a07-d7b4-449d-b446-408f9187d3ca`) — shared between both projects
+- **Supabase Project:** `[SUPABASE_PROJECT_REF]` (same PostgreSQL instance)
+- **D1 Database:** `madagascar-db` (ID: `[D1_MADAGASCAR_DB_ID]`) — shared between both projects
 - **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Analytics Engine:** `ANALYTICS` binding → dataset `madagascar_analytics` (shared, both projects)
 - **Queue:** `EMAIL_QUEUE` → `madagascar-emails` (async email dispatch)
-- **Cloudflare Account:** Mascotas Madagascar (ID: `320d1ebab5143958d2acd481ea465f52`)
+- **Cloudflare Account:** Mascotas Madagascar (ID: `[CF_ACCOUNT_ID]`)
 
 ### KV Namespaces (Isolated per project)
 
 | Namespace | ID | Project | Purpose |
 |-----------|-----|---------|---------|
-| `cf-admin-session` | `ba82eecc6f5a4956ad63178b203a268f` | cf-admin | Astro session store |
-| `cf-astro-session` | `bee123e795504473accf58ac5b6de13d` | cf-astro | Astro session store |
-| `cf-astro-isr-cache` | `d9cea8c7e20f4b328b8cb3b04104138c` | cf-astro | ISR HTML cache |
+| `cf-admin-session` | `[KV_ADMIN_SESSION_ID]` | cf-admin | Astro session store |
+| `cf-astro-session` | `[KV_ASTRO_SESSION_ID]` | cf-astro | Astro session store |
+| `cf-astro-isr-cache` | `[KV_ISR_CACHE_ID]` | cf-astro | ISR HTML cache |
 
 > ✅ **SESSION KV IDs VERIFIED:** The `cf-admin-session` (`ba82...`) and `cf-astro-session` (`bee1...`) IDs are verified against the LIVE environment.
 
@@ -202,7 +217,7 @@ CHATBOT_ADMIN_API_KEY=...
 # REMOVED: PUBLIC_SUPABASE_ANON_KEY, TURNSTILE_SECRET_KEY (no longer used)
 ```
 
-> **Note — wrangler.toml `[vars]` entries (NOT .dev.vars secrets):** `PUBLIC_SUPABASE_URL`, `SITE_URL` (`https://secure.madagascarhotelags.com`), `CF_TEAM_NAME` (`mascotas`), `CF_ACCESS_AUD` (audience tag), `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, `CF_QUEUE_NAME`, `LOCAL_DEV_ADMIN_EMAIL` (`[DEVELOPER_EMAIL]`), `PUBLIC_ASTRO_URL`, `PUBLIC_CDN_URL`. These are non-secret config values; do **not** put them in `.dev.vars` or treat them as secrets.
+> **Note — wrangler.toml `[vars]` entries (NOT .dev.vars secrets):** `PUBLIC_SUPABASE_URL`, `SITE_URL` (`https://secure.madagascarhotelags.com`), `CF_TEAM_NAME` (`mascotas`), `CF_ACCESS_AUD` (audience tag), `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, `CF_QUEUE_NAME`, `LOCAL_DEV_ADMIN_EMAIL` (`[OWNER_PERSONAL_EMAIL]`), `PUBLIC_ASTRO_URL`, `PUBLIC_CDN_URL`. These are non-secret config values; do **not** put them in `.dev.vars` or treat them as secrets.
 
 Secrets in production: `wrangler secret put <KEY>` — see [OPERATIONS.md §5](./documentation/operations/OPERATIONS.md) for the full registry.
 
@@ -371,12 +386,10 @@ function MyModal() {
 To keep the architecture lightweight and lightning fast, `cf-admin` enforces strict file size limits via `eslint.config.js`.
 
 - **`max-lines`: 500 lines per file** (hard error).
-- Exceptions: Only highly complex orchestrators (e.g., `src/lib/auth/session.ts` or `SessionCommandCenter.tsx`) may exceed this up to a 600-line warning limit, but this must be explicitly whitelisted in `eslint.config.js`.
+- Exceptions: Only highly complex orchestrators (e.g., `src/lib/auth/session.ts` or `[SUPABASE_PROJECT_REF].tsx`) may exceed this up to a 600-line warning limit, but this must be explicitly whitelisted in `eslint.config.js`.
 - **Enforcement:** If a file grows beyond 500 lines, you MUST refactor it by extracting logic into modular files (e.g., extracting routing constants, security headers, or sub-components) rather than disabling the linter rule.
 - **Goal:** Zero ongoing file bloat, 100% modular architecture.
 
-=======
->>>>>>> Stashed changes
 → See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
 ---

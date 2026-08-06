@@ -47,7 +47,7 @@ answered.
 Everything in this section was read from the live service through an MCP connector on
 2026-07-29, not from a document.
 
-### 1.1 Cloudflare account `320d1ebab5143958d2acd481ea465f52`
+### 1.1 Cloudflare account `[CF_ACCOUNT_ID]`
 
 | Resource | Live state | In `operations/OPERATIONS.md §1`? |
 |---|---|---|
@@ -67,13 +67,13 @@ service bindings, and the `AI` binding.
 
 ### 1.2 Supabase — two projects exist
 
-**`zlvmrepvypucvbyfbpjj` ("Cloudflare")** — the documented production project. 20 public
+**`[SUPABASE_PROJECT_REF]` ("Cloudflare")** — the documented production project. 20 public
 tables. Live counts: `bookings` 10, `contacts` 81, `messages` 628, `conversations` 120,
 `consent_records` 268, `chat_analytics` 360, `admin_authorized_users` 6, `admin_sessions`
 28. **Security advisors: 1 warning** (leaked-password protection disabled, already tracked
 as L-8). This project matches its documentation.
 
-**`anpagfigqkorxubnyanj` ("supabase-pink-village")** — created 2026-01-01, status
+**`[SUPABASE_PROJECT_REF]` ("supabase-pink-village")** — created 2026-01-01, status
 `ACTIVE_HEALTHY`, referenced in **zero files across all three repositories and zero
 documentation files**. 37 tables holding personal data, including `consent_receipts` (105),
 `forensic_access_log` (192), `admin_audit_logs` (232), `email_master_log` (577),
@@ -226,7 +226,7 @@ one-word answer is often enough.
 Mostly closed by the 2026-07-29 owner decision above. These remain.
 
 15. Confirm: was `supabase-pink-village` the original cf-admin backend, superseded by the
-    move to `zlvmrepvypucvbyfbpjj`? The table set (`admin_users`, `admin_section_permissions`,
+    move to `[SUPABASE_PROJECT_REF]`? The table set (`admin_users`, `admin_section_permissions`,
     `admin_permission_logs`) reads like a predecessor of the current model.
 16. Its `admin_audit_logs` and `access_login_attempts` were last written **2026-06-22**.
     Was anything still pointed at it that recently?

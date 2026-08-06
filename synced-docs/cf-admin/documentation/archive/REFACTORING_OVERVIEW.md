@@ -29,8 +29,8 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 - **UI:** Preact islands (NOT React — types differ)
 - **Auth:** Cloudflare Zero Trust (CF Access JWT) + Supabase whitelist
 - **RBAC:** 5-tier — DEV(0) > Owner(1) > SuperAdmin(2) > Admin(3) > Staff(4)
-- **DB:** Cloudflare D1 (UUID `7fca2a07-d7b4-449d-b446-408f9187d3ca`)
-- **KV:** ADMIN_SESSION (UUID `ba82eecc6f5a4956ad63178b203a268f`)
+- **DB:** Cloudflare D1 (UUID `[D1_MADAGASCAR_DB_ID]`)
+- **KV:** ADMIN_SESSION (UUID `[KV_ADMIN_SESSION_ID]`)
 - **Rate limiting:** Upstash Redis via `src/lib/ratelimit.ts` → `getRateLimiter()`
 - **Audit engine:** Ghost audit — `ctx.waitUntil()` deferred D1 writes
 - **API responses:** Canonical helpers — `jsonOk`, `jsonError`, `withETag`, `jsonFresh` from `src/lib/api.ts`
@@ -55,13 +55,13 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 | 2D | Remove @types/react @types/react-dom (decided: keep, build needed them) | ✅ DONE |
 | 3A | Unify all 36 API routes to use src/lib/api.ts helpers | ✅ DONE |
 | 3B | Merge WidgetShared + WidgetSharedV2 → single WidgetShared | ✅ DONE |
-| 3C | Extract getServiceBadgeStyle to src/lib/bookings/constants.ts | ✅ DONE |
+| 3C | Extract [SUPABASE_PROJECT_REF] to src/lib/bookings/constants.ts | ✅ DONE |
 | 3D | (Subsumed into 3C — same files) | ✅ DONE |
 | 3E | Remove duplicate CmsBlock interface from cms.ts | ✅ DONE |
 | 3F | Create src/lib/formatters.ts, consolidate formatDate | ✅ DONE |
 | 4C | Add null guard to isBreakGlassAdmin() | ✅ DONE |
 | 4D | Add env validation to createAdminClient() | ✅ DONE |
-| 4E | Enable verbatimModuleSyntax:true in tsconfig.json | ✅ DONE (no errors, only warnings) |
+| 4E | Enable [SUPABASE_PROJECT_REF]:true in tsconfig.json | ✅ DONE (no errors, only warnings) |
 | 4A | Eliminate `any` in src/lib/cms.ts and analytics/providers.ts | ✅ DONE |
 | 4B | Eliminate `any` in key components | ✅ DONE |
 | 5A | Split ActivityCenter.tsx (1,436 lines) → shared types + orchestrator | ✅ DONE |

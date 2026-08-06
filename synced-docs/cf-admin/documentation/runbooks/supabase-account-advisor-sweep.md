@@ -21,9 +21,9 @@ tags: [runbook, supabase, security, advisors, review, quarterly]
 ## Context / Scope
 
 **Why this runbook exists.** Every prior security review queried advisors for the production
-project by its hardcoded ref (`zlvmrepvypucvbyfbpjj`). Each review reported a clean result
+project by its hardcoded ref (`[SUPABASE_PROJECT_REF]`). Each review reported a clean result
 and was correct about the project it checked. None of them discovered
-`anpagfigqkorxubnyanj`, dormant since June 2026, holding 105 consent receipts, 192 forensic
+`[SUPABASE_PROJECT_REF]`, dormant since June 2026, holding 105 consent receipts, 192 forensic
 access log rows and 2 ARCO requests, with 45 `SECURITY DEFINER` functions callable by the
 anonymous role over the public REST API.
 
@@ -87,8 +87,8 @@ for SOC 2 `CC4.1`, which is currently 🟡 precisely because no such log existed
 
 | Project | Ref | Status | Security findings | Verdict |
 |---|---|---|---|---|
-| Cloudflare (**production**) | `zlvmrepvypucvbyfbpjj` | ACTIVE_HEALTHY | **1** (`auth_leaked_password_protection`, N/A on this platform) | Clean. This is the project every posture claim refers to. |
-| supabase-pink-village (superseded version) | `anpagfigqkorxubnyanj` | ACTIVE_HEALTHY, dormant | **128** — 45 anon-executable `SECURITY DEFINER`, 48 authenticated-executable, 14 always-true RLS, 19 mutable `search_path`, 1 RLS-no-policy | Not remediated by decision. Superseded product version, no live connection; pending export then decommission. See `security/RoPA.md` activity **H**. |
+| Cloudflare (**production**) | `[SUPABASE_PROJECT_REF]` | ACTIVE_HEALTHY | **1** (`auth_leaked_password_protection`, N/A on this platform) | Clean. This is the project every posture claim refers to. |
+| supabase-pink-village (superseded version) | `[SUPABASE_PROJECT_REF]` | ACTIVE_HEALTHY, dormant | **128** — 45 anon-executable `SECURITY DEFINER`, 48 authenticated-executable, 14 always-true RLS, 19 mutable `search_path`, 1 RLS-no-policy | Not remediated by decision. Superseded product version, no live connection; pending export then decommission. See `security/RoPA.md` activity **H**. |
 
 Any future sweep should compare against this table. A production count above 1, or a new
 project absent from `RoPA.md`, is the signal to act.
@@ -96,7 +96,7 @@ project absent from `RoPA.md`, is the signal to act.
 ## Operational notes
 
 - **Export before pausing.** Pausing a Supabase project makes its data inaccessible until
-  restored. For `anpagfigqkorxubnyanj` the export must complete *before* the pause, or the
+  restored. For `[SUPABASE_PROJECT_REF]` the export must complete *before* the pause, or the
   pause blocks the export it exists to protect.
 - **A clean advisor run is not a clean database.** Advisors do not evaluate application-layer
   authorization. cf-admin reaches Supabase exclusively through a service-role client that

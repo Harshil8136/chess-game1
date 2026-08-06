@@ -472,7 +472,7 @@ Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
 ## 10. Supabase RLS Policy Reference
 
 > **Last Audited:** 2026-04-29 (via Supabase Advisor API — 0 security warnings)
-> **Database:** `zlvmrepvypucvbyfbpjj` (shared with cf-astro)
+> **Database:** `[SUPABASE_PROJECT_REF]` (shared with cf-astro)
 
 ### 10.1 Design Principles
 

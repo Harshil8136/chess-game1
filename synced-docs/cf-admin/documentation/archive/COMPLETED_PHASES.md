@@ -154,16 +154,16 @@ Note: Rate limit responses are kept as raw `new Response()` (not `jsonError`) be
 5. Updated all 15 files that imported from `WidgetSharedV2` to import from `WidgetShared`
 
 **Files that previously imported WidgetShared (now updated):**
-- `DataServicesWidget.tsx`, `InfrastructureWidget.tsx`, `IntelliobsWidget.tsx`, `MasterAuditFeed.tsx`
+- `DataServicesWidget.tsx`, `[SUPABASE_PROJECT_REF].tsx`, `IntelliobsWidget.tsx`, `MasterAuditFeed.tsx`
 
 **Files that previously imported WidgetSharedV2 (now updated):**
-- `BookingDashboard.tsx`, `UsersRegistry.tsx`, `DashboardController.tsx`, `ActivityTable.tsx`, `CloudflareWidgets.tsx`, `ObservabilityWidgets.tsx`, `ServiceStatusStrip.tsx`, `SupabaseQuickActions.tsx`, `SupabaseWidgets.tsx`
+- `BookingDashboard.tsx`, `UsersRegistry.tsx`, `DashboardController.tsx`, `ActivityTable.tsx`, `CloudflareWidgets.tsx`, `[SUPABASE_PROJECT_REF].tsx`, `ServiceStatusStrip.tsx`, `[SUPABASE_PROJECT_REF].tsx`, `SupabaseWidgets.tsx`
 
 **Result:** One canonical file `src/components/dashboard/widgets/WidgetShared.tsx` containing all shared widget utilities.
 
 ---
 
-## Phase 3C/D — Extract getServiceBadgeStyle to Shared Constant ✅
+## Phase 3C/D — Extract [SUPABASE_PROJECT_REF] to Shared Constant ✅
 
 **Problem:** Identical booking service badge color logic existed in two components with slightly different alpha values (0.12 vs 0.15 for background, 0.25 vs 0.3 for border):
 - `src/components/admin/bookings/BookingDashboard.tsx` (lines 181-187)
@@ -171,7 +171,7 @@ Note: Rate limit responses are kept as raw `new Response()` (not `jsonError`) be
 
 **Solution:** Created `src/lib/bookings/constants.ts`:
 ```typescript
-export function getServiceBadgeStyle(service: string): { background: string; color: string; borderColor: string } {
+export function [SUPABASE_PROJECT_REF](service: string): { background: string; color: string; borderColor: string } {
   const s = (service || '').toLowerCase();
   if (s === 'relocation') return { background: 'rgba(59,130,246,0.12)', color: '#60a5fa', borderColor: 'rgba(59,130,246,0.25)' };
   if (s === 'hotel')      return { background: 'rgba(168,85,247,0.12)', color: '#c084fc', borderColor: 'rgba(168,85,247,0.25)' };
@@ -180,7 +180,7 @@ export function getServiceBadgeStyle(service: string): { background: string; col
 }
 ```
 
-Both components now import and use `getServiceBadgeStyle(booking.service)` instead of inline IIFEs. The canonical values use 0.12/0.25 alpha (slightly more subtle than the 0.15/0.3 in the drawer — visually more consistent with the rest of the dashboard).
+Both components now import and use `[SUPABASE_PROJECT_REF](booking.service)` instead of inline IIFEs. The canonical values use 0.12/0.25 alpha (slightly more subtle than the 0.15/0.3 in the drawer — visually more consistent with the rest of the dashboard).
 
 ---
 
@@ -253,7 +253,7 @@ export function createAdminClient(env: EnvBindings): SupabaseClient {
   if (!env.PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('[Supabase] Missing PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
-  return createSupabaseClient(
+  return [SUPABASE_PROJECT_REF](
     env.PUBLIC_SUPABASE_URL,        // no longer needs `as string`
     env.SUPABASE_SERVICE_ROLE_KEY,  // no longer needs `as string`
     { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } }
@@ -263,13 +263,13 @@ export function createAdminClient(env: EnvBindings): SupabaseClient {
 
 ---
 
-## Phase 4E — Enable verbatimModuleSyntax in tsconfig.json ✅
+## Phase 4E — Enable [SUPABASE_PROJECT_REF] in tsconfig.json ✅
 
 **File:** `tsconfig.json`
 
-Changed `"verbatimModuleSyntax": false` → `"verbatimModuleSyntax": true`
+Changed `"[SUPABASE_PROJECT_REF]": false` → `"[SUPABASE_PROJECT_REF]": true`
 
-**Result:** `npx astro check` ran with **0 errors**. There are TypeScript warnings (unused imports, unused variables) but these are pre-existing and are not errors. `verbatimModuleSyntax` itself introduced no new errors — the codebase was already compatible.
+**Result:** `npx astro check` ran with **0 errors**. There are TypeScript warnings (unused imports, unused variables) but these are pre-existing and are not errors. `[SUPABASE_PROJECT_REF]` itself introduced no new errors — the codebase was already compatible.
 
 ---
 
@@ -563,7 +563,7 @@ Tab container:
 | File | Change |
 |------|--------|
 | `src/components/ui/SlideDrawer.tsx` | Close button: `aria-label="Close drawer"` |
-| `src/components/admin/chatbot/ConversationsBrowser.tsx` | Modal close (✕): `aria-label="Close"` |
+| `src/components/admin/chatbot/[SUPABASE_PROJECT_REF].tsx` | Modal close (✕): `aria-label="Close"` |
 | `src/components/admin/chatbot/KnowledgeBase.tsx` | Modal close (✕): `aria-label="Close"` |
 | `src/components/admin/chatbot/PromptsEditor.tsx` | Modal close (✕): `aria-label="Close"` |
 | `src/components/admin/debug/PageRegistryManager.tsx` | Edit icon button: `aria-label="Edit Configuration"` (upgraded from `title=`) |
@@ -666,7 +666,7 @@ npm run build    →  ✓ Complete! — production ready.
 **Files modified:**
 - `src/components/admin/users/ExpandedRow.tsx`:
   - Added `last_login_at` row in Identity Profile column (between Created and CF Identity)
-  - Added `LoginHistoryEntry` / `LoginHistoryResponse` interfaces
+  - Added `LoginHistoryEntry` / `[SUPABASE_PROJECT_REF]` interfaces
   - Added `formatRelativeDate`, `MethodBadge`, `BotScoreBadge` helpers
   - Added `loginHistory` state + `handleLoadLoginHistory` callback
   - Added full-width "Login Intelligence" section below the 3-column grid (on-demand, Owner+ only)

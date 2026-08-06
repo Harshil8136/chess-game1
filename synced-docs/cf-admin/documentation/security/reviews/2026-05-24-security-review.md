@@ -173,7 +173,7 @@ The following are committed to git in `[vars]`:
 
 - `CF_ACCESS_AUD` — CF Zero Trust audience tag (not a secret, but aids JWT forgery research)
 - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, KV namespace `id` — infrastructure identifiers
-- `LOCAL_DEV_ADMIN_EMAIL = "[DEVELOPER_EMAIL]"` — developer's personal email
+- `LOCAL_DEV_ADMIN_EMAIL = "[OWNER_PERSONAL_EMAIL]"` — developer's personal email
 
 Per Cloudflare's own guidance, CF_ACCESS_AUD is not a secret (it's a public application identifier), and infrastructure IDs in wrangler.toml are expected for deployment configuration. However, the developer email should be moved to `.dev.vars` (already gitignored) rather than committed.
 

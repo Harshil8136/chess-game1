@@ -146,7 +146,7 @@ CSA-canonical column headers.
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| IPY-01 | Is data portable in standard formats? | Yes | JSON + CSV export at API + UI level (`/api/audit/export`, `SessionCommandCenter` export). |
+| IPY-01 | Is data portable in standard formats? | Yes | JSON + CSV export at API + UI level (`/api/audit/export`, `[SUPABASE_PROJECT_REF]` export). |
 | IPY-02 | Are APIs documented and stable? | Partial | Per-feature docs; no OpenAPI schema yet — future work. |
 
 ### IVS — Infrastructure & Virtualization Security

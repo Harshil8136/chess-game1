@@ -98,7 +98,7 @@ majors) plus two new, small findings from this pass (§2.5, §7.2).
 
 The `src/lib/dal/` folder — the repository layer — has grown to **12
 repositories** (`AccessRequestRepository`, `AuditLogRepository`,
-`BookingStateRepository`, `EmailDraftRepository`, `EmailTemplateRepository`,
+`BookingStateRepository`, `[SUPABASE_PROJECT_REF]`, `EmailTemplateRepository`,
 `FeatureFlagRepository`, `InquiryRepository`, `LoginLogRepository`,
 `PageRegistryRepository`, `PortalSettingsRepository`,
 `ServiceConfigRepository`, `UserSettingsRepository`) — up from roughly half

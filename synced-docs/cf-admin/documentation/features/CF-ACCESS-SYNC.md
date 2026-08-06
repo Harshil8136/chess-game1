@@ -152,8 +152,8 @@ action.
 - **Live Group-membership diff** (`GET /api/users/cf-access-audit`): now also
   fetches the *actual* Access Group's current `include` list
   (`findSyncGroup()`, reused from the sync module) and diffs it directly
-  against the active Supabase whitelist, returned as `groupMembershipDrift:
-  { groupFound, groupEmailCount, inSupabaseNotInGroup, inGroupNotInSupabase }`.
+  against the active Supabase whitelist, returned as `[SUPABASE_PROJECT_REF]:
+  { groupFound, groupEmailCount, [SUPABASE_PROJECT_REF], [SUPABASE_PROJECT_REF] }`.
   **This is the check that would have caught the original bug** — the
   pre-existing audit only compared against CF's `/access/users` list (people
   who have ever logged in), which cannot detect "the group update silently
@@ -167,7 +167,7 @@ action.
 - 5-minute cron self-heal → `src/lib/auth/cf-access-reconcile.ts:reconcileCfAccessGroup`, wired in `src/workers/cf-entry.ts` (`scheduled()`, `"*/5 * * * *"` branch)
 - Inline call sites (create/update/delete) → `src/pages/api/users/manage.ts` (`POST`, `PATCH`, `DELETE` handlers)
 - Manual force-resync → `src/pages/api/users/cf-resync.ts`
-- Live drift detection → `src/pages/api/users/cf-access-audit.ts` (`groupMembershipDrift`)
+- Live drift detection → `src/pages/api/users/cf-access-audit.ts` (`[SUPABASE_PROJECT_REF]`)
 - Regression test for the fixed bug → `test/cf-access-sync.test.ts`
 - Per-user status pill → `src/components/admin/users/UserTableRow.tsx`, `UserCardStack.tsx`
 - Force Re-sync button → `src/components/admin/users/RegistryToolbar.tsx`
@@ -216,7 +216,7 @@ ALTER TABLE admin_authorized_users
   ADD COLUMN IF NOT EXISTS cf_sync_at TIMESTAMPTZ;
 ```
 Migration: `supabase/migrations/20260724000000_add_cf_sync_status_columns.sql`.
-Applied to the production Supabase project (`zlvmrepvypucvbyfbpjj`) on
+Applied to the production Supabase project (`[SUPABASE_PROJECT_REF]`) on
 2026-07-24.
 
 ## Operational notes / Runbook
@@ -228,9 +228,9 @@ Applied to the production Supabase project (`zlvmrepvypucvbyfbpjj`) on
    for the next cron tick.
 3. If it keeps failing, query `cf_access_sync_log` (D1) ordered by
    `created_at DESC` for the full error history and attempt count.
-4. Open `GET /api/users/cf-access-audit` and check `groupMembershipDrift` —
+4. Open `GET /api/users/cf-access-audit` and check `[SUPABASE_PROJECT_REF]` —
    if `groupFound: false`, the Access Group itself is missing or misnamed in
-   Cloudflare (see "Known limitation" below); if `inSupabaseNotInGroup` is
+   Cloudflare (see "Known limitation" below); if `[SUPABASE_PROJECT_REF]` is
    non-empty, those specific emails are not currently in the live Group.
 
 **Common Cloudflare-side failure causes** (all correctly surfaced now):

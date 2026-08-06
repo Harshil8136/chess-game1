@@ -884,7 +884,7 @@ horizon:**
 - [Enactia — ISO 42001 Certification: The 2026 Roadmap for AI Governance](https://enactia.com/iso-42001-certification-the-2026-roadmap-for-ai-governance/)
 - [ProtechtGroup — AI governance: Why ISO 42001 is the natural next certification step](https://www.protechtgroup.com/en-us/blog/ai-governance-iso-42001-certification)
 - [CyberAssure — PCI DSS v4.0.1 in 2026](https://www.cyberassure.com.au/blog-pci-dss-v4)
-- [PCI SSC Blog — Now is the Time for Organizations to Adopt the Future-Dated Requirements](https://blog.pcisecuritystandards.org/now-is-the-time-for-organizations-to-adopt-the-future-dated-requirements-of-pci-dss-v4-x)
+- [PCI SSC Blog — Now is the Time for Organizations to Adopt the Future-Dated Requirements](https://blog.[SUPABASE_PROJECT_REF].org/now-is-the-time-for-organizations-to-adopt-the-future-dated-requirements-of-pci-dss-v4-x)
 - [216digital — ADA Web Accessibility Compliance Services, 2026](https://216digital.com/ada-web-accessibility-compliance-services-protecting-your-business-in-2026/)
 - [nklegal — ADA Website Lawsuits and Demand Letters: 2026 Update](https://www.nklegal.com/post/ada-website-lawsuits-and-demand-letters-2026-update)
 - [ideaforgestudios — ADA Website Compliance for Small Business: 2025 Lawsuit Surge](https://ideaforgestudios.com/2026/07/15/ada-website-compliance-for-small-business-what-the-2025-lawsuit-surge-actually-m/)

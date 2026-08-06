@@ -357,7 +357,7 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | `GET /api/users/[id]/session-status` | super_admin+ | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
-| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `groupMembershipDrift` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
+| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `[SUPABASE_PROJECT_REF]` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
 | `POST /api/users/cf-resync` | owner+ | Force an immediate whitelist → CF Access Group resync (see `CF-ACCESS-SYNC.md`) |
 
 ### 11.4 Login Intelligence Panel (ExpandedRow)

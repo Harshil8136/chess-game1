@@ -16,7 +16,7 @@ tags: []
 > **Version:** 1.0
 > **Last Updated:** 2026-05-13
 > **Projects:** `cf-admin` (writer), `cf-astro` (reader)
-> **Namespace:** `ISR_CACHE` — ID `d9cea8c7e20f4b328b8cb3b04104138c`
+> **Namespace:** `ISR_CACHE` — ID `[CF_HEX_ID]`
 
 ---
 

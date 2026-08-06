@@ -107,7 +107,7 @@ genuinely a two-repo feature.
 | **Owns the database write path?** | Yes — all blog writes go through `cf-admin`'s API | No — reads only, directly from the same database |
 
 Both applications bind the exact same Cloudflare D1 database
-(`madagascar-db`, id `7fca2a07-d7b4-449d-b446-408f9187d3ca`) — there is no
+(`madagascar-db`, id `[D1_MADAGASCAR_DB_ID]`) — there is no
 data-copying or syncing lag between "the admin's copy" and "the website's
 copy" of a blog post. There is only one copy, and both apps read/write the
 same rows. This matters for the timing section below: because there's no

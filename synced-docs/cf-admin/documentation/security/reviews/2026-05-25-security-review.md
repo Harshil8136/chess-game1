@@ -75,7 +75,7 @@ The codebase's posture remains strong — RBAC numeric hierarchy, KV-backed sess
 5. `scheduled-log-sync.ts:140,166` — `setTimeout` waits up to ~24s inside scheduled worker — close to CPU/wall-time budget. Add absolute deadline check.
 6. `audit.ts` — `details` field free-text; some callers pass `JSON.stringify({...})`, others plain strings. Standardize.
 7. `chatbot/[...path].ts` — Defense-in-depth: reject slug containing `..` or absolute `/`.
-8. **Supabase advisor (security):** `auth_leaked_password_protection` disabled on project `zlvmrepvypucvbyfbpjj`. Not relevant for cf-admin (uses CF Access, not Supabase Auth) but relevant if other apps on this project use email/password — enable in Supabase dashboard → Auth → Password Security.
+8. **Supabase advisor (security):** `auth_leaked_password_protection` disabled on project `[SUPABASE_PROJECT_REF]`. Not relevant for cf-admin (uses CF Access, not Supabase Auth) but relevant if other apps on this project use email/password — enable in Supabase dashboard → Auth → Password Security.
 9. **Supabase advisor (performance):** 28 unused indexes across `bookings`, `chat_analytics`, `consent_records`, `email_audit_logs`, `feedback_events`, `intent_events`, `kb_gaps`, `legal_requests`, `privacy_requests`, `admin_authorized_users(cf_sub_id)`. Drop after confirming no usage from `cf-astro` / `cf-chatbot`.
 10. `ModelsCatalog.tsx:274` — `dangerouslySetInnerHTML` with numeric-only template (`Math.round(...)`). Currently safe; structurally fragile if the data source changes. Replace with JSX.
 11. `cms_content_history` — same root cause as Medium #8; tracked once.
@@ -88,7 +88,7 @@ The codebase's posture remains strong — RBAC numeric hierarchy, KV-backed sess
 ## Verification Methodology
 
 - **Static analysis pass:** every API route in `src/pages/api/**/*.ts` (≈50 routes) read and cross-referenced against `requireAuth()` minimum role + PLAC check + rate limit + input validation.
-- **Live Supabase audit:** `mcp__supabase__get_advisors` (security + performance) on project `zlvmrepvypucvbyfbpjj`. `list_tables` confirmed all 18 public tables have RLS enabled.
+- **Live Supabase audit:** `mcp__supabase__get_advisors` (security + performance) on project `[SUPABASE_PROJECT_REF]`. `list_tables` confirmed all 18 public tables have RLS enabled.
 - **Frontend XSS pass:** grep + per-file review of every `dangerouslySetInnerHTML`, `innerHTML =`, `eval(`, `new Function(`, `setTimeout('string')`, `window.location = userInput`, `target="_blank"` without `noopener`.
 - **Per-route PLAC enforcement audit:** table built of which endpoints check `actor.accessMap[?]` (5 had ad-hoc checks, 45 did not).
 - **CVE scan:** `npm audit --json` — 16 vulns reported.

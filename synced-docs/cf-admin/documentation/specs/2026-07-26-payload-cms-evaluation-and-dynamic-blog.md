@@ -131,7 +131,7 @@ This is not a soft recommendation. It is the vendor stating the free plan does n
 
 ### 5.1 Current state — verified
 
-The Cloudflare account (`320d1ebab5143958d2acd481ea465f52`) is on the **Workers Free plan**,
+The Cloudflare account (`[CF_ACCOUNT_ID]`) is on the **Workers Free plan**,
 as are all other services. Confirmed with the owner 2026-07-26. This matches
 [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) §8 and
 [`RULESAd.md`](../../RULESAd.md) §15 ("TOTAL MONTHLY COST — $0"), which are the canonical
@@ -564,7 +564,7 @@ Verified as **already correct** and left unchanged:
 - Revalidation receiver + KV injection → `cf-astro/src/pages/api/revalidate.ts`
 - Current static blog → `cf-astro/src/content.config.ts`, `cf-astro/src/pages/{es,en}/blog/`
 - AI blog drafting (already built) → `cf-astro/src/pages/api/admin/generate-blog-draft.ts`
-- Live D1 state → `madagascar-db` `7fca2a07-d7b4-449d-b446-408f9187d3ca`, 23 tables, 1.9 MB
+- Live D1 state → `madagascar-db` `[D1_MADAGASCAR_DB_ID]`, 23 tables, 1.9 MB
 
 ---
 

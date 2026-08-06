@@ -183,7 +183,7 @@ bespoke `sr-*` CSS class system. `SessionForensicsDrawer.tsx` was the worst
 offender in the whole tree — raw hex gradients (`linear-gradient(180deg,
 #0f172a 0%, #090d16 100%)`, `backgroundColor: '#060911'`) with zero token usage,
 so it never responded to the light theme at all. Migrated to `Card`/`Badge`;
-`SessionCommandCenter`'s KPI ribbon → `MetricCard`, tab bar → `Tabs`, cards →
+`[SUPABASE_PROJECT_REF]`'s KPI ribbon → `MetricCard`, tab bar → `Tabs`, cards →
 `Card`, badges → `Badge`; the two forensic drawers and `ForensicComponents`
 followed.
 
@@ -194,7 +194,7 @@ needed (`PageRegistryConfirmModal.tsx`'s `bg-[#11141d]`/`text-white/50`, and
 **Bookings** (`src/components/admin/bookings/`, 16 files) had **zero**
 theme-token usage anywhere — raw slate/white/black Tailwind throughout. The
 highest-leverage single fix was `src/lib/bookings/constants.ts`: three shared
-functions (`getServiceBadgeStyle`, `getStatusBadgeStyle`, `getPaymentBadgeStyle`)
+functions (`[SUPABASE_PROJECT_REF]`, `getStatusBadgeStyle`, `[SUPABASE_PROJECT_REF]`)
 returned raw hex/rgba inline-style objects consumed by six different booking
 views. Rewriting those three functions to build colours from `var(--theme-*)`
 via a `color-mix()` tint helper fixed all six consumers at the source.
@@ -232,12 +232,12 @@ security fix in §2.1 legitimately added the sanitiser back:
 
 | File | At split | After | Extracted into |
 |------|---------:|------:|----------------|
-| `SessionCommandCenter.tsx` | 628 | **487** | `sessionBadges.ts`, `ActiveSessionsPanel`, `AuthHistoryPanel`, `EdgeBlocksPanel` |
+| `[SUPABASE_PROJECT_REF].tsx` | 628 | **487** | `sessionBadges.ts`, `ActiveSessionsPanel`, `AuthHistoryPanel`, `EdgeBlocksPanel` |
 | `Composer.tsx` | 393 | **284** | `SaveIndicator`, `ComposerHeader`, `ComposerActionBar` |
 | `EmailPortal.tsx` | 347 | **272** | `EmailSidePanel` |
 | `RichEditor.tsx` | 332 | **197** | `richEditorBlocks.ts`, `RichEditorToolbar`, `SlashCommandMenu` |
 
-`SessionCommandCenter` was over even the raised 600-line threshold
+`[SUPABASE_PROJECT_REF]` was over even the raised 600-line threshold
 `eslint.config.js` whitelists for it; it is now back under. All four splits are
 pure structural extraction with no behavioural change.
 
@@ -341,7 +341,7 @@ benchmark. "Before" = state at `e860dff`.
 | **Dashboard data honesty** | 1 | 5 | Was: one wholly fabricated card and three invented sparklines, in direct breach of RULE #0.5. Now: every rendered value traces to a real `AnalyticsMetrics` field. |
 | **Theme correctness** | 2 | 5 | Was: 652 raw colour values; four whole modules dark-only. Now: 0. Rated 5 on code correctness; see the caveat in §6 — not visually verified in a browser. |
 | **Design-system adherence** | 2 | 4 | Was: primitives breached the "no raw hex" rule; brand-colour coding contradicted the single-accent rule. Now: token-driven throughout, indigo/cyan mapped to sanctioned section tokens. Not 5 — some `sr-*`/`ios-*`/`diag-*` bespoke class systems still exist for layout. |
-| **Component-size discipline** | 2 | 4 | Was: 4 files at 234–619 lines against a documented 200-line limit. Now: 197–487. Not 5 — `SessionCommandCenter` (487) is under its whitelisted 600 but still over the general guideline, and `Composer` (284) / `EmailPortal` (272) remain over it too. |
+| **Component-size discipline** | 2 | 4 | Was: 4 files at 234–619 lines against a documented 200-line limit. Now: 197–487. Not 5 — `[SUPABASE_PROJECT_REF]` (487) is under its whitelisted 600 but still over the general guideline, and `Composer` (284) / `EmailPortal` (272) remain over it too. |
 | **Accessibility** | 2 | 3 | Modest, honest movement: −3 A11Y-01, −1 A11Y-06, plus a real ARIA tab implementation. 36 A11Y-01 findings remain repo-wide. `ACCESSIBILITY.md` still correctly claims non-conformance. |
 | **Code duplication** | 2 | 4 | Two parallel dropdown implementations unified; six booking views fixed via one shared module; three tab panels extracted from one god-component. |
 | **Dependency hygiene** | 3 | 5 | 12 exceptions describing advisories for a package not in the tree, plus an inert override — all removed. Remaining 5 exceptions are genuine and evidence-backed. |
