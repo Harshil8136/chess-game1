@@ -157,8 +157,8 @@ An isolated, lightweight worker sidecar consumes the queue on behalf of **both**
 
 ### 6.3 Delivery Webhooks & Observability
 
-- **Webhook Endpoint**: `POST /api/webhooks/brevo` (cf-astro) captures delivery, bounces, and complaints from the primary provider.
-- **Security**: Because the Edge Worker lacks standard Node.js crypto binaries, signature verification is computed manually using the **Web Crypto API** (`crypto.subtle.verify`).
+- **Webhook Endpoint**: `POST /api/webhooks/brevo` (cf-astro) captures delivery, bounces, and complaints from the primary provider. This lives in cf-astro itself, not the consumer worker — `cf-astro-email-consumer` is queue-only (no `fetch()` handler), so it cannot receive inbound HTTP webhooks at all.
+- **Security**: Brevo does not sign webhook payloads by default, so this is **not** signature/HMAC verification — it's a constant-time shared-secret comparison (`timingSafeEq`, `src/lib/security.ts`) against `BREVO_WEBHOOK_SECRET` (a cf-astro secret), checked from either the `Authorization` header or a `?secret=`/`?token=` query param. Never log the raw query string unredacted.
 - **Audit Log**: Verified webhook events are pushed into the `email_audit_logs` Supabase table inside a JSONB `delivery_events` array for auditing.
 
 ---
@@ -209,6 +209,13 @@ npx wrangler kv:namespace create SESSION
 npx wrangler secret put DATABASE_URL        # Supabase postgres:// URL
 # Note: BREVO_API_KEY (primary) and RESEND_API_KEY (failover) are secrets on
 # the shared cf-astro-email-consumer worker, not on cf-astro itself.
+npx wrangler secret put BREVO_WEBHOOK_SECRET # Verifies inbound Brevo delivery-status
+                                              # webhook (/api/webhooks/brevo) — this
+                                              # ONE Brevo secret lives on cf-astro
+                                              # itself, unlike BREVO_API_KEY above.
+                                              # Must match the token/header value
+                                              # configured in the Brevo dashboard's
+                                              # webhook settings exactly.
 npx wrangler secret put REVALIDATION_SECRET  # Webhook bearer key
 npx wrangler secret put SENTRY_AUTH_TOKEN    # Sentry source map uploader token
 ```
