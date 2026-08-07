@@ -72,21 +72,18 @@ the things nobody knows about.
 
 ## 3. Known defects
 
-From `python3 scripts/a11y_check.py`, 2026-07-25:
+From `python3 scripts/a11y_check.py`, 2026-08-07:
 
 | Rule | Criterion | Count | Status |
 |---|---|:---:|---|
-| A11Y-01 | 4.1.2 — icon-only `<button>` with no accessible name | **39** | 🔴 Open |
+| A11Y-01 | 4.1.2 — icon-only `<button>` with no accessible name | **0** | ✅ Fixed 2026-08-07 |
 | A11Y-02 | 1.1.1 — `<img>` without `alt` | 0 | ✅ |
-| A11Y-03 | 4.1.2 — `<dialog>` without an accessible name | 0 | ✅ Fixed 2026-07-25 |
-| A11Y-04 | 2.4.4 — link without discernible text | **6** | 🔴 Open |
+| A11Y-03 | 4.1.2 — `<dialog>` without an accessible name | **0** | ✅ Fixed 2026-08-07 |
+| A11Y-04 | 2.4.4 — link without discernible text | **0** | ✅ Fixed 2026-08-07 |
 | A11Y-05 | 2.4.3 — positive `tabindex` | 0 | ✅ |
 | A11Y-06 | 3.1.1 — `<html>` without `lang` | 0 | ✅ Fixed 2026-07-25 |
 
-The 45 open findings each need an individually written label — a mechanical fix,
-but not one that can be auto-generated meaningfully. Tracked for burn-down in
-[`../../MAINTENANCE.md`](../../MAINTENANCE.md). The guard runs `--warn-only`
-until they reach zero, matching how `RULESAd.md` §9.0 rolled out SEC-03/SEC-04.
+All static accessibility findings have been completely resolved (0 findings). The guard runs in strict **blocking** mode in `package.json` (`npm run verify`).
 
 **Impact:** a screen-reader user hears "button" with no indication of what it
 does. For an icon-only control this is a total loss of function, so despite the

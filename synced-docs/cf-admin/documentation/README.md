@@ -152,7 +152,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`runbooks/brevo-webhook.md`](runbooks/brevo-webhook.md) | Enable Brevo delivery webhook: Worker secret + CF Access bypass policy + Brevo config | active |
 | [`runbooks/supabase-leaked-password-protection.md`](runbooks/supabase-leaked-password-protection.md) | Enable Supabase Auth HIBP leaked-password check (3-step dashboard toggle) | active |
 | [`runbooks/supabase-account-advisor-sweep.md`](runbooks/supabase-account-advisor-sweep.md) | Quarterly account-wide advisor sweep: enumerate every Supabase project before checking any, triage table, 2026-07-29 baseline (production 1 finding vs superseded project 128), and the export-before-pause ordering | active |
-| [`runbooks/public-share-links-domain-isolation.md`](runbooks/public-share-links-domain-isolation.md) | External vendor share links + RFC 8058 unsubscribe served from a dedicated, never-Access-enrolled hostname (`share.madagascarhotelags.com`); also documents the pipeline.ts public-route ordering bug this fixed | active |
+| [`runbooks/public-share-links-domain-isolation.md`](runbooks/public-share-links-domain-isolation.md) | External vendor share links + RFC 8058 unsubscribe reachable on the single primary domain (`secure.madagascarhotelags.com`) via a Cloudflare Access Path-Based Bypass Policy — supersedes the earlier dedicated-hostname (`share.madagascarhotelags.com`) design | active |
 
 ## Archive (historical — kept verbatim)
 
