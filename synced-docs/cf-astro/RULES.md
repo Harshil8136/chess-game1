@@ -30,6 +30,19 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 ---
 
+## 🛡️ RULE #0.6 — REUSE BEFORE CREATION (D1/Supabase/KV/services)
+
+**Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order.** This applies with extra force here because `madagascar-db` (D1) and the Supabase project are **shared with cf-admin** — a table added carelessly from this repo is exactly as much clutter as one added from cf-admin's.
+
+1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
+2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** Active connectors exist for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case rather than defaulting either direction (see the audit doc §4 for three worked examples).
+3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.**
+
+- ❌ **FORBIDDEN:** Creating a new table/namespace/service integration in the shared D1/Supabase infrastructure without first checking for an existing one that already fits.
+- ✅ **ALLOWED, and expected:** Creating new infrastructure when the check comes back negative.
+
+---
+
 ## 1. PROJECT IDENTITY
 
 | Property           | Value                                                                        |
