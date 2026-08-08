@@ -605,15 +605,15 @@ Resend Email: Direct `fetch` API + HTML string builders (consumer worker only)
 
 ### 6.12 Supabase Project Configuration
 
-| Property          | Value                                               |
-| ----------------- | --------------------------------------------------- |
-| **Project ID**    | `[SUPABASE_PROJECT_REF]`                            |
-| **Project Name**  | cf-astro                                            |
-| **Region**        | us-east-1                                           |
-| **Database Host** | `db.[SUPABASE_PROJECT_REF].supabase.co`             |
+| Property          | Value                                                 |
+| ----------------- | ----------------------------------------------------- |
+| **Project ID**    | `[SUPABASE_PROJECT_REF]`                              |
+| **Project Name**  | cf-astro                                              |
+| **Region**        | us-east-1                                             |
+| **Database Host** | `db.[SUPABASE_PROJECT_REF].supabase.co`               |
 | **REST API**      | `https://[SUPABASE_PROJECT_REF].supabase.co/rest/v1/` |
-| **RLS Enabled**   | ✅ On ALL public tables                             |
-| **PII Storage**   | Bookings, pets, consent, privacy requests           |
+| **RLS Enabled**   | ✅ On ALL public tables                               |
+| **PII Storage**   | Bookings, pets, consent, privacy requests             |
 
 ### 6.12.1 Dual-Role Database Connection Strategy (Security)
 
