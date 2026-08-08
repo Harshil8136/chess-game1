@@ -15,10 +15,13 @@ daily at 07:00 Aguascalientes and emails you if consent writes stop or error.
 
 ## Consent data
 
-| What                                          | Store                         | Table              | Notes                                                                                                              |
-| --------------------------------------------- | ----------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| **Legal consent evidence** (the real records) | **Supabase Postgres**         | `consent_records`  | Written by cf-astro `/api/consent` via Drizzle. THE source of truth.                                               |
-| Attempt audit trail (dead-letter)             | Cloudflare D1 `madagascar-db` | `consent_attempts` | Written BEFORE validation; every click lands here even if the Postgres write later fails. 90-day target retention. |
+| What                                          | Store                         | Table                             | Notes                                                                                                              |
+| --------------------------------------------- | ----------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Legal consent evidence** (the real records) | **Supabase Postgres**         | `consent_records`                 | Written by cf-astro `/api/consent` via Drizzle. THE source of truth.                                               |
+| Attempt audit trail (dead-letter)             | Cloudflare D1 `madagascar-db` | `consent_attempts`                | Written BEFORE validation; every click lands here even if the Postgres write later fails. 90-day target retention. |
+| Replay outbox (undelivered records)           | Cloudflare D1 `madagascar-db` | `consent_attempts.replay_payload` | The exact canonical Postgres row, held until delivery. Non-NULL = not yet in Supabase. Drained automatically.      |
+
+Full architecture and runbook: **[`CONSENT-RECORD-SYSTEM.md`](./CONSENT-RECORD-SYSTEM.md)**.
 
 There is **no** `consent_records` table in D1 anymore. It was a legacy,
 always-empty leftover from the Supabase migration; it was dropped 2026-07-19
@@ -45,8 +48,36 @@ WHERE created_at >= datetime('now', '-14 days')
 GROUP BY day, status ORDER BY day DESC;
 ```
 
-Healthy = every row `db_success`. `db_error` / `env_missing` = recording is
+Healthy = every row `db_success` (or `db_replayed`, meaning it reached Postgres
+on a later retry — equally valid). `db_error` / `env_missing` = recording is
 broken, fix immediately (the heartbeat workflow alerts on exactly this).
+`replay_exhausted` = a record gave up retrying and needs manual recovery.
+
+```sql
+-- D1: anything still undelivered to Supabase right now
+SELECT id, created_at, status, replay_attempts, error_code
+FROM consent_attempts
+WHERE replay_payload IS NOT NULL AND replayed_at IS NULL
+ORDER BY created_at;
+```
+
+**30-second health check, no credentials beyond one secret:**
+
+```bash
+curl -sS -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
+  'https://madagascarhotelags.com/api/health/?probe=consent' | jq '.checks'
+```
+
+`consent_insert: "ok (…ms)"` means the full write path — schema, grants, RLS,
+connectivity — is verified against production right now. It performs a real
+INSERT inside a rolled-back transaction, so it proves the path without
+writing a row.
+
+> **Duplicate records are possible and are not a bug.** If a consent write
+> succeeds but the response is lost in transit, the browser retry queue re-sends
+> it and the server assigns a new id. Over-recording consent is legally
+> harmless; under-recording is not, so the trade-off is deliberate. Collapse
+> duplicates offline by `session_id` + `created_at` if you ever need exact counts.
 
 ## Traffic data
 

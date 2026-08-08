@@ -39,27 +39,48 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.**
 
 - ❌ **FORBIDDEN:** Creating a new table/namespace/service integration in the shared D1/Supabase infrastructure without first checking for an existing one that already fits.
+
+---
+
+## 🗄️ RULE #0.7 — A SCHEMA CHANGE IS THREE ARTEFACTS, NOT ONE
+
+**A migration file in this repo is NOT evidence that the migration was applied. The database's own ledger is.**
+
+On 2026-08-07 a column was added to `src/lib/db/schema.ts`, a migration was hand-written for it, and it was never journalled and never applied. CI was green. The deploy succeeded. Every consent write then failed in production with Postgres `42703` for ~22 hours, silently discarding legal consent evidence, and no alert fired. See `Documentation/INCIDENT-2026-08-07-CONSENT-OUTAGE.md`.
+
+A schema change is complete only when **all three** exist:
+
+1. The change in `src/lib/db/schema.ts` (Postgres) or the D1 DDL.
+2. A migration **generated**, never hand-written — `npm run db:generate` — committed together with its `drizzle/meta/NNNN_snapshot.json` **and** its `drizzle/meta/_journal.json` entry.
+3. The migration **applied**, and confirmed present in `supabase_migrations.schema_migrations` (Postgres) or `d1_migrations` (D1).
+
+- ❌ **FORBIDDEN:** Hand-writing any `.sql` file into `drizzle/`. Without the paired snapshot and journal entry Drizzle cannot see it, and neither can the drift guard.
+- ❌ **FORBIDDEN:** Committing a `src/lib/db/schema.ts` change without running `npm run db:check`.
+- ❌ **FORBIDDEN:** Treating a merged PR as "the migration is live". Nothing in CI or the deploy path applies migrations — application is a manual step that must be verified against the ledger.
+
+**Enforcement:** `npm run db:check` guards artefacts 1-2 in CI with no database access. `GET /api/health/?probe=consent` guards artefact 3 against production hourly, by performing a real rolled-back INSERT. Both are required; neither is sufficient alone.
+
 - ✅ **ALLOWED, and expected:** Creating new infrastructure when the check comes back negative.
 
 ---
 
 ## 1. PROJECT IDENTITY
 
-| Property           | Value                                                                        |
-| ------------------ | ---------------------------------------------------------------------------- |
-| **Framework**      | Astro 6.0+ with `@astrojs/cloudflare` adapter                                |
-| **UI Islands**     | Preact (3KB, React-compatible) for interactive components                    |
-| **Hosting**        | Cloudflare Pages (unlimited bandwidth, free)                                 |
-| **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)        |
-| **Cache**          | Cloudflare KV + Upstash Redis                                                |
-| **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)        |
+| Property           | Value                                                                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Framework**      | Astro 6.0+ with `@astrojs/cloudflare` adapter                                                                                                                                                                                |
+| **UI Islands**     | Preact (3KB, React-compatible) for interactive components                                                                                                                                                                    |
+| **Hosting**        | Cloudflare Pages (unlimited bandwidth, free)                                                                                                                                                                                 |
+| **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)                                                                                                                                                        |
+| **Cache**          | Cloudflare KV + Upstash Redis                                                                                                                                                                                                |
+| **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)                                                                                                                                                        |
 | **Email**          | Async via Cloudflare Queue → shared `cf-astro-email-consumer` worker. Brevo is primary for every send (cf-astro and cf-admin alike); Resend is an automatic same-request failover if Brevo throws — not a per-project split. |
-| **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges)                            |
-| **Analytics**      | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine      |
-| **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing)        |
-| **Logging**        | BetterStack (`@logtail/edge`, server-side structured logging)                |
-| **i18n**           | Astro built-in (es/en with prefix routing)                                   |
-| **CSS**            | Tailwind CSS **v4** via `@tailwindcss/vite` Vite plugin                      |
+| **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges)                                                                                                                                                                            |
+| **Analytics**      | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine                                                                                                                                                      |
+| **Error Tracking** | Sentry (`@sentry/browser` + `@sentry/cloudflare` distributed tracing)                                                                                                                                                        |
+| **Logging**        | BetterStack (`@logtail/edge`, server-side structured logging)                                                                                                                                                                |
+| **i18n**           | Astro built-in (es/en with prefix routing)                                                                                                                                                                                   |
+| **CSS**            | Tailwind CSS **v4** via `@tailwindcss/vite` Vite plugin                                                                                                                                                                      |
 
 ---
 
