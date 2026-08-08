@@ -3,7 +3,12 @@
 
 How a consent click becomes a durable legal record, what happens when that
 fails, and how to fix it. Written after the 2026-08-07 outage, in which every
-consent click was silently discarded for ~22 hours.
+consent click was silently discarded.
+
+> For the full background — what broke, why nobody was paged, every design
+> decision and its rationale — see
+> [`CONSENT-ENGINEERING-RECORD-2026-08.md`](./CONSENT-ENGINEERING-RECORD-2026-08.md).
+> **This document is the runbook**: read it when something is on fire.
 
 **The guarantee:** a consent click is never lost. Not to schema drift, not to a
 Supabase outage, not to a bad deploy, not to a dropped mobile connection.
@@ -43,6 +48,12 @@ Four independent layers have to fail simultaneously to lose a record:
 | ③   | Canonical row builder  | column drift between the three writers                      | `src/lib/consent/consent-contract.ts`      |
 | ④   | Server outbox + replay | Postgres unreachable or rejecting                           | `src/lib/consent/consent-outbox.ts`        |
 
+**The visitor is never shown any of this.** There is no retry button, no error
+toast, no "something went wrong" state, and no second consent prompt. Recovery
+is entirely a backend concern — the banner dismisses and that is the last the
+customer ever hears of it. Any change that surfaces a consent failure in the UI
+is a regression.
+
 ## 2. The three writers
 
 All go through `buildConsentInsert()`. Never inline a
@@ -70,7 +81,27 @@ visible error and the user retries — the silent-loss problem does not apply.
 | `next_replay_at`  | Lease/backoff marker. NULL = not eligible.                       |
 | `replayed_at`     | Delivery timestamp. Non-NULL = done.                             |
 
-Backoff is `min(2^attempts, 60)` minutes. Two triggers:
+Retry policy depends on **why** the write failed — see `isTransientDbError()`
+in `src/lib/consent/consent-outbox.ts`:
+
+| Failure class | Examples                                                                                               | Drain behaviour                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **Transient** | `08xxx` connection, `53xxx` resources, `57P0x` shutdown, `40001` serialization, `ECONNRESET`, timeouts | exponential backoff `min(2^attempts, 60)` min; **exhausts** at 12 attempts |
+| **Permanent** | `42703` undefined column, `42501` insufficient privilege, `23xxx` constraint violation                 | retried **hourly, forever** — never exhausts                               |
+| **Unknown**   | no SQLSTATE, unrecognised message                                                                      | treated as transient (a wasted retry is cheaper than an abandoned record)  |
+
+Permanent failures never exhaust on purpose: a `42703` will fail identically
+until someone applies a migration, and burning the retry budget would abandon a
+legal record for a reason entirely within our control. The moment the schema is
+fixed, the record lands by itself. The heartbeat fails the run on the first
+`permanent > 0`, so it is never quiet about it.
+
+`/api/consent` additionally retries a **transient** failure once inline, on a
+fresh connection, before falling through to the outbox — fixing a dropped
+socket in ~50ms while the visitor is still on the page. Permanent errors are
+never retried inline.
+
+Two drain triggers:
 
 - **Opportunistic** — after any successful consent write, `waitUntil` drains up
   to 5 rows (3s budget). A healthy write proves Postgres is reachable, so it is
