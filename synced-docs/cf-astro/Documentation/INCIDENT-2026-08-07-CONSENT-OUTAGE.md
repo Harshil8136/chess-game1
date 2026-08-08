@@ -5,9 +5,14 @@
 - **Window**: 2026-08-07 18:33 UTC → 2026-08-08 02:20 UTC (~7h45m)
 - **Impact**: 100% of cookie-banner consent decisions failed to persist. Booking
   and contact consent were unaffected.
-- **Detected**: 2026-08-08, by investigation — **not** by any alert.
-- **Volume**: low. The site averages ~5 consent records/day; the window covers
-  roughly 1-3 lost records. The failure rate, however, was total.
+- **Detected**: 2026-08-08, by investigation — **not** by any alert. (Sentry had
+  captured both failures within seconds; nothing was configured to notify a
+  human. See cause 2.)
+- **Volume**: **exactly 2 records**, both since recovered at full fidelity — see
+  [Recovery](#recovery--both-lost-records-restored-at-full-fidelity). The count
+  is measured, not estimated: the D1 audit trail survived the outage intact.
+  Small in count; the failure rate was nonetheless total.
+- **Status**: Resolved. Root cause fixed, both records restored, guards in place.
 
 ## What happened
 
@@ -44,9 +49,14 @@ important half of the incident.
 1. **`locals.cfContext` was never assigned.** It was read in six places, but
    nothing bridged it from the adapter's `locals.runtime.ctx`. It was always
    `undefined`.
-2. **Server-side Sentry was therefore never initialised.** `middleware.ts`
-   guards `Sentry.wrapRequestHandler` on `cfCtx` being truthy, so it never ran,
-   so `captureApiError`'s `captureException` had no client to send to.
+2. **Sentry DID receive the errors — nobody was notified.** This corrects an
+   earlier version of this document, which claimed server-side Sentry was never
+   initialised. It was: both failures are recorded as
+   [`CF-ADMIN-1F`](https://pet-hotel-madagascar.sentry.io/issues/CF-ADMIN-1F) at
+   `21:07:35.337Z` and `01:45:36.000Z`, tagged `api.route=api/consent`, with the
+   complete Postgres error. The capture path worked. What did not exist was any
+   **alert rule or routing** that turned those two events into a notification, so
+   they sat unread in a project named `cf-admin`.
 3. **The alert was severity-gated below email.** `captureApiError` hardcoded
    `severity: 'warning'`, which routes to console + D1 + Sentry only. Only
    `critical` reaches the email channel.
@@ -55,18 +65,48 @@ important half of the incident.
    promise when the Response returned.
 5. **The heartbeat ran daily, read only D1, and skipped silently** when
    `CLOUDFLARE_API_TOKEN` was absent.
-6. **The D1 audit trail may itself have been broken.** The same commit added
-   `accessibility_accommodation` to D1's `consent_attempts`; if that migration
-   was also unapplied, `[SUPABASE_PROJECT_REF]` was throwing into a `catch` that
-   only calls `console.error`.
+6. **The D1 audit trail was intact.** Also corrected: migration 0013 _had_ been
+   applied to D1 (though it was missing from the `d1_migrations` ledger), so
+   `[SUPABASE_PROJECT_REF]` kept working throughout. That is the only reason the
+   two lost records were recoverable at all.
 
-A single missing column took down the write path; six independent gaps in the
-observability path meant it ran for a day unnoticed.
+A single missing column took down the write path. The observability path did not
+fail to _record_ — it failed to _tell anyone_, which is a different and more
+insidious problem: the evidence existed the whole time and no human ever saw it.
 
 ## Resolution
 
 Applied the DDL through Supabase's own migration ledger. Consent recording
 resumed immediately, with no deploy. All 315 existing rows untouched.
+
+## Recovery — both lost records restored at full fidelity
+
+Exactly **two** consent records were lost, identified from the D1 audit trail:
+
+| Attempt     | Clicked                 | Where                             | Restored as                            |
+| ----------- | ----------------------- | --------------------------------- | -------------------------------------- |
+| `b763e8e3…` | 2026-08-07 21:07:35 UTC | Aguascalientes, MX (Edge/Windows) | `[D1_DATABASE_ID]` |
+| `3610927e…` | 2026-08-08 01:45:36 UTC | Toronto, CA (Chrome/Android)      | `[D1_DATABASE_ID]` |
+
+Both were **accepted** (`granted = true`), `cookies_essential`, locale `es`,
+notice `v3.1-2026`.
+
+The D1 dead-letter row alone would have given a degraded reconstruction — its
+`request_body` is PII-redacted, so the fingerprint and interaction proof were
+gone. But the Sentry events (see cause 2 above) captured the **entire bound
+parameter list** of the failed INSERT, including the original server-generated
+UUIDs, region/city, interaction proof, full device fingerprint, network ASN,
+Turnstile result, trace and CF ray IDs.
+
+So both records were restored **byte-for-byte as originally captured**, under
+their original UUIDs — not approximations. The only field that is not the
+original is `created_at`, which uses the server-side insert-attempt timestamp
+(the original would have been the commit timestamp, ~1s later). Each carries a
+`fingerprint_data._recovery` block recording provenance, fidelity and the
+source Sentry event ID.
+
+Verified afterwards: 0 duplicate `(session_id, created_at)` groups, 0 remaining
+`db_error` rows in D1.
 
 ## Contributing causes
 
