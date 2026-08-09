@@ -100,50 +100,17 @@ all inoperative at the same time, and five of them had been broken for a long
 time without anyone noticing, because **code that never runs looks identical to
 code that runs and finds nothing wrong.**
 
-| #   | Safeguard          | Actual state                                                                                                                                      |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `locals.cfContext` | Read in 6 places, **assigned nowhere**. Always `undefined`.                                                                                       |
-| 2   | Server-side Sentry | Captured both errors correctly (`CF-ADMIN-1F`) — but no alert rule turned them into a notification, so they sat unread. See the correction below. |
-| 3   | Alert severity     | `captureApiError` hardcoded `severity: 'warning'`, which routes to console + D1 + Sentry. **Only `critical` reaches email.**                      |
-| 4   | Alert delivery     | `fireAlertBackground` called without `waitUntil`, so the runtime cancelled the alert's HTTP calls when the Response returned.                     |
-| 5   | Consent heartbeat  | Daily, D1-only, and **skipped silently** when `CLOUDFLARE_API_TOKEN` was absent.                                                                  |
-| 6   | CI                 | Aborting at `Format Check`, so typecheck, build, vitest and knip had been **skipped on every run for days**.                                      |
+| #   | Safeguard          | Actual state                                                                                                                                |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `locals.cfContext` | Read in 6 places, **assigned nowhere**. Always `undefined`.                                                                                 |
+| 2   | Server-side Sentry | `middleware.ts` gates `Sentry.wrapRequestHandler` on `cfCtx` being truthy → never ran → no Sentry client → `captureException` went nowhere. |
+| 3   | Alert severity     | `captureApiError` hardcoded `severity: 'warning'`, which routes to console + D1 + Sentry. **Only `critical` reaches email.**                |
+| 4   | Alert delivery     | `fireAlertBackground` called without `waitUntil`, so the runtime cancelled the alert's HTTP calls when the Response returned.               |
+| 5   | Consent heartbeat  | Daily, D1-only, and **skipped silently** when `CLOUDFLARE_API_TOKEN` was absent.                                                            |
+| 6   | CI                 | Aborting at `Format Check`, so typecheck, build, vitest and knip had been **skipped on every run for days**.                                |
 
-Cause 1 is the root of 4. Cause 6 meant the pipeline was reporting failure over
-a formatting nit while verifying nothing of substance.
-
-#### Correction: Sentry was working (2026-08-08)
-
-An earlier version of this document asserted that server-side Sentry was never
-initialised, reasoning from the fact that `middleware.ts` gates
-`Sentry.wrapRequestHandler` on `cfCtx`, which was always `undefined`. Direct
-inspection of the Sentry project disproved it. Both consent failures are
-recorded as [`CF-ADMIN-1F`](https://pet-hotel-madagascar.sentry.io/issues/CF-ADMIN-1F)
-— two events at `2026-08-07T21:07:35.337Z` and `2026-08-08T01:45:36.000Z`,
-tagged `api.route=api/consent`, `handled=yes`, `environment=production`, with
-the full `PostgresError: column "accessibility_accommodation" ... does not
-exist` and the complete bound parameter list.
-
-The inference was wrong, and the corrected picture is more useful:
-
-- **Capture worked.** The events were in Sentry within seconds, every time.
-- **Notification did not exist.** No alert rule routed them anywhere, and they
-  landed in a project named `cf-admin`, where nobody was watching for a cf-astro
-  consent failure.
-
-That distinction matters for the fix. Adding more error _capture_ would have
-achieved nothing — the data was already there. What was missing was something
-that actively pushes at a human, which is exactly what the `critical` severity
-path (email via `EMAIL_QUEUE`) and the hourly probe now provide.
-
-It also had a large practical consequence: because the events carried the
-entire failed INSERT's parameters, both lost records were recoverable at **full
-fidelity** rather than as degraded reconstructions. See §8.
-
-**Recommended follow-up (outside this repo):** create a Sentry alert rule on
-`api.route:api/consent` so the capture path can page on its own, and consider
-splitting the `cf-astro` Worker into its own Sentry project rather than
-reporting into `cf-admin`.
+Cause 1 is the root of 2 and 4. Cause 6 meant the pipeline was reporting failure
+over a formatting nit while verifying nothing of substance.
 
 ### 2.5 Impact
 
@@ -466,58 +433,6 @@ response is lost, the client retry re-sends and the server assigns a new id.
 Over-recording consent is legally harmless; under-recording is not. Collapse by
 `session_id` + `created_at` offline if exact counts are ever needed.
 
-### 8.1 Recovery of the two lost records
-
-Exactly two records were lost. Both are restored, at **full fidelity**:
-
-| Attempt     | Clicked (UTC)       | Where                                                         | Restored as                            |
-| ----------- | ------------------- | ------------------------------------------------------------- | -------------------------------------- |
-| `b763e8e3…` | 2026-08-07 21:07:35 | Aguascalientes, MX — Edge 151 / Windows, Total Play (AS22884) | `[D1_DATABASE_ID]` |
-| `3610927e…` | 2026-08-08 01:45:36 | Toronto, CA — Chrome 150 / Android, Bell Mobility (AS577)     | `[D1_DATABASE_ID]` |
-
-Both accepted (`granted = true`), `cookies_essential`, locale `es`, notice
-`v3.1-2026`, identical consent-text hash.
-
-The D1 audit row alone would have given a degraded reconstruction, because
-`request_body` is PII-redacted. The Sentry events supplied the rest: the failed
-INSERT's complete bound parameter list, including the **original
-server-generated UUIDs**, `ip_region`/`ip_city`, interaction proof, the full
-device fingerprint, network ASN and colo, Turnstile result, and the trace and CF
-ray IDs. So the rows are what would have been written, not an approximation.
-
-The one field that is not original is `created_at`: it holds the server-side
-insert-_attempt_ timestamp rather than the commit timestamp (~1s later). Each
-row carries a `fingerprint_data._recovery` block with `fidelity: "complete"`,
-the source Sentry event ID and the originating attempt ID.
-
-Post-recovery verification: 321 rows, 0 duplicate `(session_id, created_at)`
-groups, 0 `db_error` rows remaining in D1.
-
-### 8.2 A race the system caught in itself
-
-At `2026-08-08 04:26:13`, a genuine visitor consent (attempt `beecdd18…`,
-Zacatecas MX) was written to Postgres successfully on the first attempt — and
-then marked `db_replayed` with `replay_attempts = 0` and no error.
-
-Cause: `[SUPABASE_PROJECT_REF]` and `drainConsentOutbox` were both scheduled with
-`waitUntil` **concurrently**. The request's own outbox row stays pending until
-`[SUPABASE_PROJECT_REF]` clears it, so the drain could claim the row the same
-request had just written and "replay" a record that never failed.
-
-Consequences were mild only because the design assumed this class of mistake:
-`onConflictDoNothing` on the pre-generated id meant **no duplicate was created**.
-The costs were a wasted Postgres round trip per consent write — on the very path
-that had just been optimised — and a misleading status.
-
-Fixed by chaining rather than parallelising: the drain now runs _after_ the
-settle completes. This also preserves the fallback, since `[SUPABASE_PROJECT_REF]`
-swallows its own errors — if it fails, the payload stays set and the following
-drain correctly picks the row up.
-
-Worth recording as the general lesson: **two independent background tasks that
-touch the same row are not independent.** The idempotency key is what turned a
-concurrency bug into a performance nit instead of duplicated legal evidence.
-
 ---
 
 ## 9. Cleanup performed
@@ -593,43 +508,19 @@ and drain automatically once the probe is green.
 `npm run db:check` enforces 1–2 offline. The health probe enforces 3 against
 production. Both are required.
 
-**Completed operationally (2026-08-08):**
+**Outstanding operational items** (need credentials not available to the agent
+that wrote this):
 
-- D1 migration **0014 applied** — `replay_payload`, `replay_attempts`,
-  `replayed_at`, `next_replay_at` and the partial index all exist. The outbox is
-  live and has already replayed in production.
-- **`d1_migrations` ledger repaired.** cf-astro migrations 0010–0014 were all
-  _applied_ but **none were recorded**. `npm run db:migrate:remote` would
-  therefore have re-run them and failed on `ALTER TABLE … ADD COLUMN` (SQLite
-  has no `IF NOT EXISTS` for columns). Backfilled, so the command is now a clean
-  no-op and future migrations apply normally. Note the ledger is **shared with
-  cf-admin** — cf-astro's `0013_add_accessibility_accommodation.sql` and
-  cf-admin's `0013_create_admin_booking_state_table.sql` coexist as distinct
-  names, which works but is worth knowing before renaming anything.
-- **Both lost consent records recovered** (§8.1).
-- Dead index `idx_consent_records_email` dropped.
-
-**Still outstanding — needs a human:**
-
-- **Add `HEALTH_CHECK_SECRET` as a GitHub Actions repository secret.** Until
-  then the token-free heartbeat leg is disabled and logs a `::warning::`. This
-  is the single most valuable remaining item: it is the leg that survives losing
-  the Cloudflare token.
-- **Create a Sentry alert rule** on `api.route:api/consent` (see the correction
-  in §2.4). Sentry captured this outage perfectly and told nobody; the Worker
-  now emails on `critical`, but Sentry itself should also be able to page.
-- Consider giving the `cf-astro` Worker its own Sentry project — its errors
-  currently report into `cf-admin`, which is where they went unnoticed.
-- Optional: `wrangler secret delete SUPABASE_SERVICE_ROLE_KEY` if one is still
-  set (§9).
-- Optional: drop the confirmed-dead `privacy_requests` table once cf-admin is
-  verified not to reference it (§9).
-
-`scripts/consent-reconcile.mjs` remains in the repo as the general-purpose
-recovery path for any _future_ pre-outbox loss, but is **not needed for this
-incident** — both records are already restored, and it would find nothing
-(it only selects rows with `replay_payload IS NULL` and `status='db_error'`,
-of which there are now none).
+- `npm run db:migrate:remote` — applies D1 migrations 0013 and 0014. Everything
+  degrades safely without them (consent still reaches Postgres), but **the
+  outbox and audit trail stay inert until this runs**.
+- Add `HEALTH_CHECK_SECRET` as a GitHub Actions repository secret, or the
+  token-free heartbeat leg stays disabled.
+- `node scripts/consent-reconcile.mjs` (dry-run first) to recover records from
+  the outage window. If D1 migration 0013 was never applied, `[SUPABASE_PROJECT_REF]`
+  was itself throwing and there is no audit trail for that window — in which
+  case nothing is recoverable and the honest outcome is a documented gap, not a
+  reconstructed record.
 
 ---
 
