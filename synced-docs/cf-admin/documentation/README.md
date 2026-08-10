@@ -113,6 +113,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
 | [`reference/commercial-readiness-checklist.md`](reference/commercial-readiness-checklist.md) | Pet-hotel decoupling roadmap toward a generic Workers admin framework | owner, technical | draft |
 | [`reference/RBAC-AT-SCALE.md`](reference/RBAC-AT-SCALE.md) | Research reference (not implemented): scaling permissions from 6 roles/small staff to 100+ roles/1000+ staff — fact-checks a proposed design, covers RBAC/PBAC/ABAC/ReBAC/bitmask models, verified Cloudflare KV/D1/Durable Objects consistency + pricing, and a recommended blueprint | ai, technical, owner | draft |
+| [`reference/PERMISSION-ARCHITECTURE-ASSESSMENT.md`](reference/PERMISSION-ARCHITECTURE-ASSESSMENT.md) | Current RBAC+PLAC+CFZT system explained end to end, fact-checked against a proposed browser-held JWT redesign; multi-benchmark comparison, per-staff-count service-usage modeling (10/20/50/100/1,000+), ×5/×10 scaling recommendations, and ASVS/SOC2 standards positioning for both designs | ai, technical, owner, non-technical | draft |
+| [`reference/DYNAMIC-ROLES-PBAC-DESIGN.md`](reference/DYNAMIC-ROLES-PBAC-DESIGN.md) | Greenfield PBAC design: fully dynamic, admin-editable roles/groups built from a fixed, code-anchored permission catalog — data model, request-resolution flow, library build-vs-buy decision, per-service usage across the current stack, and why it simplifies (not just modernizes) today's RBAC+PLAC split | ai, technical, owner, non-technical | draft |
 
 ## Compliance
 
