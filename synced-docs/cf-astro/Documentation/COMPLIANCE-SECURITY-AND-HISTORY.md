@@ -26,7 +26,7 @@ The application implements a strict zero-trust edge security paradigm. Access co
       │                                         │
       ├─► assertOrigin() (CSRF check)           ├─► Bearer Token Auth
       │                                         │
-      ├─► Turnstile Token Verify                ├─► timingSafeEq() (Constant-Time)
+      ├─► D1 dead-letter audit (pre-check)      ├─► timingSafeEq() (Constant-Time)
       │                                         │
       └─► Upstash Redis Rate Limiting           └─► IP Allowlist Check
 ```

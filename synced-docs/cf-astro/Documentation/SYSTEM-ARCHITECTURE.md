@@ -9,7 +9,7 @@ This document provides a comprehensive, production-grade technical reference for
 
 **Hotel para Mascotas Madagascar** is a luxury pet hotel and boarding business located in Aguascalientes, Mexico. The application (`madagascarhotelags.com`) serves both as a public marketing presence and a fully bilingual (ES/EN) customer booking platform.
 
-Originally constructed with Next.js on Vercel, the application was systematically migrated to **Astro 6** deployed on **Cloudflare Pages** to achieve three fundamental business goals:
+Originally constructed with Next.js on Vercel, the application was systematically migrated to **Astro 7** deployed on **Cloudflare Workers** (`wrangler deploy` — migrated off Cloudflare Pages in July 2026, see `Documentation/SEO-OPERATIONS.md` §3) to achieve three fundamental business goals:
 
 - **Zero-Cost Edge Infrastructure**: Fully utilizes Cloudflare's free tiers for static CDNs, serverless Workers, D1 SQL databases, R2 media storage, and KV namespaces.
 - **Flawless SXO (Search Experience Optimization)**: Achieves instantaneous loads and a 100/100 Core Web Vitals score by defaulting to zero client-side JavaScript for marketing pages, utilizing Astro's component framework to prerender optimized HTML at build time.
@@ -25,7 +25,7 @@ The entire application runs distributed at the network edge on the Cloudflare Ed
 graph TD
     User([User Browser]) -->|HTTPS request| CF_Edge[Cloudflare Edge Network]
 
-    subgraph Cloudflare Pages Compute
+    subgraph Cloudflare Workers Compute
         CF_Edge -->|Prerendered HTML / CSS| Static_CDN[Static Pages CDN]
         CF_Edge -->|SSR / API Routes| Edge_Worker[Serverless Worker Entrypoint]
     end
@@ -72,7 +72,7 @@ Establishes the core compilation rules, [SUPABASE_PROJECT_REF] routing, and buil
 
 ### 3.2 `wrangler.toml`
 
-Defines the Cloudflare Pages environment, build directory (`./dist`), compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
+Defines the Cloudflare Workers environment, build directory (`./dist`), compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
 
 - **`DB` (D1 Database)**: Binds the local SQLite engine for fast content delivery and dead-letter queue audits.
 - **`ISR_CACHE` (KV Namespace)**: Caches HTML page structures and CMS content blocks. _(Note: standard static assets like images and fonts bypass KV entirely and are cached natively by Cloudflare's CDN using `public, max-age=31536000, immutable`)._
@@ -87,10 +87,10 @@ Defines the Cloudflare Pages environment, build directory (`./dist`), compatibil
 
 | Endpoint                | Method | Prerender | Security                                | Purpose                                                          |
 | ----------------------- | ------ | --------- | --------------------------------------- | ---------------------------------------------------------------- |
-| `/api/booking`          | `POST` | `false`   | CSRF + Turnstile + Upstash Rate Limit   | Processes atomic booking transaction across D1 and Supabase.     |
+| `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit | Processes atomic booking transaction across D1 and Supabase.     |
 | `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison) | Purges KV Cache and updates CMS data blocks.                     |
 | `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                       | Obfuscates PostHog analytical calls to prevent ad-blocker drops. |
-| `/api/privacy/arco`     | `POST` | `false`   | CSRF + Turnstile + Rate Limit           | Handles Mexican LFPDPPP legal data requests.                     |
+| `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit           | Handles Mexican LFPDPPP ARCO identity-document + rights requests.|
 | `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                        | Hashes and logs GDPR/LFPDPPP privacy agreements.                 |
 
 ### 4.2 The Atomic Booking Transaction
@@ -103,7 +103,7 @@ The booking submission flow is designed with extreme resilience to avoid losing 
                ▼  (POST JSON Payload)
    [/api/booking (Worker SSR)]
                │
-               ├─► [1. CSRF + Turnstile Validate] (Fails closed)
+               ├─► [1. CSRF Validate] (Fails closed)
                │
                ├─► [2. Write Attempt to D1 `booking_attempts`] (Dead-Letter Logger)
                │
@@ -224,18 +224,34 @@ npx wrangler secret put SENTRY_AUTH_TOKEN    # Sentry source map uploader token
 
 ## 8. Domain Routing & DNS Setup
 
-Because `cf-astro` is deployed to Cloudflare Pages, cross-domain redirection (such as forcing `www.madagascarhotelags.com` to redirect to the apex `madagascarhotelags.com`) **cannot** be handled via the static `public/_redirects` file due to edge container limits.
+Cross-domain redirection (forcing `www.madagascarhotelags.com` and
+`pet.madagascarhotelags.com` to the apex `madagascarhotelags.com`) **cannot**
+be handled via the static `public/_redirects` file — Workers `_redirects`
+only supports relative URLs (see the comment block at the top of that file).
+Two layers exist:
 
-These redirects must be configured manually inside the **Cloudflare Dashboard**:
+1. **Primary, code-level (`src/middleware.ts`, lines 20-46):** on every
+   on-demand request, a `LEGACY_HOSTS` check (`www.*`, `pet.*`) plus an
+   `isHttp` check issue a single-hop 301 straight to
+   `https://madagascarhotelags.com`, normalizing root path and trailing
+   slash in the same response. This is the code's own defense — it does not
+   depend on any Cloudflare dashboard configuration.
+2. **Secondary, dashboard-level (defense-in-depth):** zone-level **Redirect
+   Rules** (Domain Zone → **Rules** → **Redirect Rules**) for the same three
+   hosts (`www.*`, `pet.*`, `cf-astro.pages.dev`) → apex, 301, preserving the
+   query string. See `Documentation/SEO-OPERATIONS.md` §1.6.
 
-1. Navigate to your Domain Zone > **Rules** > **Redirect Rules**.
-2. Create a rule:
-   - **Expression**: `(http.host eq "www.madagascarhotelags.com")` or `(http.host eq "cf-astro.pages.dev")` or `(http.host eq "pet.madagascarhotelags.com")`.
-   - **Type**: Dynamic 301 Redirect.
-   - **Target URL**: `concat("https://madagascarhotelags.com", http.request.uri)`
-   - **Preserve Query String**: Enabled.
-
-This completely resolves GSC "Redirect errors" and consolidates search rank authority onto the apex domain.
+> **Known issue, live as of 2026-08-10 — not yet resolved despite the code
+> above being correct:** production traffic on `www.*` and `pet.*` is
+> observed 301-redirecting to *itself* (an infinite loop), which the current
+> `middleware.ts` logic cannot produce if it is actually executing for those
+> requests. This points to a Cloudflare **account-configuration** issue —
+> most likely `www`/`pet` are still bound as Custom Domains on a stale,
+> no-longer-deployed Cloudflare Pages project from before the July 2026
+> migration to a plain Worker, rather than on the current `cf-astro` Worker
+> alongside the apex domain. See the fix plan for the full live diagnosis
+> and dashboard remediation steps; this note should be removed once the
+> live curl checks there come back clean.
 
 ---
 
@@ -261,7 +277,7 @@ To ensure this codebase remains perfectly editable, maintainable, and robust for
 > [!WARNING]
 > **System Architectural Invariants**
 >
-> 1. **Do Not Introduce Local Image Processors**: Never replace `passthroughImageService()` with `@astrojs/image` or standard Sharp compilation. Doing so will break static SSR execution limits on Cloudflare Pages Workers (1MB container limit).
+> 1. **Do Not Introduce Local Image Processors**: Never replace `passthroughImageService()` with `@astrojs/image` or standard Sharp compilation. Doing so will break static SSR execution limits on Cloudflare Workers (1MB container limit).
 > 2. **Never Import Database Schemas in Email Consumer**: The `cf-astro-email-consumer` worker must remain 100% decoupled from `cf-astro/src/db` and Drizzle schemas. Any imports between them will break build cycles and cause module resolution crashes during bundle packaging.
 > 3. **Preserve `trailingSlash: 'always'`**: All page-level generation logic, routing hooks, and canonical calculations rely on trailing slashes. Changing this parameter will immediately throw 404/301 loops in production.
 
