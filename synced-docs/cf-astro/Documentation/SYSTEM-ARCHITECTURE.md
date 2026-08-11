@@ -49,7 +49,7 @@ graph TD
 
 ### Technical Stack Mapping
 
-- **Framework**: Astro 6.1.2+ configured with the official `@astrojs/cloudflare` adapter.
+- **Framework**: Astro 7.1+ configured with the official `@astrojs/cloudflare` adapter.
 - **Rendering Strategy**: Static-first Hybrid model (`output: 'static'`). Pages are precompiled to pure HTML unless explicitly marked with `export const prerender = false` (which triggers edge SSR).
 - **Styling**: Tailwind CSS v4 utilizing the high-performance `@tailwindcss/vite` compiler plugin for lightning-fast builds.
 - **Hydration Core**: Preact 10+ islands (`@astrojs/preact` configured with Vite `compat: true` for React ecosystem interoperability).
