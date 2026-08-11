@@ -450,6 +450,53 @@ Scheduled posts that arrive while a cap is full are not force-published —
 they wait and retry automatically every 15 minutes until there's room
 (§3.4).
 
+### 6.4 — PLAC+RBAC Permission-Based Quality Audit Bypass (`/dashboard/content/blog#bypass-quality-audit`)
+
+Users holding the granular PLAC permission `/dashboard/content/blog#bypass-quality-audit` (registered in D1 `admin_pages` with `required_role = 'admin'`) or high-clearance roles (`vendor_support` / `owner`) can bypass the Quality Audit block when publishing or scheduling an article.
+
+#### Architecture & Enforcement Flow
+
+```
+User Request → Astro SSR (blog.astro)
+    │
+    ▼ Resolves user session & computes PLAC permission in SSR
+    ▼ checkPageAccess(user.accessMap, '/dashboard/content/blog#bypass-quality-audit')
+    │
+    ▼ Passes `canBypassQualityAudit` prop to Preact Island
+BlogManager (Preact Island)
+    │  • Enables "Bypass & Publish" with Amber Warning styling when checks fail & permission is true
+    │  • Disables "Publish Now" if permission is false and checks fail
+    │
+    ▼ POST /api/content/blog
+API Route (blog.ts)
+    │  • Evaluates evaluateSeoGate(input)
+    │  • If !gate.passed → Checks checkPageAccess(user.accessMap, '/dashboard/content/blog#bypass-quality-audit')
+    │  • Allowed: Publishes article, attaches `qualityGateBypassed: true` to Ghost Audit Log via ctx.waitUntil
+    │  • Denied: Returns 422 Unprocessable Entity
+```
+
+```mermaid
+flowchart TD
+    A[User Request] --> B[Astro SSR: blog.astro]
+    B --> C["checkPageAccess(user.accessMap, '/dashboard/content/blog#bypass-quality-audit')"]
+    C --> D[Passes canBypassQualityAudit prop to Preact Island]
+    D --> E[BlogManager Preact Island]
+    E -- "Checks fail & Bypass Allowed" --> F["Bypass & Publish Button Active (Amber Warning State)"]
+    E -- "Checks fail & Bypass Denied" --> G["Publish Button Disabled"]
+    F --> H["POST /api/content/blog"]
+    H --> I["evaluateSeoGate(input)"]
+    I -- Gate Passed --> J[Normal Publish & Purge Cache]
+    I -- "Gate Failed & canBypass == true" --> K["Publish Article + Audit Log qualityGateBypassed: true"]
+    I -- "Gate Failed & canBypass == false" --> L["Return 422 Unprocessable Entity"]
+```
+
+#### PLAC System Integration Details:
+1. **D1 Migration**: `migrations/0043_add_blog_bypass_quality_gate_plac.sql` inserts `/dashboard/content/blog#bypass-quality-audit` into `admin_pages`.
+2. **SSR Resolution**: `src/pages/dashboard/content/blog.astro` computes `canBypassQualityAudit` using `checkPageAccess` and passes it to `BlogManager`.
+3. **API Gate & Audit**: `src/pages/api/content/blog.ts` checks `checkPageAccess(user.accessMap, '/dashboard/content/blog#bypass-quality-audit')` if `evaluateSeoGate(...)` fails. When bypassed, `qualityGateBypassed: true` is included in the D1 `admin_audit_log` details via `ctx.waitUntil`.
+4. **Preact UI**: `src/components/admin/content/BlogManager.tsx` surfaces "Bypass & Publish" with amber warning styling and a toast notification on successful bypass.
+
+
 ---
 
 ## 7. Full feature list
@@ -760,9 +807,9 @@ plan.
   primary provider and Resend as an automatic failover, for both
   applications
 
-**What's still exactly as it was**
-- The AI generation flow itself (model choice, prompt, RAG grounding) is
-  unchanged — this pass hardened everything *around* it, not the
-  generation logic itself.
-- The legacy 14 static Markdown blog posts remain in place as a fallback
-  content source and were not touched.
+**What's updated in AI Generation Engine**
+- Integrated **AI System Prompt Reviewer & Customization Studio** in `/dashboard/content/blog` (Workers AI Copilot modal).
+- Staff can inspect full system prompts, view live real-time interpolated prompts, insert dynamic variable chips (`{topic}`, `{tone}`, `{locale}`, `{target_words}`, `{knowledge_base}`), and select style presets (*Deep-Dive Educational Guide*, *Commercial Comparison & Review*, *Local Services Spotlight*).
+- System prompts enforce strict semantic HTML tags (`<h2>`, `<h3>`, `<p>`, `<ul>`, `<li>`, `<blockquote class="cms-callout">`), eliminating unformatted plain text lines.
+- Custom system prompt templates persist in D1 `admin_portal_settings` (`blog_ai_system_prompt_override`) and are gated via PLAC capability `/dashboard/content/blog#edit-ai-prompts`.
+

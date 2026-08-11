@@ -66,24 +66,30 @@ Five core modules, all backed by Cloudflare D1:
 | Reviews | `/dashboard/content/reviews` | "Happy Clients" testimonials carousel |
 | **Blog Studio** | `/dashboard/content/blog` | Dynamic D1 Blog Manager & Workers AI Copilot |
 
+### 3.1 Publish Quality Gate & PLAC Bypass Capability
+- **Quality Gate**: Server-side 10-check SEO/content audit (`evaluateSeoGate`).
+- **PLAC Capability**: `/dashboard/content/blog#bypass-quality-audit` (registered in D1 `admin_pages` with `required_role = 'admin'`).
+- **Enforcement**: Users with this PLAC permission (or Owner / Vendor Support) can override failing quality gate checks and publish articles. Every bypass is audited with `qualityGateBypassed: true`.
+
+
 ---
 
 ## 4. Workers AI Author & RAG Knowledge Base Integration
 
 **File:** `src/components/admin/content/BlogAiCopilotModal.tsx` & `src/pages/api/content/ai-generate.ts`
 
-### 1. Ground-Truth RAG Pipeline
-- The AI content generator calls `getKnowledgeBaseContext(env)` in `src/lib/ai-knowledge.ts`.
-- Queries `cf-chatbot` via server-side service binding (`env.CHATBOT_SERVICE.fetch('https://cf-chatbot.internal/admin/kb')`) or HTTP fallback proxy (`chatbotFetch()`).
-- Retrieves official Madagascar Pet Hotel knowledge base items (pricing, suite types, spa services, vet care, location in Aguascalientes).
-- Injects ground-truth context into Workers AI system prompt (`Llama 3.3 70B`, `Qwen 2.5 Coder 32B`, `Llama 3.1 8B`), eliminating AI hallucinations.
+### 1. Ground-Truth RAG Pipeline & Prompt Customization Studio
+- The AI content generator calls `getKnowledgeBaseContext(env)` in `src/lib/ai-knowledge.ts` to retrieve ground-truth facts from `cf-chatbot`.
+- Staff can open **"System Prompt & Style Studio"** in the Copilot modal to inspect the **full system prompt in detail**, view live interpolated prompt previews, insert variable chips (`{topic}`, `{tone}`, `{locale}`, `{target_words}`, `{knowledge_base}`), and select style presets (*Deep-Dive Educational Guide*, *Commercial Comparison & Review*, *Local Services Spotlight*).
+- System prompts strictly enforce semantic HTML wrapping (`<h2>`, `<h3>`, `<p>`, `<ul>`, `<li>`, `<blockquote class="cms-callout">`), eliminating unformatted plain text lines.
+- Custom prompts persist in D1 `admin_portal_settings` (`blog_ai_system_prompt_override`) and are gated via PLAC capability `/dashboard/content/blog#edit-ai-prompts`.
 
 ### 2. Structured 7-Field JSON Output
 The AI model returns a validated JSON payload containing:
 1. `title` (SEO Headline)
 2. `slug` (URL-friendly kebab-case string)
 3. `description` (1-2 sentence meta description)
-4. `body` (Rich HTML with `<h2>`, `<h3>`, `<p>`, `<ul>`, `<blockquote>`)
+4. `body` (Rich HTML with `<h2>`, `<h3>`, `<p>`, `<ul>`, `<blockquote class="cms-callout">`)
 5. `translation_slug` (Suggested English/Spanish paired slug)
 6. `seo_score` (Target visibility estimate)
 7. `direct_answers` (Q&A blocks for AI Overview / ChatGPT / Perplexity citations)
