@@ -3,15 +3,18 @@
 title: "Staff Managed Storage"
 status: active
 audience: [non-technical, ai, technical, operator]
-last_verified: 2026-08-05
+last_verified: 2026-08-12
 verified_against: [code, infra]
 owner: harshil
 related_code:
 - src/pages/dashboard/storage/
 - src/components/admin/storage/
 - src/pages/api/storage/
+- src/pages/api/storage/request/
+- src/pages/api/storage/requests/
 - src/lib/storage/
 - src/lib/dal/StorageFileRepository.ts
+- src/lib/dal/StorageFileRequestRepository.ts
 - src/lib/dal/PortalSettingsRepository.ts
 - src/workers/scheduled-asset-cleanup.ts
 related_docs:
@@ -22,16 +25,17 @@ related_docs:
 - ../security/SECURITY.md
 - ../runbooks/public-share-links-domain-isolation.md
 - ../reference/coding-standards.md
-tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing]
+- ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md
+tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing, file-requests]
 
 ---
 
 # Staff Managed Storage
 
-> **TL;DR (non-technical):** A private file drive at `/dashboard/storage`, built into the admin portal, where staff keep documents, medical records, contracts, and media that don't belong on the public website. Everyone gets their own storage allowance sized to their role. Files stay private by default; a staff member can generate a time-limited, optionally passcode-protected link to share one file with an outside party (a vet clinic, a vendor) and can email that link directly from the app. Nothing here costs anything extra — it runs entirely on Cloudflare's free tier.
+> **TL;DR (non-technical):** A private file drive at `/dashboard/storage`, built into the admin portal, where staff keep documents, medical records, contracts, and media that don't belong on the public website. Everyone gets their own storage allowance sized to their role. Files stay private by default; a staff member can generate a time-limited, optionally passcode-protected link to share one file with an outside party (a vet clinic, a vendor) and can email that link directly from the app. The reverse direction also exists: a staff member can send a locked upload link asking an outside party to submit files *into* the drive (see [File Request Links](#6a-file-request-links-inbound)). Nothing here costs anything extra — it runs entirely on Cloudflare's free tier.
 
-> **Status:** Production Active (shipped 2026-08-05)
-> **Surface:** `/dashboard/storage` (drive), `/dashboard/storage/inspect` (cross-user view), `/dashboard/storage/config` (defaults & overrides)
+> **Status:** Production Active (shipped 2026-08-05; File Request Links sub-feature added 2026-08-09)
+> **Surface:** `/dashboard/storage` (drive — includes both outbound share links and inbound file requests), `/dashboard/storage/inspect` (cross-user view), `/dashboard/storage/config` (defaults & overrides)
 > **Role floor:** Staff or higher can use their own drive; higher tiers unlock cross-user and admin capability — see [Roles & Quotas](#3-roles--quotas) below.
 
 ---
@@ -98,6 +102,24 @@ This is the feature most likely to touch someone outside the company, so it's wo
 
 **Resolved 2026-08-06.** The admin portal requires staff to authenticate via Cloudflare Zero Trust Access for administrative areas (`/dashboard/*`). Public vendor share links (`/api/storage/share/[token]`) and RFC 8058 unsubscribe links are made accessible to external recipients on the single primary domain `secure.madagascarhotelags.com` via a dedicated Cloudflare Access Path-Based Bypass Policy. See [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) for full configuration details.
 
+## 6a. File Request Links (Inbound)
+
+> Added 2026-08-09. This is the mirror image of §6: instead of a staff member sending a file *out*, this lets a staff member ask someone *outside* the company to send a file *in* — a vendor's signed W-9, a client's vaccination record, a contractor's invoice — without ever creating that person a portal account.
+
+**Creating a request.** A Manager or higher (PLAC `#request-create`) opens the "File Requests" panel on their drive and fills in: who it's for (name + email), a title/note explaining what's needed, how many files are allowed (default 1), a per-file size ceiling, which file extensions are accepted, an expiry, and optionally a passcode. The system generates a locked upload link and can email it directly, the same way a share link can.
+
+**What the recipient sees.** The link opens an unauthenticated upload page — no CF Access login, no portal account. They see the title/note, drag in a file (or files, up to the allowed count), and submit. Every upload is checked against the request's own extension allowlist and size ceiling (not the requester's personal drive settings), and the file's actual bytes are verified against its claimed extension exactly like a normal upload (§5) — a mismatch is rejected and nothing is stored.
+
+**Where received files land.** Confirmed uploads are written straight into the *requesting staff member's* drive, in the folder the request specified (`/Requests` by default), tagged internally as coming from that request. They count against the staff member's own quota, not a separate pool.
+
+**Fulfillment & limits.** A request tracks how many files it has received against its cap; once the cap is hit it flips to `fulfilled` and the link stops accepting uploads. Requests also expire on a schedule the creator sets, and can be revoked early the same way a share link can.
+
+**Who can see what.** A Manager+ sees and manages the requests *they* created. Admin or higher (PLAC `#request-manage`) can view and revoke every file request link created across the organization — the same oversight pattern as `#admin-inspect` for the drive itself.
+
+**Security model.** Deliberately built on the exact same primitives as vendor share links (§6), not a parallel mechanism: the same HMAC-signed, self-expiring token format (`src/lib/storage/share-token.ts`), the same magic-byte content verification on confirm, the same `storage_share_access_logs` telemetry table, and the same Worker-level `isPublicApiRoute()` treatment. See [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) for the one open item on this: whether the Cloudflare Access edge bypass policy has actually been extended to `/api/storage/request/*` the way it was for `/api/storage/share/*` — unverified as of 2026-08-12.
+
+**What this added, infrastructure-wise (RULE #0.6/#0.8/#0.9 compliance):** zero new environment variables (reuses the existing `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`IP_HASH_SECRET` secrets already provisioned for §6's share links), and exactly **one** new D1 table (`storage_file_requests`, migration `0042`) — everything else (quota checks, extension allowlists, audit logging) reuses tables and repositories this feature already had. Two new PLAC rows (`#request-create`, `#request-manage`) were added to the existing `admin_pages` registry, not a new permission system.
+
 ## 7. Weekly Reconciliation
 
 Every Sunday at 2 AM, alongside a cleanup job that already existed for the website's image library, a companion check runs over the staff storage bucket. It compares what's actually sitting in storage against what the drive's records say should be there, and looks for two kinds of drift:
@@ -140,7 +162,7 @@ This feature was originally scoped as a much heavier build. During implementatio
 
 None of this changed what staff actually experience — the feature works exactly as originally envisioned. It changed how much new infrastructure had to exist to deliver it.
 
-## 10. Known Limitations (as of 2026-08-05)
+## 10. Known Limitations (as of 2026-08-12)
 
 Written down honestly rather than left to be discovered:
 
@@ -149,18 +171,20 @@ Written down honestly rather than left to be discovered:
 - **Folders are lightweight.** Creating an empty folder with nothing in it yet won't survive a page refresh — folders exist as a property of the files inside them, not as their own stored thing.
 - **"Require review" doesn't yet have a one-click action.** As described in §7, it currently behaves the same as "log only" — an Admin+ has to act on the weekly report manually via Inspect rather than clicking an "approve cleanup" button.
 - ~~**External sharing needs one more manual setup step.**~~ Resolved 2026-08-05 — see [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md).
+- **File Request Links' Cloudflare Access bypass status is unverified (flagged 2026-08-12).** The Worker code has treated `/api/storage/request/*` as public since launch, but it's unconfirmed whether the Zero Trust Access dashboard policy was actually extended to that path the way it was for `/api/storage/share/*`. If it wasn't, external recipients get a CF Access SSO wall instead of the upload page — see [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) for how to check and fix.
+- **File Request Links have no passcode option.** Unlike outbound share links, an inbound request link isn't passcode-protectable — the token itself is the only gate, since the recipient is fixed at creation time by email rather than by a shareable public link.
 
 ## 11. Where Things Live (for engineers / AI agents)
 
-No database schema here by design — see the migration files themselves (`migrations/0037`–`0039`) for exact table structure. This section is a map, not a reference.
+No database schema here by design — see the migration files themselves (`migrations/0037`–`0039`, `0041`–`0042`) for exact table structure. This section is a map, not a reference.
 
-- **Pages:** `src/pages/dashboard/storage/` (drive, inspect, config)
-- **UI components:** `src/components/admin/storage/`
-- **API routes:** `src/pages/api/storage/` (presign/confirm/list/quota/download/rename/delete, `[id]/share/*`, `share/[token]` for the public link, `admin/*` for inspect/config/overrides/reconciliation)
-- **Shared logic:** `src/lib/storage/` (config resolution, magic-byte signatures, share-token signing, share email)
-- **Data access:** `src/lib/dal/StorageFileRepository.ts`, and the scoped-config methods added to `src/lib/dal/PortalSettingsRepository.ts`
+- **Pages:** `src/pages/dashboard/storage/` (drive, inspect, config — File Request Links have no dedicated page, they're a panel inside the drive page itself)
+- **UI components:** `src/components/admin/storage/` — File Request Links: `CreateFileRequestModal.tsx`, `FileRequestsTable.tsx`, `RequestDetailsModal.tsx`
+- **API routes:** `src/pages/api/storage/` (presign/confirm/list/quota/download/rename/delete, `[id]/share/*`, `share/[token]` for the public share link, `admin/*` for inspect/config/overrides/reconciliation) — File Request Links: `request/[token]/{index,presign,confirm}.ts` (public, recipient-facing) and `requests/{index,[id]}.ts` (authenticated, staff-facing create/list/revoke)
+- **Shared logic:** `src/lib/storage/` (config resolution, magic-byte signatures, share-token signing — reused as-is for request tokens, share email)
+- **Data access:** `src/lib/dal/StorageFileRepository.ts`, `src/lib/dal/StorageFileRequestRepository.ts` (the one new table this sub-feature needed), and the scoped-config methods added to `src/lib/dal/PortalSettingsRepository.ts`
 - **Weekly job:** `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage`), wired into the Sunday branch of `src/workers/cf-entry.ts`
-- **Permissions:** standard PLAC rows under `/dashboard/storage` and its `#` sub-features — see [plac-and-audit.md](../architecture/plac-and-audit.md) for how the permission system itself works.
+- **Permissions:** standard PLAC rows under `/dashboard/storage` and its `#` sub-features, including `#request-create`/`#request-manage` — see [plac-and-audit.md](../architecture/plac-and-audit.md) for how the permission system itself works.
 
 ## 12. Related
 
@@ -168,3 +192,4 @@ No database schema here by design — see the migration files themselves (`migra
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — how roles and per-user permission grants work portal-wide
 - [`reference/coding-standards.md`](../reference/coding-standards.md) — the universal scoped-config pattern this feature established for future features to reuse
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) — bucket and secret registry
+- [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the live D1/Supabase table inventory and RULE #0.6/#0.8/#0.9 reuse policy this feature (and File Request Links) were built to follow

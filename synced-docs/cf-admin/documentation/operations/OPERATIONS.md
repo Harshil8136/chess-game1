@@ -190,6 +190,17 @@ High-risk Preact components (data widgets, charts, API-bound tables) are wrapped
 
 All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [vars]`.
 
+> **RULE #0.8 — env var cap, hard stop.** cf-admin is verified at **40 env vars**
+> (17 `[vars]` + 23 secrets, live-counted 2026-08-12 against `wrangler.toml` — see
+> `../2026-08-06-data-infrastructure-audit-and-reuse-policy.md` §0). We are not
+> adding more as a default move. New feature config belongs in
+> `admin_portal_settings` (`PortalSettingsRepository.ts`) or KV — a new env var is
+> the last option, not the first. Note: the tables below (§5.1/§5.2) predate several
+> entries that already exist in `wrangler.toml` (Control Plane connector secrets,
+> `PUBLIC_ASTRO_URL`/`PUBLIC_CDN_URL`/`PUBLIC_SENTRY_DSN`, session timing vars,
+> `API_DENY_MODE`) — treat `wrangler.toml`'s own comment block as authoritative
+> for the full current list until this section is reconciled.
+
 ### 5.1 Secrets (wrangler secret put)
 
 | Secret | Status | Purpose |
@@ -210,8 +221,8 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | `IP_HASH_SECRET` | ✅ Active | Privacy-safe IP hashing in login forensics |
 | `CHATBOT_WORKER_URL` | ✅ Active | cf-chatbot Worker endpoint |
 | `CHATBOT_ADMIN_API_KEY` | ✅ Active | 64-char key securing cf-chatbot access |
-| `R2_ACCESS_KEY_ID` | 🟡 Pending owner setup (2026-08-05) | R2 S3-compatible credential, scoped ONLY to `madagascar-staff-storage`. Used by `aws4fetch` to sign presigned upload PUT URLs for the Staff Managed Storage feature. Structurally different from `CLOUDFLARE_API_TOKEN` (Bearer format) — S3 SigV4 signing requires this credential shape, no substitute. Create via Cloudflare dashboard → R2 → Manage API Tokens, scoped to this bucket only. |
-| `R2_SECRET_ACCESS_KEY` | 🟡 Pending owner setup (2026-08-05) | Paired secret for `R2_ACCESS_KEY_ID` above. |
+| `R2_ACCESS_KEY_ID` | ✅ Active (confirmed via live audit-log evidence 2026-08-12 — was mismarked 🟡 pending here; uploads have succeeded since 2026-08-06) | R2 S3-compatible credential, scoped ONLY to `madagascar-staff-storage`. Used by `aws4fetch` to sign presigned upload PUT URLs for the Staff Managed Storage feature. Structurally different from `CLOUDFLARE_API_TOKEN` (Bearer format) — S3 SigV4 signing requires this credential shape, no substitute. Create via Cloudflare dashboard → R2 → Manage API Tokens, scoped to this bucket only. |
+| `R2_SECRET_ACCESS_KEY` | ✅ Active (confirmed via live audit-log evidence 2026-08-12 — see note above) | Paired secret for `R2_ACCESS_KEY_ID` above. |
 | `PUBLIC_SUPABASE_ANON_KEY` | ❌ **REMOVED** | GoTrue client-side auth removed — `wrangler secret delete PUBLIC_SUPABASE_ANON_KEY` |
 | `TURNSTILE_SECRET_KEY` | ❌ **REMOVED** (2026-04-30) | CAPTCHA on login form — form deleted — deleted via `wrangler secret delete TURNSTILE_SECRET_KEY` |
 
@@ -224,6 +235,7 @@ All secrets set via `wrangler secret put <KEY>`. Vars set in `wrangler.toml [var
 | `CF_ACCOUNT_ID` | ✅ Active | Cloudflare account ID (analytics + CF API calls, Layer 3 revocation) |
 | `CF_D1_DATABASE_ID` | ✅ Active | D1 database UUID for GraphQL analytics queries |
 | `CF_R2_BUCKET_NAME` | ✅ Active | R2 bucket name for usage analytics |
+| `STAFF_STORAGE_BUCKET_NAME` | ✅ Active | R2 bucket name (`madagascar-staff-storage`) for the Staff Managed Storage presign flow — see [`../features/STAFF-MANAGED-STORAGE.md`](../features/STAFF-MANAGED-STORAGE.md) |
 | `CF_QUEUE_NAME` | ✅ Active | Queue name for queue stats analytics |
 | `CF_TEAM_NAME` | ✅ Active (`mascotas`) | Zero Trust team name — constructs JWKS URL + CF logout URL |
 | `CF_ACCESS_AUD` | ✅ Active | CF Access Application Audience tag — RS256 JWT audience verification |

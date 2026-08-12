@@ -3,7 +3,7 @@
 title: "Data Infrastructure Audit & Reuse-Before-Creation Policy"
 status: active
 audience: [ai, technical, owner]
-last_verified: 2026-08-06
+last_verified: 2026-08-12
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/lib/retention-tables.ts, src/pages/api/arco/requests.ts, src/pages/api/audit/sessions.ts]
@@ -33,12 +33,42 @@ policy that came out of it (§4, intended to stay current).
 
 ---
 
-## 1. D1 `madagascar-db` — live table inventory (queried 2026-08-06 via `wrangler d1 execute --remote`)
+## 0. Live totals (re-verified 2026-08-12 via Cloudflare + Supabase MCP)
 
-28 real tables (excluding `sqlite_master`/`d1_migrations` bookkeeping):
+The three-app production estate is **40 env vars** (cf-admin's Worker: 17 `[vars]` +
+23 secrets — see `wrangler.toml`) and **61 database tables**:
+
+| Store | Tables | Apps |
+|---|---:|---|
+| D1 `madagascar-db` | 29 | cf-admin + cf-astro (shared) |
+| D1 `chatbot-kb` | 9 | cf-chatbot |
+| D1 `whatsapp-chatbot` | 4 | cf-chatbot |
+| Supabase `[SUPABASE_PROJECT_REF]` `public` | 19 | cf-admin + cf-astro (shared) |
+| **Total** | **61** | |
+
+`chatbot-kb` and `whatsapp-chatbot` were not in scope of the 2026-08-06 audit below
+(that pass only covered cf-admin's own D1 + the shared Supabase project) — they're
+added here so RULE #0.8/#0.9's "40 env vars / 61 tables" figures in `main.md` have a
+single documented source. A second Supabase project (`[SUPABASE_PROJECT_REF]`,
+37 tables) also exists on the account but is the legacy/superseded project referenced
+in `runbooks/supabase-account-advisor-sweep.md` — not part of the current three-app
+system, deliberately excluded from this total.
+
+**This is a hard cap, not a target to approach.** Per RULE #0.8/#0.9, a new env var
+or a new table is the last option on the table — proposed only once every reuse path
+in §4 below has been checked and genuinely doesn't fit.
+
+---
+
+## 1. D1 `madagascar-db` — live table inventory (queried 2026-08-06 via `wrangler d1 execute --remote`; total re-verified 2026-08-12)
+
+29 real tables (excluding `sqlite_master`/`d1_migrations` bookkeeping) — 28 as of the
+2026-08-06 audit below, +1 (`storage_file_requests`, migration `0042`, shipped
+2026-08-09 — see `features/STAFF-MANAGED-STORAGE.md`):
 
 | Table | Rows | Status |
 |---|---:|---|
+| `storage_file_requests` | 2 | Live (added 2026-08-09, after this audit's original pass — File Request Links sub-feature) |
 | `admin_audit_log` | 2,042 | Live, high-volume (expected — every request writes here) |
 | `cf_access_sync_log` | 3,766 | Live, high-volume (5-minute cron self-heal, expected) |
 | `admin_login_logs` | 251 | Live |
@@ -191,6 +221,7 @@ anything — flagged for a decision):
 | 2026-08-06 | claude | Supabase MCP `list_tables` on `[SUPABASE_PROJECT_REF]` | Live Supabase inventory in §2 |
 | 2026-08-06 | claude | Grep across `cf-admin/src` for every ambiguous/zero-row table name, read matching call sites in full | Distinguished genuinely-dead tables from correctly-empty or pre-launch ones — see per-row citations in §1/§2 |
 | 2026-08-06 | claude | Web search: PostHog feature-flag pricing, edge/Workers evaluation guidance | 1M free requests/month confirmed; PostHog's own docs recommend Cloudflare KV as the edge cache layer for flag definitions — see §4 |
+| 2026-08-12 | claude | Cloudflare MCP `d1_database_query` (table count, all 3 D1 databases) + Supabase MCP `list_tables` (both projects) + manual count of `wrangler.toml` `[vars]`/documented secrets | Top-line totals only (§0): D1 `madagascar-db` now 29 (was 28, +`storage_file_requests`), `chatbot-kb` 9, `whatsapp-chatbot` 4, Supabase `public` still 19 — 61-table full-estate total added; cf-admin env var count confirmed at 40 (17 vars + 23 secrets). Per-row detail in §1/§2 below is otherwise still the 2026-08-06 pass — re-run before trusting individual row counts. |
 
 ## Related
 

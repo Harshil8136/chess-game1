@@ -93,7 +93,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) | Email Portal: compose/send, drafts, templates, scheduling, queue delivery tracking; RBAC+PLAC gating | non-technical, ai, technical, operator | active |
 | [`features/CONTROL-PLANE.md`](features/CONTROL-PLANE.md) | Service Control Plane: two-layer model, access, API surface | ai, technical | active |
 | [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
-| [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: private per-role file drive, external vendor sharing with email delivery, weekly drift reconciliation, admin quota/config controls — shipped 2026-08-05 | non-technical, ai, technical, operator | active |
+| [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: private per-role file drive, external vendor sharing with email delivery, inbound File Request Links (added 2026-08-09), weekly drift reconciliation, admin quota/config controls — shipped 2026-08-05 | non-technical, ai, technical, operator | active |
 
 ## Operations
 
@@ -154,7 +154,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`runbooks/brevo-webhook.md`](runbooks/brevo-webhook.md) | Enable Brevo delivery webhook: Worker secret + CF Access bypass policy + Brevo config | active |
 | [`runbooks/supabase-leaked-password-protection.md`](runbooks/supabase-leaked-password-protection.md) | Enable Supabase Auth HIBP leaked-password check (3-step dashboard toggle) | active |
 | [`runbooks/supabase-account-advisor-sweep.md`](runbooks/supabase-account-advisor-sweep.md) | Quarterly account-wide advisor sweep: enumerate every Supabase project before checking any, triage table, 2026-07-29 baseline (production 1 finding vs superseded project 128), and the export-before-pause ordering | active |
-| [`runbooks/public-share-links-domain-isolation.md`](runbooks/public-share-links-domain-isolation.md) | External vendor share links + RFC 8058 unsubscribe reachable on the single primary domain (`secure.madagascarhotelags.com`) via a Cloudflare Access Path-Based Bypass Policy — supersedes the earlier dedicated-hostname (`share.madagascarhotelags.com`) design | active |
+| [`runbooks/public-share-links-domain-isolation.md`](runbooks/public-share-links-domain-isolation.md) | External vendor share links + File Request Links + RFC 8058 unsubscribe reachable on the single primary domain (`secure.madagascarhotelags.com`) via a Cloudflare Access Path-Based Bypass Policy — supersedes the earlier dedicated-hostname (`share.madagascarhotelags.com`) design; flags an unverified gap for the request-link path (2026-08-12) | active |
 
 ## Archive (historical — kept verbatim)
 
