@@ -30,6 +30,15 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 ---
 
+## 🎯 RULE #0.5 — REAL DATA ONLY
+
+**Never build mock data, `Math.random()` features, or placeholder UI pages.** All data presented in the UI must be real and sourced from active endpoints/databases.
+
+- ❌ **FORBIDDEN:** Fake or randomized stats, placeholder testimonials, mock booking data, or any UI page whose content isn't backed by a real endpoint or database record.
+- ✅ **ALLOWED:** Loading states, skeletons, and empty states while real data loads — as long as the final rendered content is real.
+
+---
+
 ## 🛡️ RULE #0.6 — REUSE BEFORE CREATION (D1/Supabase/KV/services)
 
 **Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order.** This applies with extra force here because `madagascar-db` (D1) and the Supabase project are **shared with cf-admin** — a table added carelessly from this repo is exactly as much clutter as one added from cf-admin's.
@@ -46,7 +55,7 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 **A migration file in this repo is NOT evidence that the migration was applied. The database's own ledger is.**
 
-On 2026-08-07 a column was added to `src/lib/db/schema.ts`, a migration was hand-written for it, and it was never journalled and never applied. CI was green. The deploy succeeded. Every consent write then failed in production with Postgres `42703` for ~22 hours, silently discarding legal consent evidence, and no alert fired. See `Documentation/INCIDENT-2026-08-07-CONSENT-OUTAGE.md`.
+On 2026-08-07 a column was added to `src/lib/db/schema.ts`, a migration was hand-written for it, and it was never journalled and never applied. CI was green. The deploy succeeded. Every consent write then failed in production with Postgres `42703` for ~7h45m (2026-08-07 18:33 UTC → 2026-08-08 02:20 UTC), silently discarding legal consent evidence, and no alert fired. See `Documentation/INCIDENT-2026-08-07-CONSENT-OUTAGE.md`.
 
 A schema change is complete only when **all three** exist:
 
@@ -61,6 +70,25 @@ A schema change is complete only when **all three** exist:
 **Enforcement:** `npm run db:check` guards artefacts 1-2 in CI with no database access. `GET /api/health/?probe=consent` guards artefact 3 against production hourly, by performing a real rolled-back INSERT. Both are required; neither is sufficient alone.
 
 - ✅ **ALLOWED, and expected:** Creating new infrastructure when the check comes back negative.
+
+---
+
+## 🧮 RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
+
+**cf-astro's own Pages/Worker deployment carries ~22 env vars** (7 `[vars]` + ~15 secrets — counted 2026-08-12 against `wrangler.toml` and `env.d.ts`; the exact secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
+
+- ❌ **FORBIDDEN:** Introducing new environment variables for feature toggles, limits, or operational settings.
+- ✅ **REQUIRED INSTEAD:** Use D1 (`admin_portal_settings`, owned by cf-admin but shared) or the site-settings pattern already in use.
+- A new env var is the **last option on the table, not the first.**
+
+---
+
+## 🗂️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
+
+**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the 50 tables shared with cf-admin (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb`/`whatsapp-chatbot` D1 databases across the full three-app estate.
+
+- ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
+- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
 
 ---
 

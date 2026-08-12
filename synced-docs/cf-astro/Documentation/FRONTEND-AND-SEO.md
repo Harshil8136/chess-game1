@@ -118,9 +118,12 @@ All structured schema graphs are generated using linked `@id` hashes so search e
 
 Because the default `@astrojs/sitemap` integration cannot embed crucial locale references inside XML nodes, the sitemaps are custom rendered at build time:
 
-- `/sitemap-index.xml`: Main index file referencing language and image files.
+- `/sitemap-index.xml`: Main index file referencing the language-specific sitemaps.
 - `/sitemap-es.xml` / `/sitemap-en.xml`: Emits exact bilingual `<url>` nodes featuring nested `<xhtml:link rel="alternate" hreflang="..." href="...">` elements for precise SEO routing.
-- `/sitemap-images.xml`: Indexes optimized hero assets and boarding gallery photos.
+
+> An image sitemap (`/sitemap-images.xml`) does not exist. It is intentionally
+> deferred until real facility photos exist (see `SEO-OPERATIONS.md` §8), and
+> `sitemap-index.xml` does not reference one in the meantime.
 
 ### 4.3 Generative Engine Optimization (GEO / AIO)
 

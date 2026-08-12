@@ -34,7 +34,7 @@ Sucursal Norte: Teniente Juan de La Barrera 503, Héroes, 20190 Aguascalientes, 
 Sucursal Sur:   Aurora Boreal 508, Jardines del Sol, 20266 Aguascalientes, Ags.
 Tel/WhatsApp:   +52 449 448 5486
 Web:            https://madagascarhotelags.com/es/
-Email:          admin@madagascarhotelags.com
+Email:          team@madagascarhotelags.com
 Facebook:  https://www.facebook.com/hotelmadagascar
 Instagram: https://www.instagram.com/hotel_mascotasmadagascar/
 ```
