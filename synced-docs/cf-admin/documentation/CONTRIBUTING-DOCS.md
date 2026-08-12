@@ -3,7 +3,7 @@
 title: "Documentation Conventions & Governance"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-12
 verified_against: [code]
 owner: harshil
 related_docs: [README.md,_templates/doc-template.md]
@@ -19,8 +19,14 @@ tags: [meta, governance, conventions]
 ## 1. One docs root
 
 All documentation lives under **`documentation/`**. The legacy `docs/` tree has
-been removed and must not be recreated. The only Markdown files that stay at the
-repository root are entry/discoverability files:
+been removed and must not be recreated. (It re-accumulated 4 working-plan files
+between the original removal and 2026-08-12; re-verified and re-removed on that
+date — the still-relevant one was moved into
+[`reference/control-plane-design/VISUAL-OVERHAUL-PLAN.md`](reference/control-plane-design/VISUAL-OVERHAUL-PLAN.md)
+and indexed below, the other three had already shipped and were deleted. If
+`docs/` reappears again, apply the same triage: move what's still open into
+`documentation/` with front-matter and an index entry, delete what's done.)
+The only Markdown files that stay at the repository root are entry/discoverability files:
 
 | Root file | Why it stays at root |
 |-----------|----------------------|

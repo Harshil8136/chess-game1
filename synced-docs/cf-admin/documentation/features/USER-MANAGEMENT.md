@@ -3,7 +3,7 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-07-24
+last_verified: 2026-08-12
 verified_against: [code, infra]
 owner: harshil
 related_docs: [CF-ACCESS-SYNC.md]
@@ -18,16 +18,18 @@ tags: []
 > including a read-only Viewer). The database still holds the previous values
 > and they are translated in code, so `super_admin` in a stored row means
 > **Admin** (level 2) and `admin` in a stored row means **Manager** (level 3).
-> Any role name below that has not been updated refers to the pre-rename
-> vocabulary. See `architecture/plac-and-audit.md` §1.1-1.2, which is the
-> authoritative reference and covers the collision this rename creates.
+> The body of this document was brought in line with the current model on
+> 2026-08-12 (role table, helper-function references, route/enforcement
+> tables, Hidden Accounts visibility, filter tabs). See
+> `architecture/plac-and-audit.md` §1.1-1.2, which remains the authoritative
+> reference and covers the collision this rename creates.
 
 > **TL;DR (non-technical):** How admin users are managed: the six role tiers, how accounts are invited/changed/removed, how higher-privilege accounts are protected, and how active sessions are controlled.
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
 > **Framework:** Astro 6 + Preact + Cloudflare Workers
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-07-24 (v4.8: CF Access Group sync hardened — root-cause fix for a silent-failure bug in `syncCfAccessGroup`'s response validation, durable per-attempt logging, 5-minute cron self-heal, per-user sync-status pill, Force Re-sync action, and live Group-membership drift detection; see `CF-ACCESS-SYNC.md`. Previously v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
+> **Last Updated:** 2026-08-12 (docs-consistency pass: role table, helper-function references, enforcement/route tables, and Hidden Accounts visibility rewritten to match the 2026-07-27 role rename and the 2026-07-26 removal of DEV/Owner list-hiding — no code changes, documentation only. Previously 2026-07-24 v4.8: CF Access Group sync hardened — root-cause fix for a silent-failure bug in `syncCfAccessGroup`'s response validation, durable per-attempt logging, 5-minute cron self-heal, per-user sync-status pill, Force Re-sync action, and live Group-membership drift detection; see `CF-ACCESS-SYNC.md`. Previously v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -52,21 +54,22 @@ The CF-Admin portal enforces a strict separation between **identity** (who you a
 5. **Audit Engine** records the event via Ghost Audit Engine (`waitUntil`) and the API returns a sanitized 201 Created response.
 6. **On next login:** CF Access authenticates the user → Worker sees their email in whitelist → creates KV session → writes `cf_sub_id` to Supabase idempotently.
 
-## 2. Role Hierarchy (5-Tier)
+## 2. Role Hierarchy (6-Tier)
 
-Access levels operate dynamically based on strict numeric permissions (lower number = higher clearance). Defined centrally in the RBAC module:
+Access levels operate dynamically based on strict numeric permissions (lower number = higher clearance). Defined centrally in the RBAC module (`src/lib/auth/rbac.ts`). Renamed 2026-07-27 from the previous 5-tier `dev > owner > super_admin > admin > staff` ladder — the database still stores the old values and `normalizeRole()`/`toStoredRole()` translate at the boundary; see the disclosure banner at the top of this document and `architecture/plac-and-audit.md` §1.2 for the full translation table and the naming collision it warns about.
 
 | Level | Role | Capabilities |
 |:-----:|:-----|:------------|
-| **0** | **DEV** ⚡ | Absolute system access + hidden account creation + dev tools + DB admin |
-| **1** | **Owner** 💎 | Project ownership + billing + API keys + view hidden accounts |
-| **2** | **SuperAdmin** 👑 | Full access + user management + settings (cannot see hidden accounts) |
-| **3** | **Admin** 🛡️ | Content management + bookings + reports. Cannot manage users. |
-| **4** | **Staff** 👤 | Standard entry level, read-only metrics, minimal interaction. |
+| **0** | **Vendor Support** ⚡ | Our support tier — database prunes, raw log access, edits to other privileged accounts. Not assignable via the invite/role picker (`ASSIGNABLE_ROLES` excludes it), but no longer hidden: as of 2026-07-26 it appears in the user list and access-review export like any other account. |
+| **1** | **Owner** 💎 | The customer's account holder. Full access including user administration. Protected from modification by every tier below. |
+| **2** | **Admin** 👑 | Second in command. Full operational control, including platform settings and users at or below their level. |
+| **3** | **Manager** 🛡️ | Runs day-to-day operations — bookings, content, customers, generalized audit logs. No user or platform administration. |
+| **4** | **Staff** 👤 | Works in their own area. Cannot change settings or other people. |
+| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/pipeline.ts`, not merely absent from the UI). |
 
 ### Color Hierarchy: Thermal Gradient
 
-The badge colors follow a **thermal gradient** designed for maximum readability on dark UI surfaces — progressing from Red (danger/system) through Emerald (ownership), Amber (authority), Purple (management), to Blue (operations).
+The badge colors follow a **thermal gradient** designed for maximum readability on dark UI surfaces — progressing from Red (Vendor Support) through Emerald (Owner), Amber (Admin), Violet (Manager), Blue (Staff), to Slate (Viewer, read-only).
 
 ### Hierarchy Logic Gate
 
@@ -76,47 +79,61 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 - **Implementation**: `src/lib/auth/rbac.ts`
 
 > [!IMPORTANT]
-> **No Hardcoded Strings:** You must **never** use hardcoded string comparisons (e.g., `user.role === 'dev'`) for authorization checks in Astro pages or API routes. Always use the hierarchical helper functions (`isDev`, `isOwner`, `isAdmin`, etc.) to ensure that new roles are automatically accounted for without causing unexpected `unauthorized` errors.
+> **No Hardcoded Strings:** You must **never** use hardcoded string comparisons (e.g., `user.role === 'vendor_support'`) for authorization checks in Astro pages or API routes. Always use the hierarchical helper functions (`isVendorSupport`, `isOwnerOrVendor`, `isAdminOrAbove`, `isManagerOrAbove`, etc.) to ensure that new roles are automatically accounted for without causing unexpected `unauthorized` errors.
 
 | Function | Logic | Purpose |
 |----------|-------|---------|
-| `hasPermission` | `userLvl <= reqLvl` | Core O(1) gatekeeper |
-| `isDev` | `role === 'dev'` | Lock critical system internals |
-| `isOwner` | `userLvl <= 1` | Billing and Ownership clearance |
-| `isOwnerOrDev` | `userLvl <= 1` | Access to hidden/ghost account visibility |
-| `isSuperAdmin` | `userLvl <= 2` | User Management clearance |
-| `isAdmin` | `userLvl <= 3` | Content & Bookings clearance |
+| `hasPermission` | `userLvl <= reqLvl` | Core O(1) gatekeeper (internal) |
+| `isVendorSupport` | `role === 'vendor_support'` | Exact Vendor Support check — lock critical system internals |
+| `isOwnerOrVendor` | `userLvl <= 1` | Vendor Support or Owner — privileged-account edit protection |
+| `isAdminOrAbove` | `userLvl <= 2` | Admin or higher — user management clearance |
+| `isManagerOrAbove` | `userLvl <= 3` | Manager or higher — content & bookings clearance |
+| `isReadOnly` | `role === 'viewer'` | Refused on every mutating request regardless of page grants |
+| `canManageUser` | `ROLE_LEVEL[actor] < ROLE_LEVEL[target]` | May `actor` edit/delete/re-role `target`? (Vendor Support exempt) |
+
+> **Deprecated aliases (still live — kept for ~200 pre-rename call sites):**
+> `isDev` = `isVendorSupport`, `isOwnerOrDev` = `isOwnerOrVendor`,
+> `isSuperAdmin` = `isAdminOrAbove` (still level 2, now named Admin),
+> `isAdmin` = `isManagerOrAbove` (still level 3, now named Manager). New code
+> should call the canonical names above; the table in §2.1 below shows which
+> of these each route currently calls.
 
 ### 2.1 Enforcement Coverage
 
 All server-side authorization gates (API routes and Astro SSR pages) **must** use the helpers above. The following files have been fully migrated. Routes marked **+PLAC** also call `placDenyResponse(actor, '/dashboard/<page>')` so an explicit page-level deny blocks the underlying API call too.
 
+> **Vocabulary note:** the parenthetical role labels below (e.g. `(admin+)`, `(owner+)`) use
+> the current canonical names. Where a file literally calls a deprecated alias
+> (`isDev`/`isOwnerOrDev`/`isSuperAdmin`) rather than the canonical function, this table says
+> so — both spellings gate the identical level (see the alias table in §2 above).
+
 | File | Helper(s) Used | Gate Purpose | +PLAC |
 |------|---------------|--------------|:---:|
-| `src/pages/api/users/manage.ts` | `isDev`, `isOwnerOrDev` | Role mutation, ghost protection | ✅ `/dashboard/users` |
-| `src/pages/api/users/access.ts` | `isDev`, `isOwnerOrDev` | PLAC provisioning | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/force-kick.ts` | `isOwnerOrDev` | Session termination | ✅ `/dashboard/users` |
-| `src/pages/api/users/index.ts` | (super_admin) | User registry list | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/activity.ts` | `isOwnerOrDev` | Ghost protection on activity logs | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/pages.ts` | (super_admin) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/probes.ts` | (owner) | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/cf-access-audit.ts` | (owner) | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
-| `src/pages/api/users/active-sessions.ts` | (super_admin) | KV active session list + revoke | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
-| `src/pages/api/users/active-revocations.ts` | (super_admin) | KV revocation block list + unblock | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
-| `src/pages/api/users/access-data.ts` | `isOwnerOrDev` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
-| `src/pages/api/users/[id]/session-status.ts` | `isSuperAdmin` | Session telemetry + per-session revocation | (role-only — single-user, not dashboard-scoped) |
-| `src/pages/api/features/toggle.ts` | `isDev` | Feature flag mutation | (role-only — DEV is PLAC-exempt) |
-| `src/pages/api/diagnostics/ping.ts` | `isDev` | System diagnostics | (role-only — DEV is PLAC-exempt) |
-| `src/pages/api/audit/consent.ts` | `isOwnerOrDev` | Consent record deletion | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/logs.ts` | `isOwnerOrDev` | Audit log deletion | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/emails.ts` | `isOwnerOrDev` | Email log deletion | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/sessions.ts` | (admin) | Session audit trail | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/stats.ts` | (admin) | Audit summary stats | ✅ `/dashboard/logs` |
+| `src/pages/api/users/manage.ts` | `isVendorSupport` | Role mutation, privileged-account edit protection | ✅ `/dashboard/users` |
+| `src/pages/api/users/access.ts` | `isVendorSupport`, `isOwnerOrVendor` | PLAC provisioning | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor` | Session termination | ✅ `/dashboard/users` |
+| `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/activity.ts` | `isOwnerOrVendor` | Privileged-account protection on activity logs | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/probes.ts` | `requireAuth(context, 'owner')` | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/cf-access-audit.ts` | `requireAuth(context, 'owner')` | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
+| `src/pages/api/sessions/active-sessions.ts` | (admin+) | KV active session list + revoke | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
+| `src/pages/api/sessions/active-revocations.ts` | (admin+) | KV revocation block list + unblock | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
+| `src/pages/api/sessions/flush-sessions.ts` | (admin+) | Bulk session flush | ✅ `/dashboard/users` |
+| `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
+| `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ `/dashboard/users/sessions` |
+| `src/pages/api/features/toggle.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Feature flag mutation | (role-only — Vendor Support is PLAC-exempt) |
+| `src/pages/api/diagnostics/ping.ts` | `isDev` (deprecated alias for `isVendorSupport`) | System diagnostics | (role-only — Vendor Support is PLAC-exempt) |
+| `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/logs.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Audit log deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/emails.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Email log deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/sessions.ts` | (admin+, via `ROLE_LEVEL['admin']`) | Session audit trail | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/stats.ts` | (admin+ for stats; owner+ for the `#security` tab, via `ROLE_LEVEL`) | Audit summary stats | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/login-logs.ts` | role-or-grant | Login forensics (PII) | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
 | `src/pages/api/audit/export.ts` | role-or-grant | CSV export | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
-| `src/pages/api/audit/prune.ts` | `isDev` | Log pruning | ✅ `/dashboard/logs` |
-| `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` | Feature flag computation | (page-level — uses middleware PLAC) |
-| `src/pages/dashboard/users/[id]/access.astro` | `isDev`, `isOwnerOrDev` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
+| `src/pages/api/audit/prune.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Log pruning | ✅ `/dashboard/logs` |
+| `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` (deprecated aliases) | Feature flag computation | (page-level — uses middleware PLAC) |
+| `src/pages/dashboard/users/[id]/access.astro` | `isVendorSupport`, `isOwnerOrVendor` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
 
 > [!NOTE]
 > **Client-side Preact components** (e.g., `DangerZone.tsx`, `ExpandedRow.tsx`, `UsersRegistry.tsx`) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (ghost protection badges, filter tabs). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
@@ -125,7 +142,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 
 When a user's role is changed or their account is deactivated, the system triggers a **3-Layer Security Cascade** to prevent stale sessions from retaining high-privilege access at any layer:
 
-1. **Verification**: Manager privilege clearance is verified.
+1. **Verification**: The actor's clearance is verified against the target's role (note: "Manager" is now also a specific role name at level 3 — this step is a generic clearance check, not a literal Manager-role gate).
 2. **Whitelist Update**: Supabase `admin_authorized_users` is updated with the new role/status.
 3. **Override Purge**: `resetUserOverrides(env.DB, userId)` deletes all D1 page overrides → clean RBAC state.
 4. **Layer 1 — KV Session Deletion**: LISTS `user-session:{userId}:*` (reverse-index pattern, O(k)) → deletes all matching session keys. User's KV session is gone.
@@ -137,14 +154,23 @@ Secondary index `user-session:{userId}:{sessionId}: '1'` allows targeted `LIST` 
 
 ## 4. Hidden Accounts System
 
-A special feature allowing **completely invisible** admin accounts for covert operations or monitoring.
+A flag allowing accounts to be marked for covert operations or monitoring. **Its scope was narrowed on 2026-07-26** — see the [!WARNING] callout below.
 
 | Aspect | Detail |
 |--------|--------|
-| **Storage** | A boolean flag in the authorized users table marks accounts as hidden |
-| **Creation** | DEV-only — via the user management API with hidden flag enabled |
-| **Visibility** | Only DEV and Owner see hidden accounts in user listings |
-| **Anti-Enumeration** | Hidden accounts are excluded from user counts shown to lower roles. Unauthorized queries receive an identical 404 response shape whether or not the account exists. |
+| **Storage** | A boolean flag (`is_hidden`) in the authorized users table marks accounts as hidden |
+| **Creation** | Vendor Support-only — via the user management API with hidden flag enabled (`isVendorSupport(session.role)` gates it in `manage.ts`) |
+| **Visibility (current, 2026-07-26+)** | `GET /api/users` returns **every** account, hidden or not, Vendor Support or not, to any actor with `/dashboard/users` PLAC access — deliberately: concealing a supplier account (or any account) from the customer's own user list and access-review export was the finding a security review would fail on. The `is_hidden` flag and the Vendor Support role still gate a narrower, per-user "ghost" check (`isOwnerOrVendor`) on endpoints like `session-status`, which 404s a hidden/Vendor-Support target for anyone below Owner. |
+| **Anti-Enumeration** | Unauthorized single-record queries (e.g. a non-existent or ghost-protected user ID) receive an identical 404 response shape whether or not the account exists. This no longer extends to the main list/export/revocation views — see Visibility above. |
+
+> [!WARNING]
+> **This table previously said hidden accounts were excluded from the user list, counts,
+> and access-review export for non-DEV/Owner actors.** That was true before 2026-07-26 and
+> is **no longer true** — see `architecture/plac-and-audit.md` §2.5 Gate B and
+> `src/pages/api/users/index.ts`'s own in-code comment: *"Every account is listed, including
+> ours... If an account should not be there, remove the account. Do not hide it."* The
+> `is_hidden` flag is retained for the narrower per-user ghost-protection check described
+> above, not for list-level concealment.
 
 ## 5. User Lifecycle Management (API Architecture)
 
@@ -173,7 +199,7 @@ The Invite Modal renders a "Command Console" two-panel dialog:
 **Left panel — Identity:**
 
 - **Role Pill Selector**: 2×2 pill grid with role-specific colors. Roles at or above actor's level are greyed-out/disabled (server enforces this too).
-- **Hidden Account Toggle**: Ghost-mode toggle only rendered for DEV and Owner actors.
+- **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors.
 - Email + Display Name inputs, Grant Access + Cancel buttons.
 
 **Right panel — Page Access:**
@@ -211,7 +237,7 @@ The interface is composed of multiple Preact islands:
 | **Page Access Manager** | | Per-user PLAC override toggle grid (for existing users) |
 | **Invite User Modal** | | Two-panel "Command Console" Preact island |
 | **Role Pill Selector** | | Atomic: 2×2 role pill grid with RBAC-gated availability |
-| **Hidden Account Toggle** | | Atomic: ghost-mode toggle (DEV/Owner only) |
+| **Hidden Account Toggle** | | Atomic: ghost-mode toggle (Vendor Support/Owner only) |
 | **Page Chip Grid** | | Atomic: interactive chip grid grouped by section, 4 chip states |
 | **Session Forensics Drawer** | `SessionForensicsDrawer.tsx` | Premium HUD slide-in panel: device identity (browser/OS via zero-dep UA parser), connection telemetry (IP, geo, Ray ID), live 24h session countdown, per-session revocation |
 
@@ -228,9 +254,9 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 
 | Tab | Shows |
 |-----|-------|
-| **All** | All visible users (excluding hidden unless DEV/Owner) |
-| **Admins** | Users with high-privilege roles (dev, owner, super_admin) |
-| **Staff** | Users with operational roles (admin, staff) |
+| **All** | Every account returned by `GET /api/users` — no hidden-account exclusion since 2026-07-26 (see §4) |
+| **Admins** | `ROLE_LEVEL[u.role] <= ROLE_LEVEL['manager']` — Vendor Support, Owner, Admin, and Manager (levels 0–3) |
+| **Staff** | `u.role === 'staff'` only (level 4; Viewer, level 5, appears only under **All**) |
 
 ## 7. Security Boilerplates & Error Flow
 
@@ -353,8 +379,8 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
-| `GET /api/users` | super_admin+ | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
-| `GET /api/users/[id]/session-status` | super_admin+ | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
+| `GET /api/users` | PLAC (`/dashboard/users`); no role floor beyond authentication — see §2.1 | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
+| `GET /api/users/[id]/session-status` | PLAC (`/dashboard/users/sessions`); `isOwnerOrVendor` gates the ghost-target sub-case only — see §2.1 | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
 | `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `[SUPABASE_PROJECT_REF]` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
@@ -371,12 +397,12 @@ When an admin expands a user row in the User Registry, the bottom of the expande
 | Location | `geo_location` + `colo` | "City, Country (CF data center)" |
 | Bot Score | `cf_bot_score` | CF bot management score; emerald < 20, amber 20–49, red ≥ 50 |
 | CF Ray | `cf_ray_id` | First 10 chars of CF Ray ID (full value in tooltip) |
-| IP | `ip_address` | Masked to `X.X.***.***` for non-dev actors; full IP for DEV |
+| IP | `ip_address` | Masked to `X.X.***.***` for non-Vendor-Support actors; full IP for Vendor Support |
 | Date | `created_at` | Relative ("2h ago") with absolute ISO tooltip |
 
 The `summary` shows total login count, success count, and failure count across all time for this email.
 
-**Check Active Sessions:** The ExpandedRow also renders a "Check Active Sessions" button (super_admin+) which opens the `SessionForensicsDrawer` — a side-panel HUD providing real-time session telemetry (device identity, connection metadata, live 24h countdown) with per-session revocation controls. See §6 UI Implementation table for component details.
+**Check Active Sessions:** The ExpandedRow also renders a "Check Active Sessions" button (admin+) which opens the `SessionForensicsDrawer` — a side-panel HUD providing real-time session telemetry (device identity, connection metadata, live 24h countdown) with per-session revocation controls. See §6 UI Implementation table for component details.
 
 ### 11.5 Access Probe Feed
 
@@ -419,8 +445,8 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | Data | Exposure | Rationale |
 |------|----------|-----------|
 | `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
-| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned to super_admin+ via the `session-status` API — only the session ID itself remains server-only. |
-| Full IP addresses | DEV actor only | PII — other actors see masked `X.X.***.***` |
+| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with `/dashboard/users/sessions` PLAC access (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
+| Full IP addresses | Vendor Support actor only | PII — other actors see masked `X.X.***.***` |
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |
 | CF audit cross-reference | Owner+ only | Reveals CF Access org-level user list |

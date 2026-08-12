@@ -27,7 +27,7 @@ tags: [ui, design-system, security, xss, accessibility, refactor, theming, summa
 
 Commit `e860dff` ("modernize main dashboard… shadcn-style Preact UI primitives,
 and live Brevo SMTP telemetry") shipped directly to `main`, as this repo's
-[`GITHUB_RULES.md`](../GITHUB_RULES.md) policy prescribes (single operator, no
+[`GITHUB_RULES.md`](../../GITHUB_RULES.md) policy prescribes (single operator, no
 pull-request gate, `npm run verify` is the only pre-merge control).
 
 A post-merge review of that commit surfaced problems in three distinct classes:

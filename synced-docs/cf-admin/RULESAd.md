@@ -1,6 +1,6 @@
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-06-10 (v4.7: sync-system durability shipped — outbox/queue/DLQ, read-back verification, content history + rollback, config versioning; see documentation/reference/SYNC-SYSTEM-REVIEW.md)
+> **Last Updated:** 2026-08-12 (v4.9: docs-consistency pass — RBAC section here and in README.md/USER-MANAGEMENT.md rewritten for the 2026-07-27 6-tier role rename (`vendor_support > owner > admin > manager > staff > viewer`); RULE #0.7/#0.8/#0.9 full text added here (previously only in `main.md`), with a new `documentation/reference/schema-change-ledger.md` satisfying RULE #0.7's ledger artifact; the "61 tables" hard-cap corrected to 62 (missing `platform_alerts` table added to the audit doc); duplicate migration `0042_platform_alerts.sql` renumbered to `0048`; broken `../../GITHUB_RULES.md` link fixed to `../GITHUB_RULES.md` and the stray local copy deleted; legacy `docs/` tree (4 files) triaged — 3 completed plans deleted, 1 still-open plan moved into `documentation/reference/control-plane-design/`. No code changes. Previously 2026-06-10 v4.7: sync-system durability shipped — outbox/queue/DLQ, read-back verification, content history + rollback, config versioning; see documentation/reference/SYNC-SYSTEM-REVIEW.md)
 > **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
 
 ---
@@ -41,7 +41,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 This exists because the pattern has already recurred: `service_config` → `admin_portal_settings` → `admin_feature_flags` are three separate, never-consolidated mechanisms for the same general idea, and a live audit on 2026-08-06 found two confirmed-dead Supabase tables (`admin_sessions`, `privacy_requests`) that existed only because nobody checked for an existing fit before adding the next one.
 
-> **Hard cap, not a guideline.** The live production estate is verified (2026-08-12) at **40 env vars** on cf-admin's Worker and **61 D1/Supabase tables** across all three apps — see `main.md` RULE #0.8 / RULE #0.9 for the exact breakdown. A new environment variable or a new database table is the **last option on the table**, proposed only after every reuse path below has been checked and genuinely doesn't fit — never the first thing reached for.
+> **Hard cap, not a guideline.** The live production estate is verified (2026-08-12) at **40 env vars** on cf-admin's Worker and **62 D1/Supabase tables** across all three apps (corrected 2026-08-12 from a prior count of 61 that omitted the real, in-use `platform_alerts` table — see the audit doc's §0 correction note) — see RULE #0.8 / RULE #0.9 below for the exact breakdown. A new environment variable or a new database table is the **last option on the table**, proposed only after every reuse path below has been checked and genuinely doesn't fit — never the first thing reached for.
 
 1. **Does something that already exists cover this?** Check [`documentation/reference/coding-standards.md`](./documentation/reference/coding-standards.md) §8 (config tables — `admin_portal_settings` covers most global/per-role/per-user config needs already), the audit doc's live table inventory, and a grep of `src/` for related repository/table names.
 2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** This project already has active connectors for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case (the audit doc has three worked examples: adopt PostHog for feature flags needing real targeting; don't adopt a hosted ReBAC/graph-auth engine for permissions this project doesn't need yet; don't adopt a third-party config SaaS for system settings that already have a home in D1).
@@ -52,12 +52,74 @@ This exists because the pattern has already recurred: `service_config` → `admi
 
 ---
 
+## 🛡️ RULE #0.7 — SCHEMA CHANGE LEDGER (3 ARTIFACTS PER CHANGE)
+
+**Every schema change requires 3 artifacts:**
+
+1. **Schema TS/DDL** — the `CREATE`/`ALTER` statement itself, in a new file under `migrations/` (D1) or `supabase/migrations/` (Supabase).
+2. **Generated migration** — applied via `npx wrangler d1 migrations apply madagascar-db` (D1) or the Supabase migration tooling, with journal/snapshot state kept in sync.
+3. **Applied ledger entry** — one row in [`documentation/reference/schema-change-ledger.md`](./documentation/reference/schema-change-ledger.md) recording the migration file, date applied, who/what applied it, and a one-line description.
+
+**Always run `npm run db:check` before considering a schema change complete.**
+
+> **Status note (2026-08-12):** artifact 3 (the ledger) did not exist anywhere in this
+> repo until today — this rule referenced it while nothing implemented it, unlike
+> RULE #0.6/#0.9 below, which point at the real, live
+> `documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`. The ledger
+> is now a real, lightweight doc, seeded with one example row; it is **not** backfilled
+> for migrations applied before this date — treat it as an ongoing practice starting
+> now, not a complete history.
+
+---
+
+## 🛡️ RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
+
+cf-admin's production Worker is verified at **41 env vars** (17 `[vars]` + 24 secrets —
+live-counted 2026-08-12 against `wrangler.toml`; the 24th secret, `GSC_SERVICE_ACCOUNT_JSON`
+(Google Search Console indexing automation), is a documented exception to this cap —
+a bootstrap-time external OAuth credential with no dynamic-config alternative, per the
+carve-out below, signed off the same day it was added; see
+[`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+This is a hard cap, not a soft target. Do NOT introduce new environment variables
+(`env.VAR_NAME`, `.dev.vars`, or `wrangler.toml` `[vars]`/bindings) for feature toggles,
+limits, or operational settings. All application toggles, operational thresholds, and
+non-secret runtime configs MUST be managed dynamically via D1 (`admin_portal_settings`
+via `PortalSettingsRepository.ts`) or Cloudflare KV (`CONFIG_KV`) — the pattern every
+recent feature (Staff Managed Storage, Blog AI, Control Plane connectors) has already
+followed. A new env var is the **last option on the table, not the first** — propose
+one only after showing every dynamic-config route was checked and genuinely doesn't
+fit (e.g. a bootstrap-time platform credential needed before any D1/KV read is
+possible), and say why in the PR/commit. Even then it requires explicit architectural
+signoff.
+
+---
+
+## 🛡️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
+
+The live production estate is verified at **63 tables** across all three apps (31 in D1
+`madagascar-db` [cf-admin+cf-astro], 9 in D1 `chatbot-kb` + 4 in D1 `whatsapp-chatbot`
+[cf-chatbot], 19 in Supabase `public` [cf-admin+cf-astro] — corrected 2026-08-12 to
+include the previously-missing `platform_alerts` table (undercounted at 61) and the
+newly-added `gsc_index_log` table (Google Search Console indexing automation, migration
+0047); see
+[`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+Do NOT create new D1/Supabase tables or write migration scripts when an existing table
+can fulfill the requirement. Leverage key-value repositories, generic config columns,
+or structured JSON/JSONB payload fields in active tables (`admin_portal_settings`,
+`cms_content`, `service_config`, etc.) to store feature state — Staff Managed Storage
+(2026-08-05) is the reference case: 1 new table shipped instead of the 6 originally
+planned. A new table is the **last option on the table, not the first** — a proposed
+schema migration MUST formally prove why existing infrastructure cannot house the data
+model without structural changes before it's written, not after.
+
+---
+
 ## PROJECT MISSION — SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
 
 **cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** Designed to:
 
 - ✅ Manage content, bookings, users, and site settings via secure dashboard
-- ✅ Enforce multi-level RBAC (DEV > Owner > SuperAdmin > Admin > Staff) on every route
+- ✅ Enforce multi-level RBAC (`vendor_support` > `owner` > `admin` > `manager` > `staff` > `viewer`) on every route — 6-tier hierarchy, renamed 2026-07-27; see [USER-MANAGEMENT.md](./documentation/features/USER-MANAGEMENT.md) and [plac-and-audit.md](./documentation/architecture/plac-and-audit.md) §1
 - ✅ Authenticate via Cloudflare Zero Trust Access (Google/GitHub/OTP — no Supabase GoTrue)
 - ✅ Block ALL unauthorized access — identity at CF edge, authorization whitelist in Supabase
 - ✅ Role re-check every 30 minutes via D1 re-fetch, hard-expire sessions at 24 hours (KV TTL + CF session duration + createdAt guard)
@@ -145,7 +207,16 @@ This exists because the pattern has already recurred: `service_config` → `admi
 
 ## 3. RBAC — ROLE-BASED ACCESS CONTROL
 
+**Current model (renamed 2026-07-27):** a 6-tier ladder, lower number = higher privilege —
+`vendor_support(0) > owner(1) > admin(2) > manager(3) > staff(4) > viewer(5)`. The database
+still stores the pre-rename values (`dev`, `owner`, `super_admin`, `admin`, `staff`) and
+`normalizeRole()`/`toStoredRole()` translate at the D1/Supabase boundary — see
+`plac-and-audit.md` §1.2 for the full translation table and the collision warning
+(`super_admin`→`admin` and `admin`→`manager` means a bare stored `"admin"` is ambiguous
+without translation).
+
 → See [USER-MANAGEMENT.md](./documentation/features/USER-MANAGEMENT.md) for the full RBAC hierarchy, user lifecycle, ghost protection, and hidden accounts.
+→ See [plac-and-audit.md](./documentation/architecture/plac-and-audit.md) for the canonical role table, helper functions, and PLAC resolution algorithm.
 
 ---
 
@@ -501,7 +572,7 @@ astro build && wrangler deploy   # Build + deploy to Cloudflare
 
 ### Git Workflow
 
-> 🛡️ **CRITICAL: See `../../GITHUB_RULES.md` for all Git deployment commands.**
+> 🛡️ **CRITICAL: See `../GITHUB_RULES.md` for all Git deployment commands.**
 > You must ALWAYS verify your directory with `git remote -v` and push directly to `origin main`. Do not create branches.
 
 ### Environment

@@ -110,7 +110,9 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`reference/DESIGN-SYSTEM.md`](reference/DESIGN-SYSTEM.md) | Midnight Slate tokens, CSS architecture, components | ai, technical | active |
 | [`reference/control-plane-design/PLAN.md`](reference/control-plane-design/PLAN.md) | Control-plane design doc (provider API specs, phases) | ai, technical | active |
 | [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](reference/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview | ai, technical | active |
+| [`reference/control-plane-design/VISUAL-OVERHAUL-PLAN.md`](reference/control-plane-design/VISUAL-OVERHAUL-PLAN.md) | Control Plane visual/theme-unification proposal, moved from the removed `docs/` tree (2026-08-12) — partially implemented, theme unification still open | ai, technical | draft |
 | [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
+| [`reference/schema-change-ledger.md`](reference/schema-change-ledger.md) | RULE #0.7's applied-ledger artifact: one row per migration (file, date, applied by, description), started 2026-08-12, not backfilled | ai, technical | active |
 | [`reference/commercial-readiness-checklist.md`](reference/commercial-readiness-checklist.md) | Pet-hotel decoupling roadmap toward a generic Workers admin framework | owner, technical | draft |
 | [`reference/RBAC-AT-SCALE.md`](reference/RBAC-AT-SCALE.md) | Research reference (not implemented): scaling permissions from 6 roles/small staff to 100+ roles/1000+ staff — fact-checks a proposed design, covers RBAC/PBAC/ABAC/ReBAC/bitmask models, verified Cloudflare KV/D1/Durable Objects consistency + pricing, and a recommended blueprint | ai, technical, owner | draft |
 | [`reference/PERMISSION-ARCHITECTURE-ASSESSMENT.md`](reference/PERMISSION-ARCHITECTURE-ASSESSMENT.md) | Current RBAC+PLAC+CFZT system explained end to end, fact-checked against a proposed browser-held JWT redesign; multi-benchmark comparison, per-staff-count service-usage modeling (10/20/50/100/1,000+), ×5/×10 scaling recommendations, and ASVS/SOC2 standards positioning for both designs | ai, technical, owner, non-technical | draft |
@@ -182,4 +184,4 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`../RULESAd.md`](../RULESAd.md) | Operational Rules Bible + policy contract |
 | [`../main.md`](../main.md) | AI entry pointer into `documentation/` |
 | [`../AI_CODE_MAINTENANCE.md`](../AI_CODE_MAINTENANCE.md) | AI-agent code-maintenance rules |
-| [`../GITHUB_RULES.md`](../GITHUB_RULES.md) | Git workflow rules |
+| [`../../GITHUB_RULES.md`](../../GITHUB_RULES.md) | Git workflow rules |
