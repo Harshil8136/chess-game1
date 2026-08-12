@@ -3,7 +3,7 @@
 title: "Record of Processing Activities (GDPR Art. 30)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-07-25
+last_verified: 2026-08-12
 verified_against: [code, config]
 owner: harshil
 related_docs: [PRIVACY.md, SECURITY.md, ../runbooks/incident-response.md, compliance/data-residency.md, ../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -145,6 +145,20 @@ that store is still in use.
 | Owner decision | Superseded version, not connected to any production or testing environment. Data to be exported for safekeeping, then the project decommissioned once the client approves. Recorded 2026-07-29. |
 | Disposal method | Export → verify the two `legal_requests` rows carry no outstanding obligation → record the disposal in `deletion_audit` (currently 0 rows) → delete the project |
 | Action outstanding | **Export before pausing.** Pausing a Supabase project makes its data inaccessible until restored, so pausing ahead of the export would block the export it is meant to protect. Sequence matters. |
+
+### I. Staff Managed Storage (personal & shared file drives)
+
+| Field | Detail |
+|---|---|
+| Purpose | Give staff a private file drive for work documents (payroll, medical records, contracts, media) and let external parties (vendors, vets) exchange files without a portal account |
+| Categories of subject | Staff, contractors, external vendors/vets (link recipients, no account) |
+| Categories of data | Uploaded file content and metadata (filename, size, extension, folder path, MIME type); recipient name/email on File Request links; access telemetry (hashed IP, user agent, CF country, timestamp, attempt status) on share/request links |
+| Legal basis | Art. 6(1)(b) contract (employment-relationship recordkeeping); 6(1)(f) legitimate interests (operational file sharing with vendors) |
+| Stores | R2 `madagascar-staff-storage` (private bucket, object content); D1 `storage_files`, `storage_file_requests`, `storage_share_access_logs`, `storage_config` |
+| Retention | Files persist until deleted by the owner or an `#admin-manage` grantee. Soft-deleted files are recoverable in Trash for 30 days (`TRASH_RETENTION_DAYS`), after which the weekly reconciliation cron becomes free to purge the underlying R2 object. Share/file-request access logs purged after 180 days |
+| Recipients | None outside Cloudflare, unless a staff member deliberately mints a share link or File Request link — both are HMAC-signed, time-boxed, optionally passcode-gated, and every access attempt is telemetry-logged regardless of outcome |
+| Safeguards | This is the one deliberate exception to full Cloudflare Zero Trust gating in the portal: two public, unauthenticated route families (`/api/storage/share/*`, `/api/storage/request/*`) exist for external parties. Both were remediated for a reflected-XSS-to-session-takeover chain, an upload passcode-enforcement bypass, and non-timing-safe comparisons in the 2026-08 security pass — see [`THREAT-MODEL.md`](THREAT-MODEL.md). Uploads are magic-byte verified against the declared extension; per-role storage quotas enforced server-side; all mutating endpoints rate-limited |
+| ⚠️ Known gap | R2 object versioning **not enabled** on `madagascar-staff-storage` — a bucket that can hold payroll/medical records arguably needs it more than `madagascar-images` (already flagged). Tracked in `../MAINTENANCE.md` |
 
 ## 3. Sub-processors
 

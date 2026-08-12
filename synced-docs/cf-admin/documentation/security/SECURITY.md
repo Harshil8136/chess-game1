@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-12
 verified_against: [code, infra]
 owner: harshil
 tags: [security, rls, auth]
@@ -145,6 +145,33 @@ Every non-public route is gated by `src/middleware.ts`. Public routes are restri
 `/` (root) and `/auth/*` routes are protected by CF Access at the edge — they never reach the Worker unauthenticated. `index.astro` at `/` only redirects to `/dashboard` once a KV session exists.
 
 Any mutation method on public routes returns `405 Method Not Allowed`. Everything else requires a valid KV session + PLAC access check.
+
+### 2a. Staff Managed Storage — the deliberate exception
+
+Two route families are the **only** intentional exception to "everything else
+requires a valid KV session" anywhere in this app: they serve external parties
+(vendors, vets) with no portal account, so they cannot sit behind CF Access.
+They are not gated by `src/middleware.ts` at all — the gate is a Cloudflare
+Zero Trust **path-based bypass policy** at the edge (outside this repository)
+plus the route's own HMAC-token verification.
+
+| Route | Methods | Auth model | Rate limit (`safeRateLimit`, fail-closed) |
+|---|---|---|---|
+| `/api/storage/share/[token]` | GET (gateway form only), POST (download) | HMAC-signed self-verifying token (`verifyShareToken`) + optional passcode, `timingSafeEqualStrings` compared | `storage-share-consume` — 20/min, keyed on hashed client IP |
+| `/api/storage/request/[token]` | GET (gateway form only), POST (passcode submit) | Same token model; `GET` never reads or echoes query-string data (closes the 2026-08 reflected-XSS finding, see `THREAT-MODEL.md`) | `storage-request-consume` — 30/min, keyed on hashed client IP |
+| `/api/storage/request/[token]/presign` | POST | Token + independently re-verified passcode | `storage-request-presign` — 20/min, keyed on hashed client IP |
+| `/api/storage/request/[token]/confirm` | POST | Token + independently re-verified passcode; magic-byte + extension + size re-validation before the row is written | `storage-request-confirm` — 20/min, keyed on hashed client IP |
+
+**⚠️ Open manual action item:** the actual scope of the CF Access bypass
+policy for `/api/storage/request/*` has not been independently re-verified
+against the Zero Trust dashboard since this route family shipped — tracked in
+`../MAINTENANCE.md`. Getting this wrong in either direction is a real
+incident: too broad silently exposes an authenticated route, too narrow
+breaks the feature for every external vendor/vet without a portal account.
+
+All other `/api/storage/*` routes (the owner's own drive, Inspect, admin
+config, reconciliation report) sit behind the normal KV session + PLAC model
+like every other dashboard-mapped route and are not exceptions.
 
 ---
 
@@ -382,8 +409,16 @@ All data-bearing API routes that map to a dashboard page now enforce PLAC. Inter
 | `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
 | `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
 | `POST /api/users/access` | 5/min | `plac` | `session.userId` |
+| `POST /api/storage/presign` | 30/min | `storage-presign` | `user.userId` |
+| `POST /api/storage/[id]/share` | 20/h | `storage-share-create` | `user.userId` |
+| `POST /api/storage/[id]/share/email` | 10/h | `storage-share-email` | `user.userId` |
+| `POST /api/storage/requests` | 20/h | `storage-request-create` | `user.userId` |
+| `GET/POST /api/storage/share/[token]` | 20/min | `storage-share-consume` | hashed client IP — **public route, see §2a** |
+| `GET/POST /api/storage/request/[token]` | 30/min | `storage-request-consume` | hashed client IP — **public route, see §2a** |
+| `POST /api/storage/request/[token]/presign` | 20/min | `storage-request-presign` | hashed client IP — **public route, see §2a** |
+| `POST /api/storage/request/[token]/confirm` | 20/min | `storage-request-confirm` | hashed client IP — **public route, see §2a** |
 
-Rate limiting uses Upstash Redis sliding-window via `src/lib/ratelimit.ts`. Falls back to allow-all in local dev (missing Upstash credentials).
+Rate limiting uses Upstash Redis sliding-window via `src/lib/ratelimit.ts`. Falls back to allow-all in local dev (missing Upstash credentials). The four public storage routes additionally use `safeRateLimit()`, which fails **closed** (denies the request) if the Upstash call itself errors, rather than the fail-open default — the right posture for unauthenticated routes.
 
 ### Zod Schema Validation
 

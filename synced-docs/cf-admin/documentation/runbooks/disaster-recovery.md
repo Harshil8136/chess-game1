@@ -3,7 +3,7 @@
 title: "Disaster Recovery & Backup Restore Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-07-25
+last_verified: 2026-08-12
 verified_against: [code, config]
 owner: harshil
 related_docs: [incident-response.md, ../operations/OPERATIONS.md, ../architecture/KV-RESILIENCE.md, ../security/compliance/SOC2-TSC-mapping.md]
@@ -40,6 +40,7 @@ deletion event is *both*; run the incident runbook first, this one second.
 | **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **≤24h** (free tier daily) | ~30–60 min est. | Daily backup restore |
 | **KV** `cf-admin-session` | Sessions, access maps | N/A — by design | ~0 | Not backed up (§4) |
 | **R2** `madagascar-images` | CMS images, email attachments | **No backup** | Unbounded | See §5 — real gap |
+| **R2** `madagascar-staff-storage` | Staff drive files — **including payroll and medical records** | **No backup** | Unbounded | See §5 — same gap, higher-sensitivity data |
 | **Worker** | Application code | 0 | ~5 min | `git` + redeploy |
 
 > ⚠️ **Every RTO above is an estimate from vendor documentation.** None has been
@@ -109,11 +110,22 @@ Partially mitigating: the weekly `scheduled-asset-cleanup` worker excludes the
 `email-attachments/` prefix unconditionally, so the automated sweep cannot
 delete attachments (MAINTENANCE.md E-1).
 
+**`madagascar-staff-storage` has the identical gap and arguably needs the fix
+more.** It is the private bucket behind the Staff Managed Storage feature and
+can hold payroll and medical records — a permanent, unrecoverable deletion
+here is a materially worse outcome than losing a CMS image. The bucket does
+have a soft-delete layer above R2 (`storage_files.is_deleted` + a 30-day Trash
+window, `TRASH_RETENTION_DAYS`), which covers accidental *application-level*
+deletes, but nothing protects against a direct R2-level deletion (compromised
+API token, `wrangler r2 object delete`, a reconciliation-cron bug) or against
+overwrite-in-place data loss (a same-key upload has no prior version to
+recover). Versioning closes both; Trash closes neither.
+
 Options, none yet implemented:
 
 | Option | Cost | Effort |
 |---|---|---|
-| Enable R2 object versioning | Storage delta only | Low — **recommended first step** |
+| Enable R2 object versioning (both buckets — prioritise `madagascar-staff-storage`) | Storage delta only | Low — **recommended first step** |
 | Scheduled `rclone` copy to a second bucket | ~$0 within free tier | Medium |
 | Accept the risk, document it | $0 | Current state |
 
@@ -139,7 +151,7 @@ CMS outage in April 2026 (`GITHUB_RULES.md` §6). Verify against
 | Accidental `retention/purge` on the wrong table | Do **not** re-run anything | D1 → Time Travel to just before; Postgres → daily backup (≤24h loss) |
 | Supabase project deleted | Open a Supabase support ticket immediately | Restore from backup; rotate `SUPABASE_SERVICE_ROLE_KEY` |
 | D1 corruption | `time-travel info` | Dry-run, then restore — check `cf-astro` blast radius first |
-| R2 objects deleted | Stop the cleanup cron | **Unrecoverable today** (§5) |
+| R2 objects deleted (`madagascar-images` or `madagascar-staff-storage`) | Stop the cleanup cron | **Unrecoverable today** (§5). For staff-storage, first check whether the file is still in Trash (`is_deleted=1`, within 30 days) — that path is recoverable via `POST /api/storage/[id]/restore` even though the R2-level gap remains |
 | Bad deploy | Cloudflare dashboard rollback | Then `git revert` so `main` matches production |
 | Cloudflare account compromise | Incident runbook §4 | Rotate every token; audit Zero Trust policies |
 

@@ -3,7 +3,7 @@
 title: "Data Residency & Cross-Border Transfers"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-07-25
+last_verified: 2026-08-12
 verified_against: [code, config]
 owner: harshil
 related_docs: [../RoPA.md, ../SECURITY.md, ISO-27017-27018.md, ../../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -31,6 +31,7 @@ of **G6** (GPC) from
 | Postgres | Supabase | **US** | Users, ARCO tickets, consent records, bookings, email ledger |
 | KV `cf-admin-session` | Cloudflare | Globally distributed | Sessions, access maps |
 | R2 `madagascar-images` | Cloudflare | **US** | CMS images, email attachments |
+| R2 `madagascar-staff-storage` | Cloudflare | **US** | Staff drive files, incl. payroll/medical records — same jurisdiction and hosting posture as `madagascar-images`; no separate residency treatment |
 | Queues | Cloudflare | US | Email payloads in transit |
 | Workers | Cloudflare | Edge (global) | Compute only — no durable storage |
 

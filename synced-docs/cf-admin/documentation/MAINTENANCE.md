@@ -3,7 +3,7 @@
 title: "Maintenance Backlog"
 status: active
 audience: [ai, technical]
-last_verified: 2026-07-25
+last_verified: 2026-08-12
 verified_against: [code]
 owner: harshil
 related_docs: [archive/ToDoList.md, archive/PENDING_PHASES.md, security/SECURITY.md]
@@ -130,6 +130,20 @@ Context: `documentation/security/compliance/ACCESSIBILITY.md`.
 | C-11 | **Role data migration is pending.** The code speaks the canonical vocabulary (`vendor_support > owner > admin > manager > staff > viewer`); both databases still hold the previous values, translated on read by `normalizeRole()` and on write by `toStoredRole()`. `viewer` therefore cannot be assigned yet: `toStoredRole()` throws rather than write a different role. | `supabase/migrations/`, `migrations/`, `src/lib/auth/rbac.ts` | 🟡 | **This is a safe steady state, not a half-finished change** — the translation layer means the Worker and the databases can never disagree about what a role means, so there is no deadline. **To close, in this order:** (1) migrate both stores with a **single `CASE` expression per table**, never two `UPDATE`s — `super_admin`→`admin` and `admin`→`manager` both touch the string "admin", so sequential updates silently collapse both tiers into `manager`; (2) verify per-role row counts before and after (expected in Supabase `admin_authorized_users`: manager 2, admin 1, owner 1, staff 1, vendor_support 1; in D1 `admin_pages.required_role`: manager 27, admin 26, owner 9, staff 6, vendor_support 3); (3) update the `admin_authorized_users_role_check` CHECK constraint and D1 migration 0018's constraint to the six canonical names; (4) update the `admin_read` RLS policy on `contact_message_comments`, which embeds `ARRAY['admin','super_admin','owner','dev']` in a JWT-claim check — dormant today because everything runs service-role, but a landmine the day a JWT path is added; (5) **only then**, and in its own commit with no other change, flip `ROLE_VOCABULARY` to `'canonical'` in `rbac.ts`; (6) delete `LEGACY_TO_CANONICAL` / `CANONICAL_TO_LEGACY` once the counts confirm zero legacy rows. Rollback is the inverse `CASE`, and remains available as long as the translation layer is deployed. |
 | C-10 | **Login anomaly detection is named but not built.** `src/lib/auth/security-logging.ts` records the sign-in and emails the owner. There is no baselining, geo-velocity check, device-fingerprint comparison, breached-password lookup or automatic lockout; the only automated signal on the login path is the Cloudflare bot score in `pipeline.ts`. | `src/lib/auth/security-logging.ts` | 🟡 | The Velox module was renamed to "Login Forensics & Sign-In Alerts" and its copy now describes recording and alerting, with the detection features listed explicitly as roadmap. Reinstate the detection language only when the checks exist. |
 
+
+## Staff Managed Storage follow-ups (2026-08-12)
+
+From the Staff Managed Storage security/permissions/UI/UX remediation pass
+(`documentation/features/STAFF-MANAGED-STORAGE.md`). Two of these are manual —
+they cannot be closed by a code change and need to be done directly against
+the Cloudflare dashboard.
+
+| # | Item | Where | Severity | Notes |
+|---|------|-------|----------|-------|
+| S-1 | **CF Access bypass-policy scope for `/api/storage/request/*` unverified.** The route family needs a Zero Trust path-based bypass policy (mirroring the existing one for `/api/storage/share/*`) so external file-request recipients without a portal account can reach it — but this has never been independently re-verified against the live Zero Trust dashboard since the feature shipped. | Cloudflare Zero Trust Dashboard → Access → Applications | 🟠 manual | Getting this wrong in either direction is a real incident: too broad silently exposes an authenticated route past CF Access; too narrow breaks the feature for every vendor/vet without a portal account. See `security/SECURITY.md` §2a. |
+| S-2 | **R2 object versioning not enabled on `madagascar-staff-storage`.** The bucket can hold payroll and medical records; a direct R2-level deletion or same-key overwrite is unrecoverable today even though the application-level Trash (30-day soft-delete window) covers accidental in-app deletes. | Cloudflare Dashboard → R2 → `madagascar-staff-storage` → Settings | 🟠 manual | No MCP tool exposes this toggle — dashboard-only. Recommended in `runbooks/disaster-recovery.md` §5, which also flags `madagascar-images` for the same gap. |
+| S-3 | **File list pagination.** `StorageDrive.tsx`/`InspectExplorerTree.tsx` filter and sort entirely client-side against the full file list returned by `list.ts`/`admin/inspect.ts`. | `src/pages/api/storage/list.ts`, `StorageDrive.tsx` | 🔵 | Fine at current staff-count scale; becomes a real cost once any single drive holds hundreds of files. Requires moving filter/sort/paging server-side — larger scope than a quick fix, deliberately deferred rather than half-built. |
+| S-4 | **Per-item upload-cancel button.** The upload modal has no way to cancel an individual in-flight file once presign/PUT/confirm has started; only closing the whole modal (which leaves any already-presigned R2 object for the reconciliation cron to clean up). | `UploadModal.tsx` | 🔵 | Minor UX gap, not a correctness or security issue — the orphaned-object cleanup path already handles the abandoned-upload case safely. |
 
 ## Commercial follow-ups (2026-07-26)
 

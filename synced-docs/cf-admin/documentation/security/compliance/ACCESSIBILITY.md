@@ -3,7 +3,7 @@
 title: "Accessibility Conformance Statement (WCAG 2.2 AA)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-07-25
+last_verified: 2026-08-12
 verified_against: [code, config]
 owner: harshil
 related_docs: [../../reference/DESIGN-SYSTEM.md, ../../MAINTENANCE.md, ../../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -63,6 +63,8 @@ Verified in code, not assumed:
 | Keyboard handlers on interactive elements | Widespread | 2.1.1 |
 | Dark/light themes with OKLCH tokens | `DESIGN-SYSTEM.md` | 1.4.3 (unverified) |
 | Automated CI guard | `scripts/a11y_check.py` | — |
+| Staff Storage `EditDrawer` rewritten from a `createPortal`-mounted div to native `<dialog>` + `showModal()` | Phase 2, 2026-08 — matches `RenameModal.tsx`'s reference pattern; gained focus trapping, Escape-to-close and a real `::backdrop` for free | 2.1.2, 2.4.3, 4.1.2 |
+| Inspect drive tree Trash toggle uses named handler references instead of inline arrow functions in JSX | Phase 2, 2026-08 — a `role="button"` element nested inside another `<button>` (native elements cannot nest); named handlers keep the static guard able to see the required `onKeyDown` | 2.1.1, 4.1.2 |
 
 `showModal()` deserves emphasis: it is mandated in this codebase for a *layout*
 reason (the "squished card" bug), but it delivers focus trapping, Escape-to-
@@ -72,7 +74,8 @@ the things nobody knows about.
 
 ## 3. Known defects
 
-From `python3 scripts/a11y_check.py`, 2026-08-07:
+From `python3 scripts/a11y_check.py`, last re-verified 2026-08-12 (0 findings
+across 244 files, including the new Staff Storage bulk-operations UI):
 
 | Rule | Criterion | Count | Status |
 |---|---|:---:|---|

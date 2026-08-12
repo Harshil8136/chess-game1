@@ -3,7 +3,7 @@
 title: "Threat Model (STRIDE)"
 status: active
 audience: [technical, operator, ai, owner]
-last_verified: 2026-07-25
+last_verified: 2026-08-12
 verified_against: [code, config]
 owner: harshil
 related_docs: [SECURITY.md, RoPA.md, ../runbooks/incident-response.md, compliance/ASVS-L2.md, ../architecture/plac-and-audit.md]
@@ -86,6 +86,39 @@ flowchart TB
    role has zero grants, zero policies, zero function ACLs.
 4. **Worker → third parties.** Outbound only, no user-controlled URLs.
 
+**Public exception — Staff Managed Storage share/request routes.** Two route
+families are the one deliberate carve-out in trust boundary 1: they serve
+external parties (vendors, vets) who have no portal account, so they cannot
+sit behind CF Access.
+
+- `/api/storage/share/[token]` — vendor download links. `GET` is always
+  side-effect-free (renders a consent/passcode gateway form only); the actual
+  file transfer happens on `POST`, so query-string data is never echoed or
+  acted on.
+- `/api/storage/request/[token]/*` — inbound File Request Links, letting an
+  external party upload a file the staff member asked for. Same GET/POST
+  split: `GET` never reads the passcode from the query string, `POST` reads it
+  from form data and compares it with `timingSafeEqualStrings()`.
+
+Token model: both are HMAC-signed, self-verifying, time-boxed tokens
+(`mintShareToken`/`verifyShareToken`, `src/lib/storage/share-token.ts`) —
+possession of the token is the credential, there is no session. An optional
+passcode adds a second factor, hashed at rest (`hashPasscode`) and compared
+timing-safely. Every access attempt — success or failure — is telemetry
+logged to `storage_share_access_logs` (hashed IP, user agent, CF country,
+attempt status), independent of whether the request succeeds.
+
+A 2026-08 security pass found and closed a **reflected-XSS-to-session-
+takeover chain**: the no-passcode path on `request/[token]/index.ts` embedded
+the raw, unvalidated `?passcode=` query value inside an inline `<script>` via
+unescaped `JSON.stringify()`, letting a crafted link execute same-origin
+script in a staff browser that later followed it. Also closed in the same
+pass: a passcode-bypass gap where the upload `presign`/`confirm` endpoints
+never re-checked the passcode the landing-page gateway had already enforced,
+and two non-timing-safe passcode comparisons (`!==` instead of
+`timingSafeEqualStrings`). All three are reflected in the STRIDE rows below as
+mitigated, not merely mitigatable.
+
 ## 2. STRIDE analysis
 
 ### S — Spoofing
@@ -104,6 +137,8 @@ flowchart TB
 | SQL injection | D1 prepared statements + bound params; Supabase client parameterises. SEC-03 forbids raw `env.DB.prepare` in handlers | Low |
 | Mass assignment | zod `.strict()` allowlists. **Was High** — `inquiries/edit` accepted `updates: any` straight into a Supabase `.update()`; fixed 2026-07-25 | Low |
 | XSS | Nonce-based CSP; `sanitizeHtml` via HTMLRewriter; SEC-08 guards `dangerouslySetInnerHTML` | **Medium** — `script-src` still carries `'unsafe-inline'` pending the Report-Only canary |
+| Reflected XSS via public storage link (`?passcode=`) | **Closed 2026-08.** No-passcode `GET` no longer reads or echoes query-string data; the upload gateway's passcode value now flows through an escaped `data-passcode` HTML attribute, never a `JSON.stringify()`'d inline `<script>` | Low |
+| Storage upload/passcode bypass | **Closed 2026-08.** `presign`/`confirm` on File Request Links now independently re-verify any configured passcode server-side, and comparisons use `timingSafeEqualStrings()` instead of `!==` | Low |
 | CSRF | Origin/Referer validation on every mutation, fail-closed (`test/csrf.test.ts`) | Low |
 | Audit-log tampering | Append-only in practice; delete is PLAC-gated and snapshots rows first | **Medium** — no hash chain; an Owner could delete evidence |
 
@@ -144,6 +179,7 @@ flowchart TB
 | Prefix confusion | Segment-boundary anchored matching — `/api/usersomething` no longer inherits `/api/users` access | Low |
 | Role escalation via payload | Client-supplied roles are informational; gates read `locals.user.role` (SEC-04) | Low |
 | Dashboard prerender bypass | ESLint hard-errors on `prerender = true` under `src/pages/dashboard/**` | Low |
+| Storage PLAC deny bypassed by hardcoded role array | **Closed 2026-08.** `requests/[id].ts` previously OR'd `placDenyResponse(...)` with a hardcoded `['dev','owner',...].includes(user.role)` clause, silently overriding an explicit per-user PLAC deny for those roles. The clause was removed — `placDenyResponse` alone now gates | Low |
 
 ## 3. Highest-priority residual risks
 
