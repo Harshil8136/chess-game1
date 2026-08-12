@@ -250,9 +250,9 @@ src/
 
 ### 7.8 Modals, Dialogs & The "Squished Card" Bug — MANDATORY READING
 
-> 🔴 **READ THIS ENTIRE SECTION before building ANY modal, dialog, popup, overlay, or full-screen panel inside a Preact island.**
+> 🔴 **READ THIS ENTIRE SECTION before building ANY modal, dialog, popup, overlay, empty-state card, or full-screen panel inside a Preact island.**
 
-There are **THREE** separate CSS bugs that can squish modals/dialogs inside Preact islands. Each has a different root cause. You must defend against ALL three simultaneously.
+There are **FOUR** separate CSS bugs that can squish modals/dialogs/cards inside Preact islands. Each has a different root cause. You must defend against ALL four simultaneously.
 
 ---
 
@@ -279,6 +279,15 @@ There are **THREE** separate CSS bugs that can squish modals/dialogs inside Prea
 **Root Cause:** The browser's User-Agent stylesheet sets `width: fit-content` on `<dialog>` elements. In Tailwind CSS v4, utility classes are placed inside `@layer utilities`, which has **lower cascade priority** than unlayered UA defaults. This means Tailwind classes like `w-full`, `max-w-2xl`, etc. applied via `className` on a `<dialog>` element **silently lose the specificity battle** to the browser's `width: fit-content`, causing the dialog to shrink-wrap to its content width.
 
 **The fix:** Use **inline `style={{ }}` attributes** for ALL layout-critical properties on the `<dialog>` element itself. Inline styles have the highest CSS specificity and always beat UA defaults.
+
+---
+
+#### Bug #4: Flexbox Auto-Margin Min-Content Collapse (The Vertical Text Wrapping Trap)
+
+**Root Cause:** In CSS Flexbox (W3C CSS Flexible Box Layout Module Level 1 §8.1), when a parent container uses `flex flex-col items-center` (`align-items: center`), cross-axis alignment calculates free space BEFORE flex item sizing. If a direct flex child element (e.g. `<p>` or `<div>`) has `max-w-md` (`max-width: 28rem`) combined with `mx-auto` (`margin-left: auto; margin-right: auto;`), the browser flexbox engine distributes all horizontal space to the auto margins first. This forces the child element's width box to collapse down to its intrinsic **`min-content` width** — which is the width of the single longest word in the text (e.g. *"generate"* or *"toolbar"*). As a result, every single word in the paragraph is forced to wrap onto its own vertical line!
+
+**The fix:** NEVER place `max-w-*` and `mx-auto` directly on text `<p>` elements that are direct children of a `flex-col items-center` container. Always wrap empty-state text elements in a dedicated block container with explicit inline width styling:
+`<div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', textAlign: 'center' }}>`.
 
 ---
 
@@ -356,7 +365,7 @@ function MyModal() {
 }
 ```
 
-#### 🚫 BANNED PATTERNS (Will cause squished modals)
+#### 🚫 BANNED PATTERNS (Will cause squished modals or vertical text collapse)
 
 | ❌ BANNED | Why It Fails |
 |-----------|-------------|
@@ -364,6 +373,7 @@ function MyModal() {
 | `<dialog open className="fixed inset-0">` | Same: not in Top Layer, trapped in scroll container |
 | `<div className="fixed inset-0 z-50">` as overlay | Trapped by `overflow-y: auto` containing block |
 | `className="w-full"` on `<dialog>` | Tailwind v4 `@layer` loses to UA specificity |
+| `<p className="w-full max-w-md mx-auto">` inside `flex flex-col items-center` | Flexbox auto-margins absorb cross-axis space, forcing text box to `min-content` width (every word wraps vertically) |
 | `setIsOpen(true)` + conditional `{isOpen && <div>...}` | No Top Layer escape, no native focus trap |
 
 #### ✅ REQUIRED CHECKLIST (Before merging any modal)
