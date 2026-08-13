@@ -3,7 +3,7 @@
 title: "Documentation Index & Map"
 status: active
 audience: [non-technical, ai, technical]
-last_verified: 2026-08-05
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 related_docs: [CONTRIBUTING-DOCS.md, ../README.md, ../RULESAd.md]
@@ -93,7 +93,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) | Email Portal: compose/send, drafts, templates, scheduling, queue delivery tracking; RBAC+PLAC gating | non-technical, ai, technical, operator | active |
 | [`features/CONTROL-PLANE.md`](features/CONTROL-PLANE.md) | Service Control Plane: two-layer model, access, API surface | ai, technical | active |
 | [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
-| [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: private per-role file drive, external vendor sharing with email delivery, inbound File Request Links (added 2026-08-09), weekly drift reconciliation, admin quota/config controls — shipped 2026-08-05 | non-technical, ai, technical, operator | active |
+| [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: private per-role file drive, external vendor sharing with email delivery, inbound File Request Links (added 2026-08-09), weekly drift reconciliation, admin quota/config controls — shipped 2026-08-05; business-value/market-comparison section added 2026-08-13 | non-technical, ai, technical, operator | active |
+| [`features/SEARCH-CONSOLE-SYNC.md`](features/SEARCH-CONSOLE-SYNC.md) | Search Console Sync: automated Google Search Console sitemap/indexing checks + weekly PageSpeed Insights (Core Web Vitals), read-only/ToS-compliant by design, full call-level audit log, CSV export, ops-alert emails, business-value & market-comparison analysis — shipped 2026-08-12 | non-technical, ai, technical, operator, owner | active |
 
 ## Operations
 

@@ -3,7 +3,7 @@
 title: "Staff Managed Storage"
 status: active
 audience: [non-technical, ai, technical, operator]
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -26,7 +26,8 @@ related_docs:
 - ../runbooks/public-share-links-domain-isolation.md
 - ../reference/coding-standards.md
 - ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md
-tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing, file-requests]
+- SEARCH-CONSOLE-SYNC.md
+tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing, file-requests, business-value, market-comparison]
 
 ---
 
@@ -161,6 +162,44 @@ This feature was originally scoped as a much heavier build. During implementatio
 | Storage location | Unspecified | A brand-new, private storage bucket, kept deliberately separate from the bucket that serves the public website |
 
 None of this changed what staff actually experience — the feature works exactly as originally envisioned. It changed how much new infrastructure had to exist to deliver it.
+
+## 9a. Business Value & Market Comparison
+
+*(Added 2026-08-13. Researched against current, sourced 2026 vendor pricing — every figure below links to where it came from, and confidence is flagged honestly where a vendor doesn't publish self-serve pricing.)*
+
+### Is this actually useful?
+
+Yes, and concretely: before this existed, staff had no sanctioned place for working documents at all — the honest alternative was email attachments or personal devices, which is both a real compliance gap (no audit trail for who has a pet's medical record, or when a signed contract went to which vendor) and a real security gap (no expiry, no revocation, no idea who's downloaded what). For a business handling client pet medical records, staff payroll documents, and vendor contracts, "we emailed it" is not a defensible answer if something goes wrong. This isn't a hypothetical productivity nice-to-have — it closes a real, pre-existing risk.
+
+The specific things that make it worth having, not just any file-storage tool:
+
+- **Per-role quotas prevent the free-tier ceiling from being an accident waiting to happen** — nobody can fill the account's storage by surprise.
+- **The share-link and file-request systems are the same primitive**, not two different mechanisms bolted together (see §6a) — one HMAC-signed, self-expiring token format, one content-verification path, one audit table. Less surface area to get wrong, and it shows in how cleanly file-request inherited the share-link security model.
+- **Weekly reconciliation catches drift automatically** — a file someone deleted directly through Cloudflare's own dashboard, bypassing the portal, gets caught within a week instead of silently corrupting what the drive thinks it has.
+- **Zero ongoing cost.** Every capability below that a commercial vendor charges $7-122/user/month for costs nothing extra here — it runs on Cloudflare's storage free tier.
+
+### What the equivalent would cost bought off-the-shelf
+
+Checked against a specific capability list this feature actually has: per-role storage quotas, RBAC, time-limited external share links, native inbound file-request (a locked upload link for an outside party to submit a file back, no account needed), and audit logs. For a 5-20 staff business, the tier that includes **all** of that, not just storage:
+
+| Tool | Price (the tier meeting the full checklist) | Native file-request? | Confidence |
+|---|---|---|---|
+| **Dropbox Business** (Advanced) | $24/user/mo — Standard ($15) lacks audit logs and custom link expiration | Yes | Official pricing + help docs |
+| **Google Workspace** (Business Standard) | $14/user/mo — **but has no native file-request at all**, a platform gap, not a tier limit; needs a $10-50/mo third-party add-on | No — confirmed platform gap | Official pricing; gap confirmed via vendor help content |
+| **Box** (Business) | $15/user/mo | Yes | Pricing convergent across trackers (official page is JS-rendered) |
+| **Microsoft 365** (Business Premium, for real RBAC/Conditional Access) | $22/user/mo — Basic ($7) already has native file-request but lacks enforced RBAC | Yes | Official pricing + docs |
+| **Egnyte** (Business) | $22/user/mo, annual-only, 10TB pooled | Yes (basic tier; advanced workflows cost more) | Official help docs |
+| **Citrix/Progress ShareFile** (Premium) | $122/mo flat for 5 seats — file-request is withheld from the two cheaper tiers despite being the product's original identity | Yes, **Premium tier only** | Official docs + pricing tracker |
+| **Nextcloud** (self-hosted) | $0 license + ~$10-40/mo hosting, but real IT setup/maintenance time, and the granular-permissions add-on's price is undocumented | Yes, free built-in feature (moderate confidence — confirmed via community sources, not an official release note) | Mixed — license/hosting confirmed, RBAC-addon cost unconfirmed |
+| **WeTransfer Teams** | $25/user/mo, but **no true RBAC, no per-role quotas** — not actually a substitute for a permissioned drive despite being the most expensive option here | Yes, but weakest match to the actual requirement | Official pricing |
+
+**For a mid-point 15-person staff, the cheapest complete commercial match (Box Business) runs ~$225/month — roughly $2,700/year — and that's before any of them integrate with this portal's existing login and role system at all**, which none of them can do out of the box; every one would run as a disconnected second system staff have to remember to use, with its own separate login. Microsoft 365 Business Premium, the more fully-featured match, runs ~$330/month (~$3,960/year). Google Workspace looks cheapest on paper (~$210/mo for 15 seats) but is *functionally incomplete* for this feature's own requirements without an add-on, since it has no native way for an outside party to send a file back in at all.
+
+**Self-hosting (Nextcloud) is the one path that could beat this in raw cash cost** — but it trades that for real, ongoing IT labor (one hosting-cost analysis put ongoing maintenance at 2-4 hours/month even before initial setup), and its granular per-folder permission system is a third-party add-on whose price isn't published. The managed version of the same software (Nextcloud One, ~€15/user/mo) lands right back in commercial SaaS pricing territory once someone else is paid to run it.
+
+### Custom-build cost, if this had been outsourced
+
+Using the same freelance/agency rate data as the Search Console Sync comparison (see [`SEARCH-CONSOLE-SYNC.md` §9](SEARCH-CONSOLE-SYNC.md#9-business-value--market-comparison) for sourcing) — this feature is larger in scope than that one: direct-to-cloud upload architecture, magic-byte content verification, two related-but-distinct token-based sharing systems, weekly reconciliation, and full integration with an existing RBAC/PLAC system. That's realistically **4-8 weeks** of one developer's time at typical mid-to-senior integration rates ($73-128/hr), putting an outsourced build in the rough range of **$12,000-$25,000 one-time**, plus whichever commercial tool from the table above still needed to be paid for afterward since a custom build of this scope is unusual for a business this size to commission from scratch. What actually shipped cost the Cloudflare storage free tier and nothing else.
 
 ## 10. Known Limitations (as of 2026-08-12)
 
