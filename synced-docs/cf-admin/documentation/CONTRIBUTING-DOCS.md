@@ -3,10 +3,10 @@
 title: "Documentation Conventions & Governance"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
-related_docs: [README.md,_templates/doc-template.md]
+related_docs: [README.md,_templates/doc-template.md,commercial/MODULE-PRICING-CATALOG.md]
 tags: [meta, governance, conventions]
 ---
 
@@ -44,6 +44,7 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 | `documentation/security/` | Current security posture, privacy, login forensics |
 | `documentation/security/reviews/` | Dated, point-in-time security audit snapshots (historical) |
 | `documentation/features/` | Per-feature docs (dashboard, users, CMS, chatbot, control-plane) |
+| `documentation/commercial/` | Cross-repo pricing/commercial reference docs (module catalog, buy-vs-build, billing model) — evergreen, not dated, since they're maintained as pricing/research evolves. Dated point-in-time commercial *analyses* (e.g. `2026-07-26-commercial-model-costing-pricing-and-scale.md`) stay at the `documentation/` root per §3's specs/reviews rule; this folder is for the living reference material that supersedes/extends them |
 | `documentation/operations/` | Binding IDs, limits, secrets registry, deploy, dev tools |
 | `documentation/reference/` | Coding standards, design system, deep design docs |
 | `documentation/specs/` | Dated design specs (append-only) |
