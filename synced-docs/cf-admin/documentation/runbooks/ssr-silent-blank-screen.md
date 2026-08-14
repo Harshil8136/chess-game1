@@ -3,7 +3,7 @@
 title: "Silent Blank Screen (SSR Hydration Failure)"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -117,7 +117,7 @@ If a blank screen recurs, follow this checklist in order:
 
 1. **Check Sentry** — Look for errors tagged `error.source: error_boundary` or `error.section: *`
 2. **Check browser console** — Look for `[GlobalErrorCapture]` or `[ErrorBoundary]` logs
-3. **Hit `/api/debug-ssr`** — Returns JSON diagnostics for all SSR subsystems (dev role only)
+3. **Run the diagnostics page** — `/dashboard/debug` (vendor-support only) exercises the D1/R2/KV/Supabase/Upstash/Analytics probes in `src/lib/diagnostics/`. *(This step previously said to hit `/api/debug-ssr`; that route was removed and no longer exists.)*
 4. **Verify the component**:
    - Does it have `export default`?
    - Does the API route exist in `src/pages/api/`?

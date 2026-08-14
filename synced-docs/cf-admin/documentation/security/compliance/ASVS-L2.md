@@ -3,7 +3,7 @@
 title: "OWASP ASVS v4.0.3 Level 2 Verification Matrix"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-07-08
+last_verified: 2026-08-13
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [../SECURITY.md, CSA-CAIQ-v4.md, SOC2-TSC-mapping.md, ../../../RULESAd.md]
@@ -79,10 +79,10 @@ tags: [compliance, owasp, asvs, self-attestation]
 
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
-| 2.1.1 | Passwords ≥ 12 chars | ✅ | Supabase Auth default; no in-app password entry (SSO only). |
-| 2.1.2 | Passwords are not truncated | ✅ | Supabase Auth. |
-| 2.1.6 | Password change requires current password | ✅ | Supabase Auth flow. |
-| 2.1.7 | Passwords compared to compromised-password corpus | 🟡 | Runbook `documentation/runbooks/supabase-leaked-password-protection.md` — awaiting dashboard toggle (Supabase Auth HIBP check). Owner action. |
+| 2.1.1 | Passwords ≥ 12 chars | **N/A** | **Corrected 2026-08-13 — Supabase GoTrue was removed; this platform has no password store and no login form.** Identity is Cloudflare Zero Trust (Google, GitHub, one-time PIN); password policy is the IdP's, not ours. Crediting a control to a component that is not deployed overstates the posture. |
+| 2.1.2 | Passwords are not truncated | **N/A** | No password store — see 2.1.1. |
+| 2.1.6 | Password change requires current password | **N/A** | No password store — see 2.1.1. Credential lifecycle is handled by the Zero Trust IdP. |
+| 2.1.7 | Passwords compared to compromised-password corpus | **N/A** | **Corrected 2026-08-13.** Four documents gave four different answers (30-second free toggle / Pro-plan-only / N-A since GoTrue removed / awaiting owner action). The settled answer: **not applicable** — no GoTrue passwords exist, so the Supabase HIBP toggle protects nothing here. The Supabase advisor still emits `auth_leaked_password_protection` as a WARN because the advisor cannot tell that GoTrue is unused; it is a known false positive, recorded in `security/SECURITY.md` §0. `runbooks/supabase-leaked-password-protection.md` is retained only for the day a password path is ever introduced. |
 | 2.2.1 | Anti-automation on auth | ✅ | Cloudflare Zero Trust bot management + Upstash Redis rate limiting (`src/lib/ratelimit.ts`). |
 | 2.2.3 | MFA required for admin/priv | ✅ | Cloudflare Zero Trust enforces MFA at the identity provider. |
 | 2.3.1 | Enrollment tokens random / time-bound | ✅ | Access-request tokens generated via `crypto.randomUUID()`. |
@@ -112,7 +112,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 |----|---------|--------|----------|
 | 4.1.1 | Trusted enforcement points | ✅ | `src/middleware.ts` centralizes gate; SEC-06 enforces per-handler. |
 | 4.1.2 | Every user attribute is authoritative-source-checked | ✅ | Role re-checked from Supabase every 30 min; PLAC recomputed on session start. |
-| 4.1.3 | Least-privilege principle | ✅ | Role hierarchy (dev < owner < super_admin < admin < staff); `isAdmin()` helper enforced by SEC-04. |
+| 4.1.3 | Least-privilege principle | ✅ | Role hierarchy — canonical `vendor_support > owner > admin > manager > staff > viewer` (stored as `dev`/`owner`/`super_admin`/`admin`/`staff`); `isAdmin()` helper enforced by SEC-04. |
 | 4.1.4 | Deny by default | ✅ | `hasAccess = false` for unmapped API routes (`src/middleware.ts:549`); enforced by SEC-07. |
 | 4.1.5 | Access control failures produce audit event | ✅ | Ghost Audit logs 403s via `waitUntil`. |
 | 4.2.1 | Sensitive data checks at access | ✅ | PLAC per-page + per-fragment (`#revoke`, `#flush`, `#export`). |
@@ -213,7 +213,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 14.3.1–14.3.3 | Debug info hidden | ✅ | Sentry `sendDefaultPii: false`; `X-Powered-By` never set. |
 | 14.4.1 | Every response with security headers | ✅ | `securityHeaders` middleware applied globally. |
 | 14.4.2 | Content-Type set on every response | ✅ | Astro sets by default. |
-| 14.4.3 | Content-Security-Policy enforced | 🟡 | `script-src` nonce + `strict-dynamic` (enforced by SEC-01). `style-src 'unsafe-inline'` residual — Preact hydration + Astro scoped styles; migration to nonces is a follow-up. |
+| 14.4.3 | Content-Security-Policy enforced | 🟡 | **Corrected 2026-08-13 — `'strict-dynamic'` is NOT in the policy.** It was deliberately left off: Cloudflare zone-level scripts (Rocket Loader / Web Analytics) are injected after the response leaves the Worker and never receive the nonce, so `'strict-dynamic'` would stop the browser trusting the host allowlist and break them (`MAINTENANCE.md` C-3). What is actually enforced (`src/lib/security/csp.ts`): per-request nonce on every first-party inline script, host allowlist, **no `'unsafe-eval'`** (removed 2026-07-25, pinned by SEC-01 with no exemption), residual `'unsafe-inline'` on `script-src` and `style-src`, and a hardened `Content-Security-Policy-Report-Only` canary without `'unsafe-inline'` (pinned by SEC-01b). |
 | 14.4.4 | X-Content-Type-Options nosniff | ✅ | Set globally. |
 | 14.4.5 | Referrer-Policy | ✅ | `strict-origin-when-cross-origin`. |
 | 14.4.6 | Content-Security-Policy in report-only mode monitored | ✅ | `report-uri` to Sentry configured. |
@@ -227,10 +227,10 @@ tags: [compliance, owasp, asvs, self-attestation]
 - **Total controls in scope (excl. N/A):** ~115
 - **✅ Verified:** 105  (~91%)
 - **🟡 Partial / accepted-risk:** 8  (~7%)
-  - 2.1.7 leaked-password protection (awaiting dashboard toggle — runbook exists)
+  - ~~2.1.7 leaked-password protection~~ — reclassified **N/A** 2026-08-13 (no GoTrue passwords)
   - 6.2.4 automated key rotation
   - 14.1.2 3 low-severity dev-server-only npm advisories
-  - 14.4.3 residual `style-src 'unsafe-inline'`
+  - 14.4.3 residual `'unsafe-inline'` on `script-src` and `style-src`; `'strict-dynamic'` intentionally off (see C-3)
   - a small handful of partials in feature-doc coverage
 - **❌ Open gaps:** 0
 - **🚫 N/A:** ~6 (mobile/native controls)

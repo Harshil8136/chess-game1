@@ -2,7 +2,7 @@
 title: "Email Portal"
 status: active
 audience: [non-technical, ai, technical, operator]
-last_verified: 2026-06-07
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 related_code:
@@ -18,7 +18,6 @@ related_code:
 - src/components/admin/emails/hooks/useEmailAttachments.ts
 - src/components/ui/BottomSheet.tsx
 - src/pages/api/emails/send.ts
-- src/pages/api/emails/cancel.ts
 - src/pages/api/emails/drafts.ts
 - src/pages/api/emails/templates.ts
 - src/pages/api/emails/attachments.ts
@@ -45,7 +44,7 @@ tags: [feature, email, queue, resend, plac, rbac]
 
 > **Status:** Production Active
 > **Surface:** `/dashboard/emails` (cf-admin) — RBAC role floor + PLAC gated
-> **Role floor:** Admin or higher (`admin`, `super_admin`, `owner`, `dev`)
+> **Role floor:** **Manager or above** — canonical `manager`/`admin`/`owner`/`vendor_support`, stored as `admin`/`super_admin`/`owner`/`dev`
 > **Last Updated:** 2026-06-07
 
 > **Audience note:** This document is an architecture-level overview for AI IDE agents
@@ -203,7 +202,7 @@ adds **status filter chips**.
 Every entry point is gated by the platform's two-engine model
 ([plac-and-audit.md](../architecture/plac-and-audit.md)):
 
-- **RBAC role floor** — `admin`, `super_admin`, `owner`, or `dev`. `staff` cannot
+- **RBAC role floor** — **Manager or above** (stored `admin`, `super_admin`, `owner`, `dev`). `staff` cannot
   reach any email endpoint.
 - **PLAC** — Page-Level Access Control with **fragment sub-capabilities** on the
   page path. Each capability defaults to **granted** unless an explicit deny exists
@@ -272,11 +271,20 @@ references. Limits: **5 MB** per file (`400` over), rate limit `20` uploads / `1
 
 ### Scheduling & cancellation
 
+> ⚠️ **Cancel-scheduled-send is NOT implemented — corrected 2026-08-13.** This
+> section described `POST /api/emails/cancel` as a working endpoint, and it was
+> listed twice more in this document's file inventory. There is no
+> `src/pages/api/emails/cancel.ts`, and nothing in `src/` calls such a route —
+> no UI affordance exists either. The paragraph below is preserved as the
+> **design intent** for the feature; treat it as a spec, not as behaviour.
+> Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md) → C-17.
+
 A scheduled send lands in the ledger with `status: scheduled` and is dispatched to
-Resend with a future `scheduledAt`. `POST /api/emails/cancel` (PLAC `#compose`) looks
-up the row, refuses anything not currently `scheduled`, calls Brevo's
-API to cancel, and flips the ledger row to `cancelled` (audited). It
-requires a stored `resend_id` (legacy column name storing Brevo ID), so a job can only be cancelled once the consumer has
+the provider with a future `scheduledAt`. The intended `POST /api/emails/cancel`
+(PLAC `#compose`) would look
+up the row, refuse anything not currently `scheduled`, call Brevo's
+API to cancel, and flip the ledger row to `cancelled` (audited). It would
+require a stored `resend_id` (legacy column name storing the Brevo ID), so a job could only be cancelled once the consumer has
 registered it with Brevo.
 
 ---
@@ -313,7 +321,7 @@ timeline). The tab requests `cache: no-store` so operators see live status.
 
 - **Access:** role floor + page PLAC + a hard `#queue-logs` check; the route is the
   same one the Activity Center's Email Log tab uses, so it also honors
-  `/dashboard/logs` denies for `super_admin`+.
+  `/dashboard/logs` denies for canonical **Admin** and above (stored `super_admin`+).
 - **Statuses:** `queued` → `sent_to_resend`/`sent` → `delivered`, plus `scheduled`,
   `failed`, `bounced`, `cancelled`.
 - **Ledger columns:** `id` (tracking UUID), `project_source`, `purpose`, `status`,
@@ -334,7 +342,6 @@ timeline). The tab requests `cache: no-store` so operators see live status.
 - Composer / editor → `src/components/admin/emails/_components/Composer.tsx`,
   `src/components/admin/emails/atoms/RichEditor.tsx`
 - Send + validation + enqueue + local-dev emulation → `src/pages/api/emails/send.ts`
-- Cancel scheduled → `src/pages/api/emails/cancel.ts`
 - Drafts CRUD (D1) → `src/pages/api/emails/drafts.ts`
 - Templates CRUD (D1) → `src/pages/api/emails/templates.ts`
 - Attachment upload (R2) → `src/pages/api/emails/attachments.ts`
@@ -371,7 +378,7 @@ canonical registry.
   Brevo in-request; a Brevo outage delays delivery (jobs stay queued) but does not
   error the operator's send.
 - **Schema provisioning (resolved).** `admin_email_drafts` and `admin_email_templates`
-  are created by `migrations/0032_create_admin_email_tables.sql`, which also seeds
+  are created by `database/legacy_migrations/0032_create_admin_email_tables.sql`, which also seeds
   `custom_email_max_recipients` and the `#preview`/`#contacts` PLAC rows. Because the
   shared `madagascar-db` reserves the default `d1_migrations` table for **cf-astro**,
   cf-admin migrations are applied **directly/out-of-band** (e.g. via the Cloudflare

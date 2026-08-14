@@ -3,7 +3,7 @@
 title: "CF-Admin Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -14,8 +14,16 @@ tags: []
 > **TL;DR (non-technical):** How the admin portal is built and why it's fast and runs at near-zero cost. It explains the "Lean Edge" approach — authenticating and authorizing every request at Cloudflare's edge before rendering, staying well within free-tier CPU budgets.
 
 > **Status:** Production Active (v4.7)
-> **Stack:** Astro 6.3.7 SSR + Cloudflare Workers (Free) + Preact 10.29.0 Islands + D1 + KV + R2 + Queues + Analytics Engine
-> **Last Updated:** 2026-05-26 (v4.7: deep-review follow-up — PLAC wired into all remaining data-bearing API routes (`content/*`, `media/*`, `settings/portal`, `users/*`, `audit/{login-logs, export, silence}`); production `npm audit` cleared (16 → 0 vulns); `writeRevocationFlag` TTL now reads `SESSION_MAX_LIFETIME_MS`; `scheduled-log-sync` email fan-out capped at 5/batch; content-route GETs crash-proofed; CSP between `_headers` and middleware aligned. See [`security/reviews/2026-05-26-security-review.md`](../security/reviews/2026-05-26-security-review.md) and [`archive/COMPLETED_PHASES.md`](../archive/COMPLETED_PHASES.md) § Phase 13)
+> **Stack:** Astro 7.1.6 SSR (`@astrojs/cloudflare` 14.1.7) + Cloudflare Workers (Free) + Preact 10.29.7 Islands (`@astrojs/preact` 6.0.2) + Tailwind CSS 4.3.3 + D1 + KV + R2 + Queues + Workers AI + Analytics Engine
+>
+> Versions here are a snapshot of `package.json` at `last_verified`; that file is
+> the source of truth. Astro 6 → 7 shipped before 2026-08-13.
+> Change history for this document lives in git; current security posture lives
+> in [`../security/SECURITY.md`](../security/SECURITY.md) §0, which is the doc
+> that owns it. (A "Last Updated: 2026-05-26" banner used to sit here restating
+> that posture — including "production `npm audit` cleared (16 → 0 vulns)" and
+> "CSP between `_headers` and middleware aligned", both of which are no longer
+> true. Duplicating another document's status is how it goes stale.)
 
 ---
 
@@ -29,7 +37,7 @@ tags: []
 |-----------|----------|----------|-----------|
 | RBAC + ACM | Hierarchical integers + route registry | <0.1ms | 0 KB |
 | PLAC | KV-cached access maps + D1 overrides | <0.5ms | ~3 KB |
-| SPA Navigation | Astro `ClientRouter` (View Transitions) | 0ms (browser-native) | 0 KB |
+| Navigation | Full-page SSR navigation — **no** `ClientRouter`/View Transitions (verified absent from `src/` 2026-08-13) | 0ms | 0 KB |
 | CSS Architecture | Component-scoped + centralized tokens | 0ms | 0 KB |
 | Security Headers | Edge-injected via middleware sequence | 0ms | 0 KB |
 | Audit Logging | `ctx.waitUntil()` fire-and-forget D1 writes | 0ms (post-response) | 0 KB |
@@ -58,7 +66,7 @@ tags: []
 │  + Page-Level Access Control (PLAC) with KV-cached overrides        │
 ├─────────────────────────────────────────────────────────────────────┤
 │                    LAYER 1: TRANSPORT                               │
-│  Astro 6 SSR + ClientRouter + Preact Islands + Signals              │
+│  Astro 7 SSR + Preact Islands + Signals                             │
 │  Cloudflare Workers → D1 / KV / R2 / Queues / Analytics Engine     │
 │  (Hyperdrive: DISABLED — free tier; Observability: logs + traces ✅) │
 └─────────────────────────────────────────────────────────────────────┘
@@ -123,7 +131,15 @@ Browser Request → CF Zero Trust Edge (CF_Authorization cookie validation)
 
 ## 4. Atomic Islands Pattern
 
-All front-end code follows this composability hierarchy. **No monolith > 200 lines.**
+All front-end code follows this composability hierarchy.
+
+**On the 200-line rule:** it is a design intent, not an enforced limit. What
+`eslint.config.js` actually does today is `'max-lines': 'off'` globally — turned
+off "TEMP pending the god-file split pass", to be re-enabled as `error` in phase
+12 — with a `warn` at 600 lines for four named exceptions. Treat 200 as the
+target you justify departing from; treat 600-as-warning as what CI will tell you
+about. `RULESAd.md` §8.1 and `reference/coding-standards.md` both describe the
+intent; this note describes the enforcement.
 
 | Level | Role | Rule |
 |-------|------|------|
@@ -154,8 +170,11 @@ src/
 │   ├── users/index.astro + [id]/access.astro
 │   ├── settings/index.astro
 │   ├── privacy/index.astro
-│   ├── debug/index.astro              ← DEV only (+ pages registry)
-│   └── [...slug].astro                ← Spread Route / Soft 404
+│   ├── emails/, storage/, seo/, alerts/, sessions/, inquiries/,
+│   │   arco/, retention/           ← added since this tree was first written
+│   ├── access-denied.astro
+│   └── debug/index.astro              ← DEV only (+ pages registry)
+└── pages/404.astro                     ← not-found page
 ├── components/
 │   ├── admin/
 │   │   ├── bookings/
@@ -217,9 +236,14 @@ src/
 
 The auth system (middleware + PLAC + registry) is the "Lego baseplate." It reads from `admin_pages` (D1) and enforces access for all modules without knowing what modules exist. New modules snap in without modifying the baseplate.
 
-### Spread Route / Soft 404
+### Not-found handling
 
-`src/pages/dashboard/[...slug].astro` catches all unbuilt paths. Astro resolves exact physical paths first; this is a fallback. It renders a Midnight Slate "Module Under Construction" card within `AdminLayout` — sidebar and topbar persist, no SPA break.
+> **Corrected 2026-08-13.** This section described a spread route at
+> `src/pages/dashboard/[...slug].astro` rendering a "Module Under Construction"
+> card. That file does not exist — every dashboard route under `src/pages/dashboard/`
+> is a real physical page. Unmatched paths fall through to
+> [`src/pages/404.astro`](../../src/pages/404.astro); denied ones render
+> `src/pages/dashboard/access-denied.astro`.
 
 ---
 

@@ -3,8 +3,8 @@
 title: "Maintenance Backlog"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-12
-verified_against: [code]
+last_verified: 2026-08-13
+verified_against: [code, infra]
 owner: harshil
 related_docs: [archive/ToDoList.md, archive/PENDING_PHASES.md, security/SECURITY.md]
 tags: [maintenance, backlog]
@@ -26,6 +26,12 @@ work** (line numbers are from the original audit and may have drifted).
 > track real code follow-ups discovered during the docs audit and from the
 > 2026-05-25 deep review's remaining Medium/Low items.
 
+> **Closing an item means re-verifying it, not remembering it.** The 2026-08-13
+> truth pass found C-1 and C-2 still listed as open weeks after both had shipped,
+> and a "dead table" note that a later commit had falsified. Every row here
+> should be cheap to re-check against code — if it isn't, add the command that
+> makes it cheap.
+
 ## Open items (from the 2026-05-25 deep review)
 
 | # | Item | File (verify lines) | Severity | Notes |
@@ -44,8 +50,8 @@ work** (line numbers are from the original audit and may have drifted).
 
 | Item | Where | Notes |
 |------|-------|-------|
-| `cms_content_history` is a dead table (zero writers) | `migrations/0026_cms_content_history.sql` | Either ship the version-history feature (writers + UI + trigger) or drop the migration. Currently a maintenance trap, not a runtime bug. |
-| ~~Email Portal schema not provisioned by migrations~~ (RESOLVED 2026-06) | `migrations/0032_create_admin_email_tables.sql` | `migration 0032` now creates `admin_email_drafts` + `admin_email_templates`, seeds `custom_email_max_recipients`, and seeds the `#preview`/`#contacts` PLAC rows. Applied out-of-band to the shared `madagascar-db` (its default `d1_migrations` table tracks **cf-astro**, so cf-admin migrations are applied directly, not via `wrangler d1 migrations apply`). All statements are idempotent. |
+| ~~`cms_content_history` is a dead table (zero writers)~~ | (migration now in `database/legacy_migrations/`) | ❌ **Wrong as of 2026-08-13 — superseded by C-13 below.** The table has a writer: `recordCmsHistory()` in `src/lib/cms/storage.ts`, called on CMS block updates. This row was carried forward verbatim from the 2026-05-26 review, which was correct *then*, and was never re-checked after the writer shipped. |
+| ~~Email Portal schema not provisioned by migrations~~ (RESOLVED 2026-06) | `database/legacy_migrations/0032_create_admin_email_tables.sql` | `migration 0032` now creates `admin_email_drafts` + `admin_email_templates`, seeds `custom_email_max_recipients`, and seeds the `#preview`/`#contacts` PLAC rows. Applied out-of-band to the shared `madagascar-db` (its default `d1_migrations` table tracks **cf-astro**, so cf-admin migrations are applied directly, not via `wrangler d1 migrations apply`). All statements are idempotent. |
 | ~~Drafts "autosave" copy vs. behavior~~ (RESOLVED 2026-06) | `src/components/admin/emails/_components/EmailPortal.tsx` | Real debounced autosave (~10s after the last edit, dirty-tracked via a content snapshot) now backs the "autosaves as you type" copy, reusing `POST /api/emails/drafts`. A "Saving…/Draft saved" indicator surfaces the state. |
 
 ## Email Portal hardening backlog (2026-06-07 review)
@@ -77,8 +83,16 @@ the list. Once a rule reaches 0 violations, remove its exemption in
 ✅ **Burn-down complete and CI is now blocking.** `scripts/rules_check.py`
 reports 0 violations across all 11 rules, and `security.yml::rules-check` no
 longer passes `--warn-only`. This table had listed both as open long after they
-were actually fixed — re-verify against `python3 scripts/rules_check.py` rather
+were actually fixed — re-verify against `python scripts/rules_check.py` rather
 than trusting a status table.
+
+> **SEC-03 regressed and was re-closed on 2026-08-13.** The Search Console
+> feature added 4 raw `env.DB.prepare(...)` calls back into
+> `src/pages/api/seo/gsc-index-log.ts` and `gsc-index-log-export.ts`, plus one
+> SEC-08 violation. Fixed by moving the queries into
+> `src/lib/dal/GscIndexLogRepository.ts` — the same remedy **E-5** above still
+> prescribes for the email routes, which remain open. A closed row in this table
+> means "was clean when checked", never "cannot come back".
 
 ## CSP hardening — pending operator verification (2026-07-22)
 
@@ -99,27 +113,42 @@ relevant doc (e.g. `security/SECURITY.md` for security fixes) — do not edit th
 archived snapshots.
 
 
-## Accessibility burn-down (2026-07-25)
+## Accessibility burn-down (2026-07-25) — ✅ closed, with one caveat
 
-`scripts/a11y_check.py` ships `--warn-only`, matching the SEC-03/SEC-04 rollout
-pattern above. A11Y-02/03/05/06 are at zero. Remaining:
+The original burn-down (A11Y-01 ×39, A11Y-04 ×6) was completed and the guard now
+runs **blocking** in `npm run verify`, not `--warn-only`. A11Y-02/03/05/06 have
+been at zero throughout.
 
-| Rule | WCAG | Count | Fix |
-|------|------|:-----:|-----|
-| A11Y-01 | 4.1.2 | 39 | Add `aria-label` to each icon-only `<button>` |
-| A11Y-04 | 2.4.4 | 6 | Add `aria-label` to each icon-only link |
+**Regression and re-close, 2026-08-13.** The Search Console feature shipped on
+2026-08-12/13 took the count back to 7 (A11Y-01 ×6, A11Y-04 ×1) while three
+documents still recorded zero. Resolution:
 
-Each needs an individually written label, so this cannot be automated
-meaningfully. Once both reach 0, drop `--warn-only` from
-`.github/workflows/quality.yml::accessibility`.
-Context: `documentation/security/compliance/ACCESSIBILITY.md`.
+- **6 of the 7 were false positives.** The buttons carry real multi-word labels
+  ("Run Full Sweep", "Inspect URL", "Delete Record"), but the labels are rendered
+  from inside a JSX expression container — the standard idiom for a button whose
+  text changes while its action runs — and `has_text_content()` deleted every
+  `{...}` container wholesale before looking for text. Fixed in the checker, not
+  in the components; bolting an `aria-label` onto a button that already has
+  visible text risks a WCAG 2.5.3 *Label in Name* mismatch, which would be a real
+  defect introduced to silence a fake one. Residual gap tracked as **C-16**.
+- **1 was genuine.** The target-URL link in `GscLogDetailDrawer.tsx` had the raw
+  URL as its only text, which satisfies 2.4.4 but gives no cue that the link
+  leaves the portal; it now carries an `aria-label` that keeps the URL inside the
+  label (2.5.3) and adds that context.
+
+Current state: `python scripts/a11y_check.py` → **0 findings over 254 files**.
+Context: [`security/compliance/ACCESSIBILITY.md`](security/compliance/ACCESSIBILITY.md).
+
+> The lesson worth keeping: a burn-down to zero is not durable unless the guard
+> blocks *and* the docs are re-derived from the guard rather than from the last
+> time someone looked. Both failures happened here within 24 hours.
 
 ## Open items surfaced by the 2026-07-25 compliance pass
 
 | # | Item | Where | Severity | Notes |
 |---|------|-------|----------|-------|
-| C-1 | **Astro 6 → 7 upgrade.** 3 high XSS advisories are excepted with evidence in `.audit-exceptions.json`; the exceptions **expire 2026-10-23** and `audit_gate.py` fails the build on an expired entry. | `package.json` | 🟠 | Breaking major: also moves `@astrojs/cloudflare` 13→14 and `@astrojs/preact` 4→6. Verified non-exploitable today (no `transition:*`, no spread attrs, no ClientRouter). |
-| C-2 | **`API_DENY_MODE` flip to `enforce`.** Currently `shadow`. | `wrangler.toml` | 🟠 | Query `SELECT request_path, COUNT(*) FROM admin_audit_log WHERE action='api_authz_shadow_deny' GROUP BY request_path;` — flip once it shows no legitimate traffic. |
+| ~~C-1~~ | ~~**Astro 6 → 7 upgrade.**~~ | `package.json` | ✅ **DONE — verified 2026-08-13** | Shipped: `astro ^7.1.6`, `@astrojs/cloudflare ^14.1.7`, `@astrojs/preact ^6.0.2`. **Follow-up still open (C-14):** `.audit-exceptions.json` still carries 3 Astro advisory exceptions written against Astro 6, and `npm audit --omit=dev` still reports 16 findings (4 high). Re-check whether those exceptions describe a resolved issue or a live one before they expire 2026-10-23. |
+| ~~C-2~~ | ~~**`API_DENY_MODE` flip to `enforce`.**~~ | `wrangler.toml` | ✅ **DONE 2026-08-12** | `API_DENY_MODE = "enforce"` is live. The shadow-deny log was queried first: the only 4 historical `api_authz_shadow_deny` rows (2026-08-07, `/api/alerts` + `/api/alerts/scan`) predated the `API_PAGE_MAPPING` entry that already fixed that route, and no shadow-deny occurred on any route in the following 5 days. Rollback lever: set the value back to `"shadow"` and redeploy. |
 | C-3 | **CSP `'unsafe-inline'` removal.** Report-Only canary is live. | `src/lib/security/csp.ts` | 🟠 | Blocked on operator verification of Cloudflare Rocket Loader (zone → Speed → Optimization). Once the canary reports no `script-src` violations, promote `SCRIPT_SRC_CANARY` and delete the Report-Only header. |
 | ~~C-4~~ | ~~`List-Unsubscribe` + suppression list~~ | `src/pages/api/emails/{send,unsubscribe}.ts` | ✅ **CLOSED 2026-07-26** | RFC 8058 headers minted per recipient, D1 suppression table (`migrations/0008_email_suppression.sql`), HMAC one-click endpoint, pre-enqueue suppression check. **Follow-up (1) — DONE 2026-07-29.** `admin_email_suppression` and `idx_email_suppression_created` are now live in `madagascar-db`, verified by a full round-trip against the exact `EmailSuppressionRepository` queries (upsert incl. `ON CONFLICT`, `isSuppressed` lookup, delete), sentinel row removed, table at 0 rows.<br><br>**How this was missed for three days, and the lesson.** This entry was marked ✅ CLOSED on 2026-07-26 while follow-up (1) was still outstanding — so the feature was recorded as shipped while `admin_email_suppression` did not exist in production. Every `EmailSuppressionRepository` read and write was failing, and the public RFC 8058 one-click endpoint could not work, which is a CASL/CAN-SPAM exposure and not merely a missing feature. Nothing detected it: the test suite passes because `@cloudflare/vitest-pool-workers` applies migrations to a *local* miniflare D1, so tests prove the code is correct against the intended schema and say nothing about production. **Do not mark an item ✅ while a deployment step is still listed as a follow-up** — use 🟡 until the out-of-band step is actually applied and verified against the remote database. A schema check alone is not verification either; run the repository's own queries.<br><br>**Follow-up (2) — still open.** The `cf-email-consumer` worker must forward `data.unsubscribeHeaders[recipient]` onto the outbound Brevo/Resend send, and a visible unsubscribe footer belongs in that worker's templates — the header alone satisfies one-click but a visible link is also expected for marketing mail. Until this lands, the suppression table is populated only by the admin path, not by recipients. |
 | C-5 | **SEC-11 Supabase advisor guard is planned, not implemented.** | `scripts/rules_check.py` | 🟡 | The two findings it should have caught are now **fixed and verified clear** (`supabase/migrations/20260726000000_advisor_fixes.sql`: `search_path` pinned on `increment_conversation_metrics`; the always-true `tool_call_events` policy replaced with a `service_role`-scoped one). Baseline refreshed. The remaining advisor — leaked-password protection — is a dashboard toggle with no code fix, and is moot here since the platform does not use Supabase GoTrue passwords. **Still open:** no automated guard re-runs `get_advisors` against the baseline, so drift is only caught by a manual run. |
@@ -130,6 +159,17 @@ Context: `documentation/security/compliance/ACCESSIBILITY.md`.
 | C-11 | **Role data migration is pending.** The code speaks the canonical vocabulary (`vendor_support > owner > admin > manager > staff > viewer`); both databases still hold the previous values, translated on read by `normalizeRole()` and on write by `toStoredRole()`. `viewer` therefore cannot be assigned yet: `toStoredRole()` throws rather than write a different role. | `supabase/migrations/`, `migrations/`, `src/lib/auth/rbac.ts` | 🟡 | **This is a safe steady state, not a half-finished change** — the translation layer means the Worker and the databases can never disagree about what a role means, so there is no deadline. **To close, in this order:** (1) migrate both stores with a **single `CASE` expression per table**, never two `UPDATE`s — `super_admin`→`admin` and `admin`→`manager` both touch the string "admin", so sequential updates silently collapse both tiers into `manager`; (2) verify per-role row counts before and after (expected in Supabase `admin_authorized_users`: manager 2, admin 1, owner 1, staff 1, vendor_support 1; in D1 `admin_pages.required_role`: manager 27, admin 26, owner 9, staff 6, vendor_support 3); (3) update the `admin_authorized_users_role_check` CHECK constraint and D1 migration 0018's constraint to the six canonical names; (4) update the `admin_read` RLS policy on `contact_message_comments`, which embeds `ARRAY['admin','super_admin','owner','dev']` in a JWT-claim check — dormant today because everything runs service-role, but a landmine the day a JWT path is added; (5) **only then**, and in its own commit with no other change, flip `ROLE_VOCABULARY` to `'canonical'` in `rbac.ts`; (6) delete `LEGACY_TO_CANONICAL` / `CANONICAL_TO_LEGACY` once the counts confirm zero legacy rows. Rollback is the inverse `CASE`, and remains available as long as the translation layer is deployed. |
 | C-10 | **Login anomaly detection is named but not built.** `src/lib/auth/security-logging.ts` records the sign-in and emails the owner. There is no baselining, geo-velocity check, device-fingerprint comparison, breached-password lookup or automatic lockout; the only automated signal on the login path is the Cloudflare bot score in `pipeline.ts`. | `src/lib/auth/security-logging.ts` | 🟡 | The Velox module was renamed to "Login Forensics & Sign-In Alerts" and its copy now describes recording and alerting, with the detection features listed explicitly as roadmap. Reinstate the detection language only when the checks exist. |
 
+## Opened by the 2026-08-13 documentation truth pass
+
+| # | Item | Where | Severity | Notes |
+|---|------|-------|----------|-------|
+| C-12 | **`public/_headers` exists, has drifted, and nobody agrees whether it is consumed.** Its CSP still carries `'unsafe-eval'` (removed from the middleware policy 2026-07-25), sets `Cross-Origin-Opener-Policy: same-origin` where the middleware deliberately uses `same-origin-allow-popups`, and predates `worker-src`, `frame-src`, `report-uri` and the R2 `connect-src` entry. | `public/_headers` | 🟠 | Three sources disagree: the file's own header says it is "NOT consumed… kept as a backup/reference"; `csp.ts` says it "has been deleted"; `RULESAd.md` §2 also said it was deleted. It is not deleted. It also matters whether Workers **Static Assets** now serves it — `assets.directory = "./dist/client"` and Astro copies `public/` there, and modern Workers static assets *do* honour `_headers`. **To close:** run a build and check whether `dist/client/_headers` exists, then either (a) delete the file and correct `csp.ts`'s comment, or (b) keep it and re-align it byte-for-byte. Do not leave the third state, which is where it is now. |
+| C-13 | **`cms_content_history` grows unbounded.** `recordCmsHistory()` (`src/lib/cms/storage.ts`) writes a row on every CMS block update. The promised cleanup trigger from the original migration was never created, and the table has no retention entry. | `src/lib/cms/storage.ts`, `src/lib/retention-tables.ts` | 🟡 | Supersedes the long-standing "dead table, zero writers" note, which was true in May and re-quoted as current fact ever since. Either add a retention window (consistent with the other tables in `retention-tables.ts`) or cap history depth per block. Low urgency at current CMS edit volume, but it is now a growth curve rather than a flat line. |
+| C-14 | **`.audit-exceptions.json` describes Astro 6.** C-1 shipped Astro 7, but the 3 Astro advisory exceptions were written against the old major and were not re-evaluated. `npm audit --omit=dev` still reports 16 findings (1 low, 11 moderate, 4 high). | `.audit-exceptions.json` | 🟡 | Exceptions expire 2026-10-23 and `audit_gate.py` fails on an expired entry, so this surfaces on its own eventually — but a stale exception that silently covers a *different* live advisory is the failure mode worth pre-empting. Re-run `npm audit --omit=dev --json` and re-derive the list. |
+| C-15 | **`knip` is installed but not wired.** `knip.json` exists and the binary is present at the monorepo root, but `package.json` has no `knip` script, so the dead-code sweep `RULESAd.md` tells you to run cannot be run as documented. | `package.json`, `knip.json` | 🔵 | Either add the script or drop the instruction — the current state is an instruction that fails. |
+| C-18 | **Decide whether `control-plane-design/` should be public at all.** `reference/control-plane-design/PLAN.md` (80 KB) carried two notes asserting it was outside the synced tree; both were false — it sits under `documentation/` and has been copied to the public repo on every push. A live Upstash endpoint was recorded in its §16 inventory and has now been replaced with the binding name. | `documentation/reference/control-plane-design/`, `.github/workflows/sync-docs.yml` | 🟠 | The leak is closed, but the placement question is not: this is unimplemented internal design detail (provider API surfaces, config-write paths) sitting in a public repo. Options: accept and keep it scrubbed, or add an exclusion to `sync-docs.yml` (which currently copies **every** `.md` under `documentation/`). Also note the workflow's secret scan is **warning-only** and its patterns would not have caught a bare hostname. |
+| C-17 | **Cancel-scheduled-send is documented but does not exist.** `features/EMAIL-PORTAL.md` described `POST /api/emails/cancel` as working behaviour and listed the file twice more in its inventory. There is no `src/pages/api/emails/cancel.ts` and no caller anywhere in `src/`. | `src/pages/api/emails/` | 🟡 | The doc now marks it as design intent rather than behaviour. Decide: build it (the ledger already carries `status: scheduled` and a provider message ID, so the pieces exist) or delete the spec. Do not leave a third state where the doc implies a feature that a user cannot find. |
+| C-16 | **A11Y-01 has a residual false positive on single-word conditional labels.** `has_text_content()` in `a11y_check.py` now recognises multi-word labels rendered from inside a JSX expression container, which is what flagged the labelled SEO buttons on 2026-08-13. A single-word conditional label (`{busy ? 'Saving…' : 'Save'}`) is still reported as icon-only. | `scripts/a11y_check.py` | 🔵 | Deliberate: the rule errs toward flagging, per the script's own "a guard that cries wolf gets disabled" principle. Fix by recognising quoted string literals in a container, taking care not to count comparison values like `=== 'running'` as labels. |
 
 ## Staff Managed Storage follow-ups (2026-08-12)
 

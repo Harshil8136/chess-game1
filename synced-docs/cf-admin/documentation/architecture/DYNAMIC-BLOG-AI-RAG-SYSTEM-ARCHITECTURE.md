@@ -176,7 +176,7 @@ Latency Timeline (Edge SSR Request Lifecycle)
   - Attaches `cf-connecting-ip`, `cf-ipcountry`, `user-agent`, and `cf-ray` to every log event.
 
 ### 3. Customer-Facing Error Recovery
-- **Custom 500 Page (`src/pages/500.astro`)**:
+- **Custom 500 Page (`cf-astro/src/pages/500.astro`)**:
   - Customer-friendly brand recovery screen.
   - Features 1-click **"Return to Home"** and **"WhatsApp Direct Support"** actions so users are never stranded.
   - Automatically captures exception context and reports trace to Sentry.

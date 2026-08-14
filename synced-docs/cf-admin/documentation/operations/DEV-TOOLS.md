@@ -3,7 +3,7 @@
 title: "Edge Command Center — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -35,30 +35,32 @@ All modules are protected by **Server-Side Rendering (SSR) authorization guards*
 
 ### 2.1 SSR-First Security
 
-Every sensitive page uses a strict **server-side role check** in the Astro frontmatter:
+Every sensitive page uses a strict **server-side role check** in the Astro frontmatter.
+The guard is `isVendorSupport` (level 0) — the samples below previously used
+`isDev`, which is now a `@deprecated` alias for exactly the same check:
 
 ```astro
 ---
 import { requireAuth } from '../../../lib/auth/guard';
-import { isDev, type Role } from '../../../lib/auth/rbac';
+import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
 
 const user = await requireAuth(Astro);
-if (!isDev(user.role as Role)) {
+if (!isVendorSupport(user.role as Role)) {
   return Astro.redirect('/dashboard?error=unauthorized');
 }
 ---
 ```
 
-**Why SSR, not client-side?** Client-side checks (e.g., `{isDev(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the HTML is never generated at all — the server returns a 302 redirect before any markup reaches the wire.
+**Why SSR, not client-side?** Client-side checks (e.g., `{isVendorSupport(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the HTML is never generated at all — the server returns a 302 redirect before any markup reaches the wire.
 
 ### 2.2 API Route Protection
 
 Every API endpoint backing these features enforces the same guard:
 
 ```typescript
-import { isDev, type Role } from '../../../lib/auth/rbac';
+import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
 
-if (!isDev(sessionUser.role as Role)) {
+if (!isVendorSupport(sessionUser.role as Role)) {
   return new Response(
     JSON.stringify({ error: 'Insufficient permissions: DEV only' }),
     { status: 403 }

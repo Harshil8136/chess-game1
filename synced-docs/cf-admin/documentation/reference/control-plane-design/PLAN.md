@@ -1,7 +1,7 @@
 ---
 
 title: "Unified Service Control Plane — Design & Implementation Plan"
-status: active
+status: draft
 audience: [ai, technical]
 last_verified: 2026-06-06
 verified_against: [code]
@@ -11,14 +11,35 @@ tags: []
 
 # Unified Service Control Plane — Design & Implementation Plan
 
+> [!IMPORTANT]
+> **Role names in this document are the pre-2026-07-27 five-tier vocabulary.**
+> The live ladder is six tiers — `vendor_support > owner > admin > manager >
+> staff > viewer`. Translation: stored `dev`→`vendor_support`,
+> `super_admin`→**`admin`** (level 2), `admin`→**`manager`** (level 3). The
+> string `admin` therefore means level 3 in the text below and level 2 in
+> current code. SQL snippets that write `required_role` are still correct as-is,
+> because the database stores the legacy values. See
+> [`architecture/plac-and-audit.md`](../../architecture/plac-and-audit.md) §1.2,
+> which is authoritative.
+
+
 > **TL;DR (non-technical):** The detailed design document behind the Service Control Plane — provider API specifications and the phased implementation plan.
 
 > **Status:** Proposed (design doc, pre-implementation) · **Revision:** v2 (verified)
 > **Owner page:** `/dashboard/control-plane` (cf-admin) — RBAC + PLAC gated
 > **Scope chosen:** Full writes (Layer A remote-config **and** Layer B provider-API), all services
-> **Location note:** This file lives under `docs/` which is **NOT** auto-synced to the public
-> docs repo (`Harshil8136/chess-game1`). The sync workflow only copies `RULESAd.md` +
-> `documentation/**` on push to `main`. Keep control-plane internals out of `documentation/`.
+> ⚠️ **Location note — corrected 2026-08-13.** This file previously said it lived
+> under `docs/` and was therefore **not** synced publicly. That is no longer true:
+> the legacy `docs/` tree was removed and this file now lives under
+> `documentation/reference/control-plane-design/`, which the sync workflow **does**
+> copy to the public repo (`Harshil8136/chess-game1`) on every push to `main`.
+> It has been public for some time under a note asserting the opposite.
+>
+> Treat everything in this file as public. The live Upstash endpoint recorded in
+> §16 has been replaced with the binding name; per
+> [`CONTRIBUTING-DOCS.md`](../../CONTRIBUTING-DOCS.md) §6, put secret **names**
+> here, never values. Whether this document should be public at all is a separate
+> decision — tracked as `MAINTENANCE.md` C-18.
 >
 > **v2 changes:** Every code reference, line number, helper name, and provider-API endpoint was
 > fact-checked against the live repos and the providers' current docs/APIs (June 2026). The
@@ -183,33 +204,33 @@ properly scoped token (see §3.2, §7).
 
 | Knob | File | Current value | How set |
 |---|---|---|---|
-| cf-astro client traces | `src/scripts/sentry.ts` (`tracesSampler`) | `/booking`,`/api/contact`→0.5; other `/api/`→0.1; else 0.0 | hardcoded |
-| cf-astro client error rate | `src/scripts/sentry.ts` | `sampleRate: 1.0` | hardcoded |
-| cf-astro client replay | `src/scripts/sentry.ts` | disabled (no replay integration) | hardcoded |
+| cf-astro client traces | `cf-astro/src/scripts/sentry.ts` (`tracesSampler`) | `/booking`,`/api/contact`→0.5; other `/api/`→0.1; else 0.0 | hardcoded |
+| cf-astro client error rate | `cf-astro/src/scripts/sentry.ts` | `sampleRate: 1.0` | hardcoded |
+| cf-astro client replay | `cf-astro/src/scripts/sentry.ts` | disabled (no replay integration) | hardcoded |
 | cf-astro server traces | `functions/_middleware.ts:6` | `tracesSampleRate: 0.1` | hardcoded |
 | cf-admin client traces | `sentry.client.config.ts` | `tracesSampleRate: 0.1`, replay off | hardcoded |
 | cf-admin server traces | `sentry.server.config.ts` | `tracesSampleRate: 0.1`, `enableLogs:true` | hardcoded |
 | CF Worker observability | `wrangler.toml` (both) | cf-astro `head_sampling_rate=1`; cf-admin enabled | **deploy-time** |
-| PostHog capture/replay | cf-astro `src/scripts/analytics-loader.ts` | key `phc_62mNJJsf…`, no session recording, default autocapture | hardcoded |
-| Rate-limit tables | cf-astro `src/lib/rate-limit.ts`; cf-admin `src/lib/ratelimit.ts` | per-endpoint limits/windows | hardcoded |
+| PostHog capture/replay | `cf-astro/src/scripts/analytics-loader.ts` | key `phc_62mNJJsf…`, no session recording, default autocapture | hardcoded |
+| Rate-limit tables | `cf-astro/src/lib/rate-limit.ts`; `cf-admin/src/lib/ratelimit.ts` | per-endpoint limits/windows | hardcoded |
 
-Sentry stats are **already read** in cf-admin `src/lib/analytics/providers.ts::fetchSentry()`
+Sentry stats are **already read** in `cf-admin/src/lib/analytics/providers/external.ts` → `fetchSentry()`
 using `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG`.
 
 ### 1.3 Existing foundation we build on (do NOT reinvent)
 
-- **D1 `admin_feature_flags`** (`migrations/0017`) — cross-service; cf-astro reads it in
+- **D1 `admin_feature_flags`** (`database/legacy_migrations/0017` — moved there with the rest of the applied history) — cross-service; cf-astro reads it in
   `src/middleware.ts`, caches 3-layer (isolate 10s → CF Cache API 60s → D1), exposes
   `Astro.locals.features`.
 - **D1 `admin_portal_settings`** (`0023`) — typed/categorized key-value, `PortalSettingsRepository`,
   UI at `/dashboard/settings`.
 - **DAL pattern** (`src/lib/dal/*Repository.ts`): injected `D1Database`, fail-soft, prototype-
   pollution-guarded writes.
-- **`fetchAllAnalytics()`** (`src/lib/analytics/providers.ts`) — aggregates 8 providers (CF
+- **`fetchAllAnalytics()`** (`cf-admin/src/lib/analytics/providers/index.ts`) — aggregates 8 providers (CF
   Zone/Workers/R2/Queues GraphQL+REST, Supabase Prometheus + Auth, Sentry, Resend), KV-cached 5 min;
   surfaced at `/api/dashboard/metrics`, rendered by `ServiceStatusStrip.tsx`.
 - **Service bindings** `ASTRO_SERVICE` + `CHATBOT_SERVICE`; helpers `revalidateAstro()`
-  (`src/lib/cms.ts`) and `chatbotFetch()` (`src/lib/chatbot-proxy.ts`).
+  (`cf-admin/src/lib/cms/revalidate.ts`) and `chatbotFetch()` (`cf-admin/src/lib/chatbot-proxy.ts`).
 - **Diagnostics runner** (`src/lib/diagnostics/*`) probes D1/R2/KV/Supabase/cf-astro/Upstash/Analytics.
 - **RBAC+PLAC+Ghost Audit** — see §4.
 
@@ -382,7 +403,7 @@ CREATE TABLE service_config_history (
 ### 5.2 PLAC page registration (migration `0030`)
 
 > **Pattern:** `INSERT OR IGNORE INTO admin_pages (path, label, icon, required_role, description, sort_order, is_active)`
-> See existing references: [0027_seed_session_management_page.sql](file:///e:/1/Madagascar%20Project/cf-admin/migrations/0027_seed_session_management_page.sql), [0021_seed_settings_subfeatures.sql](file:///e:/1/Madagascar%20Project/cf-admin/migrations/0021_seed_settings_subfeatures.sql), [0003_seed_admin_pages.sql](file:///e:/1/Madagascar%20Project/cf-admin/migrations/0003_seed_admin_pages.sql)
+> See existing references: [0027_seed_session_management_page.sql](file:///e:/1/Madagascar%20Project/cf-admin/database/legacy_migrations/0027_seed_session_management_page.sql), [0021_seed_settings_subfeatures.sql](file:///e:/1/Madagascar%20Project/cf-admin/migrations/0021_seed_settings_subfeatures.sql), [0003_seed_admin_pages.sql](file:///e:/1/Madagascar%20Project/cf-admin/database/legacy_migrations/0003_seed_admin_pages.sql)
 
 **Sort order strategy:** Existing pages use 0–19 (core), 30–32 (settings subfeatures),
 700–770 (chatbot). Control-plane uses the **800 range** (dedicated block, no collisions):
@@ -773,13 +794,13 @@ is an optional fast-path for genuinely-SSR pages only.
 
 **Files modified and why:**
 
-- **cf-astro `src/scripts/sentry.ts`** — `tracesSampler` reads config from JSON island;
+- **`cf-astro/src/scripts/sentry.ts`** — `tracesSampler` reads config from JSON island;
   `beforeSend` adds runtime error sampling. See §11.3.
 - **cf-astro `functions/_middleware.ts`** — `tracesSampleRate: 0.1` → `tracesSampler` reading
   from KV-cached config via closure. See §11.3.
-- **cf-astro `src/scripts/analytics-loader.ts`** — `posthog.init()` reads config; kill-switch
+- **`cf-astro/src/scripts/analytics-loader.ts`** — `posthog.init()` reads config; kill-switch
   skips init entirely if `posthog.enabled: false`. See §11.4.
-- **cf-astro `src/lib/rate-limit.ts`** — `RATE_LIMITS` const gains override support from config.
+- **`cf-astro/src/lib/rate-limit.ts`** — `RATE_LIMITS` const gains override support from config.
   See §11.5.
 - **cf-admin server Sentry** — same `tracesSampler` pattern; D1 access already available. See §11.3.
 
@@ -826,7 +847,7 @@ one TTL (≤60s), no redeploy.
 > `ASTRO_SERVICE` + `/api/revalidate` channel — cf-astro consumer lands in Phase 3). `getConfigVersion()`
 > added for cheap change-detection.
 > ✅ **Phase 3 done (cf-astro repo, same branch)** — cf-astro now consumes the shared D1
-> `service_config`: `src/lib/service-config.ts` (3-layer cache, fail-safe DEFAULTS, `peek`/`purge`),
+> `service_config`: `cf-astro/src/lib/service-config.ts` (3-layer cache, fail-safe DEFAULTS, `peek`/`purge`),
 > `GET /api/runtime-config` + `runtime-config-client.ts` (client-safe subset; static pages fetch it),
 > client `sentry.ts` (tracesSampler + beforeSend error sampling + replay + kill-switch), server
 > `functions/_middleware.ts` (module-cached sync sampler + waitUntil refresh), `analytics-loader.ts`
@@ -1194,7 +1215,7 @@ bounds propagation; the "Purge config cache" action additionally purges this pat
 
 ### 11.3 Sentry SDK refactors
 
-#### cf-astro `src/scripts/sentry.ts` (client-side)
+#### `cf-astro/src/scripts/sentry.ts` (client-side)
 
 ```ts
 // BEFORE (hardcoded):
@@ -1291,7 +1312,7 @@ If `enabled: false`, we skip `init()` entirely → no PostHog script loads → z
 
 ### 11.5 Rate-limit refactors
 
-#### cf-astro `src/lib/rate-limit.ts`
+#### `cf-astro/src/lib/rate-limit.ts`
 
 ```ts
 // BEFORE: RATE_LIMITS is a const object with hardcoded values
@@ -1428,8 +1449,13 @@ wrangler secret put CONTROL_PLANE_CF_TOKEN --name cf-admin-madagascar
    All "sampling control" in the panel is SDK-level (Layer A) + client-key rate limits (Layer B).
 4. **PostHog environments** — PostHog API operates project-level. No per-environment settings API.
    Since only cf-astro uses PostHog (production only), single-project model is correct.
-5. **Doc publishing** — keep control-plane internals under `docs/` (not synced), never under
-   `documentation/`. The sync workflow only copies `RULESAd.md` + `documentation/**`.
+5. **Doc publishing** — ⚠️ **this instruction is no longer achievable as written.**
+   It said to keep control-plane internals under `docs/` and never under
+   `documentation/`; `docs/` has since been removed as a location
+   (`CONTRIBUTING-DOCS.md` §1: "All documentation lives under `documentation/`…
+   must not be recreated"), and this file is under `documentation/` and is
+   synced publicly. The rule that still applies is the one that does not depend
+   on location: **no secret values in any doc, treat every doc as public.**
 6. **No arbitrary SQL** in the Supabase panel — schema stays migration-driven. Advisors surfaced
    read-only.
 7. **env.d.ts gaps** — `ANALYTICS` and `EMAIL_QUEUE` bindings exist in `wrangler.toml` but are
@@ -1458,8 +1484,8 @@ wrangler secret put CONTROL_PLANE_CF_TOKEN --name cf-admin-madagascar
 | Sentry org | `pet-hotel-madagascar` (`o4510752043761664`); projects `cf-astro`, `cf-admin` |
 | Sentry DSN cf-astro | `…@o4510752043761664.ingest.us.sentry.io/4511247514861568` |
 | Sentry DSN cf-admin | `389bb420…@o4510752043761664.ingest.us.sentry.io/4511193333760000` |
-| PostHog | host `https://us.i.posthog.com`, key `phc_62mNJJsf…` (cf-astro only) |
-| Upstash Redis | `https://modest-mastiff-88856.upstash.io` |
+| PostHog | host `https://us.i.posthog.com`, project key in `POSTHOG_PROJECT_ID` / cf-astro's public key (cf-astro only) |
+| Upstash Redis | endpoint in the `UPSTASH_REDIS_REST_URL` secret — value deliberately not recorded here |
 | CF Zero Trust | team `mascotas`, AUD `680d4150…b13088` |
 | Chatbot worker | `cf-chatbot` (`charlar.madagascarhotelags.com`) |
 

@@ -1,7 +1,25 @@
 # CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-08-12 (v4.9: docs-consistency pass — RBAC section here and in README.md/USER-MANAGEMENT.md rewritten for the 2026-07-27 6-tier role rename (`vendor_support > owner > admin > manager > staff > viewer`); RULE #0.7/#0.8/#0.9 full text added here (previously only in `main.md`), with a new `documentation/reference/schema-change-ledger.md` satisfying RULE #0.7's ledger artifact; the "61 tables" hard-cap corrected to 62 (missing `platform_alerts` table added to the audit doc); duplicate migration `0042_platform_alerts.sql` renumbered to `0048`; broken `../../GITHUB_RULES.md` link fixed to `../GITHUB_RULES.md` and the stray local copy deleted; legacy `docs/` tree (4 files) triaged — 3 completed plans deleted, 1 still-open plan moved into `documentation/reference/control-plane-design/`. No code changes. Previously 2026-06-10 v4.7: sync-system durability shipped — outbox/queue/DLQ, read-back verification, content history + rollback, config versioning; see documentation/reference/SYNC-SYSTEM-REVIEW.md)
-> **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
+> **Version: v5.0 · Last Updated: 2026-08-13** — documentation truth pass. This
+> one version number governs the whole file; per-section version tags have been
+> removed, because they had drifted to four different values (header v4.9, §9.0
+> "v4.8", §9.1 "v4.5", root `README.md` "v4.7") and a reader had no way to tell
+> which was current.
+>
+> **v5.0 changes:** the env-var and table counts reconciled to one figure each,
+> with the query that reproduces them (they read 40/41 and 62/63 in three places
+> in this file); stack versions corrected to Astro 7; `public/_headers` no longer
+> described as deleted; §8.1 now separates the file-size *intent* from what
+> ESLint enforces; §9.0 gate status re-derived; §15 relabelled direct-spend and
+> pointed at the costed model; §17 email providers settled against both repos;
+> RULE #0.7's `npm run db:check` and `d1 migrations apply` instructions replaced
+> with commands that work. Full context:
+> [`documentation/MAINTENANCE.md`](./documentation/MAINTENANCE.md).
+>
+> Change history lives in git — this header records the current version and the
+> reason for it, not a running changelog.
+
+> **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Official Documentation
 
 ---
 
@@ -41,7 +59,14 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 This exists because the pattern has already recurred: `service_config` → `admin_portal_settings` → `admin_feature_flags` are three separate, never-consolidated mechanisms for the same general idea, and a live audit on 2026-08-06 found two confirmed-dead Supabase tables (`admin_sessions`, `privacy_requests`) that existed only because nobody checked for an existing fit before adding the next one.
 
-> **Hard cap, not a guideline.** The live production estate is verified (2026-08-12) at **40 env vars** on cf-admin's Worker and **62 D1/Supabase tables** across all three apps (corrected 2026-08-12 from a prior count of 61 that omitted the real, in-use `platform_alerts` table — see the audit doc's §0 correction note) — see RULE #0.8 / RULE #0.9 below for the exact breakdown. A new environment variable or a new database table is the **last option on the table**, proposed only after every reuse path below has been checked and genuinely doesn't fit — never the first thing reached for.
+> **Hard cap, not a guideline.** The counts that define these caps live in
+> **RULE #0.8** (env vars) and **RULE #0.9** (tables) below — this rule does not
+> restate them, because restating them is exactly how they drifted: until
+> 2026-08-13 this paragraph said "40 env vars / 62 tables", #0.8 said "41", and
+> #0.9 said "63", all in the same file. A new environment variable or a new
+> database table is the **last option on the table**, proposed only after every
+> reuse path below has been checked and genuinely doesn't fit — never the first
+> thing reached for.
 
 1. **Does something that already exists cover this?** Check [`documentation/reference/coding-standards.md`](./documentation/reference/coding-standards.md) §8 (config tables — `admin_portal_settings` covers most global/per-role/per-user config needs already), the audit doc's live table inventory, and a grep of `src/` for related repository/table names.
 2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** This project already has active connectors for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case (the audit doc has three worked examples: adopt PostHog for feature flags needing real targeting; don't adopt a hosted ReBAC/graph-auth engine for permissions this project doesn't need yet; don't adopt a third-party config SaaS for system settings that already have a home in D1).
@@ -57,10 +82,24 @@ This exists because the pattern has already recurred: `service_config` → `admi
 **Every schema change requires 3 artifacts:**
 
 1. **Schema TS/DDL** — the `CREATE`/`ALTER` statement itself, in a new file under `migrations/` (D1) or `supabase/migrations/` (Supabase).
-2. **Generated migration** — applied via `npx wrangler d1 migrations apply madagascar-db` (D1) or the Supabase migration tooling, with journal/snapshot state kept in sync.
+2. **Applied migration** — for D1, apply the file directly:
+   `wrangler d1 execute madagascar-db --file=migrations/<file>.sql --remote`.
+   > ⚠️ **Do NOT use `wrangler d1 migrations apply` on `madagascar-db`.** That
+   > database's `d1_migrations` bookkeeping table tracks **cf-astro**'s history,
+   > so the command would misjudge what has already run here and can re-apply or
+   > skip migrations. This rule previously prescribed exactly that command while
+   > `MAINTENANCE.md` and `features/EMAIL-PORTAL.md` both documented that it does
+   > not work. Supabase changes use the Supabase migration tooling as normal.
 3. **Applied ledger entry** — one row in [`documentation/reference/schema-change-ledger.md`](./documentation/reference/schema-change-ledger.md) recording the migration file, date applied, who/what applied it, and a one-line description.
 
-**Always run `npm run db:check` before considering a schema change complete.**
+**Verify the change landed** by querying the live schema — there is no
+`npm run db:check` script in `package.json` (this rule asked for one for months;
+it never existed):
+
+```bash
+wrangler d1 execute madagascar-db --remote \
+  --command="SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+```
 
 > **Status note (2026-08-12):** artifact 3 (the ledger) did not exist anywhere in this
 > repo until today — this rule referenced it while nothing implemented it, unlike
@@ -74,12 +113,29 @@ This exists because the pattern has already recurred: `service_config` → `admi
 
 ## 🛡️ RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
-cf-admin's production Worker is verified at **41 env vars** (17 `[vars]` + 24 secrets —
-live-counted 2026-08-12 against `wrangler.toml`; the 24th secret, `GSC_SERVICE_ACCOUNT_JSON`
+cf-admin's production Worker is verified at **41 env vars** (17 `[vars]` + 24 secrets).
+The 17 `[vars]` are countable from `wrangler.toml` at any time; the secret count is
+**only** authoritative from `wrangler secret list` against the live Worker — note that
+`src/env.d.ts` declares more names than that (it also types build-time credentials such
+as `SENTRY_AUTH_TOKEN` and the dev-only `LOCAL_DEV_ADMIN_EMAIL`), so do not derive the
+cap by counting that file. Re-derive with:
+
+```bash
+grep -c '^[A-Z_]* = ' wrangler.toml   # cross-check against the [vars] block
+wrangler secret list                   # the authoritative secret count
+```
+
+(The 24th secret, `GSC_SERVICE_ACCOUNT_JSON`
 (Google Search Console indexing automation), is a documented exception to this cap —
 a bootstrap-time external OAuth credential with no dynamic-config alternative, per the
 carve-out below, signed off the same day it was added; see
 [`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+
+> ⚠️ **The 41 figure may already be stale.** `PAGESPEED_API_KEY` was moved out of
+> D1 and into a real Cloudflare secret after that count was taken, and
+> `BREVO_WEBHOOK_SECRET` / `SECURITY_ALERT_EMAIL` also appear in `src/env.d.ts`.
+> Run `wrangler secret list` and update this number before citing it in a
+> decision — a cap nobody re-counts stops being a cap.
 This is a hard cap, not a soft target. Do NOT introduce new environment variables
 (`env.VAR_NAME`, `.dev.vars`, or `wrangler.toml` `[vars]`/bindings) for feature toggles,
 limits, or operational settings. All application toggles, operational thresholds, and
@@ -96,13 +152,32 @@ signoff.
 
 ## 🛡️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
 
-The live production estate is verified at **63 tables** across all three apps (31 in D1
-`madagascar-db` [cf-admin+cf-astro], 9 in D1 `chatbot-kb` + 4 in D1 `whatsapp-chatbot`
-[cf-chatbot], 19 in Supabase `public` [cf-admin+cf-astro] — corrected 2026-08-12 to
-include the previously-missing `platform_alerts` table (undercounted at 61) and the
-newly-added `gsc_index_log` table (Google Search Console indexing automation, migration
-0047); see
-[`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+The live production estate is **63 tables** across all three apps, re-counted
+against the live databases on 2026-08-13:
+
+| Store | Tables | How counted |
+|---|---:|---|
+| D1 `madagascar-db` [cf-admin + cf-astro] | 30 | `sqlite_master` query below |
+| D1 `chatbot-kb` [cf-chatbot] | 9 | same |
+| D1 `whatsapp-chatbot` [cf-chatbot] | 4 | same |
+| Supabase `public` [cf-admin + cf-astro] | 20 | Supabase MCP `list_tables` |
+| **Total** | **63** | |
+
+```sql
+-- Run per D1 database; excludes SQLite/D1 internal bookkeeping tables.
+SELECT COUNT(*) FROM sqlite_master
+ WHERE type='table' AND name NOT LIKE 'sqlite_%'
+   AND name NOT LIKE '_cf_%' AND name NOT LIKE 'd1_%';
+```
+
+> The 2026-08-12 breakdown recorded 31 D1 / 19 Supabase. The **total was right**
+> and the split was wrong; the live query above is now the derivation, so the
+> next reader can re-check it in one command instead of trusting the number.
+> A second Supabase project (`supabase-pink-village`, 37 tables) belongs to the
+> retired `admin-app` and is deliberately **excluded** — see RULE #0.
+
+See [`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)
+for the per-table inventory and reuse analysis.
 Do NOT create new D1/Supabase tables or write migration scripts when an existing table
 can fulfill the requirement. Leverage key-value repositories, generic config columns,
 or structured JSON/JSONB payload fields in active tables (`admin_portal_settings`,
@@ -139,7 +214,7 @@ model without structural changes before it's written, not after.
 |----------|-------|
 | **Name** | cf-admin (Madagascar Pet Hotel — Admin Portal) |
 | **Purpose** | Cloudflare-native admin portal equivalent to admin-app |
-| **Framework** | Astro 6.3.7 with `@astrojs/cloudflare` adapter (`^13.5.4`) |
+| **Framework** | Astro 7.1.6 with `@astrojs/cloudflare` adapter (`^14.1.7`), `@astrojs/preact` `^6.0.2` |
 | **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
@@ -160,7 +235,7 @@ model without structural changes before it's written, not after.
 
 **EDGE-INJECTED SECURITY:** The dashboard enforces strict HTTP security headers injected globally at the edge via Astro middleware `sequence`.
 
-- **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). `'unsafe-eval'` is forbidden and absent (SEC-01, no exemptions). `'unsafe-inline'` is **still present on the enforcing policy**; a `Content-Security-Policy-Report-Only` canary ships the hardened directive without it, pinned by SEC-01b, and is promoted once it reports clean (blocked on operator verification of Cloudflare Rocket Loader — see MAINTENANCE.md). `'strict-dynamic'` is off for the same reason. `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped styles require it. Also sets COOP, CORP and `X-Robots-Tag`, which `public/_headers` declared but never shipped (that file is Pages-only; this deploys as a Worker, and it has been deleted).
+- **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). `'unsafe-eval'` is forbidden and absent (SEC-01, no exemptions). `'unsafe-inline'` is **still present on the enforcing policy**; a `Content-Security-Policy-Report-Only` canary ships the hardened directive without it, pinned by SEC-01b, and is promoted once it reports clean (blocked on operator verification of Cloudflare Rocket Loader — see MAINTENANCE.md). `'strict-dynamic'` is off for the same reason. `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped styles require it. Also sets COOP, CORP and `X-Robots-Tag`. ⚠️ `public/_headers` **still exists** (this line previously said it had been deleted) and its CSP has drifted — it still carries `'unsafe-eval'`. Whether Workers Static Assets now serves it is unresolved; see `documentation/MAINTENANCE.md` → C-12. Until that closes, `src/lib/security/csp.ts` is the only file to read for the live policy.
 - **X-Frame-Options: DENY** (Blocks Clickjacking)
 - **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
 - **Referrer-Policy: strict-origin-when-cross-origin**
@@ -466,12 +541,28 @@ function MyModal() {
 
 ### 8.1 File Size & Complexity Limits (Anti-Bloat)
 
-To keep the architecture lightweight and lightning fast, `cf-admin` enforces strict file size limits via `eslint.config.js`.
+To keep the architecture lightweight and fast, `cf-admin` aims at strict file
+size limits. **Read this section as intent plus current enforcement — they are
+not the same thing, and this section used to state only the intent as if it were
+the enforcement.**
 
-- **`max-lines`: 500 lines per file** (hard error).
-- Exceptions: Only highly complex orchestrators (e.g., `src/lib/auth/session.ts` or `[SUPABASE_PROJECT_REF].tsx`) may exceed this up to a 600-line warning limit, but this must be explicitly whitelisted in `eslint.config.js`.
-- **Enforcement:** If a file grows beyond 500 lines, you MUST refactor it by extracting logic into modular files (e.g., extracting routing constants, security headers, or sub-components) rather than disabling the linter rule.
-- **Goal:** Zero ongoing file bloat, 100% modular architecture.
+**Intent:** ~200 lines for components (`coding-standards.md`), 500 as the outer
+bound for any file. If a file grows past that, extract logic into modules
+(routing constants, security headers, sub-components) rather than disabling the
+rule.
+
+**What `eslint.config.js` actually enforces today (verified 2026-08-13):**
+
+| Scope | Rule | Effect |
+|---|---|---|
+| All `.ts`/`.tsx`/`.astro` | `'max-lines': 'off'` | **Nothing is enforced.** Marked `TEMP` pending the god-file split pass; slated to return as `error` in phase 12. |
+| 4 named files (`auth/session.ts`, `auth/pipeline.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only |
+| `src/pages/dashboard/**/*.astro` | `no-restricted-syntax` on `export const prerender = true` | **Hard error** — this one is real |
+
+The same gap exists for `any`: `coding-standards.md` forbids it outright while
+`@typescript-eslint/no-explicit-any` is set to `'warn'`, and `src/` currently
+holds **350** occurrences. Do not cite either limit as enforced until the rule
+is flipped back on.
 
 → See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
@@ -479,7 +570,7 @@ To keep the architecture lightweight and lightning fast, `cf-admin` enforces str
 
 ## 9. SECURITY RULES
 
-### 9.0 Enforced Compliance Rules (v4.8, code-anchored, CI-blocking)
+### 9.0 Enforced Compliance Rules (code-anchored, CI-blocking)
 
 Every rule below is **mechanically enforced** by `scripts/rules_check.py` and
 wired into `.github/workflows/security.yml`. A PR that violates any rule fails
@@ -508,8 +599,18 @@ Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
 blocking merges. Once the tree is clean for a given rule, remove `--warn-only`
 in `.github/workflows/security.yml`.
 
-**Status (2026-07-25): `rules_check.py` is BLOCKING** — 11 rules, 0 violations.
-The SEC-03/SEC-04 debt is fully burned down.
+**Status (verified 2026-08-13): `rules_check.py` is BLOCKING** — 11 rules,
+0 violations. `a11y_check.py` is also blocking — 6 rules over 254 files,
+0 findings.
+
+> **This line is a snapshot, not a guarantee — re-run before citing it.** On
+> 2026-08-13 it read "0 violations" while the tree actually had 5 (SEC-03 ×4 in
+> the new Search Console routes, SEC-08 ×1) and `a11y_check.py` had 7, so
+> `npm run verify` was red while three documents said it was green. The SEC-03
+> debt this section calls "fully burned down" was reintroduced by the very next
+> feature; it has since been re-fixed by moving the queries into
+> `src/lib/dal/GscIndexLogRepository.ts`. A burn-down is a state, not a
+> milestone.
 
 > ⚠️ **An exemption that is disabled by the condition it detects is worse than
 > no rule.** SEC-01 previously carried `exempt_line=r"unsafe-eval"`, rationalised
@@ -524,7 +625,7 @@ The SEC-03/SEC-04 debt is fully burned down.
 `.github/workflows/quality.yml`, currently `--warn-only` — see
 `documentation/security/compliance/ACCESSIBILITY.md`.
 
-### 9.1 Security Invariants (v4.5, historical)
+### 9.1 Security Invariants (historical — superseded by §9.0)
 
 1. **Supabase `anon` role has ZERO access** — no table grants, no RLS policies, no function EXECUTE privileges.
 2. **Default privileges locked** — `ALTER DEFAULT PRIVILEGES` prevents future tables from auto-granting to `anon`.
@@ -563,8 +664,16 @@ npm run dev              # Local dev (wrangler dev)
 npm run cf:dev           # Full CF runtime with R2 simulation (required for image uploads)
 
 # Type & Dependency Check
-astro check              # TypeScript validation
-npx knip                 # Static analysis (must be 100% clean - no unused exports/files)
+npm run typecheck        # astro check — TypeScript validation
+npm run lint             # ESLint
+npx knip                 # Dead-code sweep. Binary lives at the MONOREPO root,
+                         # not in cf-admin/node_modules, and there is no
+                         # `npm run knip` script — see MAINTENANCE.md C-15.
+
+# The full gate — run this before any commit (GITHUB_RULES.md)
+npm run verify           # typecheck → lint → tests → rules_check → docs_check
+                         #   → a11y_check → audit_gate
+python ../.agents/scripts/checklist.py cf-admin
 
 # Build & Deploy
 astro build && wrangler deploy   # Build + deploy to Cloudflare
@@ -657,7 +766,20 @@ documentation/
 
 ---
 
-## 15. TOTAL MONTHLY COST — $0
+## 15. DIRECT INFRASTRUCTURE SPEND — ~$0.50/month
+
+> **This is direct spend on this one deployment, not cost-to-serve.** The two
+> were being quoted interchangeably: this section said "$0.00", `OPERATIONS.md`
+> §8 said "~$0.50", and the commercial analysis says **~$30–36/client/month**
+> fully loaded. All three were "right" about different things, which made every
+> one of them misleading on its own.
+>
+> - **Direct spend (this table):** what leaves the bank account today, with
+>   everything on a free tier.
+> - **Cost-to-serve (the number for any commercial conversation):**
+>   [`documentation/2026-07-26-commercial-model-costing-pricing-and-scale.md`](./documentation/2026-07-26-commercial-model-costing-pricing-and-scale.md)
+>   owns it, including the paid tiers a real client deployment needs and the
+>   operational time that is 60–70% of it. **Never quote this table to a client.**
 
 | Service | What We Use | Monthly Cost |
 |---------|------------|-------------|
@@ -668,8 +790,10 @@ documentation/
 | Cloudflare Queues | Async email delivery | **$0** |
 | Supabase | Auth + PostgreSQL (shared) | **$0** |
 | Upstash | Redis (rate limiting) | **$0** |
+| Cloudflare Workers AI | Blog generation + RAG | **$0** (free tier) |
 | GitHub | Source control | **$0** |
-| | **TOTAL** | **$0.00** |
+| Anthropic (Claude Haiku fallback) | Chatbot fallback only | ~$0.01–0.50 |
+| | **TOTAL, direct spend** | **~$0.50** |
 
 ### Only Paid Services
 
@@ -687,8 +811,13 @@ Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architectur
 
 - **Queue Binding:** `EMAIL_QUEUE` (mapped to `madagascar-emails`)
 - **Producer:** API Routes push a JSON payload with a unique `trackingId` to the queue and respond immediately.
-- **Consumer:** A standalone Cloudflare Worker (`cf-email-consumer`) consumes the queue batches, processes HTML templates using **Eta** (a lightweight Edge-native framework), and executes the Resend REST API `fetch` completely out of band of the user request. Bloated Node.js SDKs (like `resend` and React Email) are strictly forbidden in the consumer worker.
-- **Audit Logs:** All email payloads, transmission statuses, and Resend webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
+- **Consumer:** A standalone Cloudflare Worker (`cf-email-consumer`) consumes the queue batches, processes HTML templates using **Eta** (a lightweight Edge-native framework), and calls the provider REST API out of band of the user request. Bloated Node.js SDKs (like `resend` and React Email) are strictly forbidden in the consumer worker.
+- **Providers — Brevo primary, Resend failover.** Verified 2026-08-13 by grepping both repos for send endpoints:
+  - `cf-admin` sends **exclusively via Brevo** (`https://api.brevo.com/v3/smtp/email`) — security alerts, retention notices, storage notifications, GSC ops alerts. There is **no** `api.resend.com` call anywhere in `cf-admin/src/`.
+  - `cf-email-consumer` calls Brevo first and falls back to `https://api.resend.com/emails`.
+  - The `resend_id` column and `resend_*` field names in `email_audit_logs` are **legacy names retained for schema stability**, not evidence of an active Resend path. Do not infer the provider from a column name.
+  > Four documents previously gave four different answers here (Resend-only, split-by-role, Brevo-primary-with-failover, and Brevo-only). This bullet is the reconciled version; if it disagrees with another doc, this one was re-derived from code.
+- **Audit Logs:** All email payloads, transmission statuses, and provider webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
   - **Referential Integrity:** The `booking_id` foreign key constraint enforces `ON DELETE CASCADE`, ensuring that atomic "Hard Wipes" of bookings cleanly and automatically purge associated audit records without referential blocking errors.
 
 > 📎 **Full detailed documentation and Webhook setup guide:** See [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).

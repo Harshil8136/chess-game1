@@ -3,7 +3,7 @@
 title: "Login Forensics — Security Audit Subsystem"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -118,7 +118,12 @@ All data captured in v3 is **Tier 1 — server-trusted** (cannot be spoofed by c
 
 ### 2.2 Column Inventory (v3 schema)
 
-> **Migration status:** Tier 2 columns dropped + CF columns added in `migrations/0020_cf_zero_trust_schema.sql` (pending `wrangler d1 execute --remote`).
+> **Migration status: ✅ APPLIED** — verified against the live `madagascar-db`
+> on 2026-08-13. `PRAGMA table_info(admin_login_logs)` confirms the CF columns
+> (`cf_ray_id`, `cf_access_method`, `cf_identity_provider`, `cf_jwt_tail`,
+> `cf_bot_score`) are present and the Tier-2 fingerprinting columns (`cores`,
+> `ram_gb`, `is_webdriver`, `keystroke_entropy`, …) are gone. This line read
+> "pending" for months after the migration had actually run.
 
 | Column | Type | Category | Source | Trust |
 |--------|------|----------|--------|-------|
@@ -386,7 +391,7 @@ Every login attempt (success and failure) triggers a Midnight Slate branded emai
 
 ## 9. D1 Migration Reference
 
-### `migrations/0020_cf_zero_trust_schema.sql` (pending)
+### `database/legacy_migrations/0020_cf_zero_trust_schema.sql` (applied)
 
 ```sql
 -- Drop Tier 2 client-reported columns (removed with GoTrue/LoginForm)
@@ -417,7 +422,9 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_method ON admin_login_logs(cf_acces
 CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 ```
 
-**Run with:** `wrangler d1 execute madagascar-db --file=migrations/0020_cf_zero_trust_schema.sql --remote`
+**Already applied** — kept here as the schema record. Re-running it is not
+required and the file now lives in `database/legacy_migrations/` with the rest
+of the applied history.
 
 ---
 
@@ -425,9 +432,9 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 
 | File | Purpose |
 |------|---------|
-| `migrations/0014_create_admin_login_logs_table.sql` | Initial D1 table schema (v1) |
-| `migrations/0015_enhance_admin_login_logs.sql` | 24 new v2 columns via ALTER TABLE |
-| `migrations/0020_cf_zero_trust_schema.sql` | v3: drop Tier 2, add CF ZT columns (pending) |
+| `database/legacy_migrations/0014_create_admin_login_logs_table.sql` | Initial D1 table schema (v1) |
+| `database/legacy_migrations/0015_enhance_admin_login_logs.sql` | 24 new v2 columns via ALTER TABLE |
+| `database/legacy_migrations/0020_cf_zero_trust_schema.sql` | v3: drop Tier 2, add CF ZT columns (pending) |
 | `migrations/supabase_0001_add_cf_sub_id.sql` | Adds `cf_sub_id` to `admin_authorized_users` (executed 2026-04-27) |
 | `src/lib/auth/security-logging.ts` | `SecurityLogData` interface + `logLoginAttempt()` + Resend email |
 | `src/lib/auth/cloudflare-access.ts` | JWT verifier (`verifyZeroTrustJwt`) + header extractor (pending Phase 1) |
@@ -438,7 +445,7 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_cf_ray ON admin_login_logs(cf_ray_id);
 | `src/pages/api/audit/stats.ts` | Stats API (login metrics) |
 | `src/pages/dashboard/logs/index.astro` | `canViewSecurity` PLAC gate |
 | `src/components/admin/logs/ActivityCenter.tsx` | SecurityForensicsTable + 3-section forensic panel |
-| `src/pages/api/users/[id]/session-status.ts` | Session telemetry API (super_admin+ auth; returns IP, UA, geo, Ray ID, lastActiveAt; Ghost Protection at DB boundary) |
+| `src/pages/api/users/[id]/session-status.ts` | Session telemetry API (canonical **Admin**+ / stored `super_admin`+ auth; returns IP, UA, geo, Ray ID, lastActiveAt; Ghost Protection at DB boundary) |
 | `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | Premium HUD drawer for live session forensics (device, connection telemetry, countdown, per-session revoke) |
 | `src/styles/pages/audit.css` | CSS — `.lf-forensic-*` prefix, token-only values |
 

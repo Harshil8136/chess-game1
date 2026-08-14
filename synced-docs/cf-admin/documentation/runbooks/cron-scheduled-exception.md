@@ -2,7 +2,7 @@
 title: "Cron Scheduled-Handler Exception (CF Access Audit Poller)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-06-07
+last_verified: 2026-08-13
 verified_against: [code, infra]
 owner: harshil
 related_code:

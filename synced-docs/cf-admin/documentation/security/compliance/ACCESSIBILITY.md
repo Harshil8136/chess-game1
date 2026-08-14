@@ -3,7 +3,7 @@
 title: "Accessibility Conformance Statement (WCAG 2.2 AA)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 verified_against: [code, config]
 owner: harshil
 related_docs: [../../reference/DESIGN-SYSTEM.md, ../../MAINTENANCE.md, ../../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -15,9 +15,16 @@ tags: [accessibility, wcag, ada, en301549, compliance]
 > **TL;DR (non-technical):** Where this admin portal stands on accessibility.
 > Honest summary: the foundations are better than expected — native dialogs,
 > keyboard support, a skip link, a declared page language — and an automated
-> guard now runs in CI. But **we do not claim WCAG 2.2 AA conformance**: 45
-> known issues remain and the criteria that need a human tester have never been
-> checked.
+> guard now runs blocking in CI with **zero findings**. But **we still do not
+> claim WCAG 2.2 AA conformance**: the automated guard only covers the
+> mechanically checkable criteria, and the ones that need a human tester
+> (contrast, focus order, screen-reader announcement, zoom/reflow, motion) have
+> never been checked. Zero automated findings is not conformance.
+
+> **Corrected 2026-08-13.** This summary previously said "45 known issues
+> remain" while §3 of the same document said "0 findings, all resolved" — the
+> TL;DR was never updated when the burn-down completed. The 45 figure was the
+> original A11Y-01 ×39 + A11Y-04 ×6 backlog and is now historical.
 
 ## Context / Scope
 
@@ -74,8 +81,8 @@ the things nobody knows about.
 
 ## 3. Known defects
 
-From `python3 scripts/a11y_check.py`, last re-verified 2026-08-12 (0 findings
-across 244 files, including the new Staff Storage bulk-operations UI):
+From `python scripts/a11y_check.py`, last re-verified **2026-08-13** (0 findings
+across **254** files, including the Search Console Sync UI):
 
 | Rule | Criterion | Count | Status |
 |---|---|:---:|---|
@@ -86,11 +93,21 @@ across 244 files, including the new Staff Storage bulk-operations UI):
 | A11Y-05 | 2.4.3 — positive `tabindex` | 0 | ✅ |
 | A11Y-06 | 3.1.1 — `<html>` without `lang` | 0 | ✅ Fixed 2026-07-25 |
 
-All static accessibility findings have been completely resolved (0 findings). The guard runs in strict **blocking** mode in `package.json` (`npm run verify`).
+All static accessibility findings are resolved (0 findings). The guard runs in
+strict **blocking** mode in `package.json` (`npm run verify`).
 
 **Impact:** a screen-reader user hears "button" with no indication of what it
 does. For an icon-only control this is a total loss of function, so despite the
 mechanical nature of the fix these are genuine blockers, not cosmetic.
+
+### 3.1 Regression log
+
+Zero is a state, not an achievement — it has to be re-verified after every UI
+change. Recorded regressions:
+
+| Date | What happened | Resolution |
+|------|---------------|------------|
+| 2026-08-13 | Search Console Sync UI took the count to 7 (A11Y-01 ×6, A11Y-04 ×1) while this document, `MAINTENANCE.md` and `RULESAd.md` §9.0 all still recorded zero. `npm run verify` was red. | 6 were **false positives** — `has_text_content()` deleted JSX expression containers wholesale, so a button whose label is rendered by a ternary read as icon-only. Fixed in `scripts/a11y_check.py`, not by adding `aria-label` to buttons that already have visible text (which would risk a WCAG 2.5.3 *Label in Name* mismatch). The 7th was genuine and was labelled. See `MAINTENANCE.md` → Accessibility burn-down and C-16. |
 
 ## 4. What has NEVER been tested
 

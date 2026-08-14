@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code, infra]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -14,8 +14,12 @@ tags: [operations, bindings, cloudflare]
 > **TL;DR (non-technical):** The operations runbook: the exact Cloudflare resource IDs, the free-tier limits that shape the design, the required secrets, and how to build and deploy.
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-26 (v4.7: `scheduled-log-sync` email fan-out capped at 5/batch with a digest line — prevents Resend quota burn on failed-login bursts; `writeRevocationFlag` TTL now reads `SESSION_MAX_LIFETIME_MS` instead of being hard-coded; production `npm audit` is clean — see [`security/reviews/2026-05-26-security-review.md`](../security/reviews/2026-05-26-security-review.md))
 > **Scope:** Cloudflare binding IDs, free tier limits, Sentry observability, build/deploy
+>
+> **§1 is the single source of truth for production bindings** (`GITHUB_RULES.md` §6).
+> If it disagrees with any other document, §1 wins — and if it disagrees with
+> `wrangler.toml`, `wrangler.toml` wins and §1 is the bug. Regenerate it with the
+> commands in §1 → "Re-deriving this section" rather than editing from memory.
 
 ---
 
@@ -23,6 +27,9 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-08-13 | `wrangler.toml` + `src/env.d.ts` re-read | §1 rebuilt — `SYNC_QUEUE`, the sync DLQ, `CHATBOT_SERVICE`, `ASTRO_SERVICE` and the `AI` binding were all missing from this registry despite being live; cron triggers and the custom-domain route added |
+| 2026-08-13 | Cloudflare MCP `d1_database_query` on `sqlite_master` | `madagascar-db` holds **30** application tables |
+| 2026-08-13 | Supabase MCP `list_tables` | project `[SUPABASE_PROJECT_REF]` `public` schema holds **20** tables, RLS enabled on all |
 | 2026-06-06 | Cloudflare MCP `kv_namespaces_list` | `ADMIN_SESSION` `ba82…`, cf-astro `SESSION` `bee1…`, `ISR_CACHE` `d9ce…` — all match ✅ |
 | 2026-06-06 | Cloudflare MCP `d1_databases_list` | `madagascar-db` `[D1_MADAGASCAR_DB_ID]` — match ✅ |
 | 2026-06-06 | Supabase MCP `list_projects` | project `[SUPABASE_PROJECT_REF]` ACTIVE_HEALTHY — match ✅ |
@@ -74,20 +81,76 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 
 ### Queues
 
-| Binding | Queue Name | Used By |
-|---------|------------|---------|
-| `EMAIL_QUEUE` | `madagascar-emails` | cf-admin, cf-astro |
+| Binding | Queue Name | Role | Used By |
+|---------|------------|------|---------|
+| `EMAIL_QUEUE` | `madagascar-emails` | producer | cf-admin, cf-astro |
+| `SYNC_QUEUE` | `madagascar-sync-revalidate` | producer **and** consumer | cf-admin |
+| — | `madagascar-sync-revalidate-dlq` | consumer (dead-letter) | cf-admin |
 
 `EMAIL_QUEUE` is the producer side of the async email pipeline; the Email Portal
 (`/dashboard/emails`) enqueues custom sends onto it and the external
 `cf-astro-email-consumer` worker drains it. See
 [`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md).
 
+`SYNC_QUEUE` carries ISR revalidation redrive jobs. This Worker is both its
+producer and its consumer (`max_batch_size = 10`, `max_retries = 4`), with
+failures spilling into `madagascar-sync-revalidate-dlq`, which this Worker also
+consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
+[`../reference/SYNC-SYSTEM-REVIEW.md`](../reference/SYNC-SYSTEM-REVIEW.md).
+
+> Both queues must exist **before** the first deploy: `wrangler deploy`
+> hard-fails on a consumer that references a non-existent queue. If this Worker
+> is ever recreated from scratch, run `wrangler queues create` for
+> `madagascar-sync-revalidate` and its `-dlq` first.
+
+### Service Bindings
+
+| Binding | Target Worker | Purpose |
+|---------|---------------|---------|
+| `CHATBOT_SERVICE` | `cf-chatbot` | Worker-to-Worker calls to the chatbot admin surface, without a public round trip |
+| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, edge sync probes) |
+
+### Workers AI
+
+| Binding | Config | Used By |
+|---------|--------|---------|
+| `AI` | `remote = true` | cf-admin — blog generation and RAG context retrieval |
+
 ### Analytics Engine
 
 | Binding | Dataset | Used By |
 |---------|---------|---------|
 | `ANALYTICS` | `madagascar_analytics` | cf-admin, cf-astro |
+
+### Scheduled triggers
+
+Three cron expressions on this Worker (`[triggers]` in `wrangler.toml`), fired
+through the custom entrypoint `src/workers/cf-entry.ts`:
+
+| Cron | Purpose |
+|------|---------|
+| `*/5 * * * *` | CF Access audit-log polling (captures failed login attempts) |
+| `0 2 * * SUN` | Orphaned R2 asset cleanup |
+| `*/15 * * * *` | Promote matured `scheduled` blog posts to `published` |
+
+> This is the 3rd of 3 cron triggers allowed on the Workers Free plan — there is
+> **no headroom left** for another cron on this Worker without upgrading.
+
+### Re-deriving this section
+
+This registry is the single source of truth named by `GITHUB_RULES.md` §6, so it
+must be regenerated from config rather than edited from memory:
+
+```bash
+# Bindings, queues, services, crons, routes — the authoritative declaration
+grep -nE '^\[|binding|queue|service|pattern|crons' wrangler.toml
+
+# The typed view the code actually sees (bindings + secrets)
+grep -oE '^\s+[A-Z][A-Z0-9_]+' src/env.d.ts | sort -u
+
+# What is really set in production
+wrangler secret list
+```
 
 ---
 
@@ -103,7 +166,9 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 
 ## 3. Free Tier Limits
 
-The entire project operates at $0/month. These quotas dictate caching strategies and system design constraints.
+Every service below is on its free tier, so direct spend is ~$0.50/month (§8 —
+which is *not* the cost-to-serve figure; read the note there). These quotas
+dictate caching strategies and system design constraints.
 
 ### 3.1 Cloudflare Workers
 
@@ -304,9 +369,18 @@ npm run dev           # Local dev server (wrangler dev)
 npm run build         # Production build
 wrangler deploy       # Deploy to Cloudflare Workers
 
-# D1 migrations (run in order, --remote for production)
-# ✅ All migrations through 0020 applied as of 2026-04-30
-wrangler d1 execute madagascar-db --file=migrations/0021_*.sql --remote  # next migration
+# D1 migrations — apply individually with `d1 execute`, NOT `d1 migrations apply`.
+# The `d1_migrations` bookkeeping table in this database tracks cf-astro's
+# migration history, so `wrangler d1 migrations apply` would misjudge what has
+# already run here. See MAINTENANCE.md and features/EMAIL-PORTAL.md.
+#
+# State as of 2026-08-13: migrations/ holds 28 files spanning 0000–0050 (the
+# numbering is sparse — 45 older files were moved to database/legacy_migrations/
+# and are already applied). The highest applied is 0050.
+wrangler d1 execute madagascar-db --file=migrations/0051_<name>.sql --remote
+
+# List what is actually in the directory before assuming a number is free:
+ls migrations/
 
 # Secrets management
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY
@@ -319,18 +393,48 @@ wrangler d1 list
 wrangler kv namespace list
 ```
 
+### ⚠️ Migration numbering has two colliding series
+
+`migrations/` (0000–0050, 28 files) and `database/legacy_migrations/`
+(0001–0043, 45 files) are **independent numbering series that overlap on 19
+numbers** — 0001–0008 and 0033–0043. `migrations/0033_create_blog_and_taxonomy_tables.sql`
+and `database/legacy_migrations/0033_create_sync_outbox.sql` are entirely
+different migrations that share a prefix.
+
+Consequences to keep in mind:
+
+- **A bare number is ambiguous.** Never write "migration 0033" in a doc, commit
+  message or conversation — always give the directory and full filename.
+- `migrations/` also contains a **live duplicate**: two files both prefixed
+  `0002` (`0002_create_cf_access_sync_log.sql` and `0002_promote_sessions_page.sql`).
+- Both series are already applied to `madagascar-db`; `legacy_migrations/` is
+  history, not a queue.
+
 For full secrets + vars reference, see [SECURITY.md](../security/SECURITY.md) §9.
 
 ---
 
 ## 8. Monthly Cost Reference
 
+**Direct infrastructure spend for this single deployment** — every service below
+sits inside its free tier today:
+
 | Service | Cost |
 |---------|------|
 | Cloudflare Workers | $0 (free tier) |
-| D1, KV, R2, Queues | $0 (free tier) |
+| D1, KV, R2, Queues, Workers AI | $0 (free tier) |
 | Supabase | $0 (free tier) |
 | Upstash | $0 (free tier) |
-| Resend (email) | $0 (free tier, <3K/month) |
+| Brevo / Resend (email) | $0 (free tier) |
 | Anthropic (Claude Haiku fallback) | ~$0.01–0.50/month |
-| **Total** | **~$0.50/month max** |
+| **Total, direct spend** | **~$0.50/month** |
+
+> **This is not the cost-to-serve, and the two must not be quoted
+> interchangeably.** The fully-loaded figure — which adds the paid tiers a real
+> client deployment needs, plus operational time — is **~$30–36/client/month**,
+> derived with its assumptions in
+> [`../2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md).
+> That document is the owner of the cost model; quote it, not this table, in any
+> commercial context. The "$0.00/month" figure that appeared in `RULESAd.md` §15
+> was this table's direct-spend number rounded down, and it was being read as a
+> cost-to-serve claim.

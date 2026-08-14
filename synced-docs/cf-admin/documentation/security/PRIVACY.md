@@ -3,7 +3,7 @@
 title: "Data Privacy Dashboard"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -15,7 +15,7 @@ tags: []
 
 > **Status:** Production Active — v2 rebuild complete (2026-05-06)
 > **Route:** `/dashboard/privacy/`
-> **Access:** SuperAdmin (Level 2) minimum
+> **Access:** canonical **Admin** (level 2) minimum — stored as `super_admin`
 > **Compliance:** LFPDPPP, GDPR, CCPA
 
 ---
@@ -26,8 +26,8 @@ Enterprise-grade forensic auditing interface for the consent records ledger. Pro
 
 **Access Control:**
 
-- **Minimum Role:** SuperAdmin (Level 2)
-- **Hidden Accounts:** DEV and Owner can additionally view audit entries from hidden accounts
+- **Minimum Role:** canonical **Admin** (level 2); stored value `super_admin`
+- **Elevated visibility:** Vendor Support (level 0, stored `dev`) and Owner can additionally view audit entries from hidden accounts
 - **Sidebar:** Displayed automatically when permitted via PLAC access maps
 - **API Defense:** PLAC middleware gate rejects unauthorized users before the route handler executes; API route additionally validates role via KV-cached session
 
@@ -38,15 +38,23 @@ Enterprise-grade forensic auditing interface for the consent records ledger. Pro
 ### Database Integration
 
 - **D1:** Admin pages registry includes the privacy module (sidebar inclusion, PLAC gating)
-- **Supabase `consent_records`:** Anonymous INSERT allowed (public cookie banner on cf-astro), all SELECT/UPDATE/DELETE restricted to `service_role` only
+- **Supabase `consent_records`:** INSERT via the dedicated `cf_astro_writer` role (public cookie banner on cf-astro); all SELECT/UPDATE/DELETE restricted to `service_role` only. `anon` has no access — see the RLS Policy note below
 - Pagination designed for 10K+ records/month scaling
 
 ### RLS Policy
 
-`consent_records` table:
+`consent_records` table — verified live via `pg_policies` on 2026-08-13:
 
-- **INSERT:** `anon` role (public cookie consent banner on cf-astro)
-- **SELECT/UPDATE/DELETE:** `service_role` only
+- **INSERT:** `cf_astro_writer` (policy `cf_astro_writer_insert`) — the dedicated,
+  least-privilege role the public cookie-consent banner on cf-astro writes through.
+- **SELECT/UPDATE/DELETE:** `service_role` only.
+- **`anon`:** zero policies, zero grants.
+
+> **Corrected 2026-08-13.** This said INSERT was granted to `anon`, which
+> contradicted [`SECURITY.md`](./SECURITY.md) §10 ("all anon policies dropped
+> 2026-04-29"). Both were partly wrong: `anon` really was dropped, but the
+> capability did not disappear — it moved to `cf_astro_writer`, which no
+> document mentioned at all. See [`SECURITY.md`](./SECURITY.md) §10.2a.
 
 See [SECURITY.md](./SECURITY.md) §10 for the full RLS policy matrix.
 
@@ -70,7 +78,7 @@ No `any` types anywhere in the privacy module.
 
 ### API (`src/pages/api/audit/receipts.ts`)
 
-`GET /api/audit/receipts` — SuperAdmin minimum. Returns:
+`GET /api/audit/receipts` — canonical **Admin** (level 2) minimum. Returns:
 
 ```typescript
 {
@@ -92,7 +100,27 @@ No `any` types anywhere in the privacy module.
 
 ### Route Controller (`src/pages/dashboard/privacy/index.astro`)
 
-SSR entry point. Auth-gated via `requireAuth(Astro, ROLES.SUPER_ADMIN)`. Mounts both islands with `client:idle`. Section tint: `data-section="cyan"`.
+SSR entry point. Mounts both islands with `client:idle`. Section tint:
+`data-section="cyan"`.
+
+> **Corrected 2026-08-13.** This previously read "Auth-gated via
+> `requireAuth(Astro, ROLES.SUPER_ADMIN)`". Two things were wrong:
+> `ROLES.SUPER_ADMIN` does not exist in `src/lib/auth/rbac.ts` (the canonical
+> ladder has no `SUPER_ADMIN` member), and the page itself calls bare
+> `requireAuth(Astro)` with no role argument.
+>
+> **The page is still gated — just at a different layer.** Access is enforced by
+> PLAC in the middleware, from the `admin_pages` row for `/dashboard/privacy`,
+> which carries `required_role = 'super_admin'` (the *stored* value; canonical
+> **Admin**, level 2). Verified against the live D1 table on 2026-08-13, together
+> with its sub-page rows:
+>
+> | Row | `required_role` (stored) | Canonical |
+> |---|---|---|
+> | `/dashboard/privacy` | `super_admin` | Admin (2) |
+> | `/dashboard/privacy#forensics` | `admin` | Manager (3) |
+> | `/dashboard/privacy#export` | `owner` | Owner (1) |
+> | `/dashboard/privacy#delete` | `owner` | Owner (1) |
 
 ### ConsentMetrics Island (`src/components/dashboard/privacy/PrivacyMetrics.tsx`)
 

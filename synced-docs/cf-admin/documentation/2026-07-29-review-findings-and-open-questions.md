@@ -12,6 +12,26 @@ tags: [review, questions, architecture, compliance, commercial, governance, open
 
 # Platform Review — Live-Verified Findings & 150 Open Questions
 
+> [!IMPORTANT]
+> **The correction pass this document was written to gate ran on 2026-08-13.**
+> This file asked the questions; the answers landed *in the files carrying the
+> wrong claims*, exactly as §Scope below prescribes. What was actually corrected:
+>
+> | This document flagged | Outcome |
+> |---|---|
+> | 5-tier role vocabulary in active docs | ✅ Swept — canonical names with stored values annotated; `plac-and-audit.md` §1.4 now documents the deprecated aliases and warns that `isAdmin` means *Manager* |
+> | Batch-stamped `last_verified: 2026-06-06` | ✅ Re-verified and re-stamped where the claims were actually re-checked; `docs_check.py` now blocks on staleness instead of warning at 120 days |
+> | Contradictory env-var / table counts | ✅ Reconciled to one figure each in `RULESAd.md` #0.8/#0.9, with the live query that reproduces them (63 tables: 30 + 9 + 4 D1, 20 Supabase) |
+> | Two coexisting cost figures | ✅ Separated: direct spend (~$0.50) vs cost-to-serve (~$30–36), with the commercial doc named as owner |
+> | `DASHBOARD.md` mojibake (Q141) | ✅ Fixed at source — 43 sequences; see Q141 below for why the sync workflow never repaired it |
+> | Attestations citing evidence that does not exist | ✅ Corrected — see the compliance pass in `CSA-CAIQ-v4.md`, `SOC2-TSC-mapping.md`, `ASVS-L2.md` |
+> | `public/_headers` / CSP drift | ➡️ Documented and tracked as `MAINTENANCE.md` C-12 — needs a build to resolve, not a doc edit |
+>
+> **Findings not yet actioned remain open in
+> [`MAINTENANCE.md`](MAINTENANCE.md)**, which is the one live backlog. This
+> document is now a record of the review, not a queue. Individual questions
+> below are annotated where they were answered.
+
 > **TL;DR (non-technical):** A full review of the three repositories and the live
 > services behind them. Part 1 records what was checked directly against Cloudflare,
 > Supabase, Sentry and PostHog rather than taken from the docs. Part 2 is a bank of 150
@@ -144,7 +164,7 @@ actually used — which matters for both the case study and the roadmap.
   installed. **Nothing in the toolchain detects dead code.**
 - `API_DENY_MODE = "shadow"` (`wrangler.toml:131`) — API authorization is observed, not
   enforced.
-- `src/pages/api/audit/silence.ts` still ships (117 lines, live `POST`). It writes
+- ~~`src/pages/api/audit/silence.ts` still ships (117 lines, live `POST`)~~ — **✅ resolved: the route was deleted 2026-07-29.** It wrote
   `is_audit_silenced`, the column dropped by
   `supabase/migrations/20260727000000_drop_audit_silence.sql`, and its PLAC gate names
   `/dashboard/audit` — a path that exists neither on disk nor in any `admin_pages` seed, so
@@ -158,7 +178,7 @@ actually used — which matters for both the case study and the roadmap.
   cf-admin upgrade to audit exceptions that **expire 2026-10-23** — a hard build-failure
   date, ~12 weeks out.
 - Velox sells 12-month contracts with a 50% early-termination fee while
-  `src/config/site.ts:30` still reads `'[Legal Business Name]'` and
+  `cf-astro/src/config/site.ts:30` (path no longer exists — the file was moved or renamed after this audit; re-locate before actioning) still read `'[Legal Business Name]'` and
   `'[Governing Jurisdiction, TBD]'`.
 
 ### 1.6 The contradictions that matter most
@@ -513,9 +533,17 @@ what I'd need to write that well.
 140. Fold `archive/` (~112 KB of superseded backlogs) into `MAINTENANCE.md` and delete?
      `MAINTENANCE.md:39` still cross-references `PENDING_PHASES.md` for L-item detail, so
      they can't simply be dropped.
-141. `features/DASHBOARD.md` is corrupted with mojibake throughout (`â€"`, `â†'`) — the only
-     such file, despite `sync-docs.yml` claiming ftfy repair *and* a mojibake validation
-     step. Should I find out why that step didn't catch it?
+141. ~~`features/DASHBOARD.md` is corrupted with mojibake throughout~~ — **✅ RESOLVED
+     2026-08-13.** 43 double-encoded sequences repaired via a cp1252 round-trip:
+     the em dash (37), arrow (4), `≤` (2) and `×` (1). The corrupt byte
+     sequences are named by code point rather than reproduced here, so this
+     note cannot itself re-introduce them — U+00E2 U+20AC U+201D, U+00E2 U+2020
+     U+2019, U+00E2 U+2030 U+00A4 and U+00C3 U+2014 respectively. The file now
+     has zero residual mojibake characters.
+     **Answering the question it asked:** `sync-docs.yml` runs `ftfy` on the *copy
+     it publishes*, not on the source, so the public repo looked clean while the
+     source stayed broken — the repair was never going to propagate backwards. A
+     mojibake check now runs against the source in `scripts/docs_check.py`.
 142. Rename `security/PRIVACY.md` → `features/PRIVACY-DASHBOARD.md` and make `RoPA.md` the
      privacy entry point? It is a UI spec wearing a privacy-policy title, and both compliance
      attestations cite it as the privacy source.

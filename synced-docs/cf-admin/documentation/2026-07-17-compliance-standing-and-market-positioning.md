@@ -1,7 +1,7 @@
 ---
 
 title: "Compliance Standing (Quantified) & Market Positioning"
-status: active
+status: historical
 audience: [owner, non-technical, technical]
 last_verified: 2026-07-17
 verified_against: [code, docs]
@@ -10,6 +10,26 @@ tags: [compliance, market, business, gtm, owasp, soc2, gdpr, ccpa, iso27001]
 ---
 
 # Compliance Standing & Market Positioning
+
+> [!IMPORTANT]
+> **Superseded in part — reclassified `historical` on 2026-08-13.** Preserved as a
+> point-in-time snapshot; its compliance percentages and market framing were sound
+> when written and are still useful reading. Two things in it are now wrong:
+>
+> 1. **Its strategic recommendation to build multi-tenancy was formally rejected
+>    nine days later.** See
+>    [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md)
+>    and `MAINTENANCE.md` M-1…M-6: the chosen direction is *fleet tooling* over a
+>    single-tenant-per-client estate, which the commercial model costs at 2–4 weeks
+>    against multi-tenancy's 2–4 months. Do not action the multi-tenancy priority
+>    below.
+> 2. **Its compliance percentages predate the 2026-07-22 certification audit**,
+>    which re-derived them —
+>    [`2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md)
+>    is the current figure set.
+>
+> Current compliance posture: [`security/SECURITY.md`](security/SECURITY.md) §0.
+> Current commercial direction: the 2026-07-26 and 2026-07-27 documents.
 
 > **Date:** 2026-07-17
 > **Purpose:** Quantify how compliant the platform is against each standard (with % and

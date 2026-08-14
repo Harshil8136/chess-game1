@@ -3,7 +3,7 @@
 title: "System Architecture: RBAC, PLAC & the Audit Engine"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -85,10 +85,26 @@ Lockout recovery is now operational rather than code-level:
 | Function | Description |
 |----------|-------------|
 | `hasPermission` | O(1) integer comparison — core gatekeeper |
-| `isDev` | Exact DEV check |
-| `isOwnerOrDev` | DEV-or-Owner, used for privileged-account edit protection |
-| `isSuperAdmin` | SuperAdmin or higher |
-| `isAdmin` | Admin or higher |
+| `isVendorSupport` | Exact vendor-support (level 0) check |
+| `isOwnerOrVendor` | Vendor-support-or-Owner; used for privileged-account edit protection |
+| `isAdminOrAbove` | Level ≤ 2 |
+| `isManagerOrAbove` | Level ≤ 3 |
+
+**Deprecated aliases.** The pre-rename names are still exported from `rbac.ts`
+and still used in `.astro` pages (`astro check` reports them as deprecated).
+They are *aliases*, not separate logic — but three of the four now read as a
+different tier than they check, which is why they are being retired:
+
+| Deprecated alias | Actually calls | Reads as | Really means |
+|---|---|---|---|
+| `isDev` | `isVendorSupport` | "developer" | Vendor support, level 0 |
+| `isOwnerOrDev` | `isOwnerOrVendor` | — | Level ≤ 1 |
+| `isSuperAdmin` | `isAdminOrAbove` | "super admin" | **Admin**, level ≤ 2 |
+| `isAdmin` | `isManagerOrAbove` | "admin" | **Manager**, level ≤ 3 |
+
+> `isAdmin` is the dangerous one: it does **not** mean canonical Admin. It
+> admits Managers. Prefer `isManagerOrAbove` / `isAdminOrAbove`, which say what
+> they check.
 | `requireAuth(context, minRole?)` | (in `guard.ts`) Server-side auth gate for pages and API routes. Returns the user on success; throws `AuthError(401\|403)` on failure. |
 | `requirePageAccess(user, pagePath)` | (in `guard.ts`) Throws `AuthError(403)` if the actor's PLAC map denies `pagePath` (exact match, then longest-prefix). DEV is exempt. |
 | `placDenyResponse(user, pagePath)` | (in `guard.ts`) Response-returning wrapper around `requirePageAccess`. Returns `null` if allowed, or a fully-formed `403` JSON `Response` if denied. Used by API routes that prefer early-return over try/catch. |

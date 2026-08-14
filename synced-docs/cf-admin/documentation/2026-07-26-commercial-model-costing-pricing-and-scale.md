@@ -313,7 +313,7 @@ Verified 2026-07-26 — `scripts/` contains only `a11y_check.py`, `audit_gate.py
 | Missing | Consequence at N clients |
 |---|---|
 | `wrangler.template.toml` | Binding IDs hand-edited per client. `GITHUB_RULES.md §6` records a real April 2026 production outage from exactly this — a wrong UUID **fails silently** |
-| `scripts/init-cloudflare.sh` | Provisioning D1/KV/R2/Queues is manual per client |
+| `scripts/init-cloudflare.sh` (proposed — does not exist) | Provisioning D1/KV/R2/Queues is manual per client |
 | Fleet migration runner | Migrations are applied **by hand**. `MAINTENANCE.md` confirms: applied "directly, not via `wrangler d1 migrations apply`" |
 | Fleet deploy orchestration | `git push` deploys **one** Worker. N clients = N pipelines |
 | Version/drift inventory | Nothing reports which client runs which version |

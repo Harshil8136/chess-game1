@@ -429,7 +429,7 @@ The CF Orphans tab is automatically selected if any orphans exist (highest-prior
 Two indexes support these queries:
 
 ```sql
--- D1 (migrations/0022_login_logs_probe_index.sql)
+-- D1 (database/legacy_migrations/0022_login_logs_probe_index.sql)
 CREATE INDEX IF NOT EXISTS idx_login_logs_unauthorized
   ON admin_login_logs(is_authorized_email, created_at DESC)
   WHERE is_authorized_email = 0;

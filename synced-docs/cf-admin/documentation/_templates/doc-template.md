@@ -10,6 +10,10 @@ related_docs: [../CONTRIBUTING-DOCS.md]
 tags: [meta, template]
 ---
 
+<!-- docs-check: stale-exempt -->
+<!-- This is the front-matter template. It makes no claim about the system,
+     so there is nothing in it to re-verify against code. -->
+
 # <Document Title>
 
 > **TL;DR (non-technical):** Two to four plain-language sentences describing what

@@ -3,7 +3,7 @@
 title: "SOC 2 Type I Readiness — TSC Control Mapping (cf-admin-madagascar)"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-07-08
+last_verified: 2026-08-13
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [ASVS-L2.md, CSA-CAIQ-v4.md, ../SECURITY.md]
@@ -101,7 +101,7 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 |----|-----------|--------|----------|
 | CC6.1 | Restricts logical access | ✅ | Cloudflare Zero Trust + `admin_authorized_users` allowlist + PLAC per-page. |
 | CC6.2 | Prior to issuing credentials, registers + authorizes users | ✅ | Access-request flow (`/api/access-requests`) + owner approval. |
-| CC6.3 | Restricts access to data + protected info based on authority | ✅ | RBAC (dev/owner/super_admin/admin/staff) + Supabase RLS + PLAC overrides. |
+| CC6.3 | Restricts access to data + protected info based on authority | ✅ | RBAC — canonical `vendor_support > owner > admin > manager > staff > viewer` (stored as `dev`/`owner`/`super_admin`/`admin`/`staff`) + Supabase RLS + PLAC overrides. |
 | CC6.4 | Restricts physical access | Inherited | Cloudflare + Supabase DC controls (see their SOC 2 Type II reports). |
 | CC6.5 | Discontinues logical + physical access | ✅ | Force-kick, session flush, revocation flag KV + CF Access session revoke — `documentation/features/SESSION-MANAGEMENT.md`. |
 | CC6.6 | Implements logical access security to protect from threats outside boundaries | ✅ | HTTPS-only + HSTS `max-age=63072000; preload`; CSP nonce-based; Cloudflare WAF. |

@@ -3,7 +3,7 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-07-08
+last_verified: 2026-08-13
 verified_against: [code]
 owner: ai-agent
 related_docs: [USER-MANAGEMENT.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md]
@@ -14,7 +14,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 
 > **TL;DR:** The **Security → Sessions** page (`/dashboard/sessions`) is the
 > first-class home for live edge sessions, login forensics, and edge revocation
-> blocks. Gated to `super_admin`+ via a dedicated PLAC page row; bulk flush is
+> blocks. Gated to canonical **Admin** and above (stored `super_admin`+) via a dedicated PLAC page row; bulk flush is
 > owner/dev only. Built KV-budget-aware — auto-refresh is opt-in and self-limiting.
 
 ## Location & access
@@ -23,7 +23,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
   (top-level, depth-2 so it renders as a sidebar nav item). The old
   `/dashboard/users/sessions` 301-redirects here.
 - **Sidebar:** the **SECURITY** section (`deriveSection` in `src/lib/auth/plac.ts`).
-- **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin`),
+- **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin` — the *stored* value; canonical **Admin**, level 2),
   seeded by `migrations/0002_promote_sessions_page.sql`, with action fragments
   `#revoke` / `#unblock` / `#flush` (owner) / `#export`. SSR access is enforced
   by the middleware `checkPageAccess` gate; per-user overrides are editable in the
@@ -86,6 +86,6 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
 ## Verification
 
 `npx tsc --noEmit`; `npx vitest run` (covers `sessionRisk` + `exportSessions`);
-load `/dashboard/sessions` as super_admin (sidebar shows Security → Sessions),
+load `/dashboard/sessions` as canonical Admin / stored `super_admin` (sidebar shows Security → Sessions),
 confirm an `admin`/`staff` user is access-denied, toggle auto-refresh and confirm
 it pauses on tab blur and stops after 5 minutes.

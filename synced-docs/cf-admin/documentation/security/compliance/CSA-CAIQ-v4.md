@@ -3,7 +3,7 @@
 title: "CSA STAR Level 1 — CAIQ v4.0.3 (cf-admin-madagascar)"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-07-08
+last_verified: 2026-08-13
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [ASVS-L2.md, SOC2-TSC-mapping.md, ../SECURITY.md]
@@ -71,17 +71,17 @@ CSA-canonical column headers.
 | BCR-03 | Are backups encrypted and tested? | Partial | Backups **are** encrypted — Supabase native backup encryption and D1 point-in-time recovery, both provider-managed. They have **never been restore-tested**: `documentation/runbooks/disaster-recovery.md` and `MAINTENANCE.md` C-6 both record that no DR drill has ever been run. Corrected 2026-07-29 — the prior answer was "Yes … tested", which the encryption half supports and the testing half does not. |
 | BCR-04 | Are systems monitored for outages? | Yes | Sentry error tracking + Cloudflare native monitoring + `/api/health` endpoint. |
 | BCR-05 | Is capacity monitored? | Yes | KV budget monitoring (`documentation/architecture/KV-RESILIENCE.md`); free-tier limits documented in `documentation/operations/OPERATIONS.md`. |
-| BCR-06 | Are dependencies mapped for continuity? | Partial | Runtime dependencies are enumerated in `package.json` and a CycloneDX SBOM is produced on every CI run. Sub-processors are listed in `documentation/security/RoPA.md`. Cloudflare bindings are registered in `wrangler.toml` and `documentation/operations/OPERATIONS.md` §1 — though that section is known to be incomplete. No continuity-specific dependency mapping (single points of failure, provider exit paths) exists; `compliance/ISO-27017-27018.md` records the missing provider exit plan as an open gap. Corrected 2026-07-29 — the prior answer cited `architecture/ARCHITECTURE.md`, which enumerates neither dependencies nor service bindings. |
+| BCR-06 | Are dependencies mapped for continuity? | Partial | Runtime dependencies are enumerated in `package.json` and a CycloneDX SBOM is produced on every CI run. Sub-processors are listed in `documentation/security/RoPA.md`. Cloudflare bindings are registered in `wrangler.toml` and `documentation/operations/OPERATIONS.md` §1, which was rebuilt from config on 2026-08-13 and is now complete (it had been missing `SYNC_QUEUE`, both DLQs, both service bindings and the AI binding). No continuity-specific dependency mapping (single points of failure, provider exit paths) exists; `compliance/ISO-27017-27018.md` records the missing provider exit plan as an open gap. Corrected 2026-07-29 — the prior answer cited `architecture/ARCHITECTURE.md`, which enumerates neither dependencies nor service bindings. |
 
 ### CCC — Change Control & Configuration Management
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | CCC-01 | Are changes tested before production? | Yes | `tsc` + `vitest` + `docs_check` + `rules_check` in CI; per-branch protection. |
-| CCC-02 | Is a change-approval process documented? | Yes | `GITHUB_RULES.md` + PR-review requirement. |
+| CCC-02 | Is a change-approval process documented? | **Partial** | **Corrected 2026-08-13 — there is no PR-review requirement.** `GITHUB_RULES.md` mandates the opposite: *"DO NOT create new branches. ALWAYS push directly to `origin main`"*, with no branch protection. The real, documented gate is automated and pre-push: `python .agents/scripts/checklist.py` plus `npm run verify` (typecheck, lint, 433 tests, `rules_check`, `docs_check`, `a11y_check`, `audit_gate`), and CI re-runs the same guards on `main`. That is a genuine change control, but it is a **machine** approval, not a second pair of human eyes. `SOC2-TSC-mapping.md` CC8.1 states this correctly and was contradicted by this row. |
 | CCC-03 | Are unauthorized changes detected? | Yes | Git history; Cloudflare Worker version history; branch-protection prevents force push. |
 | CCC-04 | Is configuration baseline maintained? | Yes | `wrangler.toml` + `documentation/operations/OPERATIONS.md` binding registry. |
-| CCC-05 | Are separation-of-duty controls enforced? | Yes | Role hierarchy (dev/owner/super_admin/admin/staff); PLAC per-page overrides. |
+| CCC-05 | Are separation-of-duty controls enforced? | **Partial** | **Corrected 2026-08-13.** *Within the application*, yes: the six-tier role ladder (`vendor_support > owner > admin > manager > staff > viewer`, `architecture/plac-and-audit.md` §1.1) plus PLAC per-page overrides genuinely separate duties between portal users, and some destructive operations require a second privileged actor (`/api/audit/*` refuses self-targeting). *In the deployment pipeline*, no: a single operator writes, approves and ships every change. Do not present this as an organisational SoD control. |
 
 ### CEK — Cryptography, Encryption & Key Management
 
@@ -138,7 +138,7 @@ CSA-canonical column headers.
 | IAM-03 | Is MFA enforced for privileged accounts? | Yes | Cloudflare Zero Trust MFA required. |
 | IAM-04 | Are shared/generic accounts forbidden? | Yes | Every user has unique CF sub-id → Supabase user row → RBAC role. |
 | IAM-05 | Are privileged operations logged? | Yes | Ghost Audit — role changes, PLAC overrides, force-kicks, session revocations, exports. |
-| IAM-06 | Is separation of duties enforced? | Yes | Role hierarchy + PLAC page-level gates; type-to-confirm on destructive ops. |
+| IAM-06 | Is separation of duties enforced? | **Partial** | Application-layer only — see CCC-05. Role hierarchy + PLAC page-level gates + type-to-confirm on destructive operations, and privileged actions cannot target the actor's own account. No pipeline-level SoD (single operator). |
 | IAM-07 | Are service accounts uniquely identified? | Yes | Named service bindings; service-role Supabase key kept out of client. |
 | IAM-08 | Is enrollment tightly controlled? | Yes | `admin_authorized_users` allowlist; access requests via `/api/access-requests` + owner approval. |
 
@@ -163,7 +163,7 @@ CSA-canonical column headers.
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | LOG-01 | Are security-relevant events logged? | Yes | Ghost Audit + login forensics + Sentry. |
-| LOG-02 | Are logs tamper-evident? | Yes | Supabase RLS on `email_audit_logs`, `admin_access_requests`; append-only audit tables. |
+| LOG-02 | Are logs tamper-evident? | **No** | **Corrected 2026-08-13 — the previous answer used wording this project explicitly bans.** `architecture/plac-and-audit.md` §3.2 forbids describing the audit log as "tamper-evident", "immutable" or "append-only", `MAINTENANCE.md` C-9 records why, and a copy-lint rule in the Velox repo fails the build if those words return in marketing. The controls that **do** exist: Supabase RLS restricts these tables to `service_role`, writes are insert-only in application code, and audit suppression was removed entirely on 2026-07-26 so coverage cannot be switched off. The controls that **do not** exist: no hash chain, no sequence numbers, no signatures, no WORM storage — and `admin_audit_log` is a purge target in `src/lib/retention-tables.ts`. Anyone holding `SUPABASE_SERVICE_ROLE_KEY` can alter history undetectably. |
 | LOG-03 | Is log retention documented? | Yes | 30-day default retention (configurable via `/api/audit/prune`); Sentry 90-day. |
 | LOG-04 | Are logs correlated / SIEM-fed? | Partial | Sentry serves as SIEM-lite; no dedicated SIEM yet. |
 | LOG-05 | Are alerts triggered on anomalies? | Yes | Sentry rules + login-forensics suspicious flagging (`src/components/admin/users/sessions/sessionRisk.ts`). |
@@ -184,7 +184,7 @@ CSA-canonical column headers.
 |---|----------|-----|----------|
 | STA-01 | Are third parties assessed? | Partial | Cloudflare, Supabase, Upstash, Sentry, Brevo — all major vendors carry SOC 2 / ISO 27001. |
 | STA-02 | Is supply-chain risk tracked? | Yes | `npm audit --omit=dev` on every push + weekly cron. |
-| STA-03 | Are SBOMs generated? | No | Follow-up — would use CycloneDX from npm tree. |
+| STA-03 | Are SBOMs generated? | **Yes** | **Corrected 2026-08-13 — this row contradicted BCR-06 in this same document.** A CycloneDX SBOM is generated on every CI run (`.github/workflows/quality.yml`, `npm sbom --sbom-format cyclonedx --sbom-type application`) and uploaded as the `sbom-cyclonedx` artifact; `npm run sbom` produces it locally. |
 | STA-04 | Is source-code integrity enforced? | Yes | GitHub commit signing recommended; secret-scan CI blocks credential commits. |
 
 ### TVM — Threat & Vulnerability Management

@@ -23,15 +23,27 @@ listed here (the CI index-drift check enforces both).
 
 ## Start here
 
-- **Executive status, ratings, scale & cost (both repos)** → [`2026-06-13-platform-status-summary.md`](2026-06-13-platform-status-summary.md)
-- **New to the project?** → root [`README.md`](../README.md)
-- **Operating rules & policy** → root [`RULESAd.md`](../RULESAd.md)
-- **System architecture** → [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md)
-- **Dynamic D1 Blog & Workers AI RAG Architecture** → [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md)
-- **Blog AI/SEO/AIO/GEO — complete reference (current, verified)** → [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md)
-- **Security posture** → [`security/SECURITY.md`](security/SECURITY.md)
-- **Infrastructure & deploy** → [`operations/OPERATIONS.md`](operations/OPERATIONS.md)
-- **Open maintenance items** → [`MAINTENANCE.md`](MAINTENANCE.md)
+Every entry below is an `active` document. Dated reports are snapshots of the day
+they were written — useful as history, not as the current state.
+
+| If you want… | Read | Owns |
+|---|---|---|
+| **New to the project** | root [`README.md`](../README.md) | — |
+| **Operating rules & policy** | root [`RULESAd.md`](../RULESAd.md) | stack versions, policy limits, gate status |
+| **System architecture** | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | request lifecycle, module pattern |
+| **Who can do what** | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | **the role ladder — authoritative** |
+| **Security posture** | [`security/SECURITY.md`](security/SECURITY.md) | CSP, auth, RLS, current posture |
+| **Infrastructure, bindings & deploy** | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | **binding registry — authoritative** (`GITHUB_RULES.md` §6) |
+| **What's still open** | [`MAINTENANCE.md`](MAINTENANCE.md) | the one live backlog |
+| **What things cost** | [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md) | **the cost model — authoritative** |
+| **Blog / AI / SEO** | [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | — |
+| **Executive status snapshot** | [`2026-06-13-platform-status-summary.md`](2026-06-13-platform-status-summary.md) | *historical — two months old* |
+
+> **One fact, one home.** Where a number appears in several documents it goes
+> stale in all but one. The "Owns" column names the document that is allowed to
+> state a given fact; everything else should link to it rather than restate it.
+> If two documents disagree, the owner wins — and if the owner disagrees with
+> code or config, the code wins and the owner is the bug.
 
 ## Status legend
 
@@ -42,7 +54,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
-| [`2026-07-17-compliance-standing-and-market-positioning.md`](2026-07-17-compliance-standing-and-market-positioning.md) | Quantified compliance % per standard (instant/close/far) + market positioning, verticals, and monetization | owner, non-technical, technical | active |
+| [`2026-07-17-compliance-standing-and-market-positioning.md`](2026-07-17-compliance-standing-and-market-positioning.md) | Quantified compliance % per standard + market positioning. **Superseded:** its multi-tenancy recommendation was rejected on 2026-07-26, and its percentages were re-derived by the 2026-07-22 audit | owner, non-technical, technical | historical |
 | [`2026-06-16-business-viability-and-compliance-assessment.md`](2026-06-16-business-viability-and-compliance-assessment.md) | Viability of selling the platform, multi-jurisdiction compliance posture | non-technical, owner | historical |
 | [`2026-07-27-go-to-market-prospecting-and-roadmap.md`](2026-07-27-go-to-market-prospecting-and-roadmap.md) | GTM: the two sales motions and how they differ, ICP/anti-ICP, eight prospecting plays, the funnel end to end, the fleet capacity gate that bounds growth, a phased roadmap with gates, what to measure, risk register, and what is safe to say to a prospect | owner, non-technical, technical, operator, ai | active |
 | [`2026-07-29-review-findings-and-open-questions.md`](2026-07-29-review-findings-and-open-questions.md) | Live-verified review across all three repos and every connected service (Cloudflare, both Supabase projects, Sentry, PostHog), the 14 contradictions with a buyer or auditor on the other side, and a 150-question bank to answer before the correction pass | owner, non-technical, technical, operator, ai | active |

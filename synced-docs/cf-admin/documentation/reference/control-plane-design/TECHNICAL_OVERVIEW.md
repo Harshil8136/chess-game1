@@ -1,7 +1,7 @@
 ---
 
 title: "Service Control Plane — Technical Overview"
-status: active
+status: draft
 audience: [ai, technical]
 last_verified: 2026-06-06
 verified_against: [code]
@@ -10,6 +10,18 @@ tags: []
 ---
 
 # Service Control Plane — Technical Overview
+
+> [!IMPORTANT]
+> **Role names in this document are the pre-2026-07-27 five-tier vocabulary.**
+> The live ladder is six tiers — `vendor_support > owner > admin > manager >
+> staff > viewer`. Translation: stored `dev`→`vendor_support`,
+> `super_admin`→**`admin`** (level 2), `admin`→**`manager`** (level 3). The
+> string `admin` therefore means level 3 in the text below and level 2 in
+> current code. SQL snippets that write `required_role` are still correct as-is,
+> because the database stores the legacy values. See
+> [`architecture/plac-and-audit.md`](../../architecture/plac-and-audit.md) §1.2,
+> which is authoritative.
+
 
 > **TL;DR (non-technical):** A technical overview of the Service Control Plane system: its architecture, data flow, and access-control model.
 

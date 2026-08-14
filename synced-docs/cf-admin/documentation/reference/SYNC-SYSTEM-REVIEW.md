@@ -3,7 +3,7 @@
 title: "Sync System — Architecture Review & Improvement Plan"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-09
+last_verified: 2026-08-13
 verified_against: [code, live-d1, live-supabase]
 owner: harshil
 tags: [sync, cms, control-plane, reliability, roadmap]
@@ -36,7 +36,7 @@ lag** — they do not move the data; D1 already shares it.
 
 | Plane | Write side (cf-admin) | Transport | Read side (cf-astro) | Cache layers |
 |---|---|---|---|---|
-| **CMS content** | `updateCmsBlock()` → D1 `cms_content` (`src/lib/cms.ts`) | `revalidateAstro()` → `POST /api/revalidate` (Bearer) | section `.astro` resolvers | edge cache-tag → `cms:*` KV (1h TTL) → D1 → i18n defaults |
+| **CMS content** | `updateCmsBlock()` → D1 `cms_content` (`cf-admin/src/lib/cms/storage.ts`) | `revalidateAstro()` → `POST /api/revalidate` (Bearer) | section `.astro` resolvers | edge cache-tag → `cms:*` KV (1h TTL) → D1 → i18n defaults |
 | **Service config** | `ServiceConfigRepository` → D1 `service_config` | `flushAstroConfigCache()` → `/api/revalidate {kind:'config'}` | `getServiceConfig()` + `route-policy.ts` resolver | mem 10s → Cache-API 60s → D1 → hardcoded `DEFAULTS` |
 | **Login / log sync** | — | 5-min cron polls CF Access audit-log API | `handleScheduled()` → D1 `admin_login_logs` | KV watermark `cf-audit-last-synced` |
 
@@ -50,7 +50,7 @@ in the *guarantees around the happy path*, not the fallback path.**
 ```
 Admin saves  ──►  D1 cms_content (authoritative, written FIRST)
                        │
-                       ▼  revalidateAstro(env, basePaths, cmsData)   [src/lib/cms.ts]
+                       ▼  revalidateAstro(env, basePaths, cmsData)   [cf-admin/src/lib/cms/revalidate.ts]
                   POST /api/revalidate  (Bearer REVALIDATION_SECRET, 3× backoff, 5s timeout)
                        │
    cf-astro /api/revalidate:
@@ -65,7 +65,7 @@ Admin saves  ──►  D1 cms_content (authoritative, written FIRST)
 
 ### Config flow (detail)
 
-cf-astro caches a `ServiceConfigSnapshot` (`src/lib/service-config.ts`): isolate
+cf-astro caches a `ServiceConfigSnapshot` (`cf-astro/src/lib/service-config.ts`): isolate
 memory (10s) → Cloudflare Cache API (60s) → shared D1 `service_config` →
 hardcoded `DEFAULTS`. `flushAstroConfigCache()` (`config-publisher.ts`) posts
 `{kind:'config'}` which calls `purgeServiceConfigCache()` — clearing the Cache-API
@@ -95,7 +95,7 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
 ### 🔴 Reliability — sync has no durability guarantee  *(TOP PRIORITY)*
 
 - **R1 — Fire-and-forget publish.** `revalidateAstro()` retries 3× then emits a
-  Sentry message and **gives up** (`src/lib/cms.ts:374`). A failed publish leaves
+  Sentry message and **gives up** (`cf-admin/src/lib/cms/revalidate.ts`). A failed publish leaves
   D1 ahead of the edge for up to **1h** (`cms:*` `expirationTtl: 3600`) or **24h**
   (ISR pages set `s-maxage=86400`; if the cache-tag purge *also* failed). There is
   **no durable redrive** — nothing retries after the 3 in-request attempts.
@@ -271,9 +271,9 @@ Tracking which roadmap items have shipped to the review branch
 
 | Item | Status | Where |
 |---|---|---|
-| 0.3 — unify internal revalidate URL to `https://internal` | ✅ shipped | `cf-admin/src/lib/cms.ts` |
+| 0.3 — unify internal revalidate URL to `https://internal` | ✅ shipped | `cf-admin/src/lib/cms/revalidate.ts` |
 | 0.5 — cache-tag `/api/runtime-config` + purge on `{kind:'config'}` | ✅ shipped | `cf-astro/src/pages/api/{runtime-config,revalidate}.ts` |
-| 1.3 — wire `cms_content_history` (append + prune to last 10) | ✅ shipped | `cf-admin/src/lib/cms.ts` (`recordCmsHistory`) |
+| 1.3 — wire `cms_content_history` (append + prune to last 10) | ✅ shipped | `cf-admin/src/lib/cms/storage.ts` (`recordCmsHistory`) |
 | 1.3b — history read + **rollback** endpoint (republishes via revalidate) | ✅ shipped | `cf-admin/src/pages/api/content/history.ts` |
 | 0.1 — rotate `BETTERSTACK_SOURCE_TOKEN` | ✅ done — rotated in both workers (2026-06-10); observability restored | — |
 | 0.2 — Supabase leaked-password protection | ⛔ not applicable — Pro-plan-only feature; project is Free tier ($0-infra invariant). Recorded as an accepted limitation. | — |
@@ -330,6 +330,6 @@ Tracking which roadmap items have shipped to the review branch
 - Control plane (config sync) → [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](./control-plane-design/TECHNICAL_OVERVIEW.md)
 - Layer-B connectors → [`features/CONTROL-PLANE-CONNECTORS.md`](../features/CONTROL-PLANE-CONNECTORS.md)
 - cf-astro system architecture → `cf-astro/Documentation/SYSTEM-ARCHITECTURE.md`
-- Key files: `cf-admin/src/lib/cms.ts`, `cf-admin/src/lib/control-plane/config-publisher.ts`,
+- Key files: `cf-admin/src/lib/cms/` (`storage.ts`, `revalidate.ts`), `cf-admin/src/lib/control-plane/config-publisher.ts`,
   `cf-astro/src/pages/api/revalidate.ts`, `cf-astro/src/lib/service-config.ts`,
   `cf-astro/src/lib/route-policy.ts`, `cf-admin/src/workers/scheduled-log-sync.ts`

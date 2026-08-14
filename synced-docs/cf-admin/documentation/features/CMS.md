@@ -3,7 +3,7 @@
 title: "CMS, Image, Blog & Bookings Management"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-03
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: [cms, blog, ai, rag, d1]
@@ -50,7 +50,7 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 **Components:** `src/components/admin/bookings/BookingDashboard.tsx` + `BookingSlideDrawer.tsx`  
 **API:** `src/pages/api/bookings/index.ts`  
 **Data Source:** Supabase PostgreSQL (`bookings` + `booking_pets` tables)  
-**Access:** Admin+ (admin, super_admin, owner, dev)
+**Access:** **Manager or above** — canonical `manager`/`admin`/`owner`/`vendor_support`; stored as `admin`/`super_admin`/`owner`/`dev`. See `architecture/plac-and-audit.md` §1.2.
 
 ---
 

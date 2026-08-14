@@ -10,6 +10,11 @@ related_docs: [../2026-06-16-business-viability-and-compliance-assessment.md, ..
 tags: [reference, commercialization, decoupling, framework]
 ---
 
+<!-- docs-check: proposed-paths -->
+<!-- This document is a design/plan: several paths below name files that
+     are proposed, not shipped. The code-path check is skipped here for that
+     reason. Do not copy this marker into a doc that describes behaviour. -->
+
 # Commercial-Readiness / Pet-Hotel Decoupling Checklist
 
 > **TL;DR:** `cf-admin` is 90% a generic Cloudflare-Workers admin framework and

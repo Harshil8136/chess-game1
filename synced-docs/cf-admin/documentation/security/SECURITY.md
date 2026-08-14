@@ -24,7 +24,6 @@ tags: [security, rls, auth]
 > **TL;DR (non-technical):** The complete security picture for the admin portal: how users are authenticated, how requests are protected, how data is locked down, and what the current security posture is.
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-26 (deep-review follow-ups — see §15: PLAC wired into the remaining 18 API routes, all production `npm audit` vulnerabilities cleared, `writeRevocationFlag` TTL respects `SESSION_MAX_LIFETIME_MS`, `scheduled-log-sync` email amplification capped, `_headers` CSP aligned with middleware, operational_status allow-listed, content-route JSON.parse crash-proofed)
 > **Scope:** Auth, CSRF, Sessions, HTTP Headers, RLS, Defense-in-Depth, Ghost Protection, Error Sanitization, IDOR Prevention, Rate Limiting, Input Validation
 
 ---
@@ -35,29 +34,39 @@ This document is the **canonical, current** security state. Point-in-time audit
 snapshots are preserved under [`reviews/`](./reviews/) as historical records — do
 not treat them as the present state; this file supersedes them.
 
-| Area | Current state (as of 2026-05-26) |
-|------|----------------------------------|
-| Production `npm audit` | 0 vulnerabilities |
-| PLAC on data-bearing API routes | Enforced on all 18 mapped routes (+ parent-deny propagation) |
-| Break-glass / hardcoded admins | None (removed; whitelist-only) |
-| Session expiry | 30-min role re-check, 24h hard expiry; revocation flag respects `SESSION_MAX_LIFETIME_MS` |
-| CSP | `_headers` aligned byte-for-byte with middleware (middleware is authoritative on Workers) |
-| Supabase `anon` role | Zero grants / zero RLS policies / zero function EXECUTE |
-| Email alert amplification | Capped at 5/batch with digest line |
+Every row below was re-derived from code or a live query on the date shown. A
+row with no evidence column is a claim, not a posture — do not add one.
+
+| Area | Current state | Verified | How to re-check |
+|------|---------------|----------|-----------------|
+| `npm audit` (production deps) | **16 findings** — 1 low, 11 moderate, 4 high. The 4 high + related groups are documented, time-boxed exceptions in `.audit-exceptions.json` (expire 2026-10-23); `audit_gate.py` fails the build on an expired or undocumented one. | 2026-08-13 | `npm audit --omit=dev`, then `python scripts/audit_gate.py` |
+| PLAC on API routes | 39 path prefixes mapped in `API_PAGE_MAPPING`, covering 136 route files by prefix (+ parent-deny propagation) | 2026-08-13 | `src/lib/auth/routes.ts` |
+| API authorization mode | **`enforce`** — an unmapped, un-allowlisted `/api/*` request is denied 403. Flipped from `shadow` 2026-08-12. | 2026-08-13 | `API_DENY_MODE` in `wrangler.toml`; logic in `src/lib/auth/pipeline.ts` |
+| Break-glass / hardcoded admins | None (removed; whitelist-only) | 2026-06-06 | `src/lib/auth/` — no hardcoded email list |
+| Session expiry | 30-min role re-check, 24h hard expiry; revocation flag respects `SESSION_MAX_LIFETIME_MS` | 2026-06-06 | `src/lib/auth/session.ts` |
+| CSP | Enforcing policy has **no `'unsafe-eval'`** (removed 2026-07-25) and still carries `'unsafe-inline'`. A hardened Report-Only canary without `'unsafe-inline'` **is live** — see §4. | 2026-08-13 | `src/lib/security/csp.ts` |
+| `public/_headers` | **Exists and has drifted** — its CSP still contains `'unsafe-eval'` and predates several directive changes. Its own header comment, `csp.ts`, and `RULESAd.md` §2 have disagreed about whether the file is even consumed. Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md) → C-12; do not treat it as evidence of the live policy either way. | 2026-08-13 | `public/_headers` vs `src/lib/security/csp.ts` |
+| Supabase `anon` role | Zero grants / zero RLS policies / zero function EXECUTE | 2026-06-06 | Supabase MCP `list_tables` / `get_advisors` |
+| Email alert amplification | Capped at 5/batch with digest line | 2026-06-06 | `src/workers/scheduled-log-sync.ts` |
+| Static security gates | `rules_check.py` 0 violations · `a11y_check.py` 0 findings | 2026-08-13 | `npm run verify` |
 
 **Review history (most recent first):**
+[2026-06-13](./reviews/2026-06-13-security-review.md) ·
 [2026-05-26](./reviews/2026-05-26-security-review.md) ·
 [2026-05-25](./reviews/2026-05-25-security-review.md) ·
 [2026-05-24](./reviews/2026-05-24-security-review.md) ·
 [SSL/Lighthouse 2026-04-24](./reviews/2026-04-24-ssl-lighthouse-audit.md).
-Open follow-ups (if any) are tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+The full-platform audit of [2026-07-17](./reviews/2026-07-17-full-platform-audit.md)
+is the most recent cross-repo pass. Open follow-ups are tracked in
+[`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 **Live verification (2026-06-06):** Supabase MCP `list_tables` confirmed RLS is
 enabled on all `public` tables (incl. `admin_authorized_users`, `bookings`,
 `consent_records`, `email_audit_logs`, chatbot tables). `get_advisors(security)`
 returned no data-model findings — the sole WARN (`auth_leaked_password_protection`)
 is a Supabase **GoTrue** feature that this project does not use (GoTrue removed in
-favour of CF Zero Trust), so it is not applicable.
+favour of CF Zero Trust), so it is not applicable. Re-confirmed 2026-08-13: RLS
+enabled on all 20 `public` tables.
 
 ---
 
@@ -206,45 +215,83 @@ Applied globally at the Cloudflare Edge via Astro's `sequence` middleware (`secu
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Leaks only origin on cross-origin navigation |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | 2-year HSTS with preload eligibility. Source of truth: `src/lib/security/csp.ts:78`. Corrected 2026-07-29 — this row read `31536000` while the deployed header has been `63072000`; three compliance documents cited the correct value and this file did not. |
 | `Permissions-Policy` | `camera=(), microphone=(), payment=(), geolocation=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()` | Disables all browser hardware APIs not used by the admin portal |
-| `Content-Security-Policy` | See enforced policy below | Resource restriction; `unsafe-inline`/`unsafe-eval` retained in Phase 1 (see §13) |
-| `Content-Security-Policy-Report-Only` | **RETIRED 2026-05-26** | Retired due to excessive console noise and client-side ad-blockers blocking Sentry reports |
+| `Cross-Origin-Opener-Policy` | `same-origin-allow-popups` | Not the stricter `same-origin`: CF Access and Google sign-in use popups, and `same-origin` severs `window.opener` and breaks those flows |
+| `Cross-Origin-Resource-Policy` | `same-origin` | Blocks cross-origin embedding of this origin's resources |
+| `X-Robots-Tag` | `noindex, nofollow, noarchive, nosnippet, noimageindex` | Defence in depth over robots.txt — an authenticated portal with zero public content |
+| `Content-Security-Policy` | See enforced policy below | Resource restriction; `'unsafe-inline'` retained on `script-src`/`style-src`, `'unsafe-eval'` removed 2026-07-25 |
+| `Content-Security-Policy-Report-Only` | **Live** — the hardened canary | Ships the target policy (no `'unsafe-inline'`) so violations surface in Sentry without breaking the portal |
 
-### Enforced CSP (Phase 1 — 2026-05-24)
+### Enforced CSP
+
+Generated per-request in [`src/lib/security/csp.ts`](../../src/lib/security/csp.ts)
+(`buildPolicy(SCRIPT_SRC_ENFORCING(nonce), true)`) — read that file for the
+literal string; the shape is:
 
 ```
 default-src 'self';
-script-src 'self' 'unsafe-inline' 'unsafe-eval'
+script-src 'self' 'unsafe-inline' 'nonce-<per-request>'
            https://browser.sentry-cdn.com
            https://static.cloudflareinsights.com
-           https://cdn.jsdelivr.net;
-style-src  'self' 'unsafe-inline' https://fonts.googleapis.com;
-img-src    'self' data: blob: https:;
-font-src   'self' data: https://fonts.gstatic.com;
-connect-src 'self' https: wss:;
+           https://cloudflareinsights.com
+           https://cdn.jsdelivr.net
+           https://accounts.google.com
+           https://secure.madagascarhotelags.com
+           https://*.madagascarhotelags.com;
+style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+img-src     'self' data: blob: https:;
+font-src    'self' data: https://fonts.gstatic.com;
+worker-src  'self' blob:;
+connect-src 'self' <app domains> <CF Access> <Sentry ingest> <Supabase + wss:>
+            <R2 S3 endpoint, for presigned Staff Storage PUTs>;
+frame-src   'self' https://accounts.google.com https://*.cloudflareaccess.com;
 frame-ancestors 'none';
-base-uri   'self';
-object-src 'none';
+base-uri    'self';
+object-src  'none';
 form-action 'self';
+report-uri  <Sentry security endpoint>;
 upgrade-insecure-requests
 ```
 
-**Why `unsafe-inline` is still present (accurate root causes — not Tailwind):**
+Every first-party inline `<script>` is rewritten to carry the per-request nonce
+by the middleware itself (the `finalBody` replace at the end of `csp.ts`).
 
-- **`script-src unsafe-inline`:** The `@sentry/astro` v10 integration injects an inline initialization script into `<head>` during SSR. This cannot currently receive a nonce via Astro 6 without a custom build hook. The hero.astro `<script>` block is bundled by Vite into an external file (not inline). The two `<script is:inline src="...">` tags in AdminLayout load external files via `src` (not inline content) — they do NOT need `unsafe-inline`.
-- **`script-src unsafe-eval`:** Retained pending verification that Sentry v10 does not use `eval()` for stack trace symbolication in Workers. Source maps are uploaded (`sentry.server.config.ts`) which normally eliminates the need. Investigate after Report-Only data is collected.
-- **`style-src unsafe-inline`:** Preact's SSR renderer emits `style="..."` attributes directly in the initial HTML for all components using `style={{ }}` props (dynamic gradients, animations, colors). These appear in the HTML document, not in JavaScript. Approximately 20 instances across `ExpandedRow.tsx`, `SystemDiagnosticsHistory.tsx`, `AccessPolicyGrid.tsx`, and others require conversion to CSS utility classes before this can be removed.
+**Why `'unsafe-inline'` is still present:**
 
-### Report-Only CSP (Phase 2 target — Retired 2026-05-26)
+- **`script-src 'unsafe-inline'`:** retained *only* until the canary below reads
+  clean. First-party inline scripts are already nonced, so the sole remaining
+  dependency is any Cloudflare zone-level *inline* injection (Rocket Loader) —
+  those are added after the response leaves the Worker and can never receive the
+  nonce. Cloudflare Web Analytics loads from `static.cloudflareinsights.com` and
+  is covered by the host allowlist, so it is unaffected either way.
+- **`style-src 'unsafe-inline'`:** Preact's SSR renderer emits `style="..."`
+  attributes in the initial HTML for components using `style={{ }}` props
+  (dynamic gradients, animations, colors). Roughly 20 instances across
+  `ExpandedRow.tsx`, `SystemDiagnosticsHistory.tsx`, `AccessPolicyGrid.tsx` and
+  others need converting to utility classes before this can go.
 
-The `Content-Security-Policy-Report-Only` header was previously deployed with the hardened policy (no `unsafe-inline`, no `unsafe-eval`) reporting violations to Sentry via a `report-uri` endpoint.
+**`'unsafe-eval'` was removed on 2026-07-25** — verified absent from both `src/**`
+and the built client bundles under `dist/_astro/`. SEC-01 now forbids it outright
+with no exemption, so it cannot come back silently.
 
-On 2026-05-26, this header was **fully retired** because:
+### Report-Only CSP — the hardened canary (live)
 
-1. Sentry's client-side initialization script and Preact's server-side rendered inline style attributes trigger hundreds of warning reports per user session.
-2. The browser console becomes cluttered with loud warnings that degrade admin user experience.
-3. Client-side ad-blockers and privacy suites block Sentry's ingest endpoint (`*.sentry.io`), converting harmless CSP warnings into red network post failure logs (`ERR_BLOCKED_BY_CLIENT`).
+> **Corrected 2026-08-13.** This section previously stated the Report-Only header
+> was "RETIRED 2026-05-26". It was retired then, but a new canary was shipped
+> afterwards and has been live since; `csp.ts` sets it on every response. The
+> stale text survived because nothing checked doc claims against code — see
+> `MAINTENANCE.md` C-3 for the flip procedure this canary gates.
 
-The primary enforced `Content-Security-Policy` header remains fully active with robust protections while ensuring a perfectly silent, secure, and warning-free browser console for system administrators.
+`Content-Security-Policy-Report-Only` carries the same policy as the enforcing
+header with `'unsafe-inline'` dropped from `script-src`, reporting to the Sentry
+`report-uri`. `upgrade-insecure-requests` is deliberately omitted from it —
+browsers ignore that directive in a Report-Only policy and log a console warning
+on every page load if it is present.
+
+Promote `SCRIPT_SRC_CANARY` to the enforcing directive and delete the Report-Only
+header once it reports zero `script-src` violations. Note that while both headers
+are live Sentry double-counts any violation that trips the enforcing policy too,
+so keep the canary window short. The flip is blocked on operator verification of
+Cloudflare Rocket Loader (zone → Speed → Optimization) — `MAINTENANCE.md` C-3.
 
 ### Data-Attribute Driven CSS
 
@@ -294,7 +341,7 @@ Role mutations, account deactivation, and PLAC changes trigger a 3-layer securit
 - All form inputs validated server-side before processing
 - Parameterized D1 queries only — never string concatenation
 - `VALID_ROLES` application-level allowlist rejects invalid role values before DB insertion
-- Cloudflare Turnstile on magic link request form
+- Zod schemas cover every JSON-body route (see `MAINTENANCE.md` C-7)
 - **All API error responses return generic messages** — no stack traces, SQL errors, schema details, or internal paths leak to the client. Never do `return jsonError(500, error.message)` — always use a static string.
 - Hidden accounts return identical 404 response shape whether they exist or not — prevents enumeration
 
@@ -332,11 +379,10 @@ try {
 | `GET /api/bookings` | authenticated | Booking list |
 | `GET /api/media/gallery` | `admin` | Gallery management |
 | `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
-| `GET /api/users` | `super_admin` | Full user list |
-| `POST /api/audit/silence` | `dev` | Modifies audit suppression |
+| `GET /api/users` | canonical **Admin** (stored `super_admin`) | Full user list |
 | `POST /api/features/toggle` | `dev` | Feature flag mutations |
 | `GET /api/diagnostics/ping` | `dev` | Infrastructure probe |
-| `GET /api/users/[id]/session-status` | `super_admin` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
+| `GET /api/users/[id]/session-status` | canonical **Admin** (stored `super_admin`) | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
 
 ### Page-Level Access Control on API routes (`placDenyResponse`)
 
@@ -358,7 +404,6 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 | `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
 | `GET /api/audit/receipts` | `/dashboard/privacy` | PR #2 | Privacy dashboard surface. |
 | `DELETE /api/audit/prune` | `/dashboard/logs` | PR #2 | DEV-only + PLAC. |
-| `POST /api/audit/silence` | `/dashboard/audit` | 2026-05-26 | DEV-only role check + self-silencing forbidden remain primary; PLAC gate added for defence-in-depth (DEV is exempt anyway, but the gate documents intent and future-proofs against the role gate being relaxed). |
 | `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. The existing hash-grant logic remains as secondary check. |
 | `POST /api/audit/export` | `/dashboard/logs` (parent) | 2026-05-26 | Same parent-deny propagation as above for the `#export` hash sub-page. |
 | `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | PR #2 | |
@@ -440,7 +485,7 @@ The `services.ts` POST no longer spreads `rawBody` directly — only validated f
 
 ### Analytics Provider Timeouts
 
-All 8 analytics providers in `src/lib/analytics/providers.ts` use `AbortSignal.timeout(5000)` on every external `fetch()`. This prevents a slow upstream (Cloudflare GraphQL, Supabase metrics, Sentry, Resend) from consuming the entire 10 ms CPU budget on a Workers free-tier request.
+All 8 analytics providers in `src/lib/analytics/providers/` use `AbortSignal.timeout(5000)` on every external `fetch()`. This prevents a slow upstream (Cloudflare GraphQL, Supabase metrics, Sentry, Resend) from consuming the entire 10 ms CPU budget on a Workers free-tier request.
 
 ---
 
@@ -521,7 +566,7 @@ Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
 
 ### 10.2 Table Policy Matrix
 
-All 17 public tables have RLS **enabled** and a single `"Service role full access"` policy restricted to `TO service_role`. No table has any policy granting access to `anon` or `authenticated`.
+All **20** public tables have RLS **enabled** and a single `"Service role full access"` policy restricted to `TO service_role`. No table has any policy granting access to `anon` or `authenticated`. (Count re-verified live 2026-08-13 via Supabase MCP `list_tables`; the matrix below lists the tables this portal touches, not necessarily all 20 — the chatbot owns the rest.)
 
 #### Admin & Session Tables
 
@@ -556,6 +601,30 @@ All 17 public tables have RLS **enabled** and a single `"Service role full acces
 | `privacy_requests` | ALL | service_role | Privacy deletion requests |
 
 > **Historical note (removed 2026-04-29):** Tables `bookings`, `booking_pets`, `booking_quality_metadata`, `consent_records`, `privacy_requests`, and `legal_requests` previously had `anon` INSERT policies for public forms. These were vestigial — GoTrue auth was removed, and no application uses the anon key. All anon policies have been dropped.
+
+#### 10.2a The `cf_astro_writer` role — public-form writes, least privilege
+
+**Added to this document 2026-08-13; it was previously undocumented anywhere.**
+Dropping the `anon` policies did not remove the need for the public site to
+record bookings and consent. That capability moved to a **dedicated database
+role**, `cf_astro_writer`, holding the narrowest possible grants:
+
+| Table | `cf_astro_writer` policy | Commands |
+|---|---|---|
+| `consent_records` | `cf_astro_writer_insert` | INSERT only |
+| `bookings` | `cf_astro_writer_insert` | INSERT only |
+| `booking_pets` | `cf_astro_writer_insert` | INSERT only |
+| `privacy_requests` | `cf_astro_writer_insert` | INSERT only |
+| `legal_requests` | `cf_astro_writer_insert`, `cf_astro_writer_select` | INSERT, SELECT |
+
+Verified live via `pg_policies` on 2026-08-13. `anon` holds **zero** policies on
+all five tables, so §10.2's statement is correct as far as it goes — it was
+simply incomplete, and `PRIVACY.md` §2 read the gap as "still `anon`".
+
+Why this matters: write-append-only is a materially stronger posture than an
+`anon` grant, and it is a real control worth citing in a compliance answer —
+but only now that it is written down. An undocumented control cannot be
+audited.
 
 ---
 
@@ -699,7 +768,7 @@ Full report: [`security/reviews/2026-05-24-security-review.md`](./reviews/2026-0
 |----------|------|--------------|-----|
 | 🔴 Critical | `src/components/admin/logs/shared.tsx` | **Stored XSS** — `JSON.stringify` does not HTML-escape `<>&`; raw data passed to `dangerouslySetInnerHTML` in JSONViewer. Exploitable via crafted URL paths stored in audit log. | Added `escapeHtml()` applied per matched regex token before `<span>` insertion |
 | 🔴 High | `src/lib/auth/security-logging.ts` | **HTML injection in security alert emails** — `userAgent`, `email`, `geoLocation`, `cfIdentityProvider`, `failureReason` interpolated raw into HTML email. Unauthenticated attacker can inject HTML via `User-Agent` header. | Added `escHtml()` helper; applied to all 5 user-controlled fields |
-| 🔴 High | `src/lib/cms.ts` | **MIME type bypass** — `file.type` (client-controlled multipart header) trusted without verifying actual file bytes. Attacker could upload HTML/SVG as `image/jpeg`. | Added `validateImageMagicBytes()` (JPEG/PNG/WebP/AVIF signatures); replaced filename-based extension with hardcoded `MIME_TO_EXT` map |
+| 🔴 High | `cf-admin/src/lib/cms/storage.ts` (renamed — this was a single `cms.ts` file when the finding was written, since split into a directory) | **MIME type bypass** — `file.type` (client-controlled multipart header) trusted without verifying actual file bytes. Attacker could upload HTML/SVG as `image/jpeg`. | Added `validateImageMagicBytes()` (JPEG/PNG/WebP/AVIF signatures); replaced filename-based extension with hardcoded `MIME_TO_EXT` map |
 | 🟠 Medium | `src/pages/api/bookings/index.ts` | **PostgREST filter injection** — `search` param interpolated raw into `.or()` filter string | Added `sanitizeSearchTerm()` stripping PostgREST operator chars |
 | 🟠 Medium | `src/pages/api/users/force-kick.ts` | **Supabase filter injection** — `.or(`id.eq.${userId}`)` with attacker-controlled `userId` | Replaced with `.eq('id', userId).limit(1)` |
 | 🟠 Medium | `src/lib/auth/session.ts` | **Session cookie `SameSite: lax`** — Admin cookie sent on cross-origin top-level navigation | Changed to `SameSite: strict` on both `createSession` and `destroySession` |
@@ -784,6 +853,12 @@ This pass re-verified every deferred item from the 2026-05-25 review and closed 
 ### Items Verified Closed (no code change needed)
 
 - **M-8 `cms_content_history` cleanup trigger** — verified the table has zero writers in the codebase. The migration's comment promises a trigger that was never created, but nothing inserts into the table so it cannot grow. Re-evaluate when the first writer ships.
+  > **Superseded 2026-08-13 — the first writer has shipped.** `recordCmsHistory()`
+  > (`src/lib/cms/storage.ts`) is called on CMS block updates, so the table now
+  > grows unbounded and the promised cleanup trigger still does not exist. This
+  > 2026-05-26 finding was correct when written; it was subsequently re-quoted as
+  > current fact in `MAINTENANCE.md` and the data-infrastructure audit, which is
+  > the drift this note closes. Retention is tracked in `MAINTENANCE.md` → C-13.
 - **M-4 audit-log DELETE handler** — genuinely a policy decision, not a bug. The UI's "Delete Selected" button in ActivityCenter depends on it. Left pending a product call.
 - **M-9 `chatbot/[...path]` default minRole** — function entry already uses `requireAuth(context, 'admin')`, which matches the `getMinRole` default. Lower priority than originally rated.
 

@@ -11,6 +11,11 @@ related_docs: [../features/CMS.md, ../operations/OPERATIONS.md, ../reference/SYN
 tags: [cms, payload, blog, evaluation, cost, architecture, cloudflare]
 ---
 
+<!-- docs-check: proposed-paths -->
+<!-- This document is a design/plan: several paths below name files that
+     are proposed, not shipped. The code-path check is skipped here for that
+     reason. Do not copy this marker into a doc that describes behaviour. -->
+
 # Payload CMS Evaluation & the Dynamic-Blog Path
 
 > **TL;DR (non-technical):** We looked at whether Payload CMS could run our website's
@@ -320,7 +325,7 @@ dependencies, inherits every security and compliance control we already have.** 
 MIT, by Thinkmill (KeystoneJS). Best-in-class **Astro** integration —
 `npm i @keystatic/core @keystatic/astro`, serves an admin UI at `/keystatic` on your own
 domain, GitHub OAuth for auth (and can sit behind CF Access). Content stays as Markdown in
-`src/content/blog/`, so **the existing schema, hreflang pairing, and RSS/sitemap code would
+`cf-astro/src/content/blog/`, so **the existing schema, hreflang pairing, and RSS/sitemap code would
 not change at all**. Genuinely the strongest option in the git-based category.
 
 Rejected because:
@@ -448,12 +453,12 @@ semantics do not fit cleanly.
 | Area | File | Change |
 |---|---|---|
 | Sync contract | `src/lib/sync-contract.ts` | **must stay byte-identical** to cf-admin's — see [`reference/SYNC-SYSTEM-REVIEW.md`](../reference/SYNC-SYSTEM-REVIEW.md) §3 (C4) |
-| Reader | `src/lib/cms.ts` | add `getBlogPosts(db, locale)` / `getBlogPost(db, locale, slug)` using the existing 3-tier resolution (KV `cms:blog_index` → D1 → empty) |
+| Reader | `cf-astro/src/lib/cms.ts` | add `getBlogPosts(db, locale)` / `getBlogPost(db, locale, slug)` using the existing 3-tier resolution (KV `cms:blog_index` → D1 → empty) |
 | Index routes | `src/pages/{es,en}/blog/index.astro` | `export const prerender = false`; swap `getCollection('blog')` for the D1 reader |
 | Post routes | `src/pages/{es,en}/blog/[slug].astro` | `export const prerender = false`; drop `getStaticPaths()`, resolve slug at request time, 404 on miss |
-| Body render | `src/components/sections/BlogPostContent.astro` | accept sanitized HTML instead of an Astro `<Content />` component |
+| Body render | `cf-astro/src/components/sections/BlogPostContent.astro` | accept sanitized HTML instead of an Astro `<Content />` component |
 | Sitemaps | `src/pages/sitemap-{es,en}.xml.ts` | read blog URLs from D1 rather than `getCollection('blog')` |
-| RSS | `src/lib/rss.ts` | same swap |
+| RSS | `cf-astro/src/lib/rss.ts` | same swap |
 
 Once `prerender = false` is set, the existing ISR middleware caches these routes
 automatically — 24 h KV TTL, `Cache-Tag: page-<path>`, purged by the same
@@ -467,7 +472,7 @@ automatically — 24 h KV TTL, `Cache-Tag: page-<path>`, purged by the same
 | 2 | Content Studio Blog module + PLAC registration + audit rows | none |
 | 3 | cf-astro reader + `prerender = false` on the 4 routes | **measure KV writes for one week** — 16 ISR PUTs/day expected against a 1,000/day cap |
 | 4 | Sitemap + RSS + `BlogPostSchema` wired to D1 | verify GSC does not report lost URLs |
-| 5 | Import the 14 existing Markdown posts (§9), then delete `src/content/blog/` | one-time D1 write burst of ~28 rows |
+| 5 | Import the 14 existing Markdown posts (§9), then delete `cf-astro/src/content/blog/` | one-time D1 write burst of ~28 rows |
 | 6 | Wire the existing `generate-blog-draft.ts` AI output into the Blog module as a draft | Workers AI free tier: 10,000 neurons/day |
 
 Ship phases 1–2 and stop there if desired: the admin can author posts with nothing user-facing
@@ -488,7 +493,7 @@ changed, which de-risks phase 3.
 
 ## 9. Migrating the 14 existing Markdown posts
 
-One-time script, run once, then `src/content/blog/` and its `content.config.ts` collection
+One-time script, run once, then `cf-astro/src/content/blog/` and its `content.config.ts` collection
 are deleted.
 
 1. Read each file in `cf-astro/src/content/blog/{es,en}/*.md`.

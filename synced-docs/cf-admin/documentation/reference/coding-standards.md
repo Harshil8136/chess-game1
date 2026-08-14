@@ -3,7 +3,7 @@
 title: "Code Quality Rules"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -16,7 +16,11 @@ tags: []
 ## 1. TypeScript Strictness
 
 - `moduleResolution: "bundler"` in `tsconfig.json`
-- `any` type is **FORBIDDEN** (unless bypassing upstream type bug, documented)
+- `any` type is **FORBIDDEN** by this standard (unless bypassing a documented upstream type bug).
+  ⚠️ **Enforcement does not match yet:** `eslint.config.js` sets
+  `@typescript-eslint/no-explicit-any` to `'warn'` during the type-debt burn-down, and
+  `src/` currently holds **350** occurrences. Treat this as the rule for *new* code; it is
+  not mechanically blocked. See `RULESAd.md` §8.1.
 - All Cloudflare bindings must be strictly typed.
 
 ## 2. File Naming
@@ -29,7 +33,11 @@ All file names must be unique and descriptive:
 ## 3. Component Architecture ("LEGO-Style" Atomic Design)
 
 - **Strict Composition Rule:** Components must follow Atomic Design + Island Architecture. Never create monolithic files.
-- **Hard size limit: No component file may exceed 200 lines.** If a file grows past this threshold, split it immediately.
+- **Target size: no component file over 200 lines.** Split immediately past that.
+  ⚠️ **Not a hard limit in CI:** `eslint.config.js` currently sets `'max-lines': 'off'`
+  globally (marked TEMP, pending the god-file split pass), with a 600-line *warning* for
+  four named exceptions. 200 is the design target you justify departing from; nothing
+  fails a build at it today. See `RULESAd.md` §8.1 for the full enforcement table.
 - **Atoms/Molecules:** Tiny, focused, reusable sub-components (e.g. `SidebarHeader.tsx`, `SidebarProfile.tsx`, `NavIcon.tsx`).
 - **Organisms (Islands):** The primary Preact component that orchestrates atoms/molecules (e.g., `SidebarMenu.tsx`).
 - **Astro Shells (`.astro`):** For server-rendered layouts and server-side data fetching.

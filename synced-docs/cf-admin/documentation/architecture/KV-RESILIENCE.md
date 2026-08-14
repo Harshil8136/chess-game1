@@ -3,7 +3,7 @@
 title: "KV Resilience & Fallback Chain"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -247,5 +247,5 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 - **ISR_CACHE binding ID** → [OPERATIONS.md](../operations/OPERATIONS.md) §1
 - **Revalidation secret config** → [CMS.md §8](../features/CMS.md#8-configuration--environment-constraints)
 - **cf-astro revalidate endpoint** → `cf-astro/src/pages/api/revalidate.ts`
-- **revalidateAstro() helper** → `cf-admin/src/lib/cms.ts` — `revalidateAstro()`
+- **revalidateAstro() helper** → `cf-admin/src/lib/cms/revalidate.ts` — `revalidateAstro()`
 - **Same KV+D1 pattern proposed for system-wide settings** → [`GLOBAL-CONFIG.md`](GLOBAL-CONFIG.md) (research reference, not implemented)

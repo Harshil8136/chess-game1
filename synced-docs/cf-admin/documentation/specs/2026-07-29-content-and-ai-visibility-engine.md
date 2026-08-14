@@ -11,6 +11,11 @@ related_docs: [2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, ../feature
 tags: [cms, blog, tiptap, workers-ai, seo, aio, geo, pricing, addon, spec]
 ---
 
+<!-- docs-check: proposed-paths -->
+<!-- This document is a design/plan: several paths below name files that
+     are proposed, not shipped. The code-path check is skipped here for that
+     reason. Do not copy this marker into a doc that describes behaviour. -->
+
 # Content & AI Visibility Engine
 
 > **TL;DR (non-technical):** A proposed paid module. Clients write blog posts in a proper
@@ -51,7 +56,7 @@ code on 2026-07-29.
 | Blog, static | **Shipped** — 14 Markdown posts (7 ES, 7 EN) | `cf-astro/src/content/blog/{es,en}/` |
 | `Article` + `BreadcrumbList` JSON-LD | **Shipped**; header comment already states *"provides AIO/GEO signals for AI citation"* | `cf-astro/src/components/seo/BlogPostSchema.astro` |
 | AI draft generation | **Shipped**, 110 lines, calls `@cf/meta/llama-3-8b-instruct` | `cf-astro/src/pages/api/admin/generate-blog-draft.ts` |
-| IndexNow submission | **Shipped**, 74 lines, reads deployed sitemaps | `cf-astro/scripts/indexnow-ping.mjs`, `src/lib/indexnow.ts` |
+| IndexNow submission | **Shipped**, 74 lines, reads deployed sitemaps | `cf-astro/scripts/indexnow-ping.mjs`, `cf-astro/src/lib/indexnow.ts` |
 | `llms.txt` / `llms-full.txt` | **Shipped** (6 KB / 14 KB) but **hand-maintained** | `cf-astro/public/` |
 | Agent-readable surface | **Shipped** — `.well-known/{agent-skills,api-catalog,mcp,oauth-protected-resource,openid-configuration,security.txt}`, `/api/mcp` | `cf-astro` |
 | AI-crawler allow groups | **Shipped** — GPTBot, ClaudeBot, Claude-SearchBot, OAI-SearchBot, PerplexityBot, Google-Extended, CCBot, Applebot, Amazonbot, Bingbot | `cf-astro/src/pages/robots.txt.ts` |
@@ -98,7 +103,7 @@ hard constraints follow:
 
 Tiptap sits on ProseMirror, which is substantial — realistically the largest client-side
 dependency either repo will have shipped. `RULESAd.md` sets a "Lean Edge" budget and a
-<15 KB CSS rule.
+&lt;15 KB CSS rule.
 
 Mitigations, in order:
 - The editor is **admin-side only**. It never loads on the public site, so client-facing
@@ -199,7 +204,7 @@ is manually updated is a contradiction. One function in the publish path.
 
 ### C. Fire IndexNow on publish, not only on deploy
 
-`scripts/indexnow-ping.mjs` exists and reads deployed sitemaps. Move the trigger into the
+`cf-astro/scripts/indexnow-ping.mjs` exists and reads deployed sitemaps. Move the trigger into the
 `revalidateAstro()` path so a post is submitted seconds after publishing rather than at the
 next build. Small change, direct indexing-latency win.
 
@@ -317,7 +322,7 @@ safe ones.
 | 2 | Tiptap editor island + Blog manager UI + PLAC registration + audit rows | **Preact `compat` proven**; editor bundle lazy-loaded and admin Lighthouse not regressed |
 | 3 | **Item A** — crawler logging + visibility dashboard | Real crawler hits visible for the existing client |
 | 4 | cf-astro reader, `prerender = false` on the 4 blog routes | **Measure KV writes for one week** against the 1,000/day cap (~16 ISR PUTs/day expected) |
-| 5 | Sitemap, RSS, `BlogPostSchema` wired to D1; migrate the 14 Markdown posts; delete `src/content/blog/` | **Google Search Console reports no lost URLs** |
+| 5 | Sitemap, RSS, `BlogPostSchema` wired to D1; migrate the 14 Markdown posts; delete `cf-astro/src/content/blog/` | **Google Search Console reports no lost URLs** |
 | 6 | Items B, C — `llms.txt` regeneration, IndexNow-on-publish | Indexing latency measurably improved |
 | 7 | Items D, E, F, G, I — Workers AI analysis passes | Measured neurons/post within budget |
 | 8 | Item H — vision alt-text | Vision neuron cost measured first |
@@ -367,8 +372,8 @@ public site changed, which de-risks phase 4 — the only phase that can damage e
 - Publish/invalidate → `src/lib/cms/revalidate.ts:156` (`revalidateAstro`)
 - Neuron metering → `src/lib/ai-pricing.ts` (`calculateNeurons`)
 - Cross-repo contract → `src/lib/sync-contract.ts` (**both copies, same commit**)
-- cf-astro reader targets → `src/lib/cms.ts`, `src/pages/{es,en}/blog/*`, `src/lib/rss.ts`,
-  `src/pages/sitemap-{es,en}.xml.ts`, `src/components/seo/BlogPostSchema.astro`
+- cf-astro reader targets → `cf-astro/src/lib/cms.ts`, `src/pages/{es,en}/blog/*`, `cf-astro/src/lib/rss.ts`,
+  `src/pages/sitemap-{es,en}.xml.ts`, `cf-astro/src/components/seo/BlogPostSchema.astro`
 - Crawler taxonomy for Item A → `cf-astro/src/pages/robots.txt.ts`, `ANALYTICS` binding
 
 ## 11. Configuration / Bindings

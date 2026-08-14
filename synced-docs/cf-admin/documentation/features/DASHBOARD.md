@@ -3,7 +3,7 @@
 title: "Dashboard — Real-Data Command Center"
 status: active
 audience: [ai, technical]
-last_verified: 2026-06-06
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: []
@@ -33,7 +33,7 @@ The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero
 
 ### After
 
-- **ServiceStatusStrip** (replaced SystemHealthBar) displays 6 live services (Network, D1, Security, Resend, Sentry, Queues) using real telemetry data
+- **ServiceStatusStrip** (replaced SystemHealthBar) displays 6 live services (Network, D1, Security, Brevo, Sentry, Queues) using real telemetry data
 - **8 parallel analytics providers** via parallel settlement (never crashes if one fails)
 - **`_unconfigured` flag pattern** on every provider — UI shows `—` / "Setup Required" instead of zeros when token is missing
 - **Dismissible setup banner** when API token is not configured
@@ -81,7 +81,7 @@ All 8 providers run in parallel using `Promise.allSettled`. A single provider cr
 
 7. **Sentry Error Count** — Fetches error event counts from the Sentry API.
 
-8. **Resend Email Stats** — Fetches email delivery stats (sent vs bounced) from the Resend API.
+8. **Email Stats** — Fetches delivery stats (sent vs bounced) from the **Brevo** API (`api.brevo.com/v3/smtp/statistics/events`, `src/lib/analytics/providers/external.ts`). *(Corrected 2026-08-13 — this said Resend; cf-admin has no Resend call path. See `RULESAd.md` §17.)*
 
 ---
 
@@ -153,7 +153,7 @@ When unconfigured → progress bar shows striped pattern, value area shows "Toke
 | Network | Requests, Bandwidth, Reliability %, Top Countries | Cloudflare Zone Traffic |
 | D1 DB | Reads, Writes, Rows per Query, Read/Write Ratio | Cloudflare D1 Console |
 | Security | Threats Blocked, WAF Actions, R2 Object Count | Cloudflare WAF / R2 |
-| Resend | Sent, Bounced, 3K/mo Limit Progress | Resend Emails Console |
+| Brevo | Sent, Bounced, monthly limit progress | Brevo Statistics Console |
 | Sentry | Error Count (pulses if >0), Project Slug | Sentry Issues Console |
 | Queues | Backlog Count, Backlog Size, DLQ Status, Active Consumers | Cloudflare Queues |
 
@@ -210,7 +210,7 @@ A Cloudflare API Token is required with the following permission scopes:
 
 ### Production Secrets
 
-All analytics-related secrets must be deployed via Wrangler secret management. This includes tokens/keys for Cloudflare API, Supabase, Sentry, and Resend.
+All analytics-related secrets must be deployed via Wrangler secret management. This includes tokens/keys for Cloudflare API, Supabase, Sentry, and Brevo (`BREVO_API_KEY`).
 
 ---
 

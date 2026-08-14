@@ -6,7 +6,7 @@ audience: [ai, technical, owner]
 last_verified: 2026-08-06
 verified_against: [code, research]
 owner: harshil
-related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/pages/api/settings/portal.ts, src/lib/auth/session.ts, src/lib/auth/pipeline.ts, src/lib/auth/plac.ts, src/lib/cms.ts]
+related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/pages/api/settings/portal.ts, src/lib/auth/session.ts, src/lib/auth/pipeline.ts, src/lib/auth/plac.ts, src/lib/cms/]
 related_docs: [KV-RESILIENCE.md, plac-and-audit.md, ../reference/RBAC-AT-SCALE.md, ../features/CF-ACCESS-SYNC.md]
 tags: [kv, d1, cache, config, feature-flags, settings, architecture, research]
 ---

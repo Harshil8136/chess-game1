@@ -155,7 +155,7 @@ dated problem. Deliver it factually, never as a threat, and always with the fix
 priced.
 
 **Credibility comes from the machinery we already run:** `cf-astro` carries
-`lighthouserc.json`, `scripts/check-links.mjs` and Playwright end-to-end tests,
+`lighthouserc.json`, `cf-astro/scripts/check-links.mjs` and Playwright end-to-end tests,
 and the Velox sales site itself now passes a full axe WCAG2A/AA sweep on every
 route. We audit others against a bar we actually clear.
 
@@ -274,7 +274,7 @@ contains only `a11y_check.py`, `audit_gate.py`, `docs_check.py` and
 | Missing | What it costs at N clients |
 |---|---|
 | `wrangler.template.toml` | Binding IDs hand-edited per client. `GITHUB_RULES.md §6` records a real April 2026 production outage from exactly this, and a wrong UUID **fails silently** |
-| `scripts/init-cloudflare.sh` | Provisioning is manual per client |
+| `scripts/init-cloudflare.sh` (proposed — does not exist yet) | Provisioning is manual per client |
 | Fleet migration runner | Migrations applied by hand (`MAINTENANCE.md`) |
 | Deploy orchestration | One push deploys one deployment. N clients, N pipelines |
 | Version / drift inventory | Nothing reports which client runs which version |

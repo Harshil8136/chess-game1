@@ -3,7 +3,7 @@
 title: "Full-Platform Security & Compliance Audit — OWASP / SOC 2 / GDPR / CCPA"
 status: active
 audience: [technical, operator]
-last_verified: 2026-07-17
+last_verified: 2026-08-13
 verified_against: [code]
 owner: harshil
 tags: [security, compliance, owasp, soc2, gdpr, ccpa, audit]
@@ -60,7 +60,7 @@ the perimeter but in a single architectural convention and a set of process gaps
 |-------|--------|
 | Runtime | Astro 6 (SSR `output:'server'`) + Preact on Cloudflare Workers; custom entry `src/workers/cf-entry.ts` wrapped in `@sentry/cloudflare withSentry` |
 | Identity | Cloudflare Zero Trust Access; JWT verify in `src/lib/auth/cloudflare-access.ts`; pipeline in `src/lib/auth/pipeline.ts` |
-| AuthZ | 5-tier RBAC (`dev<owner<super_admin<admin<staff`) + Page-Level Access Control (PLAC) with per-user grant/deny overrides; `src/lib/auth/{rbac,plac,guard,session}.ts` |
+| AuthZ | 6-tier RBAC (`vendor_support<owner<admin<manager<staff<viewer`; was 5-tier when this audit ran) + Page-Level Access Control (PLAC) with per-user grant/deny overrides; `src/lib/auth/{rbac,plac,guard,session}.ts` |
 | Data | Supabase Postgres (service-role/REST, RLS on all tables) + D1 `madagascar-db` (~30 tables, shared with cf-astro) + KV `ADMIN_SESSION` + R2 `madagascar-images` |
 | Async | Queues `madagascar-emails`, `madagascar-sync-revalidate` (+DLQ); crons `*/5 * * * *` (Access audit-log poll) + weekly R2 cleanup |
 | Observability | Sentry (client + workerd server), Workers logs+traces, Analytics Engine, PostHog control-plane connector |

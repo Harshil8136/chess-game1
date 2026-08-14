@@ -9,7 +9,7 @@ owner: harshil
 related_code:
 - src/lib/auth/plac.ts
 - src/lib/auth/cf-access-sync.ts
-- database/legacy_migrations/0004_create_admin_audit_log_table.sql
+- database/legacy_database/legacy_migrations/0004_create_admin_audit_log_table.sql
 - migrations/0002_create_cf_access_sync_log.sql
 related_docs:
 - MODULE-PRICING-CATALOG.md
