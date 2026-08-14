@@ -1,0 +1,698 @@
+# CF-ADMIN PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
+
+> **Last Updated:** 2026-08-12 (v4.9: docs-consistency pass — RBAC section here and in README.md/USER-MANAGEMENT.md rewritten for the 2026-07-27 6-tier role rename (`vendor_support > owner > admin > manager > staff > viewer`); RULE #0.7/#0.8/#0.9 full text added here (previously only in `main.md`), with a new `documentation/reference/schema-change-ledger.md` satisfying RULE #0.7's ledger artifact; the "61 tables" hard-cap corrected to 62 (missing `platform_alerts` table added to the audit doc); duplicate migration `0042_platform_alerts.sql` renumbered to `0048`; broken `../../GITHUB_RULES.md` link fixed to `../GITHUB_RULES.md` and the stray local copy deleted; legacy `docs/` tree (4 files) triaged — 3 completed plans deleted, 1 still-open plan moved into `documentation/reference/control-plane-design/`. No code changes. Previously 2026-06-10 v4.7: sync-system durability shipped — outbox/queue/DLQ, read-back verification, content history + rollback, config versioning; see documentation/reference/SYNC-SYSTEM-REVIEW.md)
+> **Research Sources:** Cloudflare Docs MCP, Supabase MCP, Cloudflare Bindings MCP, Tavily, Official Documentation
+
+---
+
+## 🛡️ RULE #0 — THE ABSOLUTE LAW (NEVER VIOLATE)
+
+**cf-admin is the Cloudflare-native version of admin-app. We can deeply review, understand how everything looks, works, and is designed in admin-app — however, WE NEVER, like NEVER, copy any single file or code from there.**
+
+This is the **STRICTEST** rule and MUST be followed at ALL times:
+
+- ✅ **ALLOWED:** Reference admin-app to understand features, flows, UX patterns, business logic concepts
+- ✅ **ALLOWED:** Use MCP tools (Cloudflare Docs, Supabase, Tavily) and SKILLs to find the best Cloudflare-native approach
+- ✅ **ALLOWED:** Build equivalent functionality from scratch using Cloudflare-optimized patterns
+- ❌ **FORBIDDEN:** Copy-pasting any file, component, function, hook, schema, or code block from admin-app
+- ❌ **FORBIDDEN:** Duplicating CSS, design tokens, or configuration verbatim from admin-app
+- ❌ **FORBIDDEN:** Using admin-app files as templates with "find and replace" modifications
+
+**Every line of code in cf-admin must be written fresh, optimized for the Cloudflare + Astro + Preact stack.**
+
+---
+
+## 🛡️ RULE #0.5 — NO FAKE DATA OR PLACEHOLDERS
+
+**ALL data and presented information MUST be real and accurate, sourced from active databases (Supabase/D1) or actual API telemetry (Cloudflare Analytics/Resend/etc).**
+
+- ❌ **FORBIDDEN:** Randomly generated chart data (e.g. `Math.random()`), hardcoded dashboard metrics (`sessionCount = 24`), or mock user activity logs.
+- ❌ **FORBIDDEN:** "Under Construction" placeholder pages masking incomplete features.
+- If a feature requires data that cannot be currently provided by the backend, the feature MUST NOT be built with mock data. Instead, either:
+  1. Omit the feature entirely from the UI, OR
+  2. Implement the full backend pipeline to fetch the real data.
+- If real data cannot be provided even when explicitly requested by the USER, the AI agent MUST provide a documented explanation and refuse to implement the mock data solution.
+
+---
+
+## 🛡️ RULE #0.6 — REUSE BEFORE CREATION (D1/Supabase/KV/services)
+
+**Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order — see [`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) for the full live audit and reasoning this rule is based on.**
+
+This exists because the pattern has already recurred: `service_config` → `admin_portal_settings` → `admin_feature_flags` are three separate, never-consolidated mechanisms for the same general idea, and a live audit on 2026-08-06 found two confirmed-dead Supabase tables (`admin_sessions`, `privacy_requests`) that existed only because nobody checked for an existing fit before adding the next one.
+
+> **Hard cap, not a guideline.** The live production estate is verified (2026-08-12) at **40 env vars** on cf-admin's Worker and **62 D1/Supabase tables** across all three apps (corrected 2026-08-12 from a prior count of 61 that omitted the real, in-use `platform_alerts` table — see the audit doc's §0 correction note) — see RULE #0.8 / RULE #0.9 below for the exact breakdown. A new environment variable or a new database table is the **last option on the table**, proposed only after every reuse path below has been checked and genuinely doesn't fit — never the first thing reached for.
+
+1. **Does something that already exists cover this?** Check [`documentation/reference/coding-standards.md`](./documentation/reference/coding-standards.md) §8 (config tables — `admin_portal_settings` covers most global/per-role/per-user config needs already), the audit doc's live table inventory, and a grep of `src/` for related repository/table names.
+2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** This project already has active connectors for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case (the audit doc has three worked examples: adopt PostHog for feature flags needing real targeting; don't adopt a hosted ReBAC/graph-auth engine for permissions this project doesn't need yet; don't adopt a third-party config SaaS for system settings that already have a home in D1).
+3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.** That's the entire mechanism that prevents this list from needing a fourth entry.
+
+- ❌ **FORBIDDEN:** Creating a new table/namespace/service integration without first checking for an existing one that already fits.
+- ✅ **ALLOWED, and expected:** Creating new infrastructure when the check comes back negative — this rule is about checking first, not about never building anything new.
+
+---
+
+## 🛡️ RULE #0.7 — SCHEMA CHANGE LEDGER (3 ARTIFACTS PER CHANGE)
+
+**Every schema change requires 3 artifacts:**
+
+1. **Schema TS/DDL** — the `CREATE`/`ALTER` statement itself, in a new file under `migrations/` (D1) or `supabase/migrations/` (Supabase).
+2. **Generated migration** — applied via `npx wrangler d1 migrations apply madagascar-db` (D1) or the Supabase migration tooling, with journal/snapshot state kept in sync.
+3. **Applied ledger entry** — one row in [`documentation/reference/schema-change-ledger.md`](./documentation/reference/schema-change-ledger.md) recording the migration file, date applied, who/what applied it, and a one-line description.
+
+**Always run `npm run db:check` before considering a schema change complete.**
+
+> **Status note (2026-08-12):** artifact 3 (the ledger) did not exist anywhere in this
+> repo until today — this rule referenced it while nothing implemented it, unlike
+> RULE #0.6/#0.9 below, which point at the real, live
+> `documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`. The ledger
+> is now a real, lightweight doc, seeded with one example row; it is **not** backfilled
+> for migrations applied before this date — treat it as an ongoing practice starting
+> now, not a complete history.
+
+---
+
+## 🛡️ RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
+
+cf-admin's production Worker is verified at **41 env vars** (17 `[vars]` + 24 secrets —
+live-counted 2026-08-12 against `wrangler.toml`; the 24th secret, `GSC_SERVICE_ACCOUNT_JSON`
+(Google Search Console indexing automation), is a documented exception to this cap —
+a bootstrap-time external OAuth credential with no dynamic-config alternative, per the
+carve-out below, signed off the same day it was added; see
+[`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+This is a hard cap, not a soft target. Do NOT introduce new environment variables
+(`env.VAR_NAME`, `.dev.vars`, or `wrangler.toml` `[vars]`/bindings) for feature toggles,
+limits, or operational settings. All application toggles, operational thresholds, and
+non-secret runtime configs MUST be managed dynamically via D1 (`admin_portal_settings`
+via `PortalSettingsRepository.ts`) or Cloudflare KV (`CONFIG_KV`) — the pattern every
+recent feature (Staff Managed Storage, Blog AI, Control Plane connectors) has already
+followed. A new env var is the **last option on the table, not the first** — propose
+one only after showing every dynamic-config route was checked and genuinely doesn't
+fit (e.g. a bootstrap-time platform credential needed before any D1/KV read is
+possible), and say why in the PR/commit. Even then it requires explicit architectural
+signoff.
+
+---
+
+## 🛡️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
+
+The live production estate is verified at **63 tables** across all three apps (31 in D1
+`madagascar-db` [cf-admin+cf-astro], 9 in D1 `chatbot-kb` + 4 in D1 `whatsapp-chatbot`
+[cf-chatbot], 19 in Supabase `public` [cf-admin+cf-astro] — corrected 2026-08-12 to
+include the previously-missing `platform_alerts` table (undercounted at 61) and the
+newly-added `gsc_index_log` table (Google Search Console indexing automation, migration
+0047); see
+[`documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+Do NOT create new D1/Supabase tables or write migration scripts when an existing table
+can fulfill the requirement. Leverage key-value repositories, generic config columns,
+or structured JSON/JSONB payload fields in active tables (`admin_portal_settings`,
+`cms_content`, `service_config`, etc.) to store feature state — Staff Managed Storage
+(2026-08-05) is the reference case: 1 new table shipped instead of the 6 originally
+planned. A new table is the **last option on the table, not the first** — a proposed
+schema migration MUST formally prove why existing infrastructure cannot house the data
+model without structural changes before it's written, not after.
+
+---
+
+## PROJECT MISSION — SECURE ADMIN PORTAL, $0 INFRASTRUCTURE
+
+**cf-admin is a production-ready, commercial-grade administrative portal built entirely on FREE tier services.** Designed to:
+
+- ✅ Manage content, bookings, users, and site settings via secure dashboard
+- ✅ Enforce multi-level RBAC (`vendor_support` > `owner` > `admin` > `manager` > `staff` > `viewer`) on every route — 6-tier hierarchy, renamed 2026-07-27; see [USER-MANAGEMENT.md](./documentation/features/USER-MANAGEMENT.md) and [plac-and-audit.md](./documentation/architecture/plac-and-audit.md) §1
+- ✅ Authenticate via Cloudflare Zero Trust Access (Google/GitHub/OTP — no Supabase GoTrue)
+- ✅ Block ALL unauthorized access — identity at CF edge, authorization whitelist in Supabase
+- ✅ Role re-check every 30 minutes via D1 re-fetch, hard-expire sessions at 24 hours (KV TTL + CF session duration + createdAt guard)
+- ✅ Run 24/7 at **$0/month** total infrastructure cost
+- ✅ Deliver premium, animated, dark-themed admin experience
+- ✅ Meet professional security, accessibility, and performance standards
+- ✅ Enforce **3-layer defense-in-depth** on Supabase: zero table grants + zero RLS policies + zero function ACLs for `anon`
+- ✅ **Fail-secure** dev mode detection — missing `SITE_URL` defaults to production mode, never bypasses auth
+
+**Every architectural decision optimizes for: maximum security + maximum quality + exactly ZERO ongoing cost.**
+
+---
+
+## 1. PROJECT IDENTITY
+
+| Property | Value |
+|----------|-------|
+| **Name** | cf-admin (Madagascar Pet Hotel — Admin Portal) |
+| **Purpose** | Cloudflare-native admin portal equivalent to admin-app |
+| **Framework** | Astro 6.3.7 with `@astrojs/cloudflare` adapter (`^13.5.4`) |
+| **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
+| **UI Islands** | Preact (3KB, React-compatible) for interactive components |
+| **Hosting** | Cloudflare Workers |
+| **Auth** | Cloudflare Zero Trust Access (Google / GitHub / OTP — CF edge identity) |
+| **Database** | Supabase PostgreSQL (shared project `[SUPABASE_PROJECT_REF]`) |
+| **Session Store** | Cloudflare KV (via Astro Sessions API) |
+| **Cache** | Upstash Redis (free tier — 10K commands/day) |
+| **Storage** | Cloudflare R2 (CMS image uploads — `madagascar-images` bucket → `cdn.madagascarhotelags.com`) |
+| **CSS** | Tailwind CSS v4 via `@tailwindcss/vite` |
+| **Design System** | "Midnight Slate" — dark-first with Blue-500 primary accents |
+| **Domain** | `secure.madagascarhotelags.com` (`SITE_URL` wrangler.toml var) |
+| **GitHub** | `mascotasmadagascar-cmd/cf-admin-madagascar` (private) |
+| **Worker Name** | `cf-admin-madagascar` (Mascotas Cloudflare account) |
+
+---
+
+## 2. STRICT HTTP SECURITY HEADERS & CSP
+
+**EDGE-INJECTED SECURITY:** The dashboard enforces strict HTTP security headers injected globally at the edge via Astro middleware `sequence`.
+
+- **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). `'unsafe-eval'` is forbidden and absent (SEC-01, no exemptions). `'unsafe-inline'` is **still present on the enforcing policy**; a `Content-Security-Policy-Report-Only` canary ships the hardened directive without it, pinned by SEC-01b, and is promoted once it reports clean (blocked on operator verification of Cloudflare Rocket Loader — see MAINTENANCE.md). `'strict-dynamic'` is off for the same reason. `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped styles require it. Also sets COOP, CORP and `X-Robots-Tag`, which `public/_headers` declared but never shipped (that file is Pages-only; this deploys as a Worker, and it has been deleted).
+- **X-Frame-Options: DENY** (Blocks Clickjacking)
+- **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
+- **Referrer-Policy: strict-origin-when-cross-origin**
+- **Strict-Transport-Security: max-age=63072000; includeSubDomains; preload** (2 years; set in `src/lib/security/csp.ts:78` — corrected 2026-07-29, previously documented here as `31536000`)
+
+→ See [SECURITY.md](./documentation/security/SECURITY.md) for the full security architecture.
+
+## 2. RELATIONSHIP TO OTHER PROJECTS
+
+| Project | Role | Relationship |
+|---------|------|-------------|
+| **cf-astro** | Main customer-facing website | Shares Supabase project, D1 database, R2 bucket. Uses Hyperdrive for direct PG (booking, ARCO) |
+| **cf-chatbot** | Cloudflare Workers AI Bot | Operates autonomously on Edge natively interacting with WhatsApp/Web. `cf-admin` serves as its secure configuration proxy and analytics Dashboard. |
+| **admin-app** | Legacy admin portal (Next.js) | Reference for UX/features only — **NEVER copy code** |
+| **nextjs-app** | Legacy main site (Next.js) | Reference only — no code sharing |
+
+### Shared Resources
+
+- **Supabase Project:** `[SUPABASE_PROJECT_REF]` (same PostgreSQL instance)
+- **D1 Database:** `madagascar-db` (ID: `[D1_MADAGASCAR_DB_ID]`) — shared between both projects
+- **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
+- **Analytics Engine:** `ANALYTICS` binding → dataset `madagascar_analytics` (shared, both projects)
+- **Queue:** `EMAIL_QUEUE` → `madagascar-emails` (async email dispatch)
+- **Cloudflare Account:** Mascotas Madagascar (ID: `[CF_ACCOUNT_ID]`)
+
+### KV Namespaces (Isolated per project)
+
+| Namespace | ID | Project | Purpose |
+|-----------|-----|---------|---------|
+| `cf-admin-session` | `[KV_ADMIN_SESSION_ID]` | cf-admin | Astro session store |
+| `cf-astro-session` | `[KV_ASTRO_SESSION_ID]` | cf-astro | Astro session store |
+| `cf-astro-isr-cache` | `[KV_ISR_CACHE_ID]` | cf-astro | ISR HTML cache |
+
+> ✅ **SESSION KV IDs VERIFIED:** The `cf-admin-session` (`ba82...`) and `cf-astro-session` (`bee1...`) IDs are verified against the LIVE environment.
+
+### Isolation Rules
+
+- Admin tables use `admin_` prefix to avoid collision with cf-astro tables
+- cf-admin has its own KV namespace for sessions (`cf-admin-session`, separate from cf-astro)
+- cf-admin has its own Worker deployment (not shared with cf-astro)
+- Each project has its own `wrangler.toml`, `.dev.vars`, and deployment pipeline
+
+---
+
+## 3. RBAC — ROLE-BASED ACCESS CONTROL
+
+**Current model (renamed 2026-07-27):** a 6-tier ladder, lower number = higher privilege —
+`vendor_support(0) > owner(1) > admin(2) > manager(3) > staff(4) > viewer(5)`. The database
+still stores the pre-rename values (`dev`, `owner`, `super_admin`, `admin`, `staff`) and
+`normalizeRole()`/`toStoredRole()` translate at the D1/Supabase boundary — see
+`plac-and-audit.md` §1.2 for the full translation table and the collision warning
+(`super_admin`→`admin` and `admin`→`manager` means a bare stored `"admin"` is ambiguous
+without translation).
+
+→ See [USER-MANAGEMENT.md](./documentation/features/USER-MANAGEMENT.md) for the full RBAC hierarchy, user lifecycle, ghost protection, and hidden accounts.
+→ See [plac-and-audit.md](./documentation/architecture/plac-and-audit.md) for the canonical role table, helper functions, and PLAC resolution algorithm.
+
+---
+
+## 4. INFRASTRUCTURE FREE TIER LIMITS
+
+→ See [OPERATIONS.md](./documentation/operations/OPERATIONS.md) for Cloudflare binding IDs, free tier quotas, and the pre-flight deploy checklist.
+
+---
+
+## 7. TECHNOLOGY STACK
+
+> 🛡️ **THE WHITELIST ARCHITECTURE POLICY:** We employ a strict "whitelisting" approach to technology additions. Anything not explicitly listed in this document is considered **BLACKLISTED** by default to protect our <50KB "Lean Edge" budget. If an AI agent or developer wishes to introduce a new library (e.g., React 19, Recharts, shadcn/ui, Hono), it must be explicitly proposed with a strong "why it's needed" justification. The new dependency can ONLY be used if the USER explicitly approves the proposal.
+
+### 7.1 Framework: Astro 6.0+ (Full SSR for Admin)
+
+- `output: 'server'` — ALL routes are server-rendered (auth check required)
+- Cloudflare adapter with native binding access
+- Astro Sessions API backed by Cloudflare KV for session persistence
+- No static pages — admin portal has zero public content
+- ❌ **FORBIDDEN:** `export const prerender = true` on ANY page under `src/pages/dashboard/**`
+  - Reason: Pre-rendering a dashboard page means Astro builds it as a static file served directly
+    from the Cloudflare edge cache, **bypassing the auth middleware entirely**. This strips
+    `Astro.locals.user`, `Astro.locals.cspNonce`, and the PLAC access check — making the page
+    unauthenticated and breaking CSP nonce injection. Use `prerender = false` (or omit the export).
+  - **Enforcement:** `eslint.config.js` contains a `no-restricted-syntax` rule that hard-errors on this.
+
+### 7.2 UI: Preact Islands
+
+- Preact 10.29.0 for all interactive components — React-compatible, no React overhead
+- Islands hydrate with `client:load` (immediate) or `client:idle` (deferred)
+- Cross-island state via `@preact/signals` (`^2.9.0`); no global event bus needed at current scale
+
+### 7.3 Approved Dependency Whitelist
+
+All packages below are **explicitly approved**. Anything NOT listed here is blacklisted by default.
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `preact` | `^10.29.0` | UI islands |
+| `@preact/signals` | `^2.9.0` | Cross-island reactive state |
+| `lucide-preact` | `^1.7.0` | Icon library (Preact-native, no extra weight) |
+| `zod` | `^4.4.1` | Runtime schema validation in API routes |
+| `@upstash/ratelimit` | `^2.0.8` | Edge-compatible rate limiting |
+| `@upstash/redis` | `^1.37.0` | Redis client for Upstash |
+| `@supabase/supabase-js` | `^2.101.1` | Supabase client (service_role only) |
+| `@sentry/astro` | `^10.51.0` | Error tracking (build-time integration) |
+| `@sentry/cloudflare` | `^10.51.0` | Error tracking (Workers runtime, V8 workerd only) |
+| `@tailwindcss/vite` | `^4.2.2` | Tailwind CSS v4 via Vite plugin |
+
+> **Icon usage:** Always import from `lucide-preact` (NOT `lucide-react`). The package is Preact-native — importing from the wrong package will cause hydration mismatches.
+
+### 7.6 Environment Variables
+
+```
+# .dev.vars (local — gitignored)
+# Secrets (not in wrangler.toml)
+SUPABASE_SERVICE_ROLE_KEY=...         # DB operations only (no GoTrue auth)
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+REVALIDATION_SECRET=...
+CLOUDFLARE_API_TOKEN=...              # Read-only analytics token
+CLOUDFLARE_ZONE_ID=...
+CF_API_TOKEN_READ_LOGS=...            # Zero Trust Audit Read — cron log polling
+CF_API_TOKEN_ZT_WRITE=...            # Zero Trust Session Revoke — Layer 3 force-kick
+RESEND_API_KEY=...
+SENTRY_AUTH_TOKEN=...
+IP_HASH_SECRET=...
+CHATBOT_WORKER_URL=https://charlar.madagascarhotelags.com
+CHATBOT_ADMIN_API_KEY=...
+
+# REMOVED: PUBLIC_SUPABASE_ANON_KEY, TURNSTILE_SECRET_KEY (no longer used)
+```
+
+> **Note — wrangler.toml `[vars]` entries (NOT .dev.vars secrets):** `PUBLIC_SUPABASE_URL`, `SITE_URL` (`https://secure.madagascarhotelags.com`), `CF_TEAM_NAME` (`mascotas`), `CF_ACCESS_AUD` (audience tag), `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_R2_BUCKET_NAME`, `CF_QUEUE_NAME`, `LOCAL_DEV_ADMIN_EMAIL` (`[OWNER_PERSONAL_EMAIL]`), `PUBLIC_ASTRO_URL`, `PUBLIC_CDN_URL`. These are non-secret config values; do **not** put them in `.dev.vars` or treat them as secrets.
+
+Secrets in production: `wrangler secret put <KEY>` — see [OPERATIONS.md §5](./documentation/operations/OPERATIONS.md) for the full registry.
+
+### 7.7 The "Module Manifest" Pattern
+
+To prevent architectural entropy as `cf-admin` grows, every new feature area must be encapsulated using the **Module Manifest** pattern. Code should be organized into self-contained vertical slices.
+
+**Directory Structure:**
+
+```
+src/
+  ├── pages/
+  │   └── [module_name]/
+  │       ├── index.astro       # Main entry point (SSR)
+  │       ├── [sub_route].astro # Nested routes
+  │       └── _components/      # Module-specific islands (Preact)
+  └── styles/
+      └── [module_name]/
+          └── [component].css   # Module-isolated CSS
+```
+
+**Implementation Rules:**
+
+1. **Entry Point (`index.astro`):** Must wrap content in `<AdminLayout title="ModuleName">` and call `requireAuth(Astro)`.
+2. **Dynamic Sidebar Auto-Registry:** A module is ONLY visible in the sidebar if its path exists in the D1 `admin_pages` table and the user's role has PLAC authorization. You do NOT hardcode nav links in the UI.
+3. **CSS Code Splitting & Scoping:** Monolithic global CSS (e.g., `global.css`, `dashboard.css`) is strictly forbidden. Essential dashboard styles must be scoped via Astro components (like `DashboardStyles.astro`) or inline component `<style>` blocks to ensure zero style bleeding and an optimal payload size.
+4. **Data Access Layer (DAL):** Never write raw D1 SQL queries directly inside `.astro` frontmatter. All data fetching must go through Repository classes (e.g., `DashboardRepository.ts` in `src/lib/dal/`) to ensure separation of concerns, security, and testability. Pass the fetched static initial state to Preact islands as props.
+
+### 7.8 Modals, Dialogs & The "Squished Card" Bug — MANDATORY READING
+
+> 🔴 **READ THIS ENTIRE SECTION before building ANY modal, dialog, popup, overlay, empty-state card, or full-screen panel inside a Preact island.**
+
+There are **FOUR** separate CSS bugs that can squish modals/dialogs/cards inside Preact islands. Each has a different root cause. You must defend against ALL four simultaneously.
+
+---
+
+#### Bug #1: The `<astro-island>` Inline Display Bug
+
+**Root Cause:** Astro wraps every `client:load` / `client:idle` component in a custom `<astro-island>` element. Browsers default custom elements to `display: inline`, which causes block children (`w-full`, flexbox containers) to shrink-wrap to their text content width (~100-200px).
+
+**Our Global Fix:** We apply `astro-island, astro-slot { display: contents; }` in `global.css` (line ~168). This removes the `<astro-island>` from the layout tree, so its children inherit the parent's full width. This fix is already in place — **do NOT re-apply it or add redundant overrides.**
+
+---
+
+#### Bug #2: The `overflow` Containing-Block Trap
+
+**Root Cause:** `.admin-main-content` has `overflow-y: auto` (in `AdminLayout.css`), which creates a new CSS **containing block** for `position: fixed` descendants. Any `<div className="fixed inset-0 ...">` overlay rendered inside this scroll container will be **clipped to the scroll container's bounds**, not the viewport. It may appear to work on large screens but will break on smaller viewports or deeply nested components.
+
+**Why `<dialog open>` DOES NOT fix this:** The declarative `<dialog open>` attribute simply makes the dialog visible in-place (like `display: block`). It does **NOT** use the browser's Top Layer. The element stays trapped inside the scroll container's containing block.
+
+**The ONLY reliable fix:** Use `dialog.showModal()` (imperative JavaScript), which promotes the `<dialog>` element into the browser's **Top Layer** — a rendering layer that sits above ALL other content, ignoring ALL containing blocks, overflow clips, stacking contexts, and z-index hierarchies.
+
+---
+
+#### Bug #3: Tailwind v4 `@layer` vs Browser UA Specificity (The Silent Width Killer)
+
+**Root Cause:** The browser's User-Agent stylesheet sets `width: fit-content` on `<dialog>` elements. In Tailwind CSS v4, utility classes are placed inside `@layer utilities`, which has **lower cascade priority** than unlayered UA defaults. This means Tailwind classes like `w-full`, `max-w-2xl`, etc. applied via `className` on a `<dialog>` element **silently lose the specificity battle** to the browser's `width: fit-content`, causing the dialog to shrink-wrap to its content width.
+
+**The fix:** Use **inline `style={{ }}` attributes** for ALL layout-critical properties on the `<dialog>` element itself. Inline styles have the highest CSS specificity and always beat UA defaults.
+
+---
+
+#### Bug #4: Flexbox Auto-Margin Min-Content Collapse (The Vertical Text Wrapping Trap)
+
+**Root Cause:** In CSS Flexbox (W3C CSS Flexible Box Layout Module Level 1 §8.1), when a parent container uses `flex flex-col items-center` (`align-items: center`), cross-axis alignment calculates free space BEFORE flex item sizing. If a direct flex child element (e.g. `<p>` or `<div>`) has `max-w-md` (`max-width: 28rem`) combined with `mx-auto` (`margin-left: auto; margin-right: auto;`), the browser flexbox engine distributes all horizontal space to the auto margins first. This forces the child element's width box to collapse down to its intrinsic **`min-content` width** — which is the width of the single longest word in the text (e.g. *"generate"* or *"toolbar"*). As a result, every single word in the paragraph is forced to wrap onto its own vertical line!
+
+**The fix:** NEVER place `max-w-*` and `mx-auto` directly on text `<p>` elements that are direct children of a `flex-col items-center` container. Always wrap empty-state text elements in a dedicated block container with explicit inline width styling:
+`<div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', textAlign: 'center' }}>`.
+
+---
+
+#### ✅ THE CORRECT PATTERN (MANDATORY)
+
+Every modal/dialog in a Preact island **MUST** follow this exact pattern. Reference implementations: `ConfirmDialog.tsx`, `InviteUserModal.tsx`, `TemplatesPanel.tsx`.
+
+```tsx
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+
+function MyModal() {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Open: ALWAYS use showModal() — NEVER use <dialog open> or toggle className
+  const openDialog = useCallback(() => {
+    dialogRef.current?.showModal();
+  }, []);
+
+  // Close: ALWAYS use .close()
+  const closeDialog = useCallback(() => {
+    dialogRef.current?.close();
+  }, []);
+
+  // Handle native Escape key
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleCancel = (e: Event) => { e.preventDefault(); closeDialog(); };
+    dialog.addEventListener('cancel', handleCancel);
+    return () => dialog.removeEventListener('cancel', handleCancel);
+  }, [closeDialog]);
+
+  // Click-outside (backdrop click)
+  const handleBackdropClick = (e: MouseEvent) => {
+    if (e.target === dialogRef.current) closeDialog();
+  };
+
+  return (
+    <>
+      {/* Backdrop styling — MUST use unique ID selector */}
+      <style>{`
+        #myModalId::backdrop {
+          background: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+      `}</style>
+
+      {/* DIALOG — inline style is MANDATORY for width/maxWidth/padding/margin */}
+      <dialog
+        id="myModalId"
+        ref={dialogRef}
+        onClick={handleBackdropClick}
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          padding: 0,
+          margin: 'auto',
+          width: '100%',
+          maxWidth: '672px',   // Adjust per use case
+          zIndex: 99999,
+          outline: 'none',
+        }}
+      >
+        {/* Inner visual container — Tailwind classes are safe HERE */}
+        <div
+          className="bg-[var(--theme-surface)] border border-[var(--theme-border-subtle)] w-full rounded-2xl shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal content goes here */}
+        </div>
+      </dialog>
+    </>
+  );
+}
+```
+
+#### 🚫 BANNED PATTERNS (Will cause squished modals or vertical text collapse)
+
+| ❌ BANNED | Why It Fails |
+|-----------|-------------|
+| `<dialog open className="w-full max-w-2xl">` | `open` attr = no Top Layer; Tailwind `w-full` loses to UA `fit-content` |
+| `<dialog open className="fixed inset-0">` | Same: not in Top Layer, trapped in scroll container |
+| `<div className="fixed inset-0 z-50">` as overlay | Trapped by `overflow-y: auto` containing block |
+| `className="w-full"` on `<dialog>` | Tailwind v4 `@layer` loses to UA specificity |
+| `<p className="w-full max-w-md mx-auto">` inside `flex flex-col items-center` | Flexbox auto-margins absorb cross-axis space, forcing text box to `min-content` width (every word wraps vertically) |
+| `setIsOpen(true)` + conditional `{isOpen && <div>...}` | No Top Layer escape, no native focus trap |
+
+#### ✅ REQUIRED CHECKLIST (Before merging any modal)
+
+- [ ] Uses `<dialog>` element (not a `<div>`)
+- [ ] Opens via `dialogRef.current?.showModal()` (not `<dialog open>`)
+- [ ] Closes via `dialogRef.current?.close()` (not DOM removal)
+- [ ] Width/maxWidth set via **inline `style={{ }}`** (not Tailwind className)
+- [ ] Has `::backdrop` styling via `<style>` tag with unique ID
+- [ ] Handles `cancel` event (Escape key)
+- [ ] Handles backdrop click (`e.target === dialogRef.current`)
+- [ ] Inner content div uses `onClick={e => e.stopPropagation()}`
+
+> ⚠️ **CRITICAL DEV WORKFLOW:** If you change a component's architecture from `.tsx` to `.astro` to fix layout bugs, Vite's Hot Module Replacement (HMR) will often cache the old ghost `.tsx` component in memory. **You MUST instruct the user to kill and restart the dev server (`npm run dev`) and hard-refresh the browser for the structural fix to appear.**
+
+---
+
+## 8. CODE QUALITY RULES & ARCHITECTURAL GUARDRAILS
+
+### 8.1 File Size & Complexity Limits (Anti-Bloat)
+
+To keep the architecture lightweight and lightning fast, `cf-admin` enforces strict file size limits via `eslint.config.js`.
+
+- **`max-lines`: 500 lines per file** (hard error).
+- Exceptions: Only highly complex orchestrators (e.g., `src/lib/auth/session.ts` or `[SUPABASE_PROJECT_REF].tsx`) may exceed this up to a 600-line warning limit, but this must be explicitly whitelisted in `eslint.config.js`.
+- **Enforcement:** If a file grows beyond 500 lines, you MUST refactor it by extracting logic into modular files (e.g., extracting routing constants, security headers, or sub-components) rather than disabling the linter rule.
+- **Goal:** Zero ongoing file bloat, 100% modular architecture.
+
+→ See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
+
+---
+
+## 9. SECURITY RULES
+
+### 9.0 Enforced Compliance Rules (v4.8, code-anchored, CI-blocking)
+
+Every rule below is **mechanically enforced** by `scripts/rules_check.py` and
+wired into `.github/workflows/security.yml`. A PR that violates any rule fails
+CI. Rules are one-line-per-file grep guards; they anchor to real code, not
+prose.
+
+Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
+`documentation/security/compliance/ASVS-L2.md`.
+
+| ID | Rule | Anchor | CI guard | Compliance |
+|----|------|--------|----------|------------|
+| SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` — **no exemptions** | `src/lib/security/csp.ts` (`SCRIPT_SRC_ENFORCING`) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
+| SEC-01b | The Report-Only canary `script-src` MUST stay free of `'unsafe-inline'`/`'unsafe-eval'` | `src/lib/security/csp.ts` (`SCRIPT_SRC_CANARY`) | `rules_check.py::SEC-01b` | ASVS 14.4.3 |
+| SEC-02 | All cookies MUST be `SameSite=Strict` (never `Lax`) | any `SameSite=` in `src/**` | `rules_check.py::SEC-02` | ASVS 3.4.3 |
+| SEC-03 | API handlers MUST use a DAL repository (`src/lib/dal/*`), never raw `env.DB.prepare(...)` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-03` | ASVS 5.3.4 |
+| SEC-04 | Use `isAdmin()` / `isSuperAdmin()` helpers (`src/lib/auth/rbac.ts`), never hardcoded role arrays | `src/pages/api/**/*.ts` | `rules_check.py::SEC-04` | ASVS 4.1.3 |
+| SEC-05 | Workers runtime has no `process.env` — use `getEnv(context)` from `src/lib/env.ts` | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-05` | ASVS 14.1.1 |
+| SEC-06 | Every API handler MUST gate on `requireAuth()`, `placDenyResponse()`, or `locals.user` — no unauthenticated endpoints outside `PUBLIC_API_ROUTES` / `WEBHOOK_ROUTES` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-06` | ASVS 4.1.1 |
+| SEC-07 | Every `/api/*` route MUST resolve via `resolveApiAuthz()` — `API_PAGE_MAPPING` prefix or an explicit `PUBLIC_API_*`/`WEBHOOK` allowlist. Default-deny is enforced at runtime by `API_DENY_MODE` | `src/lib/auth/routes.ts`, `src/pages/api/**/*.ts` | `rules_check.py::SEC-07` ✅ implemented 2026-07-25 | ASVS 4.1.5 |
+| SEC-08 | `dangerouslySetInnerHTML` MUST receive pre-sanitized content only (`sanitizeHtml`, `escapeHtml`, template literal) | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-08` | ASVS 5.2.6 |
+| SEC-09 | Every table with `ENABLE ROW LEVEL SECURITY` MUST also declare at least one `CREATE POLICY` in the same migration | `supabase/migrations/**/*.sql` | `rules_check.py::SEC-09` | ASVS 5.3.4 |
+| SEC-10 | Use Web Crypto `crypto.subtle.digest(...)`, never Node's `crypto.createHash(...)` | `src/**/*.{ts,tsx}` | `rules_check.py::SEC-10` | ASVS 6.2.1 |
+
+**Roll-out policy:** New rules ship in `--warn-only` mode for ~1 week
+(prints violations, exits 0) so existing tech-debt can burn down without
+blocking merges. Once the tree is clean for a given rule, remove `--warn-only`
+in `.github/workflows/security.yml`.
+
+**Status (2026-07-25): `rules_check.py` is BLOCKING** — 11 rules, 0 violations.
+The SEC-03/SEC-04 debt is fully burned down.
+
+> ⚠️ **An exemption that is disabled by the condition it detects is worse than
+> no rule.** SEC-01 previously carried `exempt_line=r"unsafe-eval"`, rationalised
+> as sparing a local-dev branch that did not exist. Because the repo has exactly
+> one `script-src` — the production one — that exemption swallowed the only line
+> the rule guarded, and *adding* `'unsafe-eval'` is what silenced the
+> `'unsafe-inline'` beside it. The guard reported "0 violations" against a CSP
+> with both. When adding an exemption, first prove the rule still fails without
+> it: every rule in this table now has a negative test.
+
+**Accessibility rules (A11Y-01…06)** live in `scripts/a11y_check.py` and run in
+`.github/workflows/quality.yml`, currently `--warn-only` — see
+`documentation/security/compliance/ACCESSIBILITY.md`.
+
+### 9.1 Security Invariants (v4.5, historical)
+
+1. **Supabase `anon` role has ZERO access** — no table grants, no RLS policies, no function EXECUTE privileges.
+2. **Default privileges locked** — `ALTER DEFAULT PRIVILEGES` prevents future tables from auto-granting to `anon`.
+3. **All 3 apps use `service_role` or direct PG** — `cf-admin` and `cf-chatbot` use `SUPABASE_SERVICE_ROLE_KEY`; `cf-astro` uses `DATABASE_URL` via Drizzle.
+4. **Fail-secure dev detection** — `isLocalDev()` returns `false` unless `SITE_URL` explicitly contains a local dev domain.
+5. **6 functions hardened** — EXECUTE revoked from `anon`, `authenticated`, and `PUBLIC` on all public schema functions; `search_path` pinned.
+
+→ See [SECURITY.md](./documentation/security/SECURITY.md) for the full security architecture, CSRF, cookie policy, RLS matrix, defense-in-depth, and Ghost Protection.
+→ See [ASVS-L2.md](./documentation/security/compliance/ASVS-L2.md) for the full OWASP ASVS v4.0.3 Level 2 verification matrix.
+
+---
+
+## 10. DESIGN SYSTEM — "MIDNIGHT SLATE"
+
+The dashboard uses a unified premium dark UI with Blue-500 primary accents, 5-level surface elevation, OKLCH color tokens, and component-scoped CSS. Both dark and light themes are fully supported.
+
+→ See [DESIGN-SYSTEM.md](./documentation/reference/DESIGN-SYSTEM.md) for design tokens, login portal spec, sidebar mechanics, component patterns, animation, accessibility, and responsive layout.
+
+---
+
+## 11. DYNAMIC CMS & ISR ARCHITECTURE (cf-admin ↔ cf-astro)
+
+cf-admin securely mutates content for cf-astro via a 2-tier KV injection pipeline that bypasses D1 read-replica lag. All revalidation uses `revalidateAstro(env, basePaths, cmsData?)` with 3× exponential backoff.
+
+→ See [CMS.md](./documentation/features/CMS.md) for the full ISR architecture, KV injection strategy, upload flow, and configuration constraints.
+
+---
+
+## 12. DEPLOYMENT RULES
+
+### Build & Deploy
+
+```bash
+# Development
+npm run dev              # Local dev (wrangler dev)
+npm run cf:dev           # Full CF runtime with R2 simulation (required for image uploads)
+
+# Type & Dependency Check
+astro check              # TypeScript validation
+npx knip                 # Static analysis (must be 100% clean - no unused exports/files)
+
+# Build & Deploy
+astro build && wrangler deploy   # Build + deploy to Cloudflare
+```
+
+### Git Workflow
+
+> 🛡️ **CRITICAL: See `../GITHUB_RULES.md` for all Git deployment commands.**
+> You must ALWAYS verify your directory with `git remote -v` and push directly to `origin main`. Do not create branches.
+
+### Environment
+
+- `wrangler.toml` — Cloudflare bindings (D1, KV, R2, Queues)
+- `.dev.vars` — Local secrets (gitignored) — **never set `PUBLIC_ASTRO_URL` here** (causes CMS revalidation loop)
+- `wrangler secret put <KEY>` — Production secrets
+
+→ See [OPERATIONS.md](./documentation/operations/OPERATIONS.md) for binding IDs, secrets checklist, and deploy verification steps.
+
+---
+
+## 13. DOCUMENTATION ARCHITECTURE
+
+| File | Purpose |
+|------|---------|
+| `RULESAd.md` | This file — operational rules and quick-reference pointers |
+| `README.md` | Quick start guide for developers |
+| `main.md` | AI entry pointer into `documentation/` |
+| `AI_CODE_MAINTENANCE.md` | AI agent maintenance guidelines |
+| `GITHUB_RULES.md` | Git workflow rules |
+| `documentation/` | All detailed technical documentation (governed tree — see [`documentation/README.md`](./documentation/README.md)) |
+
+> **Single source of truth for the doc map:** [`documentation/README.md`](./documentation/README.md)
+> is the authoritative, always-current index (CI enforces index ↔ filesystem
+> parity). Naming and front-matter rules live in
+> [`documentation/CONTRIBUTING-DOCS.md`](./documentation/CONTRIBUTING-DOCS.md).
+
+### Documentation Folder Structure
+
+```
+documentation/
+├── README.md                 # Doc index & map (start here)
+├── CONTRIBUTING-DOCS.md      # Naming, front-matter, folder governance
+├── MAINTENANCE.md            # Single live backlog of open items
+├── _templates/               # Canonical doc template
+├── architecture/             # ARCHITECTURE.md, KV-RESILIENCE.md, plac-and-audit.md
+├── security/                 # SECURITY.md, PRIVACY.md, login-forensics.md
+│   └── reviews/              # Dated security/SSL audit snapshots (historical)
+├── features/                 # DASHBOARD, USER-MANAGEMENT, CMS, CHATBOT, CONTROL-PLANE(+CONNECTORS)
+├── operations/               # OPERATIONS.md (binding IDs/secrets/deploy), DEV-TOOLS.md
+├── reference/                # coding-standards.md, DESIGN-SYSTEM.md, control-plane-design/
+├── specs/                    # Dated design specs
+├── runbooks/                 # Operational error playbooks (e.g. ssr-silent-blank-screen.md)
+└── archive/                  # Superseded status/tracking docs (kept verbatim)
+```
+
+---
+
+## 14. MCP & SKILL USAGE GUIDE
+
+### 14.1 Active MCP Tools
+
+| MCP Name | Cost | When to Use |
+|----------|------|-------------|
+| `@mcp:tavily` | **FREE** | Web searches, deep research, data extraction |
+| `@mcp:cloudflare-docs` | **FREE** | API signatures, platform limits |
+| `@mcp:cloudflare-bindings` | **FREE** | Runtime binding patterns |
+| `@mcp:supabase-mcp-server` | **FREE** | Database schema, RLS, Auth setup |
+| `@mcp:upstash` | **FREE** | Redis management, rate limiting |
+| `@mcp:sentry` | **FREE** | Error tracking setup |
+| `@mcp:posthog` | **FREE** | Analytics queries |
+| `@mcp:resend` | **FREE** | Email management |
+
+### 14.2 Skills
+
+| Skill | When to Use |
+|-------|-------------|
+| `astro/SKILL.md` | Astro CLI, project structure, adapters |
+| `cloudflare/SKILL.md` | Cloudflare product selection, limits |
+| `tailwind-design-system/SKILL.md` | Tailwind v4 @theme, component patterns |
+| `systematic-debugging/SKILL.md` | First response to ANY bugs |
+| `brainstorming/SKILL.md` | Design process (brainstorm → plan → build) |
+
+### 14.3 Perplexity MCP — PAID SERVICE
+
+`@mcp:perplexity-ask` costs real money. Use ONLY as last resort after exhausting all free tools.
+
+**Priority Order:**
+
+1. RULES.md → 2. SKILL.md files → 3. `@mcp:cloudflare-docs` → 4. `@mcp:tavily` → 5. Pre-trained knowledge → 6. `@mcp:perplexity-ask` (💰 LAST)
+
+---
+
+## 15. TOTAL MONTHLY COST — $0
+
+| Service | What We Use | Monthly Cost |
+|---------|------------|-------------|
+| Cloudflare Workers | Hosting + SSR | **$0** |
+| Cloudflare KV | Session storage & ISR Cache | **$0** |
+| Cloudflare D1 | Operational data & CMS content | **$0** |
+| Cloudflare R2 | CMS image storage (10GB free) | **$0** |
+| Cloudflare Queues | Async email delivery | **$0** |
+| Supabase | Auth + PostgreSQL (shared) | **$0** |
+| Upstash | Redis (rate limiting) | **$0** |
+| GitHub | Source control | **$0** |
+| | **TOTAL** | **$0.00** |
+
+### Only Paid Services
+
+| Service | Cost | Note |
+|---------|------|------|
+| Domain name | ~$10-15/year | One-time, shared with cf-astro |
+| Anthropic (Claude Haiku fallback) | ~$0.01-0.50/month | Chatbot fallback only |
+| Perplexity MCP | Per-query | Minimize usage |
+
+---
+
+## 17. ASYNC EMAIL QUEUES & AUDIT ARCHITECTURE
+
+Both `cf-admin` and `cf-astro` utilize a decoupled Cloudflare Queues architecture to dispatch emails asynchronously.
+
+- **Queue Binding:** `EMAIL_QUEUE` (mapped to `madagascar-emails`)
+- **Producer:** API Routes push a JSON payload with a unique `trackingId` to the queue and respond immediately.
+- **Consumer:** A standalone Cloudflare Worker (`cf-email-consumer`) consumes the queue batches, processes HTML templates using **Eta** (a lightweight Edge-native framework), and executes the Resend REST API `fetch` completely out of band of the user request. Bloated Node.js SDKs (like `resend` and React Email) are strictly forbidden in the consumer worker.
+- **Audit Logs:** All email payloads, transmission statuses, and Resend webhook delivery events are chronologically mapped in the Supabase PostgreSQL table `email_audit_logs`. This table relies exclusively on `service_role` edge requests and has Row Level Security (RLS) entirely locking out public access.
+  - **Referential Integrity:** The `booking_id` foreign key constraint enforces `ON DELETE CASCADE`, ensuring that atomic "Hard Wipes" of bookings cleanly and automatically purge associated audit records without referential blocking errors.
+
+> 📎 **Full detailed documentation and Webhook setup guide:** See [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md).
+
+---
+
+*End of Rules. These constraints must be acknowledged and followed for every task in cf-admin.*

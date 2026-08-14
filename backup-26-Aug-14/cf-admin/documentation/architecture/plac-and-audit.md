@@ -1,0 +1,295 @@
+---
+
+title: "System Architecture: RBAC, PLAC & the Audit Engine"
+status: active
+audience: [ai, technical]
+last_verified: 2026-06-06
+verified_against: [code]
+owner: harshil
+tags: []
+---
+
+# System Architecture: RBAC, PLAC & the Audit Engine
+
+> **TL;DR (non-technical):** How the portal decides who can see and do what (roles plus per-page permissions), and how it records every sensitive action for accountability — all without slowing pages down.
+
+> [!NOTE]
+> **System Status:** Production Ready
+> **Target Environment:** Cloudflare Workers V8 Isolates (Edge Computing)
+> **Last Updated:**  2026-07-27 (audit suppression removed entirely; DEV/Owner accounts are no longer hidden from lower tiers in the user list, the access-review export or active revocations)
+
+This document outlines the complete technical implementation, execution lifecycle, and operational rules for the **CF-Admin Security & Tracing Triad**: Hierarchical RBAC, Page-Level Access Control (PLAC), and the Audit Engine.
+
+Designed specifically to operate within Cloudflare's strict 10ms–50ms CPU limits, this triad provides enterprise-grade administrative security with **zero user-perceived latency** and an effective **$0 infrastructure cost**.
+
+---
+
+## 1. The RBAC Foundation (Role-Based Access Control)
+
+RBAC forms the "natural baseline" of the CF-Admin authentication system. It assigns an absolute integer weight to users, establishing a rigid command hierarchy.
+
+### 1.1 The Six-Tier Role Hierarchy
+
+Roles are defined centrally in `src/lib/auth/rbac.ts` and scored such that a **lower number equals higher privilege**. Any permission check evaluates `ActorLevel <= TargetLevel`.
+
+| Level | Role | Capabilities | Badge | Assignable? |
+| :---: | :--- | :--- | :--- | :--- |
+| **0** | **Vendor Support** | Our support tier. Database prunes, raw log access, and edits to other privileged accounts. **Listed in the customer's user registry and access-review export** as of 2026-07-26; it was previously filtered out of both, which is not a defensible position for a supplier account sitting above the customer on the customer's own data. Disclosed in prose on the Velox `/security` page. | Red | **No.** Absent from `ASSIGNABLE_ROLES`, so it cannot appear in an invite picker or a role-change menu, and `/api/users/manage` refuses to assign it unless the actor already holds it. |
+| **1** | **Owner** | The customer's account holder. Full access including user administration. Protected from modification by every tier below. | Emerald | Yes |
+| **2** | **Admin** | Second in command. Full operational control, including platform settings and users at or below their level. | Amber | Yes |
+| **3** | **Manager** | Runs day-to-day operations: bookings, content, customers, generalized audit logs. No user or platform administration. | Violet | Yes |
+| **4** | **Staff** | Works in their own area. Cannot change settings or other people. | Blue | Yes |
+| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (see §1.2). | Slate | Yes |
+
+### 1.2 Naming, and why stored values differ from labels
+
+The tiers were previously `dev > owner > super_admin > admin > staff`. That had three problems: "Super Admin" sitting *below* "Admin" reads backwards to anyone outside the codebase, `dev` is an internal word for a production security boundary, and there was no read-only tier at all, which every comparable product ships and every buyer expects. The Velox marketing site had meanwhile published a five-role matrix naming Manager and Viewer, neither of which existed.
+
+**The database has not been migrated.** `normalizeRole()` translates stored values on read and `toStoredRole()` translates back on write, behind a single `ROLE_VOCABULARY` flag:
+
+| Stored (legacy) | Canonical | Level |
+| :--- | :--- | :---: |
+| `dev` | `vendor_support` | 0 |
+| `owner` | `owner` | 1 |
+| `super_admin` | `admin` | 2 |
+| `admin` | `manager` | 3 |
+| `staff` | `staff` | 4 |
+| *(none)* | `viewer` | 5 |
+
+> [!WARNING]
+> **The rename collides.** `super_admin` becomes `admin` while `admin` becomes `manager`, so the string "admin" means level 3 before the migration and level 2 after it. There is no way to look at a bare `admin` row and know which it is. A naive two-statement migration (`UPDATE … SET role='admin' WHERE role='super_admin'` then `UPDATE … SET role='manager' WHERE role='admin'`) **silently collapses both tiers into `manager`**. Any migration must use a single `CASE` expression, and must count rows per role before and after.
+
+Translating in code means there is never a moment where the deployed Worker and the database disagree about what a role means. The migration is then data hygiene rather than a privilege-boundary change. `viewer` cannot be assigned until it runs: `toStoredRole()` throws rather than write a different role.
+
+**Two stores hold role values,** and both translate at their own boundary: the Supabase `admin_authorized_users` whitelist, and D1's `admin_pages.required_role`. Each has its own CHECK constraint pinning the legacy names.
+
+**The rule, stated once:** canonical above the database edge, stored values only inside it. `normalizeRole()` on every read, `toStoredRole()` on every write. A value that will not translate returns `null` and the caller refuses; it is never guessed at, because `ROLE_LEVEL[undefined]` makes every `<=` comparison false and turns a clearance check into a rubber stamp.
+
+**The ladder is written down once,** in `rbac.ts`. It previously existed in seven places, all typed with an index signature so the compiler could not object when they drifted; two were still on the old ladder after the rename shipped. `test/rbac-roles.test.ts` fails the build on any file outside `rbac.ts` that writes it out again.
+
+**Viewer is enforced, not merely absent.** `resolveApiAuthz()` derives API permission from *page* access, so a viewer granted a page would otherwise inherit its mutations. `src/lib/auth/pipeline.ts` refuses `viewer` on any non-idempotent method regardless of page grants, before the page-access rewrite and covering page routes as well as `/api/*`. It is deliberately not staged behind `API_DENY_MODE`: that flag exists to protect legitimate traffic on 87 pre-existing routes, and a new tier has none.
+
+### 1.3 No Hardcoded Bypass
+
+> [!IMPORTANT]
+> **There is no break-glass list, no hardcoded super-admin emails, no fallback grant path.** Every authenticated request must clear (a) Cloudflare Zero Trust at the edge, (b) the `admin_authorized_users` whitelist with `is_active = true`, and (c) the relevant role/PLAC gate. A previously-existing `BREAK_GLASS_EMAILS` array and the `isBreakGlassAdmin()` / `isHardcodedSuperAdmin()` helpers were removed from `src/lib/auth/rbac.ts` — confirmed by the 2026-05-24 deep review (see `SECURITY-REVIEW-2026-05-24.md`) and re-verified in the 2026-05-25 review.
+
+Lockout recovery is now operational rather than code-level:
+
+- If the whitelist row for a stranded admin is wrong, a still-active admin updates it via `/dashboard/users`.
+- If every admin is locked out, the row is fixed directly in Supabase (Studio or `psql`) using `SUPABASE_SERVICE_ROLE_KEY`.
+- The 3-layer force-kick cascade (§2.6) propagates the change inside seconds.
+
+### 1.4 Helper Functions
+
+| Function | Description |
+|----------|-------------|
+| `hasPermission` | O(1) integer comparison — core gatekeeper |
+| `isDev` | Exact DEV check |
+| `isOwnerOrDev` | DEV-or-Owner, used for privileged-account edit protection |
+| `isSuperAdmin` | SuperAdmin or higher |
+| `isAdmin` | Admin or higher |
+| `requireAuth(context, minRole?)` | (in `guard.ts`) Server-side auth gate for pages and API routes. Returns the user on success; throws `AuthError(401\|403)` on failure. |
+| `requirePageAccess(user, pagePath)` | (in `guard.ts`) Throws `AuthError(403)` if the actor's PLAC map denies `pagePath` (exact match, then longest-prefix). DEV is exempt. |
+| `placDenyResponse(user, pagePath)` | (in `guard.ts`) Response-returning wrapper around `requirePageAccess`. Returns `null` if allowed, or a fully-formed `403` JSON `Response` if denied. Used by API routes that prefer early-return over try/catch. |
+
+---
+
+## 2. Page-Level Access Control (PLAC)
+
+While RBAC handles broad categorization natively, **PLAC** is a high-performance database extension that allows explicit **Granting** or **Denying** of single pages inside the dashboard on a *per-user* basis. It acts as the absolute final authority determining if a user can view a specific dashboard route.
+
+### 2.1 The "Compute on Write, Read from Cache" Pipeline
+
+Querying D1 for page permissions on every single navigation event would consume 3–5ms of CPU time per click and create thousands of unnecessary SQL reads. PLAC avoids this entirely.
+
+**The Two-Phase Approach:**
+
+1. **Phase 1 — Login / Provisioning:** When a user authenticates, the Worker joins page definitions and overrides, computes a precomputed JSON access map, and serializes it into the KV session cache.
+2. **Phase 2 — High-Speed Navigation:** When the user navigates to any dashboard page, the middleware fetches the access map from KV and performs an O(1) hashmap lookup. Zero D1 queries are executed during navigation.
+
+### 2.2 The D1 Schema Integration
+
+PLAC relies on two database constructs:
+
+- **Page Registry** (The Source of Truth for Routing) — Defines every page that exists in the interface including path, required role, and active status. The required role is validated against all 5 role tiers.
+
+- **Override Table** (The Delta State) — Holds specific overrides from the natural hierarchy via composite keys (user identifier + page path) and a boolean granted parameter.
+
+### 2.3 The "Deny Wins" Resolution Algorithm
+
+When the access map computation fires, it resolves permissions through strict precedence:
+
+1. **Explicit DENY Overrides:** ACCESS IS BLOCKED. Denies instantly overwrite the natural hierarchy.
+2. **Explicit GRANT Overrides:** ACCESS IS ALLOWED.
+3. **Implicit Role Default:** If no override row exists, the system relies on baseline mathematics: the user's role level must be at or above the page's required level.
+
+### 2.4 Granular Permission Model (Sub-Features)
+
+PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micro-capabilities (e.g., exporting CSVs, performing a destructive prune) to be managed by the exact same O(1) mathematical resolution engine without requiring structural schema updates.
+
+- **Pattern:** A hash-fragment sub-feature is appended to a parent route in the page registry.
+- **Evaluation:** Standard routing still checks the base path. The UI buttons independently request a PLAC check for the sub-feature path.
+- **UI Visualization:** In the invite flows and permission managers, sub-features automatically nest under their parent route and are branded as "Features" rather than "Pages" for conceptual clarity.
+- **Cost:** $0. Because the hashmap loads instantly into Cloudflare KV, querying 50 granular capability checks for a single render still operates at <1ms.
+
+**Registered Pseudo-Paths:**
+
+| Pseudo-Path | Default Access | Description |
+|-------------|---------------|-------------|
+| `/dashboard/logs#export` | DEV, Owner | Export audit logs as CSV |
+| `/dashboard/logs#prune` | DEV | Destructive prune of logs >30 days |
+| `/dashboard/logs#security` | DEV, Owner | View Login Forensics tab (contains PII: IP, User-Agent, Geo) |
+
+> [!TIP]
+> For comprehensive documentation of the Login Forensics subsystem (D1 schema, API endpoints, UI, alert emails), see **[LOGIN-FORENSICS.md](../security/login-forensics.md)**.
+
+### 2.5 Provisioning Gatekeepers (Anti-Escalation Measures)
+
+> [!IMPORTANT]
+> The Access Management API (`POST /api/users/access`) enforces **five ironclad gates**. Without them, an Admin could lock out a higher-tier user, or a user with a PLAC deny could self-administer their way back in.
+
+- **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `SECURITY-REVIEW-2026-05-25.md` finding C-1.
+- **Gate B: privileged-account edit protection** — DEV and Owner accounts cannot be *mutated* by lower ranks, and this endpoint rejects such attempts outright. They are no longer *hidden* from lower ranks: as of 2026-07-26 every account appears in the user list and in the access-review export regardless of who is asking. Concealing a supplier account from the customer whose data it can reach is the finding most likely to end a security review, and "you cannot edit it" is the control that was actually wanted.
+- **Gate C: Page Visibility Check** — The actor cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
+- **Gate D: Natural Ceiling Enforcement** — Grants are capped at the actor's clearance ceiling. An Admin cannot grant a Staff member access to a DEV-required tool.
+- **Gate E: No Self-Modification (new 2026-05-25)** — `actor.userId === targetUserId` is rejected outright. Denies must not be self-removable and grants must not be self-administered. A user denied a page via PLAC needs a higher-tier actor to lift it.
+
+### 2.6 PLAC enforcement on API routes (`placDenyResponse`)
+
+The Astro middleware (`src/middleware.ts`) deliberately allows every `/api/*` request through the page-level PLAC gate — each API route picks its own auth posture. That left a gap: a super_admin with a PLAC deny on `/dashboard/users` could still hit `/api/users/manage`, `/api/users/force-kick`, etc. directly.
+
+The 2026-05-25 review closed this for the highest-risk routes via the `placDenyResponse(actor, pagePath)` helper in `src/lib/auth/guard.ts`. The helper:
+
+1. Skips the check for DEV (break-glass tier).
+2. Falls through if the actor has no `accessMap` (defensive — the route's own role check still runs).
+3. Looks up `accessMap[pagePath]`. Exact match → use it. Otherwise longest-prefix match. Any `false` denies; any other state allows.
+4. On deny: returns a fully-formed `403` JSON `Response` (no-store / nosniff headers). On allow: returns `null`.
+
+Usage in a route handler:
+
+```typescript
+import { placDenyResponse } from '@/lib/auth/guard';
+
+const actor = locals.user;
+if (!actor) return jsonError(401, 'Unauthorized');
+// ... other role checks ...
+
+const denied = placDenyResponse(actor, '/dashboard/logs');
+if (denied) return denied;
+```
+
+**Routes wired in PR #2 (2026-05-25):** all `/api/audit/*` data endpoints (`emails`, `sessions`, `stats`, `logs`, `consent`, `receipts`) + `audit/prune`, plus `users/manage`, `users/force-kick`, `users/access-data`.
+
+**Routes wired in commit `27e6090` (2026-05-26):**
+
+- **Users surface (`/dashboard/users`):** `users/index`, `users/activity`, `users/pages`, `users/access`, `users/probes`, `users/cf-access-audit`, `users/active-sessions` (GET + DELETE), `users/active-revocations` (GET + DELETE).
+- **Content surface (`/dashboard/content`):** `content/services` (GET + POST), `content/blocks` (POST), `content/faqs` (GET + POST), `content/stats` (GET + POST), `content/reviews` (GET + POST).
+- **Media surface (`/dashboard/media`):** `media/gallery` (GET + POST), `media/upload` (POST), `media/library` (GET + DELETE), `media/revalidate` (POST).
+- **Settings surface (`/dashboard/settings`):** `settings/portal` (GET + POST).
+- **Audit surface — parent-deny propagation:** `audit/login-logs` (GET) and `audit/export` (POST) now call `placDenyResponse(actor, '/dashboard/logs')` as their first gate, so a deny on the parent page blocks the `#security` and `#export` hash sub-pages too via longest-prefix matching. The existing hash-grant logic remains as the secondary check.
+- **Audit surface:** `audit/silence` was **deleted** on 2026-07-26 along with the suppression feature behind it. See §3.
+
+All data-bearing API routes that map to a dashboard page now enforce PLAC. The full route table with page-paths and rate limits is in `SECURITY.md` §6a / §6b.
+
+### 2.7 Auto-Purging Strategies
+
+- **Instant Discontinuation:** Modifying a user's PLAC map triggers `forceLogoutUser()` — a **3-layer revocation** cascade:
+  1. **Layer 1** — KV session deletion via reverse-mapping key pattern for O(k) destruction
+  2. **Layer 2** — KV revocation flag (`revoked:{userId}`) prevents re-bootstrap via still-valid CF Access cookie
+  3. **Layer 3** — CF API `DELETE /access/users/{cfSubId}/active_sessions` invalidates the CF_Authorization cookie at the edge immediately
+- **Role Promotion Reset:** Changing a user's natural baseline role immediately triggers `resetUserOverrides(env.DB, userId)` — complete purge of all D1 historical PLAC overrides. A new role implies a new baseline; historical overrides are destroyed. The 3-layer force-kick fires immediately after to apply the new role.
+
+### 2.8 Admin Pages Registry Manager
+
+To ensure full administrative oversight over the PLAC system itself, the **Admin Pages Registry Manager** is implemented at `/dashboard/debug/pages`. This interface is exclusively accessible to DEV and operates under a rigorous 5-layer security stack:
+
+1. **SSR Gating**: Enforced by the `isDev` helper in the Astro page component, instantly rejecting any unauthorized rendering.
+2. **API-Level Auth**: All mutations via `/api/system/pages.ts` and `/api/system/preview.ts` undergo `requireAuth(context, 'dev')`.
+3. **Rate Limiting**: Enforced via Upstash Redis to prevent abuse.
+4. **Schema Validation**: The D1 schema incorporates a hardened `CHECK` constraint guaranteeing valid required roles (including `owner`), automatically resolving legacy migration issues (e.g., Migration 0018).
+5. **Audit Logging**: All mutations to the registry log a `registry_update` action in the Audit Engine.
+
+The manager includes an **Impact Analysis Engine** that performs pre-mutation dry-runs, calculating aggregate access gains or losses globally across the user base before any role changes are committed to the D1 schema.
+
+---
+
+## 3. The Audit Engine
+
+The Audit Engine is the forensic record for `cf-admin`. Because there is no monolithic backend, a blocking logger would sit on the Edge hot path, so writes are deferred until after the response is sent. That is the only thing "async" changes here: every action is recorded, and there is no path that skips a write.
+
+### 3.1 The Concept: Deferred Execution
+
+Writing to a physical D1 SQL database takes approximately 5ms to 15ms. Waiting for an audit log to spool before completing a request destroys perceived application speed.
+
+**Solution:** Cloudflare's `ExecutionContext.waitUntil(promise)` mechanism.
+
+The API endpoint processes the user's request, returns the HTTP response immediately, and then the V8 isolate is kept alive to perform the asynchronous audit log write to D1. The user experiences unparalleled performance, while the security ledger remains mathematically uncompromised.
+
+### 3.2 Write-path restriction at the edge (not immutability)
+
+> [!WARNING]
+> The audit engine exposes **inserts and reads only** — there is no update path, and no
+> endpoint lets a user edit an existing entry.
+
+**What this does give you.** An actor cannot alter history through the application. There is
+no update endpoint, the logger factory validates table names against an internal allowlist,
+and every write goes through `auditLog()`.
+
+**What it does not give you — and do not claim otherwise.** The log is **not immutable and
+not tamper-evident.** Specifically:
+
+- There is **no hash chain, no sequence number, no digital signature, and no WORM storage**,
+  so a modification leaves no detectable trace.
+- `admin_audit_log` is itself listed as a purge target in `src/lib/retention-tables.ts`, so
+  the application *can* delete audit rows — via `/api/audit/prune`, `/api/audit/delete` and
+  `/api/audit/delete-targeted`.
+- Anyone with Cloudflare dashboard or API access can run arbitrary D1 SQL against the table.
+  For a single-operator deployment that is the same person who owns the audit trail, so
+  there is no separation of duties protecting it.
+
+`documentation/security/THREAT-MODEL.md` scores this correctly as a Medium residual risk —
+"an Owner could delete evidence" — and `MAINTENANCE.md` C-9 tracks building real
+tamper-evidence.
+
+> **Terminology rule (2026-07-29).** Do not describe this log as *immutable*,
+> *append-only*, *tamper-evident*, *tamper-proof*, or *a ledger*, in engineering docs or in
+> customer-facing copy. Velox's `copy-lint.test.ts` already fails the marketing build on
+> those words. The accurate phrasing is: **"every privileged action is audit-logged with
+> actor, role, path and hashed IP, through an insert-only application path."** That is a
+> strong, true claim. This section previously ended "at the framework level, the ledger is
+> computationally immutable", which was not.
+
+**Defense-in-Depth:** The audit logger factory validates table name configuration against an internal whitelist. Since D1 does not support parameterized table names, this prevents SQL injection out-of-the-box.
+
+### 3.3 Typed Actions and Modules
+
+The audit system uses strict typed unions (not arbitrary strings) for maximum query reliability:
+
+**Actions:**
+`login`, `logout`, `create`, `update`, `delete`, `grant_access`, `revoke_access`, `reset_access`, `role_change`, `view`, `export`, `prune`, `force_logout`
+
+**Modules:**
+`auth`, `plac`, `users`, `content`, `bookings`, `customers`, `pets`, `settings`, `analytics`, `reports`, `logs`, `media`, `debug`, `system`
+
+### 3.4 Operational Payload Tracking
+
+The engine specifically tracks unified JSON payloads representing every state mutation:
+
+- **Identity Signatures:** user identifier, user email, user role
+- **Behavior Vectors:** action (typed enum), module (typed enum)
+- **Impact Vectors:** target identifier, target type, details (granular JSON tracking of exact element changes)
+
+### 3.5 Ubiquitous Navigational Telemetry (Middleware Tracking)
+
+> [!TIP]
+> **The "In-Accessible Page" Tracer**
+> Traditional audit logs only track successful API actions. CF-Admin intercepts navigations at the core middleware level to log both permitted views and **malicious probing**.
+
+Every non-API navigation inside the dashboard is intercepted:
+
+1. **Access Evaluation:** The middleware checks the PLAC map.
+2. **Synchronous Transition:** The user is either allowed to load the page or bounced to a 403 error screen.
+3. **Deferred telemetry:** The middleware fires an async deferred task pushing a "view" ledger entry.
+
+The details payload contains a `granted` boolean. This allows Devs to scan the audit table for denied entries to instantly uncover repeated unauthorized access attempts.
