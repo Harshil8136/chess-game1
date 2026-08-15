@@ -34,7 +34,14 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 | `RULESAd.md` | Operational Rules Bible + policy contract; the public-docs sync workflow targets this exact path |
 | `main.md` | AI entry pointer into `documentation/` |
 | `AI_CODE_MAINTENANCE.md` | AI-agent maintenance rules (referenced by `RULESAd.md`) |
-| `GITHUB_RULES.md` | Git workflow rules (referenced by `RULESAd.md` §12) |
+
+> **`GITHUB_RULES.md` is not one of them — corrected 2026-08-13.** This table
+> listed it as a cf-admin root file. It actually lives one level up, at the
+> **monorepo** root (`../GITHUB_RULES.md`), because its rules govern every repo
+> in the workspace, not just this one. The stray local copy was deleted on
+> 2026-08-12 and `RULESAd.md` §12 links to `../GITHUB_RULES.md`. It stays in
+> `docs_check.py`'s `ROOT_EXEMPT` set only so that a future local copy would not
+> trip the front-matter rule.
 
 ## 2. Folder map
 
@@ -93,6 +100,11 @@ enforced on those.
 - Never put secret **values** (tokens, keys, connection strings) in any doc —
   names only. The public-docs sync redacts developer email PII but does **not**
   scrub secrets; treat every doc as potentially public.
+- **"Potentially public" is literal.** `sync-docs.yml` copies *every* `.md` under
+  `documentation/` to a public repo on each push to `main`, and its secret scan
+  is **warning-only** with patterns that only match token shapes — a bare
+  hostname or endpoint sails through. A live Upstash endpoint sat in
+  `reference/control-plane-design/PLAN.md` for exactly that reason.
 
 ## 7. Adding or moving a doc
 
@@ -101,3 +113,33 @@ enforced on those.
 3. Add an entry to the index in [`README.md`](README.md) — CI fails if a doc is
    missing from the index (index-drift check).
 4. Use `git mv` when relocating so history is preserved.
+
+## 8. What `docs_check.py` enforces
+
+Structure was never the problem — a doc can be perfectly well-formed and still
+wrong. These checks were added on 2026-08-13 after a pass found ~29 contradictions
+between documents that were all `status: active` and all passing CI.
+
+| Check | Level | What it means for you |
+|---|---|---|
+| Front-matter, links, index drift | blocking | Unchanged. |
+| **Staleness** | blocking | An `active` doc older than **45 days** fails. `active` is a promise that the claims were re-checked — if you cannot re-check them, set `status: historical` instead. |
+| **Code paths** | blocking | Backticked `src/…`, `migrations/…`, `scripts/…` references must resolve. This is where dead references actually hide; the link check never saw them. |
+| **Mojibake** | blocking | Double-encoded UTF-8. The sync workflow runs `ftfy` on the *published copy* only, so the source could stay corrupt indefinitely. |
+| **Batch stamps** | warning | Many docs sharing one `last_verified` — the signature of a date applied rather than earned. |
+
+Three escape hatches exist. Each is visible in the source so it can be reviewed:
+
+- `<!-- docs-check: stale-exempt -->` — for a doc that makes no claim needing
+  re-verification (the front-matter template). Not for a doc you'd rather not update.
+- `<!-- docs-check: proposed-paths -->` — for a **design or plan** document whose
+  file references are proposals. Never put this in a doc describing behaviour.
+- An **absence cue on the same line** (or within the preceding few lines) —
+  "deleted", "removed", "no longer", "proposed", "→", and similar. Naming a file
+  in order to say it was deleted or moved is good documentation, and the check
+  is built to allow it rather than push you into erasing history.
+
+Migration references may use numeric shorthand (`migrations/0037`); the check
+resolves it against the directory. Note that `migrations/` and
+`database/legacy_migrations/` are **separate series overlapping on 19 numbers**,
+so always give the directory too — see `operations/OPERATIONS.md` §7.

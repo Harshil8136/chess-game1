@@ -560,9 +560,16 @@ rule.
 | `src/pages/dashboard/**/*.astro` | `no-restricted-syntax` on `export const prerender = true` | **Hard error** — this one is real |
 
 The same gap exists for `any`: `coding-standards.md` forbids it outright while
-`@typescript-eslint/no-explicit-any` is set to `'warn'`, and `src/` currently
-holds **350** occurrences. Do not cite either limit as enforced until the rule
-is flipped back on.
+`@typescript-eslint/no-explicit-any` is set to `'warn'`. `npm run lint` reports
+**444** such warnings (2026-08-13) — count them with
+`npx eslint . -f json` rather than by grepping, which undercounts generics and
+type arguments. Do not cite either limit as enforced until the rule is flipped
+back on.
+
+`npm run lint` currently exits clean with **0 errors, 445 warnings**: the 444
+above plus **1 `max-lines`** — `src/lib/auth/pipeline.ts` is at 608 lines against
+its own 600-line exception. That exception's comment in `eslint.config.js` still
+describes the file as 517 lines.
 
 → See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
@@ -666,14 +673,18 @@ npm run cf:dev           # Full CF runtime with R2 simulation (required for imag
 # Type & Dependency Check
 npm run typecheck        # astro check — TypeScript validation
 npm run lint             # ESLint
-npx knip                 # Dead-code sweep. Binary lives at the MONOREPO root,
-                         # not in cf-admin/node_modules, and there is no
-                         # `npm run knip` script — see MAINTENANCE.md C-15.
+npm run knip             # Dead-code sweep. NOT clean today (see MAINTENANCE.md
+                         # C-15) — knip.json has no `entry` config, so it cannot
+                         # see Astro's file-based routes and reports ~34 "unused"
+                         # files that are really pages. Read its output; do not
+                         # treat a non-zero exit as a blocking failure yet.
 
 # The full gate — run this before any commit (GITHUB_RULES.md)
 npm run verify           # typecheck → lint → tests → rules_check → docs_check
                          #   → a11y_check → audit_gate
-python ../.agents/scripts/checklist.py cf-admin
+# checklist.py resolves its argument against the CURRENT directory, so it
+# must be run from the MONOREPO ROOT, not from cf-admin/:
+cd .. && python .agents/scripts/checklist.py cf-admin
 
 # Build & Deploy
 astro build && wrangler deploy   # Build + deploy to Cloudflare

@@ -19,7 +19,7 @@ tags: []
 - `any` type is **FORBIDDEN** by this standard (unless bypassing a documented upstream type bug).
   ⚠️ **Enforcement does not match yet:** `eslint.config.js` sets
   `@typescript-eslint/no-explicit-any` to `'warn'` during the type-debt burn-down, and
-  `src/` currently holds **350** occurrences. Treat this as the rule for *new* code; it is
+  `npm run lint` reports **444** of them (2026-08-13). Treat this as the rule for *new* code; it is
   not mechanically blocked. See `RULESAd.md` §8.1.
 - All Cloudflare bindings must be strictly typed.
 
