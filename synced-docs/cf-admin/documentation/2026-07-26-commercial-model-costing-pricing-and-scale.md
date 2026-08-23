@@ -223,7 +223,7 @@ All rates verified against vendor documentation on 2026-07-26, not recalled. Sou
 
 ### 5.1 The critical billing fact for a fleet
 
-> **Cloudflare Workers Paid is $5/month per _account_, not per Worker** — and the
+> **Cloudflare Workers Paid is $5/month per *account*, not per Worker** — and the
 > included quotas (10M requests, 50M D1 rows written, 1M KV writes, 1M Queue operations)
 > are **shared across every Worker in that account**.
 
@@ -312,7 +312,7 @@ Verified 2026-07-26 — `scripts/` contains only `a11y_check.py`, `audit_gate.py
 
 | Missing | Consequence at N clients |
 |---|---|
-| `wrangler.template.toml` | Binding IDs hand-edited per client. `GITHUB_RULES.md §6` records a real April 2026 production outage from exactly this — a wrong UUID **fails silently** |
+| `wrangler.template.toml` | Binding IDs hand-edited per client. `RULESAd.md` §12 records a real April 2026 production outage from exactly this — a wrong UUID **fails silently** |
 | `scripts/init-cloudflare.sh` (proposed — does not exist) | Provisioning D1/KV/R2/Queues is manual per client |
 | Fleet migration runner | Migrations are applied **by hand**. `MAINTENANCE.md` confirms: applied "directly, not via `wrangler d1 migrations apply`" |
 | Fleet deploy orchestration | `git push` deploys **one** Worker. N clients = N pipelines |

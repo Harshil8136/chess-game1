@@ -50,9 +50,10 @@ truth for what currently exists. This ledger only tracks changes from
 - **"Applied by"** should name the developer or agent session that ran the
   migration once that's reliably capturable; until then, note it as
   unrecorded rather than guessing.
-- This is a manually-maintained table, not a CI-enforced gate — `npm run
-  db:check` (referenced by RULE #0.7) validates migration/schema consistency,
-  not ledger completeness. Treat gaps here as a documentation debt to close
+- This is a manually-maintained table, not a CI-enforced gate. There is no
+  `db:check` script — RULE #0.7 asked for one for months and it was never
+  written; the rule now points at `wrangler d1 migrations apply` and
+  `npm run verify` instead. Nothing validates ledger completeness automatically. Treat gaps here as a documentation debt to close
   opportunistically, not a build-blocking violation.
 
 ## Related

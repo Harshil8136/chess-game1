@@ -41,7 +41,7 @@ tags: [rbac, plac, authorization, cfzt, kv, d1, scaling, benchmarks, assessment,
 3. [Fact-check: claims vs. reality](#3-fact-check-claims-vs-reality)
 4. [Multi-benchmark comparison](#4-multi-benchmark-comparison)
 5. [Service usage modeling — per hour, per day, per staff count](#5-service-usage-modeling--per-hour-per-day-per-staff-count)
-6. [Scaling recommendations — current, ×5, ×10, and beyond](#6-scaling-recommendations--current-×5-×10-and-beyond)
+6. [Scaling recommendations — current, ×5, ×10, and beyond](#6-scaling-recommendations--current-5-10-and-beyond)
 7. [Where each design stands against real standards](#7-where-each-design-stands-against-real-standards)
 8. [What to adopt from the proposal](#8-what-to-adopt-from-the-proposal)
 9. [Final recommendation](#9-final-recommendation)

@@ -3,7 +3,7 @@
 title: "Threat Model (STRIDE)"
 status: active
 audience: [technical, operator, ai, owner]
-last_verified: 2026-08-12
+last_verified: 2026-08-23
 verified_against: [code, config]
 owner: harshil
 related_docs: [SECURITY.md, RoPA.md, ../runbooks/incident-response.md, compliance/ASVS-L2.md, ../architecture/plac-and-audit.md]
@@ -48,7 +48,7 @@ flowchart TB
     subgraph worker["cf-admin Worker — TRUST BOUNDARY 2"]
         csp["securityHeaders<br/>CSP, COOP/CORP, GPC"]
         pipeline["authMiddleware<br/>JWT verify, session,<br/>role recheck, PLAC,<br/>FAIL-CLOSED /api/*"]
-        routes["87 API routes<br/>zod validation"]
+        routes["137 API route files<br/>zod validation"]
     end
 
     subgraph data["Data stores — TRUST BOUNDARY 3"]

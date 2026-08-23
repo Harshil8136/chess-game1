@@ -52,7 +52,7 @@ tags: []
 
 ## Resolved 2026-05-26 (commit `27e6090`)
 
-All items below verified shipped on `main` — see `SECURITY-REVIEW-2026-05-26.md` for the full report.
+All items below verified shipped on `main` — see `../security/reviews/2026-05-26-security-review.md` for the full report.
 
 | # | Original Issue | Resolution |
 |---|---|---|
@@ -95,6 +95,6 @@ All items below verified shipped on `main` — see `SECURITY-REVIEW-2026-05-26.m
 ## Previously Resolved (record only)
 
 - Phases 1A–11 of the original refactor (SQL injection, rate limiting, dead code, type safety, component splitting, ErrorBoundary, CSS architecture, accessibility, Session Forensics, Theme Hardening) — see `COMPLETED_PHASES.md` for the full record.
-- 2026-05-24 deep review's 7 patches — see `SECURITY-REVIEW-2026-05-24.md`.
-- 2026-05-25 deep review's Critical + High patches (C-1, C-2, H-1..H-5) — see `SECURITY-REVIEW-2026-05-25.md` and `COMPLETED_PHASES.md` § Phase 12.
-- 2026-05-26 deep-review follow-up (Medium and Low closures + dependency CVEs) — see `SECURITY-REVIEW-2026-05-26.md` and `COMPLETED_PHASES.md` § Phase 13.
+- 2026-05-24 deep review's 7 patches — see `../security/reviews/2026-05-24-security-review.md`.
+- 2026-05-25 deep review's Critical + High patches (C-1, C-2, H-1..H-5) — see `../security/reviews/2026-05-25-security-review.md` and `COMPLETED_PHASES.md` § Phase 12.
+- 2026-05-26 deep-review follow-up (Medium and Low closures + dependency CVEs) — see `../security/reviews/2026-05-26-security-review.md` and `COMPLETED_PHASES.md` § Phase 13.

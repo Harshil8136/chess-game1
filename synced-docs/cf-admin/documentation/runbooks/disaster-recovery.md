@@ -80,11 +80,13 @@ single cheapest improvement available to the RPO in this table.
 
 1. Dashboard → Database → Backups → pick the most recent good day → Restore.
 2. Verify afterwards, in this order — highest compliance value first:
+
    ```sql
    SELECT COUNT(*) FROM legal_requests   WHERE status IN ('PENDING','IN_PROGRESS');
    SELECT COUNT(*) FROM admin_authorized_users WHERE is_active = true;
    SELECT COUNT(*) FROM consent_records;
    ```
+
 3. Re-run `get_advisors` (Supabase MCP) — a restore can reintroduce RLS drift
    that was previously fixed.
 
@@ -141,7 +143,7 @@ git revert <sha> && git push origin main    # main auto-deploys
 
 **Binding IDs are the real risk here, not the code.** A `wrangler.toml`
 pointing at a non-existent KV/D1 UUID fails silently — this caused a production
-CMS outage in April 2026 (`GITHUB_RULES.md` §6). Verify against
+CMS outage in April 2026 (`RULESAd.md` §12). Verify against
 `../operations/OPERATIONS.md` §1 before any recovery deploy.
 
 ## 7. Scenario playbooks

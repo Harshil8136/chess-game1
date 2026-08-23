@@ -3,7 +3,7 @@
 title: "Data Infrastructure Audit & Reuse-Before-Creation Policy"
 status: active
 audience: [ai, technical, owner]
-last_verified: 2026-08-12
+last_verified: 2026-08-23
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/lib/retention-tables.ts, src/pages/api/arco/requests.ts, src/pages/api/audit/sessions.ts]
@@ -33,18 +33,28 @@ policy that came out of it (§4, intended to stay current).
 
 ---
 
-## 0. Live totals (re-verified 2026-08-12 via Cloudflare + Supabase MCP)
+## 0. Live totals (re-verified 2026-08-23 via Cloudflare + Supabase MCP)
 
 The three-app production estate is **41 env vars** (cf-admin's Worker: 17 `[vars]` +
 24 secrets — see `wrangler.toml`) and **63 database tables**:
 
 | Store | Tables | Apps |
 |---|---:|---|
-| D1 `madagascar-db` | 31 | cf-admin + cf-astro (shared) |
+| D1 `madagascar-db` | 30 | cf-admin + cf-astro (shared) |
 | D1 `chatbot-kb` | 9 | cf-chatbot |
 | D1 `whatsapp-chatbot` | 4 | cf-chatbot |
-| Supabase `[SUPABASE_PROJECT_REF]` `public` | 19 | cf-admin + cf-astro (shared) |
+| Supabase `public` (production project) | 20 | cf-admin + cf-astro (shared) |
 | **Total** | **63** | |
+
+> **Corrected 2026-08-23.** The per-store cells previously read 31 / 9 / 4 / 19.
+> The total was right, but two cells were wrong in opposite directions and
+> cancelled out: `madagascar-db` was counted **including** `d1_migrations`, which
+> the counting SQL in `RULESAd.md` §0.9 excludes, and Supabase `public` was one
+> short. Re-queried live: `sqlite_master` gives 30 / 9 / 4 with the `d1_%`
+> exclusion applied, and Supabase `list_tables` gives 20. `RULESAd.md` §0.9 —
+> the owner of this figure — already carried the correct breakdown; this table
+> is now consistent with it. **Count the same way every time, or two errors will
+> agree on a total again.**
 
 `chatbot-kb` and `whatsapp-chatbot` were not in scope of the 2026-08-06 audit below
 (that pass only covered cf-admin's own D1 + the shared Supabase project) — they're

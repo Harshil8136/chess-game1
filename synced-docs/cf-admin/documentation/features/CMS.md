@@ -25,7 +25,7 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 
 **Core Stack:**
 
-- **CMS Database:** Cloudflare D1 (`cms_content`, `blog_posts`, `cms_version_history` tables, shared with cf-astro)
+- **CMS Database:** Cloudflare D1 (`cms_content`, `blog_posts`, `cms_content_history` tables, shared with cf-astro)
 - **Bookings Database:** Supabase PostgreSQL
 - **Asset Storage:** Cloudflare R2 (`madagascar-images`, served via `cdn.madagascarhotelags.com`)
 - **Caching & Propagation:** Cloudflare KV (`ISR_CACHE`) + ISR revalidation webhook + IndexNow protocol

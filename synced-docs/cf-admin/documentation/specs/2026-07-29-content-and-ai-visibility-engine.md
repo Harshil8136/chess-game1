@@ -1,7 +1,7 @@
 ---
 
 title: "Content & AI Visibility Engine — Tiptap Authoring + Workers AI Analysis"
-status: active
+status: historical
 audience: [owner, non-technical, technical, operator, ai]
 last_verified: 2026-07-29
 verified_against: [code, infra, vendor-docs, web]
@@ -17,6 +17,10 @@ tags: [cms, blog, tiptap, workers-ai, seo, aio, geo, pricing, addon, spec]
      reason. Do not copy this marker into a doc that describes behaviour. -->
 
 # Content & AI Visibility Engine
+
+> **Re-statused `historical` on 2026-08-23.** This is a design decision record; `specs/` is append-only per CONTRIBUTING-DOCS §2. It is
+> accurate for the date it carries; do not read it as current state.
+
 
 > **TL;DR (non-technical):** A proposed paid module. Clients write blog posts in a proper
 > visual editor; an AI pass then analyses each post and generates the structured data that

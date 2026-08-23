@@ -1,7 +1,7 @@
 ---
 
 title: "Payload CMS Evaluation & the Dynamic-Blog Path"
-status: active
+status: historical
 audience: [owner, non-technical, technical, operator, ai]
 last_verified: 2026-07-26
 verified_against: [code, infra, vendor-docs]
@@ -17,6 +17,10 @@ tags: [cms, payload, blog, evaluation, cost, architecture, cloudflare]
      reason. Do not copy this marker into a doc that describes behaviour. -->
 
 # Payload CMS Evaluation & the Dynamic-Blog Path
+
+> **Re-statused `historical` on 2026-08-23.** This is a design decision record; `specs/` is append-only per CONTRIBUTING-DOCS §2. It is
+> accurate for the date it carries; do not read it as current state.
+
 
 > **TL;DR (non-technical):** We looked at whether Payload CMS could run our website's
 > content. Payload is genuinely free and open source, and Cloudflare genuinely supports

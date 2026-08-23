@@ -268,44 +268,44 @@ No live secrets (`sk-`, `eyJ…`, `service_role`, `sbp_`, `xkeysib-`) found in t
 
 **P1 — Hardening & hygiene — mostly done:**
 
-4. **L6 ✅** — `cookie.txt`/`findings_output.txt`/`fix_ux_issues.py`/`update_rules.ps1`/
+1. **L6 ✅** — `cookie.txt`/`findings_output.txt`/`fix_ux_issues.py`/`update_rules.ps1`/
    `split_activity_center.py` removed; `.gitignore` extended; a **blocking CI secret-scan** added.
    *Operator follow-up: rotate the dev `admin_session` that `cookie.txt` had held.*
-5. **L7 ✅** — Brevo webhook now **fails closed** if `BREVO_WEBHOOK_SECRET` is unset (503) and
+2. **L7 ✅** — Brevo webhook now **fails closed** if `BREVO_WEBHOOK_SECRET` is unset (503) and
    prefers the `x-brevo-secret` header.
-6. **L8 ◑** — logout `GET` fallback is now IP rate-limited; kept GET-capable by design (the UI's
+3. **L8 ◑** — logout `GET` fallback is now IP rate-limited; kept GET-capable by design (the UI's
    fallback uses it; SameSite=strict + CF Access make logout-CSRF impact negligible).
-7. **M4 ⏳** — nonce/hash `script-src` CSP migration (staged; deliberately not rushed onto prod).
-8. **M5 ⏳** — add an `/api/*` default-deny wrapper (or enforce mapped PLAC) in middleware.
-9. **L9 ◑** — `ai-test` stack leak removed; a few handlers still echo `err.message` — tighten to
+4. **M4 ⏳** — nonce/hash `script-src` CSP migration (staged; deliberately not rushed onto prod).
+5. **M5 ⏳** — add an `/api/*` default-deny wrapper (or enforce mapped PLAC) in middleware.
+6. **L9 ◑** — `ai-test` stack leak removed; a few handlers still echo `err.message` — tighten to
    generic client messages with detail only in Sentry.
 
 **P2 — Reliability & maintainability — partly done:**
 
-10. **`env.ts` race ✅ (mitigated)** — the one context-less caller (`writeRevocationFlag`) now
+ 1. **`env.ts` race ✅ (mitigated)** — the one context-less caller (`writeRevocationFlag`) now
     threads the request context into `getRawEnv(context)` instead of relying on the async module
     global. *(A top-level-await rewrite was evaluated and rejected as an unverifiable prod-build risk
     in this environment.)* Remaining: remove `(env as any).DB` casts.
-11. **Tests ✅ (first pass)** — added `test/csrf.test.ts`, `test/plac.test.ts`, `test/sanitize-html.test.ts`
+ 2. **Tests ✅ (first pass)** — added `test/csrf.test.ts`, `test/plac.test.ts`, `test/sanitize-html.test.ts`
     (19 passing). Still to add: `guard.ts`, session lifecycle, and middleware integration.
-12. **Route normalization ✅** — the 5 `inquiries/*` routes now use `instanceof AuthError` (fixes the
+ 3. **Route normalization ✅** — the 5 `inquiries/*` routes now use `instanceof AuthError` (fixes the
     403→401 collapse) and dropped the redundant `jsonOk({ success: true, … })`; `InquiryRepository`
     now imports the `@/lib/sentry` facade.
-13. **`env.d.ts` typing ✅** — declared `ANALYTICS`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `IP_HASH_SECRET`,
+ 4. **`env.d.ts` typing ✅** — declared `ANALYTICS`, `ADMIN_EMAIL`, `SENDER_EMAIL`, `IP_HASH_SECRET`,
     `BREVO_WEBHOOK_SECRET`; fixed the Resend→Brevo header. Remaining: split `DashboardStyles.astro`
     and the `any`-heavy control-plane/email god-components.
 
 **P3 — CI/CD & data — partly done:**
 
-14. **security.yml ✅** — added a blocking secret-scan job. `npm audit` stays non-blocking: the
+ 1. **security.yml ✅** — added a blocking secret-scan job. `npm audit` stays non-blocking: the
     residual highs are transitive dev/build-chain (e.g. `ws` via wrangler/miniflare), not in the
     Worker. Flip `|| true` off once `npm audit --omit=dev --audit-level=high` exits 0.
-15. **production-tests.yml ✅** — cross-repo checkout switched to `PERSONAL_PAT`; `setup-node` unified
+ 2. **production-tests.yml ✅** — cross-repo checkout switched to `PERSONAL_PAT`; `setup-node` unified
     to `@v6`.
-16. **Migrations ✅ (partial)** — duplicate `0021` renamed (`0021b_…`); added
+ 3. **Migrations ✅ (partial)** — duplicate `0021` renamed (`0021b_…`); added
     `database/legacy_migrations/README.md` marking the tree archive-only. Remaining: unify the
     Supabase migration naming scheme.
-17. **⏳** Complete or revert the Resend→Brevo rename across `wrangler.toml`/`RULESAd.md` (code side
+ 4. **⏳** Complete or revert the Resend→Brevo rename across `wrangler.toml`/`RULESAd.md` (code side
     done in `env.d.ts`).
 
 ---

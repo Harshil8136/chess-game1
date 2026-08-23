@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-08-12
 verified_against: [code]
 owner: harshil
-related_docs: [PLAN.md, TECHNICAL_OVERVIEW.md]
+related_docs: [../../archive/control-plane-design/PLAN.md, ../../archive/control-plane-design/TECHNICAL_OVERVIEW.md]
 tags: [control-plane, ui, design]
 ---
 
@@ -104,5 +104,5 @@ This plan implements a complete visual overhaul of the Service Control Plane pag
 
 ## Related
 
-- [`PLAN.md`](PLAN.md) — the original control-plane design doc (provider API specs, phases)
-- [`TECHNICAL_OVERVIEW.md`](TECHNICAL_OVERVIEW.md) — control-plane technical overview
+- [`archive/control-plane-design/PLAN.md`](../../archive/control-plane-design/PLAN.md) — the original control-plane design doc (provider API specs, phases); archived 2026-08-23
+- [`archive/control-plane-design/TECHNICAL_OVERVIEW.md`](../../archive/control-plane-design/TECHNICAL_OVERVIEW.md) — control-plane technical overview; archived 2026-08-23

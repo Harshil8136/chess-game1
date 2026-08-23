@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-13
+last_verified: 2026-08-23
 verified_against: [code, infra]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -16,7 +16,7 @@ tags: [operations, bindings, cloudflare]
 > **Status:** Production Active
 > **Scope:** Cloudflare binding IDs, free tier limits, Sentry observability, build/deploy
 >
-> **§1 is the single source of truth for production bindings** (`GITHUB_RULES.md` §6).
+> **§1 is the single source of truth for production bindings** (`../RULESAd.md` §12).
 > If it disagrees with any other document, §1 wins — and if it disagrees with
 > `wrangler.toml`, `wrangler.toml` wins and §1 is the bug. Regenerate it with the
 > commands in §1 → "Re-deriving this section" rather than editing from memory.
@@ -138,7 +138,7 @@ through the custom entrypoint `src/workers/cf-entry.ts`:
 
 ### Re-deriving this section
 
-This registry is the single source of truth named by `GITHUB_RULES.md` §6, so it
+This registry is the single source of truth named by `../RULESAd.md` §12, so it
 must be regenerated from config rather than edited from memory:
 
 ```bash
@@ -395,8 +395,9 @@ wrangler kv namespace list
 
 ### ⚠️ Migration numbering has two colliding series
 
-`migrations/` (0000–0050, 28 files) and `database/legacy_migrations/`
-(0001–0043, 45 files) are **independent numbering series that overlap on 19
+`migrations/` (0000–0050, 28 `.sql` files — `0002` appears twice and 0009–0032
+are unused) and `database/legacy_migrations/` (0001–0043, 44 `.sql` files plus a
+README — `0021` appears twice) are **independent numbering series that overlap on 19
 numbers** — 0001–0008 and 0033–0043. `migrations/0033_create_blog_and_taxonomy_tables.sql`
 and `database/legacy_migrations/0033_create_sync_outbox.sql` are entirely
 different migrations that share a prefix.

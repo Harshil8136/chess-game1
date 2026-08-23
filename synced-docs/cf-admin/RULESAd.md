@@ -139,10 +139,14 @@ carve-out below, signed off the same day it was added; see
 This is a hard cap, not a soft target. Do NOT introduce new environment variables
 (`env.VAR_NAME`, `.dev.vars`, or `wrangler.toml` `[vars]`/bindings) for feature toggles,
 limits, or operational settings. All application toggles, operational thresholds, and
-non-secret runtime configs MUST be managed dynamically via D1 (`admin_portal_settings`
-via `PortalSettingsRepository.ts`) or Cloudflare KV (`CONFIG_KV`) — the pattern every
-recent feature (Staff Managed Storage, Blog AI, Control Plane connectors) has already
-followed. A new env var is the **last option on the table, not the first** — propose
+non-secret runtime configs MUST be managed dynamically via D1 —
+`admin_portal_settings`, through `src/lib/dal/PortalSettingsRepository.ts` — the pattern
+every recent feature (Staff Managed Storage, Blog AI, Control Plane connectors) has
+already followed. *Corrected 2026-08-23:* this rule also named a `CONFIG_KV` binding as
+an alternative. No such binding exists — `wrangler.toml` declares exactly one KV
+namespace, `SESSION`, and `CONFIG_KV` appears nowhere in `src/`. D1 is the mechanism.
+
+A new env var is the **last option on the table, not the first** — propose
 one only after showing every dynamic-config route was checked and genuinely doesn't
 fit (e.g. a bootstrap-time platform credential needed before any D1/KV read is
 possible), and say why in the PR/commit. Even then it requires explicit architectural
@@ -305,7 +309,7 @@ without translation).
 
 > 🛡️ **THE WHITELIST ARCHITECTURE POLICY:** We employ a strict "whitelisting" approach to technology additions. Anything not explicitly listed in this document is considered **BLACKLISTED** by default to protect our <50KB "Lean Edge" budget. If an AI agent or developer wishes to introduce a new library (e.g., React 19, Recharts, shadcn/ui, Hono), it must be explicitly proposed with a strong "why it's needed" justification. The new dependency can ONLY be used if the USER explicitly approves the proposal.
 
-### 7.1 Framework: Astro 6.0+ (Full SSR for Admin)
+### 7.1 Framework: Astro 7.x (Full SSR for Admin)
 
 - `output: 'server'` — ALL routes are server-rendered (auth check required)
 - Cloudflare adapter with native binding access
@@ -320,9 +324,9 @@ without translation).
 
 ### 7.2 UI: Preact Islands
 
-- Preact 10.29.0 for all interactive components — React-compatible, no React overhead
+- Preact 10.29.7 for all interactive components — React-compatible, no React overhead
 - Islands hydrate with `client:load` (immediate) or `client:idle` (deferred)
-- Cross-island state via `@preact/signals` (`^2.9.0`); no global event bus needed at current scale
+- Cross-island state via `@preact/signals` (pinned `2.10.0`); no global event bus needed at current scale
 
 ### 7.3 Approved Dependency Whitelist
 
@@ -392,7 +396,7 @@ src/
 1. **Entry Point (`index.astro`):** Must wrap content in `<AdminLayout title="ModuleName">` and call `requireAuth(Astro)`.
 2. **Dynamic Sidebar Auto-Registry:** A module is ONLY visible in the sidebar if its path exists in the D1 `admin_pages` table and the user's role has PLAC authorization. You do NOT hardcode nav links in the UI.
 3. **CSS Code Splitting & Scoping:** Monolithic global CSS (e.g., `global.css`, `dashboard.css`) is strictly forbidden. Essential dashboard styles must be scoped via Astro components (like `DashboardStyles.astro`) or inline component `<style>` blocks to ensure zero style bleeding and an optimal payload size.
-4. **Data Access Layer (DAL):** Never write raw D1 SQL queries directly inside `.astro` frontmatter. All data fetching must go through Repository classes (e.g., `DashboardRepository.ts` in `src/lib/dal/`) to ensure separation of concerns, security, and testability. Pass the fetched static initial state to Preact islands as props.
+4. **Data Access Layer (DAL):** Never write raw D1 SQL queries directly inside `.astro` frontmatter. All data fetching must go through Repository classes (e.g., `PortalSettingsRepository.ts`, one of the 18 in `src/lib/dal/`) to ensure separation of concerns, security, and testability. Pass the fetched static initial state to Preact islands as props.
 
 ### 7.8 Modals, Dialogs & The "Squished Card" Bug — MANDATORY READING
 
@@ -679,21 +683,41 @@ npm run knip             # Dead-code sweep. NOT clean today (see MAINTENANCE.md
                          # files that are really pages. Read its output; do not
                          # treat a non-zero exit as a blocking failure yet.
 
-# The full gate — run this before any commit (GITHUB_RULES.md)
+# The full gate — run this before any commit (see "Git & deployment protocol")
 npm run verify           # typecheck → lint → tests → rules_check → docs_check
                          #   → a11y_check → audit_gate
-# checklist.py resolves its argument against the CURRENT directory, so it
-# must be run from the MONOREPO ROOT, not from cf-admin/:
-cd .. && python .agents/scripts/checklist.py cf-admin
 
 # Build & Deploy
 astro build && wrangler deploy   # Build + deploy to Cloudflare
 ```
 
-### Git Workflow
+### Git & deployment protocol
 
-> 🛡️ **CRITICAL: See `../GITHUB_RULES.md` for all Git deployment commands.**
-> You must ALWAYS verify your directory with `git remote -v` and push directly to `origin main`. Do not create branches.
+This is the authoritative statement of the deploy protocol for this repo. It
+absorbs the rules previously kept in a monorepo-root git-rules file, which is
+not part of this repository and is no longer referenced anywhere — the repo is
+now standalone, so a pointer outside it can never resolve.
+
+- **Verify the working directory before every push** — `git remote -v` must show
+  this repo. Pushing cf-admin changes from a sibling checkout is the single
+  easiest way to deploy the wrong Worker.
+- **Push directly to `origin main`.** There is no pull-request gate and no branch
+  protection; `main` auto-deploys. Compliance docs record this honestly as a
+  machine approval rather than a second pair of human eyes — see
+  [`documentation/security/compliance/SOC2-TSC-mapping.md`](./documentation/security/compliance/SOC2-TSC-mapping.md)
+  CC8.1. (An agent working on an assigned feature branch follows its own
+  instructions and pushes there instead.)
+- **Run `npm run verify` before every push.** CI re-runs the same gates on `main`,
+  so a failure that slips through is visible immediately after deploy, not before.
+
+#### §6 — Binding IDs are never invented
+
+[`documentation/operations/OPERATIONS.md`](./documentation/operations/OPERATIONS.md)
+§1 is the **single source of truth for production bindings** (D1/KV/R2 IDs, queue
+names, service bindings). Never hand-edit or guess a binding UUID: a wrong ID
+**fails silently** rather than erroring, and did cause a real CMS outage in April
+2026. Read the value from `wrangler.toml` or the Cloudflare dashboard, and update
+the registry in the same change. Docs elsewhere cite this rule as "§6".
 
 ### Environment
 
@@ -713,7 +737,6 @@ astro build && wrangler deploy   # Build + deploy to Cloudflare
 | `README.md` | Quick start guide for developers |
 | `main.md` | AI entry pointer into `documentation/` |
 | `AI_CODE_MAINTENANCE.md` | AI agent maintenance guidelines |
-| `GITHUB_RULES.md` | Git workflow rules |
 | `documentation/` | All detailed technical documentation (governed tree — see [`documentation/README.md`](./documentation/README.md)) |
 
 > **Single source of truth for the doc map:** [`documentation/README.md`](./documentation/README.md)
@@ -734,7 +757,7 @@ documentation/
 │   └── reviews/              # Dated security/SSL audit snapshots (historical)
 ├── features/                 # DASHBOARD, USER-MANAGEMENT, CMS, CHATBOT, CONTROL-PLANE(+CONNECTORS)
 ├── operations/               # OPERATIONS.md (binding IDs/secrets/deploy), DEV-TOOLS.md
-├── reference/                # coding-standards.md, DESIGN-SYSTEM.md, control-plane-design/
+├── reference/                # coding-standards.md, DESIGN-SYSTEM.md, control-plane-design/ (VISUAL-OVERHAUL-PLAN only)
 ├── specs/                    # Dated design specs
 ├── runbooks/                 # Operational error playbooks (e.g. ssr-silent-blank-screen.md)
 └── archive/                  # Superseded status/tracking docs (kept verbatim)

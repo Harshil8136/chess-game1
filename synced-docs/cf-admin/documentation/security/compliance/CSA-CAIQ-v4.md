@@ -78,7 +78,7 @@ CSA-canonical column headers.
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | CCC-01 | Are changes tested before production? | Yes | `tsc` + `vitest` + `docs_check` + `rules_check` in CI; per-branch protection. |
-| CCC-02 | Is a change-approval process documented? | **Partial** | **Corrected 2026-08-13 — there is no PR-review requirement.** `GITHUB_RULES.md` mandates the opposite: *"DO NOT create new branches. ALWAYS push directly to `origin main`"*, with no branch protection. The real, documented gate is automated and pre-push: `python .agents/scripts/checklist.py` plus `npm run verify` (typecheck, lint, 433 tests, `rules_check`, `docs_check`, `a11y_check`, `audit_gate`), and CI re-runs the same guards on `main`. That is a genuine change control, but it is a **machine** approval, not a second pair of human eyes. `SOC2-TSC-mapping.md` CC8.1 states this correctly and was contradicted by this row. |
+| CCC-02 | Is a change-approval process documented? | **Partial** | **Corrected 2026-08-13 — there is no PR-review requirement.** `RULESAd.md` §12 mandates the opposite: *"DO NOT create new branches. ALWAYS push directly to `origin main`"*, with no branch protection. The real, documented gate is automated and pre-push: `npm run verify` (typecheck, lint, 491 tests, `rules_check`, `docs_check`, `a11y_check`, `audit_gate`), and CI re-runs the same guards on `main`. *Corrected 2026-08-23:* this row also cited a monorepo-root checklist script that is not part of this repository. That is a genuine change control, but it is a **machine** approval, not a second pair of human eyes. `SOC2-TSC-mapping.md` CC8.1 states this correctly and was contradicted by this row. |
 | CCC-03 | Are unauthorized changes detected? | Yes | Git history; Cloudflare Worker version history; branch-protection prevents force push. |
 | CCC-04 | Is configuration baseline maintained? | Yes | `wrangler.toml` + `documentation/operations/OPERATIONS.md` binding registry. |
 | CCC-05 | Are separation-of-duty controls enforced? | **Partial** | **Corrected 2026-08-13.** *Within the application*, yes: the six-tier role ladder (`vendor_support > owner > admin > manager > staff > viewer`, `architecture/plac-and-audit.md` §1.1) plus PLAC per-page overrides genuinely separate duties between portal users, and some destructive operations require a second privileged actor (`/api/audit/*` refuses self-targeting). *In the deployment pipeline*, no: a single operator writes, approves and ships every change. Do not present this as an organisational SoD control. |
@@ -126,7 +126,7 @@ CSA-canonical column headers.
 |---|----------|-----|----------|
 | HRS-01 | Are background checks performed on staff with system access? | Partial | Owner-only currently; staff onboarding process documented per contract. |
 | HRS-02 | Is security awareness training provided? | Partial | AI-agent + human operators guided by `RULESAd.md`. |
-| HRS-03 | Are acceptable-use policies signed? | Yes | GitHub organization TOS + `GITHUB_RULES.md`. |
+| HRS-03 | Are acceptable-use policies signed? | Yes | GitHub organization TOS + `RULESAd.md` §12. |
 | HRS-04 | Is access revoked on offboarding? | Yes | Force-kick + session flush + CF Access revocation — `documentation/features/SESSION-MANAGEMENT.md`. |
 
 ### IAM — Identity & Access Management
@@ -213,4 +213,4 @@ CSA-canonical column headers.
 - [ ] Once approved (typically <2 weeks), our listing appears at
       `https://cloudsecurityalliance.org/star/registry/madagascar-hotel`.
 
-_Refreshed 2026-07-08 post-compliance-wave._
+*Refreshed 2026-07-08 post-compliance-wave.*

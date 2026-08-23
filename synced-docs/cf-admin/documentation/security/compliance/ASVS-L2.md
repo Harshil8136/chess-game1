@@ -70,7 +70,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 1.7.1–1.7.2 | Errors, logging, audit architecture | ✅ | Ghost Audit Engine (`documentation/architecture/plac-and-audit.md`); Sentry error tracking; login forensics table. |
 | 1.8.1–1.8.2 | Data protection architecture | ✅ | KV for sessions (1h TTL), Supabase RLS (SEC-09), R2 for CMS assets, IP hashing (`hashIp` in `src/pages/api/emails/send.ts`). |
 | 1.9.1–1.9.2 | Communications architecture | ✅ | HTTPS-only, HSTS `max-age=63072000; includeSubDomains; preload` — set in `src/lib/security/csp.ts:78`, documented in `security/SECURITY.md` §4. TLS enforced by Cloudflare edge. |
-| 1.10.1 | Source code control | ✅ | GitHub + branch policy in `GITHUB_RULES.md`. |
+| 1.10.1 | Source code control | ✅ | GitHub + branch policy in `RULESAd.md` §12. |
 | 1.11.1–1.11.2 | Business-logic architecture | ✅ | Documented in feature docs + `plac-and-audit.md`. |
 | 1.12.1–1.12.2 | File upload architecture | ✅ | R2 for CMS images (`src/pages/api/media/upload.ts` with MIME allowlist + 5MB cap); email attachments in R2 with quota-managed cleanup. |
 | 1.14.1–1.14.6 | Configuration architecture | ✅ | `wrangler.toml` + secrets in Worker Env; `documentation/operations/OPERATIONS.md`. |
@@ -197,7 +197,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 13.2.2 | Schema-validated JSON | ✅ | Zod. |
 | 13.2.3 | REST access controls | ✅ | See V4. |
 | 13.2.5 | Endpoints protected against CSRF | ✅ | See 4.2.2. |
-| 13.2.6 | Reflection/introspection disabled | ✅ | No `/api/docs`, no OpenAPI endpoint public. |
+| 13.2.6 | Reflection/introspection disabled | ✅ | There is no `/api/docs` and no public OpenAPI endpoint. |
 | 13.3.1 | Anti-automation on APIs | ✅ | Upstash Redis rate limits per user/IP. |
 | 13.4.1–13.4.2 | GraphQL | 🚫 | N/A — REST only. |
 
@@ -253,4 +253,4 @@ Residual partials are documented and tracked in `MAINTENANCE.md`.
 > "ASVS audited", or presenting the percentage without the self-assessment
 > qualifier.
 
-_Refreshed 2026-07-08 post-compliance-wave._
+*Refreshed 2026-07-08 post-compliance-wave.*

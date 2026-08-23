@@ -1,7 +1,7 @@
 ---
 
 title: "Architecture Improvement Pass — 2026-07-22 Summary"
-status: active
+status: historical
 audience: [non-technical, ai, technical, operator]
 last_verified: 2026-07-22
 verified_against: [code]
@@ -12,6 +12,10 @@ tags: [architecture, review, benchmark, security, maintainability, summary]
 ---
 
 # Architecture Improvement Pass — 2026-07-22
+
+> **Re-statused `historical` on 2026-08-23.** This is a record of a completed 12-commit pass. It is
+> accurate for the date it carries; do not read it as current state.
+
 
 > **TL;DR (non-technical):** We spent today paying down technical debt that had
 > built up in the admin portal's codebase — not new features, but fixing the
@@ -42,7 +46,7 @@ lint + compliance-check + production-build pass before every push.
 ## 2. What actually changed — 12 commits
 
 All merged directly to `main` per this repo's push-straight-to-main policy
-(`GITHUB_RULES.md`), each independently verified and revertible:
+(`RULESAd.md` §12), each independently verified and revertible:
 
 | # | Commit | What it did |
 |---|--------|--------------|

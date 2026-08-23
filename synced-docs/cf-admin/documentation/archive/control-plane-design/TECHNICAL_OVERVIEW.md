@@ -1,7 +1,7 @@
 ---
 
 title: "Service Control Plane — Technical Overview"
-status: draft
+status: historical
 audience: [ai, technical]
 last_verified: 2026-06-06
 verified_against: [code]
@@ -10,6 +10,16 @@ tags: []
 ---
 
 # Service Control Plane — Technical Overview
+
+> **Archived 2026-08-23.** This is a point-in-time design record, not a
+> description of what is built. It was `draft` and unverified for 78 days, and
+> it specifies routes that were never implemented (`/api/runtime-config`,
+> `/api/config/flush`, `/api/environments/`, `/api/ingest`). For what the
+> control plane actually does today, see
+> [`../../features/CONTROL-PLANE.md`](../../features/CONTROL-PLANE.md) and
+> [`../../features/CONTROL-PLANE-CONNECTORS.md`](../../features/CONTROL-PLANE-CONNECTORS.md).
+> Kept verbatim as a record of the design intent; do not edit.
+
 
 > [!IMPORTANT]
 > **Role names in this document are the pre-2026-07-27 five-tier vocabulary.**

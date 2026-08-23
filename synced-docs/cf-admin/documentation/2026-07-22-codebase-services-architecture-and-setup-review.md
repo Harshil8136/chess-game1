@@ -1,7 +1,7 @@
 ---
 
 title: "Codebase, Services, Architecture & Setup — Deep Technical Review"
-status: active
+status: historical
 audience: [owner, non-technical, technical, operator, ai]
 last_verified: 2026-07-22
 verified_against: [code, infra]
@@ -12,6 +12,10 @@ tags: [architecture, codebase, services, infrastructure, ci-cd, review, benchmar
 ---
 
 # Codebase, Services, Architecture & Setup — Deep Technical Review
+
+> **Re-statused `historical` on 2026-08-23.** This is a dated deep review, superseded by the 2026-08-02 pass and this one. It is
+> accurate for the date it carries; do not read it as current state.
+
 
 > **Date:** 2026-07-22
 > **Scope:** `cf-admin` (worker name `cf-admin-madagascar`) **only** — not cf-astro,
@@ -576,8 +580,8 @@ so none of these are flagged by CI yet, but the *content* has measurably
 drifted from the code in that window:
 
 - **`OPERATIONS.md`'s §1 binding registry** (the doc explicitly designated
-  "single source of truth for current production UUIDs" by `GITHUB_RULES.md`
-  §6) does not list the `SYNC_QUEUE` producer/consumer pair, the DLQ, the
+  "single source of truth for current production UUIDs" by `RULESAd.md`
+  §12 "§6 — Binding IDs are never invented") does not list the `SYNC_QUEUE` producer/consumer pair, the DLQ, the
   two service bindings (`CHATBOT_SERVICE`, `ASTRO_SERVICE`), or the `AI`
   binding — all four are live in `wrangler.toml` today (confirmed in §4.1)
   but were added to the code after this doc's last verification pass.
@@ -587,7 +591,7 @@ drifted from the code in that window:
   Sessions).
 
 None of this is a functional risk — the code is the source of truth and
-works correctly regardless of doc staleness — but per `GITHUB_RULES.md` §6,
+works correctly regardless of doc staleness — but per `RULESAd.md` §12,
 `OPERATIONS.md` is specifically designated as the safety reference an
 operator or future AI session is told to trust before touching binding IDs.
 A stale version of *that specific document* has more blast-radius than a
@@ -632,25 +636,25 @@ volume headroom (100K requests/day), not with binding count.
    false-positive "unused file" findings (§2.4).
 
 ### Near-term (days)
-5. Add integration tests for at least the DAL repository layer and the
+1. Add integration tests for at least the DAL repository layer and the
    retention-purge safety invariants (§2.3) — highest-ROI test investment
    available given current coverage shape.
-6. Continue the god-file split for the remaining 9 files over 500 lines
+2. Continue the god-file split for the remaining 9 files over 500 lines
    (§2.2) — already a tracked, in-progress effort.
-7. Update `architecture/ARCHITECTURE.md` to include the four newer feature
+3. Update `architecture/ARCHITECTURE.md` to include the four newer feature
    modules (Inquiries, ARCO, Retention, Sessions) (§3.4).
-8. Revisit the 2026-07-17 compliance document's GDPR/CCPA percentages given
+4. Revisit the 2026-07-17 compliance document's GDPR/CCPA percentages given
    the ARCO/retention findings in §5.3 — the flagged gap appears substantially
    closed.
 
 ### Structural / policy decisions (weeks, needs a call from the owner)
-9. Decide whether `production-tests.yml` (cross-repo integration test)
+1. Decide whether `production-tests.yml` (cross-repo integration test)
    should run automatically on schema/contract-relevant changes rather than
    manually only (§6.3).
-10. Decide on a periodic (quarterly?) check that the transitive
+2. Decide on a periodic (quarterly?) check that the transitive
     `npm audit` findings haven't moved from build-time-only into the
     runtime bundle, given they're currently accepted as non-blocking (§4.3).
-11. Ship or drop the dead `cms_content_history` table (§5.1) — carried over,
+3. Ship or drop the dead `cms_content_history` table (§5.1) — carried over,
     still open.
 
 ---

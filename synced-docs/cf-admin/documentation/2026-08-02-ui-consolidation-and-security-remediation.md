@@ -1,7 +1,7 @@
 ---
 
 title: "UI Consolidation & Security Remediation — 2026-08-02"
-status: active
+status: historical
 audience: [non-technical, ai, technical, operator]
 last_verified: 2026-08-02
 verified_against: [code]
@@ -11,6 +11,10 @@ tags: [ui, design-system, security, xss, accessibility, refactor, theming, summa
 ---
 
 # UI Consolidation & Security Remediation — 2026-08-02
+
+> **Re-statused `historical` on 2026-08-23.** This is a record of a completed 15-commit remediation pass. It is
+> accurate for the date it carries; do not read it as current state.
+
 
 > **TL;DR (non-technical):** A previous change modernised the Email Portal and
 > main Dashboard, but it also removed a security protection, put fake numbers on
@@ -27,7 +31,7 @@ tags: [ui, design-system, security, xss, accessibility, refactor, theming, summa
 
 Commit `e860dff` ("modernize main dashboard… shadcn-style Preact UI primitives,
 and live Brevo SMTP telemetry") shipped directly to `main`, as this repo's
-[`GITHUB_RULES.md`](../../GITHUB_RULES.md) policy prescribes (single operator, no
+[`RULESAd.md`](../RULESAd.md) §12 policy prescribes (single operator, no
 pull-request gate, `npm run verify` is the only pre-merge control).
 
 A post-merge review of that commit surfaced problems in three distinct classes:
@@ -180,8 +184,9 @@ net).
 
 **Sessions** (`src/components/admin/users/sessions/`) ran an entirely separate
 bespoke `sr-*` CSS class system. `SessionForensicsDrawer.tsx` was the worst
-offender in the whole tree — raw hex gradients (`linear-gradient(180deg,
-#0f172a 0%, #090d16 100%)`, `backgroundColor: '#060911'`) with zero token usage,
+offender in the whole tree — raw hex gradients
+(`linear-gradient(180deg, #0f172a 0%, #090d16 100%)`,
+`backgroundColor: '#060911'`) with zero token usage,
 so it never responded to the light theme at all. Migrated to `Card`/`Badge`;
 `[SUPABASE_PROJECT_REF]`'s KPI ribbon → `MetricCard`, tab bar → `Tabs`, cards →
 `Card`, badges → `Badge`; the two forensic drawers and `ForensicComponents`

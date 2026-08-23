@@ -33,6 +33,7 @@ tags: [blog, ai, rag, seo, architecture, blueprint]
 This document defines the end-to-end architecture, data flows, security posture, and edge delivery model for the **Dynamic D1 Blog, Workers AI RAG (Retrieval-Augmented Generation), and Edge SSR Engine** powering the Madagascar Pet Hotel platform.
 
 ### Industry Benchmark Positioning
+
 | Benchmark | Industry SaaS Standard (Paid Stack) | Madagascar Platform ($0 Architecture) | Performance Delta |
 | :--- | :--- | :--- | :--- |
 | **Monthly Infra Cost** | $450 - $1,200/mo (Vercel + Supabase + Contentful + OpenAI) | **$0.00 / month** (Cloudflare Free Tier) | **100% Cost Reduction** |
@@ -74,7 +75,7 @@ The platform operates as a decoupled, dual-application ecosystem connected via s
 ┌─────────────────────────────────────────┐                     ┌─────────────────────────────────────────┐
 │     Cloudflare D1 (`madagascar-db`)     │◄────────────────────┤       `ISR_CACHE` KV Namespace          │
 │ • `blog_posts` (Published Articles)     │                     │ • Edge HTML Page Caching                │
-│ • `cms_version_history` (Revisions)     │                     │ • Real-time Purge via /api/revalidate   │
+│ • `cms_content_history` (Revisions)     │                     │ • Real-time Purge via /api/revalidate   │
 └───────────────────┬─────────────────────┘                     └─────────────────────────────────────────┘
                     │
                     ▼
@@ -104,11 +105,13 @@ The platform operates as a decoupled, dual-application ecosystem connected via s
 
 ### Phase 2: D1 Database Mutation & Revision Snapshot (`cf-admin`)
 1. **D1 Write**: Article is persisted to D1 database `blog_posts` table:
+
    ```sql
    INSERT INTO blog_posts (id, title, slug, description, body, cover_image, locale, translation_slug, status, pub_date, author, tags, seo_score, aio_data)
    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'published', ?9, ?10, ?11, ?12, ?13);
    ```
-2. **Revision History Snapshot**: Saves copy to `cms_version_history` table for 1-click diff restores.
+
+2. **Revision History Snapshot**: Saves copy to `cms_content_history` table for 1-click diff restores.
 
 ### Phase 3: Real-Time ISR Cache Purge & CDN Invalidation
 1. **Revalidation Webhook Trigger**: `cf-admin` fires POST request to `https://madagascarhotelags.com/api/revalidate`:
@@ -188,10 +191,13 @@ Latency Timeline (Edge SSR Request Lifecycle)
 ### Deploying Schema Migrations
 1. Update D1 schema in `cf-admin/db/schema.sql`.
 2. Apply migration to production:
+
    ```bash
    npx wrangler d1 execute madagascar-db --remote --file=./db/schema.sql
    ```
+
 3. Run TypeScript type check across both workspaces:
+
    ```bash
    cd cf-admin && npx tsc --noEmit
    cd ../cf-astro && npx tsc --noEmit
@@ -199,13 +205,16 @@ Latency Timeline (Edge SSR Request Lifecycle)
 
 ### Verifying ISR Cache Revalidation
 To manually test the revalidation flow from CLI:
+
 ```bash
 curl -X POST https://madagascarhotelags.com/api/revalidate \
   -H "Authorization: Bearer YOUR_REVALIDATION_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"paths": ["/es/blog/guia-pension-canina/"]}'
 ```
+
 Expected response:
+
 ```json
 {
   "revalidated": true,

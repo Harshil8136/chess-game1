@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-12
+last_verified: 2026-08-23
 verified_against: [code, infra]
 owner: harshil
 tags: [security, rls, auth]
@@ -423,10 +423,10 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 | `GET/POST /api/content/faqs` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/stats` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/reviews` | `/dashboard/content` | 2026-05-26 | |
-| `GET/POST /api/media/gallery` | `/dashboard/media` | 2026-05-26 | |
-| `POST /api/media/upload` | `/dashboard/media` | 2026-05-26 | |
-| `GET/DELETE /api/media/library` | `/dashboard/media` | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
-| `POST /api/media/revalidate` | `/dashboard/media` | 2026-05-26 | |
+| `GET/POST /api/media/gallery` | `/dashboard/content/media` | 2026-05-26 | |
+| `POST /api/media/upload` | `/dashboard/content/media` | 2026-05-26 | |
+| `GET/DELETE /api/media/library` | `/dashboard/content/media` | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
+| `POST /api/media/revalidate` | `/dashboard/content/media` | 2026-05-26 | |
 
 All data-bearing API routes that map to a dashboard page now enforce PLAC. Internal/operational endpoints (`/api/health`, `/api/diagnostics/*`, `/api/features/toggle`) remain on role-only gates by design — they don't map to a single dashboard page.
 

@@ -3,7 +3,7 @@
 title: "Documentation Index & Map"
 status: active
 audience: [non-technical, ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-08-23
 verified_against: [code]
 owner: harshil
 related_docs: [CONTRIBUTING-DOCS.md, ../README.md, ../RULESAd.md]
@@ -33,7 +33,7 @@ they were written — useful as history, not as the current state.
 | **System architecture** | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | request lifecycle, module pattern |
 | **Who can do what** | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | **the role ladder — authoritative** |
 | **Security posture** | [`security/SECURITY.md`](security/SECURITY.md) | CSP, auth, RLS, current posture |
-| **Infrastructure, bindings & deploy** | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | **binding registry — authoritative** (`GITHUB_RULES.md` §6) |
+| **Infrastructure, bindings & deploy** | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | **binding registry — authoritative** (`../RULESAd.md` §12) |
 | **What's still open** | [`MAINTENANCE.md`](MAINTENANCE.md) | the one live backlog |
 | **What things cost** | [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md) | **the cost model — authoritative** |
 | **Blog / AI / SEO** | [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | — |
@@ -44,6 +44,16 @@ they were written — useful as history, not as the current state.
 > state a given fact; everything else should link to it rather than restate it.
 > If two documents disagree, the owner wins — and if the owner disagrees with
 > code or config, the code wins and the owner is the bug.
+
+## Naming
+
+| Name | What it refers to |
+|---|---|
+| **cf-admin** | This repository and the Worker it deploys: the internal admin portal at `secure.madagascarhotelags.com`. Written lowercase in prose and paths. |
+| **cf-astro** | Sibling repo — the public marketing site. Not in this checkout. |
+| **cf-chatbot** | Sibling repo — the AI chatbot Worker (web + WhatsApp). Not in this checkout. |
+| **Madagascar Pet Hotel** | The customer whose operation this platform runs. |
+| **Velox** | The commercial product brand under which this platform is sold to other operators. Appears in the commercial and go-to-market documents and in `MAINTENANCE.md` (which references a copy-lint rule living in the Velox repo). It is the same software, marketed — not a separate system. |
 
 ## Status legend
 
@@ -71,11 +81,11 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) | KV caching strategy, quotas, fail-safe fallback chain | ai, technical | active |
 | [`architecture/GLOBAL-CONFIG.md`](architecture/GLOBAL-CONFIG.md) | Research reference (not implemented): dynamic system-wide settings (session timing, theme default, page notices) via a KV-cached, D1-backed config layer — found the D1/UI plumbing already exists but is disconnected from runtime enforcement; fact-checks a JWT-delivery alternative, plus full cost/latency/long-run-maintenance analysis | ai, technical, owner | draft |
 | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
-| [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | active |
-| [`2026-07-05-comprehensive-codebase-and-system-review.md`](2026-07-05-comprehensive-codebase-and-system-review.md) | Full multi-benchmark scorecard (ISO 5055/25010, OWASP, CWE), findings + prioritized fix roadmap | ai, technical, operator, owner | active |
-| [`2026-07-22-architecture-improvement-summary.md`](2026-07-22-architecture-improvement-summary.md) | 12-commit architecture pass: SEC-03/SEC-04 closed, CSP guard fixed, 4 god-files split, before/after benchmark scorecard | non-technical, ai, technical, operator | active |
-| [`2026-07-22-codebase-services-architecture-and-setup-review.md`](2026-07-22-codebase-services-architecture-and-setup-review.md) | Live-verified deep review: codebase health, service topology, DB structure, CI/CD & cross-repo docs-sync pipeline, dependency freshness, findings punch list | owner, non-technical, technical, operator, ai | active |
-| [`2026-08-02-ui-consolidation-and-security-remediation.md`](2026-08-02-ui-consolidation-and-security-remediation.md) | 15-commit pass: stored-XSS regression in the email editor closed, fabricated dashboard KPIs removed (RULE #0.5), shared Preact UI primitives relocated + made theme-aware and rolled out to Sessions/Debug/Bookings (652 → 0 raw colour values), new Menu primitive, 4 god-files split, before/after ratings + explicit verification gaps | non-technical, ai, technical, operator | active |
+| [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | historical |
+| [`2026-07-05-comprehensive-codebase-and-system-review.md`](2026-07-05-comprehensive-codebase-and-system-review.md) | Full multi-benchmark scorecard (ISO 5055/25010, OWASP, CWE), findings + prioritized fix roadmap | ai, technical, operator, owner | historical |
+| [`2026-07-22-architecture-improvement-summary.md`](2026-07-22-architecture-improvement-summary.md) | 12-commit architecture pass: SEC-03/SEC-04 closed, CSP guard fixed, 4 god-files split, before/after benchmark scorecard | non-technical, ai, technical, operator | historical |
+| [`2026-07-22-codebase-services-architecture-and-setup-review.md`](2026-07-22-codebase-services-architecture-and-setup-review.md) | Live-verified deep review: codebase health, service topology, DB structure, CI/CD & cross-repo docs-sync pipeline, dependency freshness, findings punch list | owner, non-technical, technical, operator, ai | historical |
+| [`2026-08-02-ui-consolidation-and-security-remediation.md`](2026-08-02-ui-consolidation-and-security-remediation.md) | 15-commit pass: stored-XSS regression in the email editor closed, fabricated dashboard KPIs removed (RULE #0.5), shared Preact UI primitives relocated + made theme-aware and rolled out to Sessions/Debug/Bookings (652 → 0 raw colour values), new Menu primitive, 4 god-files split, before/after ratings + explicit verification gaps | non-technical, ai, technical, operator | historical |
 | [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | Cross-repo blog AI-generation → publish → SEO/AIO/GEO reference: full workflow, time-to-live tables, quality gate + cadence-lock safety rails, service coordination map, and the security/data-integrity fixes (stored-XSS, silent slug-save bug) found and closed in the same pass | non-technical, ai, technical, operator, owner | active |
 | [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](2026-08-06-data-infrastructure-audit-and-reuse-policy.md) | Live D1 + Supabase table inventory (row counts, dead-table findings: `admin_sessions`, `privacy_requests`, `cms_content_history`) plus the reuse-before-creation policy this drove — see `RULESAd.md` RULE #0.6 | ai, technical, owner | active |
 
@@ -88,7 +98,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/RoPA.md`](security/RoPA.md) | Record of Processing Activities (GDPR Art. 30) — data inventory, legal bases, sub-processors | owner, operator, technical, ai | active |
 | [`security/THREAT-MODEL.md`](security/THREAT-MODEL.md) | STRIDE threat model + data-flow diagram + residual-risk ranking | technical, operator, ai, owner | active |
 | [`security/login-forensics.md`](security/login-forensics.md) | Login forensics subsystem (schema, telemetry, alerts) | ai, technical | active |
-| [`security/reviews/2026-07-17-full-platform-audit.md`](security/reviews/2026-07-17-full-platform-audit.md) | Full-platform OWASP/SOC2/GDPR/CCPA audit + zero-cost roadmap + multi-tenant readiness | technical, operator | active |
+| [`security/reviews/2026-07-17-full-platform-audit.md`](security/reviews/2026-07-17-full-platform-audit.md) | Full-platform OWASP/SOC2/GDPR/CCPA audit + zero-cost roadmap + multi-tenant readiness | technical, operator | historical |
 | [`security/reviews/2026-06-13-security-review.md`](security/reviews/2026-06-13-security-review.md) | Latest security review + remediation, scored (A− 91/100) — full fix pass | technical, operator | historical |
 | [`security/reviews/2026-05-26-security-review.md`](security/reviews/2026-05-26-security-review.md) | Security review (follow-up) | technical | historical |
 | [`security/reviews/2026-05-25-security-review.md`](security/reviews/2026-05-25-security-review.md) | Deep security review | technical | historical |
@@ -124,8 +134,6 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 |-----|---------|----------|--------|
 | [`reference/coding-standards.md`](reference/coding-standards.md) | DAL pattern, TypeScript standards, component rules, naming | ai, technical | active |
 | [`reference/DESIGN-SYSTEM.md`](reference/DESIGN-SYSTEM.md) | Midnight Slate tokens, CSS architecture, components | ai, technical | active |
-| [`reference/control-plane-design/PLAN.md`](reference/control-plane-design/PLAN.md) | Control-plane design doc (provider API specs, phases) | ai, technical | active |
-| [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](reference/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview | ai, technical | active |
 | [`reference/control-plane-design/VISUAL-OVERHAUL-PLAN.md`](reference/control-plane-design/VISUAL-OVERHAUL-PLAN.md) | Control Plane visual/theme-unification proposal, moved from the removed `docs/` tree (2026-08-12) — partially implemented, theme unification still open | ai, technical | draft |
 | [`reference/SYNC-SYSTEM-REVIEW.md`](reference/SYNC-SYSTEM-REVIEW.md) | Sync-system architecture review + durability roadmap (outbox, read-back, versioning) | ai, technical | active |
 | [`reference/schema-change-ledger.md`](reference/schema-change-ledger.md) | RULE #0.7's applied-ledger artifact: one row per migration (file, date, applied by, description), started 2026-08-12, not backfilled | ai, technical | active |
@@ -157,8 +165,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`specs/2026-05-03-settings-design.md`](specs/2026-05-03-settings-design.md) | Settings dashboard design | historical |
 | [`specs/2026-05-12-bookings-header-design.md`](specs/2026-05-12-bookings-header-design.md) | Bookings page header redesign | historical |
 | [`specs/2026-05-13-cms-ui-redesign.md`](specs/2026-05-13-cms-ui-redesign.md) | CMS UI redesign | historical |
-| [`specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) | Payload CMS evaluation (MIT ✓, Cloudflare ✓, Workers-Paid-only ✗) + alternatives + recommended $0 dynamic-blog blueprint on the existing D1 CMS | active |
-| [`specs/2026-07-29-content-and-ai-visibility-engine.md`](specs/2026-07-29-content-and-ai-visibility-engine.md) | Tiptap authoring + Workers AI analysis as a paid module: Tiptap licensing fact-check, measured neuron costs (≈162/post), nine capability additions with the measurement half prioritised first, 110–150 h effort breakdown, and a pricing correction from $14.99+$24.99 to a single $79–129/mo flagship | active |
+| [`specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) | Payload CMS evaluation (MIT ✓, Cloudflare ✓, Workers-Paid-only ✗) + alternatives + recommended $0 dynamic-blog blueprint on the existing D1 CMS | historical |
+| [`specs/2026-07-29-content-and-ai-visibility-engine.md`](specs/2026-07-29-content-and-ai-visibility-engine.md) | Tiptap authoring + Workers AI analysis as a paid module: Tiptap licensing fact-check, measured neuron costs (≈162/post), nine capability additions with the measurement half prioritised first, 110–150 h effort breakdown, and a pricing correction from $14.99+$24.99 to a single $79–129/mo flagship | historical |
 
 ## Runbooks
 
@@ -183,6 +191,8 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`archive/ToDoList.md`](archive/ToDoList.md) | Phase 4 hardening backlog (superseded by MAINTENANCE.md) | historical |
 | [`archive/NEW_FILES_CREATED.md`](archive/NEW_FILES_CREATED.md) | Refactor-session file snapshot | historical |
 | [`archive/REFACTORING_OVERVIEW.md`](archive/REFACTORING_OVERVIEW.md) | Refactoring project overview | historical |
+| [`archive/control-plane-design/PLAN.md`](archive/control-plane-design/PLAN.md) | Control-plane design record (provider API specs, phases). Archived 2026-08-23 — specifies routes never built; see `features/CONTROL-PLANE.md` for what exists | historical |
+| [`archive/control-plane-design/TECHNICAL_OVERVIEW.md`](archive/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview (same design record). Archived 2026-08-23 | historical |
 
 ## Meta
 
@@ -200,4 +210,3 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`../RULESAd.md`](../RULESAd.md) | Operational Rules Bible + policy contract |
 | [`../main.md`](../main.md) | AI entry pointer into `documentation/` |
 | [`../AI_CODE_MAINTENANCE.md`](../AI_CODE_MAINTENANCE.md) | AI-agent code-maintenance rules |
-| [`../../GITHUB_RULES.md`](../../GITHUB_RULES.md) | Git workflow rules |

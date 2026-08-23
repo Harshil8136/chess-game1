@@ -203,6 +203,7 @@ CREATE TABLE IF NOT EXISTS cf_access_sync_log (
   updated_at            INTEGER NOT NULL
 );
 ```
+
 Migration: `migrations/0002_create_cf_access_sync_log.sql`. Applied directly
 to production via the Cloudflare API on 2026-07-24.
 
@@ -215,6 +216,7 @@ ALTER TABLE admin_authorized_users
   ADD COLUMN IF NOT EXISTS cf_sync_error TEXT,
   ADD COLUMN IF NOT EXISTS cf_sync_at TIMESTAMPTZ;
 ```
+
 Migration: `supabase/migrations/20260724000000_add_cf_sync_status_columns.sql`.
 Applied to the production Supabase project (`[SUPABASE_PROJECT_REF]`) on
 2026-07-24.

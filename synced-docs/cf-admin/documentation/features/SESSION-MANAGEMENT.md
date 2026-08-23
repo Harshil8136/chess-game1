@@ -3,7 +3,7 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-13
+last_verified: 2026-08-23
 verified_against: [code]
 owner: ai-agent
 related_docs: [USER-MANAGEMENT.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md]
@@ -21,7 +21,10 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 
 - **Route:** `src/pages/dashboard/sessions/index.astro` → `/dashboard/sessions`
   (top-level, depth-2 so it renders as a sidebar nav item). The old
-  `/dashboard/users/sessions` 301-redirects here.
+  `/dashboard/users/sessions` path was **deactivated**, not deleted: migration
+  `migrations/0002_promote_sessions_page.sql` re-pointed its PLAC overrides here
+  and set `is_active = 0` on the old `admin_pages` rows (verified against live D1
+  2026-08-23).
 - **Sidebar:** the **SECURITY** section (`deriveSection` in `src/lib/auth/plac.ts`).
 - **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin` — the *stored* value; canonical **Admin**, level 2),
   seeded by `migrations/0002_promote_sessions_page.sql`, with action fragments

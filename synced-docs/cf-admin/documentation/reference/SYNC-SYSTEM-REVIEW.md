@@ -3,7 +3,7 @@
 title: "Sync System — Architecture Review & Improvement Plan"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-08-23
 verified_against: [code, live-d1, live-supabase]
 owner: harshil
 tags: [sync, cms, control-plane, reliability, roadmap]
@@ -31,7 +31,7 @@ Three sync planes ride on **one shared substrate**: D1 `madagascar-db`
 (`[D1_MADAGASCAR_DB_ID]`) is bound by **both** workers (see both
 `wrangler.toml` files), so cf-astro reads cf-admin's `cms_content` and
 `service_config` tables **directly**. KV, the edge cache, and the
-`/api/revalidate` webhook exist only to **bust caches faster than D1 read-replica
+`cf-astro/src/pages/api/revalidate.ts` webhook exist only to **bust caches faster than D1 read-replica
 lag** — they do not move the data; D1 already shares it.
 
 | Plane | Write side (cf-admin) | Transport | Read side (cf-astro) | Cache layers |
@@ -141,9 +141,9 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
 
 ### 🟡 Smaller but real
 
-- **S1** — `cms.ts` posts to `http://internal/api/revalidate`; `config-publisher.ts`
+- **S1** — `cms.ts` posts to cf-astro's `http://internal/api/revalidate`; `config-publisher.ts`
   posts to `https://internal/…` — inconsistent service-binding URL.
-- **S2** — `/api/runtime-config` is CDN-cached `max-age=60` **independently** of the
+- **S2** — cf-astro's `/api/runtime-config` is CDN-cached `max-age=60` **independently** of the
   Cache-API flush, so a config purge still serves stale client config up to 60s
   (no tag to purge it).
 - **S3** — Cron watermark advances to `now`, not the last processed `created_at`,
@@ -180,8 +180,9 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
 1.1 **Outbox + Queue-driven revalidation** *(the single highest-leverage change)*.
     In the same D1 write that updates `cms_content` / `service_config`, insert a
     `sync_outbox` row and enqueue a revalidation job on a **Cloudflare Queue**
-    (Queues are already used for email). A consumer worker drives `/api/revalidate`
-    with **retries + DLQ + automatic redrive**. Outcome: a publish is *guaranteed*
+    (Queues are already used for email). A consumer worker drives cf-astro's
+    `/api/revalidate` with **retries + DLQ + automatic redrive**.
+    Outcome: a publish is *guaranteed*
     to propagate or land in a **visible DLQ** — eliminating the silent 1–24h
     split-brain in R1/R2. Keep the in-request `revalidateAstro()` call as the fast
     path; the outbox is the safety net that closes the gap when it fails.
@@ -272,7 +273,7 @@ Tracking which roadmap items have shipped to the review branch
 | Item | Status | Where |
 |---|---|---|
 | 0.3 — unify internal revalidate URL to `https://internal` | ✅ shipped | `cf-admin/src/lib/cms/revalidate.ts` |
-| 0.5 — cache-tag `/api/runtime-config` + purge on `{kind:'config'}` | ✅ shipped | `cf-astro/src/pages/api/{runtime-config,revalidate}.ts` |
+| 0.5 — cache-tag cf-astro's `/api/runtime-config` + purge on `{kind:'config'}` | ✅ shipped | `cf-astro/src/pages/api/{runtime-config,revalidate}.ts` |
 | 1.3 — wire `cms_content_history` (append + prune to last 10) | ✅ shipped | `cf-admin/src/lib/cms/storage.ts` (`recordCmsHistory`) |
 | 1.3b — history read + **rollback** endpoint (republishes via revalidate) | ✅ shipped | `cf-admin/src/pages/api/content/history.ts` |
 | 0.1 — rotate `BETTERSTACK_SOURCE_TOKEN` | ✅ done — rotated in both workers (2026-06-10); observability restored | — |
@@ -327,7 +328,7 @@ Tracking which roadmap items have shipped to the review branch
 
 - CMS pipeline & fallback chain → [`features/CMS.md`](../features/CMS.md)
 - KV quota & failure cascade → [`architecture/KV-RESILIENCE.md`](../architecture/KV-RESILIENCE.md)
-- Control plane (config sync) → [`reference/control-plane-design/TECHNICAL_OVERVIEW.md`](./control-plane-design/TECHNICAL_OVERVIEW.md)
+- Control plane (config sync) → [`features/CONTROL-PLANE.md`](../features/CONTROL-PLANE.md) (the design record moved to [`archive/control-plane-design/TECHNICAL_OVERVIEW.md`](../archive/control-plane-design/TECHNICAL_OVERVIEW.md) on 2026-08-23)
 - Layer-B connectors → [`features/CONTROL-PLANE-CONNECTORS.md`](../features/CONTROL-PLANE-CONNECTORS.md)
 - cf-astro system architecture → `cf-astro/Documentation/SYSTEM-ARCHITECTURE.md`
 - Key files: `cf-admin/src/lib/cms/` (`storage.ts`, `revalidate.ts`), `cf-admin/src/lib/control-plane/config-publisher.ts`,

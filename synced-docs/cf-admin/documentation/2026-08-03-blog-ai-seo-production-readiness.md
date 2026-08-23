@@ -631,7 +631,7 @@ All under `cf-admin/src/pages/api/content/`:
 On the `cf-astro` side, the relevant public-facing surface is entirely
 page rendering (`/es/blog/*`, `/en/blog/*`, `/sitemap-es.xml`,
 `/sitemap-en.xml`) plus one internal, authenticated endpoint,
-`/api/revalidate`, which is what `cf-admin` calls to trigger the
+cf-astro's `/api/revalidate`, which is what `cf-admin` calls to trigger the
 cache-purge/IndexNow sequence.
 
 ---
@@ -639,6 +639,7 @@ cache-purge/IndexNow sequence.
 ## 11. File map — where everything lives
 
 **`cf-admin`** (writing, AI, publishing, safety rails)
+
 ```
 src/pages/api/content/blog.ts              — the main CRUD + gate + cadence endpoint
 src/pages/api/content/ai-generate.ts       — AI article generation
@@ -655,6 +656,7 @@ migrations/0034_blog_quality_gate_and_redirects.sql — this pass's schema addit
 ```
 
 **`cf-astro`** (public rendering, SEO)
+
 ```
 src/lib/blog.ts                            — all D1 reads for the public site + related-posts scoring + redirect lookup
 src/lib/related-posts-static.ts            — related-posts scoring for the legacy static-post fallback path

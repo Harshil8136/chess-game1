@@ -273,7 +273,7 @@ contains only `a11y_check.py`, `audit_gate.py`, `docs_check.py` and
 
 | Missing | What it costs at N clients |
 |---|---|
-| `wrangler.template.toml` | Binding IDs hand-edited per client. `GITHUB_RULES.md §6` records a real April 2026 production outage from exactly this, and a wrong UUID **fails silently** |
+| `wrangler.template.toml` | Binding IDs hand-edited per client. `RULESAd.md` §12 records a real April 2026 production outage from exactly this, and a wrong UUID **fails silently** |
 | `scripts/init-cloudflare.sh` (proposed — does not exist yet) | Provisioning is manual per client |
 | Fleet migration runner | Migrations applied by hand (`MAINTENANCE.md`) |
 | Deploy orchestration | One push deploys one deployment. N clients, N pipelines |
@@ -507,7 +507,7 @@ ceiling, §8 unit economics, §10 ICP, §12 validation plan, §13 claims list),
 `documentation/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`
 (gap register, phased roadmap), `documentation/MAINTENANCE.md` (C-1, C-2, C-6,
 C-8), `documentation/reference/commercial-readiness-checklist.md` (extraction
-Phases A-E, unstarted), `GITHUB_RULES.md` §6 (the April 2026 binding-ID outage),
+Phases A-E, unstarted), `RULESAd.md` §12 (the April 2026 binding-ID outage),
 `scripts/` (fleet tooling absent), and in the sibling repositories
 `cf-astro/lighthouserc.json`, `cf-astro/RULES.md`,
 `cf-astro/Documentation/23-CODEBASE-REVIEW-AND-RATINGS-2026-07.md`,

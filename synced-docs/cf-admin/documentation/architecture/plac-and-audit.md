@@ -3,7 +3,7 @@
 title: "System Architecture: RBAC, PLAC & the Audit Engine"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-08-23
 verified_against: [code]
 owner: harshil
 tags: []
@@ -67,12 +67,12 @@ Translating in code means there is never a moment where the deployed Worker and 
 
 **The ladder is written down once,** in `rbac.ts`. It previously existed in seven places, all typed with an index signature so the compiler could not object when they drifted; two were still on the old ladder after the rename shipped. `test/rbac-roles.test.ts` fails the build on any file outside `rbac.ts` that writes it out again.
 
-**Viewer is enforced, not merely absent.** `resolveApiAuthz()` derives API permission from *page* access, so a viewer granted a page would otherwise inherit its mutations. `src/lib/auth/pipeline.ts` refuses `viewer` on any non-idempotent method regardless of page grants, before the page-access rewrite and covering page routes as well as `/api/*`. It is deliberately not staged behind `API_DENY_MODE`: that flag exists to protect legitimate traffic on 87 pre-existing routes, and a new tier has none.
+**Viewer is enforced, not merely absent.** `resolveApiAuthz()` derives API permission from *page* access, so a viewer granted a page would otherwise inherit its mutations. `src/lib/auth/pipeline.ts` refuses `viewer` on any non-idempotent method regardless of page grants, before the page-access rewrite and covering page routes as well as `/api/*`. It is deliberately not staged behind `API_DENY_MODE`: that flag exists to protect legitimate traffic on the 87 routes that pre-dated it in July 2026 (there are 137 API route files today), and a new tier has none.
 
 ### 1.3 No Hardcoded Bypass
 
 > [!IMPORTANT]
-> **There is no break-glass list, no hardcoded super-admin emails, no fallback grant path.** Every authenticated request must clear (a) Cloudflare Zero Trust at the edge, (b) the `admin_authorized_users` whitelist with `is_active = true`, and (c) the relevant role/PLAC gate. A previously-existing `BREAK_GLASS_EMAILS` array and the `isBreakGlassAdmin()` / `isHardcodedSuperAdmin()` helpers were removed from `src/lib/auth/rbac.ts` — confirmed by the 2026-05-24 deep review (see `SECURITY-REVIEW-2026-05-24.md`) and re-verified in the 2026-05-25 review.
+> **There is no break-glass list, no hardcoded super-admin emails, no fallback grant path.** Every authenticated request must clear (a) Cloudflare Zero Trust at the edge, (b) the `admin_authorized_users` whitelist with `is_active = true`, and (c) the relevant role/PLAC gate. A previously-existing `BREAK_GLASS_EMAILS` array and the `isBreakGlassAdmin()` / `isHardcodedSuperAdmin()` helpers were removed from `src/lib/auth/rbac.ts` — confirmed by the 2026-05-24 deep review (see `../security/reviews/2026-05-24-security-review.md`) and re-verified in the 2026-05-25 review.
 
 Lockout recovery is now operational rather than code-level:
 
@@ -165,7 +165,7 @@ PLAC extends beyond simple "page routing" via **Pseudo-Paths**. This allows micr
 > [!IMPORTANT]
 > The Access Management API (`POST /api/users/access`) enforces **five ironclad gates**. Without them, an Admin could lock out a higher-tier user, or a user with a PLAC deny could self-administer their way back in.
 
-- **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `SECURITY-REVIEW-2026-05-25.md` finding C-1.
+- **Gate A: Rank Supremacy** — The actor must strictly outrank the target. **Hardened 2026-05-25:** the target's role is now read from `admin_authorized_users` on every call. Earlier versions trusted `body.targetUserRole`, which let an actor spoof a low target role to bypass this check; see `../security/reviews/2026-05-25-security-review.md` finding C-1.
 - **Gate B: privileged-account edit protection** — DEV and Owner accounts cannot be *mutated* by lower ranks, and this endpoint rejects such attempts outright. They are no longer *hidden* from lower ranks: as of 2026-07-26 every account appears in the user list and in the access-review export regardless of who is asking. Concealing a supplier account from the customer whose data it can reach is the finding most likely to end a security review, and "you cannot edit it" is the control that was actually wanted.
 - **Gate C: Page Visibility Check** — The actor cannot grant another user access to a page (or granular sub-feature) they cannot see themselves.
 - **Gate D: Natural Ceiling Enforcement** — Grants are capped at the actor's clearance ceiling. An Admin cannot grant a Staff member access to a DEV-required tool.
@@ -201,7 +201,7 @@ if (denied) return denied;
 
 - **Users surface (`/dashboard/users`):** `users/index`, `users/activity`, `users/pages`, `users/access`, `users/probes`, `users/cf-access-audit`, `users/active-sessions` (GET + DELETE), `users/active-revocations` (GET + DELETE).
 - **Content surface (`/dashboard/content`):** `content/services` (GET + POST), `content/blocks` (POST), `content/faqs` (GET + POST), `content/stats` (GET + POST), `content/reviews` (GET + POST).
-- **Media surface (`/dashboard/media`):** `media/gallery` (GET + POST), `media/upload` (POST), `media/library` (GET + DELETE), `media/revalidate` (POST).
+- **Media surface (`/dashboard/content/media`):** `media/gallery` (GET + POST), `media/upload` (POST), `media/library` (GET + DELETE), `media/revalidate` (POST).
 - **Settings surface (`/dashboard/settings`):** `settings/portal` (GET + POST).
 - **Audit surface — parent-deny propagation:** `audit/login-logs` (GET) and `audit/export` (POST) now call `placDenyResponse(actor, '/dashboard/logs')` as their first gate, so a deny on the parent page blocks the `#security` and `#export` hash sub-pages too via longest-prefix matching. The existing hash-grant logic remains as the secondary check.
 - **Audit surface:** `audit/silence` was **deleted** on 2026-07-26 along with the suppression feature behind it. See §3.

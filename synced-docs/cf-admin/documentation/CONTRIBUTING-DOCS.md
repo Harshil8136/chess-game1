@@ -3,7 +3,7 @@
 title: "Documentation Conventions & Governance"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-08-23
 verified_against: [code]
 owner: harshil
 related_docs: [README.md,_templates/doc-template.md,commercial/MODULE-PRICING-CATALOG.md]
@@ -35,13 +35,14 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 | `main.md` | AI entry pointer into `documentation/` |
 | `AI_CODE_MAINTENANCE.md` | AI-agent maintenance rules (referenced by `RULESAd.md`) |
 
-> **`GITHUB_RULES.md` is not one of them — corrected 2026-08-13.** This table
-> listed it as a cf-admin root file. It actually lives one level up, at the
-> **monorepo** root (`../GITHUB_RULES.md`), because its rules govern every repo
-> in the workspace, not just this one. The stray local copy was deleted on
-> 2026-08-12 and `RULESAd.md` §12 links to `../GITHUB_RULES.md`. It stays in
-> `docs_check.py`'s `ROOT_EXEMPT` set only so that a future local copy would not
-> trip the front-matter rule.
+> **There is no fifth root file — corrected 2026-08-23.** This table once listed
+> a git-rules file as a cf-admin root doc. It never lived here: it sat at the
+> **monorepo** root, and this repo is now standalone, so every reference to it
+> was a link that could not resolve. The rules still in force — verify the
+> working directory before pushing, push directly to `origin main`, and never
+> invent a binding UUID — now live in `RULESAd.md` §12 "Git & deployment
+> protocol", which is the authority those docs cite. Do not reintroduce a
+> pointer to a file outside this repository.
 
 ## 2. Folder map
 
@@ -104,7 +105,7 @@ enforced on those.
   `documentation/` to a public repo on each push to `main`, and its secret scan
   is **warning-only** with patterns that only match token shapes — a bare
   hostname or endpoint sails through. A live Upstash endpoint sat in
-  `reference/control-plane-design/PLAN.md` for exactly that reason.
+  `archive/control-plane-design/PLAN.md` for exactly that reason.
 
 ## 7. Adding or moving a doc
 

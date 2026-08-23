@@ -1,7 +1,7 @@
 ---
 
 title: "Full-Platform Security & Compliance Audit — OWASP / SOC 2 / GDPR / CCPA"
-status: active
+status: historical
 audience: [technical, operator]
 last_verified: 2026-08-13
 verified_against: [code]
@@ -10,6 +10,10 @@ tags: [security, compliance, owasp, soc2, gdpr, ccpa, audit]
 ---
 
 # Full-Platform Security & Compliance Audit
+
+> **Re-statused `historical` on 2026-08-23.** This is a point-in-time audit; every other doc in `security/reviews/` is historical. It is
+> accurate for the date it carries; do not read it as current state.
+
 
 > **Date:** 2026-07-17
 > **Scope:** `cf-admin-madagascar` — full stack: application code, auth/RBAC/PLAC,
@@ -176,7 +180,7 @@ All changes verified: `tsc` 0 errors, ESLint 0 errors, 58/58 vitest tests pass
 | O8 | Low | CI gates advisory: `npm audit \|\| true`, `rules_check --warn-only`; floating (non-SHA) action tags | `.github/workflows/*` | Top10 A06/A08 |
 | O9 | Low | No prod/staging env separation in `wrangler.toml`; D1 shared with cf-astro | `wrangler.toml` | ASVS V14, SOC2 CC8 |
 | O10 | Low | Residual CSP `unsafe-inline`; dead `public/_headers`; duplicate report-only CSP header | `src/lib/security/csp.ts`, `public/_headers` | ASVS V14 |
-| O11 | Info | Direct-push-to-main deploy, no PR gate (per GITHUB_RULES.md) | `GITHUB_RULES.md` | SOC2 CC8 |
+| O11 | Info | Direct-push-to-main deploy, no PR gate | `RULESAd.md` §12 | SOC2 CC8 |
 | O12 | Accepted | `sync-docs.yml` publishes security internals + infra IDs to public `Harshil8136/chess-game1` (owner-accepted for AI-IDE context) | `.github/workflows/sync-docs.yml` | Info-exposure |
 
 ---

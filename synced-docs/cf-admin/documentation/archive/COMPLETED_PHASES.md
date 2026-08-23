@@ -733,7 +733,7 @@ npx tsc --noEmit  →  0 errors
 
 **Date:** 2026-05-25
 **Shipped:** PR #2 → `main` (merge commit `3f8cd78`), 7 atomic commits on `claude/codebase-security-review-LhIkr`.
-**Full report:** `documentation/SECURITY-REVIEW-2026-05-25.md`
+**Full report:** `../security/reviews/2026-05-25-security-review.md`
 
 The 2026-05-25 deep-review pass surfaced 35 new findings on top of the 2026-05-24 review. Phase 12 lands the 2 Critical and 5 High items. 14 Medium + 14 Low items are tracked in `PENDING_PHASES.md` and `ToDoList.md` Section II.
 
@@ -811,7 +811,7 @@ The previous bust-and-retry path fetched fresh keys into a local variable it nev
 
 **Single atomic commit:** `27e6090` — 28 files changed, +637 / −319.
 **Branch:** `claude/codebase-review-branch-fixes-WZg5d` → `main`.
-**Full report:** `documentation/SECURITY-REVIEW-2026-05-26.md`.
+**Full report:** `../security/reviews/2026-05-26-security-review.md`.
 
 This pass closed every Medium and Low item from the 2026-05-25 review that had a meaningful exploit path or genuine functional impact, plus the full dependency CVE list. Production `npm audit` went from **16 vulnerabilities (3 high, 12 moderate, 1 low) to 0**.
 

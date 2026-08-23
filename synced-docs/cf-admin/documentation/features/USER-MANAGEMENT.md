@@ -3,7 +3,7 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-12
+last_verified: 2026-08-23
 verified_against: [code, infra]
 owner: harshil
 related_docs: [CF-ACCESS-SYNC.md]
@@ -121,7 +121,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/sessions/active-revocations.ts` | (admin+) | KV revocation block list + unblock | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
 | `src/pages/api/sessions/flush-sessions.ts` | (admin+) | Bulk session flush | ✅ `/dashboard/users` |
 | `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
-| `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ `/dashboard/users/sessions` |
+| `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ effective gate `/dashboard/users` |
 | `src/pages/api/features/toggle.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Feature flag mutation | (role-only — Vendor Support is PLAC-exempt) |
 | `src/pages/api/diagnostics/ping.ts` | `isDev` (deprecated alias for `isVendorSupport`) | System diagnostics | (role-only — Vendor Support is PLAC-exempt) |
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
@@ -380,7 +380,7 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
 | `GET /api/users` | PLAC (`/dashboard/users`); no role floor beyond authentication — see §2.1 | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
-| `GET /api/users/[id]/session-status` | PLAC (`/dashboard/users/sessions`); `isOwnerOrVendor` gates the ghost-target sub-case only — see §2.1 | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
+| `GET /api/users/[id]/session-status` | PLAC — the handler passes the deactivated page key `/dashboard/users/sessions`, which resolves by longest-prefix to `/dashboard/users` (see note below); `isOwnerOrVendor` gates the ghost-target sub-case only — see §2.1 | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
 | `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `[SUPABASE_PROJECT_REF]` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
@@ -406,7 +406,7 @@ The `summary` shows total login count, success count, and failure count across a
 
 ### 11.5 Access Probe Feed
 
-The `AccessProbePanel` component (rendered below the User Registry for Owner+ only, `client:idle`) surfaces emails that successfully authenticated via CF OTP but were blocked by the Supabase whitelist gate. 
+The `AccessProbePanel` component (rendered below the User Registry for Owner+ only, `client:idle`) surfaces emails that successfully authenticated via CF OTP but were blocked by the Supabase whitelist gate.
 
 > **Note on Edge Blocking:** Since the system now uses automated Cloudflare Access Group synchronization (blocking unauthorized emails at the CF Edge), the Worker middleware will rarely see unauthorized attempts, meaning the Access Probe Feed will likely remain empty unless the CFZT policy is temporarily changed to OTP-Open.
 
@@ -445,7 +445,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | Data | Exposure | Rationale |
 |------|----------|-----------|
 | `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
-| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with `/dashboard/users/sessions` PLAC access (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
+| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with `/dashboard/users` PLAC access (the effective gate — see the page-key note in §2.1) (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
 | Full IP addresses | Vendor Support actor only | PII — other actors see masked `X.X.***.***` |
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |

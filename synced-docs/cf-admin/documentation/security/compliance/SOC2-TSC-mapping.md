@@ -122,7 +122,7 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `vitest` (347 tests), then `rules_check.py`, `docs_check.py`, `a11y_check.py`, `audit_gate.py` — and the same gates re-run in CI on push to `main` (`quality.yml`, `security.yml`, `docs-quality.yml`). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `GITHUB_RULES.md` mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** CI gates are blocking, so a failing change is visible immediately after push rather than approved before it. Branch protection on `main` with CI as a required status check is authorised and pending enablement. Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `GITHUB_RULES.md` and the repo's own audit. |
+| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `vitest` (491 tests), then `rules_check.py`, `docs_check.py`, `a11y_check.py`, `audit_gate.py` — and the same gates re-run in CI on push to `main` (`quality.yml`, `security.yml`, `docs-quality.yml`). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `RULESAd.md` §12 mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** CI gates are blocking, so a failing change is visible immediately after push rather than approved before it. Branch protection on `main` with CI as a required status check is authorised and pending enablement. Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `RULESAd.md` §12 and the repo's own audit. |
 
 ## CC9 — Risk Mitigation
 
@@ -179,4 +179,4 @@ small-scope, single-service report.
 - **Q3 2027 onwards**: Type II readiness (12-month operating-effectiveness
   window). Refresh review cadence to weekly for hot paths.
 
-_Refreshed 2026-07-08 post-compliance-wave._
+*Refreshed 2026-07-08 post-compliance-wave.*
