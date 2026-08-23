@@ -31,7 +31,8 @@ they were written — useful as history, not as the current state.
 | **New to the project** | root [`README.md`](../README.md) | — |
 | **Operating rules & policy** | root [`RULESAd.md`](../RULESAd.md) | stack versions, policy limits, gate status |
 | **System architecture** | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | request lifecycle, module pattern |
-| **Who can do what** | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | **the role ladder — authoritative** |
+| **Who can do what** | [`architecture/PERMISSIONS-SYSTEM.md`](architecture/PERMISSIONS-SYSTEM.md) | **the permission model — authoritative** (role ladder, PLAC, API authz, revocation, measured cost) |
+| **Audit engine internals** | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | **the Ghost Audit engine — authoritative** |
 | **Security posture** | [`security/SECURITY.md`](security/SECURITY.md) | CSP, auth, RLS, current posture |
 | **Infrastructure, bindings & deploy** | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | **binding registry — authoritative** (`../RULESAd.md` §12) |
 | **What's still open** | [`MAINTENANCE.md`](MAINTENANCE.md) | the one live backlog |
@@ -80,6 +81,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md) | System blueprint for D1 Blog, Workers AI RAG context retrieval, ISR cache purge, and Edge SSR | ai, technical, operator | active |
 | [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) | KV caching strategy, quotas, fail-safe fallback chain | ai, technical | active |
 | [`architecture/GLOBAL-CONFIG.md`](architecture/GLOBAL-CONFIG.md) | Research reference (not implemented): dynamic system-wide settings (session timing, theme default, page notices) via a KV-cached, D1-backed config layer — found the D1/UI plumbing already exists but is disconnected from runtime enforcement; fact-checks a JWT-delivery alternative, plus full cost/latency/long-run-maintenance analysis | ai, technical, owner | draft |
+| [`architecture/PERMISSIONS-SYSTEM.md`](architecture/PERMISSIONS-SYSTEM.md) | **The permission model, authoritative** — RBAC ladder, ACM page registry, PLAC overrides, the request lifecycle and every rejection path, provisioning gates, revocation timing, measured latency and resource accounting, and a comparison against Zanzibar/OpenFGA, Auth0/Keycloak and policy-engine designs | ai, technical, operator | active |
 | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | RBAC + PLAC resolution + Ghost Audit Engine internals | ai, technical | active |
 | [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Comprehensive ISO5055 benchmark, code quality, and MCP service audit | ai, technical | historical |
 | [`2026-07-05-comprehensive-codebase-and-system-review.md`](2026-07-05-comprehensive-codebase-and-system-review.md) | Full multi-benchmark scorecard (ISO 5055/25010, OWASP, CWE), findings + prioritized fix roadmap | ai, technical, operator, owner | historical |

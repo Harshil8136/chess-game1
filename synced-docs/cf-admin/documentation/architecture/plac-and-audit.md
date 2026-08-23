@@ -11,6 +11,13 @@ tags: []
 
 # System Architecture: RBAC, PLAC & the Audit Engine
 
+> **Scope note (2026-08-23).** The permission *model* — the role ladder, the PLAC
+> resolution algorithm, API authorization, revocation timing and measured cost — is
+> now owned by [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md). This document
+> remains authoritative for the **Ghost Audit engine** and the audit trail. Where the
+> two overlap, the permissions document wins.
+
+
 > **TL;DR (non-technical):** How the portal decides who can see and do what (roles plus per-page permissions), and how it records every sensitive action for accountability — all without slowing pages down.
 
 > [!NOTE]

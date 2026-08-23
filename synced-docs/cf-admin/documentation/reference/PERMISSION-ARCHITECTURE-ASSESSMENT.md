@@ -13,6 +13,11 @@ tags: [rbac, plac, authorization, cfzt, kv, d1, scaling, benchmarks, assessment,
 
 # Permission Architecture Assessment — Current System vs. Proposed JWT Design
 
+> **Status note (2026-08-23).** This is an assessment of alternatives. For what is
+> actually built and measured today, see
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+
+
 > **TL;DR (non-technical):** Someone (an AI, in an earlier discussion) proposed replacing
 > today's login-and-permissions system with one based on browser-held signed tokens
 > (JWTs) instead of the server-held sessions cf-admin uses today. This document verifies

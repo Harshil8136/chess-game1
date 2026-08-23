@@ -13,6 +13,11 @@ tags: [rbac, pbac, dynamic-roles, permissions, d1, kv, architecture, design, gre
 
 # Dynamic Roles, Fixed Permissions — A Greenfield PBAC Design
 
+> **Status note (2026-08-23).** This is a proposed successor model, not the shipped
+> system. For what is actually built today, see
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+
+
 > **TL;DR (non-technical):** This document answers a specific question: *if we were
 > designing the permissions system from a blank page today, using the same free
 > Cloudflare/Supabase/Upstash/Sentry/PostHog stack, how would we make user roles fully

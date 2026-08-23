@@ -12,6 +12,11 @@ tags: []
 
 # Manage Users & RBAC Architecture
 
+> **Scope note (2026-08-23).** This document covers the account lifecycle and the
+> admin UI. The permission model it rests on — roles, PLAC, the provisioning gates —
+> is owned by [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+
+
 > [!IMPORTANT]
 > **Role names changed on 2026-07-27.** The ladder is now
 > `vendor_support > owner > admin > manager > staff > viewer` (six tiers,

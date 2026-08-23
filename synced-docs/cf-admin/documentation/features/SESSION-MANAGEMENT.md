@@ -12,6 +12,11 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 
 # Session Management
 
+> **Scope note (2026-08-23).** This document covers the sessions console. Session
+> lifecycle, revocation layers and their timing are described in full in
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+
+
 > **TL;DR:** The **Security → Sessions** page (`/dashboard/sessions`) is the
 > first-class home for live edge sessions, login forensics, and edge revocation
 > blocks. Gated to canonical **Admin** and above (stored `super_admin`+) via a dedicated PLAC page row; bulk flush is

@@ -13,6 +13,11 @@ tags: [rbac, abac, pbac, rebac, permissions, scale, authorization, research, zan
 
 # Permissions at Scale — From 6 Roles/20 Staff to 100+ Roles/1000+ Staff
 
+> **Status note (2026-08-23).** This is forward-looking scaling analysis. For what is
+> actually built and measured today, see
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+
+
 > **TL;DR (non-technical):** cf-admin's current permission system (6 roles, page-level
 > overrides) is a small, well-built version of a pattern the whole industry uses. This
 > document is a research-backed teaching reference for what changes — and what doesn't —
