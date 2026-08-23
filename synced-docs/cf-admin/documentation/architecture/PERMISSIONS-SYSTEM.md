@@ -80,14 +80,21 @@ path prefixes, and no delegation. See §15.
 
 ```mermaid
 flowchart TD
-    U[Browser] -->|CF_Authorization JWT| CFA[Cloudflare Access<br/>identity provider]
-    CFA --> W[Worker: Astro SSR<br/>secure.madagascarhotelags.com]
-    W -->|1 read, ~97.6% of requests| KV[(Workers KV<br/>session + access map)]
-    W -->|cold login only| SB[(Supabase Postgres<br/>admin_authorized_users)]
-    W -->|map (re)compute only| D1[(D1<br/>admin_pages + admin_page_overrides)]
-    W -->|audit, via waitUntil| D1
-    CRON[Cron */5] -->|group reconcile| CFAPI[Cloudflare Access API]
+    U["Browser"] -->|"CF_Authorization JWT"| CFA["Cloudflare Access<br/>identity provider"]
+    CFA --> W["Worker — Astro SSR<br/>secure.madagascarhotelags.com"]
+    W -->|"JWKS certs — module-scope cached, ~1.7% of requests"| CFA
+
+    W ==>|"WARM PATH — 1 read, ~97.6% of requests"| KV[("Workers KV<br/>session record + access map")]
+    W -->|"cold login only — avg 244 ms"| SB[("Supabase Postgres<br/>admin_authorized_users")]
+    W -->|"map re-compute only — 0.65 ms"| D1[("D1<br/>admin_pages + admin_page_overrides")]
+    W -.->|"audit, after response via waitUntil"| D1
+
+    W --- SCHED["Scheduled handler<br/>same Worker, every 5 min"]
+    SCHED -->|"group membership reconcile"| CFAPI["Cloudflare Access API"]
 ```
+
+The thick edge is the only one on the hot path. Everything else runs on a cold
+login, on a re-compute, or after the response has already been sent.
 
 | Fact | Owner | Read on the hot path? |
 |---|---|---|
