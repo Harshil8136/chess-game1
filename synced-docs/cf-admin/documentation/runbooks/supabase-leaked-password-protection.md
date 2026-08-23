@@ -3,7 +3,7 @@
 title: "Runbook: Enable Supabase Leaked-Password Protection"
 status: active
 audience: [operator, owner]
-last_verified: 2026-07-08
+last_verified: 2026-08-23
 verified_against: [supabase-mcp]
 owner: harshil
 related_docs: [../security/SECURITY.md, ../security/compliance/ASVS-L2.md]

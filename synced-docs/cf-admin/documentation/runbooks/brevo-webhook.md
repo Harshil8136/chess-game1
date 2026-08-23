@@ -3,7 +3,7 @@
 title: "Runbook: Brevo Delivery Webhook"
 status: active
 audience: [technical, operator]
-last_verified: 2026-07-08
+last_verified: 2026-08-23
 verified_against: [code, config]
 owner: ai-agent
 related_docs: [../features/EMAIL-PORTAL.md, ../security/SECURITY.md]

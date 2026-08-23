@@ -1,7 +1,7 @@
 ---
 
 title: "Comprehensive Codebase & System Review — Multi-Benchmark Scorecard (2026-07-05)"
-status: active
+status: historical
 audience: [ai, technical, operator, owner]
 last_verified: 2026-07-05
 verified_against: [code, mcp, config]
