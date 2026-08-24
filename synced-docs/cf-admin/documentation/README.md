@@ -122,6 +122,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/CONTROL-PLANE-CONNECTORS.md`](features/CONTROL-PLANE-CONNECTORS.md) | Layer-B connector reference (Sentry/PostHog/Cloudflare/Supabase) | ai, technical | active |
 | [`features/STAFF-MANAGED-STORAGE.md`](features/STAFF-MANAGED-STORAGE.md) | Staff Managed Storage: private per-role file drive, external vendor sharing with email delivery, inbound File Request Links (added 2026-08-09), weekly drift reconciliation, admin quota/config controls — shipped 2026-08-05; business-value/market-comparison section added 2026-08-13 | non-technical, ai, technical, operator | active |
 | [`features/SEARCH-CONSOLE-SYNC.md`](features/SEARCH-CONSOLE-SYNC.md) | Search Console Sync: automated Google Search Console sitemap/indexing checks + weekly PageSpeed Insights (Core Web Vitals), read-only/ToS-compliant by design, full call-level audit log, CSV export, ops-alert emails, business-value & market-comparison analysis — shipped 2026-08-12 | non-technical, ai, technical, operator, owner | active |
+| [`features/GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](features/GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md) | Google Search Console Error Auto-Healing & Validation Readiness Engine: 5-category diagnostic triage, 12h automated cron readiness scoring, in-place collapsible drawers, RULESAd §7.8 native dialog compliance, and main dashboard integration — shipped 2026-08-24 | non-technical, ai, technical, operator, owner | active |
 
 ## Operations
 

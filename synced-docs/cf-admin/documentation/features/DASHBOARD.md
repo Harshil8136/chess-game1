@@ -47,14 +47,22 @@ The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero
 The dashboard is composed of the following visual rows, from top to bottom:
 
 1. **Setup Banner** — Amber, dismissible — only visible if analytics token is missing
-2. **Dashboard Header** — "Overview" title + Health Orb Dropdown + Refresh Button
-3. **Row 1 (2-column):** Cloudflare Workers (cf-admin vs cf-astro) | Usage Limits (6 quota cells, 3-col grid)
-4. **Row 2 (2-column):** Edge Analytics 24h chart (responsive) | Supabase Cluster (Tabbed Widget: PostgreSQL Performance + Auth Metrics)
-5. **Storage & Queues** — Full-width (R2 + D1 + Email Queue)
-6. **Quick Actions** — Full-width action buttons
-7. **Audit Log Feed** — Full-width, 8 recent entries
+2. **Dashboard Header & Service Status Strip** — "Overview" title + Health Orb Dropdown + Refresh Button + **Live Service Strip (7 Services: Network, D1, Security, SEO/GSC, Brevo, Sentry, Queues)**
+3. **Top KPI Ribbon (4 Metric Cards):** Edge Traffic (24h) | Auth Users (30d MAU) | Database Operations (24h) | **GSC Validation Health (100% Ready · Auto-Healed)**
+4. **Interactive Dashboard Tabs:**
+   - **Overview:** Main combined infrastructure view
+   - **System Health:** Deep latency and error rates
+   - **Cloudflare Workers:** Multi-worker execution analytics
+   - **Database & Storage:** Supabase and R2 storage
+   - **Google Search Console & Indexing:** Dedicated **GscValidationWidget** with 12h auto-cron badge, 4 category summary tiles, and 5-category diagnostic matrix
+   - **Audit Log:** Portal security events
+5. **Row 1 (2-column):** Cloudflare Workers (cf-admin vs cf-astro) | Usage Limits (6 quota cells, 3-col grid)
+6. **Row 2 (2-column):** Edge Analytics 24h chart (responsive) | Supabase Cluster (Tabbed Widget: PostgreSQL Performance + Auth Metrics)
+7. **Storage & Queues** — Full-width (R2 + D1 + Email Queue)
+8. **Quick Actions** — Full-width action buttons
+9. **Audit Log Feed** — Full-width, 8 recent entries
 
-**Note:** The former "Business Engine" ticket card and standalone `DatabaseMetricsWidget` were removed. Analytics are now consolidated. Active Application Users is displayed contextually within the Supabase Auth tab.
+**Note:** The former "Business Engine" ticket card and standalone `DatabaseMetricsWidget` were removed. Analytics are now consolidated. Active Application Users is displayed contextually within the Supabase Auth tab. GSC Validation health is deeply integrated into both the Overview and dedicated Search Console tabs.
 
 ---
 
