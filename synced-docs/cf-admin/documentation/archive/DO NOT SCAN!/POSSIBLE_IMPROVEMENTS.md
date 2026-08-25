@@ -31,7 +31,7 @@ All proposed enhancements strictly adhere to the project's non-negotiable archit
 
 ```mermaid
 flowchart TD
-    subgraph [SUPABASE_PROJECT_REF] [Proposed Improvement Modules]
+    subgraph [SUPABASE_PROJECT_REF] ["Proposed Improvement Modules"]
         SearchAI["1. Search & Query Intelligence"]
         BillerLive["2. Biller & Notes Engine Upgrades"]
         CSRTools["3. CSR Workflow Accelerators"]
@@ -187,21 +187,21 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph Phase1 [Phase 1: High Impact and Zero Risk]
+    subgraph Phase1 ["Phase 1: High Impact and Zero Risk"]
         P1a["Multi-Token Query Routing"]
         P1b["In-Card Notes Search Filter"]
         P1c["Live Region a11y Announcements"]
         P1d["Focus Restoration Engine"]
     end
 
-    subgraph Phase2 [Phase 2: CSR Workflow Accelerators]
+    subgraph Phase2 ["Phase 2: CSR Workflow Accelerators"]
         P2a["Quick-Paste Snippet Drawer"]
         P2b["Interactive Fee Calculator"]
         P2c["Dynamic Tab Counter Badges"]
         P2d["Recent Search History Dropdown"]
     end
 
-    subgraph Phase3 [Phase 3: Advanced Intelligence and Performance]
+    subgraph Phase3 ["Phase 3: Advanced Intelligence and Performance"]
         P3a["Operating Hours Status (Open/Closed)"]
         P3b["Precompiled Fuse Index Storage"]
         P3c["Call Scratchpad & CRM Note Builder"]
