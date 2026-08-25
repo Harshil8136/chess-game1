@@ -24,22 +24,22 @@
 **BillerHub** is an ultra-lightweight, zero-dependency, client-side Single Page Application (SPA) purpose-built for Customer Service Representatives (CSRs) operating in high-volume utility and payment processing call centers (specifically tuned for enterprise billing ecosystems).
 
 ```mermaid
-graph TD
-    subgraph UserWorkflows ["Core User Workflows"]
+flowchart TD
+    subgraph UserWorkflows [Core User Workflows]
         CSR["CSR on Live Call"] --> Search["Smart Search Engine"]
         CSR --> AreaLookup["Area Code & Geolocation Hub"]
         CSR --> FeeTool["Fee Investigation Cockpit"]
         CSR --> BillerCard["Biller Information Card"]
     end
 
-    subgraph ClientArchitecture ["Client Architecture"]
+    subgraph ClientArchitecture [Client Architecture]
         Search --> CoreEngine["In-Memory O(1) Hash Map & Fuse.js"]
         AreaLookup --> LocationData["Master Area Code & Timezone Dictionary"]
         FeeTool --> SummaryBuilder["Live Summary & TL Escalation Builder"]
         BillerCard --> NotesEngine["Tri-Model Dynamic Notes Renderer"]
     end
 
-    subgraph StorageLayer ["Storage & Offline Layer"]
+    subgraph StorageLayer [Storage and Offline Layer]
         CoreEngine --> Cache["IndexedDB + LocalStorage (24h TTL)"]
         SummaryBuilder --> FormPersist["Debounced LocalStorage Autosave"]
     end
@@ -136,12 +136,12 @@ Handles three fundamentally different organizational structures:
 
 ```mermaid
 sequenceDiagram
-    participant Browser
+    participant Browser as Client Browser
     participant Loader as loader.js
     participant DataManager as data-manager.js
     participant DB as db.js (IndexedDB)
     participant AppMain as app-main.js
-    participant UI as UI Layer
+    participant UI as UI Module Layer
 
     Browser->>Loader: index.html loads loader.js
     Loader->>Loader: Inject 19 CSS stylesheets in parallel
@@ -217,14 +217,14 @@ Every suggestion click, favorite lookup, and directory modal interaction resolve
 
 ```mermaid
 flowchart TD
-    subgraph ColdBoot ["Cold Start (Approx 95ms Total)"]
+    subgraph ColdBoot [Cold Start Breakdown - Approx 95ms Total]
         C1["DOM Parsing & CSS Injection (25ms)"] --> C2["Sequential Script Loading (40ms)"]
         C2 --> C3["Regional Bundles Merge (15ms)"]
         C3 --> C4["IndexedDB Store & Map Build (10ms)"]
         C4 --> C5["Fuse.js Init & Splash Fade (5ms)"]
     end
 
-    subgraph WarmBoot ["Warm Start (Approx 18ms Total)"]
+    subgraph WarmBoot [Warm Start Breakdown - Approx 18ms Total]
         W1["DOM Parsing & CSS Injection (8ms)"] --> W2["Sequential Script Load (6ms)"]
         W2 --> W3["IndexedDB Fast Read (2ms)"]
         W3 --> W4["Fuse.js Ready & Splash Fade (2ms)"]
@@ -260,7 +260,7 @@ Running web applications under the `file:///` protocol introduces unique browser
 
 ```mermaid
 flowchart TD
-    subgraph BrowserSandbox ["Browser Security Sandbox (file:/// Protocol)"]
+    subgraph BrowserSandbox [Browser Security Sandbox]
         LocalFile["Local index.html"] --> Sandbox["Browser Security Sandbox"]
         Sandbox -->|Allowed| WebStorage["localStorage & sessionStorage"]
         Sandbox -->|Allowed| IDB["IndexedDB (BillerHubDB)"]
@@ -329,14 +329,14 @@ BillerHub is architected to operate with 100% offline autonomy for core operatio
 
 ```mermaid
 flowchart LR
-    subgraph OfflineCore ["Offline Core Subsystem"]
+    subgraph OfflineCore [Offline Core Subsystem]
         Catalog["Biller Catalog & Search"]
         AreaCodes["Area Code & Geolocation"]
         Cockpit["Investigation Cockpit & Notes"]
         ThemeEngine["Themes & Layout Controls"]
     end
 
-    subgraph ExternalServices ["External Background Services"]
+    subgraph ExternalServices [External Background Services]
         Weather["Open-Meteo REST API"] --> SessionStorage["sessionStorage (15-min cache)"]
         Telemetry["Firebase Telemetry"] --> IDBQueue["IndexedDB Event Queue"]
         CDNs["FontAwesome & GSAP CDNs"] --> SWCache["sw.js Cache-First Store"]
@@ -358,7 +358,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph ArchitectureComparison ["Architecture Comparison: Portability vs Complexity"]
+    subgraph ArchitectureComparison [Architecture Comparison]
         A1["BillerHub (Vanilla SPA)"] --> A1Desc["Zero build overhead, sub-millisecond search, under 15MB RAM"]
         A2["React / Vite Web App"] --> A2Desc["Requires node/npm build, 60-140MB RAM, 400-1200ms cold boot"]
         A3["Electron Desktop App"] --> A3Desc["150MB+ bundle, 180-350MB RAM, 1500-3500ms cold boot"]

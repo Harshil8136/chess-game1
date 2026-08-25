@@ -14,7 +14,7 @@ flowchart TD
     Loader --> CSS["19 CSS Files (Parallel Injection)"]
     Loader --> JS["Sequential JS Dependency Pipeline"]
     
-    subgraph ExecutionPipeline ["Execution Pipeline"]
+    subgraph ExecutionPipeline [Execution Pipeline]
         JS --> Libs["Libraries (Fuse.js, GSAP)"]
         Libs --> DataLayer["Data Manifests & Biller Registries"]
         DataLayer --> Core["Core Engine (DataManager, DB, Utils, QueryParser)"]
@@ -144,7 +144,7 @@ The following table summarizes all 54 non-live files reviewed across the project
 
 ```mermaid
 sequenceDiagram
-    participant User
+    participant User as CSR User
     participant SearchInput as Search Input Field
     participant QueryParser as Query Parser Engine
     participant QueryTag as Visual Pill Tag

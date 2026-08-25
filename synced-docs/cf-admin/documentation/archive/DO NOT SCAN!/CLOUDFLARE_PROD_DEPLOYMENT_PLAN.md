@@ -29,7 +29,7 @@ In high-volume call centers handling **5k–10k calls daily**, relying on **heav
 
 ```mermaid
 flowchart TD
-    subgraph LegacyWorkflow ["Legacy Workflow (45 to 90 Seconds per Call)"]
+    subgraph LegacyWorkflow [Legacy Workflow - 45 to 90 Seconds per Call]
         Call["Customer on Live Call"] --> OpenDoc["Open Heavy 50+ Page Cloud Document"]
         OpenDoc --> FindDoc["Ctrl+F Search (Browser Freezes on Large Doc)"]
         Call --> OpenWiki["Open External Wiki / KB Portal Tab"]
@@ -39,7 +39,7 @@ flowchart TD
         ReadRules --> Answer["Deliver Answer to Customer"]
     end
 
-    subgraph BillerHubPlatform ["BillerHub Unified Edge Platform (Under 50ms)"]
+    subgraph BillerHubPlatform [BillerHub Unified Edge Platform - Under 50ms]
         Call2["Customer on Live Call"] --> BillerSearch["Single Unified Search Input"]
         BillerSearch --> InstantResult["Sub-15ms FTS5 Hybrid Result (Contacts, Fees, Alerts & KB)"]
         InstantResult --> OneClickCopy["1-Click Copy & Instant Response"]
@@ -59,19 +59,19 @@ By leveraging Cloudflare's **generous Free Tier allowances**, we can run the ent
 
 ```mermaid
 flowchart TD
-    subgraph ClientAccess ["Client Access Perimeter (100% Free)"]
+    subgraph ClientAccess [Client Access Perimeter - 100 Percent Free]
         CSR["100-200 CSR Browsers"] --> CFZT["Cloudflare Zero Trust / Access (Free for up to 50 Seats or Cloudflare Tunnel)"]
         CFZT --> EdgeWorker["Cloudflare Worker (100,000 Free Req/Day)"]
     end
 
-    subgraph StorageTier ["Cloudflare Free Tier Storage & Compute ($0/mo)"]
+    subgraph StorageTier [Cloudflare Free Tier Storage and Compute]
         EdgeWorker --> KV[("Workers KV Free (100k Reads/Day, 1GB)")]
         EdgeWorker --> D1[("Cloudflare D1 Free (5M Reads/Day, 500MB)")]
         EdgeWorker --> R2[("Cloudflare R2 Free (10GB Storage, 10M Reads/Mo)")]
         EdgeWorker --> Assets["Cloudflare Assets / Pages Free"]
     end
 
-    subgraph ClientMemory ["Client-Side Memory & Fallback (Zero Server Cost)"]
+    subgraph ClientMemory [Client Side Memory and Fallback]
         EdgeWorker --> SPA["High-Performance Vanilla SPA"]
         SPA --> LocalIDB[("Local Browser IndexedDB (100% Offline Autonomy)")]
     end
@@ -85,7 +85,7 @@ Below is the mathematical proof demonstrating that **5,000+ billers, 300+ KB doc
 
 ```mermaid
 pie title Cloudflare D1 Free Storage Allowance (500 MB Total)
-    "5,000 Normalized Billers (6.5 MB)" : 6.5
+    "5000 Normalized Billers (6.5 MB)" : 6.5
     "300 Full KB Articles (3.2 MB)" : 3.2
     "FTS5 Search Index (8.5 MB)" : 8.5
     "Remaining Free Space (481.8 MB)" : 481.8
@@ -130,7 +130,7 @@ flowchart LR
     CSRInput["Query: comed fee credit card 800"] --> QueryTokenizer["Edge FTS5 Query Builder"]
     QueryTokenizer --> FTS5Matcher["D1 FTS5 Trigram & Prefix Matcher"]
     
-    subgraph D1Engine ["D1 SQLite Engine (Under 12ms)"]
+    subgraph D1Engine [D1 SQLite Engine - Under 12ms]
         FTS5Matcher --> BM25Rank["BM25 Column Weighting (TLA=10, Name=5, Contacts=8, KB=3)"]
         BM25Rank --> SnippetGen["snippet() function (Auto-Extract Match Context)"]
     end
@@ -232,12 +232,12 @@ transformDataToSQL();
 
 ```mermaid
 flowchart TD
-    subgraph LegacyTime ["Legacy Call Workflow (Total: 65s Search Time)"]
+    subgraph LegacyTime [Legacy Call Workflow - Total 65s Search Time]
         L1["1. Open & Search Document / Wiki Tabs (35s)"] --> L2["2. Scroll & Find Fee / Phone Number (20s)"]
         L2 --> L3["3. Manual Copy & Quote to Customer (10s)"]
     end
 
-    subgraph FastTime ["BillerHub Free Tier Workflow (Total: 2s Search Time)"]
+    subgraph FastTime [BillerHub Free Tier Workflow - Total 2s Search Time]
         F1["1. Type Query & Instant FTS5 Display (1s)"] --> F2["2. 1-Click Copy & Instant Quote (1s)"]
     end
 ```
