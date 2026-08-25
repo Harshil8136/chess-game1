@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-23
+last_verified: 2026-08-24
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -165,8 +165,8 @@ D1 `admin_pages`, primary key `path`:
 | `parent_path` | Groups sub-features under their page |
 | `sort_order`, `category`, `label`, `icon` | Presentation |
 
-**Measured live, 2026-08-23:** 92 rows, **81 active**, **46** of them hash-fragment
-sub-pages.
+**Measured live, 2026-08-24:** 92 rows, **81 active**, **47** of them hash-fragment
+sub-pages (45 active).
 
 Hash fragments are the fine-grained layer. `/dashboard/sessions` is the page;
 `#revoke`, `#unblock`, `#flush`, `#export` are separately grantable actions within
@@ -255,7 +255,7 @@ override machinery as capability, not as exercised behaviour.
 1. `sentryErrorBoundary` — catches downstream throws, tags them, returns JSON 500
    for `/api/*` and re-throws for pages.
 2. `securityHeaders` — CSP with a per-request nonce (`src/lib/security/csp.ts`).
-3. `authMiddleware` — everything below (`src/lib/auth/pipeline.ts`, 721 lines).
+3. `authMiddleware` — everything below (`src/lib/auth/pipeline.ts`, 722 lines).
 
 Ordered, with the store each stage touches:
 
@@ -402,7 +402,7 @@ attempts, authorised or not, go to `admin_login_logs` with full Cloudflare
 telemetry: IP, user agent, geo, ASN, colo, TLS version, HTTP protocol, client RTT,
 Ray ID, Access method, identity provider, JWT tail and bot score.
 
-**Measured live 2026-08-23:** 225 rows in `admin_audit_log`, 291 in
+**Measured live 2026-08-24:** 232 rows in `admin_audit_log`, 293 in
 `admin_login_logs`.
 
 IPs are stored as an HMAC-SHA256 hash derived through
@@ -626,7 +626,7 @@ Those are `draft` and forward-looking. **This document describes what is built.*
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
-| 2026-08-23 | claude | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Sentry span aggregation over 30 d; Cloudflare docs for platform limits | pass — all figures sourced and dated; CPU-ms explicitly not measured |
+| 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
 
 ## Related
 
