@@ -25,23 +25,23 @@
 
 ```mermaid
 graph TD
-    subgraph Core User Workflows
-        CSR[CSR on Live Call] -->|1. Search: Name, TLA, Phone, Type| Search[Smart Search Engine]
-        CSR -->|2. Alt+S: Area Code Query| AreaLookup[Area Code & Geolocation Hub]
-        CSR -->|3. Alt+1: Fee Investigation| FeeTool[Fee Investigation Cockpit]
-        CSR -->|4. Copy Contacts/Rules| BillerCard[Biller Information Card]
+    subgraph UserWorkflows ["Core User Workflows"]
+        CSR["CSR on Live Call"] --> Search["Smart Search Engine"]
+        CSR --> AreaLookup["Area Code & Geolocation Hub"]
+        CSR --> FeeTool["Fee Investigation Cockpit"]
+        CSR --> BillerCard["Biller Information Card"]
     end
 
-    subgraph Client Architecture
-        Search --> CoreEngine[In-Memory $O(1)$ Hash Map & Fuse.js]
-        AreaLookup --> LocationData[Master Area Code & Timezone Dictionary]
-        FeeTool --> SummaryBuilder[Live Summary & TL Escalation Builder]
-        BillerCard --> NotesEngine[Tri-Model Dynamic Notes Renderer]
+    subgraph ClientArchitecture ["Client Architecture"]
+        Search --> CoreEngine["In-Memory O(1) Hash Map & Fuse.js"]
+        AreaLookup --> LocationData["Master Area Code & Timezone Dictionary"]
+        FeeTool --> SummaryBuilder["Live Summary & TL Escalation Builder"]
+        BillerCard --> NotesEngine["Tri-Model Dynamic Notes Renderer"]
     end
 
-    subgraph Storage & Offline Layer
-        CoreEngine --> Cache[IndexedDB + LocalStorage 24h TTL]
-        SummaryBuilder --> FormPersist[Debounced LocalStorage Autosave]
+    subgraph StorageLayer ["Storage & Offline Layer"]
+        CoreEngine --> Cache["IndexedDB + LocalStorage (24h TTL)"]
+        SummaryBuilder --> FormPersist["Debounced LocalStorage Autosave"]
     end
 ```
 
@@ -57,37 +57,28 @@ graph TD
 BillerHub consolidates critical customer support utilities and documentation into a single, keyboard-accelerated dashboard:
 
 ```mermaid
-mindmap
-  root((BillerHub))
-    Smart Search Engine
-      Name & TLA Fuzzy Matching
-      Phone Number Recognition
-      Area Code Detection
-      Payment Type Filtering
-    Biller Intelligence
-      Grouped Contacts Grid
-      OPPD Bilingual Compaction
-      Internal Transfer Warnings
-      Live Time-in-Zone Clock
-      1-Click Text/Phone Copying
-    Tri-Model Notes Engine
-      Stateless Category Tabs
-      Stateful Multi-State Utilities
-      Composite Multi-Service Accordions
-    Fee Investigation Cockpit
-      Triage Payment Gateways
-      Visited Link Tracking
-      Live Form Autosave
-      1-Click TL Escalation Message
-    Area Code Geolocation
-      3-Digit Jurisdiction Resolver
-      Local Timezone Calculator
-      Associated Biller Mapping
-    Productivity & Customization
-      20+ Theme Palette Engine
-      Favorites Drag-and-Drop
-      Keyboard Accelerators
-      Live Header Weather
+flowchart TD
+    Root["BillerHub System Capabilities"]
+    
+    Root --> S1["1. Smart Search Engine"]
+    S1 --> S1a["Fuzzy Name & TLA Matching"]
+    S1 --> S1b["Phone & Area Code Recognition"]
+    S1 --> S1c["Payment Type Tagging"]
+
+    Root --> S2["2. Biller Intelligence"]
+    S2 --> S2a["Structured Contacts Grid"]
+    S2 --> S2b["OPPD Bilingual Compaction"]
+    S2 --> S2c["Internal Transfer Shields"]
+
+    Root --> S3["3. Tri-Model Notes Engine"]
+    S3 --> S3a["Stateless Category Tabs"]
+    S3 --> S3b["Stateful Multi-State Tabs"]
+    S3 --> S3c["Composite Service Accordions"]
+
+    Root --> S4["4. Fee Investigation Cockpit"]
+    S4 --> S4a["Gateway Triage & Visited State"]
+    S4 --> S4b["Auto-Summary & Form Persistence"]
+    S4 --> S4c["1-Click TL Escalation Message"]
 ```
 
 ### 2.1 Multi-Dimensional Smart Search
@@ -160,14 +151,14 @@ sequenceDiagram
     AppMain->>AppMain: cacheDOMElements() (Populate dom object)
     AppMain->>DataManager: DataManager.init()
     
-    alt Cache Valid (Version match & TTL < 24h)
-        DataManager->>DB: DB.get('biller-index')
+    alt Cache Valid (Version match & TTL under 24h)
+        DataManager->>DB: DB.get(biller-index)
         DB-->>DataManager: Return cached combined billers
     else Cache Invalid or Expired
         DataManager->>DB: DB.clear() (Purge expired records)
         DataManager->>Loader: Sequentially load regional JS bundles (East, Central, West)
         DataManager->>DataManager: Merge arrays into window.BILLERS
-        DataManager->>DB: DB.set('biller-index', combinedBillers)
+        DataManager->>DB: DB.set(biller-index, combinedBillers)
         DataManager->>Browser: Update localStorage version & timestamp
     end
 
@@ -225,23 +216,19 @@ Every suggestion click, favorite lookup, and directory modal interaction resolve
 ## 4. Performance Evaluation & Speed Benchmarks
 
 ```mermaid
-gantt
-    title BillerHub Cold Start vs. Warm Start Latency Breakdown (Target: Standard Desktop Browsers)
-    dateFormat X
-    axisFormat %s ms
+flowchart TD
+    subgraph ColdBoot ["Cold Start (Approx 95ms Total)"]
+        C1["DOM Parsing & CSS Injection (25ms)"] --> C2["Sequential Script Loading (40ms)"]
+        C2 --> C3["Regional Bundles Merge (15ms)"]
+        C3 --> C4["IndexedDB Store & Map Build (10ms)"]
+        C4 --> C5["Fuse.js Init & Splash Fade (5ms)"]
+    end
 
-    section Cold Start (~95ms total)
-    DOM Parsing & CSS Injection       :0, 25
-    Sequential Script Ingestion       :25, 65
-    Regional Bundle Load & Merge      :65, 80
-    IndexedDB Write & Map Indexing    :80, 90
-    Fuse.js Init & Splash Fade-out    :90, 95
-
-    section Warm Start (~18ms total)
-    DOM Parsing & CSS Injection       :0, 8
-    Sequential Script Ingestion       :8, 14
-    IndexedDB Read (Cached Index)     :14, 16
-    Fuse.js Init & Splash Fade-out    :16, 18
+    subgraph WarmBoot ["Warm Start (Approx 18ms Total)"]
+        W1["DOM Parsing & CSS Injection (8ms)"] --> W2["Sequential Script Load (6ms)"]
+        W2 --> W3["IndexedDB Fast Read (2ms)"]
+        W3 --> W4["Fuse.js Ready & Splash Fade (2ms)"]
+    end
 ```
 
 ### 4.1 Speed Benchmarks by Subsystem
@@ -273,15 +260,15 @@ Running web applications under the `file:///` protocol introduces unique browser
 
 ```mermaid
 flowchart TD
-    subgraph Browser Sandbox under file:///
-        LocalFile[Local index.html] --> Sandbox[Browser Security Sandbox]
-        Sandbox -->|Allowed| WebStorage[localStorage & sessionStorage]
-        Sandbox -->|Allowed| IDB[IndexedDB: BillerHubDB]
-        Sandbox -->|Allowed| OutboundHTTPS[HTTPS Requests: Open-Meteo, Firebase]
-        Sandbox -->|BLOCKED by CORS| LocalFetch[fetch local JSON / XML]
-        Sandbox -->|BLOCKED by CORS| ESModules[import / export Modules]
-        Sandbox -->|BLOCKED by Protocol| ServiceWorker[Service Worker Registration]
-        Sandbox -->|BLOCKED by OS Sandbox| DiskAccess[Read/Write Arbitrary Local Files]
+    subgraph BrowserSandbox ["Browser Security Sandbox (file:/// Protocol)"]
+        LocalFile["Local index.html"] --> Sandbox["Browser Security Sandbox"]
+        Sandbox -->|Allowed| WebStorage["localStorage & sessionStorage"]
+        Sandbox -->|Allowed| IDB["IndexedDB (BillerHubDB)"]
+        Sandbox -->|Allowed| OutboundHTTPS["HTTPS Requests (External APIs)"]
+        Sandbox -->|Blocked by CORS| LocalFetch["Local fetch() on JSON Files"]
+        Sandbox -->|Blocked by CORS| ESModules["Local ES Module Imports"]
+        Sandbox -->|Blocked by Protocol| ServiceWorker["Local Service Worker Registration"]
+        Sandbox -->|Blocked by OS Sandbox| DiskAccess["Arbitrary File System Access"]
     end
 ```
 
@@ -342,17 +329,17 @@ BillerHub is architected to operate with 100% offline autonomy for core operatio
 
 ```mermaid
 flowchart LR
-    subgraph Offline Core (0ms Latency)
-        Catalog[Biller Catalog & Search]
-        AreaCodes[Area Code & Geolocation]
-        Cockpit[Investigation Cockpit & Notes]
-        ThemeEngine[Themes & Layout Controls]
+    subgraph OfflineCore ["Offline Core Subsystem"]
+        Catalog["Biller Catalog & Search"]
+        AreaCodes["Area Code & Geolocation"]
+        Cockpit["Investigation Cockpit & Notes"]
+        ThemeEngine["Themes & Layout Controls"]
     end
 
-    subgraph Non-Blocking External Services
-        Weather[Open-Meteo REST API] -->|15-Minute Cache| SessionStorage[sessionStorage Cache]
-        Telemetry[Firebase Telemetry] -->|10-Sec Batching| IDBQueue[IndexedDB Event Queue]
-        CDNs[FontAwesome & GSAP CDNs] -->|Service Worker Cache| SWCache[sw.js Cache-First]
+    subgraph ExternalServices ["External Background Services"]
+        Weather["Open-Meteo REST API"] --> SessionStorage["sessionStorage (15-min cache)"]
+        Telemetry["Firebase Telemetry"] --> IDBQueue["IndexedDB Event Queue"]
+        CDNs["FontAwesome & GSAP CDNs"] --> SWCache["sw.js Cache-First Store"]
     end
 ```
 
@@ -370,18 +357,12 @@ flowchart LR
 ## 7. Where BillerHub Stands: Comparative Analysis & Trade-Offs
 
 ```mermaid
-quadrantChart
-    title Architecture Trade-Off Matrix: Portability vs. Complexity
-    x-axis Low Structural Complexity --> High Structural Complexity
-    y-axis Low Portability / High Overhead --> High Portability / Zero Overhead
-    quadrant-1 Modern Enterprise SPAs (High Power, High Overhead)
-    quadrant-2 BillerHub Architecture (Sweet Spot: Maximum Portability & Speed)
-    quadrant-3 Legacy Monoliths
-    quadrant-4 Over-Engineered Frameworks
-    "BillerHub (Vanilla SPA)": [0.25, 0.90]
-    "React + Vite App": [0.65, 0.45]
-    "Electron Desktop App": [0.85, 0.30]
-    "Server-Rendered Portal": [0.75, 0.20]
+flowchart TD
+    subgraph ArchitectureComparison ["Architecture Comparison: Portability vs Complexity"]
+        A1["BillerHub (Vanilla SPA)"] --> A1Desc["Zero build overhead, sub-millisecond search, under 15MB RAM"]
+        A2["React / Vite Web App"] --> A2Desc["Requires node/npm build, 60-140MB RAM, 400-1200ms cold boot"]
+        A3["Electron Desktop App"] --> A3Desc["150MB+ bundle, 180-350MB RAM, 1500-3500ms cold boot"]
+    end
 ```
 
 ### 7.1 Architectural Comparison

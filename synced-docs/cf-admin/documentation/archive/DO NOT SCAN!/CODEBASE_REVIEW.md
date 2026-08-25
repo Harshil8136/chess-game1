@@ -10,24 +10,24 @@ BillerHub is an enterprise-grade, client-side single-page application (SPA) desi
 
 ```mermaid
 flowchart TD
-    Shell[index.html] --> Loader[src/js/core/loader.js]
-    Loader --> CSS[19 CSS Files Injected Parallel]
-    Loader --> JS[Sequential JS Dependency Pipeline]
+    Shell["index.html"] --> Loader["src/js/core/loader.js"]
+    Loader --> CSS["19 CSS Files (Parallel Injection)"]
+    Loader --> JS["Sequential JS Dependency Pipeline"]
     
-    subgraph Execution Pipeline
-        JS --> Libs[Libraries: Fuse.js, GSAP]
-        Libs --> DataLayer[Data Manifests & Biller Registries]
-        DataLayer --> Core[Core Engine: DataManager, DB, Utils, QueryParser]
-        Core --> Features[Feature Modules: Favorites, Notes, Weather, Clock]
-        Features --> UI[UI Modules: Search, BillerCard, Modals, Popovers]
-        UI --> Main[app-main.js: init]
+    subgraph ExecutionPipeline ["Execution Pipeline"]
+        JS --> Libs["Libraries (Fuse.js, GSAP)"]
+        Libs --> DataLayer["Data Manifests & Biller Registries"]
+        DataLayer --> Core["Core Engine (DataManager, DB, Utils, QueryParser)"]
+        Core --> Features["Feature Modules (Favorites, Notes, Weather, Clock)"]
+        Features --> UI["UI Modules (Search, BillerCard, Modals, Popovers)"]
+        UI --> Main["app-main.js (init)"]
     end
 
-    Main --> Inject[UI.Templates.inject]
-    Inject --> Cache[cacheDOMElements]
-    Cache --> Hydrate[DataManager.init: IndexedDB / Network]
-    Hydrate --> SearchInit[Fuse.js & billerIdMap Initialization]
-    SearchInit --> DismissSplash[Dismiss Splash Screen & Activate Listeners]
+    Main --> Inject["UI.Templates.inject()"]
+    Inject --> Cache["cacheDOMElements()"]
+    Cache --> Hydrate["DataManager.init() (IndexedDB / Fallback)"]
+    Hydrate --> SearchInit["Fuse.js & billerIdMap Initialization"]
+    SearchInit --> DismissSplash["Dismiss Splash Screen & Activate Listeners"]
 ```
 
 ### Core Architecture Principles
@@ -145,21 +145,21 @@ The following table summarizes all 54 non-live files reviewed across the project
 ```mermaid
 sequenceDiagram
     participant User
-    participant SearchInput as dom.searchInput
-    participant QueryParser
-    participant QueryTag as UI.QueryTag
-    participant Fuse as Fuse.js
-    participant UI_Search as UI.Search
-    participant BillerCard as UI.BillerCard
+    participant SearchInput as Search Input Field
+    participant QueryParser as Query Parser Engine
+    participant QueryTag as Visual Pill Tag
+    participant Fuse as In-Memory Fuse.js
+    participant UI_Search as Suggestion Renderer
+    participant BillerCard as Biller Card Module
 
-    User->>SearchInput: Types query (e.g. "8005889477" or "COMD")
+    User->>SearchInput: Types search query (e.g. 8005889477 or COMD)
     SearchInput->>QueryParser: QueryParser.parse(rawQuery)
-    QueryParser-->>QueryTag: { type: "PHONE", value: "8005889477", display: "Phone" }
+    QueryParser-->>QueryTag: Classification Result (Phone / Area Code / TLA)
     QueryTag->>QueryTag: Update visual pill tag (.tag-phone)
-    SearchInput->>Fuse: searchService.search("8005889477")
+    SearchInput->>Fuse: searchService.search(queryTerm)
     Fuse-->>UI_Search: Returns scored matches
     UI_Search->>UI_Search: Render rich suggestions with icons & snippets
-    User->>UI_Search: Clicks / Hits Enter on match
+    User->>UI_Search: Clicks or hits Enter on match
     UI_Search->>BillerCard: selectBillerById(id, originalQuery)
     BillerCard->>BillerCard: Render Card, compact contacts, highlight numbers
 ```

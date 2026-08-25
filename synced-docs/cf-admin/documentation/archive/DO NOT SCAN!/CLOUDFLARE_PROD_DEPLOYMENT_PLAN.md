@@ -29,20 +29,20 @@ In high-volume call centers handling **5k–10k calls daily**, relying on **heav
 
 ```mermaid
 flowchart TD
-    subgraph Legacy Workflow (45 to 90 Seconds per Call)
-        Call[Customer on Live Call] --> OpenDoc[Open Heavy 50+ Page Cloud Document]
-        OpenDoc --> FindDoc[Ctrl+F Search: Browser Freezes on Large Doc]
-        Call --> OpenWiki[Open External Wiki / KB Portal Tab]
-        OpenWiki --> WikiSearch[Wiki Search: Slow 3-5s Page Load]
-        WikiSearch --> ScanText[Manually Scroll 300+ Page Wiki Hierarchy]
-        ScanText --> ReadRules[CSR Scans Unformatted Text]
-        ReadRules --> Answer[Deliver Answer to Customer]
+    subgraph LegacyWorkflow ["Legacy Workflow (45 to 90 Seconds per Call)"]
+        Call["Customer on Live Call"] --> OpenDoc["Open Heavy 50+ Page Cloud Document"]
+        OpenDoc --> FindDoc["Ctrl+F Search (Browser Freezes on Large Doc)"]
+        Call --> OpenWiki["Open External Wiki / KB Portal Tab"]
+        OpenWiki --> WikiSearch["Wiki Search (Slow 3-5s Page Load)"]
+        WikiSearch --> ScanText["Manually Scroll 300+ Page Wiki Hierarchy"]
+        ScanText --> ReadRules["CSR Scans Unformatted Text"]
+        ReadRules --> Answer["Deliver Answer to Customer"]
     end
 
-    subgraph BillerHub Unified Edge Platform (Under 50 Milliseconds)
-        Call2[Customer on Live Call] --> BillerSearch[Single Unified Search Input]
-        BillerSearch --> InstantResult[Sub-15ms FTS5 Hybrid Result: Contacts, Fees, Alerts & KB]
-        InstantResult --> OneClickCopy[1-Click Copy & Instant Response]
+    subgraph BillerHubPlatform ["BillerHub Unified Edge Platform (Under 50ms)"]
+        Call2["Customer on Live Call"] --> BillerSearch["Single Unified Search Input"]
+        BillerSearch --> InstantResult["Sub-15ms FTS5 Hybrid Result (Contacts, Fees, Alerts & KB)"]
+        InstantResult --> OneClickCopy["1-Click Copy & Instant Response"]
     end
 ```
 
@@ -58,22 +58,22 @@ flowchart TD
 By leveraging Cloudflare's **generous Free Tier allowances**, we can run the entire enterprise infrastructure at **$0.00 / month** with no sacrifices in speed or reliability:
 
 ```mermaid
-graph TD
-    subgraph Client Access Perimeter (100% Free)
-        CSR[100-200 CSR Browsers] -->|HTTPS Single URL| CFZT[Cloudflare Zero Trust / Access: Free for up to 50 Seats or Cloudflare Tunnel]
-        CFZT -->|Edge Routing < 10ms| EdgeWorker[Cloudflare Worker: 100,000 Free Req/Day]
+flowchart TD
+    subgraph ClientAccess ["Client Access Perimeter (100% Free)"]
+        CSR["100-200 CSR Browsers"] --> CFZT["Cloudflare Zero Trust / Access (Free for up to 50 Seats or Cloudflare Tunnel)"]
+        CFZT --> EdgeWorker["Cloudflare Worker (100,000 Free Req/Day)"]
     end
 
-    subgraph Cloudflare Free Tier Storage & Compute ($0/mo)
-        EdgeWorker -->|Hot Catalog Cache < 4ms| KV[(Workers KV Free: 100k Reads/Day, 1GB)]
-        EdgeWorker -->|FTS5 BM25 Search < 12ms| D1[(Cloudflare D1 Free: 5M Reads/Day, 500MB)]
-        EdgeWorker -->|PDF Agreements & Backups| R2[(Cloudflare R2 Free: 10GB Storage, 10M Reads/Mo)]
-        EdgeWorker -->|Static SPA Assets| Assets[Cloudflare Assets / Pages Free]
+    subgraph StorageTier ["Cloudflare Free Tier Storage & Compute ($0/mo)"]
+        EdgeWorker --> KV[("Workers KV Free (100k Reads/Day, 1GB)")]
+        EdgeWorker --> D1[("Cloudflare D1 Free (5M Reads/Day, 500MB)")]
+        EdgeWorker --> R2[("Cloudflare R2 Free (10GB Storage, 10M Reads/Mo)")]
+        EdgeWorker --> Assets["Cloudflare Assets / Pages Free"]
     end
 
-    subgraph Client-Side Memory & Fallback (Zero Server Cost)
-        EdgeWorker -->|SWR Payload| SPA[High-Performance Vanilla SPA]
-        SPA --> LocalIDB[(Local Browser IndexedDB: 100% Offline Autonomy)]
+    subgraph ClientMemory ["Client-Side Memory & Fallback (Zero Server Cost)"]
+        EdgeWorker --> SPA["High-Performance Vanilla SPA"]
+        SPA --> LocalIDB[("Local Browser IndexedDB (100% Offline Autonomy)")]
     end
 ```
 
@@ -85,9 +85,9 @@ Below is the mathematical proof demonstrating that **5,000+ billers, 300+ KB doc
 
 ```mermaid
 pie title Cloudflare D1 Free Storage Allowance (500 MB Total)
-    "5,000 Normalized Billers" : 6.5
-    "300 Full KB Articles" : 3.2
-    "FTS5 Search Index" : 8.5
+    "5,000 Normalized Billers (6.5 MB)" : 6.5
+    "300 Full KB Articles (3.2 MB)" : 3.2
+    "FTS5 Search Index (8.5 MB)" : 8.5
     "Remaining Free Space (481.8 MB)" : 481.8
 ```
 
@@ -127,15 +127,15 @@ We achieve sub-millisecond, instant search **without expensive AI models** by ut
 
 ```mermaid
 flowchart LR
-    CSRInput[Query: 'comed fee credit card 800'] --> QueryTokenizer[Edge FTS5 Query Builder]
-    QueryTokenizer --> FTS5Matcher[D1 FTS5 Trigram & Prefix Matcher]
+    CSRInput["Query: comed fee credit card 800"] --> QueryTokenizer["Edge FTS5 Query Builder"]
+    QueryTokenizer --> FTS5Matcher["D1 FTS5 Trigram & Prefix Matcher"]
     
-    subgraph D1 SQLite Engine < 12ms
-        FTS5Matcher --> BM25Rank[BM25 Column Weighting: TLA=10.0, Name=5.0, Contacts=8.0, KB=3.0]
-        BM25Rank --> SnippetGen[snippet function: Auto-Extract Match Context]
+    subgraph D1Engine ["D1 SQLite Engine (Under 12ms)"]
+        FTS5Matcher --> BM25Rank["BM25 Column Weighting (TLA=10, Name=5, Contacts=8, KB=3)"]
+        BM25Rank --> SnippetGen["snippet() function (Auto-Extract Match Context)"]
     end
 
-    SnippetGen --> Output[Instant Ranked Results with Bold Highlight Snippets]
+    SnippetGen --> Output["Instant Ranked Results with Bold Highlight Snippets"]
 ```
 
 ### 4.1 FTS5 Capabilities in Cloudflare D1
@@ -151,14 +151,14 @@ To replace manual copy-pasting, a simple Node.js ingestion script parses your ex
 
 ```mermaid
 flowchart TD
-    GDoc[Exported Master Biller Data: CSV / JSON] --> IngestScript[scripts/ingest.js]
-    Conf[Exported Wiki Knowledge Base: HTML / Markdown] --> IngestScript
+    GDoc["Exported Master Biller Data (CSV / JSON)"] --> IngestScript["scripts/ingest.js"]
+    Conf["Exported Wiki Knowledge Base (HTML / Markdown)"] --> IngestScript
     
-    IngestScript --> Validator[Data Schema Validator & Deduplicator]
-    Validator --> NormalizedSQL[Generate D1 SQL Seed Script: seed.sql]
-    NormalizedSQL --> D1Deploy[npx wrangler d1 execute DB --file=seed.sql]
-    D1Deploy --> D1[(Cloudflare D1 Production Database)]
-    D1Deploy --> KVWarm[Warm Workers KV Global Cache]
+    IngestScript --> Validator["Data Schema Validator & Deduplicator"]
+    Validator --> NormalizedSQL["Generate D1 SQL Seed Script (seed.sql)"]
+    NormalizedSQL --> D1Deploy["wrangler d1 execute DB --file=seed.sql"]
+    D1Deploy --> D1[("Cloudflare D1 Production Database")]
+    D1Deploy --> KVWarm["Warm Workers KV Global Cache"]
 ```
 
 ### 5.1 Automated Ingestion Script (`scripts/ingest.js`)
@@ -231,19 +231,15 @@ transformDataToSQL();
 ## 6. Operational Impact & AHT Reduction Analysis
 
 ```mermaid
-gantt
-    title CSR Call Timeline: Legacy Multi-Tab vs. BillerHub Free Tier
-    dateFormat X
-    axisFormat %s sec
+flowchart TD
+    subgraph LegacyTime ["Legacy Call Workflow (Total: 65s Search Time)"]
+        L1["1. Open & Search Document / Wiki Tabs (35s)"] --> L2["2. Scroll & Find Fee / Phone Number (20s)"]
+        L2 --> L3["3. Manual Copy & Quote to Customer (10s)"]
+    end
 
-    section Legacy Workflow (Total: 65s Search Time)
-    Open & Search Document / Wiki Tabs    :0, 35
-    Scroll & Find Fee / Phone Number       :35, 55
-    Manual Copy & Quote to Customer       :55, 65
-
-    section BillerHub Free Tier (Total: 2s Search Time)
-    Type Query & Instant FTS5 Display     :0, 1
-    1-Click Copy & Instant Quote          :1, 2
+    subgraph FastTime ["BillerHub Free Tier Workflow (Total: 2s Search Time)"]
+        F1["1. Type Query & Instant FTS5 Display (1s)"] --> F2["2. 1-Click Copy & Instant Quote (1s)"]
+    end
 ```
 
 ### Quantifiable Operational ROI:
@@ -529,11 +525,11 @@ The front-end SPA implements an **Offline-First SWR (Stale-While-Revalidate)** a
 
 ```mermaid
 flowchart TD
-    Input[CSR Types Query] --> LocalCheck{Is Offline or Local Hit?}
-    LocalCheck -->|Yes (< 1ms)| RenderLocal[Render from Local IndexedDB Cache]
-    LocalCheck -->|Network Active| EdgeFetch[Fetch from Cloudflare D1 FTS5 < 15ms]
-    EdgeFetch --> UpdateLocal[Update Local IndexedDB in Background]
-    EdgeFetch --> RenderFresh[Update UI with Fresh Highlights & Snippets]
+    Input["CSR Types Query"] --> LocalCheck{"Is Offline or Local Hit?"}
+    LocalCheck -->|Yes| RenderLocal["Render from Local IndexedDB Cache (Under 1ms)"]
+    LocalCheck -->|Network Active| EdgeFetch["Fetch from Cloudflare D1 FTS5 (Under 15ms)"]
+    EdgeFetch --> UpdateLocal["Update Local IndexedDB in Background"]
+    EdgeFetch --> RenderFresh["Update UI with Fresh Highlights & Snippets"]
 ```
 
 ### Resilience Guarantee
@@ -562,8 +558,8 @@ flowchart LR
     • Workers AI (Neural Semantic Search)
     • Automated Wiki Webhook Sync"]
 
-    Tier0 -->|Scale > 100k req/day or Live Hub| Tier1
-    Tier1 -->|Add Conversational RAG| Tier2
+    Tier0 --> Tier1
+    Tier1 --> Tier2
 ```
 
 ### Comparison Matrix Across Tiers
