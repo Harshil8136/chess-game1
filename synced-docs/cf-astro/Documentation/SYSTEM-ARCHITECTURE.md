@@ -85,13 +85,13 @@ Defines the Cloudflare Workers environment, build directory (`./dist`), compatib
 
 ### 4.1 System API Reference
 
-| Endpoint                | Method | Prerender | Security                                | Purpose                                                          |
-| ----------------------- | ------ | --------- | --------------------------------------- | ---------------------------------------------------------------- |
-| `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit | Processes atomic booking transaction across D1 and Supabase.     |
-| `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison) | Purges KV Cache and updates CMS data blocks.                     |
-| `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                       | Obfuscates PostHog analytical calls to prevent ad-blocker drops. |
-| `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit           | Handles Mexican LFPDPPP ARCO identity-document + rights requests.|
-| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                        | Hashes and logs GDPR/LFPDPPP privacy agreements.                 |
+| Endpoint                | Method | Prerender | Security                                                     | Purpose                                                           |
+| ----------------------- | ------ | --------- | ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit | Processes atomic booking transaction across D1 and Supabase.      |
+| `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison)                      | Purges KV Cache and updates CMS data blocks.                      |
+| `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                                            | Obfuscates PostHog analytical calls to prevent ad-blocker drops.  |
+| `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit                                | Handles Mexican LFPDPPP ARCO identity-document + rights requests. |
+| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                             | Hashes and logs GDPR/LFPDPPP privacy agreements.                  |
 
 ### 4.2 The Atomic Booking Transaction
 
@@ -243,7 +243,7 @@ Two layers exist:
 
 > **Known issue, live as of 2026-08-10 — not yet resolved despite the code
 > above being correct:** production traffic on `www.*` and `pet.*` is
-> observed 301-redirecting to *itself* (an infinite loop), which the current
+> observed 301-redirecting to _itself_ (an infinite loop), which the current
 > `middleware.ts` logic cannot produce if it is actually executing for those
 > requests. This points to a Cloudflare **account-configuration** issue —
 > most likely `www`/`pet` are still bound as Custom Domains on a stale,
