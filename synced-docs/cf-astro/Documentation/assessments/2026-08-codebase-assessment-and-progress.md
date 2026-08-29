@@ -3,7 +3,7 @@
 title: 'Codebase Assessment, Progress Tracking & Edge Architecture'
 status: active
 audience: [technical, ai, operator]
-last_verified: 2026-08-28
+last_verified: 2026-08-29
 verified_against: [code, tests, checklist, live-infrastructure]
 owner: harshil
 related_docs:
@@ -46,8 +46,9 @@ tags: [assessment, progress, quality, health, resilience, observability, durabil
 5. [Comparative Metrics Matrix](#5-comparative-metrics-matrix)
 6. [Resilience & Multi-Tier Failover Model](#6-resilience--multi-tier-failover-model)
 7. [Work Done & Progress Ledger](#7-work-done--progress-ledger)
-8. [Known Gaps & Follow-Ups](#8-known-gaps--follow-ups)
-9. [Maintenance Recommendations](#9-maintenance-recommendations)
+8. [Deployment Record](#8-deployment-record--2026-08-29)
+9. [Known Gaps & Follow-Ups](#9-known-gaps--follow-ups)
+10. [Maintenance Recommendations](#10-maintenance-recommendations)
 
 ---
 
@@ -335,7 +336,7 @@ sequenceDiagram
 
 ### Phase 4: Booking Durability Overhaul
 
-- [x] **Correlation Key Restored**: `booking_ref` written to D1 from the first audit write.
+- [x] **Correlation Key Restored**: the booking reference is written to the edge audit store from the very first write.
 - [x] **Monotonic Status Guard**: Optimistic writes cannot erase recorded failure states.
 - [x] **Background Writes Sequenced**: Success write chained after queue dispatch settles.
 - [x] **Shared Outbox Core**: One reusable drain loop; consent and booking as tenants.
@@ -362,17 +363,63 @@ sequenceDiagram
 
 ---
 
-## 8. Known Gaps & Follow-Ups
+## 8. Deployment Record — 2026-08-29
 
-1. **Migration Application Required:** Committing a migration is not applying it (RULE #0.7). Apply it and confirm against the ledger before relying on the outbox. Until applied, durable-write helpers fail harmlessly.
-2. **Email Consumer Local Dependencies:** Consumer worker dependencies are not installed locally; `npm install` must be run in `cf-email-consumer/` before standalone deployment.
-3. **Subdomain Redirect Hops:** `pet.` subdomain has an asset-level relative redirect in production. Dashboard configuration adjustment required.
-4. **Managed Robots.txt Overlap:** Cloudflare AI Crawl Control prepends rules before the application's output. Dashboard-level configuration.
-5. **Synthetic Alert Canary:** Sentry recorded one event in 90 days. A scheduled synthetic critical event will continuously prove the full alert path end-to-end.
+| Component        | State           | Detail                                                                      |
+| :--------------- | :-------------- | :-------------------------------------------------------------------------- |
+| Public site      | 🟢 **Deployed** | CI green, all routes 200, new replay endpoint live and correctly auth-gated |
+| Admin portal     | 🟢 **Deployed** | CI green (quality + security), Access redirect healthy                      |
+| Email sidecar    | 🔴 **Blocked**  | See gap 1 — cannot deploy from this machine                                 |
+| Outbox migration | 🔴 **Blocked**  | See gap 1 — same cause                                                      |
+
+CI on the public site had been **failing on every push since at least
+2026-08-11** — six consecutive red runs — and is now green. Two causes, both
+pre-existing and unrelated to this work:
+
+1. The Prettier format gate had drifted across 35 files, most of them untouched
+   by recent work. It went unnoticed because `checklist.py`, which
+   `GITHUB_RULES.md` mandates as the pre-push gate, does **not** run
+   `format:check`, so a locally-clean checklist never matched CI.
+2. The CI step that strips the remote-only AI binding hard-asserted that the
+   binding existed. It had been pruned as an orphan, so a correct cleanup made
+   CI red. Absence is now a no-op.
+
+> **Recommended follow-up:** add `npm run format:check` to `checklist.py` so the
+> mandated gate and CI cannot silently diverge again.
 
 ---
 
-## 9. Maintenance Recommendations
+## 9. Known Gaps & Follow-Ups
+
+1. **The deploy credential on this machine points at the wrong account.**
+   `wrangler whoami` resolves to a personal account, while all three repos
+   declare the production account. Any `wrangler deploy` or
+   `wrangler d1 migrations apply --remote` fails with `Authentication error
+[code: 10000]`. `account_id` was deliberately **not** changed — editing it to
+   match the wrong account is exactly the class of configuration error
+   `GITHUB_RULES.md` §7 exists to prevent. Fix with `wrangler login` against the
+   production account. This blocks both items below.
+2. **Migration application required.** Committing a migration is not applying it
+   (RULE #0.7). Apply it and confirm against the ledger before relying on the
+   outbox. Until then the durable-write helpers fail harmlessly and behaviour
+   matches the previous release — every other improvement is already live.
+3. **Email sidecar not deployed.** Its dependencies are now installed and it
+   typechecks and dry-runs clean; only the credential blocks it. Until it ships,
+   the dead-letter queue still discards payloads after three failed sends.
+4. **Admin CSP needs one human check.** The portal sits behind Cloudflare
+   Access, so the new CSP could not be verified unauthenticated. Sign in once
+   and confirm the sign-in popup, R2 uploads and dashboard scripts all work.
+5. **Subdomain redirect hops.** The `pet.` subdomain has an asset-level relative
+   redirect in production. Dashboard configuration adjustment required.
+6. **Managed robots.txt overlap.** Cloudflare AI Crawl Control prepends rules
+   before the application's own output. Dashboard-level configuration.
+7. **Synthetic alert canary.** Sentry recorded one event in 90 days. The
+   observability floor now makes silence meaningful, but a scheduled synthetic
+   critical event would prove the full alert path end to end.
+
+---
+
+## 10. Maintenance Recommendations
 
 1. **Never reorder the durable write:** The edge payload write must stay _before_ the database attempt. Backgrounding it or moving it after would reintroduce data-loss risk.
 2. **Never route the replay payload through PII redaction:** It is the record awaiting delivery, not forensic residue.
