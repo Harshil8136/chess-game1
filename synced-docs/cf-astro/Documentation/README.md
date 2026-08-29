@@ -24,6 +24,7 @@ tags: [meta, index]
 | Doc                                                                                                      | Purpose                                                                       | Audience      | Status |
 | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------- | ------ |
 | [`SYSTEM-ARCHITECTURE.md`](SYSTEM-ARCHITECTURE.md)                                                       | Lean Edge stack, request lifecycle, module pattern, CPU budget                | ai, technical | active |
+| [`assessments/2026-08-codebase-assessment-and-progress.md`](assessments/2026-08-codebase-assessment-and-progress.md) | Comprehensive codebase assessment, invariants ledger, and progress tracking | ai, technical, operator | active |
 | [`2026-06-18-system-review-and-iso5055-benchmark.md`](2026-06-18-system-review-and-iso5055-benchmark.md) | Multi-level system architecture, edge platform health, and ISO-5055 benchmark | ai, technical | active |
 | [`SYNC-SYSTEM-REVIEW.md`](SYNC-SYSTEM-REVIEW.md)                                                         | Sync-system architecture review + durability roadmap                          | ai, technical | active |
 | [`FRONTEND-AND-SEO.md`](FRONTEND-AND-SEO.md)                                                             | UI architecture, Glassmorphism, Astro configurations                          | ai, technical | active |

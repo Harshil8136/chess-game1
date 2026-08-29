@@ -75,7 +75,7 @@ A schema change is complete only when **all three** exist:
 
 ## 🧮 RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
-**cf-astro's own Pages/Worker deployment carries ~22 env vars** (7 `[vars]` + ~15 secrets — counted 2026-08-12 against `wrangler.toml` and `env.d.ts`; the exact secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
+**cf-astro's own Pages/Worker deployment carries ~21 env vars** (7 `[vars]` + ~14 secrets — recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
 
 - ❌ **FORBIDDEN:** Introducing new environment variables for feature toggles, limits, or operational settings.
 - ✅ **REQUIRED INSTEAD:** Use D1 (`admin_portal_settings`, owned by cf-admin but shared) or the site-settings pattern already in use.
@@ -85,7 +85,7 @@ A schema change is complete only when **all three** exist:
 
 ## 🗂️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
 
-**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the 50 tables shared with cf-admin (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb`/`whatsapp-chatbot` D1 databases across the full three-app estate.
+**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the 51 tables shared with cf-admin (31 D1 + 20 Supabase `public`, verified live 2026-08-28) (see RULE #0.6 above), or **64** counting cf-chatbot's separate `chatbot-kb`/`whatsapp-chatbot` D1 databases across the full three-app estate.
 
 - ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
 - See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
