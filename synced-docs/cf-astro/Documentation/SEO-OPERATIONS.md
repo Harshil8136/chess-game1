@@ -227,8 +227,11 @@ Google Business Profile:
   photography — service pages are text-first, blog posts have no cover
   images, and the image sitemap was removed. When real facility photos are
   taken: upload via cf-admin (hero + gallery slots), add `heroImage` back to
-  entries in `src/data/servicePages.ts`, add `coverImage` to blog
-  frontmatter, and restore `src/pages/sitemap-images.xml.ts` (see git
+  entries in `src/data/servicePages.ts`, set the cover on each article in the
+  cf-admin Blog Studio (all 15 articles currently have `cover_image` NULL, which
+  is a _blocking_ quality-gate check on re-publish — see
+  `2026-08-30-BLOG-RENDERING-AND-INDEXABILITY.md`), and restore
+  `src/pages/sitemap-images.xml.ts` (see git
   history) pointing at the real R2 URLs. Real photos are a significant
   local-SEO and GBP trust signal — prioritize this.
 
