@@ -61,7 +61,7 @@ cf-admin/src/
 ---
 
 ### 2.2 `cf-astro` Rate Limiting Surface Area
-In `cf-astro`, rate limiting is handled in `src/lib/rate-limit.ts`. It employs a 2-tier architecture: **Upstash Redis as Primary**, with a **Cloudflare KV fallback** (`ISR_CACHE`) and an in-memory isolate `Map` last resort.
+In `cf-astro`, rate limiting is handled in `cf-astro/src/lib/rate-limit.ts`. It employs a 2-tier architecture: **Upstash Redis as Primary**, with a **Cloudflare KV fallback** (`ISR_CACHE`) and an in-memory isolate `Map` last resort.
 
 ```
 cf-astro/src/
