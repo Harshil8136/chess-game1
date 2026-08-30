@@ -42,6 +42,19 @@ truth for what currently exists. This ledger only tracks changes from
 | `migrations/0048_platform_alerts.sql` | 2026-08-12 | harshil | Creates `platform_alerts` D1 table and indexes for durable local dead-letter alerting surviving multi-service outages. |
 | `migrations/0049_add_seo_dashboard_page.sql` | 2026-08-13 | harshil | Registers `/dashboard/seo` ('Search Console Sync') under `admin_pages` with `required_role = 'super_admin'` (canonical Admin) and sort order 19. |
 | `migrations/0050_gsc_index_log_pagespeed_and_richresults.sql` | 2026-08-13 | harshil | Widens `gsc_index_log` with `mobile_usability_verdict`, `rich_results_verdict`, and `service` discriminator (RULE #0.9 reuse for PageSpeed Insights); seeds `pagespeed-check-enabled` and `pagespeed-check-interval-hours` in `admin_portal_settings`. |
+| `migrations/0051_blog_suggestions_and_schema_ownership.sql` | 2026-08-30 | claude (blog-system remediation) | Adds `entry_type` + `status` discriminators to `blog_posts_history` so it doubles as the Suggestional Edit store (RULE #0.9 reuse — no new table, same pattern as 0050's `service` column); adds `idx_history_post_entry_status`; registers PLAC capability `/dashboard/content/blog#review-suggestions`. |
+
+### Out-of-band data corrections (not migrations)
+
+Applied via the Cloudflare D1 MCP connector against `madagascar-db`, recorded
+here because RULE #0.7's spirit is "no unrecorded change to the live database",
+even when the change is data rather than schema.
+
+| Date | Applied by | Change | Why |
+|---|---|---|---|
+| 2026-08-30 | claude | `blog_posts` → set `status='archived'` on `why-chose-us` (`en`) | The post's `body` was the model's raw JSON envelope wrapped in a `<p>` tag, produced by the fabricated-article fallback in `ai-generate-stream.ts` (removed the same day). It was published and had been pushed to five search engines via IndexNow. Archived rather than deleted so it stays editable in the Studio. |
+| 2026-08-30 | claude | `blog_redirects` → insert `why-chose-us`/`en` → `/en/blog/` | Archiving alone makes the URL 404 (`[slug].astro` rewrites to /404 when D1, static and redirect all miss). A 301 to the blog index is the honest retirement for a URL already submitted to search engines. |
+| 2026-08-30 | claude | `blog_redirects` → repoint `welcome`/`es` from `/es/blog/why-chose-us/` to `/es/blog/` | The original row was written by the `recordRedirect` locale bug (fixed in `BlogRepository.updatePost` the same day): it used `existing.locale` for the target path after the post's locale had flipped `es`→`en`, so the redirect pointed at an ES URL that never existed. |
 
 ## Operational notes
 
