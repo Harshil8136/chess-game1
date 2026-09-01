@@ -39,6 +39,7 @@ they were written — useful as history, not as the current state.
 | **What things cost** | [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md) | **the cost model — authoritative** |
 | **Blog / AI / SEO** | [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | — |
 | **Blog remediation & Suggestional Edit** | [`2026-08-30-blog-system-overhaul.md`](2026-08-30-blog-system-overhaul.md) | — |
+| **AI reliability, cost truth & observability** | [`2026-08-31-ai-system-overhaul.md`](2026-08-31-ai-system-overhaul.md) | — |
 | **Executive status snapshot** | [`2026-06-13-platform-status-summary.md`](2026-06-13-platform-status-summary.md) | *historical — two months old* |
 
 > **One fact, one home.** Where a number appears in several documents it goes
@@ -93,6 +94,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`architecture/RATE-LIMITING-AND-REDIS-ELIMINATION-STRATEGY.md`](architecture/RATE-LIMITING-AND-REDIS-ELIMINATION-STRATEGY.md) | Comprehensive rate limiting evaluation, KV 1k write limit risk analysis, Workers native `[[ratelimits]]` bindings, and Redis elimination roadmap | ai, technical, owner, operator | active |
 | [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](2026-08-06-data-infrastructure-audit-and-reuse-policy.md) | Live D1 + Supabase table inventory (row counts, dead-table findings: `admin_sessions`, `privacy_requests`, `cms_content_history`) plus the reuse-before-creation policy this drove — see `RULESAd.md` RULE #0.6 | ai, technical, owner | active |
 | [`2026-08-30-blog-system-overhaul.md`](2026-08-30-blog-system-overhaul.md) | Blog remediation across both repos: why the Studio showed no articles, the fabricated article that reached production, the 15 defects found, the 14-article legacy import, human-reviewed AI Suggestional Edits, and before/after metrics | non-technical, ai, technical, operator, owner | active |
+| [`2026-08-31-ai-system-overhaul.md`](2026-08-31-ai-system-overhaul.md) | AI layer overhaul: why generation failed 100% of the time, the RAG grounding that never once read the knowledge base, a spend counter 6.3x under actual, per-inference telemetry with no new table, and the UI claims nobody had computed | non-technical, ai, technical, operator, owner | active |
 
 ## Security
 

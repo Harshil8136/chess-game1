@@ -50,18 +50,22 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 **Custom hook:** `src/components/admin/chatbot/hooks/useChatbotApi.ts`
 
 - `useChatbotApi('analytics')` — fetches data on mount
-- `mutate(method, path, body)` — fires POST/PUT/DELETE; calls `refetch()` on success
+- `mutate(path, method, body)` — fires POST/PUT/DELETE; calls `refetch()` on success.
+  (Documented here as `mutate(method, path, body)` until 2026-08-31 — the first
+  two arguments were reversed, which is exactly the kind of error a reader
+  copies straight into a bug.)
 - Never caches sensitive payloads client-side — always re-fetches from the proxy
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| **AnalyticsDashboard** | `AnalyticsDashboard.tsx` | Real-time message telemetry, session gauges, performance logs |
+| **AnalyticsDashboard** | `AnalyticsDashboard.tsx` | AI Command Center (`/dashboard/chatbot/analytics`), served by `/api/chatbot/analytics/command-center` and `/analytics/kb-clusters` |
 | **BotConfig** | `BotConfig.tsx` | AI hyperparameters (`temperature`, `max_history_turns`), model dropdowns, fallback messages |
 | **ModelsCatalog** | `ModelsCatalog.tsx` | Authorized model grid with Set Primary / Set Fallback actions |
 | **KnowledgeBase** | `KnowledgeBase.tsx` | CRUD for KB entries across `content_en` / `content_es` |
-| **ConversationsManagement** | `[SUPABASE_PROJECT_REF].tsx` | End-to-end session viewer, deep context retrieval, cron session sweeping |
+| **[SUPABASE_PROJECT_REF]** | `[SUPABASE_PROJECT_REF].tsx` | End-to-end session viewer, deep context retrieval, cron session sweeping |
 | **PromptsEditor** | `PromptsEditor.tsx` | System prompt management |
 | **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking |
+| **ChatbotDashboard** | `ChatbotDashboard.tsx` | Overview page (`/dashboard/chatbot/dashboard`), served by the bare `/api/chatbot/analytics` |
 
 All panels maintain the **Midnight Slate** aesthetic per standard cf-admin rules.
 
@@ -233,6 +237,14 @@ Analytics shifted from tracking raw technical metrics to tracking **customer out
 
 - `get_command_center_analytics(p_days)` — aggregates executive/operations/model/intent data for a given period
 - `get_kb_clusters(p_resolved)` — groups kb_gaps by cluster_topic using `jsonb_agg`
+
+> ⚠️ **The knowledge-gaps panel has no data source yet.** `cluster_topic` is
+> populated by the "Background AI Clustering Cron" listed under §9 Future
+> Enhancements — which has not been built. The panel is therefore empty because
+> nothing writes to it, not because the bot has no gaps. Until 2026-08-31 it
+> rendered "No knowledge gaps detected yet. The AI is answering all queries
+> successfully.", which stated a conclusion no measurement supported. Do not
+> reintroduce a reassuring empty state here.
 
 **Zero-blocking telemetry:** `cf-chatbot/src/storage/supabase.ts` uses `Promise.allSettled` for fire-and-forget inserts after response is sent — zero latency added to chat experience.
 

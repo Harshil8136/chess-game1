@@ -3,7 +3,7 @@
 title: "Dynamic D1 Blog, Workers AI RAG & Edge SSR Architecture"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-03
+last_verified: 2026-08-31
 verified_against: [code]
 owner: harshil
 related_docs: [2026-08-03-blog-ai-seo-production-readiness.md, specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, specs/2026-07-29-content-and-ai-visibility-engine.md]
@@ -32,6 +32,28 @@ tags: [blog, ai, rag, seo, architecture, blueprint]
 
 This document defines the end-to-end architecture, data flows, security posture, and edge delivery model for the **Dynamic D1 Blog, Workers AI RAG (Retrieval-Augmented Generation), and Edge SSR Engine** powering the Madagascar Pet Hotel platform.
 
+> ### ⚠️ Correction — 2026-08-31
+>
+> Two things this document described as working were not.
+>
+> **1. "RAG" here is keyword-free bulk injection, not retrieval.** There is no
+> vector database, no embedding model and no Vectorize binding anywhere in this
+> product. `getKnowledgeBaseContext` fetches the top N active knowledge base
+> entries in the API's own order and injects them wholesale into the system
+> prompt. That is a legitimate and cheap grounding strategy at this KB size —
+> but it is not retrieval, and the copilot UI's claim of a "D1 Vector Index"
+> (removed 2026-08-31) was false.
+>
+> **2. Step 3 below never actually returned an entry.** From the day it shipped
+> until 2026-08-31, `getKnowledgeBaseContext` read the wrong key off the
+> response (`items`, where `/admin/kb` returns `entries`) and declared the wrong
+> column names. Every generation silently fell back to a hardcoded nine-line
+> literal. The `<15ms` RPC figure in the benchmark table below measured a call
+> whose result was then discarded.
+>
+> Both are fixed. See
+> [`../2026-08-31-ai-system-overhaul.md`](../2026-08-31-ai-system-overhaul.md) §1.2 and §2.5.
+
 ### Industry Benchmark Positioning
 
 | Benchmark | Industry SaaS Standard (Paid Stack) | Madagascar Platform ($0 Architecture) | Performance Delta |
@@ -39,7 +61,7 @@ This document defines the end-to-end architecture, data flows, security posture,
 | **Monthly Infra Cost** | $450 - $1,200/mo (Vercel + Supabase + Contentful + OpenAI) | **$0.00 / month** (Cloudflare Free Tier) | **100% Cost Reduction** |
 | **Edge TTFB (Global)** | 120ms - 350ms (Origin Server Hops) | **35ms - 60ms** (Cloudflare Global Worker Edge) | **82% Latency Improvement** |
 | **AI Authoring Latency** | 4.5s - 8.0s (Third-party API RTT) | **1.2s - 2.8s** (Workers AI In-Isolate Execution) | **65% Speed Upgrade** |
-| **RAG Retrieval Overhead** | 200ms - 600ms (External Vector DB) | **<15ms** (`CHATBOT_SERVICE` Worker Binding RPC) | **95% Latency Reduction** |
+| **Knowledge fetch overhead** | 200ms - 600ms (External Vector DB) | **<15ms** (`CHATBOT_SERVICE` Worker Binding RPC) | **95% Latency Reduction** — but see the correction above: this is bulk injection over a service binding, not vector retrieval, and until 2026-08-31 the fetched result was discarded |
 | **Uptime / Availability** | 99.9% (Dependent on third-party SaaS SLAs) | **99.99%** (Multi-tier D1 + Static Fallback) | **Zero Single-Point-of-Failure** |
 
 ---
@@ -94,13 +116,14 @@ The platform operates as a decoupled, dual-application ecosystem connected via s
 ### Phase 1: RAG Knowledge Retrieval & AI Authoring (`cf-admin`)
 1. **User Request**: Content creator launches Workers AI Author in `cf-admin` Content Studio and inputs an article brief/topic.
 2. **PLAC RBAC Verification**: Route handler `/api/content/ai-generate` verifies user role and page-level permission via `placDenyResponse(user, '/dashboard/content')`.
-3. **RAG Context Fetch**: The AI generator calls `getKnowledgeBaseContext(env)`:
+3. **Knowledge Context Fetch**: The AI generator calls `getKnowledgeBaseContext(env, maxItems, locale)`:
    - Queries `cf-chatbot` via server-side service binding (`env.CHATBOT_SERVICE.fetch('https://cf-chatbot.internal/admin/kb')`) or HTTP fallback proxy (`chatbotFetch()`).
-   - Retrieves official Madagascar Pet Hotel knowledge base items (rates, luxury suites, spa services, vet care policies, location in Aguascalientes).
+   - Reads `entries` and renders `title_{locale}` / `content_{locale}` — official Madagascar Pet Hotel knowledge (rates, luxury suites, spa services, vet care policies, location in Aguascalientes).
+   - Returns `{ source: 'kb' | 'fallback', count, text, reason? }`. **The source is reported to the operator**, so a fallback is never presented as retrieved ground truth.
 4. **Workers AI In-Isolate Execution**:
-   - Injects ground-truth KB entries into the system prompt.
-   - Executes Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast` or `@cf/qwen/qwen2.5-coder-32b-instruct`).
-   - Generates structured 7-field JSON response (`title`, `slug`, `description`, `body`, `translation_slug`, `seo_score`, `direct_answers`).
+   - Injects the knowledge block into the system prompt.
+   - Executes Cloudflare Workers AI — default `@cf/meta/llama-4-scout-17b-16e-instruct`; see `src/lib/ai-pricing.ts` for the catalogue, which is the single source of truth. Every listed model supports guided JSON, and every call sends `response_format` plus a temperature, a scaled `max_tokens`, a 60s timeout and one retry.
+   - Generates a structured JSON response (`title`, `slug`, `description`, `body`, `translation_slug`, `direct_answers`). **`seo_score` was removed from the schema on 2026-08-31** — the model no longer grades its own work; `evaluateSeoGate` is the single source of that number.
 5. **1-Click Form Population**: User clicks **"Apply to Editor"** in `BlogAiCopilotModal.tsx`, automatically populating all 7 fields into `BlogManager.tsx`.
 
 ### Phase 2: D1 Database Mutation & Revision Snapshot (`cf-admin`)
