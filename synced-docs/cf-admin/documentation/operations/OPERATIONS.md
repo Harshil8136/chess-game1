@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-23
+last_verified: 2026-09-02
 verified_against: [code, infra]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -127,14 +127,16 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 Three cron expressions on this Worker (`[triggers]` in `wrangler.toml`), fired
 through the custom entrypoint `src/workers/cf-entry.ts`:
 
-| Cron | Purpose |
+| Cron | Handlers dispatched (`src/workers/cf-entry.ts`) |
 |------|---------|
-| `*/5 * * * *` | CF Access audit-log polling (captures failed login attempts) |
-| `0 2 * * SUN` | Orphaned R2 asset cleanup |
-| `*/15 * * * *` | Promote matured `scheduled` blog posts to `published` |
+| `*/5 * * * *` | CF Access audit-log polling, booking email-retry reconciler, booking outbox drain, CF Access group reconcile, storage quota/share-expiry notifications |
+| `0 2 * * SUN` | Orphaned R2 asset cleanup, Staff Managed Storage reconciliation |
+| `*/15 * * * *` | Promote matured `scheduled` blog posts, Search Console sweep, PageSpeed sweep (the last two self-gate on their own interval settings) |
 
-> This is the 3rd of 3 cron triggers allowed on the Workers Free plan — there is
-> **no headroom left** for another cron on this Worker without upgrading.
+> **Cap corrected 2026-09-02.** Workers Free allows **5 cron triggers per
+> account**, not 3 per Worker. This Worker uses 3 and `cf-chatbot` uses 1, so
+> 4 of 5 account slots are taken. Consolidating the `*/15` handlers into the
+> `*/5` tick (viability program chunk 7) frees one.
 
 ### Re-deriving this section
 

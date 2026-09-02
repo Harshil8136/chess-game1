@@ -202,6 +202,20 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`archive/control-plane-design/PLAN.md`](archive/control-plane-design/PLAN.md) | Control-plane design record (provider API specs, phases). Archived 2026-08-23 — specifies routes never built; see `features/CONTROL-PLANE.md` for what exists | historical |
 | [`archive/control-plane-design/TECHNICAL_OVERVIEW.md`](archive/control-plane-design/TECHNICAL_OVERVIEW.md) | Control-plane technical overview (same design record). Archived 2026-08-23 | historical |
 
+## Viability Program
+
+The chunk-by-chunk long-term viability program started 2026-09-02. Evergreen
+roadmap and registry, one record per chunk, decision records. Excluded from
+the public docs mirror (ADR-0001).
+
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| [`program/ROADMAP.md`](program/ROADMAP.md) | The ordered chunk table, owner decisions, principles, dependency lanes and definition of done — updated every chunk | owner, ai, technical, operator | active |
+| [`program/DEBT-REGISTRY.md`](program/DEBT-REGISTRY.md) | Every metric the program moves, with its counting command, 2026-09-02 baseline and current value; live-estate facts and the free-tier limits designed against | ai, technical, owner | active |
+| [`program/CHUNK-TEMPLATE.md`](program/CHUNK-TEMPLATE.md) | The twelve-section record every chunk writes before its code, and the draft → active → historical lifecycle | ai, technical | active |
+| [`program/adr/ADR-0001-program-constraints.md`](program/adr/ADR-0001-program-constraints.md) | The seven owner decisions that bind the program: scope, $0 budget, dependency approval, safety-first order, Workers Builds deploy, manual-only retention, no staging | owner, ai, technical, operator | active |
+| [`program/chunks/2026-09-02-00-program-scaffolding.md`](program/chunks/2026-09-02-00-program-scaffolding.md) | Chunk P0 record: this folder, the baseline registry, and the four documentation contradictions corrected | ai, technical, owner | active |
+
 ## Meta
 
 | Doc | Purpose | Status |

@@ -3,8 +3,8 @@
 title: "Disaster Recovery & Backup Restore Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-08-12
-verified_against: [code, config]
+last_verified: 2026-09-02
+verified_against: [code, config, infra]
 owner: harshil
 related_docs: [incident-response.md, ../operations/OPERATIONS.md, ../architecture/KV-RESILIENCE.md, ../security/compliance/SOC2-TSC-mapping.md]
 tags: [disaster-recovery, backup, rto, rpo, soc2, iso22301, runbook]
@@ -36,7 +36,7 @@ deletion event is *both*; run the incident runbook first, this one second.
 
 | Store | What lives there | RPO (data loss) | RTO (time to restore) | Mechanism |
 |---|---|---|---|---|
-| **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** (continuous) | ~15–30 min est. | Time Travel, 30-day window |
+| **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** (continuous, within 7 days) | ~15–30 min est. | Time Travel, **7-day window on Workers Free** (30 days is the Paid figure — corrected 2026-09-02) |
 | **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **≤24h** (free tier daily) | ~30–60 min est. | Daily backup restore |
 | **KV** `cf-admin-session` | Sessions, access maps | N/A — by design | ~0 | Not backed up (§4) |
 | **R2** `madagascar-images` | CMS images, email attachments | **No backup** | Unbounded | See §5 — real gap |
@@ -51,8 +51,10 @@ deletion event is *both*; run the incident runbook first, this one second.
 
 ## 2. D1 — point-in-time recovery
 
-D1 Time Travel keeps a continuous 30-day window at no cost, so RPO is
-effectively zero within that window.
+D1 Time Travel keeps a continuous **7-day** window at no cost on the Workers
+Free plan (30 days on Workers Paid — this runbook said 30 until 2026-09-02),
+so RPO is effectively zero within that window and **unbounded beyond it**
+until the weekly export in viability program chunk 6 exists.
 
 ```bash
 # 1. Find a restore point BEFORE the damage
@@ -121,13 +123,20 @@ window, `TRASH_RETENTION_DAYS`), which covers accidental *application-level*
 deletes, but nothing protects against a direct R2-level deletion (compromised
 API token, `wrangler r2 object delete`, a reconciliation-cron bug) or against
 overwrite-in-place data loss (a same-key upload has no prior version to
-recover). Versioning closes both; Trash closes neither.
+recover). Trash closes neither.
+
+> **Corrected 2026-09-02.** Earlier revisions recommended "enable R2 object
+> versioning". Cloudflare R2 does not offer per-object versioning; it offers
+> **bucket locks** (a retention policy that blocks deletes and overwrites for a
+> period). A lock would also block the application's own 30-day Trash
+> hard-delete and the weekly reconciliation cron, so it is a design decision,
+> not a toggle. It is taken in viability program chunk 6.
 
 Options, none yet implemented:
 
 | Option | Cost | Effort |
 |---|---|---|
-| Enable R2 object versioning (both buckets — prioritise `madagascar-staff-storage`) | Storage delta only | Low — **recommended first step** |
+| R2 bucket lock on `madagascar-staff-storage` (retention policy; requires the Trash hard-delete and reconciliation paths to respect it) | Storage delta only | Medium — **decision pending (chunk 6)** |
 | Scheduled `rclone` copy to a second bucket | ~$0 within free tier | Medium |
 | Accept the risk, document it | $0 | Current state |
 

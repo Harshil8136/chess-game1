@@ -82,14 +82,20 @@ This exists because the pattern has already recurred: `service_config` → `admi
 **Every schema change requires 3 artifacts:**
 
 1. **Schema TS/DDL** — the `CREATE`/`ALTER` statement itself, in a new file under `migrations/` (D1) or `supabase/migrations/` (Supabase).
-2. **Applied migration** — for D1, apply the file directly:
-   `wrangler d1 execute madagascar-db --file=migrations/<file>.sql --remote`.
-   > ⚠️ **Do NOT use `wrangler d1 migrations apply` on `madagascar-db`.** That
-   > database's `d1_migrations` bookkeeping table tracks **cf-astro**'s history,
-   > so the command would misjudge what has already run here and can re-apply or
-   > skip migrations. This rule previously prescribed exactly that command while
-   > `MAINTENANCE.md` and `features/EMAIL-PORTAL.md` both documented that it does
-   > not work. Supabase changes use the Supabase migration tooling as normal.
+2. **Applied migration** — for D1, apply through Wrangler's migration runner:
+   `npx wrangler d1 migrations apply madagascar-db --local` (dev) and
+   `npx wrangler d1 migrations apply madagascar-db --remote` (production).
+   > **Corrected 2026-09-02.** This rule previously said "do NOT use
+   > `wrangler d1 migrations apply` on `madagascar-db`" because the database's
+   > `d1_migrations` table "tracks cf-astro's history". A live query of that
+   > table (86 rows) shows it is keyed on **filename** and holds both repos'
+   > files interleaved — every one of this repo's 29 `migrations/*.sql` files
+   > is recorded there, applied by exactly this command. The runner is the
+   > mechanism in use; `main.md` RULE #0.7b and `README.md` already said so.
+   > What the filename key does imply: **never rename an applied migration file**
+   > (the runner would re-apply it) and never reuse a number the other repo
+   > owns (RULE #0.7b). Supabase changes use the Supabase migration tooling as
+   > normal.
 3. **Applied ledger entry** — one row in [`documentation/reference/schema-change-ledger.md`](./documentation/reference/schema-change-ledger.md) recording the migration file, date applied, who/what applied it, and a one-line description.
 
 **Verify the change landed** by querying the live schema — there is no
@@ -702,7 +708,12 @@ now standalone, so a pointer outside it can never resolve.
   this repo. Pushing cf-admin changes from a sibling checkout is the single
   easiest way to deploy the wrong Worker.
 - **Push directly to `origin main`.** There is no pull-request gate and no branch
-  protection; `main` auto-deploys. Compliance docs record this honestly as a
+  protection; `main` auto-deploys **through Cloudflare Workers Builds** (the
+  dashboard-side GitHub connection — no workflow in `.github/` runs
+  `wrangler deploy`). The quality/security workflows run on the same push but
+  do not gate that deploy today; making the Builds build/deploy commands run
+  verify → migrate → deploy is the viability program's chunk 3
+  (`documentation/program/ROADMAP.md`). Compliance docs record this honestly as a
   machine approval rather than a second pair of human eyes — see
   [`documentation/security/compliance/SOC2-TSC-mapping.md`](./documentation/security/compliance/SOC2-TSC-mapping.md)
   CC8.1. (An agent working on an assigned feature branch follows its own
