@@ -74,7 +74,7 @@ Translating in code means there is never a moment where the deployed Worker and 
 
 **The ladder is written down once,** in `rbac.ts`. It previously existed in seven places, all typed with an index signature so the compiler could not object when they drifted; two were still on the old ladder after the rename shipped. `test/rbac-roles.test.ts` fails the build on any file outside `rbac.ts` that writes it out again.
 
-**Viewer is enforced, not merely absent.** `resolveApiAuthz()` derives API permission from *page* access, so a viewer granted a page would otherwise inherit its mutations. `src/lib/auth/pipeline.ts` refuses `viewer` on any non-idempotent method regardless of page grants, before the page-access rewrite and covering page routes as well as `/api/*`. It is deliberately not staged behind `API_DENY_MODE`: that flag exists to protect legitimate traffic on the 87 routes that pre-dated it in July 2026 (there are 137 API route files today), and a new tier has none.
+**Viewer is enforced, not merely absent.** `resolveApiAuthz()` derives API permission from *page* access, so a viewer granted a page would otherwise inherit its mutations. `src/lib/auth/stages/decide.ts` (the pipeline's decision stage since chunk 10) refuses `viewer` on any non-idempotent method regardless of page grants, before the page-access rewrite and covering page routes as well as `/api/*`. It is deliberately not staged behind `API_DENY_MODE`: that flag exists to protect legitimate traffic on the 87 routes that pre-dated it in July 2026 (there are 137 API route files today), and a new tier has none.
 
 ### 1.3 No Hardcoded Bypass
 

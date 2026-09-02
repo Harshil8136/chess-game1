@@ -70,7 +70,7 @@ Access levels operate dynamically based on strict numeric permissions (lower num
 | **2** | **Admin** 👑 | Second in command. Full operational control, including platform settings and users at or below their level. |
 | **3** | **Manager** 🛡️ | Runs day-to-day operations — bookings, content, customers, generalized audit logs. No user or platform administration. |
 | **4** | **Staff** 👤 | Works in their own area. Cannot change settings or other people. |
-| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/pipeline.ts`, not merely absent from the UI). |
+| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). |
 
 ### Color Hierarchy: Thermal Gradient
 

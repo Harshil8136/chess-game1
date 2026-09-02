@@ -565,16 +565,16 @@ rule.
 | Scope | Rule | Effect |
 |---|---|---|
 | All `.ts`/`.tsx`/`.astro` | `'max-lines': 'off'` in `eslint.config.js` | Nothing is enforced by ESLint itself. Marked `TEMP` pending the god-file split pass (chunks 10 and 13.x). |
-| 4 named files (`auth/session.ts`, `auth/pipeline.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only. `pipeline.ts` is 620 lines; its decomposition is chunk 10, after which the exception is deleted. |
+| 3 named files (`auth/session.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only. `auth/pipeline.ts` left the list on 2026-09-02 when chunk 10 split it into `src/lib/auth/stages/` (77-line orchestrator, largest stage 103 lines). |
 | `src/pages/dashboard/**/*.astro` | `no-restricted-syntax` on `export const prerender = true` | **Hard error** — this one is real |
 | Whole repository | **`scripts/ratchet.py` against `.ratchet.json`** — blocking in `npm run verify` and in the `quality` workflow | **17 counts may only fall:** `no-explicit-any`, `no-floating-promises`, `no-misused-promises`, raw `.prepare(` outside the DAL and in API routes, `console.*`, inline `style={`, raw hex, hand-written `try` in routes, Supabase `.from(` outside the DAL, `createAdminClient(` sites, inline rate-limit literals, hand-rolled backoffs, files over 600 lines, lines under `src/`, deprecated role-alias call sites. A rise fails the build until `python scripts/ratchet.py --update --reason "…"` is committed with it; the reason is recorded in the file. |
 
 `any` is still `'warn'` in ESLint and still forbidden by `coding-standards.md`
 for new code; the difference since chunk 4 is that the count is **held**: 500 on
-2026-09-02 (count with `npx eslint . -f json`, not by grepping), and it cannot
-go up. The same holds for the two type-aware promise rules enabled the same
-day (114 `no-floating-promises`, 215 `no-misused-promises`) and for the 22
-files over 600 lines. Each vertical slice (chunk 13.x) lowers its own share and
+2026-09-02 when the ratchet landed, 493 after chunk 10 the same day (count with
+`npx eslint . -f json`, not by grepping), and it cannot go up. The same holds for the two type-aware promise rules enabled the same
+day (114 `no-floating-promises`, 215 `no-misused-promises`) and for the files
+over 600 lines (22 at chunk 4, 21 since chunk 10). Each vertical slice (chunk 13.x) lowers its own share and
 commits the new baseline. Do not cite any of these limits as an ESLint `error`
 until the count reaches zero and the rule is flipped.
 

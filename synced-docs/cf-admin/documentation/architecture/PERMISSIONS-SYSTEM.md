@@ -7,7 +7,7 @@ last_verified: 2026-08-24
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/auth/pipeline.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -255,26 +255,29 @@ override machinery as capability, not as exercised behaviour.
 1. `sentryErrorBoundary` — catches downstream throws, tags them, returns JSON 500
    for `/api/*` and re-throws for pages.
 2. `securityHeaders` — CSP with a per-request nonce (`src/lib/security/csp.ts`).
-3. `authMiddleware` — everything below (`src/lib/auth/pipeline.ts`, 722 lines).
+3. `authMiddleware` — everything below (`src/lib/auth/pipeline.ts`, a 77-line
+   orchestrator over the stage modules in `src/lib/auth/stages/` since chunk 10).
 
-Ordered, with the store each stage touches:
+Ordered, with the file that owns each stage and the store it touches (chunk 10,
+2026-09-02; files are under `src/lib/auth/stages/` unless the path says otherwise):
 
-| # | Stage | Touches |
-|---|---|---|
-| 1 | Asset/public-route short-circuit | — |
-| 2 | Read `__Host-admin_session` cookie | — |
-| 3 | Read `session:{id}` from KV | **KV ×1** |
-| 4 | Session valid and fresh? → skip to 9 | — |
-| 5 | No session → verify Cloudflare Access JWT | JWKS fetch (cached) |
-| 6 | Look up email in `admin_authorized_users` | **Supabase HTTP** |
-| 7 | Compute access map | **D1 ×1** |
-| 8 | Write session + reverse index | **KV ×2** |
-| 9 | Viewer-on-mutation check | — |
-| 10 | Resolve page/API access from the in-memory map | — |
-| 11 | Audit write, after the response | **D1 ×1, via `waitUntil`** |
+| # | Stage | File | Touches |
+|---|---|---|---|
+| 1 | Asset, webhook, public-page and public-API classification with the method rules; then the CSRF gate | `classify.ts` | — |
+| 2 | Read `__Host-admin_session` → `session:{id}` from KV; refuse a revoked session (`revoked-session:{id}`, `revoked:{userId}`) | `session-stage.ts` | **KV ×3** (record + two flags) |
+| 3a | Warm session, every 30 min: re-read the identity row; inactive, missing or unrecognised revokes; a changed role recomputes the map | `refresh-role.ts` | Supabase HTTP; **D1 ×1** on a role change |
+| 3b | No session: verify the Cloudflare Access assertion (JWKS, RS256, audience, issuer, expiry) | `assertion.ts` | JWKS fetch (cached) |
+| 3c | … bot score, header/claim email match, whitelist, revocation flag, stored role, session creation, `cf_sub_id` write-back, login event | `bootstrap.ts` | **Supabase HTTP**, **D1 ×1** (map), **KV ×1 read + ×2 writes** |
+| 4 | A usable access map: missing, built for another role or older than 1 h → recompute; bounded fail-open on a D1 error when a prior map exists | `access-map.ts` | **D1 ×1** when recomputing |
+| 5 | The decision, as data: page or API resolution through the one page rule, the viewer-on-mutation refusal, `API_DENY_MODE`, and the audit events each outcome records | `decide.ts` (pure), `../decide-access.ts` | — |
+| 6 | Audit rows, after the response, through the Ghost Audit engine | `record.ts` | **D1 ×1 per event, via `waitUntil`** |
+| 7 | `locals.user`, then the Decision becomes a Response (`next`, redirect, rewrite, text or JSON) | `../pipeline.ts`, `decision.ts` | — |
 
-Steps 5–8 run only on a cold login or a stale re-check. Steps 1–4 and 9–11 are the
-warm path.
+Stages 3b–3c run only on a cold login and 3a every 30 minutes; 1, 2 and 4–7
+are the warm path. Each stage returns either `continue` with the facts the next
+one needs or a `Decision`; `decision.ts` is the only place a `Response` is
+built and `record.ts` the only place a row is written, so every stage is
+tested on its own against real KV and D1 (`test/pipeline-*.test.ts`).
 
 ---
 
@@ -614,8 +617,10 @@ Those are `draft` and forward-looking. **This document describes what is built.*
 | Test | Guarantees |
 |---|---|
 | `test/rbac-roles.test.ts` | Ladder ordering, translation, `canManageUser` semantics |
-| `test/plac.test.ts` | Map computation and deny-beats-grant |
-| `test/guard-plac.test.ts` | `requirePageAccess` exact match, prefix propagation, fail-closed on a missing map |
+| `test/plac.test.ts` | Map computation against a real D1 registry, deny-beats-grant |
+| `test/guard-plac.test.ts` | `requirePageAccess` exact match, prefix propagation, fail-closed on a missing map, owner bypass, an unknown key is not a deny |
+| `test/decide-access.test.ts` | The one page-access rule: vendor and owner bypass, exact key, longest-ancestor inheritance, unknown vs deny |
+| `test/pipeline-session.test.ts`, `test/pipeline-bootstrap.test.ts`, `test/pipeline-decision.test.ts` | Every status, redirect, rewrite, header, KV effect and audit row of the middleware on real KV and D1 (40 cases, chunk 10): session read and both revocation flags; the 30-minute re-check, including that a supabase-js 5xx revokes like a missing row; the Cloudflare Access bootstrap with a real RS256 key and a stubbed identity store; the access-map refresh and its bounded fail-open; the viewer rule; `API_DENY_MODE`; the rows `recordEvents` writes |
 | `test/api-authz-inventory.test.ts` | **Every `/api/*` route is mapped** — CI fails otherwise |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
@@ -627,6 +632,7 @@ Those are `draft` and forward-looking. **This document describes what is built.*
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
+| 2026-09-02 | claude | chunk 10: §7 rewritten from the stage modules after the decomposition (`wc -l src/lib/auth/stages/*.ts`, `git show 794bc34`); §17 from the suites that ran (`npx vitest run`: 279 cases across the 11 auth-path files, 717 across the repository). §13.1's KV-read figures were not re-verified here — chunk 10b owns that correction | §7 and §17 match the code at `794bc34` |
 
 ## Related
 

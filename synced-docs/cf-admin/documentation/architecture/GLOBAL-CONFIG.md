@@ -132,7 +132,7 @@ be read fresh by the code that enforces it, not carried inside the thing it's
 supposed to be governing.
 
 **Recommendation: read `GLOBAL_CONFIG` fresh (from isolate cache → KV → D1, per §3)
-on every request that needs it, the same way `checkPageAccess()` already reads the
+on every request that needs it, the same way `decideAccess()` already reads the
 PLAC map fresh from the session on every request. Do not deliver it via a token that
 only refreshes at login.** This isn't a security objection — it would be exactly as
 wrong even if it held zero sensitive data — it's that a login-scoped token cannot

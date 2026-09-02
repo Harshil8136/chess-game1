@@ -219,6 +219,10 @@ src/
 │   └── audit/, privacy/, diagnostics/
 └── lib/
     ├── auth/                          ← RBAC, PLAC, sessions, guards
+    │   ├── pipeline.ts                ← authMiddleware: the orchestrator (chunk 10)
+    │   ├── stages/                    ← classify, session-stage, refresh-role, assertion, bootstrap, access-map, decide, record;
+    │   │                                 decision.ts is the stage contract and the only Response builder
+    │   └── decide-access.ts           ← the one page-access rule (decideAccess / isExplicitlyDenied)
     ├── bookings/
     │   └── constants.ts               ← [SUPABASE_PROJECT_REF]() — canonical service badge colors
     ├── analytics/

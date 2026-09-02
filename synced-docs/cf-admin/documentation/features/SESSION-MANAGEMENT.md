@@ -34,7 +34,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 - **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin` — the *stored* value; canonical **Admin**, level 2),
   seeded by `migrations/0002_promote_sessions_page.sql`, with action fragments
   `#revoke` / `#unblock` / `#flush` (owner) / `#export`. SSR access is enforced
-  by the middleware `checkPageAccess` gate; per-user overrides are editable in the
+  by the middleware `decideAccess` gate; per-user overrides are editable in the
   Access Policy Manager (grouped under "Security").
 
 ## Components (code-split)
