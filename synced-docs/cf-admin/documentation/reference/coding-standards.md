@@ -17,10 +17,12 @@ tags: []
 
 - `moduleResolution: "bundler"` in `tsconfig.json`
 - `any` type is **FORBIDDEN** by this standard (unless bypassing a documented upstream type bug).
-  ⚠️ **Enforcement does not match yet:** `eslint.config.js` sets
-  `@typescript-eslint/no-explicit-any` to `'warn'` during the type-debt burn-down, and
-  `npm run lint` reports **444** of them (2026-08-13). Treat this as the rule for *new* code; it is
-  not mechanically blocked. See `RULESAd.md` §8.1.
+  ⚠️ **Enforcement is a ratchet, not an error:** `eslint.config.js` sets
+  `@typescript-eslint/no-explicit-any` to `'warn'` during the type-debt burn-down;
+  since 2026-09-02 (viability program chunk 4) `scripts/ratchet.py` holds the count
+  (500 that day) so it cannot rise — a new `any` fails `npm run verify` and CI. Treat
+  this as the rule for *new* code and lower the count in the slice you are working on.
+  See `RULESAd.md` §8.1.
 - All Cloudflare bindings must be strictly typed.
 
 ## 2. File Naming

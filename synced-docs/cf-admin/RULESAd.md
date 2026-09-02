@@ -560,25 +560,23 @@ bound for any file. If a file grows past that, extract logic into modules
 (routing constants, security headers, sub-components) rather than disabling the
 rule.
 
-**What `eslint.config.js` actually enforces today (verified 2026-08-13):**
+**What is actually enforced today (verified 2026-09-02, viability program chunk 4):**
 
 | Scope | Rule | Effect |
 |---|---|---|
-| All `.ts`/`.tsx`/`.astro` | `'max-lines': 'off'` | **Nothing is enforced.** Marked `TEMP` pending the god-file split pass; slated to return as `error` in phase 12. |
-| 4 named files (`auth/session.ts`, `auth/pipeline.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only |
+| All `.ts`/`.tsx`/`.astro` | `'max-lines': 'off'` in `eslint.config.js` | Nothing is enforced by ESLint itself. Marked `TEMP` pending the god-file split pass (chunks 10 and 13.x). |
+| 4 named files (`auth/session.ts`, `auth/pipeline.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only. `pipeline.ts` is 620 lines; its decomposition is chunk 10, after which the exception is deleted. |
 | `src/pages/dashboard/**/*.astro` | `no-restricted-syntax` on `export const prerender = true` | **Hard error** — this one is real |
+| Whole repository | **`scripts/ratchet.py` against `.ratchet.json`** — blocking in `npm run verify` and in the `quality` workflow | **17 counts may only fall:** `no-explicit-any`, `no-floating-promises`, `no-misused-promises`, raw `.prepare(` outside the DAL and in API routes, `console.*`, inline `style={`, raw hex, hand-written `try` in routes, Supabase `.from(` outside the DAL, `createAdminClient(` sites, inline rate-limit literals, hand-rolled backoffs, files over 600 lines, lines under `src/`, deprecated role-alias call sites. A rise fails the build until `python scripts/ratchet.py --update --reason "…"` is committed with it; the reason is recorded in the file. |
 
-The same gap exists for `any`: `coding-standards.md` forbids it outright while
-`@typescript-eslint/no-explicit-any` is set to `'warn'`. `npm run lint` reports
-**444** such warnings (2026-08-13) — count them with
-`npx eslint . -f json` rather than by grepping, which undercounts generics and
-type arguments. Do not cite either limit as enforced until the rule is flipped
-back on.
-
-`npm run lint` currently exits clean with **0 errors, 445 warnings**: the 444
-above plus **1 `max-lines`** — `src/lib/auth/pipeline.ts` is at 608 lines against
-its own 600-line exception. That exception's comment in `eslint.config.js` still
-describes the file as 517 lines.
+`any` is still `'warn'` in ESLint and still forbidden by `coding-standards.md`
+for new code; the difference since chunk 4 is that the count is **held**: 500 on
+2026-09-02 (count with `npx eslint . -f json`, not by grepping), and it cannot
+go up. The same holds for the two type-aware promise rules enabled the same
+day (114 `no-floating-promises`, 215 `no-misused-promises`) and for the 22
+files over 600 lines. Each vertical slice (chunk 13.x) lowers its own share and
+commits the new baseline. Do not cite any of these limits as an ESLint `error`
+until the count reaches zero and the rule is flipped.
 
 → See [CODING-STANDARDS.md](./documentation/reference/coding-standards.md) for the full code quality and architecture standards.
 
@@ -601,7 +599,7 @@ Compliance mappings link to the OWASP ASVS v4.0.3 matrix in
 | SEC-01 | `script-src` MUST NOT contain `'unsafe-eval'` — **no exemptions** | `src/lib/security/csp.ts` (`SCRIPT_SRC_ENFORCING`) | `rules_check.py::SEC-01` | ASVS 14.4.3 |
 | SEC-01b | The Report-Only canary `script-src` MUST stay free of `'unsafe-inline'`/`'unsafe-eval'` | `src/lib/security/csp.ts` (`SCRIPT_SRC_CANARY`) | `rules_check.py::SEC-01b` | ASVS 14.4.3 |
 | SEC-02 | All cookies MUST be `SameSite=Strict` (never `Lax`) | any `SameSite=` in `src/**` | `rules_check.py::SEC-02` | ASVS 3.4.3 |
-| SEC-03 | API handlers MUST use a DAL repository (`src/lib/dal/*`), never raw `env.DB.prepare(...)` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-03` | ASVS 5.3.4 |
+| SEC-03 | API handlers MUST use a DAL repository (`src/lib/dal/*`), never raw D1 — `.prepare(` or `.batch(` on **any** binding alias. Until 2026-09-02 only the literal `env.DB.prepare(` was matched and 17 files went unseen; the 18 files that call D1 directly today are named in the rule's `exempt` list as the burn-down list (each 13.x slice deletes its own line), and a 19th file is blocked | `src/pages/api/**/*.ts` | `rules_check.py::SEC-03` (negative test: `scripts/tests/test_rules_check.py`) | ASVS 5.3.4 |
 | SEC-04 | Use `isAdmin()` / `isSuperAdmin()` helpers (`src/lib/auth/rbac.ts`), never hardcoded role arrays | `src/pages/api/**/*.ts` | `rules_check.py::SEC-04` | ASVS 4.1.3 |
 | SEC-05 | Workers runtime has no `process.env` — use `getEnv(context)` from `src/lib/env.ts` | `src/**/*.{ts,tsx,astro}` | `rules_check.py::SEC-05` | ASVS 14.1.1 |
 | SEC-06 | Every API handler MUST gate on `requireAuth()`, `placDenyResponse()`, or `locals.user` — no unauthenticated endpoints outside `PUBLIC_API_ROUTES` / `WEBHOOK_ROUTES` | `src/pages/api/**/*.ts` | `rules_check.py::SEC-06` | ASVS 4.1.1 |
@@ -635,7 +633,10 @@ in `.github/workflows/security.yml`.
 > the rule guarded, and *adding* `'unsafe-eval'` is what silenced the
 > `'unsafe-inline'` beside it. The guard reported "0 violations" against a CSP
 > with both. When adding an exemption, first prove the rule still fails without
-> it: every rule in this table now has a negative test.
+> it. **Corrected 2026-09-02:** this sentence used to say every rule in the
+> table has a negative test; no test file for the gates existed until
+> viability program chunk 4 added `scripts/tests/` (run with
+> `npm run test:gates`). SEC-03 has one; add one for every rule you touch.
 
 **Accessibility rules (A11Y-01…06)** live in `scripts/a11y_check.py` and run in
 `.github/workflows/quality.yml`, currently `--warn-only` — see
