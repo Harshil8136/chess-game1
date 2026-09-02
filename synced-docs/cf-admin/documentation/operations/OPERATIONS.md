@@ -378,30 +378,35 @@ Local development: copy `.dev.vars.example` to `.dev.vars` and fill the values; 
 
 ## 7. Build & Deploy Commands
 
+> Owner of the release path: [`../runbooks/release-and-rollback.md`](../runbooks/release-and-rollback.md)
+> (viability program chunk 3). This section is the command reference only.
+
 ```bash
 # cf-admin
-npm run dev           # Local dev server (wrangler dev)
-npm run build         # Production build
-wrangler deploy       # Deploy to Cloudflare Workers
+npm run dev            # Local dev server (Astro on workerd)
+npm run verify         # the full gate — same set Workers Builds and CI run
+npm run build          # Production build (astro build; offline-safe via .env.build)
+npm run release        # preflight → verify → build → drift check → migrate → deploy → smoke → tag
+npm run build:ci       # Workers Builds build command  (verify + build)
+npm run deploy:ci      # Workers Builds deploy command (migrate BEFORE deploy, then smoke)
 
-# D1 migrations — apply individually with `d1 execute`, NOT `d1 migrations apply`.
-# The `d1_migrations` bookkeeping table in this database tracks cf-astro's
-# migration history, so `wrangler d1 migrations apply` would misjudge what has
-# already run here. See MAINTENANCE.md and features/EMAIL-PORTAL.md.
-#
-# State as of 2026-08-13: migrations/ holds 28 files spanning 0000–0050 (the
-# numbering is sparse — 45 older files were moved to database/legacy_migrations/
-# and are already applied). The highest applied is 0050.
-wrangler d1 execute madagascar-db --file=migrations/0051_<name>.sql --remote
+# D1 migrations — through Wrangler's runner (RULESAd RULE #0.7, corrected 2026-09-02).
+# The shared d1_migrations ledger is keyed on FILENAME and holds both repos'
+# files; every one of this repo's migrations/*.sql is recorded there. Never
+# rename an applied file. Numbers 0033+ belong to this repo (RULE #0.7b).
+npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
+npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
+node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# List what is actually in the directory before assuming a number is free:
+# State as of 2026-09-02: migrations/ holds 29 files (0000–0008, then 0033–0051;
+# `0002` appears twice — both applied, never rename). Highest applied: 0051.
 ls migrations/
 
 # Secrets management
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 wrangler secret put CF_API_TOKEN_READ_LOGS    # see §6 for token permissions
 wrangler secret put CF_API_TOKEN_ZT_WRITE     # see §6 for token permissions
-wrangler secret list
+wrangler secret list                          # must cover [secrets] required in wrangler.toml
 
 # Verify bindings are live
 wrangler d1 list
@@ -410,7 +415,7 @@ wrangler kv namespace list
 
 ### ⚠️ Migration numbering has two colliding series
 
-`migrations/` (0000–0050, 28 `.sql` files — `0002` appears twice and 0009–0032
+`migrations/` (0000–0051, 29 `.sql` files — `0002` appears twice and 0009–0032
 are unused) and `database/legacy_migrations/` (0001–0043, 44 `.sql` files plus a
 README — `0021` appears twice) are **independent numbering series that overlap on 19
 numbers** — 0001–0008 and 0033–0043. `migrations/0033_create_blog_and_taxonomy_tables.sql`

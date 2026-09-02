@@ -689,11 +689,15 @@ npm run knip             # Dead-code sweep. NOT clean today (see MAINTENANCE.md
                          # treat a non-zero exit as a blocking failure yet.
 
 # The full gate — run this before any commit (see "Git & deployment protocol")
-npm run verify           # typecheck → lint → tests → rules_check → docs_check
-                         #   → a11y_check → audit_gate
+npm run verify           # types:check → typecheck → lint → tests → rules_check
+                         #   → docs_check → a11y_check → audit_gate (all blocking)
 
-# Build & Deploy
-astro build && wrangler deploy   # Build + deploy to Cloudflare
+# Release (viability program chunk 3 — documentation/runbooks/release-and-rollback.md)
+npm run release          # preflight → verify → build → drift check → MIGRATE
+                         #   → wrangler deploy → smoke → tag   (local; cf:deploy is an alias)
+npm run build:ci         # what Workers Builds runs as its build command
+npm run deploy:ci        # what Workers Builds runs as its deploy command
+                         #   (migrations are applied BEFORE the new code deploys)
 ```
 
 ### Git & deployment protocol
@@ -710,9 +714,12 @@ now standalone, so a pointer outside it can never resolve.
   protection; `main` auto-deploys **through Cloudflare Workers Builds** (the
   dashboard-side GitHub connection — no workflow in `.github/` runs
   `wrangler deploy`). The quality/security workflows run on the same push but
-  do not gate that deploy today; making the Builds build/deploy commands run
-  verify → migrate → deploy is the viability program's chunk 3
-  (`documentation/program/ROADMAP.md`). Compliance docs record this honestly as a
+  do not gate that deploy by themselves; the gate is the Builds **build
+  command** running `npm run build:ci` (the full `verify` then `astro build`)
+  and the **deploy command** running `npm run deploy:ci` (migrate → deploy →
+  smoke) — `scripts/release.mjs`, viability program chunk 3, switched on by
+  the owner in the dashboard per
+  `documentation/runbooks/release-and-rollback.md` §3. Compliance docs record this honestly as a
   machine approval rather than a second pair of human eyes — see
   [`documentation/security/compliance/SOC2-TSC-mapping.md`](./documentation/security/compliance/SOC2-TSC-mapping.md)
   CC8.1. (An agent working on an assigned feature branch follows its own

@@ -146,9 +146,14 @@ Code recovery is `git`; the deployment is reproducible.
 
 ```bash
 git log --oneline -20
-git revert <sha> && git push origin main    # main auto-deploys
+git revert <sha> && git push origin main    # main auto-deploys through Workers Builds
+npx wrangler rollback                       # instant: previous Worker code, same bindings/secrets
 # or roll back in the Cloudflare dashboard → Workers → Deployments
 ```
+
+> Code rolls back; **schema does not**. Which of the two you need — and when a
+> rollback is the wrong move after a contract migration — is the table in
+> [`release-and-rollback.md`](release-and-rollback.md) §5.
 
 **Binding IDs are the real risk here, not the code.** A `wrangler.toml`
 pointing at a non-existent KV/D1 UUID fails silently — this caused a production

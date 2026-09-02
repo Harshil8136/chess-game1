@@ -184,6 +184,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
 | [`runbooks/incident-response.md`](runbooks/incident-response.md) | Incident response + GDPR Art. 33 72-hour breach notification (severity, containment, notification matrix) | active |
 | [`runbooks/disaster-recovery.md`](runbooks/disaster-recovery.md) | Backup/restore per store, RTO/RPO targets, scenario playbooks (drill outstanding) | active |
+| [`runbooks/release-and-rollback.md`](runbooks/release-and-rollback.md) | The release path (Workers Builds → `build:ci` / `deploy:ci`: verify, migrate before deploy, smoke), expand/contract policy for migrations, the one-time dashboard switch-on, and code-vs-schema rollback | active |
 | [`runbooks/cron-scheduled-exception.md`](runbooks/cron-scheduled-exception.md) | Cron `*/5` scheduled-handler exception (CF Access audit poller): diagnosis + fix | active |
 | [`runbooks/cloudflare-deploy-queue-handler-missing.md`](runbooks/cloudflare-deploy-queue-handler-missing.md) | Deploy fails with `Queue handler is missing [code: 11001]` while the build passes: missing `main` entrypoint in wrangler.toml, diagnosis + fix + guard | active |
 | [`runbooks/brevo-webhook.md`](runbooks/brevo-webhook.md) | Enable Brevo delivery webhook: Worker secret + CF Access bypass policy + Brevo config | active |
@@ -218,6 +219,7 @@ the public docs mirror (ADR-0001).
 | [`program/chunks/2026-09-02-00-program-scaffolding.md`](program/chunks/2026-09-02-00-program-scaffolding.md) | Chunk P0 record: this folder, the baseline registry, and the four documentation contradictions corrected | ai, technical, owner | historical |
 | [`program/chunks/2026-09-02-01-real-runtime-test-harness.md`](program/chunks/2026-09-02-01-real-runtime-test-harness.md) | Chunk 1 record: the Workers test pool enabled with a production schema snapshot, fixtures, the first middleware/route/repository/cron/queue tests, and the coverage baseline | ai, technical, owner | historical |
 | [`program/chunks/2026-09-02-02-config-truth.md`](program/chunks/2026-09-02-02-config-truth.md) | Chunk 2 record: `Env` generated from `wrangler.toml`, required-secrets validation at deploy, the 92 untyped env accesses fixed at source, `.dev.vars.example`, offline build flag, and C-12 (`_headers`) closed by evidence | ai, technical, owner, operator | historical |
+| [`program/chunks/2026-09-02-03-release-discipline.md`](program/chunks/2026-09-02-03-release-discipline.md) | Chunk 3 record: the release script and its unit-tested guards, Workers Builds build/deploy commands, release id = commit SHA, the health route split by auth with the synthetic metrics removed, local verify = CI | ai, technical, owner, operator | active |
 
 ## Meta
 
