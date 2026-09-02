@@ -55,6 +55,7 @@ To enable zero-click / single-click redirection to Google OAuth from Cloudflare 
    - Ensure **Google** is selected in **Identity providers**.
    - Enable **"Apply instant authentication"** (`auto_redirect_to_identity: true`).
 4. (Optional via Cloudflare API):
+
    ```bash
    curl "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/access/apps/${APP_ID}" \
      -X PUT \
@@ -70,8 +71,9 @@ To enable zero-click / single-click redirection to Google OAuth from Cloudflare 
 
 ## 3. Client-Side Identity Memory Specifications
 
-* **Storage Location:** `window.localStorage.getItem('cf_admin_last_profile')`
-* **Schema Definition (`StoredProfile` in `src/lib/auth/profile-memory.ts`):**
+- **Storage Location:** `window.localStorage.getItem('cf_admin_last_profile')`
+- **Schema Definition (`StoredProfile` in `src/lib/auth/profile-memory.ts`):**
+
   ```typescript
   export interface StoredProfile {
     email: string;
@@ -81,11 +83,13 @@ To enable zero-click / single-click redirection to Google OAuth from Cloudflare 
     avatarInitials: string;
     lastActiveAt: number;
   }
+
   ```
-* **Security & Invariants:**
-  * **No Secrets:** Session IDs, CSRF tokens, and JWT assertions are NEVER written to `localStorage`.
-  * **Auto-Expiration:** Profiles older than 30 days (`PROFILE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000`) are purged automatically.
-  * **Reset Capability:** Clicking *"Use another account or sign in with OTP"* immediately invokes `[SUPABASE_PROJECT_REF]()`.
+
+- **Security & Invariants:**
+  - **No Secrets:** Session IDs, CSRF tokens, and JWT assertions are NEVER written to `localStorage`.
+  - **Auto-Expiration:** Profiles older than 30 days (`PROFILE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000`) are purged automatically.
+  - **Reset Capability:** Clicking *"Use another account or sign in with OTP"* immediately invokes `[SUPABASE_PROJECT_REF]()`.
 
 ---
 
