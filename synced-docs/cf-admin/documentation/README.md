@@ -217,7 +217,7 @@ the public docs mirror (ADR-0001).
 | [`program/adr/ADR-0001-program-constraints.md`](program/adr/ADR-0001-program-constraints.md) | The seven owner decisions that bind the program: scope, $0 budget, dependency approval, safety-first order, Workers Builds deploy, manual-only retention, no staging | owner, ai, technical, operator | active |
 | [`program/chunks/2026-09-02-00-program-scaffolding.md`](program/chunks/2026-09-02-00-program-scaffolding.md) | Chunk P0 record: this folder, the baseline registry, and the four documentation contradictions corrected | ai, technical, owner | historical |
 | [`program/chunks/2026-09-02-01-real-runtime-test-harness.md`](program/chunks/2026-09-02-01-real-runtime-test-harness.md) | Chunk 1 record: the Workers test pool enabled with a production schema snapshot, fixtures, the first middleware/route/repository/cron/queue tests, and the coverage baseline | ai, technical, owner | historical |
-| [`program/chunks/2026-09-02-02-config-truth.md`](program/chunks/2026-09-02-02-config-truth.md) | Chunk 2 record: `Env` generated from `wrangler.toml`, required-secrets validation at deploy, the 92 untyped env accesses fixed at source, `.dev.vars.example`, offline build flag, and C-12 (`_headers`) closed by evidence | ai, technical, owner, operator | active |
+| [`program/chunks/2026-09-02-02-config-truth.md`](program/chunks/2026-09-02-02-config-truth.md) | Chunk 2 record: `Env` generated from `wrangler.toml`, required-secrets validation at deploy, the 92 untyped env accesses fixed at source, `.dev.vars.example`, offline build flag, and C-12 (`_headers`) closed by evidence | ai, technical, owner, operator | historical |
 
 ## Meta
 
