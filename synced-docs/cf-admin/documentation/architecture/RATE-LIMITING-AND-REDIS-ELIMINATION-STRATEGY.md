@@ -106,6 +106,7 @@ cf-astro/src/
 ### Approach 3: Cloudflare Workers Native `[[ratelimits]]` Binding (Recommended)
 * **Mechanism:** Configured natively in `wrangler.toml` as a runtime binding. The Cloudflare Workers runtime tracks counters inside Cloudflare's local Points of Presence (PoPs) and syncs them globally via Cloudflare's core edge infrastructure.
 * **Architecture:**
+
   ```toml
   # wrangler.toml
   [[ratelimits]]
@@ -113,6 +114,7 @@ cf-astro/src/
   namespace_id = "1001"
   simple = { limit = 60, period = 60 }
   ```
+
   ```typescript
   // Edge runtime execution (< 1ms)
   const clientIp = request.headers.get('cf-connecting-ip') || 'no-ip';
@@ -121,6 +123,7 @@ cf-astro/src/
     return jsonError(429, 'Rate limit exceeded');
   }
   ```
+
 * **Why This Is the Ideal Architecture:**
   1. **Zero KV Writes:** Does **not** touch the 1k/day KV quota. It is metered as standard Worker invocations (100k/day free).
   2. **Near-Zero Latency:** Executes in **< 1ms** directly in the V8 isolate without external network I/O.
@@ -225,6 +228,7 @@ Instead of making external Redis calls, daily AI neuron consumption is tracked d
 
 1. **Schema Fit (RULE #0.6 / RULE #0.9):** Reuse the existing `admin_portal_settings` table or `gsc_index_log` pattern.
 2. **Implementation:** Store a JSON payload in `admin_portal_settings` under the key `ai_neuron_daily_usage`:
+
    ```json
    {
      "date": "2026-08-30",
@@ -232,6 +236,7 @@ Instead of making external Redis calls, daily AI neuron consumption is tracked d
      "updatedAt": "2026-08-30T02:15:00Z"
    }
    ```
+
 3. **Write Path:** The AI generation endpoint (`/api/content/ai-generate` or `/api/emails/ai-generate`) updates the count in D1 asynchronously via `ctx.waitUntil()` after streaming the response to the user.
 4. **Performance:** Zero latency added to the user's stream; zero external Redis dependency.
 
@@ -289,15 +294,20 @@ export async function enforceRateLimit(
 
 ### Phase 3: Prune Dependencies & Comply with RULE #0.8
 1. **Uninstall packages:**
+
    ```bash
    npm uninstall @upstash/ratelimit @upstash/redis
    ```
+
 2. **Remove Environment Secrets:**
+
    ```bash
    wrangler secret delete UPSTASH_REDIS_REST_URL
    wrangler secret delete UPSTASH_REDIS_REST_TOKEN
    ```
+
 3. **Verify Clean Gates:**
+
    ```bash
    python .agents/scripts/checklist.py cf-admin
    python .agents/scripts/checklist.py cf-astro
