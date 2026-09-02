@@ -88,10 +88,13 @@ Defines the Cloudflare Workers environment, build directory (`./dist`), compatib
 | Endpoint                | Method | Prerender | Security                                                     | Purpose                                                           |
 | ----------------------- | ------ | --------- | ------------------------------------------------------------ | ----------------------------------------------------------------- |
 | `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit | Processes atomic booking transaction across D1 and Supabase.      |
+| `/api/booking/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains booking outbox records from D1 into Supabase. Poked by `cf-admin` 5-min cron via `ASTRO_SERVICE`. |
+| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                             | Hashes and logs GDPR/LFPDPPP privacy agreements.                  |
+| `/api/consent/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains consent outbox records from D1 into Supabase.              |
+| `/api/health`           | `GET`  | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Health check diagnostics verifying D1, KV, and external dependencies. |
 | `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison)                      | Purges KV Cache and updates CMS data blocks.                      |
 | `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                                            | Obfuscates PostHog analytical calls to prevent ad-blocker drops.  |
 | `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit                                | Handles Mexican LFPDPPP ARCO identity-document + rights requests. |
-| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                             | Hashes and logs GDPR/LFPDPPP privacy agreements.                  |
 
 ### 4.2 The Atomic Booking Transaction
 
