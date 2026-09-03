@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-08-24
 verified_against: [code, infra]
 owner: harshil
-related_docs: [../../RULESAd.md, ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
+related_docs: [../../RULESAd.md, ../architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
 tags: [d1, supabase, migrations, governance]
 ---
 
@@ -26,7 +26,7 @@ trees). This ledger is the third artifact — it did not exist anywhere in the
 repo until 2026-08-12, when a docs-consistency review found RULE #0.7
 referencing it while nothing implemented it (unlike RULE #0.6/#0.9, which
 point at the real, live
-[`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+[`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
 
 **Not backfilled.** Migrations applied before 2026-08-12 are not retroactively
 listed here — the live table inventory in the audit doc above is the source of
@@ -43,6 +43,7 @@ truth for what currently exists. This ledger only tracks changes from
 | `migrations/0049_add_seo_dashboard_page.sql` | 2026-08-13 | harshil | Registers `/dashboard/seo` ('Search Console Sync') under `admin_pages` with `required_role = 'super_admin'` (canonical Admin) and sort order 19. |
 | `migrations/0050_gsc_index_log_pagespeed_and_richresults.sql` | 2026-08-13 | harshil | Widens `gsc_index_log` with `mobile_usability_verdict`, `rich_results_verdict`, and `service` discriminator (RULE #0.9 reuse for PageSpeed Insights); seeds `pagespeed-check-enabled` and `pagespeed-check-interval-hours` in `admin_portal_settings`. |
 | `migrations/0051_blog_suggestions_and_schema_ownership.sql` | 2026-08-30 | claude (blog-system remediation) | Adds `entry_type` + `status` discriminators to `blog_posts_history` so it doubles as the Suggestional Edit store (RULE #0.9 reuse — no new table, same pattern as 0050's `service` column); adds `idx_history_post_entry_status`; registers PLAC capability `/dashboard/content/blog#review-suggestions`. |
+| `cf-astro/db/migrations/0015_booking_replay_outbox.sql` | 2026-09-02 | claude/gemini (outbox unblocking remediation) | Adds `replay_payload`, `replay_attempts`, `replayed_at`, `next_replay_at`, and partial index `idx_booking_attempts_pending_replay` to `booking_attempts` in D1 (`madagascar-db`), activating the durable booking replay outbox and resolving 5-min `no such column: replay_payload` cron errors. |
 
 ### Out-of-band data corrections (not migrations)
 
@@ -76,4 +77,4 @@ even when the change is data rather than schema.
 ## Related
 
 - [`../../RULESAd.md`](../../RULESAd.md) RULE #0.7 — the rule this ledger satisfies.
-- [`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — live table inventory (the source of truth for what exists today; this ledger is the change history, not the inventory).
+- [`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — live table inventory (the source of truth for what exists today; this ledger is the change history, not the inventory).
