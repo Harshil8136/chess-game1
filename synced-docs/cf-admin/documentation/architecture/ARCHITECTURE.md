@@ -181,11 +181,10 @@ src/
 │   │   │   ├── BookingDashboard.tsx           ← booking list + search
 │   │   │   ├── BookingSlideDrawer.tsx          ← thin orchestrator (~115 lines)
 │   │   │   ├── types.ts                        ← BookingRow, BookingPet, BookingDetails, SERVICE_LABELS, PET_TYPE_ICONS
-│   │   │   ├── BookingCustomerSection.tsx
-│   │   │   ├── BookingPetSection.tsx
+│   │   │   ├── BookingDossierTab.tsx
 │   │   │   ├── BookingOperationsSection.tsx
 │   │   │   ├── BookingAuditSection.tsx
-│   │   │   └── BookingDangerZoneSection.tsx
+│   │   │   └── BookingGridView / Kanban / Gantt / Manifest views, BookingHeader, BookingBatchBar, BookingCareBadges
 │   │   ├── chatbot/
 │   │   │   ├── BotConfig.tsx                  ← orchestrator (~200 lines)
 │   │   │   ├── BotConfigShared.tsx            ← ConfigSection, Field, InfoIcon primitives

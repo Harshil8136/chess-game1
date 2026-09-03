@@ -78,8 +78,9 @@ Current `wrangler.toml` names bindings after Madagascar Hotel resources
    - No production drop yet; just re-organize source of truth.
 
 2. **Phase B — Plugin-ify the bookings UI**.
-   - New `src/plugins/pet-hotel/BookingPetSection.tsx` (moved from
-     `src/components/admin/bookings/`).
+   - New `src/plugins/pet-hotel/BookingPetSection.tsx` (the former
+     `src/components/admin/bookings/BookingPetSection.tsx` was unimported and
+     was deleted on 2026-09-02, chunk 9; `git show 46c0c59` has its last shape).
    - `BookingSlideDrawer` gains a `<PluginActionBlock>` slot; pet-hotel plugin
      supplies its WhatsApp template.
    - Feature flag: `PLUGIN_PET_HOTEL=1` env; default off.

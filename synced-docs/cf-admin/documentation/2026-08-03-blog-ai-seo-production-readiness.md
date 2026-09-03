@@ -6,7 +6,7 @@ audience: [non-technical, ai, technical, operator, owner]
 last_verified: 2026-08-03
 verified_against: [code]
 owner: harshil
-related_code: [cf-admin/src/pages/api/content/blog.ts, cf-admin/src/pages/api/content/ai-generate.ts, cf-admin/src/pages/api/content/scheduled-publish.ts, cf-admin/src/lib/blog/seo-gate.ts, cf-admin/src/lib/blog/publish-scheduled.ts, cf-admin/src/lib/dal/BlogRepository.ts, cf-admin/src/components/admin/content/BlogManager.tsx, cf-admin/src/components/admin/content/BlogAiCopilotModal.tsx, cf-admin/migrations/0033_create_blog_and_taxonomy_tables.sql, cf-admin/migrations/0034_blog_quality_gate_and_redirects.sql, cf-astro/src/lib/blog.ts, cf-astro/src/pages/es/blog/, cf-astro/src/pages/en/blog/, cf-astro/src/components/seo/BlogPostSchema.astro, cf-astro/src/components/blog/]
+related_code: [cf-admin/src/pages/api/content/blog.ts, cf-admin/src/pages/api/content/ai-generate.ts, cf-admin/src/lib/blog/seo-gate.ts, cf-admin/src/lib/blog/publish-scheduled.ts, cf-admin/src/lib/dal/BlogRepository.ts, cf-admin/src/components/admin/content/BlogManager.tsx, cf-admin/src/components/admin/content/BlogAiCopilotModal.tsx, cf-admin/migrations/0033_create_blog_and_taxonomy_tables.sql, cf-admin/migrations/0034_blog_quality_gate_and_redirects.sql, cf-astro/src/lib/blog.ts, cf-astro/src/pages/es/blog/, cf-astro/src/pages/en/blog/, cf-astro/src/components/seo/BlogPostSchema.astro, cf-astro/src/components/blog/]
 related_docs: [architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md, specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, specs/2026-07-29-content-and-ai-visibility-engine.md]
 tags: [blog, ai, seo, aio, geo, workers-ai, d1, rag, publishing, production-readiness]
 ---

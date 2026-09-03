@@ -78,7 +78,7 @@ Authorization is enforced at **three layers**:
 |-------|-----------|------|
 | **Page-Level** (PLAC) | D1 `admin_pages` table restricts sidebar visibility | `lib/auth/plac.ts` |
 | **SSR Guard** | Astro frontmatter redirects non-DEV users | `pages/dashboard/debug/index.astro` |
-| **API Guard** | API route rejects non-DEV requests with 403 | `pages/api/diagnostics/ping.ts` |
+| **API Guard** | API route rejects non-DEV requests with 403 | `pages/api/diagnostics/run.ts` |
 
 All three layers must independently agree. If an attacker bypasses PLAC (e.g., bookmarks a URL), the SSR guard catches them. If they call the API directly, the API guard catches them.
 
@@ -90,23 +90,29 @@ All three layers must independently agree. If an attacker bypasses PLAC (e.g., b
 
 The System Debugging page provides real-time health verification of the production infrastructure, enabling DEV users to verify binding availability without SSH or Cloudflare dashboard access.
 
-### 3.2 Diagnostic Ping
+### 3.2 Diagnostics run
 
-The **"Run Diagnostic Ping"** tool calls `GET /api/diagnostics/ping`, which:
+The page mounts `SystemDiagnostics.tsx`, which calls `POST /api/diagnostics/run`
+on load and every 30 seconds ("Force Sync" runs it on demand). The route checks
+the vendor-support role, runs the probe suite in `src/lib/diagnostics/runner.ts`
+against the live bindings and returns the run; one row per probe is written to
+`system_test_results`.
 
-1. Authenticates the DEV user (role check)
-2. Sends a `GET` request to `cf-astro`'s `/api/health` endpoint (authenticated via `REVALIDATION_SECRET`)
-3. Measures round-trip latency
-4. Returns D1 and KV binding status from `cf-astro`
-5. Logs the action via `ctx.waitUntil()` (non-blocking, post-response)
+Two things that used to be on this page are gone (2026-09-02, viability
+program chunk 9): the "Run Diagnostic Ping" tool and its route
+`GET /api/diagnostics/ping`, which nothing had called since the page was
+rebuilt around the runner, and the "Trigger Production Tests" button, whose
+route only ever simulated a dispatch in production (owner decision, ADR-0002
+answer 5).
 
 ### 3.3 File Map
 
 | File | Purpose |
 |------|---------|
 | `pages/dashboard/debug/index.astro` | SSR page with DEV guard |
-| `components/admin/debug/SystemDiagnostics.tsx` | Preact island (Ping UI + audit status indicator) |
-| `pages/api/diagnostics/ping.ts` | API: proxies cf-astro health check |
+| `components/admin/debug/SystemDiagnostics.tsx` | Preact island: runs the suite on load and every 30 s, renders the infra bar and the per-probe list |
+| `pages/api/diagnostics/run.ts` | API: runs the probe suite and returns the run; results persist to `system_test_results` |
+| `lib/diagnostics/runner.ts` | The probe suite (tiers, latency grades, remediation text) |
 
 ---
 

@@ -6,7 +6,7 @@ audience: [ai, technical, owner]
 last_verified: 2026-08-23
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/lib/retention-tables.ts, src/pages/api/arco/requests.ts, src/pages/api/audit/sessions.ts]
+related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/lib/retention-tables.ts, src/pages/api/arco/requests.ts]
 related_docs: [reference/coding-standards.md, architecture/GLOBAL-CONFIG.md, reference/RBAC-AT-SCALE.md, MAINTENANCE.md]
 tags: [d1, supabase, kv, governance, audit, cleanup, reuse]
 ---

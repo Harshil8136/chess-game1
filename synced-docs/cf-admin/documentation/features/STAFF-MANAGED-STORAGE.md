@@ -219,7 +219,7 @@ No database schema here by design — see the migration files themselves (`migra
 
 - **Pages:** `src/pages/dashboard/storage/` (drive, inspect, config — File Request Links have no dedicated page, they're a panel inside the drive page itself)
 - **UI components:** `src/components/admin/storage/` — File Request Links: `CreateFileRequestModal.tsx`, `FileRequestsTable.tsx`, `RequestDetailsModal.tsx`
-- **API routes:** `src/pages/api/storage/` (presign/confirm/list/quota/download/rename/delete, `[id]/share/*`, `share/[token]` for the public share link, `admin/*` for inspect/config/overrides/reconciliation) — File Request Links: `request/[token]/{index,presign,confirm}.ts` (public, recipient-facing) and `requests/{index,[id]}.ts` (authenticated, staff-facing create/list/revoke)
+- **API routes:** `src/pages/api/storage/` (presign/confirm/list/download/rename/delete, `[id]/share/*`, `share/[token]` for the public share link, `admin/*` for inspect/config/overrides/reconciliation) — File Request Links: `request/[token]/{index,presign,confirm}.ts` (public, recipient-facing) and `requests/{index,[id]}.ts` (authenticated, staff-facing create/list/revoke)
 - **Shared logic:** `src/lib/storage/` (config resolution, magic-byte signatures, share-token signing — reused as-is for request tokens, share email)
 - **Data access:** `src/lib/dal/StorageFileRepository.ts`, `src/lib/dal/StorageFileRequestRepository.ts` (the one new table this sub-feature needed), and the scoped-config methods added to `src/lib/dal/PortalSettingsRepository.ts`
 - **Weekly job:** `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage`), wired into the Sunday branch of `src/workers/cf-entry.ts`

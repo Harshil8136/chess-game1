@@ -118,7 +118,6 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/users/access.ts` | `isVendorSupport`, `isOwnerOrVendor` | PLAC provisioning | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor` | Session termination | ✅ `/dashboard/users` |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/activity.ts` | `isOwnerOrVendor` | Privileged-account protection on activity logs | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/probes.ts` | `requireAuth(context, 'owner')` | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/cf-access-audit.ts` | `requireAuth(context, 'owner')` | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
@@ -128,11 +127,9 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
 | `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ effective gate `/dashboard/users` |
 | `src/pages/api/features/toggle.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Feature flag mutation | (role-only — Vendor Support is PLAC-exempt) |
-| `src/pages/api/diagnostics/ping.ts` | `isDev` (deprecated alias for `isVendorSupport`) | System diagnostics | (role-only — Vendor Support is PLAC-exempt) |
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/logs.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Audit log deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/emails.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Email log deletion | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/sessions.ts` | (admin+, via `ROLE_LEVEL['admin']`) | Session audit trail | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/stats.ts` | (admin+ for stats; owner+ for the `#security` tab, via `ROLE_LEVEL`) | Audit summary stats | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/login-logs.ts` | role-or-grant | Login forensics (PII) | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
 | `src/pages/api/audit/export.ts` | role-or-grant | CSV export | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |

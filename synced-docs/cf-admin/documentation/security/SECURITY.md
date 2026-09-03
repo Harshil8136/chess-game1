@@ -381,7 +381,6 @@ try {
 | `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
 | `GET /api/users` | canonical **Admin** (stored `super_admin`) | Full user list |
 | `POST /api/features/toggle` | `dev` | Feature flag mutations |
-| `GET /api/diagnostics/ping` | `dev` | Infrastructure probe |
 | `GET /api/users/[id]/session-status` | canonical **Admin** (stored `super_admin`) | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
 
 ### Page-Level Access Control on API routes (`placDenyResponse`)
@@ -398,7 +397,6 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 | Route | Page check | Wired In | Notes |
 |---|---|---|---|
 | `GET /api/audit/emails` (+ `DELETE`) | `/dashboard/logs` | PR #2 (2026-05-25) | Replaces the prior inline `accessMap[]` check; consistent across the audit endpoints. |
-| `GET /api/audit/sessions` | `/dashboard/logs` | PR #2 | |
 | `GET /api/audit/stats` | `/dashboard/logs` | PR #2 | |
 | `GET /api/audit/logs` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
 | `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
@@ -410,7 +408,6 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 | `DELETE /api/users/force-kick` | `/dashboard/users` | PR #2 | |
 | `GET /api/users/access-data` | `/dashboard/users` | PR #2 | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
 | `GET /api/users` | `/dashboard/users` | 2026-05-26 | |
-| `GET /api/users/activity` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/pages` | `/dashboard/users` | 2026-05-26 | |
 | `POST /api/users/access` | `/dashboard/users` | 2026-05-26 | Added before the existing 5-gate hierarchy check; a PLAC-denied admin can no longer mutate PLAC. |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |

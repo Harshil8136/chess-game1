@@ -273,10 +273,6 @@ Returns login forensic metrics to users with security clearance:
 - **Total Login Logs** — cumulative count
 - **Failed Logins Today** — count of `LOGIN_FAILED` + `LOGIN_BLOCKED` today
 
-### `GET /api/audit/sessions`
-
-Returns recent authentication events for a target user (used in User Activity panel). Queries `admin_login_logs` by email with `success = 1`, ordered by `created_at DESC`. Returns `sessions` array with a synthetic `expires_at` (= `created_at + 24h`) for UI compatibility with the "Live Sessions" panel.
-
 ---
 
 ## 6. Dashboard UI
@@ -441,7 +437,6 @@ of the applied history.
 | `src/middleware.ts` | Inline `LOGIN_SUCCESS` logging on CF ZT session bootstrap |
 | `src/workers/scheduled-log-sync.ts` | 5-min cron: polls CF Audit Log API, writes LOGIN_FAILED/LOGIN_BLOCKED (pending Phase 6) |
 | `src/pages/api/audit/login-logs.ts` | Query API (PLAC-gated, v3 schema) |
-| `src/pages/api/audit/sessions.ts` | User session activity (queries admin_login_logs, not admin_sessions) |
 | `src/pages/api/audit/stats.ts` | Stats API (login metrics) |
 | `src/pages/dashboard/logs/index.astro` | `canViewSecurity` PLAC gate |
 | `src/components/admin/logs/ActivityCenter.tsx` | SecurityForensicsTable + 3-section forensic panel |

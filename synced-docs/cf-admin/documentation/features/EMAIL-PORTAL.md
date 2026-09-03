@@ -271,21 +271,14 @@ references. Limits: **5 MB** per file (`400` over), rate limit `20` uploads / `1
 
 ### Scheduling & cancellation
 
-> ⚠️ **Cancel-scheduled-send is NOT implemented — corrected 2026-08-13.** This
-> section described `POST /api/emails/cancel` as a working endpoint, and it was
-> listed twice more in this document's file inventory. There is no
-> `src/pages/api/emails/cancel.ts`, and nothing in `src/` calls such a route —
-> no UI affordance exists either. The paragraph below is preserved as the
-> **design intent** for the feature; treat it as a spec, not as behaviour.
-> Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md) → C-17.
-
-A scheduled send lands in the ledger with `status: scheduled` and is dispatched to
-the provider with a future `scheduledAt`. The intended `POST /api/emails/cancel`
-(PLAC `#compose`) would look
-up the row, refuse anything not currently `scheduled`, call Brevo's
-API to cancel, and flip the ledger row to `cancelled` (audited). It would
-require a stored `resend_id` (legacy column name storing the Brevo ID), so a job could only be cancelled once the consumer has
-registered it with Brevo.
+> **A scheduled send cannot be cancelled from the portal.** An earlier revision
+> described `POST /api/emails/cancel` as working behaviour and kept a design
+> paragraph for it after that was corrected; the route was never built, nothing
+> calls it, and the paragraph was deleted on 2026-09-02 (viability program
+> chunk 9, MAINTENANCE C-17) so this document no longer implies a capability a
+> user cannot find. A scheduled send lands in the ledger with
+> `status: scheduled` and is dispatched to the provider with a future
+> `scheduledAt`; if cancellation is ever wanted it is a feature request.
 
 ---
 
