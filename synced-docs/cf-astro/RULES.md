@@ -43,7 +43,7 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 **Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order.** This applies with extra force here because `madagascar-db` (D1) and the Supabase project are **shared with cf-admin** — a table added carelessly from this repo is exactly as much clutter as one added from cf-admin's.
 
-1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
+1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
 2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** Active connectors exist for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case rather than defaulting either direction (see the audit doc §4 for three worked examples).
 3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.**
 
@@ -73,6 +73,20 @@ A schema change is complete only when **all three** exist:
 
 ---
 
+## 🗄️ RULE #0.7b — SHARED D1 MIGRATION NUMBER OWNERSHIP
+
+**`madagascar-db` is one database with one `d1_migrations` ledger, written to by BOTH `cf-astro` and `cf-admin`.**
+
+The ledger keys on filename, not number, so duplicate numbers collide *silently* — 25 numbers (`0001`–`0014`, `0021`, `0033`–`0042`) already appear more than once in the live ledger, once from each repo. The number space is strictly partitioned:
+
+- **`cf-astro` owns `0001`–`0032`** (`db/migrations/`)
+- **`cf-admin` owns `0033`+** (`migrations/`)
+
+- ❌ **FORBIDDEN:** Taking a migration sequence number owned by `cf-admin` (`0033`+).
+- ❌ **FORBIDDEN:** Creating a migration that depends on a column added by `cf-admin`'s migrations (or vice versa). SQLite has no `ADD COLUMN IF NOT EXISTS`, so either repo may fail if migrated in different order on a clean rebuild. Always declare shared structures using `CREATE TABLE IF NOT EXISTS` rather than `ALTER TABLE`.
+
+---
+
 ## 🧮 RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
 **cf-astro's own Pages/Worker deployment carries ~21 env vars** (7 `[vars]` + ~14 secrets — recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
@@ -88,7 +102,7 @@ A schema change is complete only when **all three** exist:
 **Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the 51 tables shared with cf-admin (31 D1 + 20 Supabase `public`, verified live 2026-08-28) (see RULE #0.6 above), or **64** counting cf-chatbot's separate `chatbot-kb`/`whatsapp-chatbot` D1 databases across the full three-app estate.
 
 - ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
-- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
+- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
 
 ---
 
