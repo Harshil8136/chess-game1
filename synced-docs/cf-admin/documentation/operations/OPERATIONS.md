@@ -108,7 +108,7 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 | Binding | Target Worker | Purpose |
 |---------|---------------|---------|
 | `CHATBOT_SERVICE` | `cf-chatbot` | Worker-to-Worker calls to the chatbot admin surface, without a public round trip |
-| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, edge sync probes) |
+| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes) |
 
 ### Workers AI
 
