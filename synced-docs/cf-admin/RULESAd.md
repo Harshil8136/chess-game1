@@ -690,8 +690,10 @@ npm run knip             # Dead-code sweep. NOT clean today (see MAINTENANCE.md
                          # treat a non-zero exit as a blocking failure yet.
 
 # The full gate — run this before any commit (see "Git & deployment protocol")
-npm run verify           # types:check → typecheck → lint → tests → rules_check
-                         #   → docs_check → a11y_check → audit_gate (all blocking)
+npm run verify           # typecheck → ratchet → test:run → test:gates → rules_check
+                         #   → docs_check → lint:md → a11y_check → audit_gate (all blocking).
+                         # package.json owns this chain. `types:check` and plain
+                         # `lint` are NOT in it — run those separately.
 
 # Release (viability program chunk 3 — documentation/runbooks/release-and-rollback.md)
 npm run release          # preflight → verify → build → drift check → MIGRATE

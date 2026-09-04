@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-08-24
 verified_against: [code, infra]
 owner: harshil
-related_docs: [../../RULESAd.md, ../architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
+related_docs: [../../RULESAd.md, ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
 tags: [d1, supabase, migrations, governance]
 ---
 
@@ -26,7 +26,7 @@ trees). This ledger is the third artifact — it did not exist anywhere in the
 repo until 2026-08-12, when a docs-consistency review found RULE #0.7
 referencing it while nothing implemented it (unlike RULE #0.6/#0.9, which
 point at the real, live
-[`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+[`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
 
 **Not backfilled.** Migrations applied before 2026-08-12 are not retroactively
 listed here — the live table inventory in the audit doc above is the source of
@@ -77,4 +77,4 @@ even when the change is data rather than schema.
 ## Related
 
 - [`../../RULESAd.md`](../../RULESAd.md) RULE #0.7 — the rule this ledger satisfies.
-- [`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — live table inventory (the source of truth for what exists today; this ledger is the change history, not the inventory).
+- [`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — live table inventory (the source of truth for what exists today; this ledger is the change history, not the inventory).
