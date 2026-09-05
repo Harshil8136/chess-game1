@@ -3,7 +3,7 @@
 title: "CF-Admin Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-04
 verified_against: [code]
 owner: harshil
 tags: []
@@ -13,7 +13,7 @@ tags: []
 
 > **TL;DR (non-technical):** How the admin portal is built and why it's fast and runs at near-zero cost. It explains the "Lean Edge" approach — authenticating and authorizing every request at Cloudflare's edge before rendering, staying well within free-tier CPU budgets.
 
-> **Status:** Production Active (v4.7)
+> **Status:** Production Active — rules version **v5.0** ([`../../RULESAd.md`](../../RULESAd.md) owns it; this banner read v4.7 until 2026-09-05)
 > **Stack:** Astro 7.1.6 SSR (`@astrojs/cloudflare` 14.1.7) + Cloudflare Workers (Free) + Preact 10.29.7 Islands (`@astrojs/preact` 6.0.2) + Tailwind CSS 4.3.3 + D1 + KV + R2 + Queues + Workers AI + Analytics Engine
 >
 > Versions here are a snapshot of `package.json` at `last_verified`; that file is
@@ -83,34 +83,41 @@ Browser Request → CF Zero Trust Edge (CF_Authorization cookie validation)
     │
     ▼
 ┌── MIDDLEWARE (middleware.ts) ──────────────────────────────────────┐
-│  1. Is route public? (/privacy, /terms) → PASS (GET/HEAD only)     │
-│  2. CSRF check on mutations (Origin/Referer vs SITE_URL)            │
+│  1. Is route public? (/privacy, /terms) → PASS (GET/HEAD only)       │
+│  2. CSRF check on mutations (Origin/Referer vs SITE_URL)             │
 │  3. Read KV session by cookie                                        │
 │                                                                      │
-│  ── KV session FOUND (fast path) ──────────────────────────────── │
-│  3a. createdAt > 24h? → destroySession() → 401 (hard expiry)       │
-│  3b. lastRoleCheckedAt > 30min? → re-fetch role from D1             │
-│      · is_active=false → destroySession() + 3-layer kick → 401     │
-│      · role changed → update session + re-compute PLAC map          │
-│      · unchanged → update lastRoleCheckedAt, continue              │
-│  3c. Session valid → skip to PLAC check                             │
+│  ── KV session FOUND (fast path) ────────────────────────────────    │
+│  3a. createdAt > 24h? → destroySession() → 401 (hard expiry)         │
+│  3b. lastRoleCheckedAt > 30min? → re-fetch role from D1              │
+│      · is_active=false → destroySession() + 3-layer kick → 401       │
+│      · role changed → update session + re-compute PLAC map           │
+│      · unchanged → update lastRoleCheckedAt, continue                │
+│  3c. Session valid → skip to PLAC check                              │
 │                                                                      │
-│  ── No KV session, CF-Access-JWT-Assertion header PRESENT ──────── │
-│  4a. verifyZeroTrustJwt(jwt, CF_ACCESS_AUD) — RS256 signature       │
-│  4b. Check KV revocation flag: revoked:{userId} → 403 if set       │
-│  4c. Lookup email in admin_authorized_users (Supabase) → id, role   │
-│  4d. Not whitelisted or is_active=false → 403                       │
-│  4e. createSession({ userId, cfSubId, email, role, loginMethod })   │
-│  4f. computeAccessMap() → embed PLAC in KV session                  │
-│  4g. logLoginAttempt() + sendSecurityAlertEmail() via waitUntil()   │
+│  ── No KV session, CF-Access-JWT-Assertion header PRESENT ────────   │
+│  4a. verifyZeroTrustJwt(jwt, CF_ACCESS_AUD) — RS256 signature        │
+│  4b. Check KV revocation flag: revoked:{userId} → 403 if set         │
+│  4c. Lookup email in admin_authorized_users (Supabase) → id, role    │
+│  4d. Not whitelisted or is_active=false → 403                        │
+│  4e. createSession({ userId, cfSubId, email, role, loginMethod })    │
+│  4f. computeAccessMap() → embed PLAC in KV session                   │
+│  4g. logLoginAttempt() + sendSecurityAlertEmail() via waitUntil()    │
 │  4h. Write cf_sub_id to admin_authorized_users on first login        │
-│      (idempotent — .is('cf_sub_id', null) guard)                    │
+│      (idempotent — .is('cf_sub_id', null) guard)                     │
 │                                                                      │
-│  ── No KV session, no CF headers → 401 (defense-in-depth) ──────── │
+│  ── No KV session, no CF identity header ───────────────────    │
+│  5a. /api/* → 401 {"error":"Missing identity"}                        │
+│  5b. page   → redirect /?error=missing_identity                       │
+│     Twice corrected. This said "401 (defense-in-depth)" until         │
+│     2026-09-04, when it was found to be redirect('/') for every       │
+│     caller — which handed an API client HTML and left / and           │
+│     /dashboard pointing at each other. Both fixed 2026-09-05;         │
+│     see PERMISSIONS-SYSTEM.md §8 and MAINTENANCE.md C-20/C-23.        │
 │                                                                      │
-│  5. PLAC check: role hierarchy + page overrides (O(1) hashmap)      │
-│  6. Denied? → Redirect /dashboard?error=insufficient                │
-│  7. Inject user + permissions into Astro.locals                     │
+│  5. PLAC check: role hierarchy + page overrides (O(1) hashmap)       │
+│  6. Denied? → REWRITE to /dashboard/access-denied (URL kept)         │
+│  7. Inject user + permissions into Astro.locals                      │
 └───────────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -254,7 +261,14 @@ The auth system (middleware + PLAC + registry) is the "Lego baseplate." It reads
 
 ### RBAC + PLAC
 
-5-tier role hierarchy (DEV → Owner → SuperAdmin → Admin → Staff) with per-user page-level overrides cached in KV for O(1) middleware checks. Deny always wins. Role changes auto-purge override history and force-logout all active sessions.
+6-tier role hierarchy (`vendor_support` > `owner` > `admin` > `manager` > `staff` > `viewer`) with per-user page-level overrides cached in KV for O(1) middleware checks. Deny always wins, except for vendor support and owner, who bypass PLAC denies (ADR-0002). Role changes auto-purge override history and force-logout all active sessions.
+
+> **Corrected 2026-09-05.** This paragraph still described the pre-rename ladder
+> (`DEV → Owner → SuperAdmin → Admin → Staff`), which was replaced on 2026-07-27 —
+> two names and one tier out of date. The databases do still store the old values
+> and `normalizeRole()` / `toStoredRole()` translate at the boundary; that is a
+> steady state, not a half-finished change (`../MAINTENANCE.md` C-11).
+> [`PERMISSIONS-SYSTEM.md`](./PERMISSIONS-SYSTEM.md) owns the ladder.
 
 → See [USER-MANAGEMENT.md](../features/USER-MANAGEMENT.md) for full RBAC hierarchy and user lifecycle
 → See [PLAC-AND-AUDIT.md](./plac-and-audit.md) for PLAC resolution algorithm, provisioning API, and Ghost Audit Engine

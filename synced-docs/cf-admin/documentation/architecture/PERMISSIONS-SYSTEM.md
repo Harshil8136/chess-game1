@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-24
+last_verified: 2026-09-04
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -287,14 +287,30 @@ The question this document exists to answer. Every rejection forks: `/api/*` get
 JSON with a status code; a page gets a redirect carrying an `?error=` code, so the
 login screen can explain itself.
 
+> **Both halves of that sentence became true on 2026-09-04.** Until then two
+> branches did not fork — a request with no `CF-Access-Authenticated-User-Email`
+> redirected to `/` even for `/api/*`, and an untranslatable stored role returned
+> JSON 403 even on a page — and four `?error=` codes were appended to
+> `/cdn-cgi/access/logout`, which is Cloudflare's endpoint and does not forward an
+> `error` parameter to the application, so their screens could never render. Both
+> are fixed and pinned: `test/pipeline-bootstrap.test.ts` asserts each fork in both
+> directions, and `test/error-code-contract.test.ts` fails on any code without a
+> card, any card without a code, and any redirect that puts a code on the
+> Cloudflare logout endpoint. See [`../MAINTENANCE.md`](../MAINTENANCE.md) C-20 and
+> C-21, and
+> [`../features/CFZT-EDGE-AUTHENTICATION.md`](../features/CFZT-EDGE-AUTHENTICATION.md)
+> §4 for the full code list.
+
 | Trigger | Status | Page behaviour | Audited |
 |---|---|---|---|
-| No `CF_Authorization` token | 401 `{"error":"Missing auth token"}` | → `/cdn-cgi/access/logout?error=missing_token` | login attempt |
-| Invalid or expired JWT | 401 `{"error":"Invalid or expired auth token"}` | → `/cdn-cgi/access/logout?error=expired_token` | login attempt |
+| No Cloudflare identity header at all | 401 `{"error":"Missing identity"}` | → `/?error=missing_identity` | — |
+| No `CF_Authorization` token | 401 `{"error":"Missing auth token"}` | → `/?error=missing_token` | login attempt |
+| Invalid or expired JWT | 401 `{"error":"Invalid or expired auth token"}` | → `/?error=expired_token` | login attempt |
 | JWT valid, **email not in `admin_authorized_users`** | 403 `{"error":"Access denied"}` | → `/?error=access_denied` | **yes — `is_authorized_email = 0`** |
-| Account exists but `is_active = 0` | 403 `{"error":"Access revoked"}` | → `/cdn-cgi/access/logout?error=access_revoked` | yes |
-| Stored role does not translate | 403 `{"error":"Account role not recognised"}` | redirect | yes |
-| Session revoked (`revoked:{userId}`) | 403 `{"error":"Session revoked"}` | → `/cdn-cgi/access/logout?error=session_revoked` | yes |
+| Account exists but `is_active = 0` **at bootstrap** | 403 `{"error":"Access denied"}` — deliberately the same flat 403 as "not whitelisted", so the API never reveals directory membership | → `/?error=account_inactive` | yes — `account_inactive` |
+| Account went inactive **during a warm session** (30-min re-check) | — | → `/?error=access_revoked` | yes |
+| Stored role does not translate | 403 `{"error":"Account role not recognised"}` | → `/?error=role_unrecognised` | no — the one refusal in `stages/bootstrap.ts` that emits no login event |
+| Session revoked (`revoked:{userId}`) | 403 `{"error":"Session revoked"}` + `Clear-Site-Data` | → `/?error=session_revoked` | yes |
 | Role re-check failed (D1 unreachable) | — | → `/?error=recheck_failed` | Sentry |
 | Bot score below threshold | 403 `{"error":"Automated traffic blocked"}` | 403 | yes |
 | Identity mismatch between JWT and session | 403 `{"error":"Identity verification failed"}` | 403 | yes |

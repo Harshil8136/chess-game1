@@ -135,11 +135,38 @@ Sessions are **fixed-duration from creation** — no rolling extension. A sessio
 
 Session cookies use the `__Host-` prefix in production (enforces `Secure`, host-bound, `path=/`). In local dev, plain cookie name is used without the prefix.
 
-> **⚠️ Fail-Secure Local Dev Detection (v4.1):** The `isLocalDev` check in `middleware.ts`, `dev-login.ts`, and `index.astro` uses `!!siteUrl && (siteUrl.includes('localhost') || ...)` — if `SITE_URL` is missing or misconfigured, the system defaults to **production mode** (fail-secure), never to dev mode. This prevents a missing env var from accidentally bypassing Cloudflare Zero Trust authentication.
+> **⚠️ Fail-Secure Local Dev Detection:** `isLocalDev(siteUrl)` in `src/lib/auth/routes.ts` is
+> `!!siteUrl && (siteUrl.includes('localhost') || siteUrl.includes('127.0.0.1'))` — if `SITE_URL`
+> is missing or misconfigured the system defaults to **production mode**, never to dev mode, so a
+> missing variable can never bypass Cloudflare Zero Trust. It has one implementation and four
+> callers: `src/lib/auth/stages/assertion.ts` (the pipeline's local-dev shortcut since the
+> chunk 10 split), `src/pages/index.astro`, `src/pages/api/auth/dev-login.ts` and
+> `src/pages/api/content/edge-verify.ts` — the last two carried private copies until
+> 2026-09-04.
+>
+> **Corrected 2026-09-04.** The file list above was stale — the check has not lived in
+> `src/middleware.ts` since the auth pipeline was split into stages. `src/pages/index.astro`
+> had also ORed two request-derived clauses onto it (`Astro.url.hostname === 'localhost'` and
+> `=== '127.0.0.1'`), so on that page dev mode was no longer decided by `SITE_URL` alone; the
+> clauses are removed and the rule holds everywhere again
+> ([`../MAINTENANCE.md`](../MAINTENANCE.md) C-27, closed).
 
 ### Local Development Bypass
 
-CF Access requires a live domain. For local dev (`npm run dev`): middleware reads email from `X-Dev-User-Email` header or falls back to `env.LOCAL_DEV_ADMIN_EMAIL` in `.dev.vars`. Creates a real KV session — all RBAC/PLAC/audit works normally in dev.
+CF Access requires a live domain, so it does not run locally.
+`src/lib/auth/stages/assertion.ts` short-circuits when `isLocalDev(SITE_URL)` is true, and
+`src/pages/index.astro` renders the Local Dev Gateway: a picker over the active rows of
+`admin_authorized_users`, plus a fallback that signs in as `LOCAL_DEV_ADMIN_EMAIL` from
+`.dev.vars`. Either choice POSTs to `src/pages/api/auth/dev-login.ts`, which creates a real KV
+session — RBAC, PLAC and audit all behave normally in dev.
+
+That endpoint is guarded twice: `import.meta.env.PROD` returns 404 in a production build, and
+`isLocalDev(SITE_URL)` redirects to `/` otherwise. It takes its email from the request body with
+no credential check, so both guards carry real weight.
+
+> **Corrected 2026-09-04.** This section previously said middleware reads the email from an
+> `X-Dev-User-Email` request header. Nothing under `src/` reads that header — it documented a
+> mechanism that does not exist. The dev session comes from the POST described above.
 
 ---
 
@@ -149,9 +176,24 @@ Every non-public route is gated by `src/middleware.ts`. Public routes are restri
 
 | Public Route | Method Restriction | Notes |
 |---|---|---|
+| `/` | GET, HEAD only | The auth landing page. It **is** in `PUBLIC_ROUTES`, so `classify()` answers it before any session or identity lookup and the rest of the pipeline never runs on it; the page does its own `getSession()` and redirect. Cloudflare Access still challenges it at the edge |
 | `/privacy`, `/terms` | GET, HEAD only | Static legal pages |
 
-`/` (root) and `/auth/*` routes are protected by CF Access at the edge — they never reach the Worker unauthenticated. `index.astro` at `/` only redirects to `/dashboard` once a KV session exists.
+`/api/auth/logout` and `/api/auth/dev-login` are exempt from the pipeline as well, named
+individually in `PUBLIC_API_ROUTES`. They were an `/api/auth/` *prefix* until 2026-09-04,
+which made every future file in that directory public before anyone chose it
+([`../MAINTENANCE.md`](../MAINTENANCE.md) C-25, closed). Because the pipeline's CSRF gate
+never sees them, the GET logout additionally refuses any `Sec-Fetch-Site` other than `none`
+or `same-origin`, so a cross-site `<img src>` cannot force-logout an administrator.
+Everything else requires a valid KV session plus a PLAC check.
+
+> **Corrected 2026-09-04.** This paragraph said `index.astro` at `/` "only redirects to
+> `/dashboard` once a KV session exists", and the table above it omitted `/` entirely while
+> `PUBLIC_ROUTES` has always contained it. Since the single-sign refactor (`198f7bd`) the page
+> also redirects when there is **no** session and no `?error=` — that is exactly how an
+> unauthenticated visitor is bounced into the Cloudflare Access challenge. The old wording
+> described the pre-refactor page. See
+> [`../features/CFZT-EDGE-AUTHENTICATION.md`](../features/CFZT-EDGE-AUTHENTICATION.md) §1.
 
 Any mutation method on public routes returns `405 Method Not Allowed`. Everything else requires a valid KV session + PLAC access check.
 
