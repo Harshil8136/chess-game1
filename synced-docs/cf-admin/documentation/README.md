@@ -40,6 +40,7 @@ they were written — useful as history, not as the current state.
 | **Blog / AI / SEO** | [`2026-08-03-blog-ai-seo-production-readiness.md`](2026-08-03-blog-ai-seo-production-readiness.md) | — |
 | **Blog remediation & Suggestional Edit** | [`2026-08-30-blog-system-overhaul.md`](2026-08-30-blog-system-overhaul.md) | — |
 | **AI reliability, cost truth & observability** | [`2026-08-31-ai-system-overhaul.md`](2026-08-31-ai-system-overhaul.md) | — |
+| [`2026-09-07-audit-log-hardening-sentry-and-dev-server.md`](2026-09-07-audit-log-hardening-sentry-and-dev-server.md) | Session record: the audit/activity-log review (14 findings, live row counts, the production bulk-delete of 40 rows), the four owner decisions, Stage 1 shipped in 14 commits with what execution uncovered that the plan did not, the Sentry init-path correction, and the dev-server root cause that five optimizeDeps.exclude entries had been chasing | ai, technical, operator, owner, non-technical | active |
 | **Executive status snapshot** | [`2026-06-13-platform-status-summary.md`](2026-06-13-platform-status-summary.md) | *historical — two months old* |
 
 > **One fact, one home.** Where a number appears in several documents it goes
@@ -163,7 +164,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`security/compliance/ISO-27017-27018.md`](security/compliance/ISO-27017-27018.md) | Cloud shared-responsibility (27017) and PII-in-cloud processor (27018) statements | technical, owner | active |
 | [`security/compliance/data-residency.md`](security/compliance/data-residency.md) | Data residency, cross-border transfer mechanisms, GPC scope | technical, owner, operator | active |
 | [`security/compliance/supabase-advisors-latest.json`](security/compliance/supabase-advisors-latest.json) | Supabase advisor baseline (2026-07-08). SEC-11 regression guard is **planned, not implemented**; baseline is stale as of 2026-07-25 — see MAINTENANCE.md | technical | active |
-| [`2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md) | Full-spectrum audit across 45+ frameworks (SOC 1/2/3, ISO 27001/27017/27018/27701/22301/9001/42001, NIST CSF/800-53/AI RMF, CSA STAR, HITRUST, FedRAMP, WCAG/ADA, EU AI Act, GDPR/CCPA/20-state US patchwork + global privacy law, HIPAA/PCI/GLBA/SOX scope notes) with scoring, gap register, and a phased sellability roadmap | owner, non-technical, technical, operator, ai | active |
+| [`2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md) | Full-spectrum audit across 45+ frameworks (SOC 1/2/3, ISO 27001/27017/27018/27701/22301/9001/42001, NIST CSF/800-53/AI RMF, CSA STAR, HITRUST, FedRAMP, WCAG/ADA, EU AI Act, GDPR/CCPA/20-state US patchwork + global privacy law, HIPAA/PCI/GLBA/SOX scope notes) with scoring, gap register, and a phased sellability roadmap | owner, non-technical, technical, operator, ai | historical |
 | [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](2026-07-26-commercial-model-costing-pricing-and-scale.md) | Commercial model: per-deployment fleet costing, unit economics, pricing floor/recommended/ceiling, scale ceilings, ICP, modularity fact-check | owner, technical, operator, ai | active |
 
 ## Specs (dated design records)
@@ -176,12 +177,14 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`specs/2026-05-13-cms-ui-redesign.md`](specs/2026-05-13-cms-ui-redesign.md) | CMS UI redesign | historical |
 | [`specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) | Payload CMS evaluation (MIT ✓, Cloudflare ✓, Workers-Paid-only ✗) + alternatives + recommended $0 dynamic-blog blueprint on the existing D1 CMS | historical |
 | [`specs/2026-07-29-content-and-ai-visibility-engine.md`](specs/2026-07-29-content-and-ai-visibility-engine.md) | Tiptap authoring + Workers AI analysis as a paid module: Tiptap licensing fact-check, measured neuron costs (≈162/post), nine capability additions with the measurement half prioritised first, 110–150 h effort breakdown, and a pricing correction from $14.99+$24.99 to a single $79–129/mo flagship | historical |
+| [`specs/2026-09-06-audit-log-remediation-design.md`](specs/2026-09-06-audit-log-remediation-design.md) | Agreed design for the 2026-09-06 audit/activity-log review: the engine consolidation, redaction moved to one chokepoint, coverage made CI-blocking via SEC-12, deletion replaced by append-only plus a gated erasure path, and the three-stage rollout | draft |
 
 ## Runbooks
 
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
+| [`runbooks/dev-server-optimize-deps-missing.md`](runbooks/dev-server-optimize-deps-missing.md) | Dev server fails with a file missing from the Vite optimize-deps directory: the dev server, `vitest` and the Vitest Explorer extension shared one cache that `predev` deleted mid-run; why `optimizeDeps.exclude` is the wrong fix | active |
 | [`runbooks/incident-response.md`](runbooks/incident-response.md) | Incident response + GDPR Art. 33 72-hour breach notification (severity, containment, notification matrix) | active |
 | [`runbooks/disaster-recovery.md`](runbooks/disaster-recovery.md) | Backup/restore per store, RTO/RPO targets, scenario playbooks (drill outstanding) | active |
 | [`runbooks/release-and-rollback.md`](runbooks/release-and-rollback.md) | The release path (Workers Builds → `build:ci` / `deploy:ci`: verify, migrate before deploy, smoke), expand/contract policy for migrations, the one-time dashboard switch-on, and code-vs-schema rollback | active |

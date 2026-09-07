@@ -346,8 +346,8 @@ All packages below are **explicitly approved**. Anything NOT listed here is blac
 | `@upstash/ratelimit` | `^2.0.8` | Edge-compatible rate limiting |
 | `@upstash/redis` | `^1.37.0` | Redis client for Upstash |
 | `@supabase/supabase-js` | `^2.101.1` | Supabase client (service_role only) |
-| `@sentry/astro` | `^10.51.0` | Error tracking (build-time integration) |
-| `@sentry/cloudflare` | `^10.51.0` | Error tracking (Workers runtime, V8 workerd only) |
+| `@sentry/astro` | `^10.73.0` | Error tracking (browser/client SDK only — its server SDK does not run in workerd) |
+| `@sentry/cloudflare` | `^10.73.0` | Error tracking (Workers runtime, V8 workerd only). Exports **no** `init()` — see OPERATIONS.md §4.1b |
 | `@tailwindcss/vite` | `^4.2.2` | Tailwind CSS v4 via Vite plugin |
 
 > **Icon usage:** Always import from `lucide-preact` (NOT `lucide-react`). The package is Preact-native — importing from the wrong package will cause hydration mismatches.

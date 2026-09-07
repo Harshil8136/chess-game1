@@ -1,7 +1,7 @@
 ---
 
 title: "Full-Spectrum Compliance & Certification Audit — Every Major Industry Standard, Scored, With a Sellability Roadmap"
-status: active
+status: historical
 audience: [owner, non-technical, technical, operator, ai]
 last_verified: 2026-07-22
 verified_against: [code, docs, config, web]

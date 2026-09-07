@@ -228,8 +228,14 @@ dictate caching strategies and system design constraints.
 
 ## 4. Observability — Sentry
 
-**Package:** `@sentry/cloudflare`
-**Config file:** `sentry.server.config.ts`
+**Package:** `@sentry/cloudflare` (`^10.73.0`)
+**Where it is initialized:** [`../../src/workers/cf-entry.ts`](../../src/workers/cf-entry.ts) — `Sentry.withSentry()` wraps the whole Worker and builds a client per invocation.
+
+> **Corrected 2026-09-07.** This line read "Config file: `sentry.server.config.ts`" and pointed at the wrong file.
+> [`../../sentry.server.config.ts`](../../sentry.server.config.ts) is an intentional **no-op** (`export {}`) whose own
+> header says "Do not add `Sentry.init(...)` here" — the Node-based `@sentry/astro` server SDK does not run in workerd.
+> Server capture goes through [`../../src/lib/sentry.ts`](../../src/lib/sentry.ts), which re-exports `@sentry/cloudflare`;
+> browser capture is configured in [`../../sentry.client.config.ts`](../../sentry.client.config.ts).
 
 ### 4.1 Architecture
 
@@ -238,10 +244,39 @@ Sentry is integrated at the Cloudflare Edge layer (CDN-native). Key decisions:
 - **10% trace sampling** (`tracesSampleRate: 0.1`) — sufficient for performance monitoring without exhausting free tier quota; 100% sampling was excessive and costly
 - **`sendDefaultPii: false`** — prevents IP addresses, cookies, and auth headers from being forwarded to Sentry (GDPR/LFPDPPP compliance)
 - **Default browser integrations disabled** — Cloudflare Workers run on V8 `workerd` runtime, NOT a browser. Browser integrations (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) reference `window`/`document` which don't exist in `workerd` — they cause `ReferenceError: window is not defined` at Worker startup
-- **Console Capture integration only** — `console.error` calls automatically trigger Sentry event capture with stack trace, metadata, and user-agent info; no explicit `Sentry.captureException()` scattered through handlers
+- **`consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] })`** — console output is forwarded to Sentry, so handlers do not need `Sentry.captureException()` scattered through them. *Corrected 2026-09-07:* this bullet named a "Console Capture integration", which is not what the code configures.
+- **`enableLogs: true`, with `beforeSend: scrubEvent` and `beforeSendLog: scrubLog`** — both scrubbers run before anything leaves the Worker; `environment` and `release` are derived per invocation in `cf-entry.ts`
 - **Hardcoded DSN** — Astro's Cloudflare adapter had inconsistent Vite env injection during SSR. DSN is a public routing key, not a secret, so hardcoding is safe and guarantees 100% telemetry uptime
 
 > **workerd Compatibility Rule:** Any future Sentry integration must be validated against `workerd`. Browser-targeting integrations WILL crash the Worker at startup.
+
+### 4.1b `@sentry/cloudflare` has no `init()` — the onboarding snippet is a trap
+
+Verified 2026-09-07 against the installed SDK (10.73.0): the package exports
+`withSentry`, `sentryPagesPlugin`, `CloudflareClient`, `setCurrentClient` and
+`getClient`, but **no `init`**. Every generic Sentry snippet — including the one
+Sentry's own onboarding wizard emits for metrics — opens with
+`Sentry.init({ dsn })`. Pasting that anywhere in this repo produces
+`TypeError: Sentry.init is not a function` at runtime. Metrics and capture calls
+belong **inside** the `withSentry()` wrapper `cf-entry.ts` already establishes.
+
+**Metrics are available and deliberately unused.** `Sentry.metrics.count()`,
+`.gauge()` and `.distribution()` exist in 10.73.0, and nothing in `src/` calls
+them. That is a decision, not an oversight:
+
+- The wizard's three placeholder metrics — `button_click`, `page_load_time=150`,
+  `response_time=200` — **were already in this codebase once**, emitted on every
+  call of the health route, and were deleted on 2026-09-02 as fabricated
+  telemetry under RULE #0.5 (viability program chunk 3; the history note is in
+  [`../../src/pages/api/health.ts`](../../src/pages/api/health.ts)). Do not
+  reintroduce them.
+- Quota, checked 2026-09-07: application metrics are included on the Developer
+  (free) plan, with **5 GB** across plan tiers, and overage is charged only
+  against a pay-as-you-go budget. Under ADR-0001's $0 constraint that budget
+  stays at zero, so an overage drops metrics rather than generating a bill.
+
+If cf-admin emits metrics later they carry real names measuring real behaviour,
+added inside `withSentry`, and recorded here.
 
 ### 4.2 SSR Hydration Guard
 

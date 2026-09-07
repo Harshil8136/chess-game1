@@ -370,6 +370,6 @@ These are architecturally sound but not needed until trigger conditions are met.
 | `lucide-preact` | `^1.7.0` | Icon library (Preact-native) |
 | `zod` | `^4.4.1` | API route validation |
 | `@upstash/ratelimit` | `^2.0.8` | Rate limiting |
-| `@sentry/cloudflare` | `^10.51.0` | Error tracking (workerd-safe) |
+| `@sentry/cloudflare` | `^10.73.0` | Error tracking (workerd-safe) |
 
 → See [OPERATIONS.md](../operations/OPERATIONS.md) for Cloudflare binding IDs, free tier limits, Sentry integration, and deploy commands
