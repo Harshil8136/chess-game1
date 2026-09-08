@@ -3,7 +3,7 @@
 title: "CF Access Group Sync — Architecture, Root-Cause Fix & Hardening"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-07-24
+last_verified: 2026-09-08
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/auth/cf-access-sync.ts, src/lib/auth/cf-access-sync-log.ts, src/lib/auth/cf-access-reconcile.ts, src/pages/api/users/manage.ts, src/pages/api/users/cf-resync.ts, src/pages/api/users/cf-access-audit.ts, src/workers/cf-entry.ts]
@@ -265,6 +265,7 @@ Access Groups → confirm only **one** group exists with that exact name.
 | 2026-07-24 | claude    | D1 `cf_access_sync_log` table + indexes verified live via `sqlite_master` query after migration | pass |
 | 2026-07-24 | claude    | Supabase `cf_sync_status`/`cf_sync_error`/`cf_sync_at` columns verified live via `information_schema.columns` | pass |
 | 2026-07-24 | pending   | Manual CF dashboard Policy→Group wiring check (see "Known limitation") | **not yet verified — operator action required** |
+| 2026-09-08 | claude    | Re-verification for the 45-day staleness gate. All 7 `related_code` paths present; every named symbol still exported (`syncCfAccessGroup`, `parseCfResponse`, `findSyncGroup`, `recordCfSyncOutcome`, `reconcileCfAccessGroup`, `[SUPABASE_PROJECT_REF]`); `CF_SYNC_GROUP_NAME` still `"Admin Portal Authorized Users"`; cron still wired at `*/5 * * * *` in `cf-entry.ts`; `CF_ACCOUNT_ID` still a `[vars]` entry and `CF_API_TOKEN_ZT_WRITE` still in `[secrets] required`; `cf_access_sync_log` live via `--remote` | pass — no claim in this document had drifted. Live row count **12,999**, up from 11,418 on 2026-09-02 (~264/day), which is the unbounded growth roadmap chunk 8 is scoped to make visible |
 
 ## Related
 
