@@ -422,8 +422,13 @@ pass was fixing.
    unknown ids, which is correct for the *neuron* budget (a third party bills
    it) but means real money can be spent with no counter. The telemetry rows
    record the provider, so the data to build this now exists.
-3. **`/api/ai/health` has no UI yet.** The endpoint is complete and tested; a
-   panel on the ops dashboard is the obvious next step.
+3. **`/api/ai/health` now has a UI. Corrected 2026-09-08:** this item read "has
+   no UI yet … a panel on the ops dashboard is the obvious next step" until that
+   panel shipped in `e5212ec`. `AiHealthPanel` renders the neuron budget, calls,
+   success rate, estimated spend, p50 latency, per-model and per-outcome
+   breakdowns and KB-vs-fallback grounding on the AI Health tab of
+   `/dashboard/logs`. It is the consumer that took ratchet A18 (API routes with
+   no in-repo caller) from 1 to 0.
 4. **Model quality is unbenchmarked.** llama-4-scout was chosen on published
    price, context window and guided-JSON support — all verified — but nobody
    has compared its Spanish prose against the 70B on this workload. The picker

@@ -3,7 +3,7 @@
 title: "Dev server: file missing from the optimize deps directory"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-07
+last_verified: 2026-09-08
 verified_against: [code]
 owner: harshil
 related_docs: [ssr-silent-blank-screen.md, ../operations/DEV-TOOLS.md]
@@ -12,10 +12,11 @@ tags: [runbook, dev-server, vite, troubleshooting]
 
 # Dev server: file missing from the optimize deps directory
 
-> **TL;DR (non-technical):** The local dev server used to fail at random with a
-> message about a missing file. It was not a broken dependency — the test runner
-> and the dev server were sharing one cache folder, and starting the dev server
-> deleted it while the tests were still using it. Fixed 2026-09-07.
+> **TL;DR (non-technical):** The local dev server used to fail with a message
+> about a missing file. Four different problems produce almost the same message,
+> and each needs a different fix — this page tells them apart. None of them is a
+> broken dependency, which is what the error text misleadingly suggests. All four
+> are fixed and three are now guarded automatically (2026-09-07, 2026-09-08).
 
 ## Symptom
 
@@ -36,7 +37,21 @@ them from the Vite dev server by URL.
 
 Intermittent by nature: it depends on what else held the cache open at that moment.
 
-## Root cause
+## Which of the four failures is this?
+
+Four distinct causes wear almost the same message. Identify which before
+changing anything — the fixes are unrelated, and the fix for one makes another
+worse.
+
+| Message | Cause | Section |
+|---|---|---|
+| `The file does not exist at …/deps_ssr/<file>` **and another process was using the cache** (a second `astro dev`, or a `vitest` run before the 2026-09-07 fix) | The cache was deleted or rewritten underneath a running server | Failure 1 and 2 below |
+| `The file does not exist at …/deps_ssr/manifest-<hash>.js` appearing **only after a request**, following a log line `dependency optimized: <pkg>` | A dependency was discovered at request time and re-optimizing rewrote every chunk hash | Failure 3 below |
+| **`module is not defined`** at `runInRunnerObject` | A CommonJS package is in `optimizeDeps.exclude`, so it never got rewritten to ESM | Failure 4 below |
+
+## Failure 1 — the cache deleted mid-run (2026-09-07)
+
+Original root cause.
 
 Neither `astro.config.ts` nor `vitest.config.ts` set `cacheDir`, so **three
 processes shared `node_modules/.vite`**:
@@ -82,8 +97,73 @@ ls node_modules/.vite node_modules/.vite-vitest
 powershell "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Select-Object ProcessId, CommandLine"
 ```
 
-Two `astro dev` servers running at once reproduce the same failure, because the
-second one's `predev` still clears `dist` and `.astro` under the first.
+## Failure 2 — a second dev server (2026-09-08)
+
+`npm run dev` runs `astro dev --force`. The `--force` re-runs the optimizer and
+rewrites `node_modules/.vite/deps_ssr` with fresh `?v=<hash>` names, while an
+already-running server is still handing out the old ones. Both then break. They
+share one cache directory, so no ordering avoids it.
+
+**`astro dev status` is not sufficient to detect this.** On 2026-09-08 it
+reported "No dev server is running" while a live server held port 4321, so each
+`npm run dev` silently stacked another server onto the next free port. Enumerate
+processes instead:
+
+```bash
+powershell "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { \$_.CommandLine -like '*astro.mjs*dev*' } | ForEach-Object { \$_.ProcessId }"
+```
+
+**Guarded since `c1b94bd`:** `predev` is `scripts/predev-guard.mjs`, which
+enumerates processes and refuses to start a second server, naming the pid and
+the stop command. It fails open if the process list cannot be read.
+
+## Failure 3 — a dependency discovered at request time (2026-09-08)
+
+`vite.ssr.noExternal` lists the runtime dependencies to bundle into SSR, but
+`ssr.optimizeDeps.include` was `[]`, so none were pre-bundled. Vite discovered
+them one at a time, on whichever request first imported each. Every discovery
+rewrites all of `deps_ssr` with new chunk hashes while the runner still holds
+URLs from the previous generation, so the next module load 404s.
+
+`@upstash/ratelimit` and `@upstash/redis/cloudflare` were discovered 100 seconds
+after the server was ready, `zod` 20 seconds later, and `zod` took the page down.
+Astro's own internals are discovered during startup, before any request exists to
+break, which is why they appear in every log and are never the culprit.
+
+**`noDiscovery: true` does not stop the optimizer.** It only removes the startup
+pre-pass that would have found these early, which makes this failure *more*
+likely, not less.
+
+**Fixed in `0af64ec`:** `include` mirrors `noExternal`, spelled exactly as the
+source imports it, subpaths included.
+
+**The rule:** anything added to `ssr.noExternal` must also be added to
+`ssr.optimizeDeps.include`, or it becomes the next instance of this failure.
+To spot a latent one:
+
+```bash
+npx astro dev logs | grep "dependency optimized"
+```
+
+Anything listed *after* the ready line is a crash waiting for the right request.
+
+## Failure 4 — a CommonJS package excluded from optimization (2026-09-08)
+
+Different message — `module is not defined` at `runInRunnerObject` — same family,
+so it is recorded here.
+
+Excluding a dependency from `optimizeDeps` skips esbuild pre-bundling, and
+pre-bundling is the step that rewrites CommonJS to ESM. `@upstash/ratelimit`
+declares no `type`, no `module` field and no `exports` map, and ships
+`module.exports = __toCommonJS(src_exports)`. Served raw into workerd, which has
+no `module` global, it throws on load — taking out all 28 API routes that import
+`src/lib/ratelimit.ts`. It looked survivable only because an unauthenticated
+request is redirected before the route module loads, so `curl` saw `302` and only
+a signed-in session saw the failure.
+
+**Fixed in `8a6495f`** and guarded by `test/vite-optimize-deps-contract.test.ts`:
+every package in any `optimizeDeps.exclude` must resolve as ESM.
+`@astrojs/cloudflare` is `type: module`, so excluding it stays legitimate.
 
 ## Verifying a fix
 

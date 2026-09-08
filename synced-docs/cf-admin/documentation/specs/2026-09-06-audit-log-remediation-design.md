@@ -147,6 +147,14 @@ redaction.
 
 ### 3. Coverage, made CI-blocking
 
+> **Partially shipped 2026-09-08 (`d7d3dc6`), ahead of the rest of Stage 2.**
+> `api/audit/export.ts` now writes an `'export'` row recording actor, source and
+> row count, and finding 2 is closed for all three export routes: escaping moved
+> to one chokepoint, `src/lib/csv.ts`, which neutralises a leading `=`, `+`, `-`,
+> `@`, tab or CR before quoting. `SEC-12`, `seo/settings.ts` and the rest of the
+> coverage work below remain open — this was two self-contained security defects
+> taken early, not the start of Stage 2.
+
 Audit writes are added to the CSV export (giving the declared `'export'` action
 its first writer, recording row count and active filters), to `seo/settings.ts`
 (which mutates settings today while its two siblings audit the identical action),
@@ -245,8 +253,8 @@ description does not justify a new `any` under `reference/coding-standards.md`.
 
 | # | Finding | Stage |
 |---|---|---|
-| 1, 10 | Export and `seo/settings.ts` unaudited | 2 |
-| 2 | CSV formula injection (three export routes) | 2 |
+| 1, 10 | Export and `seo/settings.ts` unaudited | 2 — **export half shipped early, 2026-09-08 (`d7d3dc6`)**; `seo/settings.ts` still open |
+| 2 | CSV formula injection (three export routes) | 2 — **shipped early, 2026-09-08 (`d7d3dc6`)** |
 | 3, 4 | Deletion paths → append-only + erasure | 2 |
 | 5 | Twelve hand-rolled PLAC resolvers | 2 |
 | 6 | Cookie-name split, 31 % null `session_id` | 2 |

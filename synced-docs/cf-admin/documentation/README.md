@@ -185,7 +185,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | Doc | Purpose | Status |
 |-----|---------|--------|
 | [`runbooks/ssr-silent-blank-screen.md`](runbooks/ssr-silent-blank-screen.md) | Known issue: SSR silent blank screen diagnosis | active |
-| [`runbooks/dev-server-optimize-deps-missing.md`](runbooks/dev-server-optimize-deps-missing.md) | Dev server fails with a file missing from the Vite optimize-deps directory: the dev server, `vitest` and the Vitest Explorer extension shared one cache that `predev` deleted mid-run; why `optimizeDeps.exclude` is the wrong fix | active |
+| [`runbooks/dev-server-optimize-deps-missing.md`](runbooks/dev-server-optimize-deps-missing.md) | Dev server fails with a file missing from the Vite optimize-deps directory. Triage table for the **four** distinct causes that wear this message: a shared cache deleted mid-run, a second dev server, a dependency discovered at request time, and a CommonJS package excluded from optimization (which reads `module is not defined` instead); why `optimizeDeps.exclude` is the wrong fix for three of the four | active |
 | [`runbooks/incident-response.md`](runbooks/incident-response.md) | Incident response + GDPR Art. 33 72-hour breach notification (severity, containment, notification matrix) | active |
 | [`runbooks/disaster-recovery.md`](runbooks/disaster-recovery.md) | Backup/restore per store, RTO/RPO targets, scenario playbooks (drill outstanding) | active |
 | [`runbooks/release-and-rollback.md`](runbooks/release-and-rollback.md) | The release path (Workers Builds → `build:ci` / `deploy:ci`: verify, migrate before deploy, smoke), expand/contract policy for migrations, the one-time dashboard switch-on, and code-vs-schema rollback | active |

@@ -101,7 +101,7 @@ draft that a human reviews, edits and explicitly sends.
 | Prompt injection redirects the system prompt | Low | Low | Keyword screen; output is a draft, not an action | Low |
 | Unapproved/unpriced model selected | **Was High** | Medium | Closed enum + bounded pattern (2026-07-25); pickers render from the catalogue so a removed model cannot linger in a UI | Low |
 | Prompt content leaks to a third party | Low | Medium | Prompts are staff-authored and contain no customer PII by design; OpenRouter is optional | Low |
-| Silent AI outage | **Was High** | Medium | Every inference writes an outcome row; `/api/ai/health` reports success rate and failures by code. Before 2026-08-31 there was NO record of any AI call, and a 100%-failure day was invisible to everything except the operators experiencing it | Low |
+| Silent AI outage | **Was High** | Medium | Every inference writes an outcome row; `/api/ai/health` reports success rate and failures by code, and since 2026-09-08 an operator can read it without curl — it is surfaced on the AI Health tab of `/dashboard/logs`, which renders a null success rate as an em dash rather than 100% when no call was made. Before 2026-08-31 there was NO record of any AI call, and a 100%-failure day was invisible to everything except the operators experiencing it | Low |
 | Bias in generated copy | Low | Low | Marketing and pet-care copy only; human review | Low |
 
 **Telemetry retention.** Inference rows record route, model, provider,
