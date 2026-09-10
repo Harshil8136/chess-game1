@@ -3,7 +3,7 @@
 title: "Incident Response & Breach Notification Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-07-25
+last_verified: 2026-09-09
 verified_against: [code, config]
 owner: harshil
 related_docs: [disaster-recovery.md, ../security/SECURITY.md, ../security/RoPA.md, ../security/compliance/SOC2-TSC-mapping.md, ../MAINTENANCE.md]
