@@ -3,7 +3,7 @@
 title: "Commercial Model — Fleet Costing, Pricing, Scale Ceilings & Compliance Standing"
 status: active
 audience: [owner, technical, operator, ai]
-last_verified: 2026-07-26
+last_verified: 2026-09-10
 verified_against: [code, config, web]
 owner: harshil
 related_docs: [2026-07-27-go-to-market-prospecting-and-roadmap.md, 2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md, 2026-07-17-compliance-standing-and-market-positioning.md, 2026-06-16-business-viability-and-compliance-assessment.md, reference/commercial-readiness-checklist.md, security/RoPA.md, security/compliance/data-residency.md, MAINTENANCE.md]

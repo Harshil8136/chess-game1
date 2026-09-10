@@ -124,19 +124,40 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 
 ### Scheduled triggers
 
-Three cron expressions on this Worker (`[triggers]` in `wrangler.toml`), fired
-through the custom entrypoint `src/workers/cf-entry.ts`:
+**Two** cron expressions on this Worker (`[triggers]` in `wrangler.toml`), fired
+through the custom entrypoint `src/workers/cf-entry.ts`. Jobs are no longer
+listed inline in the entrypoint — the single list is `src/lib/jobs/registry.ts`,
+and each one runs under `runJob` with a declared D1 budget:
 
-| Cron | Handlers dispatched (`src/workers/cf-entry.ts`) |
+| Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
-| `*/5 * * * *` | CF Access audit-log polling, booking email-retry reconciler, booking outbox drain, CF Access group reconcile, storage quota/share-expiry notifications |
-| `0 2 * * SUN` | Orphaned R2 asset cleanup, Staff Managed Storage reconciliation |
-| `*/15 * * * *` | Promote matured `scheduled` blog posts, Search Console sweep, PageSpeed sweep (the last two self-gate on their own interval settings) |
+| `*/5 * * * *` | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`, plus the three folded in from the retired 15-minute trigger: `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings) |
+| `0 2 * * SUN` | `asset-cleanup`, `staff-storage-reconcile` |
 
-> **Cap corrected 2026-09-02.** Workers Free allows **5 cron triggers per
-> account**, not 3 per Worker. This Worker uses 3 and `cf-chatbot` uses 1, so
-> 4 of 5 account slots are taken. Consolidating the `*/15` handlers into the
-> `*/5` tick (viability program chunk 7) frees one.
+> **Account slots: 3 of 5 (chunk 7, 2026-09-10).** Workers Free allows **5 cron
+> triggers per account**, not 3 per Worker. The `*/15` trigger was deleted and
+> its jobs folded into the `*/5` tick: verified live, all three were no-ops
+> (`gsc-sync-enabled` false since 2026-08-26, `pagespeed-check-enabled` false
+> since 2026-08-22, zero `scheduled` blog posts), so it fired 96 times a day to
+> do nothing while holding a scarce slot. `cf-chatbot` also moved from
+> `* * * * *` to `*/5 * * * *` in the same chunk (1,440 → 288 invocations/day).
+>
+> **Verify the count from the live API, never from config** — config is what
+> *should* be deployed, not what is:
+>
+> ```bash
+> curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+>   "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/<name>/schedules"
+> ```
+
+**Failures on these paths are never silent.** Every catch on a scheduled-job
+path either reports through `reportNonFatal` / `reportOnceCooled` — which write
+to **both** Cloudflare Observability and Sentry — or carries an explicit
+`// silent-ok: <reason>` annotation. Ratchet metric **A19** fails the build if
+anyone adds one that does neither. Cron-path Sentry reporting is capped at one
+event per hour per fingerprint so a persistently failing job cannot exhaust the
+monthly quota and silence real alerts; Observability still receives every
+occurrence. See [`../runbooks/when-d1-is-unavailable.md`](../runbooks/when-d1-is-unavailable.md).
 
 ### Re-deriving this section
 
