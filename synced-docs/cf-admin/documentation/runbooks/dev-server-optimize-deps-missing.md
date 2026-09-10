@@ -3,7 +3,7 @@
 title: "Dev server: file missing from the optimize deps directory"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-08
+last_verified: 2026-09-10
 verified_against: [code]
 owner: harshil
 related_docs: [ssr-silent-blank-screen.md, ../operations/DEV-TOOLS.md]
@@ -16,7 +16,8 @@ tags: [runbook, dev-server, vite, troubleshooting]
 > about a missing file. Four different problems produce almost the same message,
 > and each needs a different fix — this page tells them apart. None of them is a
 > broken dependency, which is what the error text misleadingly suggests. All four
-> are fixed and three are now guarded automatically (2026-09-07, 2026-09-08).
+> are fixed and three are now guarded automatically (2026-09-07, 2026-09-08,
+> 2026-09-10).
 
 ## Symptom
 
@@ -131,21 +132,61 @@ Astro's own internals are discovered during startup, before any request exists t
 break, which is why they appear in every log and are never the culprit.
 
 **`noDiscovery: true` does not stop the optimizer.** It only removes the startup
-pre-pass that would have found these early, which makes this failure *more*
-likely, not less.
+pre-pass that would have found these early.
 
 **Fixed in `0af64ec`:** `include` mirrors `noExternal`, spelled exactly as the
 source imports it, subpaths included.
 
-**The rule:** anything added to `ssr.noExternal` must also be added to
-`ssr.optimizeDeps.include`, or it becomes the next instance of this failure.
+### It recurred on 2026-09-10 — `lucide-preact`, and the rule was too narrow
+
+Mirroring `noExternal` was not enough. `lucide-preact` was in `noExternal` and
+never in `include`; ~95 components import it, so nearly every dashboard page
+armed it. It surfaced on the theme picker
+(`src/components/admin/settings/UserSettingsPanel.tsx` imports `Moon`).
+
+Three things were learned fixing it:
+
+1. **`ssr.optimizeDeps` REPLACES the SSR environment's optimizeDeps.** Entries
+   Astro and its integrations contribute at the *top level* never reach the first
+   bundling pass. `@astrojs/preact` adds `@astrojs/preact/server.js` to
+   `vite.optimizeDeps.include` from its `astro:config:setup` hook — with this
+   block present that entry is shadowed, and it is reliably the first thing
+   discovered on a cold cache. Mirroring `noExternal` could never have caught it,
+   because it was never in `noExternal`.
+
+2. **`noDiscovery: false` is worse, not better.** It looks like the fix — Astro
+   reads that exact flag and only when it is false sets `optimizeDeps.entries` to
+   `src/**/*.{jsx,tsx,vue,svelte,html,astro}`
+   (`astro/dist/vite-plugin-environment/index.js`), turning on a real startup
+   scan. But the scan's results land as a re-optimize *after* the runner has
+   loaded modules, and the dev server then **fails to start at all**
+   ("Dev server process exited before becoming ready"), reproducibly, on a clean
+   cache. Keep it `true` and keep `include` complete instead.
+
+3. **The runner does not always recover from a reload.** Earlier notes said
+   startup-time discoveries are harmless because they happen before any request.
+   That is only usually true. Two Astro internals — `astro/logger/console` and
+   `astro/assets/services/noop` — are discovered a second or two after
+   "connected", and each costs a `optimized dependencies changed. reloading`
+   cycle. Sometimes the runner reloads cleanly; sometimes it stays pinned to the
+   dead generation and then **every route 500s** on a missing `deps_ssr` file
+   until the server is restarted. Both are now in `include`.
+
+**The rule, restated:** `ssr.optimizeDeps.include` must name every bare specifier
+the SSR graph imports — not just the ones in `noExternal`. The measurable
+contract is *zero* `dependency optimized:` lines on a cold start, not merely none
+after the ready line. `test/vite-optimize-deps-contract.test.ts` pins the list and
+the `noDiscovery: true` setting.
+
 To spot a latent one:
 
 ```bash
-npx astro dev logs | grep "dependency optimized"
+rm -rf node_modules/.vite && npm run dev
+grep -oE 'dependency optimized: [^"]*' .astro/dev.log   # must print nothing
 ```
 
-Anything listed *after* the ready line is a crash waiting for the right request.
+Note `npx astro dev logs` reports "No dev server is running" even when one is
+live; `.astro/dev.log` is the file to read.
 
 ## Failure 4 — a CommonJS package excluded from optimization (2026-09-08)
 
@@ -171,11 +212,30 @@ every package in any `optimizeDeps.exclude` must resolve as ESM.
 merely started:
 
 ```bash
-npx astro dev status
-curl -s -o /tmp/page.html -w "HTTP %{http_code} %{size_download}\n" http://localhost:4321/
-grep -c "optimize deps directory" /tmp/page.html   # must be 0
+rm -rf node_modules/.vite && npm run dev        # cold cache, or you prove nothing
+
+grep -oE 'dependency optimized: [^"]*' .astro/dev.log   # must print nothing
+grep -c "does not exist at" .astro/dev.log              # must be 0
+
+for p in / /dashboard /api/health; do
+  curl -s -o /tmp/page.html -w "$p HTTP %{http_code} %{size_download} " "http://localhost:4321$p"
+  grep -c "optimize deps directory" /tmp/page.html      # must be 0
+done
 npx astro dev stop
 ```
 
-A healthy result is `HTTP 200`, a few hundred KB, and `0` overlay matches — with
-a `vitest` run active at the same time, since that is the collision case.
+A healthy result is: no discoveries at all, no errors in `.astro/dev.log`, `/`
+answering `HTTP 200` at a few hundred KB, protected routes answering `302` rather
+than `500` (a `500` here means the route module failed to load, before auth ever
+ran), and `0` overlay matches — with a `vitest` run active at the same time, since
+that is the collision case.
+
+Two traps when verifying:
+
+- **`npx astro dev status` and `npx astro dev logs` report "No dev server is
+  running" while one is live.** Read `.astro/dev.log` directly and enumerate node
+  processes for the pid.
+- **Do not delete `node_modules/.vite` while a server is running.** That is
+  failure 1, and it leaves a `deps_temp_*` directory behind that poisons the next
+  start. Stop the server first, then remove the whole `.vite` directory — not just
+  the `deps*` subdirectories.
