@@ -3,7 +3,7 @@
 title: "Go-To-Market — Prospecting Plays, Funnel & Sequenced Roadmap"
 status: active
 audience: [owner, non-technical, technical, operator, ai]
-last_verified: 2026-07-27
+last_verified: 2026-09-11
 verified_against: [code, config, web]
 owner: harshil
 related_docs: [2026-07-26-commercial-model-costing-pricing-and-scale.md, 2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md, 2026-07-17-compliance-standing-and-market-positioning.md, reference/commercial-readiness-checklist.md, MAINTENANCE.md]
@@ -516,3 +516,23 @@ Phases A-E, unstarted), `RULESAd.md` §12 (the April 2026 binding-ID outage),
 **Disclaimer:** internal commercial planning, not a forecast or professional
 advice. Every conversion assumption here is untested; §7 exists to replace them
 with measurements.
+
+### Re-verification 2026-09-11 — scope-limited
+
+The 45-day staleness gate tripped on 2026-09-11. Rather than blanket-bump the
+date, the two **headline claims** in the TL;DR were re-checked against their
+sources. Both still hold; the rest of the document was **not** re-verified and
+its 2026-07-27 reasoning stands unexamined.
+
+| Claim | Source checked | Result |
+|---|---|---|
+| The agent-readable business interface "is currently sold as a $24.99 checkbox" | `Velox/new/src/data/pricing.ts:591` — the live pricing source of truth | **Still true.** "AI Search & Answer Engine Visibility" remains $24.99/mo |
+| "A hard ceiling of roughly 10-15 clients … and the tooling that raises it is still unstarted" | `documentation/program/ROADMAP.md`, chunk 22 (Fleet readiness) | **Still true.** Chunk 22 is still `planned`; no provisioning or fleet-migration tooling has shipped |
+
+**One cross-document conflict surfaced and left open.**
+[`commercial/MODULE-PRICING-CATALOG.md`](commercial/MODULE-PRICING-CATALOG.md)
+§63 states the old `$14.99 + $24.99` line items were underpriced ~4× and
+"should already be retired" in favour of a single $79-129/mo flagship module,
+and asks someone to confirm the retirement happened. It has **not**: the
+$24.99 module is still live in `pricing.ts`. That is an owner pricing decision,
+not a documentation fix, so it is recorded here rather than resolved.

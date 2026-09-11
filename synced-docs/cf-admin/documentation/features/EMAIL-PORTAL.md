@@ -1,28 +1,37 @@
 ---
 title: "Email Portal"
 status: active
-audience: [non-technical, ai, technical, operator]
-last_verified: 2026-08-13
-verified_against: [code]
+audience: [non-technical, ai, technical, operator, owner]
+last_verified: 2026-09-11
+verified_against: [code, infra]
 owner: harshil
 related_code:
 
 - src/pages/dashboard/emails/index.astro
 - src/components/admin/emails/_components/EmailPortal.tsx
 - src/components/admin/emails/_components/Composer.tsx
-- src/components/admin/emails/_components/MobileComposer.tsx
-- src/components/admin/emails/_components/MobileTabBar.tsx
-- src/components/admin/emails/_components/EmailPreviewModal.tsx
-- src/components/admin/emails/atoms/RecipientInput.tsx
-- src/components/admin/emails/atoms/LinkPopover.tsx
-- src/components/admin/emails/hooks/useEmailAttachments.ts
-- src/components/ui/BottomSheet.tsx
+- src/components/admin/emails/_components/BrevoTelemetryView.tsx
+- src/components/admin/emails/_components/ContactsSuppressionsView.tsx
+- src/components/admin/emails/_components/[SUPABASE_PROJECT_REF].tsx
+- src/components/admin/emails/_components/DraftsManagerView.tsx
+- src/components/admin/emails/_components/[SUPABASE_PROJECT_REF].tsx
+- src/components/admin/emails/_components/ManageSenderModal.tsx
+- src/components/admin/emails/_components/DnsDiagnosticModal.tsx
+- src/components/admin/emails/_components/WebhookTestModal.tsx
+- src/components/admin/emails/_components/AiGeneratorModal.tsx
+- src/components/admin/emails/_components/QueueLogItem.tsx
+- src/components/admin/emails/atoms/SenderSelect.tsx
 - src/pages/api/emails/send.ts
-- src/pages/api/emails/drafts.ts
-- src/pages/api/emails/templates.ts
-- src/pages/api/emails/attachments.ts
-- src/pages/api/emails/contacts.ts
-- src/pages/api/audit/emails.ts
+- src/pages/api/emails/engine.ts
+- src/pages/api/emails/senders.ts
+- src/pages/api/emails/suppressions.ts
+- src/pages/api/emails/dns-check.ts
+- src/pages/api/emails/ai-generate.ts
+- src/pages/api/emails/unsubscribe.ts
+- src/pages/api/emails/webhook.ts
+- src/lib/dal/EmailSuppressionRepository.ts
+- src/lib/email/sanitize-html.ts
+- src/lib/email/unsubscribe.ts
 related_docs:
 - ../architecture/ARCHITECTURE.md
 - ../architecture/plac-and-audit.md
@@ -30,393 +39,495 @@ related_docs:
 - DASHBOARD.md
 - ../operations/OPERATIONS.md
 - ../security/SECURITY.md
-tags: [feature, email, queue, resend, plac, rbac]
+- ../runbooks/brevo-webhook.md
+tags: [feature, email, queue, brevo, plac, rbac, suppression, deliverability]
 
 ---
 
 # Email Portal
 
-> **TL;DR (non-technical):** A staff screen at `/dashboard/emails` for composing
-> and sending custom emails from the hotel's own address — with attachments,
-> reusable templates, saved drafts, scheduled delivery, and a live delivery-status
-> board. Every send is rate-limited, access-controlled, and recorded so we always
-> know who sent what, to whom, and whether it arrived.
+> **TL;DR (non-technical):** A staff screen at `/dashboard/emails` for composing and
+> sending email from the hotel's own addresses — with attachments, templates, drafts,
+> scheduling and a delivery board. Since 2026-09-10 it also carries a Brevo control
+> room: live sending quota, per-address sender permissions, an unsubscribe
+> suppression list, DNS deliverability diagnostics, and an AI HTML generator.
+> Every send is role-gated, rate-limited, sanitised, suppression-filtered and audited.
 
-> **Status:** Production Active
-> **Surface:** `/dashboard/emails` (cf-admin) — RBAC role floor + PLAC gated
-> **Role floor:** **Manager or above** — canonical `manager`/`admin`/`owner`/`vendor_support`, stored as `admin`/`super_admin`/`owner`/`dev`
-> **Last Updated:** 2026-06-07
+> **Status:** Production Active — **with one open P1 defect, see §0**
+> **Surface:** `/dashboard/emails` (cf-admin)
+> **Role floor:** canonical **Manager or above** (stored `admin`/`super_admin`/`owner`/`dev`)
+> **Last verified against live code + D1 + Supabase:** 2026-09-11
 
-> **Audience note:** This document is an architecture-level overview for AI IDE agents
-> and contributors. It omits environment-specific values — resource IDs, account
-> identifiers, secret values, and DDL live only in infrastructure config, never here.
+---
+
+## 0. OPEN DEFECT — sending is broken for Admin and Manager
+
+> **Severity: P1. Verified live 2026-09-11. Not yet fixed.**
+
+**Symptom.** A canonical **Admin** or **Manager** opens the portal, picks a sender
+from the dropdown, writes an email, hits Send, and receives:
+
+```
+403 — Insufficient permissions. Only OWNER and VENDOR_SUPPORT roles
+      can use unmapped custom sender aliases.
+```
+
+**Root cause — an asymmetric fallback between two routes:**
+
+| Route | Reads `email_sender_identities` from D1 | Falls back to `DEFAULT_SENDER_IDENTITIES` when empty |
+|---|---|---|
+| `GET /api/emails/senders` (what the **dropdown** shows) | yes | **yes** — `senders.ts:94` |
+| `POST /api/emails/send` (what **enforces**) | yes | **no** — `send.ts:133-141` |
+
+The setting has **never been written**. Verified:
+
+```sql
+SELECT COUNT(*) FROM admin_portal_settings WHERE setting_key = 'email_sender_identities';
+-- 0
+```
+
+Nothing seeds it — no migration creates it, and `senders.ts` only persists on the
+`create`/`update`/`delete` POST actions (`senders.ts:282,340,395`). Its GET handler
+substitutes the five defaults **in memory only**.
+
+So `send.ts` sees `identities = []`, finds no match for any address, falls into the
+unmapped-alias branch, and requires `isOwnerOrVendor` — which excludes precisely the
+two roles the portal is built for.
+
+**Who is affected right now** (live `admin_authorized_users`, 2026-09-11):
+
+| Stored role | Canonical | Level | Can send today? |
+|---|---|---|---|
+| `dev` × 1 | `vendor_support` | 0 | ✅ yes |
+| `owner` × 1 | `owner` | 1 | ✅ yes |
+| `super_admin` × 1 | **`admin`** | 2 | ❌ **blocked** |
+| `admin` × 1 | **`manager`** | 3 | ❌ **blocked** |
+| `staff` × 2 | `staff` | 4 | ❌ blocked by the role floor (by design) |
+
+**2 of 6 active accounts cannot send.** The owner can, which is why this was not
+caught during acceptance.
+
+**Why the test suite passed.** `test/api-email-senders.test.ts` covers `senders.ts`
+— the route that *has* the fallback. No test exercises `send.ts` against an empty
+`email_sender_identities`, which is the production state. The asymmetry is the bug
+and the coverage gap is its mirror image.
+
+**Three ways to fix, cheapest first:**
+
+1. **Seed the setting** (no deploy). One `updateSetting` write of
+   `DEFAULT_SENDER_IDENTITIES`, or any sender create/update in the UI as owner.
+   Unblocks immediately; leaves the asymmetry for the next fresh environment.
+2. **Give `send.ts` the same fallback** (one import + one line). Makes the two
+   routes agree by construction. **Recommended** — this is the actual defect.
+3. **Both**, plus a regression test asserting a Manager can send with the setting
+   absent. This is what closes it permanently.
+
+Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md). Until fixed, treat the sender
+dropdown as showing addresses that only the owner can actually use.
 
 ---
 
 ## 1. Context / Scope
 
-The Email Portal is the operator surface for **outbound custom email**. It does **not**
+The Email Portal is the operator surface for **outbound custom email**. It does not
 handle transactional auth email (CF Access OTP, Supabase GoTrue recovery — see
 [USER-MANAGEMENT.md](USER-MANAGEMENT.md)) nor the automated security-alert fan-out
-emitted by the scheduled log-sync worker (see
-[OPERATIONS.md](../operations/OPERATIONS.md) §"Email fan-out"). Those paths predate
-this feature and remain separate.
+from the scheduled log-sync worker.
 
-What the portal covers:
+What it covers today:
 
-- **Compose & send** a custom HTML email from a verified `@madagascarhotelags.com`
-  address, with optional CC/BCC and file attachments.
-- **Schedule** a send up to 30 days in the future, and **cancel** a scheduled send.
-- **Drafts** — per-operator work-in-progress saved in D1.
-- **Templates ("Presets")** — shared, reusable subject + HTML bodies in D1.
-- **Queue Logs** — a per-message delivery timeline read from the Supabase email
-  ledger, including provider webhook events.
-
-This doc deliberately does **not** cover the external consumer worker's internals
-(see [`cf-email-consumer/README.md`](../cf-email-consumer/README.md), a
-separate repo) beyond the contract this app depends on.
+- **Compose & send** custom HTML from a verified `@madagascarhotelags.com` address,
+  with CC/BCC and attachments.
+- **Schedule** up to 30 days out.
+- **Drafts** — per-operator, autosaved.
+- **Templates** — shared, reusable subject + HTML.
+- **Queue Logs** — per-message delivery timeline from the Supabase ledger.
+- **Brevo Engine** *(new 2026-09-10)* — live account telemetry, quota, settings.
+- **Sender management** *(new)* — per-address RBAC clearance.
+- **Suppressions** *(new)* — CAN-SPAM/GDPR unsubscribe list, enforced pre-send.
+- **DNS diagnostics** *(new)* — live SPF/DKIM/DMARC inspection.
+- **AI generator** *(new)* — Workers AI HTML drafting.
 
 ---
 
-## 2. Architecture / How it works
+## 2. Architecture
 
-Sending is **decoupled** from the provider call: cf-admin never blocks the operator's
-request on Brevo. It writes a ledger row, enqueues a job, and returns. An external
-consumer worker drains the queue and talks to Brevo; provider webhooks then update
-the same ledger row, which the Queue Logs tab reads back.
+Sending is **decoupled** from the provider: cf-admin never blocks the operator on
+Brevo. It sanitises, filters, writes a ledger row, enqueues, and returns.
 
 ```
  Operator (Email Portal island)
         │  POST /api/emails/send
         ▼
- cf-admin API  ──①── validate (role floor · PLAC · rate limit · recipient cap ·
-        │             sender domain · schedule window · attachment gates)
-        │
-        ├──②── INSERT email_audit_logs  (Supabase — status: queued|scheduled)
-        │
-        └──③── EMAIL_QUEUE.send(job)    (Cloudflare Queue "madagascar-emails")
+ cf-admin API
+        ├─① sanitize HTML            (HTMLRewriter — stored-XSS backstop)
+        ├─② role floor · PLAC · rate limit · recipient cap
+        ├─③ SENDER CLEARANCE         (per-address minRole)   ◄── §0 defect here
+        ├─④ SUPPRESSION PARTITION    (drop unsubscribed, audit the drop)
+        ├─⑤ INSERT email_audit_logs  (Supabase — queued|scheduled)
+        └─⑥ EMAIL_QUEUE.send(job)    (Cloudflare Queue "madagascar-emails")
                       │
                       ▼
-        cf-astro-email-consumer  (external worker, repo cf-email-consumer)
-                      │  calls Brevo API (carries Sentry trace headers)
-                      ▼
-                   Brevo   ──④── delivery webhooks ──▶ update email_audit_logs
-                                                       (status + delivery_events)
+        cf-astro-email-consumer  (separate worker/repo) ──▶ Brevo
                       ▲
-        Queue Logs tab ─⑤─ GET /api/audit/emails?purpose=custom_email
-                            (reads the ledger row + delivery_events timeline)
+        Brevo webhooks ──▶ /api/emails/webhook ──▶ update delivery_events
+                      ▲
+        Queue Logs ─── GET /api/audit/emails?purpose=custom_email
 ```
 
-**Why a queue.** Brevo calls are pushed off the request lifecycle so a slow or
-failing provider never degrades the admin UI, and bursts are smoothed. The
-producer binding (`EMAIL_QUEUE` → `madagascar-emails`) is declared in
-`wrangler.toml`; the consumer lives in a separate worker/repo. See
-[OPERATIONS.md](../operations/OPERATIONS.md) §Queues.
+Steps ① ③ and ④ are new as of 2026-09-10 and are the substantive security additions.
 
-**Local dev has no consumer.** When `import.meta.env.DEV` is set, `send.ts` runs an
-inline emulation (`runLocalDispatch`) that resolves attachments from local R2, calls
-Brevo directly, and writes **mock** `email.sent` / `email.delivered` events so the
-Queue Logs timeline is testable without the queue or webhooks. This branch is
-`DEV`-only and never runs in production.
+**Stores:**
 
-**Three stores, three jobs:**
-
-| Store | Binding | Holds | Scope |
-|-------|---------|-------|-------|
-| Supabase Postgres | `email_audit_logs` | the central delivery ledger (status, payload, `resend_id`, `delivery_events`) | shared with cf-astro |
-| D1 | `admin_email_drafts` | per-operator composer drafts | cf-admin |
-| D1 | `admin_email_templates` | shared template presets | cf-admin |
-| R2 (`IMAGES`) | `email-attachments/` prefix | uploaded attachment blobs | shared bucket, private prefix |
-
----
-
-## 3. User Interface
-
-`/dashboard/emails` renders a single Preact island, `EmailPortal`, with four tabs.
-The page sits in the **TOOLS** sidebar section (`deriveSection` in
-`src/lib/auth/plac.ts`).
-
-| Tab | Component | Purpose |
-|-----|-----------|---------|
-| **Composer** | `Composer` + `RichEditor` | From-prefix selector, To/CC/BCC chips, subject, contenteditable HTML body, attachment uploader, schedule toggle. Actions: Send, Save Draft, Save as Preset. |
-| **Drafts** | `DraftsPanel` | List the operator's own drafts; load one back into the composer or delete it. |
-| **Presets** | `TemplatesPanel` | List shared templates; apply one to the composer, create a new one, or delete (delete/create gated). |
-| **Queue Logs** | `QueueTracker` | Per-message delivery timeline with status legend (Delivered / Queued / Scheduled / Failed / Cancelled). Only rendered when the operator holds `#queue-logs`. |
-
-All cross-island feedback uses a single toast HUD. Destructive actions (delete
-draft/template, cancel schedule) confirm first. The **Queue Logs** tab is hidden
-entirely for operators without the capability — and the API enforces the same gate,
-so the tab and its data cannot drift apart.
-
-### Responsive layout (desktop vs. mobile)
-
-The island renders one component tree and switches presentation at the `lg`
-(1024px) breakpoint:
-
-- **Desktop (`lg+`)** — top tab bar (Composer / Drafts / Presets / Queue Logs) with
-  a two-column composer: fields + body on the left, delivery settings / attachments /
-  actions on the right (`Composer.tsx`).
-- **Mobile (`<lg`)** — a Gmail/Outlook-style shell: a fixed **bottom tab bar** for the
-  lists plus a floating **Compose FAB** (`MobileTabBar.tsx`). The FAB opens a
-  **full-screen composer** (`MobileComposer.tsx`) with an app-bar (close · attach ·
-  overflow ⋮ · Send), minimal field rows, a full-height body editor, and advanced
-  delivery options (sender alias, schedule, save-draft/preset, preview) in a
-  bottom sheet (`BottomSheet.tsx`). A `matchMedia` check gates the full-screen mount so
-  it never runs on desktop.
-
-Responsive panels: `DraftsPanel` shows a table at `md+` and a card stack below;
-`QueueTracker` and `DraftsPanel` both expose client-side **search**, and Queue Logs
-adds **status filter chips**.
-
-### Composer capabilities
-
-- **Recipients** — To/CC/BCC are chip inputs (`RecipientInput.tsx`) that split pasted
-  text on comma/semicolon/tab/newline; each chip is validated against an email pattern
-  and invalid entries are flagged inline. CC and BCC are revealed on demand. With
-  `#contacts`, recent recipients (from the ledger via `GET /api/emails/contacts`) drive
-  an autocomplete dropdown.
-- **Autosave** — the composer autosaves to Drafts ~10s after the last edit (dirty-tracked
-  via a content snapshot, reusing `POST /api/emails/drafts`), with a "Saving…/Draft saved"
-  indicator. Manual **Save Draft** still works on demand.
-- **Preview & test** — with `#preview`, operators can preview the rendered email in a
-  sandboxed `<iframe>` (`EmailPreviewModal.tsx`) and **send a test copy to themselves**
-  (a normal single-recipient send through the standard pipeline; counts against the rate
-  limit).
-- **Sender** — a prefix selector in front of the fixed `@madagascarhotelags.com`
-  domain; the field is locked to `info`/`booking` unless the operator holds
-  `#custom-sender`.
-- **Body** — `RichEditor`, a lightweight `contenteditable` WYSIWYG with a toolbar for
-  bold, italic, H1/H2, normal text, bullet/numbered lists, link insertion, and
-  clear-formatting (plus Ctrl/⌘+B and Ctrl/⌘+I shortcuts).
-- **Attachments** — drag-and-drop or file-picker upload with client-side guardrails: a
-  type allowlist (`.md`, `.txt`, `.pdf`, `.png`, `.jpg`), a per-file 5 MB cap, and a
-  magic-number signature check before upload. Staged files can be removed before
-  sending; the server re-checks size on upload (see §5).
-- **Scheduling** — an optional future send time (`datetime-local`), validated
-  server-side to a 1-minute–30-day window.
-
----
-
-## 4. Access Control (RBAC + PLAC)
-
-Every entry point is gated by the platform's two-engine model
-([plac-and-audit.md](../architecture/plac-and-audit.md)):
-
-- **RBAC role floor** — **Manager or above** (stored `admin`, `super_admin`, `owner`, `dev`). `staff` cannot
-  reach any email endpoint.
-- **PLAC** — Page-Level Access Control with **fragment sub-capabilities** on the
-  page path. Each capability defaults to **granted** unless an explicit deny exists
-  (`accessMap[...] === false`); **deny always wins**. The page resolves them once in
-  `src/pages/dashboard/emails/index.astro` and passes a `permissions` object to the
-  island; the API routes re-check independently via `placDenyResponse`.
-
-| Capability (PLAC anchor)            | Grants                                                        |
-|-------------------------------------|--------------------------------------------------------------|
-| `/dashboard/emails`                 | See the portal; read drafts and templates                    |
-| `…#compose`                         | Send and cancel emails                                        |
-| `…#attachments`                     | Attach files to a send                                       |
-| `…#templates`                       | Create / update / delete shared template presets             |
-| `…#custom-sender`                   | Send from a non-default alias (prefix other than `info`/`booking`) |
-| `…#bulk-send`                       | Send to more than one recipient in a single message          |
-| `…#queue-logs`                      | View the delivery-queue timeline                             |
-| `…#preview`                         | Preview the rendered email and send a test copy to oneself   |
-| `…#contacts`                        | Recent-recipient autocomplete suggestions (`GET /api/emails/contacts`) |
-
-**DEV/OWNER bypass.** `dev` and `owner` bypass the per-hour send rate limit and the
-recipient-count cap. All other gates still apply to them.
-
-The Queue Logs data route (`GET /api/audit/emails?purpose=custom_email`) additionally
-hard-checks `#queue-logs` and is served out of the shared `/dashboard/logs` ledger
-endpoint, so it inherits the logs-page deny semantics too.
-
----
-
-## 5. Send pipeline & validation
-
-`POST /api/emails/send` applies these checks **in order**; the first failure returns a
-specific status and message (no throws leak to the client):
-
-1. **Auth + role floor** — `requireAuth`, then `admin`+ (`401` / `403`).
-2. **PLAC `#compose`** — explicit deny → `403`.
-3. **Rate limit** — `10` sends / `1 hour` per user (Upstash limiter, key
-   `custom-emails`); `429` with `X-RateLimit-*` headers. Bypassed for `dev`/`owner`.
-4. **Bindings present** — `DB` and `EMAIL_QUEUE` (`500` if missing).
-5. **Body + required fields** — `to`, `subject`, `html` (`400`).
-6. **Recipient cap** — total of `to + cc + bcc` must be ≥ 1 and ≤
-   `custom_email_max_recipients` (a `PortalSettingsRepository` setting, default `10`);
-   over-cap → `400` (bypassed for `dev`/`owner`).
-7. **Bulk PLAC** — more than one recipient requires `#bulk-send`.
-8. **Sender domain** — the resolved `from` must end with `@madagascarhotelags.com`;
-   prefixes `info` and `booking` are open, **any other prefix requires
-   `#custom-sender`**. Default sender is `SENDER_EMAIL` (falls back to
-   `info@madagascarhotelags.com`).
-9. **Attachments PLAC** — any attachment requires `#attachments`.
-10. **Schedule window** — `scheduledAt`, if present, must be a valid future timestamp
-    within **30 days** (`400` otherwise).
-
-On success: a `trackingId` (UUID) is generated, the ledger row is inserted
-(`status: queued` or `scheduled`, with the recipient list, the sender's IP, and the
-full payload), the job is enqueued with Sentry trace/baggage headers for distributed
-tracing, and a
-post-response Ghost Audit entry is written (`module: logs`, `targetType: custom_email`)
-via `ctx.waitUntil` — zero added latency. See
-[plac-and-audit.md](../architecture/plac-and-audit.md) for the audit engine.
-
-### Attachments
-
-`POST /api/emails/attachments` (multipart) uploads one file to the `IMAGES` R2 bucket
-under `email-attachments/<uuid>/<filename>`, returning the R2 key the composer then
-references. Limits: **5 MB** per file (`400` over), rate limit `20` uploads / `1 min`
-(key `email-attachments-upload`). Requires the role floor + page PLAC.
-
-### Scheduling & cancellation
-
-> **A scheduled send cannot be cancelled from the portal.** An earlier revision
-> described `POST /api/emails/cancel` as working behaviour and kept a design
-> paragraph for it after that was corrected; the route was never built, nothing
-> calls it, and the paragraph was deleted on 2026-09-02 (viability program
-> chunk 9, MAINTENANCE C-17) so this document no longer implies a capability a
-> user cannot find. A scheduled send lands in the ledger with
-> `status: scheduled` and is dispatched to the provider with a future
-> `scheduledAt`; if cancellation is ever wanted it is a feature request.
-
----
-
-## 6. Drafts & Templates
-
-| | Drafts (`admin_email_drafts`) | Templates (`admin_email_templates`) |
+| Store | Object | Holds |
 |---|---|---|
-| Scope | **Per operator** (`WHERE user_id = ?`) | **Shared** (global list) |
-| Read | page PLAC | page PLAC |
-| Write | page PLAC (owner-scoped rows) | **`#templates`** |
-| Audited | no | yes (create/update/delete → Ghost Audit) |
-| Fields | sender/recipient/subject/`body_html`/cc/bcc/attachments(JSON)/`updated_at` | name/subject/`body_html`/`created_by` |
-
-Drafts persist both on the explicit **Save Draft** action and via **debounced
-autosave** (~10s after the last edit), creating or updating the row keyed on the active
-draft id. Autosave is dirty-tracked against a content snapshot so it never re-saves
-unchanged content and never fires for an empty composer; loading a draft seeds the
-snapshot so it does not immediately re-save.
-
-**Brand baseline for presets.** The platform's transactional emails under
-`email-templates/` (`confirmation`, `invite`, `magiclink`, `recovery`, …) share a
-common brand header, an emerald→amber gradient bar, and a footer. That styling is the
-reference for operator presets and the intended source for seeded starter presets.
+| Supabase | `email_audit_logs` | delivery ledger (status, payload, `delivery_events`) |
+| D1 | `admin_email_drafts` | per-operator drafts |
+| D1 | `admin_email_templates` | shared templates |
+| D1 | `admin_email_suppression` | unsubscribe list (PK `email`) |
+| D1 | `admin_portal_settings` | engine settings + sender identities |
+| R2 (`IMAGES`) | `email-attachments/` | attachment blobs, private prefix |
 
 ---
 
-## 7. Queue Logs (delivery tracking)
+## 3. What shipped 2026-09-10 (commit `5781fb8`)
 
-The Queue Logs tab calls `GET /api/audit/emails?purpose=custom_email`, which reads the
-Supabase `email_audit_logs` ledger and returns each row's `status`, `resend_id`,
-`email_error`, full `payload`, and the `delivery_events` array (provider webhook
-timeline). The tab requests `cache: no-store` so operators see live status.
+46 files, +8,049/−1,373. Five new operator surfaces and four new API routes.
 
-- **Access:** role floor + page PLAC + a hard `#queue-logs` check; the route is the
-  same one the Activity Center's Email Log tab uses, so it also honors
-  `/dashboard/logs` denies for canonical **Admin** and above (stored `super_admin`+).
-- **Statuses:** `queued` → `sent_to_resend`/`sent` → `delivered`, plus `scheduled`,
-  `failed`, `bounced`, `cancelled`.
-- **Ledger columns:** `id` (tracking UUID), `project_source`, `purpose`, `status`,
-  `recipient_email`, `resend_id`, `email_error`, `sender_ip`, `payload` (JSON),
-  `delivery_events` (JSON), `booking_id` (nullable FK), `created_at`, `updated_at`.
-- **`delivery_events`** is an append-only array of provider webhook records
-  (`event_type` such as `delivered`/`bounced`/`spam`, `timestamp`,
-  `resend_email_id` (Brevo messageId), `raw_data`), rendered as the per-message timeline.
-- **Deletion:** `DELETE /api/audit/emails` is **DEV/OWNER-only** (bulk by id),
-  audited. See [USER-MANAGEMENT.md](USER-MANAGEMENT.md) for the logs-route guard map.
+### 3.1 Brevo Engine / telemetry — `BrevoTelemetryView.tsx` (1,192 lines)
+
+Live panel reading `GET /api/emails/engine`, which calls Brevo v3 for account, plan,
+domains, webhooks and 30-day aggregate stats, merged with D1 engine settings. Shows
+daily/monthly quota consumption, plan type, latency, and whether the figures are live
+or fallback (`isLiveBrevoData`). Also hosts the branding form (§6) and the
+**Webhook Test** modal (`WebhookTestModal.tsx`), which posts a synthetic event to
+verify the webhook path end to end.
+
+`POST /api/emails/engine` dispatches three actions: `ping`, `sync_webhook`,
+`save_settings`.
+
+### 3.2 Sender management — `senders.ts` + `ManageSenderModal.tsx`
+
+Replaces the old binary `#custom-sender` model with **per-address clearance**. Each
+identity carries `{ id, name, email, minRole, active, department, isDefault }`.
+`GET` merges D1 policy with live Brevo senders; `POST` supports
+`create`/`update`/`delete`/`sync`, all audited, all Admin+.
+
+Guardrails verified in code: external domains rejected; the primary `info@` identity
+cannot be deleted (`senders.ts`, covered by test).
+
+The five defaults (`DEFAULT_SENDER_IDENTITIES`, `senders.ts:19`):
+
+| Address | Department | Min role (canonical) |
+|---|---|---|
+| `info@` | General Support | staff |
+| `booking@` | Reservations Desk | staff |
+| `admin@` | Executive & Ops | **admin** |
+| `team@` | Guest Care | staff |
+| `billing@` | Accounts & Billing | **manager** |
+
+> These exist **only in code**. See §0 — they are not in D1, which is the defect.
+
+### 3.3 Suppressions — `suppressions.ts` + `ContactsSuppressionsView.tsx`
+
+A real compliance control, not a UI nicety. `EmailSuppressionRepository.partition()`
+splits the recipient list **before the ledger write and before the enqueue**, so a
+suppressed address never reaches the queue at all. If every recipient is suppressed
+the send is refused with a clear error. Drops are written to the audit log with the
+suppressed addresses in `context`.
+
+Table `admin_email_suppression`: `email` (PK), `reason` (default `unsubscribe`),
+`source` (default `one_click`), `actor_email`, `ip_hash`, `created_at`.
+Live row count on 2026-09-11: **0** — the list works but nobody has unsubscribed yet.
+
+Fed by `/api/emails/unsubscribe` (RFC 8058 one-click, added 2026-07-26 in `06d71af`)
+and by manual add/remove in the UI. `buildUnsubscribeHeaders` attaches
+`List-Unsubscribe` and `List-Unsubscribe-Post` to every send.
+
+### 3.4 DNS deliverability — `dns-check.ts` + `DnsDiagnosticModal.tsx`
+
+Live DNS-over-HTTPS queries against Cloudflare `1.1.1.1`, cross-referenced with
+Brevo's domain-verification telemetry. Inspects SPF, DKIM and DMARC and reports what
+is missing. Genuinely useful — deliverability failures are otherwise invisible until
+mail starts landing in spam.
+
+### 3.5 AI generator — `ai-generate.ts` + `AiGeneratorModal.tsx`
+
+Cloudflare Workers AI (`env.AI.run`) drafts raw HTML email bodies into the composer.
+Gated by the new `#ai-generate` PLAC anchor. Has its own quota route
+(`ai-quota.ts`).
+
+### 3.6 Workspace redesign
+
+`EmailPortal.tsx` was restructured (−334/+334 net churn) into a workspace shell with
+`[SUPABASE_PROJECT_REF]`, and the tab bodies split into `[SUPABASE_PROJECT_REF]`,
+`DraftsManagerView` and `QueueLogItem`. `QueueTracker` shrank by ~50% as its row
+rendering moved to `QueueLogItem`.
 
 ---
 
-## 8. Key code paths
+## 4. Access control — RBAC + PLAC
 
-- Page + PLAC resolution → `src/pages/dashboard/emails/index.astro`
-- Island shell + tabs → `src/components/admin/emails/_components/EmailPortal.tsx`
-- Composer / editor → `src/components/admin/emails/_components/Composer.tsx`,
-  `src/components/admin/emails/atoms/RichEditor.tsx`
-- Send + validation + enqueue + local-dev emulation → `src/pages/api/emails/send.ts`
-- Drafts CRUD (D1) → `src/pages/api/emails/drafts.ts`
-- Templates CRUD (D1) → `src/pages/api/emails/templates.ts`
-- Attachment upload (R2) → `src/pages/api/emails/attachments.ts`
-- Queue-log read/delete (Supabase) → `src/pages/api/audit/emails.ts`
-- Recipient-cap setting → `src/lib/dal/PortalSettingsRepository.ts`
-  (`custom_email_max_recipients`)
-- Sidebar section routing (`/dashboard/emails` → TOOLS) → `src/lib/auth/plac.ts`
-  (`deriveSection`)
+Two engines ([plac-and-audit.md](../architecture/plac-and-audit.md)): an RBAC role
+floor, then Page-Level Access Control with fragment sub-capabilities. Each capability
+defaults to **granted** unless an explicit deny exists; **deny always wins**. The page
+resolves them once and passes a `permissions` object to the island; every API route
+re-checks independently.
 
----
+**All ten anchors, with the `required_role` actually stored in D1** (queried live
+2026-09-11; shown in stored vocabulary with the canonical name in brackets):
 
-## 9. Configuration / Bindings
+| Capability | `required_role` in D1 | Grants |
+|---|---|---|
+| `/dashboard/emails` | `admin` [manager] | See the portal; read drafts and templates |
+| `…#compose` | `admin` [manager] | Send email |
+| `…#attachments` | `admin` [manager] | Attach files |
+| `…#templates` | `admin` [manager] | Create/update/delete shared templates |
+| `…#ai-generate` | `admin` [manager] | **(new)** AI HTML drafting |
+| `…#preview` | `admin` [manager] | Preview and send a test copy to self |
+| `…#contacts` | `admin` [manager] | Recent-recipient autocomplete |
+| `…#bulk-send` | `super_admin` [admin] | More than one recipient per message |
+| `…#custom-sender` | `owner` | Unmapped alias (see §0) |
+| `…#queue-logs` | `owner` | Delivery-queue timeline |
 
-Names only — never values. See [OPERATIONS.md](../operations/OPERATIONS.md) for the
-canonical registry.
+**Sender clearance is a second, independent layer.** Even with `#compose`, the
+`from` address must satisfy that identity's `minRole` (`send.ts:150-165`). An
+unmapped address additionally requires `isOwnerOrVendor` **and** `#custom-sender`.
 
-| Binding / var | Kind | Role in the portal |
-|---------------|------|--------------------|
-| `EMAIL_QUEUE` → `madagascar-emails` | Cloudflare Queue (producer) | Decouples Resend from the request; drained by the external consumer |
-| `DB` | D1 | Drafts, templates, Ghost Audit rows, recipient-cap setting |
-| `IMAGES` | R2 bucket | Attachment storage under `email-attachments/` |
-| `SESSION` | KV | Session + PLAC access map (auth) |
-| `BREVO_API_KEY` | secret | Provider key — cancellation and DEV-only local emulation (production sends go through the consumer) |
-| `BREVO_WEBHOOK_SECRET` | secret | Used to authenticate incoming webhook payloads in `/api/emails/webhook` |
-| `SENDER_EMAIL` | var | Default `from`; must be on `@madagascarhotelags.com` |
-| `ADMIN_EMAIL` | var | Platform contact address |
-| Upstash Redis (`UPSTASH_REDIS_REST_*`) | secret | Backs the send + upload rate limiters |
+**Bypasses.** `owner` and `vendor_support` bypass the per-hour rate limit and the
+recipient cap. They do **not** bypass PLAC denies, sanitisation or suppression.
 
 ---
 
-## 10. Operational notes / Runbook
+## 5. Send pipeline — exact order
 
-- **Provider misconfig is fail-soft on cancel/dev only.** Production sends never call
-  Brevo in-request; a Brevo outage delays delivery (jobs stay queued) but does not
-  error the operator's send.
-- **Schema provisioning (resolved).** `admin_email_drafts` and `admin_email_templates`
-  are created by `database/legacy_migrations/0032_create_admin_email_tables.sql`, which also seeds
-  `custom_email_max_recipients` and the `#preview`/`#contacts` PLAC rows. Because the
-  shared `madagascar-db` reserves the default `d1_migrations` table for **cf-astro**,
-  cf-admin migrations are applied **directly/out-of-band** (e.g. via the Cloudflare
-  D1 API), not through `wrangler d1 migrations apply`; 0032 is idempotent
-  (`CREATE TABLE IF NOT EXISTS` / `INSERT OR IGNORE`). If drafts/templates ever 500
-  with `no such table: admin_email_drafts`, re-apply 0032 to the live DB.
-- **Server-side errors go to Sentry via `@sentry/cloudflare`.** The worker is wrapped
-  with `withSentry` in `src/workers/cf-entry.ts`; server code captures through
-  `@/lib/sentry` (re-exports `@sentry/cloudflare`). The Node-based `@sentry/astro`
-  server SDK does **not** run in workerd — using it for server capture is a silent
-  no-op (the historical reason server errors like the missing-table 500 never reached
-  Sentry). Only browser/island code may import `@sentry/astro`.
-- **Recipient cap is a runtime setting**, not a constant — adjust
-  `custom_email_max_recipients` in portal settings rather than editing code.
-- **Attachments are private.** They live under a private R2 prefix and are resolved
-  server-side by the consumer (or the dev emulator); the portal stores only the R2
-  key, never a public URL.
-- **Ledger is the source of truth for "did it send".** The composer's success toast
-  means *enqueued*, not *delivered* — confirm final state in Queue Logs.
-- **Attachment orphan sweep (action needed).** The weekly R2 cleanup
-  (`src/workers/scheduled-asset-cleanup.ts`, Sunday cron) safely reconciles bucket objects
-  against `cms_content`, active `admin_email_drafts`, and `email_audit_logs`. It now garbage collects
-  orphaned attachments under `email-attachments/` without touching active files.
-- **No send idempotency yet.** Each `POST /api/emails/send` mints a fresh `trackingId`,
-  so a double-submit enqueues two messages. Operators should confirm in Queue Logs
-  rather than re-sending. Tracked in [MAINTENANCE.md](../MAINTENANCE.md).
+`POST /api/emails/send`, first failure wins:
+
+| # | Check | Failure |
+|---|---|---|
+| 1 | `requireAuth` | 401 |
+| 2 | `isAdmin` role floor (manager+) | 403 |
+| 3 | PLAC `#compose` | 403 |
+| 4 | Rate limit 10/hour/user (Upstash; owner+vendor bypass) | 429 + `X-RateLimit-*` |
+| 5 | `DB` and `EMAIL_QUEUE` bindings | 500 |
+| 6 | Zod `sendEmailSchema` | 400 |
+| 7 | **HTML sanitisation** (`sanitizeEmailHtml`, HTMLRewriter) | — rewrites, never rejects |
+| 8 | ≥1 recipient | 400 |
+| 9 | Recipient cap (`custom_email_max_recipients`, live value **10**) | 400 |
+| 10 | `#bulk-send` if >1 recipient | 403 |
+| 11 | Domain must be `@madagascarhotelags.com` | 400 |
+| 12 | **Sender clearance** by `minRole`, else owner/vendor + `#custom-sender` | 403 ← §0 |
+| 13 | `#attachments`; cumulative size ≤ **25 MB** | 403 / 400 |
+| 14 | Schedule window: future, ≤30 days | 400 |
+| 15 | **Suppression partition**; all-suppressed → refuse | 400 |
+| 16 | Ledger insert → enqueue with Sentry trace headers → Ghost Audit | — |
+
+**Why sanitisation matters.** Templates and drafts are shared across operators of
+differing privilege, so a lower-privileged author could otherwise plant active markup
+that executes in a reviewer's browser. DOMPurify/jsdom crash workerd, so this uses
+Workers-native `HTMLRewriter`.
+
+---
+
+## 6. Engine settings — what is real and what is not
+
+`engine.ts` reads **eleven** settings. Only **one** exists in D1 (verified
+2026-09-11); the other ten fall back to hardcoded defaults on every request.
+
+| Setting | In D1? | Default in code | Consumed by the send path? |
+|---|---|---|---|
+| `custom_email_max_recipients` | ✅ `10` | `send.ts` 10 / `engine.ts` **100** ⚠ | **yes** |
+| `email_sender_identities` | ❌ | none (`[]`) | **yes** — §0 defect |
+| `brevo_daily_limit` | ❌ | 300 | no — display only |
+| `brevo_monthly_limit` | ❌ | 9000 | no — display only |
+| `brevo_track_opens` | ❌ | true | no |
+| `brevo_track_clicks` | ❌ | true | no |
+| `email_logo_url` | ❌ | site logo URL | no |
+| `email_brand_color` | ❌ | `#3b82f6` | no |
+| `email_footer_address` | ❌ | hardcoded street address | no |
+| `email_support_phone` | ❌ | `+52 (449) 123-4567` | no |
+| `email_reply_to` | ❌ | `info@…` | no |
+
+Three honest observations:
+
+1. **The branding panel persists settings nothing reads.** `email_logo_url`,
+   `email_brand_color`, `email_footer_address`, `email_support_phone` and
+   `email_reply_to` are written by `save_settings` and read back into the form — but
+   `send.ts` reads only `custom_email_max_recipients` and `email_sender_identities`,
+   and the queue payload does not carry them. The panel is **configured but not
+   wired**. No customer has ever seen these values.
+2. **`+52 (449) 123-4567` is a placeholder.** Harmless today precisely because of (1),
+   but it must not be wired up as-is — it would put a fake phone number in customer
+   mail, against RULE #0.5.
+3. **The recipient-cap defaults disagree** — `send.ts` falls back to 10,
+   `engine.ts` to 100. No live impact while the D1 row exists (both read `10`), but
+   delete that row and the UI would advertise a cap ten times what is enforced.
+
+**`brevo_api_key` is a dead read.** Six routes do
+`settingsRepo.getSetting('brevo_api_key')` as a fallback to `env.BREVO_API_KEY`, but
+nothing ever writes it and it is not in `KNOWN_SETTING_KEYS`. `getSetting` is
+ungated, so each of those is a real D1 query that always returns `NULL` — six
+wasted reads per portal interaction. (Also worth noting: a provider secret in a
+settings table would be an anti-pattern; ROADMAP chunk 12 explicitly plans to move
+credentials out of that table. The good news is nothing puts it there today.)
+
+---
+
+## 7. Usage allowance and scale
+
+**Provider ceiling.** Brevo's free plan allows **300 emails/day** (~9,000/month),
+which the code's defaults mirror exactly. The count resets daily and does not roll
+over. Paid tiers start around **$9/month** (Starter, 5k emails/month).
+
+**Platform ceilings, and which binds first:**
+
+| Limit | Value | Binds at |
+|---|---|---|
+| Per-user send rate | 10/hour (owner/vendor exempt) | 240/day/user in theory |
+| Recipients per message | 10 (D1 setting) | — |
+| Attachment size | 25 MB cumulative per message | — |
+| Brevo free plan | **300/day** | **the real ceiling** |
+| Cloudflare Queue | 1M ops/month free | ~33k/day — not binding |
+| D1 rows written | 100k/day free | not binding |
+
+With 6 active accounts, the **provider's 300/day is the binding constraint**, and
+only if all six sent ~50 messages daily. Actual volume is far below this: the portal
+is used for occasional operator correspondence, not campaigns.
+
+**What would change the picture.** Bulk sending to a guest list — a seasonal
+promotion to a few hundred contacts — would hit 300/day immediately. That is the
+trigger to move to Starter, not a code change.
+
+---
+
+## 8. Where it is used today, and what it is for next
+
+**Current, verified from the live ledger and settings:**
+
+- Operator-to-guest correspondence from `info@` / `booking@` (ad-hoc, low volume).
+- Manual follow-up on bookings, alongside the automated booking confirmations that
+  run through the *same* queue but a *different* producer (cf-astro).
+- Delivery troubleshooting — Queue Logs is the only place a human can see whether a
+  given message actually landed.
+
+**Realistic next uses, in the order they would pay off:**
+
+1. **Wire the branding settings** (§6) so templates inherit logo/colour/footer
+   centrally instead of each author pasting markup. Highest value per hour of work.
+2. **Seasonal guest campaigns** — needs the suppression list (already built) plus a
+   paid Brevo tier and a recipient-cap raise.
+3. **Template-driven operational mail** — vaccination reminders, pickup reminders.
+   The scheduling and template machinery already exist; only the trigger is missing.
+4. **Feeding the AI generator from booking context** so a follow-up drafts itself.
+
+---
+
+## 9. Standalone commercial assessment (honest)
+
+The owner asked what this would be worth sold separately. Assessed 2026-09-11 against
+what the code actually does.
+
+**What it is.** An operator console layered over a third-party ESP, with RBAC,
+per-address sender clearance, audit, suppression and deliverability diagnostics. It
+is **not** an ESP, not a marketing-automation platform, and not a campaign builder.
+
+**Honest market position.** As a *standalone SaaS product this is weak.* It sends
+through Brevo, so a buyer already paying Brevo gets a console from Brevo. The market
+for "a nicer front-end to someone else's ESP" is thin, and the incumbents
+(Postmark ~$15/mo, SendGrid, Mailgun) bundle their own dashboards free.
+
+**Where the real value is.** The parts a generic ESP dashboard does *not* give you:
+
+- per-address sender clearance tied to an org's own role model;
+- PLAC sub-capabilities, so "can send" and "can send as billing@" are separable;
+- every send audited into the same ledger as the rest of the admin platform;
+- suppression enforced *server-side before enqueue*, not trusted to the provider;
+- deliverability diagnostics in the same screen as sending.
+
+That is integration value, and it only exists **inside** a larger admin platform.
+
+**What to charge — three honest framings:**
+
+| Framing | Realistic price | Reasoning |
+|---|---|---|
+| **Module in the existing platform** | **$15–40/mo per tenant** | Fits beside the Velox tiers ($59/$149/$299/$499). Defensible as an add-on; not defensible as a standalone line item. |
+| **One-off client build** | **$6,000–12,000** | ~8,000 lines with genuine security work (sanitisation, suppression, RBAC, audit). At $75–120/hr that is 60–110 hours, which is about right for a careful build plus tests. |
+| **Standalone SaaS** | **don't** | Undifferentiated against the ESPs' own consoles; you would be reselling Brevo with extra steps and owning the support burden. |
+
+**How well does it actually do the job?** Mixed, and worth saying plainly:
+
+- **Strong:** the security model. Sanitisation, pre-enqueue suppression, per-address
+  clearance and full audit are better than most in-house email consoles.
+- **Strong:** decoupling. A Brevo outage delays delivery; it never breaks the UI.
+- **Weak:** the settings layer is largely decorative (§6) — ten of eleven settings
+  either aren't stored or aren't read.
+- **Weak:** test coverage. One test file for four new routes; the §0 defect shipped
+  green because the untested route is the one that enforces.
+- **Blocking:** the §0 defect. A product that four of six roles cannot use is not
+  shippable to a third party as-is.
+
+**Verdict.** Keep it as a platform module. Fix §0 and wire §6 before it is ever
+demonstrated to a paying client.
+
+---
+
+## 10. Operational notes
+
+- **Success toast means *enqueued*, not *delivered*.** Confirm in Queue Logs.
+- **No send idempotency.** Each POST mints a fresh `trackingId`; a double-submit
+  enqueues twice. Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+- **A scheduled send cannot be cancelled from the portal.** `POST /api/emails/cancel`
+  was never built; the claim was removed 2026-09-02.
+- **Attachments are private.** Stored under a private R2 prefix, resolved server-side
+  by the consumer. The portal stores the key, never a public URL.
+- **Orphan sweep.** The Sunday R2 cleanup garbage-collects `email-attachments/`
+  against `cms_content`, active drafts and the ledger.
+- **Server errors reach Sentry via `@sentry/cloudflare`** (`withSentry` in
+  `cf-entry.ts`). `@sentry/astro`'s server SDK is a silent no-op in workerd.
+
+### Schema and migrations
+
+`5781fb8` added **zero migrations** — the feature reuses existing tables, which is
+RULE #0.9 working as intended. Two standing items, both predating it:
+
+- `migrations/0008_email_suppression.sql` (authored 2026-07-26, applied 2026-08-04)
+  sits in cf-admin's series at a number **RULE #0.7b assigns to cf-astro** (which
+  owns `0001`–`0032`; cf-admin owns `0033`+). The live `d1_migrations` ledger now
+  carries three different files numbered `0008`. It is already inside the "26
+  duplicate numbers" main.md records, and because the ledger keys on *filename* all
+  three applied correctly — so this is untidy, not broken. **Do not renumber an
+  applied migration.**
+- That migration has no row in
+  [`../reference/schema-change-ledger.md`](../reference/schema-change-ledger.md).
+  **This is correct, not a gap** — the ledger records that it only tracks changes
+  from **2026-08-12 forward** and is deliberately not backfilled; this migration was
+  applied 2026-08-04. (An earlier draft of this section called it a RULE #0.7
+  violation. It is not, and the ledger's own scope note is the authority.)
 
 ---
 
 ## 11. Verification log
 
-| Date       | Checked by | Method                         | Result |
-|------------|-----------|--------------------------------|--------|
-| 2026-06-07 | claude    | code read (`src/pages/api/emails/*`, `src/components/admin/emails/*`, `wrangler.toml`, `src/env.d.ts`) | pass — schema-provisioning gap noted in §10 |
-| 2026-06-07 | claude    | deep UI + backend review (`Composer`/`RichEditor`, `scheduled-asset-cleanup.ts`) | corrected sender-IP wording (stored raw, not hashed); added Composer/editor + ledger detail; logged orphan-sweep + idempotency caveats |
-| 2026-06-07 | claude    | mobile-first redesign (`astro check` + `astro build` pass) | bottom tab bar + Compose FAB + full-screen `MobileComposer`; extracted `RecipientInput`/`useEmailAttachments`; `BottomSheet`, `LinkPopover`, `EmailPreviewModal`; real autosave; recipient autocomplete (`/api/emails/contacts`) + Drafts/Queue search; new `#preview`/`#contacts` PLAC anchors |
+| Date | Checked by | Method | Result |
+|------------|-----------|-------------------------------|------------------------|
+| 2026-06-07 | claude | code read | pass — schema-provisioning gap noted |
+| 2026-06-07 | claude | deep UI + backend review | corrected sender-IP wording; added ledger detail |
+| 2026-06-07 | claude | mobile-first redesign | bottom tab bar, `MobileComposer`, autosave, `#preview`/`#contacts` |
+| 2026-09-11 | claude | full re-audit of `5781fb8` — read all 4 new API routes + `send.ts`; live D1 (`admin_portal_settings`, `admin_pages`, `admin_email_*`, `d1_migrations`); live Supabase (`admin_authorized_users`) | **P1 defect found (§0)**: `email_sender_identities` absent from D1; `senders.ts` falls back, `send.ts` does not → canonical Admin and Manager get 403 on every send. 2 of 6 active accounts blocked |
+| 2026-09-11 | claude | `SELECT` over the 11 engine settings | only `custom_email_max_recipients` exists; 10 fall back to code defaults; 5 branding settings are written but read by nothing in the send path (§6) |
+| 2026-09-11 | claude | `grep` for `brevo_api_key` readers/writers + `KNOWN_SETTING_KEYS` | 6 reads, 0 writes, not a known key — a dead D1 read on every portal interaction |
+| 2026-09-11 | claude | `admin_pages` query | 10 PLAC anchors live, incl. new `#ai-generate`; `required_role` recorded in §4 |
+| 2026-09-11 | claude | `git show --stat 5781fb8`; `d1_migrations` query; ledger scope note | 0 migrations in the commit — RULE #0.9 reuse working as intended. `0008_email_suppression.sql` applied 2026-08-04; its absence from the schema-change ledger is **correct** (that ledger starts 2026-08-12 and is not backfilled), and its number collides with cf-astro's series but is already inside the 26 duplicates main.md records |
+| 2026-09-11 | claude | Brevo plan limits cross-checked against vendor pricing pages | 300/day, ~9,000/month free — code defaults are accurate, not invented |
 
 ---
 
 ## 12. Related
 
-- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — Lean Edge stack, request lifecycle, DAL pattern
-- [plac-and-audit.md](../architecture/plac-and-audit.md) — PLAC resolution + Ghost Audit Engine
-- [USER-MANAGEMENT.md](USER-MANAGEMENT.md) — RBAC hierarchy, logs-route guard map (incl. `api/audit/emails.ts`)
-- [DASHBOARD.md](DASHBOARD.md) — Email Queue health widget + Brevo delivery stats
-- [OPERATIONS.md](../operations/OPERATIONS.md) — bindings, queue, secrets registry, free-tier limits
-- [SECURITY.md](../security/SECURITY.md) — CSRF, session model, security posture
-- [`cf-email-consumer/README.md`](../cf-email-consumer/README.md) — external queue-consumer worker (separate repo)
+- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — Lean Edge stack, request lifecycle
+- [plac-and-audit.md](../architecture/plac-and-audit.md) — PLAC + Ghost Audit
+- [USER-MANAGEMENT.md](USER-MANAGEMENT.md) — RBAC hierarchy, role vocabulary
+- [DASHBOARD.md](DASHBOARD.md) — Email Queue health widget
+- [OPERATIONS.md](../operations/OPERATIONS.md) — bindings, queue, secrets registry
+- [brevo-webhook.md](../runbooks/brevo-webhook.md) — webhook verification runbook
+- [SECURITY.md](../security/SECURITY.md) — CSRF, session model
