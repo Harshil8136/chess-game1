@@ -134,11 +134,32 @@ Marketing page texts, service pricing tables, and blog posts are loaded via a ro
 
 ## 5. Edge Feature Routing & Configuration
 
-Feature flags are queried instantly at the edge without requiring server restarts or rebuilds:
+> **Corrected 2026-09-10 — this section described a system that does not exist.**
+> It previously specified a three-step pipeline: `admin_feature_flags` read from
+> D1, cached in KV under `features:global` with a 60-second TTL, and hydrated
+> into `Astro.locals.features`. None of it is in `src/`. There is no
+> `admin_feature_flags` read, no `features:global` key, and no `locals.features`
+> anywhere in this repo — verified by grep on 2026-09-10. The D1 table exists
+> (2 rows) but this repo has never read it.
+>
+> **It was also a latent cost bug.** A 60-second KV TTL means a KV *write* every
+> 60 seconds to refresh the entry — 1,440 writes/day against a Cloudflare free
+> tier limit of **1,000 KV writes/day**. Had it been built as written, it would
+> have exhausted the daily KV write budget on its own. If edge feature flags are
+> ever wanted here, the TTL has to be minutes, not seconds, and the design needs
+> to be costed against that 1,000/day ceiling first.
 
-1. **Administrative Flags**: Managed inside the `cf-admin` CMS, setting boolean values in D1's `admin_feature_flags` table.
-2. **Caching Middleware**: Astro middleware intercepts all requests, reading the flags from D1 and cache-wrapping them inside KV under the key `features:global` with a 60-second TTL.
-3. **Context Hydration**: The cached flags are populated into `Astro.locals.features` and made instantly available to Astro components during SSR compile loops.
+What actually exists at the edge today:
+
+1. **Service configuration**, read from D1 `service_config` by
+   [`src/lib/service-config.ts`](../src/lib/service-config.ts) — currently a full
+   table scan on every call (~279 calls/day, ~6,420 rows read/day as of
+   2026-09-10). Moving it behind KV is Stage 4 of
+   `cf-admin/documentation/specs/2026-09-10-d1-and-worker-resource-optimization-design.md`.
+2. **ISR HTML caching**, in `src/middleware.ts`, keyed by `__BUILD_ID__` with a
+   24-hour TTL — one KV write per unique path per deploy.
+3. **CMS content blocks**, injected into `ISR_CACHE` under `cms:<key>` by
+   `src/pages/api/revalidate.ts` with a 1-hour TTL.
 
 ---
 

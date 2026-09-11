@@ -77,7 +77,7 @@ A schema change is complete only when **all three** exist:
 
 **`madagascar-db` is one database with one `d1_migrations` ledger, written to by BOTH `cf-astro` and `cf-admin`.**
 
-The ledger keys on filename, not number, so duplicate numbers collide *silently* — 25 numbers (`0001`–`0014`, `0021`, `0033`–`0042`) already appear more than once in the live ledger, once from each repo. The number space is strictly partitioned:
+The ledger keys on filename, not number, so duplicate numbers collide *silently* — **26 numbers** (`0001`–`0015`, `0021`, `0033`–`0042`) already appear more than once in the live ledger (re-counted against `d1_migrations` on 2026-09-10). This said 25 and stopped at `0014` until then; `0015` joined the list when this repo's `0015_booking_replay_outbox.sql` was applied on 2026-09-03. Three series feed the one ledger, not two — this repo's `db/migrations/`, cf-admin's `migrations/`, and cf-admin's inert `database/legacy_migrations/` — so `0001`–`0008` each carry three entries and `0002` carries four. The number space is strictly partitioned:
 
 - **`cf-astro` owns `0001`–`0032`** (`db/migrations/`)
 - **`cf-admin` owns `0033`+** (`migrations/`)
@@ -99,7 +99,7 @@ The ledger keys on filename, not number, so duplicate numbers collide *silently*
 
 ## 🗂️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
 
-**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the 51 tables shared with cf-admin (31 D1 + 20 Supabase `public`, verified live 2026-08-28) (see RULE #0.6 above), or **64** counting cf-chatbot's separate `chatbot-kb`/`whatsapp-chatbot` D1 databases across the full three-app estate.
+**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the **50** tables shared with cf-admin (**30** D1 `madagascar-db` + 20 Supabase `public`, re-counted live 2026-09-10) (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb` (9) and `whatsapp-chatbot` (4) D1 databases across the full three-app estate. This read 51/31/64 until 2026-09-10; the D1 figure was one high, and cf-admin's `RULESAd.md` §0.9 had the correct total all along.
 
 - ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
 - See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
