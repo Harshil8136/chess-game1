@@ -1,7 +1,7 @@
 ---
 
 title: "Platform Review — Live-Verified Findings & 150 Open Questions"
-status: active
+status: historical
 audience: [owner, non-technical, technical, operator, ai]
 last_verified: 2026-07-29
 verified_against: [code, config, live-mcp]

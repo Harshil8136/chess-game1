@@ -3,7 +3,7 @@
 title: "Runbook — Account-Wide Supabase Advisor Sweep"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-07-29
+last_verified: 2026-09-13
 verified_against: [live-mcp]
 owner: harshil
 related_docs: [../security/RoPA.md, ../security/compliance/data-residency.md, ../security/compliance/SOC2-TSC-mapping.md, ../operations/OPERATIONS.md]
@@ -112,6 +112,7 @@ project absent from `RoPA.md`, is the signal to act.
 | Date | Project(s) | Security / Perf | Action |
 |---|---|---|---|
 | 2026-07-29 | Both (see baseline) | 1 / not run · 128 / not run | Baseline established. Production clean. Superseded project recorded in RoPA as activity H, pending export and decommission. |
+| 2026-09-13 | Production (`[SUPABASE_PROJECT_REF]`) | 1 (`auth_leaked_password_protection`) / perf checked | Re-verified via Supabase MCP advisor sweep. Production clean (1 expected security warning, N/A due to CF Access). |
 
 ## Related
 
