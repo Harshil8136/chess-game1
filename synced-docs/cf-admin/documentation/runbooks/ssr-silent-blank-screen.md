@@ -3,7 +3,7 @@
 title: "Silent Blank Screen (SSR Hydration Failure)"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -97,7 +97,7 @@ const ramUsedPct = fmtPct((pg.ramTotal ?? 0) - (pg.ramAvailable ?? 0), pg.ramTot
 
 ### Layer 1: ErrorBoundary → Sentry
 
-Every dashboard widget is now wrapped in `<ErrorBoundary sectionName="...">`. When a widget crashes:
+Dashboard widgets are wrapped in `<ErrorBoundary sectionName="...">` (`src/components/ui/ErrorBoundary.tsx`; three mounting files as of 2026-09-14). When a widget crashes:
 
 - User sees "X is temporarily unavailable" + "Try Again" button
 - Error is reported to Sentry with section tag and component stack
@@ -105,11 +105,11 @@ Every dashboard widget is now wrapped in `<ErrorBoundary sectionName="...">`. Wh
 
 ### Layer 2: Global `window.onerror` Safety Net
 
-An inline `<script>` in `AdminLayout.astro` captures errors **before** any Preact island hydrates. This catches hydration failures that no ErrorBoundary can catch.
+`AdminLayout.astro` loads `public/scripts/error-capture.js` — a nonce-carrying `<script is:inline src>`, not an inline script body — which registers `window` `error` and `unhandledrejection` listeners **before** any Preact island hydrates. This catches hydration failures that no ErrorBoundary can catch. *(Corrected 2026-09-14: this said "an inline script".)*
 
-### Layer 3: Sentry `@sentry/astro` Integration
+### Layer 3: Sentry (`@sentry/cloudflare` on the server, `@sentry/astro` in the browser)
 
-Framework-level capture via `sentry.server.config.ts` and `sentry.client.config.ts`. All `console.error` calls are automatically captured via the CaptureConsole integration.
+Server side, `@sentry/cloudflare`'s `withSentry` wraps the whole Worker in `src/workers/cf-entry.ts` and forwards console output through `consoleLoggingIntegration`; `sentry.server.config.ts` is a deliberate no-op because the `@sentry/astro` server SDK does not run in workerd. Browser side, `sentry.client.config.ts`. *(Corrected 2026-09-14 — this paragraph described the Astro server SDK and a "CaptureConsole" integration, neither of which is what runs; see `OPERATIONS.md` §4.)*
 
 ## Diagnostic Playbook — Debugging Future Blank Screens
 
@@ -125,3 +125,9 @@ If a blank screen recurs, follow this checklist in order:
    - Does it avoid `window`/`document` outside `useEffect`?
 5. **Check Cloudflare Workers logs** — Real-time via Wrangler or Cloudflare dashboard
 6. **Inspect the HTML** — View page source; if `<body>` is missing or truncated, the SSR pipeline crashed
+
+## Re-verification
+
+| Date | Method | Result |
+|---|---|---|
+| 2026-09-14 | `ls` / `grep` for every file and route this runbook names: `src/components/ui/ErrorBoundary.tsx`, `src/components/navigation/TopBar.tsx`, `src/pages/api/dashboard/metrics.ts`, `/dashboard/debug`, `src/lib/diagnostics/`, `public/scripts/error-capture.js` and its `<script>` tag in `AdminLayout.astro`, the Sentry wiring in `src/workers/cf-entry.ts` | All present. Two paragraphs corrected above (Layer 2's script is a static file, Layer 3 is `withSentry` + `consoleLoggingIntegration`, not the Astro server SDK); the three crash patterns and the April 2026 post-mortem are history and were not re-derived |

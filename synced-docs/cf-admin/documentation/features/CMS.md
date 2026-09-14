@@ -3,7 +3,7 @@
 title: "CMS, Image, Blog & Bookings Management"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: [cms, blog, ai, rag, d1]
@@ -15,6 +15,7 @@ tags: [cms, blog, ai, rag, d1]
 
 > **Version:** 5.0  
 > **Last Updated:** 2026-08-03 (Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via `cf-chatbot` Service Binding)  
+> **Re-verified:** 2026-09-14 against code and the live D1 (see §7)  
 > **Projects:** `cf-admin` (writes & AI authoring), `cf-astro` (edge SSR reads & AIO/GEO citation)
 
 ---
@@ -29,7 +30,7 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 - **Bookings Database:** Supabase PostgreSQL
 - **Asset Storage:** Cloudflare R2 (`madagascar-images`, served via `cdn.madagascarhotelags.com`)
 - **Caching & Propagation:** Cloudflare KV (`ISR_CACHE`) + ISR revalidation webhook + IndexNow protocol
-- **Interactivity:** Preact islands + Tiptap Rich Visual Editor + Native HTML5 Drag & Drop
+- **Interactivity:** Preact islands + an in-house rich editor (`src/components/admin/content/TiptapRichEditor.tsx` — Preact and `contenteditable`; despite its name the `@tiptap` packages are **not** a dependency and are not on the `RULESAd.md` §7.3 whitelist) + native HTML5 drag and drop
 
 ### KV Injection & Edge Routing Coverage
 
@@ -41,7 +42,7 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 | Reviews | `happy_clients` (`global`) | `cms:happy_clients` | `POST /api/content/reviews` | `Testimonials.astro` |
 | FAQ | `faq_items` (`global`) | `cms:faqs` | `POST /api/content/faqs` | `FAQ.astro` |
 | About / Stats | `about_stats` (`global`) | `cms:about` | `POST /api/content/stats` | `About.astro` |
-| **Dynamic Blog Posts** | `blog_posts` table | Purged via ISR path | `POST /api/content/blog` | `[slug].astro` via `getBlogPostBySlug()` |
+| **Dynamic Blog Posts** | `blog_posts` table | Purged via ISR path | `POST /api/content/blog` | the blog post page via `getBlogPostBySlug()` (three call sites in cf-astro) |
 
 ---
 
@@ -56,19 +57,25 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 
 ## 3. Content Studio Hub (`/dashboard/content`)
 
-Five core modules, all backed by Cloudflare D1:
+Nine pages under `src/pages/dashboard/content/` (re-listed 2026-09-14 — this
+table said "five core modules" and omitted four of them), all backed by
+Cloudflare D1:
 
 | Module | Route | Purpose |
 |--------|-------|---------|
-| Hero | `/dashboard/content` | Hero background image (LCP critical) |
+| Hub | `/dashboard/content` | Content Studio entry page |
+| Hero | `/dashboard/content/hero` | Hero background image (LCP critical) |
 | Gallery | `/dashboard/content/gallery` | Drag-and-drop visual asset manager |
 | Services | `/dashboard/content/services` | Pricing editor — syncs marketing pages + booking wizard |
 | Reviews | `/dashboard/content/reviews` | "Happy Clients" testimonials carousel |
+| FAQ | `/dashboard/content/faq` | FAQ items (`faq_items`) |
+| About / Stats | `/dashboard/content/about` | About block and stats (`about_stats`) |
+| Media | `/dashboard/content/media` | R2 media library |
 | **Blog Studio** | `/dashboard/content/blog` | Dynamic D1 Blog Manager & Workers AI Copilot |
 
 ### 3.1 Publish Quality Gate & PLAC Bypass Capability
 - **Quality Gate**: Server-side 10-check SEO/content audit (`evaluateSeoGate`).
-- **PLAC Capability**: `/dashboard/content/blog#bypass-quality-audit` (registered in D1 `admin_pages` with `required_role = 'admin'`).
+- **PLAC Capability**: `/dashboard/content/blog#bypass-quality-audit` (registered in D1 `admin_pages` with `required_role = 'admin'`; live and active on 2026-09-14, alongside `#edit-ai-prompts` and `#review-suggestions`, both `admin`).
 - **Enforcement**: Users with this PLAC permission (or Owner / Vendor Support) can override failing quality gate checks and publish articles. Every bypass is audited with `qualityGateBypassed: true`.
 
 
@@ -112,3 +119,9 @@ Clicking **"Apply to Editor"** populates all 7 fields into `BlogManager.tsx`.
 - **Master System Architecture** → [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md)
 - **Binding IDs (D1/KV/R2 UUIDs)** → See [OPERATIONS.md](../operations/OPERATIONS.md) §1
 - **RBAC gates** → See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md)
+
+## 7. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | The nine content pages on disk; every writer endpoint in §1 mounted (`docs_check` route check); `src/lib/blog/seo-gate.ts` and `src/lib/ai-knowledge.ts` present; the prompt-override setting key referenced in six places; the CDN `Cache-Control` value at `src/lib/cms/storage.ts`; the three blog PLAC rows live in `admin_pages` (Cloudflare MCP); every cf-astro reader file in §1 present in the sibling checkout; the editor is in-house, not the `@tiptap` packages | The KV key names in §1 against a live KV read (the connector has no key-level read); the AI output schema in §4 against a live generation |

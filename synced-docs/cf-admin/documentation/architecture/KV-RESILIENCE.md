@@ -3,7 +3,7 @@
 title: "KV Resilience & Fallback Chain"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -14,7 +14,8 @@ tags: []
 > **TL;DR (non-technical):** How the portal stays fast and stays up when Cloudflare KV (its high-speed cache) is slow or hits free-tier write limits. Describes the caching strategy and the fail-safe fallbacks so the dashboard never breaks.
 
 > **Version:** 1.0
-> **Last Updated:** 2026-05-13
+> **Last Updated:** 2026-05-13  
+> **Re-verified:** 2026-09-14 against both checkouts (see §9)
 > **Projects:** `cf-admin` (writer), `cf-astro` (reader)
 > **Namespace:** `ISR_CACHE` — ID `[KV_ISR_CACHE_ID]`
 
@@ -205,7 +206,7 @@ This ensures:
 
 ## 6. KV Allowlist — Complete List
 
-`cf-astro/src/pages/api/revalidate.ts` validates every incoming CMS key against an allowlist before writing to KV. This prevents arbitrary cache injection if the `REVALIDATION_SECRET` is ever compromised.
+`cf-astro/src/pages/api/revalidate.ts` validates every incoming CMS key against an allowlist before writing to KV. Since the Phase 3 sync contract the list itself lives in `cf-astro/src/lib/sync-contract.ts` (`CMS_KEY_ALLOWLIST`, an `as const` array the endpoint wraps in a `Set`); the contents below are unchanged and were re-compared on 2026-09-14. This prevents arbitrary cache injection if the `REVALIDATION_SECRET` is ever compromised.
 
 ```typescript
 const CMS_KEY_ALLOWLIST = new Set([
@@ -249,3 +250,11 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 - **cf-astro revalidate endpoint** → `cf-astro/src/pages/api/revalidate.ts`
 - **revalidateAstro() helper** → `cf-admin/src/lib/cms/revalidate.ts` — `revalidateAstro()`
 - **Same KV+D1 pattern proposed for system-wide settings** → [`GLOBAL-CONFIG.md`](GLOBAL-CONFIG.md) (research reference, not implemented)
+
+---
+
+## 9. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | `cf-astro/src/pages/api/revalidate.ts`: `Promise.allSettled` batch with per-promise `.catch()` (§5), `expirationTtl: 3600` on `cms:*` writes (§4), `log.warn('Rejected disallowed CMS key')` (§6/§7), BetterStack logger is `@logtail/edge` in `cf-astro/src/lib/logger.ts`; the 18-key allowlist plus the `blog_draft_*` regex against `sync-contract.ts`; `s-maxage=86400` set in `cf-astro/src/middleware.ts`; `cf-admin/src/lib/cms/revalidate.ts`: 3 attempts, 5 s timeout, `Sentry.captureMessage` on exhausted retries (§7 — the message is now "Edge purge failed — queued for redrive", because exhausted retries hand off to the queue consumer rather than giving up). | Live KV key state (the connector has no key-level read); the failure walk-through in §3 was not re-induced |

@@ -3,7 +3,7 @@
 title: "SOC 2 Type I Readiness — TSC Control Mapping (cf-admin-madagascar)"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [ASVS-L2.md, CSA-CAIQ-v4.md, ../SECURITY.md]
@@ -122,7 +122,7 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `vitest` (491 tests), then `rules_check.py`, `docs_check.py`, `a11y_check.py`, `audit_gate.py` — and the same gates re-run in CI on push to `main` (`quality.yml`, `security.yml`, `docs-quality.yml`). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `RULESAd.md` §12 mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** CI gates are blocking, so a failing change is visible immediately after push rather than approved before it. Branch protection on `main` with CI as a required status check is authorised and pending enablement. Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `RULESAd.md` §12 and the repo's own audit. |
+| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `ratchet.py`, `vitest` (855 tests on 2026-09-14; 491 when this row was written), `test:gates`, then `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`, `audit_gate.py` — and the same gates re-run in CI on push to `main` (`quality.yml`, `security.yml`, `docs-quality.yml`). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `RULESAd.md` §12 mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** CI gates are blocking, so a failing change is visible immediately after push rather than approved before it. Branch protection on `main` with CI as a required status check is authorised and pending enablement. Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `RULESAd.md` §12 and the repo's own audit. |
 
 ## CC9 — Risk Mitigation
 
@@ -161,8 +161,10 @@ Before an actual SOC 2 Type I engagement is worth engaging, close these:
 4. **TVM-03 — pen test**: engage an external firm for a scoped pen test
    (Astro admin + Cloudflare Worker attack surface). Budget ~$5k for a
    small-scope engagement.
-5. **STA-03 — SBOM**: emit CycloneDX SBOM from `npm ls --production --json`
-   as a CI artifact.
+5. ~~**STA-03 — SBOM**: emit CycloneDX SBOM from `npm ls --production --json`
+   as a CI artifact.~~ **Closed 2026-09-14 (re-verified):** `quality.yml` runs
+   `npm sbom --sbom-format cyclonedx` on every push to `main` and uploads
+   `sbom.cyclonedx.json` as the `sbom-cyclonedx` artifact.
 6. **IPY-02 — API docs**: generate an OpenAPI schema (Zod → OpenAPI) so
    external integrators + auditors have a stable API surface.
 
@@ -173,7 +175,7 @@ small-scope, single-service report.
 ## Suggested next-step ordering
 
 - **Q3 2026**: publish this file + CAIQ + ASVS. Register on CSA STAR L1.
-- **Q4 2026**: close gaps 1, 2, 3, 5, 6. Refresh CAIQ answers.
+- **Q4 2026**: close gaps 1, 2, 3, 6 (5 closed 2026-09-14). Refresh CAIQ answers.
 - **Q1 2027**: close gap 4 (external pen test). Address findings.
 - **Q2 2027**: engage a SOC 2 Type I auditor. Ship report.
 - **Q3 2027 onwards**: Type II readiness (12-month operating-effectiveness

@@ -1,6 +1,6 @@
 ---
 title: "Cron Scheduled-Handler Exception (CF Access Audit Poller)"
-status: active
+status: historical
 audience: [ai, technical, operator]
 last_verified: 2026-08-13
 verified_against: [code, infra]
@@ -30,6 +30,19 @@ tags: [runbook, cron, workers, observability, sentry]
 
 > **Status:** Diagnosed & remediated 2026-06-07 (Phases 1–3 implemented — see §5)
 > **Surface:** Cloudflare Worker `cf-admin-madagascar`, cron trigger `*/5 * * * *`
+
+> **Superseded 2026-09-10 (viability program chunk 7) — kept as the record of the
+> 2026-06-07 diagnosis, marked `historical` on 2026-09-14.** What this runbook
+> describes has since been replaced: every scheduled job is dispatched through
+> `runCronBatch` / `runJob` (`src/lib/jobs/`), every failure on a job path reports
+> through `reportNonFatal` / `reportOnceCooled` to both Sentry and Cloudflare
+> Observability (ratchet metric A19 holds that at zero), the whole Worker is wrapped
+> by `withSentry` in `src/workers/cf-entry.ts` so the §3.2 blind spot no longer
+> exists, and the audit watermark lives in D1 `admin_portal_settings` under
+> `cf-audit-last-synced`, not in KV. Current guidance:
+> [`when-d1-is-unavailable.md`](when-d1-is-unavailable.md) and
+> [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) → "Scheduled
+> triggers". Sentry cron check-ins (§5, Phase 2) are still not added.
 
 ---
 

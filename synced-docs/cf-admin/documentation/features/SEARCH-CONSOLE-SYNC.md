@@ -3,7 +3,7 @@
 title: "Search Console Sync"
 status: active
 audience: [non-technical, ai, technical, operator, owner]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -46,7 +46,7 @@ Before this existed, both of these were manual: someone had to remember to open 
 
 ## 2. How It Works, Step By Step
 
-1. Every 15 minutes, the admin portal's existing scheduled job checks two internal clocks: "has it been 12 hours since the last Search Console sweep?" and "has it been a week since the last PageSpeed check?" (both configurable — see [§6](#6-settings--cadence)). Most ticks do nothing.
+1. Every 5 minutes (15 until 2026-09-10 — see [§11](#11-where-things-live-for-engineers--ai-agents)), the admin portal's existing scheduled job checks two internal clocks: "has it been 12 hours since the last Search Console sweep?" and "has it been a week since the last PageSpeed check?" (both configurable — see [§6](#6-settings--cadence)). Most ticks do nothing.
 2. When the Search Console clock is due: the system submits both language sitemaps to Google, asks Google for its own read on each sitemap's health (how many URLs it actually downloaded, any warnings), then checks the indexing status of the homepage, every service page, and the ten most recently updated blog posts.
 3. When the PageSpeed clock is due: the system runs a real Google PageSpeed Insights check (mobile) against every static page, and records the performance score plus Core Web Vitals.
 4. **Every single one of those calls — successful or not — is written to a log** with the exact URL, why it was made (scheduled sweep, a blog post just published, or someone clicked a button), what Google returned, and how long it took.

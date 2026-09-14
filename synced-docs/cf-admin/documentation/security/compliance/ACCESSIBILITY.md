@@ -3,7 +3,7 @@
 title: "Accessibility Conformance Statement (WCAG 2.2 AA)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code, config]
 owner: harshil
 related_docs: [../../reference/DESIGN-SYSTEM.md, ../../MAINTENANCE.md, ../../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -66,11 +66,11 @@ Verified in code, not assumed:
 | Native `<dialog>` + `showModal()` everywhere | Mandated by `RULESAd.md` §7.8 | 2.1.2, 2.4.3 |
 | Every dialog has an accessible name | 13 fixed 2026-07-25 | 4.1.2 |
 | Email-preview iframes declare `lang` | 5 fixed 2026-07-25 | 3.1.1 |
-| ARIA/role markup | 98 component files | 4.1.2 |
+| ARIA/role markup | 145 component files (`grep -rlE 'role=\|aria-' src/components`, 2026-09-14; 98 on 2026-08-13) | 4.1.2 |
 | Keyboard handlers on interactive elements | Widespread | 2.1.1 |
 | Dark/light themes with OKLCH tokens | `DESIGN-SYSTEM.md` | 1.4.3 (unverified) |
 | Automated CI guard | `scripts/a11y_check.py` | — |
-| Staff Storage `EditDrawer` rewritten from a `createPortal`-mounted div to native `<dialog>` + `showModal()` | Phase 2, 2026-08 — matches `RenameModal.tsx`'s reference pattern; gained focus trapping, Escape-to-close and a real `::backdrop` for free | 2.1.2, 2.4.3, 4.1.2 |
+| Staff Storage `EditDrawer` rewritten from a `createPortal`-mounted div to native `<dialog>` + `showModal()` | Phase 2, 2026-08 — matches `RenameModal.tsx`'s reference pattern; gained focus trapping, Escape-to-close and a real `::backdrop` for free. *2026-09-14: no file named `EditDrawer` remains (folded into the storage islands since); `createPortal` has 0 uses under `src/components/admin/storage/` and 8 files there use `showModal()`* | 2.1.2, 2.4.3, 4.1.2 |
 | Inspect drive tree Trash toggle uses named handler references instead of inline arrow functions in JSX | Phase 2, 2026-08 — a `role="button"` element nested inside another `<button>` (native elements cannot nest); named handlers keep the static guard able to see the required `onKeyDown` | 2.1.1, 4.1.2 |
 
 `showModal()` deserves emphasis: it is mandated in this codebase for a *layout*
@@ -81,8 +81,9 @@ the things nobody knows about.
 
 ## 3. Known defects
 
-From `python scripts/a11y_check.py`, last re-verified **2026-08-13** (0 findings
-across **254** files, including the Search Console Sync UI):
+From `python scripts/a11y_check.py`, last re-verified **2026-09-14** (0 findings
+across **259** files — 266 before seven dead Emails-portal components were deleted
+that day; 254 on 2026-08-13):
 
 | Rule | Criterion | Count | Status |
 |---|---|:---:|---|
@@ -94,7 +95,9 @@ across **254** files, including the Search Console Sync UI):
 | A11Y-06 | 3.1.1 — `<html>` without `lang` | 0 | ✅ Fixed 2026-07-25 |
 
 All static accessibility findings are resolved (0 findings). The guard runs in
-strict **blocking** mode in `package.json` (`npm run verify`).
+strict **blocking** mode in `package.json` (`npm run verify`) and, since
+2026-09-14, in `.github/workflows/quality.yml` as well — the CI job had kept
+`--warn-only` after the burn-down, so a regression would have passed CI.
 
 **Impact:** a screen-reader user hears "button" with no indication of what it
 does. For an icon-only control this is a total loss of function, so despite the
@@ -107,6 +110,7 @@ change. Recorded regressions:
 
 | Date | What happened | Resolution |
 |------|---------------|------------|
+| 2026-09-14 | Re-run after the Emails-portal dead subtree was deleted and the CI job flipped to blocking: 0 findings over 259 files. No regression. | — |
 | 2026-08-13 | Search Console Sync UI took the count to 7 (A11Y-01 ×6, A11Y-04 ×1) while this document, `MAINTENANCE.md` and `RULESAd.md` §9.0 all still recorded zero. `npm run verify` was red. | 6 were **false positives** — `has_text_content()` deleted JSX expression containers wholesale, so a button whose label is rendered by a ternary read as icon-only. Fixed in `scripts/a11y_check.py`, not by adding `aria-label` to buttons that already have visible text (which would risk a WCAG 2.5.3 *Label in Name* mismatch). The 7th was genuine and was labelled. See `MAINTENANCE.md` → Accessibility burn-down and C-16. |
 
 ## 4. What has NEVER been tested
@@ -151,7 +155,7 @@ switched off, which is worse than no guard.
 
 | Step | Effort | Cost |
 |---|---|---|
-| Burn down the 45 A11Y-01/04 findings; flip the guard to blocking | 1–2 days | $0 |
+| ~~Burn down the 45 A11Y-01/04 findings; flip the guard to blocking~~ — done: burn-down 2026-08-07, blocking in `verify` since, blocking in CI 2026-09-14 | — | $0 |
 | Manual keyboard-only walkthrough of every dashboard route | 1 day | $0 |
 | Contrast audit of the OKLCH tokens in both themes | 0.5 day | $0 |
 | Screen-reader pass (NVDA + VoiceOver) on core flows | 2 days | $0 |
