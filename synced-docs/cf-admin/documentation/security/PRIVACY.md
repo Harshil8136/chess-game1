@@ -3,7 +3,7 @@
 title: "Data Privacy Dashboard"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -74,7 +74,7 @@ ConsentMetrics      — aggregated metrics returned by API
 ReceiptsApiResponse — full GET /api/audit/receipts response shape
 ```
 
-No `any` types anywhere in the privacy module.
+`any` is used in 12 places across the privacy module (`FeedItem.tsx`, `ForensicFeed.tsx`, `PrivacyMetrics.tsx`, `types.ts`, `receipts.ts`) — counted by the A1 ratchet like everywhere else. *(2026-09-14: this line claimed none.)*
 
 ### API (`src/pages/api/audit/receipts.ts`)
 
@@ -96,11 +96,11 @@ No `any` types anywhere in the privacy module.
 }
 ```
 
-5 parallel Supabase queries (total, granted, revoked, 7-day window, last record) — all lightweight `head: true` counts except the window query.
+7 parallel Supabase queries in one `Promise.all` (the records page plus six metrics: total, granted, revoked, last-24h, 7-day window, last record); the window and last-record queries are full reads, the rest `head: true` counts. Metrics are memoised for 60 s (`METRICS_TTL_MS`); `skipMetrics`, `refresh`, `type` and `intent` query params exist. *(Corrected 2026-09-14.)*
 
 ### Route Controller (`src/pages/dashboard/privacy/index.astro`)
 
-SSR entry point. Mounts both islands with `client:idle`. Section tint:
+SSR entry point. Mounts both islands with `client:load`. Section tint:
 `data-section="cyan"`.
 
 > **Corrected 2026-08-13.** This previously read "Auth-gated via
@@ -124,9 +124,9 @@ SSR entry point. Mounts both islands with `client:idle`. Section tint:
 
 ### ConsentMetrics Island (`src/components/dashboard/privacy/PrivacyMetrics.tsx`)
 
-`client:idle` — props-free, self-fetching.
+`client:load` — props-free, self-fetching.
 
-**Page Header:** Shield icon + pinging live-dot + `[Active]` emerald badge + compliance subtitle + refresh button.
+**Page Header:** Shield icon + pinging live-dot + "SOC Active" emerald badge + compliance subtitle + refresh button.
 
 **4 Metric Cards in a segmented panel (Linear style):**
 
@@ -146,7 +146,7 @@ Each card:
 
 ### ConsentFeed (`src/components/dashboard/privacy/ForensicFeed.tsx`)
 
-`client:idle` — paginated at 15 records/page.
+`client:load` — paginated at 15 records/page.
 
 - Glassmorphic control bar: "Audit Ledger" title + pulsing sync badge + search + refresh + record count + paginator
 - Three distinct states: skeleton (initial load), loading overlay (pagination), empty state
@@ -155,7 +155,7 @@ Each card:
 
 ### FeedItem (`src/components/dashboard/privacy/FeedItem.tsx`)
 
-Expandable consent record row. All dynamic state via data-attributes — zero inline styles.
+Expandable consent record row. State flags (`data-revoked`, `data-bot-risk`, `data-safe`) drive the CSS; computed values (bars, widths, colours) use inline `style` objects, which the nonce-based CSP permits. *(2026-09-14: this said "zero inline styles".)*
 
 **Data-attribute patterns:**
 
@@ -165,15 +165,16 @@ Expandable consent record row. All dynamic state via data-attributes — zero in
 
 **Collapsed row:** Status badge + email + 4-column metadata grid (Captured / Origin / Device / Analysis).
 
-**Expanded 3-panel forensic view:**
+**Expanded forensic view (4 cards as shipped — 2026-09-14; this table said 3):**
 
-| Panel | Color | Contents |
-|-------|-------|----------|
-| Client Environment | Cyan | Platform, browser, screen res, location, UA (monospace + copy) |
-| Interaction Telemetry | Indigo | Notice version, time-to-click, cursor travel px, mechanism bar |
-| Security & Ledger | Emerald/Rose | Bot likelihood, WebDriver + Headless checks, SHA-256 hash, revocation note |
+| Panel | Contents |
+|-------|----------|
+| Client Environment | Platform, browser, screen res, UA (monospace + copy) |
+| Session Origin | Location / origin details |
+| Interaction Metrics | Notice version, time-to-click, cursor travel px, mechanism bar |
+| Security Checks | Bot likelihood, WebDriver + Headless checks, SHA-256 hash, revocation note |
 
-Expand/collapse driven by `revealDown` CSS keyframe (0.35s spring).
+Expand/collapse driven by the `revealDown` CSS keyframe (`privacy-dashboard.css`).
 
 Full keyboard accessibility: `role="button"`, `tabIndex={0}`, `onKeyDown` Enter/Space handler, `aria-expanded`.
 
@@ -181,7 +182,7 @@ Full keyboard accessibility: `role="button"`, `tabIndex={0}`, `onKeyDown` Enter/
 
 ## 4. CSS Architecture (`src/styles/pages/privacy-dashboard.css`)
 
-All styles use design tokens — no raw hex values, no hardcoded pixel colors.
+Styles use design tokens, with a `#0f172a` fallback and three `rgba(255,255,255,…)` literals in `privacy-dashboard.css` (2026-09-14).
 
 **Key patterns:**
 
@@ -195,7 +196,7 @@ All styles use design tokens — no raw hex values, no hardcoded pixel colors.
 - `heroLivePulse` — live-dot beacon on page header
 - `dotPulse` — sync badge dot
 - `revealDown` — forensic panel expand animation
-- `pulse` — skeleton shimmer (via Tailwind)
+- `shimmer-loading` (global.css, 1.8 s) — skeleton shimmer on `.consent-skeleton`
 
 ---
 
@@ -205,3 +206,9 @@ All styles use design tokens — no raw hex values, no hardcoded pixel colors.
 - **PLAC gate documentation** → See [PLAC-AND-AUDIT.md](../architecture/plac-and-audit.md)
 - **RBAC hierarchy** → See [USER-MANAGEMENT.md](../features/USER-MANAGEMENT.md)
 - **Design tokens** → See [DESIGN-SYSTEM.md](../reference/DESIGN-SYSTEM.md)
+
+## 6. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | Every path in §1–§4; the five interfaces in `types.ts` (plus `envUrls`, which the response also carries); the `receipts.ts` query fan-out and cache; island directives in `index.astro`; PLAC seeds for `/dashboard/privacy` and its fragments; metric-card, feed and FeedItem behaviour (keyboard handling, `aria-expanded`, data flags); keyframes in `privacy-dashboard.css`; cross-references. Ten corrections above. | Live RLS state; live `admin_pages` rows; the 10K+/month scaling claim |

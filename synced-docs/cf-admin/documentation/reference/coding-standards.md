@@ -3,7 +3,7 @@
 title: "Code Quality Rules"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -20,7 +20,7 @@ tags: []
   ⚠️ **Enforcement is a ratchet, not an error:** `eslint.config.js` sets
   `@typescript-eslint/no-explicit-any` to `'warn'` during the type-debt burn-down;
   since 2026-09-02 (viability program chunk 4) `scripts/ratchet.py` holds the count
-  (500 that day) so it cannot rise — a new `any` fails `npm run verify` and CI. Treat
+  (500 that day) so it cannot rise silently — a new `any` fails `npm run verify` and CI unless the baseline is re-locked with a committed `--update --reason` (four such rises to 2026-09-10; 547 on 2026-09-14). Treat
   this as the rule for *new* code and lower the count in the slice you are working on.
   See `RULESAd.md` §8.1.
 - All Cloudflare bindings must be strictly typed.
@@ -38,7 +38,7 @@ All file names must be unique and descriptive:
 - **Target size: no component file over 200 lines.** Split immediately past that.
   ⚠️ **Not a hard limit in CI:** `eslint.config.js` currently sets `'max-lines': 'off'`
   globally (marked TEMP, pending the god-file split pass), with a 600-line *warning* for
-  four named exceptions. 200 is the design target you justify departing from; nothing
+  three named exceptions (`pipeline.ts` left the list on 2026-09-02). 200 is the design target you justify departing from; nothing
   fails a build at it today. See `RULESAd.md` §8.1 for the full enforcement table.
 - **Atoms/Molecules:** Tiny, focused, reusable sub-components (e.g. `SidebarHeader.tsx`, `SidebarProfile.tsx`, `NavIcon.tsx`).
 - **Organisms (Islands):** The primary Preact component that orchestrates atoms/molecules (e.g., `SidebarMenu.tsx`).
@@ -117,7 +117,7 @@ Three-layer error shield, all core-level (survives any page/widget changes):
 |-------|------|-------|
 | **Sentry `@sentry/astro`** | Framework-level server + client auto-capture | `astro.config.ts`, `sentry.*.config.ts` |
 | **ErrorBoundary → Sentry** | Per-widget crash capture with section tags | `src/components/ui/ErrorBoundary.tsx` |
-| **Global `window.onerror`** | Pre-boot safety net (catches hydration failures) | `AdminLayout.astro` inline `<script>` |
+| **Global error capture** | Pre-boot safety net (catches hydration failures) — `window` `error` + `unhandledrejection` listeners | `public/scripts/error-capture.js`, loaded by `AdminLayout.astro` via `<script is:inline src>` |
 
 All errors automatically appear in the Sentry dashboard with:
 
@@ -260,8 +260,10 @@ Sortable `<th>` elements must have `aria-sort`:
 ## 7. Animation Standards
 
 - All interactive elements must have smooth transitions
-- Use `var(--duration-normal)` (200ms) for hover/focus states
-- Use `var(--duration-slow)` (350ms) for page transitions
+- Use `var(--duration-[200ms])` for hover/focus states
+- Use `var(--duration-[350ms])` for page transitions
+
+  *(2026-09-14: the tokens are literally named `--duration-[120ms|200ms|350ms]` in `src/styles/global.css`; `--duration-normal` / `--duration-slow` were never defined.)*
 - Respect `prefers-reduced-motion` media query
 
 ---
@@ -293,7 +295,7 @@ metadata is not settings, so it's a real table, not a `admin_portal_settings` ro
 (`getSetting`, `getAllSettings`, `getSettingsByCategory`) still work unchanged and are implicitly
 scoped to `global` — existing callers needed zero changes when this shipped.
 
-**Note:** `service_config` (migration `0028`) is a second, older generic config table already in this
+**Note:** `service_config` (`database/legacy_migrations/0028_create_service_config.sql`; now in `migrations/0000_baseline.sql`) is a second, older generic config table already in this
 codebase, used by the cf-astro/cf-chatbot control plane. The two are not yet consolidated — that's a
 separate cleanup, not something to solve by picking whichever one is more convenient in the moment.
 For a *new* feature, prefer `admin_portal_settings` going forward; it's the one with scoping support.
@@ -325,3 +327,9 @@ for the live audit that found this, plus two confirmed-dead tables (`admin_sessi
 
 This is now also RULE #0.6 in `RULESAd.md` — a full rules-bible entry, not just a coding-standards note,
 because the pattern it guards against has already recurred enough times to earn one.
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | `tsconfig.json`, `eslint.config.js` (max-lines off, 600-line warn list, `prerender` guard), `scripts/ratchet.py` + `.ratchet.json` (A1 history), RULE #0.6 and §8.1 in `RULESAd.md`, every file and repository method this doc names, the motion token names in `global.css`. Five corrections above. | Whether `admin_sessions` / `privacy_requests` are dead on the Supabase side; Sentry dedup behaviour |

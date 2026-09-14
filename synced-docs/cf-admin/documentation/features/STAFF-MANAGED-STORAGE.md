@@ -3,7 +3,7 @@
 title: "Staff Managed Storage"
 status: active
 audience: [non-technical, ai, technical, operator]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -38,6 +38,7 @@ tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing, file-requests,
 > **Status:** Production Active (shipped 2026-08-05; File Request Links sub-feature added 2026-08-09)
 > **Surface:** `/dashboard/storage` (drive — includes both outbound share links and inbound file requests), `/dashboard/storage/inspect` (cross-user view), `/dashboard/storage/config` (defaults & overrides)
 > **Role floor:** Staff or higher can use their own drive; higher tiers unlock cross-user and admin capability — see [Roles & Quotas](#3-roles--quotas) below.
+> **Re-verified 2026-09-14** against code and migrations — see §13 for what changed since 2026-08-12.
 
 ---
 
@@ -53,7 +54,7 @@ When a file needs to leave the building — a vet needs a pet's records, a vendo
 
 1. A staff member opens `/dashboard/storage` and drags a file in (or clicks to browse).
 2. The system checks the file's extension against an allowed list and confirms the staff member still has room in their storage allowance.
-3. The file is uploaded **directly from the browser to Cloudflare's storage** — it does not pass through the admin portal's own servers first. This matters for large files: video and big PDFs can be uploaded without hitting server-side size limits that would otherwise apply.
+3. The file is normally uploaded **directly from the browser to Cloudflare's storage** via a presigned URL — it does not pass through the admin portal's own servers. If that direct path fails (a CORS or network problem), the browser falls back to `POST /api/storage/upload`, which streams the file through the Worker instead. This matters for large files: video and big PDFs can be uploaded without hitting server-side size limits that would otherwise apply.
 4. Once the upload lands, the system double-checks that the file's actual content matches what was claimed (so a renamed `.exe` pretending to be a `.pdf` gets rejected, not silently accepted), then records it in the drive.
 5. The file now shows up in the staff member's "My Files" list with its size, and their quota gauge updates.
 6. To share externally: open the file's share panel, pick how long the link should stay valid, optionally set a passcode, and either copy the link or type in an email address to have it sent automatically.
@@ -144,20 +145,20 @@ The latest run's results — how many issues of each kind were found, and what (
 
 Beyond their own drive, higher roles get three additional screens:
 
-- **Inspect** (`/dashboard/storage/inspect`, Manager+) — look up any staff member's files by their user ID, read-only. Used for oversight, not day-to-day file management.
-- **Configuration** (`/dashboard/storage/config`, Admin+) — edit the portal-wide storage defaults (allowances, allowed file types, link lifetimes), grant or remove individual overrides, and (Owner only) set the weekly reconciliation policy.
+- **Inspect** (`/dashboard/storage/inspect`, Manager+) — a read-only tree of every active drive (`InspectExplorerTree`, fed by `GET /api/storage/admin/inspect`), expandable per user. Used for oversight, not day-to-day file management.
+- **Configuration** (`/dashboard/storage/config`, Admin+) — edit the portal-wide storage defaults (allowances, allowed file types, link lifetimes), grant or remove individual overrides, see per-user usage in one table (`[SUPABASE_PROJECT_REF]`), see who holds storage PLAC grants (`StorageAccessGrantsPanel`), and (Owner only) set the weekly reconciliation policy.
 - **Reconciliation report** — the weekly run's results, described above.
 
 Every one of these is gated by the portal's existing permission system, the same one used everywhere else in the admin portal — nothing here invented a separate set of rules.
 
 ## 9. What Changed From the Original Plan
 
-This feature was originally scoped as a much heavier build. During implementation, a deep review against the live codebase found the original plan didn't actually fit this project — it assumed a database and upload architecture the portal doesn't use, and one piece of it (a dedicated weekly cleanup schedule) literally could not be added because Cloudflare's free plan only allows three scheduled jobs per project and all three were already spoken for. The team's own standing instruction was also to stop creating new database tables for every feature and reuse what already exists wherever possible. The version that shipped reflects all of that:
+This feature was originally scoped as a much heavier build. During implementation, a deep review against the live codebase found the original plan didn't actually fit this project — it assumed a database and upload architecture the portal doesn't use, and one piece of it (a dedicated weekly cleanup schedule) was believed at the time to be impossible because Cloudflare's free plan allowed only three scheduled jobs and all were spoken for. *(Corrected 2026-09-02/2026-09-14: the limit is 5 cron triggers per account and the Worker now uses 2; the reconciliation rides the Sunday tick.)* The team's own standing instruction was also to stop creating new database tables for every feature and reuse what already exists wherever possible. The version that shipped reflects all of that:
 
 | | Originally planned | What actually shipped |
 |---|---|---|
 | New database tables | 6 | **1** — everything else reuses tables the portal already had |
-| Upload method | A general-purpose cloud toolkit, unused anywhere else in this codebase | A 6-kilobyte library built specifically for this exact job, matching what Cloudflare's own documentation recommends |
+| Upload method | A general-purpose cloud toolkit, unused anywhere else in this codebase | A ~6-kilobyte (minified) library built specifically for this exact job, matching what Cloudflare's own documentation recommends |
 | Weekly cleanup | A brand-new scheduled job | Folded into the cleanup job that already runs every Sunday |
 | Storage location | Unspecified | A brand-new, private storage bucket, kept deliberately separate from the bucket that serves the public website |
 
@@ -215,14 +216,16 @@ Written down honestly rather than left to be discovered:
 
 ## 11. Where Things Live (for engineers / AI agents)
 
-No database schema here by design — see the migration files themselves (`migrations/0037`–`0039`, `0041`–`0042`) for exact table structure. This section is a map, not a reference.
+No database schema here by design — see the migration files themselves (`migrations/0037`–`0039`, `0041`–`0042`, `0045`–`0046`) for exact table structure. This section is a map, not a reference.
 
 - **Pages:** `src/pages/dashboard/storage/` (drive, inspect, config — File Request Links have no dedicated page, they're a panel inside the drive page itself)
-- **UI components:** `src/components/admin/storage/` — File Request Links: `CreateFileRequestModal.tsx`, `FileRequestsTable.tsx`, `RequestDetailsModal.tsx`
-- **API routes:** `src/pages/api/storage/` (presign/confirm/list/download/rename/delete, `[id]/share/*`, `share/[token]` for the public share link, `admin/*` for inspect/config/overrides/reconciliation) — File Request Links: `request/[token]/{index,presign,confirm}.ts` (public, recipient-facing) and `requests/{index,[id]}.ts` (authenticated, staff-facing create/list/revoke)
+- **UI components:** `src/components/admin/storage/` — File Request Links: `CreateFileRequestModal.tsx`, `FileRequestsTable.tsx`, `RequestDetailsModal.tsx`; also `TrashPanel.tsx`, `BulkActionBar.tsx`, `ImageLightboxModal.tsx`, `InspectExplorerTree.tsx`, `[SUPABASE_PROJECT_REF].tsx`, `StorageAccessGrantsPanel.tsx`
+- **API routes:** `src/pages/api/storage/` (presign/confirm/list/download, `upload` (Worker-streamed fallback), `[id]` PATCH rename / DELETE soft-delete, `trash` + `[id]/restore` (30-day Trash window, `TRASH_RETENTION_DAYS`), `[id]/share/*`, `share/[token]` for the public share link, `admin/*` for inspect/config/overrides/profiles/grants/reconciliation) — File Request Links: `request/[token]/{index,presign,confirm}.ts` (public, recipient-facing) and `requests/{index,[id]}.ts` (authenticated, staff-facing create/list/revoke)
 - **Shared logic:** `src/lib/storage/` (config resolution, magic-byte signatures, share-token signing — reused as-is for request tokens, share email)
 - **Data access:** `src/lib/dal/StorageFileRepository.ts`, `src/lib/dal/StorageFileRequestRepository.ts` (the one new table this sub-feature needed), and the scoped-config methods added to `src/lib/dal/PortalSettingsRepository.ts`
 - **Weekly job:** `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage`), wired into the Sunday branch of `src/workers/cf-entry.ts`
+- **5-minute job:** `src/workers/scheduled-storage-notifications.ts` + `src/lib/storage/notify.ts` — quota ≥ 90 % and share-expiring-within-24 h emails (registered in `src/lib/jobs/registry.ts`)
+- **Global cap:** `maxGlobalPoolBytes` in `src/lib/storage/config.ts` (100 GB fallback) bounds the whole bucket; `FALLBACK_CONFIG` there (50 GB / 10,000 files) is what applies if the seeded defaults row is ever missing — the seeded Owner/Vendor row is unlimited
 - **Permissions:** standard PLAC rows under `/dashboard/storage` and its `#` sub-features, including `#request-create`/`#request-manage` — see [plac-and-audit.md](../architecture/plac-and-audit.md) for how the permission system itself works.
 
 ## 12. Related
@@ -232,3 +235,9 @@ No database schema here by design — see the migration files themselves (`migra
 - [`reference/coding-standards.md`](../reference/coding-standards.md) — the universal scoped-config pattern this feature established for future features to reuse
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) — bucket and secret registry
 - [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the live D1/Supabase table inventory and RULE #0.6/#0.8/#0.9 reuse policy this feature (and File Request Links) were built to follow
+
+## 13. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | All `related_code` / `related_docs` paths; the three pages and their guards; quotas, share TTLs, upload cap, default policy and extension list against `migrations/0039` and `config.ts`; every PLAC string against the seeds; `storage_file_requests` shape and passcode re-verification; public API prefixes; the Sunday reconciliation wiring and auto-correct behaviour; one-active-share semantics; secrets and the `STAFF_STORAGE` binding. Ten corrections/additions above (Trash + restore, Worker-streamed upload fallback, inspect tree, profiles + grants panels, notifications job, global cap, migrations 0045–0046, cron-limit history). | CF Access bypass policy for `/api/storage/request/*`; vendor pricing in §9a; live share-log data |

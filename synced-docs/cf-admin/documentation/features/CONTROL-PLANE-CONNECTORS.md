@@ -3,7 +3,7 @@
 title: "Service Control Plane — Connectors (Layer B)"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -103,14 +103,15 @@ route. Provider API base URLs are public/standard and shown for orientation.
 | | |
 |---|---|
 | **Provider API** | `https://api.cloudflare.com/client/v4` |
-| **Function** | `purgeCache(env, body)` → `POST /zones/{zoneId}/purge_cache` |
-| **Capability** | write only: purge **everything**, by **URL list**, or by **cache-tag** |
+| **Function** | `purgeCache(env, body)` → `POST /zones/{zoneId}/purge_cache`; `setSecurityLevel(env, level)` → zone security level |
+| **Capability** | writes: purge **everything**, by **URL list**, or by **cache-tag**; set the zone **security level**. Reads (added since the 2026-08-13 pass): `listWorkerScripts`, `listKVNamespaces`, `listD1Databases`, `listR2Buckets`, `getQueueDetail`, `listZTActiveUsers`, `getZoneSecurity`, served by `GET /api/control-plane/cloudflare` |
 | **Token / scope** | a Cloudflare API token with **`Zone: Cache Purge`**; a dedicated purge-token override is preferred if set, otherwise the shared analytics token is reused |
 | **Unconfigured when** | no purge token, or no zone id |
 
 > Cloudflare **metrics** (requests, cache hit, bandwidth, threats, D1/R2/queue/workers) are *not* read
-> by this connector — they come from the shared analytics aggregate (see `providers.ts`). This file is
-> purge-only.
+> by this connector — they come from the shared analytics aggregate (`src/lib/analytics/providers/index.ts`).
+> *2026-09-14: this note said the file is "purge-only"; it has been an inventory reader plus two writers
+> since the Cloudflare sub-page gained its resource inventory.*
 
 ### 3.2 Sentry — `sentry-admin.ts`
 
@@ -118,7 +119,7 @@ route. Provider API base URLs are public/standard and shown for orientation.
 |---|---|
 | **Provider API** | `https://sentry.io/api/0` |
 | **Reads** | `getSentryUsage` (error/transaction stats), `getTopIssues`, `listInboundFilters`, `listClientKeys` |
-| **Writes** | `setInboundFilter`, `setKeyRateLimit`, `setSpikeProtection` |
+| **Writes** | `setInboundFilter`, `setKeyRateLimit`, `setSpikeProtection`, `updateSentryIssue` (resolve / ignore / unresolve — `POST` actions `resolve-issue`, `ignore-issue`, `unresolve-issue`) |
 | **Project scope** | each call takes `'cf-admin' | 'cf-astro'` to target the right project |
 | **Token / scope** | a Sentry auth token + org; **writes require `project:write`** |
 | **Unconfigured when** | token or org missing |
@@ -129,7 +130,7 @@ route. Provider API base URLs are public/standard and shown for orientation.
 |---|---|
 | **Provider API** | `https://us.posthog.com/api` |
 | **Reads** | `getPostHogSettings` (recording opt-in, sample rate, autocapture), `getPostHogBilling` |
-| **Writes** | `setSessionRecording(optIn, sampleRate)` |
+| **Writes** | `setSessionRecording(env, optIn, sampleRate)` |
 | **Token / scope** | a PostHog **personal API key**; billing reads additionally need the **org id** |
 | **Unconfigured when** | personal API key missing (billing: also when org id missing) |
 
@@ -164,7 +165,8 @@ it never reads or logs a value. Tokens, by purpose:
 | PostHog org id                                                   | PostHog billing reads                   | —                                      |
 
 Exact secret/env-var names are intentionally omitted here; they live in `wrangler.toml` and the
-Worker secret store. The Health & Drift panel only shows the **purpose** and a configured/not dot.
+Worker secret store. The Health & Drift panel shows each token's **name and purpose** and a
+configured/not dot (presence only — never a value). *Corrected 2026-09-14: it said "purpose only".*
 
 ---
 
@@ -197,7 +199,7 @@ Supabase, or triaging Sentry issues. It is important not to conflate the two cha
 | **Audience** | platform operators (humans), at runtime | developers / AI agents, at build/ops time |
 | **Path** | in the request path, behind RBAC + PLAC, same-origin & audited | a separate developer tool channel, outside the app |
 | **Auth** | Worker secrets scoped to the minimum needed | the developer's own MCP credentials |
-| **Surface** | the curated, safe actions the UI exposes (e.g. purge, recording toggle, advisors) | the provider's broader API as the MCP server exposes it |
+| **Surface** | the curated, safe actions the UI exposes (purge, zone security level, recording toggle, Sentry issue triage, advisors) | the provider's broader API as the MCP server exposes it |
 | **Source of truth** | shared D1 + provider APIs | read/inspection (and provider-side changes) outside the audit trail |
 
 **Rule of thumb:** the connectors are the *production* path — gated, minimal, audited. MCP is a
@@ -228,3 +230,9 @@ audit) rather than wiring the UI to anything MCP-side.
 - [OPERATIONS.md](../operations/OPERATIONS.md) — deploy commands, provider integrations, free-tier limits
 - [plac-and-audit.md](../architecture/plac-and-audit.md) — PLAC resolution and the audit engine
 - [SECURITY.md](../security/SECURITY.md) — secret handling, CSRF, headers, session model
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | All six files under `src/lib/control-plane/`; the `ProviderResult` type and helpers in §2 line by line (status mapping, 401/403 hint, message extraction); every function named in §3 exists with the described API base, token and unconfigured conditions; the §4 token matrix against `tokenStatus()` (7 entries, presence-only); the §5 flush path in `config-publisher.ts` and its three call sites, and cf-astro's `kind === 'config'` handling; `#provider-write` + `requireAuth(ctx, 'owner')` on every Layer-B POST. Six corrections above (Cloudflare reads and security-level write, Sentry issue triage, panel shows token names). | Token scopes actually provisioned; provider API behaviour; the MCP comparison in §6 |

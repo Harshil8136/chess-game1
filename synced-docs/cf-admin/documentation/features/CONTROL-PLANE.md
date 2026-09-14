@@ -3,7 +3,7 @@
 title: "Service Control Plane"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -76,9 +76,7 @@ the entire access model, audit story, and failure behaviour.
 
 **Why D1 (not a shared KV)** — KV namespaces are per-binding and isolated between the two apps, so
 they cannot share one. The single shared substrate is D1. It is the source of truth; each app reads
-it and caches locally (cf-astro via its edge cache + in-isolate memory; cf-admin via its session KV
-namespace / in-isolate memory). A monotonic version token lets each app do one cheap indexed read
-per TTL to decide whether to re-pull.
+it and caches locally (cf-astro via a 10 s in-isolate memory layer plus the Cache API — `cf-astro/src/lib/service-config.ts`; cf-admin reads D1 directly on every request, with no config cache). The repository exposes a monotonic version token (`getConfigVersion()`), but as of 2026-09-14 nothing calls it: cf-astro re-pulls the full key set per TTL. *Corrected 2026-09-14 — this said cf-admin caches in its session KV namespace and both apps poll the version token; only the metrics aggregate is KV-cached.*
 
 ---
 
@@ -105,7 +103,7 @@ visibility without write power, or one kind of write without another:
 | `…#provider-write`                    | Apply Layer-B writes via provider APIs          |
 
 The role floor is enforced **and** the PLAC capability is checked — both must pass. Reads are open to
-anyone who can see the page; Layer-A writes require Admin+; Layer-B writes require Owner+. Page-level
+anyone who can see the page (provider reads require Admin+); Layer-A writes require Admin+; Layer-B writes require Owner+. Page-level
 denies also block the underlying API calls (each route opts in via the shared deny helper), so the UI
 and the API cannot drift apart.
 
@@ -180,12 +178,12 @@ result reports the flush outcome separately.
 
 ### 4.4 Route policy — per-route telemetry rules
 
-Most Layer-A knobs are scalar (one rate or toggle). One key is **structured**: a JSON **route policy**
+Most Layer-A knobs are scalar (one rate or toggle). Two keys are **structured** JSON: `sentry.cf_astro.ignore_errors` (edited by `IgnoreErrorsEditor.tsx`) and the **route policy** described here (`sentry.cf_astro.route_policy`), a JSON **route policy**
 that makes cf-astro's Sentry/PostHog sampling *per-route* and runtime-tunable, so adding a route or
 retuning one is a config edit rather than a redeploy.
 
 - **Shape** — `{ version, rules[] }`. Each rule has a unique `id`, an optional `label`, a list of
-  `match` patterns (substring match; a trailing `*`/`/` acts as a prefix), and any subset of
+  `match` patterns (substring match; a trailing `*` makes it a prefix match — `cf-astro/src/lib/route-policy.ts`), and any subset of
   per-signal overrides: client `traces`, server `tracesServer`, `replaySession`, `replayError`, and a
   `posthog` block (`pageview`, `autocapture`, `recording`). Every rate is clamped to `[0,1]`.
 - **Resolution (two-tier, fail-safe)** — cf-astro reads the existing scalar keys as the **baseline**
@@ -225,7 +223,7 @@ misconfigurations from being reported to Cloudflare Workers Observability as ser
 |-------------|----------------------------------------------------------------|-------------------------------------------------------|
 | **Sentry**  | Quota outcomes, top unresolved issues, inbound filters, keys   | Toggle inbound filters, set key rate limits, spike protection |
 | **PostHog** | Project settings (recording opt-in, sample rate, autocapture), billing usage | Enable/disable session recording + set sample rate |
-| **Cloudflare** | (metrics shown via the analytics aggregate)                 | Cache purge — everything, by URL, or by cache-tag      |
+| **Cloudflare** | Resource inventory (Workers, KV, D1, R2, queue detail, Zero Trust active users, zone security); metrics via the analytics aggregate | Cache purge — everything, by URL, or by cache-tag; zone security level |
 | **Supabase** | Security & performance advisors                               | — (read-only; schema changes stay migration-driven)   |
 
 Notes that matter for correctness:
@@ -264,15 +262,22 @@ same-origin (CSRF-guarded) and audited.
 | `/api/control-plane/config`       | PATCH  | Admin+     | `#edit-sampling`       | Edit one config value                |
 | `/api/control-plane/reset`        | POST   | Admin+     | `#edit-sampling`       | Restore drifted values to defaults   |
 | `/api/control-plane/purge-cache`  | POST   | Admin+     | `#purge-config`        | Force cross-app config-cache flush    |
-| `/api/control-plane/sentry`       | GET    | Any auth   | page                   | Sentry usage, issues, filters, keys  |
-| `/api/control-plane/sentry`       | POST   | Owner+     | `#provider-write`      | Filters / key limits / spike protection |
-| `/api/control-plane/posthog`      | GET    | Any auth   | page                   | PostHog settings + billing           |
+| `/api/control-plane/sentry`       | GET    | Admin+     | page                   | Sentry usage, issues, filters, keys  |
+| `/api/control-plane/sentry`       | POST   | Owner+     | `#provider-write`      | Filters / key limits / spike protection / issue resolve-ignore-unresolve |
+| `/api/control-plane/posthog`      | GET    | Admin+     | page                   | PostHog settings + billing           |
 | `/api/control-plane/posthog`      | POST   | Owner+     | `#provider-write`      | Session recording config             |
-| `/api/control-plane/cloudflare`   | POST   | Owner+     | `#provider-write`      | Cache purge                          |
-| `/api/control-plane/supabase`     | GET    | Any auth   | page                   | Security + performance advisors      |
+| `/api/control-plane/cloudflare`   | GET    | Admin+     | page                   | Workers / KV / D1 / R2 / queue / ZT users / zone security inventory |
+| `/api/control-plane/cloudflare`   | POST   | Owner+     | `#provider-write`      | Cache purge; zone security level     |
+| `/api/control-plane/supabase`     | GET    | Admin+     | page                   | Security + performance advisors      |
 
-Read endpoints attach cache-validation headers (ETag / short max-age) so the UI can revalidate
-cheaply. Every mutating endpoint writes an audit entry via the post-response, fire-and-forget audit
+*Re-verified against each handler on 2026-09-14.* The three provider GETs were listed as "Any auth"
+but have always called `requireAuth(ctx, 'admin')`. `PATCH config` was the other way round: this
+table and the handler's own header said "Admin+ and `#edit-sampling`", but the code checked only the
+session and the page-level PLAC — fixed the same day to match `reset.ts`.
+
+`GET config` attaches an ETag (`withETag`) so the editor can revalidate cheaply; the provider GETs
+are served `Cache-Control: no-store` (`jsonFresh`) and the Cloudflare inventory plain `jsonOk`.
+*Corrected 2026-09-14 — this said every read endpoint carried ETag / short max-age headers.* Every mutating endpoint writes an audit entry via the post-response, fire-and-forget audit
 engine — zero added latency for the operator.
 
 ---
@@ -302,7 +307,9 @@ library (the Phase-6 redesign):
 | `StatCard` / `MetricGrid` | KPI card (accent bar, loading/empty states) + responsive 1→2→3→4 grid |
 | `SectionCard`     | Consistent section container (title, accent, body)                          |
 | `ServiceSubNav`   | Sticky segmented sub-nav (native `<select>` on mobile, tabs on desktop)      |
-| `EmptyState` / `Skeleton` | Consistent empty / loading states                                  |
+| `EmptyState`      | Consistent empty state (there is no `Skeleton` component; loading states are per-island) |
+| `IgnoreErrorsEditor` | Structured editor for the `sentry.cf_astro.ignore_errors` JSON key |
+| `Sparkline`, `ProviderTile.astro`, `SubPageShell.astro` | Trend glyph, provider summary tile, and the shared sub-page frame that carries the role / PLAC gating for the UI |
 
 Cross-island feedback uses the shared toast channel (a Preact signal) rather than per-island feedback
 state, and destructive actions use a typed confirmation dialog. Write controls only render for
@@ -335,3 +342,9 @@ operators who hold the relevant capability.
 - [SECURITY.md](../security/SECURITY.md) — CSRF, headers, session model, security posture
 - [CMS.md](./CMS.md) — the cross-app revalidation webhook the config flush reuses
 - [OPERATIONS.md](../operations/OPERATIONS.md) — deploy commands, provider integrations, free-tier limits
+
+## 11. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | Every route under `src/pages/api/control-plane/` (role floor, PLAC fragment, response helper); the six-tier RBAC ladder in `src/lib/auth/rbac.ts`; the three PLAC anchors in routes and UI; the config schema (`config-schema.ts`: value types, categories, scopes, services, caps, route-policy validation); optimistic concurrency + history + audit + best-effort flush in `config.ts` / `ServiceConfigRepository.ts`; cf-astro's `route-policy.ts` matching and `service-config.ts` caching; every component under `src/components/admin/control-plane/`; the cross-reference targets. Ten corrections above, one of which was a code defect (PATCH config lacked its role floor and fragment; fixed). | Live `admin_pages` rows (the seed is in `database/legacy_migrations/0030_seed_control_plane_pages.sql`; the baseline migration carries no data); Cloudflare Observability behaviour; the pre-redesign "hardcoded in source" history |

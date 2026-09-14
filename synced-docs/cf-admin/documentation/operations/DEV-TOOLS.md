@@ -3,7 +3,7 @@
 title: "Edge Command Center — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -15,7 +15,7 @@ tags: []
 
 > **Scope**: `cf-admin` — Covers System Debugging, Feature Configuration, and the Audit Engine.
 >
-> **Last Updated**: 2026-04-25
+> **Last Updated**: 2026-04-25; re-verified 2026-09-14 (see §9)
 
 ---
 
@@ -46,12 +46,12 @@ import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
 
 const user = await requireAuth(Astro);
 if (!isVendorSupport(user.role as Role)) {
-  return Astro.redirect('/dashboard?error=unauthorized');
+  return Astro.rewrite('/dashboard/access-denied');
 }
 ---
 ```
 
-**Why SSR, not client-side?** Client-side checks (e.g., `{isVendorSupport(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the HTML is never generated at all — the server returns a 302 redirect before any markup reaches the wire.
+**Why SSR, not client-side?** Client-side checks (e.g., `{isVendorSupport(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the page HTML is never generated at all — the server rewrites to the access-denied view before any of the page's markup reaches the wire. *(2026-09-14: the three guarded pages still import the deprecated `isDev` alias and use `Astro.rewrite`, not a redirect; this doc previously showed `Astro.redirect('/dashboard?error=unauthorized')`.)*
 
 ### 2.2 API Route Protection
 
@@ -62,7 +62,7 @@ import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
 
 if (!isVendorSupport(sessionUser.role as Role)) {
   return new Response(
-    JSON.stringify({ error: 'Insufficient permissions: DEV only' }),
+    JSON.stringify({ error: 'Insufficient permissions: DEV only' }), // toggle.ts wording; run.ts says 'Insufficient permissions or access denied by PLAC policy'
     { status: 403 }
   );
 }
@@ -84,15 +84,15 @@ All three layers must independently agree. If an attacker bypasses PLAC (e.g., b
 
 ---
 
-## 3. System Debugging (`/dashboard/debug`)
+## 3. Developer Debug Portal (`/dashboard/debug`)
 
 ### 3.1 Purpose
 
-The System Debugging page provides real-time health verification of the production infrastructure, enabling DEV users to verify binding availability without SSH or Cloudflare dashboard access.
+`/dashboard/debug` is a landing hub (`<h1>` "Developer Debug Portal") linking to the diagnostics run, its history and the page-registry manager. The diagnostics page provides real-time health verification of the production infrastructure, enabling DEV users to verify binding availability without SSH or Cloudflare dashboard access.
 
 ### 3.2 Diagnostics run
 
-The page mounts `SystemDiagnostics.tsx`, which calls `POST /api/diagnostics/run`
+`/dashboard/debug/diagnostics` mounts `SystemDiagnostics.tsx` (`client:idle`), which calls `POST /api/diagnostics/run`
 on load and every 30 seconds ("Force Sync" runs it on demand). The route checks
 the vendor-support role, runs the probe suite in `src/lib/diagnostics/runner.ts`
 against the live bindings and returns the run; one row per probe is written to
@@ -109,10 +109,12 @@ answer 5).
 
 | File | Purpose |
 |------|---------|
-| `pages/dashboard/debug/index.astro` | SSR page with DEV guard |
-| `components/admin/debug/SystemDiagnostics.tsx` | Preact island: runs the suite on load and every 30 s, renders the infra bar and the per-probe list |
-| `pages/api/diagnostics/run.ts` | API: runs the probe suite and returns the run; results persist to `system_test_results` |
-| `lib/diagnostics/runner.ts` | The probe suite (tiers, latency grades, remediation text) |
+| `pages/dashboard/debug/index.astro` | Landing hub with DEV guard |
+| `pages/dashboard/debug/diagnostics.astro`, `debug/diagnostics/history.astro` | Diagnostics run and its history (`SystemDiagnosticsHistory.tsx`) |
+| `pages/dashboard/debug/pages.astro` + `components/admin/debug/PageRegistryManager.tsx`, `PageRegistryConfirmModal.tsx` | Page-registry manager (edit `admin_pages` rows) |
+| `components/admin/debug/SystemDiagnostics.tsx` (+ `DiagnosticsInfraBar.tsx`, `DiagnosticsTestList.tsx`) | Preact island: runs the suite on load and every 30 s, renders the infra bar and the per-probe list |
+| `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | API: run the probe suite / read persisted results / infra snapshot; results persist to `system_test_results` |
+| `lib/diagnostics/runner.ts`, `benchmarks.ts`, `types.ts`, `tests/` | The probe suite (tiers, latency grades, remediation text) |
 
 ---
 
@@ -120,7 +122,7 @@ answer 5).
 
 ### 4.1 Purpose
 
-Feature Configuration enables instant, deployment-free toggling of experimental features across `cf-admin` and `cf-astro`. Flags are stored in D1 (`admin_feature_flags` table) and cached in KV with a 60-second TTL.
+Feature Configuration enables instant, deployment-free toggling of experimental features across `cf-admin` and `cf-astro`. Flags are stored in D1 (`admin_feature_flags` table) and read from D1 on each request — `FeatureFlagRepository.ts` has no KV layer. *(2026-09-14: this said "cached in KV with a 60-second TTL".)*
 
 ### 4.2 Toggle Flow
 
@@ -134,7 +136,7 @@ Feature Configuration enables instant, deployment-free toggling of experimental 
 
 ### 4.3 Cross-Project Propagation
 
-When a flag is toggled in `cf-admin`, `cf-astro` picks it up within 60 seconds via its middleware cache cycle (see `EDGE_FEATURE_ROUTING.md` in cf-astro).
+**Not implemented as of 2026-09-14.** This section said cf-astro picks a toggled flag up within 60 seconds via its middleware cache and pointed at a cf-astro file (`EDGE_FEATURE_ROUTING`) that does not exist in the cf-astro checkout (removed or never written), and cf-astro's `src/` contains no reader of `admin_feature_flags` (its `service-config.ts` header still mentions a "feature-flag 3-layer cache in middleware.ts" that the middleware no longer contains). Today the flags affect cf-admin only. Cross-app runtime config goes through `service_config` — see [`../features/CONTROL-PLANE.md`](../features/CONTROL-PLANE.md).
 
 ### 4.4 File Map
 
@@ -211,13 +213,13 @@ The `admin_pages` table controls sidebar navigation. The following entries were 
 
 | Path | Old Label | New Label |
 |------|-----------|-----------|
-| `/dashboard/debug` | Debug Tools | System Debugging |
+| `/dashboard/debug` | Debug Tools | System Debugging *(no migration on disk sets this label — unverified, likely applied by hand; the seed is `Debug Tools`)* |
 
 Page titles (rendered in `<h1>` tags) were also updated:
 
 | Page | Old Title | New Title |
 |------|-----------|-----------|
-| `debug/index.astro` | QA & Diagnostics Command Center | System Debugging |
+| `debug/index.astro` | QA & Diagnostics Command Center | Developer Debug Portal *(the shipped `<h1>`; this row said "System Debugging")* |
 | `settings/features.astro` | Feature Flags | Feature Configuration |
 
 ---
@@ -255,8 +257,14 @@ No part of the audit log is immutable — see
 
 - **None measurable** — all audit operations are post-response via `ctx.waitUntil()`
 - There is no suppression check on the write path at all; every entry is written
-- No additional KV reads — the flag is part of the existing session object
+- ~~No additional KV reads — the flag is part of the existing session object~~ *(stale remnant: the `auditSilenced` session field was removed with §5; there is no flag)*
 
 ### 8.3 DEV-Only Restriction
 
 Feature Configuration and System Debugging are now **DEV-exclusive**. SuperAdmin users who previously had access will be redirected. This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators.
+
+## 9. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | The three guarded pages (`debug/index`, `debug/diagnostics`, `settings/features`) and their guard pattern; `run.ts` and `toggle.ts` guards and messages; every file under `components/admin/debug/`, `pages/dashboard/debug/`, `pages/api/diagnostics/`, `lib/diagnostics/`; `FeatureFlagRepository.ts` (D1 only); cf-astro for any `admin_feature_flags` reader; audit-silence removal (no `silence.ts`, no `auditSilenced`, `supabase/migrations/20260727000000_drop_audit_silence.sql`); `ctx.waitUntil` audit writes. Ten corrections above. | Live `admin_pages` labels in D1; historical redirect behaviour |

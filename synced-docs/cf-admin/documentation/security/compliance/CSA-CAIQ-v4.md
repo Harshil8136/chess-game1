@@ -3,7 +3,7 @@
 title: "CSA STAR Level 1 — CAIQ v4.0.3 (cf-admin-madagascar)"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [ASVS-L2.md, SOC2-TSC-mapping.md, ../SECURITY.md]
@@ -31,7 +31,7 @@ it can be copy-pasted into the CSA workbook without re-entry.
 - **Deployment model:** Public cloud (Cloudflare Workers), single-tenant
 - **Service model:** Software-as-a-Service (SaaS) — first-party, not resold
 - **Cloud provider(s) leveraged:** Cloudflare (Workers, D1, KV, R2, Queues,
-  Access, Analytics Engine), Supabase (Postgres + Auth), Upstash (Redis),
+  Access, Analytics Engine), Supabase (Postgres — GoTrue auth retired, see `SECURITY.md` §10), Upstash (Redis),
   Sentry (error tracking), Brevo (email)
 
 ## Domain answers
@@ -44,7 +44,7 @@ CSA-canonical column headers.
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | A&A-01 | Are audit and assurance policies established? | Yes | `RULESAd.md` §9 + `documentation/security/reviews/` dated review cadence. |
-| A&A-02 | Are independent audits performed? | Partial | Internal deep reviews on a monthly cadence; external audit not yet engaged. |
+| A&A-02 | Are independent audits performed? | Partial | Internal deep reviews on a quarterly cadence (see GRC-03 — this row said "monthly"; corrected 2026-09-14); external audit not yet engaged. |
 | A&A-03 | Is a risk-based audit plan documented? | Yes | `MAINTENANCE.md` + `documentation/2026-07-05-comprehensive-codebase-and-system-review.md`. |
 | A&A-04 | Are audit findings tracked to resolution? | Yes | `MAINTENANCE.md` open-items table with severity + status. |
 | A&A-05 | Are audit reports made available to customers? | Partial | Self-assessments (this file, `SOC2-TSC-mapping.md`, `ASVS-L2.md`) are available on request. The `cf-admin-madagascar` repository is **private**; no third-party audit report exists to share. Corrected 2026-07-29 — the prior answer read "Public repo", which was wrong. |
@@ -55,7 +55,7 @@ CSA-canonical column headers.
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | AIS-01 | Are SSDLC / secure coding standards enforced? | Yes | `documentation/reference/coding-standards.md`, `RULESAd.md` §9.0 CI-enforced rules, `scripts/rules_check.py`. |
-| AIS-02 | Is app-level authentication multi-factor? | Yes | Cloudflare Zero Trust MFA + Supabase Auth. |
+| AIS-02 | Is app-level authentication multi-factor? | Yes | Cloudflare Zero Trust MFA (the only login path; Supabase Auth was retired — `SECURITY.md` §10, ASVS 2.1.1). |
 | AIS-03 | Are inputs validated at every boundary? | Yes | Zod schemas at every API handler. |
 | AIS-04 | Is output encoded to prevent injection? | Yes | Preact/Astro auto-escape; `src/lib/email/sanitize-html.ts` HTMLRewriter sanitizer. |
 | AIS-05 | Is CSRF protection in place for state-changing ops? | Yes | `src/lib/csrf.ts::validateCsrf()` on all mutation methods. |
@@ -77,11 +77,11 @@ CSA-canonical column headers.
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| CCC-01 | Are changes tested before production? | Yes | `tsc` + `vitest` + `docs_check` + `rules_check` in CI; per-branch protection. |
-| CCC-02 | Is a change-approval process documented? | **Partial** | **Corrected 2026-08-13 — there is no PR-review requirement.** `RULESAd.md` §12 mandates the opposite: *"DO NOT create new branches. ALWAYS push directly to `origin main`"*, with no branch protection. The real, documented gate is automated and pre-push: `npm run verify` (typecheck, lint, 491 tests, `rules_check`, `docs_check`, `a11y_check`, `audit_gate`), and CI re-runs the same guards on `main`. *Corrected 2026-08-23:* this row also cited a monorepo-root checklist script that is not part of this repository. That is a genuine change control, but it is a **machine** approval, not a second pair of human eyes. `SOC2-TSC-mapping.md` CC8.1 states this correctly and was contradicted by this row. |
-| CCC-03 | Are unauthorized changes detected? | Yes | Git history; Cloudflare Worker version history; branch-protection prevents force push. |
+| CCC-01 | Are changes tested before production? | Yes | CI on every push to `main`: `quality.yml` (types:check, typecheck, ratchet/ESLint, gate self-tests, vitest, build, SBOM, blocking a11y), `security.yml` (`audit_gate.py`, secret scan, `rules_check.py`), `docs-quality.yml` (`docs_check.py`, markdownlint). No branch protection — see CCC-02. *(Corrected 2026-09-14: this row claimed "per-branch protection".)* |
+| CCC-02 | Is a change-approval process documented? | **Partial** | **Corrected 2026-08-13 — there is no PR-review requirement.** `RULESAd.md` §12 mandates the opposite: *"DO NOT create new branches. ALWAYS push directly to `origin main`"*, with no branch protection. The real, documented gate is automated and pre-push: `npm run verify` (typecheck, ratchet/ESLint, 855 tests as of 2026-09-14, gate self-tests, `rules_check`, `docs_check`, markdownlint, `a11y_check`, `audit_gate`), and CI re-runs the same guards on `main`. *Corrected 2026-08-23:* this row also cited a monorepo-root checklist script that is not part of this repository. That is a genuine change control, but it is a **machine** approval, not a second pair of human eyes. `SOC2-TSC-mapping.md` CC8.1 states this correctly and was contradicted by this row. |
+| CCC-03 | Are unauthorized changes detected? | Partial | Git history; Cloudflare Worker version history; Workers Builds deploys only from `main`. There is **no** branch protection (CCC-02), so force-push is not prevented. *(Corrected 2026-09-14.)* |
 | CCC-04 | Is configuration baseline maintained? | Yes | `wrangler.toml` + `documentation/operations/OPERATIONS.md` binding registry. |
-| CCC-05 | Are separation-of-duty controls enforced? | **Partial** | **Corrected 2026-08-13.** *Within the application*, yes: the six-tier role ladder (`vendor_support > owner > admin > manager > staff > viewer`, `architecture/plac-and-audit.md` §1.1) plus PLAC per-page overrides genuinely separate duties between portal users, and some destructive operations require a second privileged actor (`/api/audit/*` refuses self-targeting). *In the deployment pipeline*, no: a single operator writes, approves and ships every change. Do not present this as an organisational SoD control. |
+| CCC-05 | Are separation-of-duty controls enforced? | **Partial** | **Corrected 2026-08-13.** *Within the application*, yes: the six-tier role ladder (`vendor_support > owner > admin > manager > staff > viewer`, `architecture/plac-and-audit.md` §1.1) plus PLAC per-page overrides genuinely separate duties between portal users, and some destructive operations refuse self-targeting (`users/force-kick`, `users/access`, `users/manage`, `audit/requests/[id]/resolve`). *In the deployment pipeline*, no: a single operator writes, approves and ships every change. Do not present this as an organisational SoD control. |
 
 ### CEK — Cryptography, Encryption & Key Management
 
@@ -104,10 +104,10 @@ CSA-canonical column headers.
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| DSP-01 | Is data classified and tracked? | Yes | `documentation/security/PRIVACY.md` classifies PII, session, audit, and public data tiers. |
+| DSP-01 | Is data classified and tracked? | Partial | The data inventory is `documentation/security/RoPA.md`; there is no written classification into tiers (`PRIVACY.md` documents the consent dashboard, not a classification). *(Corrected 2026-09-14 — the previous answer pointed at a classification that does not exist.)* |
 | DSP-02 | Are data-retention policies enforced? | Yes | Weekly R2 cleanup (`src/workers/scheduled-asset-cleanup.ts` with `email-attachments/` protected); D1 audit log prune via `/api/audit/prune`. |
 | DSP-03 | Are data-subject rights honored (GDPR/LFPDPPP)? | Yes | Privacy dashboard, consent records, deletion + export flows. |
-| DSP-04 | Are logs privacy-safe? | Yes | Sentry `sendDefaultPii: false`; IP hashed via `hashIp()` (`src/pages/api/emails/send.ts`). |
+| DSP-04 | Are logs privacy-safe? | Yes | Sentry `sendDefaultPii: false`; IP hashed via `hashIp()` (`src/lib/audit-helpers.ts`). |
 | DSP-05 | Are cross-border transfers governed? | Yes | Data resides in US-East (Supabase) + Cloudflare's global edge; PII limited to authorized-user emails + admin-generated content. |
 | DSP-06 | Is data deleted on request? | Yes | Privacy request handler + Supabase RLS-enforced deletes. |
 | DSP-07 | Are data-sharing agreements documented? | Partial | Sub-processors (Cloudflare, Supabase, Upstash, Sentry, Brevo) are enumerated with transfer mechanisms in `documentation/security/RoPA.md` and `compliance/data-residency.md`, and each vendor's published DPA terms apply. **Countersigned DPAs are being collected individually and are available on request once held.** `data-residency.md` notes that relying on published terms is weaker evidence than a signed agreement. Corrected 2026-07-29 — the prior answer read "DPAs on file". |
@@ -117,7 +117,7 @@ CSA-canonical column headers.
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | GRC-01 | Is a compliance/governance program in place? | Yes | `RULESAd.md` — governance codified as CI-enforced rules. |
-| GRC-02 | Are regulatory obligations tracked? | Yes | GDPR + Mexican LFPDPPP tracked in `documentation/security/PRIVACY.md`. |
+| GRC-02 | Are regulatory obligations tracked? | Yes | GDPR + Mexican LFPDPPP tracked in `documentation/security/RoPA.md` and `runbooks/incident-response.md` (`PRIVACY.md` only names them). |
 | GRC-03 | Are internal audits conducted? | Yes | **Quarterly cadence**, plus an ad-hoc review on any significant architectural change. Evidence: dated snapshots in `documentation/security/reviews/`. Corrected 2026-07-29 — the prior answer claimed a monthly cadence that the actual review dates (2026-04-24, 05-24, 05-25, 05-26, 06-13, 07-17) do not support. Quarterly is what a single-operator team can sustain and evidence. |
 
 ### HRS — Human Resources
@@ -164,7 +164,7 @@ CSA-canonical column headers.
 |---|----------|-----|----------|
 | LOG-01 | Are security-relevant events logged? | Yes | Ghost Audit + login forensics + Sentry. |
 | LOG-02 | Are logs tamper-evident? | **No** | **Corrected 2026-08-13 — the previous answer used wording this project explicitly bans.** `architecture/plac-and-audit.md` §3.2 forbids describing the audit log as "tamper-evident", "immutable" or "append-only", `MAINTENANCE.md` C-9 records why, and a copy-lint rule in the Velox repo fails the build if those words return in marketing. The controls that **do** exist: Supabase RLS restricts these tables to `service_role`, writes are insert-only in application code, and audit suppression was removed entirely on 2026-07-26 so coverage cannot be switched off. The controls that **do not** exist: no hash chain, no sequence numbers, no signatures, no WORM storage — and `admin_audit_log` is a purge target in `src/lib/retention-tables.ts`. Anyone holding `SUPABASE_SERVICE_ROLE_KEY` can alter history undetectably. |
-| LOG-03 | Is log retention documented? | Yes | 30-day default retention (configurable via `/api/audit/prune`); Sentry 90-day. |
+| LOG-03 | Is log retention documented? | Yes | Retention registry in `src/lib/retention-tables.ts` (targets: `admin_audit_log` 180 d, `admin_login_logs` 365 d; nothing is auto-purged, deletion is a manual `/api/audit/prune` run whose `days` param defaults to 30); `storage_share_access_logs` purged at 180 d by the Sunday cron; Sentry 90-day. *(Re-stated 2026-09-14.)* |
 | LOG-04 | Are logs correlated / SIEM-fed? | Partial | Sentry serves as SIEM-lite; no dedicated SIEM yet. |
 | LOG-05 | Are alerts triggered on anomalies? | Yes | Sentry rules + login-forensics suspicious flagging (`src/components/admin/users/sessions/sessionRisk.ts`). |
 
@@ -172,7 +172,7 @@ CSA-canonical column headers.
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| SEF-01 | Is an IR plan documented? | Partial | Runbooks in `documentation/runbooks/`; no formal escalation matrix. |
+| SEF-01 | Is an IR plan documented? | Yes | `documentation/runbooks/incident-response.md` (severity classification, roles, notification targets and deadlines) plus the per-failure runbooks. *(Updated 2026-09-14; the runbook post-dates this row. SEF-04 stays No — never exercised in a drill.)* |
 | SEF-02 | Are IR roles assigned? | Yes | Owner (harshil) + AI agent (Claude) as documented in RULESAd.md. |
 | SEF-03 | Is incident detection automated? | Yes | Sentry error tracking + login forensics suspicious flags. |
 | SEF-04 | Are IR exercises performed? | No | Not yet. Follow-up. |
@@ -192,7 +192,7 @@ CSA-canonical column headers.
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | TVM-01 | Are vulnerabilities scanned? | Yes | Weekly `npm audit`, Supabase advisor MCP, `rules_check.py`. |
-| TVM-02 | Are patches applied timely? | Yes | Latest audit-fix pass 2026-07-08 (15 → 3 low-severity residual). |
+| TVM-02 | Are patches applied timely? | Yes | `audit_gate.py` blocking in CI and weekly; Dependabot monthly groups; 6 documented high/critical exceptions with an expiry, 0 unexcepted on 2026-09-14 (`MAINTENANCE.md` C-14). |
 | TVM-03 | Are pen tests performed? | No | Follow-up — external engagement not yet budgeted. |
 | TVM-04 | Are secure defaults used? | Yes | Fail-closed API deny; SameSite=Strict cookies; nonce-based CSP. |
 
@@ -213,4 +213,4 @@ CSA-canonical column headers.
 - [ ] Once approved (typically <2 weeks), our listing appears at
       `https://cloudsecurityalliance.org/star/registry/madagascar-hotel`.
 
-*Refreshed 2026-07-08 post-compliance-wave.*
+*Refreshed 2026-07-08 post-compliance-wave; rows re-verified against the repo on 2026-09-14 (twelve corrections, each marked inline; vendor attestations, DPAs and GitHub settings were not re-checked).*

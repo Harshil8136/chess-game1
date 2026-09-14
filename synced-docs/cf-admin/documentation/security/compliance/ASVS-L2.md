@@ -3,7 +3,7 @@
 title: "OWASP ASVS v4.0.3 Level 2 Verification Matrix"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [../SECURITY.md, CSA-CAIQ-v4.md, SOC2-TSC-mapping.md, ../../../RULESAd.md]
@@ -56,8 +56,8 @@ tags: [compliance, owasp, asvs, self-attestation]
 
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
-| 1.1.1 | Secure SDLC in place | ✅ | `.github/workflows/*` (docs-quality, security, production-tests, sync-docs), `documentation/security/reviews/` (dated deep reviews), `MAINTENANCE.md` live backlog. |
-| 1.1.2 | Threat model documented | ✅ | `documentation/2026-07-05-comprehensive-codebase-and-system-review.md` (multi-benchmark scorecard), `documentation/security/reviews/2026-06-13-security-review.md`. |
+| 1.1.1 | Secure SDLC in place | ✅ | `.github/workflows/*` (quality — typecheck, ratchet/ESLint, gate self-tests, vitest, build, CycloneDX SBOM, blocking a11y; security; docs-quality; production-tests; sync-docs), `documentation/security/reviews/` (dated deep reviews), `MAINTENANCE.md` live backlog. |
+| 1.1.2 | Threat model documented | ✅ | `documentation/security/THREAT-MODEL.md` (STRIDE); background in `documentation/2026-07-05-comprehensive-codebase-and-system-review.md` and `documentation/security/reviews/2026-06-13-security-review.md`. |
 | 1.1.3 | User stories capture security features | 🟡 | Feature docs in `documentation/features/` capture RBAC + audit expectations. |
 | 1.1.4 | High-level architecture defined | ✅ | `documentation/architecture/ARCHITECTURE.md`, `documentation/architecture/plac-and-audit.md`. |
 | 1.2.1 | Unique low-privilege service accounts | ✅ | `SUPABASE_SERVICE_ROLE_KEY` used only in cf-admin; `anon` role revoked from all tables (RULESAd §9.1). |
@@ -68,7 +68,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 1.5.1–1.5.4 | Input/output validation architecture | ✅ | Zod schemas at every API boundary; `src/lib/email/sanitize-html.ts` for output-side HTML. |
 | 1.6.1–1.6.4 | Crypto architecture | ✅ | Web Crypto only (`crypto.subtle.digest`); enforced by SEC-10. |
 | 1.7.1–1.7.2 | Errors, logging, audit architecture | ✅ | Ghost Audit Engine (`documentation/architecture/plac-and-audit.md`); Sentry error tracking; login forensics table. |
-| 1.8.1–1.8.2 | Data protection architecture | ✅ | KV for sessions (1h TTL), Supabase RLS (SEC-09), R2 for CMS assets, IP hashing (`hashIp` in `src/pages/api/emails/send.ts`). |
+| 1.8.1–1.8.2 | Data protection architecture | ✅ | KV for sessions (24 h lifetime — `SESSION_MAX_LIFETIME_MS`, 30-min role recheck), Supabase RLS (SEC-09), R2 for CMS assets, IP hashing (`hashIp` in `src/lib/audit-helpers.ts`). |
 | 1.9.1–1.9.2 | Communications architecture | ✅ | HTTPS-only, HSTS `max-age=63072000; includeSubDomains; preload` — set in `src/lib/security/csp.ts:78`, documented in `security/SECURITY.md` §4. TLS enforced by Cloudflare edge. |
 | 1.10.1 | Source code control | ✅ | GitHub + branch policy in `RULESAd.md` §12. |
 | 1.11.1–1.11.2 | Business-logic architecture | ✅ | Documented in feature docs + `plac-and-audit.md`. |
@@ -113,7 +113,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 4.1.1 | Trusted enforcement points | ✅ | `src/middleware.ts` centralizes gate; SEC-06 enforces per-handler. |
 | 4.1.2 | Every user attribute is authoritative-source-checked | ✅ | Role re-checked from Supabase every 30 min; PLAC recomputed on session start. |
 | 4.1.3 | Least-privilege principle | ✅ | Role hierarchy — canonical `vendor_support > owner > admin > manager > staff > viewer` (stored as `dev`/`owner`/`super_admin`/`admin`/`staff`); `isAdmin()` helper enforced by SEC-04. |
-| 4.1.4 | Deny by default | ✅ | `hasAccess = false` for unmapped API routes (`src/middleware.ts:549`); enforced by SEC-07. |
+| 4.1.4 | Deny by default | ✅ | `hasAccess = false` for unmapped API routes (`src/lib/auth/stages/decide.ts`); enforced by SEC-07. |
 | 4.1.5 | Access control failures produce audit event | ✅ | Ghost Audit logs 403s via `waitUntil`. |
 | 4.2.1 | Sensitive data checks at access | ✅ | PLAC per-page + per-fragment (`#revoke`, `#flush`, `#export`). |
 | 4.2.2 | CSRF-defended state-changing ops | ✅ | `src/lib/csrf.ts::validateCsrf()` on all mutation methods; enforced globally in middleware. |
@@ -125,7 +125,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 |----|---------|--------|----------|
 | 5.1.1–5.1.5 | Input validation | ✅ | Zod schemas on every API request body. |
 | 5.2.1 | HTML sanitization on operator-authored HTML | ✅ | `src/lib/email/sanitize-html.ts` (HTMLRewriter-based); called from `src/pages/api/emails/send.ts` + client `RichEditor.tsx`. |
-| 5.2.6 | dangerouslySetInnerHTML only receives sanitized/escaped input | ✅ | Enforced by SEC-08; sole exception is `src/components/admin/logs/shared.tsx` (already-escaped syntax highlighting via `escapeHtml`). |
+| 5.2.6 | dangerouslySetInnerHTML only receives sanitized/escaped input | ✅ | Enforced by SEC-08; three exemptions in `scripts/rules_check.py`: `src/components/admin/logs/shared.tsx` (already-escaped syntax highlighting via `escapeHtml`), `BlogAiCopilotModal.tsx` and `TiptapRichEditor.tsx` (both through `sanitizeEmailHtmlClient`). |
 | 5.2.8 | Prevent XSS via templating | ✅ | Preact + Astro auto-escape by default. |
 | 5.3.1–5.3.4 | Output encoding + parameterized queries | ✅ | D1 + Supabase clients both parameterize; enforced by SEC-03 (no raw SQL from API handlers — DAL only). |
 | 5.4.1–5.4.3 | Memory-safe strings | ✅ | TypeScript strict mode; no Buffer manipulation without `TextEncoder`/`TextDecoder`. |
@@ -136,8 +136,8 @@ tags: [compliance, owasp, asvs, self-attestation]
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
 | 6.1.1–6.1.3 | Data classification | ✅ | Documented in `documentation/security/PRIVACY.md`. |
-| 6.2.1 | Approved crypto only | ✅ | Web Crypto (SubtleCrypto) — SHA-256 for IP hashing, RSA-256 for JWT verify. Enforced by SEC-10. |
-| 6.2.2 | Approved algorithms only | ✅ | SHA-256, RSA-PSS, HMAC-SHA256 — all NIST/IETF-approved. |
+| 6.2.1 | Approved crypto only | ✅ | Web Crypto (SubtleCrypto) — SHA-256 for IP hashing, RS256 (`RSASSA-PKCS1-v1_5`) for JWT verify. Enforced by SEC-10. |
+| 6.2.2 | Approved algorithms only | ✅ | SHA-256, RSASSA-PKCS1-v1_5 (RS256), HMAC-SHA256 — all NIST/IETF-approved. *(Corrected 2026-09-14: said RSA-PSS.)* |
 | 6.2.3 | Keys sourced from secure random | ✅ | `crypto.getRandomValues()` — used for CSP nonce, session IDs, tokens. |
 | 6.2.4 | Auto-key-rotation | 🟡 | Rotation via Supabase and Cloudflare dashboards; not fully automated. Accepted risk for admin-only app. |
 | 6.3.1–6.3.3 | Random values | ✅ | Web Crypto random. |
@@ -158,7 +158,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
 | 8.1.1–8.1.6 | Client data protection | ✅ | HttpOnly cookies; no localStorage secrets; auth token never sent to non-`/api/*` endpoints. |
-| 8.2.1–8.2.3 | Client-side data destruction | ✅ | Session-invalidation flow clears cookie + browser session storage. |
+| 8.2.1–8.2.3 | Client-side data destruction | ✅ | Session-invalidation flow clears the cookie server-side and `SessionWatchdog.tsx` removes `sb-*` `localStorage` keys; `sessionStorage` is not touched (nothing is stored there). |
 | 8.3.1–8.3.8 | Sensitive private data | ✅ | Consent records (`consent_records` in Supabase); privacy dashboard (`documentation/security/PRIVACY.md`). |
 
 ## V9 — Communications
@@ -172,7 +172,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
-| 10.1.1 | Malicious-code check on external deps | ✅ | `npm audit` on every push (`.github/workflows/security.yml`). Currently 3 low-severity Windows-only dev-server esbuild advisories accepted (documented). |
+| 10.1.1 | Malicious-code check on external deps | ✅ | `npm audit --omit=dev` → `scripts/audit_gate.py` on every push and weekly (`.github/workflows/security.yml`). As of 2026-09-14: 6 high/critical advisory groups documented in `.audit-exceptions.json` (js-yaml, sharp ×3, svgo ×2; expire 2026-11-30), 0 unexcepted — see `MAINTENANCE.md` C-14. |
 | 10.2.1–10.2.6 | Malicious-code inclusion | ✅ | No dynamic `import()` of untrusted URLs; CSP `script-src` allowlist. |
 | 10.3.1–10.3.3 | Deployed source integrity | ✅ | Wrangler deploys signed bundle; secret-scan CI blocks credential commits. |
 
@@ -206,9 +206,9 @@ tags: [compliance, owasp, asvs, self-attestation]
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
 | 14.1.1 | Build reproducible | ✅ | `package-lock.json` pinned; wrangler builds are deterministic. |
-| 14.1.2 | Deps clean | 🟡 | 3 low-severity dev-server-Windows-only advisories accepted (`npm audit --omit=dev`). |
+| 14.1.2 | Deps clean | 🟡 | 6 documented high/critical exceptions with an expiry (`.audit-exceptions.json`), 0 unexcepted; `audit_gate.py` fails the build on any new or expired one. *(Re-stated 2026-09-14; previously "3 low-severity".)* |
 | 14.1.3–14.1.5 | Build hardening | ✅ | TypeScript strict mode; no debug endpoints exposed in prod. |
-| 14.2.1 | Latest patched libraries | ✅ | Weekly `npm audit` cron; automatic Dependabot planned. |
+| 14.2.1 | Latest patched libraries | ✅ | Weekly `npm audit` cron; Dependabot enabled (`.github/dependabot.yml`, monthly npm + github-actions groups). |
 | 14.2.2 | Unused features removed | ✅ | Recent E-1/E-2/E-3 cleanup; `MAINTENANCE.md` tracks. |
 | 14.3.1–14.3.3 | Debug info hidden | ✅ | Sentry `sendDefaultPii: false`; `X-Powered-By` never set. |
 | 14.4.1 | Every response with security headers | ✅ | `securityHeaders` middleware applied globally. |
@@ -229,13 +229,15 @@ tags: [compliance, owasp, asvs, self-attestation]
 - **🟡 Partial / accepted-risk:** 8  (~7%)
   - ~~2.1.7 leaked-password protection~~ — reclassified **N/A** 2026-08-13 (no GoTrue passwords)
   - 6.2.4 automated key rotation
-  - 14.1.2 3 low-severity dev-server-only npm advisories
+  - 14.1.2 six documented, expiring high/critical npm advisories (0 unexcepted)
   - 14.4.3 residual `'unsafe-inline'` on `script-src` and `style-src`; `'strict-dynamic'` intentionally off (see C-3)
   - a small handful of partials in feature-doc coverage
 - **❌ Open gaps:** 0
 - **🚫 N/A:** ~6 (mobile/native controls)
 
 **Overall ASVS Level 2 self-attestation: ~91% verified (105/115), 8 partials, 0 hard gaps.**
+
+> *2026-09-14 note:* counted by table rows the sheet shows 91 ✅, 4 🟡 (1.1.3, 6.2.4, 14.1.2, 14.4.3), 4 🚫 and 4 N/A; the 105/115 and "8 partials" figures above count individual requirements inside ranged rows and were not re-derived. 3.7.1 is marked ✅ against a control (password change) that is N/A here — there is no password store (2.1.1).
 Residual partials are documented and tracked in `MAINTENANCE.md`.
 
 > **Provenance and how to quote this.** This assessment was produced by an AI
@@ -254,3 +256,9 @@ Residual partials are documented and tracked in `MAINTENANCE.md`.
 > qualifier.
 
 *Refreshed 2026-07-08 post-compliance-wave.*
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | Every row citing a file, header, middleware, script, workflow step or doc section: `csp.ts` (HSTS, nonce, allowlist, Report-Only, `frame-ancestors`), `middleware.ts` / `stages/decide.ts`, `session.ts` lifetimes and cookie flags, `csrf.ts`, `plac.ts`, `rbac.ts`, `sanitize-html.ts`, `ratelimit.ts` (live in 49 API files), `cloudflare-access.ts` algorithms, upload limits (`cms/storage.ts`, `attachments.ts`, `send.ts`), `sendDefaultPii`, service bindings, SEC-01…10 in `rules_check.py`, `security.yml` / `quality.yml` steps, `audit_gate.py` run, `.audit-exceptions.json`, `dependabot.yml`, `SessionWatchdog.tsx`, cross-referenced docs and sections. Eleven corrections above. | Cloudflare Zero Trust MFA / bot management / device posture; TLS versions on Supabase and Upstash; R2 checksums; key-rotation practice; GitHub branch policy |

@@ -3,7 +3,7 @@
 title: "Dashboard — Real-Data Command Center"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -15,6 +15,31 @@ tags: []
 
 **Last updated:** 2026-05-02 (v4.5: DashboardController is now props-free; uplot reference corrected)
 **Scope:** `cf-admin` project — Dashboard page and all supporting analytics infrastructure
+
+---
+
+## 0. What the dashboard renders today (verified 2026-09-14)
+
+The layout sections below (§"Current Dashboard Layout", §"Component Details", §"CSS Architecture",
+§"Dual-Axis Edge Analytics Chart", §"Verification Checklist") describe the **v4.5 build of
+2026-05-02** and are kept as history. They no longer match `src/components/dashboard/`. What
+`DashboardController.tsx` actually mounts (`client:only="preact"` from `src/pages/dashboard/index.astro`):
+
+| Layer | What is rendered | Source |
+|---|---|---|
+| Service Status Strip | **8** mini-cards: Network, D1, Google SEO, Security, Brevo, Sentry, Observability, Queues | `widgets/ServiceStatusStrip.tsx` |
+| KPI ribbon | 4 cards: Global Edge Traffic, GSC Validation Health, Supabase Postgres Pool, Brevo SMTP Quota | `DashboardController.tsx` |
+| Tabs | Overview · Google Search Console & Indexing · Edge Compute · Postgres Cluster · Services & Quotas | `DashboardController.tsx` |
+| Overview tab | ServiceStatusStrip → `GscValidationWidget` (fetches its own report) → ⅔ `WidgetEdgeCompute` + ⅓ `EventLedgerWidget` | `widgets/*.tsx` |
+| Edge Compute tab | `WidgetEdgeCompute` (`CloudflareWidgets.tsx`) — per-Worker cards | |
+| Postgres Cluster tab | `WidgetPostgresCluster` (`SupabaseWidgets.tsx`) with 4 tabs: Vitals, Engine I/O, Capacity, Auth | |
+| Services & Quotas tab | 2 cards: Brevo `{sent} / 9,000` and R2 objects / volume | |
+
+Not present any more: the setup banner, the Quick Actions row, the audit-log feed, the 6-cell
+quota grid, the Storage widget, the dual-axis chart (only a dead `.cf-uplot-theme` rule remains in
+`DashboardStyles.astro`), and `ResizeObserver`. The "12h auto-cron" badge on the GSC widget is a label
+derived from the `gsc-run-interval-hours` setting (default 12); the job itself rides the 5-minute
+cron tick and self-gates — see `SEARCH-CONSOLE-SYNC.md` §11.
 
 ---
 
@@ -33,7 +58,7 @@ The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero
 
 ### After
 
-- **ServiceStatusStrip** (replaced SystemHealthBar) displays 6 live services (Network, D1, Security, Brevo, Sentry, Queues) using real telemetry data
+- **ServiceStatusStrip** (replaced SystemHealthBar) displays live services using real telemetry data (6 at the time; 8 today — see §0)
 - **8 parallel analytics providers** via parallel settlement (never crashes if one fails)
 - **`_unconfigured` flag pattern** on every provider — UI shows `—` / "Setup Required" instead of zeros when token is missing
 - **Dismissible setup banner** when API token is not configured
@@ -42,7 +67,7 @@ The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero
 
 ---
 
-## Current Dashboard Layout (Top → Bottom)
+## Current Dashboard Layout (Top → Bottom) — *historical, v4.5 (2026-05-02); see §0 for today*
 
 The dashboard is composed of the following visual rows, from top to bottom:
 
@@ -105,7 +130,7 @@ Both providers now also check for GraphQL errors before attempting to read data.
 
 ---
 
-## Component Details
+## Component Details — *historical, v4.5; the widgets below were replaced (see §0)*
 
 ### Workers Widget
 
@@ -181,7 +206,7 @@ The main orchestrator Preact island (`DashboardController.tsx`) is **props-free*
 
 ---
 
-## CSS Architecture
+## CSS Architecture — *historical; the layout classes remain in `DashboardStyles.astro` but the widgets they styled are gone*
 
 ### Layout Classes
 
@@ -238,17 +263,17 @@ After every Cloudflare GraphQL response, the code checks for errors before readi
 
 ### Component Isolation
 
-Each widget is a standalone Preact component receiving analytics data and loading state props. No widget fetches its own data. All data flows from the dashboard controller after a single API call. This keeps state in one place and makes skeleton loading states trivial.
+Each widget is a standalone Preact component receiving analytics data and loading state props. One exception since the GSC work: `GscValidationWidget` fetches its own validation report. All data flows from the dashboard controller after a single API call. This keeps state in one place and makes skeleton loading states trivial.
 
 ### Active App Users Source
 
-Active users count is fetched client-side as part of the analytics API call (Phase 4 Item 8 removed the SSR D1 query). `index.astro` no longer performs any database queries — `DashboardController` is mounted with `client:load` and receives zero props.
+Active users count is fetched client-side as part of the analytics API call (Phase 4 Item 8 removed the SSR D1 query). `index.astro` no longer performs any database queries — `DashboardController` is mounted with `client:only="preact"` and receives zero props.
 
 ### No New Dependencies
 
 The entire overhaul uses only existing approved dependencies: CSS for quota bars and progress animations, native `fetch` for all API calls, and the Dual-Axis chart is implemented with pure SVG/Canvas — no third-party chart library (`uplot` is **not** in `package.json` and is not used).
 
-### Dual-Axis Edge Analytics Chart
+### Dual-Axis Edge Analytics Chart — *historical; no chart component exists in `src/components/dashboard/widgets/` today*
 
 - Upgraded to a highly dense **Dual-Axis Chart**.
 - **Left Axis**: Total Requests (Cyan) and Cached Requests (Deep Blue) for Cache Hit metrics visualization.
@@ -261,7 +286,7 @@ The entire overhaul uses only existing approved dependencies: CSS for quota bars
 
 ---
 
-## Verification Checklist
+## Verification Checklist — *historical (v4.5 widget names)*
 
 After adding environment tokens and restarting the dev server:
 
@@ -300,3 +325,9 @@ After adding environment tokens and restarting the dev server:
 4. **Workers script name matching** — The analytics API returns all scripts on the account. The provider filters client-side to known script names. If a worker is renamed in the Cloudflare dashboard, update the script list in the provider configuration.
 
 5. **Supabase Prometheus endpoint** — The privileged metrics endpoint is a non-public API. It provides 20+ crucial infrastructure metrics, but since it's in early beta/internal use, Supabase could change or restrict it without notice. String parsing logic must fail safely.
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | `DashboardController.tsx`, every file under `src/components/dashboard/widgets/`, `src/pages/dashboard/index.astro`, the provider layer (`src/lib/analytics/providers/*` — 8 providers, `Promise.allSettled`, `_unconfigured`, snake-case GraphQL filters, `WORKER_SCRIPTS`), `wrangler.toml` crons, `package.json` (no `uplot`). §0 added; five sections marked historical; three line corrections. The provider-architecture, bug-history, configuration and known-limitations sections were re-read and hold. | API-token permission scopes; D1 Analytics lag; Supabase Prometheus endpoint stability |

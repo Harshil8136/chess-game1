@@ -3,7 +3,7 @@
 title: "Chatbot Integration & AI Infrastructure — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -14,7 +14,7 @@ tags: []
 > **TL;DR (non-technical):** How the customer-facing AI chatbot is configured and monitored from the admin portal — which AI models it uses, and how its analytics and conversations are surfaced.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-04-23 (Workers AI primary migration)
+> **Last Updated:** 2026-04-23 (Workers AI primary migration); corrections 2026-08-31 and 2026-09-14 (see §12)
 > **RLS Policy:** All chatbot tables (`chat_analytics`, `contacts`, `conversations`, `messages`) locked to `service_role` only. See [SECURITY.md](../security/SECURITY.md).
 
 ---
@@ -29,7 +29,7 @@ Every request through the proxy:
 
 1. Blocks unauthenticated requests (session check)
 2. Validates user RBAC clearance against required role
-3. Appends `CHATBOT_ADMIN_API_KEY` to securely handshake with `cf-chatbot`
+3. Calls `cf-chatbot` over the `CHATBOT_SERVICE` service binding first (adding `X-Internal-Service-Auth`), falling back to HTTP against `CHATBOT_WORKER_URL`; `CHATBOT_ADMIN_API_KEY` is appended only when it is configured (`src/lib/chatbot-proxy.ts`). *Corrected 2026-09-14.*
 
 ### Required Secrets (both Workers)
 
@@ -50,7 +50,7 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 **Custom hook:** `src/components/admin/chatbot/hooks/useChatbotApi.ts`
 
 - `useChatbotApi('analytics')` — fetches data on mount
-- `mutate(path, method, body)` — fires POST/PUT/DELETE; calls `refetch()` on success.
+- `mutate(path, method, body)` — fires POST/PUT/DELETE and returns the parsed body (throws on error); callers call `refetch()` themselves. *Corrected 2026-09-14 — this said `mutate` refetches.*
   (Documented here as `mutate(method, path, body)` until 2026-08-31 — the first
   two arguments were reversed, which is exactly the kind of error a reader
   copies straight into a bug.)
@@ -59,13 +59,14 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 | Component | File | Purpose |
 |-----------|------|---------|
 | **AnalyticsDashboard** | `AnalyticsDashboard.tsx` | AI Command Center (`/dashboard/chatbot/analytics`), served by `/api/chatbot/analytics/command-center` and `/analytics/kb-clusters` |
-| **BotConfig** | `BotConfig.tsx` | AI hyperparameters (`temperature`, `max_history_turns`), model dropdowns, fallback messages |
+| **BotConfig** | `BotConfig.tsx` (+ `BotConfigShared.tsx`, `BotConfigThinkingSection.tsx`) | AI hyperparameters (`ai_temperature`, `max_history_turns`), model dropdowns, fallback messages |
 | **ModelsCatalog** | `ModelsCatalog.tsx` | Authorized model grid with Set Primary / Set Fallback actions |
 | **KnowledgeBase** | `KnowledgeBase.tsx` | CRUD for KB entries across `content_en` / `content_es` |
-| **[SUPABASE_PROJECT_REF]** | `[SUPABASE_PROJECT_REF].tsx` | End-to-end session viewer, deep context retrieval, cron session sweeping |
+| **[SUPABASE_PROJECT_REF]** | `[SUPABASE_PROJECT_REF].tsx` | Channel/status filters, paginated conversation table, message-thread modal with per-message AI metadata, status / takeover / release-to-AI / send-message actions. *2026-09-14: this row claimed "cron session sweeping"; no such feature exists in cf-admin.* |
 | **PromptsEditor** | `PromptsEditor.tsx` | System prompt management |
 | **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking |
 | **ChatbotDashboard** | `ChatbotDashboard.tsx` | Overview page (`/dashboard/chatbot/dashboard`), served by the bare `/api/chatbot/analytics` |
+| **ChatbotSubnav** | `ChatbotSubnav.tsx` | The "AI Models" / hub sub-navigation |
 
 All panels maintain the **Midnight Slate** aesthetic per standard cf-admin rules.
 
@@ -174,7 +175,7 @@ Model selection is driven entirely by the `provider` column in the D1 `model_reg
 
 ### How to Swap Models
 
-1. **Admin UI:** Chatbot Hub → Models → "Set Primary" or "Set Fallback" on any card
+1. **Admin UI:** Chatbot → "AI Models" sub-nav → "Set Primary" or "Set Fallback" on any card
 2. **Admin API:** `POST /api/chatbot/models/switch` with `{"role": "primary", "model_id": "..."}`
 3. **Direct D1:** `UPDATE bot_config SET primary_model_id = '<model_id>' WHERE id = 1`
 
@@ -272,3 +273,9 @@ Analytics shifted from tracking raw technical metrics to tracking **customer out
 - ❌ Get Anthropic-quality for free via Cloudflare
 - ❌ Use AI Gateway to bypass Anthropic billing — it's a proxy, not a credit substitute
 - ❌ Use Gemini 3.1 Pro on free tier — paid-only
+
+## 12. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | Proxy route `src/pages/api/chatbot/[...path].ts` (session check, per-pattern RBAC floor, path-traversal rejection, ghost audit); `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` in `wrangler.toml` and `worker-configuration.d.ts`; the `CHATBOT_SERVICE` binding; every component file in §3 on disk (three were missing from the table and are now listed); the hook signatures in `useChatbotApi.ts`; the analytics endpoints each island calls; `POST models/switch` payload; `content_en` / `content_es` in `KnowledgeBase.tsx`; the knowledge-gaps empty state; no clustering cron in `wrangler.toml` (two triggers) and no writer of `cluster_topic` / `feedback_events` in either checkout. Seven corrections above. | Everything inside `cf-chatbot` (not on disk here): pipeline files, `thinking_param`, `model_registry` / `bot_config` tables, migration history, Supabase RPCs, `/admin/analytics/*` routes; Workers AI neuron pricing (§4–6, §10); live RLS state |

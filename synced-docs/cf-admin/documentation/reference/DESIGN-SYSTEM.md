@@ -3,7 +3,7 @@
 title: "Design System — 'Midnight Slate'"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -14,7 +14,8 @@ tags: []
 > **TL;DR (non-technical):** The visual design system ("Midnight Slate") — the colors, surfaces, spacing, and component patterns that keep the admin UI consistent.
 
 > **Status:** Production Active
-> **Last Updated:** 2026-05-25 (v4.6: theme default changed to hardcoded dark; OS detection removed)
+> **Last Updated:** 2026-05-25 (v4.6: theme default changed to hardcoded dark; OS detection removed)  
+> **Re-verified:** 2026-09-14 — token values in §2 corrected to the shipped `themes/*.css`; sections that describe patterns the code never adopted are marked **target, not implemented** (see §11)
 > **Codename:** Project Midnight Blue
 
 ---
@@ -80,12 +81,12 @@ bg     surface  raised  overlay  elevated
 ```
 
 ```css
-/* Dark */
---theme-bg:               #09090b;
---theme-surface:          #121214;
---theme-surface-raised:   #18191c;
---theme-surface-overlay:  #212226;
---theme-surface-elevated: #2b2d31;
+/* Dark (src/styles/themes/dark.css, 2026-09-14) */
+--theme-bg:               #080e1a;
+--theme-surface:          #0f172a;
+--theme-surface-raised:   #1e293b;
+--theme-surface-overlay:  #2d3a4f;
+--theme-surface-elevated: #3c4b63;
 
 /* Light */
 --theme-bg:               #F8FAFC;
@@ -98,11 +99,13 @@ bg     surface  raised  overlay  elevated
 ### 2.3 Text Hierarchy
 
 ```css
-/* Dark (contrast on #121214) */
---theme-text-primary:   #ffffff;    /* 17.1:1 — AAA */
---theme-text-secondary: #a1a1aa;    /*  7.2:1 — AAA */
---theme-text-tertiary:  #8a8a93;    /*  5.3:1 — AA  */
---theme-text-muted:     #71717a;    /*  4.0:1 — AA large only */
+/* Dark (dark.css, 2026-09-14 — the ratios below were computed for the old
+   #121214 / zinc palette and have NOT been re-measured for the slate palette;
+   see ACCESSIBILITY.md §4) */
+--theme-text-primary:   #ffffff;
+--theme-text-secondary: #cbd5e1;    /* slate-300 */
+--theme-text-tertiary:  #94a3b8;    /* slate-400 */
+--theme-text-muted:     #64748b;    /* slate-500 */
 ```
 
 > **Rule:** `--text-muted` for large text (≥14px bold or ≥18px) only — never for essential information.
@@ -110,20 +113,21 @@ bg     surface  raised  overlay  elevated
 ### 2.4 Border System
 
 ```css
-/* Dark */
---theme-border-subtle:  rgba(255, 255, 255, 0.05);
---theme-border-default: rgba(255, 255, 255, 0.12);
---theme-border-strong:  rgba(255, 255, 255, 0.20);
---theme-border-accent:  rgba(59, 130, 246, 0.40);
+/* Dark (dark.css, 2026-09-14) */
+--theme-border-subtle:  rgba(148, 163, 184, 0.05);
+--theme-border-default: rgba(148, 163, 184, 0.10);
+--theme-border-strong:  rgba(148, 163, 184, 0.20);
+--theme-border-accent:  rgba(59, 130, 246, 0.45);
 ```
 
 ### 2.5 Glassmorphism Tokens
 
 ```css
-/* Dark */
---theme-glass:         rgba(18, 18, 20, 0.7);
---theme-glass-strong:  rgba(24, 25, 28, 0.85);
---theme-glass-border:  rgba(255, 255, 255, 0.08);
+/* Dark (dark.css, 2026-09-14) */
+--theme-glass:         rgba(8, 14, 26, 0.70);
+--theme-glass-strong:  rgba(15, 23, 42, 0.88);
+--theme-glass-border:  rgba(148, 163, 184, 0.08);
+--theme-glass-hover:   rgba(30, 41, 59, 0.80);
 --theme-glass-inner:   inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 ```
 
@@ -132,7 +136,9 @@ bg     surface  raised  overlay  elevated
 Section colors identify sidebar sections — NOT used for interactive elements (buttons, links, focus rings always use `--theme-accent`).
 
 ```css
---theme-violet:  #b794f4;   /* Admin, Users, Roles */
+--theme-violet:  #b794f4;   /* Admin, Users, Roles — 2026-09-14: this line had been mis-typed as a second
+                               `--theme-emerald` in both theme files, so `--theme-violet` (used by
+                               `src/lib/bookings/constants.ts`) resolved to nothing; fixed that day */
 --theme-cyan:    #22d3ee;   /* Dashboard, Analytics */
 --theme-amber:   #f6ad55;   /* Reports, Billing */
 --theme-emerald: #4ade80;   /* CMS, Content */
@@ -155,21 +161,23 @@ Applied via `data-section` attribute; children consume `var(--section-color)` et
 ### 2.8 RBAC Role Badge Colors
 
 ```css
+/* global.css, 2026-09-14 — only these four exist; there is no --color-role-owner.
+   Runtime role badges use the .role-badge--{vendor_support|owner|admin|manager|staff|viewer|suspended}
+   classes in global.css instead. */
 --color-role-dev:        var(--theme-red);       /* Red */
---color-role-owner:      var(--theme-emerald);   /* Emerald */
 --color-role-superadmin: var(--theme-amber);     /* Amber */
---color-role-admin:      var(--theme-violet);    /* Violet */
+--color-role-admin:      var(--theme-emerald);   /* Emerald (not violet) */
 --color-role-staff:      var(--theme-blue);      /* Blue */
 ```
 
 ### 2.9 Typography
 
 ```css
---font-family-sans: 'Inter', -apple-system, system-ui, sans-serif;
---font-family-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+--font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+--font-family-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 ```
 
-**Type scale:** `display` (32px/800) → `headline` (24px/700) → `title` (18px/650) → `subtitle` (15px/600) → `body` (14px/400) → `body-sm` (13px/400) → `caption` (12px/500) → `micro` (11px/600) → `mono-data` (14px/500, JetBrains)
+**Type scale (target — no such tokens or classes exist in the code as of 2026-09-14; sizes are applied per component with Tailwind utilities):** `display` (32px/800) → `headline` (24px/700) → `title` (18px/650) → `subtitle` (15px/600) → `body` (14px/400) → `body-sm` (13px/400) → `caption` (12px/500) → `micro` (11px/600) → `mono-data` (14px/500, JetBrains)
 
 ### 2.10 Component Badge Color Tokens
 
@@ -203,13 +211,13 @@ A full set of semantic badge color tokens for status badges across the admin UI.
 --color-badge-red-bg:         rgba(248, 113, 113, 0.15);
 --color-badge-red-border:     rgba(248, 113, 113, 0.3);
 
-/* Purple — hotel service, special states */
---color-badge-purple:         #c084fc;
---color-badge-purple-bg:      rgba(192, 132, 252, 0.15);
---color-badge-purple-border:  rgba(192, 132, 252, 0.3);
+/* Purple values, but the token is named "teal" in dark.css (2026-09-14) */
+--color-badge-teal:           #c084fc;
+--color-badge-teal-bg:        rgba(192, 132, 252, 0.15);
+--color-badge-teal-border:    rgba(192, 132, 252, 0.3);
 ```
 
-**Usage:** In `src/styles/components/chatbot/buttons-badges.css`, all `.chatbot-badge-*` selectors now reference these variables. No raw hex values in component CSS.
+**Usage:** In `src/styles/components/chatbot/buttons-badges.css`, the `.chatbot-badge-*` selectors reference these variables, except `.chatbot-badge-primary`, `-fallback` and `-thinking`, which still carry raw `#60a5fa` / `#fbbf24` / `#c084fc` and `rgba()` literals (2026-09-14).
 
 **Rule:** When adding a new badge color, add the three-variant token group here first, then reference `var(--color-badge-*)` in component CSS. Never write raw hex values for badge colors.
 
@@ -226,10 +234,9 @@ A full set of semantic badge color tokens for status badges across the admin UI.
 --radius-sm: 6px;   --radius-md: 10px;  --radius-lg: 14px;
 --radius-xl: 20px;  --radius-2xl: 24px; --radius-full: 9999px;
 
-/* Motion */
---duration-fast: 120ms;  --duration-normal: 200ms;  --duration-slow: 350ms;
+/* Motion (global.css, 2026-09-14 — these are the only motion tokens defined) */
+--duration-[120ms]: 120ms;  --duration-[200ms]: 200ms;  --duration-[350ms]: 350ms;
 --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
---ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
 ```
 
 ---
@@ -255,20 +262,19 @@ src/styles/
 │   └── light.css           ← :root[data-theme="light"] tokens
 ├── sections.css            ← data-section attribute color resolution
 ├── utilities.css           ← Custom utility classes (.sr-only, etc.)
-├── components/             ← Component-scoped CSS modules
-│   ├── bento.css, stat-card.css, health-bar.css, button.css
-│   ├── badge.css, input.css, table.css, toast.css, modal.css
-│   ├── command-palette.css, activity-feed.css ...
+├── bookings.css            ← Bookings dashboard styles
+├── components/             ← Component-scoped CSS (2026-09-14 listing)
+│   ├── blog-studio.css, cms-module-panel.css, seo-patterns.css
 │   └── chatbot/
-│       ├── buttons-badges.css   ← .chatbot-badge-* (uses --color-badge-* vars; no raw hex)
-│       ├── stats.css            ← .ad-* analytics dashboard classes (20+ extracted from AnalyticsDashboard.tsx)
-│       └── [other chatbot css files]
+│       ├── buttons-badges.css   ← .chatbot-badge-* (mostly --color-badge-* vars; three raw-hex selectors remain)
+│       ├── stats.css            ← .ad-* analytics dashboard classes (extracted from AnalyticsDashboard.tsx)
+│       └── cards, forms, layout, messages, modal-toast, tables, utilities .css
 └── pages/                  ← Page-level overrides
-    ├── dashboard.css, chatbot.css, audit.css
-    └── login-forensics.css
+    ├── audit.css, diagnostics.css
+    └── privacy-dashboard.css, session-registry.css
 ```
 
-Component and page CSS are **NOT** imported in `global.css`. Each component/page imports its own CSS — Astro handles per-route code splitting automatically. This reduces per-page CSS payload by 67–86% vs the previous monolithic approach.
+Component and page CSS are **NOT** imported in `global.css` (one exception: `blog-studio.css`). Each component/page imports its own CSS — Astro handles per-route code splitting automatically. This reduces per-page CSS payload by 67–86% vs the previous monolithic approach.
 
 **Note on widget shared utilities:** The canonical shared widget file is `src/components/dashboard/widgets/WidgetShared.tsx`. The former `WidgetSharedV2.tsx` was merged into it and deleted (Phase 3B). All imports must reference `WidgetShared`, never `WidgetSharedV2`.
 
@@ -287,7 +293,7 @@ Component and page CSS are **NOT** imported in `global.css`. Each component/page
 
 ### 4.2 Zero-FOWT SSR Integration
 
-`data-theme` lives on `<html>` (the `:root`). A blocking `<script is:inline>` in `<head>` (`theme-init.js`) reads the cookie and, if no cookie exists, defaults to dark. It no longer checks `prefers-color-scheme`. The attribute is set synchronously before paint — ~200 bytes, negligible blocking cost.
+`data-theme` lives on `<html>` (the `:root`). A blocking `<script is:inline src="/scripts/theme-init.js">` in `<head>` (an external 511-byte file, not inline script text — it carries the CSP nonce) reads the cookie and, if no cookie exists, defaults to dark. It does not check `prefers-color-scheme`; the one place that still does is the `system` option in `UserSettingsPanel.tsx`, which clears the cookie and reads `matchMedia` once (and `admin_user_settings.theme` defaults to `'system'`). The attribute is set synchronously before paint.
 
 ```css
 /* dark.css */
@@ -299,7 +305,7 @@ Component and page CSS are **NOT** imported in `global.css`. Each component/page
 
 ### 4.3 ThemeToggle Component
 
-Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `TopBar`). On toggle: updates `document.documentElement.dataset.theme` immediately, sets `cf_admin_theme` cookie (1 year, SameSite=Lax), dispatches `CustomEvent('theme-change')` for canvas-based components (uPlot charts) that need explicit re-rendering. The OS preference `matchMedia` listener was removed — the component no longer reacts to system-level theme changes.
+Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `TopBar`). On toggle: updates `document.documentElement.dataset.theme` immediately, sets `cf_admin_theme` cookie (1 year, SameSite=Strict), POSTs the choice to `/api/settings/user` so it persists in D1, and dispatches `CustomEvent('theme-change')` for components that re-render on theme. The OS preference `matchMedia` listener was removed — the component no longer reacts to system-level theme changes.
 
 ---
 
@@ -311,7 +317,7 @@ Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `
 
 ```
 ┌──────────────────────────────────────────┐
-│  TopBar (sticky, z-40, 60px, glass)      │
+│  TopBar (sticky, z-30, 52px, glass)      │
 ├──────┬───────────────────────────────────┤
 │      │                                   │
 │ Side │  <main id="main-content">         │
@@ -320,7 +326,7 @@ Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `
 └──────┴───────────────────────────────────┘
 ```
 
-`.admin-content-area` uses `margin-left: var(--sidebar-width)` with a 200ms transition.
+`.admin-content-area` sits in a flex row with `margin-left: 0 !important` (`AdminLayout.css`); there is no `--sidebar-width` token. *(Corrected 2026-09-14.)*
 
 ### Per-Page Strategies
 
@@ -336,12 +342,11 @@ Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `
 
 | State | Width | Trigger |
 |-------|-------|---------|
-| Collapsed (default) | 72px | Page load |
-| Expanded | 240px | Hover |
-| Pinned | 240px | Click pin (saved to `cf_admin_sidebar_collapsed` cookie) |
+| Expanded (default when the cookie is absent) | 280px | Page load |
+| Collapsed | 72px | Click pin (saved to `cf_admin_sidebar_collapsed` cookie); hover re-expands to 280px, 300 ms |
 | Hidden | 0 | < 1024px breakpoint |
 
-### Login Portal — "Midnight Slate"
+### Login Portal — "Midnight Slate" *(historical — there is no login page; Cloudflare Access hosts login and `src/pages/index.astro` is the access-denied / dev gate. The orbs + `feTurbulence` noise live in `AdminLayout.css` at `opacity: 0.03`)*
 
 Single-column centered card on `#09090b` background with three ambient gradient orbs (Cyan, Slate, Deep Blue at 0.06–0.12 opacity) + SVG `feTurbulence` noise texture at `opacity-[0.015]`.
 
@@ -364,12 +369,12 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 ### 6.1 Motion Tokens
 
 ```css
---duration-fast:   120ms;  /* hover, focus rings */
---duration-normal: 200ms;  /* panel reveals, tab switches */
---duration-slow:   350ms;  /* page transitions, drawer slides */
---ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);   /* emphasis */
---ease-out:        cubic-bezier(0.16, 1, 0.3, 1);        /* appearing */
---ease-in:         cubic-bezier(0.55, 0, 1, 0.45);       /* leaving */
+/* Defined (global.css): */
+--duration-[120ms]: 120ms;  /* hover, focus rings */
+--duration-[200ms]: 200ms;  /* panel reveals, tab switches */
+--duration-[350ms]: 350ms;  /* page transitions, drawer slides */
+--ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);   /* emphasis */
+/* Target only — never defined (2026-09-14): --duration-fast/normal/slow, --ease-out, --ease-in */
 ```
 
 ### 6.2 Truthful Animations
@@ -379,7 +384,7 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 - **Quota bars** animate width to real usage percentage; color changes at warning/critical thresholds
 - **Activity feed** new items slide in from top with `slideInFromTop` + spring easing
 
-### 6.3 Standard Patterns
+### 6.3 Standard Patterns *(target — `useAnimatedCounter`, `slideInFromTop`, `.bento-card:nth-child` stagger and `.skeleton` do not exist in the code as of 2026-09-14; only `fadeIn` in `utilities.css` does)*
 
 ```css
 /* Fade-in for content loads */
@@ -409,11 +414,9 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
-  .admin-ambient-orb { display: none; }
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
-    animation: none !important;
-  }
 }
+/* 2026-09-14: the shipped block in utilities.css ends here — it only zeroes durations.
+   Hiding the orbs (.admin-orb in AdminLayout.css) and the view-transition rules are target, not implemented. */
 ```
 
 **Performance rules:** Animate only `transform`/`opacity` — never layout properties. `will-change: transform` only on actively animating orbs. Nothing over 500ms.
@@ -422,7 +425,7 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 
 ## 7. Accessibility (WCAG 2.2 AA)
 
-### 7.1 Verified Contrast Ratios (Dark Theme)
+### 7.1 Contrast Ratios (Dark Theme) — *measured against the retired #121214 / zinc palette; not re-measured for the current slate tokens (ACCESSIBILITY.md §4)*
 
 | Token Pair | Contrast | Level |
 |------------|----------|-------|
@@ -433,7 +436,7 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 | `--success` (#4ade80) on `--surface` | 8.5:1 | AAA |
 | `--danger` (#f87171) on `--surface` | 5.6:1 | AA |
 
-### 7.2 Landmark Structure
+### 7.2 Landmark Structure *(2026-09-14: `<div role="banner">` wraps the TopBar, not `<header class="topbar">`; there is no Breadcrumb `<nav>`; the toast region has `aria-live="polite"` but no `role="status"` / `aria-label`. The skip link, `<nav aria-label="Main navigation">` and `<main id="main-content">` are as described)*
 
 ```html
 <a href="#main-content" class="skip-nav">Skip to main content</a>
@@ -445,7 +448,7 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 <div role="status" aria-live="polite" aria-label="Notifications">...</div>
 ```
 
-### 7.3 Keyboard Shortcuts
+### 7.3 Keyboard Shortcuts *(Ctrl/Cmd+K, Escape and arrow keys in the palette verified 2026-09-14; there is no `useFocusTrap` hook — native `<dialog>` supplies the trap)*
 
 | Key | Action |
 |-----|--------|
@@ -480,7 +483,7 @@ Focus trapping required for modals and command palette via `useFocusTrap` hook.
 | 768–1023px | Hidden + hamburger overlay | 1-col stack | Scroll |
 | <768px | Full-screen overlay | 1-col stack | Card layout |
 
-### 8.2 Container Queries
+### 8.2 Container Queries *(target — no `@container` / `container-type` in any stylesheet as of 2026-09-14)*
 
 Used for components that adapt to their container width (bento cards) rather than viewport width:
 
@@ -510,7 +513,7 @@ Used for components that adapt to their container width (bento cards) rather tha
 
 ---
 
-## 9. Component Patterns
+## 9. Component Patterns *(target vocabulary — see §11: as of 2026-09-14 the code has no `.btn` base / `.btn--sm` / `.badge--*` / `.input--error` / `.cell-mono` / `.toast--*` / `modalEnter`; `.bento-card` lives in `DashboardStyles.astro` without the `--full/--compact/--interactive` modifiers; `.data-table__*` in `global.css` does use BEM `__`)*
 
 ### 9.1 Naming Convention
 
@@ -581,3 +584,9 @@ Base `.btn` minimum height: 36px. Sizes: `.btn--sm` (28px), `.btn--lg` (44px). A
 - **Chatbot admin component inventory** → See [CHATBOT.md](../features/CHATBOT.md)
 - **Login forensics CSS module** → See [LOGIN-FORENSICS.md](../security/login-forensics.md) §7
 - **CSP + security headers** → See [SECURITY.md](../security/SECURITY.md) §4
+
+## 11. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | Every token value in §2 against `src/styles/themes/dark.css`, `light.css` and `global.css` (dark surfaces, text, borders, glass, section colours, role tokens, badge tokens, fonts, spacing, radii, shadows, motion); the `src/styles` tree; `theme-init.js`, `ThemeToggle.tsx`, `UserSettingsPanel.tsx`; `AdminLayout.astro` / `AdminLayout.css` (landmarks, orbs, content area); `TopBar.tsx` and `Sidebar/index.tsx` geometry; `utilities.css` reduced-motion block; grep for every class, hook and keyframe named in §6–§9. **Result:** §1, §2.1 (accents), §2.7, §2.11 (spacing/radius/shadow), §3 architecture prose, §4.1, §5 shell and §7.3 hold; the dark palette in §2.2–2.5 was the pre-slate zinc palette and is now corrected; §2.9 type scale, §6.1 extra tokens, §6.3, §6.4 extras, §8.2 and §9 describe a target vocabulary the code never adopted and are labelled as such rather than deleted; the `--theme-violet` mis-declaration was fixed in both theme files. | Contrast ratios for the slate palette; the "67–86 % payload reduction" figure; Phase 3B/7C history |
