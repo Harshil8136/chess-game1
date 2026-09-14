@@ -86,7 +86,9 @@ per TTL to decide whether to re-pull.
 
 Every entry point is gated by the platform's two-engine access model:
 
-- **RBAC** — a 5-tier role hierarchy (DEV → Owner → SuperAdmin → Admin → Staff; lower rank = higher
+- **RBAC** — a 6-tier role hierarchy (`vendor_support > owner > admin > manager > staff > viewer`
+  since 2026-07-27; the databases still store the old names, translated on read — *corrected
+  2026-09-14, this line named the pre-rename ladder*; lower rank = higher
   privilege). See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md).
 - **PLAC** — Page-Level Access Control: per-user grants/denies layered on top of the role baseline,
   resolved O(1) from a KV-cached access map. Deny always wins. See

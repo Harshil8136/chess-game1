@@ -201,7 +201,7 @@ dictate caching strategies and system design constraints.
 | CPU time per request | **10 ms** ← critical design constraint |
 | Memory | 128 MB |
 | Subrequests per request | 50 |
-| Worker script size | 3 MB |
+| Worker bundle size | 64 MiB uncompressed on every plan (Cloudflare changelog 2026-09-04; the 3 MB compressed Free limit this row quoted no longer exists). Built 2026-09-14: 6.4 MB server + 5.0 MB client |
 
 ### 3.2 KV (Sessions & Cache)
 

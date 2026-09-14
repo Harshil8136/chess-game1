@@ -1,7 +1,7 @@
 ---
 
 title: "D1, KV & Worker Resource Optimization — Design"
-status: draft
+status: active
 audience: [ai, technical, owner, operator]
 last_verified: 2026-09-10
 verified_against: [code, infra]
@@ -14,6 +14,12 @@ tags: [d1, performance, cron, observability, design]
 <!-- docs-check: proposed-paths -->
 
 # D1, KV & Worker Resource Optimization — Design
+
+> **Status 2026-09-14:** chunk 7 shipped 2026-09-10 (`5da1c04`, record `historical`).
+> Chunk 8 is in progress — the reconcile hash gate shipped 2026-09-12 (`996c829`)
+> and holds (`cf_access_sync_log`: 1 write in 24 h on 2026-09-14); the outbox
+> probe, watermark and storage-interval gates and chunks 8b / 8c are open. The
+> figures in §1 are the 2026-09-10 measurements and have not been re-pulled.
 
 > **TL;DR (non-technical):** The website gets fewer than a hundred visitors a day,
 > but the database runs about four thousand queries a day. Almost none of that is

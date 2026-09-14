@@ -181,7 +181,7 @@ thinking about pricing and billing specifically:
   and it should be accounted for in whichever tier/fee structure a client's onboarding
   falls into, the same way the existing $1,500-5,000 setup fee already accounts for
   manual provisioning work in Motion B.
-- **The audit exceptions expire 2026-10-23** (`MAINTENANCE.md` C-1) — a hard date, not
+- **The audit exceptions expire 2026-11-30** (six entries in `.audit-exceptions.json`; chunk 4 retired the ten that carried 2026-10-23 — *corrected 2026-09-14*) — a hard date, not
   optional, and it fails the build gate fleet-wide if missed.
 - **No uptime SLA can honestly be offered** — no DR drill has ever been run. Don't let a
   new module's polish (ops alerts, dashboards) create the impression of an availability

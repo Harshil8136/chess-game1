@@ -1,7 +1,7 @@
 ---
 
 title: "Blog AI-Generation, Publishing & SEO/AIO/GEO System — Complete Reference (2026-08-03)"
-status: active
+status: historical
 audience: [non-technical, ai, technical, operator, owner]
 last_verified: 2026-08-03
 verified_against: [code]
@@ -29,6 +29,13 @@ tags: [blog, ai, seo, aio, geo, workers-ai, d1, rag, publishing, production-read
 > automatic redirects when a URL changes). Nothing in this pass was
 > deployed to production yet — it is code-complete and verified, sitting in
 > the working tree, ready for review.
+
+> **Status note (2026-09-14):** this is the 2026-08-03 snapshot and is kept as
+> history. The work it describes shipped afterwards and was reworked by
+> [`2026-08-30-blog-system-overhaul.md`](2026-08-30-blog-system-overhaul.md);
+> the current design lives in
+> [`architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md).
+> The "not yet deployed" sentence above was true on the date written.
 
 ---
 

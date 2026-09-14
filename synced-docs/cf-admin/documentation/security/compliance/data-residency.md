@@ -3,7 +3,7 @@
 title: "Data Residency & Cross-Border Transfers"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-08-12
+last_verified: 2026-09-14
 verified_against: [code, config]
 owner: harshil
 related_docs: [../RoPA.md, ../SECURITY.md, ISO-27017-27018.md, ../../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -27,7 +27,7 @@ of **G6** (GPC) from
 
 | Store | Provider | Region | Contains |
 |---|---|---|---|
-| D1 `madagascar-db` | Cloudflare | **US** | Audit log, page registry, login logs, booking state, email drafts |
+| D1 `madagascar-db` | Cloudflare | **US** (served from ENAM) | Audit log, page registry, login logs, booking state, email drafts and templates, blog posts, CMS content, SEO/GSC logs, platform alerts, staff-storage file metadata — 30 tables, ~2,200 rows on 2026-09-14 |
 | Postgres | Supabase | **US** | Users, ARCO tickets, consent records, bookings, email ledger |
 | KV `cf-admin-session` | Cloudflare | Globally distributed | Sessions, access maps |
 | R2 `madagascar-images` | Cloudflare | **US** | CMS images, email attachments |
@@ -137,3 +137,9 @@ having even where there is nothing to opt out of.
 - "EU data residency available" (no EU deployment exists).
 - "Data stored in your region" (single US region only).
 - "Fully GPC compliant" (consumer-facing enforcement is a `cf-astro` gap).
+
+## 7. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | §1 store list and regions against the live estate (Cloudflare MCP: D1 queries served from `ENAM`, three R2 buckets listed, KV global; Supabase `us-east-1` per the connection string in cf-astro's `wrangler.toml`); §2 sub-processor list against code (`api.brevo.com` in 13 files, `api.resend.com` in 1, PostHog in 10, `src/lib/sentry-scrub.ts` and `src/lib/security/gpc.ts` present, Upstash still on the request path, OpenRouter in `src/lib/ai/`); §5 GPC detection file present | The DPA filing status in §2 (an owner action), the commercial assessment in §3, and §4's cost estimates |

@@ -3,7 +3,7 @@
 title: "Record of Processing Activities (GDPR Art. 30)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-08-12
+last_verified: 2026-09-14
 verified_against: [code, config]
 owner: harshil
 related_docs: [PRIVACY.md, SECURITY.md, ../runbooks/incident-response.md, compliance/data-residency.md, ../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -196,7 +196,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 - Input validation on 100% of API routes accepting a JSON body.
 - CSP with per-request nonces; `unsafe-eval` removed 2026-07-25.
 - CI gates: blocking `npm audit` with expiring exceptions, secret scanning,
-  10 code-anchored security rules, typecheck/lint/test/build.
+  11 code-anchored security rules (SEC-01…10 plus SEC-01b), typecheck/lint/test/build.
 
 ## 6. Known gaps
 
@@ -204,7 +204,13 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 |---|---|---|
 | No DPO / EU representative | Required if EU targeting begins | This doc §1 |
 | No EU data residency | Art. 46 SCC reliance; blocks some buyers | G17 |
-| No `List-Unsubscribe` / suppression list | CAN-SPAM, CASL, deliverability | G5 |
+| ~~No `List-Unsubscribe` / suppression list~~ — **closed 2026-09-10**: the Emails portal ships a suppression list (`admin_email_suppression`) and emits `List-Unsubscribe` (three call sites in `src/`, re-checked 2026-09-14). Confirm the header on a real Brevo send before citing it to an auditor | CAN-SPAM, CASL, deliverability | G5 (closed in code) |
 | GPC enforcement lives in `cf-astro` | Detection only here | G6 (partial) |
 | No tested DR restore | Art. 32(1)(c) resilience unproven | G3 |
 | IR plan never drilled | Art. 33 readiness unproven | G1/G4 |
+
+## 7. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-14 | §3 sub-processor list against code and the live estate (see `compliance/data-residency.md` §7 for the commands); §4 regions; §5 the rule count (11, was written as 10) and that `API_DENY_MODE=enforce`, the `anon` posture and the audit-exception gate still hold; §6 G5 closed by the 2026-09-10 Emails portal work, G3 and G1/G4 still open (chunk 6 and the IR drill remain `planned`) | §2's legal bases and retention periods for activities A–I, and the §1 DPO assessment — those are owner and counsel judgements, not code, and were not re-derived |

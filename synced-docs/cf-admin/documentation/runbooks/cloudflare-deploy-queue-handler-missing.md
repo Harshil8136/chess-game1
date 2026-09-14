@@ -2,7 +2,7 @@
 title: "Cloudflare Deploy Fails: Queue Handler Is Missing (code 11001)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-03
+last_verified: 2026-09-14
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -59,8 +59,8 @@ export default { fetch: handle };
 `[[queues.consumers]]`, Cloudflare's upload API refuses the version with 11001.
 
 **Second, silent failure:** the same fallback has no `scheduled` export, so every
-cron in `[triggers]` stops firing — CF Access audit polling, booking email retry,
-CF Access group reconcile, R2 asset cleanup, scheduled blog publish. Cloudflare
+cron in `[triggers]` stops firing — all ten jobs in `src/lib/jobs/registry.ts`, the
+eight on the five-minute tick and the two on Sunday. Cloudflare
 does **not** error on this. If you ever "fix" 11001 by deleting the queue
 consumers, the deploy goes green and the crons stay dead.
 
@@ -72,7 +72,7 @@ Restore the entrypoint in `wrangler.toml`:
 main = "./src/workers/cf-entry.ts"
 ```
 
-`src/workers/cf-entry.ts` already implements the documented Astro 6 pattern —
+`src/workers/cf-entry.ts` already implements the documented Astro pattern (Astro 7 today) —
 `import { handle } from '@astrojs/cloudflare/handler'` plus a default-exported
 `ExportedHandler` with `fetch`, `scheduled` and `queue`. It needs no changes; it
 only needs to be wired in.
@@ -89,8 +89,9 @@ CLOUDFLARE_VITE_FORCE_LOCAL=true npm run build
 # main must resolve to the cf-entry bundle, not the adapter default
 node -e "const c=require('./dist/server/wrangler.json'); console.log(c.main)"
 
-# all three handlers must survive bundling
-grep -oE 'async (fetch|scheduled|queue)\(' dist/server/chunks/worker-entry_*.mjs | sort -u
+# all three handlers must survive bundling (the adapter emits a flat entry.mjs;
+# earlier builds put the handlers in chunks/worker-entry_*.mjs)
+grep -oE 'async (fetch|scheduled|queue)\(' dist/server/entry.mjs | sort -u
 
 npx wrangler deploy --dry-run --outdir=/tmp/cf-dryrun
 ```
@@ -101,8 +102,9 @@ Cloudflare credentials — the `[ai]` binding otherwise makes
 
 ## Verify after deploying
 
-- Cloudflare dashboard → Worker → **Cron Triggers**: the three crons show recent
-  successful invocations (within ~15 min).
+- Cloudflare dashboard → Worker → **Cron Triggers**: both triggers (`*/5 * * * *`
+  and `0 2 * * SUN` — the 15-minute trigger was folded into the 5-minute one on
+  2026-09-10) show recent successful invocations, the five-minute one within ~5 min.
 - Cloudflare dashboard → **Queues** → `madagascar-sync-revalidate`: consumer is
   attached to `cf-admin-madagascar` and the backlog drains.
 - Sentry receives server-side events (`withSentry` lives in `cf-entry.ts`, so it
@@ -123,3 +125,9 @@ unrelated dependency/`optimizeDeps` cleanup. Every deploy from then until
 worth keeping: **a green `npm run build` in CI does not mean the Worker is
 deployable** — the entrypoint contract is only enforced at upload time, which is
 why the guard test exists.
+
+## Re-verification
+
+| Date | Method | Result |
+|---|---|---|
+| 2026-09-14 | `wrangler.toml` read; `CLOUDFLARE_VITE_FORCE_LOCAL=true npm run build`; `node -e "…dist/server/wrangler.json…main"`; `grep -oE 'async (fetch\|scheduled\|queue)\(' dist/server/entry.mjs`; `ls test/` | `main = "./src/workers/cf-entry.ts"` present; built `main` resolves to `entry.mjs`, which exports `fetch`, `queue` and `scheduled`; `test/worker-entry-contract.test.ts` present and in `npm run test:run`. Three lines corrected above: the cron count (two triggers since chunk 7), the Astro version, and the grep path for the bundled handlers |

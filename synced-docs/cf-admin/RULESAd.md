@@ -489,7 +489,7 @@ There are **FOUR** separate CSS bugs that can squish modals/dialogs/cards inside
 
 #### ✅ THE CORRECT PATTERN (MANDATORY)
 
-Every modal/dialog in a Preact island **MUST** follow this exact pattern. Reference implementations: `ConfirmDialog.tsx`, `InviteUserModal.tsx`, `TemplatesPanel.tsx`.
+Every modal/dialog in a Preact island **MUST** follow this exact pattern. Reference implementations: `ConfirmDialog.tsx`, `InviteUserModal.tsx` (`TemplatesPanel.tsx` was a third until 2026-09-14, when it was deleted as dead code left behind by the Emails portal overhaul).
 
 ```tsx
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
@@ -680,7 +680,7 @@ in `.github/workflows/security.yml`.
 > `npm run test:gates`). SEC-03 has one; add one for every rule you touch.
 
 **Accessibility rules (A11Y-01…06)** live in `scripts/a11y_check.py` and run in
-`.github/workflows/quality.yml`, currently `--warn-only` — see
+`.github/workflows/quality.yml`, blocking since 2026-09-14 (0 findings) — see
 `documentation/security/compliance/ACCESSIBILITY.md`.
 
 ### 9.1 Security Invariants (historical — superseded by §9.0)
@@ -724,11 +724,14 @@ npm run cf:dev           # Full CF runtime with R2 simulation (required for imag
 # Type & Dependency Check
 npm run typecheck        # astro check — TypeScript validation
 npm run lint             # ESLint
-npm run knip             # Dead-code sweep. NOT clean today (see MAINTENANCE.md
-                         # C-15) — knip.json has no `entry` config, so it cannot
-                         # see Astro's file-based routes and reports ~34 "unused"
-                         # files that are really pages. Read its output; do not
-                         # treat a non-zero exit as a blocking failure yet.
+npm run knip             # Dead-code sweep, run through `npx --yes knip` (the
+                         # package is not a devDependency; chunk 4's proposal
+                         # still awaits owner approval). knip.json has carried
+                         # `entry` config since chunk 4, so pages are no longer
+                         # false positives. 2026-09-14: 0 unused files, 0 unused
+                         # dependencies, 29 unused exports, 11 unused exported
+                         # types, 4 duplicate exports (the deprecated role
+                         # aliases, chunk 10b). Not in `verify`; read its output.
 
 # The full gate — run this before any commit (see "Git & deployment protocol")
 npm run verify           # typecheck → ratchet → test:run → test:gates → rules_check
