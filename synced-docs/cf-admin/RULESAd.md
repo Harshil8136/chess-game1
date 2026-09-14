@@ -117,6 +117,47 @@ wrangler d1 execute madagascar-db --remote \
 
 ---
 
+## 🛡️ RULE #0.7b — SHARED D1 MIGRATION NUMBER OWNERSHIP
+
+**`madagascar-db` is one database with one `d1_migrations` ledger, written to by BOTH this repo and cf-astro.**
+
+> Added here 2026-09-14. RULE #0.7 above and `documentation/operations/OPERATIONS.md`
+> §7 already cited "RULE #0.7b", but its only home was `main.md` — the file that is
+> supposed to summarise this one, not own a rule. This is now the full text;
+> `main.md` links here.
+
+The ledger keys on filename, not number, so duplicate numbers collide *silently* —
+**26 numbers** (`0001`–`0015`, `0021`, `0033`–`0042`) already appear more than once in
+the live ledger (re-counted against `d1_migrations` on 2026-09-14: 87 rows; `0015`
+joined the list when cf-astro's `0015_booking_replay_outbox.sql` was applied on
+2026-09-03). Three series feed that one ledger, not two — cf-astro's `db/migrations/`,
+this repo's `migrations/`, and this repo's inert `database/legacy_migrations/` — so
+`0001`–`0008` each carry three entries and `0002` carries four. The number space is
+therefore owned:
+
+- **cf-astro owns `0001`–`0032`** (`cf-astro/db/migrations/`)
+- **cf-admin owns `0033`+** (`migrations/`)
+
+- ❌ **FORBIDDEN:** Taking a number cf-astro owns for a new file in `migrations/`.
+- ❌ **FORBIDDEN:** A migration that depends on a column the other repo's migration
+  adds. Either repo may be migrated first on a from-scratch rebuild, and SQLite has
+  no `ADD COLUMN IF NOT EXISTS` — declare the column in your own
+  `CREATE TABLE IF NOT EXISTS` (a no-op if the other repo got there first) rather
+  than as an `ALTER`.
+- ❌ **FORBIDDEN:** Renaming an applied migration file — the filename key means the
+  runner would apply it again (RULE #0.7).
+
+> **This bit production once.** `migrations/0034_blog_quality_gate_and_redirects.sql`
+> does `UPDATE blog_posts SET published_at = …` for a column that only cf-astro's
+> `cf-astro/db/migrations/0011_blog_quality_gate_and_redirects.sql` created, and
+> survived purely because `0011` ran four hours earlier; in the reverse order the
+> `UPDATE` fails and wrangler aborts the batch, silently skipping every later
+> migration. Closed 2026-08-30 by declaring `published_at` (and `cover_image_alt`)
+> in `migrations/0033_create_blog_and_taxonomy_tables.sql`'s `CREATE TABLE`, the
+> only order-independent home for them — the header of `0034` records why.
+
+---
+
 ## 🛡️ RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
 cf-admin's production Worker carries **40 env entries** (15 `[vars]` + 25 secrets),
