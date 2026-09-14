@@ -12,6 +12,7 @@
 ## 1. What Happened
 
 `cf-admin` runs a 5-minute scheduled cron (`src/workers/scheduled-booking-retry.ts:pokeBookingOutboxDrain`) that calls `POST /api/booking/replay/` on `cf-astro` with:
+
 ```typescript
 const secret = env.REVALIDATION_SECRET || env.HEALTH_CHECK_SECRET;
 // Authorization: Bearer <secret>
@@ -24,7 +25,9 @@ The endpoint in `cf-astro` rejected the incoming requests with `HTTP 401 Unautho
 ## 2. Root Cause Analysis
 
 ### Cause 1: Secret Comparison Logical Short-Circuit (Code Defect)
+
 In the deployment running in production (version `[D1_DATABASE_ID]`, deployed on 2026-08-30), `src/pages/api/booking/replay.ts` evaluated authentication as:
+
 ```typescript
 const secret =
   runtimeEnv.HEALTH_CHECK_SECRET ||
@@ -38,21 +41,26 @@ if (!timingSafeEq(provided, secret)) {
   return json({ error: 'Unauthorized.' }, 401);
 }
 ```
+
 Because `HEALTH_CHECK_SECRET` was configured in Cloudflare Workers secrets, the JavaScript `||` operator short-circuited and selected `HEALTH_CHECK_SECRET`, completely ignoring `REVALIDATION_SECRET`.
 
 Because `cf-admin` sent `REVALIDATION_SECRET` (which has a different value from `HEALTH_CHECK_SECRET`), the timing-safe string comparison failed on every invocation.
 
 ### Cause 2: Deployment Blocked by Lockfile Desynchronization
+
 On 2026-09-02, commit `ad004d2` introduced `verifyBearerAuth` to check an array of candidate secrets in constant time (`[HEALTH_CHECK_SECRET, REVALIDATION_SECRET]`).
 
 However, commit `ad004d2` updated dependencies in `package.json` without updating `package-lock.json` for Linux platforms (`workerd@1.20260831.1`, `@cloudflare/workerd-linux-64`, etc.). When pushed to GitHub, GitHub Actions CI failed at `npm ci`:
+
 ```text
 npm error Missing: workerd@1.20260831.1 from lock file
 npm error Missing: @cloudflare/workerd-linux-64@1.20260831.1 from lock file
 ```
+
 Because the CI quality gate failed, the fix was never deployed to Cloudflare Workers, leaving the legacy August 30 code serving in production.
 
 ### Cause 3: Unnecessary Public Internet Round-Trip
+
 `cf-admin`'s `pokeBookingOutboxDrain` targeted `https://madagascarhotelags.com/api/booking/replay/` via `fetch()`, incurring public DNS resolution, egress latency, and public edge rate limiting, despite already having the internal `ASTRO_SERVICE` Service Binding defined in `wrangler.toml`.
 
 ---

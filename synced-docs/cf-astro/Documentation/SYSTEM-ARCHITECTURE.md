@@ -85,16 +85,16 @@ Defines the Cloudflare Workers environment, build directory (`./dist`), compatib
 
 ### 4.1 System API Reference
 
-| Endpoint                | Method | Prerender | Security                                                     | Purpose                                                           |
-| ----------------------- | ------ | --------- | ------------------------------------------------------------ | ----------------------------------------------------------------- |
-| `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit | Processes atomic booking transaction across D1 and Supabase.      |
+| Endpoint                | Method | Prerender | Security                                                        | Purpose                                                                                                  |
+| ----------------------- | ------ | --------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit    | Processes atomic booking transaction across D1 and Supabase.                                             |
 | `/api/booking/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains booking outbox records from D1 into Supabase. Poked by `cf-admin` 5-min cron via `ASTRO_SERVICE`. |
-| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                             | Hashes and logs GDPR/LFPDPPP privacy agreements.                  |
-| `/api/consent/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains consent outbox records from D1 into Supabase.              |
-| `/api/health`           | `GET`  | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Health check diagnostics verifying D1, KV, and external dependencies. |
-| `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison)                      | Purges KV Cache and updates CMS data blocks.                      |
-| `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                                            | Obfuscates PostHog analytical calls to prevent ad-blocker drops.  |
-| `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit                                | Handles Mexican LFPDPPP ARCO identity-document + rights requests. |
+| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                                | Hashes and logs GDPR/LFPDPPP privacy agreements.                                                         |
+| `/api/consent/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains consent outbox records from D1 into Supabase.                                                     |
+| `/api/health`           | `GET`  | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Health check diagnostics verifying D1, KV, and external dependencies.                                    |
+| `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison)                         | Purges KV Cache and updates CMS data blocks.                                                             |
+| `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                                               | Obfuscates PostHog analytical calls to prevent ad-blocker drops.                                         |
+| `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit                                   | Handles Mexican LFPDPPP ARCO identity-document + rights requests.                                        |
 
 ### 4.2 The Atomic Booking Transaction
 
@@ -142,7 +142,7 @@ Marketing page texts, service pricing tables, and blog posts are loaded via a ro
 > anywhere in this repo — verified by grep on 2026-09-10. The D1 table exists
 > (2 rows) but this repo has never read it.
 >
-> **It was also a latent cost bug.** A 60-second KV TTL means a KV *write* every
+> **It was also a latent cost bug.** A 60-second KV TTL means a KV _write_ every
 > 60 seconds to refresh the entry — 1,440 writes/day against a Cloudflare free
 > tier limit of **1,000 KV writes/day**. Had it been built as written, it would
 > have exhausted the daily KV write budget on its own. If edge feature flags are
