@@ -3,7 +3,7 @@
 title: 'Documentation Index & Map'
 status: active
 audience: [non-technical, ai, technical]
-last_verified: 2026-08-12
+last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
 related_docs: [../RULES.md]
@@ -48,12 +48,13 @@ tags: [meta, index]
 
 | Doc                                                                                              | Purpose                                                                                                                                                                                                        | Audience                | Status     |
 | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------- |
-| [`OPERATIONS.md`](OPERATIONS.md)                                                                 | Cloudflare Binding IDs, free-tier limits, and CLI commands                                                                                                                                                     | ai, technical, operator | active     |
+| [`OPERATIONS.md`](OPERATIONS.md)                                                                 | Cloudflare resource inventory (D1, R2, KV, queues) and the wrangler commands that verify it — IDs are redacted there; `wrangler.toml` holds the live values                                                    | ai, technical, operator | active     |
 | [`SEO-OPERATIONS.md`](SEO-OPERATIONS.md)                                                         | Dashboard-level SEO/GEO runbook and IndexNow configs                                                                                                                                                           | ai, operator            | active     |
 | [`2026-08-30-BLOG-RENDERING-AND-INDEXABILITY.md`](2026-08-30-BLOG-RENDERING-AND-INDEXABILITY.md) | Public blog rendering, indexability and security: the tag-page regression, missing CSP on SSR routes, the AIO block that never rendered, sitemap/feed correctness, and the production checks still outstanding | ai, technical, operator | active     |
 | [`BACKLINKS-PLAYBOOK.md`](BACKLINKS-PLAYBOOK.md)                                                 | Owner-facing off-page SEO playbook — backlink/citation targets, KPIs, and canonical NAP block                                                                                                                  | non-technical, operator | active     |
 | [`INCIDENT-2026-04-18-EMAIL-OUTAGE.md`](INCIDENT-2026-04-18-EMAIL-OUTAGE.md)                     | Outage post-mortem and resolution for async emails                                                                                                                                                             | technical               | historical |
 | [`INCIDENT-2026-08-07-CONSENT-OUTAGE.md`](INCIDENT-2026-08-07-CONSENT-OUTAGE.md)                 | Outage post-mortem: consent records silently discarded for ~7h45m due to an unapplied schema migration                                                                                                         | technical               | historical |
+| [`INCIDENT-2026-09-02-BOOKING-REPLAY-AUTH.md`](INCIDENT-2026-09-02-BOOKING-REPLAY-AUTH.md)       | Outage post-mortem: cf-admin's outbox-drain poke got HTTP 401 from `/api/booking/replay/` for three days — a secret-selection short-circuit, and the fix stuck behind a lockfile-broken CI                     | technical               | historical |
 
 ## Business / Strategy
 

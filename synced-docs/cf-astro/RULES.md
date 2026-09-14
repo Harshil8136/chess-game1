@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-07-06
+> **Last Updated:** 2026-09-14
 
 ## 🏢 PROJECT MISSION — COMMERCIAL-GRADE, $0 INFRASTRUCTURE
 
@@ -12,7 +12,7 @@
 - Deliver Lighthouse 95+ performance on mobile
 - Meet professional SEO, accessibility, and security standards
 
-Every architectural decision optimizes for one goal: maximum professional quality at exactly ZERO ongoing cost. We combine Cloudflare's free tier (Workers, D1, R2, KV, Pages) with Brevo (+ Resend failover), Supabase, Upstash, PostHog, and Sentry free tiers.
+Every architectural decision optimizes for one goal: maximum professional quality at exactly ZERO ongoing cost. We combine Cloudflare's free tier (Workers, D1, R2, KV, Queues) with Brevo (+ Resend failover), Supabase, Upstash, PostHog, and Sentry free tiers.
 
 ---
 
@@ -43,7 +43,7 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 **Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order.** This applies with extra force here because `madagascar-db` (D1) and the Supabase project are **shared with cf-admin** — a table added carelessly from this repo is exactly as much clutter as one added from cf-admin's.
 
-1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
+1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
 2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** Active connectors exist for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case rather than defaulting either direction (see the audit doc §4 for three worked examples).
 3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.**
 
@@ -77,7 +77,7 @@ A schema change is complete only when **all three** exist:
 
 **`madagascar-db` is one database with one `d1_migrations` ledger, written to by BOTH `cf-astro` and `cf-admin`.**
 
-The ledger keys on filename, not number, so duplicate numbers collide *silently* — **26 numbers** (`0001`–`0015`, `0021`, `0033`–`0042`) already appear more than once in the live ledger (re-counted against `d1_migrations` on 2026-09-10). This said 25 and stopped at `0014` until then; `0015` joined the list when this repo's `0015_booking_replay_outbox.sql` was applied on 2026-09-03. Three series feed the one ledger, not two — this repo's `db/migrations/`, cf-admin's `migrations/`, and cf-admin's inert `database/legacy_migrations/` — so `0001`–`0008` each carry three entries and `0002` carries four. The number space is strictly partitioned:
+The ledger keys on filename, not number, so duplicate numbers collide _silently_ — **26 numbers** (`0001`–`0015`, `0021`, `0033`–`0042`) already appear more than once in the live ledger (re-counted against `d1_migrations` on 2026-09-14: 87 rows). This said 25 and stopped at `0014` until then; `0015` joined the list when this repo's `0015_booking_replay_outbox.sql` was applied on 2026-09-03. Three series feed the one ledger, not two — this repo's `db/migrations/`, cf-admin's `migrations/`, and cf-admin's inert `database/legacy_migrations/` — so `0001`–`0008` each carry three entries and `0002` carries four. The number space is strictly partitioned:
 
 - **`cf-astro` owns `0001`–`0032`** (`db/migrations/`)
 - **`cf-admin` owns `0033`+** (`migrations/`)
@@ -89,7 +89,7 @@ The ledger keys on filename, not number, so duplicate numbers collide *silently*
 
 ## 🧮 RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
-**cf-astro's own Pages/Worker deployment carries ~21 env vars** (7 `[vars]` + ~14 secrets — recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
+**cf-astro's own Worker deployment carries ~21 env vars** (7 `[vars]` + ~14 secrets — recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
 
 - ❌ **FORBIDDEN:** Introducing new environment variables for feature toggles, limits, or operational settings.
 - ✅ **REQUIRED INSTEAD:** Use D1 (`admin_portal_settings`, owned by cf-admin but shared) or the site-settings pattern already in use.
@@ -99,10 +99,10 @@ The ledger keys on filename, not number, so duplicate numbers collide *silently*
 
 ## 🗂️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
 
-**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the **50** tables shared with cf-admin (**30** D1 `madagascar-db` + 20 Supabase `public`, re-counted live 2026-09-10) (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb` (9) and `whatsapp-chatbot` (4) D1 databases across the full three-app estate. This read 51/31/64 until 2026-09-10; the D1 figure was one high, and cf-admin's `RULESAd.md` §0.9 had the correct total all along.
+**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the **50** tables shared with cf-admin (**30** D1 `madagascar-db` + 20 Supabase `public`, re-counted live 2026-09-14) (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb` (9) and `whatsapp-chatbot` (4) D1 databases across the full three-app estate. This read 51/31/64 until 2026-09-10; the D1 figure was one high, and cf-admin's `RULESAd.md` §0.9 had the correct total all along.
 
 - ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
-- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/architecture/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
+- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
 
 ---
 
@@ -112,7 +112,7 @@ The ledger keys on filename, not number, so duplicate numbers collide *silently*
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Framework**      | Astro 7.1+ with `@astrojs/cloudflare` adapter                                                                                                                                                                                |
 | **UI Islands**     | Preact (3KB, React-compatible) for interactive components                                                                                                                                                                    |
-| **Hosting**        | Cloudflare Pages (unlimited bandwidth, free)                                                                                                                                                                                 |
+| **Hosting**        | Cloudflare Workers — static assets + SSR via `wrangler deploy`; left Cloudflare Pages in July 2026 (`Documentation/SYSTEM-ARCHITECTURE.md` §1)                                                                               |
 | **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)                                                                                                                                                        |
 | **Cache**          | Cloudflare KV + Upstash Redis                                                                                                                                                                                                |
 | **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)                                                                                                                                                        |
@@ -132,6 +132,15 @@ The ledger keys on filename, not number, so duplicate numbers collide *silently*
 - **Failover / Resiliency**: We use D1 as a dead-letter/audit queue for bookings. If Supabase fails, data is retained in D1 for delayed execution.
 - **Islands Architecture**: We limit client-side JS by utilizing Astro islands with Preact only where interactivity is required.
 - **Hybrid-SMTP Async Email**: All email dispatch (from both cf-astro and cf-admin) is non-blocking via one shared Cloudflare Queue (`madagascar-emails`) consumed by one shared worker, `cf-astro-email-consumer`. **Brevo is the primary provider for every send regardless of `projectSource`**; **Resend is wired in only as an automatic same-request failover** if the Brevo call throws — there is no per-project routing split.
+
+## 3. GIT & DEPLOYMENT PROTOCOL
+
+This is the authoritative statement of the deploy protocol for this repo. It absorbs the rules previously kept in a workspace-level git-rules file, which is not part of this repository — the repo is standalone, so a pointer outside it can never resolve. Until 2026-09-14 the protocol lived only in `main.md`, which is supposed to summarise this file, not own a rule.
+
+- **Verify the working directory before every push** — `git remote -v` must show this repo (`cf-astro`). Pushing from a sibling checkout is the easiest way to deploy the wrong Worker.
+- **Push directly to `origin main`.** `main` auto-deploys through **Cloudflare Workers Builds** (the dashboard-side GitHub connection) on every push — the site left Cloudflare Pages in July 2026 (`Documentation/SEO-OPERATIONS.md` §3, `Documentation/SYSTEM-ARCHITECTURE.md` §1). The `CI` workflow runs on the same push but does not gate that deploy: nothing in `.github/workflows/` runs `wrangler deploy`, and a red run does not stop the Builds deploy. Never open a sub-branch for routine work. (An agent working on an assigned feature branch follows its own instructions and pushes there instead.)
+- **Run `npm run verify` before every push** — it is the only gate that runs before the code is live, because the deploy does not wait for CI.
+- **Binding IDs are never invented.** `wrangler.toml` holds the live D1 and KV IDs; `Documentation/OPERATIONS.md` lists the resources with those IDs redacted. A wrong ID fails silently rather than erroring, and did cause a real CMS outage in April 2026. Read the value from `wrangler.toml` or the Cloudflare dashboard; never guess it.
 
 > For historical constraints and deprecated patterns, see `Documentation/ARCHIVE-RULES-HISTORY.md`.
 
