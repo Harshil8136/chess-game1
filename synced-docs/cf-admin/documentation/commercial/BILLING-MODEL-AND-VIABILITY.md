@@ -3,13 +3,13 @@
 title: "Billing Model & Personal Viability"
 status: active
 audience: [owner]
-last_verified: 2026-08-13
+last_verified: 2026-09-15
 verified_against: [code, docs]
 owner: harshil
 related_code:
 - src/lib/auth/plac.ts
 - src/lib/auth/cf-access-sync.ts
-- database/legacy_database/legacy_migrations/0004_create_admin_audit_log_table.sql
+- database/legacy_migrations/0004_create_admin_audit_log_table.sql
 - migrations/0002_create_cf_access_sync_log.sql
 related_docs:
 - MODULE-PRICING-CATALOG.md
@@ -196,3 +196,9 @@ thinking about pricing and billing specifically:
 - [`PLATFORM-BUY-VS-BUILD-COMPARISON.md`](PLATFORM-BUY-VS-BUILD-COMPARISON.md) — what the whole stack costs bought elsewhere
 - [`../2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md) — the cost floor and unit economics this document is built on
 - [`../2026-07-27-go-to-market-prospecting-and-roadmap.md`](../2026-07-27-go-to-market-prospecting-and-roadmap.md) — the funnel, capacity ceiling, and risk register referenced throughout
+
+## 7. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-15 | Scope-limited pass: every `related_code` path exists (one path corrected — the audit-log migration lives under `database/legacy_migrations/`); every `related_docs` and §6 link resolves; `.audit-exceptions.json` still carries six entries expiring 2026-11-30 (`python scripts/audit_gate.py`, 0 unexcepted); the Search Console Sync and Staff Managed Storage modules this document prices are the ones shipped (`src/lib/gsc/`, `src/lib/pagespeed/`, `src/components/admin/storage/`). | The vendor and market figures (the `/pricing` samples, Ahrefs / SEMrush / Box / Microsoft 365 / Jasper / Intercom / Zendesk price points, the 42-module catalogue) — these were fetched from the web on 2026-08-13 and were **not** re-fetched; re-verify them before quoting any number in a proposal. The personal-viability arithmetic in §3 rests on those figures and was not re-derived |

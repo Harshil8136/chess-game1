@@ -3,7 +3,7 @@
 title: "Module Pricing Catalog"
 status: active
 audience: [owner, non-technical, technical, operator]
-last_verified: 2026-08-13
+last_verified: 2026-09-15
 verified_against: [code, web, docs]
 owner: harshil
 related_code:
@@ -95,3 +95,9 @@ other row in §1 was confirmed.
 
 - [`PLATFORM-BUY-VS-BUILD-COMPARISON.md`](PLATFORM-BUY-VS-BUILD-COMPARISON.md) — the whole-stack version of this table: what buying every category above, piecemeal, from separate vendors would cost combined, versus running this platform
 - [`BILLING-MODEL-AND-VIABILITY.md`](BILLING-MODEL-AND-VIABILITY.md) — how to actually bill for these modules, and an honest answer on personal viability at near-zero marginal cost
+
+## 5. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-15 | Scope-limited pass: the three cf-admin `related_code` directories exist; `src/lib/ai-pricing.ts` (the "measured" AI cost) exists; `SEARCH-CONSOLE-SYNC.md` §9 and `STAFF-MANAGED-STORAGE.md` §9a (the two sourced comparison tables this catalog cites) exist and were themselves re-verified on 2026-09-14; the three commercial source docs in §4 resolve. | The vendor and market figures (the `/pricing` samples, Ahrefs / SEMrush / Box / Microsoft 365 / Jasper / Intercom / Zendesk price points, the 42-module catalogue) — these were fetched from the web on 2026-08-13 and were **not** re-fetched; re-verify them before quoting any number in a proposal; the cf-chatbot repository (its source and the cost analysis the AI Chatbot row cites) is not on disk here; the Velox `/pricing` and `/ai` pages were not fetched |

@@ -3,7 +3,7 @@
 title: "Platform Buy-vs-Build Comparison"
 status: active
 audience: [owner, non-technical, technical]
-last_verified: 2026-08-13
+last_verified: 2026-09-15
 verified_against: [web, docs]
 owner: harshil
 related_docs:
@@ -102,3 +102,9 @@ infrastructure cost (commercial-model doc §8):
 - [`MODULE-PRICING-CATALOG.md`](MODULE-PRICING-CATALOG.md) — the per-module version of this comparison, with recommended standalone pricing for each
 - [`BILLING-MODEL-AND-VIABILITY.md`](BILLING-MODEL-AND-VIABILITY.md) — how to actually bill for this, and whether it's worth doing at near-zero marginal cost
 - [`../2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md) — the infrastructure cost floor this comparison is measured against
+
+## 5. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-15 | Scope-limited pass: every `related_docs` entry and every source cited in the §1 table resolves to a document in this repository (or to the feature docs re-verified on 2026-09-14). | The vendor and market figures (the `/pricing` samples, Ahrefs / SEMrush / Box / Microsoft 365 / Jasper / Intercom / Zendesk price points, the 42-module catalogue) — these were fetched from the web on 2026-08-13 and were **not** re-fetched; re-verify them before quoting any number in a proposal. The §1 totals are sums of those figures and were not re-derived |
