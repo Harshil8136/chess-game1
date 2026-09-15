@@ -36,7 +36,7 @@ work** (line numbers are from the original audit and may have drifted).
 
 | # | Item | File (verify lines) | Severity | Notes |
 |---|------|---------------------|----------|-------|
-| 13 | Decide policy on `DELETE /api/audit/logs` (append-only ledger vs. interactive "Delete Selected" UI) | `src/pages/api/audit/logs.ts` | 🟡 policy | PLAC gate already wired; remaining question is product policy. Needs sign-off. |
+| 13 | Decide policy on `DELETE /api/audit/logs` (append-only ledger vs. interactive "Delete Selected" UI) | `src/pages/api/audit/logs.ts` | 🟡 decided | **Decided 2026-09-15 (assessment D-9): append-only.** The interactive delete routes are removed and the "Delete Selected" UI with them in viability chunk 19 (tamper-evidence), so the hash chain never has to record a deletion; retention stays manual and owner/vendor-only (ADR-0001 decision 6). Open until chunk 19 ships. |
 | 14 | Validate `pageOverrides` on user creation (each `pagePath` exists in `admin_pages`; apply Gate D ceiling to grants) | `src/pages/api/users/manage.ts` | 🟡 | — |
 | ~~16~~ | ~~Simplify `effectiveSiteUrl`~~ | `src/middleware.ts` | ✅ RESOLVED 2026-07-08 | Dropped `process.env` branch; `const effectiveSiteUrl = env.SITE_URL;` |
 | ~~18~~ | ~~Fail-closed chatbot proxy `minRole`~~ | `src/pages/api/chatbot/[...path].ts` | ✅ RESOLVED 2026-07-08 | Default changed from `'admin'` → `'dev'` (most restrictive) |

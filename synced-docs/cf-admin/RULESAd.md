@@ -732,6 +732,8 @@ npm run knip             # Dead-code sweep, run through `npx --yes knip` (the
                          # dependencies, 29 unused exports, 11 unused exported
                          # types, 4 duplicate exports (the deprecated role
                          # aliases, chunk 10b). Not in `verify`; read its output.
+                         # 2026-09-15 (D-2): stays `npx --yes`; it joins `verify` the
+                         # day it is clean — chunk 10b deletes the 4 duplicate exports.
 
 # The full gate — run this before any commit (see "Git & deployment protocol")
 npm run verify           # typecheck → ratchet → test:run → test:gates → rules_check

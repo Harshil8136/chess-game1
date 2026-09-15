@@ -341,7 +341,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `BREVO_API_KEY` | Brevo transactional email (primary provider) |
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
 | `RESEND_API_KEY` | Resend — invite re-send path (`src/pages/api/users/resend-invite.ts`) |
-| `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`) |
+| `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Redis rate limiting and AI neuron budget — retired by viability program chunk 16 |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics and the control plane (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads |
