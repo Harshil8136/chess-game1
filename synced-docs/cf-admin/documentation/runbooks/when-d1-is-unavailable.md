@@ -66,9 +66,9 @@ isolated by `allSettled`, so one failure cannot starve another.
 |---|---|---|---|
 | `cf-access-audit-poll` | `*/5` | Watermark unreadable → run skipped. Failed-login capture pauses | Next tick; watermark not advanced, so no window is lost |
 | `booking-email-retry` | `*/5` | Scan fails → no re-enqueue this tick | Next tick |
-| `booking-outbox-poke` | `*/5` | Poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly GitHub Actions heartbeat |
+| `booking-outbox-poke` | `*/5` | The pending-replay probe fails **open**, so the poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly GitHub Actions heartbeat |
 | `cf-access-reconcile` | `*/5` | Push to Cloudflare still happens; the D1 log row and Supabase sweep fail | Next tick |
-| `storage-notifications` | `*/5` | No quota or share-expiry mail this tick | Next tick |
+| `storage-notifications` | `*/5` | Gate settings unreadable → treated as due (fails open); the scans then fail → no quota or share-expiry mail this tick, and `storage-notify-last-run` is not stamped | Next tick |
 | `blog-scheduled-publish` | `*/5` | A matured post stays `scheduled` | Next tick |
 | `gsc-sync`, `pagespeed-sync` | `*/5` | Gate settings unreadable → treated as not-due | Next tick |
 | `asset-cleanup`, `staff-storage-reconcile` | `0 2 * * SUN` | Run aborts **before** deleting anything | Next Sunday, or a manual run |

@@ -18,7 +18,7 @@ tags: []
 
 ---
 
-## 0. What the dashboard renders today (verified 2026-09-14)
+## 0. What the dashboard renders today (verified 2026-09-14; re-read 2026-09-15 after the remodel in `4e60c9d`)
 
 The layout sections below (§"Current Dashboard Layout", §"Component Details", §"CSS Architecture",
 §"Dual-Axis Edge Analytics Chart", §"Verification Checklist") describe the **v4.5 build of
@@ -27,17 +27,19 @@ The layout sections below (§"Current Dashboard Layout", §"Component Details", 
 
 | Layer | What is rendered | Source |
 |---|---|---|
-| Service Status Strip | **8** mini-cards: Network, D1, Google SEO, Security, Brevo, Sentry, Observability, Queues | `widgets/ServiceStatusStrip.tsx` |
-| KPI ribbon | 4 cards: Global Edge Traffic, GSC Validation Health, Supabase Postgres Pool, Brevo SMTP Quota | `DashboardController.tsx` |
-| Tabs | Overview · Google Search Console & Indexing · Edge Compute · Postgres Cluster · Services & Quotas | `DashboardController.tsx` |
-| Overview tab | ServiceStatusStrip → `GscValidationWidget` (fetches its own report) → ⅔ `WidgetEdgeCompute` + ⅓ `EventLedgerWidget` | `widgets/*.tsx` |
-| Edge Compute tab | `WidgetEdgeCompute` (`CloudflareWidgets.tsx`) — per-Worker cards | |
-| Postgres Cluster tab | `WidgetPostgresCluster` (`SupabaseWidgets.tsx`) with 4 tabs: Vitals, Engine I/O, Capacity, Auth | |
-| Services & Quotas tab | 2 cards: Brevo `{sent} / 9,000` and R2 objects / volume | |
+| Command bar | Title, live sync indicator ("Live Stream Active" / "Syncing…" + last sync time), Refresh Telemetry button | `DashboardController.tsx` |
+| KPI deck | 4 `MetricCard`s: Global Edge Network (requests, bandwidth, uptime, sparkline), Data Layer & Cache (pool + buffer-cache ratio bar), Edge Worker Scripts (count, P50, errors, isolate-health bar), Transactional SMTP (sent / 9,000 bar) | `DashboardController.tsx`, `ui/MetricCard.tsx` |
+| Tabs (segmented control) | Overview · Search Console · Edge Workers · Database Pool · Quotas & Storage | `DashboardController.tsx` |
+| Overview tab | "Service Health Matrix" = `ServiceStatusStrip` (**8** mini-cards: Network, D1 DB, Google SEO, Security, Brevo, Sentry, Observability, Queues) → `GscValidationWidget` (fetches its own report) → 7/12 `WidgetEdgeCompute` + 5/12 `EventLedgerWidget` | `widgets/*.tsx` |
+| Edge Workers tab | `WidgetEdgeCompute` (`CloudflareWidgets.tsx`) — searchable fleet console: full script names, role tags, humanised durations | |
+| Database Pool tab | `WidgetPostgresCluster` (`SupabaseWidgets.tsx`) with 4 tabs: Vitals, Engine I/O, Capacity, Auth | |
+| Quotas & Storage tab | 2 cards: Brevo `{sent} / 9,000` and R2 objects / volume | |
+| Event ledger | Section A: telemetry events (routing, pool & cache, email engine, isolates); Section B "Edge Ingress & D1 Engine": cache-hit ratio, D1 read / write queries, cached bandwidth | `widgets/EventLedgerWidget.tsx` |
 
 Not present any more: the setup banner, the Quick Actions row, the audit-log feed, the 6-cell
-quota grid, the Storage widget, the dual-axis chart (only a dead `.cf-uplot-theme` rule remains in
-`DashboardStyles.astro`), and `ResizeObserver`. The "12h auto-cron" badge on the GSC widget is a label
+quota grid, the Storage widget, the dual-axis chart, `ResizeObserver`, and — since `4e60c9d`
+(2026-09-15) — `DashboardStyles.astro` itself: its 1,195 lines of orphaned CSS were deleted with the
+remodel, so the "CSS Architecture" section below describes files that no longer exist. The "12h auto-cron" badge on the GSC widget is a label
 derived from the `gsc-run-interval-hours` setting (default 12); the job itself rides the 5-minute
 cron tick and self-gates — see `SEARCH-CONSOLE-SYNC.md` §11.
 
@@ -206,7 +208,7 @@ The main orchestrator Preact island (`DashboardController.tsx`) is **props-free*
 
 ---
 
-## CSS Architecture — *historical; the layout classes remain in `DashboardStyles.astro` but the widgets they styled are gone*
+## CSS Architecture — *historical; `DashboardStyles.astro` and its layout classes were deleted on 2026-09-15 (`4e60c9d`)*
 
 ### Layout Classes
 

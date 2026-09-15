@@ -134,6 +134,17 @@ and each one runs under `runJob` with a declared D1 budget:
 | `*/5 * * * *` | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`, plus the three folded in from the retired 15-minute trigger: `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings) |
 | `0 2 * * SUN` | `asset-cleanup`, `staff-storage-reconcile` |
 
+> **Idle-tick gates (chunk 8, complete 2026-09-15).** Four of the 5-minute jobs
+> decide cheaply before they work, and every gate fails open: `booking-outbox-poke`
+> runs only when `booking_attempts` holds a row awaiting replay (one indexed
+> `SELECT 1 … LIMIT 1`); `cf-access-reconcile` only when the whitelist hash changed
+> or `cf-access-reconcile-max-staleness-hours` (24) has passed; `cf-access-audit-poll`
+> still polls every tick but rewrites its watermark only past
+> `cf-audit-watermark-max-staleness-minutes` (60); `storage-notifications` runs once
+> per `storage-notify-interval-minutes` (60), stamping `storage-notify-last-run` on
+> success. All four bounds are `admin_portal_settings` rows; setting one to `0`
+> restores the ungated behaviour without a deploy.
+
 > **Account slots: 3 of 5 (chunk 7, 2026-09-10).** Workers Free allows **5 cron
 > triggers per account**, not 3 per Worker. The `*/15` trigger was deleted and
 > its jobs folded into the `*/5` tick: verified live, all three were no-ops

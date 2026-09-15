@@ -513,7 +513,7 @@ Used for components that adapt to their container width (bento cards) rather tha
 
 ---
 
-## 9. Component Patterns *(target vocabulary — see §11: as of 2026-09-14 the code has no `.btn` base / `.btn--sm` / `.badge--*` / `.input--error` / `.cell-mono` / `.toast--*` / `modalEnter`; `.bento-card` lives in `DashboardStyles.astro` without the `--full/--compact/--interactive` modifiers; `.data-table__*` in `global.css` does use BEM `__`)*
+## 9. Component Patterns *(target vocabulary — see §11: as of 2026-09-14 the code has no `.btn` base / `.btn--sm` / `.badge--*` / `.input--error` / `.cell-mono` / `.toast--*` / `modalEnter`; `.bento-card` lived in `DashboardStyles.astro` until that file was deleted on 2026-09-15 (`4e60c9d`) — no `.bento-card` rule exists now; `.data-table__*` in `global.css` does use BEM `__`)*
 
 ### 9.1 Naming Convention
 
@@ -526,7 +526,7 @@ Used for components that adapt to their container width (bento cards) rather tha
 
 No BEM `__` double underscore. Single hyphen for children, double hyphen for modifiers.
 
-### 9.2 Bento Card
+### 9.2 Bento Card *(target — the rule below has no implementation since the dashboard remodel of 2026-09-15; dashboard cards are the shared `Card` / `MetricCard` components with Tailwind utilities)*
 
 The fundamental dashboard widget container.
 
