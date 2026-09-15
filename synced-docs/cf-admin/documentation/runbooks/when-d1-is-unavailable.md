@@ -115,22 +115,20 @@ check what it deleted that week before assuming it was fine.**
 - **A `lease-held` outcome** means another tick was still running. Expected under
   slow conditions, not an error.
 
-## 6. The visitor-facing half
+## 6. The visitor-facing half (cf-astro, chunk 8c — shipped 2026-09-15)
 
-Chunk 8c extends this runbook with the cf-astro rows. Until it lands, the known
-gaps on the public site are:
+| Surface | If D1 is down | Visitor sees | Reported |
+|---|---|---|---|
+| `/en/blog`, `/es/blog` | `getBlogPosts` returns `degraded: true` | The bundled Markdown collection (`cf-astro/src/content/blog/`, 7 posts per locale) as the listing, no pagination | `blog.fallback_taken`, once per isolate |
+| `/blog/tag/[tag]` | same | The bundled posts carrying that tag; if none, the "temporarily unavailable" panel with **503 + Retry-After** (an empty fallback is unavailability, not an empty result) | same |
+| `/blog/[slug]` | `getBlogPostBySlug` returns `{ ok: false, reason: 'error' }` | The bundled copy if one exists; otherwise the panel with **503**. **Never a 404** — that answer is reserved for `reason: 'not_found'` in both sources (`resolvePostOutcome`, tested) | `blog.fallback_taken` / `blog.post_unavailable` |
+| RSS, sitemaps | `getMergedBlogPosts` | Collection-only feed (unchanged behaviour) | `blog.sources.*` |
+| Rate limits, Sentry sampling | `getServiceConfig` | The last snapshot for up to 300 s (was 60 s), then `DEFAULTS` | `service_config.fallback_to_defaults`, once per isolate |
 
-- `/en/blog`, `/es/blog` and the tag pages call `getBlogPosts`, which returns
-  `{ posts: [], total: 0 }` on a D1 error — a visitor sees an **empty blog page**.
-- `/blog/[slug]` calls `getBlogPostBySlug`, which returns `null` for both a
-  genuine absence and an error — so a real post is served as a **404**, which
-  search engines can act on.
-- The bundled Markdown fallback **already exists** (`getMergedBlogPosts`) but is
-  wired only to RSS and the sitemaps.
-- `getServiceConfig` falls back to `DEFAULTS` **silently**, so the site can revert
-  to default rate limits and default Sentry sampling with nobody told.
-
-If a D1 incident happens before chunk 8c ships, check the public blog manually.
+**What this means for the operator:** during a D1 incident the public blog keeps
+serving the fourteen bundled articles; D1-only articles answer 503 (not 404), so
+nothing is de-listed. The bundled collection must stay a truthful subset of the
+blog for this to hold (cf-astro `AGENTS.md` invariant 7).
 
 ## 7. Related
 
