@@ -229,7 +229,7 @@ npx wrangler d1 migrations apply madagascar-db --remote
 npx wrangler kv:namespace create ISR_CACHE
 npx wrangler kv:namespace create SESSION
 
-# 4. Bind Secrets to Pages Worker
+# 4. Bind Secrets to the Worker
 npx wrangler secret put DATABASE_URL        # Supabase postgres:// URL
 # Note: BREVO_API_KEY (primary) and RESEND_API_KEY (failover) are secrets on
 # the shared cf-astro-email-consumer worker, not on cf-astro itself.
@@ -283,14 +283,14 @@ Two layers exist:
 
 The system operates strictly inside Cloudflare's free tier quotas, ensuring monthly operational cost is exactly **$0 USD**:
 
-| Resource                | Current Usage | Cloudflare Free Tier Limit | Status       |
-| ----------------------- | ------------- | -------------------------- | ------------ |
-| **Pages Builds**        | ~30 / month   | 500 / month                | 🟢 Excellent |
-| **Worker Requests**     | ~1,200 / day  | 100,000 / day              | 🟢 Excellent |
-| **D1 Rows Read**        | ~5,000 / day  | 5,000,000 / day            | 🟢 Excellent |
-| **D1 Rows Written**     | ~150 / day    | 100,000 / day              | 🟢 Excellent |
-| **KV Storage Capacity** | ~2 MB         | 1 GB                       | 🟢 Excellent |
-| **R2 Storage Capacity** | ~450 MB       | 10 GB                      | 🟢 Excellent |
+| Resource                | Current Usage | Cloudflare Free Tier Limit                                                                   | Status       |
+| ----------------------- | ------------- | -------------------------------------------------------------------------------------------- | ------------ |
+| **Workers Builds**      | ~30 / month   | 3,000 build minutes / month, 1 concurrent (Free — `workers/ci-cd/builds/limits-and-pricing`) | 🟢 Excellent |
+| **Worker Requests**     | ~1,200 / day  | 100,000 / day                                                                                | 🟢 Excellent |
+| **D1 Rows Read**        | ~5,000 / day  | 5,000,000 / day                                                                              | 🟢 Excellent |
+| **D1 Rows Written**     | ~150 / day    | 100,000 / day                                                                                | 🟢 Excellent |
+| **KV Storage Capacity** | ~2 MB         | 1 GB                                                                                         | 🟢 Excellent |
+| **R2 Storage Capacity** | ~450 MB       | 10 GB                                                                                        | 🟢 Excellent |
 
 ---
 

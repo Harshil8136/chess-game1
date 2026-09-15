@@ -1,7 +1,7 @@
 {% raw %}
 # cf-astro Operations Reference
 
-**Date:** 2026-06-18
+**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4
 
 This document outlines the core infrastructure bindings and the CLI commands used to manage and verify the Cloudflare resources attached to `cf-astro`.
 
@@ -48,6 +48,7 @@ Used for SSR rendering caches and session state.
 - `CHATBOT_CACHE`
 - `CHATBOT_KV`
 - `ADMIN_SESSION`
+- `EMAIL_IDEMPOTENCY` (the email consumer's dedupe namespace; 6 namespaces on the account as of 2026-09-15)
 - **Verify status:**
   _(Note: `npx wrangler kv:namespace list` is deprecated; use the exact syntax below)_
 
@@ -59,7 +60,7 @@ npx wrangler kv namespace list
 
 Decouples email delivery and syncing from user API requests.
 
-- `madagascar-emails` (Email sending via Resend)
+- `madagascar-emails` (email sending by the shared `cf-astro-email-consumer` Worker — Brevo primary, Resend as same-request failover; see `SYSTEM-ARCHITECTURE.md` §4)
 - `madagascar-emails-dlq` (Dead-letter queue)
 - `madagascar-sync-revalidate` (Sync events)
 - `madagascar-sync-revalidate-dlq` (Dead-letter queue)
