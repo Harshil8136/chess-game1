@@ -3,7 +3,7 @@
 title: "Disaster Recovery & Backup Restore Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-09-02
+last_verified: 2026-09-15
 verified_against: [code, config, infra]
 owner: harshil
 related_docs: [incident-response.md, ../operations/OPERATIONS.md, ../architecture/KV-RESILIENCE.md, ../security/compliance/SOC2-TSC-mapping.md]
@@ -32,29 +32,31 @@ Worker deployment.
 [`incident-response.md`](incident-response.md). A ransomware or malicious-
 deletion event is *both*; run the incident runbook first, this one second.
 
-## 1. Recovery objectives — stated, not yet proven
+## 1. Recovery objectives — measured weekly since 2026-09-15
 
 | Store | What lives there | RPO (data loss) | RTO (time to restore) | Mechanism |
 |---|---|---|---|---|
-| **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** (continuous, within 7 days) | ~15–30 min est. | Time Travel, **7-day window on Workers Free** (30 days is the Paid figure — corrected 2026-09-02) |
-| **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **≤24h** (free tier daily) | ~30–60 min est. | Daily backup restore |
+| **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** within 7 days (Time Travel); **≤ 7 days** beyond that (weekly export) | Time Travel: minutes (never drilled on production, by design). From the export: **measured by the weekly drill** — see the latest `backups` run summary; the first figure is in the chunk 6 record §11 | Time Travel, **7-day window on Workers Free**; weekly `wrangler d1 export` artifact, 90 days (`backups` workflow, chunk 6) |
+| **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **≤24h** (free tier daily); **≤ 7 days** from the weekly dump | Dashboard restore: not measurable without a paid PITR/branch. From the dump: **measured by the weekly drill** once `SUPABASE_DB_URL` is set (chunk 6 §10) | Daily backup restore; weekly `pg_dump` artifact, 90 days |
 | **KV** `cf-admin-session` | Sessions, access maps | N/A — by design | ~0 | Not backed up (§4) |
 | **R2** `madagascar-images` | CMS images, email attachments | **No backup** | Unbounded | See §5 — real gap |
 | **R2** `madagascar-staff-storage` | Staff drive files — **including payroll and medical records** | **No backup** | Unbounded | See §5 — same gap, higher-sensitivity data |
 | **Worker** | Application code | 0 | ~5 min | `git` + redeploy |
 
-> ⚠️ **Every RTO above is an estimate from vendor documentation.** None has been
-> measured. SOC 2 A1.3 asks for evidence of *tested* recovery; that evidence
-> does not exist yet. The drill in §8 is the outstanding action, and until it
-> runs the honest external answer is *"documented targets, first drill
-> scheduled"* — never *"proven RTO/RPO."*
+> **Since 2026-09-15 the `backups` workflow rehearses both restores every Monday**
+> and prints the elapsed time and a row-count verdict in its job summary
+> (Actions → backups → latest run). That summary is the evidence SOC 2 A1.3 asks
+> for; copy the numbers here when they change materially. Until the first green
+> run of each half, the honest external answer for that store is *"documented
+> targets, drill automated, first result pending."* R2 and KV are policies (§4,
+> §5), not estimates.
 
 ## 2. D1 — point-in-time recovery
 
 D1 Time Travel keeps a continuous **7-day** window at no cost on the Workers
 Free plan (30 days on Workers Paid — this runbook said 30 until 2026-09-02),
-so RPO is effectively zero within that window and **unbounded beyond it**
-until the weekly export in viability program chunk 6 exists.
+so RPO is effectively zero within that window and **up to seven days beyond
+it**, from the weekly export (§2.1).
 
 ```bash
 # 1. Find a restore point BEFORE the damage
@@ -66,6 +68,28 @@ wrangler d1 time-travel restore madagascar-db --timestamp=<UNIX_TS> --dry-run
 # 3. Restore
 wrangler d1 time-travel restore madagascar-db --timestamp=<UNIX_TS>
 ```
+
+### 2.1 Beyond seven days — restore from the weekly export
+
+The `backups` workflow keeps a full `wrangler d1 export` (schema + data) for 90
+days as artifact `d1-madagascar-db-<run id>` (a `.tar.gz.gpg` when
+`BACKUP_PASSPHRASE` is set). The export **creates tables**, so it cannot be
+imported into the live database; restore into a fresh one and swap the binding:
+
+```bash
+# 1. Download the artifact (Actions → backups → run → Artifacts) and unpack
+# 2. Fresh database, import, verify every table's row count against the export's source-counts.json
+npx wrangler d1 create madagascar-db-restore-$(date +%Y%m%d) --location enam
+npx wrangler d1 execute madagascar-db-restore-YYYYMMDD --remote --yes --file madagascar-db.sql
+node scripts/backup_drill.mjs counts madagascar-db-restore-YYYYMMDD madagascar-db.sql restored.json
+node scripts/backup_drill.mjs compare source-counts.json restored.json
+# 3. Point BOTH repos at it: database_id in cf-admin wrangler.toml [[d1_databases]] and
+#    cf-astro's, then release each (RULESAd §12: a wrong binding UUID fails silently — copy it from `wrangler d1 list`)
+```
+
+This is exactly what the weekly drill rehearses (into `madagascar-db-drill-<run>`,
+deleted afterwards), so the steps and their duration are known before they are
+needed.
 
 > 🚨 **`madagascar-db` is SHARED with `cf-astro`.** A Time Travel restore rolls
 > back the ENTIRE database, not the `admin_*` tables. Restoring to undo an
@@ -91,6 +115,21 @@ single cheapest improvement available to the RPO in this table.
 
 3. Re-run `get_advisors` (Supabase MCP) — a restore can reintroduce RLS drift
    that was previously fixed.
+
+### 3.1 From the weekly dump
+
+Artifact `supabase-madagascar-<run id>` holds `madagascar-public.dump`
+(`pg_dump --schema=public --format=custom`, Postgres 17 client) and
+`source-counts.csv`. To restore into a new Supabase project or branch:
+
+```bash
+pg_restore --dbname "<session pooler URI of the target>" --no-owner --no-privileges madagascar-public.dump
+# then the three compliance counts above, and compare every table with source-counts.csv
+```
+
+The dump exists only once the `SUPABASE_DB_URL` secret is set (the **session
+pooler** URI — the direct host is IPv6-only and unreachable from GitHub
+runners); until then the workflow skips this half with a warning on every run.
 
 > **Open ARCO tickets are the priority check.** Losing one loses a statutory
 > deadline the data subject is still owed (GDPR Art. 15–17 / LFPDPPP), and the
@@ -134,11 +173,15 @@ recover). Trash closes neither.
 
 Options, none yet implemented:
 
-| Option | Cost | Effort |
-|---|---|---|
-| R2 bucket lock on `madagascar-staff-storage` (retention policy; requires the Trash hard-delete and reconciliation paths to respect it) | Storage delta only | Medium — **decision pending (chunk 6)** |
-| Scheduled `rclone` copy to a second bucket | ~$0 within free tier | Medium |
-| Accept the risk, document it | $0 | Current state |
+| Option | Protects against | Leaves open | Cost |
+|---|---|---|---|
+| Bucket lock on `madagascar-staff-storage`, `--retention-days N` | deletes/overwrites of objects younger than N days | everything older than N days; also blocks the app's own Trash hard-delete for young objects | $0 |
+| Weekly `rclone sync` to a backup bucket from the `backups` workflow (R2 S3 token as secrets) | loss of any object, up to a week of lag | a token that can delete the copy too | $0 within the free tier |
+| **Both — the copy, plus an indefinite lock on the backup bucket** (recommended, chunk 6 §3.4) | both | nothing known | $0 |
+| Accept the risk, document it | — | everything | current state |
+
+**Owner decision D-13 (opened 2026-09-15), not yet taken.** The recommended row
+needs a backup bucket and a scoped R2 token that only the owner can create.
 
 ## 6. Worker / application
 
@@ -171,18 +214,21 @@ CMS outage in April 2026 (`RULESAd.md` §12). Verify against
 | Bad deploy | Cloudflare dashboard rollback | Then `git revert` so `main` matches production |
 | Cloudflare account compromise | Incident runbook §4 | Rotate every token; audit Zero Trust policies |
 
-## 8. The drill — outstanding
+## 8. The drill — weekly and automated since 2026-09-15
 
-**Never performed.** Until it is, §1 contains estimates.
+`.github/workflows/backups.yml` (every Monday 03:17 UTC, and on demand from the
+Actions tab) restores the D1 export into `madagascar-db-drill-<run id>`, checks
+every table's row count against the source, deletes the database, and does the
+same for the Supabase dump in a `postgres:17` container. Each run's summary
+states the elapsed seconds and the verdict — that summary is the dated evidence
+SOC 2 A1.3 asks for.
 
-Planned quarterly drill, ~2 hours, on non-production data:
+Still manual, quarterly, ~30 minutes:
 
-1. `wrangler d1 time-travel info` and a `--dry-run` restore — **measure** it.
-2. Supabase restore into a throwaway branch — **measure** it.
-3. Confirm KV loss is non-destructive (log out, log back in).
-4. Redeploy the Worker from a clean checkout — **measure** it.
-5. Replace every estimate in §1 with the measured number and update
-   `last_verified`.
+1. Confirm KV loss is non-destructive (log out, log back in).
+2. Redeploy the Worker from a clean checkout — the release smoke stage already
+   measures propagation (`release-and-rollback.md`).
+3. `wrangler d1 time-travel info` and a `--dry-run` restore on production —
+   read-only, to keep the command familiar.
 
-Record results in `../security/reviews/` as a dated snapshot. That artefact,
-not this document, is what satisfies SOC 2 A1.3.
+Record the quarterly results in `../security/reviews/` as a dated snapshot.
