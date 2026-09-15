@@ -3,7 +3,7 @@
 title: "Schema Change Ledger"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-24
+last_verified: 2026-09-15
 verified_against: [code, infra]
 owner: harshil
 related_docs: [../../RULESAd.md, ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
@@ -28,16 +28,43 @@ referencing it while nothing implemented it (unlike RULE #0.6/#0.9, which
 point at the real, live
 [`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
 
-**Not backfilled.** Migrations applied before 2026-08-12 are not retroactively
-listed here — the live table inventory in the audit doc above is the source of
-truth for what currently exists. This ledger only tracks changes from
-2026-08-12 forward. Add a row here whenever a new migration file lands in
-`migrations/` (D1) or `supabase/migrations/` (Supabase).
+**Backfilled 2026-09-15 (viability program chunk 5).** Every file in
+`migrations/` has a row; the 24 rows for files applied before this ledger
+existed take their date from the live `d1_migrations.applied_at` and say
+"unrecorded" for who ran them. The live table inventory in the audit doc above
+remains the source of truth for what exists today; this is the change history.
+Add a row whenever a new migration file lands in `migrations/` (D1) or
+`supabase/migrations/` (Supabase) — `test/migrations-guard.test.ts` fails the
+build when a D1 file has no row.
 
 ## Ledger
 
 | Migration file | Date applied | Applied by | Description |
 |---|---|---|---|
+| `migrations/0000_baseline.sql` | 2026-07-13 | unrecorded (runner; date from `d1_migrations`) | Consolidated schema baseline generated from production; every `CREATE` is `IF NOT EXISTS`, so it is a no-op on production and provisions a fresh local database in one step. |
+| `migrations/0001_add_privacy_delete_action.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Registers the PLAC action for deleting privacy records (`INSERT OR IGNORE` since 2026-07-29: the row predates the baseline). |
+| `migrations/0002_create_cf_access_sync_log.sql` | 2026-07-24 | unrecorded (runner; date from `d1_migrations`) | Creates `cf_access_sync_log`, the durable record of every whitelist → Cloudflare Access group sync. |
+| `migrations/0002_promote_sessions_page.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Promotes session management from `/dashboard/users/sessions` to the top-level `/dashboard/sessions` under "Security" and re-points per-user PLAC overrides. Shares its number with the row above: frozen history from before RULE #0.7b. |
+| `migrations/0003_granular_audit_log.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Neutralised 2026-07-29 — intentionally a no-op (it used to drop and recreate `admin_audit_log`); kept under its name so the applied ledger stays consistent. |
+| `migrations/0004_add_arco_queue_page.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Registers the ARCO data-subject-request queue page in the PLAC registry. |
+| `migrations/0005_add_retention_review_page.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Registers the owner-gated Retention Review / Purge tool in the PLAC registry. |
+| `migrations/0006_rename_privacy_page_label.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Renames the `/dashboard/privacy` sidebar label to "Consent Records" (label only). |
+| `migrations/0007_add_privacy_forensics_plac.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Adds the PLAC actions for viewing privacy forensics and exporting reports (renamed from a second `0005` on 2026-07-19 — the collision RULE #0.7b now guards against). |
+| `migrations/0008_email_suppression.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Creates `admin_email_suppression`, the CAN-SPAM / CASL suppression list checked before every enqueue. |
+| `migrations/0033_create_blog_and_taxonomy_tables.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Creates `blog_categories`, `blog_posts` (with `cover_image_alt` and `published_at` declared here since 2026-08-30, RULE #0.7b), `blog_posts_history`, and the blog PLAC rows. |
+| `migrations/0034_blog_quality_gate_and_redirects.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Creates `blog_redirects` and back-fills `published_at`; the two columns its description promises live in `0033` (its header records the 2026-08-30 fix). |
+| `migrations/0035_retention_plac_and_flags.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Registers the granular Retention Review sub-actions in `admin_pages`. |
+| `migrations/0036_retention_export_plac.sql` | 2026-08-04 | unrecorded (runner; date from `d1_migrations`) | Registers the Retention Export sub-action in `admin_pages`. |
+| `migrations/0037_widen_admin_portal_settings_scoped.sql` | 2026-08-06 | unrecorded (runner; date from `d1_migrations`) | Widens `admin_portal_settings` into the scoped config store (`scope_type`/`scope_id`) every later feature reuses (RULE #0.9). |
+| `migrations/0038_create_storage_files.sql` | 2026-08-06 | unrecorded (runner; date from `d1_migrations`) | Creates `storage_files`, the one new table of Staff Managed Storage. |
+| `migrations/0039_seed_storage_config_and_plac.sql` | 2026-08-06 | unrecorded (runner; date from `d1_migrations`) | Seeds the storage defaults row in `admin_portal_settings` and the storage PLAC rows. |
+| `migrations/0040_audit_log_target_index.sql` | 2026-08-06 | unrecorded (runner; date from `d1_migrations`) | Adds `idx_audit_target` on `admin_audit_log` for the per-target activity timeline. |
+| `migrations/0041_create_storage_share_access_logs.sql` | 2026-08-06 | unrecorded (runner; date from `d1_migrations`) | Creates `storage_share_access_logs` (per-attempt telemetry for external share links). |
+| `migrations/0042_create_storage_file_requests.sql` | 2026-08-09 | unrecorded (runner; date from `d1_migrations`) | Creates `storage_file_requests` and its PLAC rows (tokenised upload links). |
+| `migrations/0043_add_blog_bypass_quality_gate_plac.sql` | 2026-08-13 | unrecorded (runner; date from `d1_migrations`) | Adds the PLAC action to bypass the blog quality-gate audit. |
+| `migrations/0044_add_blog_ai_prompt_plac_and_settings.sql` | 2026-08-13 | unrecorded (runner; date from `d1_migrations`) | Adds the edit-AI-prompts PLAC action and seeds the default blog AI prompt setting. |
+| `migrations/0045_widen_storage_share_logs_attempt_status.sql` | 2026-08-12 | unrecorded (runner; date from `d1_migrations`) | Rebuilds `storage_share_access_logs` so the `attempt_status` CHECK admits `FILE_TOO_LARGE` and `DISALLOWED_EXTENSION` (SQLite cannot alter a CHECK). |
+| `migrations/0046_add_storage_files_replaces_file_id.sql` | 2026-08-12 | unrecorded (runner; date from `d1_migrations`) | Adds nullable `storage_files.replaces_file_id` for "Replace this file" provenance. |
 | `migrations/0047_create_gsc_index_log_and_seo_settings.sql` | 2026-08-12 | (unrecorded — this ledger began 2026-08-12; seed/example row, added retroactively same-day) | Adds `gsc_index_log` (durable audit log of every Google Search Console API call made by the indexing-automation sync — sitemap submits, URL inspections) and seeds two dynamic `admin_portal_settings` rows (enable/disable master switch, sweep interval in hours) per RULE #0.8's dynamic-config-first pattern. |
 | `migrations/0048_platform_alerts.sql` | 2026-08-12 | harshil | Creates `platform_alerts` D1 table and indexes for durable local dead-letter alerting surviving multi-service outages. |
 | `migrations/0049_add_seo_dashboard_page.sql` | 2026-08-13 | harshil | Registers `/dashboard/seo` ('Search Console Sync') under `admin_pages` with `required_role = 'super_admin'` (canonical Admin) and sort order 19. |
@@ -70,11 +97,17 @@ even when the change is data rather than schema.
 - **"Applied by"** should name the developer or agent session that ran the
   migration once that's reliably capturable; until then, note it as
   unrecorded rather than guessing.
-- This is a manually-maintained table, not a CI-enforced gate. There is no
-  `db:check` script — RULE #0.7 asked for one for months and it was never
-  written; the rule now points at `wrangler d1 migrations apply` and
-  `npm run verify` instead. Nothing validates ledger completeness automatically. Treat gaps here as a documentation debt to close
-  opportunistically, not a build-blocking violation.
+- **Completeness is enforced** since 2026-09-15: `test/migrations-guard.test.ts`
+  (part of `npm run verify`) fails when a file in `migrations/` has no row
+  here. The same test freezes applied files through
+  `database/migrations.manifest.json` (an edit or rename of a frozen file
+  fails; a new file must be added with `node scripts/migrations_manifest.mjs`)
+  and enforces RULE #0.7b numbering (new files `0033`+, one file per number).
+  Rows for Supabase and cf-astro files are recorded here by convention but
+  not checked.
+- A new D1 migration's row is written in the same commit as the file, with the
+  date the deploy that carries it will apply it; `release.mjs` applies pending
+  files before the code deploys, so the date is the push date.
 
 ## Related
 

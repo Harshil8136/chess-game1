@@ -453,7 +453,7 @@ Local development: copy `.dev.vars.example` to `.dev.vars` and fill the values; 
 npm run dev            # Local dev server (Astro on workerd)
 npm run verify         # the full gate — same set Workers Builds and CI run
 npm run build          # Production build (astro build; offline-safe via .env.build)
-npm run release        # preflight → verify → build → drift check → migrate → deploy → smoke → tag
+npm run release        # preflight → verify → build → drift check (blocking) → migrate → deploy → smoke → tag
 npm run build:ci       # Workers Builds build command  (verify + build)
 npm run deploy:ci      # Workers Builds deploy command (migrate BEFORE deploy, then smoke)
 

@@ -114,6 +114,13 @@ wrangler d1 execute madagascar-db --remote \
 > is now a real, lightweight doc, seeded with one example row; it is **not** backfilled
 > for migrations applied before this date — treat it as an ongoing practice starting
 > now, not a complete history.
+>
+> **Update (2026-09-15, viability program chunk 5):** backfilled to every file in
+> `migrations/` (30 of 30, dates from the live `d1_migrations`), and completeness is
+> now enforced — `test/migrations-guard.test.ts` fails `npm run verify` when a D1
+> migration file has no ledger row. The same test freezes applied files
+> (`database/migrations.manifest.json`; add a file with
+> `node scripts/migrations_manifest.mjs`).
 
 ---
 
@@ -146,6 +153,12 @@ therefore owned:
   than as an `ALTER`.
 - ❌ **FORBIDDEN:** Renaming an applied migration file — the filename key means the
   runner would apply it again (RULE #0.7).
+
+> **Enforced since 2026-09-15** (viability program chunk 5) by
+> `test/migrations-guard.test.ts`: a new file in `migrations/` numbered below `0033`,
+> two files sharing a number, or an edit/rename of a frozen file fails the build. The
+> "declare, never `ALTER`, a column the other repo's migration adds" clause is not
+> machine-checked — it is still a reading rule.
 
 > **This bit production once.** `migrations/0034_blog_quality_gate_and_redirects.sql`
 > does `UPDATE blog_posts SET published_at = …` for a column that only cf-astro's

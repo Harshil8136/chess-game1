@@ -30,7 +30,7 @@ git push origin main
        │      npm run verify  (types:check → typecheck → lint → tests → rules_check → docs_check → a11y_check → audit_gate)
        │      npm run build   (astro build)
        └─ deploy command  npm run deploy:ci  →  node scripts/release.mjs deploy --ci
-              schema drift check   node scripts/d1_schema_snapshot.mjs --check   (warn-only until chunk 5)
+              schema drift check   node scripts/d1_schema_snapshot.mjs --check   (BLOCKING since chunk 5: exit 2 = drift → deploy stops; exit 1 = live schema unreadable → 3 tries, then deploy with a warning)
               migrations           wrangler d1 migrations list/apply madagascar-db --remote   ← BEFORE the code
               deploy               wrangler deploy   (refuses if a [secrets] required name is missing)
               smoke                GET /api/health through an Access service token; expects status ok and release == commit
@@ -115,6 +115,7 @@ Nothing changes until these are set; until then Builds keeps its default
 | Bad code after a **contract** migration | fix forward: a new migration that re-adds what was dropped, then deploy | `wrangler rollback` alone — the old code would hit the missing column |
 | Wrong data written by a migration | a corrective forward migration (record it in the ledger) | D1 Time Travel, unless the damage is broad — the database is shared with cf-astro and Time Travel rewinds *everything* (7-day window on Workers Free; see [`disaster-recovery.md`](disaster-recovery.md) §2) |
 | Deploy refused: "required secret missing" | `npx wrangler secret put <NAME>` then re-run the build | remove the name from `[secrets] required` to make it pass |
+| Deploy refused: "live schema differs from database/schema.snapshot.sql" | production's schema is not what the tests ran against: `node scripts/d1_schema_snapshot.mjs`, commit the regenerated snapshot, push again | never edit the snapshot by hand (chunk 8b's hand edit left a stale header count that chunk 5 found) |
 | Deploy refused: "migration blocked (contract)" | add the `-- contract:` line with the reason and the ledger row, or split the destructive step into a later migration | delete the guard |
 
 ## 6. Verification log
@@ -128,4 +129,4 @@ Nothing changes until these are set; until then Builds keeps its default
 - [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §7 — the command reference this runbook expands
 - [`disaster-recovery.md`](disaster-recovery.md) — when a release is not the problem
 - [`../reference/schema-change-ledger.md`](../reference/schema-change-ledger.md) — the third artifact of every schema change
-- [`../program/ROADMAP.md`](../program/ROADMAP.md) — chunks 5 (drift check becomes blocking) and 6 (backups)
+- [`../program/ROADMAP.md`](../program/ROADMAP.md) — chunk 5 (drift check blocking since 2026-09-15) and chunk 6 (backups)
