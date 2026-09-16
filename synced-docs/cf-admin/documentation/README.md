@@ -118,6 +118,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
+| [`features/CRON-CONTROL.md`](features/CRON-CONTROL.md) | The scheduled-job control plane: what can be paused, the four PLAC keys and what each grants per role, the criticality tiers and why they live in code, how automatic shedding decides, what the gate costs per tick, and the fail-open guarantee | active |
 | [`features/DASHBOARD.md`](features/DASHBOARD.md) | Dashboard home, analytics providers, widgets | ai, technical | active |
 | [`features/USER-MANAGEMENT.md`](features/USER-MANAGEMENT.md) | RBAC hierarchy, user lifecycle, ghost protection, sessions | ai, technical | active |
 | [`features/CF-ACCESS-SYNC.md`](features/CF-ACCESS-SYNC.md) | CF Access Group whitelist sync: architecture, 2026-07-24 root-cause fix, durability (log + cron self-heal), Users-tab visibility, runbook | ai, technical, operator | active |

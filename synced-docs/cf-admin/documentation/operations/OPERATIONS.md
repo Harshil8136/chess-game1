@@ -134,6 +134,13 @@ and each one runs under `runJob` with a declared D1 budget:
 | `*/5 * * * *` | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`, plus the three folded in from the retired 15-minute trigger: `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings) |
 | `0 2 * * SUN` | `asset-cleanup`, `staff-storage-reconcile` |
 
+> **Every job below can be paused, throttled or run by hand from
+> `/dashboard/cron` (2026-09-16).** The control plane owns per-job state,
+> criticality tiers, the permission matrix and the automatic-shedding rules —
+> see [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md), which is
+> their single home. The gate costs +1 row read per tick and fails open: a
+> missing or unreadable control document runs every job exactly as before.
+
 > **Idle-tick gates (chunk 8, complete 2026-09-15).** Four of the 5-minute jobs
 > decide cheaply before they work, and every gate fails open: `booking-outbox-poke`
 > runs only when `booking_attempts` holds a row awaiting replay (one indexed
