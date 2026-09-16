@@ -216,7 +216,9 @@ signoff.
 ## 🛡️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
 
 The live production estate is **63 tables** across all three apps, re-counted
-against the live databases on 2026-08-13:
+against the live databases on 2026-08-13 (**61 live since 2026-09-16**: viability
+program chunk 14a quarantined `admin_sessions` and `privacy_requests` under
+`zz_dead_*` names; they are dropped by D-15 after the first green backup):
 
 | Store | Tables | How counted |
 |---|---:|---|
