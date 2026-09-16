@@ -3,7 +3,7 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-23
+last_verified: 2026-09-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [CF-ACCESS-SYNC.md]
@@ -142,7 +142,9 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 
 ### 3.1 Session Revocation Workflow (3-Layer Ghost Sweep)
 
-When a user's role is changed or their account is deactivated, the system triggers a **3-Layer Security Cascade** to prevent stale sessions from retaining high-privilege access at any layer:
+**Changed 2026-09-16.** A role change no longer triggers this cascade, and neither does granting, revoking or resetting a page or approving an access request. Those write an `authz-changed:{userId}` mark; each of the user's live sessions re-reads its role and page map on its next request and nobody is signed out ([`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md), D1). The cascade below still runs for deactivation, deletion, force-kick and the Sessions page's block action; stage 2 of that remediation retires Layer 2.
+
+When an account is deactivated, deleted or force-kicked, the system triggers a **3-Layer Security Cascade** to prevent stale sessions from retaining access at any layer:
 
 1. **Verification**: The actor's clearance is verified against the target's role (note: "Manager" is now also a specific role name at level 3 — this step is a generic clearance check, not a literal Manager-role gate).
 2. **Whitelist Update**: Supabase `admin_authorized_users` is updated with the new role/status.
@@ -223,7 +225,7 @@ Access is managed via the active flag in the authorization table. When set to tr
 
 If a user needs immediate revocation:
 
-1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The middleware `lastRoleCheckedAt` 30-min re-check detects `is_active = false` → destroys session. 3-layer force-kick fires immediately on the PATCH itself to kick all active sessions right away (not waiting for the 30-min refresh window).
+1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The 3-layer force-kick fires on the PATCH itself, and the PATCH writes an `authz-changed` mark, so any session the kick misses re-verifies on its next request and ends with `account_inactive`. The re-check writes no sign-in block.
 2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV delete + KV revocation flag + CF API session DELETE). User is ejected within seconds.
 3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
 4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
@@ -288,7 +290,7 @@ For detailed PLAC documentation, see the dedicated [PLAC-AND-AUDIT.md](../archit
 - Pages the actor cannot modify are shown locked (grayed out with lock icon).
 - **Role Mutation Pipeline (Ghost Protection Invalidation):** Changing a user's role is a high-risk event. Any role update triggers a synchronous security cascade:
   1. `resetUserOverrides`: Purges all historical custom page overrides, returning the user to a clean RBAC state.
-  2. `forceLogoutUser`: Immediately destroys the user's active KV session to prevent privilege escalation via stale tokens.
+  2. `markAuthzChanged` (`src/lib/auth/authz-signal.ts`): each live session re-reads role and page map on its next request. Until 2026-09-16 this step was `forceLogoutUser`, whose 24-hour sign-in block locked the changed user out of the portal.
 
 ## 9. API Data Contracts
 
@@ -300,7 +302,7 @@ Accepts email, display name, role, hidden status, and any initial page overrides
 
 ### 9.2 PATCH /api/users/manage (Modify User)
 
-Accepts updates for active status, display name, and role. Mutates the D1 whitelist and triggers the synchronous session invalidation cascade if roles change.
+Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation.
 
 ## 10. Operational Resilience & Failure Modes
 
@@ -310,7 +312,8 @@ The system is designed to "fail-closed" across various infrastructure disruption
 |---------------|---------------|-----------------------|
 | **KV Read Timeout** | Session cannot be verified | Request is rejected (401). Prevents unauthorized access on cache failure. |
 | **D1 Write Failure** | Permission change not saved | API returns 500. UI shows error, no state change occurs. |
-| **KV Write Failure** | Force-logout command fails | User remains logged in until next 30m JWT refresh, where role mismatch is detected. Audit log preserves the attempt. |
+| **KV Write Failure** | Force-logout or `authz-changed` mark not written | The session keeps its old map until the next 30-minute re-check, which detects the role or active-state change. Audit log preserves the attempt. |
+| **Supabase outage during a re-check** | Identity row cannot be read | The session keeps working for up to two re-check intervals since the last good check, then ends with `recheck_failed`. No sign-in block is written. |
 | **Supabase Outage** | Invitation/Auth fails | Whitelisting is rolled back atomically to prevent orphaned records. |
 
 ### Session Timing Matrix

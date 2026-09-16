@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-04
+last_verified: 2026-09-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -282,8 +282,8 @@ Ordered, with the file that owns each stage and the store it touches (chunk 10,
 | # | Stage | File | Touches |
 |---|---|---|---|
 | 1 | Asset, webhook, public-page and public-API classification with the method rules; then the CSRF gate | `classify.ts` | — |
-| 2 | Read `__Host-admin_session` → `session:{id}` from KV; refuse a revoked session (`revoked-session:{id}`, `revoked:{userId}`) | `session-stage.ts` | **KV ×3** (record + two flags) |
-| 3a | Warm session, every 30 min: re-read the identity row; inactive, missing or unrecognised revokes; a changed role recomputes the map | `refresh-role.ts` | Supabase HTTP; **D1 ×1** on a role change |
+| 2 | Read `__Host-admin_session` → `session:{id}` from KV; refuse a revoked session (`revoked-session:{id}`, `revoked:{userId}`); read the user's `authz-changed:{userId}` mark | `session-stage.ts` | **KV ×4** (record + one bulk read of three keys, billed per key) |
+| 3a | Warm session, every 30 min **or at once when the `authz-changed` mark is new**: re-read the identity row; missing, inactive or unrecognised ends the session (no sign-in block); a changed role or a new mark recomputes the map; a Supabase outage keeps the session for up to two intervals since the last good check | `refresh-role.ts` | Supabase HTTP; **D1 ×1** on a role change or a new mark |
 | 3b | No session: verify the Cloudflare Access assertion (JWKS, RS256, audience, issuer, expiry) | `assertion.ts` | JWKS fetch (cached) |
 | 3c | … bot score, header/claim email match, whitelist, revocation flag, stored role, session creation, `cf_sub_id` write-back, login event | `bootstrap.ts` | **Supabase HTTP**, **D1 ×1** (map), **KV ×1 read + ×2 writes** |
 | 4 | A usable access map: missing, built for another role or older than 1 h → recompute; bounded fail-open on a D1 error when a prior map exists | `access-map.ts` | **D1 ×1** when recomputing |
@@ -326,10 +326,12 @@ login screen can explain itself.
 | Invalid or expired JWT | 401 `{"error":"Invalid or expired auth token"}` | → `/?error=expired_token` | login attempt |
 | JWT valid, **email not in `admin_authorized_users`** | 403 `{"error":"Access denied"}` | → `/?error=access_denied` | **yes — `is_authorized_email = 0`** |
 | Account exists but `is_active = 0` **at bootstrap** | 403 `{"error":"Access denied"}` — deliberately the same flat 403 as "not whitelisted", so the API never reveals directory membership | → `/?error=account_inactive` | yes — `account_inactive` |
-| Account went inactive **during a warm session** (30-min re-check) | — | → `/?error=access_revoked` | yes |
+| Account went inactive **during a warm session** (re-check) | 403 `{"error":"Account inactive"}` + `Clear-Site-Data` | → `/?error=account_inactive` | — (session ends; no sign-in block since 2026-09-16) |
+| Identity row gone **during a warm session** | 403 `{"error":"Access denied"}` + `Clear-Site-Data` | → `/?error=access_denied` | — |
+| Directory unreachable **at sign-in** | 503 `{"error":"Directory unavailable"}` | → `/?error=directory_unavailable` | yes — `directory_unavailable` |
 | Stored role does not translate | 403 `{"error":"Account role not recognised"}` | → `/?error=role_unrecognised` | no — the one refusal in `stages/bootstrap.ts` that emits no login event |
 | Session revoked (`revoked:{userId}`) | 403 `{"error":"Session revoked"}` + `Clear-Site-Data` | → `/?error=session_revoked` | yes |
-| Role re-check failed (D1 unreachable) | — | → `/?error=recheck_failed` | Sentry |
+| Re-check failed: Supabase unreachable past the grace window (or on a forced re-check), or D1 unreachable while recomputing the map | 503 `{"error":"Verification unavailable"}` + `Clear-Site-Data` | → `/?error=recheck_failed` | Sentry / cooled report |
 | Bot score below threshold | 403 `{"error":"Automated traffic blocked"}` | 403 | yes |
 | Identity mismatch between JWT and session | 403 `{"error":"Identity verification failed"}` | 403 | yes |
 | **PLAC deny on the page** | 403 `{"error":"Forbidden"}` | → `/dashboard/access-denied` | yes |
@@ -417,16 +419,19 @@ Three layers (`src/lib/auth/plac.ts`):
 
 `revoked-session:{sessionId}` (TTL 24 h) does the same for one session.
 
-**The asymmetry that matters.** Revoking access triggers the full three-layer
-force-kick — immediate, with no consistency window. **Granting** access does not:
-there is no push invalidation, so a new grant reaches a logged-in user only when
-their access map is next recomputed. That happens when the map is missing, when
-their role changed, or when it is older than `PLAC_REFRESH_MS` — **one hour**.
-
-This is the safe direction to be wrong in: denials are instant, grants are eventual.
-It should still be stated plainly to anyone comparing against a system with push
-invalidation, and it is a genuine difference from a centralised PDP, which sees
-every decision live.
+**Permission changes do not revoke anything (2026-09-16).** Until then a single
+page revoke, an access-request approval, a role change and a page-registry change
+all called the three-layer force-kick above, and its `revoked:{userId}` flag
+refused every sign-in for 24 hours — which is how the only Owner was locked out
+on 2026-09-16 ([`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md)).
+Those changes now write a random `authz-changed:{userId}` mark instead. The
+session stage reads it in the same bulk KV read as the flags, and a session
+whose stored `authzMark` differs re-reads its role from Supabase and its map from
+D1 on that request. Grants and revocations therefore both reach a signed-in user
+on their next request, subject only to KV's eventual consistency (about 60 s),
+and nobody is signed out. The three-layer force-kick is left to force-kick,
+deactivation, deletion and the Sessions page's block action; stage 2 of the
+remediation retires its user-level flag.
 
 ---
 

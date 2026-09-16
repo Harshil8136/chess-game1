@@ -3,7 +3,7 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-08-23
+last_verified: 2026-09-16
 verified_against: [code]
 owner: ai-agent
 related_docs: [USER-MANAGEMENT.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md]
@@ -55,7 +55,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 |-----|--------|---------|
 | Active Sessions | `GET /api/sessions/active-sessions` (`kv.list` + gets) | 1 list/call |
 | Authentication History | `GET /api/audit/login-logs` (D1) | none |
-| Active Edge Blocks | `GET /api/sessions/active-revocations` (KV `revoked:*`) | 1 list/call |
+| Active Edge Blocks | `GET /api/sessions/active-revocations` (KV `revoked:*`) — fetched only when this tab is opened, so the KPI tile and tab count read 0 until then (design D2; the surface is retired in stage 2) | 1 list/call |
 | KPI ribbon | `GET /api/audit/stats` (D1) | none |
 
 Session-mutation endpoints (`active-sessions` DELETE, `active-revocations`
@@ -90,6 +90,23 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   (type-to-confirm; keeps the operator's own session). See `flush-sessions.ts`.
 - **Privacy** — IPs are masked in list views; the full IP appears only in the
   detail drawer (`maskIp`, per `login-forensics.md §6.2`).
+
+## Authorization changes and re-verification (2026-09-16)
+
+A warm request reads three keys in one bulk KV read: `revoked-session:<sessionId>`,
+`revoked:<userId>` (retired in stage 2 of the access revocation remediation) and
+`authz-changed:<userId>`. When the mark differs from the one the session stored,
+the request re-reads the user's row from Supabase and recomputes the page map
+from D1 before it is authorised. Granting, revoking or resetting a page,
+approving an access request, changing a role and applying a page-registry change
+write the mark; none of them signs anyone out.
+
+The periodic re-check (every `SESSION_REFRESH_INTERVAL_MS`) never writes a
+sign-in block. A missing row ends the session with `access_denied`, an inactive
+row with `account_inactive`, an untranslatable role with `role_unrecognised`.
+A Supabase outage keeps the session for up to two intervals since the last good
+check, then ends it with `recheck_failed`; a re-check forced by a mark gets no grace.
+Design and rationale: [`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md).
 
 ## Verification
 
