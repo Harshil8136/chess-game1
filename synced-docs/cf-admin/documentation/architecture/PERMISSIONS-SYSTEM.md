@@ -165,13 +165,26 @@ D1 `admin_pages`, primary key `path`:
 | `parent_path` | Groups sub-features under their page |
 | `sort_order`, `category`, `label`, `icon` | Presentation |
 
-**Measured live, 2026-08-24:** 92 rows, **81 active**, **47** of them hash-fragment
-sub-pages (45 active).
+**Measured live, 2026-09-16:** 97 rows, **86 active**, **51** of them hash-fragment
+sub-pages (49 active). The rise since 2026-08-24 (92/81/47/45) is mostly the cron
+control plane, which added `/dashboard/cron` plus `#pause`, `#trigger` and
+`#configure` in `migrations/0054`–`0055`.
 
 Hash fragments are the fine-grained layer. `/dashboard/sessions` is the page;
 `#revoke`, `#unblock`, `#flush`, `#export` are separately grantable actions within
 it. This is how a coarse per-page model reaches action-level granularity without a
 policy language.
+
+**A fragment key is not a descendant of its page, and a handler must check both.**
+`resolveAccess` matches ancestors with `startsWith(key + '/')`; `#revoke` supplies
+no `/`, so `/dashboard/sessions#revoke` inherits nothing from `/dashboard/sessions`.
+Check only the page and a deny written on the fragment is ignored — the override is
+stored, shown in the access UI, and has no effect at the one point that matters.
+Check only the fragment and a user denied the whole page still reaches the action,
+because an undefined key resolves `unknown` and `requirePageAccess` permits unknown.
+`src/lib/auth/surface-guards.ts` exists to make that pair the default: `denyCron` and
+`denySessions` take the page key first, then the action. This was got wrong twice
+before it was centralised — see MAINTENANCE.md D-4 and D-5.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -179,7 +192,12 @@ top-level page required a migration rather than a re-link
 (`migrations/0002_promote_sessions_page.sql`).
 
 `is_active = 0` is a soft delete that keeps foreign keys and audit history intact.
-It has a consequence worth knowing — see §16, D-3.
+It has a consequence worth knowing: the access map is built `WHERE is_active = 1`, so
+a deactivated key is **absent** from it rather than denied, and a guard naming one
+falls through to longest-prefix matching against its parent. The gate still fails
+closed, but it is no longer the gate the code appears to name. That is what happened
+to the sessions telemetry endpoint after `migrations/0002_promote_sessions_page.sql`
+(MAINTENANCE.md D-3, fixed 2026-09-16).
 
 ---
 
@@ -618,13 +636,18 @@ Those are `draft` and forward-looking. **This document describes what is built.*
 
 | # | Gap | Impact |
 |---|---|---|
-| D-3 | `src/pages/api/users/[id]/session-status.ts` gates on the page key `/dashboard/users/sessions`, whose `admin_pages` rows migration 0002 **deactivated** (`is_active = 0`, confirmed against live D1). Absent from the map, it resolves by longest-prefix to `/dashboard/users`. | Not a hole — the parent deny still applies — but a grant scoped to sessions has no effect on an endpoint returning session telemetry. |
-| D-4 | `API_PAGE_MAPPING` maps `/api/sessions` to `/dashboard/sessions` while the handlers check `/dashboard/users`. | Both must pass, so the stricter wins; but the access matrix cannot be reasoned about from either source alone. |
 | C-11 | Role vocabulary migration outstanding; `viewer` and `manager` cannot be persisted. | The read-only tier is enforced in code but unassignable. |
 | C-9 | Audit log is not tamper-evident. | Complete, but not provably unaltered. |
 | — | One override in production (§6.3). | PLAC is unexercised capability. |
 | — | Cold login costs ~240 ms to Supabase (§13.2). | Identity is not edge-local; only the decision is. |
 | — | Grants propagate in up to 1 h (§11). | No push invalidation. |
+
+**Closed 2026-09-16:** D-3 (`session-status.ts` gated on a deactivated key) and D-4
+(`/api/sessions` mapped to one page while its handlers checked another) are both
+fixed and verified against code; the route mapping and all three handlers now agree
+on `/dashboard/sessions`. D-5, found while closing them — four sessions
+sub-permissions defined in `admin_pages` and enforced nowhere — is fixed in the same
+pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 ---
 

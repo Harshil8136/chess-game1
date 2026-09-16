@@ -6,7 +6,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/control.ts, src/lib/jobs/tiers.ts, src/lib/jobs/runJob.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/pages/api/cron/_guard.ts, src/pages/dashboard/cron/index.astro]
+related_code: [src/lib/jobs/control.ts, src/lib/jobs/tiers.ts, src/lib/jobs/runJob.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/pages/dashboard/cron/index.astro]
 related_docs: [../operations/OPERATIONS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../specs/2026-09-16-cron-control-plane-design.md, ../program/ROADMAP.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
@@ -62,9 +62,10 @@ multi-level rather than a fixed ladder.
 **A deny on the page does not automatically deny the actions.** Ancestor matching
 in `resolveAccess` is `startsWith(key + '/')`, and `#pause` supplies no `/`. Every
 cron API route therefore checks the page key *and* its action key, through
-`src/pages/api/cron/_guard.ts`. Gap D-4 in
+`src/lib/auth/surface-guards.ts`. Gap D-4 in
 [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
-is this same mistake made once already elsewhere.
+is this same mistake made once already elsewhere — in the sessions routes, whose four
+sub-permissions were fixed alongside this doc and now share that module.
 
 Every pause, resume, trigger and configuration change writes a Ghost Audit row
 (`cron_pause`, `cron_resume`, `cron_trigger`, `config_change`) with the actor and
