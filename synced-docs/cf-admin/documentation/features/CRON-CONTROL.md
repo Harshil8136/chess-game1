@@ -30,7 +30,7 @@ restating them — one fact, one home.
 | Control | What it does | Permission |
 |---|---|---|
 | **Pause / resume** | Stops a job dispatching at all. Takes a required reason and an optional expiry. | `#pause` |
-| **Interval** | Runs a job at most every N minutes instead of every tick, without a deploy. | `#pause` |
+| **Interval** | Runs a job at most every N minutes instead of every tick, without a deploy. The tick records `lastRunAt` for interval-gated jobs in one write per tick, which is what the throttle measures against. | `#pause` |
 | **Run now** | Runs one job immediately and shows its telemetry. Works on a paused job. | `#trigger` |
 | **Thresholds** | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
 | **Halt** | Stops every job, essential ones included. Requires a reason. | `#configure` |
@@ -155,4 +155,5 @@ an empty table.
 | 2026-09-16 | claude | Seeded the control document in production, then read `madagascar_analytics` across the seed boundary | `gsc-sync`, `pagespeed-sync` and `blog-scheduled-publish` moved from `ran` to `disabled`; every essential job continued to run; `cron-usage-probe` began reporting |
 | 2026-09-16 | claude | D1 query on `admin_portal_settings` | Control document at rev 2, `updated_by: cron-usage-probe`, usage 0.176% reads / 0.179% writes at 13:05:20Z |
 | 2026-09-16 | claude | D1 query on `admin_pages` | Four rows at `sort_order` 85-88 with the intended roles, icons and `parent_path` |
+| 2026-09-16 | claude | D1 query on the control document after the interval fix | `rev` 3, `updated_by: cron-tick`, `cron-usage-probe.lastRunAt` written — the clock `decideJobRun` throttles against. Before this fix nothing wrote it, so `intervalMinutes` rendered as configurable and could never fire; found from production telemetry, not from a test |
 | — | owner | Browser check at `/dashboard/cron` | **Pending** — the agent does not open browsers (program principle 11) |
