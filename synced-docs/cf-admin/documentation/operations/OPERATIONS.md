@@ -414,7 +414,12 @@ Local development: copy `.dev.vars.example` to `.dev.vars` and fill the values; 
 ### Token: `cf-admin: Zero Trust Session Revoke`
 
 **Worker secret:** `CF_API_TOKEN_ZT_WRITE`
-**Used by:** `src/lib/auth/plac.ts` — Layer 3 Ghost Protection force-kick (`DELETE /accounts/{id}/access/users/{cfSubId}/active_sessions`)
+**Used by:** `src/lib/auth/plac.ts` — Layer 3 Ghost Protection force-kick
+(`POST /accounts/{id}/access/organizations/revoke_user` with `{ email?, user_uid?, devices: true }`).
+*Corrected 2026-09-16:* this line documented `DELETE /accounts/{id}/access/users/{cfSubId}/active_sessions`,
+which ends the current sessions; the call now revokes the user's Access tokens across devices at the
+organization. The `Access: Organizations — Revoke` permission below is what authorises it. Pinned by
+`test/plac-revocation.test.ts`, which asserts the URL, the method and the `devices: true` payload.
 
 | Permission | Scope |
 |------------|-------|
