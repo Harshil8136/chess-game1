@@ -90,7 +90,7 @@ Legend: ✅ Pass · 🟡 Partial · ❌ Gap. Evidence paths are repo-relative.
 | V4 Access control | 🟡→✅ | RBAC+PLAC deny-wins; **API self-guard gap fixed** (`inquiries/update-status.ts`) |
 | V5 Validation / encoding | 🟡 | zod in ~31 files but many `request.json() as T` casts remain (§6) |
 | V6 Cryptography | 🟡→✅ | HMAC IP hashing standard; **weak email IP hash unified this pass** |
-| V7 Errors & logging | 🟡→✅ | Append-only audit; **Sentry PII scrubber added this pass** |
+| V7 Errors & logging | 🟡→✅ | Append-only audit *(retracted — see the note under this table)*; **Sentry PII scrubber added this pass** |
 | V8 Data protection | 🟡 | `sendDefaultPii:false`; client PII minimized this pass; retention automation pending (§6) |
 | V9 Communications | ✅ | HSTS preload, TLS-only, edge-terminated |
 | V10 Malicious code | ✅ | No `eval`; email HTML sanitized (HTMLRewriter); parameterized SQL |
@@ -98,6 +98,29 @@ Legend: ✅ Pass · 🟡 Partial · ❌ Gap. Evidence paths are repo-relative.
 | V12 Files & resources | ✅ | R2 upload gated (isAdmin+PLAC+RL), traversal rejected in `cf-entry.ts` |
 | V13 API & web service | 🟡→✅ | CSRF fail-closed; API PLAC parity restored this pass |
 | V14 Configuration | 🟡 | Clean secrets; **residual CSP `unsafe-inline`, no staging env, dead `public/_headers`** (§6) |
+
+> **Correction, 2026-09-19 — V7's "append-only audit".** The audit log is not
+> append-only, and "append-only" is one of the words
+> [`../../architecture/plac-and-audit.md`](../../architecture/plac-and-audit.md)
+> §3.2 bans for it. `/api/audit/logs` DELETE, `/api/audit/prune` and
+> `/api/audit/delete-targeted` all remove rows, and the table was cleared in
+> production on 2026-09-18. This matters more here than in prose, because it is
+> a ✅ against an ASVS chapter that `../compliance/ASVS-L2.md` does not claim in
+> those terms. The accurate wording is **"insert-only application write path
+> (not append-only storage)"**; the Sentry PII scrubber half of the row stands.
+>
+> **Correction, 2026-09-19 — the "~92% self-attested" figure below.** Three
+> ASVS percentages now circulate (~91, ~92, ~95) and none is reproducible.
+> `../compliance/ASVS-L2.md` withdrew percentages entirely on 2026-09-19 in
+> favour of row counts. Read this one as "as self-attested on 2026-07-17".
+>
+> **Correction, 2026-09-19 — `strict-dynamic`.** The executive summary above
+> credits the CSP with `'strict-dynamic'`. It was added on 2026-07-09 (so the
+> claim was true on the audit date) and removed shortly afterwards; it appears
+> nowhere in `src/` today and its absence is deliberate — Cloudflare zone-level
+> scripts are injected after the response leaves the Worker and never receive
+> the nonce. See `../compliance/ASVS-L2.md` 14.4.3 and `../../MAINTENANCE.md`
+> C-3.
 
 **Net:** was ~92% self-attested; the code fixes this pass close the two hardest V4/V6/V7
 gaps. Remaining deltas are process (V1) and hardening (V5/V14), all zero-cost.
@@ -183,6 +206,26 @@ All changes verified: `tsc` 0 errors, ESLint 0 errors, 58/58 vitest tests pass
 | O11 | Info | Direct-push-to-main deploy, no PR gate | `RULESAd.md` §12 | SOC2 CC8 |
 | O12 | Accepted | `sync-docs.yml` publishes security internals + infra IDs to public `Harshil8136/chess-game1` (owner-accepted for AI-IDE context) | `.github/workflows/sync-docs.yml` | Info-exposure |
 
+> **Status block added 2026-09-19.** The table above has no status column, so a
+> reader — or a buyer handed this file — cannot tell which of the twelve still
+> stand. Each was re-checked today against the code and config; the findings
+> themselves are left as written.
+>
+> | Item | Status on 2026-09-19 | Evidence |
+> |---|---|---|
+> | O1 | **Closed** | `API_DENY_MODE = "enforce"` in `wrangler.toml`; unmapped API routes deny by default (`src/lib/auth/stages/decide.ts`) |
+> | O2 | Partly closed | An ARCO/DSAR queue exists; `privacy_requests` was quarantined on the Supabase side |
+> | O3 | **Still open** | `src/lib/retention-tables.ts` states that nothing is auto-purged; only R2 assets and `storage_share_access_logs` (180 d) are enforced |
+> | O4 | Partly closed | Zod coverage is wide but not total |
+> | O5 | **Closed** | `../../runbooks/incident-response.md` and `../THREAT-MODEL.md` both exist (untested — see `MAINTENANCE.md` C-6) |
+> | O6 | Partly closed | `.github/workflows/backups.yml` schedules a weekly restore drill; it has **never completed** — required Cloudflare secrets unset. Design yes, evidence no |
+> | O7 | **Closed** | `src/lib/email/unsubscribe.ts` mints `List-Unsubscribe` + `List-Unsubscribe-Post`; `admin_email_suppression` backs a suppression list |
+> | O8 | **Closed** | `audit_gate.py` blocking since 2026-07-25; `rules_check.py` no longer `--warn-only` |
+> | O9 | **Still open** | `grep -n "\[env\." wrangler.toml` returns nothing — no environment separation |
+> | O10 | Partly closed | `'unsafe-eval'` removed 2026-07-25 and pinned absent; `'unsafe-inline'` remains (`../compliance/ASVS-L2.md` 14.4.3) |
+> | O11 | **Still open** | `RULESAd.md` §12 still mandates direct pushes; no branch protection |
+> | O12 | Accepted, narrowed | Still publishing, still owner-accepted. Since 2026-09-19 the sync excludes `program/`, `records/`, `commercial/`, `MAINTENANCE.md` and five named files; the security documentation and the compliance self-assessments are published deliberately |
+
 ---
 
 ## 6. Zero-cost remediation roadmap
@@ -208,6 +251,9 @@ today). Require these as branch-protection status checks on `main`. *Effort: S. 
 - **DSAR/erasure workflow:** add an owner/super_admin admin page + API that lists
   `privacy_requests`/`legal_requests`, and an erasure action that hard-deletes matching
   booking/contact PII and writes an append-only erasure record to `admin_audit_log`.
+  *(Wording retracted 2026-09-19: `admin_audit_log` is not append-only storage —
+  see the correction under §3.1's ASVS table. The recommendation itself stands;
+  write the erasure record through the normal insert-only audit path.)*
   Reuse `InquiryRepository`/`AccessRequestRepository` patterns. *Effort: M.*
 - **Retention automation:** extend the existing weekly cron (`scheduled-asset-cleanup.ts`)
   to purge `consent_attempts`, `booking_attempts`, and `admin_login_logs` older than a

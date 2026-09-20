@@ -11,6 +11,19 @@ tags: []
 
 # CMS UI Redesign: Content Studio & Gallery
 
+> **Outcome (added 2026-09-20).** Shipped on 2026-05-13 (`4662de9`) as
+> `GlobalPublishButton.tsx` plus a sticky content header, and the gallery's
+> "Add Photo" tile survives in `src/components/admin/content/GalleryGrid.tsx`.
+> Both header components were then deleted on 2026-06-18 (`bda18fc`) when the
+> CMS moved to a bento layout, and nothing replaced the button — so §4's global
+> Publish control and its dirty-state wiring do **not** exist today. The
+> consequence is a live defect, not just doc drift:
+> `src/components/admin/content/GalleryManager.tsx` still registers its save
+> handler into the `cmsSaveAction` signal, no component reads that signal any
+> more, and the gallery editor therefore has no reachable save control. Do not
+> read this spec as a description of the current Content Studio; see
+> [`../features/CMS.md`](../features/CMS.md).
+
 **Date:** 2026-05-13
 **Project:** cf-admin
 

@@ -88,9 +88,22 @@ that idea, worked all the way down to a data model and a request flow.
 
 ## 2. The data model
 
-Five tables, all in D1 — co-located with the identity/session logic already living
-there today, so resolving a person's permissions never has to reach across two
-different databases in one operation.
+Five tables, all in D1.
+
+> ⚠️ **The stated advantage does not exist yet — corrected 2026-09-20.** This
+> paragraph claimed the five tables would be "co-located with the identity/session
+> logic already living there today, so resolving a person's permissions never has
+> to reach across two different databases in one operation." **Identity does not
+> live in D1.** The authorized-user directory is **Supabase**
+> `admin_authorized_users`, read via `createAdminClient(env).from(...)` in both
+> `src/lib/auth/stages/bootstrap.ts` and `stages/refresh-role.ts`; the session
+> lives in **KV**; only the page registry and overrides are in D1. Resolving a
+> role against an identity row is already a cross-store operation, and stays one
+> until the identity move — for which the program has **reserved ADR-0003 and not
+> written it** (`documentation/program/adr/ADR-0002-feature-first-sequencing.md`),
+> ranked P3 in the 2026-09-14 review. **Treat D1 co-location as a stated
+> dependency on ADR-0003, not as a property of today's stack.** The design still
+> works without it — it just does not inherit the locality benefit claimed here.
 
 | Table | What it holds | Who edits it | How often it changes |
 |---|---|---|---|
@@ -100,6 +113,18 @@ different databases in one operation.
 | **User → role assignment** | Which role(s) each person holds — deliberately allows more than one role per person from day one, so someone can be, say, both "Bookings Manager" and "Read-Only Finance" without needing a bespoke combined role invented for them | **Admins** | Onboarding, role changes, offboarding |
 | **Per-user permission overrides** | Individual exceptions layered on top of whatever the person's role(s) already grant — grant one extra permission, or explicitly deny one their role would otherwise give them. Same **deny-always-wins** rule as today's page-override table, and for the same structural reason: one row per (person, permission) pair, so a grant and a deny for the same thing can never both exist at once | **Admins**, with the same safety gates already proven today (actor can't touch their own access, can't grant above their own clearance, target's role is always re-read fresh — see the companion assessment document §1.3) | As needed, individually |
 
+> ⚠️ **On "deny-always-wins" in the override row — qualified 2026-09-20.** The
+> primary-key argument holds for building the map, but at request time
+> `resolveAccess()` (`src/lib/auth/decide-access.ts`) returns `allow` for
+> `vendor_support` and `owner` **before the map is read at all** — a deliberate
+> ADR-0002 decision, since a self-inflicted lockout of the customer's top tier is
+> the worse failure. So the rule this design inherits is "deny wins for four of
+> the six roles". A permission model that assumes the unqualified rule will be
+> surprised at the top of the ladder; decide explicitly whether the new model
+> keeps that exemption.
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
+> owns this fact.
+
 Every one of these tables is a direct, one-for-one generalization of a table that
 already exists and is already proven in production — the permission catalog
 generalizes the existing page registry; the role-bundle table generalizes nothing that
@@ -107,34 +132,51 @@ exists today (this is the genuinely new piece — today's roles are hardcoded, n
 data); the per-user override table is structurally identical to today's page-override
 table, just keyed by permission instead of by page path.
 
-### 2.1 Verified against the live system — the trigger has already been reached
+### 2.1 A **2026-08-09 snapshot** of the live system
 
-None of this needs to stay theoretical. A live query against the current production
-database, run specifically to check this design against reality, found:
+> ⚠️ **This heading read "Verified against the live system — the trigger has
+> already been reached". Both halves need care, and the section was re-measured
+> on 2026-09-20.**
+>
+> **The snapshot has moved:** live today `admin_pages` has **97** rows — **86**
+> active, 11 disabled — of which **51** are `#fragment` sub-permissions and 46 are
+> real pages, and `admin_page_overrides` has **4** rows, not 1. Fragments are now
+> the majority, not "almost exactly half", and the override count has quadrupled.
+>
+> **The trigger claim does not follow from these numbers.** The companion
+> [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) §7 states the 15–20 threshold for a
+> role's **own** grant set. The figures below are **cumulative inherited** totals —
+> the table says so ("a higher role already inherits everything a lower one has").
+> Under the threshold's own counting rule, `staff`'s own bundle is 5 and each
+> higher role adds its own increment on top; that is not what the trigger
+> describes. One number, two definitions, opposite verdicts. **Count each role's
+> own grants before concluding anything.**
 
-| What was measured | Live result |
+A live query against the production database on **2026-08-09**, run specifically to
+check this design against reality, found:
+
+| What was measured (2026-08-09) | Result that day |
 |---|---|
-| Total permission-equivalent rows today (the current page registry — real pages + `#fragment` sub-features) | 89 (78 currently active, 11 disabled) |
-| Split between real pages and `#fragment`-style sub-permissions | 44 real pages, 45 fragments — almost exactly half of today's permission surface is already the fragment workaround described in §7 |
-| Permissions in each role's effective bundle today, cumulative (a higher role already inherits everything a lower one has) | staff: 5 · admin *(canonical: manager)*: 36 · super_admin *(canonical: admin)*: 60 · owner: 75 · dev *(canonical: vendor_support)*: 78 |
-| Per-user page-access overrides that exist today | 1, for 1 person, across the entire system |
+| Total permission-equivalent rows (the page registry — real pages + `#fragment` sub-features) | 89 (78 active, 11 disabled) — *97 / 86 / 11 on 2026-09-20* |
+| Split between real pages and `#fragment`-style sub-permissions | 44 real pages, 45 fragments — *46 / 51 on 2026-09-20; fragments are now the majority* |
+| Permissions in each role's effective bundle, **cumulative** (a higher role already inherits everything a lower one has) | staff: 5 · admin *(canonical: manager)*: 36 · super_admin *(canonical: admin)*: 60 · owner: 75 · dev *(canonical: vendor_support)*: 78 |
+| Per-user page-access overrides in use | 1, for 1 person — *4 on 2026-09-20* |
 
-§6 identifies "a role's bundle regularly exceeding roughly 15–20 permissions" as the
-point where a compact bitmask starts being worth it over a plain set. **The live
-numbers show four of the current five roles are already 2–5× past that point** — only
-`staff`, the bottom tier, is still under it. This isn't a future concern to design
-around later; it's already true today, at 89 total permissions. The practical
-conclusion: **build the role-bundle representation as a small number of per-category
-bitmasks from the start**, not as a plain hashmap with bitmask compaction deferred to
-"later." With today's 7 real categories (the largest, communication-related
-permissions, currently holds 22), a single small integer per category comfortably
-covers each one many times over before needing to split further — this costs nothing
-extra to build now and avoids a real, if not urgent, rework later.
+The practical conclusion the section reached — **build the role-bundle
+representation as a small number of per-category bitmasks from the start**, rather
+than a plain hashmap with compaction deferred — is still a defensible default,
+because it costs nothing extra to build now and avoids rework later. But it should
+be argued on that basis, not on "the trigger has already been reached", which the
+counting rule above does not support.
 
-The near-zero override count (1, total) is worth reading correctly: it is not evidence
-the current hierarchy comfortably fits real-world needs — it's a snapshot of a system
-that hasn't yet been stressed by much fine-grained customization. §9.1 projects what
-happens to that number as the permission catalog grows.
+The override count is worth reading correctly, and now more so: at 1 it was a
+snapshot of a system not yet stressed by fine-grained customization; at 4 it is
+growing, which is evidence *for* this design rather than against it. §9.1 projects
+what happens as the permission catalog grows.
+
+For current counts, read
+[`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §5
+rather than any table in this document.
 
 ---
 
@@ -197,15 +239,54 @@ question. A dynamic role is different: editing what "Bookings Manager" can do
 potentially affects everyone who holds that role at once. This needs an explicit
 answer, not an assumption:
 
-- A personal override changing → same as today: revoking force-logs-out just that one
-  person; granting relies on the natural refresh cycle.
-- **A role's bundle changing → force-log-out everyone currently holding that specific
-  role**, not the whole system. This is not a new mechanism to invent — it is *exactly*
-  the pattern already live in this codebase today for a closely related case: when a
-  page's required role is tightened, the system already looks up every active user who
-  would lose access and force-kicks precisely that set, nobody else. The same lookup
-  (find everyone assigned to role X) plus the same existing force-logout mechanism
-  covers this case directly — no new primitive required.
+> 🚨 **This section was rewritten on 2026-09-20. Its original proposal would ban
+> a whole role from the portal for 24 hours.** It read: *"A personal override
+> changing → revoking force-logs-out just that one person"* and *"A role's bundle
+> changing → **force-log-out everyone currently holding that specific role** …
+> This is not a new mechanism to invent … the same existing force-logout
+> mechanism covers this case directly — **no new primitive required**."*
+>
+> Both halves were retired on 2026-09-16, precisely because force-logout is not a
+> safe invalidation primitive. `forceLogoutUser` writes a `revoked:<userId>` KV
+> flag with a **24-hour** TTL (`src/lib/auth/plac.ts`), and
+> `src/lib/auth/stages/bootstrap.ts` refuses *every sign-in* while it is set —
+> `revocation_block_active` → `/?error=access_revoked`. Used for an ordinary
+> permission edit it stranded the only Owner for more than 14 hours
+> (`src/lib/auth/authz-signal.ts` says so in its header). **Generalizing it to a
+> role bundle would apply that 24-hour sign-in block to every holder of the role,
+> on an ordinary checkbox change in the role-editing UI this design proposes.**
+> That is the single most damaging instruction this document ever carried.
+
+**The current answer for a personal override change** (shipped 2026-09-16): a
+grant, a revoke and a reset all write a random `authz-changed:<userId>` mark and
+sign nobody out. The session stage reads it in the same bulk KV read as the
+revocation flags, and a live session whose stored mark differs re-verifies its role
+against Supabase and its page map against D1 **on that request**. So both directions
+now land on the next request, not after an hour and not after a forced sign-out.
+
+**The proposed answer for a role-bundle change:** generalize the mark, not the
+force-kick — **a role epoch**. Write a random value under a key scoped to the role
+(`authz-changed:role:<roleId>`), read it in the same bulk KV read a session already
+does, and have any session whose stored role epoch differs recompute its bundle on
+that request. Same shape as the per-user mark, same cost (the bulk read already
+happens), same property that no two Workers need to agree on the time — and nobody
+is signed out.
+
+Be honest that this **is** a new primitive, contrary to the original claim. It is a
+small one: the per-user version is already prototyped, shipped and running, so this
+is a second key and a second comparison, not a new mechanism. Two things it needs
+that the per-user mark does not:
+
+- The bulk KV read grows by one key per role the session holds — cheap, but this
+  design allows multiple roles per person, so bound it.
+- The recompute path must re-read the role bundle, not just the user's overrides.
+
+**Reserve the three-layer force-kick for what it is now scoped to:** force-kick,
+deactivation, deletion and the Sessions page's block action — cases where refusing
+sign-in for a day is the *intent*. See
+[`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md).
+(The page-required-role-tightening precedent the original text cited is real, but it
+is the same force-kick and carries the same 24-hour block.)
 
 ---
 

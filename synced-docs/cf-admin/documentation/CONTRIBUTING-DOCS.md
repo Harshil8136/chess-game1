@@ -3,7 +3,7 @@
 title: "Documentation Conventions & Governance"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-23
+last_verified: 2026-09-19
 verified_against: [code]
 owner: harshil
 related_docs: [README.md,_templates/doc-template.md,commercial/MODULE-PRICING-CATALOG.md]
@@ -35,6 +35,12 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 | `main.md` | AI entry pointer into `documentation/` |
 | `AI_CODE_MAINTENANCE.md` | AI-agent maintenance rules (referenced by `RULESAd.md`) |
 
+> **Enforced since 2026-09-19.** `docs_check.py` now fails when a `.md` appears
+> at the repository root that is not in this table. It was a convention with
+> nothing behind it, and a fifth root doc (`cron-visual-redesign.md`, moved to
+> `specs/2026-09-16-cron-dashboard-visual-redesign.md` on 2026-09-19) sat there
+> unnoticed, with no front-matter and no index entry.
+
 > **There is no fifth root file — corrected 2026-08-23.** This table once listed
 > a git-rules file as a cf-admin root doc. It never lived here: it sat at the
 > **monorepo** root, and this repo is now standalone, so every reference to it
@@ -46,13 +52,27 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 
 ## 2. Folder map
 
+**Living documentation vs records (2026-09-19).** A *living* document describes
+the system as it is now and is kept true: architecture, security, features,
+operations, reference, runbooks. A *record* is a dated snapshot of a moment —
+a review, a work report, a design spec, a chunk record — and is frozen once
+written. A record is superseded by a newer record or by a living document; it is
+never edited to match today, and its `status` is `historical`. Records live in
+`records/`, `specs/`, `security/reviews/`, `operations/incidents/` and
+`program/chunks/`, never at the `documentation/` root.
+
 | Folder | Holds |
 |--------|-------|
 | `documentation/architecture/` | System architecture, request lifecycle, PLAC/audit internals, KV resilience |
 | `documentation/security/` | Current security posture, privacy, login forensics |
 | `documentation/security/reviews/` | Dated, point-in-time security audit snapshots (historical) |
+| `documentation/security/compliance/` | Framework statements a buyer or auditor reads (ASVS, SOC 2, CAIQ, ISO, accessibility, AI governance, data residency) |
+| `documentation/records/reviews/` | Dated technical/compliance reviews. **Not published** |
+| `documentation/records/reports/` | Dated work and session reports — what a pass changed, and what it found. **Not published** |
+| `documentation/commercial/` | Evergreen commercial reference (module pricing, buy-vs-build, billing model). **Not published** |
+| `documentation/commercial/analyses/` | Dated commercial analyses (cost model, GTM, viability). **Not published** |
+| `documentation/operations/incidents/` | Dated incident post-mortems |
 | `documentation/features/` | Per-feature docs (dashboard, users, CMS, chatbot, control-plane) |
-| `documentation/commercial/` | Cross-repo pricing/commercial reference docs (module catalog, buy-vs-build, billing model) — evergreen, not dated, since they're maintained as pricing/research evolves. Dated point-in-time commercial *analyses* (e.g. `2026-07-26-commercial-model-costing-pricing-and-scale.md`) stay at the `documentation/` root per §3's specs/reviews rule; this folder is for the living reference material that supersedes/extends them |
 | `documentation/operations/` | Binding IDs, limits, secrets registry, deploy, dev tools |
 | `documentation/program/` | The long-term viability program (started 2026-09-02): the evergreen roadmap and debt registry, a chunk-record template, dated chunk records under `program/chunks/`, decision records under `program/adr/`, executable task plans under `program/plans/` (added to this map 2026-09-14; the folder dates from 2026-09-10), and dated per-target assessment records under `program/assessments/` (the written case for a feature or service, produced before its first chunk — see ADR-0002). Chunk and assessment records follow §3's dated naming and move `draft` → `active` → `historical` as they ship (see `program/CHUNK-TEMPLATE.md`). Excluded from the public docs mirror by decision ADR-0001 |
 | `documentation/reference/` | Coding standards, design system, deep design docs |
@@ -71,8 +91,11 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 
 ## 4. Required front-matter
 
-Every non-archive doc starts with the YAML block from
-[`_templates/doc-template.md`](_templates/doc-template.md):
+**Every** `.md` under `documentation/` starts with the YAML block from
+[`_templates/doc-template.md`](_templates/doc-template.md) — archive included.
+*Corrected 2026-09-19: this said "every non-archive doc". `docs_check.py`'s
+front-matter check has always covered `archive/` too, so a doc written to the
+old wording turned the local `verify` gate red.*
 
 ```yaml
 ---
@@ -102,11 +125,20 @@ enforced on those.
 - Never put secret **values** (tokens, keys, connection strings) in any doc —
   names only. The public-docs sync redacts developer email PII but does **not**
   scrub secrets; treat every doc as potentially public.
-- **"Potentially public" is literal.** `sync-docs.yml` copies *every* `.md` under
-  `documentation/` to a public repo on each push to `main`, and its secret scan
-  is **warning-only** with patterns that only match token shapes — a bare
-  hostname or endpoint sails through. A live Upstash endpoint sat in
-  `archive/control-plane-design/PLAN.md` for exactly that reason.
+- **"Potentially public" is literal.** `sync-docs.yml` copies the *living*
+  documentation under `documentation/` to a public repo on each push to `main`,
+  and its secret scan is **warning-only** with patterns that only match token
+  shapes — a bare hostname or endpoint sails through. A live Upstash endpoint sat
+  in `archive/control-plane-design/PLAN.md` for exactly that reason.
+- **What is not published** (`SYNC_EXCLUDE_PREFIXES`, set 2026-09-19): `program/`,
+  `records/`, `commercial/`, `MAINTENANCE.md`, the access-revocation design and
+  plan, `runbooks/supabase-account-advisor-sweep.md`,
+  `reference/commercial-readiness-checklist.md` and `reference/RBAC-AT-SCALE.md`.
+  The rule behind the list: publish how the system works, not the list of what is
+  wrong with it, and not what it costs to run or sell.
+- **Publishing cannot be undone.** The public repo keeps its git history, so a
+  value that shipped in an earlier sync stays reachable after the source is
+  redacted. Treat an accidental publish as a rotation, not an edit.
 
 ## 7. Adding or moving a doc
 

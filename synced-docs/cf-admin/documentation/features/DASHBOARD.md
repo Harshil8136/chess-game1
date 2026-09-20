@@ -2,33 +2,54 @@
 
 title: "Dashboard — Real-Data Command Center"
 status: active
-audience: [ai, technical]
-last_verified: 2026-09-14
+audience: [ai, technical, operator]
+last_verified: 2026-09-19
 verified_against: [code]
 owner: harshil
-tags: []
+related_code:
+- src/pages/dashboard/index.astro
+- src/components/dashboard/DashboardController.tsx
+- src/components/dashboard/widgets/ServiceStatusStrip.tsx
+- src/components/dashboard/widgets/GscValidationWidget.tsx
+- src/components/dashboard/widgets/EventLedgerWidget.tsx
+- src/components/ui/MetricCard.tsx
+- src/pages/api/dashboard/metrics.ts
+- src/lib/analytics/providers/index.ts
+- src/lib/analytics/providers/cloudflare.ts
+- src/lib/analytics/providers/external.ts
+related_docs:
+- EMAIL-PORTAL.md
+- GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md
+- SEARCH-CONSOLE-SYNC.md
+- ../operations/OPERATIONS.md
+tags: [feature, dashboard, analytics, cloudflare, supabase, telemetry]
 ---
 
 # Dashboard — Real-Data Command Center
 
-> **TL;DR (non-technical):** The admin home screen: the live metrics and widgets it shows, where those numbers come from, and how the layout adapts to the viewer's role and device.
+> **TL;DR (non-technical):** The admin home screen: the live metrics and widgets it shows, where those numbers come from, and which of them are not real.
 
-**Last updated:** 2026-05-02 (v4.5: DashboardController is now props-free; uplot reference corrected)
-**Scope:** `cf-admin` project — Dashboard page and all supporting analytics infrastructure
+> **Rewritten 2026-09-19.** This document carried ~200 lines describing the v4.5
+> layout of 2026-05-02 — a setup banner, a bento grid, a dual-axis chart, a quota
+> monitor, an audit-log feed — inside an `active` doc, with a "historical" label
+> that was easy to read past. Those widgets no longer exist and git holds their
+> history, so they have been removed rather than re-labelled. What remains
+> describes the page as it is today.
+
+**Scope:** the `/dashboard` home page and the analytics provider layer behind it.
 
 ---
 
-## 0. What the dashboard renders today (verified 2026-09-14; re-read 2026-09-15 after the remodel in `4e60c9d`)
+## 0. What the dashboard renders today
 
-The layout sections below (§"Current Dashboard Layout", §"Component Details", §"CSS Architecture",
-§"Dual-Axis Edge Analytics Chart", §"Verification Checklist") describe the **v4.5 build of
-2026-05-02** and are kept as history. They no longer match `src/components/dashboard/`. What
-`DashboardController.tsx` actually mounts (`client:only="preact"` from `src/pages/dashboard/index.astro`):
+`src/pages/dashboard/index.astro` mounts one island,
+`DashboardController.tsx`, `client:only="preact"` and **props-free** — the page
+performs no database query of its own.
 
 | Layer | What is rendered | Source |
 |---|---|---|
 | Command bar | Title, live sync indicator ("Live Stream Active" / "Syncing…" + last sync time), Refresh Telemetry button | `DashboardController.tsx` |
-| KPI deck | 4 `MetricCard`s: Global Edge Network (requests, bandwidth, uptime, sparkline), Data Layer & Cache (pool + buffer-cache ratio bar), Edge Worker Scripts (count, P50, errors, isolate-health bar), Transactional SMTP (sent / 9,000 bar) | `DashboardController.tsx`, `ui/MetricCard.tsx` |
+| KPI deck | 4 `MetricCard`s: Global Edge Network (requests, bandwidth, uptime, sparkline), Data Layer & Cache (pool + buffer-cache ratio bar), Edge Worker Scripts (count, P50, errors, isolate-health bar), Transactional SMTP (sent / 9,000 bar) | `DashboardController.tsx`, `src/components/ui/MetricCard.tsx` |
 | Tabs (segmented control) | Overview · Search Console · Edge Workers · Database Pool · Quotas & Storage | `DashboardController.tsx` |
 | Overview tab | "Service Health Matrix" = `ServiceStatusStrip` (**8** mini-cards: Network, D1 DB, Google SEO, Security, Brevo, Sentry, Observability, Queues) → `GscValidationWidget` (fetches its own report) → 7/12 `WidgetEdgeCompute` + 5/12 `EventLedgerWidget` | `widgets/*.tsx` |
 | Edge Workers tab | `WidgetEdgeCompute` (`CloudflareWidgets.tsx`) — searchable fleet console: full script names, role tags, humanised durations | |
@@ -36,87 +57,81 @@ The layout sections below (§"Current Dashboard Layout", §"Component Details", 
 | Quotas & Storage tab | 2 cards: Brevo `{sent} / 9,000` and R2 objects / volume | |
 | Event ledger | Section A: telemetry events (routing, pool & cache, email engine, isolates); Section B "Edge Ingress & D1 Engine": cache-hit ratio, D1 read / write queries, cached bandwidth | `widgets/EventLedgerWidget.tsx` |
 
-Not present any more: the setup banner, the Quick Actions row, the audit-log feed, the 6-cell
-quota grid, the Storage widget, the dual-axis chart, `ResizeObserver`, and — since `4e60c9d`
-(2026-09-15) — `DashboardStyles.astro` itself: its 1,195 lines of orphaned CSS were deleted with the
-remodel, so the "CSS Architecture" section below describes files that no longer exist. The "12h auto-cron" badge on the GSC widget is a label
-derived from the `gsc-run-interval-hours` setting (default 12); the job itself rides the 5-minute
-cron tick and self-gates — see `SEARCH-CONSOLE-SYNC.md` §11.
+Tab ids are `overview`, `seo`, `edge`, `postgres`, `quotas`. There is no System
+Health tab and no Audit Log tab.
 
----
+### 0.1 Values on this page that are not measurements
 
-## What Was Built
+*Added 2026-09-19. These are **code** defects against RULE #0.5, not wording
+problems, and they are logged in [`../MAINTENANCE.md`](../MAINTENANCE.md). They
+are recorded here because anyone reading a number off this page needs to know
+which ones mean nothing.*
 
-The `cf-admin` dashboard was overhauled from a mostly-static layout showing zero data into a **live infrastructure command center** that reads from every active Cloudflare binding and Supabase service.
+| Where | What is shown | What it actually is |
+|---|---|---|
+| KPI deck — Transactional SMTP | `99.8% Delivery · TLS Verified` | A literal string. No provider computes a delivery rate. |
+| KPI deck — Edge Worker Scripts | P50 `1.2 ms` | The fallback when no worker script has data; not a measurement. |
+| KPI deck — Global Edge Network | `100.0%` uptime | The fallback when the status-code series is empty. |
+| KPI deck — Data Layer & Cache | `100.0%` cache-hit ratio | Same: the fallback when Supabase reports nothing. |
+| KPI deck — Edge Worker Scripts | "Isolate Health" bar | `100 − errors × 10`, an invented index rather than a reported metric. |
+| Service Health Matrix — Google SEO | `100% Pass`, `12h Active`, `3 Failed Errors Healed` | All three are literal text. The live readiness score is **76%**, with 60 of 87 URLs thin — see [`GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md). The card passes no `isUnconfigured` flag. |
+| `GscValidationWidget` header | `12h Auto-Cron Active` badge | A hard-coded string. *Corrected 2026-09-19: this document said the badge was "a label derived from the `gsc-run-interval-hours` setting".* It is not, and the job it names has been off at source since 2026-08-26 and paused in the cron control plane since 2026-09-16 — see [`SEARCH-CONSOLE-SYNC.md`](SEARCH-CONSOLE-SYNC.md). |
 
-### Before
+Most remaining deck fields fall back to `|| 0`, and **nothing in the KPI deck
+reads `_unconfigured`** — so the "never show a fake zero" guarantee described in
+[§Architecture Decisions](#_unconfigured-flag-pattern) holds for the provider
+layer and some widgets, but not for this deck.
 
-- ~6 bento cards with hardcoded or zero values
-- Chart had fixed width (caused overflow)
-- SystemHealthBar had hardcoded "operational" entries regardless of reality
-- Analytics provider had 4 providers only
-- No Workers analytics, no R2 usage, no Queue info, no Supabase Auth/GoTrue metrics
-- No distinction between "token missing" and "genuine zero value"
+### 0.2 How the data gets there
 
-### After
+*Corrected 2026-09-19: this document said "all data (analytics, audit log, user
+info) is fetched client-side after mount via the analytics API". There is no audit
+log and no user info on this page.*
 
-- **ServiceStatusStrip** (replaced SystemHealthBar) displays live services using real telemetry data (6 at the time; 8 today — see §0)
-- **8 parallel analytics providers** via parallel settlement (never crashes if one fails)
-- **`_unconfigured` flag pattern** on every provider — UI shows `—` / "Setup Required" instead of zeros when token is missing
-- **Dismissible setup banner** when API token is not configured
-- **ResizeObserver** drives chart width responsively
-- **2-column bento grid** replaces old fixed layout — collapses to 1-column on narrow viewports
+`DashboardController` calls `GET /api/dashboard/metrics` on mount and then every
+**60 seconds** while the page is open. That route calls `fetchAllAnalytics()`,
+which:
 
----
+1. reads a 5-minute KV cache (`telemetry_metrics_cache_v2`) from the `SESSION`
+   namespace and returns it on a hit;
+2. on a miss, fans out to the eight providers and, on success, writes **two** KV
+   keys — the 5-minute cache and a permanent stale copy.
 
-## Current Dashboard Layout (Top → Bottom) — *historical, v4.5 (2026-05-02); see §0 for today*
+Two KV writes per cache miss matters: the free allowance is ~1,000 writes/day and
+this namespace is shared with sessions. A dashboard left open all day costs up to
+about 576 of them.
 
-The dashboard is composed of the following visual rows, from top to bottom:
-
-1. **Setup Banner** — Amber, dismissible — only visible if analytics token is missing
-2. **Dashboard Header & Service Status Strip** — "Overview" title + Health Orb Dropdown + Refresh Button + **Live Service Strip (7 Services: Network, D1, Security, SEO/GSC, Brevo, Sentry, Queues)**
-3. **Top KPI Ribbon (4 Metric Cards):** Edge Traffic (24h) | Auth Users (30d MAU) | Database Operations (24h) | **GSC Validation Health (100% Ready · Auto-Healed)**
-4. **Interactive Dashboard Tabs:**
-   - **Overview:** Main combined infrastructure view
-   - **System Health:** Deep latency and error rates
-   - **Cloudflare Workers:** Multi-worker execution analytics
-   - **Database & Storage:** Supabase and R2 storage
-   - **Google Search Console & Indexing:** Dedicated **GscValidationWidget** with 12h auto-cron badge, 4 category summary tiles, and 5-category diagnostic matrix
-   - **Audit Log:** Portal security events
-5. **Row 1 (2-column):** Cloudflare Workers (cf-admin vs cf-astro) | Usage Limits (6 quota cells, 3-col grid)
-6. **Row 2 (2-column):** Edge Analytics 24h chart (responsive) | Supabase Cluster (Tabbed Widget: PostgreSQL Performance + Auth Metrics)
-7. **Storage & Queues** — Full-width (R2 + D1 + Email Queue)
-8. **Quick Actions** — Full-width action buttons
-9. **Audit Log Feed** — Full-width, 8 recent entries
-
-**Note:** The former "Business Engine" ticket card and standalone `DatabaseMetricsWidget` were removed. Analytics are now consolidated. Active Application Users is displayed contextually within the Supabase Auth tab. GSC Validation health is deeply integrated into both the Overview and dedicated Search Console tabs.
+On a Cloudflare-provider failure the route serves the stale copy **with
+`timestamp` reset to now**, so the "last sync" clock reads fresh over stale data.
 
 ---
 
 ## Analytics Provider Architecture
 
-### Provider Design
+### Provider design
 
-The analytics system uses **8 parallel providers**. Each provider returns a typed result object with an optional `_unconfigured` flag. When a token is missing or a fetch fails, this flag is set instead of throwing.
+The analytics system uses **8 parallel providers**. Each returns a typed result
+object with an optional `_unconfigured` flag. When a token is missing or a fetch
+fails, the flag is set instead of throwing. All eight run under
+`Promise.allSettled`, so one crashing never affects the others.
 
-All 8 providers run in parallel using `Promise.allSettled`. A single provider crashing never affects others.
+### Provider descriptions
 
-### Provider Descriptions
+1. **Zone HTTP Metrics** — zone-level HTTP analytics from Cloudflare GraphQL (requests, cached, bandwidth, threats, status codes, WAF actions, top countries). Also queries D1 analytics for read/write stats.
 
-1. **Zone HTTP Metrics** — Fetches zone-level HTTP analytics from Cloudflare GraphQL (requests, cached, bandwidth, threats, time-series for the chart). Also queries D1 analytics for read/write stats.
+2. **Worker Invocation Analytics** — account-level Worker invocation data from Cloudflare GraphQL. CPU/wall times are converted from microseconds to milliseconds. Both worker scripts always appear in output, even with 0 invocations (`WORKER_SCRIPTS` in `src/lib/analytics/providers/cloudflare.ts`).
 
-2. **Worker Invocation Analytics** — Fetches account-level Worker invocation data from Cloudflare GraphQL. CPU/wall times are converted from microseconds to milliseconds. Both worker scripts always appear in output, even with 0 invocations.
+3. **R2 Bucket Usage** — object count and uploaded bytes from the R2 REST API.
 
-3. **R2 Bucket Usage** — Fetches object count and uploaded bytes from the R2 REST API.
+4. **Queue Info** — queue metadata **plus backlog and dead-letter metrics**: consumer count, `backlog_count`, `backlog_bytes`, and the same figures for the `-dlq` queue. *Corrected 2026-09-19: this said "name, consumer count".*
 
-4. **Queue Info** — Fetches queue metadata (name, consumer count) from the Cloudflare REST API.
+5. **Supabase PostgreSQL Metrics** — Prometheus metrics from Supabase (18+ metrics including tuple activity, cache hit ratio, deadlocks, WAL, disk utilisation).
 
-5. **Supabase PostgreSQL Metrics** — Fetches Prometheus metrics from Supabase (18+ metrics including tuple activity, cache hit ratio, deadlocks, WAL, and disk utilization).
-6. **Supabase Auth Metrics** — Fetches total registered users, MAU (derived from `last_sign_in_at`), recent signups (7d), and auth provider breakdown using the Supabase Admin API. Note: these metrics reflect users registered in Supabase's `auth.users` table (used for DB access); authentication itself is now handled by Cloudflare Zero Trust.
+6. **Supabase Auth Metrics** — total registered users, MAU (derived from `last_sign_in_at`), recent signups (7d), and auth provider breakdown via the Supabase Admin API. These reflect users in Supabase's `auth.users` table (used for DB access); portal authentication itself is Cloudflare Zero Trust.
 
-7. **Sentry Error Count** — Fetches error event counts from the Sentry API.
+7. **Sentry** — fetches the **5 most frequent unresolved issues** (`?query=is:unresolved&limit=5&sort=freq`) and sums their **lifetime** `count`. *Corrected 2026-09-19: this said "fetches error event counts", which reads as a windowed count. It is neither windowed nor complete.*
 
-8. **Email Stats** — Fetches delivery stats (sent vs bounced) from the **Brevo** API (`api.brevo.com/v3/smtp/statistics/events`, `src/lib/analytics/providers/external.ts`). *(Corrected 2026-08-13 — this said Resend; cf-admin has no Resend call path. See `RULESAd.md` §17.)*
+8. **Email Stats** — reads the **latest 100 events** from Brevo (`api.brevo.com/v3/smtp/statistics/events?limit=100`, `src/lib/analytics/providers/external.ts`) and counts `sent`/`delivered` and the bounce variants among them. *(Corrected 2026-08-13 — this said Resend; cf-admin has no Resend call path. See `RULESAd.md` §17.)* *Corrected 2026-09-19: because only 100 events are read, the "Monthly Usage" bar rendered as `{sent} / 9,000` can never exceed 100 and is not a monthly total.*
 
 ---
 
@@ -124,113 +139,17 @@ All 8 providers run in parallel using `Promise.allSettled`. A single provider cr
 
 > **Critical pattern:** Cloudflare GraphQL filter objects use **snake_case field names**, not camelCase. Using the wrong casing causes the filter to be silently ignored, and the query either returns no results or GraphQL returns an errors array (HTTP 200 with errors). Always check for errors after parsing the response body.
 
-**Workers analytics bug:** Originally used camelCase filter fields which were silently ignored. Fixed to snake_case datetime filter fields.
+**Workers analytics bug:** originally used camelCase filter fields which were silently ignored. Fixed to snake_case datetime filter fields.
 
-**D1 analytics bug:** Originally missing datetime filter entirely — could return all-time data or error. Fixed to include proper datetime scope.
+**D1 analytics bug:** originally missing the datetime filter entirely — could return all-time data or error. Fixed to include proper datetime scope.
 
 Both providers now also check for GraphQL errors before attempting to read data.
 
 ---
 
-## Component Details — *historical, v4.5; the widgets below were replaced (see §0)*
-
-### Workers Widget
-
-- When unconfigured → renders a "Workers Analytics Unavailable" setup state
-- When loading → skeleton spans inside each worker card
-- Display map controls name and accent color per script
-- Error rate calculated as errors / requests percentage, shown in red when > 0
-- 4 stats per card: Requests (24h), Errors, CPU p50, CPU p99 (all in ms)
-
-### Storage Widget
-
-**Three sections (separated by dividers):**
-
-1. **R2 Images** — object count + formatted bytes vs 10 GB limit
-2. **D1 Database** — read queries, write queries, rows read, rows written
-3. **Email Queue** — green status dot, queue name, consumers count
-
-Renders full-width using the teal-tinted bento card variant. The queue shown here
-(`madagascar-emails`) is the same one the [Email Portal](EMAIL-PORTAL.md) produces to.
-
-### Supabase Cluster Widget (formerly SupabaseAuthWidget)
-
-**Tabbed Layout:**
-
-- **Tab 1: PostgreSQL Performance** — Comprehensive performance overview including a 4-column load/RAM/connections grid, prominent Buffer Cache Hit Ratio bar, transaction counters (commits, rollbacks, deadlocks), tuple activity, and disk/WAL utilization bars. Progress bar against 500 MB plan limit.
-- **Tab 2: GoTrue Auth** — Total Registered, Active Now (24h) with pulse dot, MAU (30d), and Recent Signups (7d). Includes an Auth Provider Breakdown horizontal bar chart showing Google/Email/Phone/etc identities.
-
-### Quota Monitor Widget
-
-**Layout:** 3-column grid, 6 entries in 2 rows. Each cell contains a colored dot, service name, metric label, percentage badge, 4px progress bar, and value/limit in monospace.
-
-**6 Quota Cells:**
-
-| Service | Metric | Limit |
-|---------|--------|-------|
-| Workers | Requests | 100,000 / day |
-| D1 | Rows read | 5,000,000 / day |
-| D1 | Rows written | 100,000 / day |
-| R2 | Storage | 10 GB |
-| Supabase | DB size | 500 MB |
-| Auth | MAU | 50,000 |
-
-**KV entries removed** — Cloudflare does not expose KV operation counts via any API.
-
-When unconfigured → progress bar shows striped pattern, value area shows "Token required".
-
-### Service Status Strip
-
-**6 Telemetry Cards (Horizontal Scrollable Row):**
-
-| Service | Data Displayed | Target Console |
-|---------|----------------|----------------|
-| Network | Requests, Bandwidth, Reliability %, Top Countries | Cloudflare Zone Traffic |
-| D1 DB | Reads, Writes, Rows per Query, Read/Write Ratio | Cloudflare D1 Console |
-| Security | Threats Blocked, WAF Actions, R2 Object Count | Cloudflare WAF / R2 |
-| Brevo | Sent, Bounced, monthly limit progress | Brevo Statistics Console |
-| Sentry | Error Count (pulses if >0), Project Slug | Sentry Issues Console |
-| Queues | Backlog Count, Backlog Size, DLQ Status, Active Consumers | Cloudflare Queues |
-
-**Visual States:**
-
-- Active/Normal: Distinct accent color per service (e.g. Network Blue, D1 Cyan, Security Rose)
-- Outage/Errors: Red pulse or specific warning text (e.g. Sentry issues, DLQ backlog)
-- Unconfigured: Dashed border with "Add env token to enable" placeholder
-
-### Dashboard Controller
-
-The main orchestrator Preact island (`DashboardController.tsx`) is **props-free** — it receives no SSR data from `index.astro`. All data (analytics, audit log, user info) is fetched client-side after mount via the analytics API. Global welcome messages have been purged for a true "Command Center" aesthetic.
-
-**Responsive chart:** Uses ResizeObserver to dynamically adjust chart width to match container dimensions.
-
-**Setup banner:** Displayed only when analytics are not loading, the Cloudflare token is missing, and the user hasn't previously dismissed the banner.
-
----
-
-## CSS Architecture — *historical; `DashboardStyles.astro` and its layout classes were deleted on 2026-09-15 (`4e60c9d`)*
-
-### Layout Classes
-
-- **2-column bento row** — collapses to 1-column at ≤1100px viewport
-- **Workers split** — 2-column side-by-side cards (collapses to 1-column at ≤640px)
-- **Quota grid** — 3-column grid with cubic-bezier animated progress bars
-- **Gradient variants** — blue-tinted (Workers), teal-tinted (Storage), amber/green-tinted (Quota), green-tinted (Supabase)
-
-### Health Bar Visual States
-
-- Custom accent colors per service with background tints
-- Micro-animations for degraded states (e.g., Sentry errors or Queue DLQ backlog trigger an animated pulse)
-
-### Removed
-
-- All "Business Engine" ticket card CSS was deleted when the card was removed
-
----
-
 ## Required Configuration
 
-### API Token Permissions
+### API token permissions
 
 A Cloudflare API Token is required with the following permission scopes:
 
@@ -238,98 +157,85 @@ A Cloudflare API Token is required with the following permission scopes:
 |-----------|-------|--------|
 | Zone Analytics: Read | Target Zone | HTTP request/bandwidth/threat metrics |
 | Workers Scripts: Read | Account | Worker invocation analytics |
-| Workers KV Storage: Read | Account | KV namespace metadata |
 | R2 Storage: Object Read | Account | R2 bucket object count & size |
-| Queues: Read | Account | Queue consumer count |
-| Analytics Engine: Read | Account | D1 analytics |
+| Queues: Read | Account | Queue consumers, backlog and DLQ metrics |
+| Account Analytics: Read | Account | D1 analytics, read through the GraphQL analytics API |
 
-### Production Secrets
+*Corrected 2026-09-19: "Workers KV Storage: Read" was listed for "KV namespace
+metadata". No provider calls a KV API — the only KV use on this path is the
+telemetry cache, through the binding. The D1 analytics row said "Analytics Engine:
+Read"; those figures come from the GraphQL analytics API, not an AE SQL query. The
+exact scope name Cloudflare requires for that query has not been re-derived — treat
+the last row as indicative.*
 
-All analytics-related secrets must be deployed via Wrangler secret management. This includes tokens/keys for Cloudflare API, Supabase, Sentry, and Brevo (`BREVO_API_KEY`).
+### Production secrets
+
+All analytics-related secrets are deployed via Wrangler secret management: the
+Cloudflare API token, Supabase keys, Sentry (`SENTRY_AUTH_TOKEN`,
+`SENTRY_ORG_SLUG`, `SENTRY_PROJECT_SLUG`) and `BREVO_API_KEY`.
 
 ---
 
 ## Architecture Decisions
 
-### `_unconfigured` Flag Pattern
+### `_unconfigured` flag pattern
 
-Every analytics provider returns a typed object with an optional `_unconfigured` field. When the API token is missing or a fetch fails, this flag is set to `true` instead of throwing. The UI renders `—` or a "Setup Required" state rather than `0` or crashing. This keeps the distinction between **zero** (real data, no activity) and **unknown** (no credentials or unreachable endpoint) explicit in the type system.
+Every analytics provider returns a typed object with an optional `_unconfigured`
+field. When the API token is missing or a fetch fails, this flag is set instead of
+throwing, keeping the distinction between **zero** (real data, no activity) and
+**unknown** (no credentials or unreachable endpoint) explicit in the type system.
 
-### Parallel Provider Settlement
+**The flag is not consistently consumed.** `ServiceStatusStrip` passes
+`isUnconfigured` for most of its cards and renders a placeholder; the KPI deck
+does not read the flag at all and falls back to invented values instead — see
+[§0.1](#01-values-on-this-page-that-are-not-measurements). *Corrected 2026-09-19:
+this section previously claimed the UI shows `—` / "Setup Required" rather than
+zeros, without qualification.*
 
-All 8 analytics providers run in parallel. A single provider failing (network error, 401, wrong token scope) returns its typed fallback and the rest of the dashboard continues unaffected.
+### Parallel provider settlement
 
-### GraphQL Error Checking
+All 8 providers run in parallel. A single provider failing (network error, 401,
+wrong token scope) returns its typed fallback and the rest of the dashboard
+continues unaffected.
 
-After every Cloudflare GraphQL response, the code checks for errors before reading data. Cloudflare returns HTTP 200 with an errors array when the query is malformed or a filter field name is wrong — not a non-200 status. Skipping this check causes silent data loss.
+### GraphQL error checking
 
-### Component Isolation
+After every Cloudflare GraphQL response, the code checks for errors before reading
+data. Cloudflare returns HTTP 200 with an errors array when a query is malformed
+or a filter field name is wrong — not a non-200 status. Skipping this check causes
+silent data loss.
 
-Each widget is a standalone Preact component receiving analytics data and loading state props. One exception since the GSC work: `GscValidationWidget` fetches its own validation report. All data flows from the dashboard controller after a single API call. This keeps state in one place and makes skeleton loading states trivial.
+### Component isolation
 
-### Active App Users Source
+Each widget is a standalone Preact component receiving analytics data and loading
+state as props, so state stays in one place and skeleton states are trivial. One
+exception: `GscValidationWidget` fetches its own validation report.
 
-Active users count is fetched client-side as part of the analytics API call (Phase 4 Item 8 removed the SSR D1 query). `index.astro` no longer performs any database queries — `DashboardController` is mounted with `client:only="preact"` and receives zero props.
+### No new dependencies
 
-### No New Dependencies
-
-The entire overhaul uses only existing approved dependencies: CSS for quota bars and progress animations, native `fetch` for all API calls, and the Dual-Axis chart is implemented with pure SVG/Canvas — no third-party chart library (`uplot` is **not** in `package.json` and is not used).
-
-### Dual-Axis Edge Analytics Chart — *historical; no chart component exists in `src/components/dashboard/widgets/` today*
-
-- Upgraded to a highly dense **Dual-Axis Chart**.
-- **Left Axis**: Total Requests (Cyan) and Cached Requests (Deep Blue) for Cache Hit metrics visualization.
-- **Right Axis**: Bandwidth / Data Transfer in auto-scaled units (Magenta), independently scaled.
-- **Midnight Slate integration**: Custom CSS applied for glassmorphic legend transparency on dark backgrounds.
-
-### Bento Grid System
-
-2-column grid is the primary layout primitive — a simple equal-width grid per row. Each row is independent so column counts can differ, responsive collapse is per-row, and no item unexpectedly spans across sections.
-
----
-
-## Verification Checklist — *historical (v4.5 widget names)*
-
-After adding environment tokens and restarting the dev server:
-
-- [ ] Dashboard loads without JavaScript errors in browser console
-- [ ] Setup banner does NOT appear (tokens configured)
-- [ ] ServiceStatusStrip shows 6 service cards with real telemetry data
-- [ ] WorkersWidget shows two side-by-side cards for both workers
-- [ ] WorkersWidget cards show non-zero request counts
-- [ ] UsageLimits widget shows 3-column grid with 6 cells and real percentage fills
-- [ ] SupabaseClusterWidget shows real total registered users and MAU
-- [ ] SupabaseClusterWidget "Active Now (24h)" row shows non-zero if any admin logins today and the pulse dot appears
-- [ ] StorageWidget shows R2 object count and D1 query metrics
-- [ ] Edge Analytics chart renders and resizes with browser window (no fixed-width overflow)
-- [ ] Audit Log shows 8 entries
-- [ ] At narrow viewport: all 2-column rows collapse to single column cleanly
-
-**Without tokens (graceful degradation):**
-
-- [ ] Setup banner appears with amber styling and dismiss × button
-- [ ] All CF-dependent values show `—` instead of `0`
-- [ ] WorkersWidget shows "Workers Analytics Unavailable" setup state
-- [ ] Quota cells with missing tokens show striped bar + "Token required"
-- [ ] ServiceStatusStrip shows unconfigured placeholder cards for missing services
-- [ ] No uncaught JavaScript errors
+The overhaul used only existing approved dependencies: CSS for progress
+animations and native `fetch` for all API calls. No third-party chart library —
+`uplot` is **not** in `package.json` and is not used.
 
 ---
 
 ## Known Limitations
 
-1. **KV operation counts** — Cloudflare does not expose KV reads/writes via any REST or GraphQL API. These entries have been removed rather than shown as permanently N/A.
+1. **KV operation counts** — Cloudflare does not expose KV reads/writes via any REST or GraphQL API, so they are not shown rather than shown as permanently N/A.
 
-2. **Supabase Auth API limitations** — We fetch `per_page=1000` to do localized counts for provider breakdown, MAU, and recent signups. For projects with >1000 users, this would need pagination logic or dedicated Analytics API integration.
+2. **Supabase Auth API limitations** — we fetch `per_page=1000` to do localised counts for provider breakdown, MAU and recent signups. Above 1,000 users this would need pagination or the dedicated Analytics API.
 
-3. **D1 Analytics lag** — Cloudflare's Analytics Engine ingests D1 data with ~2-minute lag. Quota bars reflect recent but not real-time write counts.
+3. **D1 Analytics lag** — Cloudflare's analytics ingest D1 data with roughly a 2-minute lag, so recent write counts are near-real-time, not real-time.
 
-4. **Workers script name matching** — The analytics API returns all scripts on the account. The provider filters client-side to known script names. If a worker is renamed in the Cloudflare dashboard, update the script list in the provider configuration.
+4. **Workers script name matching** — the analytics API returns every script on the account; the provider filters client-side to `WORKER_SCRIPTS`. Renaming a worker in the Cloudflare dashboard requires updating that list.
 
-5. **Supabase Prometheus endpoint** — The privileged metrics endpoint is a non-public API. It provides 20+ crucial infrastructure metrics, but since it's in early beta/internal use, Supabase could change or restrict it without notice. String parsing logic must fail safely.
+5. **Supabase Prometheus endpoint** — the privileged metrics endpoint is a non-public API in early/internal use. Supabase could change or restrict it without notice, so the string-parsing logic must fail safely.
+
+6. **Brevo usage bar and the SMTP KPI are not trustworthy** — see [§0.1](#01-values-on-this-page-that-are-not-measurements).
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-09-14 | `DashboardController.tsx`, every file under `src/components/dashboard/widgets/`, `src/pages/dashboard/index.astro`, the provider layer (`src/lib/analytics/providers/*` — 8 providers, `Promise.allSettled`, `_unconfigured`, snake-case GraphQL filters, `WORKER_SCRIPTS`), `wrangler.toml` crons, `package.json` (no `uplot`). §0 added; five sections marked historical; three line corrections. The provider-architecture, bug-history, configuration and known-limitations sections were re-read and hold. | API-token permission scopes; D1 Analytics lag; Supabase Prometheus endpoint stability |
+| 2026-09-19 | `DashboardController.tsx` (KPI fallbacks, 60 s poll, tab ids), `ServiceStatusStrip.tsx` (the static `seo` card), `GscValidationWidget.tsx` (the static badge), `src/pages/api/dashboard/metrics.ts`, `src/lib/analytics/providers/index.ts` (KV cache + stale copy + timestamp rewrite), `external.ts` (Sentry top-5 lifetime sum, Brevo 100-event window), `cloudflare.ts` (queue backlog/DLQ). §0.1 and §0.2 added; the v4.5 historical sections removed; provider, token-scope and `_unconfigured` claims corrected. | The exact Cloudflare token-scope name the GraphQL D1 query needs; the D1 analytics lag figure; the Supabase Prometheus endpoint's stability |
+| 2026-09-14 | `DashboardController.tsx`, every file under `src/components/dashboard/widgets/`, `src/pages/dashboard/index.astro`, the provider layer (8 providers, `Promise.allSettled`, `_unconfigured`, snake-case GraphQL filters, `WORKER_SCRIPTS`), `wrangler.toml` crons, `package.json` (no `uplot`) | API-token permission scopes; D1 Analytics lag; Supabase Prometheus endpoint stability |

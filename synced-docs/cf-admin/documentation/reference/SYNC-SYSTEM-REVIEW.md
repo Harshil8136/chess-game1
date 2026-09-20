@@ -3,24 +3,36 @@
 title: "Sync System — Architecture Review & Improvement Plan"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-23
+last_verified: 2026-09-20
 verified_against: [code, live-d1, live-supabase]
 owner: harshil
+related_code: [src/lib/cms/revalidate.ts, src/lib/sync-outbox.ts, src/workers/sync-revalidate-consumer.ts, src/lib/sync-contract.ts, src/workers/scheduled-log-sync.ts]
 tags: [sync, cms, control-plane, reliability, roadmap]
 ---
 
 # Sync System — Architecture Review & Improvement Plan
 
 > **TL;DR (non-technical):** How content and settings travel from the admin
-> portal to the live website, where that pipeline can silently fall behind, and a
-> phased plan to make it provably reliable. **Top priority: durability** — every
-> publish should either reach the live site (verified) or land in a visible
-> dead-letter queue, never silently lag for hours.
+> portal to the live website, where that pipeline can silently fall behind, and
+> what was done about it. **The durability work is shipped and live:** a failed
+> publish is persisted to the `sync_outbox` table and redriven by a queue
+> consumer, so it no longer silently gives up after three in-request retries.
+> What remains open is smaller — dead config keys (C3), the cross-repo
+> `sync-contract.ts` parity kept by hand (C4), webhook replay protection (S4)
+> and a content-history **UI**.
+
+> **This document is two things.** §0 (the three planes, the fail-safe chain,
+> the outbox/DLQ path, read-back semantics and the C4 parity rule) is an
+> evergreen architecture description and is re-verified. §2's risk list and §3's
+> roadmap are a **dated 2026-06-09 review**: most of it shipped, and §6 is the
+> record of what. Read §2 with §6 open, or you will treat closed risks as open.
 
 > **Scope:** the content / config / log sync that flows cf-admin ⇄ cf-astro
 > through Cloudflare (D1 / KV / R2 / Queues / edge cache) and Supabase.
-> **Grounded against:** live production D1 (`madagascar-db`, `7fca2a07…`), live
-> Supabase (`[SUPABASE_PROJECT_REF]`), and the code on both repos as of 2026-06-09.
+> **Grounded against:** live production D1 (`madagascar-db`,
+> `[D1_MADAGASCAR_DB_ID]`), live Supabase (`[SUPABASE_PROJECT_REF]`), and the
+> code on both repos as of 2026-06-09; re-verified against cf-admin's code and
+> live D1 on 2026-09-20 (see §8).
 > **Projects:** `cf-admin` (writer), `cf-astro` (reader).
 
 ---
@@ -38,7 +50,14 @@ lag** — they do not move the data; D1 already shares it.
 |---|---|---|---|---|
 | **CMS content** | `updateCmsBlock()` → D1 `cms_content` (`cf-admin/src/lib/cms/storage.ts`) | `revalidateAstro()` → `POST /api/revalidate` (Bearer) | section `.astro` resolvers | edge cache-tag → `cms:*` KV (1h TTL) → D1 → i18n defaults |
 | **Service config** | `ServiceConfigRepository` → D1 `service_config` | `flushAstroConfigCache()` → `/api/revalidate {kind:'config'}` | `getServiceConfig()` + `route-policy.ts` resolver | mem 10s → Cache-API 60s → D1 → hardcoded `DEFAULTS` |
-| **Login / log sync** | — | 5-min cron polls CF Access audit-log API | `handleScheduled()` → D1 `admin_login_logs` | KV watermark `cf-audit-last-synced` |
+| **Login / log sync** | `handleScheduled()` → D1 `admin_login_logs` (**cf-admin**, `src/workers/scheduled-log-sync.ts`, run as the `cf-access-audit-poll` job in the `*/5` batch) | 5-min cron polls CF Access audit-log API | — (cf-astro is not involved) | **D1** watermark: `admin_portal_settings` row `cf-audit-last-synced` |
+
+> **Corrected 2026-09-20** (the row above had two errors that sent debuggers to
+> the wrong store and the wrong repo): the watermark is a **D1**
+> `admin_portal_settings` row, not KV — `scheduled-log-sync.ts` says so in its
+> header, though the constant is still misleadingly named `KV_LAST_SYNCED_KEY` —
+> and `handleScheduled()` is **cf-admin's** function, invoked from cf-admin's
+> job registry. Nothing in cf-astro runs it.
 
 **The design instinct is strong and must be preserved:** every read fails safe to
 the last good value (KV → D1 → hardcoded), so a missing or corrupt store
@@ -60,7 +79,9 @@ Admin saves  ──►  D1 cms_content (authoritative, written FIRST)
      4. CF API purge_cache by tag page-<path>   (waitUntil)
                        │
         success ──► RevalidationResult{ success:true }
-        3× fail ──► Sentry.captureMessage("[CMS Sync Error] …")  ←─ then GIVES UP
+        3× fail ──► enqueueRevalidation() → D1 sync_outbox + SYNC_QUEUE redrive
+                    └─► Sentry.captureMessage("… queued for redrive")
+                    └─► sync-revalidate-consumer.ts drains it (DLQ behind it)
 ```
 
 ### Config flow (detail)
@@ -92,31 +113,47 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
 
 ## 2. Risks & gaps (prioritized, production-grounded)
 
-### 🔴 Reliability — sync has no durability guarantee  *(TOP PRIORITY)*
+### ✅ Reliability — durability, as found 2026-06-09 (**R1–R4 all closed**; see §6)
 
-- **R1 — Fire-and-forget publish.** `revalidateAstro()` retries 3× then emits a
-  Sentry message and **gives up** (`cf-admin/src/lib/cms/revalidate.ts`). A failed publish leaves
+> **These four were the top priority of the 2026-06 review and are no longer
+> open.** They are kept in the past tense because the roadmap in §3 and the log
+> in §6 only make sense against them. Re-verified 2026-09-20.
+
+- **R1 — Fire-and-forget publish.** *(closed — item 1.1)* `revalidateAstro()`
+  retried 3× then emitted a Sentry message and **gave up**. A failed publish left
   D1 ahead of the edge for up to **1h** (`cms:*` `expirationTtl: 3600`) or **24h**
-  (ISR pages set `s-maxage=86400`; if the cache-tag purge *also* failed). There is
-  **no durable redrive** — nothing retries after the 3 in-request attempts.
-- **R2 — Split self-healing clocks.** `cms:*` KV heals at 1h but ISR/edge HTML
-  heals at 24h, so the two cache layers can disagree for up to a day after a
-  partial failure.
-- **R3 — No post-publish verification.** The admin Content Studio iframe reloads
-  with `?v=Date.now()`; nothing reads back from cf-astro to confirm KV/edge
-  actually serve the new bytes. **"Saved" ≠ "live."**
-- **R4 — Booking dual-write has no transaction or reconciliation.**
-  `cf-astro/src/pages/api/booking.ts` writes D1 `booking_attempts` (dead-letter) +
-  Supabase `bookings` + `EMAIL_QUEUE` with no saga. The deferred **email-retry
-  cron** (scan `booking_attempts WHERE status='queue_error'`) is still open in
-  `cf-astro/ToDo.md`. Two booking sources of truth, no reconciler.
+  (ISR pages set `s-maxage=86400`; if the cache-tag purge *also* failed).
+  **Today:** on a genuine delivery failure (`result.attempts > 0` — not a dev
+  bypass or a missing secret) `src/lib/cms/revalidate.ts` persists the publish
+  via `enqueueRevalidation()` to `sync_outbox` and enqueues a redrive on
+  `SYNC_QUEUE`; `src/workers/sync-revalidate-consumer.ts` drains it, with a DLQ
+  behind it. The Sentry message now reads "queued for redrive".
+- **R2 — Split self-healing clocks.** *(closed by 1.1 — owner decision, item
+  0.6)* `cms:*` KV healed at 1h while ISR/edge HTML healed at 24h, so the two
+  layers could disagree for a day after a partial failure. Aligning the TTLs was
+  superseded by the redrive: a failure is now retried in minutes rather than
+  waited out.
+- **R3 — No post-publish verification.** *(closed — item 1.2)* Read-back now
+  runs against cf-astro's `/api/cms-status` and surfaces as `verified` on the
+  save/rollback response. Advisory, not blocking — see the note in §6.
+- **R4 — Booking dual-write has no transaction or reconciliation.** *(closed —
+  item 2.1)* The email-retry reconciler is shipped and live, with the
+  `booking_attempts` replay columns added by
+  `cf-astro/db/migrations/0015_booking_replay_outbox.sql` (applied 2026-09-03).
+  Two booking sources of truth remain by design; the reconciler is the bridge.
 
 ### 🟠 Correctness / consistency
 
-- **C1 — Content history is unwired.** `cms_content_history` exists (migration
-  `0026`) but has **0 rows** in production — `updateCmsBlock()` never writes it.
-  **No content versioning or rollback**, even though `service_config_history` *is*
-  populated (3 rows) and the control-plane doc advertises rollback.
+- **C1 — Content history: wired, still unexercised.** `cms_content_history`
+  (`database/legacy_migrations/0026_cms_content_history.sql`, applied
+  2026-05-13, since consolidated into `migrations/0000_baseline.sql`) was unwired
+  at review time. `recordCmsHistory` has since been wired into `updateCmsBlock()`
+  (`src/lib/cms/storage.ts`) and a history/rollback API exists
+  (`src/pages/api/content/history.ts`) — items 1.3 / 1.3b. **But live on
+  2026-09-20 the table is still 0 rows**: the path has not fired in production in
+  three months, so rollback is untested against real data. For contrast,
+  `service_config_history` is now **30** rows (3 at review time). A history
+  **UI** in the Content Studio is still unbuilt.
 - **C2 — `service_config` has no `version` column** (verified live), yet
   `TECHNICAL_OVERVIEW.md` claims "version bumped / version-tracked for change
   detection." Cache invalidation is therefore purely time/flush-based, and
@@ -152,14 +189,26 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
 - **S4** — Webhook auth is a single static Bearer secret — no body HMAC, no
   timestamp/nonce → no replay protection. (Allowlist + sanitize limit blast
   radius, but allowed keys are still poisonable if the secret leaks.)
-- **S5** — Supabase advisor: **leaked-password protection disabled** (also in
-  `ToDo.md`); ~27 unused indexes (benign — never-queried, not yet a problem);
-  `BETTERSTACK_SOURCE_TOKEN` returns 401 → logs silently dropped (🔴 in ToDo —
-  this blinds the entire observability story below).
+- **S5** — Supabase advisor: **leaked-password protection disabled** — still the
+  only open security advisory on the project, and the one item in this doc that
+  two `status: active` docs disagree about. The procedure is owned by
+  [`../runbooks/supabase-leaked-password-protection.md`](../runbooks/supabase-leaked-password-protection.md);
+  settle it there, not here (see item 0.2 in §6).
+  *Indexes: acted on* — chunk 14a (2026-09-16) removed five never-used indexes
+  and added the two missing FK indexes; see
+  [`schema-change-ledger.md`](schema-change-ledger.md).
+  *BetterStack:* `BETTERSTACK_SOURCE_TOKEN` returned 401 → logs silently dropped;
+  rotated 2026-06-10, observability restored (item 0.1 in §6).
 
 ---
 
 ## 3. Improvement roadmap (phased — reliability first)
+
+> **Pointer for inbound links.** Several places — `src/lib/sync-contract.ts` and
+> two specs — cite "SYNC-SYSTEM-REVIEW.md **§3** (C4)" as the rule that the two
+> `sync-contract.ts` files must stay byte-identical. **C4 is in §2**, above; §3
+> holds roadmap item 3.1, which is the work that partly closed it. Both are the
+> right reading; the section number in those citations is wrong.
 
 ### Phase 0 — Quick wins (hours, low risk)
 
@@ -265,7 +314,7 @@ reuse it.
 
 ---
 
-## 7. Implementation log
+## 6. Implementation log
 
 Tracking which roadmap items have shipped to the review branch
 (`claude/sync-system-architecture-review-0vyjxz`, PRs cf-admin#12 / cf-astro#13).
@@ -277,24 +326,29 @@ Tracking which roadmap items have shipped to the review branch
 | 1.3 — wire `cms_content_history` (append + prune to last 10) | ✅ shipped | `cf-admin/src/lib/cms/storage.ts` (`recordCmsHistory`) |
 | 1.3b — history read + **rollback** endpoint (republishes via revalidate) | ✅ shipped | `cf-admin/src/pages/api/content/history.ts` |
 | 0.1 — rotate `BETTERSTACK_SOURCE_TOKEN` | ✅ done — rotated in both workers (2026-06-10); observability restored | — |
-| 0.2 — Supabase leaked-password protection | ⛔ not applicable — Pro-plan-only feature; project is Free tier ($0-infra invariant). Recorded as an accepted limitation. | — |
+| 0.2 — Supabase leaked-password protection | ⚠️ **unsettled — do not cite this row.** It said "not applicable, Pro-plan-only", while [`../runbooks/supabase-leaked-password-protection.md`](../runbooks/supabase-leaked-password-protection.md) (also `status: active`) says it is a 30-second dashboard toggle at no cost. Live, the advisor still reports it disabled. A third possibility neither doc states: cf-admin does not use Supabase GoTrue at all (identity is Cloudflare Access), so the setting may simply be inert. **The runbook owns the procedure and the answer**; this row defers to it. | see the runbook |
 | 0.4 — dead config keys (wire/delete + assertion) | ⏳ todo (Phase 3 contract territory) | — |
 | 0.6 — align self-healing clocks (ISR vs `cms:*` TTL) | ⏸ deferred — superseded by 1.1 redrive (owner decision) | — |
-| 1.1 — outbox + Queue-driven revalidation (DLQ) | ✅ shipped + **live in prod** (queues created, config un-gated, migration `0033` applied 2026-06-10) | `cf-admin`: `sync-outbox.ts`, `workers/sync-revalidate-consumer.ts`, `cms.ts`, `cf-entry.ts`, `wrangler.toml`, migration `0033` |
+| 1.1 — outbox + Queue-driven revalidation (DLQ) | ✅ shipped + **live in prod** (queues created, config un-gated, `database/legacy_migrations/0033_create_sync_outbox.sql` applied 2026-06-10) | `cf-admin`: `src/lib/sync-outbox.ts`, `src/workers/sync-revalidate-consumer.ts`, `src/lib/cms/revalidate.ts`, `src/workers/cf-entry.ts`, `wrangler.toml` |
 | 1.2 — `/api/cms-status` read-back verification | ✅ shipped | `cf-astro/src/pages/api/cms-status.ts`; `cf-admin/src/lib/cms-status.ts` (`verifyCmsLive`), surfaced as `verified` on save/rollback responses |
-| 1.4 — `service_config.version` + optimistic concurrency | ✅ shipped | `cf-admin`: migration `0034`, `ServiceConfigRepository`, `api/control-plane/config.ts`; doc claims reconciled in `TECHNICAL_OVERVIEW.md` |
+| 1.4 — `service_config.version` + optimistic concurrency | ✅ shipped | `cf-admin`: `database/legacy_migrations/0034_service_config_version.sql`, `ServiceConfigRepository`, `api/control-plane/config.ts`; doc claims reconciled in `TECHNICAL_OVERVIEW.md` |
 | 2.2 — cron watermark + pagination hardening (S3) | ✅ shipped | `cf-admin/src/workers/scheduled-log-sync.ts` |
 | 2.1 — booking email-retry reconciler (R4) | ✅ shipped + **live in prod** (migration `0008` applied 2026-06-10; reconciler hardened to skip quietly if the columns are ever absent) | `cf-astro`: migration `0008`, `d1-attempts.ts`, `booking.ts`; `cf-admin`: `workers/scheduled-booking-retry.ts` wired into the 5-min cron |
 | 3.1 — shared sync-contract module (C4, partial) | ✅ shipped (in-repo single-source) | `sync-contract.ts` in both repos; cf-astro `RATE_LIMITS` + `DEFAULTS.ratelimit` + CMS allowlist and cf-admin `SITE_LOCALES` now derive from it. Cross-repo agreement = keep the two files in sync (see C4 note below). Sentry defaults vs cf-admin `CONFIG_SPECS` and exact 1.2 hashing still pending. |
 
 > **✅ Production status (verified 2026-06-10 against live `madagascar-db`
-> `7fca2a07…`).** All deployment steps are complete and the durability pipeline is
-> live:
+> `[D1_MADAGASCAR_DB_ID]`).** All deployment steps are complete and the
+> durability pipeline is live:
 >
 > - Queues `madagascar-sync-revalidate` + `…-dlq` created; `SYNC_QUEUE` producer +
 >   consumers un-gated in `wrangler.toml` and deployed.
-> - Migrations applied & tracked in `d1_migrations`: `0033` (sync_outbox), `0034`
->   (service_config.version), and cf-astro `0008` (booking_attempts email-retry).
+> - Migrations applied & tracked in `d1_migrations`:
+>   `database/legacy_migrations/0033_create_sync_outbox.sql`,
+>   `0034_service_config_version.sql`, and cf-astro's `0008` (booking_attempts
+>   email-retry). ⚠️ **Cite these by full path, not by bare number.** All three
+>   pre-date the `migrations/0000_baseline.sql` consolidation, and `0033` / `0034`
+>   in today's `migrations/` are the **blog** tables — different files entirely.
+>   That collision is exactly what RULE #0.7b exists to prevent.
 > - Verified columns/tables exist: `sync_outbox`, `service_config.version`,
 >   `booking_attempts.email_payload` + `retry_count`.
 > - `BETTERSTACK_SOURCE_TOKEN` rotated → observability restored.
@@ -324,7 +378,7 @@ Tracking which roadmap items have shipped to the review branch
 
 ---
 
-## 6. Cross-references
+## 7. Cross-references
 
 - CMS pipeline & fallback chain → [`features/CMS.md`](../features/CMS.md)
 - KV quota & failure cascade → [`architecture/KV-RESILIENCE.md`](../architecture/KV-RESILIENCE.md)
@@ -334,3 +388,12 @@ Tracking which roadmap items have shipped to the review branch
 - Key files: `cf-admin/src/lib/cms/` (`storage.ts`, `revalidate.ts`), `cf-admin/src/lib/control-plane/config-publisher.ts`,
   `cf-astro/src/pages/api/revalidate.ts`, `cf-astro/src/lib/service-config.ts`,
   `cf-astro/src/lib/route-policy.ts`, `cf-admin/src/workers/scheduled-log-sync.ts`
+
+---
+
+## 8. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-08-23 | Original 2026-06-09 review re-stamped; cross-references updated for the control-plane archive move. §2's R1/R2 were already closed by §6's item 1.1 at that date and were not corrected — that is the drift this 2026-09-20 pass repaired. | — |
+| 2026-09-20 | **cf-admin code:** `src/lib/cms/revalidate.ts` (outbox fallback on `attempts > 0`, "queued for redrive"), `src/lib/sync-outbox.ts` and `src/workers/sync-revalidate-consumer.ts` both present; `src/workers/scheduled-log-sync.ts` header (**D1** `admin_portal_settings` watermark, not KV) and `src/lib/jobs/registry.ts` (`handleScheduled` runs in **cf-admin** as `cf-access-audit-poll`). **Live D1:** `cms_content_history` **0** rows, `service_config_history` **30** rows (was 3), `sync_outbox` 0. **Result:** R1–R4 restated as closed; the §0 login-sync row corrected on both counts; C1 restated as wired-but-unexercised; bare migration numbers `0026`/`0033`/`0034` replaced with full `database/legacy_migrations/` paths (those numbers now name the blog tables in `migrations/`); S5 split into its three parts; item 0.2 marked unsettled and deferred to the runbook; the partial D1 database id removed from the two places the mirror's redactor does not catch; §6/§7 renumbered so the document runs 0–8. | The **cf-astro** side throughout: S1 (`http://` vs `https://internal`), S2 (`/api/runtime-config` cache tag), S3 pagination, and whether Phase 4.1 (HMAC on the revalidate body, S4) landed there. That repo is out of scope for a cf-admin pass — treat every cf-astro claim in this doc as dated 2026-06-09. |

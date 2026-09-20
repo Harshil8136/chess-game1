@@ -3,11 +3,11 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-16
+last_verified: 2026-09-19
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/control.ts, src/lib/jobs/tiers.ts, src/lib/jobs/runJob.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/pages/dashboard/cron/index.astro]
-related_docs: [../operations/OPERATIONS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../specs/2026-09-16-cron-control-plane-design.md, ../program/ROADMAP.md]
+related_code: [src/lib/jobs/control.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/pages/dashboard/cron/index.astro]
+related_docs: [../operations/OPERATIONS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
 
@@ -19,7 +19,8 @@ tags: [cron, jobs, control-plane, plac, operations]
 > by itself if the free database allowance ever comes under pressure, and puts
 > them back when it passes.
 
-**Where:** `/dashboard/cron`. It appears in the sidebar for anyone who can open it.
+**Where:** `/dashboard/cron`, titled **Scheduled Jobs**. It appears in the sidebar for
+anyone who can open it.
 
 This document owns the job list, the tiers and the permission matrix.
 [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) links here rather than
@@ -30,10 +31,31 @@ restating them — one fact, one home.
 | Control | What it does | Permission |
 |---|---|---|
 | **Pause / resume** | Stops a job dispatching at all. Takes a required reason and an optional expiry. | `#pause` |
-| **Interval** | Runs a job at most every N minutes instead of every tick, without a deploy. The tick records `lastRunAt` for interval-gated jobs in one write per tick, which is what the throttle measures against. | `#pause` |
-| **Run now** | Runs one job immediately and shows its telemetry. Works on a paused job. | `#trigger` |
+| **Interval** | Runs a job at most every N minutes instead of every tick. **No UI exists for this** — see the warning below. | `#pause` |
+| **Run now** | Runs one job immediately and streams its telemetry and per-query trace. Bypasses the control document, but not the job's own gate. | `#trigger` |
+| **Sync telemetry** | Forces a live probe of Cloudflare's D1 analytics instead of waiting for the hourly one. | `#trigger` |
 | **Thresholds** | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
 | **Halt** | Stops every job, essential ones included. Requires a reason. | `#configure` |
+
+> **The interval control has no user interface, and pausing erases it.**
+> `POST /api/cron/state` accepts `intervalMinutes`, but the dashboard never sends
+> it (`src/components/admin/cron/CronDashboard.tsx`) and no row renders an input
+> for it. Worse, the route rebuilds a job's control entry from scratch on every
+> pause or resume and carries over only `lastRunAt`
+> (`src/pages/api/cron/state.ts`), so a pause/resume round-trip through the page
+> silently drops an interval set through the API or the seed script. Live today,
+> only `cron-usage-probe` has one (60 minutes). Treat intervals as
+> API-and-seed-only until the UI exists. *Corrected 2026-09-19.*
+
+> **Sync telemetry is not free and is not audited.** The header button calls
+> `POST /api/cron/sync`, which runs the usage probe with `force=true` — one
+> Cloudflare GraphQL call plus two control-row reads and a compare-and-swap
+> write **per click**, recorded as `updated_by: cron-usage-probe-manual`. It has
+> no rate limit and writes no audit row. It is gated on `#trigger` (baseline
+> `dev`) while the button renders for everyone who can open the page, so a
+> canonical Admin sees "Sync failed (403)" — and the plain refresh this button
+> used to do is gone. Added by `a9dd974` (2026-09-17); logged for triage in
+> [`../MAINTENANCE.md`](../MAINTENANCE.md). *Added 2026-09-19.*
 
 ## 2. Permissions
 
@@ -62,26 +84,40 @@ multi-level rather than a fixed ladder.
 **A deny on the page does not automatically deny the actions.** Ancestor matching
 in `resolveAccess` is `startsWith(key + '/')`, and `#pause` supplies no `/`. Every
 cron API route therefore checks the page key *and* its action key, through
-`src/lib/auth/surface-guards.ts`. Gap D-4 in
-[`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
-is this same mistake made once already elsewhere — in the sessions routes, whose four
-sub-permissions were fixed alongside this doc and now share that module.
+`src/lib/auth/surface-guards.ts`. Gap **D-5** in
+[`../MAINTENANCE.md`](../MAINTENANCE.md) is this same mistake made once already
+elsewhere — in the sessions routes, three of whose four sub-permissions were fixed
+alongside this doc and now share that module (`#export` has no server route and is
+left unmapped). *Corrected 2026-09-19: this said "D-4 in PERMISSIONS-SYSTEM.md";
+D-4 is the separate "two page keys for one route family" gap, and both live in
+MAINTENANCE.md.*
 
 Every pause, resume, trigger and configuration change writes a Ghost Audit row
-(`cron_pause`, `cron_resume`, `cron_trigger`, `config_change`) with the actor and
-the reason.
+(`cron_pause`, `cron_resume`, `cron_trigger`, `config_change`) naming the actor.
+A pause or a halt also records its reason; a `cron_trigger` row carries no reason
+field, and **`POST /api/cron/sync` writes no audit row at all** even though it
+mutates the control document. *Corrected 2026-09-19.*
 
 ## 3. Tiers
 
+There are **11 registered jobs** (`src/lib/jobs/registry.ts`): 9 on the
+`*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
+and `staff-storage-reconcile`, both dispatched through the same `runCronBatch`).
+
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
-a corrupt or hand-edited row cannot mark a security job as sheddable. Adding a
-job to the registry without a tier is a compile error.
+a corrupt or hand-edited row cannot mark a security job as sheddable.
 
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
 | `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe` | never |
 | `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
+
+> **A missing tier is not a compile error.** `JobDefinition.id` is typed `string`,
+> so `JobId` widens to `string` and `Record<JobId, JobTier>` demands nothing. A job
+> added to the registry without a `JOB_TIERS` entry compiles, and its tier reads
+> `undefined` at runtime. Keeping the two lists in step is a review duty, not a
+> guarantee the type system makes. *Corrected 2026-09-19.*
 
 The two Cloudflare Access jobs are security controls; the two booking jobs are
 the customer money path, and a traffic surge is exactly when bookings are most
@@ -107,19 +143,43 @@ pressure** — shedding switches off rather than standing jobs down on evidence
 nobody can confirm. Shedding also self-restores as soon as a later reading falls
 below the threshold, and the allowance resets at UTC midnight.
 
+Since `a9dd974` (2026-09-17) the probe also stores the **raw** `rowsRead` /
+`rowsWritten` alongside the percentages, plus per-database `dbRowsRead` /
+`dbRowsWritten`, so the usage cards show real row counts rather than figures
+derived back from a percentage, with a "Portal DB: N rows" footer when the
+portal's own share differs from the account total. The same commit made
+`src/lib/jobs/metered-d1.ts` meter `.first()` calls, which it previously did not —
+so per-job rows-read history recorded **before 2026-09-17 undercounts** every
+`.first()` query. *Added 2026-09-19.*
+
 **Current headroom, measured 2026-09-16:** 0.18% of the daily read allowance and
 0.18% of writes. The 70% default thresholds have never been approached; treat
 shedding as insurance, not as something that fires routinely.
 
 ## 5. What it costs
 
-The control document is one JSON row in `admin_portal_settings`, read as the 13th
-key of a batched settings query the tick already makes — **+1 row read per tick,
-no extra query**, however many jobs are registered. No new table, no new
-environment variable.
+The control document is one JSON row in `admin_portal_settings`. No new table, no
+new environment variable.
 
-A paused job costs nothing beyond that single read: the gate runs before the
-job's own logic, so it never reaches D1.
+*Corrected 2026-09-19 — this section previously claimed the document was read as
+"the 13th key of a batched settings query the tick already makes: +1 row read per
+tick, no extra query". It is not. `readControl` issues its own `SELECT`
+(`src/lib/dal/CronControlRepository.ts`), separate from the batched gate-key read.
+The real per-tick cost is:*
+
+- **two single-row reads per tick** — one from `runCronBatch`
+  (`src/lib/jobs/runJob.ts`) and one from `cron-usage-probe`, which is essential
+  and ungated and so re-reads the document on every tick before checking its own
+  60-minute clock;
+- **one write per hour** from the probe, plus one write per tick in which an
+  interval-gated job actually ran (`stampIntervalClocks`, a single write for the
+  whole tick).
+
+The same false claim is repeated in code comments at `src/lib/jobs/runJob.ts` and
+`src/lib/jobs/control.ts`; correcting them is a code change, not a doc change.
+
+A paused job still costs those reads, but nothing more: the gate runs before the
+job's own logic, so the job itself never reaches D1.
 
 ## 6. Failure behaviour
 
@@ -135,25 +195,42 @@ an empty table.
 ## 7. Reading the page
 
 - **Runs / 24h, rows read, average duration** come from Analytics Engine, which
-  already records every run. When that query cannot be made the page says
-  "History unavailable" — it never shows a zero, because a zero run count reads
-  as "this job has stopped".
-- **"Runs on the next tick"** versus a reason (`Paused`, `Shed`, `Waiting for its
-  interval`, `Halted`) tells you why a job is idle.
+  records every tick's outcome. When that query cannot be made the chip reads
+  "24h history unavailable" — it never shows a zero, because a zero run count
+  reads as "this job has stopped". Note that the count is *every* recorded
+  outcome, `disabled` and `shed` included, so a paused job on the five-minute
+  tick still shows about 288 "runs". *Corrected 2026-09-19.*
+- **The status label** tells you why a job is idle. The current wording
+  (`src/components/admin/cron/status.ts`) is **Active** / **Paused** /
+  **Paused (Quota)** for an automatic shed / **Standby** while an interval window
+  is open / **System Halted** / **Inactive**. Tier headings read
+  "Essential Tasks", "Standard Tasks" and "Disabled / Inactive Tasks".
+  *Corrected 2026-09-19 — the earlier wording quoted labels that no longer exist.*
 - **Run now** bypasses the control document deliberately, so you can test a job
-  you have just paused. It still honours the lease, so it cannot race a scheduled
-  tick; if one is already running you get a 409 rather than a duplicate run.
+  you have just paused. It does **not** bypass the job's own gate: Run now on
+  `gsc-sync` still does nothing while `gsc-sync-enabled` is `false`.
+- **No job takes a lease.** `leaseSeconds` exists on `JobDefinition` and is
+  honoured by `runJob`, but no registered job declares one, so `claimLease` never
+  runs and a manual trigger *can* overlap a scheduled tick. The Run-now route is
+  an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
+  there is no 409 path. *Corrected 2026-09-19: this section previously promised
+  that Run now "still honours the lease … you get a 409 rather than a duplicate
+  run". The code comment in `src/pages/api/cron/jobs/[id]/stream.ts` makes the
+  same claim.*
 
-> **Known limitation.** The run dialog shows structured job telemetry. Raw
-> `console` output from inside a handler is not captured there — it is in Workers
-> Observability. Routing job-path `console.*` through the observability helper
-> would close this; it is not done yet.
+> **Known limitations.** The run dialog now streams a per-query database trace
+> (statement, table, rows and latency) alongside the structured job telemetry, and
+> the page renders a skeleton while the first load is in flight — both added by
+> `a9dd974`. Raw `console` output from inside a handler is still not captured
+> there; it is in Workers Observability. Routing job-path `console.*` through the
+> observability helper would close that, and it is not done yet.
 
 ## 8. Verification log
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
-| 2026-09-16 | claude | Seeded the control document in production, then read `madagascar_analytics` across the seed boundary | `gsc-sync`, `pagespeed-sync` and `blog-scheduled-publish` moved from `ran` to `disabled`; every essential job continued to run; `cron-usage-probe` began reporting |
+| 2026-09-19 | claude | Re-derived the whole document against HEAD `a9dd974` and the live control row | `a9dd974` (2026-09-17) shipped a query-trace console, skeleton loading, `POST /api/cron/sync` and raw/per-database usage counts with no doc update; the lease, cost, interval, label and D-4 claims were all wrong and are corrected above. Live control row: `gsc-sync` off, `pagespeed-sync` off, **`blog-scheduled-publish` on**, `cron-usage-probe` on with `intervalMinutes 60` |
+| 2026-09-16 | claude | Seeded the control document in production, then read `madagascar_analytics` across the seed boundary | `gsc-sync`, `pagespeed-sync` and `blog-scheduled-publish` moved from `ran` to `disabled`; every essential job continued to run; `cron-usage-probe` began reporting. *(Corrected 2026-09-19: `blog-scheduled-publish` was later resumed and is `on` in the live control row — only the two `idle` jobs remain paused.)* |
 | 2026-09-16 | claude | D1 query on `admin_portal_settings` | Control document at rev 2, `updated_by: cron-usage-probe`, usage 0.176% reads / 0.179% writes at 13:05:20Z |
 | 2026-09-16 | claude | D1 query on `admin_pages` | Four rows at `sort_order` 85-88 with the intended roles, icons and `parent_path` |
 | 2026-09-16 | claude | D1 query on the control document after the interval fix | `rev` 3, `updated_by: cron-tick`, `cron-usage-probe.lastRunAt` written — the clock `decideJobRun` throttles against. Before this fix nothing wrote it, so `intervalMinutes` rendered as configurable and could never fire; found from production telemetry, not from a test |

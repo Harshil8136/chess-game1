@@ -1,29 +1,57 @@
 ---
 
 title: "Dynamic D1 Blog, Workers AI RAG & Edge SSR Architecture"
-status: active
+status: historical
 audience: [ai, technical, operator]
 last_verified: 2026-08-31
 verified_against: [code]
 owner: harshil
-related_docs: [2026-08-03-blog-ai-seo-production-readiness.md, specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, specs/2026-07-29-content-and-ai-visibility-engine.md]
-tags: [blog, ai, rag, seo, architecture, blueprint]
+related_docs: [../features/CMS.md, ../records/reports/2026-08-03-blog-ai-seo-production-readiness.md, ../records/reports/2026-08-30-blog-system-overhaul.md, ../records/reports/2026-08-31-ai-system-overhaul.md, ../specs/2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, ../specs/2026-07-29-content-and-ai-visibility-engine.md]
+tags: [blog, ai, rag, seo, architecture, blueprint, historical]
 ---
-
-> **Note (2026-08-03):** This document is the original design blueprint and
-> contains illustrative/target benchmark figures (see §1), not all of which
-> were measured against production. For the verified, current state after
-> the production-readiness hardening pass — security fixes, the publish
-> quality gate, cadence locks, SEO/AIO mechanics, and exact service
-> coordination — see
-> [`2026-08-03-blog-ai-seo-production-readiness.md`](../2026-08-03-blog-ai-seo-production-readiness.md),
-> which is the authoritative reference as of that date.
 
 # Dynamic D1 Blog, Workers AI RAG & Edge SSR Architecture
 
-> **System Blueprint & Technical Reference Manual**  
-> **Target Applications:** `cf-admin` (Control Plane) & `cf-astro` (Customer-Facing Storefront)  
-> **Last Updated:** 2026-08-03  
+> # ⚠ HISTORICAL — the original blueprint, superseded. Do not build from this.
+>
+> **Re-statused `active` → `historical` on 2026-09-19.** The document had said of
+> itself since 2026-08-03 that it was "the original design blueprint" containing
+> figures "not all of which were measured", and named another document as
+> authoritative — while carrying a status that told readers it described the system
+> as built. Its §6 procedures were also actively harmful (see below). It is kept
+> for the design history, and for the 2026-08-31 correction block in §1, which
+> records two things this blueprint claimed and the product never did.
+>
+> **Read these instead:**
+>
+> | For | Go to |
+> |---|---|
+> | The blog studio, the AI author and the knowledge-base grounding as built | [`../features/CMS.md`](../features/CMS.md) — the living feature doc |
+> | The production-readiness hardening: security fixes, the publish quality gate, cadence locks, SEO/AIO mechanics | [`../records/reports/2026-08-03-blog-ai-seo-production-readiness.md`](../records/reports/2026-08-03-blog-ai-seo-production-readiness.md) |
+> | What the blog system became | [`../records/reports/2026-08-30-blog-system-overhaul.md`](../records/reports/2026-08-30-blog-system-overhaul.md) |
+> | What the AI system became, including the "RAG" correction | [`../records/reports/2026-08-31-ai-system-overhaul.md`](../records/reports/2026-08-31-ai-system-overhaul.md) |
+> | ISR revalidation, the durable outbox and the queue redrive | [`KV-RESILIENCE.md`](KV-RESILIENCE.md) |
+> | Schema changes | RULE #0.7 in [`../../RULESAd.md`](../../RULESAd.md) — **not** §6 below |
+>
+> **Known-stale facts in the body**, left in place rather than silently patched,
+> because a historical document is evidence: "Astro 6 SSR" (it is Astro 7); a
+> Tiptap editor (there is no tiptap dependency); revisions saved to
+> `cms_content_history` (blog revisions live in `blog_posts_history`); "Llama 3.3
+> 70B & Qwen 2.5 Coder 32B" (contradicted by §3's own `llama-4-scout` default,
+> which is correct — the catalogue is `src/lib/ai-pricing.ts`); a PLAC check on
+> `/dashboard/content` (the call uses `/dashboard/content/blog`); a direct
+> `CHATBOT_SERVICE.fetch` URL (the code calls `chatbotFetch`); "all 7 fields" (the
+> UI reports 9); a publish that POSTs the public revalidate URL (the
+> `ASTRO_SERVICE` binding goes first, then the outbox and queue redrive); and an
+> `ADMIN_AI_SECRET` in §5 that is neither declared nor read anywhere.
+>
+> **The §1 benchmark and §4 latency tables are illustrative targets, not
+> measurements** — as the document's own note has said since 2026-08-03. Do not
+> quote them.
+
+> **System Blueprint & Technical Reference Manual**
+> **Target Applications:** `cf-admin` (Control Plane) & `cf-astro` (Customer-Facing Storefront)
+> **Written:** 2026-08-03 · **Superseded:** 2026-09-19
 > **Infrastructure Model:** Commercial-Grade $0/Month Cloudflare Ecosystem
 
 ---
@@ -52,7 +80,7 @@ This document defines the end-to-end architecture, data flows, security posture,
 > whose result was then discarded.
 >
 > Both are fixed. See
-> [`../2026-08-31-ai-system-overhaul.md`](../2026-08-31-ai-system-overhaul.md) §1.2 and §2.5.
+> [`../records/reports/2026-08-31-ai-system-overhaul.md`](../records/reports/2026-08-31-ai-system-overhaul.md) §1.2 and §2.5.
 
 ### Industry Benchmark Positioning
 
@@ -211,20 +239,23 @@ Latency Timeline (Edge SSR Request Lifecycle)
 
 ## 6. Maintenance & Operational Procedures
 
-### Deploying Schema Migrations
-1. Update D1 schema in `cf-admin/db/schema.sql`.
-2. Apply migration to production:
+### Deploying schema migrations — REMOVED 2026-09-19
 
-   ```bash
-   npx wrangler d1 execute madagascar-db --remote --file=./db/schema.sql
-   ```
-
-3. Run TypeScript type check across both workspaces:
-
-   ```bash
-   cd cf-admin && npx tsc --noEmit
-   cd ../cf-astro && npx tsc --noEmit
-   ```
+> [!CAUTION]
+> **The procedure that stood here did not work, and would have been damaging if it
+> had.** It said to edit `cf-admin/db/schema.sql` and then run
+> `npx wrangler d1 execute madagascar-db --remote --file=./db/schema.sql`.
+>
+> There is no `db/` directory in this repository, so the command fails outright.
+> Had it succeeded, it would have applied a whole-schema file straight to the
+> production database — bypassing the migration runner, the `d1_migrations` ledger
+> and RULE #0.7's three required artifacts, which is precisely the failure mode
+> RULE #0.7 exists to prevent.
+>
+> **The real procedure** is a numbered migration under `migrations/`, applied with
+> `wrangler d1 migrations apply`, with the ledger row and verification that RULE
+> #0.7 requires. See [`../../RULESAd.md`](../../RULESAd.md) and
+> [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §7.
 
 ### Verifying ISR Cache Revalidation
 To manually test the revalidation flow from CLI:

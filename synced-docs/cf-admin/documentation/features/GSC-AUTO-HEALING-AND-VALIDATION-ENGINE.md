@@ -1,202 +1,205 @@
 ---
-title: "Google Search Console Error Auto-Healing & Validation Readiness Engine"
+title: "GSC Validation Readiness Engine"
 status: active
 audience: [ai, technical, operator, owner]
-last_verified: 2026-08-24
-verified_against: [code, infra, tests]
+last_verified: 2026-09-19
+verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/seo/validation-readiness.ts, src/lib/seo/discovery-inspector.ts, src/pages/api/seo/validation-readiness.ts, src/pages/api/seo/discovery-health.ts, src/components/admin/seo/DiscoveryCoveragePanel.tsx, src/components/dashboard/widgets/GscValidationWidget.tsx, src/components/dashboard/DashboardController.tsx, src/components/dashboard/widgets/ServiceStatusStrip.tsx, astro.config.ts]
-related_docs: [SEARCH-CONSOLE-SYNC.md, DASHBOARD.md, ../../RULESAd.md, ../architecture/plac-and-audit.md]
-tags: [feature, seo, search-console, auto-healing, indexing, cron, validation, preact, dialog]
+related_code: [src/lib/seo/validation-readiness.ts, src/lib/seo/discovery-inspector.ts, src/pages/api/seo/validation-readiness.ts, src/pages/api/seo/discovery-health.ts, src/components/admin/seo/DiscoveryCoveragePanel.tsx, src/components/dashboard/widgets/GscValidationWidget.tsx, src/components/dashboard/widgets/ServiceStatusStrip.tsx]
+related_docs: [SEARCH-CONSOLE-SYNC.md, DASHBOARD.md, CRON-CONTROL.md, ../runbooks/dev-server-optimize-deps-missing.md, ../architecture/plac-and-audit.md]
+tags: [feature, seo, search-console, indexing, validation, preact, dialog]
 ---
 
-# Google Search Console Error Auto-Healing & Validation Readiness Engine
+# GSC Validation Readiness Engine
 
-> **TL;DR (Executive Summary):** An autonomous, edge-native diagnostic and auto-healing subsystem that monitors Google Search Console indexing error states, continuously verifies sitemap integrity, audits edge headers (200 OK, robots.txt, canonicals, noindex), and computes an executive **Validation Readiness Score (0–100%)**. It arms administrators with instant in-place root-cause diagnostics, automated edge fix recipes, candidate URL exports, and direct 1-click validation triggers. Runs 24/7 on Cloudflare Workers edge with a 12-hour scheduled cron heartbeat, costing **$0/month**.
+> **Rewritten 2026-09-19.** This document was titled "Google Search Console Error
+> Auto-Healing & Validation Readiness Engine" and described a 12-hour cron
+> heartbeat, a "GSC Validation Health — 100% Ready" dashboard KPI card, a `gsc`
+> dashboard tab and a Vite configuration — **none of which exist**, and the Vite
+> section gave advice that is the exact opposite of what `astro.config.ts` does
+> and says. It also presented several hard-coded constants as live measurements.
+> Everything below was re-derived from the code and the live database. The sync
+> feature itself — the part that actually talks to Google on a schedule — is
+> owned by [`SEARCH-CONSOLE-SYNC.md`](SEARCH-CONSOLE-SYNC.md), and **both of its
+> syncs are switched off**; read that document's banner first.
 
----
+> **TL;DR:** An on-demand scorer. When an operator opens the SEO dashboard, it
+> crawls the site's own sitemap URLs from the edge, checks each one for
+> redirects, 404s, thin copy and missing structured data, and produces a
+> **Validation Readiness Score (0–100%)** plus a per-category remediation drawer.
+> It answers one question: *if I click "Start New Validation" in Search Console
+> right now, would it pass?* It does not call any Google API, it does not fix
+> anything by itself, and nothing runs it on a timer.
 
-## 1. Problem Statement & Background
+## 1. Why it exists
 
-When Googlebot crawls a web property (`sc-domain:madagascarhotelags.com`), it categorizes unindexed URLs under various diagnostic reasons in Google Search Console ("Why pages aren't indexed"):
-1. **Page with redirect** (URLs resulting in 301/308 redirects)
-2. **Not found (404)** (Dead slugs or broken internal references)
-3. **Crawled - currently not indexed** (Low copy density or missing structured schema)
-4. **Blocked by robots.txt** (Private or admin paths)
-5. **Excluded by 'noindex' tag** (Preview/utility pages)
+When Googlebot crawls `sc-domain:madagascarhotelags.com`, it files unindexed URLs
+under five diagnostic reasons in Search Console:
 
-When a webmaster clicks **"Start New Validation"** in GSC without fixing the underlying issues, Google re-crawls the sample URLs, fails the validation, and downgrades the property's crawl budget. Conversely, initiating validation on genuine fixes elevates crawl priority and boosts search visibility.
+1. **Page with redirect** — URLs returning 301/308
+2. **Not found (404)** — dead slugs or broken internal references
+3. **Crawled - currently not indexed** — low copy density or missing schema
+4. **Blocked by robots.txt** — private or admin paths
+5. **Excluded by 'noindex' tag** — preview and utility pages
 
-This subsystem provides:
-1. **Automated Edge Pre-Flight Triage:** Evaluates every sitemap URL against Google's exact validation criteria before triggering GSC re-validation.
-2. **Auto-Healing Edge Recipes:** Guarantees zero 301 redirects or 404s exist inside published XML sitemaps.
-3. **Interactive Admin UX:** High-density, balanced Discovery & Indexing dashboard widgets with collapsible in-place diagnostic drawers and Section 7.8 Top-Layer native `<dialog>` modals.
+Clicking **"Start New Validation"** in GSC without fixing the underlying issue
+makes Google re-crawl the sample URLs, fail the validation, and lower the
+property's crawl priority. Validating a genuine fix does the opposite. This
+subsystem is the pre-flight check for that decision.
 
----
+## 2. How it actually runs
 
-## 2. System Architecture
+There is **no scheduled trigger.** `runValidationReadinessAudit()` has exactly two
+callers, both in `src/pages/api/seo/validation-readiness.ts`:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          Cloudflare Workers Edge                            │
-│                                                                             │
-│  ┌────────────────────────┐         ┌────────────────────────────────────┐  │
-│  │ 12h Cron Trigger       │         │ /api/seo/validation-readiness      │  │
-│  │ (scheduled-gsc-sync)   │───────> │ evaluateValidationReadiness()      │  │
-│  └────────────────────────┘         └─────────────────┬──────────────────┘  │
-│                                                       │                     │
-│                                             ┌─────────┴──────────┐          │
-│                                             ▼                    ▼          │
-│                                  ┌───────────────────┐ ┌─────────────────┐  │
-│                                  │ Sitemaps XML Sync │ │ Robots / Meta   │  │
-│                                  │ (es/en/index)     │ │ Directives      │  │
-│                                  └─────────┬─────────┘ └────────┬────────┘  │
-│                                            │                    │           │
-│                                            ▼                    ▼           │
-│                                  ┌───────────────────────────────────────┐  │
-│                                  │ 5 Category Triage & Scoring (0-100%) │  │
-│                                  └───────────────────┬───────────────────┘  │
-└──────────────────────────────────────────────────────┼──────────────────────┘
-                                                       │
-                               ┌───────────────────────┴──────────────────────┐
-                               ▼                                              ▼
-               ┌───────────────────────────────┐              ┌───────────────────────────────┐
-               │ /dashboard/seo                │              │ /dashboard (Main Hub)         │
-               │ DiscoveryCoveragePanel.tsx    │              │ GscValidationWidget.tsx       │
-               │ • In-Place Collapsible Drawer │              │ • 4 Top-Level Metric Cards    │
-               │ • RULESAd §7.8 Native Dialog  │              │ • 5-Category Triage Matrix    │
-               │ • 4 Discovery Signal Badges   │              │ • ServiceStatusStrip Mini-Tag │
-               └───────────────────────────────┘              └───────────────────────────────┘
+| Call | What happens | Cost |
+|---|---|---|
+| `GET /api/seo/validation-readiness` | Serves the cached summary from `admin_portal_settings` if one exists | 1 row read |
+| `GET …?fresh=true` | Runs the full live crawl, writes a `gsc_index_log` row and re-caches the summary | crawl + 2 D1 writes, **no rate limit** |
+| `POST /api/seo/validation-readiness` | Same full crawl, Admin+ only, 15/hour | crawl + 2 D1 writes |
+
+The cache is a single `admin_portal_settings` row,
+`seo-validation-readiness-latest`. **Live today it was written on 2026-08-26 at
+17:22 UTC** and reads:
+
+```json
+{"overallReadinessScore":76,"cleanUrlsCount":45,"totalUrls":87,
+ "redirects":0,"notFounds":0,"thinContentPages":60}
 ```
 
----
+So the honest current state is **76%, with 60 of 87 URLs thin or missing schema**,
+from a report nearly a month old. Any screen showing "100%" is showing a literal
+string, not this number — see [§5](#5-what-the-dashboard-actually-shows).
 
-## 3. The 5 GSC Error Categories & Diagnostic Algorithms
+```text
+Operator opens /dashboard/seo (or the main dashboard widget)
+        │
+        ▼
+GET /api/seo/validation-readiness      ── cached summary? ──▶ render it
+        │  (?fresh=true, or no cache)
+        ▼
+runValidationReadinessAudit()          src/lib/seo/validation-readiness.ts
+        ├─ fetch sitemap-index + es/en sitemaps
+        ├─ per URL: status code, canonical, word count, JSON-LD presence
+        ├─ score 3 categories, hard-code 2  (§3)
+        └─ write gsc_index_log row + cache the summary
+```
 
-Located in `src/lib/seo/validation-readiness.ts`:
+## 3. The five categories — what is measured and what is not
 
-### 1. `page_with_redirect` (Page with redirect)
-- **Root Cause Diagnosis:** Non-canonical URLs (e.g. missing trailing slash, HTTP vs HTTPS, or outdated slugs) submitted in sitemaps causing 301/308 redirects.
-- **Auto-Healing Edge Rule:** XML sitemaps strictly contain normalized, canonical, self-referencing 200 OK target URLs. Zero redirect hops permitted.
-- **Readiness Condition:** 100% Score if 0 redirect hops exist in sitemaps.
+Located in `src/lib/seo/validation-readiness.ts`. **Three categories are computed.
+Two are placeholders.** The doc previously presented all five as verified
+measurements; that is the single most misleading thing it said.
 
-### 2. `not_found_404` (Not found - 404)
-- **Root Cause Diagnosis:** Dead or deleted routes referenced in XML sitemaps or internal link graph returning HTTP 404.
-- **Auto-Healing Edge Rule:** Sitemap generator queries active database records and removes deleted or draft slugs dynamically.
-- **Readiness Condition:** 100% Score if all sitemap endpoints return HTTP 200 OK.
+### Measured
 
-### 3. `crawled_not_indexed` (Crawled - currently not indexed)
-- **Root Cause Diagnosis:** Googlebot crawled the page but deferred indexing due to low content density or lack of rich structured data.
-- **Auto-Healing Edge Rule:** Pages are enriched with JSON-LD structured schemas (`LocalBusiness`, `FAQPage`, `BreadcrumbList`, `PetBoardingService`) and >250 words of unique copy.
-- **Readiness Condition:** 90–100% Score based on schema presence and content density.
+| Category | Readiness condition | Weight in the overall score |
+|---|---|---|
+| `page_with_redirect` | 100% when zero sitemap URLs return a redirect hop | 0.35 |
+| `not_found_404` | 100% when every sitemap endpoint returns HTTP 200 | 0.35 |
+| `crawled_not_indexed` | `100 − 10 × (thin or schema-less URLs)`, floored at 20 | 0.30 |
 
-### 4. `blocked_robots` (Blocked by robots.txt)
-- **Root Cause Diagnosis:** Private management routes (`/dashboard/*`, `/api/*`, `/login`) blocked by robots.txt directives.
-- **Auto-Healing Edge Rule:** Expected behavior for administrative surfaces. Confirms public routes (`/`, `/en/*`, `/es/*`, `/blog/*`) are fully crawlable while protecting private routes.
-- **Readiness Condition:** 100% Score (Verified correct security isolation).
+"Thin" means a word-count estimate **under 180 words**, or no Schema.org markup
+(`LocalBusiness`, `FAQPage`, `BreadcrumbList`, `PetBoardingService`). *Corrected
+2026-09-19: this document said ">250 words" and "90–100% score".* On the cached
+path — when the summary is served rather than re-crawled — this category is shown
+as a flat **60** rather than the formula's output.
 
-### 5. `excluded_noindex` (Excluded by 'noindex' tag)
-- **Root Cause Diagnosis:** Utility and preview pages marked with `<meta name="robots" content="noindex" />`.
-- **Auto-Healing Edge Rule:** Confirms public indexing targets have `index, follow` with self-canonical headers, while utility pages retain `noindex`.
-- **Readiness Condition:** 100% Score (Verified clean directive separation).
+The overall score is the weighted sum of those three, and nothing else.
 
----
+### Hard-coded — treat as decoration, not data
 
-## 4. UI Architecture & RULESAd.md §7.8 Compliance
+| Category | What the code emits | Reality |
+|---|---|---|
+| `blocked_robots` | `readinessScore: 100`, `pagesAffectedCount: 14`, `lastValidationStatus: 'started'`, "Validation is already in progress in GSC" | All four are literals. Nothing counts robots-blocked pages, and nothing asks GSC whether a validation is running. |
+| `excluded_noindex` | `readinessScore: 100`, `pagesAffectedCount` = discovered noindex URLs **or 8 when none are found**, `lastValidationStatus: 'started'` | The `100` and the `8` fallback are literals. |
 
-Inside `DiscoveryCoveragePanel.tsx` and `GscValidationWidget.tsx`, the UI adheres to the strict **RULESAd.md §7.8** standard:
+Neither contributes to the overall score. The underlying *claims* are reasonable
+— admin routes should be robots-blocked, utility pages should be `noindex` — but
+the portal is not verifying them, and a fixed "100% — Verified correct security
+isolation" reads as a measurement. This is a **RULE #0.5** defect against the
+code, logged in [`../MAINTENANCE.md`](../MAINTENANCE.md); the fix is either to
+measure the two categories or to render them as "not measured".
 
-### 1. In-Place Collapsible Drawer
-- **Direct Click Action:** Clicking any category card activates the card with a vibrant cyan border/ring (`border-2 border-cyan-400 shadow-cyan-500/10`) and smoothly expands an in-place drawer directly underneath the 5-card grid.
-- **Zero Layout Shift:** Content renders inline inside the page flow, eliminating clipping issues caused by scroll containers.
-- **Interactive Elements:**
-  - Root Cause Diagnosis panel with warning indicators.
-  - Automated Edge Fix Recipe with checkmark badges.
-  - Step-by-step GSC Validation Guide.
-  - Discovered URLs list with 1-click clipboard copy (`navigator.clipboard.writeText`).
-  - Direct GSC deep link button (`https://search.google.com/search-console/index?resource_id=sc-domain%3Amadagascarhotelags.com`).
-- **Toggle Collapse:** Clicking the active card again or pressing `✕` closes the drawer.
+## 4. The remediation drawer (RULESAd §7.8)
 
-### 2. Native Top-Layer `<dialog>` Implementation
-- **Browser Top-Layer Elevation:** Replaced legacy `fixed inset-0` `<div>` overlays with native HTML5 `<dialog ref={dialogRef}>` opened imperatively via `dialogRef.current?.showModal()`.
-- **Immunity to Containing-Block Overflow:** Bypasses `.admin-main-content` `overflow-y: auto` trapping completely.
-- **Inline Specificity Override:**
+`DiscoveryCoveragePanel.tsx` and `GscValidationWidget.tsx` follow the RULESAd.md
+§7.8 overlay standard, and this part was verified accurate:
 
-  ```tsx
-  <dialog
-    id="gscCategoryRemediationDialog"
-    ref={categoryDialogRef}
-    onClick={(e) => { if (e.target === categoryDialogRef.current) setActiveCategoryModal(null); }}
-    style={{
-      backgroundColor: 'transparent',
-      border: 'none',
-      padding: 0,
-      margin: 'auto',
-      width: '100%',
-      maxWidth: '640px',
-      zIndex: 99999,
-      outline: 'none',
-    }}
-  >
-  ```
+- **In-place collapsible drawer.** Clicking a category card rings it and expands a
+  drawer inline under the 5-card grid — content renders inside the page flow, so
+  it cannot be clipped by a scroll container. Clicking the active card again, or
+  `✕`, collapses it. The drawer carries the root-cause text, the fix recipe, the
+  step-by-step GSC guide, the affected-URL list with one-click clipboard copy, and
+  a deep link into Search Console.
+- **Native top-layer `<dialog>`.** `#gscCategoryRemediationDialog` is a real
+  `<dialog>` opened with `showModal()`, not a `fixed inset-0` div, so it escapes
+  `.admin-main-content`'s `overflow-y: auto` entirely. Its backdrop is styled
+  through `::backdrop`.
 
-- **Backdrop Styling:**
+## 5. What the dashboard actually shows
 
-  ```css
-  #gscCategoryRemediationDialog::backdrop {
-    background: rgba(0, 0, 0, 0.80);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-  ```
+*Corrected 2026-09-19 — the previous §5 described a KPI card, a tab and a chip
+that do not exist as written.*
 
----
+- **There is no GSC KPI card.** The main dashboard's KPI deck is four cards:
+  Global Edge Network, Data Layer & Cache, Edge Worker Scripts, Transactional
+  SMTP.
+- **The tab id is `seo`, labelled "Search Console"** — not `gsc`, and not
+  "Google Search Console & Indexing". Its siblings are Overview, Edge Workers,
+  Database Pool and Quotas & Storage. There is no System Health tab and no Audit
+  Log tab.
+- **`GscValidationWidget` carries a "12h Auto-Cron Active" badge that is a
+  hard-coded string.** It is not derived from `gsc-run-interval-hours`, and the
+  job it names has been off since 2026-08-26.
+- **The `seo` chip in `ServiceStatusStrip` is entirely literal text** — "100%
+  Pass", "12h Active", "3 Failed Errors Healed" — while the live readiness score
+  is 76%. It passes no `isUnconfigured` flag.
 
-## 5. Main Dashboard Integration
+All four of those are code defects, not documentation gaps. They are listed in
+[`DASHBOARD.md`](DASHBOARD.md) §0 and logged in
+[`../MAINTENANCE.md`](../MAINTENANCE.md).
 
-### 1. Top KPI Metric Card
-- Added 4th Top KPI card in `DashboardController.tsx`:
-  - **Title:** GSC Validation Health
-  - **Metric:** `100% Ready`
-  - **Status:** `Auto-Healed · Ready for GSC Pass`
+## 6. Vite / dev-server stability
 
-### 2. Dedicated Dashboard Tab
-- Added **Google Search Console & Indexing** tab (`key: 'gsc'`) alongside Overview, System Health, Workers, Database, and Audit Log.
-- Features the complete `GscValidationWidget` with live 12h auto-cron badge, 4 summary metric tiles, and the 5-category diagnostic matrix.
+*Section deleted 2026-09-19.* It claimed `astro.config.ts` pre-bundles
+`@upstash/ratelimit`, `@upstash/redis`, `@supabase/supabase-js`, `zod`, `preact`
+and `lucide-preact` through `optimizeDeps.include`, and excludes Astro dev-runtime
+files through `ssr.external` and `ssr.optimizeDeps.exclude`. The real config does
+the **opposite**: the top-level `optimizeDeps` excludes only `@astrojs/cloudflare`,
+with an explicit comment that Vite's own "try optimizeDeps.exclude" advice is
+wrong for this failure; the SSR block uses `noDiscovery: true` with an explicit
+include list; and there is no `ssr.external` at all. Acting on the old text would
+reintroduce the `module is not defined` crash. The subject has a runbook of its
+own: [`../runbooks/dev-server-optimize-deps-missing.md`](../runbooks/dev-server-optimize-deps-missing.md).
 
-### 3. ServiceStatusStrip Mini-Indicator
-- Added `seo` service mini-chip inside `ServiceStatusStrip.tsx`:
-  - Shows pulsating status dot, `100% Pass` health, and `3 Failed Errors Healed` summary.
-  - Clicking navigates directly to `/dashboard/seo`.
+## 7. API surface
 
----
+Both readiness routes PLAC-gate on `/dashboard/seo`. Their RBAC floors differ from
+the rest of `src/pages/api/seo/`:
 
-## 6. Vite SSR Optimizer Stability Hardening
-
-To prevent runtime mid-flight re-optimization crashes (`astro_app_entrypoint_dev.js missing`), `astro.config.ts` was configured with:
-1. **`optimizeDeps.include`:** Pre-bundles all dynamically imported libraries upfront (`@upstash/ratelimit`, `@upstash/redis`, `@supabase/supabase-js`, `zod`, `preact`, `lucide-preact`).
-2. **`ssr.external` & `ssr.optimizeDeps.exclude`:** Excludes internal Astro dev runtime files (`astro_app_entrypoint_dev`, `astro_compiler-runtime`, `@astrojs/compiler`) from the Vite optimizer.
-
----
-
-## 7. API Endpoints Reference
-
-| Endpoint | Method | Role Floor | Description |
+| Endpoint | Method | RBAC floor | Notes |
 |---|---|---|---|
-| `/api/seo/validation-readiness` | `GET` | Admin (PLAC `/dashboard/seo`) | Returns the 5-category diagnostic triage report, readiness scores, and fix guides. |
-| `/api/seo/discovery-health` | `GET` | Admin (PLAC `/dashboard/seo`) | Returns live sitemap counts, robots.txt status, AI `/llms.txt` payload, and meta directives. |
-| `/api/seo/gsc-sync-trigger` | `POST` | Admin (PLAC `/dashboard/seo`) | Manually triggers full sitemap sweep or single-URL inspection. |
-| `/api/seo/gsc-index-log` | `GET` | Admin (PLAC `/dashboard/seo`) | Retrieves paginated GSC & PageSpeed audit log rows. |
-| `/api/seo/gsc-index-log-export` | `GET` | Admin (PLAC `/dashboard/seo`) | Exports filtered audit logs to CSV. |
+| `/api/seo/validation-readiness` | `GET` | **Viewer** | Cached summary; `?fresh=true` forces a full crawl with no rate limit |
+| `/api/seo/validation-readiness` | `POST` | Admin | Forces a crawl, 15/hour |
+| `/api/seo/discovery-health` | `GET` | **Viewer** | Live sitemap counts, robots.txt status, `/llms.txt` payload, meta directives |
+| `/api/seo/discovery-health` | `POST` | Admin | — |
 
----
+*Corrected 2026-09-19: the old table gave an "Admin" floor for every row, and
+listed four sync/log routes that belong to
+[`SEARCH-CONSOLE-SYNC.md`](SEARCH-CONSOLE-SYNC.md) §11, which now owns the full
+route map.*
 
-## 8. Verification & Test Suite
+## 8. Verification
 
-All changes are covered by automated integration tests:
-- `test/seo-validation-readiness.test.ts` (7 tests)
-- `test/seo-discovery-health.test.ts` (3 tests)
-- `test/seo-delete-targeted.test.ts` (4 tests)
-- `test/indexnow.test.ts` (11 tests)
-- Full suite: **499 / 499 tests passed across 31 test files** in Vitest.
-- Type safety: `npx tsc --noEmit` $\rightarrow$ **0 errors**.
+- Unit/integration tests: `test/seo-validation-readiness.test.ts`,
+  `test/seo-discovery-health.test.ts`, `test/seo-delete-targeted.test.ts`,
+  `test/indexnow.test.ts`. *Corrected 2026-09-19: per-file case counts and a
+  "499/499 tests across 31 files" total were removed — they were a point-in-time
+  snapshot that went stale immediately and understated the suite by a wide margin.*
+- Type safety: `npm run typecheck`.
+
+| Date | Checked by | Method | Result |
+|---|---|---|---|
+| 2026-09-19 | claude | Re-derived the whole document against the code and live D1 | Cron heartbeat, KPI card, `gsc` tab and §6 Vite guidance all found false and removed; two of five categories confirmed hard-coded; live cached readiness 76% (60/87 URLs thin), last written 2026-08-26 17:22 UTC |
+| 2026-08-24 | claude | code + infra + tests | Original pass. Its architecture, dashboard-integration and Vite claims did not hold and are corrected above. |

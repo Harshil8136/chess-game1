@@ -6,12 +6,22 @@ audience: [technical]
 last_verified: 2026-06-06
 verified_against: [code]
 owner: harshil
-tags: []
+tags: [ssl, hsts, dns, dmarc, lighthouse, cloudflare-images, cf-astro]
 ---
 
 # Security, SSL/TLS, HTTPS & Lighthouse Audit
 
-> **Date:** 2026-04-22
+> **DO NOT EXECUTE — historical record (banner added 2026-09-19).** This is a
+> point-in-time audit from April 2026, when cf-admin had not been deployed. Its
+> §3 Step 5 tells the reader to **delete the DNS record for
+> `secure.madagascarhotelags.com`** and to delete the records for
+> `charlar.` / `chat.`. Those are live production hostnames today:
+> `secure.` is cf-admin's route (`wrangler.toml` `[[routes]]`) and `charlar.` is
+> cf-chatbot's custom domain. Following the checklist takes the portal and the
+> chatbot offline. The zone-level items (HSTS, TLS 1.2 floor, DMARC, Bot Fight
+> Mode) are still reasonable; the subdomain actions are obsolete.
+
+> **Date:** 2026-04-22 (filed 2026-04-24 — the filename, the docs index and every inbound link use the filing date)
 > **Scope:** cf-astro + zone-wide Cloudflare settings (`madagascarhotelags.com`)
 > **Trigger:** Cloudflare Security Insights export (`Account_SecurityInsights_20260422_2227.csv`) showing 18 active alerts across 6 domains; Lighthouse 13.0.1 scores of Performance 73 / Accessibility 95 / Best Practices 77 / SEO 92 on mobile (Moto G Power emulation, Slow 4G).
 > **Status:** Code fixes applied. Dashboard actions required (documented below).
@@ -136,6 +146,11 @@ Even though the `_headers` file in cf-astro already sets this header in every re
 
 **`secure.madagascarhotelags.com`:** Delete the DNS record. If cf-admin needs a subdomain, use `admin.madagascarhotelags.com` and create it at the point of deployment.
 
+> **Superseded 2026-09-19 — do not do any of the above.** Option 2 is what
+> happened: cf-chatbot is deployed on `charlar.madagascarhotelags.com` (a custom
+> domain) and cf-admin on `secure.madagascarhotelags.com`. Deleting either record
+> takes production offline. `admin.` was never used.
+
 ### Step 6 — Bot Fight Mode
 
 `Security → Bots → Bot Fight Mode → Toggle ON`
@@ -155,7 +170,7 @@ Even though the `_headers` file in cf-astro already sets this header in every re
 | Content | `v=DMARC1; p=quarantine; rua=mailto:admin@madagascarhotelags.com; sp=quarantine; adkim=r; aspf=r` |
 | TTL | Auto |
 
-Also verify SPF (`v=spf1 include:...`) and DKIM CNAME records exist for the email provider (Resend). The DMARC alert will not clear until DMARC, SPF, and DKIM are all valid and aligned.
+Also verify SPF (`v=spf1 include:...`) and DKIM CNAME records exist for the email providers — **Brevo is the primary sender today, with Resend on staff invites and a diagnostics ping only** *(corrected 2026-09-19; the original said "the email provider (Resend)", and an operator checking only Resend DKIM would miss the alignment that actually matters)*. The DMARC alert will not clear until DMARC, SPF, and DKIM are all valid and aligned.
 
 ### Step 9 — Security.txt in Security Center
 
@@ -300,7 +315,16 @@ The security infrastructure described here applies to cf-astro (the public-facin
 - The same `madagascarhotelags.com` zone DNS
 - The `cdn.madagascarhotelags.com` R2 CDN domain (used by cf-admin for CMS image uploads)
 
-cf-admin's own `public/_headers` (or equivalent security header configuration) should separately include `X-Frame-Options: SAMEORIGIN` and `upgrade-insecure-requests` in its CSP, following the same patterns documented here for cf-astro. The cf-admin CSP is stricter (no `unsafe-eval` or Google Fonts) and requires a separate review pass.
+~~cf-admin's own `public/_headers` (or equivalent security header configuration) should separately include `X-Frame-Options: SAMEORIGIN` and `upgrade-insecure-requests` in its CSP, following the same patterns documented here for cf-astro. The cf-admin CSP is stricter (no `unsafe-eval` or Google Fonts) and requires a separate review pass.~~
+
+> **Do not follow this recommendation — note added 2026-09-19.** cf-admin
+> already sets `X-Frame-Options: DENY` plus CSP `frame-ancestors 'none'` from
+> `src/lib/security/csp.ts`, and `upgrade-insecure-requests` is in the same
+> policy. Adding `SAMEORIGIN` would **loosen** the admin portal's clickjacking
+> posture, not tighten it. The advice is also structurally wrong for this repo:
+> `public/_headers` applies only to static-asset responses (its own header
+> comment says so), so a CSP written there would be dead text for every SSR
+> response.
 
 ---
 
@@ -312,8 +336,8 @@ After completing the dashboard steps, use this checklist to confirm all 18 alert
 - [ ] Always Use HTTPS toggle is ON
 - [ ] HSTS enabled with max-age ≥ 12 months, includeSubDomains, preload
 - [ ] `cdn.madagascarhotelags.com` appears in R2 → madagascar-images → Custom Domains as Active
-- [ ] `charlar.` and `chat.` DNS records deleted (or Worker deployed)
-- [ ] `secure.` DNS record deleted
+- [x] `charlar.` DNS record kept — cf-chatbot Worker deployed on it (2026-09-19: do not delete)
+- [x] `secure.` DNS record kept — cf-admin's production route (2026-09-19: do not delete)
 - [ ] `pet.` DNS record is orange-clouded (proxied)
 - [ ] `_dmarc.madagascarhotelags.com` TXT record exists and is valid (validate via `mxtoolbox.com/dmarc`)
 - [ ] Security.txt configured in Security Center

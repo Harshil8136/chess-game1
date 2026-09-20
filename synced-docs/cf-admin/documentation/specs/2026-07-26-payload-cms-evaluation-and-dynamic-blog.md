@@ -7,7 +7,7 @@ last_verified: 2026-07-26
 verified_against: [code, infra, vendor-docs]
 owner: harshil
 related_code: [src/lib/cms/storage.ts, src/lib/cms/revalidate.ts, src/lib/sync-contract.ts, src/pages/dashboard/content/index.astro, src/pages/api/content/blocks.ts, migrations/0000_baseline.sql]
-related_docs: [../features/CMS.md, ../operations/OPERATIONS.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../architecture/plac-and-audit.md, ../2026-07-26-commercial-model-costing-pricing-and-scale.md, ../2026-06-13-platform-status-summary.md]
+related_docs: [../features/CMS.md, ../operations/OPERATIONS.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../architecture/plac-and-audit.md, ../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md, ../records/reports/2026-06-13-platform-status-summary.md]
 tags: [cms, payload, blog, evaluation, cost, architecture, cloudflare]
 ---
 
@@ -18,8 +18,22 @@ tags: [cms, payload, blog, evaluation, cost, architecture, cloudflare]
 
 # Payload CMS Evaluation & the Dynamic-Blog Path
 
-> **Re-statused `historical` on 2026-08-23.** This is a design decision record; `specs/` is append-only per CONTRIBUTING-DOCS §2. It is
-> accurate for the date it carries; do not read it as current state.
+> **Outcome (added 2026-09-20).** The recommendation held — Payload was not
+> adopted — and the $0 blueprint in §8 shipped on 2026-08-03 (`e66a645`):
+> `src/lib/dal/BlogRepository.ts`, `src/pages/api/content/blog.ts`,
+> `src/components/admin/content/BlogManager.tsx`,
+> `src/pages/dashboard/content/blog.astro` and the blog tables, with the 14
+> posts imported on 2026-08-30 and scheduled publishing built. What was built
+> is described in
+> [`../records/reports/2026-08-30-blog-system-overhaul.md`](../records/reports/2026-08-30-blog-system-overhaul.md)
+> and owned by
+> [`../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md).
+> Two premises have since expired: Cloudflare removed the compressed 3 MB
+> Worker-size limit on 2026-09-04 (64 MiB on both plans), so only the 10 ms CPU
+> block remains of the "two independent hard blocks"; and the step telling the
+> reader to delete `cf-astro/src/content/blog/` must not be followed — see the
+> correction in §9. Stack figures here are of their date (Astro 6; the repo runs
+> Astro 7).
 
 
 > **TL;DR (non-technical):** We looked at whether Payload CMS could run our website's
@@ -182,14 +196,14 @@ band, against a **10 ms hard ceiling**.
 
 **The $5 is per-account, and it is a one-time floor.** Once paid, every additional Worker
 costs $0 until aggregate quotas are crossed — a point already established in
-[`2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md) §5.1.
+[`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) §5.1.
 So the honest framing is: *Payload does not cost $5/month; Payload is the thing that forces
 us across the $0 → $5 threshold.*
 
 ### 5.4 What else that $5 would buy
 
 If the threshold is crossed anyway, the money is not wasted — it also delivers, per
-[`2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md) §5:
+[`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) §5:
 
 - **Queue retention 24 h → 4 days (configurable to 14).** Today, if `cf-astro-email-consumer`
   is down over a weekend, queued booking emails are lost. This is a real data-loss exposure.
@@ -476,7 +490,7 @@ automatically — 24 h KV TTL, `Cache-Tag: page-<path>`, purged by the same
 | 2 | Content Studio Blog module + PLAC registration + audit rows | none |
 | 3 | cf-astro reader + `prerender = false` on the 4 routes | **measure KV writes for one week** — 16 ISR PUTs/day expected against a 1,000/day cap |
 | 4 | Sitemap + RSS + `BlogPostSchema` wired to D1 | verify GSC does not report lost URLs |
-| 5 | Import the 14 existing Markdown posts (§9), then delete `cf-astro/src/content/blog/` | one-time D1 write burst of ~28 rows |
+| 5 | Import the 14 existing Markdown posts (§9). ~~then delete `cf-astro/src/content/blog/`~~ — **do not do this**: the collection was kept deliberately and is now the D1-outage fallback added by chunk 8c | one-time D1 write burst of ~28 rows |
 | 6 | Wire the existing `generate-blog-draft.ts` AI output into the Blog module as a draft | Workers AI free tier: 10,000 neurons/day |
 
 Ship phases 1–2 and stop there if desired: the admin can author posts with nothing user-facing
@@ -497,8 +511,11 @@ changed, which de-risks phase 3.
 
 ## 9. Migrating the 14 existing Markdown posts
 
-One-time script, run once, then `cf-astro/src/content/blog/` and its `content.config.ts` collection
-are deleted.
+One-time script, run once. ~~then `cf-astro/src/content/blog/` and its `content.config.ts` collection
+are deleted.~~ **Correction (2026-09-20):** the import ran on 2026-08-30 but the collection was
+kept, and chunk 8c later made it the visitor-facing fallback for a D1 outage
+(`cf-astro/src/lib/blog-sources.ts` reads it through `getCollection('blog')`). Deleting it would
+bring back the empty-page and false-404 failures that chunk 8c fixed.
 
 1. Read each file in `cf-astro/src/content/blog/{es,en}/*.md`.
 2. Parse front-matter (`title`, `description`, `pubDate`, `updatedDate`, `author`,
@@ -551,14 +568,14 @@ Corrected in this pass using the repo's existing strikethrough + superseded-note
 
 | File | What was wrong | Fix |
 |---|---|---|
-| [`2026-06-13-platform-status-summary.md`](../2026-06-13-platform-status-summary.md) §4 | Compute ceiling quoted only the Workers **Paid** figure | Annotated as Paid-plan; Free-plan 100k/day added |
-| [`2026-06-13-platform-status-summary.md`](../2026-06-13-platform-status-summary.md) §6 | Cost table asserted "Workers Paid … **~$5**" as current spend | Struck through + superseded note: account is Free tier |
+| [`../records/reports/2026-06-13-platform-status-summary.md`](../records/reports/2026-06-13-platform-status-summary.md) §4 | Compute ceiling quoted only the Workers **Paid** figure | Annotated as Paid-plan; Free-plan 100k/day added |
+| [`../records/reports/2026-06-13-platform-status-summary.md`](../records/reports/2026-06-13-platform-status-summary.md) §6 | Cost table asserted "Workers Paid … **~$5**" as current spend | Struck through + superseded note: account is Free tier |
 
 Verified as **already correct** and left unchanged:
 [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) §8 ($0 free tier),
 [`RULESAd.md`](../../RULESAd.md) §15 ($0 total),
 [`features/CMS.md`](../features/CMS.md) (already carries both Free and Paid KV rows),
-[`2026-07-22-codebase-services-architecture-and-setup-review.md`](../2026-07-22-codebase-services-architecture-and-setup-review.md) §8
+[`../records/reviews/2026-07-22-codebase-services-architecture-and-setup-review.md`](../records/reviews/2026-07-22-codebase-services-architecture-and-setup-review.md) §8
 (already annotated 2026-07-26 as describing an all-free-tier posture).
 
 ---
@@ -618,7 +635,7 @@ Verified as **already correct** and left unchanged:
 - [`reference/SYNC-SYSTEM-REVIEW.md`](../reference/SYNC-SYSTEM-REVIEW.md) — sync contract, C4 drift rule
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — PLAC + audit model
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) §8 — canonical cost statement
-- [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md) §5–6 — verified vendor rates, scale ceiling
+- [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) §5–6 — verified vendor rates, scale ceiling
 - [`RULESAd.md`](../../RULESAd.md) §7.3 whitelist policy, §15 $0 cost rule
 
 ---
@@ -628,5 +645,5 @@ Verified as **already correct** and left unchanged:
 - [`features/CMS.md`](../features/CMS.md)
 - [`reference/SYNC-SYSTEM-REVIEW.md`](../reference/SYNC-SYSTEM-REVIEW.md)
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md)
-- [`2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md)
+- [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md)
 - [`specs/2026-05-13-cms-ui-redesign.md`](2026-05-13-cms-ui-redesign.md)

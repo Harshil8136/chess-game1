@@ -11,6 +11,17 @@ tags: [security, audit, remediation, scorecard]
 
 # Security Review & Remediation — CF-Admin Madagascar
 
+> **Historical snapshot — banner added 2026-09-19.** This was a scored security
+> review and remediation pass: the portal was re-graded B+ 87 → A− 91 after the
+> fixes in it shipped. It is accurate for the date it carries and is preserved
+> unedited; **do not read it as current state, and do not quote the grade as a
+> present-tense standing.** It was superseded by
+> [`2026-07-17-full-platform-audit.md`](./2026-07-17-full-platform-audit.md)
+> and by two later passes filed under `../../records/reports/` (2026-08-02 and
+> 2026-09-07). Three lines below carry dated corrections. For current state
+> read `../SECURITY.md` §0, the self-assessments in `../compliance/`, and
+> `../../MAINTENANCE.md` for what is still open.
+
 > **TL;DR (non-technical):** We ran a full security check-up of the admin portal,
 > fixed every code-level issue we found, and re-scored the result. The portal moved
 > from **B+ (87/100)** to **A− (91/100)**. There are no critical or high-risk issues
@@ -53,10 +64,29 @@ one latent high-severity item and all four mediums.
 | 5 | Security headers / CSP | 7.0 | 7.0 | CSP still allows `unsafe-inline`/`eval`; nonce migration staged (deferred). |
 | 6 | Rate limiting & DoS | 8.0 | **9.0** | Access-request endpoint now length-capped, shape-validated, and rate-limited. |
 | 7 | Dependency / supply chain | 7.0 | **8.0** | Dependabot + weekly `npm audit` CI added; remaining advisories are dev-chain only. |
-| 8 | Data protection | 9.0 | 9.0 | Admin-only PII; immutable ghost audit trail; service key server-side only. |
+| 8 | Data protection | 9.0 | 9.0 | Admin-only PII; immutable ghost audit trail; service key server-side only. **[Retracted 2026-09-19 — see the note below this table.]** |
 | 9 | Observability & incident response | 9.0 | 9.0 | Sentry + CSP reports + structured audit/login logs; 3-layer force-kick. |
 | 10 | CI/CD & repo security | 5.5 | **7.5** | Security workflow + Dependabot added; CodeQL still recommended. |
 | 11 | Docs & process maturity | 9.0 | **9.5** | Governed docs tree + this verified, scored review. |
+
+> **Correction, 2026-09-19 — dimension 8 says "immutable ghost audit trail".**
+> The audit trail is **not** immutable, and "immutable" is one of the words
+> [`../../architecture/plac-and-audit.md`](../../architecture/plac-and-audit.md)
+> §3.2 bans for this log in engineering docs and customer-facing copy. There is
+> no hash chain, no sequence number, no signature and no WORM storage;
+> `admin_audit_log` is a purge target with three live delete paths, and the
+> table was cleared in production on 2026-09-18. The accurate claim for what
+> dimension 8 was scoring is: **"every privileged action is audit-logged with
+> actor, role, path and hashed IP, through an insert-only application write
+> path."** The score is left as it was written — this note retracts the word,
+> not the history. Tracked as `../../MAINTENANCE.md` C-9;
+> `../compliance/CSA-CAIQ-v4.md` LOG-02 states the position in full.
+>
+> **Correction, 2026-09-19 — dimension 5 is half-stale.** `'unsafe-eval'` was
+> removed on 2026-07-25 and is now pinned absent by rule SEC-01 with no
+> exemption. `'unsafe-inline'` is still present on `script-src`/`style-src`,
+> and the nonce is live — see `../compliance/ASVS-L2.md` 14.4.3 for the
+> current state.
 
 **Benchmark:** clears **OWASP ASVS Level 1** fully and most of **Level 2** (session management,
 access control, input validation are L2-grade). Remaining L2 gaps are CSP hardening and a
@@ -96,7 +126,7 @@ Accurate risk scoring depends on scale, so this is grounded in the live configur
   reaches the Worker. Origin-side rate limiting is therefore a **second** layer, not the only one —
   which is why the deferred CSP item and availability-class findings are low real-world risk today.
 - **Architecture:** edge SSR Worker behind **Cloudflare Zero Trust Access**; shared Cloudflare
-  **D1** (`madagascar-db`, ENAM/us-east, 10 tables) as the cross-app substrate; **R2** (shared
+  **D1** (`madagascar-db`, ENAM/us-east, 10 tables *at the time of this review — 30 today*) as the cross-app substrate; **R2** (shared
   `madagascar-images`); per-app **KV** (`ADMIN_SESSION`); **Cloudflare Queues** for async email and
   a durable sync-revalidate channel with a dead-letter queue; **Analytics Engine** for edge metrics;
   service bindings to the chatbot and public-site Workers; **Supabase** Postgres 17.6 (us-east-1)
@@ -134,7 +164,7 @@ Accurate risk scoring depends on scale, so this is grounded in the live configur
 | **F-11 — repo cleanup artifacts** | Informational only; not exploitable | Move stray root scripts into `scripts/` or delete |
 | **CodeQL / secret-scanning workflow** | `npm audit` + Dependabot now cover dependencies; static analysis is the next layer | Add CodeQL when convenient |
 | **Blocking audit gate** | Current `npm audit` job is non-blocking (dev-chain noise) | Flip to blocking once the prod tree is advisory-free |
-| **Supabase leaked-password protection** | N/A on the current plan (owner-confirmed) | No action |
+| **Supabase leaked-password protection** | N/A on the current plan (owner-confirmed). **Superseded 2026-08-13:** the settled reason is not the plan — it is that **there is no GoTrue password store at all**, so the HIBP toggle would protect nothing. "Pro-plan-only" is one of the four contradictory answers that correction was written to kill; see `../compliance/ASVS-L2.md` 2.1.7. | No action |
 
 ---
 

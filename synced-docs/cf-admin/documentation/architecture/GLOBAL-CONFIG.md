@@ -47,7 +47,7 @@ overlap. It has more than expected:
 
 | Already exists | Where | Status |
 |---|---|---|
-| A generic, typed, D1-backed global settings table | `admin_portal_settings` (migration `0000_baseline.sql`; scoped via `scope_type`/`scope_id` for global vs. per-user/per-role rows) | **Built and in use** |
+| A generic, typed, D1-backed global settings table | `admin_portal_settings` (created by `migrations/0000_baseline.sql`; the `scope_type`/`scope_id` columns for global vs. per-user/per-role rows were added later, by `migrations/0037_widen_admin_portal_settings_scoped.sql` — *corrected 2026-09-19*) | **Built and in use** |
 | A repository with get/set, category filtering, and a **JSON-typed value** column (`setting_type: 'json'`) | `src/lib/dal/PortalSettingsRepository.ts` | **Built and in use** |
 | An authoritative allowlist of known setting keys | `KNOWN_SETTING_KEYS` in the same file — already includes `default_theme`, `session_max_lifetime`, `session_recheck_interval`, `maintenance_mode` | **Built** |
 | A GET/POST API with RBAC + PLAC gating and audit logging | `src/pages/api/settings/portal.ts` (`admin`+ to write, PLAC-gated on `/dashboard/settings`) | **Built and in use** |
@@ -71,6 +71,15 @@ is explicitly commented out of the UI as superseded by the per-user
 `admin_user_settings.theme` column, so it's effectively dead code sitting in the
 allowlist.
 
+> **Still true on 2026-09-19, and still tracked nowhere else.** Re-checked: no code
+> path outside the settings feature reads `maintenance_mode`, and
+> `documentation/MAINTENANCE.md` — the one live backlog — has no entry for it. A
+> switch labelled "Block all non-Dev access to the portal" that does nothing is a
+> defect, not a design gap, and it is recorded only inside a `draft` proposal that
+> may never be built. **It needs a MAINTENANCE item of its own, or the dead
+> settings need hiding from the UI.** Flagged here because this document cannot
+> edit that backlog.
+
 This reframes the proposal correctly: **this is not "should we build a global
 config system" — it's "the global config system already exists; the fast-read
 cache layer connecting it to the enforcement code paths was never built."** That's
@@ -93,10 +102,9 @@ dataset (global settings) using the pattern already proven for two other dataset
 **One refinement over "reload from D1 on every TTL":** relying on TTL expiry alone
 as the *only* refresh trigger means a change an admin makes right now doesn't take
 effect until the old cached value's TTL naturally runs out — which defeats the
-point of a live "block this page" switch if the TTL is, say, an hour. The existing
-`computeAccessMap()`/`updateSessionAccessMap()` pair in `plac.ts` already
-demonstrates the better pattern: **write the freshly-computed value to KV
-immediately when the underlying D1 data changes** (in this case, from the
+point of a live "block this page" switch if the TTL is, say, an hour. The better
+pattern is to **write the freshly-computed value to KV immediately when the
+underlying D1 data changes** (in this case, from the
 `POST /api/settings/portal` handler, right after the D1 update succeeds), and treat
 the TTL purely as a defense-in-depth backstop for the rare case that write-through
 itself fails or a request lands on a KV replica that hasn't caught up yet. TTL as
@@ -104,6 +112,17 @@ primary refresh mechanism = changes take up to the TTL to appear. TTL as backsto
 write-through on save = changes appear within KV's normal propagation window
 (≤60 seconds globally, same figure documented in `RBAC-AT-SCALE.md` §3) almost all
 the time, with the TTL only mattering when something already went wrong.
+
+> *Corrected 2026-09-19.* This paragraph cited
+> `computeAccessMap()`/`updateSessionAccessMap()` as an existing write-through
+> precedent. **PLAC is not write-through for other users.** An administrator's
+> change writes a random `authz-changed:{userId}` mark to KV
+> (`src/lib/auth/authz-signal.ts`), and the *target* recomputes its own map on its
+> next request; `updateSessionAccessMap` only patches the requester's own session
+> record. The mark **is** the right precedent to cite here, and it is arguably a
+> better fit for global config than write-through: one small write per change,
+> fanned out lazily by the readers, rather than one recomputed blob per writer. See
+> [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §11.
 
 ### 2.2 "Load it in a separate JWT, refresh on login" — this doesn't fit, for a sharper reason than last time
 
@@ -178,11 +197,12 @@ Described as a shape, not code — consistent with keeping this a planning docum
    (§5).
 
 6. **Version the cached blob**, the same way `PageAccessMap` already carries
-   `computedAt`/`role` for staleness detection. `pipeline.ts` already had to fix a
+   `computedAt`/`role` for staleness detection. The codebase already had to fix a
    real bug of exactly this shape once — a session written before the
    `PageAccessMap` refactor stored the old flat shape, and new code had to learn to
-   detect and discard it rather than misread it (the comment at that call site
-   literally documents this). A global config blob will hit the same problem the
+   detect and discard it rather than misread it. That comment now lives in
+   `src/lib/auth/stages/access-map.ts`, not in `pipeline.ts`, since the chunk-10
+   decomposition *(corrected 2026-09-19)*. A global config blob will hit the same problem the
    first time its shape changes across a deploy: an old cached value from before the
    change, read by new code expecting the new shape. Carry a small `configVersion`
    number in the blob itself so new code can recognise an old shape and force a
@@ -190,13 +210,17 @@ Described as a shape, not code — consistent with keeping this a planning docum
 
 7. **A self-heal cron, mirroring `CF-ACCESS-SYNC.md`'s proven pattern for a
    different subsystem:** that feature already solved "what if the inline
-   write-through silently fails" for CF Access Group sync, via a 5-minute cron that
-   unconditionally re-runs the sync regardless of whether the last attempt reported
-   success, plus a durable per-attempt log and a visible status indicator. Reusing
-   that exact shape here (a low-frequency cron that recomputes `GLOBAL_CONFIG` from
-   D1 and rewrites KV unconditionally) closes the same class of gap — a failed or
-   partially-applied write-through — without needing to invent new failure-handling
-   machinery.
+   write-through silently fails" for CF Access Group sync, via a 5-minute cron plus
+   a durable per-attempt log and a visible status indicator. Reusing that shape
+   here (a low-frequency cron that recomputes `GLOBAL_CONFIG` from D1 and rewrites
+   KV) closes the same class of gap — a failed or partially-applied write-through —
+   without inventing new failure-handling machinery. *Corrected 2026-09-19: this
+   described the reconcile as "unconditionally re-runs the sync regardless of
+   whether the last attempt reported success". It is hash-or-age gated and skips
+   the Cloudflare API entirely when nothing has changed
+   (`src/lib/auth/cf-access-reconcile.ts`) — which is the better model to copy
+   anyway, since an unconditional rewrite of a config blob would spend KV writes on
+   every tick for nothing.*
 
 ---
 
@@ -206,22 +230,46 @@ Described as a shape, not code — consistent with keeping this a planning docum
 30min" doesn't quite match what's in the code today. The **role re-check** interval
 (`SESSION_REFRESH_INTERVAL_MS`) already defaults to **30 minutes**, not 5. The
 5-minute figure is a *different*, currently-hardcoded timer — the `lastActiveAt`
-"heartbeat" throttle in `pipeline.ts` (`now - lastActive > 5 * 60 * 1000`), which
-isn't wired to a setting (or an env var) at all today; it's a literal in the code.
+"heartbeat" throttle in `src/lib/auth/pipeline.ts`
+(`now - lastActive > 5 * 60 * 1000`), which isn't wired to a setting or an env var;
+it's a literal in the code. That much is still true.
 
-That's worth calling out because it connects directly to a finding from
-[`RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) §8.5/§8.6: that 5-minute
-heartbeat is **the single tightest constraint on how many staff the true $0
-Workers-Free tier can support**, because it's the dominant source of KV writes per
-active user per day. Making it a `GLOBAL_CONFIG` value (rather than a code literal)
-isn't just a nice-to-have here — it's the concrete mechanism that would let that
-earlier cost-optimization recommendation (throttle it to 15–30 minutes) actually be
-an admin-adjustable dial instead of a code change, which is a good practical anchor
-for what belongs in this system and what doesn't: **values that are genuinely
-operational knobs (timing, defaults, on/off switches, short notices) belong here;
-anything that changes the shape of authorization decisions (roles, permissions)
-belongs in the PLAC/RBAC system instead, which already has its own, separate,
-correctly-designed cache.**
+> ### ⚠ Premise refuted — 2026-09-19
+>
+> **The heartbeat is not a source of KV writes at all, and this section's
+> cost argument for making it configurable does not hold.**
+>
+> This section claimed, following
+> [`RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) §8.5/§8.6, that the 5-minute
+> heartbeat is "the single tightest constraint on how many staff the true $0
+> Workers-Free tier can support", being "the dominant source of KV writes per
+> active user per day" — around 113 writes per active user per day.
+>
+> `touchLastActive()` in `src/lib/auth/pipeline.ts` moves `lastActiveAt` **in
+> memory only**; it reaches KV with the next session write that happens for some
+> other reason. The function's own comment says so: "an active user costs no extra
+> KV writes per request." That changed in commit `ae569e0` on 2026-08-06 at 16:52 —
+> fourteen hours *after* this document was written at 02:20 the same day — so the
+> premise was refuted within a day of being recorded, and nobody noticed because
+> the document was never re-verified.
+>
+> **What the recurring writes actually are:** the 30-minute role re-check and the
+> hourly access-map refresh, each one `patchSession` call
+> (`src/lib/auth/stages/refresh-role.ts`, `src/lib/auth/stages/access-map.ts`).
+> That is roughly **26 writes per person per day**, not ~113 — the arithmetic is in
+> [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §13.3, which owns it.
+>
+> **Consequence for this proposal:** making the heartbeat interval admin-adjustable
+> buys nothing on cost. If a cost lever is wanted, the candidates are the re-check
+> interval and the map-refresh TTL — both of which are real writes, and the first of
+> which is already an env var. The heartbeat row in the table below is struck for
+> the same reason. `RBAC-AT-SCALE.md` §8.5/§8.6 carries the same stale model and is
+> outside this document's scope to fix.
+
+The general principle this section was reaching for still stands: **values that are
+genuinely operational knobs (timing, defaults, on/off switches, short notices)
+belong here; anything that changes the shape of authorization decisions (roles,
+permissions) belongs in the PLAC/RBAC system, which has its own separate cache.**
 
 A reasonable first set, combining what already has a home in
 `KNOWN_SETTING_KEYS` with what's genuinely new:
@@ -233,7 +281,8 @@ A reasonable first set, combining what already has a home in
 | `maintenance_mode` | Known key, D1-stored, **not enforced anywhere** | Needs an actual middleware check added, not just a stored boolean |
 | `default_theme` | Known key, but **dead** — superseded by per-user `admin_user_settings.theme` | Resolve the naming collision: this should mean "fallback used only when a user has no personal preference set," evaluated in that order — not a value that overrides an explicit per-user choice. Same "explicit override beats a global default" algebra as PLAC, Discord overwrites, and AWS IAM's deny-wins rule, once again |
 | Per-route notices/blocks (new) | Not modeled yet | A natural extension of `maintenance_mode` from a single global boolean to a JSON list of `{ path, status: 'blocked' \| 'notice', message }` — the `setting_type: 'json'` column already supports exactly this shape |
-| `lastActiveAt` heartbeat interval (new) | Currently a hardcoded literal, not a setting at all | Directly enables the `RBAC-AT-SCALE.md` §8.6 cost lever as an admin-adjustable value instead of a code change |
+| ~~`lastActiveAt` heartbeat interval (new)~~ | **Struck 2026-09-19.** Still a hardcoded literal, but it costs no KV write, so there is no cost case for making it a setting (see the refutation above) | — |
+| `session_refresh_interval` / the PLAC map TTL | Real recurring KV writes: ~16 + ~8 per person per working day | The genuine cost levers, if one is wanted. `SESSION_REFRESH_INTERVAL_MS` is already an env var; the 1-hour map TTL is a literal in `src/lib/auth/stages/access-map.ts` |
 
 ---
 
@@ -309,11 +358,21 @@ aggressive caching that exists in this system.
 Not reasons not to build this — things worth deciding on purpose now rather than
 discovering by accident later:
 
-1. **Two existing, parallel mechanisms for "global settings"
-   (`admin_portal_settings` scalar/JSON rows, and `admin_feature_flags` booleans)
-   will become three if `GLOBAL_CONFIG` is built as a third table instead of a
-   *read-side cache over the two that already exist.*** Recommendation: don't add a
-   third source of truth. `GLOBAL_CONFIG` should be a KV-cached **view**, computed
+1. **There are already four runtime-read config stores, not two** *(corrected
+   2026-09-19)*, and `GLOBAL_CONFIG` would make five if built as its own table
+   instead of a *read-side cache over what exists.* Besides
+   `admin_portal_settings` (scalar/JSON rows) and `admin_feature_flags` (booleans),
+   this document missed:
+   - **`service_config`** — the control plane's Layer-A store
+     (`src/lib/dal/ServiceConfigRepository.ts`).
+   - **The `cron-control` JSON document**, a row *inside* `admin_portal_settings`
+     read straight from D1 by the job runner on every tick
+     (`src/lib/dal/CronControlRepository.ts`). That is a live precedent for a JSON
+     global setting with **no KV layer at all**, and worth measuring against before
+     adding one — ROADMAP chunk 14b is the config-store consolidation this overlaps.
+
+   Recommendation unchanged: don't add another source of truth.
+   `GLOBAL_CONFIG` should be a KV-cached **view**, computed
    by joining both existing tables, the same way `computeAccessMap()` is a view over
    `admin_pages` + `admin_page_overrides` rather than a new table duplicating both.
    If the two tables' distinct existence (typed settings vs. plain booleans) stops
@@ -370,10 +429,12 @@ discovering by accident later:
 |---|---|---|---|
 | 2026-08-06 | claude | Read `PortalSettingsRepository.ts`, `FeatureFlagRepository.ts`, `src/pages/api/settings/portal.ts`, `PortalSettingsPanel.tsx` in full; grepped `src/` for `maintenance_mode`, `session_recheck_interval`, `session_max_lifetime`, `default_theme`, and `PortalSettingsRepository` usage; cross-checked against `session.ts`/`pipeline.ts`'s actual timing source (`SESSION_REFRESH_INTERVAL_MS` env var) | **Confirmed**: `admin_portal_settings` + UI already exist for these exact settings, and are disconnected from the runtime code that would need to read them. `default_theme` confirmed dead (superseded, commented out of the UI). `maintenance_mode` confirmed unenforced anywhere. |
 | 2026-08-06 | claude | Re-read `KV-RESILIENCE.md` and `plac.ts`'s `computeNavItems()`/`computeAccessMap()` for the existing KV+D1 cache precedent and TTL/fallback conventions | Confirmed the proposed pattern already exists twice in this codebase (page registry cache, CMS `cms:*`/`isr:*` keys) — this document generalizes an established pattern, not a new one |
+| 2026-09-19 | claude | Re-checked the premises, not the arithmetic. Read `src/lib/auth/pipeline.ts` (`touchLastActive`), `stages/refresh-role.ts`, `stages/access-map.ts`, `authz-signal.ts`, `cf-access-reconcile.ts`, `dal/ServiceConfigRepository.ts`, `dal/CronControlRepository.ts`, `migrations/0000_baseline.sql` and `migrations/0037_widen_admin_portal_settings_scoped.sql`; re-grepped `src/` for `maintenance_mode` and `documentation/MAINTENANCE.md` for an entry | **§4's central cost premise is refuted** — the `lastActiveAt` heartbeat has cost no KV write since `ae569e0` (2026-08-06, 14 h after this doc was written). Also corrected: the PLAC "write-through" precedent (it is the `authz-changed` mark), the `0037` scope columns, the flat-shape comment's new home, the CF-Access reconcile's gating, and "two mechanisms" → four. Status stays `draft`: **nothing here is implemented**, which remains true. **Not re-derived:** §5 and §6's cost and latency figures, which come from `RBAC-AT-SCALE.md` and rest on the same stale write model |
 
 ## Related
 
 - [`KV-RESILIENCE.md`](KV-RESILIENCE.md) — the existing KV+D1 fallback pattern this document mirrors.
-- [`plac-and-audit.md`](plac-and-audit.md) — `computeAccessMap()`/PLAC's "compute on write, cache on read" precedent.
-- [`../reference/RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) — §3 (KV/D1 latency and consistency facts, reused here) and §8.5/§8.6 (the `lastActiveAt` heartbeat cost finding this document's settings roadmap directly builds on).
+- [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) — the `authz-changed` mark (§11) and the per-request KV accounting (§13), both of which this document's cost model depends on.
+- [`plac-and-audit.md`](plac-and-audit.md) — the Ghost Audit engine.
+- [`../reference/RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) — §3 (KV/D1 latency and consistency facts, reused here). **Its §8.5/§8.6 `lastActiveAt` heartbeat cost finding is stale** on the same `ae569e0` change; see the refutation in §4.
 - [`../features/CF-ACCESS-SYNC.md`](../features/CF-ACCESS-SYNC.md) — the durable sync-log + cron self-heal + status-pill pattern proposed for reuse in §3 point 7.

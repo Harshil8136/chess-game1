@@ -10,6 +10,18 @@ tags: []
 
 # cf-admin — Pending Hardening Items
 
+> **ARCHIVED — not a live tracker.** This is the 2026-05-26 residue list from
+> the 2026-05-25 deep review, frozen. The live backlog is
+> [`../MAINTENANCE.md`](../MAINTENANCE.md); anything below that still matters is
+> there, and anything that is not there is either closed or not tracked at all.
+> Several items marked open below are closed: M-7, M-9, M-11 and M-13 were
+> resolved on 2026-07-08, and M-4 was decided on 2026-09-15 (append-only; the
+> delete routes go in viability chunk 19). Still open in code today: M-5 and
+> L-1, L-2, L-3, L-5 and L-11. Do not re-report an item from this file without
+> checking `MAINTENANCE.md` and the code first, and do not read the preface's
+> "every item with a meaningful exploit path has shipped" as current — M-5 is a
+> privilege-ceiling gap at user creation and is still open.
+
 > **Last Updated:** 2026-05-26 (post deep-review follow-up commit `27e6090` — closes M-1, M-2, M-3, M-6, M-10, M-12, M-14, L-10, L-14)
 >
 > **Context:** Phases 1A–11 of the original refactor + the 2026-05-24 security review + the 2026-05-25 deep review (C-1, C-2, H-1..H-5) + the 2026-05-26 follow-up pass are all complete on `main`. This document tracks what remains from the 2026-05-25 review — every item that had a meaningful exploit path or functional impact has shipped; the residue is policy decisions, dead-code cleanup, and advisor lints.

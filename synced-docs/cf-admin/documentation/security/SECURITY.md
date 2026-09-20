@@ -3,9 +3,11 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-08-23
+last_verified: 2026-09-20
 verified_against: [code, infra]
 owner: harshil
+related_docs: [THREAT-MODEL.md, RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/plac-and-audit.md, ../operations/OPERATIONS.md]
+related_code: [src/lib/auth/routes.ts, src/lib/auth/plac.ts, src/lib/auth/authz-signal.ts, src/lib/security/csp.ts, src/lib/csrf.ts]
 tags: [security, rls, auth]
 ---
 
@@ -18,8 +20,10 @@ tags: [security, rls, auth]
 > and they are translated in code, so `super_admin` in a stored row means
 > **Admin** (level 2) and `admin` in a stored row means **Manager** (level 3).
 > Any role name below that has not been updated refers to the pre-rename
-> vocabulary. See `architecture/plac-and-audit.md` §1.1-1.2, which is the
-> authoritative reference and covers the collision this rename creates.
+> vocabulary. [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
+> §4.1 is the authoritative reference for the ladder and the collision this
+> rename creates; `../architecture/plac-and-audit.md` §1.1-1.2 covers the same
+> ground for the audit engine.
 
 > **TL;DR (non-technical):** The complete security picture for the admin portal: how users are authenticated, how requests are protected, how data is locked down, and what the current security posture is.
 
@@ -40,15 +44,22 @@ row with no evidence column is a claim, not a posture — do not add one.
 | Area | Current state | Verified | How to re-check |
 |------|---------------|----------|-----------------|
 | `npm audit` (production deps) | **0 unexcepted advisories**; 6 documented, time-boxed exceptions in `.audit-exceptions.json` (js-yaml ×1, sharp ×3, svgo ×2 — all build-time only, all expiring **2026-11-30**). `audit_gate.py` audits this package's own lockfile in isolation (chunk 4) and fails the build on an expired or undocumented entry. *Corrected 2026-09-14* — this row described the pre-chunk-4 state (16 findings, ten exceptions expiring 2026-10-23). | 2026-09-14 | `npm audit --omit=dev`, then `python scripts/audit_gate.py` |
-| PLAC on API routes | 39 path prefixes mapped in `API_PAGE_MAPPING`, covering 136 route files by prefix (+ parent-deny propagation) | 2026-08-13 | `src/lib/auth/routes.ts` |
-| API authorization mode | **`enforce`** — an unmapped, un-allowlisted `/api/*` request is denied 403. Flipped from `shadow` 2026-08-12. | 2026-08-13 | `API_DENY_MODE` in `wrangler.toml`; logic in `src/lib/auth/pipeline.ts` |
+| PLAC on API routes | **44** path prefixes mapped in `API_PAGE_MAPPING`, covering **147** route files by prefix (+ parent-deny propagation) | 2026-09-20 | `src/lib/auth/routes.ts` |
+| API authorization mode | **`enforce`** — an unmapped, un-allowlisted `/api/*` request is denied 403. Flipped from `shadow` 2026-08-12. | 2026-09-20 | `API_DENY_MODE` in `wrangler.toml`; logic in `src/lib/auth/stages/decide.ts` |
 | Break-glass / hardcoded admins | None (removed; whitelist-only) | 2026-06-06 | `src/lib/auth/` — no hardcoded email list |
-| Session expiry | 30-min role re-check, 24h hard expiry; revocation flag respects `SESSION_MAX_LIFETIME_MS` | 2026-06-06 | `src/lib/auth/session.ts` |
+| Session expiry | 30-min role re-check, 24h hard expiry. The revocation flag's TTL is a **fixed 24 h** (`expirationTtl: 86400` in `src/lib/auth/plac.ts`). *Corrected 2026-09-20* — this row said it follows `SESSION_MAX_LIFETIME_MS`; the TTL-aware writer `writeRevocationFlag()` in `src/lib/auth/session.ts` exists but has no callers | 2026-09-20 | `src/lib/auth/plac.ts`, `src/lib/auth/session.ts` |
+| Permission-change propagation | An `authz-changed:{userId}` mark; the session re-verifies on its **next request** and nobody is signed out (2026-09-16) | 2026-09-20 | `src/lib/auth/authz-signal.ts`; §5 |
 | CSP | Enforcing policy has **no `'unsafe-eval'`** (removed 2026-07-25) and still carries `'unsafe-inline'`. A hardened Report-Only canary without `'unsafe-inline'` **is live** — see §4. | 2026-08-13 | `src/lib/security/csp.ts` |
 | `public/_headers` | **Exists; its CSP no longer contains `'unsafe-eval'`** (0 matches, 2026-09-14). Chunk 2 settled what it does: Workers Static Assets applies `_headers` to static-asset responses only, never to SSR (C-12 closed by evidence, 2026-09-02 — see the chunk record). `src/lib/security/csp.ts` remains the only file to read for the live policy. *Corrected 2026-09-14* — this row still described the August drift. | 2026-09-14 | `public/_headers` vs `src/lib/security/csp.ts` |
-| Supabase `anon` role | Zero grants / zero RLS policies / zero function EXECUTE | 2026-06-06 | Supabase MCP `list_tables` / `get_advisors` |
-| Email alert amplification | Capped at 5/batch with digest line | 2026-06-06 | `src/workers/scheduled-log-sync.ts` |
+| Supabase `anon` role | Zero table grants, zero RLS policies. **Function EXECUTE is revoked on 4 of 6 public functions, not all 6** — `increment_conversation_metrics` and `purge_expired_privacy_data` are still callable by `anon` and `authenticated`. Neither is `SECURITY DEFINER` and `anon` has no table grants, so the body fails on table access: a posture defect, not an exposure path. REVOKE migration outstanding — see §10.3 | 2026-09-20 (live `has_function_privilege`) | `has_function_privilege` over `pg_proc` in the `public` schema |
+| Email alert amplification | Capped at 5/batch with digest line **on the cron path only**. The inline bootstrap path sends one Brevo alert per refused request, so a user sitting behind a live `revoked:` flag generates one email per request | 2026-09-20 | `src/workers/scheduled-log-sync.ts`; `src/lib/auth/stages/bootstrap.ts` |
 | Static security gates | `rules_check.py` 0 violations · `a11y_check.py` 0 findings | 2026-08-13 | `npm run verify` |
+
+**Verification log**
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-09-20 | §5 rewritten against the 2026-09-16 access-revocation work (the `authz-changed` mark vs the force-kick, the real Layer-3 endpoint and payload, layer order, the fixed 24 h flag TTL, which callers pass `ctx`). §6a rewritten — the pipeline **enforces** PLAC on `/api/*` and an unmapped route denies. §9 replaced by a link to the live-derived owner. §10.3 and the §0 `anon` row corrected from a live `has_function_privilege` check. Also: §0 counts (44 prefixes / 147 routes), the `AdminSession` shape, the timing matrix, the session-less route list, raw-IP limiter keys, the CSRF stage and its production fail-closed, the header sequence and `X-XSS-Protection`, the CSP blocker size (885) and the jsDelivr host, `VALID_ROLES`, the error-message claim, the session and media PLAC keys, `safeRateLimit` coverage, analytics timeouts, §7 (no `X-Request-ID`), §8, the Access application domain, the ZT token scope, and a historical banner over §13–§15 | Live Supabase table policies and grants (only function ACLs were queried); the Cloudflare Access bypass-policy scope; the "hidden accounts return an identical 404" claim; the CF Access JWT lifetime |
 
 **Review history (most recent first):**
 [2026-06-13](./reviews/2026-06-13-security-review.md) ·
@@ -80,7 +91,7 @@ CF-Admin uses **Cloudflare Zero Trust Access** for identity (who you are) and a 
 - **Identity providers:** Google, GitHub, One-Time PIN (OTP)
 - **CF injects on every authenticated request:**
   - `CF-Access-Authenticated-User-Email` — verified user email
-  - `CF-Access-JWT-Assertion` — short-lived RS256 JWT (~1 min) with `sub` (CF user UUID), `iat`, `exp`, IdP info
+  - `CF-Access-JWT-Assertion` — short-lived RS256 JWT with `sub` (CF user UUID), `iat`, `exp`. An `idp` claim is *defined* but is **absent in production**: every login since 2026-09-05 resolves `login_method = 'unknown'`, so IdP attribution is not available from the JWT (see [`login-forensics.md`](login-forensics.md) §2.2)
   - `CF-RAY` — Cloudflare Ray ID (links to CF dashboard trace)
 - **JWKS verification:** Worker verifies JWT signature via public keys fetched from `https://{team}.cloudflareaccess.com/cdn-cgi/access/certs`, cached in memory for 1h per isolate lifecycle
 - **No client-side secrets:** CF Access cookie (`CF_Authorization`) is managed entirely by the CF edge. No anon key, no OAuth credentials ever reach the browser.
@@ -102,18 +113,31 @@ Sessions are stored in **Cloudflare KV** with a dual-key pattern:
 
 ```typescript
 interface AdminSession {
-  userId: string;           // admin_authorized_users UUID (D1/Supabase)
+  sessionId?: string;
+  userId: string;           // admin_authorized_users UUID (Supabase)
   cfSubId: string;          // CF Access user UUID (JWT sub claim) — needed for Layer 3 revocation
   email: string;
   displayName: string;
   role: Role;
-  loginMethod: 'google' | 'github' | 'otp';
+  loginMethod: 'google' | 'github' | 'otp' | 'unknown';
   createdAt: number;        // Unix ms — 24h hard expiry anchor
-  lastRoleCheckedAt: number;// Unix ms — 30-min D1 role re-check anchor
+  lastRoleCheckedAt: number;// Unix ms — 30-min role re-check anchor
   accessMap?: PageAccessMap;
-  auditSilenced?: boolean;
+  authzMark?: string;       // last authz-changed mark this session re-verified against
+  ipHash?: string;          // HMAC of the login IP, computed once, used in audit rows
+  // Telemetry — note ipAddress is the RAW address
+  ipAddress: string;
+  userAgent: string;
+  geoLocation: string;
+  rayId: string;
+  lastActiveAt: number;
 }
 ```
+
+*Corrected 2026-09-20.* The copy that stood here predated 2026-07-26: it still
+carried `auditSilenced`, which no longer exists, and omitted `authzMark` and the
+telemetry block. `src/lib/auth/session.ts` is the source of truth — prefer
+reading it to trusting this copy.
 
 **`cfSubId` persistence:** Stored in `admin_authorized_users.cf_sub_id` (TEXT column, Supabase migration `supabase_0001_add_cf_sub_id`). Written idempotently on first CF ZT login via `waitUntil()`. Enables Layer 3 revocation even when no active KV session exists (natural expiry edge case).
 
@@ -125,9 +149,10 @@ interface AdminSession {
 | Global CF session | **24 hours** | CF Dashboard → Settings → Authentication → Global Session Timeout |
 | KV session TTL | **24 hours** | `expirationTtl: 86400` on `SESSION.put()` |
 | Hard expiry guard | **24 hours** | `createdAt` check in middleware fast-path (defense-in-depth) |
-| Role re-check | **30 minutes** | `lastRoleCheckedAt` check → D1 re-fetch of `admin_authorized_users` |
-| CF JWT assertion | **~1 minute** | Auto-refreshed by CF edge on every request — Worker does not manage this |
-| Force-kick propagation | **Immediate** | 3-layer revocation (see §5) |
+| Role re-check | **30 minutes** | `lastRoleCheckedAt` check → re-fetch of `admin_authorized_users` from **Supabase** (not D1; the page map is the D1 read) |
+| CF JWT assertion | Short-lived | Auto-refreshed by CF edge on every request — Worker does not manage this |
+| Permission / role change | **Next request** | `authz-changed:{userId}` mark, bounded by KV eventual consistency (≈60 s) and the 5 s isolate cache (see §5) |
+| Force-kick propagation | **Next request**, ≈60 s worst case | 3-layer revocation (see §5). Not instantaneous: KV is eventually consistent, so "immediate" was never accurate |
 
 Sessions are **fixed-duration from creation** — no rolling extension. A session created at 09:00 expires at 09:00 next day regardless of activity.
 
@@ -138,11 +163,12 @@ Session cookies use the `__Host-` prefix in production (enforces `Secure`, host-
 > **⚠️ Fail-Secure Local Dev Detection:** `isLocalDev(siteUrl)` in `src/lib/auth/routes.ts` is
 > `!!siteUrl && (siteUrl.includes('localhost') || siteUrl.includes('127.0.0.1'))` — if `SITE_URL`
 > is missing or misconfigured the system defaults to **production mode**, never to dev mode, so a
-> missing variable can never bypass Cloudflare Zero Trust. It has one implementation and four
+> missing variable can never bypass Cloudflare Zero Trust. It has one implementation and seven
 > callers: `src/lib/auth/stages/assertion.ts` (the pipeline's local-dev shortcut since the
-> chunk 10 split), `src/pages/index.astro`, `src/pages/api/auth/dev-login.ts` and
-> `src/pages/api/content/edge-verify.ts` — the last two carried private copies until
-> 2026-09-04.
+> chunk 10 split), `src/lib/auth/landing.ts`, `src/lib/storage/share-token.ts`,
+> `src/pages/index.astro`, `src/pages/api/auth/dev-login.ts`,
+> `src/pages/api/content/edge-verify.ts` and `src/workers/cf-entry.ts` — two of them carried
+> private copies until 2026-09-04. *(Count corrected 2026-09-20; it read "four".)*
 >
 > **Corrected 2026-09-04.** The file list above was stale — the check has not lived in
 > `src/middleware.ts` since the auth pipeline was split into stages. `src/pages/index.astro`
@@ -197,28 +223,49 @@ Everything else requires a valid KV session plus a PLAC check.
 
 Any mutation method on public routes returns `405 Method Not Allowed`. Everything else requires a valid KV session + PLAC access check.
 
+### Session-less routes — the complete list
+
+Everything not named here requires a valid KV session plus a PLAC check. The
+set below is `src/lib/auth/routes.ts`, and it is the whole of it:
+
+| Route | Authorization instead of a session | Reaches the Worker past CF Access via |
+|---|---|---|
+| `GET /api/health` | None — liveness probe, returns no data | The edge bypass policy |
+| `POST /api/emails/unsubscribe` | HMAC-signed token in the link (RFC 8058 one-click). Public since 2026-07-26; a mailbox provider has no session, cookie or CSRF token | The edge bypass policy |
+| `GET/POST /api/auth/logout` | Must work when the session is already gone. GET additionally refuses any `Sec-Fetch-Site` other than `none`/`same-origin` | Normal Access session |
+| `POST /api/auth/dev-login` | Local dev only — 404 in a production build, and redirects unless `isLocalDev(SITE_URL)` | Never reachable in production |
+| `POST /api/emails/webhook` | Pre-shared secret, constant-time compared, fail-closed when unset; 120/min per IP. **Not** an HMAC signature — see [`THREAT-MODEL.md`](THREAT-MODEL.md) | The edge bypass policy |
+| `/api/storage/share/*`, `/api/storage/request/*` | HMAC-signed self-verifying token + optional passcode — §2a | A path-based bypass policy |
+
+*Corrected 2026-09-20.* §2a used to call the two storage families the "only"
+exception, which was wrong in both directions: unsubscribe and the webhook are
+also session-less, and both must be reachable past Cloudflare Access.
+
 ### 2a. Staff Managed Storage — the deliberate exception
 
-Two route families are the **only** intentional exception to "everything else
-requires a valid KV session" anywhere in this app: they serve external parties
-(vendors, vets) with no portal account, so they cannot sit behind CF Access.
-They are not gated by `src/middleware.ts` at all — the gate is a Cloudflare
-Zero Trust **path-based bypass policy** at the edge (outside this repository)
-plus the route's own HMAC-token verification.
+These two route families are the deliberate *product* exception: they serve
+external parties (vendors, vets) with no portal account, so they cannot sit
+behind CF Access. They are not gated by `src/middleware.ts` at all — the gate is
+a Cloudflare Zero Trust **path-based bypass policy** at the edge (outside this
+repository) plus the route's own HMAC-token verification.
 
 | Route | Methods | Auth model | Rate limit (`safeRateLimit`, fail-closed) |
 |---|---|---|---|
-| `/api/storage/share/[token]` | GET (gateway form only), POST (download) | HMAC-signed self-verifying token (`verifyShareToken`) + optional passcode, `timingSafeEqualStrings` compared | `storage-share-consume` — 20/min, keyed on hashed client IP |
-| `/api/storage/request/[token]` | GET (gateway form only), POST (passcode submit) | Same token model; `GET` never reads or echoes query-string data (closes the 2026-08 reflected-XSS finding, see `THREAT-MODEL.md`) | `storage-request-consume` — 30/min, keyed on hashed client IP |
-| `/api/storage/request/[token]/presign` | POST | Token + independently re-verified passcode | `storage-request-presign` — 20/min, keyed on hashed client IP |
-| `/api/storage/request/[token]/confirm` | POST | Token + independently re-verified passcode; magic-byte + extension + size re-validation before the row is written | `storage-request-confirm` — 20/min, keyed on hashed client IP |
+| `/api/storage/share/[token]` | GET (gateway form only), POST (download) | HMAC-signed self-verifying token (`verifyShareToken`) + optional passcode, `timingSafeEqualStrings` compared | `storage-share-consume` — 20/min, keyed on the **raw** client IP |
+| `/api/storage/request/[token]` | GET (gateway form only), POST (passcode submit) | Same token model; `GET` never reads or echoes query-string data (closes the 2026-08 reflected-XSS finding, see `THREAT-MODEL.md`) | `storage-request-consume` — 30/min, keyed on the **raw** client IP |
+| `/api/storage/request/[token]/presign` | POST | Token + independently re-verified passcode | `storage-request-presign` — 20/min, keyed on the **raw** client IP |
+| `/api/storage/request/[token]/confirm` | POST | Token + independently re-verified passcode; magic-byte + extension + size re-validation before the row is written | `storage-request-confirm` — 20/min, keyed on the **raw** client IP |
 
-**⚠️ Open manual action item:** the actual scope of the CF Access bypass
-policy for `/api/storage/request/*` has not been independently re-verified
-against the Zero Trust dashboard since this route family shipped — tracked in
-`../MAINTENANCE.md`. Getting this wrong in either direction is a real
-incident: too broad silently exposes an authenticated route, too narrow
-breaks the feature for every external vendor/vet without a portal account.
+*Corrected 2026-09-20:* these four limiters were documented as "keyed on hashed
+client IP". They pass `cf-connecting-ip` straight to the limiter, so raw client
+IPs become Upstash keys. The access **telemetry** rows written by the same
+routes do hash the IP — the two are different things. See [`RoPA.md`](RoPA.md) §2.1.
+
+**Open operator action:** the scope of the Cloudflare Access bypass policy in
+front of these routes has not been re-verified against the Zero Trust dashboard
+since the route family shipped. It is a dashboard-side setting, not code, and it
+is tracked in `../MAINTENANCE.md`; re-verify it there rather than reasoning about
+it from this document.
 
 All other `/api/storage/*` routes (the owner's own drive, Inspect, admin
 config, reconciliation report) sit behind the normal KV session + PLAC model
@@ -228,7 +275,7 @@ like every other dashboard-mapped route and are not exceptions.
 
 ## 3. CSRF Protection
 
-Stateless CSRF via `src/lib/csrf.ts` — Origin + Referer header validation. No tokens, no cookies, no client JS required. Applied globally by `middleware.ts` to all mutation methods (POST, PUT, PATCH, DELETE).
+Stateless CSRF via `src/lib/csrf.ts` — Origin + Referer header validation. No tokens, no cookies, no client JS required. It runs as the `csrfGate` stage of the auth pipeline (`src/lib/auth/pipeline.ts`), **after** `classify()`, on every mutation method (POST, PUT, PATCH, DELETE). Consequence: public routes, webhook routes and the public API routes are answered by `classify()` first and never reach the gate — which is why the GET logout carries its own `Sec-Fetch-Site` check and the webhook carries its own secret. *Corrected 2026-09-20: this said "applied globally by `middleware.ts`".*
 
 | Step | Check | Action |
 |------|-------|--------|
@@ -242,17 +289,30 @@ Stateless CSRF via `src/lib/csrf.ts` — Origin + Referer header validation. No 
 
 **Performance:** <0.05ms CPU, 0 KV reads, 0 bytes client JS.
 
-**Local dev:** When `SITE_URL` is not set, CSRF validation is skipped entirely (fail-open for developer convenience). If `SITE_URL` is misconfigured in `.dev.vars`, every mutation will fail with 403 — check this first when debugging.
+**Missing `SITE_URL`:** in a **production** build (`import.meta.env.PROD`) an
+absent `SITE_URL` makes CSRF unenforceable, so the gate **blocks every
+mutation** rather than skipping. Only a non-production build falls through, for
+developer convenience. *Corrected 2026-09-20 — this said validation is "skipped
+entirely", which would have been a fail-open in production.* If `SITE_URL` is
+misconfigured in `.dev.vars`, every mutation fails with 403 — check it first
+when debugging.
 
 ---
 
 ## 4. Edge-Injected Security Headers
 
-Applied globally at the Cloudflare Edge via Astro's `sequence` middleware (`securityHeaders` → `authMiddleware`). Headers are written to a mutable `new Headers(response.headers)` copy to avoid immutable-header exceptions on the Workers runtime.
+Applied **inside the Worker** by Astro's `sequence` middleware —
+`sequence(sentryErrorBoundary, securityHeaders, authMiddleware)`
+(`src/middleware.ts`), not at the Cloudflare edge. Headers are written to a
+mutable `new Headers(response.headers)` copy to avoid immutable-header
+exceptions on the Workers runtime. The distinction matters: anything Cloudflare
+injects after the response leaves the Worker (Rocket Loader, for one) is not
+covered by these headers and cannot receive the CSP nonce.
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `X-Frame-Options` | `DENY` | Prevents clickjacking (legacy; `frame-ancestors` in CSP is primary) |
+| `X-Frame-Options` | `DENY` | Prevents clickjacking (legacy; `frame-ancestors` in CSP is primary). Skipped on localhost so the dev toolbar works |
+| `X-XSS-Protection` | `0` | Deliberately disables the legacy auditor, which is itself an XSS vector in old browsers. Omitted from this table until 2026-09-20 |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME-type sniffing attacks |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Leaks only origin on cross-origin navigation |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | 2-year HSTS with preload eligibility. Source of truth: `src/lib/security/csp.ts:78`. Corrected 2026-07-29 — this row read `31536000` while the deployed header has been `63072000`; three compliance documents cited the correct value and this file did not. |
@@ -307,9 +367,20 @@ by the middleware itself (the `finalBody` replace at the end of `csp.ts`).
   is covered by the host allowlist, so it is unaffected either way.
 - **`style-src 'unsafe-inline'`:** Preact's SSR renderer emits `style="..."`
   attributes in the initial HTML for components using `style={{ }}` props
-  (dynamic gradients, animations, colors). Roughly 20 instances across
-  `ExpandedRow.tsx`, `SystemDiagnosticsHistory.tsx`, `AccessPolicyGrid.tsx` and
-  others need converting to utility classes before this can go.
+  (dynamic gradients, animations, colors). **885 occurrences across 110 files**
+  as of 2026-09-20 — measured with
+  `grep -rn "style={{" src --include=*.tsx --include=*.astro`. *This read
+  "roughly 20 instances" across three named files; it is a materially larger
+  job than that and the CSP plan should be sized accordingly.* There is also no
+  nonce on `style-src`, so anything describing inline styles as "nonce-permitted"
+  is wrong.
+
+**`https://cdn.jsdelivr.net` should come out of `SCRIPT_SRC_HOSTS`.** Nothing
+under `src/` loads from jsDelivr any more — Chart.js is no longer CDN-loaded,
+and `src/lib/security/csp.ts` is the only file that still names the host. A
+public npm CDN in the allowlist is a well-known way around a CSP, and it is
+carried by the *hardened canary* as well as the enforcing policy, so the target
+policy has a hole in it before the flip. Tracked in `../MAINTENANCE.md`.
 
 **`'unsafe-eval'` was removed on 2026-07-25** — verified absent from both `src/**`
 and the built client bundles under `dist/_astro/`. SEC-01 now forbids it outright
@@ -341,40 +412,98 @@ Dynamic UI state is controlled via data attributes (`data-state="expanded"`, `da
 
 ---
 
-## 5. Ghost Protection — 3-Layer Force-Kick
+## 5. Revocation — two mechanisms, not one
 
-Role mutations, account deactivation, and PLAC changes trigger a 3-layer security cascade that immediately revokes access at every layer of the stack. Implemented in `src/lib/auth/plac.ts` → `forceLogoutUser()`.
+> **Owner of this subject:** [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §11.
+> When the two disagree, that document wins. This section was rewritten on
+> 2026-09-20 because it still described the pre-2026-09-16 behaviour, in which
+> *every* permission change signed the user out — the behaviour that stranded the
+> only Owner account for 14 hours and prompted the remediation.
 
-**Trigger events:** role change, account deactivation, PLAC override modification, manual force-kick, per-session revocation via Session Forensics Drawer
+Since 2026-09-16 there are two distinct mechanisms, and using the wrong word for
+what happened is how an incident gets misdiagnosed.
 
-**Layer 1 — KV Session Deletion (O(k)):**
+### 5.1 The authorization-change mark — for permission changes
 
-- LISTs `user-session:{userId}:*` in the reverse index → deletes all matching KV session keys
-- Also deletes the reverse-index pointers
-- **Reverse-index KV pattern:** Sessions indexed at `user-session:{userId}:{sessionId}: '1'` — targeted LIST is O(sessions_per_user), not O(total_sessions)
+A role change, a page grant or revoke, an access-request approval and a
+page-registry change all write a random mark to `authz-changed:{userId}`
+(`src/lib/auth/authz-signal.ts`), **after** the database change commits. The
+session stage reads it in the same bulk KV read as the revocation flags; a live
+session whose stored `authzMark` differs re-reads its role from Supabase and its
+page map from D1 on that request and stores the new mark.
 
-**Layer 2 — KV Revocation Flag:**
+Nobody is signed out. Grants and revocations both reach a signed-in user on
+their **next request**, bounded by KV's eventual consistency (≈60 s).
 
-- Writes `revoked:{userId}` → `'1'` to KV with `expirationTtl: 86400` (24h auto-expiry)
-- Middleware checks this flag on every bootstrap attempt (no active KV session but CF headers present)
-- If flag exists → returns 403 immediately, refuses to create a new session
-- Prevents the "CF Access cookie still valid → Worker auto-bootstraps new session" gap
+| Trigger | Code |
+|---|---|
+| Role change, activation/deactivation metadata, display name | `src/pages/api/users/manage.ts` |
+| Page grant / revoke | `src/pages/api/users/access.ts` |
+| Access-request approval | `src/pages/api/audit/requests/[id]/resolve.ts` |
+| Page-registry change | `src/pages/api/system/pages.ts` |
 
-**Layer 3 — CF Access API Hard Revocation (nuclear, immediate):**
+A role change additionally calls `resetUserOverrides(env.DB, targetUser.id)`
+first, so the new role starts from its own PLAC baseline.
 
-- Calls CF API: `DELETE /accounts/{CF_ACCOUNT_ID}/access/users/{cfSubId}/active_sessions`
-- Invalidates the `CF_Authorization` cookie at the CF edge
-- User's next request is intercepted by CF Access → redirected to login — Worker never receives it
-- `cfSubId` sourced from active KV session; falls back to reading `cf_sub_id` from Supabase `admin_authorized_users` if no active session exists
-- Requires `CF_API_TOKEN_ZT_WRITE` secret (Zero Trust: Edit permission — account scope only)
-- Fired via `ctx.waitUntil()` — zero latency on the actor's response
+### 5.2 The 3-layer force-kick — for removing a person
 
-**Cascade sequence (role change or deactivation):**
+`forceLogoutUser()` (`src/lib/auth/plac.ts`) still exists and is still a hard
+eviction. It now runs in exactly four places:
 
-1. `resetUserOverrides(env.DB, targetUser.id)` — purges all PLAC overrides → clean RBAC baseline
-2. `forceLogoutUser(env.SESSION, targetUser.id, env)` — all 3 layers above
+| Trigger | Code |
+|---|---|
+| Account deactivation (`is_active === false`) | `src/pages/api/users/manage.ts` |
+| User deletion | `src/pages/api/users/manage.ts` |
+| Manual force-kick | `src/pages/api/users/force-kick.ts` |
+| Sessions-page full account block | `src/pages/api/sessions/active-sessions.ts` |
 
-**Failure mode:** If KV write fails during Layer 1, Layer 2 still blocks re-bootstrap. If Layer 3 CF API call fails (non-fatal, logged), the CF Access cookie remains valid but Layer 2 revocation flag prevents session creation. On CF session natural expiry (max 24h), the user is fully locked out.
+Revoking **one** session instead uses `revokeSingleSession()`, which writes
+`revoked-session:{sessionId}` — a different key from the user-level flag.
+
+**Layer 2 runs first — KV revocation flag:**
+
+- Writes `revoked:{userId}` → `'1'` with a fixed `expirationTtl: 86400` (24 h).
+  The TTL is a constant, not derived from `SESSION_MAX_LIFETIME_MS`
+- Written **before** the sessions are deleted, deliberately: doing it the other
+  way round leaves a window in which a deleted session can re-bootstrap
+- Checked on every warm request (`src/lib/auth/stages/session-stage.ts`) as well
+  as at bootstrap, in one bulk read together with `revoked-session:` and
+  `authz-changed:`
+- While the flag is live the user cannot sign in at all, and each refused
+  request emits a `revocation_block_active` row and one Brevo alert. Lifting it
+  early means reactivating the account or calling
+  `DELETE /api/sessions/active-revocations`
+
+**Layer 1 — KV session deletion (O(k)):**
+
+- LISTs `user-session:{userId}:*` in the reverse index → deletes all matching KV
+  session keys, and the reverse-index pointers
+- **Reverse-index KV pattern:** sessions indexed at
+  `user-session:{userId}:{sessionId}: '1'` — a targeted LIST is
+  O(sessions_per_user), not O(total_sessions)
+
+**Layer 3 — CF Access API hard revocation:**
+
+- `POST https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/access/organizations/revoke_user`
+  with `{ email?, user_uid?, devices: true }` — it revokes the user's Access
+  tokens across devices at the organization. *Corrected 2026-09-20: this
+  documented `DELETE …/access/users/{cfSubId}/active_sessions`, which ends the
+  current sessions only. `test/plac-revocation.test.ts` pins the URL, the method
+  and the payload.*
+- `cfSubId` and email come from an active KV session, falling back to
+  `cf_sub_id` / `email` in Supabase `admin_authorized_users`
+- Requires `CF_API_TOKEN_ZT_WRITE`. That token is **not** narrowly scoped —
+  see [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §6 for what it
+  actually holds
+- Fired through `ctx.waitUntil()` **only when the caller passes a context**. The
+  Sessions page does; `force-kick.ts` and both call sites in `manage.ts` do not,
+  so for those three the CF API call is awaited inline and its latency is on the
+  actor's response
+
+**Failure mode:** the flag is written first, so a failure in the session sweep
+still leaves re-bootstrap blocked. A Layer 3 failure is logged and non-fatal —
+the `CF_Authorization` cookie stays valid, but the flag still refuses session
+creation, and the user is fully locked out at CF session expiry (max 24 h).
 
 ---
 
@@ -382,10 +511,21 @@ Role mutations, account deactivation, and PLAC changes trigger a 3-layer securit
 
 - All form inputs validated server-side before processing
 - Parameterized D1 queries only — never string concatenation
-- `VALID_ROLES` application-level allowlist rejects invalid role values before DB insertion
-- Zod schemas cover every JSON-body route (see `MAINTENANCE.md` C-7)
-- **All API error responses return generic messages** — no stack traces, SQL errors, schema details, or internal paths leak to the client. Never do `return jsonError(500, error.message)` — always use a static string.
-- Hidden accounts return identical 404 response shape whether they exist or not — prevents enumeration
+- Role values pass through `normalizeRole()` / `storedRoleOrNull()`
+  (`src/lib/auth/rbac.ts`) plus the zod schemas before any DB write — an
+  unrecognised value is refused. *Corrected 2026-09-20: this named a
+  `VALID_ROLES` allowlist; no such symbol exists.*
+- Zod schemas cover every JSON-body route (see `../MAINTENANCE.md` C-7)
+- **API error responses should return generic messages** — no stack traces, SQL
+  errors, schema details or internal paths. `return jsonError(500, error.message)`
+  is the anti-pattern. **This is the rule, not yet the state:** 10 routes still
+  return the caught exception's message on a 500, among them
+  `src/pages/api/audit/delete.ts`, `src/pages/api/arco/requests/[id].ts` and
+  `src/pages/api/retention/purge.ts`. Find them with
+  `grep -rn "jsonError(500, message)" src/pages/api`. A SEC rule would make this
+  enforceable; until then, treat the claim as an intention
+- Hidden accounts are intended to return an identical 404 shape whether or not
+  they exist. Not re-verified against the handlers in this pass
 
 ---
 
@@ -421,18 +561,47 @@ try {
 | `GET /api/bookings` | authenticated | Booking list |
 | `GET /api/media/gallery` | `admin` | Gallery management |
 | `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
-| `GET /api/users` | canonical **Admin** (stored `super_admin`) | Full user list |
-| `POST /api/features/toggle` | `dev` | Feature flag mutations |
-| `GET /api/users/[id]/session-status` | canonical **Admin** (stored `super_admin`) | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
+| `GET /api/users` | bare `requireAuth` + PLAC on `/dashboard/users` | Full user list. Admin is the floor only because the registry row says so, so a PLAC grant can change it — *this row read "canonical Admin via `requireAuth`" until 2026-09-20* |
+| `POST /api/features/toggle` | `dev` + PLAC on `/dashboard/settings/features` | Feature flag mutations |
+| `GET /api/users/[id]/session-status` | bare `requireAuth` + PLAC on `/dashboard/sessions` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
 
 ### Page-Level Access Control on API routes (`placDenyResponse`)
 
-Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own auth posture; see §6 of `plac-and-audit.md`). To make sure an explicit PLAC deny on a dashboard page also blocks the underlying API calls, sensitive routes opt in via the `placDenyResponse(actor, pagePath)` helper from `src/lib/auth/guard.ts`. The helper:
+> **Rewritten 2026-09-20.** The text here said the middleware "deliberately
+> skips PLAC for `/api/*`" and that the helper allows when the actor has no PLAC
+> map. Both were true before 2026-08-12 and are the opposite of the current
+> behaviour — and the first contradicted this document's own §0 row.
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §9
+> owns API authorization.
 
-- Returns `null` (allow) for any DEV actor — DEV is the break-glass tier; PLAC denies on DEV are meaningless.
-- Returns `null` when the actor has no PLAC map (defensive — falls back to the role check the route already performed).
-- Honors the same resolution rules as page navigation: exact-match wins, then longest-prefix-match. An explicit `false` denies; any other state allows.
-- Returns a fully-formed `403` JSON `Response` when denied (no-store / nosniff headers included) so callers can early-return: `const denied = placDenyResponse(actor, '/dashboard/logs'); if (denied) return denied;`
+**The pipeline enforces PLAC on `/api/*`.** With `API_DENY_MODE = "enforce"`,
+`decide()` (`src/lib/auth/stages/decide.ts`) resolves every `/api/*` path
+through `API_PAGE_MAPPING` (longest prefix first) and:
+
+- **mapped** → the page decision applies; a deny returns 403
+- **public / webhook** → allowlisted by design
+- **no match at all** → `unmapped_route`, denied 403. A missing map is a deny,
+  not an allow, and `test/api-authz-inventory.test.ts` fails CI if any `/api/*`
+  route is unmapped, so shipping a route without a mapping is a build error
+- `shadow` mode records an `api_authz_shadow_deny` row and allows; any
+  unrecognised value of `API_DENY_MODE` enforces
+
+Two independent gates therefore guard an API route, and both must pass. The
+second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
+`src/lib/auth/guard.ts` (wrapping `requirePageAccess`). That helper:
+
+- Returns `null` (allow) for **vendor_support and owner**, who bypass every
+  deny by design (ADR-0002)
+- **Throws 403 when the actor has no PLAC map.** A map goes missing when session
+  hydration fails or a stale session carries the pre-refactor shape, neither of
+  which says anything about whether the route's own role check was sufficient —
+  so the defensive reading is to deny and make the user re-authenticate
+- Applies explicit-deny semantics: exact match wins, then longest prefix. A key
+  the registry does not define passes *here* (the route's own role check still
+  applies), while the middleware gate uses `decideAccess()` and denies the unknown
+- Returns a fully-formed `403` JSON `Response` when denied (no-store / nosniff
+  headers included) so callers can early-return:
+  `const denied = placDenyResponse(actor, '/dashboard/logs'); if (denied) return denied;`
 
 **Routes wired (all data-bearing routes now enforce PLAC):**
 
@@ -454,20 +623,34 @@ Astro middleware deliberately skips PLAC for `/api/*` (each route picks its own 
 | `POST /api/users/access` | `/dashboard/users` | 2026-05-26 | Added before the existing 5-gate hierarchy check; a PLAC-denied admin can no longer mutate PLAC. |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
-| `GET /api/users/active-sessions` (+ `DELETE`) | `/dashboard/users` | 2026-05-26 | DELETE additionally has a 30/min revoke rate limit. |
-| `GET /api/users/active-revocations` (+ `DELETE`) | `/dashboard/users` | 2026-05-26 | DELETE additionally has a 30/min unblock rate limit. |
+| `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. |
+| `GET /api/sessions/active-revocations` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | `denySessions()` + `#unblock`. DELETE additionally has a 30/min unblock rate limit. |
+| `POST /api/sessions/flush-sessions` | `/dashboard/sessions` | 2026-09 | `denySessions()` + `#flush`. |
 | `GET/POST /api/settings/portal` | `/dashboard/settings` | 2026-05-26 | |
 | `GET/POST /api/content/services` | `/dashboard/content` | 2026-05-26 | |
 | `POST /api/content/blocks` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/faqs` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/stats` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/reviews` | `/dashboard/content` | 2026-05-26 | |
-| `GET/POST /api/media/gallery` | `/dashboard/content/media` | 2026-05-26 | |
-| `POST /api/media/upload` | `/dashboard/content/media` | 2026-05-26 | |
-| `GET/DELETE /api/media/library` | `/dashboard/content/media` | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
-| `POST /api/media/revalidate` | `/dashboard/content/media` | 2026-05-26 | |
+| `GET/POST /api/media/gallery` | `/dashboard/content/media` (middleware) | 2026-05-26 | See the media note below. |
+| `POST /api/media/upload` | `/dashboard/content/media` (middleware) | 2026-05-26 | |
+| `GET/DELETE /api/media/library` | `/dashboard/content/media` (middleware) | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
+| `POST /api/media/revalidate` | `/dashboard/content/media` (middleware) | 2026-05-26 | |
 
-All data-bearing API routes that map to a dashboard page now enforce PLAC. Internal/operational endpoints (`/api/health`, `/api/diagnostics/*`, `/api/features/toggle`) remain on role-only gates by design — they don't map to a single dashboard page.
+**Media note (2026-09-20).** The four media handlers call
+`placDenyResponse(user, '/dashboard/media')`, but that key is neither a page nor
+a registry row, so their route-level check resolves against nothing and is
+effectively inert. The gate that actually holds is the middleware mapping
+`/api/media` → `/dashboard/content/media`. Flagged to the code owners; the fix
+is a one-word change in the handlers, not in this document.
+
+All data-bearing API routes that map to a dashboard page enforce PLAC — and
+since the `enforce` flip, so does every other `/api/*` route, because an unmapped
+path is denied. `/api/health` is the only genuinely public endpoint of the three
+previously listed here: `/api/diagnostics` maps to `/dashboard/debug/diagnostics`
+and `/api/features/toggle` maps to `/dashboard/settings/features`
+(`src/lib/auth/routes.ts`). *That sentence previously said all three were on
+role-only gates "by design".*
 
 ---
 
@@ -482,8 +665,8 @@ All data-bearing API routes that map to a dashboard page now enforce PLAC. Inter
 | `POST /api/system/preview` | 20/min | `system-preview` | `actor.userId` |
 | `POST /api/system/pages` (PATCH) | 3/min | `registry` | `actor.userId` |
 | `POST/PATCH/DELETE /api/users/manage` | 10/h | `users-manage` | `session.userId` |
-| `DELETE /api/users/active-sessions` | 30/min | `session-revoke` | `session.userId` |
-| `DELETE /api/users/active-revocations` | 30/min | `revocation-unblock` | `session.userId` |
+| `DELETE /api/sessions/active-sessions` | 30/min | `session-revoke` | `session.userId` |
+| `DELETE /api/sessions/active-revocations` | 30/min | `revocation-unblock` | `session.userId` |
 | `GET /api/users/cf-access-audit` | 10/min | `cf-access-audit` | `session.userId` |
 | `POST /api/content/blocks` | 30/h | `content-blocks` | `user.userId` |
 | `POST /api/content/faqs` | 30/h | `content-faqs` | `user.userId` |
@@ -497,12 +680,20 @@ All data-bearing API routes that map to a dashboard page now enforce PLAC. Inter
 | `POST /api/storage/[id]/share` | 20/h | `storage-share-create` | `user.userId` |
 | `POST /api/storage/[id]/share/email` | 10/h | `storage-share-email` | `user.userId` |
 | `POST /api/storage/requests` | 20/h | `storage-request-create` | `user.userId` |
-| `GET/POST /api/storage/share/[token]` | 20/min | `storage-share-consume` | hashed client IP — **public route, see §2a** |
-| `GET/POST /api/storage/request/[token]` | 30/min | `storage-request-consume` | hashed client IP — **public route, see §2a** |
-| `POST /api/storage/request/[token]/presign` | 20/min | `storage-request-presign` | hashed client IP — **public route, see §2a** |
-| `POST /api/storage/request/[token]/confirm` | 20/min | `storage-request-confirm` | hashed client IP — **public route, see §2a** |
+| `GET/POST /api/storage/share/[token]` | 20/min | `storage-share-consume` | raw client IP — **public route, see §2a** |
+| `GET/POST /api/storage/request/[token]` | 30/min | `storage-request-consume` | raw client IP — **public route, see §2a** |
+| `POST /api/storage/request/[token]/presign` | 20/min | `storage-request-presign` | raw client IP — **public route, see §2a** |
+| `POST /api/storage/request/[token]/confirm` | 20/min | `storage-request-confirm` | raw client IP — **public route, see §2a** |
+| `POST /api/auth/logout` | 10/min | `auth-logout` | raw client IP |
+| `POST /api/emails/webhook` | 120/min | `brevo-webhook` | raw client IP |
 
-Rate limiting uses Upstash Redis sliding-window via `src/lib/ratelimit.ts`. Falls back to allow-all in local dev (missing Upstash credentials). The four public storage routes additionally use `safeRateLimit()`, which fails **closed** (denies the request) if the Upstash call itself errors, rather than the fail-open default — the right posture for unauthenticated routes.
+Rate limiting uses Upstash Redis sliding-window via `src/lib/ratelimit.ts`.
+Missing Upstash credentials fall back to allow-all in local dev but **deny in
+production** — read `src/lib/ratelimit.ts` before assuming a missing binding is
+harmless. `safeRateLimit()` fails **closed** if the Upstash call itself errors;
+it is used by **11 route files**, not only the four public storage routes — the
+AI generation routes and the authenticated storage routes use it too
+(`grep -rln "safeRateLimit(" src/pages`). *Both corrections 2026-09-20.*
 
 ### Zod Schema Validation
 
@@ -524,13 +715,30 @@ The `services.ts` POST no longer spreads `rawBody` directly — only validated f
 
 ### Analytics Provider Timeouts
 
-All 8 analytics providers in `src/lib/analytics/providers/` use `AbortSignal.timeout(5000)` on every external `fetch()`. This prevents a slow upstream (Cloudflare GraphQL, Supabase metrics, Sentry, Resend) from consuming the entire 10 ms CPU budget on a Workers free-tier request.
+The analytics providers in `src/lib/analytics/providers/` put an
+`AbortSignal.timeout()` on every external `fetch()` — 5000 ms in most places,
+4000 ms on two Cloudflare calls. This bounds how long a slow upstream
+(Cloudflare GraphQL, Supabase metrics, Sentry, **Brevo** — `fetchBrevo`, not
+Resend) can hold a request open. Note what it does *not* do: a fetch timeout
+bounds wall-clock time, while the Workers free-tier budget is 10 ms of **CPU**
+time, which an awaited fetch does not consume. *Corrected 2026-09-20.*
 
 ---
 
 ## 7. Request Tracing
 
-Every request receives a unique `X-Request-ID` header generated via `crypto.randomUUID()`. This ID can be correlated with audit log entries in `admin_audit_log` to trace the full lifecycle of any request from ingress → mutation → audit write.
+**There is no `X-Request-ID` header.** Nothing under `src/` sets or reads one;
+`grep -rni x-request-id src` returns nothing. *This section claimed one until
+2026-09-20.* What exists:
+
+- **`CF-RAY`** — Cloudflare's per-request ID. It is stored on the session
+  (`rayId`), on every `admin_login_logs` row (`cf_ray_id`), and it is the handle
+  that links a request to the Cloudflare dashboard trace. This is the ID to use.
+- **`rid`** — a `crypto.randomUUID()` generated inside the auth pipeline
+  (`src/lib/auth/pipeline.ts`) and written into the `details` JSON of authz
+  audit events (`src/lib/auth/stages/decide.ts`). It correlates the authz
+  decisions *within* one request; it never leaves the server and is not on any
+  response.
 
 ---
 
@@ -538,7 +746,7 @@ Every request receives a unique `X-Request-ID` header generated via `crypto.rand
 
 | Protection | Implementation |
 |-----------|----------------|
-| JWT absence → 401 | **Fail-close**: absent `CF-Access-JWT-Assertion` returns 401 immediately — no session bootstrap possible without the JWT |
+| JWT absence → refuse | **Fail-close**: without `CF-Access-JWT-Assertion` no session can be bootstrapped. An API path gets 401; a page path is redirected to `/?error=missing_token` so the visitor meets the Access challenge rather than a bare error (`src/lib/auth/stages/assertion.ts`) |
 | JWT signature verification | RS256 via JWKS from `https://{team}.cloudflareaccess.com/cdn-cgi/access/certs` |
 | Audience validation | `aud` claim matched against `CF_ACCESS_AUD` env var (app-specific tag) |
 | Whitelist check | Email verified against `admin_authorized_users` (Supabase) before session creation |
@@ -551,40 +759,24 @@ Every request receives a unique `X-Request-ID` header generated via `crypto.rand
 
 ## 9. Required Production Secrets & Vars
 
-Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
+**Owner: [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §5.** That
+section is derived from the live Worker and from the `[secrets] required` block
+in `wrangler.toml`, which `wrangler deploy` enforces. Read it there.
 
-### Secrets (never committed)
+*Replaced 2026-09-20.* A 14-row copy of the secrets table lived here and had
+drifted badly: it named `CF_API_TOKEN` and `CF_ZONE_ID` (the real names are
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID`), listed `SITE_URL` — a
+`[vars]` entry — as a secret, and omitted ten required secrets. Two facts worth
+carrying here because they are security-relevant rather than operational:
 
-| Secret | Purpose |
-|--------|---------|
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase DB operations (no GoTrue — authorization whitelist + bookings/chatbot/RLS) |
-| `REVALIDATION_SECRET` | Authenticates ISR webhooks (cf-admin → cf-astro) |
-| `SITE_URL` | CSRF Origin validation + cookie prefix decision |
-| `UPSTASH_REDIS_REST_URL` | Redis connection for rate limiting |
-| `UPSTASH_REDIS_REST_TOKEN` | Redis auth token |
-| `CF_API_TOKEN` | Cloudflare GraphQL analytics access |
-| `CF_API_TOKEN_ZT_WRITE` | Zero Trust: Edit — Layer 3 force-kick (DELETE active sessions via CF API) |
-| `CF_API_TOKEN_READ_LOGS` | Zero Trust: Read — audit log cron polling (5-min failed-login sync) |
-| `CF_ZONE_ID` | Specific CF zone for HTTP metrics |
-| `RESEND_API_KEY` | Outgoing emails + dashboard metrics |
-| `SENTRY_AUTH_TOKEN` | Sentry API for error feed |
-| `IP_HASH_SECRET` | Privacy-safe IP hashing for login forensics |
-| `CHATBOT_WORKER_URL` | cf-chatbot Worker endpoint |
-| `CHATBOT_ADMIN_API_KEY` | 64-character key securing cf-chatbot access |
-
-### Vars (in wrangler.toml)
-
-| Var | Purpose |
-|-----|---------|
-| `PUBLIC_SUPABASE_URL` | Supabase project URL (DB queries — not auth) |
-| `CF_TEAM_NAME` | Zero Trust team name (e.g. `mascotas`) for logout redirect URL construction |
-| `CF_ACCESS_AUD` | CF Access Application Audience tag — required for RS256 JWT audience check |
-| `CF_ACCOUNT_ID` | Cloudflare account ID (already used for analytics; also needed for audit log cron + Layer 3) |
-
-**Removed secrets (no longer in codebase):**
-
-- `PUBLIC_SUPABASE_ANON_KEY` — GoTrue client-side auth removed
-- `TURNSTILE_SECRET_KEY` — Turnstile CAPTCHA removed (no login form)
+- **`IP_HASH_SECRET` is not just an IP hash key.** It is the HKDF root for the
+  share-link, file-request, passcode and unsubscribe signing keys
+  (`src/lib/storage/share-token.ts`). Rotating it invalidates every live share
+  link, file-request link, stored passcode hash and unsubscribe link. It is not
+  a routine rotation.
+- **`RESEND_API_KEY` is not the outgoing-mail key.** Brevo carries transactional,
+  marketing and security-alert mail; Resend is used only by staff invites and a
+  diagnostics ping.
 
 ---
 
@@ -597,7 +789,12 @@ Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
 
 **Zero Anon Access:** The `anon` role has **zero table-level grants**, **zero RLS policies**, and **zero function EXECUTE privileges** across the entire `public` schema. Default privileges are also revoked so future tables inherit this lockdown.
 
-**Service-Role Exclusive:** All 3 applications (`cf-admin`, `cf-chatbot`, `cf-astro`) access the database via either `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS) or direct `DATABASE_URL` PostgreSQL connection (bypasses PostgREST). No application code uses the Supabase anon key.
+**Service-Role Exclusive — with one documented exception.** `cf-admin` and
+`cf-chatbot` access the database via `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS)
+or a direct `DATABASE_URL` connection (bypasses PostgREST). `cf-astro`'s public
+forms write through the dedicated, insert-only `cf_astro_writer` role — see
+§10.2a. No application code uses the Supabase anon key. *Reworded 2026-09-20:
+as written, §10.1 contradicted §10.2a in the same document.*
 
 **Defense-in-Depth:** Even though `service_role` bypasses RLS (via `bypassrls = true`), every table has an explicit `service_role`-only RLS policy. This creates a documented deny-by-default posture for `anon`/`authenticated` roles and prevents accidental exposure if a new code path is added.
 
@@ -605,15 +802,34 @@ Secrets via `wrangler secret put <KEY>`. Vars in `wrangler.toml` `[vars]`.
 
 ### 10.2 Table Policy Matrix
 
-All **20** public tables have RLS **enabled** and a single `"Service role full access"` policy restricted to `TO service_role`. No table has any policy granting access to `anon` or `authenticated`. (Count re-verified live 2026-08-13 via Supabase MCP `list_tables`; the matrix below lists the tables this portal touches, not necessarily all 20 — the chatbot owns the rest.)
+> **Re-derive this before citing it (flagged 2026-09-20).** The matrix below was
+> last checked live on 2026-08-13 and three repo-level facts have moved since,
+> so treat it as indicative, not evidential, until someone re-runs the
+> `pg_policies` query:
+>
+> - `admin_sessions` and `privacy_requests` were **quarantined on 2026-09-16**
+>   (renamed `zz_dead_*`), leaving **18** live tables, not 20.
+> - "A single `Service role full access` policy on every table" cannot be
+>   reconciled with the repo migrations: `contact_message_comments` carries an
+>   `admin_read` policy `FOR SELECT TO authenticated`
+>   (`supabase/migrations/20260708000000_rls_and_indexes.sql`), `tool_call_events`
+>   uses a differently named service-role policy, and four tables carry
+>   `cf_astro_writer` policies (§10.2a).
+> - The matrix omits `contact_messages` and `contact_message_comments`, which
+>   this portal does touch through `InquiryRepository`.
+
+RLS is **enabled** on every public table, and the intended posture is one
+service-role policy per table with no `anon` grant anywhere. The exceptions
+above are the ones the repo can prove; the live grant state was not re-queried
+in this pass.
 
 #### Admin & Session Tables
 
 | Table | Policy | Roles | Notes |
 |-------|--------|-------|-------|
 | `admin_authorized_users` | ALL | service_role | Authorization whitelist — `cf_sub_id` for Layer 3 revocation |
-| `admin_sessions` | ALL | service_role | Session metadata (KV is primary store) |
 | `email_audit_logs` | ALL | service_role | Email dispatch audit; CASCADE on booking delete |
+| `contact_messages`, `contact_message_comments` | ALL (+ an `admin_read` policy `TO authenticated` on the comments table) | service_role, authenticated | Customer inquiries, read through `InquiryRepository` |
 
 #### Chatbot & Analytics Tables (PII — customer data)
 
@@ -636,8 +852,10 @@ All **20** public tables have RLS **enabled** and a single `"Service role full a
 | `booking_pets` | ALL | service_role | Pets linked to bookings |
 | `booking_quality_metadata` | ALL | service_role | Booking quality signals |
 | `consent_records` | ALL | service_role | GDPR/LFPDPPP consent receipts |
-| `legal_requests` | ALL + SELECT | service_role | ARCO rights requests |
-| `privacy_requests` | ALL | service_role | Privacy deletion requests |
+| `legal_requests` | ALL + SELECT | service_role | ARCO rights requests. The identity document itself is **not here** — it is an R2 object owned by cf-astro; this table holds only its MIME type and size |
+
+`admin_sessions` and `privacy_requests` had rows in this table until 2026-09-20.
+Both were renamed `zz_dead_*` on 2026-09-16 and hold no live processing.
 
 > **Historical note (removed 2026-04-29):** Tables `bookings`, `booking_pets`, `booking_quality_metadata`, `consent_records`, `privacy_requests`, and `legal_requests` previously had `anon` INSERT policies for public forms. These were vestigial — GoTrue auth was removed, and no application uses the anon key. All anon policies have been dropped.
 
@@ -653,15 +871,18 @@ role**, `cf_astro_writer`, holding the narrowest possible grants:
 | `consent_records` | `cf_astro_writer_insert` | INSERT only |
 | `bookings` | `cf_astro_writer_insert` | INSERT only |
 | `booking_pets` | `cf_astro_writer_insert` | INSERT only |
-| `privacy_requests` | `cf_astro_writer_insert` | INSERT only |
 | `legal_requests` | `cf_astro_writer_insert`, `cf_astro_writer_select` | INSERT, SELECT |
 
-Verified live via `pg_policies` on 2026-08-13. `anon` holds **zero** policies on
-all five tables, so §10.2's statement is correct as far as it goes — it was
-simply incomplete, and `PRIVACY.md` §2 read the gap as "still `anon`".
+Verified live via `pg_policies` on 2026-08-13; **four** tables, not five —
+`cf_astro_writer_insert` was dropped from `privacy_requests` on 2026-09-16 when
+that table was quarantined
+(`supabase/migrations/20260916000000_supabase_objects_chunk_14a.sql`, corrected
+here 2026-09-20). `anon` holds **zero** policies on all of them, so §10.2's
+statement is correct as far as it goes — it was simply incomplete, and
+`PRIVACY.md` §2 read the gap as "still `anon`".
 
-Why this matters: write-append-only is a materially stronger posture than an
-`anon` grant, and it is a real control worth citing in a compliance answer —
+Why this matters: an insert-only grant to a dedicated role is a materially
+stronger posture than an `anon` grant, and it is a real control worth citing in a compliance answer —
 but only now that it is written down. An undocumented control cannot be
 audited.
 
@@ -669,16 +890,28 @@ audited.
 
 ### 10.3 Function Security
 
-All public functions have `SET search_path = public` to prevent search-path hijacking, and EXECUTE has been **revoked from `anon`, `authenticated`, and `PUBLIC`**. Only `service_role` and `postgres` retain execution privileges.
+All public functions have `SET search_path = public` to prevent search-path
+hijacking. EXECUTE is revoked from `anon`, `authenticated` and `PUBLIC` on
+**four of the six** functions in the schema — not all of them.
+
+> **Corrected 2026-09-20 from a live `has_function_privilege` check.** This
+> section, §11 and the §0 posture row all claimed a blanket revoke.
+> `increment_conversation_metrics` and `purge_expired_privacy_data` are still
+> EXECUTE-able by `anon` and `authenticated`. Neither is `SECURITY DEFINER`, so
+> a caller runs with their own privileges and `anon` holds zero table grants —
+> the body would fail on table access. It is a false claim and a posture defect,
+> **not** a live exposure path today. It becomes one the moment a grant or an
+> RLS policy changes, and `purge_expired_privacy_data` is a deletion routine.
+> The REVOKE needs a Supabase migration and is outstanding work.
 
 | Function | Signature | search_path | EXECUTE Revoked From |
 |----------|-----------|-------------|---------------------|
-| `get_command_center_analytics` | `(p_days integer)` | `public` | anon, authenticated, PUBLIC |
-| `get_kb_clusters` | `(p_resolved boolean)` | `public` | anon, authenticated, PUBLIC |
-| `get_usage_metrics` | `(p_days_ago integer)` | `public` | anon, authenticated, PUBLIC |
-| `increment_conversation_metrics` | `(uuid, text, bool, int, numeric)` | `public` | anon, authenticated, PUBLIC |
-| `increment_conversation_metrics` | `(uuid, text, bool, int, numeric, text)` | `public` | anon, authenticated, PUBLIC |
-| `rls_auto_enable` | (trigger) | `pg_catalog` | anon, authenticated, PUBLIC |
+| `get_command_center_analytics` | `(p_days integer)` | `public` | anon, authenticated, PUBLIC ✅ |
+| `get_kb_clusters` | `(p_resolved boolean)` | `public` | anon, authenticated, PUBLIC ✅ |
+| `get_usage_metrics` | `(p_days_ago integer)` | `public` | anon, authenticated, PUBLIC ✅ |
+| `increment_conversation_metrics` | `(uuid, text, bool, int, numeric[, text])` | `public` | **Not revoked** — `anon` and `authenticated` can EXECUTE. Not `SECURITY DEFINER` |
+| `purge_expired_privacy_data` | `()` | `public` | **Not revoked** — `anon` and `authenticated` can EXECUTE. Not `SECURITY DEFINER`. A deletion routine, so it is the one to fix first |
+| `rls_auto_enable` | (trigger) | `pg_catalog` | anon, authenticated, PUBLIC ✅ (the one `SECURITY DEFINER` function, and it is locked down) |
 
 ---
 
@@ -720,12 +953,18 @@ Removed: 20+ unused indexes dropped to save Free Tier storage (2026-04-29). Dupl
 
 ### 10.6 Required Manual Actions (Phase 0 — CF Dashboard Setup)
 
-> These are one-time setup steps required before the CF Zero Trust auth flow goes live. They cannot be automated — they require manual actions in CF and Google/GitHub dashboards.
+> **Historical procedure, kept as the rebuild recipe.** These one-time steps were
+> run before the CF Zero Trust auth flow went live; they cannot be automated. If
+> you are rebuilding the Access application from this list, note the domain
+> correction below — the original text would have protected the wrong host.
 
 **Cloudflare Zero Trust Application:**
 
 1. Zero Trust → Access → Applications → Add Self-Hosted App
-2. Application domain: `admin.madagascarhotelags.com` with path `/*`
+2. Application domain: **`secure.madagascarhotelags.com`** with path `/*`.
+   *Corrected 2026-09-20 — this said `admin.madagascarhotelags.com`. The
+   Worker's only route is `secure.madagascarhotelags.com` (`wrangler.toml`), so
+   the documented step protected a host the application does not serve.*
 3. Session Duration: **24 hours** (must match KV TTL)
 4. Identity providers: Google, GitHub, One-Time Pin only
 5. Note the **Application Audience (AUD)** tag → add to `wrangler.toml` as `CF_ACCESS_AUD`
@@ -736,8 +975,13 @@ Removed: 20+ unused indexes dropped to save Free Tier storage (2026-04-29). Dupl
 
 **CF API Tokens (dash.cloudflare.com → My Profile → API Tokens):**
 
-- `CF_API_TOKEN_READ_LOGS`: Account → Zero Trust → **Read** permission only
-- `CF_API_TOKEN_ZT_WRITE`: Account → Zero Trust → **Edit** permission only
+- `CF_API_TOKEN_READ_LOGS`: Account → Access Audit Logs / SCIM Logs / Logs → **Read**
+- `CF_API_TOKEN_ZT_WRITE`: the permission Layer 3 actually needs is
+  **Access: Organizations — Revoke**. *Corrected 2026-09-20: this said "Zero
+  Trust → Edit permission only". The token in production is far broader than
+  that — the authoritative inventory of what it holds is
+  [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §6, and narrowing
+  it is open work. Do not cite least privilege for this token.*
 
 **Google Cloud Console — OAuth Redirect:**
 
@@ -762,14 +1006,16 @@ The Supabase database is protected by **three independent layers**. Even if one 
 │  → PostgREST returns 404 for anon on any table           │
 ├─────────────────────────────────────────────────────────┤
 │  LAYER 2: ROW-LEVEL SECURITY (RLS)                       │
-│  All 19 policies restricted to service_role only          │
-│  No policy matches anon or authenticated                  │
-│  → Even with grants, RLS would deny all rows             │
+│  Service-role-only policies on the admin tables, plus     │
+│  four insert-only cf_astro_writer policies (§10.2a)       │
+│  No policy matches anon; one matches authenticated        │
+│  (contact_message_comments admin_read) — see §10.2        │
 ├─────────────────────────────────────────────────────────┤
-│  LAYER 3: FUNCTION ACLs                                  │
-│  EXECUTE revoked from anon, authenticated, PUBLIC         │
+│  LAYER 3: FUNCTION ACLs — INCOMPLETE                     │
+│  EXECUTE revoked on 4 of 6 public functions               │
 │  All functions have pinned search_path                    │
-│  → RPC calls via PostgREST return permission denied       │
+│  → 2 remain callable by anon/authenticated; neither is    │
+│    SECURITY DEFINER, so Layers 1-2 still deny the body    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -797,6 +1043,17 @@ The Supabase database is protected by **three independent layers**. Even if one 
 
 ---
 
+---
+
+> # §13–§15 are historical audit logs
+>
+> **Everything below this line is a point-in-time record of the May 2026 review
+> passes, kept for provenance. It is not the current posture — §0–§12 are.**
+> Banner added 2026-09-20, because three "Items Remaining" lists in these
+> sections had been read as live state long after they were closed. Each list
+> now carries its own status note. They belong in `reviews/` alongside the full
+> reports; moving them is a separate change.
+
 ## 13. Security Audit Log — 2026-05-24 Deep Review
 
 Full report: [`security/reviews/2026-05-24-security-review.md`](./reviews/2026-05-24-security-review.md)
@@ -822,10 +1079,17 @@ Full report: [`security/reviews/2026-05-24-security-review.md`](./reviews/2026-0
 
 | Item | Resolution | Date |
 |------|-----------|------|
-| Security docs synced to public repo via `sync-docs.yml` | **✅ Final approach 2026-05-24.** All `.md` docs are synced — they are the architecture baseline for AI IDE agents (Claude Code, Cursor, Copilot) and must be complete for accurate AI-assisted development. Only non-`.md` files (scripts, binaries) are excluded. **PII redaction** step added: personal developer email addresses (`harshil.*@*`) are replaced with `[DEVELOPER_EMAIL]` before push. Secret scan warns on credential patterns. Architecture content (resource IDs, security design, RBAC/PLAC internals, operational runbooks) is preserved intact — it is essential for AI context and contains no actionable secrets (IDs without API tokens are inert). | 2026-05-24 |
+| Security docs synced to public repo via `sync-docs.yml` | **✅ Approach settled 2026-05-24, narrowed since.** *Status note 2026-09-20: this row no longer describes the workflow.* `sync-docs.yml` now publishes living docs only — `program/`, `records/`, `commercial/`, `MAINTENANCE.md` and several named files are **excluded**, and the redaction step strips dashed UUIDs, 64- and 32-hex strings and 20-character project-ref-shaped tokens as well as personal developer emails. "All `.md` synced, resource IDs preserved intact" has not been true for some time; read `.github/workflows/sync-docs.yml` for what actually ships. | 2026-05-24 |
 | `Content-Security-Policy` — Phase 1 hardening | **✅ Partially done 2026-05-24.** Enforced CSP updated: (1) `https://*.sentry-cdn.com` wildcard replaced with explicit `https://browser.sentry-cdn.com`; (2) `frame-ancestors 'none'` added; (3) `base-uri 'self'` added; (4) `object-src 'none'` added; (5) `form-action 'self'` added; (6) `upgrade-insecure-requests` added; (7) `Permissions-Policy` header added disabling camera/mic/payment/geo/USB/sensors. `Content-Security-Policy-Report-Only` deployed with hardened policy (no `unsafe-inline`/`unsafe-eval`) reporting violations to Sentry. | 2026-05-24 |
 
-### Items Remaining (Require Phase 2 Work — Tracked in §4)
+### Items Remaining (as of 2026-05-24 — status appended 2026-09-20)
+
+> Two of these four are closed and one is mis-sized. `'unsafe-eval'` was removed
+> on 2026-07-25 and SEC-01 now forbids it. The Chart.js SRI item is moot —
+> Chart.js is no longer CDN-loaded; what remains is that `cdn.jsdelivr.net` is
+> still in `SCRIPT_SRC_HOSTS` and should come out (§4). The `style-src` row
+> undercounts by more than an order of magnitude: 885 occurrences, not ~20.
+> Only the `script-src 'unsafe-inline'` row is still live work.
 
 | Item | Root Cause | Required Work |
 |------|-----------|--------------|
@@ -850,7 +1114,7 @@ Shipped on `main` via PR #2 (merge commit `3f8cd78`) as 7 atomic commits.
 | 🟠 High | `src/lib/csrf.ts` | **CSRF Referer prefix bypass** — `referer.startsWith(siteUrl)` accepted `https://secure.example.com.attacker.com/...`. Modern browsers send Origin so exposure was narrow, but the bypass was real. | Anchored match: exact equality to normalized SITE_URL, or prefix followed by `/`. |
 | 🟠 High | `src/pages/api/settings/user.ts` | **Cross-user settings edit ignored target hierarchy** — POST checked editor was admin+ but never the target's role. An admin could rewrite a super_admin's `display_name`, enabling visual impersonation in any UI surface that renders display_name. | When editing another user, fetch target role and reject unless editor strictly outranks target. DEV exempt. |
 | 🟠 High | `src/pages/api/audit/silence.ts` | **DEV self-silence + KV TTL rejuvenation** — DEV could mute their own audit trail by passing their own userId. `propagateAuditSilence` also rewrote every active session with `expirationTtl = SESSION_MAX_LIFETIME` (same bug previously fixed in `patchSession`). | Reject `targetUserId === session.userId` (requires a second DEV). Compute remaining TTL from `session.createdAt`, floor at 60s; read `SESSION_MAX_LIFETIME_MS` from env. |
-| 🟠 High | `src/lib/auth/guard.ts` + 10 routes | **Most API routes bypass PLAC entirely** — Middleware skips PLAC for `/api/*`; many data routes ignored explicit denies on the corresponding page. A super_admin denied `/dashboard/users` could still call `/api/users/manage` etc. | Added `requirePageAccess()` + `placDenyResponse()` helpers. Wired into highest-risk routes (all `/api/audit/*` data endpoints, `audit/prune`, `users/{manage, force-kick, access-data}`). See §6a above. |
+| 🟠 High | `src/lib/auth/guard.ts` + 10 routes | **Most API routes bypassed PLAC entirely** — at the time, the middleware skipped PLAC for `/api/*` (this changed on 2026-08-12, §6a); many data routes ignored explicit denies on the corresponding page. A super_admin denied `/dashboard/users` could still call `/api/users/manage` etc. | Added `requirePageAccess()` + `placDenyResponse()` helpers. Wired into highest-risk routes (all `/api/audit/*` data endpoints, `audit/prune`, `users/{manage, force-kick, access-data}`). See §6a above. |
 | 🟠 High | `src/lib/auth/cloudflare-access.ts` | **JWKS cache double-fetch on rotation** — Bust-and-retry path fetched fresh keys into an unused variable then fell through to a third `fetchPublicKeys()` call. Functionally correct but confusing — next reviewer would misread as "use stale key". | Single reassignable variable; behavior identical. |
 
 ### Additional fixes bundled with the PLAC PR
@@ -858,9 +1122,9 @@ Shipped on `main` via PR #2 (merge commit `3f8cd78`) as 7 atomic commits.
 - `access-data.ts` ghost-protection: non-DEV actors get 403 when querying a DEV/Owner's PLAC matrix (was a back door around the `/api/users` ghost-hiding).
 - `audit/prune.ts` `days` parameter: NaN-safe and bounded to 1–3650. Previous `Math.max(1, parseInt('abc'))` produced silent SQL no-ops.
 
-### Items Remaining (Tracked in `PENDING_PHASES.md`)
+### Items Remaining (as of 2026-05-25)
 
-All Critical and High items shipped in PR #2 (2026-05-25). The follow-up pass on 2026-05-26 (commit `27e6090` — see §15) cleared every Medium and Low item that had a meaningful exploit path or genuine functional impact, plus the entire dependency CVE list. Only soft items remain (audit-log DELETE policy decision, dead-code migration cleanup, advisor lints) — see `PENDING_PHASES.md`.
+All Critical and High items shipped in PR #2 (2026-05-25). The follow-up pass on 2026-05-26 (commit `27e6090` — see §15) cleared every Medium and Low item that had a meaningful exploit path or genuine functional impact, plus the entire dependency CVE list. Only soft items remained: the audit-log DELETE policy decision, dead-code migration cleanup and advisor lints. *Status note 2026-09-20: the tracker referenced here is archived at `../archive/PENDING_PHASES.md`; open work now lives in `../MAINTENANCE.md` and `../program/ROADMAP.md`. The audit-log DELETE decision was ultimately taken the other way — deletion stayed, and the tamper-evidence gap it leaves is item 1 in [`THREAT-MODEL.md`](THREAT-MODEL.md) §3.*
 
 ---
 
@@ -880,8 +1144,8 @@ This pass re-verified every deferred item from the 2026-05-25 review and closed 
 | 🔴 Crit | `bookings/[id]/state.ts` | **`operational_status` accepted any string** (no DB CHECK, no zod allow-list) and `internal_notes` had no length cap. Garbage strings could persist into D1 and corrupt UI filters. | Defined `VALID_OPERATIONAL_STATUS = {'pending','confirmed','in_progress','completed','cancelled','no_show'}`; reject otherwise with 400. Cap `internal_notes` at 2000 chars. |
 | 🟠 High | 16 npm packages | **Production `npm audit`: 16 vulnerabilities** including high-severity `vite` path traversal + WS file read, `devalue` DoS, `fast-uri` path traversal + host confusion, plus moderate-severity `astro` XSS, `@astrojs/cloudflare` SSRF, `postcss` XSS, `ws` memory disclosure, `yaml` stack overflow. | `npm audit fix` (non-breaking) + `@astrojs/cloudflare ^13.1.6 → ^13.5.4` + `@astrojs/check ^0.9.8 → ^0.9.9`. Moved `@astrojs/check` from `dependencies` → `devDependencies` (build-only). **Result: 0 prod vulnerabilities.** |
 | 🟠 High | `src/workers/scheduled-log-sync.ts` | **Email amplification.** For every failed CF Access login returned by the audit poll, one alert email was sent via Resend. A 100-failure burst (misconfigured IdP, password-spraying bot) would burn the Resend quota and silence real alerts. | Cap email notifications at 5 per batch; the 5th email appends a digest line noting how many more failures were suppressed (with a pointer to D1 `admin_login_logs` for the complete set). All failures still write to D1 — only the email fan-out is throttled. |
-| 🟠 High | `src/lib/auth/session.ts:280` (`writeRevocationFlag`) | **TTL hardcoded to 86 400 s.** Drifts whenever `SESSION_MAX_LIFETIME_MS` changes — a 12 h session would be outlived by a 24 h revocation flag. | Read `SESSION_MAX_LIFETIME_MS` via `getSessionTiming(getRawEnv())`; floor at 60 s. Callers unchanged. |
-| 🟠 High | `public/_headers` vs `src/middleware.ts` | **CSP divergence.** `_headers` had `https://*.sentry-cdn.com` wildcard, `https://*.supabase.co` carveouts, and an older `Permissions-Policy` that the middleware version had already dropped. `_headers` isn't consumed by the Workers runtime (this project deploys via `wrangler deploy`, not Pages), so the divergence misled rather than weakened — but the misleading file is now byte-aligned with middleware and carries a header comment clarifying its reference-only role. | Aligned `_headers` to middleware byte-for-byte; added the reference-only banner. |
+| 🟠 High | `src/lib/auth/session.ts` (`writeRevocationFlag`) | **TTL hardcoded to 86 400 s.** Drifts whenever `SESSION_MAX_LIFETIME_MS` changes — a 12 h session would be outlived by a 24 h revocation flag. | Read `SESSION_MAX_LIFETIME_MS` via `getSessionTiming(getRawEnv())`; floor at 60 s. *Status note 2026-09-20: the fixed function has **no callers**. The only live writer of `revoked:` is `src/lib/auth/plac.ts`, which still uses a hardcoded `expirationTtl: 86400`, so the finding is open in practice — either route the writer through `writeRevocationFlag()` or delete it.* |
+| 🟠 High | `public/_headers` vs `src/middleware.ts` | **CSP divergence.** `_headers` had `https://*.sentry-cdn.com` wildcard, `https://*.supabase.co` carveouts, and an older `Permissions-Policy` that the middleware version had already dropped. `_headers` was believed not to be consumed by the Workers runtime, so the divergence misled rather than weakened — but the misleading file is now byte-aligned with middleware and carries a header comment clarifying its reference-only role. *Status note 2026-09-20: that belief was wrong and is contradicted by the §0 row. Workers Static Assets does apply `_headers` — to static-asset responses only, never to SSR (settled by evidence 2026-09-02). `src/lib/security/csp.ts` remains the only file to read for the live SSR policy.* | Aligned `_headers` to middleware byte-for-byte; added the reference-only banner. |
 | 🟡 Med | `audit/{login-logs,export}.ts` | **PLAC parent-deny not propagated** — both used custom `actor.accessMap['/dashboard/logs#security']` / `['#export']` lookups instead of the canonical helper, so a deny on the parent `/dashboard/logs` would not block these endpoints if a stale grant for the hash sub-page existed. | Added `placDenyResponse(actor, '/dashboard/logs')` as the first gate; the existing hash-grant logic remains as secondary. Order matters: parent deny wins. |
 | 🟡 Med | `users/access.ts` | **PLAC-denied admin could still POST PLAC changes.** The route had its full 5-gate hierarchy but never checked whether the actor was allowed to reach `/dashboard/users` in the first place. | `placDenyResponse(actor, '/dashboard/users')` added before any of the existing gates. |
 | 🟡 Med | `users/{active-sessions, active-revocations, cf-access-audit}.ts` | **No rate limit on privileged ops.** Session revocation, edge-block unblock, and CF Access user enumeration were unthrottled. `cf-access-audit` is the most sensitive — it enumerates every CF Access user in the account. | Added Upstash limiters: 30/min revoke, 30/min unblock, 10/min CF Access audit. Keyed by `session.userId`. |

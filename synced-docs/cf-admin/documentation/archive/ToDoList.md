@@ -10,6 +10,16 @@ tags: []
 
 # cf-admin — Phase 4 Hardening Backlog
 
+> **ARCHIVED — not a live tracker.** This is the 2026-05-02 backlog, frozen, and
+> the sentence below ("tracks all remaining hardening items") has not been true
+> for months. The live backlog is [`../MAINTENANCE.md`](../MAINTENANCE.md).
+> Items still flagged 🟡 open here are resolved or decided: 16, 18, 20 and 22
+> were fixed on 2026-07-08, and 13 was decided on 2026-09-15. Item 14 is the
+> same privilege-ceiling gap as M-5 in `PENDING_PHASES.md` and is still open —
+> it is tracked as item 14 in `MAINTENANCE.md`. The stack described below is the
+> 2026-05 stack; the current one is in `RULESAd.md`. Do not act on a status
+> symbol in this file without checking `MAINTENANCE.md` and the code first.
+
 > **Context:** This document tracks all remaining hardening items from the senior dev + security audit conducted 2026-05-02. Phases 1–3 of the audit are complete (see `SECURITY.md` for a full record of what was fixed). Everything here is Phase 4: lower-severity polish, defensive hardening, and cleanup that carries no immediate incident risk but should be resolved before any significant traffic spike or security review.
 >
 > **How to read this doc:** Each item contains the exact file, exact line(s), root cause, why it matters, what the fix looks like, what NOT to do, and current status. Written for an AI IDE or future developer who has zero context from prior conversations.

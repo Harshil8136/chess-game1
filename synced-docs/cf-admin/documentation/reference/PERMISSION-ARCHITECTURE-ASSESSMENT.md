@@ -1,9 +1,9 @@
 ---
 
 title: "Permission Architecture Assessment — Current System vs. Proposed JWT Design, Benchmarked & Scaled"
-status: draft
+status: historical
 audience: [ai, technical, owner, non-technical]
-last_verified: 2026-08-10
+last_verified: 2026-09-20
 verified_against: [code, infra, research]
 owner: harshil
 related_code: [src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/auth/session.ts, src/lib/auth/pipeline.ts, src/lib/auth/cloudflare-access.ts, src/lib/audit.ts]
@@ -13,9 +13,24 @@ tags: [rbac, plac, authorization, cfzt, kv, d1, scaling, benchmarks, assessment,
 
 # Permission Architecture Assessment — Current System vs. Proposed JWT Design
 
-> **Status note (2026-08-23).** This is an assessment of alternatives. For what is
-> actually built and measured today, see
-> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+> ## 📕 HISTORICAL — a decision record, assessed 2026-08-10. Not a description of the current system.
+>
+> **What is still worth reading:** §2, §3, §4 and §6 — the fact-check of the
+> browser-held-JWT proposal and, above all, §3.1's argument that a staff-access
+> system cannot trade away real revocation for statelessness. That argument
+> decided the question and still holds.
+>
+> **What must not be trusted:** **§1 and §1.7** describe the system as it stood
+> on 2026-08-09, before chunk 10 (2026-09-02) split the auth pipeline and before
+> the access-revocation remediation (2026-09-16) replaced force-logout with the
+> `authz-changed` mark. Several of its statements are now wrong, and the
+> corrections are marked inline below. **§5's cost model is refuted at its root**
+> — see the correction above §5.2.
+>
+> **The owner of every current-system fact is**
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
+> — role ladder, PLAC, API authz, revocation and measured cost. Where that doc
+> and this one disagree, that doc is right. Do not copy a number out of here.
 
 
 > **TL;DR (non-technical):** Someone (an AI, in an earlier discussion) proposed replacing
@@ -54,7 +69,14 @@ tags: [rbac, plac, authorization, cfzt, kv, d1, scaling, benchmarks, assessment,
 
 ---
 
-## 1. How the current system works (verified live, 2026-08-09)
+## 1. How the system worked (verified live, 2026-08-09 — **superseded**)
+
+> ⚠️ **This section is a 2026-08-09 snapshot, kept because §3 and §4 argue
+> against it.** For current behaviour read
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+> The four statements corrected inline below were wrong enough to send an
+> operator to the wrong file: the expired-token path (§1.1), "deny always wins"
+> (§1.3), "revoking force-logs-out" (§1.3/§1.5) and the live catalog (§1.7).
 
 Two separate planes cooperate: **identity** (proving who you are) and **authorization**
 (deciding what you can do). Identity is proven once, at the Cloudflare network edge, by
@@ -72,6 +94,14 @@ table (PLAC) that can grant or deny beyond that default.
    published signing keys, its expiry, its issuer, and its intended audience. A bad or
    expired token is routed back through Cloudflare's own logout endpoint, which also
    clears the identity cookie itself.
+   > ⚠️ **Wrong — corrected 2026-09-20.** Nothing calls a Cloudflare logout
+   > endpoint on this path and no cookie is cleared. `src/lib/auth/stages/assertion.ts`
+   > returns `401 {"error":"Invalid or expired auth token"}` on an `/api/*` path
+   > and redirects to `/?error=expired_token` on a page. Missing identity and
+   > missing token behave the same way, with their own error codes. Cookies are
+   > cleared (`CLEAR_COOKIES`) only on a *revocation* refusal, in
+   > `stages/bootstrap.ts`. The C-20 / C-23 fix that produced this behaviour
+   > shipped 2026-09-04, after this document's assessment date.
 3. The verified email is cross-checked against a **whitelist table** (a managed
    database, not the edge database) — a row must exist, be marked active, and carry a
    role. Not found or inactive → access denied, unconditionally.
@@ -82,6 +112,15 @@ table (PLAC) that can grant or deny beyond that default.
 5. A fresh application session is created and cached (§1.4).
 6. Every login attempt — success or failure, and every distinct failure reason — is
    logged to a durable table and triggers a real-time email alert.
+   > ⚠️ **Not *every* — corrected 2026-09-20.** Read "every refusal from the
+   > directory lookup onward". Four refusals happen *before* it and emit
+   > nothing — no login-log row and no alert email: `missing_identity`,
+   > `missing_token` and `expired_token` all return directly from
+   > `src/lib/auth/stages/assertion.ts` without reaching `emitLoginEvent`, and
+   > `role_unrecognised` is excluded on purpose — `stages/bootstrap.ts` calls it
+   > "a configuration error, not a login, and the one refusal in this file that
+   > emits no login event". (The alert email itself goes via **Brevo**, not
+   > Resend — `src/lib/auth/security-logging.ts`.)
 
 ### 1.2 RBAC — the role hierarchy
 
@@ -116,10 +155,31 @@ exceptions table's key is (user, page) — one row per pair — a grant and a de
 literally never coexist for the same person and page, so "deny wins" is a database
 guarantee, not just a convention followed in code.
 
+> ⚠️ **"Always" is wrong for two of six roles — corrected 2026-09-20.** The
+> primary-key argument holds for building the map. At **request** time,
+> `resolveAccess()` (`src/lib/auth/decide-access.ts`) returns `'allow'` for
+> `vendor_support` and `owner` **before it reads the map at all**. That is a
+> deliberate ADR-0002 decision, explained in the resolver's own header: a
+> self-inflicted lockout of the customer's top tier is the worse failure, and
+> only vendor support can write a deny against an owner. So: *deny wins over a
+> grant and over the role default, for every role except `vendor_support` and
+> `owner`, which bypass the map by design.* Someone designing a deny for an
+> owner would otherwise be surprised.
+
 A small number of special "sub-feature" permissions (e.g., "can export this page's
 data," "can permanently delete this page's records") are modeled as extra rows in the
 same page registry rather than as a separate system — they resolve through the exact
 same grant/deny/default logic as any real page.
+
+> ⚠️ **Not the *exact* same logic — corrected 2026-09-20.** Fragments share the
+> map-build precedence, but the two request-time predicates differ by design:
+> `decideAccess` (the middleware gate and the sidebar) treats `unknown` as no,
+> while `isExplicitlyDenied` (`requirePageAccess`, the handler guard) refuses
+> only an explicit deny — so a fragment key the registry does not define
+> **passes**. This is why a missing registry row is a security bug rather than a
+> cosmetic one, and it is exactly the defect migration `0055` was written to
+> repair. See [`schema-change-ledger.md`](schema-change-ledger.md): "`placDenyResponse`
+> on a fragment permits every role until its row exists."
 
 The endpoint that lets an admin grant or revoke another user's page access enforces, in
 order: the actor must themselves have access to the user-management page; the request
@@ -133,6 +193,18 @@ above their own clearance level. Revoking access force-logs-out the target
 immediately; granting or resetting access does not — the target's already-cached
 permissions can take up to about an hour to reflect a newly granted page, a known and
 accepted trade-off (see §1.4).
+
+> 🚨 **Both halves changed on 2026-09-16 — corrected 2026-09-20.**
+> `src/pages/api/users/access.ts` now calls `markAuthzChanged(kv, [targetUserId], env)`
+> for **grant, revoke and reset alike**, and force-logs-out nobody. The session
+> stage reads that mark in the same bulk KV read as the revocation flags, and a
+> session whose stored mark differs re-verifies its role against Supabase and its
+> page map against D1 **on that request** — so a grant lands on the next request,
+> not in an hour, and a revoke no longer writes a 24-hour sign-in block. That
+> block is what stranded the only Owner for more than 14 hours, which is why the
+> remediation happened; see `src/lib/auth/authz-signal.ts` and
+> [`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md).
+> **Do not reason from "revocation force-logs-out" anywhere in this document.**
 
 ### 1.4 The cache layer — why this is fast
 
@@ -150,6 +222,17 @@ repeated requests from the same person in quick succession don't pay even the ca
 lookup's cost more than once every few seconds.
 
 ### 1.5 Instant-revocation guarantee — three independent layers
+
+> ⚠️ **Narrowed on 2026-09-16 — corrected 2026-09-20.** The three-layer
+> force-kick below is real and still used, but **only** for force-kick,
+> deactivation, deletion and the Sessions page's block action. A *permission*
+> change (role change, page revoke, access-request approval) no longer triggers
+> it — layer 2's `revoked:` flag is a **24-hour** block on all sign-ins, and
+> using it for ordinary permission edits is what locked the Owner out. Stage 2
+> of the remediation retires the user-level flag entirely; it has not shipped, so
+> the flag is still written by `src/lib/auth/plac.ts` and still read on the login
+> path. §3's revocation-vs-statelessness argument is unaffected — that argument
+> is about whether revocation is *possible at all*, and it is.
 
 When an account needs to be cut off immediately — role change, deactivation, deletion,
 a manual "kick this user" action, or an explicit access revocation — the system does
@@ -182,12 +265,19 @@ writing to exactly one destination table, and a prior "let the person being audi
 silence their own entry" escape hatch was identified as a real risk and removed
 entirely.
 
-### 1.7 The current permission catalog, measured live
+### 1.7 The permission catalog — a **2026-08-09 snapshot**
 
-Everything above is described structurally. Here is what it actually looks like
-today, pulled directly from the live production database rather than estimated:
+Everything above is described structurally. Here is what it looked like on
+**2026-08-09**, pulled from the live production database rather than estimated.
 
-| What was measured | Live result |
+> ⚠️ **Stale — re-measured live 2026-09-20: 97 rows (86 active, 11 disabled),
+> **51 fragments** and 46 real pages, and **4** per-user overrides.** Fragments
+> are now the majority, not "almost exactly half", and the override count has
+> quadrupled. Both derived conclusions below are therefore out of date. For
+> current counts read
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §5.
+
+| What was measured (2026-08-09) | Result that day |
 |---|---|
 | Total page-registry rows (real pages + `#fragment` sub-permissions) | 89 — 78 active, 11 currently disabled |
 | Split between real pages and `#fragment`-style sub-permissions | 44 real pages, 45 fragments |
@@ -278,9 +368,9 @@ API), not toward it.
 | Revocation guarantee | **Three independent layers**, including a direct, cache-independent call to the identity provider (§1.5) | **One layer** — a cache version flag, with the same ≤60-second worst case as today's own flag, and no identity-provider-level kill described |
 | Free-tier cache-write budget | Already the tightest resource ceiling in the current design (§5) — dominated by routine activity tracking, not by permission checks | Adds a version-bump write on top of that same existing budget for every permission edit — makes the already-tightest ceiling tighter, not looser, especially under fast-changing role/permission catalogs |
 | Size ceiling on the cached permission payload | None meaningful — server-side only | The browser's own per-cookie limit (a few kilobytes) — a real, self-imposed constraint the current design never has to think about |
-| Hot-path latency | ~6–10ms, already measured | Not measurably faster — dominated by the same cache-lookup cost structure |
+| Hot-path latency | ⚠️ *This row said "~6–10 ms, already measured". **It was never measured.** The owning doc states that Worker CPU time is **not measurable** from this environment and that no number should be quoted before `wrangler tail` or Workers analytics confirms one. What **is** measured (Sentry, 30-day window to 2026-08-23, n=2,920) is whole-transaction `GET /dashboard`: **avg 128.7 ms, p95 219.4 ms**.* | Not measurably faster — dominated by the same cache-lookup cost structure. *(That conclusion survives: neither side has a measured hot-path CPU figure, so the comparison was always a wash.)* |
 | New moving parts required | None — already built and running | Token signing/verification, a secret-rotation story for the signing key, an in-process cache layer with no defined expiry policy in the proposal as written, and a "push the cache update the moment something changes" mechanism |
-| Rough code surface to build/maintain | None (already exists) | A meaningfully larger surface for a system whose entire current implementation lives in three focused files |
+| Rough code surface to build/maintain | None (already exists) | A meaningfully larger surface. ⚠️ *This cell said "three focused files". Since chunk 10 (2026-09-02) the pipeline is a 77-line orchestrator over **nine** stage modules in `src/lib/auth/stages/`, plus `plac.ts`, `rbac.ts`, `session.ts`, `guard.ts`, `decide-access.ts`, `surface-guards.ts`, `authz-signal.ts` and `routes.ts` — 17 files under `src/lib/auth/`. The comparison is weaker than stated, though still directionally right: the JWT design adds its surface **on top of** this one.* |
 | Fit for "unlimited roles/groups/permissions" | Already has a fully worked-out, sourced blueprint for this (§6.4) that doesn't touch any of the above | Doesn't actually help this specific goal — the browser-held-token question and the "how do we model 100+ permissions" question are unrelated; solving the second doesn't require solving it via the first |
 
 ---
@@ -309,32 +399,52 @@ activity tracking (an "I'm still here" heartbeat, refreshed frequently while som
 actively using the portal), which is a design decision independent of whether
 permissions are delivered via a server-held cache or a browser-held token.
 
-### 5.2 Per-active-staff-member cache-write cost, per day
+### 5.2 / 5.3 Per-staff cache-write cost — 🚨 **REFUTED AND WITHDRAWN**
 
-Two figures matter here: the **worst case** (someone actively clicking around for a
-full 8-hour shift, generating an activity update on every refresh interval) and the
-**shipped-today figure**, both taken directly from this project's own code:
-
-| Scenario | Writes / active staff / 8-hour day | Why |
-|---|---|---|
-| **As shipped today** (worst case, continuous use) | ≈113 | 1 login (2 writes) + an activity heartbeat roughly every 5 minutes (≈96 writes over 8 hours) + a role re-confirmation roughly every 30 minutes (≈16 writes) |
-| **With one small, already-identified fix** (align the heartbeat to the same ~30-minute cadence as the role re-check, instead of every 5 minutes) | ≈17 | Same login + one combined write every ~30 minutes instead of up to seven separate writes in that window |
-| **Actually observed in production today**, for the current ~10-person staff | ≈7.5 (≈75 total / 10 people, per this project's own architecture documentation) | Real staff don't click continuously for a full 8-hour shift — this is roughly 15× lower than the worst-case model, which is the expected and healthy gap between a stress-test ceiling and typical real usage |
-
-**This is the single most important number in this whole document for planning
-purposes**, and it is identical for both designs — the browser-held-token proposal
-does not change it, because it doesn't touch how often "is this person still active" is
-recorded.
-
-### 5.3 Staff-count breakpoints — cache writes/day vs. the free-tier ceiling (1,000/day)
-
-| Staff count | As-shipped worst case | Fits free tier? | With the heartbeat throttle | Fits free tier? |
-|---|---|---|---|---|
-| **10 (current)** | 1,130/day | Marginally over in the worst case *(real observed usage today is ~75/day — comfortably under)* | 170/day | Yes, 5.9× headroom |
-| **20** | 2,260/day | No, 2.3× over in the worst case | 340/day | Yes, 2.9× headroom |
-| **50 (current × 5)** | 5,650/day | No, 5.7× over | 850/day | Yes, but tight — 85% utilized |
-| **100 (current × 10)** | 11,300/day | No, 11.3× over | 1,700/day | No, 1.7× over — this is the realistic point to move to the $5/mo paid plan |
-| **1,000** | 113,000/day | No | ≈17,000/day (≈510,000/month) | N/A on free tier at this size regardless — but **comfortably inside the paid plan's 1,000,000/month included allowance, $0 overage** |
+> **The "≈113 KV writes per active staff member per 8-hour day" figure that used
+> to stand here is wrong, and it is wrong at the root.** This document is where
+> it originated; it then propagated into
+> [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) §8.5/§8.6 and
+> [`DYNAMIC-ROLES-PBAC-DESIGN.md`](DYNAMIC-ROLES-PBAC-DESIGN.md) §9. All the
+> derived figures have been removed there too. Both the per-person table and the
+> 10/20/50/100/1,000 breakpoint table are deleted rather than patched, because
+> every cell in both was computed from the refuted premise.
+>
+> **What was wrong:** the model assumed an activity heartbeat costing one KV
+> write roughly every 5 minutes (≈96 writes a day). **There is no such write.**
+> `src/lib/auth/pipeline.ts` says so in as many words — "`lastActiveAt` moves in
+> memory every 5 minutes and reaches KV with the next session write, so an active
+> user costs no extra KV writes per request." `touchLastActive()` mutates the
+> in-memory session object and nothing else. The "one small, already-identified
+> fix" this section recommended was therefore either already in the code or never
+> needed.
+>
+> Two consequences worth stating plainly, because this section called ≈113 "the
+> single most important number in this whole document":
+>
+> - The ≈7.5 row was labelled **"actually observed in production"**. It was not
+>   observed. **Nothing in this repo measures KV writes** — the architecture doc
+>   it cited labels its own figure "the arithmetic, not measured", and the only
+>   genuinely measured data anywhere is Sentry *span latency*. Real KV write
+>   usage needs Workers KV analytics, which no doc here cites.
+> - §6.2's "implement the throttle before it's needed" and §6.3's "$5/mo at ~100
+>   staff" inflection both rest on this table. Re-derive them from the owner
+>   before quoting either.
+>
+> **Where the real arithmetic lives:**
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
+> §13.3, which owns it. As redone there on 2026-09-19: about **26 KV writes per
+> person per working day** (2 at login, ~16 for the half-hourly role re-check,
+> ~8 for the hourly access-map refresh), giving roughly **38 concurrent daily
+> users** on the free plan before writes start failing — not the ~55 an earlier
+> revision of that doc said, and nothing like the 8–9 this section's worst case
+> implied. That doc also records the constraint this one missed entirely: **the
+> 1,000 writes/day quota is account-wide, not per Worker**, and is shared with
+> cf-astro's `ISR_CACHE`.
+>
+> §5.1 above and §5.4 below are unaffected and still stand — the platform
+> ceilings were re-confirmed, and §5.4's request/row-write model never depended
+> on the heartbeat.
 
 ### 5.4 Requests and database writes at the same breakpoints
 
@@ -372,10 +482,16 @@ decision that exists one layer above either design.
 
 ## 6. Scaling recommendations — current, ×5, ×10, and beyond
 
-### 6.1 Current scale (~10 staff) — no action needed
+### 6.1 Current scale — no action needed
 
-Real, observed usage today is comfortably inside every free-tier ceiling, by a wide
-margin, on every resource. Nothing needs to change at this scale.
+> ⚠️ **"~10 staff" was never right — corrected 2026-09-20.** There are **6**
+> authorized users (`admin_authorized_users`). Every "×5" and "×10" heading below
+> is therefore a multiple of a baseline that was ~1.7× too high, and §6.2's
+> "implement the throttle" recommendation is moot — see the §5.2/§5.3 withdrawal
+> above; there is no heartbeat to throttle.
+
+The conclusion survives the correction: usage today is comfortably inside every
+free-tier ceiling on every resource, and nothing needs to change at this scale.
 
 ### 6.2 Current × 5 (~50 staff) — implement the throttle before it's needed
 
@@ -623,10 +739,13 @@ doesn't touch the revocation guarantee at all.
 | 2026-08-06 (prior session, reused here) | Cloudflare KV/D1/Durable Objects consistency behavior, pricing, and a full industry-model comparison (RBAC/PBAC/ABAC/bitmask/relationship-graph) | Live documentation fetches + external research, recorded in the companion document | Reused directly in §6.4; not re-derived, since it was already sourced and dated within days of this document |
 | 2026-08-09 | Exact contents of the live production permission registry — row counts, active/inactive split, real-page vs. fragment split, per-role cumulative bundle sizes, category breakdown, existing override count | Direct, live SQL query against the production D1 database via the Cloudflare account's own D1 query access | Confirmed the "89 permissions" figure exactly; basis for §1.7 and §6.5 |
 | 2026-08-10 | Real-world build velocity for a single module (Staff Managed Storage), to ground the growth-phase model in §6.5 | Git log timeline of storage-related commits, cross-checked against the live D1 permission count for that module's paths | Confirmed: 11 permission rows shipped across 5 calendar days (2026-08-05 to 2026-08-09) — the model in §6.5 was revised from a smooth annual curve to a front-loaded, module-driven one on this basis |
+| **2026-09-20** | Re-verification against today's code and live D1; document re-statused `historical` | `src/lib/auth/pipeline.ts`, `decide-access.ts`, `authz-signal.ts`, `stages/assertion.ts`, `stages/bootstrap.ts`, `src/pages/api/users/access.ts`; live `admin_pages` / `admin_page_overrides`; `architecture/PERMISSIONS-SYSTEM.md` §13.3 | **§5.2/§5.3 withdrawn** — the ≈113 writes/person/day model had no basis in the code (there is no heartbeat KV write) and the "≈7.5 observed in production" row was never observed; the owner's figure is ~26 writes/person/day → ~38 concurrent daily users. §1.1 step 2 (no CF logout endpoint), §1.3 ("deny always wins" — `vendor_support`/`owner` bypass the map per ADR-0002; fragments use an asymmetric guard), §1.3/§1.5 (revocation no longer force-logs-out on a permission change, since 2026-09-16), §1.7 (live catalog now 97/86/51/46 and 4 overrides), §4 (the "~6–10 ms already measured" row and the "three focused files" row), §1.1 step 6 (four refusals emit no login event) and §6.1 (6 authorized users, not ~10) all corrected inline |
+| — | **Not checked this pass** | — | §7's ASVS/SOC 2 positioning was not re-read against `security/compliance/ASVS-L2.md` and `SOC2-TSC-mapping.md`; §1.6's claim that the audit whitelist is code-enforced to exactly one destination table; the §5.1 free-tier figures other than D1's |
 
 ## Related
 
-- [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) — the full industry-model comparison and scaling blueprint referenced throughout §6.4.
+- [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) — **the owner of every current-system fact in §1.** Read it instead of §1.
+- [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) — the full industry-model comparison and scaling blueprint referenced throughout §6.4. *(Also `historical`; its §8.5/§8.6 inherited the refuted write model from §5.2 here.)*
 - [`../architecture/GLOBAL-CONFIG.md`](../architecture/GLOBAL-CONFIG.md) — the write-on-change caching pattern referenced in §8.
 - [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — the current page-access engine this document summarizes in §1.3.
 - [`../security/compliance/ASVS-L2.md`](../security/compliance/ASVS-L2.md) and [`../security/compliance/SOC2-TSC-mapping.md`](../security/compliance/SOC2-TSC-mapping.md) — the tracked standards mappings referenced in §7.

@@ -3,7 +3,7 @@
 title: "Dev server: file missing from the optimize deps directory"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-10
+last_verified: 2026-09-19
 verified_against: [code]
 owner: harshil
 related_docs: [ssr-silent-blank-screen.md, ../operations/DEV-TOOLS.md]
@@ -29,7 +29,7 @@ which is in the optimize deps directory. The dependency might be incompatible
 with the dep optimizer. Try adding it to `optimizeDeps.exclude`.
 
   at runInRunnerObject (workers/runner-worker/index.js:107:3)
-  at [SUPABASE_PROJECT_REF] (workers/runner-worker/index.js:241:17)
+  at getWorkerEntryExport (workers/runner-worker/index.js:241:17)
 ```
 
 The named file varies. `runner-worker` is `@cloudflare/vite-plugin`, nested
@@ -197,8 +197,11 @@ Excluding a dependency from `optimizeDeps` skips esbuild pre-bundling, and
 pre-bundling is the step that rewrites CommonJS to ESM. `@upstash/ratelimit`
 declares no `type`, no `module` field and no `exports` map, and ships
 `module.exports = __toCommonJS(src_exports)`. Served raw into workerd, which has
-no `module` global, it throws on load — taking out all 28 API routes that import
-`src/lib/ratelimit.ts`. It looked survivable only because an unauthenticated
+no `module` global, it throws on load — taking out **every API route that
+imports `src/lib/ratelimit.ts`** (28 when this was written in September 2026;
+~50 on 2026-09-19 — derive it with
+`grep -rln "lib/ratelimit" src/pages/api` rather than trusting a number here).
+It looked survivable only because an unauthenticated
 request is redirected before the route module loads, so `curl` saw `302` and only
 a signed-in session saw the failure.
 
@@ -209,7 +212,12 @@ every package in any `optimizeDeps.exclude` must resolve as ESM.
 ## Verifying a fix
 
 `astro dev` daemonizes in Astro 7, so check it is actually serving rather than
-merely started:
+merely started.
+
+> **Shell:** the block below is **Git Bash / POSIX** — it uses `rm -rf`, a
+> `for … do` loop and `/tmp`. None of that is valid in PowerShell, which is
+> this repo's primary shell; the PowerShell one-liners elsewhere in this
+> runbook are marked as such. Run this one under Git Bash, or translate it.
 
 ```bash
 rm -rf node_modules/.vite && npm run dev        # cold cache, or you prove nothing
@@ -239,3 +247,9 @@ Two traps when verifying:
   failure 1, and it leaves a `deps_temp_*` directory behind that poisons the next
   start. Stop the server first, then remove the whole `.vite` directory — not just
   the `deps*` subdirectories.
+
+## Verification log
+
+| Date | Method | Result |
+|---|---|---|
+| 2026-09-19 | `astro.config.ts` `ssr.optimizeDeps`, `vitest.config.ts` `cacheDir`, the `predev`/`dev` scripts and `test/vite-optimize-deps-contract.test.ts` re-checked; `grep -rln "lib/ratelimit" src/pages/api` | Every configuration claim still holds exactly as written. Two corrections: the blast-radius figure (28 → ~50 routes, now derived rather than stated) and a shell note on the POSIX-only verification block. **Not re-checked:** the dev-server behaviour itself — running `npm run dev` was out of scope for this pass |

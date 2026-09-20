@@ -2,7 +2,7 @@
 title: "Email Portal"
 status: active
 audience: [non-technical, ai, technical, operator, owner]
-last_verified: 2026-09-11
+last_verified: 2026-09-19
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -12,9 +12,9 @@ related_code:
 - src/components/admin/emails/_components/Composer.tsx
 - src/components/admin/emails/_components/BrevoTelemetryView.tsx
 - src/components/admin/emails/_components/ContactsSuppressionsView.tsx
-- src/components/admin/emails/_components/[SUPABASE_PROJECT_REF].tsx
+- src/components/admin/emails/_components/TemplatesManagerView.tsx
 - src/components/admin/emails/_components/DraftsManagerView.tsx
-- src/components/admin/emails/_components/[SUPABASE_PROJECT_REF].tsx
+- src/components/admin/emails/_components/EmailWorkspaceHeader.tsx
 - src/components/admin/emails/_components/ManageSenderModal.tsx
 - src/components/admin/emails/_components/DnsDiagnosticModal.tsx
 - src/components/admin/emails/_components/WebhookTestModal.tsx
@@ -55,8 +55,8 @@ tags: [feature, email, queue, brevo, plac, rbac, suppression, deliverability]
 
 > **Status:** Production Active — **with one open P1 defect, see §0**
 > **Surface:** `/dashboard/emails` (cf-admin)
-> **Role floor:** canonical **Manager or above** (stored `admin`/`super_admin`/`owner`/`dev`)
-> **Last verified against live code + D1 + Supabase:** 2026-09-11
+> **Role floor:** canonical **Manager or above** (stored `admin`/`super_admin`/`owner`/`dev`) for the page and the compose path; the Brevo Engine, Suppressions, DNS and sender-management routes require canonical **Admin** — see §4
+> **Last verified against live code + D1 + Supabase:** 2026-09-19
 
 ---
 
@@ -76,7 +76,7 @@ from the dropdown, writes an email, hits Send, and receives:
 
 | Route | Reads `email_sender_identities` from D1 | Falls back to `DEFAULT_SENDER_IDENTITIES` when empty |
 |---|---|---|
-| `GET /api/emails/senders` (what the **dropdown** shows) | yes | **yes** — `senders.ts:94` |
+| `GET /api/emails/senders` (what the **dropdown** shows) | yes | **yes** — `senders.ts:95` |
 | `POST /api/emails/send` (what **enforces**) | yes | **no** — `send.ts:133-141` |
 
 The setting has **never been written**. Verified:
@@ -183,7 +183,7 @@ Steps ① ③ and ④ are new as of 2026-09-10 and are the substantive security 
 |---|---|---|
 | Supabase | `email_audit_logs` | delivery ledger (status, payload, `delivery_events`) |
 | D1 | `admin_email_drafts` | per-operator drafts |
-| D1 | `admin_email_templates` | shared templates |
+| D1 | `admin_email_templates` | **orphan.** The table still exists live, but nothing in `src/` reads or writes it — `templates.ts` constructs `EmailTemplateRepository(brevoApiKey)` and templates live in Brevo. A RULE #0.9 cleanup candidate. *Corrected 2026-09-19.* |
 | D1 | `admin_email_suppression` | unsubscribe list (PK `email`) |
 | D1 | `admin_portal_settings` | engine settings + sender identities |
 | R2 (`IMAGES`) | `email-attachments/` | attachment blobs, private prefix |
@@ -194,7 +194,7 @@ Steps ① ③ and ④ are new as of 2026-09-10 and are the substantive security 
 
 46 files, +8,049/−1,373. Five new operator surfaces and four new API routes.
 
-### 3.1 Brevo Engine / telemetry — `BrevoTelemetryView.tsx` (1,192 lines)
+### 3.1 Brevo Engine / telemetry — `BrevoTelemetryView.tsx` (1,211 lines)
 
 Live panel reading `GET /api/emails/engine`, which calls Brevo v3 for account, plan,
 domains, webhooks and 30-day aggregate stats, merged with D1 engine settings. Shows
@@ -203,20 +203,23 @@ or fallback (`isLiveBrevoData`). Also hosts the branding form (§6) and the
 **Webhook Test** modal (`WebhookTestModal.tsx`), which posts a synthetic event to
 verify the webhook path end to end.
 
-`POST /api/emails/engine` dispatches three actions: `ping`, `sync_webhook`,
-`save_settings`.
+`POST /api/emails/engine` dispatches **five** actions: `ping`, `sync_webhook`,
+`save_settings`, `test_webhook` and `update_webhook_events`. It requires canonical
+Admin. *Corrected 2026-09-19: this said three.*
 
 ### 3.2 Sender management — `senders.ts` + `ManageSenderModal.tsx`
 
 Replaces the old binary `#custom-sender` model with **per-address clearance**. Each
 identity carries `{ id, name, email, minRole, active, department, isDefault }`.
 `GET` merges D1 policy with live Brevo senders; `POST` supports
-`create`/`update`/`delete`/`sync`, all audited, all Admin+.
+`create`/`update`/`delete`, all audited, all Admin+. *Corrected 2026-09-19: a
+fourth `sync` action was listed here. There is none — the Brevo merge happens on
+the GET.*
 
 Guardrails verified in code: external domains rejected; the primary `info@` identity
 cannot be deleted (`senders.ts`, covered by test).
 
-The five defaults (`DEFAULT_SENDER_IDENTITIES`, `senders.ts:19`):
+The five defaults (`DEFAULT_SENDER_IDENTITIES`, `senders.ts:18`):
 
 | Address | Department | Min role (canonical) |
 |---|---|---|
@@ -231,10 +234,20 @@ The five defaults (`DEFAULT_SENDER_IDENTITIES`, `senders.ts:19`):
 ### 3.3 Suppressions — `suppressions.ts` + `ContactsSuppressionsView.tsx`
 
 A real compliance control, not a UI nicety. `EmailSuppressionRepository.partition()`
-splits the recipient list **before the ledger write and before the enqueue**, so a
-suppressed address never reaches the queue at all. If every recipient is suppressed
-the send is refused with a clear error. Drops are written to the audit log with the
-suppressed addresses in `context`.
+splits the recipient list **before the ledger write and before the enqueue**. If
+every `to` recipient is suppressed the send is refused with a clear error. Drops
+are written to the audit log with the suppressed addresses in `context`.
+
+> **Only the `to` list is partitioned — `cc` and `bcc` are not.** *Corrected
+> 2026-09-19: this section claimed "a suppressed address never reaches the queue
+> at all".* `src/pages/api/emails/send.ts` partitions `to` and then puts `cc` and
+> `bcc` into the queue payload unfiltered; the ledger's `payload.to` also keeps
+> the original, unpartitioned list. `src/lib/schemas/email.ts` accepts both
+> fields, so this is reachable from the composer. An unsubscribed address CC'd on
+> a message is mailed anyway, which is the CAN-SPAM/CASL failure the mechanism
+> exists to prevent. It is **latent, not active** — the suppression list has had 0
+> rows since it shipped — but it should be fixed before any campaign use.
+> Logged in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 Table `admin_email_suppression`: `email` (PK), `reason` (default `unsubscribe`),
 `source` (default `one_click`), `actor_email`, `ip_hash`, `created_at`.
@@ -254,13 +267,14 @@ mail starts landing in spam.
 ### 3.5 AI generator — `ai-generate.ts` + `AiGeneratorModal.tsx`
 
 Cloudflare Workers AI (`env.AI.run`) drafts raw HTML email bodies into the composer.
-Gated by the new `#ai-generate` PLAC anchor. Has its own quota route
+A `#ai-generate` PLAC anchor exists in `admin_pages` and the UI honours it, but
+**the server does not** — see the table in §4. Has its own quota route
 (`ai-quota.ts`).
 
 ### 3.6 Workspace redesign
 
 `EmailPortal.tsx` was restructured (−334/+334 net churn) into a workspace shell with
-`[SUPABASE_PROJECT_REF]`, and the tab bodies split into `[SUPABASE_PROJECT_REF]`,
+`EmailWorkspaceHeader`, and the tab bodies split into `TemplatesManagerView`,
 `DraftsManagerView` and `QueueLogItem`. `QueueTracker` shrank by ~50% as its row
 rendering moved to `QueueLogItem`.
 
@@ -268,34 +282,61 @@ rendering moved to `QueueLogItem`.
 
 ## 4. Access control — RBAC + PLAC
 
-Two engines ([plac-and-audit.md](../architecture/plac-and-audit.md)): an RBAC role
-floor, then Page-Level Access Control with fragment sub-capabilities. Each capability
-defaults to **granted** unless an explicit deny exists; **deny always wins**. The page
-resolves them once and passes a `permissions` object to the island; every API route
-re-checks independently.
+Two engines — an RBAC role floor, then Page-Level Access Control with fragment
+sub-capabilities. Each capability defaults to **granted** unless an explicit deny
+exists; **deny always wins**. The page resolves them once and passes a
+`permissions` object to the island. The model, the resolution order and the
+bypass rules are owned by
+[`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md);
+[`plac-and-audit.md`](../architecture/plac-and-audit.md) covers the audit side.
+What follows is only which anchors this page defines and which of them the server
+actually checks.
 
 **All ten anchors, with the `required_role` actually stored in D1** (queried live
-2026-09-11; shown in stored vocabulary with the canonical name in brackets):
+2026-09-11; shown in stored vocabulary with the canonical name in brackets). The
+last column was added 2026-09-19 after grepping every route under
+`src/pages/api/emails/` for the anchor string — **three of the ten are UI-only**.
 
-| Capability | `required_role` in D1 | Grants |
-|---|---|---|
-| `/dashboard/emails` | `admin` [manager] | See the portal; read drafts and templates |
-| `…#compose` | `admin` [manager] | Send email |
-| `…#attachments` | `admin` [manager] | Attach files |
-| `…#templates` | `admin` [manager] | Create/update/delete shared templates |
-| `…#ai-generate` | `admin` [manager] | **(new)** AI HTML drafting |
-| `…#preview` | `admin` [manager] | Preview and send a test copy to self |
-| `…#contacts` | `admin` [manager] | Recent-recipient autocomplete |
-| `…#bulk-send` | `super_admin` [admin] | More than one recipient per message |
-| `…#custom-sender` | `owner` | Unmapped alias (see §0) |
-| `…#queue-logs` | `owner` | Delivery-queue timeline |
+| Capability | `required_role` in D1 | Grants | Server-enforced? |
+|---|---|---|---|
+| `/dashboard/emails` | `admin` [manager] | See the portal; read drafts and templates | yes — every route |
+| `…#compose` | `admin` [manager] | Send email | yes (`send.ts`) |
+| `…#attachments` | `admin` [manager] | Attach files | yes (`send.ts`, `attachments.ts`) |
+| `…#templates` | `admin` [manager] | Create/update/delete shared templates | **no** — `templates.ts` checks only the page key, although its own header says `#templates` |
+| `…#ai-generate` | `admin` [manager] | AI HTML drafting | **no** — `ai-generate.ts` checks the page key twice; the second call is merely *labelled* "ai-generate" |
+| `…#preview` | `admin` [manager] | Preview and send a test copy to self | **no** — there is no preview route; a test send is an ordinary `send.ts` call under `#compose` |
+| `…#contacts` | `admin` [manager] | Recent-recipient autocomplete | yes (`contacts.ts`) |
+| `…#bulk-send` | `super_admin` [admin] | More than one recipient per message | yes (`send.ts`) |
+| `…#custom-sender` | `owner` | Unmapped alias (see §0) | yes (`send.ts`) |
+| `…#queue-logs` | `owner` | Delivery-queue timeline | yes (`audit/emails.ts`) |
+
+> *Corrected 2026-09-19.* This section used to say "the page resolves them once
+> and passes a `permissions` object to the island; **every API route re-checks
+> independently**". The first half is true; the second is not. Denying an operator
+> `#templates` or `#ai-generate` hides the control and nothing more — the server
+> will still serve the request. This is the same class of gap as **D-5** in
+> [`../MAINTENANCE.md`](../MAINTENANCE.md) (a hash key is not a path descendant,
+> so a page-key check never covers a fragment), and it is logged there for
+> triage. The fix is `src/lib/auth/surface-guards.ts`, which already does exactly
+> this for the cron and sessions surfaces.
 
 **Sender clearance is a second, independent layer.** Even with `#compose`, the
 `from` address must satisfy that identity's `minRole` (`send.ts:150-165`). An
 unmapped address additionally requires `isOwnerOrVendor` **and** `#custom-sender`.
 
-**Bypasses.** `owner` and `vendor_support` bypass the per-hour rate limit and the
-recipient cap. They do **not** bypass PLAC denies, sanitisation or suppression.
+**Bypasses.** `owner` and `vendor_support` bypass the per-hour rate limit, the
+recipient cap **and every PLAC deny on this page** — `requirePageAccess()` returns
+immediately for those two roles (`src/lib/auth/guard.ts`), which is ADR-0002
+answer 2, not an oversight. They do not bypass sanitisation or suppression.
+*Corrected 2026-09-19: this said they do **not** bypass PLAC denies. They bypass
+all of them, so every anchor above binds canonical Admin and below.* The model
+itself is owned by
+[`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+
+**The portal's role floor is not uniform.** The page and the compose path admit
+canonical **Manager**, but `engine.ts`, `suppressions.ts`, `dns-check.ts` and the
+`senders.ts` POST all require `isAdminOrAbove`. A Manager therefore sees the Brevo
+Engine, Suppressions and DNS tabs and gets a 403 from each. *Added 2026-09-19.*
 
 ---
 
@@ -319,7 +360,7 @@ recipient cap. They do **not** bypass PLAC denies, sanitisation or suppression.
 | 12 | **Sender clearance** by `minRole`, else owner/vendor + `#custom-sender` | 403 ← §0 |
 | 13 | `#attachments`; cumulative size ≤ **25 MB** | 403 / 400 |
 | 14 | Schedule window: future, ≤30 days | 400 |
-| 15 | **Suppression partition**; all-suppressed → refuse | 400 |
+| 15 | **Suppression partition** of `to` only (see §3.3); all-suppressed → refuse | 400 |
 | 16 | Ledger insert → enqueue with Sentry trace headers → Ghost Audit | — |
 
 **Why sanitisation matters.** Templates and drafts are shared across operators of
@@ -331,13 +372,17 @@ Workers-native `HTMLRewriter`.
 
 ## 6. Engine settings — what is real and what is not
 
-`engine.ts` reads **eleven** settings. Only **one** exists in D1 (verified
-2026-09-11); the other ten fall back to hardcoded defaults on every request.
+`engine.ts` reads `brevo_api_key` plus **ten** engine settings. Of those ten, only
+**one** exists in D1 (verified 2026-09-11, re-verified 2026-09-19); the other nine
+fall back to hardcoded defaults on every request. `email_sender_identities` is
+listed below because it is the §0 defect, but note that **`engine.ts` never reads
+it** — only `senders.ts` and `send.ts` do. *Corrected 2026-09-19: this said
+`engine.ts` reads eleven settings including that one.*
 
 | Setting | In D1? | Default in code | Consumed by the send path? |
 |---|---|---|---|
 | `custom_email_max_recipients` | ✅ `10` | `send.ts` 10 / `engine.ts` **100** ⚠ | **yes** |
-| `email_sender_identities` | ❌ | none (`[]`) | **yes** — §0 defect |
+| `email_sender_identities` *(not read by `engine.ts`)* | ❌ | none (`[]`) | **yes** — §0 defect |
 | `brevo_daily_limit` | ❌ | 300 | no — display only |
 | `brevo_monthly_limit` | ❌ | 9000 | no — display only |
 | `brevo_track_opens` | ❌ | true | no |
@@ -356,9 +401,17 @@ Three honest observations:
    `send.ts` reads only `custom_email_max_recipients` and `email_sender_identities`,
    and the queue payload does not carry them. The panel is **configured but not
    wired**. No customer has ever seen these values.
-2. **`+52 (449) 123-4567` is a placeholder.** Harmless today precisely because of (1),
-   but it must not be wired up as-is — it would put a fake phone number in customer
-   mail, against RULE #0.5.
+2. **`+52 (449) 123-4567` is a placeholder, and it is still reachable.** Harmless
+   in customer mail today precisely because of (1), but it must not be wired up
+   as-is (RULE #0.5). *Updated 2026-09-19 — MAINTENANCE item **E-8**:* on
+   2026-09-16 `4cefa2b` removed the client-side fallback and added a "Saved, but
+   not yet applied to outgoing email" notice. That is a partial fix only.
+   `engine.ts` still substitutes the placeholder when the setting is absent, and
+   `BrevoTelemetryView.tsx` loads whatever `engineSettings.email_support_phone`
+   returns into the input's **value** — so opening the branding panel and pressing
+   Save still persists the invented number as though an operator had typed it.
+   Separately, `LiveEmailPreviewPane.tsx` hard-codes the same number into the
+   operator's email preview.
 3. **The recipient-cap defaults disagree** — `send.ts` falls back to 10,
    `engine.ts` to 100. No live impact while the D1 row exists (both read `10`), but
    delete that row and the UI would advertise a cap ten times what is enforced.
@@ -387,7 +440,7 @@ over. Paid tiers start around **$9/month** (Starter, 5k emails/month).
 | Recipients per message | 10 (D1 setting) | — |
 | Attachment size | 25 MB cumulative per message | — |
 | Brevo free plan | **300/day** | **the real ceiling** |
-| Cloudflare Queue | 1M ops/month free | ~33k/day — not binding |
+| Cloudflare Queue | **10,000 operations/day** per account, 24 h max retention (Workers Free) | ~3,300 messages/day shared across `EMAIL_QUEUE`, `SYNC_QUEUE` and cf-astro's producer — still not binding. *Corrected 2026-09-19: this said "1M ops/month free · ~33k/day".* |
 | D1 rows written | 100k/day free | not binding |
 
 With 6 active accounts, the **provider's 300/day is the binding constraint**, and
@@ -474,14 +527,26 @@ demonstrated to a paying client.
 ## 10. Operational notes
 
 - **Success toast means *enqueued*, not *delivered*.** Confirm in Queue Logs.
-- **No send idempotency.** Each POST mints a fresh `trackingId`; a double-submit
-  enqueues twice. Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+- **A double-submit from the composer is deduplicated; an API caller's is not.**
+  *Corrected 2026-09-19 — this said "No send idempotency. Each POST mints a fresh
+  `trackingId`; a double-submit enqueues twice. Tracked in MAINTENANCE.md", and
+  MAINTENANCE has no such item.* The composer mints one `trackingId` per compose
+  session (`useEmailPortalState.ts`) and sends it with the request; `send.ts` uses
+  it as the ledger primary key and returns success on a `23505` unique violation,
+  so the second submit is swallowed rather than enqueued. Only a caller that omits
+  `trackingId` gets a fresh one per POST and is therefore unprotected.
 - **A scheduled send cannot be cancelled from the portal.** `POST /api/emails/cancel`
   was never built; the claim was removed 2026-09-02.
 - **Attachments are private.** Stored under a private R2 prefix, resolved server-side
   by the consumer. The portal stores the key, never a public URL.
-- **Orphan sweep.** The Sunday R2 cleanup garbage-collects `email-attachments/`
-  against `cms_content`, active drafts and the ledger.
+- **There is no orphan sweep for attachments.** *Corrected 2026-09-19 — this said
+  the Sunday R2 cleanup "garbage-collects `email-attachments/` against
+  `cms_content`, active drafts and the ledger".* It does the opposite:
+  `email-attachments/` is in `PROTECTED_PREFIXES` in
+  `src/workers/scheduled-asset-cleanup.ts` and is **always excluded** from
+  deletion, deliberately, because the DB reference queries may be incomplete if
+  Supabase is down. Orphaned attachment blobs therefore accumulate indefinitely.
+  Tracked as **E-1** in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 - **Server errors reach Sentry via `@sentry/cloudflare`** (`withSentry` in
   `cf-entry.ts`). `@sentry/astro`'s server SDK is a silent no-op in workerd.
 
@@ -497,12 +562,15 @@ RULE #0.9 working as intended. Two standing items, both predating it:
   duplicate numbers" main.md records, and because the ledger keys on *filename* all
   three applied correctly — so this is untidy, not broken. **Do not renumber an
   applied migration.**
-- That migration has no row in
-  [`../reference/schema-change-ledger.md`](../reference/schema-change-ledger.md).
-  **This is correct, not a gap** — the ledger records that it only tracks changes
-  from **2026-08-12 forward** and is deliberately not backfilled; this migration was
-  applied 2026-08-04. (An earlier draft of this section called it a RULE #0.7
-  violation. It is not, and the ledger's own scope note is the authority.)
+- That migration **now has a row** in
+  [`../reference/schema-change-ledger.md`](../reference/schema-change-ledger.md),
+  recorded as applied 2026-08-04 with the date taken from `d1_migrations`.
+  *Corrected 2026-09-19: this section said the absence of a row was correct
+  because the ledger "only tracks changes from 2026-08-12 forward and is
+  deliberately not backfilled". The ledger was backfilled on 2026-09-15 and does
+  record `0008`.* (An earlier draft called the migration a RULE #0.7 violation. It
+  is not — the number collision is untidy, not broken, and an applied migration is
+  never renumbered.)
 
 ---
 
@@ -510,6 +578,7 @@ RULE #0.9 working as intended. Two standing items, both predating it:
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-09-19 | claude | Re-grepped every `src/pages/api/emails/` route for its PLAC anchors and role floors; re-read `send.ts` end to end; live D1 re-check of `email_sender_identities` and `custom_email_max_recipients` | §0 defect **still live** (no `email_sender_identities` row). Corrections: owner/vendor **do** bypass every PLAC deny; `#templates`/`#ai-generate`/`#preview` are not server-enforced; `cc`/`bcc` escape the suppression partition; attachments are never swept; the composer *is* idempotent; `0008` **is** in the schema ledger; engine actions 5 not 3; senders POST has no `sync`; queue free tier is 10k ops/day; `admin_email_templates` is orphaned; E-8's fix is partial |
 | 2026-06-07 | claude | code read | pass — schema-provisioning gap noted |
 | 2026-06-07 | claude | deep UI + backend review | corrected sender-IP wording; added ledger detail |
 | 2026-06-07 | claude | mobile-first redesign | bottom tab bar, `MobileComposer`, autosave, `#preview`/`#contacts` |

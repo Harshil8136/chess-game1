@@ -1,7 +1,7 @@
 ---
 
 title: "Cron Control Plane — Design"
-status: draft
+status: historical
 audience: [ai, technical, owner, operator]
 last_verified: 2026-09-16
 verified_against: [code, infra]
@@ -17,6 +17,38 @@ tags: [cron, jobs, control-plane, plac, observability, design]
      each stage ships. -->
 
 # Cron Control Plane — Design
+
+> **Shipped 2026-09-16 — re-statused `historical` 2026-09-20.** All three stages
+> landed in `14745a8`..`473604d`, then were extended by `d870161` (the run
+> dialog became an SSE query trace), `20c6213`, `5d3ea31` and `a9dd974`
+> (per-query trace console, skeleton loading, a telemetry sync API and D1 usage
+> reporting — none of which this design describes). The owner doc is
+> [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md); where the two
+> disagree, the code is the record, and the `proposed-paths` opt-out above no
+> longer applies. What shipped differently:
+>
+> - The control row is **not** the 13th key of the batched settings read. It is
+>   a separate indexed query per tick (`src/lib/jobs/runJob.ts` calls
+>   `readControl`), so gating costs +1 query as well as +1 row read. The code
+>   comment repeats the original claim.
+> - `Record<JobId, …>` is **not** compile-time enforcement: `JobDefinition.id`
+>   is `string`, so `JobId` widens to `string` and a missing tier or budget
+>   passes `typecheck`. The real guard is the runtime contract test
+>   `test/cron-contract.test.ts`, which does run in `npm run verify`.
+> - Never built: the `scripts/rules_check.py` cron rule, the wrangler↔dispatch
+>   contract test, and the 7-day window, expected-vs-actual run count and
+>   schedule-drift health checks — `src/lib/jobs/health.ts` queries 24 hours
+>   only.
+> - Per-job interval is **API-only**. No cron component sends
+>   `intervalMinutes`, and `POST /api/cron/state` rebuilds the entry from the
+>   request, so pausing or resuming a job from the dashboard erases an interval
+>   that was seeded through the API.
+> - The migration landed as `0054_cron_control_plane_pages.sql` plus the repair
+>   `0055_cron_control_plane_subpages.sql`; audit actions are `cron_pause`,
+>   `cron_resume`, `cron_trigger` and `config_change`; and `POST /api/cron/sync`
+>   (added later) writes no audit row and has no rate limit.
+> - §13's C-3 — Workers Traces start consuming the observability quota on
+>   2026-10-01 — is still tracked nowhere but here.
 
 > **TL;DR (non-technical):** The portal runs ten background jobs on a timer. Today
 > there is no way to stop one, test one, or see how one is doing without editing

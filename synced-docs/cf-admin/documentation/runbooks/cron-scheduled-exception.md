@@ -5,19 +5,9 @@ audience: [ai, technical, operator]
 last_verified: 2026-08-13
 verified_against: [code, infra]
 owner: harshil
-related_code:
-
-- src/workers/cf-entry.ts
-- src/workers/scheduled-log-sync.ts
-- src/workers/scheduled-asset-cleanup.ts
-- src/lib/auth/security-logging.ts
-- sentry.server.config.ts
-related_docs:
-- ../operations/OPERATIONS.md
-- ../security/login-forensics.md
-- ../architecture/ARCHITECTURE.md
-tags: [runbook, cron, workers, observability, sentry]
-
+related_code: [src/workers/cf-entry.ts, src/workers/scheduled-log-sync.ts, src/workers/scheduled-asset-cleanup.ts, src/lib/auth/security-logging.ts]
+related_docs: [../operations/OPERATIONS.md, ../security/login-forensics.md, ../architecture/ARCHITECTURE.md, when-d1-is-unavailable.md]
+tags: [runbook, cron, workers, observability, sentry, incident]
 ---
 
 # Cron Scheduled-Handler Exception (CF Access Audit Poller)
@@ -42,7 +32,18 @@ tags: [runbook, cron, workers, observability, sentry]
 > `cf-audit-last-synced`, not in KV. Current guidance:
 > [`when-d1-is-unavailable.md`](when-d1-is-unavailable.md) and
 > [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) → "Scheduled
-> triggers". Sentry cron check-ins (§5, Phase 2) are still not added.
+> triggers". Sentry cron check-ins (§5, Phase 2) are still not added
+> (re-confirmed 2026-09-19).
+>
+> Two housekeeping notes, 2026-09-19: `sentry.server.config.ts` was dropped
+> from `related_code` — it is a deliberate no-op (`export {}`), and listing it
+> invites the exact mistake `OPERATIONS.md` §4 had to correct. And this file is
+> a **dated incident record living in the playbook folder**: it belongs at
+> `../operations/incidents/2026-06-07-cron-scheduled-handler-exception.md` now
+> that the incidents folder exists. The move is not this pass's to make — it is
+> flagged for the coordinator, along with the fact that
+> `CONTRIBUTING-DOCS.md`'s folder map has no `operations/incidents/` row, which
+> is why there is no rule saying where a record like this goes.
 
 ---
 
@@ -175,8 +176,11 @@ So the failure can only be seen in Cloudflare Observability, never in Sentry.
 ## 6. Verification
 
 - `npm run check` / `astro check` clean.
-- Deploy, trigger the cron (`wrangler`), and confirm CF Observability shows
-  `outcome: ok`.
+- Confirm CF Observability shows `outcome: ok`. **There is no wrangler command
+  that triggers a *deployed* cron** (this step implied one until 2026-09-19) —
+  either wait for the next tick, or exercise the handler locally with
+  `wrangler dev --test-scheduled` plus a request to
+  `http://localhost:8787/__scheduled?cron=*%2F5+*+*+*+*`.
 - Force an error and confirm it now appears as a **Sentry issue** (proves
   instrumentation) instead of a bare CF exception; re-query Sentry logs for `[CRON]` and
   confirm entries now flush.

@@ -10,6 +10,19 @@ tags: []
 
 # Portal Settings Module Design Specification
 
+> **Outcome (added 2026-09-20).** Shipped, with different component names: the
+> two panels are `src/components/admin/settings/PortalSettingsPanel.tsx` and
+> `src/components/admin/settings/UserSettingsPanel.tsx`, both embedded on
+> `/dashboard/settings` — there is no settings modal launched from the avatar
+> menu, and no registry integration. Delegated editing exists in the API
+> (`targetUserId`) but no UI sends it. SSR theme comes from a `cf_admin_theme`
+> cookie, not a KV or D1 read in the layout; the audit events are
+> `action: 'update', module: 'settings'`, not the dotted names in §4; and §4's
+> PLAC alternative does not apply — a hard role gate runs first, so a grant
+> cannot admit a lower role. Not working as designed: the Session Max
+> Lifetime setting is stored and editable but nothing reads it — session
+> lifetime comes only from `SESSION_MAX_LIFETIME_MS`.
+
 ## 1. Overview
 
 The Portal Settings Module provides a robust, RBAC/PLAC-managed system for configuring both global portal behavior and individual user preferences within the `cf-admin` architecture. This module adheres to the "Defense-in-Depth" and "Lean Edge" infrastructure standards, utilizing Cloudflare D1 for ultra-fast localized storage and Supabase strictly for access control and core identity fields.

@@ -6,17 +6,25 @@ audience: [ai, technical]
 last_verified: 2026-09-14
 verified_against: [code]
 owner: harshil
-tags: []
+related_code: [src/lib/control-plane/config-schema.ts, src/lib/control-plane/preflight.ts, src/lib/dal/ServiceConfigRepository.ts, src/pages/api/control-plane/config.ts, src/components/admin/control-plane/ConfigEditor.tsx]
+related_docs: [CONTROL-PLANE-CONNECTORS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/ARCHITECTURE.md, ../operations/OPERATIONS.md]
+tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observability]
 ---
 
 # Service Control Plane
 
 > **TL;DR (non-technical):** A single admin screen to watch and tune the platform's external services (error tracking, analytics, CDN, database advisories) live, without redeploying code.
 
-> **Status:** Production Active
+> **Status:** Deployed, **partially wired**. The surface, Layer-A store and the
+> Sentry/Cloudflare connectors work in production. Two Layer-B integrations
+> (Supabase advisors, PostHog billing) return `unconfigured` live because their
+> secrets are not on the Worker, and the **`sentry.cf_admin.*` keys are not read
+> by anything** — see §4.5 and §5. *Corrected 2026-09-19; this said "Production
+> Active" without qualification.*
 > **Surface:** `/dashboard/control-plane` (cf-admin) — RBAC + PLAC gated
-> **Scope:** Manages runtime configuration and provider settings for **both** cf-admin and cf-astro
-> **Last Updated:** 2026-06-05
+> **Scope:** Layer-A config is stored for both apps. Only **cf-astro** currently
+> reads its keys at runtime; cf-admin's own keys are editable but inert.
+> **Last Updated:** 2026-09-19
 
 > **Audience note:** This document is an architecture-level overview for AI IDE agents and
 > contributors. It intentionally omits all environment-specific values — resource IDs, account
@@ -55,7 +63,8 @@ the entire access model, audit story, and failure behaviour.
 │  LAYER A — REMOTE CONFIG (our values, our store)                       │
 │  ──────────────────────────────────────────────────────────────────   │
 │  Runtime-tunable parameters persisted in shared D1.                    │
-│  Both apps read them; cf-admin edits them.                             │
+│  cf-admin edits them. cf-astro reads its own; cf-admin does NOT read    │
+│  its own — see §4.5.                                                   │
 │  e.g. Sentry sample/trace rates, PostHog capture toggles, rate limits. │
 │  Validated · audited · versioned · propagated to cf-astro.             │
 ├──────────────────────────────────────────────────────────────────────┤
@@ -76,7 +85,7 @@ the entire access model, audit story, and failure behaviour.
 
 **Why D1 (not a shared KV)** — KV namespaces are per-binding and isolated between the two apps, so
 they cannot share one. The single shared substrate is D1. It is the source of truth; each app reads
-it and caches locally (cf-astro via a 10 s in-isolate memory layer plus the Cache API — `cf-astro/src/lib/service-config.ts`; cf-admin reads D1 directly on every request, with no config cache). The repository exposes a monotonic version token (`getConfigVersion()`), but as of 2026-09-14 nothing calls it: cf-astro re-pulls the full key set per TTL. *Corrected 2026-09-14 — this said cf-admin caches in its session KV namespace and both apps poll the version token; only the metrics aggregate is KV-cached.*
+it and caches locally (cf-astro via a 10 s in-isolate memory layer plus the Cache API — `cf-astro/src/lib/service-config.ts`). The repository exposes a monotonic version token (`getConfigVersion()`), but as of 2026-09-14 nothing calls it: cf-astro re-pulls the full key set per TTL. *Corrected 2026-09-14 — this said cf-admin caches in its session KV namespace and both apps poll the version token; only the metrics aggregate is KV-cached. Corrected again 2026-09-19 — it then said "cf-admin reads D1 directly on every request", which reads as though cf-admin consumes its own config. It does not consume it at all; see §4.5.*
 
 ---
 
@@ -87,10 +96,22 @@ Every entry point is gated by the platform's two-engine access model:
 - **RBAC** — a 6-tier role hierarchy (`vendor_support > owner > admin > manager > staff > viewer`
   since 2026-07-27; the databases still store the old names, translated on read — *corrected
   2026-09-14, this line named the pre-rename ladder*; lower rank = higher
-  privilege). See [USER-MANAGEMENT.md](./USER-MANAGEMENT.md).
-- **PLAC** — Page-Level Access Control: per-user grants/denies layered on top of the role baseline,
-  resolved O(1) from a KV-cached access map. Deny always wins. See
-  [plac-and-audit.md](../architecture/plac-and-audit.md).
+  privilege).
+- **PLAC** — Page-Level Access Control: per-user grants and denies layered on the role baseline,
+  keyed by page path and by `#fragment` sub-capability.
+
+Both models are owned by
+[PERMISSIONS-SYSTEM.md](../architecture/PERMISSIONS-SYSTEM.md); read the
+resolution rules there rather than here.
+
+> *Corrected 2026-09-19 — this section said PLAC is "resolved O(1) from a
+> KV-cached access map. Deny always wins", and linked the role ladder to
+> USER-MANAGEMENT.md rather than the owning document. Both halves were wrong in
+> ways that matter for this page: **owner and vendor_support bypass PLAC
+> entirely** (`src/lib/auth/decide-access.ts`), so a deny written against them
+> never applies — you cannot use `#provider-write` to hold an owner back.
+> Resolution is also not a single O(1) lookup: an exact key match first, then a
+> longest-ancestor scan across the map's keys.*
 
 The control plane uses **fragment sub-capabilities** on its page path so a user can be granted page
 visibility without write power, or one kind of write without another:
@@ -103,9 +124,21 @@ visibility without write power, or one kind of write without another:
 | `…#provider-write`                    | Apply Layer-B writes via provider APIs          |
 
 The role floor is enforced **and** the PLAC capability is checked — both must pass. Reads are open to
-anyone who can see the page (provider reads require Admin+); Layer-A writes require Admin+; Layer-B writes require Owner+. Page-level
-denies also block the underlying API calls (each route opts in via the shared deny helper), so the UI
-and the API cannot drift apart.
+anyone who can see the page (provider reads require Admin+); Layer-A writes require Admin+; Layer-B writes require Owner+.
+
+Page-level denies also block the underlying API calls, but **enforcement is
+central, not per-route**: under `API_DENY_MODE = "enforce"` the middleware maps
+every `/api/*` path to a page through `API_PAGE_MAPPING` and denies anything
+unmapped (`src/lib/auth/routes.ts`, `src/lib/auth/stages/decide.ts`). That is
+what keeps the UI and the API from drifting apart — not each handler
+remembering to call a helper. `GET /api/control-plane/cloudflare`, for
+instance, never calls `placDenyResponse` and is still gated. Note also that the
+middleware maps the provider routes to their **sub-pages**
+(`/dashboard/control-plane/sentry`, and so on) while the handlers check the
+parent page, so a deny written against a sub-page is caught by the middleware
+alone. *Corrected 2026-09-19 — this said "each route opts in via the shared
+deny helper", which invites a new route to be written without one on the
+assumption that it is then simply unguarded.*
 
 ---
 
@@ -201,6 +234,32 @@ retuning one is a config edit rather than a redeploy.
   PostHog controls, and a per-rule "≈ N events/day at this rate" estimate. It batches a draft and
   commits through the same optimistic-concurrency write path as every other key.
 
+### 4.5 What is stored but not yet consumed
+
+*Added 2026-09-19.* Three Layer-A keys are scoped to `cf-admin` and are fully
+editable in the UI, but **nothing in cf-admin reads them**:
+
+| Key | Declared as | Reality |
+|---|---|---|
+| `sentry.cf_admin.traces` | Server + client `tracesSampleRate` | `src/workers/cf-entry.ts` and `sentry.client.config.ts` both hardcode `0.1` |
+| `sentry.cf_admin.error_sample_rate` | Error sample rate via `beforeSend` | no reader |
+| `sentry.cf_admin.enabled` | "Master kill-switch for Sentry in cf-admin" | no reader |
+
+`grep -rn "sentry.cf_admin" src` returns only `config-schema.ts`. The practical
+consequence is the one that matters during an incident: **turning the
+kill-switch off, or dropping the sample rate, during a Sentry quota event
+changes nothing**, while the UI reports the edit as applied and audits it. The
+equivalent `sentry.cf_astro.*` keys *are* read, by
+`cf-astro/src/lib/service-config.ts`.
+
+`cloudflare.cf_admin.observability_enabled` is a separate case and is correctly
+marked read-only in the schema: it is deploy-time config.
+
+Until these are wired, treat the cf-admin Sentry rows as a declaration of
+intent. Wiring them means reading the config in `cf-entry.ts` and at client
+init with the hardcoded values as the fail-safe fallback — which is what the
+"parity invariant" in §4.1 already assumes.
+
 ---
 
 ## 5. Layer B — Provider Control
@@ -211,27 +270,43 @@ as Worker secrets. Every call returns a **discriminated result** — success, er
 breaking the page. Writes are gated behind the `#provider-write` capability and only render in the UI
 for operators who hold it.
 
-**Failure classification.** A failed provider call is not automatically a server error. The shared
-result carries the HTTP status the endpoint should return: an *unconfigured* token or a provider
-**4xx** (typically a 401/403 token-scope problem) is **our** misconfiguration and maps to **400**
-with an actionable message (e.g. "check API token permissions"), logged at `warn`; only a genuine
-upstream **5xx** or a network/timeout failure maps to **502**, logged at `error`. This keeps expected
-misconfigurations from being reported to Cloudflare Workers Observability as server errors. See
-[CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) for the per-connector reference.
+**Failure classification.** A failed provider call is not automatically a server error: `unconfigured`
+and provider-4xx results map to **400**, genuine upstream 5xx and network failures to **502**. The
+table that defines this — and the reasoning behind it — is owned by
+[CONTROL-PLANE-CONNECTORS.md §2.1](./CONTROL-PLANE-CONNECTORS.md#21-failure-classification-why-a-502-is-not-the-default),
+along with the per-connector reference. *Corrected 2026-09-19 — this paragraph
+duplicated that section in full, so the two could drift.*
 
-| Provider    | Reads (visibility)                                              | Writes (Owner+ only)                                  |
-|-------------|----------------------------------------------------------------|-------------------------------------------------------|
-| **Sentry**  | Quota outcomes, top unresolved issues, inbound filters, keys   | Toggle inbound filters, set key rate limits, spike protection |
-| **PostHog** | Project settings (recording opt-in, sample rate, autocapture), billing usage | Enable/disable session recording + set sample rate |
-| **Cloudflare** | Resource inventory (Workers, KV, D1, R2, queue detail, Zero Trust active users, zone security); metrics via the analytics aggregate | Cache purge — everything, by URL, or by cache-tag; zone security level |
-| **Supabase** | Security & performance advisors                               | — (read-only; schema changes stay migration-driven)   |
+| Provider    | Reads (visibility)                                              | Writes (Owner+ only)                                  | Configured in production? |
+|-------------|----------------------------------------------------------------|-------------------------------------------------------|---|
+| **Sentry**  | Quota outcomes, top unresolved issues, inbound filters, keys   | Toggle inbound filters, set key rate limits, spike protection, issue resolve/ignore/unresolve | ✅ yes |
+| **PostHog** | Project settings (recording opt-in, sample rate, autocapture) | Enable/disable session recording + set sample rate | ⚠️ partly — see below |
+| **PostHog** | Billing usage | — | ❌ no — the org id is not a live secret |
+| **Cloudflare** | Resource inventory (Workers, KV, D1, R2, queue detail, Zero Trust active users, zone security); metrics via the analytics aggregate | Cache purge — everything, by URL, or by cache-tag; zone security level | ✅ yes |
+| **Supabase** | Security & performance advisors                               | — (read-only; schema changes stay migration-driven)   | ❌ no — the Management API PAT is not a live secret |
+
+*Column added 2026-09-19.* Checked against `wrangler secret list` on the live
+Worker (names only, never values): 25 secrets, and neither the Supabase
+Management API PAT nor the PostHog org id is among them. Both cards therefore
+render the `unconfigured` "configure this to enable control" notice in
+production — correct fail-soft behaviour, but not the "Production Active" the
+banner used to claim. The PostHog settings read and the session-recording write
+work, but resolve their project by falling back to the first project the key can
+list; see
+[CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) §3.3.
 
 Notes that matter for correctness:
 
 - Some knobs are **deploy-time only** (e.g. Cloudflare Worker observability sampling is set in build
   config and requires a redeploy) and are surfaced **read-only** — the UI explains this rather than
   pretending it can change them at runtime.
-- Provider writes are audited the same way Layer-A writes are.
+- **Provider writes are audited, but not identically to Layer-A writes.** A
+  Layer-A edit writes both an `admin_audit_log` row and a versioned
+  `service_config_history` row; a Layer-B provider write records only the
+  `admin_audit_log` row, because there is no local value to version. The
+  "recent change history" panel on the overview therefore shows Layer-A edits
+  only. *Corrected 2026-09-19 — this said provider writes are audited "the same
+  way".*
 
 ---
 
@@ -325,7 +400,9 @@ operators who hold the relevant capability.
 - **D1 is the one source of truth.** No second store to keep in sync — apps read D1 and cache
   locally, with an explicit cross-app flush for immediacy.
 - **No throws across boundaries.** The data layer and provider clients return typed results; the UI
-  degrades gracefully (notice, skeleton, or empty state) instead of erroring.
+  degrades gracefully to an `unconfigured` notice or an empty state instead of erroring. *Corrected
+  2026-09-19 — this said "notice, skeleton, or empty state"; there is no `Skeleton` component, as §8
+  itself notes. Loading states are per-island.*
 - **Everything sensitive is gated and audited.** Reads, role floors, PLAC capabilities, same-origin
   mutation guards, and a versioned change history apply uniformly to both layers.
 - **Secrets never surface.** Provider tokens are Worker secrets used server-side only; the UI knows
@@ -337,8 +414,9 @@ operators who hold the relevant capability.
 
 - [CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) — Layer-B connector reference: provider management APIs, the shared result contract + failure classification, token scopes, config propagation, and how the connectors relate to MCP tooling
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — the "Lean Edge" stack, request lifecycle, DAL pattern
-- [USER-MANAGEMENT.md](./USER-MANAGEMENT.md) — RBAC role hierarchy and user lifecycle
-- [plac-and-audit.md](../architecture/plac-and-audit.md) — PLAC resolution algorithm and the Ghost Audit Engine
+- [PERMISSIONS-SYSTEM.md](../architecture/PERMISSIONS-SYSTEM.md) — **the owner of the permission model**: the role ladder, PLAC resolution and the owner/vendor bypass
+- [USER-MANAGEMENT.md](./USER-MANAGEMENT.md) — user lifecycle
+- [plac-and-audit.md](../architecture/plac-and-audit.md) — the Ghost Audit Engine
 - [SECURITY.md](../security/SECURITY.md) — CSRF, headers, session model, security posture
 - [CMS.md](./CMS.md) — the cross-app revalidation webhook the config flush reuses
 - [OPERATIONS.md](../operations/OPERATIONS.md) — deploy commands, provider integrations, free-tier limits
@@ -347,4 +425,5 @@ operators who hold the relevant capability.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-09-19 | `grep -rn "sentry.cf_admin\|error_sample_rate" src` → only `config-schema.ts`; the hardcoded `tracesSampleRate: 0.1` in `src/workers/cf-entry.ts` and `sentry.client.config.ts`; `src/lib/auth/decide-access.ts` (owner / vendor_support bypass, exact-then-ancestor resolution); `src/lib/auth/routes.ts` + `stages/decide.ts` (central API→page mapping, `API_DENY_MODE`); `src/pages/api/control-plane/cloudflare.ts` GET (no deny helper); the audit targets in `sentry.ts` / `cloudflare.ts` / `posthog.ts`; `src/lib/control-plane/preflight.ts`; live `wrangler secret list` (25 names — no `SUPABASE_ACCESS_TOKEN`, no `POSTHOG_ORG_ID`) | Whether the unconfigured cards are *intended* to stay unconfigured; Cloudflare Observability behaviour; provider API behaviour |
 | 2026-09-14 | Every route under `src/pages/api/control-plane/` (role floor, PLAC fragment, response helper); the six-tier RBAC ladder in `src/lib/auth/rbac.ts`; the three PLAC anchors in routes and UI; the config schema (`config-schema.ts`: value types, categories, scopes, services, caps, route-policy validation); optimistic concurrency + history + audit + best-effort flush in `config.ts` / `ServiceConfigRepository.ts`; cf-astro's `route-policy.ts` matching and `service-config.ts` caching; every component under `src/components/admin/control-plane/`; the cross-reference targets. Ten corrections above, one of which was a code defect (PATCH config lacked its role floor and fragment; fixed). | Live `admin_pages` rows (the seed is in `database/legacy_migrations/0030_seed_control_plane_pages.sql`; the baseline migration carries no data); Cloudflare Observability behaviour; the pre-redesign "hardcoded in source" history |

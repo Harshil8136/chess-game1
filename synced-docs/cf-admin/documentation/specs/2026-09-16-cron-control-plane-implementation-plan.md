@@ -1,7 +1,7 @@
 ---
 
 title: "Cron Control Plane — Implementation Plan"
-status: draft
+status: historical
 audience: [ai, technical, owner]
 last_verified: 2026-09-16
 verified_against: [code]
@@ -16,6 +16,35 @@ tags: [cron, jobs, control-plane, plac, permissions, plan]
      is opted out here and enforced on the chunk records once each stage ships. -->
 
 # Cron Control Plane Implementation Plan
+
+> **Executed 2026-09-16 — re-statused `historical` 2026-09-20. Do not run this
+> plan again.** Every task shipped (`14745a8`, `6293843`, `b19529b`, `6006d72`,
+> `2564000`/`5032e11`, `ec6efd7`, `1e4b3f7`, `894394e`, `335f681`), and the
+> unticked checkboxes below are an artefact, not remaining work. Four defects in
+> the plan text are on the record because production met them:
+>
+> - **Task 7's migration SQL was wrong.** It inserts the three `#pause`,
+>   `#trigger` and `#configure` rows with a NULL `icon`, but `admin_pages.icon`
+>   is `TEXT NOT NULL`, so `INSERT OR IGNORE` silently discarded all three while
+>   wrangler reported success — leaving those "load-bearing" permission checks a
+>   no-op for every role until `0055_cron_control_plane_subpages.sql` repaired
+>   it. Never seed rows with `INSERT OR IGNORE` without checking `changes`.
+> - **The seed commands do not do what they say.** `--apply` alone writes the
+>   local database; production needs `--apply --remote`, which the script
+>   performs through D1's REST API because wrangler's `--file` and `--command`
+>   paths both fail here.
+> - **`_guard.ts` moved.** Step 1 of Task 8 tells you to create
+>   `src/pages/api/cron/_guard.ts`; that file was merged into
+>   `src/lib/auth/surface-guards.ts`, and ratchet A18 now rejects a non-route
+>   file under `src/pages/api/`. Other renamed artefacts: `RunConsole.tsx` (not
+>   `RunResultDialog.tsx`), `src/styles/pages/cron.css`, and
+>   `src/pages/api/cron/jobs/[id]/stream.ts` (not `run.ts`).
+> - **The interval gate was inert as planned.** No task wrote `lastRunAt`; it
+>   was found from production telemetry and fixed afterwards in `cac8f40`.
+>
+> The "compile error if a job has no tier" premise is also false — see the
+> banner on
+> [`./2026-09-16-cron-control-plane-design.md`](./2026-09-16-cron-control-plane-design.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

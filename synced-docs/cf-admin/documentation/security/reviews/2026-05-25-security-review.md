@@ -6,7 +6,7 @@ audience: [technical]
 last_verified: 2026-06-06
 verified_against: [code]
 owner: harshil
-tags: []
+tags: [security, audit, review, plac, csrf]
 ---
 
 # Security Vulnerability Review — CF-Admin Madagascar
@@ -14,9 +14,28 @@ tags: []
 **Date:** 2026-05-25
 **Reviewer:** Automated deep scan
 **Branch (merged):** `claude/codebase-security-review-LhIkr` → `main` (PR #2, merge commit `3f8cd78`)
-**Scope:** Full codebase pass — middleware, all 50 API routes, frontend rendering, workers, scheduled crons, GitHub workflows, dependency CVEs, live Supabase advisors
+**Scope:** Full codebase pass — middleware, all 50 API routes *(as of 2026-05-25; there are 147 route files today)*, frontend rendering, workers, scheduled crons, GitHub workflows, dependency CVEs, live Supabase advisors
 
-> **📋 Follow-up status (2026-05-26):** The 14 Medium and 14 Low items deferred from this review have been re-verified and closed in commit `27e6090`. Production `npm audit` is now 0. See **[`2026-05-26-security-review.md`](./2026-05-26-security-review.md)** for the follow-up report — it maps each deferred item to its resolution. The body of this document is preserved as the historical record.
+> **Historical snapshot — banner added 2026-09-19.** This was a 35-finding
+> full-codebase pass (2 Critical + 5 High shipped in PR #2; 14 Medium + 14 Low
+> deferred), and it is the most detailed exploit narrative in the repository.
+> It is accurate for the date it carries and is preserved unedited; **do not
+> read it as current state** — the scope line's "50 API routes" is now 147, and
+> finding 4 is annotated below because it is still live. For current state read
+> `../SECURITY.md` §0, the self-assessments in `../compliance/`, and
+> `../../MAINTENANCE.md` for what is still open.
+
+> **📋 Follow-up status (2026-05-26, corrected 2026-09-19):** The 14 Medium and
+> 14 Low items deferred from this review were **re-verified** in commit
+> `27e6090`; the exploitable subset was closed there and the remainder was
+> consciously deferred. This banner previously said all 28 "have been
+> re-verified and closed", which the follow-up's own *Items Verified Closed*
+> table contradicts — it lists M-4, M-5, M-7, M-8, M-9, M-13 and L-1..L-13 with
+> dispositions like *"Left as-is pending a product call"* and *"Deferred as a
+> follow-up batch"*. Production `npm audit` did reach 0. See
+> **[`2026-05-26-security-review.md`](./2026-05-26-security-review.md)** for
+> the follow-up report — it maps each deferred item to its resolution. The body
+> of this document is preserved as the historical record.
 
 ---
 
@@ -47,7 +66,11 @@ The codebase's posture remains strong — RBAC numeric hierarchy, KV-backed sess
 
 ---
 
-## Findings Pending (tracked in `PENDING_PHASES.md`)
+## Findings Pending (tracked in [`../../archive/PENDING_PHASES.md`](../../archive/PENDING_PHASES.md))
+
+> *Pointer updated 2026-09-19:* `PENDING_PHASES.md` was archived. The items
+> that are still open — chiefly item 4 below — are tracked in
+> [`../../MAINTENANCE.md`](../../MAINTENANCE.md), not there.
 
 ### 🟡 Medium (14)
 
@@ -55,6 +78,16 @@ The codebase's posture remains strong — RBAC numeric hierarchy, KV-backed sess
 2. `content/reviews.ts:33` — GET crashes 500 if a corrupted JSON row sits in `cms_content`. Wrap `JSON.parse` in try/catch (pattern already used in `gallery.ts`).
 3. `writeRevocationFlag` TTL hardcoded to 86 400 s in both `src/lib/auth/session.ts:281` and `src/lib/auth/plac.ts:363` — doesn't respect `SESSION_MAX_LIFETIME_MS`. Two copies; consolidate into one helper.
 4. `audit/logs.ts` DELETE handler — even with the new PLAC gate, allows DEV/Owner to bulk-delete arbitrary audit entries. Audit log should be append-only. Consider removing DELETE entirely (use `audit/prune` retention instead).
+   > **Still open — note added 2026-09-19.** Unlike everything else in this
+   > file, this describes a capability that is live today: the handler still
+   > runs `DELETE FROM admin_audit_log …`, and it was exercised in production
+   > on 2026-09-18 — the table now holds a single-digit number of rows, the
+   > oldest of which is that delete. Tracked as `../../MAINTENANCE.md` C-9.
+   > *Terminology:* `../../architecture/plac-and-audit.md` §3.2 bans
+   > "append-only" for this log; the approved phrasing for what exists is
+   > **"an insert-only application write path"**, and the fix this item asks
+   > for is genuine tamper-evidence (a chain plus a verify endpoint), not a
+   > word.
 5. `users/manage.ts:100–121` — POST `pageOverrides[].pagePath` accepted without validating it exists in `admin_pages`, and without the Gate D ceiling check. Stash junk rows in `admin_page_overrides`. Low impact (privileged action) but data-quality bug.
 6. `session.ts:130` — `X-Forwarded-For` fallback for IP logging. CF always sets `CF-Connecting-IP` on Internet-facing requests; the XFF fallback only lets an attacker spoof audit-trail IP if CF-Connecting-IP is somehow missing. Drop the XFF leg.
 7. `middleware.ts:170` — `process.env.SITE_URL ?? env.SITE_URL` reverses precedence vs intent. Not currently exploitable (both agree today) but fragile.

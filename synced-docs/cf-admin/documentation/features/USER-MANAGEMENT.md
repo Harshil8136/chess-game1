@@ -3,18 +3,26 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-16
+last_verified: 2026-09-19
 verified_against: [code, infra]
 owner: harshil
-related_docs: [CF-ACCESS-SYNC.md]
-tags: []
+related_code: [src/pages/api/users/manage.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
+tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
 
 # Manage Users & RBAC Architecture
 
-> **Scope note (2026-08-23).** This document covers the account lifecycle and the
-> admin UI. The permission model it rests on — roles, PLAC, the provisioning gates —
-> is owned by [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
+> **Scope note (2026-08-23, restated 2026-09-19).** This document covers the
+> account lifecycle and the admin UI. The permission model it rests on — roles,
+> PLAC, the provisioning gates, the helper semantics — is owned by
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
+> and that document wins on any disagreement; the tables reproduced below in §2
+> are a convenience copy. Everything about the **Sessions console** — the tabs, the
+> edge-block list, the fragment enforcement — belongs to
+> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
+> The banner below calls `plac-and-audit.md` "authoritative"; that predates the
+> split and is no longer accurate for the model itself, only for the audit side.
 
 
 > [!IMPORTANT]
@@ -32,9 +40,9 @@ tags: []
 > **TL;DR (non-technical):** How admin users are managed: the six role tiers, how accounts are invited/changed/removed, how higher-privilege accounts are protected, and how active sessions are controlled.
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
-> **Framework:** Astro 6 + Preact + Cloudflare Workers
+> **Framework:** Astro 7 + Preact + Cloudflare Workers *(corrected 2026-09-19 — this said Astro 6; the pinned version is 7.3.2)*
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-08-12 (docs-consistency pass: role table, helper-function references, enforcement/route tables, and Hidden Accounts visibility rewritten to match the 2026-07-27 role rename and the 2026-07-26 removal of DEV/Owner list-hiding — no code changes, documentation only. Previously 2026-07-24 v4.8: CF Access Group sync hardened — root-cause fix for a silent-failure bug in `syncCfAccessGroup`'s response validation, durable per-attempt logging, 5-minute cron self-heal, per-user sync-status pill, Force Re-sync action, and live Group-membership drift detection; see `CF-ACCESS-SYNC.md`. Previously v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
+> **Last Updated:** 2026-09-19 (corrections pass — see §12). Previously 2026-08-12 (docs-consistency pass: role table, helper-function references, enforcement/route tables, and Hidden Accounts visibility rewritten to match the 2026-07-27 role rename and the 2026-07-26 removal of DEV/Owner list-hiding — no code changes, documentation only. Previously 2026-07-24 v4.8: CF Access Group sync hardened — root-cause fix for a silent-failure bug in `syncCfAccessGroup`'s response validation, durable per-attempt logging, 5-minute cron self-heal, per-user sync-status pill, Force Re-sync action, and live Group-membership drift detection; see `CF-ACCESS-SYNC.md`. Previously v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -48,7 +56,7 @@ The CF-Admin portal enforces a strict separation between **identity** (who you a
 - **No GoTrue:** `auth.admin.createUser()`, `auth.admin.deleteUser()`, `supabase.auth.signInWithOtp()`, and the `admin_sessions` table have been fully removed from all code paths.
 - **CSRF Protection:** All mutation requests are validated via stateless Origin + Referer header checking, applied globally by middleware.
 - **Error Sanitization:** All API error responses return generic messages — no internal stack traces, SQL errors, or schema details leak to the client.
-- **Ghost Protection (3-Layer Force-Kick):** Role mutations trigger a synchronous security cascade across KV + CF API to prevent privilege persistence via stale sessions.
+- **Ghost Protection (3-Layer Force-Kick):** Deactivation, deletion, force-kick and the Sessions page's block action trigger a synchronous security cascade across KV + CF API to prevent privilege persistence via stale sessions. *Corrected 2026-09-19: this said "role mutations trigger" the cascade, which contradicted §3.1 and §8 of this same document. Since `46b8f4d` (2026-09-16) a **role change** instead resets the user's page overrides and writes an `authz-changed` mark — each live session re-reads its role and page map on its next request, and nobody is signed out.*
 
 ### Technical Interaction Model (Authorize a New User)
 
@@ -70,7 +78,7 @@ Access levels operate dynamically based on strict numeric permissions (lower num
 | **2** | **Admin** 👑 | Second in command. Full operational control, including platform settings and users at or below their level. |
 | **3** | **Manager** 🛡️ | Runs day-to-day operations — bookings, content, customers, generalized audit logs. No user or platform administration. |
 | **4** | **Staff** 👤 | Works in their own area. Cannot change settings or other people. |
-| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). |
+| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Not currently assignable.** *Added 2026-09-19:* while `ROLE_VOCABULARY = 'legacy'` (`src/lib/auth/rbac.ts`) the database has no stored value for Viewer, so `toStoredRole` cannot persist it and `manage.ts` refuses it — but `ASSIGNABLE_ROLES` in the invite pill grid still offers it, so an admin can pick a role the server will reject. Tracked as C-11 in [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md). |
 
 ### Color Hierarchy: Thermal Gradient
 
@@ -96,7 +104,7 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 | `isReadOnly` | `role === 'viewer'` | Refused on every mutating request regardless of page grants |
 | `canManageUser` | `ROLE_LEVEL[actor] < ROLE_LEVEL[target]` | May `actor` edit/delete/re-role `target`? (Vendor Support exempt) |
 
-> **Deprecated aliases (still live — kept for ~200 pre-rename call sites):**
+> **Deprecated aliases (still live — 70 pre-rename call sites across 50 files, measured 2026-09-19; this said ~200):**
 > `isDev` = `isVendorSupport`, `isOwnerOrDev` = `isOwnerOrVendor`,
 > `isSuperAdmin` = `isAdminOrAbove` (still level 2, now named Admin),
 > `isAdmin` = `isManagerOrAbove` (still level 3, now named Manager). New code
@@ -116,16 +124,36 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 |------|---------------|--------------|:---:|
 | `src/pages/api/users/manage.ts` | `isVendorSupport` | Role mutation, privileged-account edit protection | ✅ `/dashboard/users` |
 | `src/pages/api/users/access.ts` | `isVendorSupport`, `isOwnerOrVendor` | PLAC provisioning | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor` | Session termination | ✅ `/dashboard/users` |
+| `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor` — **target protection only** | Session termination | ✅ `/dashboard/users` |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/probes.ts` | `requireAuth(context, 'owner')` | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/cf-access-audit.ts` | `requireAuth(context, 'owner')` | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
-| `src/pages/api/sessions/active-sessions.ts` | (admin+) | KV active session list + revoke | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
-| `src/pages/api/sessions/active-revocations.ts` | (admin+) | KV revocation block list + unblock | ✅ `/dashboard/users` (2026-05-26); DELETE has 30/min RL |
-| `src/pages/api/sessions/flush-sessions.ts` | (admin+) | Bulk session flush | ✅ `/dashboard/users` |
+| `src/pages/api/sessions/active-sessions.ts` | `denySessions` | KV active session list + revoke | ✅ `/dashboard/sessions`, **plus `#revoke` on DELETE**; 30/min RL |
+| `src/pages/api/sessions/active-revocations.ts` | `denySessions` | KV revocation block list + unblock | ✅ `/dashboard/sessions`, **plus `#unblock` on DELETE**; 30/min RL |
+| `src/pages/api/sessions/flush-sessions.ts` | `denySessions` + `isOwnerOrDev` | Bulk session flush — **Owner/Vendor only** | ✅ `/dashboard/sessions`, plus `#flush` |
 | `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
-| `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ effective gate `/dashboard/users` |
+| `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ `/dashboard/sessions` |
+
+> *Corrected 2026-09-19.* The three `src/pages/api/sessions/` rows said "(admin+)"
+> with PLAC on **`/dashboard/users`**, and `session-status.ts` was described as
+> having an "effective gate" of `/dashboard/users` reached through a deactivated
+> page key. Both changed on 2026-09-16 (gaps **D-3** and **D-4** in
+> [`../MAINTENANCE.md`](../MAINTENANCE.md)): every one of them now gates on
+> `/dashboard/sessions`, the mutating routes additionally check their action
+> fragment through `src/lib/auth/surface-guards.ts`, and `flush-sessions` is
+> Owner/Vendor only rather than admin+. The Sessions console is documented in
+> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md), which owns these rows.
+
+> **Spec gap D6 — `#force-kick` is enforced nowhere.** The `admin_pages` row
+> `/dashboard/users#force-kick` exists live with an Owner baseline, and the access
+> UI offers it, but a grep of `src/` finds no reference to the string. What the
+> route actually enforces is `/dashboard/users` plus a *target* check: a canonical
+> **Admin** with page access can force-kick any manager or staff account, and
+> `isOwnerOrVendor` only protects owner and vendor_support targets from them.
+> Every kick also writes a 24-hour `revoked:` sign-in block — see §5.4. Open; see
+> `documentation/specs/2026-09-16-access-revocation-remediation-design.md`.
+> *Added 2026-09-19.*
 | `src/pages/api/features/toggle.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Feature flag mutation | (role-only — Vendor Support is PLAC-exempt) |
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/logs.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Audit log deletion | ✅ `/dashboard/logs` |
@@ -148,10 +176,10 @@ When an account is deactivated, deleted or force-kicked, the system triggers a *
 
 1. **Verification**: The actor's clearance is verified against the target's role (note: "Manager" is now also a specific role name at level 3 — this step is a generic clearance check, not a literal Manager-role gate).
 2. **Whitelist Update**: Supabase `admin_authorized_users` is updated with the new role/status.
-3. **Override Purge**: `resetUserOverrides(env.DB, userId)` deletes all D1 page overrides → clean RBAC state.
+3. **Override Purge**: `resetUserOverrides(env.DB, userId)` deletes all D1 page overrides → clean RBAC state. *Corrected 2026-09-19: this runs on a **role change** and on **deletion** only. Deactivation and force-kick leave the user's overrides in place.*
 4. **Layer 1 — KV Session Deletion**: LISTS `user-session:{userId}:*` (reverse-index pattern, O(k)) → deletes all matching session keys. User's KV session is gone.
-5. **Layer 2 — KV Revocation Flag**: Writes `revoked:{userId}` → `'1'` to KV with 24h TTL. Middleware checks this flag before any new session bootstrap — prevents the "CF Access cookie still valid → auto-bootstrap" gap.
-6. **Layer 3 — CF Access API Revocation**: `DELETE /accounts/{accountId}/access/users/{cfSubId}/active_sessions` — invalidates the CF_Authorization cookie at the CF edge immediately. User's next request is intercepted by CF Access → redirect to login. `cfSubId` read from KV session; falls back to `admin_authorized_users.cf_sub_id` if no active session.
+5. **Layer 2 — KV Revocation Flag**: Writes `revoked:{userId}` → `'1'` to KV with 24h TTL. Middleware checks this flag before any new session bootstrap — prevents the "CF Access cookie still valid → auto-bootstrap" gap. It is written **first**, before the session deletion, so no re-bootstrap window opens between the two operations.
+6. **Layer 3 — CF Access API Revocation**: `POST /accounts/{accountId}/access/organizations/revoke_user` with a body of `{ email?, user_uid?, devices: true }` (`src/lib/auth/plac.ts`). *Corrected 2026-09-19: this said `DELETE …/access/users/{cfSubId}/active_sessions`.* The difference matters — `devices: true` revokes the user's tokens across **every device**, not one session, and the call is made by email as well as `user_uid`, so it works even for an account that has never linked a `cf_sub_id`. The user's next request is intercepted by CF Access → redirect to login. `cfSubId` and email are read from the KV sessions first and fall back to `admin_authorized_users`. The call is fire-and-forget through `waitUntil` when an execution context is available, and a failure is logged, not surfaced.
 
 **Reverse-Index KV Pattern:**
 Secondary index `user-session:{userId}:{sessionId}: '1'` allows targeted `LIST` for O(k) deletion instead of O(total_sessions) full-namespace scan.
@@ -194,7 +222,8 @@ When an authorized admin adds a new member from the dashboard:
 8. **CF Access whitelist (Automated):** The CF Access Group ("Admin Portal Authorized Users") is automatically synchronized with the Supabase whitelist via a background task (`cf-access-sync.ts`) hooked into the Worker API. No manual intervention is needed in the Cloudflare dashboard.
 
 > **Non-fatal override writes:** If the batch override write fails, user creation still succeeds. The admin can set page permissions manually via the Page Access Manager after creation.
-> **No GoTrue:** There is no call to `auth.admin.createUser()`. The user receives no invitation email from the Worker. CF Access sends its own authentication email/redirect when the user first tries to access `admin.madagascarhotelags.com`.
+> **No GoTrue:** There is no call to `auth.admin.createUser()`.
+> **The Worker does send an invitation email.** *Corrected 2026-09-19: this said "The user receives no invitation email from the Worker. CF Access sends its own authentication email/redirect when the user first tries to access `admin.madagascarhotelags.com`."* `POST /api/users/manage` enqueues an invite onto `EMAIL_QUEUE` with `purpose: 'custom_email'` and the tag `admin_invite`, and `src/pages/api/users/resend-invite.ts` exists to send it again. CF Access does also send its own OTP/redirect on first access, but that is in addition. The portal host is **`secure.madagascarhotelags.com`**, not `admin.…`.
 
 ### 5.2 Role Selection UI (Invite Modal)
 
@@ -202,7 +231,7 @@ The Invite Modal renders a "Command Console" two-panel dialog:
 
 **Left panel — Identity:**
 
-- **Role Pill Selector**: 2×2 pill grid with role-specific colors. Roles at or above actor's level are greyed-out/disabled (server enforces this too).
+- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the five assignable roles, with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
 - **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors.
 - Email + Display Name inputs, Grant Access + Cancel buttons.
 
@@ -226,7 +255,30 @@ Access is managed via the active flag in the authorization table. When set to tr
 If a user needs immediate revocation:
 
 1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The 3-layer force-kick fires on the PATCH itself, and the PATCH writes an `authz-changed` mark, so any session the kick misses re-verifies on its next request and ends with `account_inactive`. The re-check writes no sign-in block.
-2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV delete + KV revocation flag + CF API session DELETE). User is ejected within seconds.
+2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV revocation flag + KV session delete + CF API org-wide revoke). User is ejected within seconds.
+
+> ### How to get someone back in after a kick
+>
+> *Added 2026-09-19. This is the failure class that locked the Owner out on
+> 2026-09-16, and it was not written down anywhere.*
+>
+> Every path above writes **Layer 2**: a `revoked:{userId}` key in KV with a
+> **24-hour TTL**. Until it is gone, the user cannot bootstrap a new session even
+> with a perfectly valid CF Access cookie — they will simply be refused, with no
+> UI explaining why.
+>
+> - **Deactivation (option 1) is self-healing.** Re-activating the account with
+>   `PATCH /api/users/manage` `is_active: true` explicitly deletes the
+>   `revoked:` key.
+> - **A force-kick (option 2) is not.** Nothing clears the flag. It can only be
+>   lifted from **Security → Sessions → Active Edge Blocks** (`#unblock`), or by
+>   waiting out the 24 hours. And that tab shows `0` with a green "No active
+>   blocks" until it is clicked — see
+>   [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
+>
+> So: if a user reports being locked out after any administrative action, open
+> the Active Edge Blocks **tab** before concluding there is no block. Stage 2 of
+> the access-revocation remediation retires this flag; it has not shipped.
 3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
 4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
 
@@ -240,7 +292,7 @@ The interface is composed of multiple Preact islands:
 | **User Card** | | Individual user card with role badge, actions, permission display |
 | **Page Access Manager** | | Per-user PLAC override toggle grid (for existing users) |
 | **Invite User Modal** | | Two-panel "Command Console" Preact island |
-| **Role Pill Selector** | | Atomic: 2×2 role pill grid with RBAC-gated availability |
+| **Role Pill Selector** | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: two-column role pill grid with RBAC-gated availability |
 | **Hidden Account Toggle** | | Atomic: ghost-mode toggle (Vendor Support/Owner only) |
 | **Page Chip Grid** | | Atomic: interactive chip grid grouped by section, 4 chip states |
 | **Session Forensics Drawer** | `SessionForensicsDrawer.tsx` | Premium HUD slide-in panel: device identity (browser/OS via zero-dep UA parser), connection telemetry (IP, geo, Ray ID), live 24h session countdown, per-session revocation |
@@ -312,9 +364,15 @@ The system is designed to "fail-closed" across various infrastructure disruption
 |---------------|---------------|-----------------------|
 | **KV Read Timeout** | Session cannot be verified | Request is rejected (401). Prevents unauthorized access on cache failure. |
 | **D1 Write Failure** | Permission change not saved | API returns 500. UI shows error, no state change occurs. |
-| **KV Write Failure** | Force-logout or `authz-changed` mark not written | The session keeps its old map until the next 30-minute re-check, which detects the role or active-state change. Audit log preserves the attempt. |
+| **KV Write Failure** | Force-logout or `authz-changed` mark not written | A missed mark after a **role or active-state** change is caught by the next 30-minute re-check. A missed mark after an **override-only** change is not — that re-check recomputes the page map only on a role change or a forced check, so the correction arrives with the 1-hour access-map refresh instead. Audit log preserves the attempt. *Corrected 2026-09-19.* |
 | **Supabase outage during a re-check** | Identity row cannot be read | The session keeps working for up to two re-check intervals since the last good check, then ends with `recheck_failed`. No sign-in block is written. |
-| **Supabase Outage** | Invitation/Auth fails | Whitelisting is rolled back atomically to prevent orphaned records. |
+| **Supabase outage during an invite or role change** | The mutation fails | The API returns 500 and **no whitelist mutation is made**, so the user stays at their previous access level. *Corrected 2026-09-19: this row said "whitelisting is rolled back atomically to prevent orphaned records", while the duplicate table below said "no whitelist mutation" — there was nothing to roll back, because the write never lands.* |
+| **Layer 1 KV kick fails** | Sessions not deleted | Layer 2's revocation flag still blocks re-bootstrap; Layer 3 blocks at the CF edge. |
+| **Layer 3 CF API fails** | The CF_Authorization cookie stays valid | Layer 2's revocation flag prevents a new session. On natural expiry (≤24 h) the user is fully locked out. |
+
+*The second, near-duplicate "Failure Modes" table that used to sit below the
+timing matrix was merged into this one on 2026-09-19; the two disagreed about the
+Supabase-outage case.*
 
 ### Session Timing Matrix
 
@@ -324,19 +382,9 @@ The system is designed to "fail-closed" across various infrastructure disruption
 | **Global CF session** | 24 Hours | CF Dashboard → Settings → Auth → Global Session Timeout |
 | **KV TTL** | 24 Hours | `expirationTtl: 86400` on KV session write |
 | **Hard expiry guard** | 24 Hours | `createdAt` check in middleware fast-path (defense-in-depth) |
-| **Role re-check** | 30 Minutes | `lastRoleCheckedAt` → D1 re-fetch of `admin_authorized_users` |
+| **Role re-check** | 30 Minutes | `lastRoleCheckedAt` → **Supabase** re-fetch of `admin_authorized_users` (`src/lib/auth/stages/refresh-role.ts`). *Corrected 2026-09-19: this said "D1 re-fetch"; the whitelist has lived in Supabase since GoTrue was removed.* |
 | **CF JWT assertion** | ~1 Minute | Auto-refreshed by CF edge — Worker does not manage this |
-| **Force-kick propagation** | Immediate | 3-layer: CF API DELETE + KV revocation flag + KV session delete |
-
-### Failure Modes
-
-| Failure Event | System Impact | Mitigation |
-|---------------|---------------|------------|
-| **KV Read Timeout** | Session cannot be verified | Request rejected (401). Fail-closed — no unauthorized access on cache failure. |
-| **D1 Write Failure** | Permission change not saved | API returns 500. No state change. |
-| **Layer 1 KV Kick Fails** | Sessions not deleted | Layer 2 revocation flag still blocks re-bootstrap. Layer 3 blocks at CF edge. |
-| **Layer 3 CF API Fails** | CF_Authorization cookie remains valid | Layer 2 revocation flag prevents new session. On natural expiry (≤24h), fully locked out. |
-| **Supabase Outage** | Invitation/role change fails | API returns 500. No whitelist mutation. User remains at previous access level. |
+| **Force-kick propagation** | Immediate | 3-layer: KV revocation flag (24 h) + KV session delete + CF API org-wide `revoke_user` |
 
 ---
 
@@ -359,8 +407,13 @@ Admin Portal Add/Update/Delete User
   → CF Access Group ("Admin Portal Authorized Users") is updated
   → outcome logged to D1 `cf_access_sync_log` + swept to `cf_sync_status` on every active user
 
-Self-heal: every 5 minutes (cron), `reconcileCfAccessGroup()` unconditionally
-re-runs the sync regardless of whether the last inline attempt succeeded.
+Self-heal: `reconcileCfAccessGroup()` is evaluated on every 5-minute tick, but
+since chunk 8 it is hash-or-age gated — it only calls Cloudflare when the active
+whitelist's hash has changed, or the last successful sync is older than the
+max-staleness window (`cf-access-reconcile-max-staleness-hours`, default 24 h).
+*Corrected 2026-09-19: this said it "unconditionally re-runs the sync regardless
+of whether the last inline attempt succeeded".* Out-of-band drift is still
+self-healed, just within a day rather than within five minutes.
 
 Login Flow:
 CF Access → (checks Access Group, if the Policy is wired to it) 
@@ -385,10 +438,10 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
 | `GET /api/users` | PLAC (`/dashboard/users`); no role floor beyond authentication — see §2.1 | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
-| `GET /api/users/[id]/session-status` | PLAC — the handler passes the deactivated page key `/dashboard/users/sessions`, which resolves by longest-prefix to `/dashboard/users` (see note below); `isOwnerOrVendor` gates the ghost-target sub-case only — see §2.1 | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
+| `GET /api/users/[id]/session-status` | PLAC `/dashboard/sessions` (D-3, resolved 2026-09-16); `isOwnerOrVendor` gates the ghost-target sub-case only — see §2.1 | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
-| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `[SUPABASE_PROJECT_REF]` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
+| `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `groupMembershipDrift` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
 | `POST /api/users/cf-resync` | owner+ | Force an immediate whitelist → CF Access Group resync (see `CF-ACCESS-SYNC.md`) |
 
 ### 11.4 Login Intelligence Panel (ExpandedRow)
@@ -402,7 +455,7 @@ When an admin expands a user row in the User Registry, the bottom of the expande
 | Location | `geo_location` + `colo` | "City, Country (CF data center)" |
 | Bot Score | `cf_bot_score` | CF bot management score; emerald < 20, amber 20–49, red ≥ 50 |
 | CF Ray | `cf_ray_id` | First 10 chars of CF Ray ID (full value in tooltip) |
-| IP | `ip_address` | Masked to `X.X.***.***` for non-Vendor-Support actors; full IP for Vendor Support |
+| IP | `ip_address` | Masked to `X.X.***.***` **server-side** for non-Vendor-Support actors; full IP for Vendor Support. (The live-sessions APIs behave differently — see §11.8.) |
 | Date | `created_at` | Relative ("2h ago") with absolute ISO tooltip |
 
 The `summary` shows total login count, success count, and failure count across all time for this email.
@@ -450,8 +503,9 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | Data | Exposure | Rationale |
 |------|----------|-----------|
 | `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
-| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with `/dashboard/users` PLAC access (the effective gate — see the page-key note in §2.1) (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
-| Full IP addresses | Vendor Support actor only | PII — other actors see masked `X.X.***.***` |
+| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with **`/dashboard/sessions`** PLAC access (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
+| Full IP addresses — **login history** | Vendor Support actor only | `GET /api/users/[id]/login-history` masks to `X.X.***.***` server-side for everyone below Vendor Support. |
+| Full IP addresses — **live sessions** | **Any canonical Admin** | *Corrected 2026-09-19: the single row here said "Vendor Support actor only", which is true of login history and false of live sessions.* `GET /api/sessions/active-sessions` and `GET /api/users/[id]/session-status` return the unmasked `ipAddress` of every session to anyone holding `/dashboard/sessions`. The masking those screens show is applied in the browser (`maskIp`), so it is a display convention, not an access boundary. See [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md); logged in [`../MAINTENANCE.md`](../MAINTENANCE.md). |
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |
 | CF audit cross-reference | Owner+ only | Reveals CF Access org-level user list |

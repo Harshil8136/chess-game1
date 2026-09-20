@@ -1,42 +1,62 @@
 ---
 
 title: "Control Plane Visual Overhaul Plan"
-status: draft
+status: historical
 audience: [ai, technical]
-last_verified: 2026-08-12
+last_verified: 2026-09-20
 verified_against: [code]
 owner: harshil
-related_docs: [../../archive/control-plane-design/PLAN.md, ../../archive/control-plane-design/TECHNICAL_OVERVIEW.md]
-tags: [control-plane, ui, design]
+related_docs: [../../archive/control-plane-design/PLAN.md, ../../archive/control-plane-design/TECHNICAL_OVERVIEW.md, ../DESIGN-SYSTEM.md]
+tags: [control-plane, ui, design, historical]
 ---
 
 # Control Plane Visual Overhaul Plan
 
-> **TL;DR (non-technical):** A proposal to unify the Service Control Plane page's
-> look under a single accent color instead of per-service branding, and fix a
-> handful of layout bugs. Moved here 2026-08-12 from the now-removed `docs/` tree
-> (see `CONTRIBUTING-DOCS.md`); **partially implemented** — see status note below.
+> ## 📕 HISTORICAL — this plan is closed. Do not execute it.
+>
+> A 2026-08 working proposal to unify the Service Control Plane's look under one
+> accent colour and fix some layout bugs. **Effectively all of it shipped.** It
+> is kept as a record of what was asked for and why, and for the one question it
+> left open. Its two siblings (`PLAN.md`, `TECHNICAL_OVERVIEW.md`) were archived
+> on 2026-08-23; this file stayed behind as the sole occupant of
+> `reference/control-plane-design/`.
+>
+> The living owner of anything in here is
+> [`../DESIGN-SYSTEM.md`](../DESIGN-SYSTEM.md).
 
-## Status note (added 2026-08-12)
+## What actually shipped (re-verified 2026-09-20)
 
-This plan was originally written as a working proposal in the legacy `docs/`
-folder. Re-checked against the current codebase before this move:
+| Ask | Outcome |
+|---|---|
+| Config-key wrapping (`break-all` → `break-words font-mono`) | ✅ **Done** — `ConfigRow.tsx` renders the key with `font-mono text-[13px] font-semibold tracking-tight … break-words`. |
+| Header text squishing (`min-w-0` on the header wrapper) | ✅ **Done** — `src/pages/dashboard/control-plane/index.astro` uses `flex-1 min-w-0 w-full`. |
+| PostHog **Layer A / Layer B** restructure | ✅ **Done**, and it also answers Open Question 1: `ProviderControls.tsx` renders an inline explainer — "App Integration Settings (Layer A): Configured locally in D1…" / "Live Platform Telemetry (Layer B): Queried in real-time… Governs actual recording ingestion and billing quotas" — plus dedicated Layer B section headers. No tooltips needed. |
+| Sub-nav layout: tabs or sidebar list? (Open Question 2) | ✅ **Answered by shipping tabs** — `ServiceSubNav.astro` is a "sticky segmented sub-navigation". |
+| Sticky sub-nav fix (`sticky top-[52px]` → `sticky top-0`) | ✅ **Done differently** — it landed on `sticky top-3 sm:top-4`. Whether that resolved the original overlap needs a browser and was never confirmed; it has been in production since 2026-08 with no complaint, so treat it as settled. |
+| **Theme unification — remove per-service brand colour** | ✅ **Done.** `violet` has **0 occurrences** across all 13 `src/components/admin/control-plane/*` files and all 5 `src/pages/dashboard/control-plane/*.astro` pages, and no provider carries its own colour. The 2026-08-12 note below said otherwise; it conflated brand colour with semantic status colour. |
 
-- **Done:** `ConfigRow.tsx` already uses `break-words font-mono text-[13px]
-  tracking-tight` on the config-key class (matches the "Config Tables & Rows"
-  section below).
-- **Partially done, differently:** `ServiceSubNav.astro`'s sticky positioning was
-  changed from the original `sticky top-[52px]` bug, but landed on
-  `sticky top-3 sm:top-4`, not the `sticky top-0` this plan proposed. Worth a
-  follow-up look to confirm it resolved the same overlap issue.
-- **Not done:** The core ask — **Theme Unification (no brand color coding)** —
-  has not shipped. `ProviderControls.tsx` still uses per-service brand colors
-  extensively (`emerald-400`/`amber-400`/`cyan-400`/`rose-400` for Sentry,
-  PostHog, and status indicators throughout `SentryView`/`PostHogView`), not the
-  unified `var(--theme-accent)` this plan calls for.
+### The one thing left open
 
-Kept as `draft` / still-relevant planning rather than deleted, since the
-headline goal remains unshipped.
+`ProviderControls.tsx` keeps two kinds of colour that the "not done" note ran
+together:
+
+- **Semantic status colour** — `text-emerald-400` / `text-rose-400` for ok/error,
+  `bg-rose-500/10` / `bg-amber-500/10` for issue severity, deploy-health dots.
+  This plan never asked for its removal and it should stay.
+- **A cyan section accent**, where this plan asked for `var(--theme-accent)`
+  (Blue-500). This is a real divergence: `DESIGN-SYSTEM.md` §2.6 reserves cyan
+  for navigation identity and says section colours are "NOT used for interactive
+  elements". Measured 2026-09-20 across the control-plane tree: `theme-accent`
+  33 uses vs `theme-cyan` 17.
+
+**That cyan-vs-Blue-500 question is the entire remaining value of this
+document.** It is a design call, not a plan, and belongs in
+[`../DESIGN-SYSTEM.md`](../DESIGN-SYSTEM.md) §2.6 or on the maintenance list.
+
+> The original proposal text is preserved unchanged below. Two blocks in it —
+> "User Review Required" and "Open Questions (For /grill-me)" — are
+> proposal-time interaction artifacts; `/grill-me` is no longer part of the
+> workflow and both questions are answered in the table above.
 
 ## Overview
 
@@ -92,8 +112,13 @@ This plan implements a complete visual overhaul of the Service Control Plane pag
 ## Verification Plan
 
 ### Automated Tests
-- Run `npm run check` to ensure there are no TypeScript compile-time errors in the Astro pages or Preact components.
-- Run `npm run build` to verify the build output packages successfully without CSS compilation warnings.
+- Run **`npm run verify`** — that is the repo's gate (typecheck → ratchet → tests
+  → `rules_check.py` → `docs_check.py` → `lint:md` → `a11y_check.py` →
+  `audit_gate.py`), and it is what CI runs.
+  *(Corrected 2026-09-20: this plan originally said `npm run check` + `npm run
+  build`. Both exist, but neither is the gate, and a UI change verified with them
+  alone skips the a11y guard and the `A6`/`A7` ratchet that hold exactly the
+  inline-style and raw-hex debt this plan touches.)*
 
 ### Manual Verification
 - Ask the developer/maintainer to check the page `/dashboard/control-plane` in their browser and confirm:

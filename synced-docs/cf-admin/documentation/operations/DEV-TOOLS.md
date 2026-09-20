@@ -1,31 +1,41 @@
 ---
 
-title: "Edge Command Center — Architecture & Security Reference"
+title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-14
+last_verified: 2026-09-19
 verified_against: [code]
 owner: harshil
 tags: []
 ---
 
-# Edge Command Center — Architecture & Security Reference
+# Developer Debug Portal (Edge Command Center) — Architecture & Security Reference
 
 > **TL;DR (non-technical):** The built-in developer and debug tools inside the admin portal — diagnostics, health checks, and the page-registry manager.
 
 > **Scope**: `cf-admin` — Covers System Debugging, Feature Configuration, and the Audit Engine.
 >
-> **Last Updated**: 2026-04-25; re-verified 2026-09-14 (see §9)
+> **Naming**: nothing in the product is labelled "Edge Command Center". The
+> shipped `<h1>` is **Developer Debug Portal** (§7), which is what to search
+> for in the code or a screenshot; the older name is kept in the title only so
+> existing links and index rows still find this page.
+>
+> **Last Updated**: 2026-04-25; re-verified 2026-09-14 and 2026-09-19 (see §9)
 
 ---
 
 ## 1. Overview
 
-The Edge Command Center is the developer-exclusive administrative module within `cf-admin`. It provides DEV-role users with:
+The Developer Debug Portal is the developer-exclusive administrative module within `cf-admin`. It provides DEV-role users with:
 
-- **System Debugging** — Health check tooling for production bindings (D1, KV)
+- **System Debugging** — the probe suite in `lib/diagnostics/` (tiers, latency
+  grades and remediation text) run against the live production bindings, plus
+  its history and the page-registry manager (§3)
 - **Feature Configuration** — Runtime feature flag management (no deployment required)
-- **Audit Suppression** — Secure, auditable suppression of activity logging per-user (managed via User Management)
+
+*(A third bullet, "Audit Suppression", was removed on 2026-09-19: the feature
+was deleted on 2026-07-26 and §5/§8.1 explain why it is not coming back. It
+should not have survived in the overview a reader hits first.)*
 
 All modules are protected by **Server-Side Rendering (SSR) authorization guards**, ensuring that no unauthorized content is ever sent to the client.
 
@@ -51,24 +61,41 @@ if (!isVendorSupport(user.role as Role)) {
 ---
 ```
 
-**Why SSR, not client-side?** Client-side checks (e.g., `{isVendorSupport(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the page HTML is never generated at all — the server rewrites to the access-denied view before any of the page's markup reaches the wire. *(2026-09-14: the three guarded pages still import the deprecated `isDev` alias and use `Astro.rewrite`, not a redirect; this doc previously showed `Astro.redirect('/dashboard?error=unauthorized')`.)*
+**Why SSR, not client-side?** Client-side checks (e.g., `{isVendorSupport(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the page HTML is never generated at all — the server rewrites to the access-denied view before any of the page's markup reaches the wire. *(2026-09-14: the guarded pages still import the deprecated `isDev` alias and use `Astro.rewrite`, not a redirect; this doc previously showed `Astro.redirect('/dashboard?error=unauthorized')`. 2026-09-19: there are **five** such pages, not three — `debug/index`, `debug/diagnostics`, `debug/diagnostics/history`, **`debug/pages`** (the page-registry manager, the highest-privilege of the set) and `settings/features`.)*
 
 ### 2.2 API Route Protection
 
-Every API endpoint backing these features enforces the same guard:
+Every API endpoint backing these features rejects an unauthenticated or
+under-privileged caller, which is what stops a direct `curl`/`fetch` from
+bypassing the UI. **The guards are not identical, and two of them are weaker
+than the role check** — corrected 2026-09-19, this section previously said
+"every API endpoint … enforces the same guard" and showed only the strict form.
+
+The strict form, used by `POST /api/features/toggle` and the `is_active` half
+of `POST /api/pages/toggle`:
 
 ```typescript
 import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
 
 if (!isVendorSupport(sessionUser.role as Role)) {
   return new Response(
-    JSON.stringify({ error: 'Insufficient permissions: DEV only' }), // toggle.ts wording; run.ts says 'Insufficient permissions or access denied by PLAC policy'
+    JSON.stringify({ error: 'Insufficient permissions: DEV only' }),
     { status: 403 }
   );
 }
 ```
 
-This prevents direct `curl`/`fetch` attacks that bypass the UI.
+The two exceptions, both live:
+
+| Route(s) | Actual guard | Consequence |
+|---|---|---|
+| `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | `checkPerm('/dashboard/debug', isDev(user.role))` — a **PLAC grant overrides the role**: `user.accessMap['/dashboard/debug'] === true` returns true before the role is consulted | A non-DEV user holding that grant can run the probe suite against live production bindings. The 403 body is `Insufficient permissions or access denied by PLAC policy` |
+| `pages/api/pages/toggle.ts` | `is_active` is DEV-only, but `required_role` is gated on `isSuperAdmin` | **Super Admin and above can change which role a page requires** — a privilege-boundary edit, from outside the DEV role |
+
+Treat both as decisions to confirm or defects to fix, not as documentation
+gaps. As written before this correction, the section asserted a stricter
+control than the code implements, which is the worse of the two failure modes
+for a threat model.
 
 ### 2.3 RBAC + PLAC Layering
 
@@ -76,11 +103,15 @@ Authorization is enforced at **three layers**:
 
 | Layer | Mechanism | File |
 |-------|-----------|------|
-| **Page-Level** (PLAC) | D1 `admin_pages` table restricts sidebar visibility | `lib/auth/plac.ts` |
-| **SSR Guard** | Astro frontmatter redirects non-DEV users | `pages/dashboard/debug/index.astro` |
-| **API Guard** | API route rejects non-DEV requests with 403 | `pages/api/diagnostics/run.ts` |
+| **Page-Level** (PLAC) | The **middleware authorization gate** for both pages and API routes, resolved from D1 `admin_pages`. It **default-denies**: an unmapped `/api/*` path is refused outright, and a refused page is rewritten to `/dashboard/access-denied`. Sidebar visibility is a consequence of the same map, not its purpose | `lib/auth/stages/decide.ts`, `lib/auth/guard.ts`, `lib/auth/plac.ts` |
+| **SSR Guard** | Astro frontmatter rewrites non-DEV users to the access-denied view | `pages/dashboard/debug/index.astro` |
+| **API Guard** | The handler's own role/PLAC check (§2.2) | `pages/api/diagnostics/run.ts` |
 
-All three layers must independently agree. If an attacker bypasses PLAC (e.g., bookmarks a URL), the SSR guard catches them. If they call the API directly, the API guard catches them.
+All three layers must independently agree. *Corrected 2026-09-19:* this section
+described PLAC as restricting "sidebar visibility" and offered "an attacker
+bookmarks a URL" as the bypass the SSR guard catches. Bookmarking a URL is
+precisely what PLAC itself stops — the middleware decides before the page or
+route runs. The defence-in-depth argument stands; the example did not.
 
 ---
 
@@ -136,7 +167,7 @@ Feature Configuration enables instant, deployment-free toggling of experimental 
 
 ### 4.3 Cross-Project Propagation
 
-**Not implemented as of 2026-09-14.** This section said cf-astro picks a toggled flag up within 60 seconds via its middleware cache and pointed at a cf-astro file (`EDGE_FEATURE_ROUTING`) that does not exist in the cf-astro checkout (removed or never written), and cf-astro's `src/` contains no reader of `admin_feature_flags` (its `service-config.ts` header still mentions a "feature-flag 3-layer cache in middleware.ts" that the middleware no longer contains). Today the flags affect cf-admin only. Cross-app runtime config goes through `service_config` — see [`../features/CONTROL-PLANE.md`](../features/CONTROL-PLANE.md).
+**Not implemented, and there is no consumer in either app.** This section said cf-astro picks a toggled flag up within 60 seconds via its middleware cache and pointed at a cf-astro file (`EDGE_FEATURE_ROUTING`) that does not exist in the cf-astro checkout (removed or never written), and cf-astro's `src/` contains no reader of `admin_feature_flags` (its `service-config.ts` header still mentions a "feature-flag 3-layer cache in middleware.ts" that the middleware no longer contains). *2026-09-19:* cf-**admin** has no runtime reader either — `admin_feature_flags` is written and read by the toggle UI and `FeatureFlagRepository.ts` and nothing else, so toggling a flag changes no behaviour anywhere. Read this as "the table is a UI with no consumer", not "it works locally". Cross-app runtime config goes through `service_config` — see [`../features/CONTROL-PLANE.md`](../features/CONTROL-PLANE.md), which is where this surface should fold in.
 
 ### 4.4 File Map
 
@@ -187,7 +218,10 @@ All audit writes use Cloudflare's `ctx.waitUntil()` API, which schedules work **
 
 - The user sees their response immediately
 - The D1 INSERT happens asynchronously in the background
-- If the D1 write fails, the user is unaffected (error is logged to console)
+- If the D1 write fails, the user is unaffected. `handleAuditError` logs to the
+  console **and** calls `Sentry.captureException` with
+  `component: 'ghost_audit_engine'` — so a persistent audit-write failure is
+  visible in Sentry, not console-only as this line said until 2026-09-19
 
 ### 6.2 Performance Budget
 
@@ -261,10 +295,11 @@ No part of the audit log is immutable — see
 
 ### 8.3 DEV-Only Restriction
 
-Feature Configuration and System Debugging are now **DEV-exclusive**. SuperAdmin users who previously had access will be redirected. This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators.
+Feature Configuration and System Debugging are now **DEV-exclusive**. SuperAdmin users who previously had access are **rewritten to `/dashboard/access-denied`** — the URL does not change, so this is not a redirect (corrected 2026-09-19; §2.1 already said so). This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators. Note the two exceptions in §2.2: a PLAC grant reaches the diagnostics API, and Super Admin can still change a page's required role.
 
 ## 9. Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-09-14 | The three guarded pages (`debug/index`, `debug/diagnostics`, `settings/features`) and their guard pattern; `run.ts` and `toggle.ts` guards and messages; every file under `components/admin/debug/`, `pages/dashboard/debug/`, `pages/api/diagnostics/`, `lib/diagnostics/`; `FeatureFlagRepository.ts` (D1 only); cf-astro for any `admin_feature_flags` reader; audit-silence removal (no `silence.ts`, no `auditSilenced`, `supabase/migrations/20260727000000_drop_audit_silence.sql`); `ctx.waitUntil` audit writes. Ten corrections above. | Live `admin_pages` labels in D1; historical redirect behaviour |
+| 2026-09-19 | `grep -rn isDev src/pages --include=*.astro` (**five** guarded pages, not three); `api/diagnostics/run.ts` and `api/pages/toggle.ts` guards read in full; `lib/auth/stages/decide.ts` + `lib/auth/guard.ts` (PLAC is the middleware gate and default-denies); `lib/audit.ts` `handleAuditError` (console **and** Sentry); `admin_feature_flags` readers across both checkouts (none outside the toggle UI/repository) | Live `admin_pages` label for `/dashboard/debug`; historical redirect behaviour (§8.3) |
+| 2026-09-14 | The guarded pages and their guard pattern; `run.ts` and `toggle.ts` guards and messages; every file under `components/admin/debug/`, `pages/dashboard/debug/`, `pages/api/diagnostics/`, `lib/diagnostics/`; `FeatureFlagRepository.ts` (D1 only); cf-astro for any `admin_feature_flags` reader; audit-silence removal (no `silence.ts`, no `auditSilenced`, `supabase/migrations/20260727000000_drop_audit_silence.sql`); `ctx.waitUntil` audit writes. Ten corrections above. | Live `admin_pages` labels in D1; historical redirect behaviour |

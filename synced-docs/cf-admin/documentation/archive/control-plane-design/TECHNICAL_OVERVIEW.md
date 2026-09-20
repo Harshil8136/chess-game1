@@ -11,11 +11,19 @@ tags: []
 
 # Service Control Plane — Technical Overview
 
-> **Archived 2026-08-23.** This is a point-in-time design record, not a
-> description of what is built. It was `draft` and unverified for 78 days, and
-> it specifies routes that were never implemented (`/api/runtime-config`,
-> `/api/config/flush`, `/api/environments/`, `/api/ingest`). For what the
-> control plane actually does today, see
+> **Archived 2026-08-23; this banner corrected 2026-09-20.** It is a
+> point-in-time design record and not a description of what is built — but the
+> previous wording, "specifies routes that were never implemented", was wrong.
+> Most of this design shipped: cf-astro serves
+> `cf-astro/src/pages/api/runtime-config.ts` and
+> `cf-astro/src/pages/api/ingest/[...path].ts`, and cf-admin ships
+> `src/lib/control-plane/`, `src/pages/api/control-plane/` and the
+> `/dashboard/control-plane` pages. Only `/api/config/flush`, the alternative
+> this design did not choose, was never built; `/api/environments/` is a PostHog
+> API path. The body's "Status: Implementation Complete" is closer to the truth
+> than the old banner was. Note also that §15's "test this in staging" answer no
+> longer applies: there is no staging environment, by owner decision (ADR-0001).
+> For what the control plane actually does today, see
 > [`../../features/CONTROL-PLANE.md`](../../features/CONTROL-PLANE.md) and
 > [`../../features/CONTROL-PLANE-CONNECTORS.md`](../../features/CONTROL-PLANE-CONNECTORS.md).
 > Kept verbatim as a record of the design intent; do not edit.

@@ -2,7 +2,7 @@
 title: "Incident Post-Mortem — CF Access Sync Gateway Timeout (504)"
 status: historical
 audience: [ai, technical, operator, owner]
-last_verified: 2026-09-13
+last_verified: 2026-09-19
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_docs: [../OPERATIONS.md, ../../architecture/ARCHITECTURE.md, ../../security/RoPA.md]
@@ -23,8 +23,9 @@ tags: [incident, post-mortem, sentry, cloudflare-workers, supabase, gateway-time
 | **Service Affected** | `cf-admin-madagascar` (Cloudflare Worker) |
 | **Trigger Origin** | Scheduled Cron (`*/5 * * * *`) |
 | **Severity** | Low (Telemetry noise; no end-user service outage) |
-| **Related Sentry Issues** | `CF-ADMIN-1N`, `CF-ADMIN-1P`, `CF-ADMIN-1M`, `CF-ADMIN-1Q` |
+| **Related Sentry Issues** | `CF-ADMIN-1N`, `CF-ADMIN-1P`, `CF-ADMIN-1M`, `CF-ADMIN-1Q` — **all four resolved** (1M last seen 2026-09-11, the other three 2026-09-12; statuses re-read 2026-09-19). A fifth, `CF-ADMIN-1S` (`storage-notifications` over its D1 budget, 11 events), was opened and resolved after them |
 | **Customer Impact** | Zero (Zero Trust policies remained active at the edge) |
+| **Status** | Remediated 2026-09-13 — **but the failure class recurred; see §7** |
 
 ---
 
@@ -92,9 +93,13 @@ Investigation revealed a **3-stage cascading failure** triggered by intermittent
 
 ## 5. Remediations Implemented
 
-### 1. Exponential Backoff Retry in `fetchAuthorizedUserEmails`
-- Added a 2-attempt retry loop with exponential backoff (`initialDelayMs = 500`) specifically targeting transient network/gateway errors (`504`, `502`, `503`, `TimeoutError`).
-- If attempt 1 suffers a gateway timeout, attempt 2 succeeds without error.
+### 1. Retry in `fetchAuthorizedUserEmails`
+- Added a retry loop targeting transient network/gateway errors (`504`, `502`, `503`, `TimeoutError`).
+- *Corrected 2026-09-19:* `maxRetries = 2` means **one retry**, and the delay is
+  `initialDelayMs * attempt` — **linear**, 500 ms. With a single retry there is
+  no curve for "exponential backoff" to describe.
+- A transient 504 on attempt 1 is **usually** absorbed by attempt 2. It is not
+  guaranteed to be, and §7 records a recurrence in which it was not.
 
 ### 2. Alert Cooldown Protection (`reportOnceCooled`)
 - Converted bare error reports in `fetchAuthorizedUserEmails` and `syncCfAccessGroup` to `reportOnceCooled(db, 'cf-sync:...', 3600000, ...)` with a 1-hour cooldown.
@@ -115,9 +120,12 @@ Investigation revealed a **3-stage cascading failure** triggered by intermittent
 
 ---
 
-## 6. Verification Evidence
+## 6. Verification Evidence (snapshot, 2026-09-13 — not a standing claim)
 
-All automated verification gates pass with zero errors:
+The block below is what the gates reported **on 2026-09-13**, frozen. It is
+not the current state and should not be read as one: the repository now holds
+83 `test/**/*.test.ts` files and the mirror publishes 111 documents. Re-run the
+commands rather than citing these numbers.
 
 ```bash
 # 1. Full cf-admin verification pipeline
@@ -137,3 +145,29 @@ npm run verify
 python .agents/scripts/checklist.py cf-admin
 # Results: 8 passed, 0 failed, 2 skipped (runtime URLs)
 ```
+
+---
+
+## 7. Addendum 2026-09-19 — the class recurred
+
+**`CF-ADMIN-1R` — "Error: Gateway Timeout", culprit `fetchAuthorizedUserEmails`
+— is unresolved today**: 5 events, first and last seen ~2026-09-14, i.e. *after*
+the 2026-09-13 remediation commit. It is the only unresolved issue in the
+Sentry project. Evidence: Sentry issue search on
+`pet-hotel-madagascar`, `is:unresolved`, re-run 2026-09-19.
+
+What this changes about §5:
+
+- The remediations are real and they worked as designed — the four original
+  issues are resolved and stayed resolved. What did **not** hold is §5.1's
+  original promise that "attempt 2 succeeds without error"; one retry at 500 ms
+  does not cover an upstream that is slow for longer than that.
+- The cooldown (§5.2) is doing its job: 5 events rather than one per tick.
+- **Open question for whoever picks this up:** whether to widen the retry
+  (more attempts, real exponential spacing, or a longer `CF_API_TIMEOUT_MS`
+  than the current 12 s) or to accept 1R as expected upstream noise and mute
+  it deliberately. Accepting it is a legitimate answer — but it has to be
+  recorded as a decision, not left as a permanently unresolved issue.
+
+A `historical` post-mortem that declares a failure class closed needs this
+note; without it the document reads as evidence that the class is gone.

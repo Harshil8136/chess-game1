@@ -3,7 +3,7 @@
 title: "Search Console Sync"
 status: active
 audience: [non-technical, ai, technical, operator, owner]
-last_verified: 2026-09-14
+last_verified: 2026-09-19
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -19,7 +19,7 @@ related_docs:
 - USER-MANAGEMENT.md
 - ../operations/OPERATIONS.md
 - ../security/SECURITY.md
-- ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md
+- ../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md
 - ../reference/schema-change-ledger.md
 tags: [feature, seo, search-console, pagespeed, core-web-vitals, cron, plac, rbac, google-api]
 
@@ -27,11 +27,38 @@ tags: [feature, seo, search-console, pagespeed, core-web-vitals, cron, plac, rba
 
 # Search Console Sync
 
-> **TL;DR (non-technical):** An automated system, built into the admin portal, that keeps Google aware of the website's content and watches its Google-measured page speed — without a human having to remember to check either. Twice a day it tells Google "here's our sitemap, please re-check it" and asks Google directly whether specific pages are actually indexed. Once a week it measures real page-speed scores the way Google itself measures them. Every single call to Google is logged — what was asked, why, and exactly what Google said back — visible on one dashboard page, exportable to a spreadsheet. If something breaks (a missing credential, a quota limit), an email goes out automatically instead of the problem sitting silent. Nothing here uses any technique Google doesn't explicitly document and allow — see [§3](#3-what-this-deliberately-does-not-do-and-why) for why that restraint matters. Runs entirely on Cloudflare's free tier plus two free Google API quotas.
+> ## ⚠️ Both syncs are switched OFF and have been since August
+>
+> *Verified live 2026-09-19.* Nothing described below is running. This is a
+> deliberate state, not a fault — but the page and this document used to read as
+> though the syncs were active, so read this first.
+>
+> | Sync | Setting | Set to `false` on | Cron control plane |
+> |---|---|---|---|
+> | Search Console | `gsc-sync-enabled` | 2026-08-26 | `gsc-sync` = `off` |
+> | PageSpeed | `pagespeed-check-enabled` | 2026-08-22 | `pagespeed-sync` = `off` |
+>
+> A disabled sync makes **zero** calls to Google on every trigger path, the
+> manual buttons included — they return 409. The alerts in
+> [§8](#8-failure-handling--alerts) are silent too, because they only fire on the
+> scheduled path.
+>
+> **Turning either back on takes two switches, and both are required:**
+>
+> 1. **The feature setting** — `/dashboard/seo` → Config panel, Admin+ with PLAC
+>    access to that page. This is what makes the code call Google at all.
+> 2. **The cron control plane** — `/dashboard/cron`, resume the job
+>    (`#pause`, Owner baseline). Both jobs were paused there on 2026-09-16 with
+>    the reason "measured 288 no-op runs/day"; a paused job never dispatches, so
+>    flipping the setting alone changes nothing.
+>
+> See [`CRON-CONTROL.md`](CRON-CONTROL.md) for the control plane. *Added 2026-09-19.*
 
-> **Status:** Production Active (shipped 2026-08-12; dashboard/PageSpeed/permissions hardening pass 2026-08-13)
+> **TL;DR (non-technical):** An automated system, built into the admin portal, that keeps Google aware of the website's content and watches its Google-measured page speed — without a human having to remember to check either. When it is switched on: twice a day it tells Google "here's our sitemap, please re-check it" and asks Google directly whether specific pages are actually indexed, and once a day it measures real page-speed scores the way Google itself measures them. Every single call to Google is logged — what was asked, why, and exactly what Google said back — visible on one dashboard page, exportable to a spreadsheet. If something breaks (a missing credential, a quota limit), an email goes out automatically instead of the problem sitting silent. Nothing here uses any technique Google doesn't explicitly document and allow — see [§3](#3-what-this-deliberately-does-not-do-and-why) for why that restraint matters. Runs entirely on Cloudflare's free tier plus two free Google API quotas.
+
+> **Status:** Built, deployed and **dormant** — shipped 2026-08-12 (dashboard/PageSpeed/permissions hardening pass 2026-08-13), both syncs switched off in August and paused in the cron control plane on 2026-09-16. *Corrected 2026-09-19: this said "Production Active".*
 > **Surface:** `/dashboard/seo` — Search Console Sync dashboard (KPIs, activity log, manual triggers, settings, CSV export)
-> **Role floor:** Admin or higher (RBAC) with PLAC access to `/dashboard/seo` — see [§5](#5-roles--permissions).
+> **Role floor:** Admin or higher (RBAC) with PLAC access to `/dashboard/seo` for every trigger and write — see [§5](#5-roles--permissions). Two read-only GETs sit lower; see [§11](#11-where-things-live-for-engineers--ai-agents).
 
 ---
 
@@ -46,7 +73,7 @@ Before this existed, both of these were manual: someone had to remember to open 
 
 ## 2. How It Works, Step By Step
 
-1. Every 5 minutes (15 until 2026-09-10 — see [§11](#11-where-things-live-for-engineers--ai-agents)), the admin portal's existing scheduled job checks two internal clocks: "has it been 12 hours since the last Search Console sweep?" and "has it been a week since the last PageSpeed check?" (both configurable — see [§6](#6-settings--cadence)). Most ticks do nothing.
+1. Every 5 minutes (15 until 2026-09-10 — see [§11](#11-where-things-live-for-engineers--ai-agents)), the admin portal's existing scheduled job checks two internal clocks: "has it been 12 hours since the last Search Console sweep?" and "has it been 24 hours since the last PageSpeed check?" (both configurable — see [§6](#6-settings--cadence); those are the live values today). Most ticks do nothing. Since 2026-09-16 the check itself is also gated by the cron control plane, and both jobs are paused there — see the banner at the top.
 2. When the Search Console clock is due: the system submits both language sitemaps to Google, asks Google for its own read on each sitemap's health (how many URLs it actually downloaded, any warnings), then checks the indexing status of the homepage, every service page, and the ten most recently updated blog posts.
 3. When the PageSpeed clock is due: the system runs a real Google PageSpeed Insights check (mobile) against every static page, and records the performance score plus Core Web Vitals.
 4. **Every single one of those calls — successful or not — is written to a log** with the exact URL, why it was made (scheduled sweep, a blog post just published, or someone clicked a button), what Google returned, and how long it took.
@@ -71,7 +98,7 @@ So the honest claim for this system is: it keeps Google's crawler pointed at fre
 |---|---|---|
 | **Google API used** | Search Console API — `sitemaps.submit`, `sitemaps.get`, `urlInspection.index:inspect` | PageSpeed Insights API v5 |
 | **Auth** | Google Cloud service account (JWT, signed with Web Crypto — no Node SDK available in Workers), granted access to the property in Search Console | Plain API key (optional) or unauthenticated |
-| **Default cadence** | Every 12 hours | Every 7 days (Core Web Vitals move slowly; checking more often adds no signal) |
+| **Cadence** | Every 12 hours (code default and live setting agree) | Code default 168 h, but the **live setting is 24 h** — daily, not weekly. *Corrected 2026-09-19.* |
 | **What it checks** | Both sitemaps + homepage + services (en/es) + 10 most recent blog posts | The same static page set, mobile strategy |
 | **Quota** | 2,000 queries/day, 600/min — this system uses roughly 20-30/day, comfortably under 1% | 25,000/day with a key; unauthenticated calls share a global pool with every other uncredentialed caller worldwide and can run dry from traffic that has nothing to do with this site (this happened in production on 2026-08-12 — see [§10](#10-known-limitations--incidents-as-of-2026-08-13)) |
 | **On quota exhaustion** | N/A — nowhere near the limit | Stops the rest of that run immediately instead of repeating a guaranteed failure across every remaining URL, logs one clear row, retries next scheduled window |
@@ -101,11 +128,12 @@ These live in the same dynamic, database-backed settings table used for every ot
 
 ## 8. Failure Handling & Alerts
 
-Every call is wrapped so a single failure never aborts a batch or crashes the cron. Three states get a one-time (then 24h-cooled-down) email, sent via the same transactional email service used for every other portal alert:
+Every call is wrapped so a single failure never aborts a batch or crashes the cron. **Two** states get a one-time (then 24h-cooled-down) email, sent via the same transactional email service used for every other portal alert (*corrected 2026-09-19 — this said "three" and listed two*):
 
-- The Google service-account credential is missing or was removed.
-- The PageSpeed Insights daily quota was exhausted.
-- (Both are genuine "something needs attention" states — a deliberately disabled sync does not alert, since that's an intentional choice, not a failure.)
+- The Google service-account credential is missing or was removed (`src/workers/scheduled-gsc-sync.ts`).
+- The PageSpeed Insights daily quota was exhausted (`src/workers/scheduled-pagespeed-sync.ts`).
+
+Both are genuine "something needs attention" states — a deliberately disabled sync does not alert, since that's an intentional choice, not a failure. Both alert paths are **silent today**: they fire only from the scheduled workers, and both jobs are off (see the banner at the top).
 
 ## 9. Business Value & Market Comparison
 
@@ -158,19 +186,20 @@ Researched against current freelance/agency rate data rather than estimated: API
 - **Orchestration:** `src/lib/gsc/sync.ts` (watermark/cadence gate, batch building, single-URL validation, all four Search Console trigger paths), `src/lib/pagespeed/sync.ts` (same pattern for PageSpeed, reuses `gsc/sync.ts`'s settings helpers and log writer)
 - **Shared query logic:** `src/lib/gsc/log-query.ts` — filter-building, service-split stats, next-run ETA computation, used identically by the table view, the CSV export, and the dashboard's initial server render so none of the three can silently disagree
 - **Alerting:** `src/lib/gsc/ops-alert.ts` — no generic "send an admin alert" helper existed anywhere in this codebase (checked before writing this); mirrors the shape of the login-security alert email rather than inventing a new pattern
-- **Cron:** `src/workers/scheduled-gsc-sync.ts`, `src/workers/scheduled-pagespeed-sync.ts`, both registered in `src/lib/jobs/registry.ts` on the `*/5 * * * *` tick — the `*/15` trigger they first rode was folded into it by chunk 7 on 2026-09-10; they self-gate on their interval settings, so the decision runs every five minutes and the work does not. The cap is 5 cron triggers per account (3 in use); this feature added none. *Corrected 2026-09-14.*
-- **API routes:** `src/pages/api/seo/` — `gsc-sync-trigger.ts` (full sweep + single-URL), `pagespeed-trigger.ts`, `gsc-index-log.ts` (GET table + stats, DELETE single/all), `gsc-index-log-export.ts` (CSV), `settings.ts` (the dedicated settings-write endpoint — see the permissions note below)
-- **Dashboard:** `src/pages/dashboard/seo/index.astro` + `src/components/admin/seo/` (`SeoDashboard.tsx`, `SeoKpiCards.tsx`, `GscSettingsControl.tsx`, `PageSpeedSettingsControl.tsx`, `GscLogDetailDrawer.tsx`)
+- **Cron:** `src/workers/scheduled-gsc-sync.ts`, `src/workers/scheduled-pagespeed-sync.ts`, both registered in `src/lib/jobs/registry.ts` on the `*/5 * * * *` tick — the `*/15` trigger they first rode was folded into it by chunk 7 on 2026-09-10; they self-gate on their interval settings, so the decision runs every five minutes and the work does not. The cap is 5 cron triggers per account; `wrangler.toml` declares 2 (`*/5 * * * *` and `0 2 * * SUN`) and this feature added none. *Corrected 2026-09-14; trigger count corrected 2026-09-19.*
+- **API routes:** all nine files under `src/pages/api/seo/` — `gsc-sync-trigger.ts` (full sweep + single-URL), `pagespeed-trigger.ts`, `indexnow-trigger.ts`, `review-nudge-trigger.ts`, `gsc-index-log.ts` (GET table + stats, DELETE single/all), `gsc-index-log-export.ts` (CSV), `validation-readiness.ts`, `discovery-health.ts`, `settings.ts` (the dedicated settings-write endpoint — see the permissions note below). *Corrected 2026-09-19: four routes were missing from this list.*
+- **Dashboard:** `src/pages/dashboard/seo/index.astro` + `src/components/admin/seo/` (`SeoDashboard.tsx`, `SeoKpiCards.tsx`, `GscSettingsControl.tsx`, `PageSpeedSettingsControl.tsx`, `GscLogDetailDrawer.tsx`, `IndexNowSettingsControl.tsx`, `ReviewLoopSettingsControl.tsx`, `SeoConfigModal.tsx`, `DiscoveryCoveragePanel.tsx`)
 - **Data:** single table `gsc_index_log` (migration `0047`, widened by `0050` to add `mobile_usability_verdict`/`rich_results_verdict`/a `service` discriminator column) — deliberately reused for both Google services rather than standing up a second table; see the RULE #0.9 reasoning written directly into migration `0050`'s own comments. Settings live in the existing `admin_portal_settings` table, `category = 'seo'`.
-- **Permissions note:** `src/pages/api/seo/settings.ts` exists as a *dedicated* endpoint, not a reuse of the portal's generic `POST /api/settings/portal` — that endpoint's PLAC check is hardcoded to `/dashboard/settings`, a different page than the one these controls actually live on, found and fixed 2026-08-13 during a permissions review. Every route under `src/pages/api/seo/` now consistently gates on `requireAuth(context, 'admin')` + PLAC access to `/dashboard/seo` specifically.
-- **Discovery & Validation Readiness Subsystem:** `src/lib/seo/validation-readiness.ts`, `src/lib/seo/discovery-inspector.ts`, and APIs `/api/seo/validation-readiness`, `/api/seo/discovery-health` compute real-time validation readiness scores (0-100%) and edge diagnosis for the 5 GSC indexing error categories.
+- **Permissions note:** `src/pages/api/seo/settings.ts` exists as a *dedicated* endpoint, not a reuse of the portal's generic `POST /api/settings/portal` — that endpoint's PLAC check is hardcoded to `/dashboard/settings`, a different page than the one these controls actually live on, found and fixed 2026-08-13 during a permissions review. Every route under `src/pages/api/seo/` PLAC-gates on `/dashboard/seo` specifically. The RBAC floor is `admin` on every trigger, write, export and delete, **with two deliberate exceptions**: `GET /api/seo/validation-readiness` and `GET /api/seo/discovery-health` take `requireAuth(context, 'viewer')`, so a read-only Viewer with page access can see the readiness report. *Corrected 2026-09-19: this said every route gates on `'admin'`.* Note also that `GET …/validation-readiness?fresh=true` re-runs the same live crawl the Admin-only POST does, without the POST's 15-per-hour rate limit — logged for triage in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+- **Discovery & Validation Readiness Subsystem:** `src/lib/seo/validation-readiness.ts`, `src/lib/seo/discovery-inspector.ts`, and APIs `/api/seo/validation-readiness`, `/api/seo/discovery-health` compute a validation readiness score (0-100%) and edge diagnosis for the 5 GSC indexing error categories. It is **request-driven, not scheduled** — nothing on any cron path calls it, and a plain GET serves the last cached summary. See [`GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md) for how the score is built and which parts of it are placeholders. *Corrected 2026-09-19: "real-time" overstated it.*
 - **Interactive UI & Section 7.8 Compliance:** `DiscoveryCoveragePanel.tsx` and `GscValidationWidget.tsx` implement the in-place collapsible drawer pattern and Top-Layer native `<dialog>` modals adhering to `RULESAd.md` §7.8.
-- **Secrets:** `GSC_SERVICE_ACCOUNT_JSON` (required, RULE #0.8 documented exception — see `2026-08-06-data-infrastructure-audit-and-reuse-policy.md`), `PAGESPEED_API_KEY` (optional, same exception category — deliberately a Worker secret and *not* a D1 setting, since D1 settings flow to the browser via the dashboard's initial page data and an API credential shouldn't).
+- **Secrets:** `GSC_SERVICE_ACCOUNT_JSON` and `PAGESPEED_API_KEY` — **both are in `wrangler.toml`'s `[secrets] required` list** (RULE #0.8 documented exception — see `../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`). *Corrected 2026-09-19: `PAGESPEED_API_KEY` was described as "optional". The code degrades gracefully without it — that is what caused the 2026-08-12 quota incident in §10 — but it is a required secret, not an optional one.* (`PAGESPEED_API_KEY` is in the same exception category — deliberately a Worker secret and *not* a D1 setting, since D1 settings flow to the browser via the dashboard's initial page data and an API credential shouldn't).
 
 ## 12. Related
 
-- [`GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md) — Comprehensive technical architecture of the GSC Error Auto-Healing & Validation Readiness Engine
+- [`GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md) — the validation-readiness scorer that shares this feature's page and log table. *Corrected 2026-09-19: that document was described here as the "comprehensive technical architecture"; most of it was found to be wrong on 2026-09-18 and it has been cut back to what the code does. This document, not that one, owns the sync itself.*
+- [`CRON-CONTROL.md`](CRON-CONTROL.md) — the control plane both sync jobs are paused in
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — how the permission system this feature relies on works portal-wide
-- [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the RULE #0.6/#0.8/#0.9 reuse policy this feature was built to follow (one shared table for two services, no new cron trigger, minimal new secrets)
+- [`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the RULE #0.6/#0.8/#0.9 reuse policy this feature was built to follow (one shared table for two services, no new cron trigger, minimal new secrets)
 - [`reference/schema-change-ledger.md`](../reference/schema-change-ledger.md) — applied-migration record for `0047`/`0049`/`0050`
 - [`STAFF-MANAGED-STORAGE.md`](STAFF-MANAGED-STORAGE.md) — the other feature this documentation pass covers; built on the same RBAC+PLAC foundation

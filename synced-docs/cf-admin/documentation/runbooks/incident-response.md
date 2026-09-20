@@ -3,8 +3,8 @@
 title: "Incident Response & Breach Notification Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-09-09
-verified_against: [code, config]
+last_verified: 2026-09-19
+verified_against: [code, config, live-mcp]
 owner: harshil
 related_docs: [disaster-recovery.md, ../security/SECURITY.md, ../security/RoPA.md, ../security/compliance/SOC2-TSC-mapping.md, ../MAINTENANCE.md]
 tags: [incident-response, breach, gdpr, soc2, runbook, security]
@@ -23,7 +23,7 @@ tags: [incident-response, breach, gdpr, soc2, runbook, security]
 
 Closes gaps **G1** (no breach-notification runbook) and **G4** (no
 incident-response runbook or drill cadence) from
-[`../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
+[`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
 
 Satisfies: GDPR Art. 33/34, SOC 2 CC7.3–CC7.5, ISO/IEC 27001 A.5.24–A.5.28,
 CSA STAR SEF-01…SEF-05, and the breach-notification clauses of the US state
@@ -34,9 +34,10 @@ and Supabase data, its Cloudflare bindings, and the credentials it holds.
 
 **Does NOT cover:** availability-only incidents with no security dimension
 (see [`disaster-recovery.md`](disaster-recovery.md)), or incidents confined to
-the public site `cf-astro` — though note the two share a Supabase project, a D1
-database and an R2 bucket, so an incident in one is presumed to affect the
-other until proven otherwise (§3).
+the public site `cf-astro` — though note that cf-admin and cf-astro share a
+Supabase project, the D1 database `madagascar-db` and the R2 bucket
+`madagascar-images`, so an incident in one is presumed to affect the other
+until proven otherwise (§4 step 5).
 
 > **This runbook is untested.** It has never been exercised in a drill. The
 > first tabletop is the outstanding action in §8 — until it is run, treat the
@@ -84,8 +85,9 @@ Detection sources, in the order they usually fire:
 
 | Source | Where | Notes |
 |--------|-------|-------|
-| Sentry alert | `cf-admin` project | `[SECURITY ALERT]` fatal messages from `retention/purge.ts`, `users/manage.ts` |
-| Audit log | D1 `admin_audit_log` | `api_authz_deny`, `api_mutation_attempt`, `login_failed` |
+| Sentry alert | `cf-admin` project | `[SECURITY ALERT]` messages — emitted **only** by `src/pages/api/retention/purge.ts` (unauthorized purge, PLAC-denied purge, deactivated-actor purge). `users/manage.ts` emits none; that name was wrong until 2026-09-19 |
+| Audit log | D1 `admin_audit_log` | `api_authz_deny`, `api_mutation_attempt` |
+| **Login logs** | D1 `admin_login_logs` | **Failed logins live here, not in the audit log.** `event_type` is one of `LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`, with a `failure_reason`. There is no `login_failed` audit action anywhere in `src/` — querying the audit log for one returns nothing and looks like "no brute force" |
 | CF Access logs | Zero Trust dashboard | Failed auth, unexpected geography |
 | Supabase advisors | `get_advisors` MCP | RLS/policy drift |
 | CI | `security.yml` | `audit_gate.py`, secret-scan |
@@ -105,6 +107,13 @@ GROUP BY request_path, user_email ORDER BY n DESC;
 SELECT created_at, action, module, request_method, request_path
 FROM admin_audit_log
 WHERE user_email = ? ORDER BY created_at DESC LIMIT 500;
+
+-- Failed-login triage — a DIFFERENT table (see the detection sources above)
+SELECT email, event_type, failure_reason, COUNT(*) AS n, MAX(created_at) AS last_seen
+FROM admin_login_logs
+WHERE event_type IN ('LOGIN_FAILED','LOGIN_BLOCKED')
+  AND created_at > datetime('now','-24 hours')
+GROUP BY email, event_type, failure_reason ORDER BY n DESC;
 ```
 
 **Open an incident log immediately** — a plain timestamped file. Every
@@ -118,12 +127,23 @@ Containment precedes investigation. Preserve evidence where possible, but never
 delay containment to gather more.
 
 1. **Revoke sessions.** `/dashboard/sessions` → force-kick. Layer 3 revocation
-   uses `CF_API_TOKEN_ZT_WRITE`; KV revocation flags apply within 30 minutes at
-   worst (`SESSION_REFRESH_INTERVAL_MS`), immediately on next request.
+   uses `CF_API_TOKEN_ZT_WRITE`. **KV revocation flags apply on the next
+   request, not "within 30 minutes"** — `revoked:<userId>` and
+   `revoked-session:<sessionId>` are read on every warm request in a single
+   bulk KV get and destroy the session on the spot
+   (`src/lib/auth/stages/session-stage.ts`); `forceLogoutUser` writes the flag
+   with a 24-hour TTL *before* deleting the sessions. (The 30 minutes belongs
+   to step 2, not to revocation; this step said both until 2026-09-19.)
 2. **Deactivate accounts.** Set `is_active = false` in
    `admin_authorized_users`. The middleware re-checks role and active state
-   every 30 minutes and destroys the session on failure
-   (`src/lib/auth/pipeline.ts`).
+   every `SESSION_REFRESH_INTERVAL_MS` (30 min) and destroys the session on
+   failure — `src/lib/auth/stages/refresh-role.ts`, orchestrated by
+   `pipeline.ts` since the chunk-10 split.
+   > **Outage grace:** if Supabase is *also* unwell, the re-check reports and
+   > then lets the session proceed on its last good verification for up to
+   > **two** intervals. Containment by `is_active = false` can therefore take
+   > ~60 minutes when the directory is degraded. If that is not fast enough,
+   > use step 1 — revocation does not consult Supabase.
 3. **Rotate credentials** — order matters, most privileged first:
    `SUPABASE_SERVICE_ROLE_KEY` → `CF_API_TOKEN_ZT_WRITE` →
    `CLOUDFLARE_API_TOKEN` → `CF_API_TOKEN_READ_LOGS` → `IP_HASH_SECRET` (see
@@ -131,18 +151,39 @@ delay containment to gather more.
    `CHATBOT_ADMIN_API_KEY` → `UPSTASH_REDIS_REST_TOKEN`.
    `wrangler secret put <KEY>`; full registry in
    [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §5.
-   > **`IP_HASH_SECRET` caveat:** rotating it makes every previously stored IP
-   > hash unlinkable to any new hash. That is good for privacy but destroys
-   > correlation in the login-forensics trail. Rotate it only if the secret
-   > itself is believed compromised, and record the rotation time in the
-   > incident log so analysts know why hashes stop matching.
+   > **`IP_HASH_SECRET` is the most consequential rotation in this list.**
+   > It is not only the IP pseudonymisation key — it is the **HKDF root for
+   > four token families**: share links, file-request links, storage passcodes
+   > and RFC 8058 unsubscribe tokens
+   > ([`public-share-links-domain-isolation.md`](public-share-links-domain-isolation.md) §3).
+   > Rotating it:
+   >
+   > - breaks correlation with every IP hash already written to
+   >   `storage_share_access_logs`, `admin_audit_log` and the login logs;
+   > - **invalidates every live share link and file-request link** — they must
+   >   be re-issued, and the recipients are external parties;
+   > - invalidates every stored passcode that has not yet upgraded-on-use;
+   > - **breaks the unsubscribe link in every email already sent**, which is a
+   >   CAN-SPAM/CASL exposure and a Gmail/Yahoo deliverability penalty, not a
+   >   broken link.
+   >
+   > So: rotate only if the secret itself is believed compromised; plan the
+   > re-issuance before rotating, not after; and record the rotation time in
+   > the incident log so analysts know why hashes stop matching.
 4. **Tighten the edge if under active attack.** Cloudflare security level →
    `under_attack` via `/dashboard/control-plane` or
    `POST /api/control-plane/cloudflare {"action":"set-security-level","level":"under_attack"}`.
-5. **Cross-repo containment.** `cf-astro` and `cf-chatbot` share the Supabase
-   project, the D1 database and the R2 bucket. A compromised
-   `SUPABASE_SERVICE_ROLE_KEY` is compromised for all three — rotate and
-   redeploy every consumer, not just this one.
+5. **Cross-repo containment.** The two neighbours share different things, and
+   the rotation scope differs accordingly (this step lumped them together
+   until 2026-09-19):
+   - **`cf-astro`** shares the Supabase project, the D1 database
+     `madagascar-db` **and** the R2 bucket `madagascar-images`. A compromised
+     `SUPABASE_SERVICE_ROLE_KEY` is compromised for it too — rotate and
+     redeploy both.
+   - **`cf-chatbot`** is reached over a **service binding**, not shared
+     storage: it has its own D1 (`chatbot-kb`) and no shared R2. Its scope is
+     its own copy of the Supabase key plus `CHATBOT_ADMIN_API_KEY`, which must
+     be set to the same value in both Workers in one sitting.
 
 ## 5. Phase 3 — Assess (runs in parallel; must conclude before hour 60)
 
@@ -190,9 +231,9 @@ explicitly permits notifying in phases.
 |---|---|---|---|
 | GDPR (EU/EEA) | Risk to rights/freedoms | **72h from awareness** | Lead authority by main establishment |
 | UK GDPR | Same | 72h | ICO |
-| **Mexico LFPDPPP** | Significant harm | Without delay | **The primary regime today** — see `../2026-06-16-business-viability-and-compliance-assessment.md` |
+| **Mexico LFPDPPP** | Significant harm | Without delay | **The primary regime today** — see `../commercial/analyses/2026-06-16-business-viability-and-compliance-assessment.md` |
 | CCPA/CPRA | Unencrypted personal info | Without unreasonable delay | California AG if >500 residents |
-| Other US states | Varies (30–60d typical) | Varies | ~20 states; check per affected state |
+| Other US states | Varies | Varies | **All 50 states, DC and the territories have breach-notification statutes**; roughly 20 set a numeric 30–60 day deadline. The absence of a numeric deadline is not the absence of a duty — check every affected state |
 | PIPEDA / Law 25 | Real risk of significant harm | ASAP | OPC + Commission d'accès (Québec) |
 | Cloudflare / Supabase | Vendor-side involvement | ASAP | Support ticket |
 | Affected customers | Contractual | Per contract | Check DPAs |
@@ -213,7 +254,7 @@ require evidence the plan works.
 |---|---|---|
 | Tabletop: leaked service-role key | Annual | ❌ **Never run** |
 | Credential-rotation walkthrough | Annual | ❌ Never run |
-| Restore drill | Annual | ❌ Never run (see `disaster-recovery.md`) |
+| Restore drill | — | **Owned by [`disaster-recovery.md`](disaster-recovery.md) §8 — read the status there, do not restate it.** (In short as of 2026-09-19: automated, blocked on an owner action, never yet succeeded.) |
 
 Until the first tabletop is complete, the honest external statement is *"we
 have a documented incident-response plan; our first drill is scheduled"* — not
@@ -230,3 +271,9 @@ Stated plainly, because an assessor will find these anyway:
   recovery, not an evidentiary image.
 - **No cyber-insurance policy** and no pre-retained incident-response firm.
 - **No named deputy** if the sole operator is unavailable.
+
+## 10. Verification log
+
+| Date | Method | Result |
+|---|---|---|
+| 2026-09-19 | `grep -rn "SECURITY ALERT" src/`; `grep -rn login_failed src/`; `admin_login_logs` schema and `event_type` values queried live; `src/lib/auth/stages/refresh-role.ts` and `stages/session-stage.ts` read; `public-share-links-domain-isolation.md` §3; `wrangler.toml` service bindings | §3's failed-login triage pointed at the wrong table — corrected to `admin_login_logs` (`event_type`, `failure_reason`) with a working query; `users/manage.ts` dropped from the `[SECURITY ALERT]` sources; §4's revocation timing, the `refresh-role.ts` path and its two-interval outage grace corrected; the `IP_HASH_SECRET` caveat expanded to the four token families; cf-chatbot separated from the shared-store list; the restore-drill row handed to `disaster-recovery.md` §8. Not re-checked: the legal deadlines in §7 beyond GDPR/CCPA (not a legal review) |

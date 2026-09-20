@@ -6,10 +6,20 @@ audience: [technical]
 last_verified: 2026-06-06
 verified_against: [code]
 owner: harshil
-tags: []
+tags: [security, audit, review, plac, dependencies]
 ---
 
 # Security Vulnerability Review — CF-Admin Madagascar
+
+> **Historical snapshot — banner added 2026-09-19.** This was the follow-up
+> pass that closed the deferrals from the 2026-05-25 review: 13 patches in
+> commit `27e6090`, including PLAC enforcement on 18 API routes. It is accurate
+> for the date it carries and is preserved unedited; **do not read it as
+> current state.** Two of its dispositions have since been overtaken and carry
+> inline *Superseded* notes below — most importantly, **do not act on
+> "drop migration 0026"**, which would now destroy live CMS version history.
+> For current state read `../SECURITY.md` §0, the self-assessments in
+> `../compliance/`, and `../../MAINTENANCE.md` for what is still open.
 
 **Date:** 2026-05-26
 **Reviewer:** Automated deep scan (follow-up pass on top of 2026-05-25 review)
@@ -28,6 +38,12 @@ Two items remain genuinely deferred (not done):
 
 - `cms_content_history` cleanup trigger — the table is created by migration 0026 but has **zero writers** in the codebase. There is nothing to clean up. Building the trigger now would be premature; the table is dead until a writer ships.
 - `astro check` hangs in the sandbox where this review ran (esbuild service deadlock — known environmental issue, not a code issue). `tsc --noEmit --skipLibCheck` passes cleanly across all 28 modified files, so type safety is verified through the alternate path.
+
+> **Closure note, 2026-09-19 — neither is deferred any more.** The
+> `cms_content_history` writer shipped (see the M-8 row below, and do not act
+> on "drop migration 0026"), and the `astro check` hang was diagnosed
+> separately in
+> [`../../runbooks/dev-server-optimize-deps-missing.md`](../../runbooks/dev-server-optimize-deps-missing.md).
 
 ---
 
@@ -63,8 +79,8 @@ Two items remain genuinely deferred (not done):
 | M-4 — `audit/logs.ts` DELETE handler audit-immutability | Genuinely a policy decision, not a bug — the UI's "Delete Selected" button in ActivityCenter depends on it. Left as-is pending a product call. |
 | M-5 — `users/manage.ts` `pageOverrides[].pagePath` validation | Privileged action (super_admin+), low-impact data-quality issue. Tracked but deferred — covers the entire "create a junk row" surface; needs a focused PR. |
 | M-7 — middleware `process.env.SITE_URL` precedence | Confirmed both env paths agree today; no exploit vector. Deferred. |
-| M-8 — `cms_content_history` cleanup trigger | **Verified table has zero writers in the codebase.** The migration's comment promises a trigger that was never created, but nothing inserts into the table, so it cannot grow. Building the trigger now would be premature optimisation against a dead feature. Re-evaluate when the first writer ships. |
-| M-9 — `chatbot/[...path].ts` `getMinRole` default | Already gated by `requireAuth(context, 'admin')` at function entry — the `getMinRole` default-to-`admin` is the same as the entry gate. Lower priority than originally rated. Deferred. |
+| M-8 — `cms_content_history` cleanup trigger | **Verified table has zero writers in the codebase.** The migration's comment promises a trigger that was never created, but nothing inserts into the table, so it cannot grow. Building the trigger now would be premature optimisation against a dead feature. Re-evaluate when the first writer ships. **Superseded 2026-09-19 — the writer shipped.** `src/lib/cms/storage.ts` inserts a version snapshot on every CMS save and prunes to the newest 10 rows per `(id, page)` in application code — which is exactly the cleanup the migration comment promised. The table is live, is registered in `src/lib/retention-tables.ts` with a 180-day target, and holds real rollback history. |
+| M-9 — `chatbot/[...path].ts` `getMinRole` default | Already gated by `requireAuth(context, 'admin')` at function entry — the `getMinRole` default-to-`admin` is the same as the entry gate. Lower priority than originally rated. Deferred. **Superseded 2026-09-19 — both the finding and this dismissal are stale, in opposite directions.** The proxy now applies a per-endpoint ladder (staff for reads, live takeover and KB auto-generate; admin for KB/config/prompt/model/cache mutations) and the `getMinRole` default is `vendor_support` with an explicit fail-closed comment — not `admin`, and not an entry-gate duplicate. |
 | M-13 — `cf_admin_theme` cookie SameSite | UI preference cookie with no security impact. Cosmetic inconsistency, deferred. |
 | L-1..L-13 | Mix of polish, advisor lints, defense-in-depth that are not currently exploitable. Deferred as a follow-up batch. |
 
@@ -82,7 +98,11 @@ Two items remain genuinely deferred (not done):
 
 ## Recommended Next Items
 
-1. **Dead-code removal**: either ship a writer for `cms_content_history` or drop migration 0026 — currently it's a maintenance trap.
+1. ~~**Dead-code removal**: either ship a writer for `cms_content_history` or drop migration 0026 — currently it's a maintenance trap.~~
+   > **Done, and do not act on the second half — note added 2026-09-19.** A
+   > writer shipped in `src/lib/cms/storage.ts`, with app-level pruning to the
+   > newest 10 versions per `(id, page)`. Dropping migration 0026 today would
+   > destroy live CMS version history.
 2. **L-14 batch follow-up**: the remaining L-1..L-13 items are all small. Bundle into a single hygiene PR when convenient.
-3. **Per-page CSP nonce**: the only blocker on dropping `script-src 'unsafe-inline'` from CSP is Sentry's SDK init script (see `SECURITY.md` §13). Now that we're on `@sentry/astro ^10.51`, re-check whether the SDK supports nonce attribution.
+3. **Per-page CSP nonce**: the only blocker on dropping `script-src 'unsafe-inline'` from CSP is Sentry's SDK init script (see `../SECURITY.md` **§4 "Edge-Injected Security Headers"** — *pointer corrected 2026-09-19; §13 is the 2026-05-24 audit log*). Now that we're on `@sentry/astro ^10.51`, re-check whether the SDK supports nonce attribution.
 4. **Astro check sandboxing**: investigate why `astro check` hangs in containerised review environments — `tsc --noEmit` is a working workaround but type checking should be a one-button affair.

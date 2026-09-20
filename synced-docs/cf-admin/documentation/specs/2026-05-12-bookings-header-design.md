@@ -9,7 +9,16 @@ tags: []
 ---
 
 # Booking Dashboard Header Redesign Spec
->
+
+> **Outcome (added 2026-09-20).** Shipped on 2026-05-13 (`4662de9`), so the
+> body's "Approved for Implementation Planning" is stale. It then outgrew this
+> spec's scope: the header is now its own component,
+> `src/components/admin/bookings/BookingHeader.tsx`, with a view switcher and a
+> six-stat ribbon (Total, Check-ins, Check-outs, Occupancy, Special Care, Total
+> Pets) rather than the four data points specified here. The "Show Deleted"
+> toggle is gated by the canonical vendor-support predicate, not a
+> `userRole === 'dev'` check.
+
 > **Date:** 2026-05-12
 > **Topic:** Booking Manager UX/UI Makeover
 > **Status:** Approved for Implementation Planning

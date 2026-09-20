@@ -6,10 +6,22 @@ audience: [technical]
 last_verified: 2026-06-06
 verified_against: [code]
 owner: harshil
-tags: []
+tags: [security, audit, review, xss, uploads]
 ---
 
 # Security Vulnerability Review — CF-Admin Madagascar
+
+> **Historical snapshot — banner added 2026-09-19.** This was the first deep
+> vulnerability review of `cf-admin`: seven exploitable findings, from a
+> Critical stored XSS in the audit-log viewer to upload magic-byte and filter
+> injection, all patched in the review branch. It is accurate for the date it
+> carries and is preserved unedited; **do not read it as current state.** Two
+> sections below have drifted furthest — five of the six "Documented, Not
+> Patched" low findings are now fixed (see the closure note on that heading,
+> which also records the sixth as an accepted risk), and three
+> recommendations point at document paths that have since moved. For current
+> state read `../SECURITY.md` §0, the self-assessments in
+> `../compliance/`, and `../../MAINTENANCE.md` for what is still open.
 
 **Date:** 2026-05-24  
 **Reviewer:** Claude (automated deep scan)  
@@ -155,7 +167,41 @@ Minimum 60-second floor prevents zero/negative TTLs from causing KV write errors
 
 ---
 
-## Additional Findings (Low Severity — Documented, Not Patched)
+## Additional Findings (Low Severity — resolved 2026-06/07, retained for history)
+
+> **Closure note added 2026-09-19.** The heading used to read "Documented, Not
+> Patched", and this section was published unchanged to the public docs mirror
+> for four months, where it read as a current list of soft spots in a
+> production admin portal. Each of the six is re-checked below against the
+> code as it stands today. Only the public-sync item is still live, and it is a
+> recorded, accepted risk rather than an oversight. The findings themselves are
+> left exactly as written.
+>
+> - **Theme cookie `Secure`** — fixed. `src/pages/api/settings/user.ts` sets
+>   `cf_admin_theme=…;SameSite=Strict;Secure` on both the set and the clear
+>   path.
+> - **`LOCAL_DEV_ADMIN_EMAIL` in `[vars]`** — fixed. `wrangler.toml` now
+>   carries only a comment: *"define ONLY in `.dev.vars` (gitignored) — never
+>   commit personal emails to `[vars]`"*.
+> - **Security docs synced to a public repository** — **still open, and
+>   risk-accepted by the owner on 2026-07-17** (O12 in
+>   `2026-07-17-full-platform-audit.md`). `sync-docs.yml` still publishes the
+>   security documentation; since 2026-09-19 it excludes the dated records, the
+>   commercial material and the live backlog, but `SECURITY.md` and the
+>   compliance self-assessments are published deliberately. The three paths
+>   this finding names have moved — they are now
+>   `documentation/security/SECURITY.md`,
+>   `documentation/architecture/ARCHITECTURE.md` and
+>   `documentation/security/login-forensics.md`.
+> - **Stale break-glass documentation** — fixed. `../SECURITY.md` §1.2 now
+>   states accurately that the mechanism was removed and that no hardcoded
+>   bypass exists.
+> - **CSP `'unsafe-eval'`** — removed 2026-07-25 and pinned absent by rule
+>   SEC-01 with no exemption (`src/lib/security/csp.ts`). `'unsafe-inline'` is
+>   still present on `script-src`/`style-src` — see `../compliance/ASVS-L2.md`
+>   14.4.3.
+> - **No logout rate limit** — fixed. `src/pages/api/auth/logout.ts` takes a
+>   10-per-minute limiter keyed on the client IP.
 
 ### 🟡 LOW — Theme Cookie Missing `Secure` Attribute
 

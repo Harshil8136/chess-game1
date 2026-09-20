@@ -3,7 +3,7 @@
 title: "Staff Managed Storage"
 status: active
 audience: [non-technical, ai, technical, operator]
-last_verified: 2026-09-14
+last_verified: 2026-09-19
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -25,8 +25,9 @@ related_docs:
 - ../security/SECURITY.md
 - ../runbooks/public-share-links-domain-isolation.md
 - ../reference/coding-standards.md
-- ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md
+- ../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md
 - SEARCH-CONSOLE-SYNC.md
+- CRON-CONTROL.md
 tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing, file-requests, business-value, market-comparison]
 
 ---
@@ -38,7 +39,7 @@ tags: [feature, storage, r2, presigned-urls, plac, rbac, sharing, file-requests,
 > **Status:** Production Active (shipped 2026-08-05; File Request Links sub-feature added 2026-08-09)
 > **Surface:** `/dashboard/storage` (drive — includes both outbound share links and inbound file requests), `/dashboard/storage/inspect` (cross-user view), `/dashboard/storage/config` (defaults & overrides)
 > **Role floor:** Staff or higher can use their own drive; higher tiers unlock cross-user and admin capability — see [Roles & Quotas](#3-roles--quotas) below.
-> **Re-verified 2026-09-14** against code and migrations — see §13 for what changed since 2026-08-12.
+> **Re-verified 2026-09-19** against the **live `storage_config` row**, not just code and migrations — see §13. The 2026-09-14 pass checked the code and missed that production's reconciliation policy, allow-list and global pool cap all differ from the shipped defaults this document described.
 
 ---
 
@@ -85,8 +86,9 @@ Files are stored in their own dedicated Cloudflare storage bucket, completely se
 
 Two independent checks run on every upload:
 
-- **Is this file type allowed?** The portal keeps an allow-list of extensions (documents, images, common video/audio, spreadsheets, zip archives). If Admin+ has granted a specific person an exception for something outside that list, that check runs too. If a file's extension isn't on either list, the upload is refused before anything is stored.
-- **Does the file's content actually match what it claims to be?** A file's declared type (what the browser or the uploader says it is) can be spoofed — someone could rename a script to look like an image. The system reads the first few bytes of every uploaded file and checks them against the real, known byte signature for that file type (this is the same technique already used for years for the website's image uploads, just extended to cover documents, video, and audio too). A mismatch gets the upload rejected and the file deleted, not stored "just in case."
+- **Is this file type allowed?** The portal keeps an allow-list of extensions. The **live list**, read from `storage_config` on 2026-09-19, is: `.pdf .png .jpg .jpeg .webp .docx .xlsx .csv .mp4 .mkv .mp3 .zip .md .js .ts .json`. *Corrected 2026-09-19: this said "documents, images, common video/audio, spreadsheets, zip archives" — the shipped seed in `src/lib/storage/config.ts`, which is those twelve. An admin has since added `.md`, `.js`, `.ts` and `.json`; allowing executable script sources into a staff drive is worth a deliberate review.* If Admin+ has granted a specific person an exception for something outside that list, that check runs too. If a file's extension isn't on either list, the upload is refused before anything is stored.
+- **Does the file's content actually match what it claims to be?** A file's declared type (what the browser or the uploader says it is) can be spoofed — someone could rename a script to look like an image. The system reads the first few bytes of every uploaded file and checks them against the real, known byte signature for that file type (the same technique used for years for the website's image uploads, extended to documents, video and audio). A mismatch gets the upload rejected and the file deleted, not stored "just in case."
+  **This check only binds formats that have a fixed signature.** `src/lib/storage/fileSignatures.ts` returns `true` for every text/code/markup format (`.csv .json .md .js .ts .svg .xml`…) because they have no magic bytes, and `true` for any extension it does not recognise. So for four of the sixteen live allowed extensions the only real controls are the allow-list itself, the size cap and the non-executable check. *Added 2026-09-19.*
 
 ## 6. External Sharing
 
@@ -118,7 +120,7 @@ This is the feature most likely to touch someone outside the company, so it's wo
 
 **Who can see what.** A Manager+ sees and manages the requests *they* created. Admin or higher (PLAC `#request-manage`) can view and revoke every file request link created across the organization — the same oversight pattern as `#admin-inspect` for the drive itself.
 
-**Security model.** Deliberately built on the exact same primitives as vendor share links (§6), not a parallel mechanism: the same HMAC-signed, self-expiring token format (`src/lib/storage/share-token.ts`), the same magic-byte content verification on confirm, the same `storage_share_access_logs` telemetry table, and the same Worker-level `isPublicApiRoute()` treatment. See [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) for the one open item on this: whether the Cloudflare Access edge bypass policy has actually been extended to `/api/storage/request/*` the way it was for `/api/storage/share/*` — unverified as of 2026-08-12.
+**Security model.** Deliberately built on the exact same primitives as vendor share links (§6), not a parallel mechanism: the same HMAC-signed, self-expiring token format (`src/lib/storage/share-token.ts`), the same magic-byte content verification on confirm, the same `storage_share_access_logs` telemetry table, and the same Worker-level `isPublicApiRoute()` treatment. **Cloudflare Access bypass: resolved 2026-08-15.** The "Public Vendor Share Links" application carries both public hostnames — `/api/storage/share/*` and `/api/storage/request/*` — and an unauthenticated probe of each from outside the tenant returned the Worker's own `404`, not an Access redirect. See [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md). *Corrected 2026-09-19: this was flagged here as "unverified as of 2026-08-12".*
 
 **What this added, infrastructure-wise (RULE #0.6/#0.8/#0.9 compliance):** zero new environment variables (reuses the existing `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`IP_HASH_SECRET` secrets already provisioned for §6's share links), and exactly **one** new D1 table (`storage_file_requests`, migration `0042`) — everything else (quota checks, extension allowlists, audit logging) reuses tables and repositories this feature already had. Two new PLAC rows (`#request-create`, `#request-manage`) were added to the existing `admin_pages` registry, not a new permission system.
 
@@ -133,11 +135,40 @@ An Owner decides, from the Configuration screen, how the system should react whe
 
 | Policy | What happens |
 |---|---|
-| **Log only** (default) | Nothing is deleted or changed. A report is generated for an Admin+ to review. |
+| **Log only** (the *shipped* default) | Nothing is deleted or changed. A report is generated for an Admin+ to review. |
 | **Require review** | Same as log only today — the report is generated and flagged for manual attention; there is not yet a one-click "approve this cleanup" button, so acting on the report is still a manual step via the cross-user Inspect screen. |
-| **Auto-delete** | The system cleans up both kinds of drift automatically, no human involved. |
+| **Auto-delete** — **this is what production is set to** | The system cleans up both kinds of drift automatically, no human involved: orphaned objects are deleted from storage in batches, and dangling records are marked deleted. |
 
-Whichever policy is active, one thing always happens regardless: if a file's recorded size doesn't match its actual size in storage, that's corrected automatically every week — that correction is harmless (it only ever fixes a display number) and never deletes anything.
+> ### ⚠️ Production runs Auto-delete, and this bucket has no backup
+>
+> *Verified against the live `storage_config` on 2026-09-19:
+> `reconciliationPolicy: "auto_delete"`. Earlier versions of this table showed
+> "Log only (default)" with no indication that the live setting differs — the
+> document presented the safe policy while production ran the destructive one.*
+>
+> The consequence is worth stating plainly, because §4 does not: an object the
+> weekly job deletes at the storage level **cannot be recovered**. There is no R2
+> versioning, no bucket lock and no working backup for `madagascar-staff-storage`
+> (see [`../runbooks/disaster-recovery.md`](../runbooks/disaster-recovery.md) and
+> **S-2** in [`../MAINTENANCE.md`](../MAINTENANCE.md)). The application-level Trash
+> covers in-app deletes only; it does not cover this job. The category at risk is
+> "uploaded to storage but never confirmed in the drive" — normally a dropped
+> browser connection, but also anything the confirm step missed.
+
+Whichever policy is active, **two** things happen regardless:
+
+1. If a file's recorded size doesn't match its actual size in storage, that's
+   corrected automatically every week. That correction only ever fixes a display
+   number and never deletes a file.
+2. **Share and file-request access telemetry older than 180 days is deleted**
+   — an unconditional `DELETE FROM storage_share_access_logs`, independent of the
+   policy, because the table is fed by public unauthenticated endpoints and a
+   low-and-slow probing flood could otherwise grow it without bound.
+   *Added 2026-09-19: this was never documented, and the previous wording ("never
+   deletes anything") was wrong about the job as a whole. Note it also sits
+   awkwardly beside the "retention is manual by policy" stance quoted in
+   `migrations/0053_storage_notification_partial_indexes.sql`; that stance is
+   about file rows and share tokens, not this telemetry table.*
 
 The latest run's results — how many issues of each kind were found, and what (if anything) was done about them — are visible to Admin+ on the Configuration screen.
 
@@ -146,7 +177,7 @@ The latest run's results — how many issues of each kind were found, and what (
 Beyond their own drive, higher roles get three additional screens:
 
 - **Inspect** (`/dashboard/storage/inspect`, Manager+) — a read-only tree of every active drive (`InspectExplorerTree`, fed by `GET /api/storage/admin/inspect`), expandable per user. Used for oversight, not day-to-day file management.
-- **Configuration** (`/dashboard/storage/config`, Admin+) — edit the portal-wide storage defaults (allowances, allowed file types, link lifetimes), grant or remove individual overrides, see per-user usage in one table (`[SUPABASE_PROJECT_REF]`), see who holds storage PLAC grants (`StorageAccessGrantsPanel`), and (Owner only) set the weekly reconciliation policy.
+- **Configuration** (`/dashboard/storage/config`, Admin+) — edit the portal-wide storage defaults (allowances, allowed file types, link lifetimes), grant or remove individual overrides, see per-user usage in one table (`StorageProfilesTable`), see who holds storage PLAC grants (`StorageAccessGrantsPanel`), and (Owner only) set the weekly reconciliation policy.
 - **Reconciliation report** — the weekly run's results, described above.
 
 Every one of these is gated by the portal's existing permission system, the same one used everywhere else in the admin portal — nothing here invented a separate set of rules.
@@ -210,22 +241,22 @@ Written down honestly rather than left to be discovered:
 - **No resumable/chunked upload.** A single file upload is a single continuous transfer, capped at 5 GB. This comfortably covers documents, photos, and most video, but there's no support for pausing and resuming a very large transfer.
 - **Folders are lightweight.** Creating an empty folder with nothing in it yet won't survive a page refresh — folders exist as a property of the files inside them, not as their own stored thing.
 - **"Require review" doesn't yet have a one-click action.** As described in §7, it currently behaves the same as "log only" — an Admin+ has to act on the weekly report manually via Inspect rather than clicking an "approve cleanup" button.
-- ~~**External sharing needs one more manual setup step.**~~ Resolved 2026-08-05 — see [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md).
-- **File Request Links' Cloudflare Access bypass status is unverified (flagged 2026-08-12).** The Worker code has treated `/api/storage/request/*` as public since launch, but it's unconfirmed whether the Zero Trust Access dashboard policy was actually extended to that path the way it was for `/api/storage/share/*`. If it wasn't, external recipients get a CF Access SSO wall instead of the upload page — see [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md) for how to check and fix.
+- ~~**External sharing needs one more manual setup step.**~~ Resolved 2026-08-06 — see [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md). *(Corrected 2026-09-19: this line said 2026-08-05 while §6 said 2026-08-06 for the same item; §6's date is the one the runbook supports.)*
+- ~~**File Request Links' Cloudflare Access bypass status is unverified (flagged 2026-08-12).**~~ **Resolved 2026-08-15**, verified against the live edge rather than the config alone: the Access application lists both `/api/storage/share/*` and `/api/storage/request/*`, and unauthenticated probes of both reached the Worker (HTTP 404, not a 302 to the Access login). The scope is correctly narrow — it is not `/api/storage/*`, so `/api/storage/admin/*` keeps its edge layer. See [`runbooks/public-share-links-domain-isolation.md`](../runbooks/public-share-links-domain-isolation.md). **Cross-doc:** `MAINTENANCE.md` **S-1** still carries this as 🟠 open and should be closed.
 - ~~**File Request Links have no passcode option.**~~ Factually wrong as originally written here — the feature has always supported an optional passcode (`storageFileRequestCreateSchema.passcode`, the "Optional Passcode Protection" field in the create-request modal, `passcode_hash` column). The real bug (resolved 2026-08-12): the passcode was collected and enforced on the landing page's initial render, but the actual upload endpoints (`presign`/`confirm`) never re-checked it — so anyone holding the raw token could bypass a configured passcode entirely via a direct API call. Both endpoints now re-verify the passcode server-side before honoring the request.
 
 ## 11. Where Things Live (for engineers / AI agents)
 
-No database schema here by design — see the migration files themselves (`migrations/0037`–`0039`, `0041`–`0042`, `0045`–`0046`) for exact table structure. This section is a map, not a reference.
+No database schema here by design — see the migration files themselves (`migrations/0037`–`0039`, `0041`–`0042`, `0045`–`0046`, and `0053`, which adds the partial indexes the notifications job reads) for exact table structure. This section is a map, not a reference. *Migration list corrected 2026-09-19.*
 
 - **Pages:** `src/pages/dashboard/storage/` (drive, inspect, config — File Request Links have no dedicated page, they're a panel inside the drive page itself)
-- **UI components:** `src/components/admin/storage/` — File Request Links: `CreateFileRequestModal.tsx`, `FileRequestsTable.tsx`, `RequestDetailsModal.tsx`; also `TrashPanel.tsx`, `BulkActionBar.tsx`, `ImageLightboxModal.tsx`, `InspectExplorerTree.tsx`, `[SUPABASE_PROJECT_REF].tsx`, `StorageAccessGrantsPanel.tsx`
+- **UI components:** `src/components/admin/storage/` — File Request Links: `CreateFileRequestModal.tsx`, `FileRequestsTable.tsx`, `RequestDetailsModal.tsx`; also `TrashPanel.tsx`, `BulkActionBar.tsx`, `ImageLightboxModal.tsx`, `InspectExplorerTree.tsx`, `StorageProfilesTable.tsx`, `StorageAccessGrantsPanel.tsx`
 - **API routes:** `src/pages/api/storage/` (presign/confirm/list/download, `upload` (Worker-streamed fallback), `[id]` PATCH rename / DELETE soft-delete, `trash` + `[id]/restore` (30-day Trash window, `TRASH_RETENTION_DAYS`), `[id]/share/*`, `share/[token]` for the public share link, `admin/*` for inspect/config/overrides/profiles/grants/reconciliation) — File Request Links: `request/[token]/{index,presign,confirm}.ts` (public, recipient-facing) and `requests/{index,[id]}.ts` (authenticated, staff-facing create/list/revoke)
 - **Shared logic:** `src/lib/storage/` (config resolution, magic-byte signatures, share-token signing — reused as-is for request tokens, share email)
 - **Data access:** `src/lib/dal/StorageFileRepository.ts`, `src/lib/dal/StorageFileRequestRepository.ts` (the one new table this sub-feature needed), and the scoped-config methods added to `src/lib/dal/PortalSettingsRepository.ts`
-- **Weekly job:** `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage`), wired into the Sunday branch of `src/workers/cf-entry.ts`
-- **5-minute job:** `src/workers/scheduled-storage-notifications.ts` + `src/lib/storage/notify.ts` — quota ≥ 90 % and share-expiring-within-24 h emails (registered in `src/lib/jobs/registry.ts`)
-- **Global cap:** `maxGlobalPoolBytes` in `src/lib/storage/config.ts` (100 GB fallback) bounds the whole bucket; `FALLBACK_CONFIG` there (50 GB / 10,000 files) is what applies if the seeded defaults row is ever missing — the seeded Owner/Vendor row is unlimited
+- **Weekly job:** `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage`), registered as the job id `staff-storage-reconcile` in `SUNDAY_JOBS` (`src/lib/jobs/registry.ts`) and dispatched by `runCronBatch` from the Sunday branch of `src/workers/cf-entry.ts`. Its tier is **`deferrable`**, so it can be shed automatically under D1 pressure or paused by hand from `/dashboard/cron` — see [`CRON-CONTROL.md`](CRON-CONTROL.md). *Corrected 2026-09-19: "wired into the Sunday branch" understated this; it is a registry job like any other and can be switched off.*
+- **Notifications job:** `src/workers/scheduled-storage-notifications.ts` + `src/lib/storage/notify.ts` — quota ≥ 90 % and share-expiring-within-24 h emails, registered as `storage-notifications` in `src/lib/jobs/registry.ts`. It rides the five-minute tick but its own gate (`storage-notify-interval-minutes`, default **60**) makes it hourly in practice. Also `deferrable`. *Corrected 2026-09-19: this was labelled a "5-minute job".*
+- **Global cap:** `maxGlobalPoolBytes` in `src/lib/storage/config.ts` bounds the whole bucket. **The live value is 7 GiB (7,516,192,768 bytes)**, set by an admin — note that is *below* the 25 GB per-user Admin quota, so the pool cap is what actually binds. The 100 GB in code is only the `FALLBACK_CONFIG` value, which applies if the seeded defaults row is ever missing (that fallback also gives Owner/Vendor 50 GB / 10,000 files rather than unlimited, and `log_only` reconciliation). *Corrected 2026-09-19: this gave the 100 GB fallback as though it were the cap in force.*
 - **Permissions:** standard PLAC rows under `/dashboard/storage` and its `#` sub-features, including `#request-create`/`#request-manage` — see [plac-and-audit.md](../architecture/plac-and-audit.md) for how the permission system itself works.
 
 ## 12. Related
@@ -234,10 +265,11 @@ No database schema here by design — see the migration files themselves (`migra
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — how roles and per-user permission grants work portal-wide
 - [`reference/coding-standards.md`](../reference/coding-standards.md) — the universal scoped-config pattern this feature established for future features to reuse
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) — bucket and secret registry
-- [`2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the live D1/Supabase table inventory and RULE #0.6/#0.8/#0.9 reuse policy this feature (and File Request Links) were built to follow
+- [`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the live D1/Supabase table inventory and RULE #0.6/#0.8/#0.9 reuse policy this feature (and File Request Links) were built to follow
 
 ## 13. Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-09-19 | The **live `storage_config` row** in D1 (quotas, allow-list, `maxUploadBytes`, `maxGlobalPoolBytes`, share TTLs, `reconciliationPolicy`); `scheduled-asset-cleanup.ts` end to end; `fileSignatures.ts`; `scheduled-storage-notifications.ts`'s gate; `registry.ts`/`tiers.ts` for both jobs; `migrations/` listing; the CF Access runbook's 2026-08-15 resolution. Corrections: policy is `auto_delete` in production; the allow-list now includes `.md .js .ts .json`; the signature check passes unknown and text formats; the global cap is 7 GiB; a 180-day unconditional purge of `storage_share_access_logs` was undocumented; both jobs are `deferrable` and pausable; S-1 is resolved; the 08-05/08-06 date conflict fixed; `0053` added to the migration list. | vendor pricing in §9a; live share-log volume; whether `.js`/`.ts` in the allow-list was an intentional admin decision |
 | 2026-09-14 | All `related_code` / `related_docs` paths; the three pages and their guards; quotas, share TTLs, upload cap, default policy and extension list against `migrations/0039` and `config.ts`; every PLAC string against the seeds; `storage_file_requests` shape and passcode re-verification; public API prefixes; the Sunday reconciliation wiring and auto-correct behaviour; one-active-share semantics; secrets and the `STAFF_STORAGE` binding. Ten corrections/additions above (Trash + restore, Worker-streamed upload fallback, inspect tree, profiles + grants panels, notifications job, global cap, migrations 0045–0046, cron-limit history). | CF Access bypass policy for `/api/storage/request/*`; vendor pricing in §9a; live share-log data |

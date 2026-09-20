@@ -10,6 +10,13 @@ tags: []
 
 # New Files Created During Refactoring
 
+> **ARCHIVED — a 2026-04/05 session snapshot, kept verbatim.** It duplicates
+> phases 3C–5E and 10B of [`COMPLETED_PHASES.md`](COMPLETED_PHASES.md) and is
+> not maintained. Its closing "Canonical File Locations After Refactoring" table
+> reads as guidance but is not: four of the paths it names no longer exist. For
+> where code belongs today, read the repository and
+> [`../reference/coding-standards.md`](../reference/coding-standards.md).
+
 All net-new files introduced during this refactoring session.
 
 ---
@@ -18,7 +25,7 @@ All net-new files introduced during this refactoring session.
 **Purpose:** Single source of truth for booking service badge styles.
 
 **Exports:**
-- `[SUPABASE_PROJECT_REF](service: string): { background, color, borderColor }` — returns inline style object for a service type. Used in `BookingDashboard.tsx` and `BookingSlideDrawer.tsx`.
+- `getServiceBadgeStyle(service: string): { background, color, borderColor }` — returns inline style object for a service type. Used in `BookingDashboard.tsx` and `BookingSlideDrawer.tsx`.
 
 **Service colors:**
 - `relocation` → blue (#60a5fa)

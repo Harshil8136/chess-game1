@@ -10,6 +10,17 @@ tags: []
 
 # cf-admin Codebase Refactoring — Project Overview
 
+> **ARCHIVED — a 2026-04/05 project overview, kept verbatim.** Its phase table
+> duplicates [`COMPLETED_PHASES.md`](COMPLETED_PHASES.md), and its imperative
+> "Stack (do not change)" and "Execution Rules" are the stack of that date — the
+> repository now runs Astro 7 with a six-tier role ladder, and the standing
+> rules live in `RULESAd.md` and
+> [`../reference/coding-standards.md`](../reference/coding-standards.md). Do not
+> treat a grep hit in this file as a current rule. Its closing pointer to
+> `PENDING_PHASES.md` as "a completion notice" was never true; that file is an
+> archived residue list, and the live backlog is
+> [`../MAINTENANCE.md`](../MAINTENANCE.md).
+
 > **REFACTORING COMPLETE** — All 8 phases (1A through 8B) are done. Final verification: `npx astro check` and `npm run build` both pass with **0 errors**. Build output: `✓ Complete!`
 
 ## Goal
@@ -55,13 +66,13 @@ A comprehensive professional SWE sweep of the `cf-admin` codebase to:
 | 2D | Remove @types/react @types/react-dom (decided: keep, build needed them) | ✅ DONE |
 | 3A | Unify all 36 API routes to use src/lib/api.ts helpers | ✅ DONE |
 | 3B | Merge WidgetShared + WidgetSharedV2 → single WidgetShared | ✅ DONE |
-| 3C | Extract [SUPABASE_PROJECT_REF] to src/lib/bookings/constants.ts | ✅ DONE |
+| 3C | Extract getServiceBadgeStyle to src/lib/bookings/constants.ts | ✅ DONE |
 | 3D | (Subsumed into 3C — same files) | ✅ DONE |
 | 3E | Remove duplicate CmsBlock interface from cms.ts | ✅ DONE |
 | 3F | Create src/lib/formatters.ts, consolidate formatDate | ✅ DONE |
 | 4C | Add null guard to isBreakGlassAdmin() | ✅ DONE |
 | 4D | Add env validation to createAdminClient() | ✅ DONE |
-| 4E | Enable [SUPABASE_PROJECT_REF]:true in tsconfig.json | ✅ DONE (no errors, only warnings) |
+| 4E | Enable verbatimModuleSyntax:true in tsconfig.json | ✅ DONE (no errors, only warnings) |
 | 4A | Eliminate `any` in src/lib/cms.ts and analytics/providers.ts | ✅ DONE |
 | 4B | Eliminate `any` in key components | ✅ DONE |
 | 5A | Split ActivityCenter.tsx (1,436 lines) → shared types + orchestrator | ✅ DONE |

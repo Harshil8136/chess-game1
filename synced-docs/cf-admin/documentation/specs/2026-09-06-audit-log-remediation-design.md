@@ -18,6 +18,26 @@ tags: [audit, logging, security, design]
 
 # Audit & Activity Log — Remediation and Hardening Design
 
+> **Stage status (2026-09-20).** Still `draft` because the design is only part
+> executed — read the stage table before acting on anything below.
+>
+> | Stage | Status | Evidence |
+> | --- | --- | --- |
+> | 1 — harden and land the detail-panel work | **Shipped 2026-09-07** (`94380eb`..`df866dd`, 14 commits, on `origin/main` and deployed) | redaction is at one chokepoint in `src/lib/audit-helpers.ts`; deep search requires a date bound in `src/pages/api/audit/logs.ts` |
+> | Findings 1–2 (export audit row, CSV formula injection) | **Shipped 2026-09-08** (`d7d3dc6`) | `src/lib/csv.ts`; the export route writes an `export` audit row |
+> | 2 — security and correctness pass | **Not started; unscheduled** | `DELETE /api/audit/logs` is still exported and still PLAC/role-gated only; SEC-12 is absent from `scripts/rules_check.py`; the hand-rolled `accessMap` resolvers, the cookie-name protocol sniff, the v1 INSERT fallback and the `'login'`/`'api_read'` union members all remain; `src/pages/api/seo/settings.ts` still writes no audit row |
+> | 3 — per-route migration | **Not started**, deferred to chunk 13.2 as written | — |
+>
+> The premise of §4 is now demonstrated rather than argued: the production log
+> was bulk-deleted again on 2026-09-18 at 04:49:11 UTC, and a read-only query on
+> 2026-09-20 returns 7 rows, the oldest being that deletion's own entry.
+> **Unreconciled decision:** assessment D-9 (2026-09-15, item 13 in
+> [`../MAINTENANCE.md`](../MAINTENANCE.md)) settles this differently — the
+> interactive delete routes are removed in viability chunk 19, retention stays
+> manual and owner/vendor-only, and no gated erasure path is planned. §4's
+> `legal_requests`-linked erasure endpoint is therefore not agreed scope, and
+> Stage 2 has no ROADMAP row.
+
 > **TL;DR (non-technical):** The portal keeps a log of who changed what. A review
 > on 2026-09-06 found fourteen problems with it: some actions are never recorded,
 > the log can be deleted, an export of it is untracked, and a new "hide passwords"

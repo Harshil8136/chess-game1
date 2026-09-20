@@ -11,10 +11,16 @@ tags: []
 
 # Unified Service Control Plane — Design & Implementation Plan
 
-> **Archived 2026-08-23.** This is a point-in-time design record, not a
-> description of what is built. It was `draft` and unverified for 78 days, and
-> it specifies routes that were never implemented (`/api/runtime-config`,
-> `/api/config/flush`, `/api/environments/`, `/api/ingest`). For what the
+> **Archived 2026-08-23; this banner corrected 2026-09-20.** It is a
+> point-in-time design record and not a description of what is built — but the
+> previous wording, "specifies routes that were never implemented", was wrong
+> and would have led a reader to treat live code as fiction. Most of this design
+> shipped: cf-astro serves `cf-astro/src/pages/api/runtime-config.ts` and
+> `cf-astro/src/pages/api/ingest/[...path].ts`, and cf-admin ships the whole
+> control-plane stack — `src/lib/control-plane/`, `src/pages/api/control-plane/`
+> and the `/dashboard/control-plane` pages. Only `/api/config/flush`, the
+> alternative this design considered and did not choose, was never built;
+> `/api/environments/` is a PostHog API path, not a route of ours. For what the
 > control plane actually does today, see
 > [`../../features/CONTROL-PLANE.md`](../../features/CONTROL-PLANE.md) and
 > [`../../features/CONTROL-PLANE-CONNECTORS.md`](../../features/CONTROL-PLANE-CONNECTORS.md).
@@ -1093,8 +1099,8 @@ Scope: `Workers KV Storage:Edit`. Use for the "Purge config cache" action → de
 
 #### 10.3.4 Analytics GraphQL datasets (beyond what exists)
 
-Additional datasets available: `firewallEventsAdaptive`, `[SUPABASE_PROJECT_REF]`,
-`botManagementAdaptive`, `[SUPABASE_PROJECT_REF]`. Currently using: `[SUPABASE_PROJECT_REF]`,
+Additional datasets available: `firewallEventsAdaptive`, `r2OperationsAdaptive`,
+`botManagementAdaptive`, `dnsAnalyticsAdaptive`. Currently using: `httpRequests1hGroups`,
 `workersInvocationsAdaptive`, `d1AnalyticsAdaptiveGroups`. **Add R2 ops metrics in Phase 1.**
 
 #### 10.3.5 Zero Trust Session Revoke (runtime)

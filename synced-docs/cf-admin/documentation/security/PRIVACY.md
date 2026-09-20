@@ -3,33 +3,60 @@
 title: "Data Privacy Dashboard"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-14
+last_verified: 2026-09-20
 verified_against: [code]
 owner: harshil
-tags: []
+related_docs: [RoPA.md, SECURITY.md, ../architecture/plac-and-audit.md, ../features/USER-MANAGEMENT.md]
+related_code: [src/pages/dashboard/privacy/index.astro, src/pages/api/audit/receipts.ts, src/components/dashboard/privacy/FeedItem.tsx, src/styles/pages/privacy-dashboard.css]
+tags: [privacy, consent, dashboard, feature]
 ---
 
 # Data Privacy Dashboard
 
-> **TL;DR (non-technical):** How the platform handles personal data and privacy/consent obligations (GDPR and Mexico's LFPDPPP): what consent is recorded, how data requests are handled, and how the privacy dashboard works.
+> **TL;DR (non-technical):** How the Privacy screen in the admin portal works —
+> the consent records it reads, the forensic detail it shows per record, and who
+> may open it. It is a feature doc for one dashboard page.
+
+> **Scope — read this before citing this document.**
+> This is an **implementation doc for the `/dashboard/privacy` surface**. It is
+> **not** the platform's privacy posture, **not** a statement of how data
+> subjects' rights are handled, and **not** a data-classification scheme — it
+> contains no classification tiers, no sensitivity labels and no handling rules,
+> and never has. Compliance answers that need those must cite the documents that
+> own them:
+>
+> | You need | Cite |
+> |---|---|
+> | What personal data exists, why, on what basis, how long | [`RoPA.md`](RoPA.md) |
+> | Security controls over that data | [`SECURITY.md`](SECURITY.md) |
+> | Data residency and transfers | [`compliance/data-residency.md`](compliance/data-residency.md) |
+> | ARCO / data-subject request handling | [`RoPA.md`](RoPA.md) activity C, and cf-astro's ARCO runbook |
+> | Retention targets per store | `src/lib/retention-tables.ts`, summarised in [`RoPA.md`](RoPA.md) §2.1 |
 
 > **Status:** Production Active — v2 rebuild complete (2026-05-06)
 > **Route:** `/dashboard/privacy/`
 > **Access:** canonical **Admin** (level 2) minimum — stored as `super_admin`
-> **Compliance:** LFPDPPP, GDPR, CCPA
 
 ---
 
 ## 1. Overview & Access Control
 
-Enterprise-grade forensic auditing interface for the consent records ledger. Provides authorized operators with deep visibility into cookie consent data collected by the public site.
+Forensic auditing interface over the consent records store. Provides authorized
+operators with deep visibility into the cookie-consent data collected by the
+public site. "Ledger" appears in the UI title; do not read it as a durability
+claim — records here are deletable, see §3.
 
 **Access Control:**
 
 - **Minimum Role:** canonical **Admin** (level 2); stored value `super_admin`
-- **Elevated visibility:** Vendor Support (level 0, stored `dev`) and Owner can additionally view audit entries from hidden accounts
 - **Sidebar:** Displayed automatically when permitted via PLAC access maps
-- **API Defense:** PLAC middleware gate rejects unauthorized users before the route handler executes; API route additionally validates role via KV-cached session
+- **API Defense:** the middleware PLAC gate rejects unauthorized users before
+  the handler runs; `src/pages/api/audit/receipts.ts` then re-checks PLAC for
+  `/dashboard/privacy` itself. It calls bare `requireAuth(context)` with **no**
+  role argument — the registry row is what sets the floor, so a PLAC grant can
+  change who reaches it. *Corrected 2026-09-20; this said the route validated a
+  role, and claimed a hidden-account visibility rule that belongs to the logs
+  surface and has never existed here.*
 
 ---
 
@@ -148,14 +175,27 @@ Each card:
 
 `client:load` — paginated at 15 records/page.
 
-- Glassmorphic control bar: "Audit Ledger" title + pulsing sync badge + search + refresh + record count + paginator
+- Glassmorphic control bar: "Audit Ledger" title (the shipped UI string) + pulsing sync badge + search + refresh + record count + paginator
 - Three distinct states: skeleton (initial load), loading overlay (pagination), empty state
 - Error state with rose styling
 - `search` passed as URL param on Enter keypress or refresh
 
 ### FeedItem (`src/components/dashboard/privacy/FeedItem.tsx`)
 
-Expandable consent record row. State flags (`data-revoked`, `data-bot-risk`, `data-safe`) drive the CSS; computed values (bars, widths, colours) use inline `style` objects, which the nonce-based CSP permits. *(2026-09-14: this said "zero inline styles".)*
+Expandable consent record row. State flags (`data-revoked`, `data-bot-risk`, `data-safe`) drive the CSS; computed values (bars, widths, colours) use inline `style` objects, which pass because `style-src` still carries `'unsafe-inline'` — there is no nonce on `style-src`. *(2026-09-14: this said "zero inline styles"; 2026-09-20: it then credited the nonce.)*
+
+**Destructive action — `Delete`.** Each record carries a Delete button, gated on
+`canDelete` in the UI and on PLAC `/dashboard/privacy#delete` (Owner) at the API.
+It calls `DELETE /api/audit/delete?id=<id>` behind a type-of-confirmation dialog
+and **permanently removes a `consent_records` row** — the store the retention
+registry calls the primary legal-defense record, and the evidence GDPR Art. 7(1)
+requires you to be able to produce.
+
+Known gap, recorded 2026-09-20: **no audit entry names the deleted record.**
+`src/pages/api/audit/delete.ts` writes no `auditLog()` call, so the only trace is
+the pipeline's generic `api_mutation_attempt` row, which carries the path but not
+the query string. After the fact you can tell that someone deleted *something*
+here, and who, but not *which record*. Tracked in `../MAINTENANCE.md`.
 
 **Data-attribute patterns:**
 
@@ -182,7 +222,10 @@ Full keyboard accessibility: `role="button"`, `tabIndex={0}`, `onKeyDown` Enter/
 
 ## 4. CSS Architecture (`src/styles/pages/privacy-dashboard.css`)
 
-Styles use design tokens, with a `#0f172a` fallback and three `rgba(255,255,255,…)` literals in `privacy-dashboard.css` (2026-09-14).
+Styles use design tokens, with a `#0f172a` fallback and a handful of raw
+`rgba(…)` literals left in `privacy-dashboard.css`. *(2026-09-20: the count that
+stood here — "three" — was wrong and is dropped rather than replaced; a literal
+count in prose goes stale on the next commit.)*
 
 **Key patterns:**
 
@@ -202,6 +245,7 @@ Styles use design tokens, with a `#0f172a` fallback and three `rgba(255,255,255,
 
 ## 5. Cross-References
 
+- **What personal data the platform holds, and for how long** → See [RoPA.md](./RoPA.md)
 - **RLS policy for `consent_records`** → See [SECURITY.md](./SECURITY.md) §10
 - **PLAC gate documentation** → See [PLAC-AND-AUDIT.md](../architecture/plac-and-audit.md)
 - **RBAC hierarchy** → See [USER-MANAGEMENT.md](../features/USER-MANAGEMENT.md)
@@ -211,4 +255,5 @@ Styles use design tokens, with a `#0f172a` fallback and three `rgba(255,255,255,
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-09-20 | Scope: what this document is and is not, added at the top because two compliance documents were citing it as evidence of a data-classification scheme it does not contain. The per-record Delete path (`FeedItem.tsx` → `src/pages/api/audit/delete.ts`) and its audit gap, previously undocumented. The `receipts.ts` gate (bare `requireAuth` + PLAC, no role argument) and the removal of the hidden-accounts line, which belonged to the logs surface. The `style-src` reason. The `rgba` count dropped | Live RLS state and live `admin_pages` rows (unchanged since the 2026-09-14 pass); the 10K+/month pagination claim |
 | 2026-09-14 | Every path in §1–§4; the five interfaces in `types.ts` (plus `envUrls`, which the response also carries); the `receipts.ts` query fan-out and cache; island directives in `index.astro`; PLAC seeds for `/dashboard/privacy` and its fragments; metric-card, feed and FeedItem behaviour (keyboard handling, `aria-expanded`, data flags); keyframes in `privacy-dashboard.css`; cross-references. Ten corrections above. | Live RLS state; live `admin_pages` rows; the 10K+/month scaling claim |

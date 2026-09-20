@@ -7,7 +7,7 @@ last_verified: 2026-07-29
 verified_against: [code, infra, vendor-docs, web]
 owner: harshil
 related_code: [src/lib/cms/storage.ts, src/lib/cms/revalidate.ts, src/lib/ai-pricing.ts, src/lib/sync-contract.ts, src/pages/api/content/faqs.ts, src/components/admin/content/GalleryManager.tsx]
-related_docs: [2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, ../features/CMS.md, ../2026-07-26-commercial-model-costing-pricing-and-scale.md, ../2026-07-27-go-to-market-prospecting-and-roadmap.md, ../reference/SYNC-SYSTEM-REVIEW.md]
+related_docs: [2026-07-26-payload-cms-evaluation-and-dynamic-blog.md, ../features/CMS.md, ../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md, ../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md, ../reference/SYNC-SYSTEM-REVIEW.md]
 tags: [cms, blog, tiptap, workers-ai, seo, aio, geo, pricing, addon, spec]
 ---
 
@@ -18,8 +18,22 @@ tags: [cms, blog, tiptap, workers-ai, seo, aio, geo, pricing, addon, spec]
 
 # Content & AI Visibility Engine
 
-> **Re-statused `historical` on 2026-08-23.** This is a design decision record; `specs/` is append-only per CONTRIBUTING-DOCS §2. It is
-> accurate for the date it carries; do not read it as current state.
+> **Outcome (added 2026-09-20).** Built in part, and not as named. The editor
+> is not Tiptap: `src/components/admin/content/TiptapRichEditor.tsx` is Preact
+> over `contenteditable` and `document.execCommand`, and no `@tiptap` or
+> `prosemirror` package is a dependency — so §3's licensing and bundle analysis
+> describes a library the product never took. What did ship is the D1 blog with
+> IndexNow on publish and an AI analysis drawer
+> (`src/pages/api/content/ai-visibility.ts`). Item A, the AI-crawler visibility
+> **measurement** that §5 calls the highest-value item and says to build first,
+> was never built — nothing logs crawler hits in either repo. The pricing
+> recommendation was never executed either: the two add-ons still sell at
+> $14.99 and $24.99, not a merged $79–129/mo. The per-post neuron figures in §4
+> came from the July price table that `src/lib/ai-pricing.ts` later records as
+> undercounting the 70B model 5.6×, so treat them as a floor, not a
+> measurement. The phase-5 step telling the reader to delete
+> `cf-astro/src/content/blog/` must not be followed — see the correction at
+> that row.
 
 
 > **TL;DR (non-technical):** A proposed paid module. Clients write blog posts in a proper
@@ -288,7 +302,7 @@ passes to `@cf/meta/llama-3.1-8b-instruct` and reserve
 - `Blog & Content Hub` — **$14.99/mo**
 - `AI Search & Answer Engine Visibility` — **$24.99/mo**
 
-`2026-07-27-go-to-market-prospecting-and-roadmap.md` already observed that the second
+`../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md` already observed that the second
 "was being sold as a $24.99 add-on describing about a third of it."
 
 **Recommendation: merge into one flagship module — "Content & AI Visibility Engine" — at
@@ -326,7 +340,7 @@ safe ones.
 | 2 | Tiptap editor island + Blog manager UI + PLAC registration + audit rows | **Preact `compat` proven**; editor bundle lazy-loaded and admin Lighthouse not regressed |
 | 3 | **Item A** — crawler logging + visibility dashboard | Real crawler hits visible for the existing client |
 | 4 | cf-astro reader, `prerender = false` on the 4 blog routes | **Measure KV writes for one week** against the 1,000/day cap (~16 ISR PUTs/day expected) |
-| 5 | Sitemap, RSS, `BlogPostSchema` wired to D1; migrate the 14 Markdown posts; delete `cf-astro/src/content/blog/` | **Google Search Console reports no lost URLs** |
+| 5 | Sitemap, RSS, `BlogPostSchema` wired to D1; migrate the 14 Markdown posts. ~~delete `cf-astro/src/content/blog/`~~ — **do not**: chunk 8c made that collection the D1-outage fallback that `cf-astro/src/lib/blog-sources.ts` reads | **Google Search Console reports no lost URLs** |
 | 6 | Items B, C — `llms.txt` regeneration, IndexNow-on-publish | Indexing latency measurably improved |
 | 7 | Items D, E, F, G, I — Workers AI analysis passes | Measured neurons/post within budget |
 | 8 | Item H — vision alt-text | Vision neuron cost measured first |
@@ -396,6 +410,6 @@ No new bindings required. Uses existing `DB` (D1), `IMAGES` (R2), `ISR_CACHE` (K
 - [`2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) — the base blueprint; §8 is the build spec
 - [`../features/CMS.md`](../features/CMS.md) — the CMS this extends
 - [`../architecture/KV-RESILIENCE.md`](../architecture/KV-RESILIENCE.md) — the write-quota ceiling phase 4 gates on
-- [`../2026-07-26-commercial-model-costing-pricing-and-scale.md`](../2026-07-26-commercial-model-costing-pricing-and-scale.md) — the cost model this amends on AI allowance
-- [`../2026-07-27-go-to-market-prospecting-and-roadmap.md`](../2026-07-27-go-to-market-prospecting-and-roadmap.md) — the agentic-visibility wedge this productizes
+- [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) — the cost model this amends on AI allowance
+- [`../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md`](../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md) — the agentic-visibility wedge this productizes
 - [`../security/compliance/AI-GOVERNANCE.md`](../security/compliance/AI-GOVERNANCE.md) — output-evaluation gap affecting §9

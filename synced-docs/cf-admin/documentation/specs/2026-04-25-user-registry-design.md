@@ -11,6 +11,20 @@ tags: []
 
 # User Registry Transformation — "Midnight Command" Design Spec
 
+> **Outcome (added 2026-09-20).** Shipped in the same commit as this spec
+> (`d06d961`, 2026-04-25) — the table registry, `AccessPolicyManager`, the
+> expanded row, inline role selector and `/dashboard/users/[id]/access`; the
+> body's "Pending Review" below is stale. Built differently: the mobile card
+> became `src/components/admin/users/UserCardStack.tsx`, the proposed `atoms/`
+> and `molecules/` folders were never created, the DEV-only Audit Silence panel
+> was removed on 2026-07-26, `/api/users/activity` was deleted in chunk 9, and
+> role badges now follow the canonical six-tier vocabulary
+> (`src/components/admin/users/roleColors.ts`), not the dev/super_admin palette
+> in §3. Not as specified: the access page reads Supabase
+> `admin_authorized_users`, not D1, and its route-level clearance gate was
+> dropped on 2026-06-07 — the page renders for anyone who passes PLAC on
+> `/dashboard/users` and only disables editing.
+
 > **Approach:** B — Premium Slate Hybrid  
 > **Module:** `/dashboard/users` (Sapphire Network → Command Center)  
 > **Date:** 2026-04-25  

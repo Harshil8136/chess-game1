@@ -3,21 +3,33 @@
 title: "KV Resilience & Fallback Chain"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-14
-verified_against: [code]
+last_verified: 2026-09-19
+verified_against: [code, infra]
 owner: harshil
-tags: []
+related_code: [src/lib/cms/revalidate.ts, src/lib/cms-status.ts, src/lib/sync-outbox.ts, src/workers/sync-revalidate-consumer.ts]
+related_docs: [../features/CMS.md, ../operations/OPERATIONS.md, GLOBAL-CONFIG.md]
+tags: [architecture, kv, cms, isr, resilience, cache]
 ---
 
 # KV Resilience & Fallback Chain
 
-> **TL;DR (non-technical):** How the portal stays fast and stays up when Cloudflare KV (its high-speed cache) is slow or hits free-tier write limits. Describes the caching strategy and the fail-safe fallbacks so the dashboard never breaks.
+> **TL;DR (non-technical):** How the public site stays correct when Cloudflare KV
+> (its high-speed cache) is slow or hits free-tier write limits. Describes the
+> caching strategy and the fail-safe fallbacks so the site never shows the wrong
+> thing.
 
-> **Version:** 1.0
-> **Last Updated:** 2026-05-13  
-> **Re-verified:** 2026-09-14 against both checkouts (see §9)
-> **Projects:** `cf-admin` (writer), `cf-astro` (reader)
-> **Namespace:** `ISR_CACHE` — ID `[KV_ISR_CACHE_ID]`
+> **Scope:** the `ISR_CACHE` namespace, which is the **cf-astro** edge cache for
+> rendered pages and CMS blocks. cf-admin *triggers* revalidation; it has no
+> `ISR_CACHE` binding — its only KV binding is `SESSION`. *Corrected 2026-09-19:
+> the header here read "`cf-admin` (writer), `cf-astro` (reader)", which is
+> backwards and contradicted this document's own §1 table.*
+>
+> cf-admin's own session KV is **out of scope** and is covered by
+> [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §13–§14. One consequence worth
+> stating here, because the title promises it: when the account's KV write quota is
+> exhausted, `createSession` rethrows and **sign-in fails**. The 1,000 writes/day
+> budget is account-wide, so the publish traffic described below and the portal's
+> sessions compete for the same allowance.
 
 ---
 
@@ -34,33 +46,45 @@ These are separate concerns. A `cms:*` write failure does not affect ISR page ca
 
 ---
 
-## 2. KV Quota Facts
+## 2. KV quota facts
 
-Cloudflare KV limits (as of 2026):
+**Owned by [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §3.2.**
 
-| Operation | Free tier | Paid (Workers Bundled $5/mo) |
-|-----------|-----------|------------------------------|
-| Reads | 10,000,000 / day | 10,000,000 / day (then $0.50/M) |
-| Writes | 1,000 / day | ~33,000 / day (1M/month included) |
-| Deletes | counted as writes | counted as writes |
-| Storage | 1 GB | 1 GB (then $0.50/GB-month) |
+> *Corrected 2026-09-19.* The table that stood here was wrong in three ways that
+> matter for the arithmetic below: it gave the **free** read allowance as
+> 10,000,000/day (it is **100,000/day** — 10 M is the *paid monthly* figure), it
+> said deletes are "counted as writes" (deletes and lists each have their **own**
+> quota), and it named the paid tier "Workers Bundled", a plan name Cloudflare
+> retired. It also contradicted the owner document and
+> [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §13.3, which both say 100,000.
 
-### Writes per CMS Publish
+The two facts this document depends on: **writes are 1,000/day on the free plan**,
+and **every KV quota is account-wide**, shared between cf-astro's `ISR_CACHE` and
+cf-admin's `SESSION`.
 
-One admin content publish calls `revalidateAstro()` → `POST cf-astro/api/revalidate`. That endpoint:
+### Operations per CMS publish
 
-1. Lists and deletes ISR keys with prefix `isr:<path>#` for each expanded path
-   - Base paths like `['/']` expand to `['/', '/en', '/es']` → up to 3 delete operations (more if cached build variants exist)
-2. Writes 1 `cms:<key>` entry per CMS data payload
+One admin content publish calls `revalidateAstro()` → `POST /api/revalidate` on
+cf-astro. That endpoint:
 
-**Approximate total: 4 KV write operations per publish.**
+1. **Lists** ISR keys with prefix `isr:<path>#` for each expanded path — one *list*
+   operation per path. Base paths like `['/']` expand to `['/', '/en', '/es']`.
+2. **Deletes** each key it found — one *delete* operation each, three or more.
+3. **Writes** one `cms:<key>` entry per CMS data payload — one *put* each.
 
-| Tier | Daily budget | Required publishes to exhaust |
-|------|-------------|-------------------------------|
-| Free | 1,000 | **~250 publishes/day** |
-| Paid | ~33,000 | ~8,000 publishes/day |
+*Corrected 2026-09-19: the old summary, "approximately 4 KV write operations per
+publish … the quota is effectively unlimited for this use case", conflated three
+separately-metered operation types into one and then budgeted against the write
+quota alone.* Stated per quota, a publish costs roughly: **1 write** per CMS key,
+**3+ deletes**, **1 list** per path.
 
-For a hotel CMS, 250 publishes in one day is not a realistic scenario. The quota is effectively unlimited for this use case.
+The write quota is therefore not what a publish burns through first — but it is the
+one shared with session creation, and it is the one that fails sign-in when it runs
+out. "Effectively unlimited" is the wrong frame: a hotel CMS will not publish 250
+times a day, but the 1,000 writes are spent mostly elsewhere, on cf-admin sessions
+and on cf-astro's rate-limit fallback, which writes one KV key per booking and per
+consent POST. See [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §13.3 for the
+combined budget.
 
 ---
 
@@ -78,7 +102,10 @@ Admin clicks "Save" (e.g. reviews, faqs, stats, hero upload)
 │  STEP 2 — Edge Revalidation
 └─ revalidateAstro(env, ['/'], { '<key>': JSON.stringify(data) })
    │
-   │  Attempt 1 of 3: POST https://madagascarhotelags.com/api/revalidate
+   │  Attempt 1 of 3, 5s timeout: POST /api/revalidate
+   │    · via the ASTRO_SERVICE binding (https://internal/api/revalidate)
+   │      — Worker to Worker, no public round trip
+   │    · public URL only as the fallback when the binding is absent
    │  → cf-astro endpoint runs Promise.allSettled([
    │       ISR_CACHE.delete('isr:/...'),   ← may throw if quota exhausted
    │       ISR_CACHE.delete('isr:/en...'), ← each failure caught individually
@@ -90,9 +117,18 @@ Admin clicks "Save" (e.g. reviews, faqs, stats, hero upload)
    │  Attempt 2 (300ms later): same, fails again
    │  Attempt 3 (600ms later): same, fails again
    │
-   └─ revalidateAstro() returns { success: false, message: "Failed after 3 attempts..." }
+   └─ revalidateAstroOnce() returns { success: false, message: "Failed after 3 attempts..." }
       │
-      ├─ Sentry alert fired (cms.ts line ~305)
+      ├─ THE PUBLISH IS NOT DROPPED (Phase 1.1):
+      │    · persisted to D1 sync_outbox (src/lib/sync-outbox.ts)
+      │    · a redrive job is enqueued on SYNC_QUEUE
+      │    · src/workers/sync-revalidate-consumer.ts retries it, or the job
+      │      lands visibly in the dead-letter state
+      │    · skipped only when attempts === 0 (dev bypass / missing secret),
+      │      where a redrive in the same environment would fail identically
+      │
+      ├─ Sentry: captureMessage("[CMS Sync Error] Edge purge failed —
+      │    queued for redrive", level: warning) from src/lib/cms/revalidate.ts
       │
       └─ Calling endpoint response:
          reviews.ts → { success: true, revalidated: false, message: "Reviews saved to database, but edge cache sync failed: ..." }
@@ -101,7 +137,21 @@ Admin clicks "Save" (e.g. reviews, faqs, stats, hero upload)
          upload.ts  → { ..., revalidation: { purged: false, message: "..." } }
 ```
 
-**Admin experience:** HTTP 200 with a visible `revalidated: false` flag and human-readable message. The admin knows D1 was saved but the edge cache wasn't purged.
+**Admin experience:** HTTP 200 with a visible `revalidated: false` flag and
+human-readable message. The admin knows D1 was saved but the edge cache was not
+purged *on this attempt*; the queued redrive may still succeed afterwards.
+
+*Corrected 2026-09-19: this cascade ended at "returns success: false" and a Sentry
+alert attributed to a `cms.ts` that does not exist. The durable outbox and the
+`SYNC_QUEUE` redrive were added before this document's own 2026-09-14
+re-verification, which noted the changed Sentry message in §9 while leaving the
+body describing the old flow.*
+
+**On success**, `revalidateAstro` also reads the published bytes back from cf-astro
+(`verifyCmsLive`, `src/lib/cms-status.ts`) to confirm the keys are actually live
+rather than merely that the webhook returned 200. That check is best-effort: a
+verification failure annotates the result and never flips a successful publish to a
+failure.
 
 ### 3b. Public Site Resolution When KV Is Degraded
 
@@ -128,7 +178,10 @@ User visits https://madagascarhotelags.com/
 │  │
 │  ├─ About.astro
 │  │  1. ISR_CACHE.get('cms:about') → miss → fall through
-│  │  2. db.prepare('SELECT content FROM cms_content WHERE id=? AND page=?').bind('about_stats','global') → D1 ✅
+│  │  2. getJsonBlock(db, 'global', 'about_stats') → D1 ✅
+│  │     (via cf-astro/src/lib/about-stats.ts, not inline SQL —
+│  │      corrected 2026-09-19; Testimonials likewise goes through
+│  │      cf-astro/src/lib/testimonials.ts)
 │  │  3. Hardcoded: 30+ / 5000+ / 24/7 / 100%
 │  │
 │  ├─ Services.astro (via pricing.ts)
@@ -161,7 +214,12 @@ If a CMS publish fails to update KV (writes exhausted, network error, etc.):
 - The **old** `cms:*` KV value remains until its TTL expires
 - `cms:*` keys have `expirationTtl: 3600` (1 hour)
 - After expiry, the next render misses KV → reads D1 → serves correct content
-- **Maximum stale window: 1 hour**
+- **Upper bound on the `cms:*` stale window: 1 hour**
+
+*Qualified 2026-09-19: TTL is the **ceiling**, not the expected case. Since the
+durable outbox shipped, an exhausted publish is retried by the `SYNC_QUEUE`
+consumer, so the realistic stale window is bounded by the redrive — typically far
+shorter than an hour — and the TTL is the backstop for a redrive that also fails.*
 
 ISR page cache (`isr:*` keys) may also be stale if the delete operations failed:
 
@@ -233,7 +291,7 @@ Any key not in this list is rejected with a `log.warn` and silently skipped. The
 | Event | Where it's logged |
 |-------|------------------|
 | KV write failure in revalidate.ts | BetterStack via `log.error` |
-| All 3 revalidation retries exhausted | Sentry via `captureMessage` (cms.ts) + BetterStack |
+| All 3 revalidation retries exhausted | Sentry via `captureMessage` ("Edge purge failed — queued for redrive", `src/lib/cms/revalidate.ts`) + BetterStack |
 | Rejected disallowed CMS key | BetterStack via `log.warn` |
 | Successful CMS key write | BetterStack via `log.info` |
 | Admin endpoint revalidation failure | HTTP response body `{ revalidated: false, message }` |
@@ -246,7 +304,8 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 
 - **CMS architecture overview** → [CMS.md](../features/CMS.md)
 - **ISR_CACHE binding ID** → [OPERATIONS.md](../operations/OPERATIONS.md) §1
-- **Revalidation secret config** → [CMS.md §8](../features/CMS.md#8-configuration--environment-constraints)
+- **KV free-tier quotas** → [OPERATIONS.md](../operations/OPERATIONS.md) §3.2 — the owner
+- **Revalidation secret config** → [CMS.md](../features/CMS.md) §4 *(corrected 2026-09-19: the link here pointed at a `#8-configuration--environment-constraints` anchor; CMS.md has sections 1–7 and no such heading)*
 - **cf-astro revalidate endpoint** → `cf-astro/src/pages/api/revalidate.ts`
 - **revalidateAstro() helper** → `cf-admin/src/lib/cms/revalidate.ts` — `revalidateAstro()`
 - **Same KV+D1 pattern proposed for system-wide settings** → [`GLOBAL-CONFIG.md`](GLOBAL-CONFIG.md) (research reference, not implemented)
@@ -257,4 +316,5 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-09-19 | Re-derived the quota table against `../operations/OPERATIONS.md` §3.2 and the Cloudflare pricing page (free reads are 100,000/day, and deletes and lists are separately metered); re-read `src/lib/cms/revalidate.ts` end to end, including `revalidateAstro`'s outbox + `SYNC_QUEUE` fallback and the `verifyCmsLive` read-back; confirmed cf-admin has no `ISR_CACHE` binding in `wrangler.toml`; checked the `CMS.md` anchor. §2, §3a, §4, §7 and §8 corrected; scope note added for cf-admin's own `SESSION` KV | Live KV key state (the connector has no key-level read); §3b's cf-astro resolvers were corrected from the 2026-09-14 reading, not re-read today |
 | 2026-09-14 | `cf-astro/src/pages/api/revalidate.ts`: `Promise.allSettled` batch with per-promise `.catch()` (§5), `expirationTtl: 3600` on `cms:*` writes (§4), `log.warn('Rejected disallowed CMS key')` (§6/§7), BetterStack logger is `@logtail/edge` in `cf-astro/src/lib/logger.ts`; the 18-key allowlist plus the `blog_draft_*` regex against `sync-contract.ts`; `s-maxage=86400` set in `cf-astro/src/middleware.ts`; `cf-admin/src/lib/cms/revalidate.ts`: 3 attempts, 5 s timeout, `Sentry.captureMessage` on exhausted retries (§7 — the message is now "Edge purge failed — queued for redrive", because exhausted retries hand off to the queue consumer rather than giving up). | Live KV key state (the connector has no key-level read); the failure walk-through in §3 was not re-induced |

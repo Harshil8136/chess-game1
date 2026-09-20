@@ -3,10 +3,10 @@
 title: "Schema Change Ledger"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-15
+last_verified: 2026-09-20
 verified_against: [code, infra]
 owner: harshil
-related_docs: [../../RULESAd.md, ../2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
+related_docs: [../../RULESAd.md, ../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
 tags: [d1, supabase, migrations, governance]
 ---
 
@@ -15,7 +15,9 @@ tags: [d1, supabase, migrations, governance]
 > **TL;DR (non-technical):** A one-line-per-migration record of every database
 > schema change applied to this project — what changed, when, and by whom —
 > so there's a single place to check "has this migration actually run?"
-> without querying the live database.
+> without querying the live database. Complete and **test-enforced** for the
+> D1 migrations in `migrations/`; the Supabase and cf-astro rows are kept by
+> convention from 2026-08-12 and are not checked by anything.
 
 ## Context / Scope
 
@@ -26,16 +28,26 @@ trees). This ledger is the third artifact — it did not exist anywhere in the
 repo until 2026-08-12, when a docs-consistency review found RULE #0.7
 referencing it while nothing implemented it (unlike RULE #0.6/#0.9, which
 point at the real, live
-[`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+[`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
 
 **Backfilled 2026-09-15 (viability program chunk 5).** Every file in
 `migrations/` has a row; the 24 rows for files applied before this ledger
 existed take their date from the live `d1_migrations.applied_at` and say
-"unrecorded" for who ran them. The live table inventory in the audit doc above
-remains the source of truth for what exists today; this is the change history.
+"unrecorded" for who ran them. This ledger is the change *history*; for what
+exists **today**, read `database/schema.snapshot.sql` (the DDL truth) and
+`RULESAd.md` RULE #0.9 (the estate counts the rules depend on). The 2026-08-06
+audit linked above remains the *reuse analysis* — why the estate looks the way
+it does — not a current inventory.
 Add a row whenever a new migration file lands in `migrations/` (D1) or
 `supabase/migrations/` (Supabase) — `test/migrations-guard.test.ts` fails the
 build when a D1 file has no row.
+
+**Scope, precisely.** `migrations/` (D1, cf-admin) is complete and enforced:
+33 files today, 33 rows. Supabase (`supabase/migrations/`, 11 files) and
+cf-astro rows are added by convention only from 2026-08-12 onward, so earlier
+Supabase files have no row here by design. `database/legacy_migrations/`
+(44 files, consolidated into `migrations/0000_baseline.sql`) is deliberately
+not itemised.
 
 ## Ledger
 
@@ -67,14 +79,14 @@ build when a D1 file has no row.
 | `migrations/0046_add_storage_files_replaces_file_id.sql` | 2026-08-12 | unrecorded (runner; date from `d1_migrations`) | Adds nullable `storage_files.replaces_file_id` for "Replace this file" provenance. |
 | `migrations/0047_create_gsc_index_log_and_seo_settings.sql` | 2026-08-12 | (unrecorded — this ledger began 2026-08-12; seed/example row, added retroactively same-day) | Adds `gsc_index_log` (durable audit log of every Google Search Console API call made by the indexing-automation sync — sitemap submits, URL inspections) and seeds two dynamic `admin_portal_settings` rows (enable/disable master switch, sweep interval in hours) per RULE #0.8's dynamic-config-first pattern. |
 | `migrations/0048_platform_alerts.sql` | 2026-08-12 | harshil | Creates `platform_alerts` D1 table and indexes for durable local dead-letter alerting surviving multi-service outages. |
-| `migrations/0049_add_seo_dashboard_page.sql` | 2026-08-13 | harshil | Registers `/dashboard/seo` ('Search Console Sync') under `admin_pages` with `required_role = 'super_admin'` (canonical Admin) and sort order 19. |
+| `migrations/0049_add_seo_dashboard_page.sql` | 2026-08-12 | harshil | Registers `/dashboard/seo` ('Search Console Sync') under `admin_pages` with `required_role = 'super_admin'` (canonical Admin) and sort order 19. |
 | `migrations/0050_gsc_index_log_pagespeed_and_richresults.sql` | 2026-08-13 | harshil | Widens `gsc_index_log` with `mobile_usability_verdict`, `rich_results_verdict`, and `service` discriminator (RULE #0.9 reuse for PageSpeed Insights); seeds `pagespeed-check-enabled` and `pagespeed-check-interval-hours` in `admin_portal_settings`. |
 | `migrations/0051_blog_suggestions_and_schema_ownership.sql` | 2026-08-30 | claude (blog-system remediation) | Adds `entry_type` + `status` discriminators to `blog_posts_history` so it doubles as the Suggestional Edit store (RULE #0.9 reuse — no new table, same pattern as 0050's `service` column); adds `idx_history_post_entry_status`; registers PLAC capability `/dashboard/content/blog#review-suggestions`. |
 | `migrations/0052_hot_query_indexes.sql` | 2026-09-15 | claude (viability program chunk 8b) — applied through the Cloudflare API with the `d1_migrations` row written by hand (id 88), because the sandbox has no `wrangler login`; the runner therefore reports nothing pending | Adds `idx_login_logs_success_created (success, created_at DESC)` on `admin_login_logs` (the stats-bar counts and the recent-logins page were full scans: 319 rows read to return one number) and seeds `admin_portal_settings.seo-validation-readiness-latest` from the newest readiness audit row so `getLatestValidationReadinessReport` reads one row instead of a leading-wildcard `LIKE` over `gsc_index_log` (565:1). Additive; no `ALTER`. |
 | `migrations/0053_storage_notification_partial_indexes.sql` | 2026-09-16 | claude (CF-ADMIN-1S follow-up) — applied with `npx wrangler d1 migrations apply madagascar-db --local` then `--remote` | Adds two **partial** indexes on `storage_files` so the `storage-notifications` cron cost tracks live state instead of cumulative file history: `idx_storage_files_live_usage (owner_user_id, size_bytes) WHERE is_deleted = 0` (covering — the per-owner `SUM` no longer needs a table lookup) and `idx_storage_files_live_share_expiry (share_expires_at_ms) WHERE is_deleted = 0 AND share_token_hash IS NOT NULL`. Neither query was missing an index; both were served by indexes spanning every row the table has ever held (4 of the 4 share-token entries existed, 3 of them soft-deleted). Measured live before/after: usage scan 6 -> 2 rows read, share scan 4 -> 1. Additive; no `ALTER`. |
 | `migrations/0054_cron_control_plane_pages.sql` | 2026-09-16 | claude (cron control plane, stage C) — `npx wrangler d1 migrations apply madagascar-db --local` then `--remote` | Registers `/dashboard/cron` in `admin_pages` (`required_role` `super_admin`, sidebar-visible at depth 2). **Partially applied:** its three hash-fragment rows passed `NULL` for `icon`, which is `TEXT NOT NULL`, and because the statement was `INSERT OR IGNORE` SQLite discarded them silently while the migration reported success. Repaired by `0055`; not edited, because it is already in the shared `d1_migrations` ledger and editing an applied file is the drift RULE #0.7b forbids. |
 | `migrations/0055_cron_control_plane_subpages.sql` | 2026-09-16 | claude (cron control plane, stage C) — same command | Adds the three sub-permission rows `0054` dropped: `/dashboard/cron#pause` (`owner`), `#trigger` (`dev`), `#configure` (`dev`), each with a non-null icon and `parent_path = '/dashboard/cron'`. These rows are load-bearing: `resolveAccess` returns `unknown` for a key the registry does not define and `requirePageAccess` refuses only an explicit deny, so `placDenyResponse` on a fragment permits every role until its row exists. Verified live: four rows at `sort_order` 85-88. |
-| `cf-astro/db/migrations/0015_booking_replay_outbox.sql` | 2026-09-02 | claude/gemini (outbox unblocking remediation) | Adds `replay_payload`, `replay_attempts`, `replayed_at`, `next_replay_at`, and partial index `idx_booking_attempts_pending_replay` to `booking_attempts` in D1 (`madagascar-db`), activating the durable booking replay outbox and resolving 5-min `no such column: replay_payload` cron errors. |
+| `cf-astro/db/migrations/0015_booking_replay_outbox.sql` | 2026-09-03 | claude/gemini (outbox unblocking remediation) | Adds `replay_payload`, `replay_attempts`, `replayed_at`, `next_replay_at`, and partial index `idx_booking_attempts_pending_replay` to `booking_attempts` in D1 (`madagascar-db`), activating the durable booking replay outbox and resolving 5-min `no such column: replay_payload` cron errors. |
 | `cf-admin/supabase/migrations/20260909000001_enhance_contact_messages.sql` | 2026-09-09 | antigravity | Widens `public.contact_messages` in Supabase with `consent_id` FK (`consent_records.id`), `priority`, `assigned_to`, `tags`, `metadata`, and performance indexes for admin inquiries CRM overhaul (RULE #0.9 schema reuse). |
 | `cf-admin/supabase/migrations/20260916000000_supabase_objects_chunk_14a.sql` | 2026-09-16 | claude (viability program chunk 14a) — via the Supabase connector `apply_migration`, recorded in `supabase_migrations` under the same name | Adds the two missing FK indexes on `tool_call_events`; removes the five never-used indexes no query path can use (`idx_authorized_users_cf_sub_id`, `idx_bookings_owner_email`, `idx_contact_messages_email`, `idx_legal_requests_email`, `idx_privacy_requests_email`); renames the two dead tables to `zz_dead_admin_sessions_20260916` and `zz_dead_privacy_requests_20260916` (removal = D-15, after the first green backup); removes the `cf_astro_writer_insert` policy on the quarantined table; replaces `purge_expired_privacy_data()` without its `privacy_requests` block. Rollback statements in the chunk record §9. |
 
@@ -98,6 +110,12 @@ even when the change is data rather than schema.
   reasoning (most migrations in this repo already document their RULE #0.9
   reuse-check inline, e.g. `migrations/0047_create_gsc_index_log_and_seo_settings.sql`'s
   header).
+- **Dates are UTC** — the `applied_at` value from `d1_migrations`, not local
+  time. Two rows had slipped a day against it and were corrected on 2026-09-20
+  (`0049` 08-13 → **08-12**, applied `2026-08-12 23:32:43`; cf-astro `0015`
+  09-02 → **09-03**, applied `2026-09-03 03:31:32`). Late-evening local
+  migrations land on the next UTC day; read the number off `d1_migrations`
+  rather than off your clock.
 - **"Applied by"** should name the developer or agent session that ran the
   migration once that's reliably capturable; until then, note it as
   unrecorded rather than guessing.
@@ -116,4 +134,5 @@ even when the change is data rather than schema.
 ## Related
 
 - [`../../RULESAd.md`](../../RULESAd.md) RULE #0.7 — the rule this ledger satisfies.
-- [`../2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — live table inventory (the source of truth for what exists today; this ledger is the change history, not the inventory).
+- `database/schema.snapshot.sql` — the current DDL, and `RULESAd.md` RULE #0.9 for the estate counts. **This is what "exists today" means**; the ledger is the change history, not the inventory.
+- [`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the 2026-08-06 reuse analysis (why the estate looks the way it does). A dated audit, not a live inventory.

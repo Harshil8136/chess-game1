@@ -1,7 +1,7 @@
 ---
 
 title: "D1, KV & Worker Resource Optimization — Design"
-status: active
+status: historical
 audience: [ai, technical, owner, operator]
 last_verified: 2026-09-10
 verified_against: [code, infra]
@@ -15,10 +15,27 @@ tags: [d1, performance, cron, observability, design]
 
 # D1, KV & Worker Resource Optimization — Design
 
-> **Status 2026-09-14:** chunk 7 shipped 2026-09-10 (`5da1c04`, record `historical`).
-> Chunk 8 is in progress — the reconcile hash gate shipped 2026-09-12 (`996c829`)
-> and holds (`cf_access_sync_log`: 1 write in 24 h on 2026-09-14); the outbox
-> probe, watermark and storage-interval gates and chunks 8b / 8c are open. The
+> **Closed 2026-09-20 — every chunk shipped; re-statused `historical`.** Chunk 7
+> shipped 2026-09-10 (`5da1c04`); chunk 8's reconcile hash gate shipped
+> 2026-09-12 (`996c829`) and its three remaining gates on 2026-09-15
+> (`424737f`); chunk 8b shipped 2026-09-15 (`8fcc3d6`, migration `0052`); chunk
+> 8c shipped the same day in cf-astro. What was measured, kept and dropped is in
+> the chunk records, which supersede this design:
+> [07](../program/chunks/2026-09-10-07-cron-consolidation-and-job-observability.md),
+> [08](../program/chunks/2026-09-10-08-idle-tick-gates.md),
+> [08b](../program/chunks/2026-09-10-08b-hot-query-correctness.md),
+> [08c](../program/chunks/2026-09-10-08c-visitor-facing-resilience.md).
+> Three things here are no longer the plan of record: the daily-read
+> trajectory ending at "~21,700/day" was **withdrawn** by chunk 8b's record —
+> the projection double-counted the sweep's own rows — and two 8b items (the
+> `gsc_index_log` aggregate and the scheduled-post partial index) were dropped
+> on measurement; §3.4's `scope_type='job'` is impossible, because the schema
+> constrains `scope_type` to `global`/`role`/`user`, and the code uses
+> global-scope keys prefixed `job-lease:<jobId>`; and job dispatch is now
+> governed by the cron control plane
+> ([`./2026-09-16-cron-control-plane-design.md`](./2026-09-16-cron-control-plane-design.md),
+> owner doc [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)), so
+> the registry, outcome and budget field names in §3 are pre-as-built. The
 > figures in §1 are the 2026-09-10 measurements and have not been re-pulled.
 
 > **TL;DR (non-technical):** The website gets fewer than a hundred visitors a day,
