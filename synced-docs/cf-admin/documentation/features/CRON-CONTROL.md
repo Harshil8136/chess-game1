@@ -37,31 +37,36 @@ restating them — one fact, one home.
 | **Thresholds** | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
 | **Halt** | Stops every job, essential ones included. Requires a reason. | `#configure` |
 
-> **The interval control has no user interface, and pausing erases it.**
-> `POST /api/cron/state` accepts `intervalMinutes`, but the dashboard never sends
-> it (`src/components/admin/cron/CronDashboard.tsx`) and no row renders an input
-> for it. Worse, the route rebuilds a job's control entry from scratch on every
-> pause or resume and carries over only `lastRunAt`
-> (`src/pages/api/cron/state.ts`), so a pause/resume round-trip through the page
-> silently drops an interval set through the API or the seed script. Live today,
-> only `cron-usage-probe` has one (60 minutes). Treat intervals as
-> API-and-seed-only until the UI exists. *Corrected 2026-09-19.*
+> **The interval control still has no user interface, but pausing no longer
+> erases it.** `POST /api/cron/state` accepts `intervalMinutes`; the dashboard
+> never sends it (`src/components/admin/cron/CronDashboard.tsx`) and no row
+> renders an input for it, so intervals remain API-and-seed-only until the UI
+> ships (phase 3 of the improvement plan). Live today, only `cron-usage-probe`
+> has one (60 minutes). *Corrected 2026-09-19; second half fixed 2026-09-20 —
+> the route rebuilt each entry from the request body and carried over only
+> `lastRunAt`, so one pause and resume through the page silently dropped any
+> interval set through the API or the seed script. It merges into the stored
+> entry now, pinned by `test/cron-api.test.ts`.*
 
-> **Sync telemetry is not free and is not audited.** The header button calls
-> `POST /api/cron/sync`, which runs the usage probe with `force=true` — one
-> Cloudflare GraphQL call plus two control-row reads and a compare-and-swap
-> write **per click**, recorded as `updated_by: cron-usage-probe-manual`. It
-> still has **no rate limit and writes no audit row**; both are phase 1 of
-> [`../specs/2026-09-20-cron-control-improvement-plan.md`](../specs/2026-09-20-cron-control-improvement-plan.md).
-> Added by `a9dd974` (2026-09-17). *Added 2026-09-19.*
+> **Sync telemetry costs a Cloudflare call, and is now floored and audited.**
+> The header button calls `POST /api/cron/sync`, which runs the usage probe with
+> `force=true` — one Cloudflare GraphQL call plus a control-row read and a
+> compare-and-swap write. Added by `a9dd974` (2026-09-17). *Added 2026-09-19.*
 >
-> *Partly corrected 2026-09-20:* the button used to render for everyone who
-> could open the page while the route required `#trigger`, so a canonical Admin
-> met "Sync failed (403)", and `a9dd974` had removed the plain refresh in the
-> same change. The button is now gated on `#trigger` and a permission-free
-> **Refresh** sits beside it. The sentence above also said this was "logged for
-> triage in `MAINTENANCE.md`"; no such row was ever written, and the improvement
-> plan is the triage record.
+> *Corrected and fixed 2026-09-20.* As shipped it had no rate limit, wrote no
+> audit row, stamped `updated_by: cron-usage-probe-manual` rather than the
+> actor, and rendered its button for everyone while the route required
+> `#trigger` — so a canonical Admin met "Sync failed (403)", with no plain
+> refresh left because `a9dd974` had replaced it. Today the button is gated on
+> `#trigger` with a permission-free **Refresh** beside it; a second forced probe
+> within 60 s of the last reading is refused and the page says so rather than
+> calling Cloudflare again; the write records the actor's email; and a probe
+> that actually happens writes a `cron_sync` audit row. A throttled click
+> writes nothing and is deliberately not audited. This note also claimed the
+> defect was "logged for triage in `MAINTENANCE.md`" — no such row was ever
+> written, and
+> [`../specs/2026-09-20-cron-control-improvement-plan.md`](../specs/2026-09-20-cron-control-improvement-plan.md)
+> is the triage record.
 
 ## 2. Permissions
 
@@ -203,8 +208,18 @@ The real per-tick cost is:*
   interval-gated job actually ran (`stampIntervalClocks`, a single write for the
   whole tick).
 
-The same false claim is repeated in code comments at `src/lib/jobs/runJob.ts` and
-`src/lib/jobs/control.ts`; correcting them is a code change, not a doc change.
+*The same false claim was repeated in code comments at `src/lib/jobs/runJob.ts`
+and `src/lib/jobs/control.ts`; both were corrected on 2026-09-20.*
+
+**The clock write does not consume a revision.** `stampIntervalClocks` writes the
+document back with `rev` unchanged, comparing-and-swapping against the current
+value. `rev` is the token the dashboard captures on load and returns with a pause
+or a configuration change, and while the stamp bumped it, an hourly machine write
+invalidated every open tab — the live document had reached **rev 179** by
+2026-09-20, every increment written by `cron-tick`. A human write landing between
+a tick's read and its stamp still wins; a human write landing just after
+overwrites a clock the next tick re-stamps, which is the tolerance this path
+already had. *Added 2026-09-20.*
 
 A paused job still costs those reads, but nothing more: the gate runs before the
 job's own logic, so the job itself never reaches D1.
@@ -237,14 +252,18 @@ an empty table.
 - **Run now** bypasses the control document deliberately, so you can test a job
   you have just paused. It does **not** bypass the job's own gate: Run now on
   `gsc-sync` still does nothing while `gsc-sync-enabled` is `false`.
-- **No job takes a lease.** `leaseSeconds` exists on `JobDefinition` and is
-  honoured by `runJob`, but no registered job declares one, so `claimLease` never
-  runs and a manual trigger *can* overlap a scheduled tick. The Run-now route is
-  an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
+- **Only the two weekly jobs take a lease.** `asset-cleanup` and
+  `staff-storage-reconcile` declare `leaseSeconds: 900`, because both delete and
+  a manual run bypasses the control document by design — two deleters walking the
+  same bucket is the one overlap worth a D1 write. The nine five-minute jobs
+  declare none: a lease is a write, writes are the scarcer resource, and 288
+  writes a day each to protect idempotent work is the wrong trade. So a manual
+  trigger *can* still overlap a scheduled tick for those nine. The Run-now route
+  is an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
   there is no 409 path. *Corrected 2026-09-19: this section previously promised
   that Run now "still honours the lease … you get a 409 rather than a duplicate
-  run". The code comment in `src/pages/api/cron/jobs/[id]/stream.ts` makes the
-  same claim.*
+  run", and the code comment in `src/pages/api/cron/jobs/[id]/stream.ts` made the
+  same claim. Leases added and that comment corrected 2026-09-20.*
 
 > **Known limitations.** The run dialog now streams a per-query database trace
 > (statement, table, rows and latency) alongside the structured job telemetry, and
@@ -257,6 +276,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-20 | claude | Phase 1 of the improvement plan, verified by `npm run verify` (1047/1047 tests) | A pause/resume no longer erases `intervalMinutes`; `stampIntervalClocks` keeps `rev` so the dashboard's compare-and-swap token survives an hourly stamp; forced probes are floored at 60 s, audited as `cron_sync` and attributed to the actor; `GET /api/cron` and `POST /api/cron/sync` now share one read model; `asset-cleanup` and `staff-storage-reconcile` take a 900 s lease; the stale cost, lease and "compile error" comments are corrected and the empty `FIFTEEN_MIN_JOBS` export is gone |
 | 2026-09-20 | claude | Phase 0 of the improvement plan: live D1 re-read of `admin_pages`, `admin_page_overrides` and `admin_audit_log`; Gate D traced through `src/pages/api/users/access.ts` | `#trigger`/`#configure` were ungrantable by the owner and are moved to the `owner` baseline by `0056`; `denyCron` and the page's capability flags now fail closed on a missing registry row; the Sync button is gated on `#trigger` with a permission-free Refresh beside it. Live: 4 registry rows active, **no cron override exists**, and the audit table holds 2 `cron_trigger` rows and no `cron_pause`/`cron_resume`/`config_change` at all — the two live pauses were written by the seed script and have no provenance |
 | 2026-09-19 | claude | Re-derived the whole document against HEAD `a9dd974` and the live control row | `a9dd974` (2026-09-17) shipped a query-trace console, skeleton loading, `POST /api/cron/sync` and raw/per-database usage counts with no doc update; the lease, cost, interval, label and D-4 claims were all wrong and are corrected above. Live control row: `gsc-sync` off, `pagespeed-sync` off, **`blog-scheduled-publish` on**, `cron-usage-probe` on with `intervalMinutes 60` |
 | 2026-09-16 | claude | Seeded the control document in production, then read `madagascar_analytics` across the seed boundary | `gsc-sync`, `pagespeed-sync` and `blog-scheduled-publish` moved from `ran` to `disabled`; every essential job continued to run; `cron-usage-probe` began reporting. *(Corrected 2026-09-19: `blog-scheduled-publish` was later resumed and is `on` in the live control row — only the two `idle` jobs remain paused.)* |

@@ -25,7 +25,23 @@ tags: [cron, jobs, control-plane, plac, permissions, ux, plan]
 > with a permission-free Refresh beside it (decision **D-2**, approved).
 > `0056` is written and frozen in the manifest but **not yet applied to
 > production** — it applies with `npm run release`, since a push does not.
-> Phases 1–4 are open; the findings register below is unedited.
+> **Phase 1 shipped 2026-09-20.** F-8, F-9, F-10, F-11, F-12, F-13 and F-15 are
+> fixed, along with F-25 to F-28 from phase 4, which were comments in the same
+> files. Two tasks changed on contact with the code and are recorded here rather
+> than silently dropped:
+>
+> - **P1-6 (a reason on a manual run) is deferred to phase 2.** The run console
+>   starts the job the moment the dialog opens, so asking for a reason first is a
+>   flow change, not a field. It belongs with the console's own UX pass. Building
+>   the server side now would have shipped a parameter nothing sends.
+> - **P1-8 changed shape.** The plan said the seed script should write an audit
+>   row. `admin_audit_log` requires `user_id`, `user_email` and `user_role` NOT
+>   NULL, and a script has no session to resolve them from — a fabricated actor
+>   in the audit trail is worse than a gap in it, because every reader downstream
+>   treats those rows as authenticated fact. The script takes `--actor=` instead
+>   and stamps it on the settings row, which is the provenance that was missing.
+>
+> Phases 2–4 are open; the findings register below is unedited.
 
 
 > **TL;DR (non-technical):** The Scheduled Jobs page works, but three things are
