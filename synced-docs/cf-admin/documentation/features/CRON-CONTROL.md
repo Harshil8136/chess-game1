@@ -3,7 +3,7 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-19
+last_verified: 2026-09-20
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/jobs/control.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/pages/dashboard/cron/index.astro]
@@ -50,12 +50,18 @@ restating them — one fact, one home.
 > **Sync telemetry is not free and is not audited.** The header button calls
 > `POST /api/cron/sync`, which runs the usage probe with `force=true` — one
 > Cloudflare GraphQL call plus two control-row reads and a compare-and-swap
-> write **per click**, recorded as `updated_by: cron-usage-probe-manual`. It has
-> no rate limit and writes no audit row. It is gated on `#trigger` (baseline
-> `dev`) while the button renders for everyone who can open the page, so a
-> canonical Admin sees "Sync failed (403)" — and the plain refresh this button
-> used to do is gone. Added by `a9dd974` (2026-09-17); logged for triage in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md). *Added 2026-09-19.*
+> write **per click**, recorded as `updated_by: cron-usage-probe-manual`. It
+> still has **no rate limit and writes no audit row**; both are phase 1 of
+> [`../specs/2026-09-20-cron-control-improvement-plan.md`](../specs/2026-09-20-cron-control-improvement-plan.md).
+> Added by `a9dd974` (2026-09-17). *Added 2026-09-19.*
+>
+> *Partly corrected 2026-09-20:* the button used to render for everyone who
+> could open the page while the route required `#trigger`, so a canonical Admin
+> met "Sync failed (403)", and `a9dd974` had removed the plain refresh in the
+> same change. The button is now gated on `#trigger` and a permission-free
+> **Refresh** sits beside it. The sentence above also said this was "logged for
+> triage in `MAINTENANCE.md`"; no such row was ever written, and the improvement
+> plan is the triage record.
 
 ## 2. Permissions
 
@@ -66,8 +72,19 @@ shown, because the database still holds the pre-rename vocabulary.
 |---|---|---|---|---|---|---|
 | `/dashboard/cron` | `super_admin` | bypass | bypass | **allow** | deny | deny |
 | `/dashboard/cron#pause` | `owner` | bypass | bypass | deny | deny | deny |
-| `/dashboard/cron#trigger` | `dev` | bypass | bypass | deny | deny | deny |
-| `/dashboard/cron#configure` | `dev` | bypass | bypass | deny | deny | deny |
+| `/dashboard/cron#trigger` | `owner` | bypass | bypass | deny | deny | deny |
+| `/dashboard/cron#configure` | `owner` | bypass | bypass | deny | deny | deny |
+
+> **`#trigger` and `#configure` moved from `dev` to `owner` in migration
+> `0056` (2026-09-20), and no role's access changed.** Gate D in
+> `src/pages/api/users/access.ts` refuses a grant when
+> `ROLE_LEVEL[actor] > ROLE_LEVEL[page.required_role]`. `dev` normalises to
+> `vendor_support`, level 0, and the owner is level 1 — so while those rows
+> stored `dev`, `1 > 0` refused **every grant the owner attempted**, and only
+> vendor support could delegate either action. The baseline comparison
+> `userLevel <= requiredLevel` denies an admin (level 2) against both values
+> alike, so the change grants nobody anything; it only lets the owner delegate,
+> which is what the next paragraph has always claimed.
 
 Three things about this are easy to get wrong and are worth stating plainly.
 
@@ -79,7 +96,18 @@ tier is judged the worse failure — not a gap.
 **Any tier below owner can be granted one action without the others.** An
 individual admin can be given `#pause` through `admin_page_overrides` while still
 being refused `#trigger`. Deny always beats grant. This is what makes the model
-multi-level rather than a fixed ladder.
+multi-level rather than a fixed ladder. *True of `#pause` since it shipped and of
+all three since migration `0056` — see the note above.*
+
+**A missing registry row now refuses the action instead of opening it.**
+`resolveAccess` answers `unknown` for a key `admin_pages` does not define, and
+`requirePageAccess` refuses an explicit deny only, so a fragment whose row is
+absent or `is_active = 0` used to permit every role that could open the page —
+the state migration `0054` actually shipped. `denyCron` goes through
+`placRequireGrant` (`src/lib/auth/guard.ts`), which requires an explicit
+**allow** on the action key, and the page's capability flags resolve the same
+way. The four rows are asserted in `test/migrations-replay.test.ts`, so losing
+one is a failing build rather than a silent opening. *Added 2026-09-20.*
 
 **A deny on the page does not automatically deny the actions.** Ancestor matching
 in `resolveAccess` is `startsWith(key + '/')`, and `#pause` supplies no `/`. Every
@@ -229,6 +257,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-20 | claude | Phase 0 of the improvement plan: live D1 re-read of `admin_pages`, `admin_page_overrides` and `admin_audit_log`; Gate D traced through `src/pages/api/users/access.ts` | `#trigger`/`#configure` were ungrantable by the owner and are moved to the `owner` baseline by `0056`; `denyCron` and the page's capability flags now fail closed on a missing registry row; the Sync button is gated on `#trigger` with a permission-free Refresh beside it. Live: 4 registry rows active, **no cron override exists**, and the audit table holds 2 `cron_trigger` rows and no `cron_pause`/`cron_resume`/`config_change` at all — the two live pauses were written by the seed script and have no provenance |
 | 2026-09-19 | claude | Re-derived the whole document against HEAD `a9dd974` and the live control row | `a9dd974` (2026-09-17) shipped a query-trace console, skeleton loading, `POST /api/cron/sync` and raw/per-database usage counts with no doc update; the lease, cost, interval, label and D-4 claims were all wrong and are corrected above. Live control row: `gsc-sync` off, `pagespeed-sync` off, **`blog-scheduled-publish` on**, `cron-usage-probe` on with `intervalMinutes 60` |
 | 2026-09-16 | claude | Seeded the control document in production, then read `madagascar_analytics` across the seed boundary | `gsc-sync`, `pagespeed-sync` and `blog-scheduled-publish` moved from `ran` to `disabled`; every essential job continued to run; `cron-usage-probe` began reporting. *(Corrected 2026-09-19: `blog-scheduled-publish` was later resumed and is `on` in the live control row — only the two `idle` jobs remain paused.)* |
 | 2026-09-16 | claude | D1 query on `admin_portal_settings` | Control document at rev 2, `updated_by: cron-usage-probe`, usage 0.176% reads / 0.179% writes at 13:05:20Z |
