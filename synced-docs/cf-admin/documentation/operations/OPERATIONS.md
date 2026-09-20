@@ -150,11 +150,17 @@ three times. As of 2026-09-19 it is **11 jobs — 9 on `*/5`, 2 on Sunday**
 | `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile` |
 
 > **Every job below can be paused, throttled or run by hand from
-> `/dashboard/cron` (2026-09-16).** The control plane owns per-job state,
-> criticality tiers, the permission matrix and the automatic-shedding rules —
-> see [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md), which is
-> their single home. The gate costs +1 row read per tick and fails open: a
-> missing or unreadable control document runs every job exactly as before.
+> `/dashboard/cron` (2026-09-16; the throttle got a user interface on
+> 2026-09-20).** The control plane owns per-job state, criticality tiers, the
+> permission matrix and the automatic-shedding rules — see
+> [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md), which is their
+> single home. It fails open: a missing or unreadable control document runs
+> every job exactly as before. *Corrected 2026-09-20 — this said the gate "costs
+> +1 row read per tick", which was the same false claim CRON-CONTROL.md §5
+> retired on 2026-09-19. `readControl` issues its own `SELECT`, so the real cost
+> is two single-row reads per tick: one from `runCronBatch` and one from
+> `cron-usage-probe`, which is ungated and re-reads before checking its own
+> clock. That document owns the figure.*
 
 > **Idle-tick gates (chunk 8, complete 2026-09-15).** Four of the 5-minute jobs
 > decide cheaply before they work, and every gate fails open: `booking-outbox-poke`

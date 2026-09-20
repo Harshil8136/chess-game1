@@ -1,7 +1,7 @@
 ---
 
 title: "Cron Control Plane — Improvement & Permission Remediation Plan"
-status: draft
+status: historical
 audience: [ai, technical, owner]
 last_verified: 2026-09-20
 verified_against: [code, infra]
@@ -17,6 +17,20 @@ tags: [cron, jobs, control-plane, plac, permissions, ux, plan]
 
 # Cron Control Plane — Improvement & Permission Remediation Plan
 
+> **Executed in full on 2026-09-20 — do not run this plan again.** All four
+> phases shipped (`c123447`, `80fc292`, `09929f2`, `f8e11ca`). Of the 29
+> findings, **25 are fixed**; the four that remain are in
+> [`../MAINTENANCE.md`](../MAINTENANCE.md) under "Cron control plane" as CR-1 to
+> CR-5, and one of them is an owner action: `migrations/0056_cron_action_roles.sql`
+> is written, frozen and ledgered but **not applied to production**, because a
+> push to `main` does not apply migrations. The living description of what the
+> page does now is [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md);
+> this file is the design record and the findings register, kept as written.
+>
+> **What did not ship, and why:** F-6 and F-7 were observations rather than
+> defects (F-7 is addressed by the "Your access" summary). F-14's manual-run
+> reason did ship, one phase later than planned. Nothing else was dropped.
+>
 > **Phase 0 shipped 2026-09-20.** F-1, F-2, F-3 and F-4 are fixed: migration
 > `0056` moves `#trigger` and `#configure` to the `owner` baseline (decision
 > **D-1**, approved), `denyCron` and the page's capability flags require an
@@ -41,7 +55,24 @@ tags: [cron, jobs, control-plane, plac, permissions, ux, plan]
 >   treats those rows as authenticated fact. The script takes `--actor=` instead
 >   and stamps it on the settings row, which is the provenance that was missing.
 >
-> Phases 2–4 are open; the findings register below is unedited.
+> **Phases 2, 3 and 4 shipped 2026-09-20** (`f8e11ca`, and `09929f2` for the
+> documentation gate). Phase 2 landed the honest tick/ran/failed counts, failure
+> badges and banner, last-run and next-tick, the real cron expression carried
+> from the registry, the freshness line with opt-in auto-refresh,
+> disabled-with-reason controls and the "Your access" summary, and the a11y pass.
+> Phase 3 landed the per-job throttle UI, the expiring halt, the job filter with
+> a `?job=` deep link, and the shed preview. Phase 4 corrected the stale code
+> comments, deleted `FIFTEEN_MIN_JOBS`, and brought `CRON-CONTROL.md`,
+> `PERMISSIONS-SYSTEM.md`, `ARCHITECTURE.md`, `OPERATIONS.md`,
+> `when-d1-is-unavailable.md`, `STAFF-MANAGED-STORAGE.md` and `MAINTENANCE.md`
+> into line with the code.
+>
+> One structural change was not in the plan: `CronDashboard.tsx` crossed the
+> 600-line ratchet and was split into `TelemetryDeck`, `JobFilter` and
+> `AccessSummary`, because RULESAd.md §8.1 says to extract rather than raise the
+> metric.
+>
+> The findings register below is unedited.
 
 
 > **TL;DR (non-technical):** The Scheduled Jobs page works, but three things are

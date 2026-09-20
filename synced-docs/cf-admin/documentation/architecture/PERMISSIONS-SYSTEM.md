@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-09-20
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -204,6 +204,24 @@ because an undefined key resolves `unknown` and `requirePageAccess` permits unkn
 `src/lib/auth/surface-guards.ts` exists to make that pair the default: `denyCron` and
 `denySessions` take the page key first, then the action. This was got wrong twice
 before it was centralised — see MAINTENANCE.md D-4 and D-5.
+
+**An action key fails CLOSED; a page key does not.** *Added 2026-09-20.* The two
+guards in that module differ deliberately. `denySessions` refuses only an explicit
+deny, which is `requirePageAccess`'s behaviour and is right for a page: a route
+whose page key was never registered must keep working on its own role check.
+`denyCron` goes through `placRequireGrant` (`guard.ts`) instead, which requires an
+explicit **allow** — because an action key exists only where somebody wrote a
+registry row for it, so `unknown` does not mean "no policy applies", it means the
+row is missing or `is_active = 0`. Migration `0054` shipped exactly that state:
+its three cron fragments were inserted with a NULL `icon` against a NOT NULL
+column, `INSERT OR IGNORE` discarded all three silently, and every cron action
+check was a no-op for every role until `0055`. Under an explicit-allow check that
+same state refuses the action instead of opening it. The rows are asserted in
+`test/migrations-replay.test.ts`, so losing one is a failing build. The sessions
+fragments are live and active (verified 2026-09-20) and could adopt the same
+helper, but `#flush` is deliberately deny-only — it keeps a hardcoded owner check
+alongside the PLAC one, so a grant alone must not become a capability — and
+`#export` has no server route, so that switch is its own change.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -456,6 +474,20 @@ code compares the **actor's** level against the page's required level
 (`src/pages/api/users/access.ts`), which is what T3 in §2 already said. Grants
 above the actor's own clearance are refused; a grant at or below it is allowed
 whatever the target's baseline rank.*
+
+> **Gate D makes a `dev` baseline undelegatable by the customer, and that is
+> easy to ship by accident.** *Added 2026-09-20.* The comparison is
+> `ROLE_LEVEL[actor] > ROLE_LEVEL[page.required_role]`. A row storing `dev`
+> normalises to `vendor_support` at level 0, and the owner is level 1, so `1 > 0`
+> refuses **every grant the owner attempts** on that key — only vendor support
+> can delegate it. `/dashboard/cron#trigger` and `#configure` shipped that way in
+> `0054`/`0055` and were moved to the `owner` baseline by
+> `migrations/0056_cron_action_roles.sql`, which changed no role's baseline
+> access (an admin is level 2 and fails `2 <= 1` either way) and restored the
+> owner's ability to delegate. **Before giving a registry row a `dev` baseline,
+> decide whether the customer should be able to hand that capability out.** If
+> they should, the lowest baseline that permits it is `owner`. The arithmetic is
+> pinned in `test/cron-permissions.test.ts`.
 
 ---
 
@@ -749,7 +781,8 @@ re-checked against the 2022 edition, which restructured Annex A.*
 | D6 | `DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks. Anyone who clears the `/dashboard/users` gate — including a staff member holding a PLAC grant on it — can force-kick an admin or a peer, which writes the 24 h `revoked:` sign-in block. The owner-only `/dashboard/users#force-kick` registry row is checked nowhere. | Rank supremacy (T5, §4.1) does not hold on this path. |
 | D7 | The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase. | A peer can be deactivated. |
 | D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Revoking one session signs the user out on every device. |
-| — | 4 overrides in production, 1 of them a deny (§6.3). | PLAC is near-unexercised capability. |
+| — | 4 overrides in production, 1 of them a deny (§6.3), **none on any cron key** (re-measured 2026-09-20). | PLAC is near-unexercised capability. |
+| — | A `dev`-baseline registry row cannot be delegated by the owner at all (§10). Two cron rows shipped that way and were repaired by `0056`; nothing prevents the next one. | A capability the customer can hold but never hand on, with no error explaining why. |
 | — | Cold login costs ~240 ms to Supabase (§13.2). | Identity is not edge-local; only the decision is. |
 
 D6, D7 and D8 are open defects recorded in
@@ -777,6 +810,8 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/pipeline-session.test.ts`, `test/pipeline-bootstrap.test.ts`, `test/pipeline-decision.test.ts` | Every status, redirect, rewrite, header, KV effect and audit row of the middleware on real KV and D1 (**49** cases today): session read, both revocation flags and the `authz-changed` mark; the 30-minute re-check, **including that a supabase-js 5xx keeps the session inside the grace window and only then ends it with `recheck_failed`**; the Cloudflare Access bootstrap with a real RS256 key and a stubbed identity store; the access-map refresh and its bounded fail-open; the viewer rule; `API_DENY_MODE`; the rows `recordEvents` writes |
 | `test/authz-signal.test.ts` | The Stage 1 mark: `markAuthzChanged` writes and TTLs, and `isAuthzStale` comparison (4 cases) |
 | `test/api-authz-inventory.test.ts` | **Every `/api/*` route is mapped** — CI fails otherwise |
+| `test/cron-permissions.test.ts` | The two-key guard end to end: a page deny reaching the action, an action grant not opening its siblings, a **missing registry row failing closed**, a session with no access map refused, the owner/vendor bypass — and Gate D's arithmetic, which is why `0056` exists (added 2026-09-20) |
+| `test/migrations-replay.test.ts` | The four cron registry rows exist, are active, have non-null icons and carry the expected `required_role` — the assertion `0054` needed and did not have (added 2026-09-20) |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 
@@ -788,6 +823,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 |------------|-----------|-------------------------------|------------------------|
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
 | 2026-09-02 | claude | chunk 10: §7 rewritten from the stage modules after the decomposition (`wc -l src/lib/auth/stages/*.ts`, `git show 794bc34`); §17 from the suites that ran (`npx vitest run`: 279 cases across the 11 auth-path files, 717 across the repository). §13.1's KV-read figures were not re-verified here — chunk 10b owns that correction | §7 and §17 match the code at `794bc34` |
+| 2026-09-20 | claude | **Scope-limited to the fragment/action model.** Read `guard.ts`, `decide-access.ts`, `surface-guards.ts` and `api/users/access.ts`; traced Gate D's arithmetic for a `dev` baseline; took live D1 counts for `admin_pages` (97 rows, 86 active, 51 fragments) and `admin_page_overrides` (4 rows, none on a cron key) | Three additions: an action key now fails closed where a page key does not (§5), a `dev`-baseline row cannot be delegated by the owner at all (§10, new gap row in §16), and two new test rows in §17. **Not re-derived:** §13's resource accounting, §11's revocation timings, §15.1's control ids |
 | 2026-09-19 | claude | Full re-derivation against `06f8ab7`. Read `decide-access.ts`, `guard.ts`, `routes.ts`, `pipeline.ts` and every module in `stages/`, plus `plac.ts`, `session.ts`, `rbac.ts`, `audit-helpers.ts`, `api/users/access.ts`, `api/users/force-kick.ts`, `api/sessions/active-sessions.ts` and `api/audit/logs.ts`; counted `API_PAGE_MAPPING` entries and `it(` cases; took live D1 counts for `admin_page_overrides`, `admin_audit_log` and `admin_login_logs` from the 2026-09-18 fact sheet | 17 corrections applied. Load-bearing: the owner/vendor bypass is now step 0 of §1 and §6.2; prefix matching inherits grants, not only denies; the warm path is 4 KV reads, reconciled across §1/§3/§7/§13/§15; the `/api/auth/` public prefix and the "39 mappings" count are gone; page-GET denials are not audited; Gate D caps at the actor's clearance; §13.3 arithmetic redone (~26 writes → ~38 users); §15/§16's "grant ≤ 1 h" and §17's "5xx revokes like a missing row" retired; D6/D7/D8 added to §16. **Not re-derived:** §13.2's Sentry figures (2026-08-23) and §15.1's ISO control ids |
 
 ## Related

@@ -56,7 +56,7 @@ tags: [rbac, plac, authorization, cfzt, kv, d1, scaling, benchmarks, assessment,
 
 ## Table of contents
 
-1. [How the current system works](#1-how-the-current-system-works-verified-live-2026-08-09)
+1. [How the system worked](#1-how-the-system-worked-verified-live-2026-08-09--superseded)
 2. [The proposed JWT + role/delta design](#2-the-proposed-jwt--roledelta-design)
 3. [Fact-check: claims vs. reality](#3-fact-check-claims-vs-reality)
 4. [Multi-benchmark comparison](#4-multi-benchmark-comparison)

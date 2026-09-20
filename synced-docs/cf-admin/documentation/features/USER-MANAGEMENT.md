@@ -257,28 +257,28 @@ If a user needs immediate revocation:
 1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The 3-layer force-kick fires on the PATCH itself, and the PATCH writes an `authz-changed` mark, so any session the kick misses re-verifies on its next request and ends with `account_inactive`. The re-check writes no sign-in block.
 2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV revocation flag + KV session delete + CF API org-wide revoke). User is ejected within seconds.
 
-> ### How to get someone back in after a kick
->
-> *Added 2026-09-19. This is the failure class that locked the Owner out on
-> 2026-09-16, and it was not written down anywhere.*
->
-> Every path above writes **Layer 2**: a `revoked:{userId}` key in KV with a
-> **24-hour TTL**. Until it is gone, the user cannot bootstrap a new session even
-> with a perfectly valid CF Access cookie — they will simply be refused, with no
-> UI explaining why.
->
-> - **Deactivation (option 1) is self-healing.** Re-activating the account with
->   `PATCH /api/users/manage` `is_active: true` explicitly deletes the
->   `revoked:` key.
-> - **A force-kick (option 2) is not.** Nothing clears the flag. It can only be
->   lifted from **Security → Sessions → Active Edge Blocks** (`#unblock`), or by
->   waiting out the 24 hours. And that tab shows `0` with a green "No active
->   blocks" until it is clicked — see
->   [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
->
-> So: if a user reports being locked out after any administrative action, open
-> the Active Edge Blocks **tab** before concluding there is no block. Stage 2 of
-> the access-revocation remediation retires this flag; it has not shipped.
+   > ### How to get someone back in after a kick
+   >
+   > *Added 2026-09-19. This is the failure class that locked the Owner out on
+   > 2026-09-16, and it was not written down anywhere.*
+   >
+   > Every path above writes **Layer 2**: a `revoked:{userId}` key in KV with a
+   > **24-hour TTL**. Until it is gone, the user cannot bootstrap a new session even
+   > with a perfectly valid CF Access cookie — they will simply be refused, with no
+   > UI explaining why.
+   >
+   > - **Deactivation (option 1) is self-healing.** Re-activating the account with
+   >   `PATCH /api/users/manage` `is_active: true` explicitly deletes the
+   >   `revoked:` key.
+   > - **A force-kick (option 2) is not.** Nothing clears the flag. It can only be
+   >   lifted from **Security → Sessions → Active Edge Blocks** (`#unblock`), or by
+   >   waiting out the 24 hours. And that tab shows `0` with a green "No active
+   >   blocks" until it is clicked — see
+   >   [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
+   >
+   > So: if a user reports being locked out after any administrative action, open
+   > the Active Edge Blocks **tab** before concluding there is no block. Stage 2 of
+   > the access-revocation remediation retires this flag; it has not shipped.
 3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
 4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
 

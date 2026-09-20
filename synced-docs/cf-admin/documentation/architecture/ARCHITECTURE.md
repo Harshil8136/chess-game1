@@ -313,8 +313,13 @@ sheddable. A human pausing a job from the dashboard *can* stop anything, includi
 an essential one — that is a deliberate, audited act.
 
 The **cron control plane** at `/dashboard/cron` (shipped 2026-09-16, extended
-2026-09-17 with a query-trace console and D1 usage reporting) is the operator
-surface for pausing, resuming and triggering jobs.
+2026-09-17 with a query-trace console and D1 usage reporting, and again
+2026-09-20 with per-job throttling, an expiring halt, honest run counts and
+failure surfacing) is the operator surface for pausing, resuming, throttling and
+triggering jobs. Two of the eleven — the weekly `asset-cleanup` and
+`staff-storage-reconcile`, both of which delete — hold a 900 s lease, so a manual
+run cannot overlap their scheduled tick; the nine five-minute jobs hold none,
+because a lease is a D1 write and writes are the scarcer resource.
 
 → [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 

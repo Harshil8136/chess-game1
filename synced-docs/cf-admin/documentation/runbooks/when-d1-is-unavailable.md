@@ -158,10 +158,14 @@ check what it deleted that week before assuming it was fine.**
 - **`overBudget: true` in the logs** is a cost regression, not an outage. The job
   completed. Budgets are a CI gate, never a runtime breaker — production always
   finishes the work.
-- **A `lease-held` outcome** means another tick was still running. **No job
-  currently sets `leaseSeconds`, so this branch is unreachable today** — if you
-  actually see `lease-held`, a job definition in `registry.ts` changed and this
-  runbook is out of date.
+- **A `lease-held` outcome** means another run of that job was still in flight.
+  *Corrected 2026-09-20: this said no job sets `leaseSeconds` and the branch was
+  unreachable. Two now do* — `asset-cleanup` and `staff-storage-reconcile`, the
+  weekly pair, both of which delete, at 900 s. On those two `lease-held` is the
+  guard working: an operator pressed **Run now** while the Sunday tick was still
+  going, and the second run stood down rather than putting two deleters on the
+  same bucket. On any other job it means a definition in `registry.ts` changed
+  and this runbook is out of date.
 - **A `disabled` or `shed` outcome** is the control plane working, not a
   failure. `disabled` = someone paused the job at `/dashboard/cron`; `shed` =
   automatic shedding on D1 usage. Neither writes to Observability (§1).
