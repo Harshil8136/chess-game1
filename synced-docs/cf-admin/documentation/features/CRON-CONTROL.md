@@ -6,7 +6,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-20
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/control.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql]
+related_code: [src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql]
 related_docs: [../operations/OPERATIONS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
@@ -322,19 +322,32 @@ an empty table.
   run", and the code comment in `src/pages/api/cron/jobs/[id]/stream.ts` made the
   same claim. Leases added and that comment corrected 2026-09-20.*
 
-> **Known limitations.** The run dialog streams a per-query database trace
-> (statement, table, rows and latency) alongside the structured job telemetry, and
-> the page renders a skeleton while the first load is in flight — both added by
-> `a9dd974`. Raw `console` output from inside a handler is still **not** captured
-> there; it is in Workers Observability. Routing job-path `console.*` through the
-> observability helper would close that, and it is still not done. The trigger
-> expressions themselves cannot be changed from this page: they live in
-> `wrangler.toml` and changing one is a deploy.
+> **The run dialog shows what the job said, as well as what it read.** A
+> handler's own output is streamed into the trace, interleaved with the D1
+> statements in the order they happened, and labelled `INFO` / `WARN` / `ERROR`
+> in text as well as colour. *Added 2026-09-21, closing the gap this section
+> recorded from 2026-09-19.*
+>
+> Jobs narrate through `JobContext.log` (`src/lib/jobs/job-log.ts`), never
+> `console.*`. That is a security boundary, not a style preference: patching the
+> global `console` for the duration of a run — the obvious way to do this — would
+> capture whatever else is running in the same Workers isolate, so another
+> request's output would render into this dialog and into any screenshot of it.
+> A sink passed down the call stack can only carry this job's own lines. Every
+> line still reaches Workers Observability exactly as before, whether or not
+> anyone is watching.
+>
+> **Known limitations.** The trigger expressions cannot be changed from this
+> page: they live in `wrangler.toml` and changing one is a deploy. A handler that
+> still calls `console.*` directly is invisible here — the six scheduled job
+> files carry none, and ratchet metric **A4** holds the line at the count they
+> left behind.
 
 ## 8. Verification log
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-21 | claude | Closed CR-1, verified by `npm run verify` (1075/1075 tests) | Jobs log through `JobContext.log` instead of `console.*`: 46 call sites migrated across the six `scheduled-*.ts` handlers, ratchet A4 fell 420 → 374 by exactly that count. The manual-run console interleaves those lines with the D1 trace in arrival order. `console` is never patched — the reasoning is in `src/lib/jobs/job-log.ts` |
 | 2026-09-20 | claude | Phases 2 and 3 of the improvement plan, verified by `npm run verify` (1071/1071 tests) | Run counts split into ticks/ran/failed; failures badged, bannered and filterable; the real cron expression carried from the registry and pinned against `wrangler.toml`; last-run and next-tick per row; freshness line, permission-free Refresh and opt-in auto-refresh; controls disabled-with-reason plus a "Your access" summary; a per-job throttle UI; a halt that can expire; a job filter and `?job=` deep link; and Run now confirms with an optional reason. No browser check — program principle 11 |
 | 2026-09-20 | claude | Phase 1 of the improvement plan, verified by `npm run verify` (1047/1047 tests) | A pause/resume no longer erases `intervalMinutes`; `stampIntervalClocks` keeps `rev` so the dashboard's compare-and-swap token survives an hourly stamp; forced probes are floored at 60 s, audited as `cron_sync` and attributed to the actor; `GET /api/cron` and `POST /api/cron/sync` now share one read model; `asset-cleanup` and `staff-storage-reconcile` take a 900 s lease; the stale cost, lease and "compile error" comments are corrected and the empty `FIFTEEN_MIN_JOBS` export is gone |
 | 2026-09-20 | claude | Phase 0 of the improvement plan: live D1 re-read of `admin_pages`, `admin_page_overrides` and `admin_audit_log`; Gate D traced through `src/pages/api/users/access.ts` | `#trigger`/`#configure` were ungrantable by the owner and are moved to the `owner` baseline by `0056`; `denyCron` and the page's capability flags now fail closed on a missing registry row; the Sync button is gated on `#trigger` with a permission-free Refresh beside it. Live: 4 registry rows active, **no cron override exists**, and the audit table holds 2 `cron_trigger` rows and no `cron_pause`/`cron_resume`/`config_change` at all — the two live pauses were written by the seed script and have no provenance |
