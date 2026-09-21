@@ -30,9 +30,8 @@ restating them — one fact, one home.
 
 | Control | What it does | Permission |
 |---|---|---|
-| **Pause / resume** | Stops a job dispatching at all. Takes a required reason and an optional expiry. | `#pause` |
-| **Throttle** | Runs a job at most every N minutes instead of every tick. Presets from "every tick" (the reset) to 24 hours. | `#pause` |
-| **Run now** | Runs one job immediately and streams its telemetry and per-query trace. Confirms first, takes an optional reason, and bypasses the control document but not the job's own gate. | `#trigger` |
+| **Manage** (pause, resume, throttle) | One panel per job with one **Save**. Pausing needs a reason and may take an expiry; the throttle runs a job at most every N minutes, from "every time" (the reset) to 24 hours. Nothing commits until you save. | `#pause` |
+| **Run now** | Opens the run console. **Start run** executes: it streams telemetry and a per-query trace, takes an optional reason, and bypasses the control document but not the job's own gate. | `#trigger` |
 | **Sync telemetry** | Forces a live probe of Cloudflare's D1 analytics instead of waiting for the hourly one. Refused within 60 s of the last reading. | `#trigger` |
 | **Refresh** | Re-reads this page's own data. Costs two D1 rows and an Analytics Engine query; probes nothing. | *page access only* |
 | **Thresholds** | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
@@ -289,23 +288,40 @@ an empty table.
   no action permission, and offers auto-refresh as an opt-in remembered per
   browser. It is off by default: each refresh is two D1 row reads plus an
   Analytics Engine query, per open tab, for as long as the tab is open.
-- **A control you may not use is disabled, not hidden**, and its tooltip names
-  the key that would grant it. A "Your access" line in the header states the
-  same four capabilities plainly. Hiding them is why the permission model was
-  invisible — a control that is not there teaches nobody that it exists, and an
-  access review cannot be run against a page that silently omits what it is
-  hiding. *Added 2026-09-20.*
+- **A row collapses to one question: is this job all right?** Name, what it will
+  do next, and whether it has failed — plus the reason it is paused, when it is.
+  Schedule, 24-hour counts, timing, database cost and the consequence of
+  switching it off are one disclosure away, because they are what you read after
+  something looks wrong, not while scanning eleven rows for the one that is.
+  *Restructured 2026-09-21, after the page was called confusing on screen: the
+  row carried up to nine competing chips and three buttons.*
+- **What you may not do is said in words, once**, naming the key that would
+  grant it, rather than rendered as a row of disabled buttons on every job. The
+  header line appears only when something **is** missing — four ticks shown to
+  someone who holds all four is a line that says nothing. The principle is
+  unchanged from 2026-09-20: a capability that is simply absent teaches nobody
+  it exists, and an access review cannot be run against a page that silently
+  omits what it is hiding. *Reworded 2026-09-21.*
+- **Pause and throttle are one panel with one Save.** They are the same decision
+  from an operator's side and share one PLAC key, but they used to be two
+  identical-looking drawers with opposite commit rules — a throttle applied the
+  moment you touched a preset, a pause waited for a reason and a confirm. One
+  request now carries the switch, the reason, the expiry and the throttle, so
+  they cannot disagree half way through and one visit to the drawer writes one
+  audit row. *Changed 2026-09-21.*
 - **The status label** tells you why a job is idle. The current wording
   (`src/components/admin/cron/status.ts`) is **Active** / **Paused** /
   **Paused (Quota)** for an automatic shed / **Standby** while an interval window
   is open / **System Halted** / **Inactive**. Tier headings read
   "Essential Tasks", "Standard Tasks" and "Disabled / Inactive Tasks".
   *Corrected 2026-09-19 — the earlier wording quoted labels that no longer exist.*
-- **Run now** confirms before it runs, and asks why. The dialog used to execute
+- **Run now** opens the console; **Start run** executes. The dialog used to run
   the job the instant it opened, so a misclick ran production work — a bucket
   cleaner, in one case — with nowhere to record intent; both `cron_trigger` rows
-  in production are unexplained. The reason is optional and rides into the audit
-  row. *Changed 2026-09-20.* It bypasses the control document deliberately, so
+  in production are unexplained. The reason it asks for is optional and rides
+  into the audit row. *Changed 2026-09-20; the confirm was renamed 2026-09-21,
+  because "Run now" opening a dialog whose button said "Run it now" is two
+  buttons with one verb and two meanings.* It bypasses the control document deliberately, so
   you can test a job you have just paused, and it does **not** bypass the job's
   own gate: Run now on `gsc-sync` still does nothing while `gsc-sync-enabled` is
   `false`.
@@ -347,6 +363,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-21 | claude | UI and interaction pass after the owner reported the page confusing **on screen**, verified by `npm run verify` (1075/1075) | Row collapses to name/status/failures with detail behind a disclosure; pause and throttle merge into one Manage panel with one Save; three per-row buttons become one, with what the viewer lacks stated in words; the access line appears only when something is missing; auto-refresh moves beside the freshness it governs; the run dialog's confirm reads **Start run**. Still unverified in a browser at the time of writing |
 | 2026-09-21 | claude | Closed CR-1, verified by `npm run verify` (1075/1075 tests) | Jobs log through `JobContext.log` instead of `console.*`: 46 call sites migrated across the six `scheduled-*.ts` handlers, ratchet A4 fell 420 → 374 by exactly that count. The manual-run console interleaves those lines with the D1 trace in arrival order. `console` is never patched — the reasoning is in `src/lib/jobs/job-log.ts` |
 | 2026-09-20 | claude | Phases 2 and 3 of the improvement plan, verified by `npm run verify` (1071/1071 tests) | Run counts split into ticks/ran/failed; failures badged, bannered and filterable; the real cron expression carried from the registry and pinned against `wrangler.toml`; last-run and next-tick per row; freshness line, permission-free Refresh and opt-in auto-refresh; controls disabled-with-reason plus a "Your access" summary; a per-job throttle UI; a halt that can expire; a job filter and `?job=` deep link; and Run now confirms with an optional reason. No browser check — program principle 11 |
 | 2026-09-20 | claude | Phase 1 of the improvement plan, verified by `npm run verify` (1047/1047 tests) | A pause/resume no longer erases `intervalMinutes`; `stampIntervalClocks` keeps `rev` so the dashboard's compare-and-swap token survives an hourly stamp; forced probes are floored at 60 s, audited as `cron_sync` and attributed to the actor; `GET /api/cron` and `POST /api/cron/sync` now share one read model; `asset-cleanup` and `staff-storage-reconcile` take a 900 s lease; the stale cost, lease and "compile error" comments are corrected and the empty `FIFTEEN_MIN_JOBS` export is gone |
