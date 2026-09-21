@@ -315,6 +315,12 @@ an empty table.
   is open / **System Halted** / **Inactive**. Tier headings read
   "Essential Tasks", "Standard Tasks" and "Disabled / Inactive Tasks".
   *Corrected 2026-09-19 — the earlier wording quoted labels that no longer exist.*
+- **The run console shows a trace only once there is a run.** Before that it is
+  the confirm panel and nothing else. *Fixed 2026-09-21: the trace section
+  rendered unconditionally and its "streaming" state keyed off the absence of
+  data, so an open dialog claimed to be streaming from the worker indefinitely,
+  before any request had been made. Found from a screenshot; no test would have
+  caught it, because the component was never rendered in one.*
 - **Run now** opens the console; **Start run** executes. The dialog used to run
   the job the instant it opened, so a misclick ran production work — a bucket
   cleaner, in one case — with nowhere to record intent; both `cron_trigger` rows
@@ -363,6 +369,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-21 | claude | Run-console defects found from an owner's screenshot, verified by `npm run verify` (1075/1075) | The trace panel rendered before any run existed, so the dialog sat permanently at "Streaming execution trace from worker…" — a request that had not been made. It now appears only once a run starts, and its empty states key off running/finished. The catalog title **Failed sign-in monitor** was ambiguous (it reads as a monitor that has failed) and is now **Rejected sign-in monitor** — a re-seed is needed for that to reach production |
 | 2026-09-21 | claude | UI and interaction pass after the owner reported the page confusing **on screen**, verified by `npm run verify` (1075/1075) | Row collapses to name/status/failures with detail behind a disclosure; pause and throttle merge into one Manage panel with one Save; three per-row buttons become one, with what the viewer lacks stated in words; the access line appears only when something is missing; auto-refresh moves beside the freshness it governs; the run dialog's confirm reads **Start run**. Still unverified in a browser at the time of writing |
 | 2026-09-21 | claude | Closed CR-1, verified by `npm run verify` (1075/1075 tests) | Jobs log through `JobContext.log` instead of `console.*`: 46 call sites migrated across the six `scheduled-*.ts` handlers, ratchet A4 fell 420 → 374 by exactly that count. The manual-run console interleaves those lines with the D1 trace in arrival order. `console` is never patched — the reasoning is in `src/lib/jobs/job-log.ts` |
 | 2026-09-20 | claude | Phases 2 and 3 of the improvement plan, verified by `npm run verify` (1071/1071 tests) | Run counts split into ticks/ran/failed; failures badged, bannered and filterable; the real cron expression carried from the registry and pinned against `wrangler.toml`; last-run and next-tick per row; freshness line, permission-free Refresh and opt-in auto-refresh; controls disabled-with-reason plus a "Your access" summary; a per-job throttle UI; a halt that can expire; a job filter and `?job=` deep link; and Run now confirms with an optional reason. No browser check — program principle 11 |
