@@ -270,6 +270,24 @@ an empty table.
   failures counted separately and called out in red; `runBreakdown`
   (`src/components/admin/cron/status.ts`) does the split and
   `test/cron-status-view.test.ts` pins it.
+- **The row is a grid, and its columns are the numbers you scan.** Name, status,
+  the last 24 hours, and when it next runs — so the eye can run down one column
+  instead of zig-zagging. *Rebuilt 2026-09-21: at 1440px the row was a name on
+  the left and two buttons on the right with roughly 1200px of nothing between
+  them, eleven times over. Below 900px the columns stack and the 24-hour figures
+  move under the name; "next run" is the one thing dropped, because it is not
+  why anyone opens this page.*
+- **A failing job does not look like a healthy one.** It carries a red left
+  border and a tinted row. Before this, one job with three failures was
+  distinguishable from ten healthy ones only by a small pill.
+- **The cards report measurements, not settings.** *Corrected 2026-09-21.* "Job
+  Health" showed `9/11` over a bar filled 82% in **red** — which reads as "most
+  of this is on fire" for a system that was entirely healthy bar one job. The
+  bar now tracks the share of jobs running, so a full bar is always the good
+  outcome, and the failure count becomes the headline when there is one. "D1
+  Quota Protection" led with `70% / 70%`, the configured threshold — a headline
+  that reported the page's own settings back and never moved. It now leads with
+  measured peak usage against that threshold.
 - **Failures are surfaced, not buried.** A job with any `failed` outcome in 24 h
   carries a badge, appears in a banner at the top of the page naming it, and is
   reachable through the **Failing** filter chip. Raw handler `console` output is
@@ -369,6 +387,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-21 | claude | **First pass made against the page as it actually renders.** The components were mounted in headless Chromium with a fixture payload and the real stylesheet, and read at 1440px and 390px | Found what three rounds of source review had not: ~1200px of dead space in every row, a red 82%-full bar on a healthy system, a card headlining its own configuration, section descriptions stranded at the far right, a status pill stretched to the width of a text input, and failure counts invisible on mobile. All fixed. Note for anyone repeating this: the page needs no server — a Vite build with `@tailwindcss/vite`, an alias for `@`, and a stubbed `fetch` on `/api/cron` renders the real components faithfully |
 | 2026-09-21 | claude | Run-console defects found from an owner's screenshot, verified by `npm run verify` (1075/1075) | The trace panel rendered before any run existed, so the dialog sat permanently at "Streaming execution trace from worker…" — a request that had not been made. It now appears only once a run starts, and its empty states key off running/finished. The catalog title **Failed sign-in monitor** was ambiguous (it reads as a monitor that has failed) and is now **Rejected sign-in monitor** — a re-seed is needed for that to reach production |
 | 2026-09-21 | claude | UI and interaction pass after the owner reported the page confusing **on screen**, verified by `npm run verify` (1075/1075) | Row collapses to name/status/failures with detail behind a disclosure; pause and throttle merge into one Manage panel with one Save; three per-row buttons become one, with what the viewer lacks stated in words; the access line appears only when something is missing; auto-refresh moves beside the freshness it governs; the run dialog's confirm reads **Start run**. Still unverified in a browser at the time of writing |
 | 2026-09-21 | claude | Closed CR-1, verified by `npm run verify` (1075/1075 tests) | Jobs log through `JobContext.log` instead of `console.*`: 46 call sites migrated across the six `scheduled-*.ts` handlers, ratchet A4 fell 420 → 374 by exactly that count. The manual-run console interleaves those lines with the D1 trace in arrival order. `console` is never patched — the reasoning is in `src/lib/jobs/job-log.ts` |
