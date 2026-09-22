@@ -90,7 +90,7 @@ Detection sources, in the order they usually fire:
 | **Login logs** | D1 `admin_login_logs` | **Failed logins live here, not in the audit log.** `event_type` is one of `LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`, with a `failure_reason`. There is no `login_failed` audit action anywhere in `src/` — querying the audit log for one returns nothing and looks like "no brute force" |
 | CF Access logs | Zero Trust dashboard | Failed auth, unexpected geography |
 | Supabase advisors | `get_advisors` MCP | RLS/policy drift |
-| CI | `security.yml` | `audit_gate.py`, secret-scan |
+| CI | `quality.yml` | `audit_gate.py`, secret-scan, `rules_check.py` |
 | External report | email | Treat as credible until disproven |
 
 Triage queries:

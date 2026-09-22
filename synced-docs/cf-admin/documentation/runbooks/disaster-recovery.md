@@ -27,16 +27,17 @@ today, a description of a mechanism that has never produced one.
 
 | # | Action | Why it blocks | Verified state |
 |---|---|---|---|
-| 1 | Add repository Actions secrets `CLOUDFLARE_API_TOKEN` (account → D1 Edit) and `CLOUDFLARE_ACCOUNT_ID` | `.github/workflows/backups.yml` fails the `d1-export` job on purpose without them, so no D1 artifact is ever produced and both drills are skipped | The repository holds exactly **one** Actions secret, `PERSONAL_PAT`. No repository variables, no environments |
-| 2 | Add `SUPABASE_DB_URL` (session pooler URI, port 5432 — the direct host is IPv6-only and unreachable from GitHub runners) | Without it the `supabase-dump` job skips every step with a warning; there is **no** Postgres backup of any kind | Not set |
-| 3 | Add `BACKUP_PASSPHRASE` | Without it both artifacts upload **unencrypted**, and they contain login logs, consent evidence and bookings | Not set |
+| 1 | Add repository Actions secrets `CLOUDFLARE_API_TOKEN` (account → D1 Edit) and `CLOUDFLARE_ACCOUNT_ID` | `.github/workflows/backups.yml` names each missing secret and skips that store, and its verdict step turns the run red, so no D1 artifact is produced and the D1 drill does not run | The repository holds exactly **one** Actions secret, `PERSONAL_PAT`. No repository variables, no environments |
+| 2 | Add `SUPABASE_DB_URL` (session pooler URI, port 5432 — the direct host is IPv6-only and unreachable from GitHub runners) | Without it the Supabase steps are skipped and the run is **red** (until 2026-09-22 this was a green skip); there is **no** Postgres backup of any kind | Not set |
+| 3 | Add `BACKUP_PASSPHRASE` | **Required since 2026-09-22.** Without it the run uploads nothing and fails, because the archives contain login logs, consent evidence and bookings; unencrypted personal data is never uploaded | Not set |
 | 4 | Decide owner decision **D-13** (§5) | R2 has no backup at all | Open since 2026-09-15 |
 
 **The `backups` workflow has run once, ever:** a manual `workflow_dispatch` on
 2026-09-15 that **failed after 41 seconds** (`d1-export` failed at the
 credentials check; both drills skipped; `supabase-dump` skipped everything).
-No scheduled run has fired. Until prerequisite 1 is done, the Monday run will
-fail exactly the same way.
+The first scheduled run (2026-09-21, started 08:55 UTC for a 03:17 slot) failed the same
+way. *Rebuilt 2026-09-22 as one job* (`documentation/records/reports/2026-09-22-ci-workflow-consolidation.md` §8):
+it now runs **every Sunday 09:17 UTC**, and until prerequisites 1–3 are done every run will fail.
 
 **Consequence for any external statement:** there is no evidence artifact for
 SOC 2 A1.3 today, because no run has produced a summary. Claiming a rehearsed
@@ -78,7 +79,7 @@ feature that needs no artifact.
 | **Worker** | Application code | 0 | ~5 min | `git` + redeploy |
 
 > **The drill is automated but has never succeeded.** `.github/workflows/backups.yml`
-> is written to rehearse both restores every Monday and print the elapsed time
+> is written to rehearse both restores every Sunday and print the elapsed time
 > and a row-count verdict in its job summary (Actions → backups → latest run).
 > That summary is what SOC 2 A1.3 asks for — and it does not exist, because the
 > workflow's one run failed (§0). Until the first green run of each half, the
@@ -118,8 +119,8 @@ wrangler d1 time-travel restore madagascar-db --bookmark=<BOOKMARK_FROM_STEP_2>
 ### 2.1 Beyond seven days — restore from the weekly export
 
 The `backups` workflow is written to keep a full `wrangler d1 export` (schema +
-data) for 90 days as artifact `d1-madagascar-db-<run id>` (a `.tar.gz.gpg` when
-`BACKUP_PASSPHRASE` is set; **unencrypted otherwise, and it is not set** — §0
+data) for 90 days as artifact `d1-madagascar-db-<run id>`, always a `.tar.gz.gpg`
+(the run refuses to upload without `BACKUP_PASSPHRASE`, which is not set yet — §0
 item 3). No such artifact exists yet (§0). The export **creates tables**, so it cannot be
 imported into the live database; restore into a fresh one and swap the binding:
 
@@ -200,7 +201,7 @@ pg_restore --dbname "<session pooler URI of the target>" --no-owner --no-privile
 
 The dump exists only once the `SUPABASE_DB_URL` secret is set (the **session
 pooler** URI — the direct host is IPv6-only and unreachable from GitHub
-runners); until then the workflow skips this half with a warning on every run.
+runners); until then every run skips this half and ends red.
 **It is not set** (§0 item 2), so there is no dump to restore from and this
 subsection describes a procedure, not an option.
 
@@ -300,7 +301,7 @@ CMS outage in April 2026 (`RULESAd.md` §12). Verify against
 **This runbook owns the drill cadence.** Any other document stating a restore
 cadence should link here rather than restate it.
 
-`.github/workflows/backups.yml` (every Monday 03:17 UTC, and on demand from the
+`.github/workflows/backups.yml` (every Sunday 09:17 UTC, and on demand from the
 Actions tab) is written to restore the D1 export into
 `madagascar-db-drill-<run id>`, check every table's row count against the
 source, delete the database, and do the same for the Supabase dump in a
