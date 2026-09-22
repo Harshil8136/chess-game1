@@ -43,7 +43,7 @@ Every architectural decision optimizes for one goal: maximum professional qualit
 
 **Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order.** This applies with extra force here because `madagascar-db` (D1) and the Supabase project are **shared with cf-admin** — a table added carelessly from this repo is exactly as much clutter as one added from cf-admin's.
 
-1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
+1. **Does something that already exists cover this?** Check `cf-admin/documentation/reference/coding-standards.md` §8 (the config-table reuse rule — `admin_portal_settings` is the general-purpose config store both projects should prefer) and `cf-admin/documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (the live table inventory for the shared databases — re-verify it live, it drifts). A 2026-08-06 audit already found three never-consolidated config mechanisms and two confirmed-dead Supabase tables in this shared infrastructure, purely from not checking first.
 2. **If nothing existing fits, does a free, open-source, or already-integrated service solve this better than bespoke infrastructure?** Active connectors exist for Cloudflare, Supabase, Sentry, and PostHog — evaluate honestly per-case rather than defaulting either direction (see the audit doc §4 for three worked examples).
 3. **If new infrastructure is genuinely the right call, say why in one line in the PR/commit.**
 
@@ -102,7 +102,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 **Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the **50** tables shared with cf-admin (**30** D1 `madagascar-db` + 20 Supabase `public`, re-counted live 2026-09-14) (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb` (9) and `whatsapp-chatbot` (4) D1 databases across the full three-app estate. This read 51/31/64 until 2026-09-10; the D1 figure was one high, and cf-admin's `RULESAd.md` §0.9 had the correct total all along.
 
 - ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
-- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
+- See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
 
 ---
 
