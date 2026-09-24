@@ -415,8 +415,8 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 - **Only `fail` halts.** `warn` results travel with the run: they are shown in the dialog, and recorded in the ops event.
 - **A halted manual run** returns `409 { ok: false, code: 'preflight_failed', message, details: { failed, warned } }`: the lists are under `details.failed` and `details.warned`, each a `ProbeResult` with its label. The Run now dialog lists each failure with its fix.
 - **A halted scheduled run:**
-  - writes the ops event `preflight-halted`;
-  - raises one alert per slot, `preflight:<slot>`, of the "Failed, missed or undispatched backups" type, which cannot be switched off;
+  - writes the ops event `preflight-halted`, once per slot;
+  - raises one alert per slot, `preflight:<slot>`, of the "Failed, missed or undispatched backups" type, which cannot be switched off. It stays open until the slot starts or is recorded as skipped;
   - is retried at every tick while its grace window lasts, not at the next slot. If the window ends first, the usual skip record and alert carry the last pre-flight's reason.
 - **A busy lane is not a halt** on the scheduled path: the tick checks the lane before the pre-flight, and the slot waits (`busy-retry`) as it always has, with no alert.
 - **No `backup_runs` row is created for a halted run.** This matches today's refused dispatch.
@@ -643,9 +643,9 @@ Built: B2, B3 and B4, less the runner test. Not built yet: the pre-flight gate (
 | After-run | `postrun.last` | the newest GitHub run's after-run copy was written |
 | Alerts | `alerts.delivery` | the last alert email was delivered |
 
-### Stage 2: the Worker pre-flight gate (2026-09-24, commits `623c92a`, `d7c9791` and `04edc96`)
+### Stage 2: the Worker pre-flight gate (2026-09-24, commits `623c92a`, `d7c9791`, `04edc96` and `3b97b10`)
 
-The first commit puts the gate on runs started by hand, and the second is the review's fix round for it. The third puts the same gate on scheduled slots.
+The first commit puts the gate on runs started by hand, and the second is the review's fix round for it. The third puts the same gate on scheduled slots, and the fourth is that part's fix round: the Alerts page now tracks a stopped slot's alert until the slot starts or is skipped, and each stopped slot writes one ops record, not one per tick.
 
 Built: B5. Not built yet: the runner test and the runner pre-flight (Stage 3), and the new storage folders (Stage 4).
 
@@ -673,7 +673,8 @@ Built: B5. Not built yet: the runner test and the runner pre-flight (Stage 3), a
 - **When a scheduled run is stopped:**
   - it is not started, and it is tried again at every tick (every 5 minutes) until its grace window ends (6 hours by default). Once the problem is fixed, the next tick starts it as usual;
   - **one alert per slot** is emailed, however many ticks it is stopped: "Scheduled … did not start: pre-flight failed". It names each failed test, what it found and how to fix it. It is a "Failed, missed or undispatched backups" alert, which cannot be switched off;
-  - if the grace window ends while it is still stopped, the slot is recorded as skipped and alerted, as before. That alert also gives the reason from the last pre-flight;
+  - the **Alerts** page shows that alert as open, "retried at each tick until the slot's grace window ends", until the slot either starts or is recorded as skipped. Either way it then says which, and the run's own alerts, or the skip alert, take over;
+  - if the grace window ends while it is still stopped, the slot is recorded as skipped and alerted, as before. That alert also gives the reason from the last pre-flight, when the newest pre-flight cf-backup ran (by hand or by the schedule) was this slot's own. If another pre-flight ran after it, the skip alert does not repeat the reason, which the slot's own pre-flight alert already gave;
   - a slot that finds another run still active simply waits, as it always has. That is not a pre-flight failure, and it raises no alert.
 - **The time limit:** the whole pre-flight stops after **7 seconds**, so a refusal reaches the console well before its connection gives up. A test it did not reach in time counts as failed: "ran out of time".
 - **The Diagnostics page** now fills its **Last pre-flight of a real run** card. It shows the newest pre-flight, by hand or by the schedule, whether it passed, and each test that failed or warned. A scheduled slot stopped by pre-flight says the schedule tries again while its grace window lasts.
@@ -698,7 +699,8 @@ Built: B5. Not built yet: the runner test and the runner pre-flight (Stage 3), a
   - its `TickResult.scheduled` entry is the new outcome `preflight-halted`, with the pre-flight message as its detail (cf-admin's job counts outcomes by name, so it needed no change);
   - no `backup_runs` row, so the next tick retries it while the slot is due;
   - the alert `preflight:<slot>`, kind `failed`, deduped by id against pending and sent alerts: one per slot;
-  - the ops event `preflight-halted`, with `mode`, `scope`, `slot`, `failed` and `warned`;
+  - the ops event `preflight-halted`, with `mode`, `scope`, `slot`, `failed` and `warned`, written once per slot, with the alert, in the tick that first halts it (fix round 1: the ticks that retry it add none, so the daily digest counts halted slots, not ticks);
+  - in the Alerts section (`GET /api/alerts`), `preflight:<slot>` is open while the slot has no `backup_runs` row. The detail gives the grace end, computed with the schedule's current `graceHours`. It resolves once the slot has a row, started or skipped, and says which. A scheduled row of the same scope on the same UTC day counts too, as it does for the tick;
   - `lastPreflight` is written with trigger `schedule` and the slot.
   - When the grace window ends, the skipped row's `error_message` ends "Last pre-flight: <test> — <what it found>" if `lastPreflight` is that slot's and failed. It is read before the tick's own pre-flights. `scheduledFailureAlert` reads it back, so an alert raised again from the row reads word for word the same.
 - **The lane comes first on the scheduled path:** the tick reads the lane before the pre-flight, and a busy lane stays `busy-retry`, naming the run, exactly as before. A `d1.lane` failure inside the pre-flight (a run started in between) is a `busy-retry` too. Without this, every busy lane, such as two slots due together, would be a halt and an alert.
