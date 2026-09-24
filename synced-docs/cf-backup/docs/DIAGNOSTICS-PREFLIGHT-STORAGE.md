@@ -723,9 +723,13 @@ A fix after Stage 2, for a problem the owner found on the live page.
 - **What went wrong:** the owner pressed **Run all**. Seven of the eight steps were saved, but **Guards** was not.
   - Guards tests the key vault, and the vault had stopped answering. Its database ran each request and finished it, but the answer never came back.
   - The console's connection to cf-backup gives up after 10 seconds. When it gives up, the step's result is lost, and nothing is saved.
-- **Why the vault stopped answering:** cf-backup reaches the vault through Cloudflare Hyperdrive, which keeps its own pool of database connections. It was set up to go through Supabase's transaction pooler (port 6543), a second pool in front of the database. Cloudflare's Supabase guide says to connect Hyperdrive without a second pool, and that double pool is where the answers were lost.
+- **What we know about why:** cf-backup reaches the vault through Cloudflare Hyperdrive, which keeps its own pool of database connections. It was set up to go through Supabase's transaction pooler (port 6543), a second pool in front of the database.
+  - What was seen: the database finished each query, but the answer did not reach cf-backup.
+  - Cloudflare's Supabase guide advises against giving Hyperdrive a pooled connection.
+  - Switching to Supabase's session pooler is expected to fix it. A re-test after the switch will confirm it.
 - **What changed:**
-  - **Each Diagnostics step now has 7 seconds in all.** A test that does not answer in time fails and says so. Any test after it in the same step fails with "Diagnostics ran out of time (7 s) before this test ran", and its How to fix line names the slow test. The step's result is always saved.
+  - **Each Diagnostics step now has 7 seconds in all.** A test that does not answer in time fails and says so. Any test after it in the same step fails with "Diagnostics ran out of time (7 s) before this test ran", and its How to fix line names the slow test. The step's result is saved, unless the settings write itself fails. The page then says "This result could not be added to the stored history."
+  - **A key rotation stops early rather than half-way.** If the vault answers more than 6 seconds into the request, the rotation stops before GitHub is asked, and says so: the new key stays unused in the vault, nothing else changes, and trying again is safe. GitHub's change must answer by 8 seconds, or it is set back, as for any GitHub failure. If setting it back does not answer by 9 seconds either, the key-mismatch alert goes out.
   - **The rest of the console gives up on the vault after 7 seconds too:** Keys → Rotate and Reveal, Readiness, and the pre-flight. You get a plain failure instead of a lost answer.
   - **The fix is spelled out.** When the vault does not answer, the How to fix line and the Keys error say that the vault connection should use Supabase's session pooler (port 5432) or direct connection, not the transaction pooler (port 6543). They point to the owner's setup guide.
   - **Setting it up again will not bring the problem back:** the setup script now makes the vault connection on the session pooler.
@@ -746,6 +750,12 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - `ApiDeps.openVault(url, { deadlineMs })` takes the deadline as a required option, so the tick's budget-counting wrapper cannot drop it.
   - `openPostgresVault` hands it to `createVault`, and `pgOptions` cuts `pg`'s 10 s connect timeout to it.
   - Only the weekly key check keeps `VAULT_CALL_DEADLINE_MS` (15 s). cf-admin waits 25 s for a tick, and the check's own 8 s slot abandons a slow call first, so a hang there is a budget stop that runs again later, not a key problem.
+- **The rotation's time marks** (`src/keys/operations.ts`, fix round), measured from the request's start (`deps.now`) by `deps.clock`:
+  - `ROTATE_VAULT_BUDGET_MS` (6 s): Vault answered later than this, so stop before GitHub with a retry-safe 502, the key unused.
+  - `ROTATE_GITHUB_BY_MS` (8 s): the `BACKUP_AGE_RECIPIENT` change must answer by then. A later answer counts as a failure, and the existing compensation sets it back.
+  - `ROTATE_SET_BACK_BY_MS` (9 s): any setting back must answer by then, or the mismatch alert goes out.
+  - Without these, the gateway could cut a rotation off between GitHub's change and the registry write, leaving the variable on an unrecorded key with no compensation, alert or audit.
+  - The GitHub client takes no abort signal, so a late answer is raced (`answerWithin`) and ignored.
 - **The guidance:** `vaultDidNotAnswer(e)` is true for a `VaultError` from the connect stage, or one that timed out.
   - `vault.list` and `vault.refusal` then show `VAULT_NO_ANSWER_FIX`. It is also their `timeoutFix` (a new optional `Probe` field), used when the probe's own time runs out first.
   - Rotate's and Reveal's 502 message ends with the same pointer (`VAULT_POOLER_HINT`).
