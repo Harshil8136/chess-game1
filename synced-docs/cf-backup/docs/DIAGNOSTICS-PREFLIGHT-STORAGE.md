@@ -740,6 +740,7 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - `runStep` passes the deadline to `runProbe`. Each probe keeps its 8 s cap, cut to the time left.
   - A probe the deadline never reached is a `fail` with `ms: null`, the summary "Diagnostics ran out of time (7 s) before this test ran", and a fix naming the slowest test that ran.
   - The pre-flight keeps its own `PREFLIGHT_DEADLINE_MS`. Both build their not-run results with `notRun` and `ranOutOfTime`.
+  - Neither starts a probe with less than `MIN_TIME_LEFT_MS` (50 ms) left (`pastDeadline`). A probe stopped at the deadline can wake a millisecond before `Date.now()` reaches it, and CI once saw the pre-flight start the next probe with about 1 ms left.
 - **The Vault deadline:** `vaultFor(deps, { deadlineMs })` opens Vault with `VAULT_CONSOLE_DEADLINE_MS` (7 s) unless told otherwise.
   - That covers Keys, the Diagnostics Vault probes, the pre-flight's `vault.list` (by hand and scheduled) and Readiness.
   - `ApiDeps.openVault(url, { deadlineMs })` takes the deadline as a required option, so the tick's budget-counting wrapper cannot drop it.
