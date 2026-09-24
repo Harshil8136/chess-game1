@@ -211,7 +211,7 @@ The business-hours window only shows a notice in the dialog; the server does not
 
 **Runner pipeline** (`scripts/backup/lib/pipeline.ts`):
 - **Steps:** `plan → tools → doctor → d1 → d1-real-drill → postgres → seal → cleanup`, in one job (`.github/workflows/db-backup.yml`, 90-minute timeout).
-- **Doctor:** `scripts/backup/lib/doctor.ts` computes per-stage gates (`d1`, `postgres`, `encrypt`, `upload`). It does not halt the whole run, which is deliberate: a Supabase outage still lets D1 back up.
+- **Doctor:** `scripts/backup/lib/doctor.ts` computes per-stage gates (`d1`, `postgres`, `encrypt`, `upload`). Since Stage 3 (see the Build log), any failed check stops every store by default, before a byte is exported. The setting `runGuards.preflightPolicy: 'skip-part'` keeps the per-stage gates, under which a Supabase outage still lets D1 back up; until Stage 3 that was the only behaviour.
 - **Check mode:** doctor downgrades encrypt-only failures to warnings.
 - **Seal:** uploads `manifest.json` last, as the completion signal.
 
@@ -497,7 +497,7 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 **Order:**
 1. **Probe library and Diagnostics page** (B2 to B4).
 2. **Worker pre-flight gate** (B5).
-3. **Runner pre-flight policy, the runner test and the encoding fix** (B6).
+3. **Runner pre-flight policy and the runner test** (B6). There is no encoding fix: see the correction in B1.
 4. **Layout v2** (B7), after the Files-page work that is in progress has landed. Both touch `src/files/*`.
 
 **Each stage** passes `npm run verify` and is deployed by Workers Builds before the next starts.
@@ -772,3 +772,72 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - a Guards run through the router, against a Vault whose queries never answer (on a fake clock), answers within 7 s and stores its history entry. `vault.list` shows "no answer within 7 s", and `vault.refusal` ran out of time;
   - Rotate and Reveal against the same Vault answer 502 with the pointer;
   - the tick's pre-flight asks Vault for 7 s, and the weekly key check asks for 15 s.
+
+### Stage 3: the runner pre-flight and the runner test (2026-09-24, commits `75348f3`, `bc7dfd7`, `0196e2c`, `634ff52` and `f510f73`)
+
+The first two commits are the halt policy and its fix round, the next two the three new runner checks and their fix round, and the last the runner test.
+
+Built: B6. Not built yet: the new storage folders (Stage 4).
+
+#### For everyone
+
+- **A run now stops at the first sign of trouble on GitHub's machine.** Before it copies anything, the runner's doctor step checks its access. By default, if any check fails, the whole run stops before a single database is copied, as the owner asked.
+  - **Where to change it:** Settings → Run guards → "When the runner pre-flight finds a problem". "Stop the whole run (nothing is exported)" is the default. "Skip only the broken part (the rest is backed up)" goes back to the old behaviour: for example, the D1 databases are still backed up while Supabase is unreachable.
+  - If the settings cannot be read, or hold a value that is neither choice, the run stops, as with the default.
+- **What a stopped run leaves behind:** three small files, and nothing else. They are its record (`manifest.json`), the doctor step's results (`env/doctor.json`) and its log (`logs/run.log.gz`).
+  - The run shows as **failed**. Its reasons start with "pre-flight stopped the run before any export", followed by each failed check and what it found. GitHub marks the run failed too.
+  - It **never counts toward Run now's cooldown or the daily limit**: it made no backup, so a setup mistake does not lock Run now for 6 hours.
+  - **When storage itself failed its check,** the three files are not uploaded, because every upload would fail. They stay on the runner, and the run's GitHub artifact keeps them for 14 days. The run's reasons say so.
+- **Three new checks on the runner,** each before anything is copied:
+  - **Trial encryption:** the runner encrypts 32 random bytes to the backup key, with the same tool a backup uses. A check and the runner test skip it, because they encrypt nothing.
+  - **Storage test file:** the runner writes a small file to storage with its own credentials, reads it back and deletes it. So a backup that could not upload its files is caught before it starts, not at the end.
+  - **Disk space:** the runner's disk needs at least 1 GiB free, or three times the size of the last good backup when that is more.
+  - When one fails, the run report gives its cause and how to fix it.
+- **The break-glass local run still works.** `npm run backup:local -- --no-upload` (docs/RESTORE.md) skips the storage checks instead of failing them, so the halt never stops the one run meant for a storage outage.
+- **The runner test.** Diagnostics has a new button, **Runner test (about 1 GitHub minute)**, for people with the Run Diagnostics tests permission. A short dialog says what it does and costs before anything starts.
+  - **What it does:** it starts the backup workflow on GitHub in a test mode. The runner installs its tools and runs doctor's checks, then writes the same three small files as a stopped run. It exports nothing and keeps no data, so it is never a backup.
+  - **What it proves:** that GitHub starts the workflow, and that on GitHub's own machine the Cloudflare token works, every database answers, storage accepts the test file, Supabase answers, the backup key's settings are in place and the disk has room. The quick Diagnostics steps cannot prove this, because only the runner has those credentials.
+  - **What it costs:** about one GitHub Actions minute of the 2,000 free each month.
+  - **Limits:** at most **5 a day** (UTC), for everyone together. Each also counts toward the person's own checks for the day. It has no cooldown. It cannot start while another run is active: it is refused at once, with the run that is active named.
+  - **Before it starts,** it runs the same quick pre-flight as other runs, without the backup key and storage-room tests. A failure stops it in the dialog, and no GitHub minute is used.
+  - **Its result:** it is a normal run, so watch it in Live. In Runs it reads "runner test (no data)", and its detail says "a runner test: doctor only, never a backup". It passes when every check passes, passes with warnings when one warns, and fails when one fails. When it has finished, run the Runner step again: its test "The runner's last doctor record" then shows this run's checks.
+  - **With no backup key yet,** the runner test reports that as a warning, "a backup would stop here", as a check does. It is not a failure, because the test encrypts nothing.
+  - **A failed runner test** emails "Runner test failed". The alert is answered when a later runner test, check or backup succeeds. A runner test never answers a failed check's alert, because it proves no export.
+- **Corrections to the plan in B6:**
+  - A stopped run records the error code `doctor_failed`, not `preflight_failed`. That code already keeps a setup mistake out of Run now's cooldown; a new code would have locked Run now for 6 hours after every stopped run.
+  - The three files keep today's folder names (`manifest.json`, `env/doctor.json`, `logs/run.log.gz`). Stage 4 moves them to the new layout.
+  - The storage test file is written under `v1/indexes/` until Stage 4 moves it to `system/preflight/`.
+  - The fourth check B6 planned, the `pg_dump` version, was not added. The existing drill-image check already compares the Postgres version the backup's tools use with the server's, and the dump runs in that same image.
+  - No text-encoding fix was needed: see the correction in B1.
+
+#### For engineers
+
+- **The policy:** `runGuards.preflightPolicy`, `'halt'` (the default) or `'skip-part'`.
+  - Under `halt`, doctor's `applyPolicy` closes the `d1`, `postgres` and `encrypt` gates, naming the failing check ids and then `preflight-halt`, and sets `DoctorReport.halted: { by }`. The `upload` gate stays as `computeGates` left it: closed only by an R2 failure.
+  - Anything but a stored `'skip-part'` is `'halt'`, including unreadable settings. Check mode's softening of key-only failures to warnings comes first, so a check with no key never halts.
+- **The minimal seal** (`sealMinimal`, `scripts/backup/lib/seal.ts`), for a halted run and for the runner test:
+  - it writes only `MINIMAL_RUN_FILES` (`src/backups/wire.ts`), `manifest.json` last, with no encryption and no verify, usage or other evidence. `report.md` is the GitHub job summary only;
+  - a halted run's verdict is failed, first reason `pre-flight stopped the run before any export: <ids>`, every data check `skipped`; the row gets `error_code: doctor_failed`, which `COUNTS_AS_A_RUN` exempts from the cooldown and the daily limit; it always exits 1;
+  - with the upload gate closed it makes no PUT: the files stay in the run folder on the runner, which the artifact step uploads, and the row keeps `doctor_failed`, never `manifest_upload_failed`.
+- **Scrubbing, on both seal paths:** verdict reasons, finding messages, each job's `problems` and the drill's `problems` are scrubbed of the run's registered secrets and of any user name and password written into a URL, before `manifest.json` and the row are written.
+- **The new doctor checks** (`scripts/backup/lib/doctor.ts`):
+  - `age-trial` ("Trial encryption (age)"): seal's own `encryptFile` on 32 random bytes, passing on the `age-encryption.org/v1` header, with a 30 s timeout. It closes `encrypt`. It is skipped in modes `check` and `preflight`, and when `age-recipient` already failed;
+  - `r2-canary` ("R2 write, read and delete"): PUT, HEAD and DELETE of `v1/indexes/preflight-canary-<runKey>`, naming the first verb that failed; the DELETE is always tried. It closes `upload`. It is skipped with `--no-upload`, with no R2 client, and when `r2` already failed;
+  - `disk-space` ("Runner disk space"): the free bytes of the run's work directory against `max(1 GiB, 3 × the last good run's data_bytes)`. It closes `d1` and `postgres`, and is skipped when the free space cannot be read;
+  - with `--no-upload`, `r2` and `r2-canary` are `skipped`, never failed;
+  - `src/report/diagnose.ts` has a cause rule for each (`RULES_VERSION` 3), tried before the generic R2 write rule so a refused canary is named as the canary.
+- **The runner test, Worker side:**
+  - `POST /api/diagnostics/runner`: capability `diagnostics.run`, audit `run.drill` with `mode=preflight`; no body. It calls `startRunnerTest` (`src/backups/start.ts`).
+  - The guards are a check's (no cooldown; the person's check count against `manualRunsPerPersonPerDay`), then `RUNNER_TESTS_PER_DAY` (5): rows carrying the runner-test reason requested since 00:00 UTC, by anyone. A `dispatch_failed` one is not counted, since it used no minute; one doctor failed still is.
+  - Then a lane read: any active run answers `409 already_running`, naming it, before the pre-flight asks GitHub anything. A run started after that read still meets the lane lock at the insert.
+  - Then the pre-flight list `preflight`: `d1.lane`, `gh.token`, `gh.workflow`, `gh.permissions`, `gh.secrets` and `gh.minutes`, with `lastPreflight.mode` `'preflight'`.
+  - The row is a check row (`r2_prefix` `v1/checks/`) whose `reason` is `RUNNER_TEST_REASON`, "Runner test (pre-flight only, no data)" (`src/backups/run.ts`). `isRunnerTest(row)` is the check prefix and that reason together. A person cannot type it: `startFromBody` refuses it as a reason.
+  - It is dispatched with `mode: 'preflight'` (`DispatchRow.mode`, which `modeForRow` returns when set). `db-backup.yml`'s `mode` choice gains `preflight`, and the workflow guard pins the four options.
+- **The runner test, runner side:**
+  - `plan` accepts `IN_MODE=preflight` for either scope, files the run under `v1/checks/<YYYY>/<MM>/<runKey>/`, moves the check row to running, plans the steps `plan`, `tools`, `doctor`, `verify`, `seal` and `manifest`, and gives no ETA (a backup's duration is not a runner test's);
+  - `doctor` closes `d1`, `postgres` and `encrypt` with `mode:preflight`, which names the mode, not a failure; the halt policy does not apply, so `halted` stays unset; key-only failures are softened to warnings, as in a check;
+  - `seal` takes the minimal path, with the verdict from doctor alone: `ok` when every check passes, `warning` with a warning, `failed` with a failure (`doctor_failed`). It exits 1 only when failed;
+  - `manifest.json` has `mode: 'preflight'`. The Worker's manifest and heartbeat readers accept it, and finalisation keeps the check folder.
+- **Labels:** `RunSummary.runnerTest`; `LiveRun.mode` `'preflight'` reads "Runner test (no data)"; the run alert is "Runner test failed"; Activity and the daily digest name it; `lastGoodCheck` leaves runner tests out unless asked, so only a runner test's own alert is answered by one.
+- **The page:** the Diagnostics header's button opens the shared `Modal`; a pre-flight refusal shows in it with `PreflightFailures`. Once started, the page says to watch Live, offers a button to it, and names the Runner step's `runner.last` test.
+- **Tests:** `test/runner/doctor-policy.test.ts`, `test/runner/doctor-checks.test.ts`, `test/runner/seal.test.ts` and `test/runner/preflight-mode.test.ts` on the runner side; `test/runner-test-api.test.ts` for the route, the guards, the manifest reader and every label; `test/report-diagnose.test.ts` for the cause rules; `test/ui-diagnostics.test.ts` for the button and the dialog.
