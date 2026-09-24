@@ -729,7 +729,10 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - Switching to Supabase's session pooler is expected to fix it. A re-test after the switch will confirm it.
 - **What changed:**
   - **Each Diagnostics step now has 7 seconds in all.** A test that does not answer in time fails and says so. Any test after it in the same step fails with "Diagnostics ran out of time (7 s) before this test ran", and its How to fix line names the slow test. The step's result is saved, unless the settings write itself fails. The page then says "This result could not be added to the stored history."
-  - **A key rotation stops early rather than half-way.** If the vault answers more than 6 seconds into the request, the rotation stops before GitHub is asked, and says so: the new key stays unused in the vault, nothing else changes, and trying again is safe. GitHub's change must answer by 8 seconds, or it is set back, as for any GitHub failure. If setting it back does not answer by 9 seconds either, the key-mismatch alert goes out.
+  - **A key rotation now has time limits:**
+    - **A late vault stops it before GitHub.** If the vault answers more than 6 seconds into the request, the rotation stops before GitHub is asked, and says so. The new key stays unused in the vault, nothing else changes, and trying again is safe.
+    - **A late GitHub change is set back.** If GitHub does not confirm the key change by 8 seconds, the rotation counts it as failed and sets it back, as for any GitHub failure. A change not yet sent by then is never sent.
+    - **A late change that lands anyway raises the alert.** If a change GitHub was already asked for still goes through after it was set back, the key-mismatch alert says so. The same alert goes out if setting it back does not answer by 9 seconds.
   - **The rest of the console gives up on the vault after 7 seconds too:** Keys → Rotate and Reveal, Readiness, and the pre-flight. You get a plain failure instead of a lost answer.
   - **The fix is spelled out.** When the vault does not answer, the How to fix line and the Keys error say that the vault connection should use Supabase's session pooler (port 5432) or direct connection, not the transaction pooler (port 6543). They point to the owner's setup guide.
   - **Setting it up again will not bring the problem back:** the setup script now makes the vault connection on the session pooler.
@@ -755,7 +758,10 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - `ROTATE_GITHUB_BY_MS` (8 s): the `BACKUP_AGE_RECIPIENT` change must answer by then. A later answer counts as a failure, and the existing compensation sets it back.
   - `ROTATE_SET_BACK_BY_MS` (9 s): any setting back must answer by then, or the mismatch alert goes out.
   - Without these, the gateway could cut a rotation off between GitHub's change and the registry write, leaving the variable on an unrecorded key with no compensation, alert or audit.
-  - The GitHub client takes no abort signal, so a late answer is raced (`answerWithin`) and ignored.
+  - A late answer is raced (`answerWithin`). Stopping to wait does not stop the call, so two things make it harmless (round 2):
+    - The call's `AbortSignal` is aborted. `GitHubApp.setVariable(…, { signal })` checks it in `#repoCall` before minting and again right before the request, so a call still minting its token never sends its PATCH. A request already sent is not cut.
+    - The stopped first change is watched under `waitUntil`. If GitHub applies it after all, possibly after the set-back, the `key:mismatch:<fp>` alert goes out, with a `rotate-failed` ops event carrying `lateChange: true`, stamped when it landed. A late refusal alerts nobody.
+    - Existing callers pass no signal and are unchanged.
 - **The guidance:** `vaultDidNotAnswer(e)` is true for a `VaultError` from the connect stage, or one that timed out.
   - `vault.list` and `vault.refusal` then show `VAULT_NO_ANSWER_FIX`. It is also their `timeoutFix` (a new optional `Probe` field), used when the probe's own time runs out first.
   - Rotate's and Reveal's 502 message ends with the same pointer (`VAULT_POOLER_HINT`).
