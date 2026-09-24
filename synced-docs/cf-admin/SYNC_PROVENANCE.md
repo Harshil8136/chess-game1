@@ -3,9 +3,9 @@
 | Field | Value |
 |-------|-------|
 | source_repo | mascotasmadagascar-cmd/cf-admin-madagascar |
-| source_commit | e27dd57bb9acf75f2b5ba8fc49d6b39fe4f782ad |
+| source_commit | 5902e3ce47c1c1434008b8a66bff97cd7d621615 |
 | source_ref | main |
 | triggered_by | push |
-| synced_at | 2026-09-24T05:13:52Z |
+| synced_at | 2026-09-24T06:19:56Z |
 | files_copied | 99 |
 | files_skipped | 60 |
