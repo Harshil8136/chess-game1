@@ -873,3 +873,61 @@ Fixes from the final review of Stages 1–3, made before Stage 4 starts.
 - The retries fit the tick's subrequest budget: each pre-flight's declared cost already counts the database and storage calls, which do not use that budget, so a vault retry's one extra connection is covered.
 - The halted message is now shared by the runner and the Worker from one place, so the 5-minute check recognises a halted run by the runner's own words.
 - Tests: the probe core, the platform, record and GitHub tests, the pre-flight and manual-run tests, and the reconcile tests each gained cases for these fixes.
+
+## Decisions made during the build
+
+The design above left some questions open, and building it raised a few more. Claude decided each one so the work would not stall, and the owner can reverse any of them. Each entry gives what was decided, why, and what it would cost if it turns out wrong.
+
+### Changes to what the design said
+- **The Diagnostics steps are grouped as the page shows them** (trigger, guards, dispatch, runner, storage, reconcile, after-run, alerts). This keeps every step a real test the Worker can run.
+  - Stages only a real run can prove (exporting, encrypting, the drill) appear inside the runner step, from the latest run's record. The browser measures the console connection itself.
+  - *If wrong:* the page has fewer headings than the table in B3.
+- **No text-encoding fix.** The stored text was correct, and a Windows terminal had garbled it. *If wrong:* nothing.
+- **No separate `pg_dump` version check.** The existing drill-image check already compares versions. *If wrong:* one duplicate check is missing.
+- **A check's pre-flight skips the storage-room test**, because a check keeps no data. *If wrong:* a check could start while storage is nearly full.
+- **History keeps the last 20 results for each step**, rather than 20 in total, so every test has its own trend. *If wrong:* the stored history is a little larger.
+- **A halted run is recorded as `doctor_failed`, not `preflight_failed`.** The Run-now cooldown already lets `doctor_failed` runs off, so a new code would have locked the owner out for 6 hours after every halt. *If wrong:* only the wording differs from the design.
+- **The runner test is shown as costing about 1–2 GitHub minutes**, not 1. The tools step downloads the Postgres image, and the real figure will be recorded after the first live runner test. *If wrong:* the stated cost is higher than it really is.
+
+### Places where the plan's own numbers or code were wrong
+- **The redaction step itself threw an error** on detail text between 500 and 2,048 characters. It now redacts field by field. *If wrong:* nothing; the stored shape is the same.
+- **The storage-room test divided by three times the run size**, understating free space about three times. It now counts how many runs fit and passes at 3 or more. *If wrong:* the thresholds are looser than the plan's literal wording.
+- **The first version of the one-retry rule never actually retried** the Vault, storage or database tests. The final fix wave corrected this. *If wrong:* nothing.
+
+### Safety and truthfulness rulings
+- **Every place a test, verdict or error message is stored or shown strips secrets.** That covers tokens, connection-string passwords and fields with secret-sounding names. It includes the run record and `manifest.json`, which had a gap on normal runs from before this work. *If wrong:* nothing; this only removes text.
+- **Anything the page, an alert or a public doc says must be true.** Several findings rated minor were fixed under this rule. For example:
+  - an untested "normal" response time was removed;
+  - a summary line that credited one run with every step's result was reworded;
+  - a runner test is never called a backup or a check;
+  - a clean runner test no longer shows amber.
+
+  *If wrong:* nothing.
+- **Time limits keep every console action inside cf-admin's 10-second gateway limit.** Diagnostics steps and pre-flights stop at 7 seconds. Rotate stops before GitHub if Vault answers after 6 seconds, and bounds its GitHub change at 8 seconds and any set-back at 9. *If wrong:* a slow but healthy service can make a person press again.
+- **A rotation cannot silently finish only half its steps.** A late GitHub change that was never sent is never sent. One that lands later still raises the key-mismatch alert. *If wrong:* an unneeded "may" alert after a very slow rotation.
+- **A scheduled slot stopped by pre-flight raises exactly one alert.** It is tried again at each tick until its grace window ends, and its alert stays open until the slot starts or is skipped. *If wrong:* an alert may close before a later failure of the same run, which raises its own alert.
+- **A busy run lane is reported as "already running"**, not as a pre-flight failure, for every way a run can start. *If wrong:* nothing.
+- **In a pre-flight, the GitHub permission test fails only on permissions that run needs.** A permission only Rotate uses gives a warning. *If wrong:* a run could start while Rotate would fail; the Diagnostics page still shows it.
+- **When R2 itself fails the runner pre-flight, the three evidence files stay on GitHub's machine**, where GitHub's run artifact keeps them, and the run keeps `doctor_failed`. *If wrong:* that halted run has no copy in R2.
+- **The documented `--no-upload` emergency run still works.** Its R2 tests are skipped instead of halting it. *If wrong:* nothing.
+
+### Infrastructure changes (approved by the owner)
+- **Vault's database connection.** The Hyperdrive config moved from Supabase's transaction pooler (port 6543) to the session pooler (port 5432), with a limit of 5 connections. The Vault login's own connection limit went from 3 to 5.
+  - Before: every Vault query hung.
+  - After: 14 of 14 queries answered in 30–90 ms.
+  - *If wrong:* switch back in the Hyperdrive settings.
+- **A local-only placeholder database address was added**, so `npm run dev` starts again. Deployments never use it. *If wrong:* nothing.
+
+### Small items recorded for the close-out (Task 17)
+- **The wording of a few rare error messages:**
+  - an R2 test that "failed twice" when it had no time to retry;
+  - the pre-flight permission summary;
+  - a rotation message's "only … seconds into this request";
+  - Rotate showing no specific hint after a wrong Vault password.
+- **A test file that could be left behind:** a 32-byte R2 test file can be left behind if its delete fails once, while the test still passes. Stage 4 moves these files and should make that case show amber.
+- **A very narrow race:** a run that starts between two checks gets a pre-flight refusal instead of "already running".
+- **Two gaps in the tests:**
+  - the storage-room test rarely runs inside the 5-minute timer;
+  - the runner result covers the doctor checks only, not each export.
+
+  Decide these in the close-out.
