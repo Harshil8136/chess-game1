@@ -713,3 +713,43 @@ Built: B5. Not built yet: the runner test and the runner pre-flight (Stage 3), a
   - `PreflightFailures` shows the refusal in the Run, bypass and drill dialogs;
   - `PreflightStartWarnings` is a card under the Now bar (`.preflight-start-warnings`), not the bar's pill, whose full radius clipped a list of more than one line;
   - the Diagnostics card shows the last pre-flight.
+
+### Diagnostics fix, 2026-09-24
+
+A fix after Stage 2, for a problem the owner found on the live page.
+
+#### For everyone
+
+- **What went wrong:** the owner pressed **Run all**. Seven of the eight steps were saved, but **Guards** was not.
+  - Guards tests the key vault, and the vault had stopped answering. Its database ran each request and finished it, but the answer never came back.
+  - The console's connection to cf-backup gives up after 10 seconds. When it gives up, the step's result is lost, and nothing is saved.
+- **Why the vault stopped answering:** cf-backup reaches the vault through Cloudflare Hyperdrive, which keeps its own pool of database connections. It was set up to go through Supabase's transaction pooler (port 6543), a second pool in front of the database. Cloudflare's Supabase guide says to connect Hyperdrive without a second pool, and that double pool is where the answers were lost.
+- **What changed:**
+  - **Each Diagnostics step now has 7 seconds in all.** A test that does not answer in time fails and says so. Any test after it in the same step fails with "Diagnostics ran out of time (7 s) before this test ran", and its How to fix line names the slow test. The step's result is always saved.
+  - **The rest of the console gives up on the vault after 7 seconds too:** Keys → Rotate and Reveal, Readiness, and the pre-flight. You get a plain failure instead of a lost answer.
+  - **The fix is spelled out.** When the vault does not answer, the How to fix line and the Keys error say that the vault connection should use Supabase's session pooler (port 5432) or direct connection, not the transaction pooler (port 6543). They point to the owner's setup guide.
+  - **Setting it up again will not bring the problem back:** the setup script now makes the vault connection on the session pooler.
+- **What the owner must do:** switch the vault connection to session mode, by running the setup script's vault part once more. The owner's private setup guide, section 5, has the steps. Until then, while the vault hangs:
+  - the two vault tests in Guards fail after 7 seconds;
+  - key rotation and reveal fail after 7 seconds;
+  - backups and restore drills stop at their pre-flight, as they already did. A check does not use the vault.
+
+#### For engineers
+
+- **The step deadline:** `STEP_DEADLINE_MS` is 7 s (`src/diagnostics/probe.ts`), for one `POST /api/diagnostics/run`.
+  - `runStep` passes the deadline to `runProbe`. Each probe keeps its 8 s cap, cut to the time left.
+  - A probe the deadline never reached is a `fail` with `ms: null`, the summary "Diagnostics ran out of time (7 s) before this test ran", and a fix naming the slowest test that ran.
+  - The pre-flight keeps its own `PREFLIGHT_DEADLINE_MS`. Both build their not-run results with `notRun` and `ranOutOfTime`.
+- **The Vault deadline:** `vaultFor(deps, { deadlineMs })` opens Vault with `VAULT_CONSOLE_DEADLINE_MS` (7 s) unless told otherwise.
+  - That covers Keys, the Diagnostics Vault probes, the pre-flight's `vault.list` (by hand and scheduled) and Readiness.
+  - `ApiDeps.openVault(url, { deadlineMs })` takes the deadline as a required option, so the tick's budget-counting wrapper cannot drop it.
+  - `openPostgresVault` hands it to `createVault`, and `pgOptions` cuts `pg`'s 10 s connect timeout to it.
+  - Only the weekly key check keeps `VAULT_CALL_DEADLINE_MS` (15 s). cf-admin waits 25 s for a tick, and the check's own 8 s slot abandons a slow call first, so a hang there is a budget stop that runs again later, not a key problem.
+- **The guidance:** `vaultDidNotAnswer(e)` is true for a `VaultError` from the connect stage, or one that timed out.
+  - `vault.list` and `vault.refusal` then show `VAULT_NO_ANSWER_FIX`. It is also their `timeoutFix` (a new optional `Probe` field), used when the probe's own time runs out first.
+  - Rotate's and Reveal's 502 message ends with the same pointer (`VAULT_POOLER_HINT`).
+- **Setup:** `scripts/setup/owner-secrets.mjs --only=vault` now signs in and builds the Hyperdrive origin on port 5432, Supavisor's session mode, with the same host and user format. It also passes `--origin-connection-limit 5`: a session-mode pooler holds one server connection per client connection, and the free tier's pool is small. Updating an existing config keeps its id, so no binding change or deploy is needed.
+- **Tests:**
+  - a Guards run through the router, against a Vault whose queries never answer (on a fake clock), answers within 7 s and stores its history entry. `vault.list` shows "no answer within 7 s", and `vault.refusal` ran out of time;
+  - Rotate and Reveal against the same Vault answer 502 with the pointer;
+  - the tick's pre-flight asks Vault for 7 s, and the weekly key check asks for 15 s.
