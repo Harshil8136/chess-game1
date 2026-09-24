@@ -69,7 +69,7 @@ A new page, **Diagnostics**, in the backup console at `/dashboard/backup/diagnos
 | Level | What it proves | Cost | How long |
 |---|---|---|---|
 | **Quick test** | every service the Worker talks to: D1, R2 (writes, reads back and deletes a small test file), the key vault, the GitHub App (sign-in, workflow, key variable, secrets present, permissions), the 5-minute timer, the email records | free | about 2 to 4 seconds |
-| **Runner test** | what only GitHub's machine can reach: the Cloudflare token and the D1 export, the Supabase login, uploading to R2, the encryption key, the tools | about 1 of the 2,000 free GitHub minutes a month | about 1 minute |
+| **Runner test** | what only GitHub's machine can reach: the Cloudflare token and the D1 export, the Supabase login, uploading to R2, the encryption key, the tools | about 1–2 of the 2,000 free GitHub minutes a month (to be measured) | about 1–2 minutes |
 | **Full check** (exists today) | every export and restore drill, with no data kept | about 6 GitHub minutes | about 6 minutes |
 
 #### A3.2 Pre-flight: a run stops at the first sign of trouble
@@ -138,7 +138,7 @@ Everything stays inside the free allowances:
 
 | Allowance | Free limit | What this design uses |
 |---|---|---|
-| GitHub Actions minutes | 2,000 a month, shared by the three repositories | Runner test: about 1 minute each time you press it. The pre-flight inside a real run adds seconds, not minutes, because it is a step in the same job. |
+| GitHub Actions minutes | 2,000 a month, shared by the three repositories | Runner test: about 1–2 minutes each time you press it (to be measured). The pre-flight inside a real run adds seconds, not minutes, because it is a step in the same job. |
 | Worker external calls | 50 per call to the Worker | Each Diagnostics step is its own call, and the largest (GitHub) needs about 8 |
 | Worker calls to Cloudflare services (D1, R2, key vault) | 1,000 per call to the Worker | A few per step |
 | Key vault connection (Hyperdrive) | 100,000 queries a day | 2 or 3 per quick test |
@@ -157,7 +157,7 @@ Everything stays inside the free allowances:
 ### A6. Questions people will ask
 
 - **Can a test delete or change a backup?** No. The only file a test writes is a small test file in `system/`, which it deletes straight away. Backups sit under storage rules that block deletion, even by the system itself.
-- **Will testing use up our free allowance?** The quick test is free. The runner test uses about one GitHub minute each time. It is limited to a few a day, and the page says what it costs before you press it.
+- **Will testing use up our free allowance?** The quick test is free. The runner test uses about 1–2 GitHub minutes each time. It is limited to a few a day, and the page says what it costs before you press it.
 - **What if GitHub or Supabase is down?** That step shows Fail with the reason, and the other steps still run. A scheduled backup that stops at pre-flight raises an alert, and the next slot tries again.
 - **Why not test every few minutes automatically?** It would spend the free allowances on nothing and hit rate limits. The test that matters runs automatically, right before every real run.
 - **Will the old folders disappear?** Yes, but only once their protection period ends (about late December 2026). Until then they appear in Files as "Old layout".
@@ -366,7 +366,7 @@ interface Probe {
   - **Limits:** it uses the check-mode counter and the per-person daily limit, and is capped at 5 a day overall.
   - **Refused** while any run is active.
 
-**New capability:** `diagnostics.run`, class `operate`, "Run diagnostics tests (the runner test uses about one GitHub Actions minute)". It is in the Owner and Vendor support defaults. It is added to the catalogue with its `known` handling, so stored policies treat it as a new id.
+**New capability:** `diagnostics.run`, class `operate`, "Run diagnostics tests (the runner test uses about 1–2 GitHub Actions minutes)". It is in the Owner and Vendor support defaults. It is added to the catalogue with its `known` handling, so stored policies treat it as a new id.
 
 **History:**
 - It is stored in a new settings row, `backup:diagnostics`, holding the last 20 runs.
@@ -376,7 +376,7 @@ interface Probe {
 **Page layout:**
 
 ```
-Diagnostics                                   [Run all]  [Runner test · ~1 min]
+Diagnostics                                   [Run all]  [Runner test · ~1–2 min]
 Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 
 ▸ 1 Trigger            ● pass   2 tests    18 ms                          [Run again]
@@ -773,9 +773,9 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - Rotate and Reveal against the same Vault answer 502 with the pointer;
   - the tick's pre-flight asks Vault for 7 s, and the weekly key check asks for 15 s.
 
-### Stage 3: the runner pre-flight and the runner test (2026-09-24, commits `75348f3`, `bc7dfd7`, `0196e2c`, `634ff52` and `f510f73`)
+### Stage 3: the runner pre-flight and the runner test (2026-09-24, commits `75348f3`, `bc7dfd7`, `0196e2c`, `634ff52`, `f510f73` and `d6695bc`)
 
-The first two commits are the halt policy and its fix round, the next two the three new runner checks and their fix round, and the last the runner test.
+The first two commits are the halt policy and its fix round, the next two the three new runner checks and their fix round, and the last two the runner test and its fix round: the cost stated as 1–2 minutes until measured, the refusal naming the active run, and the Runner step's last doctor record passing a clean runner test.
 
 Built: B6. Not built yet: the new storage folders (Stage 4).
 
@@ -794,15 +794,15 @@ Built: B6. Not built yet: the new storage folders (Stage 4).
   - **Disk space:** the runner's disk needs at least 1 GiB free, or three times the size of the last good backup when that is more.
   - When one fails, the run report gives its cause and how to fix it.
 - **The break-glass local run still works.** `npm run backup:local -- --no-upload` (docs/RESTORE.md) skips the storage checks instead of failing them, so the halt never stops the one run meant for a storage outage.
-- **The runner test.** Diagnostics has a new button, **Runner test (about 1 GitHub minute)**, for people with the Run Diagnostics tests permission. A short dialog says what it does and costs before anything starts.
+- **The runner test.** Diagnostics has a new button, **Runner test (about 1–2 GitHub Actions minutes)**, for people with the Run Diagnostics tests permission. A short dialog says what it does and costs before anything starts.
   - **What it does:** it starts the backup workflow on GitHub in a test mode. The runner installs its tools and runs doctor's checks, then writes the same three small files as a stopped run. It exports nothing and keeps no data, so it is never a backup.
   - **What it proves:** that GitHub starts the workflow, and that on GitHub's own machine the Cloudflare token works, every database answers, storage accepts the test file, Supabase answers, the backup key's settings are in place and the disk has room. The quick Diagnostics steps cannot prove this, because only the runner has those credentials.
-  - **What it costs:** about one GitHub Actions minute of the 2,000 free each month.
-  - **Limits:** at most **5 a day** (UTC), for everyone together. Each also counts toward the person's own checks for the day. It has no cooldown. It cannot start while another run is active: it is refused at once, with the run that is active named.
-  - **Before it starts,** it runs the same quick pre-flight as other runs, without the backup key and storage-room tests. A failure stops it in the dialog, and no GitHub minute is used.
+  - **What it costs:** about 1–2 GitHub Actions minutes of the 2,000 free each month. GitHub bills the whole job: it checks out the code, sets up Node, and the tools step downloads the Postgres image that doctor's checks use, before doctor and the small seal run. This figure is an estimate: the measured one will be recorded here after the first live runner test.
+  - **Limits:** at most **5 a day** (UTC), for everyone together, including any that doctor failed (they still used their minutes). Each also counts toward the person's own checks for the day, unless doctor failed it. It has no cooldown. It cannot start while another run is active: it is refused at once, with the run that is active named.
+  - **Before it starts,** it runs the same quick pre-flight as other runs, without the backup key tests and without the two storage tests (the test file and the room left). The runner writes its own storage test file anyway, from GitHub's machine. A failure stops it in the dialog, and no GitHub minute is used.
   - **Its result:** it is a normal run, so watch it in Live. In Runs it reads "runner test (no data)", and its detail says "a runner test: doctor only, never a backup". It passes when every check passes, passes with warnings when one warns, and fails when one fails. When it has finished, run the Runner step again: its test "The runner's last doctor record" then shows this run's checks.
   - **With no backup key yet,** the runner test reports that as a warning, "a backup would stop here", as a check does. It is not a failure, because the test encrypts nothing.
-  - **A failed runner test** emails "Runner test failed". The alert is answered when a later runner test, check or backup succeeds. A runner test never answers a failed check's alert, because it proves no export.
+  - **A failed runner test** emails "Runner test failed". The alert is answered when a later runner test, full check or full backup succeeds. A runner test never answers a failed check's alert, because it proves no export.
 - **Corrections to the plan in B6:**
   - A stopped run records the error code `doctor_failed`, not `preflight_failed`. That code already keeps a setup mistake out of Run now's cooldown; a new code would have locked Run now for 6 hours after every stopped run.
   - The three files keep today's folder names (`manifest.json`, `env/doctor.json`, `logs/run.log.gz`). Stage 4 moves them to the new layout.
@@ -828,8 +828,8 @@ Built: B6. Not built yet: the new storage folders (Stage 4).
   - `src/report/diagnose.ts` has a cause rule for each (`RULES_VERSION` 3), tried before the generic R2 write rule so a refused canary is named as the canary.
 - **The runner test, Worker side:**
   - `POST /api/diagnostics/runner`: capability `diagnostics.run`, audit `run.drill` with `mode=preflight`; no body. It calls `startRunnerTest` (`src/backups/start.ts`).
-  - The guards are a check's (no cooldown; the person's check count against `manualRunsPerPersonPerDay`), then `RUNNER_TESTS_PER_DAY` (5): rows carrying the runner-test reason requested since 00:00 UTC, by anyone. A `dispatch_failed` one is not counted, since it used no minute; one doctor failed still is.
-  - Then a lane read: any active run answers `409 already_running`, naming it, before the pre-flight asks GitHub anything. A run started after that read still meets the lane lock at the insert.
+  - The guards are a check's (no cooldown; the person's check count against `manualRunsPerPersonPerDay`, which, like every run count, leaves out one doctor failed), then `RUNNER_TESTS_PER_DAY` (5): rows carrying the runner-test reason requested since 00:00 UTC, by anyone. A `dispatch_failed` one is not counted, since it used no minute; one doctor failed still is, since it did.
+  - Then a lane read: any active run answers `409 already_running`, naming it as what it is ("The runner test is running…", "A full check is running…", else "A full backup is running…"; the lane lock's own refusal uses the same words), before the pre-flight asks GitHub anything. A run started after that read still meets the lane lock at the insert.
   - Then the pre-flight list `preflight`: `d1.lane`, `gh.token`, `gh.workflow`, `gh.permissions`, `gh.secrets` and `gh.minutes`, with `lastPreflight.mode` `'preflight'`.
   - The row is a check row (`r2_prefix` `v1/checks/`) whose `reason` is `RUNNER_TEST_REASON`, "Runner test (pre-flight only, no data)" (`src/backups/run.ts`). `isRunnerTest(row)` is the check prefix and that reason together. A person cannot type it: `startFromBody` refuses it as a reason.
   - It is dispatched with `mode: 'preflight'` (`DispatchRow.mode`, which `modeForRow` returns when set). `db-backup.yml`'s `mode` choice gains `preflight`, and the workflow guard pins the four options.
@@ -839,5 +839,7 @@ Built: B6. Not built yet: the new storage folders (Stage 4).
   - `seal` takes the minimal path, with the verdict from doctor alone: `ok` when every check passes, `warning` with a warning, `failed` with a failure (`doctor_failed`). It exits 1 only when failed;
   - `manifest.json` has `mode: 'preflight'`. The Worker's manifest and heartbeat readers accept it, and finalisation keeps the check folder.
 - **Labels:** `RunSummary.runnerTest`; `LiveRun.mode` `'preflight'` reads "Runner test (no data)"; the run alert is "Runner test failed"; Activity and the daily digest name it; `lastGoodCheck` leaves runner tests out unless asked, so only a runner test's own alert is answered by one.
+- **`runner.last`** (fix round 1): the doctor record says which kind of run it came from. A check and a runner test skip their trial encryption by design, so that skip is counted as "not needed in a runner test" (or "in a check") and never warns: a clean runner test or check reads as a pass. Any other skipped check still warns.
+- **The minutes estimate:** the `gh.minutes` pre-flight probe counts a runner test as 2 minutes, the top of its stated 1–2, until a live one is measured.
 - **The page:** the Diagnostics header's button opens the shared `Modal`; a pre-flight refusal shows in it with `PreflightFailures`. Once started, the page says to watch Live, offers a button to it, and names the Runner step's `runner.last` test.
 - **Tests:** `test/runner/doctor-policy.test.ts`, `test/runner/doctor-checks.test.ts`, `test/runner/seal.test.ts` and `test/runner/preflight-mode.test.ts` on the runner side; `test/runner-test-api.test.ts` for the route, the guards, the manifest reader and every label; `test/report-diagnose.test.ts` for the cause rules; `test/ui-diagnostics.test.ts` for the button and the dialog.
