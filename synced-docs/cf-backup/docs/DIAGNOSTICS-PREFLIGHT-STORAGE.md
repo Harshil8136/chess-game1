@@ -555,7 +555,9 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 
 ## Build log
 
-### Stage 1: the probe library and the Diagnostics page (2026-09-24, commit `5491f72`)
+### Stage 1: the probe library and the Diagnostics page (2026-09-24, commits `5491f72` and `7159680`)
+
+The second commit is the review's fix round: reasons and fixes are now stored, and the page words below match it.
 
 Built: B2, B3 and B4, less the runner test. Not built yet: the pre-flight gate (Stage 2), the runner test and the runner pre-flight (Stage 3), and the new storage folders (Stage 4).
 
@@ -564,41 +566,54 @@ Built: B2, B3 and B4, less the runner test. Not built yet: the pre-flight gate (
 - **Where it is:** the backup console's **Diagnostics** section, between Readiness and Access, at `/dashboard/backup/diagnostics`. The Readiness page links to it: "Test every step now → Diagnostics". Anyone who can open Readiness can open Diagnostics.
 - **How to use it:**
   - **Run all** tests the eight steps of the backup flow, one after another. Each step's results appear as soon as that step answers. It takes a few seconds.
-  - **Run again**, on each step, tests that step alone. One person can test the same step once every 15 seconds.
-  - Both buttons need the **Run Diagnostics tests** permission (`diagnostics.run`). Owner and Vendor support have it. Without it you still see every result, but no buttons.
+  - **Run again**, on each step, tests that step alone. One person can test the same step about once every 15 seconds.
+  - Only one test runs at a time: while Run all or Run again is working, every button waits, and the steps still to come say "Waiting its turn in Run all".
+  - If Run all loses its connection part-way (a network error, or an error page from the gateway), it stops there and says "Run all stopped at <step>; the steps after it were not tested." Each later step then says its result is older and was not tested by that run.
+  - Both buttons need the **Run Diagnostics tests** permission (`diagnostics.run`). Owner and Vendor support have it. Without it you see every stored result, with its reason and How to fix line, but no buttons.
   - A step with a warning or a failure opens by itself. Click a step's name to open or close it.
 - **Reading a row:**
   - **Result:** a shape and a word, never colour alone: ✓ **Passed** (green), **!** **Warning** (amber), ✕ **Failed** (red), **?** **Skipped** (grey, and the row says why). A step's own pill shows its worst test.
-  - **Response time:** in milliseconds. A slow answer is amber and says "slow", with the normal time.
+  - **Response time:** in milliseconds. An answer slower than that test's set limit is amber and says "slow", with the limit.
   - **What it found:** the one-line answer. **Details** opens the full answer, with secrets removed.
-  - **How to fix:** a line under a warning or a failure, when the test knows the fix.
+  - **How to fix:** a line under a warning, a failure or a skip, when the test knows the fix.
   - **Trend:** a small line of that test's last 20 response times, so a service that is slowing down shows before it fails.
   - **Not tested yet:** nobody has tested that step yet. It is never shown as a pass.
 - **What Run all costs:** nothing. It uses no GitHub Actions minutes, and it stays well inside the free Cloudflare and GitHub allowances (about 8 GitHub API calls). It writes one small test file in storage, away from the backups, and deletes it at once.
 - **Nothing runs by itself.** The page only reads until someone presses a button. Every test run is recorded in Activity as `diagnostics.run`: who ran which step, and how many tests passed, warned or failed.
-- **After the page is reloaded,** each step shows its stored result: every test's result and time, and the reason for a warning or failure. The full answers, the fixes and Details come back when the step is run again.
+- **The summary line** at the top counts the latest result of each step, and says how old the newest and oldest of them are. They can come from different runs.
+- **What is kept, and for how long:**
+  - **Stored for everyone who can open the page** (the last 20 runs of each step): each test's result and time, and for every test that did not pass (a warning, a failure or a skip) its reason and its How to fix line. So these are still there after a reload, and people without the run permission see them too. A very long reason or fix is cut to 300 characters.
+  - **Kept only in the browser tab that ran the test:** the one-line answer of a test that passed, and **Details**. They stay while you move between sections, and are gone after a page reload.
+- **If the page cannot read the latest stored results,** it keeps showing what it had, with a note saying so.
 - **Two more cards:**
   - **Last pre-flight of a real run:** empty until Stage 2 ships.
-  - **Console connection:** how long this page's own request took, there and back, measured by your browser.
+  - **Console connection:** how long this page's own request took, there and back, measured by your browser. It is only that number: the page does not judge it slow or normal.
 
 #### For engineers
 
 - **Routes:**
   - `GET /api/diagnostics`, capability `usage.view`: returns `DiagnosticsView`, which holds the steps, the probe catalogue (label, step, `warnMs`, cost), the stored history, `lastPreflight` (null until Stage 2) and `canRun`.
-  - `POST /api/diagnostics/run { step }`, capability `diagnostics.run`: runs that step's probes one after another and returns `DiagnosticsStepResult` (`results: ProbeResult[]` and `saved`). It is audited as `diagnostics.run` with the step and the pass, warn, fail and skipped counts. The same person asking for the same step again within 15 s gets `429 rate_limited`.
+  - `POST /api/diagnostics/run { step }`, capability `diagnostics.run`: runs that step's probes one after another and returns `DiagnosticsStepResult` (`results: ProbeResult[]` and `saved`). It is audited as `diagnostics.run` with the step and the pass, warn, fail and skipped counts.
+  - **Throttle:** the same person asking for the same step again within 15 s gets `429 rate_limited`. It is best effort: the mark lives in the memory of one Worker instance, so a request served by another instance is not throttled.
 - **Permission:** `diagnostics.run`, class `operate`, in the Owner and Vendor support defaults. Viewing needs `usage.view`, the same as Readiness.
 - **History:**
   - It is stored in the settings row `backup:diagnostics` (schema `cf-backup/diagnostics@1`).
-  - Each entry is one step run: `{ at, by, step, results: [{ id, s, ms }], errors: [{ id, summary }] }`.
+  - Each entry is one step run: `{ at, by, step, results: [{ id, s, ms }], errors: [{ id, summary, fix? }] }`.
+  - `errors` holds every result that is not a pass (warn, fail and skipped), with its summary and, when the probe gave one, its fix. Both are already redacted, and each is cut to 300 characters (`STORED_TEXT_MAX`); the response keeps the whole text. A pass's summary and every `detail` are not stored.
+  - `fix` is optional, so rows written before it existed still parse; the schema stays `@1`.
   - Entries are newest first, at most 20 per step.
   - They are appended by a fail-soft compare-and-swap: a lost entry never fails the step, and `saved` says whether it was kept.
-  - `errors` holds the summaries of warnings and failures only. A skipped probe's reason, a fix and the detail are not stored.
 - **Probe rules:**
   - an 8 s timeout, and one retry on a network error or a 5xx;
   - a pass slower than the probe's `warnMs` becomes a warn;
   - every summary, fix and detail goes through `redactText`, and the detail is capped at 2 KB;
   - each step declares at most 20 external subrequests.
-- **The page:** `src/ui/screens/DiagnosticsScreen.tsx`, with `ProbeRow`, `LatencyTrend` and the pure helpers in `src/ui/diagnostics-view.ts`. Run all calls the steps in sequence, so the history row's compare-and-swap never races itself, and reads the history once at the end. The Console connection card times `GET /api/diagnostics` with `performance.now()`, and marks it slow above 300 ms (the B10 binding threshold).
+- **The page:** `src/ui/screens/DiagnosticsScreen.tsx`, with `ProbeRow`, `LatencyTrend` and the pure helpers in `src/ui/diagnostics-view.ts`.
+  - This visit's live answers, the per-step notes, what is running and where the last Run all stopped live in the console state (`useConsole`), not in the screen, so a section switch keeps them.
+  - One action at a time: `runExclusive` sets an in-flight flag before the first request, so a second Run all or Run again answers `busy` without sending anything.
+  - Run all calls the steps in sequence, so the history row's compare-and-swap never races itself, and reads the history once at the end. An answer with no error code (the session ended, no connection, a gateway error page) stops it; a refusal with a code, such as `rate_limited`, does not; `runStepsInOrder` returns the step it stopped at and the steps it did not test.
+  - A failed re-read of `GET /api/diagnostics` keeps the previous answer on screen, with a note; only a first read that fails shows an error.
+  - The Console connection card times `GET /api/diagnostics` with `performance.now()` and shows only that number.
 - **The probes, by step, and what a pass proves:**
 
 | Step | Probe | A pass proves |
