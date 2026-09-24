@@ -21,3 +21,7 @@ Workers Builds is connected: a push to `main` installs dependencies, runs
 ## Design
 
 See `main.md`.
+
+Proposed next (not built yet): `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md`, which
+covers a Diagnostics page that tests every step of the flow, pre-flight checks that stop a run
+before it starts, and a simpler storage layout. Part A is written for everyone; Part B for engineers.

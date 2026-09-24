@@ -53,8 +53,8 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
 9. **The public docs mirror publishes an allow-list, nothing else.**
    `.github/workflows/sync-docs.yml` copies to `Harshil8136/chess-game1`
    (`synced-docs/cf-backup/`) only the files named in `PUBLISHED_DOCS`
-   (`scripts/backup/lib/docs-mirror.ts`): `README.md`, this file, `main.md` and
-   `docs/RESTORE.md`.
+   (`scripts/backup/lib/docs-mirror.ts`): `README.md`, this file, `main.md`,
+   `docs/RESTORE.md` and `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md`.
    - Every other file is private until it is added to that list in a reviewed commit. The
      list says why the rest stays private: `docs/OWNER-SETUP.md` names live account
      identifiers.
