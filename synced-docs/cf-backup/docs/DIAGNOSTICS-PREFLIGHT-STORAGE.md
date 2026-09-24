@@ -732,7 +732,7 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - **A key rotation now has time limits:**
     - **A late vault stops it before GitHub.** If the vault answers more than 6 seconds into the request, the rotation stops before GitHub is asked, and says so. The new key stays unused in the vault, nothing else changes, and trying again is safe.
     - **A late GitHub change is set back.** If GitHub does not confirm the key change by 8 seconds, the rotation counts it as failed and sets it back, as for any GitHub failure. A change not yet sent by then is never sent.
-    - **A late change that lands anyway raises the alert.** If a change GitHub was already asked for still goes through after it was set back, the key-mismatch alert says so. The same alert goes out if setting it back does not answer by 9 seconds.
+    - **A late change that GitHub confirms raises the alert.** If GitHub confirms a change after it was set back, the key-mismatch alert says so. That needs GitHub's answer to arrive while cf-backup is still running; if it never does, the backup run's own checks and the weekly key check are what catch it. The same alert goes out if setting it back does not answer by 9 seconds. On the very first rotation there is nothing to set back to, and the alert says that instead.
   - **The rest of the console gives up on the vault after 7 seconds too:** Keys → Rotate and Reveal, Readiness, and the pre-flight. You get a plain failure instead of a lost answer.
   - **The fix is spelled out.** When the vault does not answer, the How to fix line and the Keys error say that the vault connection should use Supabase's session pooler (port 5432) or direct connection, not the transaction pooler (port 6543). They point to the owner's setup guide.
   - **Setting it up again will not bring the problem back:** the setup script now makes the vault connection on the session pooler.
@@ -760,7 +760,9 @@ A fix after Stage 2, for a problem the owner found on the live page.
   - Without these, the gateway could cut a rotation off between GitHub's change and the registry write, leaving the variable on an unrecorded key with no compensation, alert or audit.
   - A late answer is raced (`answerWithin`). Stopping to wait does not stop the call, so two things make it harmless (round 2):
     - The call's `AbortSignal` is aborted. `GitHubApp.setVariable(…, { signal })` checks it in `#repoCall` before minting and again right before the request, so a call still minting its token never sends its PATCH. A request already sent is not cut.
-    - The stopped first change is watched under `waitUntil`. If GitHub applies it after all, possibly after the set-back, the `key:mismatch:<fp>` alert goes out, with a `rotate-failed` ops event carrying `lateChange: true`, stamped when it landed. A late refusal alerts nobody.
+    - The stopped first change is watched under `waitUntil`. If GitHub confirms it after all, possibly after the set-back, the `key:mismatch:<fp>` alert goes out, with a `rotate-failed` ops event carrying `lateChange: true`, stamped when it landed. A late refusal alerts nobody.
+    - The watch waits for the compensation's decision, so the alert names the key it tried to set back to, or, on the first rotation, says there was none (round 3).
+    - This depends on GitHub's answer arriving while the Worker is still alive (`waitUntil` has limits). The fallbacks are the runner's doctor, which refuses an unregistered recipient, and the weekly key check.
     - Existing callers pass no signal and are unchanged.
 - **The guidance:** `vaultDidNotAnswer(e)` is true for a `VaultError` from the connect stage, or one that timed out.
   - `vault.list` and `vault.refusal` then show `VAULT_NO_ANSWER_FIX`. It is also their `timeoutFix` (a new optional `Probe` field), used when the probe's own time runs out first.
