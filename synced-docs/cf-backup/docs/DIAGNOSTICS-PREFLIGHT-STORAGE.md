@@ -405,21 +405,22 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 
 **The probes by mode:**
 
-| Mode | Probes |
+| Mode | Probes, asked in this order |
 |---|---|
-| backup (daily, full) | `keys.active`, `vault.list`, `gh.token`, `gh.workflow`, `gh.permissions`, `gh.recipient`, `gh.secrets`, `gh.minutes`, `r2.canary`, `r2.headroom`, `d1.lane` |
-| drill | the backup list, with `r2.headroom` for a full run |
-| check | the backup list without `keys.active`, `vault.list` and `gh.recipient`, because a check encrypts nothing |
+| backup (daily, full) | `d1.lane`, `keys.active`, `vault.list`, `gh.token`, `gh.workflow`, `gh.permissions`, `gh.recipient`, `gh.secrets`, `gh.minutes`, `r2.canary`, `r2.headroom` |
+| drill | the backup list (a drill is a full backup plus one step) |
+| check | the backup list without `keys.active`, `vault.list` and `gh.recipient`, because a check encrypts nothing, and without `r2.headroom`, because it keeps no data |
 
 **Outcomes:**
 - **Only `fail` halts.** `warn` results travel with the run: they are shown in the dialog, and recorded in the ops event.
-- **A halted manual run** returns `409 { code: 'preflight_failed', failed: ProbeResult[] }`, and the Run now dialog lists each failure with its fix.
+- **A halted manual run** returns `409 { ok: false, code: 'preflight_failed', message, details: { failed, warned } }`: the lists are under `details.failed` and `details.warned`, each a `ProbeResult` with its label. The Run now dialog lists each failure with its fix.
 - **A halted scheduled run:**
-  - writes the ops event `preflight.halted`;
-  - raises the existing "Failed, missed or undispatched backups" alert, which cannot be switched off;
-  - retries at the next slot.
+  - writes the ops event `preflight-halted`;
+  - raises one alert per slot, `preflight:<slot>`, of the "Failed, missed or undispatched backups" type, which cannot be switched off;
+  - is retried at every tick while its grace window lasts, not at the next slot. If the window ends first, the usual skip record and alert carry the last pre-flight's reason.
+- **A busy lane is not a halt** on the scheduled path: the tick checks the lane before the pre-flight, and the slot waits (`busy-retry`) as it always has, with no alert.
 - **No `backup_runs` row is created for a halted run.** This matches today's refused dispatch.
-- **Cost:** about 8 external subrequests. The scheduled path runs inside the tick's `Budget`. When the tick lacks the budget, it defers the slot to the next tick; it does not skip the pre-flight.
+- **Cost:** the declared cost is 17 for a backup or a drill (12 for a check), because the code declares each D1 and R2 call as external too; of those, about 8 are real GitHub subrequests, plus one Vault connection for a backup or a drill. The scheduled path weighs the declared sum against the tick's `Budget`. When the tick lacks the budget, it defers the slot to the next tick; it does not skip the pre-flight.
 - **This closes the manual path's missing key guard.**
 
 ### B6. Runner pre-flight and the runner test
@@ -503,7 +504,7 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 
 | Risk | Mitigation |
 |---|---|
-| A transient network error halts a scheduled backup | one retry per probe; only `fail` halts; the next slot retries; the alert says which probe failed |
+| A transient network error halts a scheduled backup | one retry per probe; only `fail` halts; the next tick retries while the slot's grace window lasts; the alert says which probe failed |
 | The pre-flight itself exceeds the tick budget | the declared costs are summed against `Budget` before running; a slot without budget is deferred, never skipped silently |
 | Runner tests spend the minutes allowance | a cap of 5 a day; the cost is shown on the button; the minutes appear on the Usage page |
 | The key vault query budget | 2 to 3 queries per quick test, against 100,000 a day |
@@ -641,3 +642,72 @@ Built: B2, B3 and B4, less the runner test. Not built yet: the pre-flight gate (
 | Reconcile | `reconcile.last` | the newest run was finalised, or is still in contact |
 | After-run | `postrun.last` | the newest GitHub run's after-run copy was written |
 | Alerts | `alerts.delivery` | the last alert email was delivered |
+
+### Stage 2: the Worker pre-flight gate (2026-09-24, commits `623c92a`, `d7c9791` and `04edc96`)
+
+The first commit puts the gate on runs started by hand, and the second is the review's fix round for it. The third puts the same gate on scheduled slots.
+
+Built: B5. Not built yet: the runner test and the runner pre-flight (Stage 3), and the new storage folders (Stage 4).
+
+#### For everyone
+
+- **What it does:** before cf-backup asks GitHub to start a backup, a restore drill or a check, it runs the quick tests that kind of run needs. If one fails, nothing starts: no GitHub minute is used and no file is written. This happens for runs started by hand (Run now, Run now without the cooldown, Start drill, and Run now's Check only) and for scheduled runs alike.
+- **What stops a backup or a restore drill:**
+  - no backup key is active;
+  - the key vault cannot be reached, or does not hold the active key;
+  - GitHub's key variable (`BACKUP_AGE_RECIPIENT`) is not set, or does not match the active key;
+  - one of the two repository secrets is missing;
+  - the GitHub App cannot get a token, or lacks a permission it needs;
+  - the backup workflow is switched off, or missing;
+  - not enough GitHub Actions minutes are left this month for this run;
+  - storage does not accept a small test write;
+  - storage has no room left for another run of this kind;
+  - another run is still active.
+- **What stops a check:** the same list without the key, key vault, key variable and storage-room tests. A check encrypts nothing and keeps no data.
+- **What you see when a run you started is stopped:**
+  - the dialog stays open and says "Pre-flight stopped this run before GitHub was asked to start it. Nothing started, and no GitHub minute was used.";
+  - it lists each failed test with a **✕ Failed** mark, its name, what it found and a **How to fix** line;
+  - warnings found at the same time are listed under the failures;
+  - an **Open Diagnostics** button takes you to the full tests.
+- **Warnings never stop a run.** A secret that is getting old, or minutes over 80% used, is a warning. When a run starts with one, a card under the Now bar says "Started with pre-flight warnings" and lists them, until you dismiss it.
+- **When a scheduled run is stopped:**
+  - it is not started, and it is tried again at every tick (every 5 minutes) until its grace window ends (6 hours by default). Once the problem is fixed, the next tick starts it as usual;
+  - **one alert per slot** is emailed, however many ticks it is stopped: "Scheduled … did not start: pre-flight failed". It names each failed test, what it found and how to fix it. It is a "Failed, missed or undispatched backups" alert, which cannot be switched off;
+  - if the grace window ends while it is still stopped, the slot is recorded as skipped and alerted, as before. That alert also gives the reason from the last pre-flight;
+  - a slot that finds another run still active simply waits, as it always has. That is not a pre-flight failure, and it raises no alert.
+- **The time limit:** the whole pre-flight stops after **7 seconds**, so a refusal reaches the console well before its connection gives up. A test it did not reach in time counts as failed: "ran out of time".
+- **The Diagnostics page** now fills its **Last pre-flight of a real run** card. It shows the newest pre-flight, by hand or by the schedule, whether it passed, and each test that failed or warned. A scheduled slot stopped by pre-flight says the schedule tries again while its grace window lasts.
+- **What it costs:** no GitHub minutes. A pre-flight makes about 8 GitHub API calls, opens the key vault once (not for a check), reads the database a few times, and writes one small test file to storage and deletes it at once.
+
+#### For engineers
+
+- **Where:**
+  - `startManualRun` (`src/backups/start.ts`): after the cooldown and the daily limit, before the lane-lock insert;
+  - `dueSlot` (`src/tick/schedule.ts`): after the lane check and the run kind, before the insert.
+  - Both call `runPreflight` (`src/diagnostics/preflight.ts`) with their ready GitHub client, so the pre-flight shares its App instance and token cache with the dispatch. In the tick, that is the budget-counted client.
+- **Probe lists (`PREFLIGHT_PROBES`), asked one after another in this order:**
+  - backup and drill: `d1.lane`, `keys.active`, `vault.list`, `gh.token`, `gh.workflow`, `gh.permissions`, `gh.recipient`, `gh.secrets`, `gh.minutes`, `r2.canary`, `r2.headroom`;
+  - check: the same, without `keys.active`, `vault.list`, `gh.recipient` and `r2.headroom`.
+- **Bounds:** `PREFLIGHT_DEADLINE_MS` is 7 s for the whole pre-flight. Each probe's timeout is cut to the time left, and a probe never reached is a `fail`. A failed `d1.lane` ends it at once. After a failed `gh.token`, the other App probes are `skipped` without a call.
+- **A refused manual start:**
+  - `409 preflight_failed`, with the lists under `details.failed` and `details.warned` (each a `ProbeResult` with its `label`);
+  - the ops event `preflight-halted` (probe ids only, comma-separated);
+  - the route's own audit action, with `preflight=failed`.
+  - A start that goes ahead with warnings answers `DispatchResult.preflightWarnings`, and its ops event carries `warned`.
+- **A halted scheduled slot:**
+  - its `TickResult.scheduled` entry is the new outcome `preflight-halted`, with the pre-flight message as its detail (cf-admin's job counts outcomes by name, so it needed no change);
+  - no `backup_runs` row, so the next tick retries it while the slot is due;
+  - the alert `preflight:<slot>`, kind `failed`, deduped by id against pending and sent alerts: one per slot;
+  - the ops event `preflight-halted`, with `mode`, `scope`, `slot`, `failed` and `warned`;
+  - `lastPreflight` is written with trigger `schedule` and the slot.
+  - When the grace window ends, the skipped row's `error_message` ends "Last pre-flight: <test> — <what it found>" if `lastPreflight` is that slot's and failed. It is read before the tick's own pre-flights. `scheduledFailureAlert` reads it back, so an alert raised again from the row reads word for word the same.
+- **The lane comes first on the scheduled path:** the tick reads the lane before the pre-flight, and a busy lane stays `busy-retry`, naming the run, exactly as before. A `d1.lane` failure inside the pre-flight (a run started in between) is a `busy-retry` too. Without this, every busy lane, such as two slots due together, would be a halt and an alert.
+- **The tick budget:** `canAfford(preflightCost(mode), PREFLIGHT_WALL_MS)`, where `PREFLIGHT_WALL_MS` is 10 s: the 7 s deadline, plus room for the insert and the dispatch inside the tick's 20 s.
+  - The declared cost is 17 for a backup or a drill, and 12 for a check, because the code declares D1 and R2 calls as external too.
+  - About 8 of them are real GitHub subrequests, plus the Vault socket, which is counted with `countConnect`.
+  - Short of budget, the entry is `busy-retry` ("tick budget: the pre-flight needs N calls; …"), and no probe runs.
+- **The record:** `backup:diagnostics.lastPreflight` is `{ at, by, trigger, slot, mode, scope, ok, failed, warned }`. It holds ids and summaries only, never a detail, and is written by a fail-soft compare-and-swap.
+- **The console:**
+  - `PreflightFailures` shows the refusal in the Run, bypass and drill dialogs;
+  - `PreflightStartWarnings` is a card under the Now bar (`.preflight-start-warnings`), not the bar's pill, whose full radius clipped a list of more than one line;
+  - the Diagnostics card shows the last pre-flight.
