@@ -1,10 +1,10 @@
 ---
-title: "cf-backend — 08 The existing backup workflow (as-is, 2026-09-21)"
+title: "cf-backup — 08 The existing backup workflow (as-is, 2026-09-21)"
 status: draft
 audience: [owner, ai, technical, operator]
 owner: harshil
 related_docs: [README.md, 03-backup-pipeline.md, 06-roadmap.md, 07-factor-register.md, ../chunks/2026-09-15-06-backups-and-dr-truth.md, ../../runbooks/disaster-recovery.md]
-tags: [program, cf-backend, backups, as-is, github-actions]
+tags: [program, cf-backup, backups, as-is, github-actions]
 ---
 
 # 08 — The existing backup workflow, as it is today
@@ -15,7 +15,7 @@ tags: [program, cf-backend, backups, as-is, github-actions]
 > never produced a single backup.** Both of its runs failed, because the four secrets it
 > needs were never added to the repository, which holds only `PERSONAL_PAT`.
 > **Fifteen minutes of owner setup would give the business its first real backup
-> this week**, long before cf-backend exists (§7). This document is the baseline
+> this week**, long before cf-backup exists (§7). This document is the baseline
 > that doc 03 migrates. Its history lives in the [chunk 6 record](../chunks/2026-09-15-06-backups-and-dr-truth.md),
 > and restore procedures in the [DR runbook](../../runbooks/disaster-recovery.md).
 > Neither is restated here beyond what the analysis needs.
@@ -116,14 +116,14 @@ Consequences recorded elsewhere, and still true today:
 
 ## 5. Gaps and defects
 
-Numbered for reference; the right-hand column says where the cf-backend plan closes each one.
+Numbered for reference; the right-hand column says where the cf-backup plan closes each one.
 
 | # | Severity | Gap | Evidence | Closed by |
 |---|---|---|---|---|
 | G1 | **Critical** | **No backup has ever been produced** | §3, §4 | §7 of this doc (now), then doc 03 |
 | G2 | High | `supabase-dump` reports **green without dumping** when its secret is missing, so the most exposed store (no platform backups at all) fails silently | lines 182–187 | Doc 03 §3 rule 1: missing config is a red run. Bridge fix in §7 |
 | G3 | High | **Plaintext copies exist even when encryption is on**: `d1-drill-input` and `supabase-drill-input` are uploaded unencrypted for 1 day on every run | lines 125–131, 243–250 | Doc 03 §3 rule 2: the drill runs on the plaintext *inside the same job*; plaintext never leaves the VM |
-| G4 | High | **Symmetric passphrase**: whoever holds the GitHub secret, or the runner itself, can decrypt every artifact | lines 95–108 | OD-4 / OD-13: public-key encryption to two offline keys |
+| G4 | High | **Symmetric passphrase**: whoever holds the GitHub secret, or the runner itself, can decrypt every artifact | lines 95–108 | OD-4 / OD-13: public-key encryption; private key in Supabase Vault (doc 09) |
 | G5 | High | **Supabase method and scope.** Raw `pg_dump` of `public` only misses `auth.users`, pg_cron jobs, roles and the migration ledger, and Supabase documents that raw `pg_dump` restores fail on permissions. The drill stubs roles and **tolerates restore errors**, so lost RLS policies or grants would still "pass" | lines 203, 287–288 | Factor B1/B2: `supabase db dump` roles/schema/data + history, drilled in `supabase/postgres` |
 | G6 | Medium | **Only `madagascar-db`**; `chatbot-kb` and `whatsapp-chatbot` are not backed up | line 42 | Doc 03 §2 (all three; query-based exporter for `chatbot-kb`, factor A1) |
 | G7 | Medium | **One location, and it expires itself.** GitHub artifacts only; every copy auto-deletes after 90 days, which sits oddly with the owner's "retention is manual" rule. No copy in R2 | line 43 | Doc 03 §4 (R2, bucket-locked, manual prune) + OD-12 (artifacts become the *second* copy) |
@@ -131,11 +131,11 @@ Numbered for reference; the right-hand column says where the cf-backend plan clo
 | G9 | Medium | **The drill runs against production infrastructure**: it creates a real D1 in the account, needs the broad **D1 Edit** permission, and leaves a stray database if the delete fails. Measured cost is small (madagascar-db holds **2,425 rows**, so about 2.4% of the 100k daily write limit per drill) | lines 156–164 | Doc 03 §3 rule 2: drill into local `sqlite3`, so the token only needs export rights |
 | G10 | Medium | **Nobody is told.** The only failure signal is GitHub's own email to the repository owner account. The two failed runs went unanswered for six days | §4 | Doc 03 §6: dead-man's switch + queue alerts |
 | G11 | Low | **GitHub schedule drift is real**: 5 h 38 min late on its first scheduled run | §4 | Dead-man thresholds tolerate hours (8 days / 36 h) |
-| G12 | Low | Heavy setup: `npm ci` of all of cf-admin just to run `wrangler` | line 64 | cf-backend's workflow installs `wrangler` alone |
+| G12 | Low | Heavy setup: `npm ci` of all of cf-admin just to run `wrangler` | line 64 | cf-backup's workflow installs `wrangler` alone |
 | G13 | Low | Actions pinned by tag, not SHA (`checkout@v4`, `setup-node@v6`, `upload-artifact@v4`); runs already warn that Node 20 actions are deprecated | lines 50–51, 111 | Doc 05 §1 T5: SHA pinning |
-| G14 | Low | Lives in cf-admin's repo, whose `push` workflows share the same secret store | — | cf-backend repo, where only `db-backup.yml` references backup secrets (doc 05 §3) |
+| G14 | Low | Lives in cf-admin's repo, whose `push` workflows share the same secret store | — | cf-backup repo, where only `db-backup.yml` references backup secrets (doc 05 §3) |
 
-What it gets **right**, and cf-backend keeps:
+What it gets **right**, and cf-backup keeps:
 
 - the named fail-fast pre-check;
 - restore drills with row-count verdicts;
@@ -156,9 +156,9 @@ What it gets **right**, and cf-backend keeps:
 | D1 reads (export + two counts) | a few thousand rows | Negligible against 5M/day |
 | Supabase egress | ~17 MB per run | Negligible against 5 GB/month |
 
-## 7. Fastest path to a real backup: this week, before cf-backend
+## 7. Fastest path to a real backup: this week, before cf-backup
 
-cf-backend P1 is weeks away, and **there is no backup today**. The existing workflow can
+cf-backup P1 is weeks away, and **there is no backup today**. The existing workflow can
 start protecting the business as soon as its secrets exist. Recommended **bridge**,
 in order (owner steps from the chunk 6 record §10, plus the decision each needs):
 
@@ -170,7 +170,7 @@ in order (owner steps from the chunk 6 record §10, plus the decision each needs
 | 4 | Owner or AI | Actions → `backups` → Run workflow; read both job summaries | First real backup + first **measured** RTOs |
 | 5 | AI | Record the measured numbers in the chunk 6 record §11 and DR runbook §1; close the §0 prerequisites | The docs stop saying "unbounded" |
 
-Optional **bridge code fixes**, small and reversible, worth doing only if cf-backend P1 is more
+Optional **bridge code fixes**, small and reversible, worth doing only if cf-backup P1 is more
 than a few weeks out (owner call; the workflow is retired in P1 stage 1e):
 
 - **G2:** make a missing `SUPABASE_DB_URL` fail the job (a two-line change).
@@ -181,20 +181,20 @@ Once steps 1–4 are done, the business has a D1 export with a rehearsed restore
 Supabase `public` data dump every week, kept 90 days. That's imperfect, but it's the
 difference between recoverable and not.
 
-## 8. How it maps into cf-backend
+## 8. How it maps into cf-backup
 
-| Today (cf-admin `backups.yml`) | cf-backend `db-backup.yml` (doc 03) |
+| Today (cf-admin `backups.yml`) | cf-backup `db-backup.yml` (doc 03) |
 |---|---|
 | Monday 03:17 UTC, weekly | Sunday 09:17 UTC full + Mon–Sat Supabase-only |
 | `madagascar-db` only | All three D1 databases (`chatbot-kb` via query export) |
 | Raw `pg_dump --schema=public` | `supabase db dump` roles/schema/data + migration history |
 | Drill: remote scratch D1 / plain `postgres:17` with stubs, errors tolerated | Drill (planned): local `sqlite3` / the `supabase/postgres` 17.6 image, errors fatal |
-| GitHub artifacts, 90 days, auto-expire | R2 `madagascar-backups/v1/runs/{full,daily}/`, bucket-locked, manual prune; artifacts as 14-day second copy |
+| GitHub artifacts, 90 days, auto-expire | R2 `madagascar-backups/v1/runs/{full,daily}/<year>/<month>/<runKey>/`, bucket-locked, manual prune; artifacts as 14-day second copy |
 | Symmetric passphrase (optional) | Public-key encryption; private key in Supabase Vault, Owner/Vendor only (doc 09) |
 | Plain 1-day drill inputs | Plaintext never leaves the job |
 | Missing Supabase secret = green | Missing anything = red |
-| Status: job summary only | `manifest.json` + `backend:backup-status` + cf-admin console + alerts |
-| Secrets in cf-admin repo | Secrets in cf-backend repo, scoped per job |
+| Status: job summary only, logs kept by GitHub for its retention window | A full evidence bundle per run in R2: redacted logs, GitHub's own log archive, sizes, resource figures and allowances ([11](11-run-evidence-and-usage.md)) + `backup:status` + the backup console + alerts |
+| Secrets in cf-admin repo | Two secrets in the cf-backup repo, two in the cf-backup Worker, none in cf-admin ([12](12-keys-and-secrets.md)) |
 
 Its processes did not die with it: the good ones and the lessons from its failure became the
 22 operating principles in [03 §10](03-backup-pipeline.md#10-operating-principles-adopted-from-the-existing-workflow)
@@ -209,7 +209,7 @@ same job), **G8** (Sunday 09:17 UTC), **G12** partly (one install, one job), **G
 v7 actions), plus a defect this analysis missed: GnuPG ≥ 2.1 rejects `--passphrase` in batch mode
 without `--pinentry-mode loopback`, so **encryption would have failed on the first real run**; it
 now reads the passphrase from stdin. `BACKUP_PASSPHRASE` is now **required**. Still open until
-cf-backend P1: G1 (the secrets), G4 (symmetric key), G5 (Supabase scope/method), G6 (the two chatbot
+cf-backup P1: G1 (the secrets), G4 (symmetric key), G5 (Supabase scope/method), G6 (the two chatbot
 databases), G7 (GitHub artifacts only), G9, G10, G11, G14.
 
 ## 9. Verification log

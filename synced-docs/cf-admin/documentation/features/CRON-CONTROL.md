@@ -156,7 +156,7 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **11 registered jobs** (`src/lib/jobs/registry.ts`): 9 on the
+There are **12 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `runCronBatch`).
 
@@ -165,7 +165,7 @@ a corrupt or hand-edited row cannot mark a security job as sheddable.
 
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
-| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe` | never |
+| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick` | never |
 | `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
@@ -180,6 +180,12 @@ the customer money path, and a traffic surge is exactly when bookings are most
 likely to be happening. `cron-usage-probe` is essential for a mechanical reason:
 if shedding could stop the probe, the usage reading would go stale, staleness
 would lift the shed, the probe would run, and shedding would re-engage.
+
+`backup-tick` (added 2026-09-23, chunk CB-2) is essential for a different
+reason: it costs this Worker no D1 rows, so shedding it relieves nothing, and a
+shed tick silently skips a scheduled backup and holds back failure alerts. It
+is also the one job whose work happens in another Worker — see
+[`BACKUP-CONSOLE.md`](BACKUP-CONSOLE.md).
 
 **A human pause can stop anything, including an essential job.** That is a
 deliberate, audited act. Automatic shedding is not, so it never touches them.
@@ -352,10 +358,10 @@ an empty table.
 - **Only the two weekly jobs take a lease.** `asset-cleanup` and
   `staff-storage-reconcile` declare `leaseSeconds: 900`, because both delete and
   a manual run bypasses the control document by design — two deleters walking the
-  same bucket is the one overlap worth a D1 write. The nine five-minute jobs
+  same bucket is the one overlap worth a D1 write. The ten five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
-  trigger *can* still overlap a scheduled tick for those nine. The Run-now route
+  trigger *can* still overlap a scheduled tick for those ten. The Run-now route
   is an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
   there is no 409 path. *Corrected 2026-09-19: this section previously promised
   that Run now "still honours the lease … you get a 409 rather than a duplicate
@@ -387,6 +393,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-23 | claude | Chunk CB-2: `backup-tick` registered (`src/lib/jobs/registry.ts`), tier `essential`, budget 10/10 measured 0 queries on the configured path (`test/jobs-budget.test.ts`); catalog entry added to `scripts/lib/cron-catalog.mjs` — **reaches the page only after the owner re-seeds** (`node scripts/seed_cron_control.mjs --apply --remote`) | 12 jobs (10+2). Until the re-seed, the row shows the job by id |
 | 2026-09-21 | claude | **First pass made against the page as it actually renders.** The components were mounted in headless Chromium with a fixture payload and the real stylesheet, and read at 1440px and 390px | Found what three rounds of source review had not: ~1200px of dead space in every row, a red 82%-full bar on a healthy system, a card headlining its own configuration, section descriptions stranded at the far right, a status pill stretched to the width of a text input, and failure counts invisible on mobile. All fixed. Note for anyone repeating this: the page needs no server — a Vite build with `@tailwindcss/vite`, an alias for `@`, and a stubbed `fetch` on `/api/cron` renders the real components faithfully |
 | 2026-09-21 | claude | Run-console defects found from an owner's screenshot, verified by `npm run verify` (1075/1075) | The trace panel rendered before any run existed, so the dialog sat permanently at "Streaming execution trace from worker…" — a request that had not been made. It now appears only once a run starts, and its empty states key off running/finished. The catalog title **Failed sign-in monitor** was ambiguous (it reads as a monitor that has failed) and is now **Rejected sign-in monitor** — a re-seed is needed for that to reach production |
 | 2026-09-21 | claude | UI and interaction pass after the owner reported the page confusing **on screen**, verified by `npm run verify` (1075/1075) | Row collapses to name/status/failures with detail behind a disclosure; pause and throttle merge into one Manage panel with one Save; three per-row buttons become one, with what the viewer lacks stated in words; the access line appears only when something is missing; auto-refresh moves beside the freshness it governs; the run dialog's confirm reads **Start run**. Still unverified in a browser at the time of writing |

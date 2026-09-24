@@ -1,6 +1,6 @@
 ---
-title: "cf-backend — 04 Moving Staff Managed Storage"
-status: draft
+title: "cf-backend — 04 Moving Staff Managed Storage (parked)"
+status: historical
 audience: [ai, technical, owner]
 owner: harshil
 related_docs: [README.md, 01-architecture.md, 02-admin-integration-contract.md, 06-roadmap.md, ../../runbooks/public-share-links-domain-isolation.md]
@@ -8,6 +8,18 @@ tags: [program, cf-backend, storage, migration]
 ---
 
 # 04 — Moving Staff Managed Storage to cf-backend
+
+> **Parked 2026-09-22 (owner decision). Not part of cf-backup.** The plan was re-scoped
+> to backups only (README). This document is kept unchanged below as the analysis of
+> 2026-09-21, in case the move is ever revived as its own project. It describes a
+> `cf-backend` with a second, public Worker that is **not** being built.
+>
+> Why parking costs little: the move was an improvement, not a fix. Its main security
+> gain already exists, since cf-admin serves storage downloads with
+> `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff` (factor D3).
+> Everything else (the Access bypass on `secure.*`, cf-admin's size, vendor links tied to
+> cf-admin's uptime) stays exactly as it is today. Backing up the storage *files* stays in
+> scope, as cf-backup Phase 4.1, and needs no move.
 
 ## 1. Why move it, and why it is safe now
 

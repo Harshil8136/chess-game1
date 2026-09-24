@@ -161,6 +161,19 @@ that store is still in use.
 | Safeguards | This is the one deliberate exception to full Cloudflare Zero Trust gating in the portal: two public, unauthenticated route families (`/api/storage/share/*`, `/api/storage/request/*`) exist for external parties. Both were remediated for a reflected-XSS-to-session-takeover chain, an upload passcode-enforcement bypass, and non-timing-safe comparisons in the 2026-08 security pass — see [`THREAT-MODEL.md`](THREAT-MODEL.md). Uploads are magic-byte verified against the declared extension; per-role storage quotas enforced server-side; all mutating endpoints rate-limited |
 | ⚠️ Known gap | R2 object versioning **not enabled** on `madagascar-staff-storage` — a bucket that can hold payroll/medical records arguably needs it more than `madagascar-images` (already flagged). Tracked in `../MAINTENANCE.md` |
 
+### J. Disaster-recovery backups (cf-backup — built 2026-09-23; no production backup has run through it yet)
+
+| Field | Detail |
+|---|---|
+| Purpose | Restore the platform's databases after loss or corruption, and prove each backup restores (restore drills) |
+| Categories of subject | Everyone whose data is in the backed-up databases (customers, pet owners, staff); staff also as the people who start, cancel or prune backups |
+| Categories of data | Full copies of the D1 databases and of the Supabase `public` schema (customer names, emails and phones, pet records, consent evidence, staff accounts, admin sign-in IPs). Run records: the requesting staff member's sign-in email and role, an optional reason, timestamps, sizes and outcomes. Run evidence is free of personal data by policy (plan of record doc 11 §4) |
+| Legal basis | Art. 6(1)(f) legitimate interests — availability and integrity of the service (Art. 32(1)(c)) |
+| Stores | Cloudflare R2 (the private backups bucket: encrypted archives and run evidence); D1 `backup_runs` (run records); the backup key's private half in Supabase Vault |
+| Retention | Archives: the owner's bucket locks set the minimum (plan: 30 days for daily, 90 days for full); deletion beyond that is manual, through the console's prune action, which never removes the newest four good full backups. `backup_runs` rows are kept (about 400 a year); pruning marks a run, it does not delete the row |
+| Recipients | None. GitHub-hosted runners (US) process the data in transit while a backup or drill runs and keep nothing afterwards |
+| Safeguards | Every archive is encrypted to a public key before it leaves the runner, with the private half held at a second provider; cf-backup has no public address and is reached only through cf-admin's gateway; every change made through the console is audited (`admin_audit_log`, module `backup`) |
+
 ### 2.1 IP addresses at rest — per store
 
 The register previously claimed IPs are "never stored raw". That is false and was
@@ -193,6 +206,7 @@ Treat rotation as a breaking change, not a privacy hygiene step.
 | Sub-processor | Purpose | Data | Region |
 |---|---|---|---|
 | Cloudflare | Hosting, Zero Trust identity, D1, KV, R2, Queues, Workers AI | All | US (see §4) |
+| GitHub | Actions runners that take, encrypt and restore-test backups (cf-backup) | Database contents in transit, encrypted before upload; nothing kept after a run | US |
 | Supabase | Postgres | Users, ARCO, consent, bookings, email ledger | US |
 | Brevo | Email delivery — transactional, marketing and security alerts | Recipient addresses, content | EU (France) |
 | Resend | Email delivery — staff invites and a diagnostics ping only | Staff addresses, invite content | US |
@@ -267,5 +281,6 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-09-23 | Activity J and the GitHub sub-processor row added from the cf-backup plan of record (doc 05 §5) and its full-build design, for chunk CB-2: `backup_runs` from `migrations/0057_backup_runs.sql`, the audit module from `src/lib/audit.ts` | Nothing in J has run in production yet; the bucket-lock periods are the plan's and become facts only when the owner sets them; legal basis and retention are owner and counsel judgements |
 | 2026-09-20 | **§2 B/C/D/E/F/I and §5 re-derived from code.** The "IPs never stored raw" safeguard was false and is replaced by §2.1, a per-store table built from `src/lib/retention-tables.ts`, `migrations/0000_baseline.sql`, `src/lib/auth/login-event.ts`, `src/lib/auth/session.ts` and the `hashIp()` call sites. Per-table retention targets; the automatic 180-day purge in `src/workers/scheduled-asset-cleanup.ts`; `privacy_requests` quarantined; the ARCO identity document located in cf-astro's R2; F's G5 self-contradiction; Brevo/Resend split; Upstash key material; Google added to §3; the 2026-08-12 enforcement date; activity H weakness detail moved to the private backlog. §5's blanket "zero function ACLs" claim corrected from a live `has_function_privilege` check (4 of 6 revoked). The 2026-09-14 row below says the `anon` posture "still holds" — on function ACLs, it did not | Live Supabase *policy* and *grant* state (only function ACLs were queried); `email_audit_logs` sender-IP values in production; Upstash region; whether R2 offers object versioning at all (bucket locks are the R2 control, so I's known gap may name a feature that does not exist); §2's legal bases, which remain owner and counsel judgements |
 | 2026-09-14 | §3 sub-processor list against code and the live estate (see `compliance/data-residency.md` §7 for the commands); §4 regions; §5 the rule count (11, was written as 10) and that `API_DENY_MODE=enforce`, the `anon` posture and the audit-exception gate still hold; §6 G5 closed by the 2026-09-10 Emails portal work, G3 and G1/G4 still open (chunk 6 and the IR drill remain `planned`) | §2's legal bases and retention periods for activities A–I, and the §1 DPO assessment — those are owner and counsel judgements, not code, and were not re-derived |

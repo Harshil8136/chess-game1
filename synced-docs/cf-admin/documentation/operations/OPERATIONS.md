@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-09-23 | `wrangler.toml` `[[services]]`; `src/lib/jobs/registry.ts` | `BACKUP` → `cf-backup` added (chunk CB-2; a binding, not a var — RULE #0.8's 42 unchanged); **12 jobs (10+2)** with `backup-tick`; deploy-order item added to §2. Not re-checked: every other row |
 | 2026-09-19 | `wrangler.toml` `[vars]` re-counted; live Worker env read; `src/lib/jobs/registry.ts`; `SELECT setting_key FROM admin_portal_settings` (remote); `ls migrations/` + `d1_migrations`; `src/lib/auth/security-logging.ts`; `src/lib/jobs/telemetry.ts`; Supabase MCP `list_projects`; `grep -rn PUBLIC_SENTRY_DSN src/` | **17 `[vars]` + 25 secrets = 42**, not 40 (15+25); **11 jobs (9+2)**, `cron-usage-probe` was missing; the three idle-tick gate keys **do not exist as rows** — the rollback is an INSERT; `migrations/` holds **33** files to `0055`, not 29 to `0051`; the failed-login alert path is **Brevo**, not Resend; the Sentry cooldown is per call site, not blanket; both Supabase free slots are in use; `PUBLIC_SENTRY_DSN` has no reader. §1, §2, §3.5, §4.1–4.3, §5, §6, §7 and §8 corrected. Not re-checked: §3.6 Upstash limits, §6's token permission tables (dashboard-only), "Account slots: 3 of 5" |
 | 2026-08-13 | `wrangler.toml` + `src/env.d.ts` re-read | §1 rebuilt — `SYNC_QUEUE`, the sync DLQ, `CHATBOT_SERVICE`, `ASTRO_SERVICE` and the `AI` binding were all missing from this registry despite being live; cron triggers and the custom-domain route added |
 | 2026-08-13 | Cloudflare MCP `d1_database_query` on `sqlite_master` | `madagascar-db` holds **30** application tables |
@@ -118,6 +119,7 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 |---------|---------------|---------|
 | `CHATBOT_SERVICE` | `cf-chatbot` | Worker-to-Worker calls to the chatbot admin surface, without a public round trip |
 | `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes) |
+| `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
 
 ### Workers AI
 
@@ -141,12 +143,12 @@ and each one runs under `runJob` with a declared D1 budget:
 **Do not hand-count this list.** [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
-three times. As of 2026-09-19 it is **11 jobs — 9 on `*/5`, 2 on Sunday**
+three times. As of 2026-09-23 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
 (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`).
 
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
-| `*/5 * * * *` (9) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads |
+| `*/5 * * * *` (10) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)) |
 | `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile` |
 
 > **Every job below can be paused, throttled or run by hand from
@@ -258,6 +260,7 @@ wrangler secret list
 3. **Never `wrangler kv namespace create`** without updating BOTH projects' `wrangler.toml`
 4. **If IDs look wrong** — verify via Cloudflare Dashboard → Workers → KV/D1 → copy UUID from there
 5. **Verify required secrets** are set via `wrangler secret list`
+6. **Service-binding targets must exist first** — `BACKUP` → `cf-backup`: deploy cf-backup before any cf-admin deploy that carries the binding; otherwise the cf-admin deploy fails
 
 ---
 

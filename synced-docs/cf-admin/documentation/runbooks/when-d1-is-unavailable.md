@@ -112,6 +112,7 @@ isolated by `allSettled`, so one failure cannot starve another.
 | `blog-scheduled-publish` | `*/5` | A matured post stays `scheduled` | Next tick |
 | `gsc-sync`, `pagespeed-sync` | `*/5` | Gate settings unreadable → treated as not-due. Both are `disabled` in the control plane today, so they never reach the gate at all | Next tick |
 | `cron-usage-probe` | `*/5` | Cannot refresh the cached D1-usage reading, so `usage.checkedAt` goes stale — **the automatic shed decision then runs on an old number**. Its own 60-minute interval is enforced in code as well as in the control document, so it cannot storm the analytics API | Next tick after D1 returns |
+| `backup-tick` | `*/5` | cf-admin's side makes no D1 query, but cf-backup's tick reads and writes this same database, so it answers with an error: the job logs it and reports once an hour. No scheduled backup starts and no alert is sent while D1 is down | Next tick; cf-backup offers any unsent alert again, and the weekly GitHub safety net (Mondays) covers a longer outage |
 | `asset-cleanup`, `staff-storage-reconcile` | `0 2 * * SUN` | Run aborts **before** deleting anything | Next Sunday, or a manual run |
 
 **Nothing in this table loses data.** Every job is a poll over durable state:

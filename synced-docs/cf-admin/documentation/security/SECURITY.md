@@ -311,7 +311,7 @@ covered by these headers and cannot receive the CSP nonce.
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `X-Frame-Options` | `DENY` | Prevents clickjacking (legacy; `frame-ancestors` in CSP is primary). Skipped on localhost so the dev toolbar works |
+| `X-Frame-Options` | `DENY` (except `SAMEORIGIN` under `/dashboard/backup/app/` — see "Framing exception" below) | Prevents clickjacking (legacy; `frame-ancestors` in CSP is primary). Skipped on localhost so the dev toolbar works |
 | `X-XSS-Protection` | `0` | Deliberately disables the legacy auditor, which is itself an XSS vector in old browsers. Omitted from this table until 2026-09-20 |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME-type sniffing attacks |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Leaks only origin on cross-origin navigation |
@@ -356,6 +356,20 @@ upgrade-insecure-requests
 
 Every first-party inline `<script>` is rewritten to carry the per-request nonce
 by the middleware itself (the `finalBody` replace at the end of `csp.ts`).
+
+### Framing exception — the backup console (added 2026-09-23)
+
+Responses whose path starts with `/dashboard/backup/app/` carry
+`X-Frame-Options: SAMEORIGIN` and `frame-ancestors 'self'` instead of
+`DENY`/`'none'`, because `/dashboard/backup` frames cf-backup's console from the
+same origin (plan of record [02 §5](../program/cf-backup/02-admin-integration-contract.md)).
+The prefix is one constant, `FRAMEABLE_PREFIX` in `src/lib/security/csp.ts`, and
+the URL parser has already resolved `..` and `%2e%2e` segments before the
+comparison. When a framed response carries its own `Content-Security-Policy`,
+it is kept and sent as a second policy: browsers enforce both, so cf-backup can
+narrow what this policy allows and never widen it. `test/csp.test.ts` fails if
+any other path loses `DENY`/`'none'`, if the prefix changes, or if a proxied
+policy replaces this one.
 
 **Why `'unsafe-inline'` is still present:**
 

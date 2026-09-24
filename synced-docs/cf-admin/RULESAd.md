@@ -286,6 +286,13 @@ SELECT COUNT(*) FROM sqlite_master
    AND name NOT LIKE '_cf_%' AND name NOT LIKE 'd1_%';
 ```
 
+> **Pending, 2026-09-23 (cf-backup, chunk CB-2):** `migrations/0057_backup_runs.sql`
+> adds a 31st `madagascar-db` table, `backup_runs` — one row per backup,
+> restore-drill or prune attempt. The owner accepted exactly one new table for
+> cf-backup on 2026-09-23; the reuse proof is the migration's own header. It is
+> not applied yet (an owner release step), so the counts above are still the
+> live ones; after the release they become 31 / 64 (62 live). Re-count, don't add.
+
 > The 2026-08-12 breakdown recorded 31 D1 / 19 Supabase. The **total was right**
 > and the split was wrong; the live query above is now the derivation, so the
 > next reader can re-check it in one command instead of trusting the number.
@@ -355,7 +362,7 @@ model without structural changes before it's written, not after.
 **EDGE-INJECTED SECURITY:** The dashboard enforces strict HTTP security headers injected globally at the edge via Astro middleware `sequence`.
 
 - **Content-Security-Policy (CSP):** Nonce-based `script-src` — `'self' 'nonce-<per-request>'` + a small host allowlist (Sentry, CF Insights, jsDelivr, Google Accounts). `'unsafe-eval'` is forbidden and absent (SEC-01, no exemptions). `'unsafe-inline'` is **still present on the enforcing policy**; a `Content-Security-Policy-Report-Only` canary ships the hardened directive without it, pinned by SEC-01b, and is promoted once it reports clean (blocked on operator verification of Cloudflare Rocket Loader — see MAINTENANCE.md). `'strict-dynamic'` is off for the same reason. `style-src` still uses `'unsafe-inline'` — Preact hydration and Astro scoped styles require it. Also sets COOP, CORP and `X-Robots-Tag`. `public/_headers` exists and carries four static-asset headers and **no CSP** — the `/api/*` rules and the drifted CSP it used to hold were removed on 2026-09-02 (MAINTENANCE C-12, closed). *Corrected 2026-09-19: this line still warned that `public/_headers` carried `'unsafe-eval'`.* `src/lib/security/csp.ts` is the only file to read for the live policy.
-- **X-Frame-Options: DENY** (Blocks Clickjacking)
+- **X-Frame-Options: DENY** (Blocks Clickjacking) — with one path-scoped exception since 2026-09-23: responses under `/dashboard/backup/app/` (the embedded backup console) carry `SAMEORIGIN` and `frame-ancestors 'self'`, guard-tested in `test/csp.test.ts` so no other path can lose `DENY`
 - **X-Content-Type-Options: nosniff** (Prevents MIME-sniffing)
 - **Referrer-Policy: strict-origin-when-cross-origin**
 - **Strict-Transport-Security: max-age=63072000; includeSubDomains; preload** (2 years; set in `src/lib/security/csp.ts:78` — corrected 2026-07-29, previously documented here as `31536000`)

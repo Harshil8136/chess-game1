@@ -450,6 +450,18 @@ Two independent mechanisms guard API routes, and both must pass:
 makes "someone shipped a route without a guard" a build error rather than an
 incident.
 
+> **Added 2026-09-23 (chunk CB-2).** The backup console's API lives at
+> `/dashboard/backup/app/api/…`, not under `/api/`, because it is cf-backup's own
+> app framed through the gateway. The pipeline therefore authorizes it as a
+> **page**: `decideAccess` on the path, which inherits the `/dashboard/backup`
+> row across the `/` boundary (unknown → deny), and a signed-out or refused
+> request gets the page answers (redirect, access-denied rewrite), not this
+> section's JSON 401/403. `API_PAGE_MAPPING`, SEC-06/SEC-07 and
+> `test/api-authz-inventory.test.ts` do not cover it; the gateway re-checks the
+> page decision and same-origin itself and is pinned by
+> `test/backup-gateway.test.ts`. What each person may do inside the console is
+> cf-backup's capability model ([13](../program/cf-backup/13-access-control.md)).
+
 ---
 
 ## 10. Provisioning gates
