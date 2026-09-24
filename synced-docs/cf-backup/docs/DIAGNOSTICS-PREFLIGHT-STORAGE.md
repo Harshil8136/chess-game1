@@ -1,6 +1,6 @@
 # Diagnostics, pre-flight checks and a simpler storage layout
 
-- **Status:** approved by the owner on 2026-09-24 and being built in four stages, in the order of B8. Until the Build log at the end of this document says a stage has shipped, that stage is **not built yet**. "How it works today" describes the live system; every other section describes the plan.
+- **Status:** Approved 2026-09-24; being built (see Build log). It is built in four stages, in the order of B8. Until the Build log at the end of this document says a stage has shipped, that stage is **not built yet**. "How it works today" describes the live system; every other section describes the plan.
 - **Who it is for:** Part A is for everyone, including staff who do not write code. Part B is for engineers and gives the exact technical design.
 - **Where it came from:** the owner asked for three things:
   1. a way to test every step of the backup flow and see each part's health, response time and result;
@@ -550,3 +550,79 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 | Run permission | `diagnostics.run`, Owner and Vendor support | grant it per person on the Access page |
 | View permission | `usage.view` (same as Readiness) | — |
 | Layout top level | `backups/`, `checks/`, `ops/`, `system/` (no version folder; the format version lives in `manifest.json`) | keep a `v2/` folder |
+
+---
+
+## Build log
+
+### Stage 1: the probe library and the Diagnostics page (2026-09-24, commit `5491f72`)
+
+Built: B2, B3 and B4, less the runner test. Not built yet: the pre-flight gate (Stage 2), the runner test and the runner pre-flight (Stage 3), and the new storage folders (Stage 4).
+
+#### For everyone
+
+- **Where it is:** the backup console's **Diagnostics** section, between Readiness and Access, at `/dashboard/backup/diagnostics`. The Readiness page links to it: "Test every step now → Diagnostics". Anyone who can open Readiness can open Diagnostics.
+- **How to use it:**
+  - **Run all** tests the eight steps of the backup flow, one after another. Each step's results appear as soon as that step answers. It takes a few seconds.
+  - **Run again**, on each step, tests that step alone. One person can test the same step once every 15 seconds.
+  - Both buttons need the **Run Diagnostics tests** permission (`diagnostics.run`). Owner and Vendor support have it. Without it you still see every result, but no buttons.
+  - A step with a warning or a failure opens by itself. Click a step's name to open or close it.
+- **Reading a row:**
+  - **Result:** a shape and a word, never colour alone: ✓ **Passed** (green), **!** **Warning** (amber), ✕ **Failed** (red), **?** **Skipped** (grey, and the row says why). A step's own pill shows its worst test.
+  - **Response time:** in milliseconds. A slow answer is amber and says "slow", with the normal time.
+  - **What it found:** the one-line answer. **Details** opens the full answer, with secrets removed.
+  - **How to fix:** a line under a warning or a failure, when the test knows the fix.
+  - **Trend:** a small line of that test's last 20 response times, so a service that is slowing down shows before it fails.
+  - **Not tested yet:** nobody has tested that step yet. It is never shown as a pass.
+- **What Run all costs:** nothing. It uses no GitHub Actions minutes, and it stays well inside the free Cloudflare and GitHub allowances (about 8 GitHub API calls). It writes one small test file in storage, away from the backups, and deletes it at once.
+- **Nothing runs by itself.** The page only reads until someone presses a button. Every test run is recorded in Activity as `diagnostics.run`: who ran which step, and how many tests passed, warned or failed.
+- **After the page is reloaded,** each step shows its stored result: every test's result and time, and the reason for a warning or failure. The full answers, the fixes and Details come back when the step is run again.
+- **Two more cards:**
+  - **Last pre-flight of a real run:** empty until Stage 2 ships.
+  - **Console connection:** how long this page's own request took, there and back, measured by your browser.
+
+#### For engineers
+
+- **Routes:**
+  - `GET /api/diagnostics`, capability `usage.view`: returns `DiagnosticsView`, which holds the steps, the probe catalogue (label, step, `warnMs`, cost), the stored history, `lastPreflight` (null until Stage 2) and `canRun`.
+  - `POST /api/diagnostics/run { step }`, capability `diagnostics.run`: runs that step's probes one after another and returns `DiagnosticsStepResult` (`results: ProbeResult[]` and `saved`). It is audited as `diagnostics.run` with the step and the pass, warn, fail and skipped counts. The same person asking for the same step again within 15 s gets `429 rate_limited`.
+- **Permission:** `diagnostics.run`, class `operate`, in the Owner and Vendor support defaults. Viewing needs `usage.view`, the same as Readiness.
+- **History:**
+  - It is stored in the settings row `backup:diagnostics` (schema `cf-backup/diagnostics@1`).
+  - Each entry is one step run: `{ at, by, step, results: [{ id, s, ms }], errors: [{ id, summary }] }`.
+  - Entries are newest first, at most 20 per step.
+  - They are appended by a fail-soft compare-and-swap: a lost entry never fails the step, and `saved` says whether it was kept.
+  - `errors` holds the summaries of warnings and failures only. A skipped probe's reason, a fix and the detail are not stored.
+- **Probe rules:**
+  - an 8 s timeout, and one retry on a network error or a 5xx;
+  - a pass slower than the probe's `warnMs` becomes a warn;
+  - every summary, fix and detail goes through `redactText`, and the detail is capped at 2 KB;
+  - each step declares at most 20 external subrequests.
+- **The page:** `src/ui/screens/DiagnosticsScreen.tsx`, with `ProbeRow`, `LatencyTrend` and the pure helpers in `src/ui/diagnostics-view.ts`. Run all calls the steps in sequence, so the history row's compare-and-swap never races itself, and reads the history once at the end. The Console connection card times `GET /api/diagnostics` with `performance.now()`, and marks it slow above 300 ms (the B10 binding threshold).
+- **The probes, by step, and what a pass proves:**
+
+| Step | Probe | A pass proves |
+|---|---|---|
+| Trigger | `tick.age` | the 5-minute tick has run recently |
+| Trigger | `schedule.next` | the schedule reads and has a next slot (warn: every slot is off) |
+| Guards | `d1.ping` | D1 answers (warn over 300 ms) |
+| Guards | `d1.settings` | every `backup:*` settings row is stored (warn: one is missing and code defaults are in use) |
+| Guards | `d1.lane` | no run is active (on this page an active run is a warn) |
+| Guards | `keys.active` | one backup key is active (warn: its recovery kit was not confirmed recently) |
+| Guards | `vault.list` | the key vault answers through Hyperdrive and holds the active key (warn over 1 s) |
+| Guards | `vault.refusal` | the key holder cannot read other vault secrets (a fail means a privilege leak) |
+| Dispatch | `gh.token` | the GitHub App can get an installation token (warn over 1.5 s) |
+| Dispatch | `gh.workflow` | the backup workflow exists and is active |
+| Dispatch | `gh.permissions` | the App holds every permission the console needs |
+| Dispatch | `gh.recipient` | the repository's encryption-recipient variable matches the active key |
+| Dispatch | `gh.secrets` | the runner's repository secrets exist, by name and date only (warn: one is old) |
+| Dispatch | `gh.rate` | over 20% of the GitHub API hourly allowance is left |
+| Runner | `gh.runs` | GitHub's newest backup run is reachable and did not fail |
+| Runner | `runner.last` | the runner's last doctor record passed |
+| Runner | `gh.minutes` | this month's Actions minutes cover a run (warn: 80% used) |
+| Storage | `r2.list` | R2 answers (warn over 500 ms) |
+| Storage | `r2.canary` | a small test file is written, read back byte for byte and deleted |
+| Storage | `r2.headroom` | the bucket has room for 3 more runs within the 10 GB free tier (from the last Usage reading) |
+| Reconcile | `reconcile.last` | the newest run was finalised, or is still in contact |
+| After-run | `postrun.last` | the newest GitHub run's after-run copy was written |
+| Alerts | `alerts.delivery` | the last alert email was delivered |
