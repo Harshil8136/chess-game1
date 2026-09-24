@@ -843,3 +843,33 @@ Built: B6. Not built yet: the new storage folders (Stage 4).
 - **The minutes estimate:** the `gh.minutes` pre-flight probe counts a runner test as 2 minutes, the top of its stated 1–2, until a live one is measured.
 - **The page:** the Diagnostics header's button opens the shared `Modal`; a pre-flight refusal shows in it with `PreflightFailures`. Once started, the page says to watch Live, offers a button to it, and names the Runner step's `runner.last` test.
 - **Tests:** `test/runner/doctor-policy.test.ts`, `test/runner/doctor-checks.test.ts`, `test/runner/seal.test.ts` and `test/runner/preflight-mode.test.ts` on the runner side; `test/runner-test-api.test.ts` for the route, the guards, the manifest reader and every label; `test/report-diagnose.test.ts` for the cause rules; `test/ui-diagnostics.test.ts` for the button and the dialog.
+
+### Final fix wave, 2026-09-24
+
+Fixes from the final review of Stages 1–3, made before Stage 4 starts.
+
+#### For everyone
+
+- **One retry now really happens.** Part B2 promised that a network blip is retried once before a test reads Fail. The GitHub tests did this, but the vault, storage and database tests did not, so one blip could stop a scheduled backup and send a "did not start" email. Now:
+  - the vault tests retry when the vault could not be reached at all;
+  - the storage tests (and the Actions-minutes test, which reads storage) retry the two errors storage's own documentation says to retry: an internal error and "service temporarily unavailable";
+  - the database tests retry the short-lived errors the database's documentation lists, such as a lost network connection or an internal error.
+  - An answer is still an answer: a refused permission, a missing table or a wrong password is never retried. When the retry fails too, the test keeps its How to fix line.
+- **A wrong vault password is named as one.** When the vault refuses the key holder's password, or the saved connection string is not valid, the How to fix line now says so and points to the setup script's vault part. It no longer shows the pooler advice, which is only for a vault that does not answer. Such a refusal is not retried.
+- **"The runner's last doctor record" tells the truth after a prune, a skipped slot or a refused start.** It now reads the newest finished run that went to GitHub, not just the newest row. When that run left no doctor record (for example a runner test whose upload was refused), the test says which run and why, instead of "no run has reached doctor yet". Readiness reads the same record the same way.
+- **Readiness and Diagnostics agree on a clean runner test or check.** The trial encryption such a run skips on purpose is counted as "not needed" on both pages, never as a warning.
+- **The key test judges each person's recovery kit,** as Keys and the weekly key check do. One person's recent confirmation no longer covers someone else's overdue one.
+- **GitHub's last run is named as what it was:** cancelled, timed out, skipped or failed to start. Only a real failure reads "failed".
+- **Starting a run while another is active** now answers "already running", naming the active run, for every kind of start (Run now, without the cooldown, a drill, a check), as the runner test already did. It no longer counts as a failed pre-flight, so it writes no pre-flight record and no "pre-flight stopped" event.
+- **The pre-flight's 7 seconds count from the start of the request,** not from the start of the pre-flight, so the checks before it cannot push the answer past the console's 10-second limit.
+- **A test the pre-flight had no time for** now says which test used the time, as a Diagnostics step does.
+- **App permissions in a pre-flight:** a start is stopped only by a permission that run needs (starting the workflow, reading the repository, reading its secrets and, for a backup or a drill, reading the backup key variable). A shortfall that only other features need, such as changing that variable during a key rotation, is a warning that travels with the run. The Diagnostics page still judges every permission the console needs.
+- **The storage write test's "slow" mark is now 2 seconds.** It makes four trips to storage one after another, so it gets the usual half second for each. The owner's two stored runs took about a third of a second for all four.
+- **A stopped run keeps its "stopped by the pre-flight" code** even when GitHub's machine could not record its own result and the 5-minute check finishes it from its record instead. So it still never counts toward Run now's cooldown or the daily limit.
+
+#### For engineers
+
+- The retry list is kept short and named in the probe core: storage's two retryable error codes, and the database's documented retryable messages. A test that hands a short-lived error back for the retry gives its own How to fix line if the retry fails too.
+- The retries fit the tick's subrequest budget: each pre-flight's declared cost already counts the database and storage calls, which do not use that budget, so a vault retry's one extra connection is covered.
+- The halted message is now shared by the runner and the Worker from one place, so the 5-minute check recognises a halted run by the runner's own words.
+- Tests: the probe core, the platform, record and GitHub tests, the pre-flight and manual-run tests, and the reconcile tests each gained cases for these fixes.
