@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-23
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/index.astro, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql, scripts/lib/cron-catalog.mjs]
+related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql, scripts/lib/cron-catalog.mjs]
 related_docs: [CRON-CONTROL.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md, ../program/cf-backup/02-admin-integration-contract.md, ../program/cf-backup/13-access-control.md]
 tags: [backups, cf-backup, gateway, cron, audit, csp]
 ---
@@ -28,6 +28,20 @@ cf-admin**: cf-admin is the gateway, cf-backup is the app (plan of record
 every screen inside the frame and decides what each person may do there
 ([13](../program/cf-backup/13-access-control.md)); cf-admin decides who may open
 the page at all.
+
+Every console section has its own address. `/dashboard/backup/runs` frames
+`/dashboard/backup/app/runs`, and `/dashboard/backup/runs/<run key>` opens that
+run, so a section can be bookmarked, reloaded or opened in a new tab. The page,
+`src/pages/dashboard/backup/[...section].astro`, knows only the path *shape*
+(`src/lib/backup-section.ts`): a section of lowercase letters and hyphens, and
+at most one more segment. Anything else is a 404 inside the admin layout. The
+`/app` prefix is internal; the address bar never shows it.
+
+After each navigation the console posts `{ type: 'cf-backup:route', v: 1, path,
+label }` to the page. The page accepts it only from its own frame and origin,
+and only for a path of that shape, then updates the address bar with
+`history.replaceState` and the tab title ("Runs · Backups"). The frame's own
+history carries Back and Forward.
 
 When the deployment has no `BACKUP` binding (local development), the page says
 "cf-backup is not connected" instead of showing a dead frame.
