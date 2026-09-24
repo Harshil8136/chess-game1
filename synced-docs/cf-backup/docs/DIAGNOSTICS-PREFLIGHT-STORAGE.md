@@ -1,6 +1,6 @@
 # Diagnostics, pre-flight checks and a simpler storage layout
 
-- **Status:** proposed on 2026-09-24. The owner has not approved it yet, so **nothing in this document is built**. "How it works today" describes the live system; every other section describes the plan.
+- **Status:** approved by the owner on 2026-09-24 and being built in four stages, in the order of B8. Until the Build log at the end of this document says a stage has shipped, that stage is **not built yet**. "How it works today" describes the live system; every other section describes the plan.
 - **Who it is for:** Part A is for everyone, including staff who do not write code. Part B is for engineers and gives the exact technical design.
 - **Where it came from:** the owner asked for three things:
   1. a way to test every step of the backup flow and see each part's health, response time and result;
@@ -225,7 +225,7 @@ A run is lost when GitHub has finished but no manifest appears within 30 minutes
 **Evidence from production:**
 - **The 2026-09-24 05:12Z drill** ended with `doctor_failed`: "variable BACKUP_AGE_RECIPIENT: not set". It took 47 s and was billed 1 minute. It left 17 of 27 expected files under `v1/runs/full/…`, where they are locked for 90 days.
 - **The 04:00Z drill** ended `no_manifest` (lost).
-- **A text-encoding bug:** those failure reasons show the section sign double-encoded, so "§" reached D1 as two characters. It is fixed in B6.
+- **Correction (2026-09-24):** an earlier draft reported a text-encoding bug in those failure reasons. There is none. D1 stores the section sign as the bytes `C2 A7`, which is correct UTF-8; the garbled text came from a Windows terminal decoding the query output.
 
 **Layout code:**
 - **Run folders:** `src/backups/run.ts` (`runFolder`, `checkFolder`, `parseRunKey`, `folderForRow`). The runner imports this file directly.
@@ -442,7 +442,7 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 - It never counts as a backup or a check for freshness, cooldown or prune.
 - **Recording:** its `backup_runs` row is marked by its `r2_prefix`, the same way checks are, until cf-admin adds a `kind` value for it. It shows in Runs as "runner test (no data)".
 
-**Encoding fix:** find where the doctor's reasons are decoded as Latin-1 on the way to D1 (the section sign arrives as two characters). Fix the decode, and add a test that fails when stored reasons contain double-encoded UTF-8.
+**No encoding fix is needed:** see the correction in B1.
 
 ### B7. Storage layout v2
 
