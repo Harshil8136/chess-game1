@@ -8,15 +8,16 @@ tags: [program, cf-backup, security, keys, disaster-recovery]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan: nothing in it is built yet. It names routes, files and folders that do not exist yet, in cf-admin and in the future cf-backup repo. -->
+<!-- Built and deployed 2026-09-23/24; the "As built" notes record where the build differs from the plan. It names routes, files and folders in cf-backup's repository, not cf-admin's. -->
 
 # 09 — Backup key management
 
 > **TL;DR.** Backups are stored at **Cloudflare**; the key that opens them is stored at
 > **Supabase** (Vault). Neither half is useful alone. Only the **Owner** and **Vendor
 > support** can bring them together, and only through the backup console (served by
-> cf-backup inside cf-admin), after a fresh sign-in, with every action audited and emailed
-> to both. A new key can be generated **on the spot** with one click. The one thing kept
+> cf-backup inside cf-admin), after a fresh sign-in, with every action audited and a notice
+> sent to the alert recipients (as built, §2 K-4). A new key can be generated **on the spot**
+> with one click. The one thing kept
 > offline is a **recovery kit** (like 2FA recovery codes), needed only if Supabase itself
 > is lost.
 >
@@ -49,7 +50,7 @@ flowchart LR
 
 | Path | Layers to cross |
 |---|---|
-| Through the portal | Cloudflare Access SSO → an **Owner or Vendor** account (no other role can even see these controls) → a fresh sign-in → typed confirmation → the action is audited and **both** people are emailed |
+| Through the portal | Cloudflare Access SSO → an **Owner or Vendor** account (no other role can even see these controls) → a fresh sign-in → typed confirmation → the action is audited and a **notice** goes to the alert recipients (K-4) |
 | Around the portal | Steal the ciphertext (Cloudflare R2, or GitHub's 14-day artifact copy) **and** the key (Supabase Vault, reachable only through three locked-down functions) **or** a recovery kit from a password manager. That means two different providers, or a personal vault |
 | A stolen storage credential alone | Useless: ciphertext only |
 | A Supabase dump alone | Useless: Vault contents stay encrypted in dumps (Supabase documents this) |
@@ -74,7 +75,7 @@ for the length of one request (rotate, reveal, the weekly check, a re-key).
 | K-1 | **One active backup key** (an `age` X25519 key pair). GitHub holds only its **public** half, as the repo variable `BACKUP_AGE_RECIPIENT`. |
 | K-2 | **Private keys live only in Supabase Vault**, named `backup-key:<fingerprint>`. Retired keys **stay** in Vault (never deleted automatically), so old backups always remain openable. |
 | K-3 | **Only Owner and Vendor support** can see key status, rotate, reveal the recovery kit, or download an encrypted run. This is **non-delegable**: no page grant can extend it to another role. cf-backup enforces it on every call (doc 13, the `keys.*` capabilities). |
-| K-4 | **Every key action** requires a fresh sign-in, a typed confirmation and a rate limit (rotate ≤ 1/day, reveal ≤ 3/day per person). The gateway writes `admin_audit_log`, cf-backup writes an `ops/events` record, and **both Owner and Vendor are emailed**, so neither can act unseen. |
+| K-4 | **Every key action** requires a fresh sign-in, a typed confirmation and a rate limit (rotate ≤ 1/day, reveal ≤ 3/day per person). The gateway writes `admin_audit_log`, cf-backup writes an `ops/events` record, and a **notice** is emailed, so neither can act unseen. **As built:** the notice goes to the alert recipients in Settings → Alerts (not to two fixed people): for this rule to hold, both the Owner's and the Vendor's addresses must be on that list. Notices cannot be switched off email, and each email's delivery is tracked (doc 13 §2). |
 | K-5 | **The recovery kit** is the private key shown **once** at creation. Owner and Vendor each save it in their own password manager. It is needed only if the Supabase project is lost, because Vault contents cannot be restored from a dump. |
 | K-6 | **The system checks the key itself, weekly**. No human chores (§4). |
 
@@ -105,7 +106,11 @@ When to rotate: **yearly** (reminder email), **immediately** if a device or acco
 
 This replaces paper shares, key ceremonies and quarterly manual proofs. The only human
 check that stays is the **twice-yearly restore rehearsal**, which compliance needs as
-evidence anyway (§8).
+evidence anyway (§8). **As built (2026-09-24):** whoever decrypts a run with the kit records
+it in the console (Keys → Restore proof: the run key and the date; `keys.rotate`). The
+console shows the newest proof's age, and the daily check raises a `key` reminder when it is
+more than six months old, or when none exists while a good backup does, at most once per
+half-year.
 
 **As built (Ruling R-2):** `backup:key-registry` carries two additive fields beyond the
 shape in [C2](../cf-backup/README.md): `reveals: string[]` (the reveal timestamps behind
@@ -116,10 +121,11 @@ last "I still have my kit" confirmation, the third row above). Both are additive
 
 ## 5. Restoring a backup
 
-1. In the backup console, pick a run → **Download** (Owner/Vendor; the encrypted files stream from R2).
-2. **Reveal key** (Owner/Vendor; fresh sign-in; audited; both emailed), or use your recovery kit.
+1. Fetch the run's files. **As built:** the console downloads them one at a time (the run's Evidence tab, or the Files section; Owner/Vendor, fresh sign-in, each confirmed); there is no whole-run archive, so a full restore fetches the folder with `wrangler r2 object get` (cf-backup's `docs/RESTORE.md` step 1).
+2. **Reveal key** (Owner/Vendor; fresh sign-in; audited; a notice), or use your recovery kit.
 3. On your own machine: `age -d -i key.txt file.age > file`. Then follow the restore steps in doc 03 §8.
 4. Delete the local plaintext and key file afterwards.
+5. Record it: Keys → Restore proof (§4).
 
 ## 6. What if…
 
@@ -137,7 +143,7 @@ last "I still have my kit" confirmation, the third row above). Both are additive
 | Piece | Where | Notes |
 |---|---|---|
 | Three Postgres functions: `backup_key_put(fingerprint, secret)`, `backup_key_get(fingerprint)`, `backup_key_list()` (fingerprints and dates only) | Supabase migration (RULE #0.7) | `SECURITY DEFINER`, wrapping `vault.create_secret` / `vault.decrypted_secrets`; `EXECUTE` revoked from `public`, `anon` and `authenticated`. **No new table** (RULE #0.9): Vault's own table holds the keys |
-| The Vault credential (key 4, OD-24) | Supabase migration + cf-backup secret `SUPABASE_KEYS_URL` | A key-holder role granted `EXECUTE` on the three functions and nothing else (doc 12 §7). **As built:** reached with the `postgres` driver (postgres.js, pinned exact `3.4.9` — the one new dependency this build adds), over the Supavisor **transaction pooler** (port 6543), `prepare: false` (Supavisor's transaction mode does not support prepared statements). Without it, key work is done by hand (doc 12 §7.1) |
+| The Vault credential (key 4, OD-24) | Supabase migration + the Hyperdrive config `cf-backup-vault`, bound to the cf-backup Worker as `VAULT_DB` | A key-holder role granted `EXECUTE` on the three functions and nothing else (doc 12 §7). **As built (2026-09-24):** reached with the `pg` driver through Hyperdrive, over the Supavisor **transaction pooler** (port 6543), with `sslmode verify-full` against Supabase's root CA and query caching off. The earlier Worker secret `SUPABASE_KEYS_URL` and postgres.js are retired. Key 4 is required: the planned by-hand scripts were not built (doc 12 §1) |
 | Key screens: status, rotate, reveal, confirm kit | cf-backup console | Owner/Vendor only (K-3), fresh sign-in, typed confirmation |
 | Updating `BACKUP_AGE_RECIPIENT` | cf-backup, through the GitHub App | Variables r/w (key 3) |
 | First key, before the console exists | The planned `scripts/backup-key-init` (same code path, run once by the Owner) | Needed for P1, since backups start before the P2 console. **As built, load-bearing:** every run's `doctor` fails until `backup:key-registry` holds an active key matching `BACKUP_AGE_RECIPIENT` — the first key must exist **before the first dispatch**, not just before the console |
@@ -159,7 +165,7 @@ Documents that describe unbuilt controls were a finding of the 2026-09-19 review
 
 | Document | Text to add |
 |---|---|
-| `security/SECURITY.md` / `THREAT-MODEL.md` | "Backups are encrypted with a public key before leaving the runner. The private key is held in Supabase Vault, a different provider from the Cloudflare storage that holds the backups. Access to it is limited to the Owner and Vendor-support roles through the admin portal, requires a fresh sign-in, and is audited and notified to both. An offline recovery copy is held by each of the two roles." |
+| `security/SECURITY.md` / `THREAT-MODEL.md` | "Backups are encrypted with a public key before leaving the runner. The private key is held in Supabase Vault, a different provider from the Cloudflare storage that holds the backups. Access to it is limited to the Owner and Vendor-support roles through the admin portal, requires a fresh sign-in, and is audited, with a notice to the configured alert recipients. An offline recovery copy is held by each of the two roles." |
 | `security/RoPA.md` | Backup key custody: Supabase (Vault) as a processor of key material; no personal data in the key itself |
 | `runbooks/disaster-recovery.md` | §5 of this document as the restore procedure; §6 as the key-loss playbook |
 | `architecture/PERMISSIONS-SYSTEM.md` | The non-delegable Owner/Vendor capability class (K-3), enforced in cf-backup behind the `/dashboard/backup` page key |

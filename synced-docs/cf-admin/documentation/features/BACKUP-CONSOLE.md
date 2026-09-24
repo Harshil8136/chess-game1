@@ -2,7 +2,7 @@
 title: "Backup Console (cf-backup, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-23
+last_verified: 2026-09-24
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql, scripts/lib/cron-catalog.mjs]
@@ -17,7 +17,8 @@ tags: [backups, cf-backup, gateway, cron, audit, csp]
 > a separate, private service with no public address; the portal is the only way
 > to reach it, checks who you are first, and records every change anyone makes.
 > Every five minutes the portal also nudges it, so scheduled backups start on
-> time and failure warnings reach the owner by email.
+> time and its alerts are emailed to the alert recipients set in the console
+> (Settings → Alerts), with each email's delivery reported back.
 
 ## 1. What it is
 
@@ -30,8 +31,11 @@ every screen inside the frame and decides what each person may do there
 the page at all.
 
 Every console section has its own address. `/dashboard/backup/runs` frames
-`/dashboard/backup/app/runs`, and `/dashboard/backup/runs/<run key>` opens that
-run, so a section can be bookmarked, reloaded or opened in a new tab. The page,
+`/dashboard/backup/app/runs`, and `/dashboard/backup/runs/<ref>` opens that run,
+where `<ref>` is its run key or, for a run that never got one, its `backup_runs`
+id. `/dashboard/backup/files/<folder>` opens one folder of the backups bucket,
+encoded into that one segment by cf-backup. So a section can be bookmarked,
+reloaded or opened in a new tab. The page,
 `src/pages/dashboard/backup/[...section].astro`, knows only the path *shape*
 (`src/lib/backup-section.ts`): a section of lowercase letters and hyphens, and
 at most one more segment. Anything else is a 404 inside the admin layout. The
@@ -94,6 +98,12 @@ gateway maps its action onto a cf-admin verb, module `backup`
 | `run.download`, `activity.export`, `run.annotate` | `backup_data_access` |
 | `runs.prune` | `backup_prune` |
 
+Actions without a verb of their own reuse one, so they never raise the
+"unrecognised action" warning: confirming a recovery kit and recording a
+restore proof are `keys.rotate` (`op=confirm-kit`, `op=restore-proof`), a
+download from the Files section is `run.download` with `via=files`, and a
+check run (Run now → Check only) is `run.drill`.
+
 The row holds the person, method, path (no query string), status, request id
 (also the row's correlation id) and the summary — never the request body, and
 never the value of a sensitive field. A missing or unknown action is recorded
@@ -129,17 +139,33 @@ its own. The `backup-tick` job rides the portal's five-minute tick
 1. it calls cf-backup's internal tick as the `backup-tick` system actor (25 s);
 2. cf-backup starts any scheduled backup that is due, checks running ones and
    returns the alerts it wants sent;
-3. the job puts each alert on the email queue from cf-admin and acknowledges the
-   ones that were queued. An alert that is not acknowledged is offered again on
-   the next tick, and the email consumer drops a repeat, so a warning is sent at
-   least once and not twice.
+3. the job writes each alert's `email_audit_logs` row (status `queued`, so it
+   shows in the Email Portal's queue logs like any other send), puts the alert
+   on the email queue and acknowledges the ones that were queued. An alert that
+   is not acknowledged is offered again on the next tick, and the email
+   consumer drops a repeat, so a warning is sent at least once and not twice.
+   The sender is cf-backup's configured alert sender (an address on
+   madagascarhotelags.com, checked again here) or the consumer's default;
+4. on a later tick, for the acknowledged alerts cf-backup asks about, the job
+   reads their `email_audit_logs` rows and reports each delivery back
+   (`POST /internal/alerts/delivery`), so the console's Alerts section shows
+   delivered, bounced or failed instead of "queued".
+
+Who gets what is cf-backup's settings, not cf-admin's: the recipients (Settings
+→ Alerts; none by default, so alerts wait until someone is added) and, per kind,
+an email at once, a daily digest, or the dashboard only (Settings →
+Notifications). Notices of key actions and data downloads go to the same
+recipients.
 
 It is tier `essential` (never shed automatically) and costs this Worker no
 database rows when it succeeds. It never throws: failures are logged and
 reported to Sentry at most once an hour. It appears on `/dashboard/cron` like
 every job — it can be paused, throttled or run by hand. If it stops, a weekly
 safety net in GitHub still runs a full backup on Mondays when none has
-succeeded for eight days.
+succeeded for eight days (never while no backup key exists), and a daily
+workflow in cf-backup's repository (`tick-deadman.yml`) fails when the tick has
+not run for an hour, so GitHub's own failed-workflow email warns through a
+path the tick does not own.
 
 ## 7. The `backup_runs` table
 
@@ -160,6 +186,7 @@ cf-admin's own code never reads or writes it; cf-backup and its runner do.
 | cf-backup refuses (e.g. already running) | cf-backup's own message | cf-backup; the audit row carries the status |
 | Tick fails | Nothing in the page; the next tick retries | Job log; Sentry once an hour |
 | Email queue missing or refusing | Alerts held; offered again next tick | Job log; Sentry once an hour |
+| An alert email bounces or fails at the provider | The console's Alerts section shows it failed, after the next delivery report | `email_audit_logs` (the Email Portal) |
 
 ## 9. Operator steps
 
@@ -181,3 +208,4 @@ hourly); the owner and vendor support see it at once.
 | Date | Checked by | Method | Result |
 |---|---|---|---|
 | 2026-09-23 | claude | Built and verified in the `feat/cf-backup-console` worktree (chunk CB-2): `npm run verify`, `npm run types:check`, `node scripts/migrations_manifest.mjs --check` | See the CB-2 chunk record §11. Not yet deployed; no browser check yet (owner step) |
+| 2026-09-24 | claude | On `main` and pushed (Workers Builds deploys every push; cf-backup first, then cf-admin), with the section page, the alert sender, migration `0058` (applied by the release pipeline) and the delivery reports since. Re-read against the code at this commit: `src/lib/backup-section.ts` (path shape), `src/lib/backup-audit.ts` (the verb map), `src/workers/scheduled-backup-tick.ts` (steps 1–4 of §6) | Matches. The console's own screens are cf-backup's (its repository); a browser pass over them stays an owner step |

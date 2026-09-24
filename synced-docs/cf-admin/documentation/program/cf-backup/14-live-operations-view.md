@@ -8,12 +8,13 @@ tags: [program, cf-backup, live, realtime, dashboard, observability]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan: nothing in it is built yet. It names routes, R2 prefixes and screens that do not exist yet. -->
+<!-- Built and deployed 2026-09-23/24; the "As built" notes record where the build differs from the plan. It names routes, files and folders in cf-backup's repository, not cf-admin's. -->
 
 # 14 — The live operations view
 
 > **TL;DR (owner requirement, 2026-09-22: "very important").** The console shows
-> everything that is happening **now**, refreshed every 2 seconds while anything runs:
+> everything that is happening **now**, refreshed every 5 seconds by default while anything runs
+> (Settings → Live view, 5–60 s; the plan's 2 s was raised on 2026-09-24 to match the heartbeat):
 >
 > - whether a backup is queued, running or finishing, and who or what started it;
 > - every step with its status, time and expected finish, plus the live log;
@@ -57,7 +58,7 @@ flowchart LR
     K --> L
     K -->|only when needed, §4| API
   end
-  B[Console in the frame] -->|poll every 2 s while active<br/>If-None-Match| A
+  B[Console in the frame] -->|poll every 5 s while active<br/>If-None-Match| A
 ```
 
 ## 3. Why polling, not a stream
@@ -71,11 +72,13 @@ flowchart LR
   request's `If-None-Match` matches it, `200` with a fresh `etag` otherwise. Phase 1a's
   interim state, where every poll answered `200` because every action still returned 503,
   no longer applies.)*
-- **Cadence** (set in `backup:config`, doc 13 §7):
-  - every **2 s** while something is active and the tab is visible;
-  - every **15 s** when idle;
-  - **paused** while the tab is hidden;
-  - after 30 minutes with no interaction, polling stops behind a "Resume live view" button, so a forgotten tab costs nothing.
+- **Cadence** (set in `backup:config`, doc 13 §7), as built on 2026-09-24:
+  - every **5 s** while something is active and the tab is visible (5–60 s);
+  - every **30 s** when idle (5–300 s), doubling while nothing changes, up to four times that;
+  - **paused** while the tab is hidden, with a fresh poll the moment it is shown again;
+  - after errors, the wait doubles up to 60 s; every wait carries ±10% jitter;
+  - after 15 minutes with no interaction (5–240), polling stops behind a "Resume live view" button, so a forgotten tab costs nothing.
+  - Ages and elapsed times keep counting on the console's own clock between polls, so a `304` never freezes them.
 
 ## 4. The console API
 
@@ -114,6 +117,7 @@ after the cursor. The console appends them.
 - While a run's heartbeat is **fresh**, R2 alone answers. There is one R2 read per poll, and GitHub is not asked.
 - GitHub is asked only in four cases: before a heartbeat exists (queued or starting); when a heartbeat goes stale; right after a dispatch or cancel; and, when idle, to discover a scheduled run that just started. That last check happens at most every 30 s per isolate.
 - Answers are cached in memory for 2 s, so ten people watching cost about what one does.
+- **As built (2026-09-24):** `active` comes from the `backup_runs` rows, and GitHub is asked only about a run a row records, when it has no heartbeat or one older than 20 s (a GitHub failure is cached 10 s). An idle console asks GitHub nothing: the tick records a scheduled run the moment it dispatches it. A source is called "measured" only when this answer actually read it.
 - Installation tokens are minted in memory and reused until they expire; they are never stored.
 
 ## 5. The heartbeat (runner side)
@@ -211,13 +215,15 @@ Doc 13's capabilities apply:
 
 | Resource | While someone watches an active run | Idle |
 |---|---|---|
-| cf-admin requests (count toward 100k/day) | ~30 per minute per viewer, most of them `304` | ~4 per minute per viewer, zero while the tab is hidden |
+| cf-admin requests (count toward 100k/day; each is also one cf-backup invocation) | as built: ~12 live polls a minute per viewer (5 s), each a `304` when nothing changed, plus a log request only when there are new lines | ~2 a minute per viewer (30 s), fewer while nothing changes; zero while the tab is hidden or paused |
 | cf-admin session reads (KV) | one per request, as for every portal request | same |
 | R2 Class B (reads) | one `state.json` read per poll, plus new log chunks | none |
-| GitHub API | only in the cases of §4; well under the 5,000/hour installation limit | one call per 30 s at most |
+| GitHub API | only in the cases of §4; well under the 5,000/hour installation limit | none (as built) |
 
-A heavy day (three people watching ten minutes of runs) is about 2,000 cf-admin requests,
-2% of the daily allowance.
+A heavy day (three people watching ten minutes of runs) is at most about 720 cf-admin
+requests (3 × 10 min × 24 a minute, if every poll also fetched log lines), under 1% of the
+daily allowance; counting cf-backup's own invocation for each, about 1,440 of the account's
+100k.
 
 ## 11. To verify when building
 

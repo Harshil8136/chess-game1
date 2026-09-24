@@ -34,7 +34,7 @@ tags: [program, cf-backup, logs, evidence, usage, free-tier, observability]
 | # | Rule |
 |---|---|
 | RE-1 | **Every execution leaves evidence.** Scheduled run, manual run, local break-glass run (P-19), daily reconcile, minutes meter, key rotation or reveal, prune, encrypted download, schedule enable/disable, and any dispatch that failed before a run existed |
-| RE-2 | **Complete.** Every step's full stdout and stderr, exit code, timings, tool versions, warnings, errors and successes. Nothing is dropped to save space: logs are gzip-compressed instead. A single log above 50 MB uncompressed keeps its first and last 20 MB, with a marker saying what was cut, and the manifest flags it |
+| RE-2 | **Complete.** Every step's full stdout and stderr, exit code, timings, tool versions, warnings, errors and successes. Nothing is dropped to save space: logs are gzip-compressed instead. A single log above 50 MB uncompressed keeps its first and last 20 MB, with a marker saying what was cut, and the manifest flags it. **As built:** those are the defaults of Settings → Evidence; `doctor` passes the saved values to the seal step, so a change applies from the next run |
 | RE-3 | **Nothing sensitive.** Never row data, secret values, connection strings, tokens, personal data or IP addresses (§4) |
 | RE-4 | **One writer per file, written once.** The runner writes the run folder; cf-backup writes a run's `postrun/` once and each `ops/` record once. Only `indexes/` is ever rewritten. Bucket locks enforce it (doc 03 §4) |
 | RE-5 | **Amended 2026-09-23 (D-2).** D1 holds the settings rows (`backup:status`, `backup:config`, `backup:access`, `backup:key-registry`, `backup:secrets-calendar`) **plus one small summary row per operation** in the new `backup_runs` table (D-1/C1): pointers (`r2_prefix`, `run_key`, `gh_run_id`), headline figures (`data_bytes`, `evidence_bytes`, `seconds`, `billed_minutes`), and a one-line, already-redacted `error_message` — never the full evidence or logs, which stay in R2 exactly as designed. cf-admin's gateway writes `admin_audit_log` for human actions, as for every portal action. No evidence goes to KV or Analytics Engine |
@@ -105,7 +105,7 @@ An event record:
    - it scrubs patterns: credentials inside URLs (`scheme://user:pass@`), `Bearer` values, JWT-shaped strings, `age` secret keys, email addresses, IPv4 and IPv6 addresses;
    - **it checks for residue, and fails closed.** It searches the scrubbed file for every secret value again. On any hit, the file is **withheld** and replaced by a placeholder saying why; the manifest records `redaction: failed` and the run verdict gets a `warning`.
 4. **The redactor has its own tests**, with canary secrets in every form it claims to catch (P-2).
-5. **GitHub's archive is stored as GitHub produced it.** It holds nothing GitHub itself does not already keep for 14 days. It is download-only in the console, for Admin and above.
+5. **GitHub's archive is stored as GitHub produced it.** It holds nothing GitHub itself does not already keep for 14 days. It is download-only in the console, for Admin and above. **As built:** from the run detail with `logs.download` (Admin by default); the Files section also serves it with `files.download`, which can be granted per person, below Admin too (doc 13 §2).
 6. Logs are stored **redacted in plain text** so the console can show them (OD-20). The backup *data* is always encrypted.
 
 ## 5. Usage and allowances
@@ -193,6 +193,7 @@ allowance is a run warning and an email (doc 03 §5). It never fails a backup.
 
 - `indexes/runs-<year>.json`: one line per run, with run key, scope, verdict, data and evidence bytes, rows, step and drill seconds (RTO), billed minutes and start delay.
 - `indexes/usage-<year>.json`: one line per day, with each allowance's used, percent and status.
+- **Not built yet (as of 2026-09-24):** neither index file is written, and the viability view does not exist; the Usage screen shows each allowance and cf-backup's own readings instead.
 - **The viability view** (console, Phase 3) is computed on read from those two files, and needs no new storage:
   - each allowance's trend, and the date it would reach 80% at its last 30-day and 90-day growth rate;
   - database growth and backup-size growth;
@@ -202,7 +203,9 @@ allowance is a run warning and an email (doc 03 §5). It never fails a backup.
 
 ## 7. What the console shows
 
-Access floors from [02 §6](02-admin-integration-contract.md#6-permissions-cf-admin-opens-the-door-cf-backup-decides-the-action) apply: all of this is Admin and above; encrypted data downloads are Owner/Vendor only.
+Access floors from [02 §6](02-admin-integration-contract.md#6-permissions-cf-admin-opens-the-door-cf-backup-decides-the-action) apply: all of this is Admin and above by default; encrypted data downloads are Owner/Vendor only. **As built:** capabilities can also be granted per person (doc 13 §4), below Admin too, except the floors.
+
+**As built (2026-09-24):** the Run detail is the run report (Summary, Timeline, Logs, Evidence), and the Summary's raw error lines need `logs.view`; there is no "Operations" screen: Activity (who did what, and each run's outcome), Alerts (every alert and its delivery) and Files (the bucket, folder by folder, the `ops/` records included) cover it; Viability is not built.
 
 | Screen | Content |
 |---|---|
@@ -219,8 +222,8 @@ Access floors from [02 §6](02-admin-integration-contract.md#6-permissions-cf-ad
 | R2 storage | ~0.1–0.3 MB of evidence per run → ~35–100 MB/year; ops records ~5 MB/year; indexes under 1 MB | Estimates until the first runs measure them (S-4, P-22) |
 | R2 operations | ~25 Class A per run + a few per day → ~10k/year, against 1M/month free | Uploads, `postrun/` writes, reconcile |
 | GitHub Actions minutes | Seconds per run for the logger, meter and redactor | GitHub's archive and the account snapshot are fetched by cf-backup, not the runner |
-| Workers | One daily reconcile and a few hourly meter calls | I/O-bound: streamed files and small JSON |
-| D1 | One row written per reconcile (`backup:status`) | RE-5 |
+| Workers | As built: the five-minute tick (288 cf-backup invocations a day, through cf-admin's existing cron), which reconciles, runs the daily and hourly chores and offers alerts | I/O-bound: streamed files and small JSON |
+| D1 | As built: `backup:status` written by a tick only when something changed, or when the stored `lastTickAt` is 10 minutes old | RE-5, p1a M14 |
 
 ## 9. To verify when building
 

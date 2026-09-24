@@ -31,7 +31,7 @@ machine one (doc 11 §5.4), and each snapshot records the value it used.
 
 | Service | What the plan uses | Free limit | Plan's use | Verdict |
 |---|---|---|---|---|
-| Workers requests | console page loads and the live view through cf-admin; one daily reconcile; hourly meter calls | 100k/day, account-wide (*docs*) | A few hundred a day; ~30 a minute per viewer while a run is active, mostly `304`s (doc 14 §10). Service-binding calls are **not** billed as extra requests (*docs*) | ✅ |
+| Workers requests | console page loads and the live view through cf-admin; one daily reconcile; hourly meter calls | 100k/day, account-wide (*docs*) | A few hundred a day, plus the tick's 288; about 12 live polls a minute per viewer while a run is active (the default 5 s refresh), each a `304` when nothing changed, and a log request only when there are new lines (doc 14 §10). Service-binding calls are **not** billed as extra requests (*docs*) | ✅ |
 | Workers CPU | key generation, key check, manifest and index reads, header re-wrap, streaming | 10 ms/invocation; I/O wait excluded (*docs*) | each well under 1 ms; streams pass through untouched; the console is a static bundle | ✅ |
 | Subrequests | reconcile, meter, snapshot, re-key batches | 50 external / 1,000 to Cloudflare services per invocation (*docs*) | batches capped at 20 runs or files; one GraphQL call carries several datasets | ✅ |
 | Cron triggers | none new | 5/account (*docs*, **measured 2026-09-23: 5 of 5 already in use**) | **+0**: one new **job** (`backup-tick`), not a new trigger, rides cf-admin's existing `*/5` tick; it computes due schedule slots, dispatches, reconciles and meters (D-4) | ✅ |

@@ -82,7 +82,7 @@ Internet … only … via an explicit Service binding" (*confirmed*, service bin
 
 ## 4. Bindings
 
-**cf-backup `wrangler.toml`** (IDs come from the live resources; never invent them):
+**cf-backup's Worker config** (`wrangler.json` as built; the plan wrote `wrangler.toml`. IDs come from the live resources; never invent them):
 
 | Binding | Type | Purpose |
 |---|---|---|
@@ -90,7 +90,8 @@ Internet … only … via an explicit Service binding" (*confirmed*, service bin
 | `BACKUPS` | R2 `madagascar-backups` (new) | Read run folders; write `postrun/`, `ops/`, `indexes/`; stream encrypted downloads; prune |
 | `ASSETS` | Static assets | The built console, fetched explicitly with `env.ASSETS.fetch()` (*confirmed* to work from a binding-only Worker) |
 | `STAFF_STORAGE` | R2, **read-only**, Phase 4 only | Source for the staff-files mirror (added when that phase starts) |
-| Secrets | — | **Two:** `GITHUB_APP_PRIVATE_KEY` (the one GitHub key) and `SUPABASE_KEYS_URL` (the key screens only). The other two keys live in GitHub. The full list, and how to set each: [12](12-keys-and-secrets.md). **Never** a backup private key at rest |
+| `VAULT_DB` | Hyperdrive config `cf-backup-vault` | **As built (2026-09-24):** key 4, the Vault login for the key screens, reached with `pg`; it replaced the Worker secret `SUPABASE_KEYS_URL` (doc 12 §7). Added once the owner creates the config |
+| Secrets | — | **One:** `GITHUB_APP_PRIVATE_KEY` (the one GitHub key). Key 4 is the `VAULT_DB` binding above; the other two keys live in GitHub. The full list, and how to set each: [12](12-keys-and-secrets.md). **Never** a backup private key at rest |
 
 **As built (full build, 2026-09-23): no `EMAIL_QUEUE` binding in cf-backup (Ruling R-5).**
 Under D-11, cf-backup never sends mail itself: `POST /internal/tick` returns `alerts[]`,
@@ -129,7 +130,7 @@ accepted 2026-09-23), no new KV namespaces or cron triggers.
 
 ```text
 cf-backup/
-├── wrangler.toml                # one Worker; no routes; workers_dev = false; preview_urls = false
+├── wrangler.json                # one Worker; no routes; workers_dev false; preview_urls false
 ├── vite.config.ts               # Cloudflare Vite plugin; built assets under /dashboard/backup/app/assets/
 ├── src/
 │   ├── worker.ts                # entry: fetch (console assets + API) and the internal endpoints
@@ -150,7 +151,7 @@ cf-backup/
 │   ├── keys/                    # age keygen, Vault calls (via lib/vault), weekly key check (doc 09)
 │   ├── github/                  # the GitHub App client: JWT signing, installation tokens, dispatch (D-10)
 │   ├── dev/                     # local-only dev simulation, wired only in `vite dev` on localhost
-│   └── lib/                     # R2, D1, postgres.js (Vault), redaction, logger
+│   └── lib/                     # R2, D1, pg through Hyperdrive (Vault), redaction, logger
 ├── scripts/backup/              # the pipeline's logic, run by the workflow (P-2), unit-tested
 ├── sql/supabase/                # C10: 01_backup_reader.sql, 02_backup_keys.sql, 03_backup_keyholder.sql (owner-run)
 ├── .github/workflows/
@@ -170,9 +171,10 @@ Conventions to copy from cf-admin (they were paid for in incidents): the ratchet
 and the rule that a doc is part of done. **Dependencies** (each needs owner approval under
 the whitelist policy): `preact`, `lucide-preact`, `zod`, `tailwindcss` +
 `@tailwindcss/vite`; dev-only `vite`, `@cloudflare/vite-plugin`, `wrangler`, `vitest`,
-`@cloudflare/vitest-pool-workers`, `typescript`; plus `postgres` (postgres.js, pinned exact
-`3.4.9`) for OD-24's Vault access — **the only dependency this build adds** to the Worker,
-and the runner adds none at all (D-8). No Astro, no SSR framework.
+`@cloudflare/vitest-pool-workers`, `typescript`; plus, for OD-24's Vault access, **as built
+(2026-09-24)** `pg` (pinned exact `8.16.3`, through the `VAULT_DB` Hyperdrive binding; it
+replaced postgres.js) — **the only dependency this build adds** to the Worker, and the
+runner adds none at all (D-8). No Astro, no SSR framework.
 
 **Approved 2026-09-23 for Phase 1a, exact versions:** preact 10.29.8; dev-only vite 8.3.0,
 @cloudflare/vite-plugin 1.57.3, @preact/preset-vite 2.10.6, @babel/core 7.29.7, wrangler
