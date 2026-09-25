@@ -1,5 +1,8 @@
 # 06: The plan
 
+> **Replaced where they differ by [10-robust-plan.md](10-robust-plan.md)** (second review,
+> 2026-09-25). Its rehearsal job and fixes carry on inside 10's Stage 2.
+
 Recommended path D from [05](05-options.md). Every phase ends with evidence (a run link or a file
 in the bucket), never with "the tests pass".
 
