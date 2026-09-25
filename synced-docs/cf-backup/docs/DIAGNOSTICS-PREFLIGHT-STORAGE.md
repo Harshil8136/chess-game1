@@ -878,7 +878,7 @@ Fixes from the final review of Stages 1–3, made before Stage 4 starts.
 
 The first commit moves every storage address into one place, changing none of them. The second switches every writer to the new layout and makes every reader accept both. The third brings the restore guide, its test and these docs up to date.
 
-Built: B7. **Not live yet:** Stage 4 is committed but not yet pushed or deployed, so until the deploy everything is still written in the old layout. The switch date below assumes the deploy lands on 2026-09-25.
+Built: B7. **Live since 2026-09-25 at 02:49 UTC:** the Worker was deployed from commit `062e15b`. The push was made while no run was active, about six and a half hours before the next scheduled run. The deploy landed on 2026-09-25, as the dates below assume, and from then on every new run, record and working file is written in the new layout.
 
 #### For everyone
 
