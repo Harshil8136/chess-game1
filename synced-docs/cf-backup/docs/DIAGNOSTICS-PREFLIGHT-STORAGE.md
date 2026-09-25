@@ -982,6 +982,19 @@ Three fixes from the owner's first live results after Stage 4:
 - **A quick re-run is no longer shown as an error.** Running the same step again within 15 seconds now shows a plain note: "Just tested — you can run this step again in N s", with the time of the results shown below it. Nothing changed on the server: one person can still run the same step once every 15 seconds.
 - **For engineers:** the storage-room test now declares 2 external calls (its database read, and one storage read of the saved count), so a backup's or a drill's pre-flight declares 19, still within the 20 a step may declare.
 
+### Runner output fix (2026-09-25)
+
+Every real backup and drill failed at doctor, because of a check on output names. This is now fixed.
+
+- **What happened.** The owner ran the first manual full backup after creating the first backup key. Every doctor check passed; the only warning was that the Cloudflare token has no expiry date. Then doctor stopped with "bad step output d1_ok" while telling GitHub which stores could run. GitHub skipped the D1 and Postgres steps, nothing was exported, and the run failed with "no backup was taken" for every store.
+- **Why.** The runner checks each output name before it hands it to GitHub. Since 2026-09-23 that check allowed only lowercase letters and underscores, so it refused `d1_ok`, which has a digit. The doctor tests used a stand-in for GitHub's output file that accepted any name, so they never saw the problem. A runner test still looked fine, because its result comes from doctor's own record, not from the outputs.
+- **The fix.** An output name may now hold digits: a lowercase letter first, then lowercase letters, digits and underscores, which GitHub accepts. New tests write through the real output file, with and without GitHub. They also check every output name the workflow reads against the rule, so this kind of mistake fails the tests.
+- **Truthful error codes.** That run was recorded as `drill_failed`, although it was a backup and no drill ran.
+  - A doctor that stops on an error outside its checks now writes the error line into its record. The run is then recorded as `doctor_failed`, with that line as its message and first reason. Like a halted run, it does not count toward Run now's cooldown.
+  - A restore-drill problem is `drill_failed` only when a drill failed. A store that never ran is `backup_not_taken`, and an export that failed before its drill is `export_failed`.
+- **The token without an expiry date** now shows as a pass, not a warning (see Decisions).
+- The runner runs from `main`, so the fix applies from the next run after the push.
+
 ## Decisions made during the build
 
 The design above left some questions open, and building it raised a few more. Claude decided each one so the work would not stall, and the owner can reverse any of them. Each entry gives what was decided, why, and what it would cost if it turns out wrong.
@@ -999,6 +1012,7 @@ The design above left some questions open, and building it raised a few more. Cl
 - **A run that finished in the old layout still gets its after-run files in its old folder** (Stage 4), not in the new one. Each old run then stays whole and is removed whole. *If wrong:* a few small files are written under `v1/` after the switch, which can push back the date `v1/` may be removed; the Stage 4 entry says to check the newest object first.
 - **The Files section opens at the top of the bucket** (Stage 4), with both layouts side by side, rather than inside the new layout. *If wrong:* one more click to reach a run.
 - **A run report cached in the old layout is gathered again** (Stage 4) instead of being read. *If wrong:* opening an old run's report does a little more work once.
+- **The Cloudflare token may stay without an expiry date** (owner decision, 2026-09-25). The design asked for a 12-month expiry, and doctor warned about a token without one. The owner accepted the token as it is, so doctor now reports it as a pass and says the owner accepted it. A token that does expire is still warned about 30 days ahead. *If wrong:* nothing prompts the yearly rotation except the date recorded in the secrets calendar.
 
 ### Places where the plan's own numbers or code were wrong
 - **The redaction step itself threw an error** on detail text between 500 and 2,048 characters. It now redacts field by field. *If wrong:* nothing; the stored shape is the same.
