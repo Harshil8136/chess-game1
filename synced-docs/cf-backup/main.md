@@ -4,6 +4,9 @@ This repository is **cf-backup** — the Cloudflare-native backup engine and emb
 
 ## Read these first, in order
 
+0. [`docs/remediation/README.md`](./docs/remediation/README.md) — **the active data protection
+   remediation program** (2026-09-25): no recovery point exists yet; its plan and decisions take
+   precedence over other pending work.
 1. [`docs/HANDOFF.md`](./docs/HANDOFF.md) — read this first when resuming: what is done,
    what is pending, the rulings made along the way, and the open decisions for the owner.
 2. [`docs/plans/2026-09-23-start-p0-p1a.md`](./docs/plans/2026-09-23-start-p0-p1a.md) — the Start Plan (Phase 0 unblock, Phase 1a skeleton, Part B build tasks). Historical: that build is done and deployed; `docs/HANDOFF.md` holds the current state.

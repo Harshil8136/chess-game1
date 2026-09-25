@@ -54,8 +54,8 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    `.github/workflows/sync-docs.yml` copies to `Harshil8136/chess-game1`
    (`synced-docs/cf-backup/`) only the files named in `PUBLISHED_DOCS`
    (`scripts/backup/lib/docs-mirror.ts`): `README.md`, this file, `main.md`,
-   `docs/RESTORE.md`, `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md` and the recovery plan in
-   `docs/recovery/` (`README.md` and `01` to `10`).
+   `docs/RESTORE.md`, `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md` and the remediation program in
+   `docs/remediation/` (`README.md` and `01` to `11`).
    - Every other file is private until it is added to that list in a reviewed commit. The
      list says why the rest stays private: `docs/OWNER-SETUP.md` names live account
      identifiers.
