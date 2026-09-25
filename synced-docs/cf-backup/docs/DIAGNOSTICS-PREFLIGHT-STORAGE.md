@@ -971,6 +971,15 @@ inside every <run>/:
   - Deploy while no run is active. A run in flight at the deploy writes its live view under `v1/live/`, which the new Worker does not read: the console falls back to GitHub, and the log appears when the run ends.
   - If the deploy lands on a later UTC day than 2026-09-25, `LAYOUT_V2_SINCE`, the restore guide's "Runs from before" heading and the dates in this entry change with it; the restore-guide test holds the heading to the constant.
 
+### Diagnostics tidy-up (2026-09-25)
+
+Three fixes from the owner's first live results after Stage 4:
+
+- **Settings rows that are not saved yet now pass.** A missing row whose built-in defaults apply is normal, so the settings test no longer warns about it. It says where each one is saved for the first time (the Access page, or the secrets calendar in Settings), or what creates it (Keys, Rotate). It warns only when a saved row cannot be read. Readiness uses the same words.
+- **The storage-room test has a reading to use.** Each time the Usage page counts the bucket, it now also saves that count, with its time, in a small working file. The storage-room test reads that file, so it runs even when a scheduled run's pre-flight starts it. It says how old the count is, warns when the count is more than 48 hours old, and never counts the bucket itself.
+- **A quick re-run is no longer shown as an error.** Running the same step again within 15 seconds now shows a plain note: "Just tested — you can run this step again in N s", with the time of the results shown below it. Nothing changed on the server: one person can still run the same step once every 15 seconds.
+- **For engineers:** the storage-room test now declares 2 external calls (its database read, and one storage read of the saved count), so a backup's or a drill's pre-flight declares 19, still within the 20 a step may declare.
+
 ## Decisions made during the build
 
 The design above left some questions open, and building it raised a few more. Claude decided each one so the work would not stall, and the owner can reverse any of them. Each entry gives what was decided, why, and what it would cost if it turns out wrong.
