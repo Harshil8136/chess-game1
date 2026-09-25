@@ -488,7 +488,7 @@ Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
 2. Deploy the new writer while no run is active. The first run after the deploy writes v2.
 3. Update `docs/RESTORE.md`: the `PREFIX=` line and every data path. Extend `test/runner/restore-doc.test.ts` so it also checks the `PREFIX=` line against `layout.ts`. Today that line is untested.
 4. Update the stale plan-of-record docs 03 §4 and 11 §2–3 to the real layout, including `checks/` and `system/`.
-5. From about 2026-12-23, when the last `v1/` lock ends, prune `v1/` and remove its three lock rules.
+5. From 2026-12-24 (90 days after the deploy), when the last `v1/` lock ends, prune `v1/` and remove its three lock rules.
 
 **Out of scope:** copying the old objects. They are test drills, not backups, and copying locked objects would only duplicate them.
 
@@ -874,6 +874,103 @@ Fixes from the final review of Stages 1–3, made before Stage 4 starts.
 - The halted message is now shared by the runner and the Worker from one place, so the 5-minute check recognises a halted run by the runner's own words.
 - Tests: the probe core, the platform, record and GitHub tests, the pre-flight and manual-run tests, and the reconcile tests each gained cases for these fixes.
 
+### Stage 4: the new storage layout (2026-09-24, commits `1c7088d` and `f1ac864`, then the restore guide and these docs)
+
+The first commit moves every storage address into one place, changing none of them. The second switches every writer to the new layout and makes every reader accept both. The third brings the restore guide, its test and these docs up to date.
+
+Built: B7. **Not live yet:** Stage 4 is committed but not yet pushed or deployed, so until the deploy everything is still written in the old layout. The switch date below assumes the deploy lands on 2026-09-25.
+
+#### For everyone
+
+- **Four top-level folders instead of eight:**
+  - `backups/` holds the backups: `full/` (weekly full runs and restore drills) and `daily/` (the Supabase-only runs), one folder per month, then one per run;
+  - `checks/` holds checks and runner tests, which are never backups;
+  - `ops/` holds cf-backup's own records, one folder per month and day;
+  - `system/` holds working files: the live view, caches, the account snapshot, exports and test files.
+- **Fewer levels.** A backup file now sits 5 folders deep instead of 8: `backups/full/2026-10/<run>/data/d1-madagascar-db.sql.gz.age`, where it used to be `v1/runs/full/2026/10/<run>/data/d1/madagascar-db.sql.gz.age`.
+- **Inside a run folder:** `manifest.json`, `report.md` and `checksums.sha256`, then two folders with no subfolders:
+  - `data/`, the encrypted backup. Each file took its old folder's name as a prefix: `data/d1/madagascar-db.sql.gz.age` is now `data/d1-madagascar-db.sql.gz.age`, and `data/postgres/roles.sql.gz.age` is now `data/postgres-roles.sql.gz.age`;
+  - `evidence/`, everything else. Every file kept its old name.
+- **Nothing was moved or copied.** Everything written before the switch stays where it is, under `v1/`, which the Files section shows as **Old layout (before 2026-09-25)**. Runs recorded before the switch open in the console as before, because each run's record keeps its own folder.
+- **The Files section** opens at the top of the bucket, where both layouts show side by side, and each folder says what it holds.
+- **Checks and runner tests** are in `checks/`, outside `backups/`, so they can never be counted or protected as a backup.
+- **The storage test files** are now written to `system/diagnostics/` (Diagnostics) and `system/preflight/` (the runner). When Diagnostics' test file is written and read back but cannot be deleted, the storage test now shows a warning (amber) instead of a pass.
+- **The restore guide** (docs/RESTORE.md) uses the new folder and file names, and has a section for runs from before 2026-09-25. A test now fails the build if the guide's folder line or its file names drift from what the code writes.
+- **Protection (bucket lock rules).** Three new rules stop anyone, even with a leaked key, deleting or overwriting what is in the new folders before its time:
+  - `backups-full`: `backups/full/`, 90 days;
+  - `backups-daily`: `backups/daily/`, 30 days;
+  - `ops-v2`: `ops/`, 90 days.
+
+  The three old rules (`v1/runs/full/` 90 days, `v1/runs/daily/` 30 days, `v1/ops/` 90 days) stay until the old layout's protection ends, so the bucket has six rules until then. `checks/` and `system/` are not protected, as before.
+- **The switch date is 2026-09-25.** From the deploy on, every new run, record and working file is written in the new layout.
+- **When `v1/` can be removed:** 90 days after the newest object in `v1/runs/full/` or `v1/ops/`.
+  - The newest run in the old layout was requested on 2026-09-24 at 05:12 UTC, so its folder is protected until 2026-12-23.
+  - Until the new version is deployed, cf-backup keeps writing its own records to `v1/ops/`, so the real date is 90 days after the deploy: **2026-12-24** if it lands on 2026-09-25.
+  - Before removing it, check the newest object under `v1/ops/` and `v1/runs/full/` in the Files section and add 90 days. Then prune `v1/` and remove its three lock rules.
+- **The Files and Usage pages were redesigned.**
+  - Files: a toolbar for reading a file (find, wrap lines, line numbers, tidy JSON, copy), a details drawer for each folder, and an icon for each kind of file. Backup data is still marked in words, and a folder's size appears only once storage has counted it.
+  - Usage: the cards are grouped by service (Cloudflare, GitHub, Supabase), with buttons to show one service at a time. Each card still says how, when and where its figure was read.
+  - A second AI coding assistant (Antigravity) built this redesign. It was reviewed and fixed before it shipped.
+- **After the deploy:** the next run's record should point at a folder that starts with `backups/` or `checks/`. The Runner test on the Diagnostics page (about 1–2 GitHub Actions minutes, filed under `checks/`) is the quickest way to see it. The result will be recorded here.
+
+**Before (layout v1, until the switch):**
+```
+v1/
+├── runs/full/2026/09/<run>/            (and runs/daily/…)
+│   ├── manifest.json, report.md, checksums.sha256
+│   ├── data/d1/…   data/postgres/…     (the encrypted backup)
+│   └── verify/  logs/  usage/  env/  postrun/
+├── checks/2026/09/<run>/
+├── ops/days/2026/09/24.json   ops/events/2026/09/24/…
+└── indexes/  live/  usage/  postrun/  exports/
+```
+
+**After (layout v2, from the switch):**
+```
+backups/
+├── full/2026-09/<run>/                 kept 90 days (rule backups-full)
+└── daily/2026-09/<run>/                kept 30 days (rule backups-daily)
+checks/2026-09/<run>/                   checks and runner tests, not protected
+ops/2026-09/24/                         day.json and events/, kept 90 days (rule ops-v2)
+system/                                 live/  indexes/  usage/  exports/  postrun-fallback/
+                                        diagnostics/  preflight/ (not protected)
+v1/                                     the old layout, read only, until its protection ends
+
+inside every <run>/:
+    manifest.json   report.md   checksums.sha256
+    data/        d1-<database>.sql.gz.age and d1-<database>.schema.sql.gz.age for each D1
+                 database; postgres-roles, -schema, -data and -migrations-history.sql.gz.age
+    evidence/    source-counts.json … drill.json, run.log.gz, events.jsonl.gz, steps.json,
+                 run-meter.json … account.json, doctor.json, tools.json, and after the run
+                 github-run.json, github-logs.zip, github-usage.json, postrun.json
+```
+
+#### For engineers
+
+- **One layout module:** `src/backups/layout.ts` builds every key and prefix. Task 14 moved each builder there unchanged; Task 15 switched them to v2, with `LAYOUT_V2_SINCE = '2026-09-25'`. The old builders remain as `V1`, read only.
+- **File names inside a run folder:** `RUN_FILES`, `d1DataFiles` and `POSTGRES_DATA_FILES` in `src/backups/wire.ts`, each evidence file with its v1 path beside it (the rename table is in the comment above `RUN_FILES`). `runFilePath(folder, id)` and `postrunDir(folder)` answer in the folder's own layout. The manifest says `layout: 'v2'`.
+- **Readers follow the row, not today's layout.** `folderForRow` keeps a row's stored `r2_prefix`. A row with no prefix resolves by its run key's date against `LAYOUT_V2_SINCE` (`folderLike`). Reconcile finalises a manifest into the folder it read it from.
+- **What still writes under `v1/`:** only the Worker's after-run files for a run that finished in v1, into that run's own `postrun/` (or `v1/postrun/…`), so an old run stays whole and is pruned whole.
+- **Fallbacks to v1,** each a second read only when v2 has nothing: the account snapshot, a month's minutes tally, an unfinished prune plan. A day's ops events are listed under both `ops/<YYYY-MM>/<DD>/events/` and `v1/ops/events/<YYYY>/<MM>/<DD>/`, so the days around the switch read whole. A run-report cache under `v1/indexes/` is not read; the report is gathered again.
+- **Checks:** `isCheckPrefix`, `IS_A_CHECK_SQL` and `NOT_A_CHECK_SQL` match both `checks/` and `v1/checks/`, and a NULL prefix is still not a check. `check-mode.test.ts` runs the SQL in SQLite.
+- **The download floor** (`isBackupDataKey`) covers any `.age` file; anything under a `data/` folder of `backups/` or `checks/` (and of `v1/runs/` or `v1/checks/`); a backup's `checksums.sha256`; everything under `v1/mirror/`; and any key outside both layouts. It never covers `evidence/`, `ops/` or `system/`.
+- **Diagnostics:**
+  - `r2.list` lists one key at the bucket root, which is valid for both layouts;
+  - `r2.canary` writes `system/diagnostics/canary-<uuid>`. A transient DELETE failure after a clean round trip is a `warn`, not retried; a permanent one still fails;
+  - the runner's `r2-canary` writes `system/preflight/canary-<runKey>`;
+  - `gh.minutes` declares 2 external calls, because it may read the old tally too. A backup's or a drill's pre-flight now declares 18, a check's 13 and a runner test's 9.
+- **Documented lock rules:** `DOCUMENTED_LOCK_RULES` (`src/files/layout.ts`) lists the three v2 rules, then the three v1 rules, with `LOCK_DAYS` `{ full: 90, daily: 30, ops: 90 }`. The Worker cannot read lock rules, so these are the documented configuration (docs/OWNER-SETUP.md §1).
+- **The restore-guide test** (`test/runner/restore-doc.test.ts`) evaluates the guide's two `PREFIX=` lines as bash would, for four run keys in both scopes, and requires the folders `runFolder()` and `V1.runFolder()` build. It also requires every data file `expectedRunFiles` lists, with its decrypted name, and the two evidence files the guide's commands read, in both layouts. Deliberate drift in the guide, and in `layout.ts` and `wire.ts`, made it fail every time.
+- **Corrections to B7:**
+  - No evidence file needed a new name: the flattened names do not collide, and the after-run files were already named `github-…` and `postrun.json`.
+  - The data files did take a prefix, their old folder's name (`d1-`, `postgres-`).
+  - `isBackupDataKey` covers more than `backups/…/data/`: see the download floor above.
+  - Step 5's date is 2026-12-24, not about 2026-12-23: cf-backup writes its own records to `v1/ops/` until the deploy, so the last old-layout lock ends 90 days after it.
+- **Deploy notes:**
+  - The runner runs from `main` when a job starts, but the Worker changes only when Workers Builds passes `verify`. Confirm the Worker deployed before the next scheduled slot, or the old Worker would record a v2 run's folder as a v1 folder.
+  - Deploy while no run is active. A run in flight at the deploy writes its live view under `v1/live/`, which the new Worker does not read: the console falls back to GitHub, and the log appears when the run ends.
+  - If the deploy lands on a later UTC day than 2026-09-25, `LAYOUT_V2_SINCE`, the restore guide's "Runs from before" heading and the dates in this entry change with it; the restore-guide test holds the heading to the constant.
+
 ## Decisions made during the build
 
 The design above left some questions open, and building it raised a few more. Claude decided each one so the work would not stall, and the owner can reverse any of them. Each entry gives what was decided, why, and what it would cost if it turns out wrong.
@@ -888,6 +985,9 @@ The design above left some questions open, and building it raised a few more. Cl
 - **History keeps the last 20 results for each step**, rather than 20 in total, so every test has its own trend. *If wrong:* the stored history is a little larger.
 - **A halted run is recorded as `doctor_failed`, not `preflight_failed`.** The Run-now cooldown already lets `doctor_failed` runs off, so a new code would have locked the owner out for 6 hours after every halt. *If wrong:* only the wording differs from the design.
 - **The runner test is shown as costing about 1–2 GitHub minutes**, not 1. The tools step downloads the Postgres image, and the real figure will be recorded after the first live runner test. *If wrong:* the stated cost is higher than it really is.
+- **A run that finished in the old layout still gets its after-run files in its old folder** (Stage 4), not in the new one. Each old run then stays whole and is removed whole. *If wrong:* a few small files are written under `v1/` after the switch, which can push back the date `v1/` may be removed; the Stage 4 entry says to check the newest object first.
+- **The Files section opens at the top of the bucket** (Stage 4), with both layouts side by side, rather than inside the new layout. *If wrong:* one more click to reach a run.
+- **A run report cached in the old layout is gathered again** (Stage 4) instead of being read. *If wrong:* opening an old run's report does a little more work once.
 
 ### Places where the plan's own numbers or code were wrong
 - **The redaction step itself threw an error** on detail text between 500 and 2,048 characters. It now redacts field by field. *If wrong:* nothing; the stored shape is the same.
@@ -924,7 +1024,7 @@ The design above left some questions open, and building it raised a few more. Cl
   - the pre-flight permission summary;
   - a rotation message's "only … seconds into this request";
   - Rotate showing no specific hint after a wrong Vault password.
-- **A test file that could be left behind:** a 32-byte R2 test file can be left behind if its delete fails once, while the test still passes. Stage 4 moves these files and should make that case show amber.
+- **A test file that could be left behind:** a 32-byte R2 test file can be left behind if its delete fails once, while the test still passes. **Done in Stage 4 for Diagnostics:** that case now shows amber. The runner's own storage test still fails the run on a delete-only failure; decide whether it should warn instead.
 - **A very narrow race:** a run that starts between two checks gets a pre-flight refusal instead of "already running".
 - **Two gaps in the tests:**
   - the storage-room test rarely runs inside the 5-minute timer;

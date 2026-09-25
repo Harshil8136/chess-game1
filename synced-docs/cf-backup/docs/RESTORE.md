@@ -10,7 +10,7 @@
 | You need | Where it comes from |
 |---|---|
 | The run key, e.g. `2026-10-04_full_gh12345678901a1` | Console → Runs. Prefer the newest run whose verdict is `ok`. |
-| The run folder | Step 1 |
+| The run folder | Step 1 (the run's Evidence tab in the console shows it too) |
 | The private key (one line, `AGE-SECRET-KEY-1…`) | Console → Keys → Reveal (Owner/Vendor, fresh sign-in, at most 3 reveals a day per person), or your recovery kit |
 | `age` 1.3 or newer | github.com/FiloSottile/age/releases (`age --version`) |
 | This repository, after `npm ci` | for `npx wrangler`; sign in once with `npx wrangler login` |
@@ -27,11 +27,18 @@ Evidence → Run folder detail, or the Files section. Each `data/` file and `che
 needs the `runs.download` capability (Owner or Vendor), a sign-in less than 10 minutes old, and
 its own confirmation.
 
+A full run or a restore drill is in `backups/full/<YYYY-MM>/<run key>/`, and a Supabase-only run
+in `backups/daily/<YYYY-MM>/<run key>/`, where `<YYYY-MM>` is the month at the start of the run
+key. The run's Evidence tab shows the same folder as "Run folder in the backups bucket". If that
+folder starts with `v1/`, the run is in the old layout, from before the switch on 2026-09-25:
+follow [Runs from before 2026-09-25](#runs-from-before-2026-09-25) as well. A check or a runner test
+(a folder under `checks/`) keeps no data, so there is nothing to restore from it.
+
 **With Cloudflare working (the normal case):**
 
 ```bash
 RUN_KEY=2026-10-04_full_gh12345678901a1
-PREFIX="v1/runs/full/${RUN_KEY:0:4}/${RUN_KEY:5:2}/$RUN_KEY"     # Supabase-only runs: v1/runs/daily/…
+PREFIX="backups/full/${RUN_KEY:0:7}/$RUN_KEY"     # Supabase-only runs: backups/daily/…
 npx wrangler r2 object get "madagascar-backups/$PREFIX/manifest.json" --remote --file manifest.json
 npx wrangler r2 object get "madagascar-backups/$PREFIX/checksums.sha256" --remote --file checksums.sha256
 node -e "for (const f of require('./manifest.json').files) console.log(f.path)" > files.txt
@@ -84,16 +91,28 @@ fingerprint matches this run and decrypt with that one.
 ## 4. Decrypt
 
 ```bash
-for f in data/d1/*.age data/postgres/*.age; do
+for f in data/*.age; do
   age -d -i key.txt -o "${f%.age}" "$f"
   gunzip -f "${f%.age}"
 done
-ls data/d1 data/postgres
+ls data
 ```
 
-You now have `data/postgres/roles.sql`, `data/postgres/schema.sql`, `data/postgres/data.sql`,
-`data/postgres/migrations-history.sql`, and for a full run `data/d1/<database>.sql` plus
-`data/d1/<database>.schema.sql` for each D1 database. A Supabase-only run has no `data/d1/`.
+`data/` has no subfolders. A full run holds all ten files below; a Supabase-only run holds only
+the four `postgres-` files.
+
+| In the run folder (encrypted) | Once decrypted | Used in |
+|---|---|---|
+| `data/postgres-roles.sql.gz.age` | `data/postgres-roles.sql` | step 5 |
+| `data/postgres-schema.sql.gz.age` | `data/postgres-schema.sql` | step 5 |
+| `data/postgres-data.sql.gz.age` | `data/postgres-data.sql` | step 5 |
+| `data/postgres-migrations-history.sql.gz.age` | `data/postgres-migrations-history.sql` | step 5 |
+| `data/d1-madagascar-db.sql.gz.age` | `data/d1-madagascar-db.sql` | step 6 |
+| `data/d1-chatbot-kb.sql.gz.age` | `data/d1-chatbot-kb.sql` | step 6 |
+| `data/d1-whatsapp-chatbot.sql.gz.age` | `data/d1-whatsapp-chatbot.sql` | step 6 |
+| `data/d1-madagascar-db.schema.sql.gz.age` | `data/d1-madagascar-db.schema.sql` | not needed: structure only (P-5) |
+| `data/d1-chatbot-kb.schema.sql.gz.age` | `data/d1-chatbot-kb.schema.sql` | not needed: structure only |
+| `data/d1-whatsapp-chatbot.schema.sql.gz.age` | `data/d1-whatsapp-chatbot.schema.sql` | not needed: structure only |
 
 > **Not in the backup.** Plan for these before you need them:
 >
@@ -119,12 +138,12 @@ Restore in exactly this order, all or nothing:
 
 ```bash
 psql --single-transaction --variable ON_ERROR_STOP=1 \
-  --file data/postgres/roles.sql \
-  --file data/postgres/schema.sql \
+  --file data/postgres-roles.sql \
+  --file data/postgres-schema.sql \
   --command 'SET session_replication_role = replica' \
-  --file data/postgres/data.sql \
+  --file data/postgres-data.sql \
   --dbname "$NEW_DB_URL"
-psql --single-transaction --variable ON_ERROR_STOP=1 --file data/postgres/migrations-history.sql --dbname "$NEW_DB_URL"
+psql --single-transaction --variable ON_ERROR_STOP=1 --file data/postgres-migrations-history.sql --dbname "$NEW_DB_URL"
 ```
 
 Any error stops and rolls the whole file back: fix the cause and rerun on an empty database.
@@ -133,7 +152,7 @@ Then check every table against what the dump held:
 ```bash
 cat > counts.mjs <<'EOF'
 import { readFileSync } from 'node:fs';
-const dumped = JSON.parse(readFileSync('verify/source-counts.json', 'utf8')).databases.postgres.dumped;
+const dumped = JSON.parse(readFileSync('evidence/source-counts.json', 'utf8')).databases.postgres.dumped;
 const q = (s) => `"${s.replace(/"/g, '""')}"`;
 console.log(Object.keys(dumped).map((t) => { const i = t.indexOf('.'); return `SELECT '${t}', count(*), ${dumped[t]} FROM ${q(t.slice(0, i))}.${q(t.slice(i + 1))}`; }).join('\nUNION ALL ') + ';');
 EOF
@@ -174,22 +193,23 @@ From this backup, always into a **new** database, never over production:
 ```bash
 DAY=$(date +%Y%m%d)
 npx wrangler d1 create madagascar-db-restore-$DAY --location enam
-npx wrangler d1 execute madagascar-db-restore-$DAY --remote --yes --file data/d1/madagascar-db.sql
+npx wrangler d1 execute madagascar-db-restore-$DAY --remote --yes --file data/d1-madagascar-db.sql
 ```
 
-Do the same for `chatbot-kb` and `whatsapp-chatbot`. `chatbot-kb.sql` recreates the `kb_search`
-full-text table and rebuilds its index from `knowledge_base`; prove it:
+Do the same for `chatbot-kb` (`data/d1-chatbot-kb.sql`) and `whatsapp-chatbot`
+(`data/d1-whatsapp-chatbot.sql`). `d1-chatbot-kb.sql` recreates the `kb_search` full-text table
+and rebuilds its index from `knowledge_base`; prove it:
 
 ```bash
 npx wrangler d1 execute chatbot-kb-restore-$DAY --remote --command "INSERT INTO kb_search(kb_search) VALUES('integrity-check')"
 ```
 
-Check the counts against the drill's (`verify/restored-counts.json`; the drill restored the same file):
+Check the counts against the drill's (`evidence/restored-counts.json`; the drill restored the same file):
 
 ```bash
 cat > d1counts.mjs <<'EOF'
 import { readFileSync } from 'node:fs';
-const counts = JSON.parse(readFileSync('verify/restored-counts.json', 'utf8')).databases[`d1:${process.argv[2]}`];
+const counts = JSON.parse(readFileSync('evidence/restored-counts.json', 'utf8')).databases[`d1:${process.argv[2]}`];
 console.log(Object.keys(counts).map((t) => `SELECT '${t}' AS t, COUNT(*) AS n, ${counts[t]} AS expected FROM "${t.replace(/"/g, '""')}"`).join(' UNION ALL '));
 EOF
 npx wrangler d1 execute madagascar-db-restore-$DAY --remote --json --command "$(node d1counts.mjs madagascar-db)" \
@@ -263,7 +283,7 @@ D1 `booking_attempts` / `consent_attempts` rows for the same people are purged t
 ## 9. Clean up
 
 ```bash
-rm -f key.txt data/d1/*.sql data/postgres/*.sql counts.sql counts.mjs d1counts.mjs legal_requests_after.csv files.txt
+rm -f key.txt data/*.sql counts.sql counts.mjs d1counts.mjs legal_requests_after.csv files.txt
 docker rm -f restore-pg                                                  # if you used the local container
 npx wrangler d1 delete madagascar-db-restore-$DAY --skip-confirmation    # only if this was a rehearsal
 ```
@@ -279,6 +299,52 @@ problem, in `docs/records/<date>-restore-rehearsal.md`.
 Then record the decrypt in the console: Keys → Restore proof, with the run key and the date.
 The console shows the newest proof's age, and when it is more than six months old (or none
 exists while a good backup does) the daily check raises a key reminder through the alerts.
+
+## Runs from before 2026-09-25
+
+On 2026-09-25 cf-backup switched to a simpler storage layout. No file was moved: a run recorded
+before the switch stays where it was written, under `v1/` (the Files section's "Old layout"
+folder), and the console opens it as before. The old layout is kept until its bucket locks end, then
+removed. Its run folders had subfolders inside `data/` and put the evidence in five folders.
+
+For a run whose folder starts with `v1/`:
+
+1. In step 1, build the folder with this line instead (its GitHub artifact, while it lasts, has
+   the old layout too):
+
+   ```bash
+   PREFIX="v1/runs/full/${RUN_KEY:0:4}/${RUN_KEY:5:2}/$RUN_KEY"     # Supabase-only runs: v1/runs/daily/…
+   ```
+
+2. Do step 2 on the folder as it arrived: `checksums.sha256` lists the old paths.
+3. Then give the files the names this guide uses, and carry on from step 3:
+
+   ```bash
+   for f in data/d1/*.age data/postgres/*.age; do
+     [ -e "$f" ] || continue
+     mv "$f" "data/$(basename "$(dirname "$f")")-$(basename "$f")"
+   done
+   mkdir -p evidence && cp verify/*.json evidence/
+   ```
+
+What the loop renames, and what the copy provides:
+
+| Old layout (before 2026-09-25) | This guide |
+|---|---|
+| `data/postgres/roles.sql.gz.age` | `data/postgres-roles.sql.gz.age` |
+| `data/postgres/schema.sql.gz.age` | `data/postgres-schema.sql.gz.age` |
+| `data/postgres/data.sql.gz.age` | `data/postgres-data.sql.gz.age` |
+| `data/postgres/migrations-history.sql.gz.age` | `data/postgres-migrations-history.sql.gz.age` |
+| `data/d1/madagascar-db.sql.gz.age` | `data/d1-madagascar-db.sql.gz.age` |
+| `data/d1/madagascar-db.schema.sql.gz.age` | `data/d1-madagascar-db.schema.sql.gz.age` |
+| `data/d1/chatbot-kb.sql.gz.age` | `data/d1-chatbot-kb.sql.gz.age` |
+| `data/d1/chatbot-kb.schema.sql.gz.age` | `data/d1-chatbot-kb.schema.sql.gz.age` |
+| `data/d1/whatsapp-chatbot.sql.gz.age` | `data/d1-whatsapp-chatbot.sql.gz.age` |
+| `data/d1/whatsapp-chatbot.schema.sql.gz.age` | `data/d1-whatsapp-chatbot.schema.sql.gz.age` |
+| `verify/source-counts.json` | `evidence/source-counts.json` |
+| `verify/restored-counts.json` | `evidence/restored-counts.json` |
+
+In step 9, `rmdir data/*/` also removes the emptied old folders.
 
 ## Break-glass backup from your machine (P-19)
 
