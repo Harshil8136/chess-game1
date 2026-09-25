@@ -1,62 +1,101 @@
-# 03: Reality check of each outside service
+---
+title: "cf-backup recovery — 03 Reality check (each outside service: assumed vs true)"
+status: active
+audience: [ai, technical, owner]
+last_verified: 2026-09-25
+verified_against: [code, infra, live-mcp, research]
+owner: harshil
+related_code: [scripts/backup/lib/pins.ts, scripts/backup/lib/d1-schema.ts, scripts/backup/lib/pg-backup.ts, sql/supabase/01_backup_reader.sql]
+related_docs: [README.md, 04-defect-register.md, 08-how-others-do-it.md]
+tags: [cf-backup, recovery, d1, r2, supabase, github-actions, age]
+---
 
-For each service: what the current design assumes, what is actually true, and how that was
-checked. "Observed" means seen in a real run's log. "Live check" means a read-only query on
-2026-09-25. "Source" means the tool's published source code at the version we pin.
+# 03 — Reality check of each outside service
 
-## Cloudflare D1
+> **TL;DR (non-technical):** For every outside service the backup depends on, this page lists
+> what the design assumed and what is actually true. Most assumptions held. The ones that did not
+> are specific: D1 has an undocumented query limit, the Supabase tool switches to an account our
+> backup role may not use, the Postgres test image is missing pieces of Supabase, and none of the
+> tools create missing folders.
 
-| Design assumes | Reality | Evidence |
-|---|---|---|
-| The D1 query API accepts any SQL that SQLite accepts | **D1 rejects a `UNION ALL` with more than 5 parts** (`too many terms in compound SELECT`, code 7500). Plain SQLite allows 500. | Live check: a 6-part `SELECT 1 UNION ALL …` fails; the runner's 32-part count query on `madagascar-db` fails |
-| `wrangler d1 export --output <path>` writes the file | It creates the export, polls, and downloads from a signed URL valid for **one hour**, then writes to `<path>`. **It does not create the parent folder.** | Observed, run 5 |
-| Export handles every table | Virtual tables (full-text search) are not supported by the export; the runner's own query exporter covers them | [Import and export data](https://developers.cloudflare.com/d1/best-practices/import-export-data/); observed: `chatbot-kb` went through the query exporter |
-| Time and size are not a concern | `madagascar-db` is about 16.5 MB; its export was created and downloaded in about 1 s | Observed, run 5 (step network counter) |
-| (not part of the design) | **D1 Time Travel gives 7 days of point-in-time restore on the Free plan.** This is a native safety net for D1 while cf-backup is being fixed. It does not survive deleting the database or the account, so it is not an off-site backup. | [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) |
-| A throwaway database for the monthly real-path drill | The Free plan allows 10 D1 databases per account; 3 are in use | [D1 limits](https://developers.cloudflare.com/d1/platform/limits/) |
+Every row has a status:
 
-## Cloudflare R2 (S3 API from a GitHub runner)
+- **Confirmed**: seen in a real run's log, a read-only live check on 2026-09-25, or the tool's
+  source at the version we pin.
+- **To verify**: plausible and material, not yet proven; the plan assigns it a stage.
 
-| Design assumes | Reality | Evidence |
-|---|---|---|
-| S3 keys are derived from the API token at run time | Works: the access key is the token id and the secret is the SHA-256 of the token | [R2 API tokens](https://developers.cloudflare.com/r2/api/tokens/); observed: the doctor's canary PUT, HEAD and DELETE passed in runs 3 to 5 |
-| Uploads are cheap | They are. Class A operations are free up to 1 million a month, and storage is free up to 10 GB-month | [R2 pricing](https://developers.cloudflare.com/r2/pricing/) |
-| Object locks protect real backups | Lock rules cover the `backups/` and `ops/` prefixes. **So a rehearsal must never write under them**; it needs its own bucket or an unlocked prefix | Build ledger, 2026-09-25 (Stage 4 step 1-2) |
+## A. Cloudflare D1
 
-## Supabase (Free plan)
+| # | The design assumes | Reality | Status | Evidence |
+|---|---|---|---|---|
+| A1 | The D1 query API accepts any SQL that SQLite accepts | **D1 rejects a compound `SELECT` of more than 5 parts** (`too many terms in compound SELECT`, code 7500). Plain SQLite allows 500. The limit is set in Cloudflare's runtime and is **not on the D1 limits page** | Confirmed | Live: a 6-part `SELECT 1 UNION ALL …` fails on `madagascar-db`; workerd source ([08](08-how-others-do-it.md) §1.2) |
+| A2 | `wrangler d1 export --output <path>` writes the file | It creates the export, polls, downloads from a signed URL valid for an hour, then writes `<path>`. **It does not create the parent folder** | Confirmed | Run 5 |
+| A3 | Export handles every table | Not virtual tables, **nor any database that has one**. `chatbot-kb` has `kb_search` (full-text), an external-content index over `knowledge_base`, so it can be rebuilt instead of exported | Confirmed | Cloudflare docs; live `sqlite_master`; run 5 used the query exporter |
+| A4 | Size and time are not a concern | `madagascar-db` is **2.5 MB** (32 tables), `chatbot-kb` 0.2 MB, `whatsapp-chatbot` 0.08 MB. An export takes about a second. *Corrected 2026-09-25: an earlier draft said 16.5 MB, which was a network counter* | Confirmed | D1 API database list |
+| A5 | (not in the design) | **Time Travel gives 7 days of point-in-time restore on the Free plan** (30 on Paid). It restores in place, in the same account. A safety net while cf-backup is fixed, not an off-site backup | Confirmed | Cloudflare Time Travel docs |
+| A6 | A throwaway database for the monthly real-path drill | The Free plan allows 10 D1 databases per account; 3 are in use | Confirmed | D1 limits; live list |
 
-| Design assumes | Reality | Evidence |
-|---|---|---|
-| Supabase keeps its own backups | **The Free plan has no platform backups.** Supabase tells Free projects to export with the CLI and keep off-site copies | [Database backups](https://supabase.com/docs/guides/platform/backups) |
-| Connect through the session pooler, port 5432 | Correct. The direct connection is IPv6-only unless a paid IPv4 add-on is bought, and GitHub-hosted runners have no IPv6. The transaction pooler (6543) does not suit `pg_dump`, which needs a whole session | [Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres); [runner-images issue 668](https://github.com/actions/runner-images/issues/668) |
-| `supabase db dump --db-url <backup role>` dumps what that role can read | **All three dump scripts in the CLI run `pg_dump`/`pg_dumpall --role "postgres"`**, which issues `SET ROLE postgres` after connecting. The backup role is **not** a member of `postgres` (`pg_has_role(…, 'MEMBER')` = false). Every dump will fail with "permission denied to set role". | Source: `apps/cli-go/pkg/migration/scripts/dump_{schema,data,role}.sh` at tag v2.117.0, copied word for word into the TypeScript CLI (`apps/cli/src/command-internal/legacy-pg-dump.scripts.ts`); live check |
-| The data dump covers user tables | The CLI's data dump uses `--schema '*'` and excludes a list that leaves in **`auth`, `storage` and `cron`**. So it asks for tables the backup role cannot read | Source: `apps/cli-go/pkg/migration/dump.go`, `excludedSchemas` |
-| The backup role can be granted what it needs | The role has `SELECT` on the `auth` tables but **no `USAGE` on schema `auth`**, and `postgres` cannot grant that. `postgres` itself can read `auth.users`, and holds `SELECT … WITH GRANT OPTION` on it. The role reads `storage.buckets` and `storage.objects` (both empty) but not the other 6 storage tables. 4 sequences are unreadable (`auth.refresh_tokens_id_seq`, `realtime.subscription_id_seq`, `cron.jobid_seq`, `cron.runid_seq`). The role has `BYPASSRLS`. The Vault is refused (as designed). | Live check; `sql/supabase/01_backup_reader.sql:44-49` |
-| Size | The database is 17 MB; Postgres 17.6; extensions: pgcrypto, uuid-ossp, pg_stat_statements, pg_cron, supabase_vault | Live check |
-| The drill image is "Supabase Postgres", so a dump restores into it | The image (`supabase/postgres` 17.6.1.104) creates only the **base** `auth` tables (`users`, `refresh_tokens`, `instances`, `audit_log_entries`, `schema_migrations`) and the functions `auth.uid()`, `auth.role()`, `auth.email()`. It creates the `storage` schema with **no tables**. Newer `auth` tables and `auth.jwt()` come from the Auth service's own migrations, which a bare `docker run` never runs. **One public policy on the live database uses `auth.jwt()`**, and 24 foreign keys point into `auth`. | Source: `migrations/db/init-scripts/0000000000000{1,2}-*.sql` at tag 17.6.1.104; live check |
-| Sign-in accounts can be exported somehow | Three real routes: (a) read them as a role that can use `auth` (`postgres`), (b) a view or function owned by `postgres` that the backup role may read, (c) the Auth Admin API. **The Admin API does not return password hashes**, so restored users would all have to reset their passwords | [Admin: list users](https://supabase.com/docs/reference/javascript/auth-admin-listusers) |
+## B. Cloudflare R2 (S3 API from a GitHub runner)
 
-## GitHub Actions (ubuntu-24.04, private repository)
+| # | The design assumes | Reality | Status | Evidence |
+|---|---|---|---|---|
+| B1 | S3 keys are derived from the API token at run time | Works: the access key is the token id, the secret the SHA-256 of the token | Confirmed | The doctor's canary PUT, HEAD and DELETE passed in runs 3 to 6 |
+| B2 | Uploads are cheap | Class A operations are free up to 1 million a month; storage up to 10 GB-month | Confirmed | R2 pricing |
+| B3 | Bucket locks protect real backups | Lock rules cover `backups/full/` (90 days), `backups/daily/` (30 days) and `ops/` (90 days), plus the `v1/` equivalents. **A rehearsal must never write under them**; it needs its own bucket or an unlocked prefix. `lifeboat/` is outside every rule | Confirmed | `src/files/layout.ts:524-531`; layout doc |
+| B4 | (for the lifeboat) Uploading with `wrangler r2 object put` | Uses the API token directly (no S3 keys); up to 315 MB per object | Confirmed | Cloudflare R2 upload docs |
 
-| Design assumes | Reality | Evidence |
-|---|---|---|
-| Docker, disk and memory are enough | 2 CPUs, 7.9 GB RAM, about 11.6 GB free disk, Docker 28.0.4 | Observed: `evidence/tools.json`, run 5 |
-| Minutes are affordable | Private repositories on the Free plan get **2,000 Linux minutes a month**, and each job is rounded up to a whole minute. The budget is shared by 3 repositories. A failing run took 1.5 min; a passing full run with both drills is estimated at 4 to 6 min | [Billing for GitHub Actions](https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions) |
-| IPv6 | Not available on hosted runners (the reason the session pooler is required) | [runner-images issue 668](https://github.com/actions/runner-images/issues/668) |
-| `ubuntu-latest` | Pinned to `ubuntu-24.04` on purpose; `ubuntu-latest` moves to a new release in Oct-Nov 2026 | `db-backup.yml` header |
+## C. Supabase (Free plan)
 
-## age
+| # | The design assumes | Reality | Status | Evidence |
+|---|---|---|---|---|
+| C1 | Supabase keeps its own backups | **The Free plan has no platform backups.** Supabase tells Free projects to export with the CLI and keep off-site copies | Confirmed | Supabase backups docs |
+| C2 | Connect through the session pooler, port 5432 | Correct. The direct connection is IPv6-only, and GitHub runners have no IPv6. The transaction pooler (6543) does not suit `pg_dump` | Confirmed | Supabase connection docs |
+| C3 | `supabase db dump --db-url <backup role>` dumps what that role can read | **All three dump scripts pass `--role "postgres"`**, so `pg_dump` runs `SET ROLE postgres` after connecting. The backup role is **not** a member of `postgres` (`pg_has_role` = false). Every dump will fail with "permission denied to set role" | Confirmed | CLI source at v2.117.0 (`dump_schema.sh`, `dump_data.sh`, `dump_role.sh`); live check |
+| C4 | The data dump covers the user tables | The CLI's data dump includes `auth`, `storage` and `cron`, which the backup role cannot fully read | Confirmed | CLI `dump.go` |
+| C5 | The backup role can be granted what it needs | It reads **all 21 tables** in `public` and `supabase_migrations` and has `BYPASSRLS`. It has **no `USAGE` on schema `auth`**, and `postgres` cannot grant that. `postgres` can read `auth.users`. The Vault is refused, as designed | Confirmed | Live: `has_table_privilege`, `has_schema_privilege`; run 6 (`42501` on `vault`) |
+| C6 | Size | 17 MB; Postgres 17.6; 20 tables in `public`, about 1,900 rows; extensions `pgcrypto`, `uuid-ossp`, `pg_stat_statements`, `pg_cron` (0 jobs), `supabase_vault`; schemas include `backup_private` (the key functions) | Confirmed | Live |
+| C7 | The drill image is "Supabase Postgres", so a dump restores into it | The `supabase/postgres` 17.6.1.104 image creates only **5 of the 27 `auth` tables** and the functions `auth.uid()`, `auth.role()`, `auth.email()`; `storage` has no tables. **One live policy uses `auth.jwt()`**, and 24 foreign keys point into `auth` | Confirmed | Image source; live `pg_policies` |
+| C8 | Sign-in accounts can be exported somehow | Routes: read them as `postgres`; a view owned by `postgres` that the backup role may read; or the Auth Admin API, which **does not return password hashes** | Confirmed | Supabase Auth docs; [07](07-decisions.md) RD-1 |
+| C9 | A spare project for restore tests | **None.** The organisation already has two projects, and the Free plan allows two active free projects | Confirmed | Live project list |
 
-| Design assumes | Reality | Evidence |
-|---|---|---|
-| `age -r <recipient> -o <file>` writes the file | It does, but **it does not create the parent folder** | Observed, run 5: `failed to write header: open …: no such file or directory` |
-| The key works | The doctor's trial encryption (32 random bytes, header checked) passed in run 5, with age v1.3.2 | Observed |
-| The private key is safe and usable | Not tested yet: no restore has ever decrypted a real backup with the owner's recovery kit | Nothing to show; this is Phase 4 of the plan |
+## D. GitHub Actions (`ubuntu-24.04`, private repository)
 
-## What the design got right
+| # | The design assumes | Reality | Status | Evidence |
+|---|---|---|---|---|
+| D1 | Docker, disk and memory are enough | 2 CPUs, 7.9 GB RAM, about 11 GB free disk, Docker 28 | Confirmed | `evidence/tools.json`, runs 5 and 6 |
+| D2 | Minutes are affordable | 2,000 Linux minutes a month on GitHub Free, shared by the account's private repositories; every job rounds up to a whole minute. A failing run bills 1 to 2 | Confirmed | GitHub billing docs; `backup_runs.billed_minutes` |
+| D3 | The runner's own Postgres tools | **Version 16.** `pg_dump` refuses a newer server, and the server is 17. Harmless today (the runner uses the 17 image in docker); it matters for any simpler workflow | Confirmed | Ubuntu 24.04 image readme |
+| D4 | Scheduled runs happen on time | They "can be delayed during periods of high loads … some queued jobs may be dropped". The first scheduled run here started 5 h 38 min late | Confirmed | GitHub docs; plan-of-record P-17 |
+| D5 | Someone is told when a scheduled run fails | GitHub emails **"the user who last modified the cron syntax in the workflow file"** | Confirmed | GitHub docs |
+| D6 | `ubuntu-latest` | Pinned to `ubuntu-24.04` on purpose; `ubuntu-latest` moves to a new release in Oct–Nov 2026 | Confirmed | `db-backup.yml` header |
 
-- The session pooler, the pinned runner image, the pinned drill image, the D1 query exporter for
-  full-text tables, the R2 key derivation, the refusal of the Vault, and a local D1 drill that
-  really restored two real exports.
-- Stated plainly: the architecture is workable. The failures come from paths that were never run,
-  one hidden `SET ROLE`, a D1 limit, and the missing parts of a bare drill image.
+## E. age
+
+| # | The design assumes | Reality | Status | Evidence |
+|---|---|---|---|---|
+| E1 | `age -r <recipient> -o <file>` writes the file | It does, but **it does not create the parent folder** | Confirmed | Run 5: `failed to write header … no such file or directory` |
+| E2 | The key works | The doctor's trial encryption to the backup key passed in runs 5 and 6 (age v1.3.2) | Confirmed | Runs 5 and 6 |
+| E3 | The private key is safe and usable | **Unproven.** No backup has ever been decrypted with a recovery kit, and the registry shows no kit confirmation | To verify | Stage 0.1 and Stage 5 of [06](06-plan.md) |
+
+## F. What the design got right
+
+The session pooler; the pinned runner image and drill image; the query exporter for full-text
+tables; the R2 key derivation; refusing the Vault to the runner; and a local D1 drill that really
+restored two real exports. **The architecture is workable.** The failures come from paths that were
+never run, one hidden `SET ROLE`, an undocumented D1 limit, and the missing parts of a bare
+drill image.
+
+## G. Verification log
+
+| Date | Checked by | Method | Result |
+|---|---|---|---|
+| 2026-09-25 | claude | D1 API and read-only queries (all three databases) | A1, A3, A4, A6 |
+| 2026-09-25 | claude | Supabase read-only SQL: roles, grants, catalog, size | C3, C5, C6, C7 |
+| 2026-09-25 | claude | Supabase CLI source at tag v2.117.0; `supabase/postgres` image source at 17.6.1.104 | C3, C4, C7 |
+| 2026-09-25 | claude | GitHub job logs, runs 5 and 6 | A2, B1, D1, E1, E2 |
+| 2026-09-25 | claude | Vendor docs, read the same day ([08](08-how-others-do-it.md)) | A5, B2, B4, C1, C2, D2 to D5 |
+
+## H. Related
+
+- [04-defect-register.md](04-defect-register.md): the defects these facts cause.
+- [08-how-others-do-it.md](08-how-others-do-it.md): the sources, with links.

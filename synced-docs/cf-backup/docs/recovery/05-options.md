@@ -1,97 +1,138 @@
-# 05: Options
+---
+title: "cf-backup recovery — 05 Options (what was considered, and the choice)"
+status: active
+audience: [owner, ai, technical]
+last_verified: 2026-09-25
+verified_against: [code, infra, research]
+owner: harshil
+related_docs: [README.md, 02-root-causes.md, 06-plan.md, 07-decisions.md, 08-how-others-do-it.md, 09-lifeboat-spec.md]
+tags: [cf-backup, recovery, options, decision]
+---
 
-Constraints: **$0** (Workers Free, Supabase Free, GitHub Actions' 2,000 free Linux minutes a month
-shared by 3 repositories), no staging environment by owner decision, and the owner wants speed.
+# 05 — Options
 
-## A. Patch and run again
+> **TL;DR (non-technical):** There were five ways forward, from "patch it and try again" to
+> "rewrite everything". The choice is to combine three: **first make a small, separate backup
+> that works (the "lifeboat")**, then fix the main system only behind a rehearsal that uses the
+> real tools, then simplify its core. This keeps the business protected every day while the
+> bigger system is repaired, costs $0, and stops the "one new bug per run" pattern.
 
-Fix the three folders, the D1 5-part limit and the CLI role problem, then dispatch another real
-backup.
+## 1. Constraints
 
-- **Fixes:** the known defects.
-- **Cost:** $0. **Effort:** half a day.
-- **Risk: high.** This is the loop that has failed five times. The next layer (the drill image
-  shim, the drill itself, seal's real upload, the schedule) is found in production, one run at a
-  time. **Rejected as the whole answer.** Its fixes are still needed, inside option D.
+- **$0**: Workers Free, Supabase Free, and GitHub Actions' 2,000 free Linux minutes a month.
+- **No staging environment** (owner decision).
+- **Speed**: Supabase has no copy today, so every day of repair is a day of exposure.
+- **The four-key cap** (RULES.md rule 3): no new secret without a decision.
 
-## B. A rehearsal job ("staging in a box"), keeping the current design
+## 2. The options
+
+### 2.1 A — Patch and run again
+
+Fix the three folders, the D1 limit and the CLI role problem, then dispatch another real backup.
+
+| | |
+|---|---|
+| Fixes | The known defects |
+| Cost, effort | $0; half a day |
+| Risk | **High.** This is the loop that failed six times. The next layer (the drill image, the drill, seal's data upload, the fallback) is found in production, one run at a time |
+| Verdict | **Rejected as the whole answer.** Its fixes are still needed, inside Stage 2 |
+
+### 2.2 B — A rehearsal job ("staging in a box")
 
 A second workflow runs the **real** `scripts/backup/cli.ts` commands, in order, with the real
-programs (wrangler, docker, psql/pg_dump, age), on a GitHub runner, against test resources:
+programs, on a GitHub runner, against test resources:
 
-- **D1:** a dedicated test database in the account (the 4th of 10 free), seeded by the job
-  with more than 5 tables, a full-text table and a few hundred rows.
+- **D1:** a dedicated test database (the 4th of 10 free), seeded with more than 5 tables, a
+  full-text table and a few hundred rows.
 - **Postgres:** a local `supabase/postgres` container at the pinned version, seeded from a
-  schema-only copy of the live `public` schema (kept in the repository and refreshed by a
-  task), including the `auth.jwt()` policy and foreign keys into `auth`.
-- **R2:** a separate test bucket with no object locks (or an unlocked prefix), so the rehearsal
-  can never touch real backups.
-- **age:** a test key pair created by the job itself. The job then **decrypts** what it uploaded
-  and compares row counts. This is the restore path that has never been exercised.
+  schema-only copy of the live `public` schema, with the `auth.jwt()` policy and foreign keys
+  into `auth`.
+- **R2:** a separate test bucket with no locks, so it can never touch real backups.
+- **age:** a throwaway key pair; the job **decrypts** what it uploaded and compares row counts.
 
-It runs when runner paths change, once a week, and by hand.
+| | |
+|---|---|
+| Fixes | P1, P2, P4 ([02](02-root-causes.md)); finds every defect in [04](04-defect-register.md) §A to §C before production |
+| Cost, effort | $0; about 5 minutes a run; 1 to 2 days to build |
+| Risk | Low. Only the production targets (secrets, variables) stay untested; the doctor's real checks (L8) cover them |
+| Verdict | **Adopted**, as Stage 2 |
 
-- **Fixes:** P1, P2 and P4 in [02](02-root-causes.md). Every defect in [04](04-latent-defects.md),
-  L1 to L12, is found here and not in production.
-- **Cost:** $0 in money. About 4 to 6 minutes a run. Estimate: 30 runs a month is 120 to 180
-  minutes.
-- **Effort:** 1 to 2 days.
-- **Risk:** low. The rehearsal and production share code and differ only in their targets, so the
-  target settings (secrets, variables) remain the one untested part. The doctor's new real checks
-  (L8) cover that.
+### 2.3 C — Simplify the core
 
-## C. Simplify the core (redesign)
+1. Postgres without the Supabase CLI: `pg_dump` in the pinned image, explicit schemas, no `--role`.
+2. The restore drill leaves the daily run and becomes a weekly run that **downloads from the
+   bucket**, so it tests what a real restore does.
+3. Fail loudly and truthfully (L5, L6, L7, N1).
+4. Freeze the add-ons (heartbeat, live logs, meters, console) until done.
 
-1. **Postgres without the Supabase CLI.** `pg_dump` and `pg_dumpall --roles-only` run directly in
-   the pinned image, with explicit schemas and no `--role`. This removes one program, one image
-   pull and the hidden `SET ROLE`.
-2. **Separate backup from drill.** The daily run only exports, compresses, encrypts, uploads and
-   writes the manifest: the smallest possible path, which fails only for real reasons. The restore
-   drill becomes its own weekly run. It **downloads the latest backup from the bucket and
-   decrypts it** with a key held for drills, and so tests what a real restore will do. Today the
-   drill restores the plain files before encryption, so it has never proved that a backup in the
-   bucket can be restored.
-3. **Fail loudly and truthfully:** any step that exits with an error fails the run (L5); no
-   empty passes (L6); errors are logged as they happen (L7).
-4. **Freeze the add-ons:** the heartbeat, live logs, meters and console views stay as they are, and
-   nothing new is added until "done".
+| | |
+|---|---|
+| Fixes | T5, L1, L3, L4, L5 to L7, N1, N4; shrinks the surface for future defects |
+| Cost, effort | $0, fewer minutes; 1 to 2 days on top of B |
+| Risk | Medium, because it changes code paths; low when each change lands with a green rehearsal |
+| Verdict | **Adopted**, inside Stages 2 and 4 |
 
-- **Fixes:** T5, L1, L3 (with the shim), L4, L5 to L7. It also shrinks the surface for future
-  defects.
-- **Cost:** $0. Minutes go down: the daily run no longer starts a Postgres container.
-- **Effort:** 1 to 2 days on top of B.
-- **Risk:** medium, because it changes code paths. It stays low if every change lands only with a
-  green rehearsal (option B).
+### 2.4 D — The lifeboat first *(added by the second review, 2026-09-25)*
 
-### Drill key for the weekly drill from the bucket
+B and C take days, and Supabase has no copy in the meantime. So first, a **small separate
+workflow** that uses only the vendors' tools and shell: `pg_dump` in the pinned image,
+`wrangler d1 export`, `age`, and `wrangler r2 object put`. It checks a restore in the same run and
+fails loudly. It shares no code with the main runner and has no console link. Specification:
+[09](09-lifeboat-spec.md).
 
-Decrypting in CI needs a private key in CI, and the design keeps the backup key offline. Two
-sound ways:
+| | |
+|---|---|
+| Fixes | The exposure itself: a daily, encrypted, restore-checked, off-site backup within 1 to 2 days, while B and C proceed |
+| Precedent | It is what small teams run ([08](08-how-others-do-it.md) §2), plus a restore check. cf-admin's `backups.yml` is already this shape and avoided T1, T5 and L3; it only lacked secrets |
+| Cost, effort | $0; about 3 minutes a run; about a day to build. Uses the existing two secrets and two variables |
+| Risk | Low. The risk is it growing into a second big system; the specification sets hard limits (one file, under 250 lines, no TypeScript, no console) |
+| Verdict | **Adopted**, as Stage 1. Before it, a manual backup by hand the same day (Stage 0) |
 
-- **(i)** Every backup is encrypted to **two** recipients: the owner's offline key and a drill key
-  whose private half is a GitHub secret. The drill uses the drill key. Risk: anyone who can read
-  that secret can decrypt backups, so the secret and the bucket must never be reachable together
-  with the same credential.
-- **(ii)** The drill decrypts nothing in CI. It checks the ciphertext (headers, sizes, checksums
-  against the manifest) and restores the plain files as it does today. A person proves decryption
-  monthly with the recovery kit.
-
-Default: **(ii)** now (it keeps the key design unchanged), with (i) as an owner decision
-([07](07-decisions-for-owner.md), decision 3).
-
-## D. Recommended: B, then C, in small verified steps, then soak
-
-B first (so every change is proven), then C's fixes one at a time, each landing with a green
-rehearsal, then one real full backup, then the soak and a real restore by hand. The phases,
-acceptance criteria and checkpoints are in [06](06-plan.md).
-
-## E. Considered and rejected
+### 2.5 E — Considered and rejected
 
 | Option | Why not |
 |---|---|
-| Supabase Pro ($25/month) for platform backups | Breaks the $0 rule. Its backups also stay inside Supabase (not off-site). |
-| Back up as the `postgres` role | Simplest way to include `auth.users`. But the runner's secret could then read the Vault, which holds the key machinery. That is refused by design (doc 12 §5, T25). |
-| A second free Supabase project as a restore target | Free projects pause after a week without use, and the 2 active free projects are a scarce slot. A local container gives the same proof at no cost. Kept as a later option for a yearly full rehearsal. |
-| `supabase start` (the full local stack) as the drill target | It pulls about ten images and takes minutes on every run. The shim approach gives the same proof for this database. Reconsider only if sign-in accounts must be restored with their sessions and MFA state. |
-| Drop Postgres drills entirely | A backup never restored is a hope, not a backup. Weekly is enough. Never is not. |
-| Rewrite everything from scratch | The pieces that ran for real mostly worked (doctor, R2, age, D1 export, D1 drill). The failures are specific and fixable. A rewrite would bring back the same untested-path risk. |
+| Supabase Pro ($25/month) for platform backups | Breaks the $0 rule. Its backups also stay inside Supabase (not off-site) |
+| Back up as the `postgres` role in CI | Simplest way to include `auth.users`, but the runner's secret could then read the Vault, which holds the key machinery. Refused by design (plan of record doc 12 §5) |
+| `pg_read_all_data` for the backup role | Opens every schema, probably the Vault too. Rejected unless a test shows the Vault stays closed (RD-10) |
+| A second free Supabase project as a restore target | No free slot: the organisation already has two projects. A local container gives the same proof |
+| `supabase start` (the full local stack) as the daily drill | It pulls about ten images every run. Used monthly only, for sign-in accounts (Stage 3) |
+| Add the four secrets to cf-admin and run its `backups.yml` | Fastest of all, but puts production secrets in cf-admin (the plan of record forbids it) plus a fifth secret, and covers only `madagascar-db` and GitHub artifacts. **Kept as the fallback** if Stage 1 slips past 48 hours (RD-8) |
+| Drop Postgres drills | A backup never restored is a hope, not a backup |
+| Rewrite everything from scratch | The pieces that ran for real mostly worked (doctor, R2, age, D1 export, D1 drill). A rewrite brings back the same untested-path risk |
+
+## 3. Decision
+
+**D, then B, then C, in small verified steps, then soak.** In order: a manual backup today; the
+lifeboat within 1 to 2 days; the rehearsal; C's fixes one at a time, each with a green
+rehearsal; one real full backup; then 30 days of soak and a restore by hand. The stages,
+acceptance criteria and owner checkpoints are in [06](06-plan.md).
+
+*History: the first review (2026-09-25 morning) recommended B then C. The second review the same
+afternoon added D in front, because B and C leave Supabase with no copy for days, and because two
+backup systems had already been built without producing one file ([02](02-root-causes.md) §3).*
+
+## 4. Sub-decision: may a key that decrypts backups live in CI?
+
+The weekly drill from the bucket (C.2) would need a private key to decrypt in CI, and the design
+keeps the backup key offline.
+
+| Choice | How | Risk |
+|---|---|---|
+| **(ii) No, default** | The drill checks the ciphertext (header, size, checksum against the manifest) and restores the plain files exported in the same run. A person proves decryption with the recovery kit | Decryption is proven by a person, not every week |
+| (i) Yes | Each backup is also encrypted to a second "drill" key whose private half is a GitHub secret | Anyone with that secret and read access to the bucket can read backups |
+
+Recorded as RD-3 in [07](07-decisions.md).
+
+## 5. Verification log
+
+| Date | Checked by | Method | Result |
+|---|---|---|---|
+| 2026-09-25 | claude | Options A to C and E weighed against the defect register and the constraints | B then C recommended |
+| 2026-09-25 | claude | Second review: exposure, cf-admin's `backups.yml`, public examples ([08](08-how-others-do-it.md)) | D added in front |
+
+## 6. Related
+
+- [06-plan.md](06-plan.md): the chosen path as stages.
+- [07-decisions.md](07-decisions.md): the decisions the owner makes.
+- [09-lifeboat-spec.md](09-lifeboat-spec.md): option D in detail.
