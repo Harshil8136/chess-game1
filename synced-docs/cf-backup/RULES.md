@@ -44,7 +44,9 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    no Cloudflare cron triggers. Its one table, `backup_runs`, is created by cf-admin
    migration `0057` (design D-1). Its settings are `admin_portal_settings` rows with the
    `backup:` prefix (cf-admin RULESAd RULE #0.6–#0.9). The schedule rides cf-admin's
-   `backup-tick` job, with one fallback `schedule:` line in `db-backup.yml` (D-4, D-5). A
+   `backup-tick` job, with one fallback `schedule:` line in `db-backup.yml` (D-4, D-5). The
+   one exception is the Secondary Pipeline's own daily schedule in `secondary-pipeline.yml`
+   (remediation decision RD-12, until RD-11 is decided; `docs/remediation/`). A
    daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
    failed-workflow email warns through a path the tick does not own. cf-backup sends no mail
    itself: its alerts leave through that job and cf-admin's `EMAIL_QUEUE` (D-11).
@@ -55,7 +57,7 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    (`synced-docs/cf-backup/`) only the files named in `PUBLISHED_DOCS`
    (`scripts/backup/lib/docs-mirror.ts`): `README.md`, this file, `main.md`,
    `docs/RESTORE.md`, `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md` and the remediation program in
-   `docs/remediation/` (`README.md` and `01` to `11`).
+   `docs/remediation/` (`README.md` and `01` to `12`).
    - Every other file is private until it is added to that list in a reviewed commit. The
      list says why the rest stays private: `docs/OWNER-SETUP.md` names live account
      identifiers.

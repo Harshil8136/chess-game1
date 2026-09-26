@@ -37,11 +37,16 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 
 ## 2. Constraints (hard limits)
 
-- **No shared code with the Primary Pipeline**: no `scripts/backup/**`, no TypeScript, no Supabase
-  CLI. A Primary Pipeline defect must not be able to stop the Secondary Pipeline.
+- **No shared code with the Primary Pipeline**: nothing under `scripts/backup/**` runs, and no
+  Supabase CLI. Shell calls the vendors' tools; a small helper,
+  `scripts/secondary-pipeline/verify.ts`, uses Node built-ins only and imports nothing from the
+  Primary Pipeline. A Primary Pipeline defect must not be able to stop the Secondary Pipeline. The
+  workflow guard (`checkSecondaryPipelineWorkflow` in `scripts/backup/lib/workflow-guards.ts`)
+  fails CI if the workflow ever runs anything under `scripts/backup/`.
 - **No console integration**: no `backup_runs` row, no heartbeat, no settings. It is visible in
   GitHub Actions and in the archive bucket only.
-- **One file, under 250 lines** including comments. If it needs more, the design is wrong.
+- **Small and reviewable:** the workflow stays under 300 lines including comments, and the helper under 400. If either needs
+  more, the design is wrong.
 - **No new secret**, except RD-9's ping URL if the Owner approves it.
 - Authentication records (`auth.*`) only after Stage 3. Until then the Owner's weekly manual baseline
   export ([10](10-sop-manual-baseline-export.md)) covers them.
