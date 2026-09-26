@@ -378,10 +378,10 @@ delete anything left there by hand.
 `.github/workflows/secondary-pipeline.yml` exports PostgreSQL (`public` and `supabase_migrations`)
 and the three D1 databases every day, independently of the runs above. Each run writes one folder,
 `secondary/pipeline/<YYYY-MM-DD>/<GitHub run id>-<attempt>/`, holding `postgres-schema.sql.gz.age`,
-`postgres-data.sql.gz.age`, one `d1-<database>.sql.gz.age` per database, `manifest.json` (the
-restore verification's row counts) and `SHA256SUMS`. The same files are kept for 14 days as the
-run's artifact on GitHub. Authentication records are not included; they come from the latest
-manual baseline export.
+`postgres-data.sql.gz.age`, `postgres-auth.sql.gz.age` (the authentication records, from
+2026-09-26), one `d1-<database>.sql.gz.age` per database, `manifest.json` (the restore
+verification's row counts) and `SHA256SUMS`. The same files are kept for 14 days as the run's
+artifact on GitHub.
 
 The procedure (fetch, `sha256sum -c SHA256SUMS`, decrypt with the same private key, then restore
 PostgreSQL before D1) is in

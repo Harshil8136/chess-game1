@@ -14,17 +14,18 @@ tags: [cf-backup, remediation, data-protection, index]
 
 > **TL;DR (non-technical):** cf-backup's Primary Pipeline has not yet produced a recovery point:
 > seven production runs, seven failures. On the evening of 2026-09-26 a small, independent
-> **Secondary Pipeline** produced the first one: the Supabase application data and all three D1
-> databases, exported, restored into a scratch copy and checked table by table, then encrypted and
-> stored off-site. It runs every day from 2026-09-27. Two gaps remain: no one has yet confirmed a saved copy of the key that decrypts the
-> archive, and sign-in accounts (authentication records) are in no copy yet. This program sets out
-> why the Primary Pipeline failed, lists every defect with its evidence, and defines how it is
-> remediated.
+> **Secondary Pipeline** produced the first ones: the Supabase data, its sign-in accounts
+> (authentication records) and all three D1 databases, exported, restored into a scratch copy and
+> checked table by table, then encrypted and stored off-site. It runs every day from 2026-09-27.
+> One gap remains: no one has yet confirmed a saved copy of the key that decrypts the archive
+> (§7). This program sets out why the Primary Pipeline failed, lists every defect with its
+> evidence, and defines how it is remediated.
 
-> **Status (2026-09-26, 20:35 UTC): open.** Stage 1 is built and commissioned: the first verified
-> recovery point exists ([09](09-secondary-pipeline-specification.md) §7). Stage 0, Containment
-> ([06](06-remediation-plan.md) §3), has not started: the Primary Pipeline's schedule remains
-> enabled and every scheduled run fails. Terms follow [11](11-terminology-standard.md).
+> **Status (2026-09-26, 22:50 UTC): open.** Stage 1 is built and commissioned, and Stage 3's
+> authentication records are in the Secondary Pipeline ([09](09-secondary-pipeline-specification.md)
+> §7). Stage 0, Containment ([06](06-remediation-plan.md) §3), has not started: the Primary
+> Pipeline's schedule remains enabled and every scheduled run fails. The Owner's remaining tasks are
+> in §7. Terms follow [11](11-terminology-standard.md).
 
 ## 1. Summary
 
@@ -69,15 +70,15 @@ existed.
 | Asset | Copies outside the primary | Current protection |
 |---|---|---|
 | Supabase: application data (`public`, `supabase_migrations`) | **1 a day**, from 2026-09-26 | Secondary Pipeline: restore-verified, encrypted, in the archive bucket and a 14-day GitHub artifact |
-| Supabase: 6 authentication records | **0** | None until the manual baseline export (Stage 0.4) or Stage 3. The Free plan provides no platform backups |
+| Supabase: authentication records (6 accounts, 12 identities) | **1 a day**, from 2026-09-26 22:49 UTC | Secondary Pipeline, as above (store `postgres-auth`). The Free plan provides no platform backups |
 | D1: `madagascar-db` (2.5 MB), `chatbot-kb`, `whatsapp-chatbot` | **1 a day off-site**, from 2026-09-26 | Secondary Pipeline, as above; plus Time Travel: 7 days, in place, same account |
-| Archive encryption key | Supabase Vault, plus an **unconfirmed** offline recovery key | 0 confirmations and 0 reveals in the key registry |
+| Archive encryption key | Supabase Vault, plus an **unconfirmed** offline recovery key | The Vault's key matches the recipient every file is encrypted to (weekly key check, 2026-09-25); 0 confirmations and 0 reveals of the offline copy |
 
 ## 5. Plan summary
 
 | Stage | Scope | Exit criteria |
 |---|---|---|
-| 0 Containment (today) | Confirm the offline recovery keys; stop the scheduled runs; **one manual baseline export**, authentication records included | Two confirmations; no new failed runs; encrypted files in the archive bucket and a second location; one file decrypted |
+| 0 Containment (today) | Confirm the offline recovery keys; stop the scheduled runs; ~~one manual baseline export~~ (superseded on 2026-09-26 by the Secondary Pipeline) | Two confirmations; no new failed runs; one file decrypted |
 | 1 Interim protection (days 1–2) | **Secondary Pipeline:** an independent daily workflow that exports, verifies a restore, encrypts and uploads | A scheduled run passes; files archived; row counts matched; one file decrypted by the Owner |
 | 2 Primary Pipeline remediation (days 2–7) | Remediation behind **Pre-production Validation** with the real tools; contract tests for the test doubles; nomenclature alignment | Validation passing; one production full run passing |
 | 3 Authentication record coverage | Include `auth.users` and `auth.identities` (RD-1) | Authentication records restored in the monthly full-stack validation |
@@ -88,15 +89,33 @@ existed.
 
 | Item | State | Evidence |
 |---|---|---|
-| Verified recovery points | **1**, 2026-09-26 20:29 UTC (Secondary Pipeline) | `secondary/pipeline/2026-09-26/36269595781-1/`; every table's restored count matched ([09](09-secondary-pipeline-specification.md) §7.2) |
+| Verified recovery points | **2**, the newest 2026-09-26 22:49 UTC (Secondary Pipeline) | `secondary/pipeline/2026-09-26/36277447136-1/`, authentication records included; every table's restored count matched ([09](09-secondary-pipeline-specification.md) §7) |
 | Primary Pipeline recovery points | **none** | `backup_runs`: 7 rows, `data_bytes` 0 or empty; the seventh failed on 2026-09-26 at 09:20 UTC |
 | Stage 0 Containment | not started | Re-checked 2026-09-26 20:35 UTC: schedule enabled; both workflows active; 0 key confirmations |
 | Stage 1 Interim protection | **in progress**: built and commissioned | Pending: the first scheduled run (2026-09-27 08:41 UTC), the Owner's decryption of one file, the bucket rules on `secondary/`, a proven failure notification |
-| Stages 2 to 5 | not started | |
+| Stage 3 Authentication record coverage | **in progress**: Secondary Pipeline done | RD-1 applied on 2026-09-26; the Primary Pipeline follows in Stage 2; the monthly full-stack restore (3.4) is pending |
+| Stages 2, 4 and 5 | not started | |
 
 Per-stage detail: [06](06-remediation-plan.md) §12.
 
-## 7. Verification log
+## 7. Owner action list
+
+Everything the Owner still has to do, in order. Defaults apply to any decision not taken.
+
+| # | Task | Why it cannot be done for the Owner | Phone? | Time |
+|---|---|---|---|---|
+| 1 | **Stop the failing Primary Pipeline runs** ([06](06-remediation-plan.md) 0.3), in this order: (a) console → Settings → Schedule: turn off **full** and **Supabase**; (b) GitHub → cf-backup → Actions → `db-backup` → ⋯ → **Disable workflow**; (c) GitHub → cf-admin → Actions → `backups` → **Disable workflow**. Leave `secondary-pipeline` enabled. The next failing runs are due on Sunday 2026-09-27 (09:17 UTC, and cf-admin's weekly run) | The console's schedule switch is audited and notifies both administrators; writing the setting into the database directly would bypass both. The GitHub connector used here cannot disable workflows | Yes, in the browser (GitHub may need "desktop site") | 5 min |
+| 2 | **Turn on GitHub's failure emails** for the account that starts the scheduled runs (`mascotasmadagascar-cmd`): GitHub → Settings → Notifications → Actions → failed workflows | A personal setting | Yes | 1 min |
+| 3 | **Add two rules on the archive bucket** ([06](06-remediation-plan.md) 1.4, RD-12): Cloudflare → R2 → `madagascar-backups` → Settings: a bucket lock rule on prefix `secondary/` for 30 days, and an object lifecycle rule deleting `secondary/` objects after 35 days | No connector tool manages bucket rules, and the pipeline's token must not change bucket policy | Yes, in the browser | 5 min |
+| 4 | **Confirm the offline recovery key by decrypting one file** ([06](06-remediation-plan.md) 0.1 and 1.3): download the artifact of any `secondary-pipeline` run, then `age -d -i key.txt -o f.sql.gz d1-whatsapp-chatbot.sql.gz.age`, `gunzip f.sql.gz`, and record the confirmation on the console's Keys screen. Then the Vendor does the same (0.2) | Only the Owner and the Vendor hold the offline key. Done for the Owner: the recipient every file is encrypted to equals the active key, and the Vault holds its private half | No: needs a computer with `age` | 15 min |
+| 5 | **Decisions RD-2, RD-4 and RD-15** ([07](07-decision-log.md), [12](12-open-source-tool-assessment.md) §7) | The Owner's call | Yes | 10 min |
+| 6 | **For Stage 2, later:** a Cloudflare API token scoped to the validation database and bucket only (RD-2), stored as a GitHub secret | Tokens are created by an account owner | Yes, in the browser | 10 min |
+
+Removed from the list on 2026-09-26: the weekly manual baseline export (0.4–0.5, superseded by the
+Secondary Pipeline's authentication records) and running the Stage 3 SQL file (3.2, applied through
+the Supabase connector).
+
+## 8. Verification log
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
@@ -106,8 +125,9 @@ Per-stage detail: [06](06-remediation-plan.md) §12.
 | 2026-09-25 | claude | Terminology standard applied; folder renamed from `docs/recovery/` to `docs/remediation/`; live status re-checked at 16:00 UTC | [11](11-terminology-standard.md); §6 |
 | 2026-09-26 | claude | Open-source tool survey and the case for build or adopt; no live checks | [12](12-open-source-tool-assessment.md) (draft) |
 | 2026-09-26 | claude | Secondary Pipeline commissioning runs 36269275118 and 36269595781; live re-check of `backup_runs`, the schedule, the key registry and workflow states at 20:35 UTC | §4, §6 |
+| 2026-09-26 | claude | Authentication records added (run 36277447136); the pipeline's recipient compared with the key registry's active key; the weekly key check's last result read from `backup:status` | §4, §6, §7 |
 
-## 8. Related
+## 9. Related
 
 - [RESTORE.md](../RESTORE.md): restoring from a cf-backup run.
 - [DIAGNOSTICS-PREFLIGHT-STORAGE.md](../DIAGNOSTICS-PREFLIGHT-STORAGE.md): the build log where failed runs are recorded.

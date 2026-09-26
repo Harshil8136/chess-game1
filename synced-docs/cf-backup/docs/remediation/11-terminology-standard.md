@@ -11,8 +11,8 @@ tags: [cf-backup, remediation, terminology, naming, glossary]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- Names proposed files (preprod-validation.yml, 04_auth_export_views.sql),
-     a retired proposal (04_backup_auth_export.sql) and cf-admin's .github/workflows/backups.yml. -->
+<!-- Names a proposed file (preprod-validation.yml), retired proposals (04_backup_auth_export.sql,
+     04_auth_export_views.sql) and cf-admin's .github/workflows/backups.yml. -->
 
 # 11 — Terminology and naming standard
 
@@ -128,7 +128,7 @@ tags: [cf-backup, remediation, terminology, naming, glossary]
 | Proposed `lifeboat.yml` | Proposed `secondary-pipeline.yml` |
 | Proposed `backup-rehearsal.yml` | Proposed `preprod-validation.yml` |
 | Proposed R2 prefix `lifeboat/` | Proposed R2 prefix `secondary/` (`secondary/pipeline/…` and `secondary/manual/…`) |
-| Proposed `sql/supabase/04_backup_auth_export.sql`, schema `backup_export` | Proposed `sql/supabase/04_auth_export_views.sql`, schema `auth_export` |
+| Proposed `sql/supabase/04_backup_auth_export.sql`, schema `backup_export`; then `04_auth_export_views.sql` | `sql/supabase/04_auth_export.sql`, schema `auth_export` (functions, not views: [07](07-decision-log.md) §2) |
 
 ## 8. Verification log
 

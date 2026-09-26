@@ -11,8 +11,7 @@ tags: [cf-backup, remediation, plan, roadmap]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan. It names files that do not exist yet: .github/workflows/preprod-validation.yml
-     and sql/supabase/04_auth_export_views.sql. -->
+<!-- This is a plan. It names a file that does not exist yet: .github/workflows/preprod-validation.yml. -->
 
 # 06 — Remediation plan
 
@@ -83,8 +82,8 @@ Dates indicate sequence, not commitments.
 | 0.1 | **Verify the offline recovery key.** Locate the key (`AGE-SECRET-KEY-1…`) saved when the archive encryption key was created; if it was not saved, Console → Keys → **Reveal** (fresh sign-in; audited) and save it now. Save it temporarily as `key.txt`: `age-keygen -y key.txt` must print the active recipient shown on the Keys screen. Delete `key.txt`. Record the confirmation on the Keys screen (the console labels it "recovery kit") | Owner (10 min) |
 | 0.2 | The Vendor repeats 0.1. Until both are complete, every recovery point is one lost password manager away from being unrecoverable | Vendor (10 min) |
 | 0.3 | **Stop the scheduled runs, in this order:** (a) Console → Settings → Schedule: disable **full** and **Supabase**; (b) GitHub → cf-backup → Actions → `db-backup` → **Disable workflow** (or `gh workflow disable db-backup.yml --repo mascotasmadagascar-cmd/cf-backup`), which also stops the fallback schedule; (c) GitHub → cf-admin → Actions → `backups` → **Disable workflow** (RD-8). Performing (b) before (a) causes every Scheduler dispatch to fail with an alert | Owner (5 min) |
-| 0.4 | **Produce one manual baseline export**, following [10](10-sop-manual-baseline-export.md): the official Supabase export as `postgres` (**authentication records included**) and the three D1 databases, encrypted to the archive encryption key, stored under `secondary/manual/<date>/` in the archive bucket and in a second location, with one file decrypted as proof | Owner (45 min) |
-| 0.5 | Repeat 0.4 weekly until Stage 1 passes, and continue until Stage 3 passes (it is the only copy of the authentication records until then) | Owner |
+| 0.4 | **Produce one manual baseline export**, following [10](10-sop-manual-baseline-export.md): the official Supabase export as `postgres` (**authentication records included**) and the three D1 databases, encrypted to the archive encryption key, stored under `secondary/manual/<date>/` in the archive bucket and in a second location, with one file decrypted as proof. **Superseded 2026-09-26**: the Secondary Pipeline's daily recovery points now include the authentication records; [10](10-sop-manual-baseline-export.md) remains a fallback | ~~Owner (45 min)~~ |
+| 0.5 | Repeat 0.4 weekly until Stage 1 passes, and continue until Stage 3 passes (it is the only copy of the authentication records until then). **Superseded 2026-09-26**, as 0.4 | ~~Owner~~ |
 
 The Scheduler's daily staleness alerts continue; that is correct. "Run now" in the console will
 not start runs until Stage 2 re-enables the workflow.
@@ -179,15 +178,17 @@ warning is "auth.users not included", until Stage 3); the archive bucket holds t
 files, the manifest and the checksums; the report has no "pass" for a store that did not run; a
 failure injected in validation produces the correct error code; 2.21 and 2.22 are merged.
 
-## 6. Stage 3 — Authentication record coverage (half a day; Owner runs one SQL file)
+## 6. Stage 3 — Authentication record coverage (half a day)
 
-For RD-1's default (read-only views owned by `postgres`, so the Vault remains refused):
+For RD-1's default (read-only access owned by `postgres`, so the Vault remains refused). **Brought
+forward on 2026-09-26 for the Secondary Pipeline**, because the Owner cannot perform the weekly
+manual baseline export that was the only copy of these records:
 
 | # | Task | Owner |
 |---|---|---|
-| 3.1 | `sql/supabase/04_auth_export_views.sql`: a schema `auth_export` owned by `postgres`, with read-only views over `auth.users` and `auth.identities`; `SELECT` granted to the read-only export role only. Pre-flight diagnostics continue to prove the Vault refused | Engineering |
-| 3.2 | Run the SQL file once in the Supabase SQL editor | Owner (5 min) |
-| 3.3 | The Primary and Secondary Pipelines export those views as `COPY` data into an additional file, encrypted like the others | Engineering |
+| 3.1 | `sql/supabase/04_auth_export.sql`: a schema `auth_export` owned by `postgres`, with two `SECURITY DEFINER` functions over `auth.users` and `auth.identities` (not views, which would block Supabase Auth upgrades: [07](07-decision-log.md) §2), executable by the read-only export role only. Pre-flight diagnostics continue to prove the Vault refused | Engineering (**done** 2026-09-26) |
+| 3.2 | Run the SQL file once | **Done** 2026-09-26 through the Supabase connector (migration `cf_backup_auth_export`), on the Owner's behalf |
+| 3.3 | The Primary and Secondary Pipelines export both tables as `COPY` data into an additional file, encrypted like the others | Engineering (Secondary Pipeline **done** 2026-09-26; Primary Pipeline in Stage 2) |
 | 3.4 | **Restore target.** The bare image has 5 of the 27 `auth` tables, and there is no free project slot (C9 in [03](03-dependency-assessment.md)). Validation therefore restores authentication records into a local full stack (`supabase start`, unneeded services excluded) **once a month**. `docs/RESTORE.md` gains a section on loading them into a new project once its Auth service has created the tables | Engineering |
 
 **Exit criteria:** the monthly validation restores the authentication records; the next production
@@ -272,13 +273,13 @@ the cause, the fix commit).
 |---|---|---|
 | 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-26 20:35 UTC) | Registry: 0 confirmations, 0 reveals |
 | 0.3 Containment of scheduled runs | not started (re-checked 2026-09-26 20:35 UTC) | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
-| 0.4 Manual baseline export | not started | Still the only way to capture authentication records until Stage 3 |
+| 0.4–0.5 Manual baseline export | **superseded** 2026-09-26 | The Secondary Pipeline exports the authentication records daily (run 36277447136) |
 | 1.1 Secondary Pipeline implemented | **done** 2026-09-26 | Commits `3abadc8`, `027feda`; `npm run verify` passing |
-| 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118 and 36269595781 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
+| 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118, 36269595781 and 36277447136 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
 | 1.3 to 1.5 Owner decryption, bucket rules, heartbeat monitor | not started | |
 | 1.6 First scheduled run | pending | Due 2026-09-27 08:41 UTC |
 | 2 Primary Pipeline remediation | not started | |
-| 3 Authentication record coverage | awaiting RD-1 | |
+| 3 Authentication record coverage | **3.1–3.3 done for the Secondary Pipeline** 2026-09-26 | RD-1 applied (functions, [07](07-decision-log.md) §2); run 36277447136: 6 users, 12 identities restored. Pending: 3.3 for the Primary Pipeline (Stage 2), 3.4 monthly full-stack restore |
 | 4 Restore verification decoupling | not started | |
 | 5 Stabilization and acceptance | not started | |
 
@@ -290,6 +291,7 @@ the cause, the fix commit).
 | 2026-09-25 | claude | Second review: live schedule, key registry, cf-admin's legacy export workflow, the fallback guard (`workflow-guards.ts:195-198`, `plan.ts:57`) | Stages 0 and 1 added; containment method corrected |
 | 2026-09-25 | claude | `backup_runs.billed_minutes` (1 to 2 per failed run) | Budget estimates in §10 |
 | 2026-09-25 | claude | Terminology review; status re-checked at 16:00 UTC | §5.4 added; §12 current |
+| 2026-09-26 | claude | Stage 3 brought forward for the Secondary Pipeline: RD-1 applied, run 36277447136; 0.4–0.5 superseded | §6, §12 |
 | 2026-09-26 | claude | Secondary Pipeline built and commissioned; live re-check of `backup_runs`, `backup:config`, `backup:key-registry` and both repositories' workflow states at 20:35 UTC | §12 current |
 
 ## 14. Related

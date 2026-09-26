@@ -5,7 +5,7 @@ audience: [ai, technical, owner]
 last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp]
 owner: harshil
-related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, scripts/backup/lib/pins.ts, scripts/backup/lib/workflow-guards.ts]
+related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, scripts/secondary-pipeline/auth-export.sh, sql/supabase/04_auth_export.sql, scripts/backup/lib/pins.ts, scripts/backup/lib/workflow-guards.ts]
 related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md]
 tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification]
 ---
@@ -18,15 +18,16 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 > second, independent path. It uses only vendor tools and the secrets already configured, and it is
 > deliberately kept small.
 
-> **Status (2026-09-26): implemented and commissioned.** Two manual runs passed; the first
-> scheduled run is at 08:41 UTC on 2026-09-27. §3 is the design; §7 records the commissioning
-> results and where the implementation differs from the design. Stage 1 of
-> [06](06-remediation-plan.md). Terms: [11](11-terminology-standard.md).
+> **Status (2026-09-26): implemented and commissioned.** Three manual runs passed, the third with
+> the authentication records added; the first scheduled run is at 08:41 UTC on 2026-09-27. §3 is
+> the design; §7 records the commissioning results and where the implementation differs from the
+> design. Stage 1 of [06](06-remediation-plan.md). Terms: [11](11-terminology-standard.md).
 
 ## 1. Objectives
 
-1. Daily: PostgreSQL (`public` and `supabase_migrations`) and all three D1 databases, exported with
-   the vendors' own tools.
+1. Daily: PostgreSQL (`public` and `supabase_migrations`), its authentication records
+   (`auth.users`, `auth.identities`, from 2026-09-26) and all three D1 databases, exported with the
+   vendors' own tools.
 2. Restore verification in the same run: every table's row count after restore equals the source.
 3. Only ciphertext leaves the runner, encrypted to the archive encryption key the Owner already
    holds.
@@ -46,8 +47,8 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 - **Small and reviewable:** the workflow stays under 300 lines including comments, and the helper under 400. If either needs
   more, the design is wrong.
 - **No new secret**, except RD-9's ping URL if the Owner approves it.
-- Authentication records (`auth.*`) only after Stage 3. Until then the Owner's weekly manual baseline
-  export ([10](10-sop-manual-baseline-export.md)) covers them.
+- Authentication records only through the two functions of `sql/supabase/04_auth_export.sql`
+  (RD-1, [07](07-decision-log.md) §2). The export role still has no access to the Vault.
 
 ## 3. Design
 
@@ -115,6 +116,16 @@ psql … -v ON_ERROR_STOP=1 --single-transaction \
 - If the schema file creates an object the target already has (for example a `CREATE SCHEMA`), the
   correction is the rewrite the Supabase CLI itself applies (`CREATE SCHEMA IF NOT EXISTS`),
   recorded in §7.
+
+**Step 3a — Authentication records (store `postgres-auth`, from 2026-09-26).** The read-only export
+role cannot reach schema `auth`, so it reads `auth.users` and `auth.identities` through the two
+functions of `sql/supabase/04_auth_export.sql` (RD-1). `scripts/secondary-pipeline/auth-export.sh`
+runs in the pinned image and writes `postgres-auth.sql`: the same `COPY "auth"."users" (…) FROM stdin`
+blocks that `supabase db dump --data-only --use-copy` writes, with generated columns left out, as
+`pg_dump` does. It also records source counts before and after, and the tables' exact column types.
+Restore verification loads the rows into tables of that exact shape in the restore target (the bare
+image has only 5 of the 27 `auth` tables) and compares the counts. The store has its own steps, so a
+failure there never stops the other stores.
 
 **Step 4 — D1 export, three databases.**
 
@@ -192,6 +203,19 @@ Pipeline uses a few MB a day.
 - `if: always()`: remove the restore container and `out/plain/`.
 - With RD-9: on success, one `curl` to the external heartbeat monitor's ping URL.
 
+### 3.3 Relationship to the vendors' recommended methods
+
+| Store | The vendor's recommended export | What this pipeline runs | Why it differs |
+|---|---|---|---|
+| Supabase | `supabase db dump`, three times (roles, schema, then data with `--use-copy --data-only`), as `postgres` with the database password | `pg_dump` in the same pinned image the CLI uses, with the CLI's own rewrites (`pg-dump-filter.sed`), producing the same plain SQL and `COPY` data; restored with Supabase's documented `psql` procedure | The CLI switches to the `postgres` role (defect T5). Storing the `postgres` password in GitHub would let a leaked secret read the Vault, which holds the archive's private key. The read-only export role reaches the same data, and the authentication records through RD-1's functions |
+| D1 | `wrangler d1 export` | `wrangler d1 export` for `madagascar-db` and `whatsapp-chatbot` | Cloudflare documents that export "is not supported for virtual tables, including databases with virtual tables". `chatbot-kb` has one (FTS5). The documented workaround (delete the virtual table, export, recreate it) would change production every day, so the pipeline reads the rows and rebuilds the index instead |
+
+Compression and encryption follow the export, in that order: gzip, then age, because encrypted data
+does not compress. The GitHub artifact's zip compresses the encrypted files again, which costs
+nothing and gains nothing. What neither vendor's command does, and this pipeline adds, is restore
+verification: every file is restored into a scratch database and counted against the source before
+it is archived.
+
 ## 4. Configuration
 
 Secret and variable **names only**:
@@ -215,11 +239,13 @@ Secret and variable **names only**:
      for each file, then `sha256sum -c SHA256SUMS`.
   2. `age -d -i key.txt -o <file>.gz <file>.gz.age`, then `gunzip`.
   3. **PostgreSQL into a new Supabase project** (its `postgres` session pooler connection string in
-     `$NEW_DB`), following Supabase's procedure:
-     `psql "$NEW_DB" -v ON_ERROR_STOP=1 --single-transaction -f postgres-schema.sql -c 'SET session_replication_role = replica' -f postgres-data.sql`.
-     Then recreate the roles with `sql/supabase/01_backup_reader.sql` to
-     `sql/supabase/03_backup_keyholder.sql`, and restore authentication records from the latest manual
-     baseline export ([10](10-sop-manual-baseline-export.md)) until Stage 3.
+     `$NEW_DB`), following Supabase's procedure. First create the roles the schema grants to
+     (`cf_astro_writer` and `backup_reader` today; the new project has Supabase's own):
+     `node scripts/secondary-pipeline/verify.ts pg-roles postgres-schema.sql | psql "$NEW_DB" -v ON_ERROR_STOP=1`.
+     Then, once the project's Auth service has created its tables:
+     `psql "$NEW_DB" -v ON_ERROR_STOP=1 --single-transaction -f postgres-schema.sql -c 'SET session_replication_role = replica' -f postgres-auth.sql -f postgres-data.sql`.
+     Finally set the roles' passwords and grants with `sql/supabase/01_backup_reader.sql` to
+     `04_auth_export.sql`, and cf-admin's own for `cf_astro_writer`.
   4. **D1:** `npx wrangler d1 create <name>`, then
      `npx wrangler d1 execute <name> --remote --file d1-<name>.sql`, and update the Workers' bindings.
      Within 7 days of an error, while the database still exists, Time Travel is faster.
@@ -241,6 +267,7 @@ All three are done (2026-09-26).
 | Workflow implemented | **done** | `secondary-pipeline.yml` (267 lines) and `scripts/secondary-pipeline/verify.ts` (356 lines), commits `3abadc8` and `027feda`; `npm run verify` passing |
 | First passing manual run | **done**, 2026-09-26 | Runs 36269275118 and 36269595781 |
 | First verified recovery point | **done**, 2026-09-26 20:29 UTC | `madagascar-backups/secondary/pipeline/2026-09-26/36269595781-1/`: seven objects written and read back; all six checksums in `SHA256SUMS` matched |
+| Authentication records added (store `postgres-auth`) | **done**, 2026-09-26 22:49 UTC | Run 36277447136 (commit `701ade2`): `secondary/pipeline/2026-09-26/36277447136-1/`; §7.4 |
 | First passing scheduled run | pending | Due 2026-09-27 08:41 UTC |
 | One file decrypted by the Owner | pending | Task 1.3 in [06](06-remediation-plan.md) |
 | Failure notification reaching a person | pending | Proven by the first failed run, or by a deliberate one |
@@ -280,8 +307,21 @@ tables and 2,201 rows; `chatbot-kb` 87 rows.
   result and per-table row counts; no personal data), not `counts.json`.
 - Only files whose restore verification passed are encrypted and archived. A store that fails does
   not stop the others, and the verdict step then fails the run.
-- Encryption, upload and the verdict run without `continue-on-error`; only the four export and
-  verification steps use it, so that each store reaches the verdict.
+- Encryption, upload and the verdict run without `continue-on-error`; only the export, restore
+  target and verification steps use it, so that each store reaches the verdict.
+
+### 7.4 Authentication records (run 36277447136)
+
+| Table | Source (before / after) | Restored |
+|---|---|---|
+| `auth.users` | 6 / 6 | 6 |
+| `auth.identities` | 12 / 12 | 12 |
+
+The other four stores passed in the same run with the counts of §7.2; `supabase_migrations` now has
+47 rows, the 47th being `cf_backup_auth_export`. Before the change, the export was proven locally
+(PostgreSQL 16 with Supabase's privilege layout reproduced): the file restores value for value into
+tables of the source's shape, and into tables with the live generated columns, which PostgreSQL then
+recomputes.
 
 ## 8. Verification log
 
@@ -291,6 +331,7 @@ tables and 2,201 rows; `chatbot-kb` 87 rows.
 | 2026-09-25 | claude | Code read: `pins.ts` (image, age), `workflow-guards.ts` (rules every workflow must satisfy) | §3.1, §6 |
 | 2026-09-25 | claude | Vendor documentation: Supabase restore procedure, wrangler D1 export and R2 upload, GitHub schedule notes | §3.2, §5 |
 | 2026-09-26 | claude | Commissioning runs 36269275118 and 36269595781 (job logs, step timings, artifact size); live read-only counts from Supabase and D1 | §7 |
+| 2026-09-26 | claude | Authentication records: local proof, live privilege checks, run 36277447136; Cloudflare's D1 export limitations and Supabase's restore guides re-read | §3.2 step 3a, §3.3, §5, §7.4 |
 
 ## 9. Related
 

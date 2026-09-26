@@ -2,7 +2,7 @@
 title: "cf-backup remediation — 07 Decision log (RD-1 to RD-14)"
 status: draft
 audience: [owner, ai, technical]
-last_verified: 2026-09-25
+last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md]
@@ -12,16 +12,16 @@ tags: [cf-backup, remediation, decisions, owner]
 # 07 — Decision log
 
 > **TL;DR (non-technical):** Fourteen decisions that only the Owner can make. Each has a
-> recommended default, and work proceeds on the default unless the Owner decides otherwise. Three
-> are needed now: how to include authentication records (RD-1), the test resources for
-> Pre-production Validation (RD-2), and a feature freeze until the recovery points are proven
-> (RD-4). Every default can be revised later.
+> recommended default, and work proceeds on the default unless the Owner decides otherwise. RD-1
+> (authentication records) was applied on its default on 2026-09-26, refined as §2 explains. Two
+> are needed now: the test resources for Pre-production Validation (RD-2) and a feature freeze
+> until the recovery points are proven (RD-4). Every default can be revised later.
 
 ## 1. Decision register (defaults: reversible at review)
 
 | ID | Decision | Default (applies unless the Owner decides otherwise) | Alternative | Required by |
 |---|---|---|---|---|
-| RD-1 | How to include authentication records (`auth.users`, `auth.identities`) | **Read-only views owned by `postgres`** that only the read-only export role may read; the Vault remains refused. See §2 | Export as `postgres`; the Auth Admin API; accept the gap | Stage 3 |
+| RD-1 | How to include authentication records (`auth.users`, `auth.identities`) | **Read-only access owned by `postgres`** that only the read-only export role may use; the Vault remains refused. **Applied 2026-09-26** as two functions rather than views (§2) | Export as `postgres`; the Auth Admin API; accept the gap | Stage 3 |
 | RD-2 | Test resources for Pre-production Validation | **A 4th D1 database and a second, small R2 bucket without locks**, with a test token scoped to those two only. PostgreSQL runs in a container on the runner | An unlocked prefix in the archive bucket: cheaper, but the validation token could reach production recovery points | Stage 2 |
 | RD-3 | May a decryption key reside in GitHub? | **No.** Weekly restore verification checks the downloaded ciphertext (header, size, checksum) and restores the plain exports produced in the same run. A person proves decryption with the offline recovery key: monthly for 3 months, then quarterly | A second "verification" key in GitHub: stronger weekly assurance, but whoever holds it with bucket read access can read recovery points | Stage 4 |
 | RD-4 | Feature freeze on cf-backup | **Yes.** No new console, diagnostics or layout work until acceptance ([06](06-remediation-plan.md) §9). Only defects that prevent a recovery point are fixed. May lift after 7 passing scheduled days, with stabilization continuing | No freeze | All stages |
@@ -50,8 +50,20 @@ administrator would need to be re-invited. Until Stage 3, the Owner's weekly man
 | d. `pg_read_all_data` (RD-10) | Grant the built-in read-all role | Yes | **Probably not**; untested | One SQL statement |
 | e. Accept the gap | Re-invite every user after a disaster | — | Yes | None |
 
-The views include password hashes, so the recovery points do as well. They are encrypted like
+The exports include password hashes, so the recovery points do as well. They are encrypted like
 everything else.
+
+**As applied (2026-09-26).** Option a, with one refinement: two `SECURITY DEFINER` functions,
+`auth_export.users()` and `auth_export.identities()`, owned by `postgres`, with an empty
+`search_path`, executable by the read-only export role only (`sql/supabase/04_auth_export.sql`,
+migration `cf_backup_auth_export`). A view over `auth.users` records a dependency on each column it
+reads, and PostgreSQL then refuses to drop or retype those columns ("cannot alter type of a column
+used by a view or rule"), so a view could make a Supabase Auth upgrade fail. A function whose body
+is plain SQL records no such dependency. Both behaviours were reproduced locally before the change.
+Live checks afterwards: only the export role may call the functions (`anon`, `authenticated`,
+`service_role` and `cf_astro_writer` may not), and the export role still has no access to the
+Vault. The Secondary Pipeline exports both tables daily as the store `postgres-auth`
+([09](09-secondary-pipeline-specification.md)).
 
 ## 3. RD-2 and RD-6 in detail: validation targets
 
@@ -87,7 +99,7 @@ configured.
 | Today, then weekly | The manual baseline export ([10](10-sop-manual-baseline-export.md)) | 45 min |
 | Stage 1 | Decrypt one Secondary Pipeline file; add the lock and lifecycle rules | 15 min |
 | Stage 2 | Create the test resources; re-enable the workflow; one pre-flight run and one full run | 20 min |
-| Stage 3 | Run one SQL file in the Supabase SQL editor | 5 min |
+| Stage 3 | ~~Run one SQL file in the Supabase SQL editor~~ Done for the Owner on 2026-09-26 through the Supabase connector | 0 min |
 | Stage 5 | One recovery test from the archive bucket with the offline recovery key | 1 hour |
 
 ## 7. Verification log
@@ -97,6 +109,7 @@ configured.
 | 2026-09-25 | claude | First review: RD-1 to RD-7 drafted | Defaults as in §1 |
 | 2026-09-25 | claude | Second review: live schedule, key registry, cf-admin's legacy export workflow, workflow guards, pre-flight policy | RD-5 corrected; RD-8 to RD-13 added |
 | 2026-09-25 | claude | Live Supabase grants and project list; cf-admin migration `0057` constraint on `backup_runs.kind` | RD-1 options; no spare project; RD-14 scope |
+| 2026-09-26 | claude | RD-1 applied: views and functions compared against Auth-style column changes on a local PostgreSQL 16 with Supabase's privileges reproduced; live privilege checks after the migration | §1, §2 |
 
 ## 8. Related
 

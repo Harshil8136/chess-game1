@@ -2,7 +2,7 @@
 title: "cf-backup remediation — 10 SOP: manual baseline export (Owner)"
 status: active
 audience: [owner, operator, technical]
-last_verified: 2026-09-25
+last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp, research]
 owner: harshil
 related_docs: [README.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, ../RESTORE.md]
@@ -17,6 +17,10 @@ tags: [cf-backup, remediation, sop, manual-baseline-export, supabase, d1]
 > and decrypts one to prove it works. The result is the business's first verified recovery point.
 > Repeat weekly until the Secondary Pipeline is operating and authentication records are covered by
 > the automated pipelines.
+
+> **Status (2026-09-26): no longer a routine task.** The Secondary Pipeline produces a verified
+> recovery point every day, authentication records included ([09](09-secondary-pipeline-specification.md)
+> §7). Keep this procedure as a fallback for when GitHub Actions or the pipeline cannot run.
 
 ## 0. Scope
 
