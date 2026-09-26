@@ -135,7 +135,7 @@ most of these. The rest are small additions:
 | Read back from R2 and compare checksums | FogMoe, kadeksuryam | Yes: step 7 |
 | Checksummed manifest | backupdrill, FogMoe | Yes: `SHA256SUMS` plus `counts.json` |
 | `PRAGMA foreign_keys=OFF;` before importing a `wrangler d1 export` file (tables can come out in the wrong order for their foreign keys) | warden-worker | **Add** to the D1 restore check and to `docs/RESTORE.md` |
-| A copy outside the Cloudflare account | warden-worker | Partly: a 30-day GitHub artifact. **Consider** a third copy (Google Drive, B2) for account-loss risk |
+| A copy outside the Cloudflare account | warden-worker | Partly: a 14-day GitHub artifact (the repository's maximum retention). **Consider** a third copy (Google Drive, B2) for account-loss risk |
 | Supabase Storage files, not only their metadata | backupdrill | **Not in scope yet.** Supabase restores only `storage.objects` rows, not the files. Check whether staff storage still uses Supabase Storage (plan of record 04) |
 | GFS retention (daily, weekly, monthly) | kadeksuryam | Covered by R2 lifecycle and lock rules (RD-12) |
 
@@ -201,7 +201,7 @@ apply as written.
 1. Does anything still use Supabase **Storage** (files)? If it does, neither pipeline exports the
    files, only their metadata (§5).
 2. Is a copy **outside the Cloudflare account** wanted, given that the database, the Worker and the
-   R2 copy share one account? The GitHub artifact covers 30 days; a third location would cover
+   R2 copy share one account? The GitHub artifact covers 14 days; a third location would cover
    account loss.
 3. How often is "frequently"? Daily fits the free minutes (about 3 minutes a run, about 90 a
    month). Every 6 hours is about 360 minutes a month, which fits under RD-7's 400-minute ceiling

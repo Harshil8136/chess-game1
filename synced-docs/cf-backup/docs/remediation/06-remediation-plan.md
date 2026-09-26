@@ -98,7 +98,7 @@ not start runs until Stage 2 re-enables the workflow.
 A separate workflow, `.github/workflows/secondary-pipeline.yml`, specified in
 [09](09-secondary-pipeline-specification.md): vendor tools and shell only, the existing two
 secrets and two variables, daily, PostgreSQL (`public`, `supabase_migrations`) and all three D1
-databases, restore verification in the same run, ciphertext only to R2 plus a 30-day artifact,
+databases, restore verification in the same run, ciphertext only to R2 plus a 14-day artifact,
 failure on any error.
 
 | # | Task | Owner |

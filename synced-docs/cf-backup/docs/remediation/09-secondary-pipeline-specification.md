@@ -181,7 +181,7 @@ done
   its own lock and lifecycle rules (RD-12).
 
 **Step 8 — Second copy.** `upload-artifact` of `out/encrypted/` (ciphertext only),
-`retention-days: 30`. GitHub Free's artifact quota for private repositories is 500 MB; the Secondary
+`retention-days: 14`, the repository's maximum. GitHub Free's artifact quota for private repositories is 500 MB; the Secondary
 Pipeline uses a few MB a day.
 
 **Step 9 — Verdict and cleanup.**
