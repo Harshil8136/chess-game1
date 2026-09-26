@@ -2,17 +2,17 @@
 title: "cf-backup remediation — 06 Remediation plan (stages, tasks, exit criteria, acceptance)"
 status: draft
 audience: [owner, ai, technical, operator]
-last_verified: 2026-09-25
+last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp]
 owner: harshil
-related_code: [.github/workflows/db-backup.yml, scripts/backup/lib/pins.ts, scripts/backup/lib/pipeline.ts, scripts/backup/lib/workflow-guards.ts, sql/supabase/01_backup_reader.sql]
+related_code: [.github/workflows/db-backup.yml, .github/workflows/secondary-pipeline.yml, scripts/backup/lib/pins.ts, scripts/backup/lib/pipeline.ts, scripts/backup/lib/workflow-guards.ts, sql/supabase/01_backup_reader.sql]
 related_docs: [README.md, 04-defect-register.md, 05-options-analysis.md, 07-decision-log.md, 09-secondary-pipeline-specification.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md]
 tags: [cf-backup, remediation, plan, roadmap]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan. It names files that do not exist yet: .github/workflows/secondary-pipeline.yml,
-     .github/workflows/preprod-validation.yml and sql/supabase/04_auth_export_views.sql. -->
+<!-- This is a plan. It names files that do not exist yet: .github/workflows/preprod-validation.yml
+     and sql/supabase/04_auth_export_views.sql. -->
 
 # 06 — Remediation plan
 
@@ -96,14 +96,14 @@ not start runs until Stage 2 re-enables the workflow.
 ## 4. Stage 1 — Interim protection: Secondary Pipeline (engineering about one day; Owner 15 minutes)
 
 A separate workflow, `.github/workflows/secondary-pipeline.yml`, specified in
-[09](09-secondary-pipeline-specification.md): vendor tools and shell only, the existing two
-secrets and two variables, daily, PostgreSQL (`public`, `supabase_migrations`) and all three D1
-databases, restore verification in the same run, ciphertext only to R2 plus a 14-day artifact,
-failure on any error.
+[09](09-secondary-pipeline-specification.md): vendor tools, shell and a small helper using Node
+built-ins only, the existing two secrets and two variables, daily, PostgreSQL (`public`,
+`supabase_migrations`) and all three D1 databases, restore verification in the same run,
+ciphertext only to R2 plus a 14-day artifact, failure on any error.
 
 | # | Task | Owner |
 |---|---|---|
-| 1.1 | Implement `secondary-pipeline.yml` (under 250 lines); add it to `DOCUMENTED_SECRETS` and the common checks in `scripts/backup/lib/workflow-guards.ts`, with a test that its image reference equals `scripts/backup/lib/pins.ts`; record the exception in `RULES.md` rule 7 and `main.md` (RD-12). `npm run verify` passes | Engineering |
+| 1.1 | Implement `secondary-pipeline.yml` (under 300 lines; its helper under 400); add it to `DOCUMENTED_SECRETS` and the common checks in `scripts/backup/lib/workflow-guards.ts`, with a test that its image reference equals `scripts/backup/lib/pins.ts`; record the exception in `RULES.md` rule 7 and `main.md` (RD-12). `npm run verify` passes | Engineering |
 | 1.2 | Commission it with manual runs until it passes. Commissioning failures cost 2 to 3 minutes each and do not touch production. Record in [09](09-secondary-pipeline-specification.md) §7 what the commissioning runs establish (the `chatbot-kb` method, the restore-target superuser, minutes, sizes) | Engineering |
 | 1.3 | Download one file from `secondary/pipeline/` and decrypt it with the offline recovery key | Owner |
 | 1.4 | Add a bucket lock rule on `secondary/` (30 days) and a lifecycle rule deleting objects there after 35 days (RD-12) | Owner (dashboard) |
@@ -254,7 +254,7 @@ day.
 | Risk | Mitigation |
 |---|---|
 | Both pipelines fail for a common reason (the token, a Supabase outage, a GitHub outage) | Both fail visibly: GitHub's failure notification, the Scheduler's staleness alerts, and the external heartbeat monitor (RD-9) |
-| The Secondary Pipeline grows into a second large system | Hard limits in [09](09-secondary-pipeline-specification.md) §2: one file, under 250 lines, shell and vendor tools only, no console integration |
+| The Secondary Pipeline grows into a second large system | Hard limits in [09](09-secondary-pipeline-specification.md) §2: a workflow under 300 lines and a helper under 400, vendor tools and Node built-ins only, nothing from the Primary Pipeline (enforced in CI), no console integration |
 | A D1 export blocks the database | About one second at this size; the Secondary Pipeline runs at 02:41 local time |
 | An offline recovery key is lost | Two keys, an annual confirmation, and a real decryption with each |
 | Personal data in plain text on the runner | Only on the runner's ephemeral disk, destroyed with it; only ciphertext is uploaded |
@@ -270,10 +270,13 @@ the cause, the fix commit).
 
 | Stage | State | Evidence |
 |---|---|---|
-| 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-25 16:00 UTC) | Registry: 0 confirmations |
-| 0.3 Containment of scheduled runs | not started (re-checked 2026-09-25 16:00 UTC) | Schedule enabled; both workflows active |
-| 0.4 Manual baseline export | not started | |
-| 1 Secondary Pipeline | not started | |
+| 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-26 20:40 UTC) | Registry: 0 confirmations, 0 reveals |
+| 0.3 Containment of scheduled runs | not started (re-checked 2026-09-26 20:40 UTC) | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
+| 0.4 Manual baseline export | not started | Still the only way to capture authentication records until Stage 3 |
+| 1.1 Secondary Pipeline implemented | **done** 2026-09-26 | Commits `3abadc8`, `027feda`; `npm run verify` passing |
+| 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118 and 36269595781 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
+| 1.3 to 1.5 Owner decryption, bucket rules, heartbeat monitor | not started | |
+| 1.6 First scheduled run | pending | Due 2026-09-27 08:41 UTC |
 | 2 Primary Pipeline remediation | not started | |
 | 3 Authentication record coverage | awaiting RD-1 | |
 | 4 Restore verification decoupling | not started | |
@@ -287,6 +290,7 @@ the cause, the fix commit).
 | 2026-09-25 | claude | Second review: live schedule, key registry, cf-admin's legacy export workflow, the fallback guard (`workflow-guards.ts:195-198`, `plan.ts:57`) | Stages 0 and 1 added; containment method corrected |
 | 2026-09-25 | claude | `backup_runs.billed_minutes` (1 to 2 per failed run) | Budget estimates in §10 |
 | 2026-09-25 | claude | Terminology review; status re-checked at 16:00 UTC | §5.4 added; §12 current |
+| 2026-09-26 | claude | Secondary Pipeline built and commissioned; live re-check of `backup_runs`, `backup:config`, `backup:key-registry` and both repositories' workflow states at 20:40 UTC | §12 current |
 
 ## 14. Related
 

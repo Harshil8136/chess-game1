@@ -11,7 +11,7 @@ tags: [cf-backup, remediation, terminology, naming, glossary]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- Names proposed files (secondary-pipeline.yml, preprod-validation.yml, 04_auth_export_views.sql),
+<!-- Names proposed files (preprod-validation.yml, 04_auth_export_views.sql),
      a retired proposal (04_backup_auth_export.sql) and cf-admin's .github/workflows/backups.yml. -->
 
 # 11 — Terminology and naming standard
@@ -48,7 +48,7 @@ tags: [cf-backup, remediation, terminology, naming, glossary]
 | Professional name | Meaning | Replaces (informal) | Identifier today |
 |---|---|---|---|
 | **Primary Pipeline** | cf-backup's scheduled export, verification and archiving pipeline | "the main pipeline" | `.github/workflows/db-backup.yml`, `scripts/backup/cli.ts` |
-| **Secondary Pipeline** | A small, independent export pipeline that shares no code with the Primary Pipeline: interim protection now, a second path later | "lifeboat" | proposed `.github/workflows/secondary-pipeline.yml` |
+| **Secondary Pipeline** | A small, independent export pipeline that shares no code with the Primary Pipeline: interim protection now, a second path later | "lifeboat" | `.github/workflows/secondary-pipeline.yml`, `scripts/secondary-pipeline/` |
 | **Pre-production Validation (PPV)** | A CI workflow that runs the Primary Pipeline's real commands and tools against test resources before any change reaches production; cf-backup's staging environment | "rehearsal", "rehearsal job", "staging in a box" | proposed `.github/workflows/preprod-validation.yml` |
 | **Scheduler** | cf-admin's five-minute job that dispatches scheduled runs and raises alerts | "the tick" | `backup-tick`, `POST /internal/tick` |
 | **Fallback schedule** | The weekly `schedule:` line that starts a full run if no good one exists (design D-5) | "fallback cron" | `db-backup.yml` cron `43 12 * * 1` |

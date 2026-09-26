@@ -1,17 +1,14 @@
 ---
 title: "cf-backup remediation — 09 Secondary Pipeline specification"
-status: draft
+status: active
 audience: [ai, technical, owner]
-last_verified: 2026-09-25
+last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp]
 owner: harshil
-related_code: [scripts/backup/lib/pins.ts, scripts/backup/lib/workflow-guards.ts, .github/workflows/db-backup.yml]
+related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, scripts/backup/lib/pins.ts, scripts/backup/lib/workflow-guards.ts]
 related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md]
 tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification]
 ---
-
-<!-- docs-check: proposed-paths -->
-<!-- A specification: .github/workflows/secondary-pipeline.yml and its compatibility shim do not exist yet. -->
 
 # 09 — Secondary Pipeline specification
 
@@ -21,8 +18,9 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 > second, independent path. It uses only vendor tools and the secrets already configured, and it is
 > deliberately kept small.
 
-> **Status: specification, not implemented.** The commands below are defaults; the commissioning
-> runs confirm or correct them, and §7 records the outcome. Stage 1 of
+> **Status (2026-09-26): implemented and commissioned.** Two manual runs passed; the first
+> scheduled run is at 08:41 UTC on 2026-09-27. §3 is the design; §7 records the commissioning
+> results and where the implementation differs from the design. Stage 1 of
 > [06](06-remediation-plan.md). Terms: [11](11-terminology-standard.md).
 
 ## 1. Objectives
@@ -59,7 +57,7 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 |---|---|
 | File | `.github/workflows/secondary-pipeline.yml` |
 | Triggers | `schedule: '41 8 * * *'` (08:41 UTC, 02:41 in Aguascalientes: low traffic, away from the hour and from 09:17) and `workflow_dispatch` without inputs |
-| Runner | `ubuntu-24.04`; one job, `timeout-minutes: 20`; a timeout on every step |
+| Runner | `ubuntu-24.04`; one job, `timeout-minutes: 30`; a timeout on every step |
 | Permissions | `permissions: {}` at the top level; the job receives `contents: read` |
 | Concurrency | Its own group, `secondary-pipeline`, `cancel-in-progress: false` |
 | Actions | Only `checkout`, `setup-node` (no npm cache) and `upload-artifact`, pinned to the same commit SHAs as `db-backup.yml` |
@@ -94,7 +92,7 @@ run_pg 'exec pg_dump "$PG_URL" --data-only  --quote-all-identifiers --schema=pub
 
 **Step 3 — PostgreSQL restore verification.** Start the same image as a local server and load the
 export as Supabase's procedure restores into a new project. The compatibility shim
-(`auth-jwt-shim.sql`, stored beside the workflow):
+(`scripts/secondary-pipeline/auth-jwt-shim.sql`):
 
 ```sql
 CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$
@@ -228,21 +226,62 @@ Secret and variable **names only**:
 
 ## 6. Repository changes required
 
+All three are done (2026-09-26).
+
 - `scripts/backup/lib/workflow-guards.ts`: `secondary-pipeline.yml` in `DOCUMENTED_SECRETS`, the
-  common checks applied to it, and a test that its image reference equals `pins.ts`.
+  common checks applied to it, and a test that its image reference equals `pins.ts`
+  (`checkSecondaryPipelineWorkflow`, which also enforces the independence rule of §2).
 - `RULES.md` rule 7 and `main.md`: the Secondary Pipeline as the second scheduled workflow (RD-12).
 - `docs/RESTORE.md`: a short section referring to §5.
 
 ## 7. Status and commissioning results
 
-| Item | State |
+| Item | State | Evidence |
+|---|---|---|
+| Workflow implemented | **done** | `secondary-pipeline.yml` (267 lines) and `scripts/secondary-pipeline/verify.ts` (356 lines), commits `3abadc8` and `027feda`; `npm run verify` passing |
+| First passing manual run | **done**, 2026-09-26 | Runs 36269275118 and 36269595781 |
+| First verified recovery point | **done**, 2026-09-26 20:29 UTC | `madagascar-backups/secondary/pipeline/2026-09-26/36269595781-1/`: seven objects written and read back; all six checksums in `SHA256SUMS` matched |
+| First passing scheduled run | pending | Due 2026-09-27 08:41 UTC |
+| One file decrypted by the Owner | pending | Task 1.3 in [06](06-remediation-plan.md) |
+| Failure notification reaching a person | pending | Proven by the first failed run, or by a deliberate one |
+
+### 7.1 What the commissioning runs established
+
+| Question left open by §3 | Answer |
 |---|---|
-| Workflow implemented | not started |
-| First passing manual run | not started |
-| First passing scheduled run | not started |
-| `chatbot-kb` method (step 4) | to be confirmed |
-| Restore-target superuser (step 3) | to be confirmed |
-| Measured minutes and sizes per run | to be measured |
+| `chatbot-kb` method (step 4) | **Row reads and rebuild** (the second method). The workflow selects it for any database with a virtual table; `--table` was not tried. The rebuilt file restores with `kb_search` rebuilt and FTS5 `integrity-check` passing |
+| Restore-target superuser (step 3) | `supabase_admin` creates the referenced roles and the `auth.jwt()` shim; the export itself restores **as `postgres`**, as it would into a new Supabase project |
+| Readiness of the restore container | The workflow waits for two consecutive successful queries over TCP as `supabase_admin` (up to 3 minutes), not a single `pg_isready`, so the restore never starts against a server that is still initializing |
+| Roles the dump references | The schema file grants privileges to roles by name. Before the restore, the helper lists every role the file names and creates any the image lacks |
+| Supabase CLI rewrites | Applied, as the Supabase CLI applies them to these schemas: `CREATE SCHEMA IF NOT EXISTS`, and `\restrict`, `ALTER DEFAULT PRIVILEGES FOR ROLE "supabase_admin"`, `CREATE PUBLICATION "supabase_realtime…"` and `SET transaction_timeout` commented out (`scripts/secondary-pipeline/pg-dump-filter.sed`). With them the schema file restores without error |
+| `wrangler d1 export` output | It prints a one-hour signed link to the **plaintext** export. The workflow writes the command's output to a file and prints it, with links removed, only on failure (fixed in `027feda`; run 2's log contains no signed link) |
+| Artifact retention | The repository caps artifacts at **14 days**; a request for 30 was lowered with a warning. The workflow asks for 14 |
+| Minutes per run | About **2 minutes** (run 2: 20:27:37 to 20:29:37 UTC); the longest steps are pre-flight (29 s), D1 export (28 s), upload and read-back (23 s) and PostgreSQL export (19 s) |
+| Sizes per run | Plaintext: PostgreSQL schema 77 KB and data 1.9 MB; D1 2.2 MB in three files (`madagascar-db` 2.0 MB). Ciphertext, gzip then age: 0.9 MB in total |
+
+### 7.2 Restore verification results (run 36269595781)
+
+Every table's restored row count equalled its source count, before and after the export.
+
+| Store | Tables | Rows restored |
+|---|---|---|
+| PostgreSQL (`public`, `supabase_migrations`) | 21 | 2,201 |
+| D1 `madagascar-db` | 32 | 2,574 |
+| D1 `whatsapp-chatbot` | 4 | 106 |
+| D1 `chatbot-kb` (`kb_search` rebuilt, not counted) | 5 | 87 |
+
+Independent check, the same evening, with read-only queries outside the workflow: PostgreSQL 21
+tables and 2,201 rows; `chatbot-kb` 87 rows.
+
+### 7.3 Where the implementation differs from §3
+
+- Working files live under `$RUNNER_TEMP/secondary/`, not `out/`, so nothing is written inside the
+  checkout. The manifest is `manifest.json` (schema `cf-backup/secondary-manifest@1`: each store's
+  result and per-table row counts; no personal data), not `counts.json`.
+- Only files whose restore verification passed are encrypted and archived. A store that fails does
+  not stop the others, and the verdict step then fails the run.
+- Encryption, upload and the verdict run without `continue-on-error`; only the four export and
+  verification steps use it, so that each store reaches the verdict.
 
 ## 8. Verification log
 
@@ -251,6 +290,7 @@ Secret and variable **names only**:
 | 2026-09-25 | claude | Live: the export role's table grants and `BYPASSRLS`; `chatbot-kb` `sqlite_master`; R2 lock rules in `src/files/layout.ts:524-531` | Steps 2, 4 and 7 rest on these |
 | 2026-09-25 | claude | Code read: `pins.ts` (image, age), `workflow-guards.ts` (rules every workflow must satisfy) | §3.1, §6 |
 | 2026-09-25 | claude | Vendor documentation: Supabase restore procedure, wrangler D1 export and R2 upload, GitHub schedule notes | §3.2, §5 |
+| 2026-09-26 | claude | Commissioning runs 36269275118 and 36269595781 (job logs, step timings, artifact size); live read-only counts from Supabase and D1 | §7 |
 
 ## 9. Related
 

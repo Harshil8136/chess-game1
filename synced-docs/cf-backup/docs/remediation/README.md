@@ -2,31 +2,34 @@
 title: "cf-backup remediation — program overview, reading order and status"
 status: active
 audience: [owner, ai, technical, operator]
-last_verified: 2026-09-25
+last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp, research]
 owner: harshil
-related_code: [.github/workflows/db-backup.yml, scripts/backup/cli.ts]
+related_code: [.github/workflows/db-backup.yml, scripts/backup/cli.ts, .github/workflows/secondary-pipeline.yml]
 related_docs: [01-post-incident-review.md, 02-root-cause-analysis.md, 03-dependency-assessment.md, 04-defect-register.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 08-industry-practice-review.md, 09-secondary-pipeline-specification.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md]
 tags: [cf-backup, remediation, data-protection, index]
 ---
 
 # cf-backup data protection remediation — overview
 
-> **TL;DR (non-technical):** cf-backup has not yet produced a recovery point: six production runs,
-> six failures, and no archived copy of any database. The Supabase database has no copy at all, and
-> no one has yet confirmed a saved copy of the key that decrypts the archive. This program sets out
-> why, lists every defect with its evidence, and defines a plan that produces a verified recovery
-> point **today**, automates it within one to two days through a small, independent Secondary
-> Pipeline, and only then remediates the Primary Pipeline.
+> **TL;DR (non-technical):** cf-backup's Primary Pipeline has not yet produced a recovery point:
+> seven production runs, seven failures. On the evening of 2026-09-26 a small, independent
+> **Secondary Pipeline** produced the first one: the Supabase application data and all three D1
+> databases, exported, restored into a scratch copy and checked table by table, then encrypted and
+> stored off-site. It runs every day from 2026-09-27. Two gaps remain: no one has yet confirmed a saved copy of the key that decrypts the
+> archive, and sign-in accounts (authentication records) are in no copy yet. This program sets out
+> why the Primary Pipeline failed, lists every defect with its evidence, and defines how it is
+> remediated.
 
-> **Status (2026-09-25, 16:00 UTC): open.** The schedule remains enabled and every scheduled run
-> fails. The first action is Stage 0, Containment ([06](06-remediation-plan.md) §3): about one hour
-> of the Owner's time. Terms follow [11](11-terminology-standard.md).
+> **Status (2026-09-26, 20:40 UTC): open.** Stage 1 is built and commissioned: the first verified
+> recovery point exists ([09](09-secondary-pipeline-specification.md) §7). Stage 0, Containment
+> ([06](06-remediation-plan.md) §3), has not started: the Primary Pipeline's schedule remains
+> enabled and every scheduled run fails. Terms follow [11](11-terminology-standard.md).
 
 ## 1. Summary
 
-Between 2026-09-24 and 2026-09-25, the Primary Pipeline (`db-backup.yml`) ran six times: five
-started manually, one by the Scheduler. Every run failed, and one was reported as successful. The
+Between 2026-09-24 and 2026-09-26, the Primary Pipeline (`db-backup.yml`) ran seven times: five
+started manually, two by the Scheduler. Every run failed, and one was reported as successful. The
 pipeline never creates the directories its tools write into, D1 rejects the row-count query it
 sends, and the Supabase export tool switches to an account the read-only export role may not use.
 None of this was detected before production because every unit test used test doubles more
@@ -65,8 +68,9 @@ existed.
 
 | Asset | Copies outside the primary | Current protection |
 |---|---|---|
-| Supabase: application data (17 MB) and 6 authentication records | **0** | None. The Free plan provides no platform backups |
-| D1: `madagascar-db` (2.5 MB), `chatbot-kb`, `whatsapp-chatbot` | **0 off-site** | Time Travel: 7 days, in place, same account |
+| Supabase: application data (`public`, `supabase_migrations`) | **1 a day**, from 2026-09-26 | Secondary Pipeline: restore-verified, encrypted, in the archive bucket and a 14-day GitHub artifact |
+| Supabase: 6 authentication records | **0** | None until the manual baseline export (Stage 0.4) or Stage 3. The Free plan provides no platform backups |
+| D1: `madagascar-db` (2.5 MB), `chatbot-kb`, `whatsapp-chatbot` | **1 a day off-site**, from 2026-09-26 | Secondary Pipeline, as above; plus Time Travel: 7 days, in place, same account |
 | Archive encryption key | Supabase Vault, plus an **unconfirmed** offline recovery key | 0 confirmations and 0 reveals in the key registry |
 
 ## 5. Plan summary
@@ -84,9 +88,10 @@ existed.
 
 | Item | State | Evidence |
 |---|---|---|
-| Recovery points in the archive bucket | **none** | `backup_runs`: 6 rows, `data_bytes` 0 or empty |
-| Stage 0 Containment | not started | Re-checked 2026-09-25 16:00 UTC: schedule enabled; both workflows active; 0 key confirmations |
-| Stage 1 Interim protection | not started | |
+| Verified recovery points | **1**, 2026-09-26 20:29 UTC (Secondary Pipeline) | `secondary/pipeline/2026-09-26/36269595781-1/`; every table's restored count matched ([09](09-secondary-pipeline-specification.md) §7.2) |
+| Primary Pipeline recovery points | **none** | `backup_runs`: 7 rows, `data_bytes` 0 or empty; the seventh failed on 2026-09-26 at 09:20 UTC |
+| Stage 0 Containment | not started | Re-checked 2026-09-26 20:40 UTC: schedule enabled; both workflows active; 0 key confirmations |
+| Stage 1 Interim protection | **in progress**: built and commissioned | Pending: the first scheduled run (2026-09-27 08:41 UTC), the Owner's decryption of one file, the bucket rules on `secondary/`, a proven failure notification |
 | Stages 2 to 5 | not started | |
 
 Per-stage detail: [06](06-remediation-plan.md) §12.
@@ -100,6 +105,7 @@ Per-stage detail: [06](06-remediation-plan.md) §12.
 | 2026-09-25 | claude | Rewritten in cf-admin's documentation format; review layers consolidated into one set | This folder |
 | 2026-09-25 | claude | Terminology standard applied; folder renamed from `docs/recovery/` to `docs/remediation/`; live status re-checked at 16:00 UTC | [11](11-terminology-standard.md); §6 |
 | 2026-09-26 | claude | Open-source tool survey and the case for build or adopt; no live checks | [12](12-open-source-tool-assessment.md) (draft) |
+| 2026-09-26 | claude | Secondary Pipeline commissioning runs 36269275118 and 36269595781; live re-check of `backup_runs`, the schedule, the key registry and workflow states at 20:40 UTC | §4, §6 |
 
 ## 8. Related
 

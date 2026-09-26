@@ -91,7 +91,7 @@ Specification: [09](09-secondary-pipeline-specification.md).
 | Resolves | The exposure itself: a daily, encrypted, restore-verified, off-site recovery point within 1 to 2 days, while B and C proceed |
 | Precedent | The standard approach for teams of this size ([08](08-industry-practice-review.md) §2), plus restore verification. cf-admin's legacy export workflow already has this shape and avoided T1, T5 and L3; it lacked only its secrets |
 | Cost, effort | $0; about 3 minutes per run; about one day to build; uses the existing two secrets and two variables |
-| Risk | Low. The risk is scope growth into a second large system; the specification sets hard limits (one file, under 250 lines, no TypeScript, no console integration) |
+| Risk | Low. The risk is scope growth into a second large system; the specification sets hard limits (a workflow under 300 lines and a helper under 400, Node built-ins only, no console integration) |
 | Assessment | **Selected**, as Stage 1, preceded the same day by a manual baseline export (Stage 0) |
 
 ### 2.5 Option E — Considered and rejected

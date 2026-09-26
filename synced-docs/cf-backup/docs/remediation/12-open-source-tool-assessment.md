@@ -10,9 +10,6 @@ related_docs: [README.md, 05-options-analysis.md, 07-decision-log.md, 08-industr
 tags: [cf-backup, remediation, open-source, build-vs-adopt, supabase, d1, decision]
 ---
 
-<!-- docs-check: proposed-paths -->
-<!-- Names the proposed .github/workflows/secondary-pipeline.yml, which does not exist yet. -->
-
 # 12 — Open-source tool assessment: adopt a tool, or remediate cf-backup
 
 > **TL;DR (non-technical):** The Owner asked whether an existing open-source project could export

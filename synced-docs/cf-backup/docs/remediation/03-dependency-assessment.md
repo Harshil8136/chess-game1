@@ -41,7 +41,7 @@ Each row carries a status:
 |---|---|---|---|---|
 | B1 | S3 credentials are derived from the API token at run time | Works: the access key is the token id, the secret the SHA-256 of the token | Confirmed | Pre-flight diagnostics' canary PUT, HEAD and DELETE passed in runs 3 to 6 |
 | B2 | Uploads are inexpensive | Class A operations are free up to 1 million a month; storage up to 10 GB-month | Confirmed | R2 pricing |
-| B3 | Bucket locks protect production recovery points | Lock rules cover `backups/full/` (90 days), `backups/daily/` (30 days) and `ops/` (90 days), plus the `v1/` equivalents. **Pre-production Validation must never write under them**; it needs its own bucket or an unlocked prefix. The proposed `secondary/` prefix is outside every rule | Confirmed | `src/files/layout.ts:524-531`; layout documentation |
+| B3 | Bucket locks protect production recovery points | Lock rules cover `backups/full/` (90 days), `backups/daily/` (30 days) and `ops/` (90 days), plus the `v1/` equivalents. **Pre-production Validation must never write under them**; it needs its own bucket or an unlocked prefix. The Secondary Pipeline's `secondary/` prefix is outside every rule | Confirmed | `src/files/layout.ts:524-531`; layout documentation |
 | B4 | (Secondary Pipeline) Uploading with `wrangler r2 object put` | Authenticates with the API token directly (no S3 credentials); up to 315 MB per object | Confirmed | Cloudflare R2 upload documentation |
 
 ## C. Supabase (Free plan)
