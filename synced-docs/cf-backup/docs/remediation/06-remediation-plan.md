@@ -270,8 +270,8 @@ the cause, the fix commit).
 
 | Stage | State | Evidence |
 |---|---|---|
-| 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-26 20:40 UTC) | Registry: 0 confirmations, 0 reveals |
-| 0.3 Containment of scheduled runs | not started (re-checked 2026-09-26 20:40 UTC) | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
+| 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-26 20:35 UTC) | Registry: 0 confirmations, 0 reveals |
+| 0.3 Containment of scheduled runs | not started (re-checked 2026-09-26 20:35 UTC) | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
 | 0.4 Manual baseline export | not started | Still the only way to capture authentication records until Stage 3 |
 | 1.1 Secondary Pipeline implemented | **done** 2026-09-26 | Commits `3abadc8`, `027feda`; `npm run verify` passing |
 | 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118 and 36269595781 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
@@ -290,7 +290,7 @@ the cause, the fix commit).
 | 2026-09-25 | claude | Second review: live schedule, key registry, cf-admin's legacy export workflow, the fallback guard (`workflow-guards.ts:195-198`, `plan.ts:57`) | Stages 0 and 1 added; containment method corrected |
 | 2026-09-25 | claude | `backup_runs.billed_minutes` (1 to 2 per failed run) | Budget estimates in §10 |
 | 2026-09-25 | claude | Terminology review; status re-checked at 16:00 UTC | §5.4 added; §12 current |
-| 2026-09-26 | claude | Secondary Pipeline built and commissioned; live re-check of `backup_runs`, `backup:config`, `backup:key-registry` and both repositories' workflow states at 20:40 UTC | §12 current |
+| 2026-09-26 | claude | Secondary Pipeline built and commissioned; live re-check of `backup_runs`, `backup:config`, `backup:key-registry` and both repositories' workflow states at 20:35 UTC | §12 current |
 
 ## 14. Related
 

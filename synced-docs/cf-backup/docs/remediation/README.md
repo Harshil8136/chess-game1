@@ -21,7 +21,7 @@ tags: [cf-backup, remediation, data-protection, index]
 > why the Primary Pipeline failed, lists every defect with its evidence, and defines how it is
 > remediated.
 
-> **Status (2026-09-26, 20:40 UTC): open.** Stage 1 is built and commissioned: the first verified
+> **Status (2026-09-26, 20:35 UTC): open.** Stage 1 is built and commissioned: the first verified
 > recovery point exists ([09](09-secondary-pipeline-specification.md) §7). Stage 0, Containment
 > ([06](06-remediation-plan.md) §3), has not started: the Primary Pipeline's schedule remains
 > enabled and every scheduled run fails. Terms follow [11](11-terminology-standard.md).
@@ -90,7 +90,7 @@ existed.
 |---|---|---|
 | Verified recovery points | **1**, 2026-09-26 20:29 UTC (Secondary Pipeline) | `secondary/pipeline/2026-09-26/36269595781-1/`; every table's restored count matched ([09](09-secondary-pipeline-specification.md) §7.2) |
 | Primary Pipeline recovery points | **none** | `backup_runs`: 7 rows, `data_bytes` 0 or empty; the seventh failed on 2026-09-26 at 09:20 UTC |
-| Stage 0 Containment | not started | Re-checked 2026-09-26 20:40 UTC: schedule enabled; both workflows active; 0 key confirmations |
+| Stage 0 Containment | not started | Re-checked 2026-09-26 20:35 UTC: schedule enabled; both workflows active; 0 key confirmations |
 | Stage 1 Interim protection | **in progress**: built and commissioned | Pending: the first scheduled run (2026-09-27 08:41 UTC), the Owner's decryption of one file, the bucket rules on `secondary/`, a proven failure notification |
 | Stages 2 to 5 | not started | |
 
@@ -105,7 +105,7 @@ Per-stage detail: [06](06-remediation-plan.md) §12.
 | 2026-09-25 | claude | Rewritten in cf-admin's documentation format; review layers consolidated into one set | This folder |
 | 2026-09-25 | claude | Terminology standard applied; folder renamed from `docs/recovery/` to `docs/remediation/`; live status re-checked at 16:00 UTC | [11](11-terminology-standard.md); §6 |
 | 2026-09-26 | claude | Open-source tool survey and the case for build or adopt; no live checks | [12](12-open-source-tool-assessment.md) (draft) |
-| 2026-09-26 | claude | Secondary Pipeline commissioning runs 36269275118 and 36269595781; live re-check of `backup_runs`, the schedule, the key registry and workflow states at 20:40 UTC | §4, §6 |
+| 2026-09-26 | claude | Secondary Pipeline commissioning runs 36269275118 and 36269595781; live re-check of `backup_runs`, the schedule, the key registry and workflow states at 20:35 UTC | §4, §6 |
 
 ## 8. Related
 
