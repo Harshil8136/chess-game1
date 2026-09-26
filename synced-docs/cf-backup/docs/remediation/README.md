@@ -6,7 +6,7 @@ last_verified: 2026-09-25
 verified_against: [code, infra, live-mcp, research]
 owner: harshil
 related_code: [.github/workflows/db-backup.yml, scripts/backup/cli.ts]
-related_docs: [01-post-incident-review.md, 02-root-cause-analysis.md, 03-dependency-assessment.md, 04-defect-register.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 08-industry-practice-review.md, 09-secondary-pipeline-specification.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md]
+related_docs: [01-post-incident-review.md, 02-root-cause-analysis.md, 03-dependency-assessment.md, 04-defect-register.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 08-industry-practice-review.md, 09-secondary-pipeline-specification.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md]
 tags: [cf-backup, remediation, data-protection, index]
 ---
 
@@ -50,13 +50,14 @@ existed.
 | 9 | [09-secondary-pipeline-specification.md](09-secondary-pipeline-specification.md) | The independent daily export pipeline, step by step |
 | 10 | [10-sop-manual-baseline-export.md](10-sop-manual-baseline-export.md) | **For the Owner today:** the manual baseline export procedure |
 | 11 | [11-terminology-standard.md](11-terminology-standard.md) | The terminology and naming standard, with the mapping from code identifiers |
+| 12 | [12-open-source-tool-assessment.md](12-open-source-tool-assessment.md) | *(draft, 2026-09-26)* Open-source tools for Supabase and D1 exports, assessed against this program's requirements; build or adopt; proposed RD-15 |
 
 ## 3. Reading paths
 
 | Role | Read |
 |---|---|
 | Owner, today | [06](06-remediation-plan.md) §3 (Stage 0), then [10](10-sop-manual-baseline-export.md) |
-| Decision-maker | [07](07-decision-log.md) (RD-1 to RD-14) |
+| Decision-maker | [07](07-decision-log.md) (RD-1 to RD-14), then [12](12-open-source-tool-assessment.md) §6 to §7 (proposed RD-15) |
 | Engineering | [04](04-defect-register.md), [06](06-remediation-plan.md), [09](09-secondary-pipeline-specification.md), [11](11-terminology-standard.md) |
 | Review of causes | [01](01-post-incident-review.md), [02](02-root-cause-analysis.md), [08](08-industry-practice-review.md) |
 
@@ -98,6 +99,7 @@ Per-stage detail: [06](06-remediation-plan.md) §12.
 | 2026-09-25 | claude | Second review: run 6; `backup_runs`, `backup:config`, `backup:key-registry`; Supabase grants and catalog; two independent code audits; industry research | Corrections, defects N1–N9, Stages 0 and 1 |
 | 2026-09-25 | claude | Rewritten in cf-admin's documentation format; review layers consolidated into one set | This folder |
 | 2026-09-25 | claude | Terminology standard applied; folder renamed from `docs/recovery/` to `docs/remediation/`; live status re-checked at 16:00 UTC | [11](11-terminology-standard.md); §6 |
+| 2026-09-26 | claude | Open-source tool survey and the case for build or adopt; no live checks | [12](12-open-source-tool-assessment.md) (draft) |
 
 ## 8. Related
 
