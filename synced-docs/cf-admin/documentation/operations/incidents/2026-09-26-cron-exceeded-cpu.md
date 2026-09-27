@@ -34,7 +34,7 @@ tags: [incident, cron, cloudflare-workers, free-plan, cpu-limit]
 | First noticed | 2026-09-27, as cf-backup's Diagnostics `tick.age` failure (222 minutes since the last tick) |
 | Last tick that finished its jobs | 2026-09-26 22:45 UTC (`cf-audit-last-synced` 22:45:48, `backup:status.lastTickAt` 22:45:47) |
 | Plan constraint | Workers Free, kept by the owner's decision: no paid plan |
-| Status | Fix committed 2026-09-27. §6 records the post-deploy check |
+| Status | **Resolved 2026-09-27.** Steady state measured at 04:10 UTC: dispatcher 2 ms, each job 1–3 ms (§6) |
 
 ## 2. Timeline (UTC)
 
@@ -54,6 +54,7 @@ tags: [incident, cron, cloudflare-workers, free-plan, cpu-limit]
 | 2026-09-27 03:30 | Tick on a docs-only redeploy of the same code (version `25c215f7…`): dispatcher `cpuTimeMs` 6. |
 | 2026-09-27 03:31 | Second pass deployed (`453b215`, version `772d3b61…`): a binding per job (the job id as `ctx.props`) and the light Sentry options on the scheduled handler (§5). |
 | 2026-09-27 03:35 | First tick on `772d3b61…`: dispatcher `cpuTimeMs` 14. Each job in its own `jsrpc` invocation: `cf-access-audit-poll` 7 ms, `backup-tick` 5 ms, each under its own request ID. |
+| 2026-09-27 04:10 | Steady state on `e6fe9e6e…` (`c8de4e0`, about 25 minutes after its deploy): dispatcher `cpuTimeMs` **2**, job invocations **1** and **3** (`backup-tick` among them). |
 
 ## 3. Root cause
 
@@ -178,14 +179,14 @@ sharing one batched read, and no two running jobs share a key.
 - **Settled:** the `JobRunner` calls report their own `cpuTimeMs` (event type
   `jsrpc`), so the scheduled event's figure is the dispatcher's alone. The job
   invocations measured 5 and 7 ms, inside their budgets.
-- **Still open: the dispatcher's own CPU varies from tick to tick** (35, 15,
-  6 and 14 ms) whatever the Sentry options. Every tick starts a fresh isolate
-  (`invocation.sequence.number` 1). The high readings are the first ticks
-  after a code change, which fits V8 having no compiled code cached yet for
-  the new version. The ticks after a deploy decide what comes next. If they
-  settle near 6 ms, the only overrun is the first tick after each deploy,
-  which Cloudflare tolerates when it is occasional. If they stay over 10 ms,
-  the dispatcher's own work has to shrink further.
+- **Settled: the steady state is far inside the limit.** At 04:10 UTC the
+  dispatcher used 2 ms and the job invocations 1 and 3 ms. The higher readings
+  (35, 15, 14 ms) were the first ticks after a code deploy, when V8 has no
+  compiled code cached for the new version. Every tick starts a fresh isolate
+  (`invocation.sequence.number` 1), so the cost that remains is one overrun
+  on the first tick after each deploy. Cloudflare tolerates an occasional
+  overrun. Many deploys in a short time would make it frequent, so batch
+  pushes to `main` on busy days.
 
 ## 7. Follow-ups
 
