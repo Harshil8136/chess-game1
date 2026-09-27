@@ -158,7 +158,11 @@ three times. As of 2026-09-23 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
 > calls each due job through the Worker's own `JobRunner` entrypoint
 > (`src/workers/job-runner.ts`) over the `ctx.exports` loopback binding, which
 > needs the `enable_ctx_exports` compatibility flag in `wrangler.toml`. Each
-> call is its own invocation with its own 10 ms of CPU (§3.1). A job that still
+> job gets a binding of its own, with its id as `ctx.props`, so each call is
+> its own invocation with its own 10 ms of CPU (§3.1). Calls on one shared
+> binding can land in a single invocation: on the first deploy two jobs shared
+> one and used 9 ms of it. The scheduled handler and `JobRunner` run Sentry
+> without tracing or log capture. A job that still
 > overruns fails alone and shows in Workers Observability as that job's
 > `exceededCpu`, not as the whole tick's. Before this change, all ten jobs
 > shared the scheduled invocation's 10 ms. The tick measured 22 ms on

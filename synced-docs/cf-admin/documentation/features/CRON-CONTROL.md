@@ -260,7 +260,9 @@ job's own logic, so the job itself never reaches D1.
 with no invocation and no query of its own. Every other job is called through
 the Worker's own `JobRunner` entrypoint (`src/workers/job-runner.ts`, reached
 through `ctx.exports`), with the control document the tick already read passed
-along. So a job gets its own 10 ms of Workers Free CPU, and a job that still
+along. Each job gets a binding of its own, carrying its id as `ctx.props`,
+because calls on one shared binding can land in a single invocation and share
+its budget. So a job gets its own 10 ms of Workers Free CPU, and a job that still
 overruns fails alone. Inside that invocation `runOneJob` reads only that job's
 `gateKeys` and then calls `runJob`, so the gate, lease, meter and telemetry
 are unchanged. Two costs moved:

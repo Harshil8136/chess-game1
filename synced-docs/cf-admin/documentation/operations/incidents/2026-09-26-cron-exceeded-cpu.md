@@ -49,7 +49,9 @@ tags: [incident, cron, cloudflare-workers, free-plan, cpu-limit]
 | 2026-09-27 03:03 | Fix pushed to `main` (`009c523`). Workers Builds deploys it as script version `51b39319…`; the failing runs were version `79d23754…`. |
 | 2026-09-27 03:05 | First tick on the new code: outcome `ok`, wall time 13 s, `cpuTimeMs` 35. It carried the backlog: about 6 hours of audit events, the hourly usage refresh and cf-backup's four queued alerts, all sent and delivered. |
 | 2026-09-27 03:10 | No tick fired. Every deploy re-sends the cron schedules, and Cloudflare says schedule changes take up to 15 minutes to propagate. |
-| 2026-09-27 03:15 | Outcome `ok`, wall time 2.5 s, `cpuTimeMs` 15, `invocation.sequence.number` 1 (a fresh isolate). The dispatcher stamped `cron-usage-probe`'s clock, which it does only after every job call returns. |
+| 2026-09-27 03:15 | Outcome `ok`, wall time 2.5 s, `cpuTimeMs` 15, `invocation.sequence.number` 1 (a fresh isolate). The dispatcher stamped `cron-usage-probe`'s clock, which it does only after every job call returns. In the same trace, a `JobRunner.jsrpc` event with `rpcCallCount` 2 and `cpuTimeMs` 9: two jobs shared one invocation. The scheduled event's 15 ms is therefore the dispatcher's own. |
+| 2026-09-27 03:20 | Tick ran; `backup:status.lastTickAt` 03:20:06. |
+| 2026-09-27 | Second pass: a binding per job (the job id as `ctx.props`) and the light Sentry options on the scheduled handler (§5). |
 
 ## 3. Root cause
 
@@ -107,9 +109,16 @@ Supporting changes:
 
 - `wrangler.toml` gains the `enable_ctx_exports` compatibility flag, which is
   what exposes `ctx.exports`.
-- `JobRunner` is wrapped by Sentry without console-log capture or tracing, so
-  each job's 10 ms goes to the job. A job's own narration still reaches
-  Workers Observability, and its errors still reach Sentry.
+- `JobRunner` and the scheduled handler are wrapped by Sentry without
+  console-log capture or tracing, so each 10 ms goes to the work. Narration
+  still reaches Workers Observability, and errors still reach Sentry. The
+  scheduled handler got this in the second pass, after it measured 15 ms with
+  the HTTP options.
+- Each job is called through a binding of its own,
+  `ctx.exports.JobRunner({ props: { jobId } })`, and reads its id from
+  `ctx.props`. The first deploy called every job on one shared binding, and
+  Cloudflare carried two of those calls in one invocation (9 ms of its 10).
+  Props belong to one invocation, so per-job bindings cannot be merged.
 - A named `WorkerEntrypoint` is reachable only through a binding, never from the
   Internet, so no new public endpoint exists.
 - Where the flag is missing, the handler falls back to running the job in the
@@ -163,10 +172,12 @@ sharing one batched read, and no two running jobs share a key.
   stamped by `cron-tick`, and cf-backup recorded its alerts as delivered.
   cf-backup writes `lastTickAt` only every other tick when nothing else
   changed, so it does not move on every tick.
-- **Still open:** whether the scheduled event's `cpuTimeMs` (35, then 15)
-  counts only the dispatcher or also the `JobRunner` calls. The per-call
-  events (`entrypoint: JobRunner`) settle it. If the dispatcher alone stays
-  over 10 ms, the next step is to trim what runs in it (§7).
+- **Settled:** the `JobRunner` calls report their own `cpuTimeMs` (event type
+  `jsrpc`), so the scheduled event's figure is the dispatcher's alone. Both
+  findings were fixed in the second pass. Before that pass shipped, local
+  workerd showed every job running on a fresh `JobRunner` instance, with its
+  props arriving through the Sentry wrapper. The next Trigger events should
+  show a scheduled event under 10 ms and `jsrpc` events with `rpcCallCount` 1.
 
 ## 7. Follow-ups
 
