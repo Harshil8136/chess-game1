@@ -22,12 +22,13 @@ tags: [cf-backup, remediation, data-protection, index]
 > Pipeline is retired instead of repaired ([13](13-engine-consolidation-plan.md)).** One gap
 > remains: no one has yet confirmed a saved copy of the key that decrypts the archive (§7).
 
-> **Status (2026-09-27, 09:30 UTC): open.** Containment is done: both schedule settings are off and
-> both old workflows are disabled. The Secondary Pipeline is commissioned; its first scheduled run
-> is due, and GitHub starts this repository's scheduled runs 4 to 5 hours late. The plan of record
-> from here is [13](13-engine-consolidation-plan.md), which replaces [06](06-remediation-plan.md)
-> Stages 2 to 5. The Owner's remaining tasks are in §7. Terms follow
-> [11](11-terminology-standard.md).
+> **Status (2026-09-27, 16:35 UTC): open, backups running daily.** The Secondary Pipeline is the
+> backup engine and the console now starts it: the Scheduler at 09:17 UTC every day, "Run now" on
+> demand, and GitHub's own schedule at 11:41 UTC only as a fallback. Seven verified recovery points
+> exist, five of them from 2026-09-27, including the first run started by "Run now" and the first
+> started by the Scheduler ([13](13-engine-consolidation-plan.md) B3). The plan of record is
+> [13](13-engine-consolidation-plan.md), which replaces [06](06-remediation-plan.md) Stages 2 to 5.
+> The Owner's remaining tasks are in §7. Terms follow [11](11-terminology-standard.md).
 
 ## 1. Summary
 
@@ -95,14 +96,15 @@ replaced by the steps of [13](13-engine-consolidation-plan.md) (RD-15, option B)
 
 | Item | State | Evidence |
 |---|---|---|
-| Verified recovery points | **2**, the newest 2026-09-26 22:49 UTC (Secondary Pipeline) | `secondary/pipeline/2026-09-26/36277447136-1/`, authentication records included; every table's restored count matched ([09](09-secondary-pipeline-specification.md) §7) |
+| Verified recovery points | **7**, the newest 2026-09-27 16:27 UTC (Secondary Pipeline) | 2026-09-26: two; 2026-09-27: GitHub's schedule (36325294293), two by hand on GitHub (36327225356, 36328312053), "Run now" (36332666181) and the Scheduler (36333172477). Every one: all 5 stores, authentication records included, every table's restored count matched ([09](09-secondary-pipeline-specification.md) §7) |
 | Primary Pipeline recovery points | **none**; the runner is to be retired (RD-15) | `backup_runs`: 7 rows, `data_bytes` 0 or empty; none since 2026-09-26 09:20 UTC |
 | Stage 0 Containment | **done** except the key confirmations | 2026-09-27: `backup:config` rev 4, both schedules off (01:34 UTC); `db-backup.yml` and cf-admin's `backups.yml` `disabled_manually` (about 02:00 UTC); key registry: 0 confirmations, 0 reveals |
 | Stage 1 Interim protection | **in progress**: built, commissioned, first scheduled run passed (2026-09-27, started 5 h 35 min late) | Pending: the Owner's decryption of one file, the bucket rules on `secondary/`, a proven failure notification. The Scheduler starting the engine: [13](13-engine-consolidation-plan.md) B3 |
 | Authentication record coverage | **done** in the Secondary Pipeline | RD-1 applied on 2026-09-26; 6 users and 12 identities restored in every run since |
 | Decisions | **all settled** 2026-09-27 | [07](07-decision-log.md) §0 |
 | B1 Run records, B2 reading | **built and live** 2026-09-27: the console records every Secondary Pipeline run, shows its per-store verification, accepts a restore proof for it, and Diagnostics reports on it | [13](13-engine-consolidation-plan.md) §3 B1, B2 |
-| B3 to B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
+| B3 Dispatch | **built and live** 2026-09-27: the Scheduler starts the engine daily at 09:17 UTC, "Run now" starts it on demand, GitHub's schedule (11:41 UTC) is the fallback; cf-admin's `backups.yml` deleted (RD-8) | [13](13-engine-consolidation-plan.md) §3 B3, §8 |
+| B4, B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
 
 Per-step detail: [13](13-engine-consolidation-plan.md) §8.
 

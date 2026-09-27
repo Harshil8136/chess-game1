@@ -311,6 +311,8 @@ All three are done (2026-09-26).
 | Authentication records added (store `postgres-auth`) | **done**, 2026-09-26 22:49 UTC | Run 36277447136 (commit `701ade2`): `secondary/pipeline/2026-09-26/36277447136-1/`; §7.4 |
 | First passing scheduled run | **done**, 2026-09-27 | Run 36325294293: due 08:41 UTC, started by GitHub at 14:16 UTC (5 h 35 min late), passed at 14:18; `secondary/pipeline/2026-09-27/36325294293-1/`, 8 of 8 files, recorded by the console at 14:30 as `succeeded` |
 | Passing run the same day, started by hand | **done**, 2026-09-27 | Run 36327225356, 14:48 to 14:50 UTC, passed |
+| First run started by the console's "Run now" | **done**, 2026-09-27 | Run 36332666181, 16:17 to 16:19 UTC, passed; `secondary/pipeline/2026-09-27/36332666181-1/` |
+| First run started by the Worker's Scheduler | **done**, 2026-09-27 | Run 36333172477, dispatched 16:25 UTC for slot `2026-09-27T16:17Z/full`, passed at 16:27; `secondary/pipeline/2026-09-27/36333172477-1/`. Daily at 09:17 UTC from 2026-09-28 |
 | One file decrypted by the Owner | pending | Task 1.3 in [06](06-remediation-plan.md) |
 | Failure notification reaching a person | pending | Proven by the first failed run, or by a deliberate one |
 

@@ -135,7 +135,18 @@ Design, decided 2026-09-27 ([07](07-decision-log.md) §0.1). Each commit is depl
 | C1 Worker, recording | A row whose `r2_prefix` is under `secondary/pipeline/` is this engine's. Reconcile follows such a row by GitHub's run alone (no heartbeat, no manifest@1): a request not confirmed in 10 minutes is matched by the request id in the run's name; queued and running are tracked; a completed run is judged from its folder exactly as B1's chore judges one (`src/secondary/record.ts`); 6 hours without contact is `lost`. The chore never records a run that already has a row (by run id and attempt, or by the request id while GitHub has not numbered it), and records a fallback that stood down as one `skipped` row that never alerts. Diagnostics' "last run" ignores skips | **built** (`41c219d`) |
 | C2 Workflow | `run-name: secondary-pipeline ${{ inputs.request_id \|\| github.event_name }}` and one optional input, `request_id`; cron `41 11 * * *`; step 0 `fallback guard` (on GitHub's schedule only: one request for the day's successful runs; any → the export steps do not run and the verdict passes; GitHub unreachable → back up anyway); the `heartbeat` step (B0.4); job permissions `contents: read, actions: read`. The guard enforces each part and the 320-line limit | **built** (`c15b190`); proven by run 36328312053 (dispatched by hand, passed 15:08 UTC) |
 | C3 Worker, dispatch | The engine is a code constant (`githubFor` sets `secondary-pipeline.yml`), not the stored `github.workflow`, so dispatch, correlation and Diagnostics' workflow test all follow it. "Run now" (full only) and the Scheduler insert a row holding the bare `secondary/pipeline/` root and dispatch the workflow with only `request_id` (`GitHubApp.dispatchSecondary`). Drill, check, Supabase-only and the runner test answer 501 with the reason until B5 deletes them; the Scheduler reports a Supabase-only slot as disabled and has no monthly drill and no check. Saving the schedule refuses Supabase-only and the monthly drill. A backup's pre-flight no longer opens the Vault; its minutes estimate is 3. Console: "Run now" offers Full only, no drill, check or runner-test buttons | **built** |
-| Live settings | Claude writes `backup:config` (Owner's decision): full backup daily, Supabase-only off, grace 2 hours, monthly drill off; first a slot about 20 minutes ahead to prove a Scheduler dispatch the same day, then 09:17 UTC. A notice alert records each change | pending, after C3 |
+| Live settings | Claude writes `backup:config` (Owner's decision): full backup daily, Supabase-only off, grace 2 hours, monthly drill off; first a slot about 20 minutes ahead to prove a Scheduler dispatch the same day, then 09:17 UTC. A notice alert records each change | **done** 2026-09-27: rev 5 at 15:50 UTC (slot 16:17), rev 6 at 16:31 UTC (09:17 daily); both notices emailed |
+
+**Proven the same day (2026-09-27):**
+
+| Path | Run | Result |
+|---|---|---|
+| "Run now" from the console, by the Owner | row `f7640dc2…`, GitHub run 36332666181 (named `secondary-pipeline f7640dc2-…`), 16:17–16:19 UTC | pre-flight passed with no warning; settled by reconcile at 16:20 as `succeeded`: 8 of 8 files, 923,742 bytes, `secondary/pipeline/2026-09-27/36332666181-1/` |
+| The Scheduler (slot `2026-09-27T16:17Z/full`) | row `35e843ab…`, GitHub run 36333172477, dispatched 16:25 UTC (the 16:20 tick waited while the Owner's run held the lane) | settled at 16:30 as `succeeded`: 8 of 8 files, 923,996 bytes, 127 s, `secondary/pipeline/2026-09-27/36333172477-1/`; one row only (the `secondary-runs` chore, in the same tick, added none) |
+
+One defect found by the Owner's run and fixed the same hour: the Live view said "no evidence in
+R2" for an engine run between GitHub finishing and the next tick; it now reads the engine's own
+`manifest.json` (`4f9cda8`).
 
 The two triggers are independent: if Cloudflare's cron stops, GitHub's schedule still backs up; if
 GitHub drops its schedule, the Scheduler has already backed up. If GitHub's schedule never fires for
@@ -237,7 +248,7 @@ day, against 5 million.
 | B0.2 to B0.5 | not started | Owner tasks, [README](README.md) §7 |
 | B1 Run records | **built and live** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts`. Production, 13:15 UTC: run `2026-09-26_full_gh36277447136a1` recorded as `succeeded`, 8 of 8 files, 908,022 bytes of data; postrun filed in the same tick (2 billed minutes) |
 | B2 | **built** 2026-09-27: run detail, restore proof, Files, Diagnostics | Tests in `test/reads-runs.test.ts`, `test/restore-proof.test.ts`, `test/files-layout.test.ts`, `test/diagnostics-records.test.ts` |
-| B3 | **in progress**: C1 built (`41c219d`), C2 built; C3 and the live settings pending | §3 B3 |
+| B3 Dispatch | **built and live** 2026-09-27: C1 `41c219d`, C2 `c15b190`, C3 `690f7ba`, Live view `4f9cda8`; schedule rev 6, full daily 09:17 UTC | "Run now" run 36332666181 and Scheduler run 36333172477 both `succeeded` (§3 B3). RD-8 done: cf-admin `backups.yml` deleted (cf-admin `cb331e5`). Next proofs: the 2026-09-28 09:17 dispatch, and the 11:41 fallback recorded as `skipped` |
 | B4, B5 | not started | |
 
 ## 9. Verification log
