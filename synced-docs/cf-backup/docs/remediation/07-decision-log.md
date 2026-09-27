@@ -16,7 +16,8 @@ tags: [cf-backup, remediation, decisions, owner]
 > RD-15: the small Secondary Pipeline becomes the permanent backup engine, and the large Primary
 > Pipeline is retired once the new arrangement is proven, instead of being repaired. Several other
 > decisions existed only to support that repair, and fall away with it. The work that follows is
-> [13](13-engine-consolidation-plan.md). Every decision can be revised later.
+> [13](13-engine-consolidation-plan.md). Every decision can be revised later. §0.1 records the
+> same afternoon's decisions on how the engine is started.
 
 ## 0. Decisions of 2026-09-27
 
@@ -49,6 +50,25 @@ record of what was proposed.
 | Does anything use Supabase Storage (files)? | **No.** Live check 2026-09-27: 0 buckets, 0 objects. Nothing outside the database needs a copy. Revisit if files ever move there |
 | A copy outside the Cloudflare account? | **The 14-day GitHub artifact is that copy** (encrypted, the repository's maximum retention). A third location would need an account and two secrets; not now |
 | How often? | **Daily** (RPO 24 hours). About 60 minutes a month; every 6 hours would use about 240 |
+
+## 0.1 Decisions of 2026-09-27 afternoon: the Worker starts the engine
+
+The Owner reported backups "still completely failing" and asked for a permanent fix. The engine was
+working; what failed was **starting** it. Its only trigger was GitHub's schedule: the first scheduled
+run, due 08:41 UTC, started at 14:16 UTC (5 h 35 min late), and GitHub documents that scheduled runs
+may also be dropped. The console's "Run now" and Scheduler could start only the retired Primary
+Pipeline. The Owner approved the plan below and answered its three questions.
+
+| Item | Decided | Reason |
+|---|---|---|
+| Primary trigger | **The Worker's Scheduler dispatches `secondary-pipeline.yml` daily at 09:17 UTC** (03:17 in Aguascalientes; Owner's choice), grace 2 hours; "Run now" starts it too | cf-admin's five-minute Cloudflare cron runs on time (verified 2026-09-27 after the CPU fix) |
+| Fallback trigger | **GitHub's own schedule stays, moved to 11:41 UTC.** Its first step, the `fallback guard`, stands the run down when a run has already succeeded that UTC day, and fails open | Two independent triggers, each able to back up alone. Recorded as `skipped` (`fallback_not_needed`), never a failure |
+| B0.1 | **Met** by run 36325294293 (GitHub's schedule, 14:16 UTC). B3 adds its own proof: a run the Scheduler dispatched passes | The schedule is no longer the primary trigger, so it is not the acceptance test |
+| Workflow size | **320 lines** (09 §2 said 300) | The guard step and the heartbeat step; still small enough to read in one sitting. The guard enforces it |
+| Correlation | **One optional input, `request_id`, used only in `run-name`** | The Worker finds the run it dispatched by the id in the run's name, whether or not GitHub returns the run id |
+| Heartbeat (RD-9, B0.4) | **Built now**: the `heartbeat` step pings `HEARTBEAT_PING_URL` after a passing verdict; nothing while the secret is unset | The Owner creates the healthchecks.io check (period 1 day, grace 8 hours) and the secret |
+| Today's recovery point | **A manual run now** (Owner's choice): run 36327225356, passed 14:50 UTC | A verified recovery point for today regardless of the schedule |
+| Live settings | **Claude applies them** directly to the `backup:config` row, with a notice alert, as on 2026-09-27 01:34 UTC (Owner's choice) | The change is made and verified in the same session as the code that uses it |
 
 ## 1. Decision register (defaults: reversible at review)
 

@@ -283,7 +283,7 @@ the cause, the fix commit).
 | 1.1 Secondary Pipeline implemented | **done** 2026-09-26 | Commits `3abadc8`, `027feda`; `npm run verify` passing |
 | 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118, 36269595781 and 36277447136 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
 | 1.3 to 1.5 Owner decryption, bucket rules, heartbeat monitor | not started | |
-| 1.6 First scheduled run | pending | Due 2026-09-27 08:41 UTC; not started at 09:30 UTC. GitHub starts this repository's scheduled runs 4 to 5 hours late (`tick-deadman`, due 10:47 UTC, started 14:45 to 15:35 UTC on 09-24 to 09-26) |
+| 1.6 First scheduled run | **done** 2026-09-27 | Run 36325294293: due 08:41 UTC, started 14:16 UTC (5 h 35 min late), passed. Because GitHub starts scheduled runs this late, the Scheduler now starts the engine and GitHub's schedule is the fallback ([13](13-engine-consolidation-plan.md) B3) |
 | 2 Primary Pipeline remediation | **not needed** (RD-15, 2026-09-27) | Replaced by [13](13-engine-consolidation-plan.md) B1 to B5 |
 | 3 Authentication record coverage | **3.1–3.3 done for the Secondary Pipeline** 2026-09-26 | RD-1 applied (functions, [07](07-decision-log.md) §2); run 36277447136: 6 users, 12 identities restored. Pending: 3.3 for the Primary Pipeline (Stage 2), 3.4 monthly full-stack restore |
 | 4 Restore verification decoupling | **not needed** (RD-15) | The Secondary Pipeline restores every export in the same run in about a minute; [13](13-engine-consolidation-plan.md) §4 |

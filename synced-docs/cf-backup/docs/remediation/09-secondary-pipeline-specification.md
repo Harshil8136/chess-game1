@@ -2,7 +2,7 @@
 title: "cf-backup remediation — 09 Secondary Pipeline specification"
 status: active
 audience: [ai, technical, owner]
-last_verified: 2026-09-26
+last_verified: 2026-09-27
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, scripts/secondary-pipeline/auth-export.sh, sql/supabase/04_auth_export.sql, scripts/backup/lib/pins.ts, scripts/backup/lib/workflow-guards.ts]
@@ -22,6 +22,14 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 > the authentication records added; the first scheduled run is at 08:41 UTC on 2026-09-27. §3 is
 > the design; §7 records the commissioning results and where the implementation differs from the
 > design. Stage 1 of [06](06-remediation-plan.md). Terms: [11](11-terminology-standard.md).
+
+> **Update 2026-09-27: the permanent backup engine (RD-15).** The first scheduled run, due 08:41
+> UTC, started at 14:16 UTC (5 h 35 min late) and passed. Because GitHub starts scheduled runs this
+> late, or not at all, the Worker's Scheduler now starts the engine daily at 09:17 UTC, and the
+> workflow's own schedule moves to 11:41 UTC as a fallback that stands down once a run has succeeded
+> that UTC day ([13](13-engine-consolidation-plan.md) B3; §3.1 and step 0 below). The workflow
+> gains one optional input, `request_id`, which only names the run, and the external heartbeat step
+> (RD-9).
 
 ## 1. Objectives
 
@@ -45,11 +53,15 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 - **No console integration**: no `backup_runs` row, no heartbeat, no settings. It is visible in
   GitHub Actions and in the archive bucket only. *Refined 2026-09-27
   ([13](13-engine-consolidation-plan.md) §2, RD-15):* once the first scheduled run passes, the
-  console **reads** this pipeline's runs and files and records them. The workflow itself still
+  console **reads** this pipeline's runs and files and records them, and (B3) the Scheduler and
+  "Run now" **start** it, passing only a request id that names the run. The workflow itself still
   never calls the Worker and never writes a console row.
-- **Small and reviewable:** the workflow stays under 300 lines including comments, and the helper under 400. If either needs
-  more, the design is wrong.
-- **No new secret**, except RD-9's ping URL if the Owner approves it.
+- **Small and reviewable:** the workflow stays within 320 lines including comments (300 until
+  2026-09-27; raised for the fallback guard and the heartbeat, [07](07-decision-log.md) §0.1), and
+  the helper under 400. The guard enforces the workflow's limit. If either needs more, the design
+  is wrong.
+- **No new secret**, except RD-9's ping URL, `HEARTBEAT_PING_URL`, which is optional: its step does
+  nothing while it is unset.
 - Authentication records only through the two functions of `sql/supabase/04_auth_export.sql`
   (RD-1, [07](07-decision-log.md) §2). The export role still has no access to the Vault.
 
@@ -60,9 +72,10 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 | Item | Value |
 |---|---|
 | File | `.github/workflows/secondary-pipeline.yml` |
-| Triggers | `schedule: '41 8 * * *'` (08:41 UTC, 02:41 in Aguascalientes: low traffic, away from the hour and from 09:17) and `workflow_dispatch` without inputs |
+| Triggers | The Worker's Scheduler dispatches it daily at 09:17 UTC (03:17 in Aguascalientes), and "Run now" on demand ([13](13-engine-consolidation-plan.md) B3). Its own `schedule: '41 11 * * *'` (11:41 UTC, 2 h 24 min later, away from the hour) is the fallback: step 0 stands it down when a run has already succeeded that UTC day. Until 2026-09-27 the schedule was `'41 8 * * *'` and the only trigger |
+| Input and run name | One optional input, `request_id` (a string; the Worker sets it). It is used only in `run-name: secondary-pipeline ${{ inputs.request_id \|\| github.event_name }}`, so the Worker finds the run it dispatched; no step reads it |
 | Runner | `ubuntu-24.04`; one job, `timeout-minutes: 30`; a timeout on every step |
-| Permissions | `permissions: {}` at the top level; the job receives `contents: read` |
+| Permissions | `permissions: {}` at the top level; the job receives `contents: read` and `actions: read` (step 0 lists the day's runs) |
 | Concurrency | Its own group, `secondary-pipeline`, `cancel-in-progress: false` |
 | Actions | Only `checkout`, `setup-node` (no npm cache) and `upload-artifact`, pinned to the same commit SHAs as `db-backup.yml` |
 | Tools | `pg_dump` and `psql` from the pinned `supabase/postgres` 17.6.1.104 image (the same reference as `scripts/backup/lib/pins.ts`; a test enforces equality); `wrangler` from `npm ci` (pinned by the lockfile); `age` v1.3.2 from its release, checked against the SHA-256 in `pins.ts`; Node 24's built-in `node:sqlite` for D1 verification |
@@ -71,7 +84,28 @@ The repository's workflow rules apply: no `${{ }}` inside a `run:` block (values
 through `env:` only), `persist-credentials: false`, no workflow-level `env`, and
 `set -euo pipefail` in every step.
 
+Why the file looks as it does (moved here from its header on 2026-09-27; the guard is
+`checkSecondaryPipelineWorkflow` in `scripts/backup/lib/workflow-guards.ts`):
+
+- Independent of the Primary Pipeline: nothing under `scripts/backup/` runs, and there is no
+  Supabase CLI (defect T5). Shell calls the tools; `scripts/secondary-pipeline/` holds the helper
+  and the SQL, using Node built-ins only.
+- `pg_dump` runs in the pinned `supabase/postgres` 17 image, never the runner's version 16 (N7).
+- Every output directory is created before any tool writes (T1). D1 is counted with one `SELECT` of
+  scalar subqueries, never a compound `SELECT` (T2).
+- A store that fails does not stop the others: its step continues so the rest are archived, and
+  the verdict step fails the run. Only verified stores are encrypted and uploaded.
+- Secrets sit only in the steps that use them; values reach the shell through `env:` only (T5).
+
 ### 3.2 Steps
+
+**Step 0 — Fallback guard (from 2026-09-27; on GitHub's schedule only).** With the job's own
+token, one request asks GitHub how many runs of this workflow succeeded since 00:00 UTC that day. If
+any did, the step records `skip=true`: steps 1 to 7 do not run, the verdict passes with "Skipped: a
+run already succeeded today (UTC)", and the run is green in about 30 seconds (one billed minute).
+If GitHub cannot be asked, the step warns and the run backs up anyway: the guard fails open. A
+dispatched run (the Scheduler, "Run now", or a person on GitHub) never checks. The console records
+a stood-down run as `skipped` (`fallback_not_needed`), which never alerts.
 
 **Step 1 — Pre-flight.** Fail immediately, naming what is missing, if either secret or either
 variable is empty. Run `mkdir -p out/plain out/encrypted out/check` once, **before any tool writes**
@@ -204,7 +238,9 @@ Pipeline uses a few MB a day.
   back. No `continue-on-error` except where a later step must still run (encryption, summary,
   cleanup); the verdict reads each step's `outcome`, never `job.status`.
 - `if: always()`: remove the restore container and `out/plain/`.
-- With RD-9: on success, one `curl` to the external heartbeat monitor's ping URL.
+- RD-9, the `heartbeat` step, right after the verdict and only when it passed (never on a
+  stood-down run): one `curl -fsS -m 10 --retry 3` to `HEARTBEAT_PING_URL`. With the secret unset
+  it does nothing; a failed ping only warns.
 
 ### 3.3 Relationship to the vendors' recommended methods
 
@@ -229,14 +265,16 @@ Secret and variable **names only**:
 | `SUPABASE_DB_URL` | Secret (key 2) | Step 2 | The read-only export role, session pooler |
 | `CLOUDFLARE_ACCOUNT_ID` | Variable | Steps 4, 7 | |
 | `BACKUP_AGE_RECIPIENT` | Variable | Step 6 | The public key only |
-| External heartbeat ping URL | Secret, only with RD-9 | Step 9 | Outside the four-secret limit |
+| `HEARTBEAT_PING_URL` | Secret, optional (RD-9) | Step 9 (`heartbeat`) | The healthchecks.io check's ping URL; outside the four-secret limit. `guard-secrets` lists it as optional while unset |
 
 ## 5. Operational notes
 
 - **A failed run:** GitHub notifies the person who started it; for a scheduled run, the person who
   last changed its cron line. The step summary identifies the store and the step.
-- **A missed run:** GitHub may delay or drop scheduled runs under load. Daily cadence and the
-  external heartbeat monitor (RD-9) cover it.
+- **A missed run:** GitHub may delay or drop scheduled runs under load (the first one started
+  5 h 35 min late). The Scheduler's dispatch at 09:17 UTC is the primary trigger and GitHub's
+  schedule the fallback; the staleness alert and the external heartbeat monitor (RD-9) report a
+  day without a passing run.
 - **Restoring from a Secondary Pipeline recovery point:**
   1. `npx wrangler r2 object get madagascar-backups/secondary/pipeline/<date>/<run>/<file> --remote --file <file>`
      for each file, then `sha256sum -c SHA256SUMS`.
@@ -267,11 +305,12 @@ All three are done (2026-09-26).
 
 | Item | State | Evidence |
 |---|---|---|
-| Workflow implemented | **done** | `secondary-pipeline.yml` (267 lines) and `scripts/secondary-pipeline/verify.ts` (356 lines), commits `3abadc8` and `027feda`; `npm run verify` passing |
+| Workflow implemented | **done** | `secondary-pipeline.yml` (267 lines) and `scripts/secondary-pipeline/verify.ts` (356 lines), commits `3abadc8` and `027feda`; `npm run verify` passing. 298 lines with the authentication records; 318 with the fallback guard and the heartbeat (2026-09-27) |
 | First passing manual run | **done**, 2026-09-26 | Runs 36269275118 and 36269595781 |
 | First verified recovery point | **done**, 2026-09-26 20:29 UTC | `madagascar-backups/secondary/pipeline/2026-09-26/36269595781-1/`: seven objects written and read back; all six checksums in `SHA256SUMS` matched |
 | Authentication records added (store `postgres-auth`) | **done**, 2026-09-26 22:49 UTC | Run 36277447136 (commit `701ade2`): `secondary/pipeline/2026-09-26/36277447136-1/`; §7.4 |
-| First passing scheduled run | pending | Due 2026-09-27 08:41 UTC |
+| First passing scheduled run | **done**, 2026-09-27 | Run 36325294293: due 08:41 UTC, started by GitHub at 14:16 UTC (5 h 35 min late), passed at 14:18; `secondary/pipeline/2026-09-27/36325294293-1/`, 8 of 8 files, recorded by the console at 14:30 as `succeeded` |
+| Passing run the same day, started by hand | **done**, 2026-09-27 | Run 36327225356, 14:48 to 14:50 UTC, passed |
 | One file decrypted by the Owner | pending | Task 1.3 in [06](06-remediation-plan.md) |
 | Failure notification reaching a person | pending | Proven by the first failed run, or by a deliberate one |
 
@@ -335,6 +374,7 @@ recomputes.
 | 2026-09-25 | claude | Vendor documentation: Supabase restore procedure, wrangler D1 export and R2 upload, GitHub schedule notes | §3.2, §5 |
 | 2026-09-26 | claude | Commissioning runs 36269275118 and 36269595781 (job logs, step timings, artifact size); live read-only counts from Supabase and D1 | §7 |
 | 2026-09-26 | claude | Authentication records: local proof, live privilege checks, run 36277447136; Cloudflare's D1 export limitations and Supabase's restore guides re-read | §3.2 step 3a, §3.3, §5, §7.4 |
+| 2026-09-27 | claude | GitHub's record of runs 36325294293 (schedule) and 36327225356 (manual); `backup_runs` in production; GitHub's list-workflow-runs filters (`status`, `created`) for the fallback guard | Status update, §2, §3.1, step 0, step 9, §4, §5, §7 |
 
 ## 9. Related
 

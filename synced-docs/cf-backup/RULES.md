@@ -44,9 +44,11 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    no Cloudflare cron triggers. Its one table, `backup_runs`, is created by cf-admin
    migration `0057` (design D-1). Its settings are `admin_portal_settings` rows with the
    `backup:` prefix (cf-admin RULESAd RULE #0.6–#0.9). The schedule rides cf-admin's
-   `backup-tick` job, with one fallback `schedule:` line in `db-backup.yml` (D-4, D-5). The
-   one exception is the Secondary Pipeline's own daily schedule in `secondary-pipeline.yml`
-   (remediation decision RD-12, until RD-11 is decided; `docs/remediation/`). A
+   `backup-tick` job: from `docs/remediation/13` B3 it dispatches the backup engine,
+   `secondary-pipeline.yml`, daily at 09:17 UTC. The workflow's own `schedule:` line
+   (11:41 UTC) is the fallback, and stands down once a run has succeeded that UTC day
+   (RD-12, permanent). `db-backup.yml` keeps its fallback line until B5 deletes it, and is
+   disabled on GitHub (D-4, D-5, RD-5). A
    daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
    failed-workflow email warns through a path the tick does not own. cf-backup sends no mail
    itself: its alerts leave through that job and cf-admin's `EMAIL_QUEUE` (D-11).

@@ -5,7 +5,7 @@ audience: [owner, ai, technical, operator]
 last_verified: 2026-09-27
 verified_against: [code, infra, live-mcp]
 owner: harshil
-related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, src/secondary/pipeline.ts, src/tick/secondary-runs.ts, .github/workflows/db-backup.yml, scripts/backup/lib/workflow-guards.ts, scripts/backup/lib/pins.ts, scripts/backup/lib/docs-mirror.ts]
+related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, src/secondary/pipeline.ts, src/secondary/record.ts, src/tick/secondary-runs.ts, src/tick/reconcile.ts, .github/workflows/db-backup.yml, scripts/backup/lib/workflow-guards.ts, scripts/backup/lib/pins.ts, scripts/backup/lib/docs-mirror.ts]
 related_docs: [README.md, 06-remediation-plan.md, 07-decision-log.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md]
 tags: [cf-backup, remediation, plan, consolidation, secondary-pipeline]
 ---
@@ -21,6 +21,11 @@ tags: [cf-backup, remediation, plan, consolidation, secondary-pipeline]
 > day, and replaces Stages 2 to 5 of [06](06-remediation-plan.md).
 
 ## 1. Where things stand (2026-09-27, 09:30 UTC)
+
+> **Update, 15:00 UTC.** The first scheduled run started at 14:16 UTC, 5 h 35 min late, and passed;
+> a manual run passed at 14:50. Both are verified recovery points for 2026-09-27. Why backups still
+> looked "failing": the engine's only trigger was GitHub's schedule, and the console could start
+> only the retired Primary Pipeline. B3 below is the permanent fix ([07](07-decision-log.md) §0.1).
 
 | Part | State |
 |---|---|
@@ -54,10 +59,10 @@ or change one.
 
 | # | Task | Owner | State |
 |---|---|---|---|
-| B0.1 | A run **started by the schedule** passes ([06](06-remediation-plan.md) 1.6) | Engineering | pending |
+| B0.1 | A run **started by the schedule** passes ([06](06-remediation-plan.md) 1.6) | Engineering | **done** 2026-09-27: run 36325294293, started 14:16 UTC |
 | B0.2 | The Owner decrypts one file from the bucket with the offline recovery key ([06](06-remediation-plan.md) 1.3) | Owner | not started |
 | B0.3 | Bucket lock (30 days) and lifecycle (35 days) rules on `secondary/` (RD-12) | Owner | not started |
-| B0.4 | External heartbeat (RD-9): the workflow pings `HEARTBEAT_PING_URL` after a passing verdict, and skips the step while the secret is absent. Engineering adds the step after B0.1; the Owner creates the check and the secret | Both | not started |
+| B0.4 | External heartbeat (RD-9): the workflow pings `HEARTBEAT_PING_URL` after a passing verdict, and skips the step while the secret is absent. Engineering adds the step after B0.1; the Owner creates the check and the secret | Both | step **built** with B3 (C2); the check and the secret are the Owner's |
 | B0.5 | A failure notification from GitHub has reached the Owner ([06](06-remediation-plan.md) §4) | Owner | not started |
 
 **Gates, refined from [12](12-open-source-tool-assessment.md) §6.1:**
@@ -67,7 +72,7 @@ or change one.
   encrypted. Landing B1 first means the console records the first scheduled run itself.
 - **No workflow change before B0.1.** A scheduled run executes whatever is on `main` when it
   starts, so the first scheduled run must meet the commissioned workflow. B3 and B0.4 change the
-  workflow, so they wait.
+  workflow, so they wait. *Met 2026-09-27 at 14:18 UTC; C2 changed the workflow after it.*
 - **B0.2 gates B5:** nothing is deleted while no one has proven the offline key opens a recovery
   point.
 
@@ -123,7 +128,23 @@ fallback: when a run has already archived a recovery point that day, the fallbac
 check, in under a minute. The console's schedule settings are re-enabled only when a dispatch from
 the console has passed.
 
-**Exit:** a "Run now" from the console runs the Secondary Pipeline and appears in the run list.
+Design, decided 2026-09-27 ([07](07-decision-log.md) §0.1). Each commit is deployable on its own:
+
+| Part | What | State |
+|---|---|---|
+| C1 Worker, recording | A row whose `r2_prefix` is under `secondary/pipeline/` is this engine's. Reconcile follows such a row by GitHub's run alone (no heartbeat, no manifest@1): a request not confirmed in 10 minutes is matched by the request id in the run's name; queued and running are tracked; a completed run is judged from its folder exactly as B1's chore judges one (`src/secondary/record.ts`); 6 hours without contact is `lost`. The chore never records a run that already has a row (by run id and attempt, or by the request id while GitHub has not numbered it), and records a fallback that stood down as one `skipped` row that never alerts. Diagnostics' "last run" ignores skips | **built** (`41c219d`) |
+| C2 Workflow | `run-name: secondary-pipeline ${{ inputs.request_id \|\| github.event_name }}` and one optional input, `request_id`; cron `41 11 * * *`; step 0 `fallback guard` (on GitHub's schedule only: one request for the day's successful runs; any → the export steps do not run and the verdict passes; GitHub unreachable → back up anyway); the `heartbeat` step (B0.4); job permissions `contents: read, actions: read`. The guard enforces each part and the 320-line limit | **built** |
+| C3 Worker, dispatch | The engine is a code constant, not the stored `github.workflow`. "Run now" (full only) and the Scheduler insert a row holding the bare `secondary/pipeline/` root and dispatch the workflow with only `request_id`. Drill, check, Supabase-only and the runner test are refused with a clear message until B5 deletes them | pending |
+| Live settings | Claude writes `backup:config` (Owner's decision): full backup daily, Supabase-only off, grace 2 hours, monthly drill off; first a slot about 20 minutes ahead to prove a Scheduler dispatch the same day, then 09:17 UTC. A notice alert records each change | pending, after C3 |
+
+The two triggers are independent: if Cloudflare's cron stops, GitHub's schedule still backs up; if
+GitHub drops its schedule, the Scheduler has already backed up. If GitHub's schedule never fires for
+two days, the Owner disables and re-enables the workflow on GitHub (Actions → secondary-pipeline →
+⋯), which registers its schedule again.
+
+**Exit:** a "Run now" from the console runs the Secondary Pipeline and appears in the run list; a
+run the Scheduler dispatched passes (the re-scoped B0.1); the next day's fallback is recorded as
+`skipped` without an alert.
 
 ### B4 — Acceptance (30 days)
 
@@ -212,11 +233,11 @@ day, against 5 million.
 | Step | State | Evidence |
 |---|---|---|
 | Decisions | **settled** 2026-09-27 | [07](07-decision-log.md) §0 |
-| B0.1 First scheduled run | pending | Due 08:41 UTC; not started at 09:30 UTC |
+| B0.1 First scheduled run | **done** 2026-09-27 | Run 36325294293: due 08:41 UTC, started 14:16 UTC, passed 14:18; recorded 14:30 as `succeeded`, 8 of 8 files. Manual run 36327225356 passed 14:50 |
 | B0.2 to B0.5 | not started | Owner tasks, [README](README.md) §7 |
 | B1 Run records | **built and live** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts`. Production, 13:15 UTC: run `2026-09-26_full_gh36277447136a1` recorded as `succeeded`, 8 of 8 files, 908,022 bytes of data; postrun filed in the same tick (2 billed minutes) |
 | B2 | **built** 2026-09-27: run detail, restore proof, Files, Diagnostics | Tests in `test/reads-runs.test.ts`, `test/restore-proof.test.ts`, `test/files-layout.test.ts`, `test/diagnostics-records.test.ts` |
-| B3 | not started | Gate: B0.1 (it changes the workflow) |
+| B3 | **in progress**: C1 built (`41c219d`), C2 built; C3 and the live settings pending | §3 B3 |
 | B4, B5 | not started | |
 
 ## 9. Verification log
@@ -225,6 +246,7 @@ day, against 5 million.
 |---|---|---|---|
 | 2026-09-27 | claude | Written from [07](07-decision-log.md) §0 and [12](12-open-source-tool-assessment.md) §6.1; live checks at 09:30 UTC: workflow states in both repositories, `backup:config`, `backup_runs`, the key registry, Supabase Storage, and the start times of this repository's scheduled runs; commissioning run durations from GitHub | §1 to §8 |
 | 2026-09-27 | claude | A map of every console path that assumes the Primary Pipeline (staleness, run list and detail, dispatch and reconcile, Diagnostics, `backup_runs` writers, the Secondary Pipeline's R2 output); B1 built against it | §3 B1, B2; §8 |
+| 2026-09-27 | claude | GitHub's record of runs 36325294293 and 36327225356; `backup_runs` in production; `npm run verify` for C1 and C2 | §1 update, §3 B0, B3; §8 |
 
 ## 10. Related
 
