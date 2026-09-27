@@ -24,7 +24,7 @@ tags: [runbook, cron, workers, observability, sentry, incident]
 > **Superseded 2026-09-10 (viability program chunk 7) — kept as the record of the
 > 2026-06-07 diagnosis, marked `historical` on 2026-09-14.** What this runbook
 > describes has since been replaced: every scheduled job is dispatched through
-> `runCronBatch` / `runJob` (`src/lib/jobs/`), every failure on a job path reports
+> `dispatchCronJobs` / `runJob` (`src/lib/jobs/`), every failure on a job path reports
 > through `reportNonFatal` / `reportOnceCooled` to both Sentry and Cloudflare
 > Observability (ratchet metric A19 holds that at zero), the whole Worker is wrapped
 > by `withSentry` in `src/workers/cf-entry.ts` so the §3.2 blind spot no longer

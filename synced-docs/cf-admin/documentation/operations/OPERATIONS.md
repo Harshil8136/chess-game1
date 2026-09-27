@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-09-27 | Cloudflare trigger events for `*/5 * * * *` and `0 2 * * SUN` (pasted by the owner); `src/lib/jobs/dispatch.ts`; `src/workers/job-runner.ts`; `wrangler.toml` | Both crons ended `exceededCpu` from 2026-09-26 22:45 UTC. The scheduled handler now calls each due job in its own invocation (§1 Scheduled triggers); `enable_ctx_exports` added to `compatibility_flags`; §3.1's CPU row now says per invocation. Not re-checked: every other row |
 | 2026-09-23 | `wrangler.toml` `[[services]]`; `src/lib/jobs/registry.ts` | `BACKUP` → `cf-backup` added (chunk CB-2; a binding, not a var — RULE #0.8's 42 unchanged); **12 jobs (10+2)** with `backup-tick`; deploy-order item added to §2. Not re-checked: every other row |
 | 2026-09-19 | `wrangler.toml` `[vars]` re-counted; live Worker env read; `src/lib/jobs/registry.ts`; `SELECT setting_key FROM admin_portal_settings` (remote); `ls migrations/` + `d1_migrations`; `src/lib/auth/security-logging.ts`; `src/lib/jobs/telemetry.ts`; Supabase MCP `list_projects`; `grep -rn PUBLIC_SENTRY_DSN src/` | **17 `[vars]` + 25 secrets = 42**, not 40 (15+25); **11 jobs (9+2)**, `cron-usage-probe` was missing; the three idle-tick gate keys **do not exist as rows** — the rollback is an INSERT; `migrations/` holds **33** files to `0055`, not 29 to `0051`; the failed-login alert path is **Brevo**, not Resend; the Sentry cooldown is per call site, not blanket; both Supabase free slots are in use; `PUBLIC_SENTRY_DSN` has no reader. §1, §2, §3.5, §4.1–4.3, §5, §6, §7 and §8 corrected. Not re-checked: §3.6 Upstash limits, §6's token permission tables (dashboard-only), "Account slots: 3 of 5" |
 | 2026-08-13 | `wrangler.toml` + `src/env.d.ts` re-read | §1 rebuilt — `SYNC_QUEUE`, the sync DLQ, `CHATBOT_SERVICE`, `ASTRO_SERVICE` and the `AI` binding were all missing from this registry despite being live; cron triggers and the custom-domain route added |
@@ -151,6 +152,20 @@ three times. As of 2026-09-23 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
 | `*/5 * * * *` (10) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)) |
 | `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile` |
 
+> **One invocation per job (2026-09-27).** The scheduled handler no longer runs
+> the jobs itself. `dispatchCronJobs` (`src/lib/jobs/dispatch.ts`) reads the
+> control document, skips the jobs it holds back without invoking them, and
+> calls each due job through the Worker's own `JobRunner` entrypoint
+> (`src/workers/job-runner.ts`) over the `ctx.exports` loopback binding, which
+> needs the `enable_ctx_exports` compatibility flag in `wrangler.toml`. Each
+> call is its own invocation with its own 10 ms of CPU (§3.1). A job that still
+> overruns fails alone and shows in Workers Observability as that job's
+> `exceededCpu`, not as the whole tick's. Before this change, all ten jobs
+> shared the scheduled invocation's 10 ms. The tick measured 22 ms on
+> 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare ended every run at
+> the limit, so no job ran. See
+> [`incidents/2026-09-26-cron-exceeded-cpu.md`](incidents/2026-09-26-cron-exceeded-cpu.md).
+
 > **Every job below can be paused, throttled or run by hand from
 > `/dashboard/cron` (2026-09-16; the throttle got a user interface on
 > 2026-09-20).** The control plane owns per-job state, criticality tiers, the
@@ -160,7 +175,7 @@ three times. As of 2026-09-23 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
 > every job exactly as before. *Corrected 2026-09-20 — this said the gate "costs
 > +1 row read per tick", which was the same false claim CRON-CONTROL.md §5
 > retired on 2026-09-19. `readControl` issues its own `SELECT`, so the real cost
-> is two single-row reads per tick: one from `runCronBatch` and one from
+> is two single-row reads per tick: one from `dispatchCronJobs` and one from
 > `cron-usage-probe`, which is ungated and re-reads before checking its own
 > clock. That document owns the figure.*
 
@@ -275,7 +290,7 @@ dictate caching strategies and system design constraints.
 | Metric | Free Limit |
 |--------|-----------|
 | Requests | 100,000/day |
-| CPU time per request | **10 ms** ← critical design constraint |
+| CPU time per invocation | **10 ms** ← critical design constraint. An HTTP request, a cron trigger and each Service Binding or RPC call are each an invocation with their own 10 ms; the scheduled handler relies on that (§1 Scheduled triggers) |
 | Memory | 128 MB |
 | Subrequests per request | 50 |
 | Worker bundle size | 64 MiB uncompressed on every plan (Cloudflare changelog 2026-09-04; the 3 MB compressed Free limit this row quoted no longer exists). To measure the current bundle rather than trusting a figure here: `npx wrangler deploy --dry-run --outdir=<tmp>` and read "Total Upload" |

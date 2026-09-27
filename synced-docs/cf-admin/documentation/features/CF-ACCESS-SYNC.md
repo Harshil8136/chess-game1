@@ -142,9 +142,11 @@ the cron reconciler go through `recordCfSyncOutcome()`
 
 `reconcileCfAccessGroup()` (`src/lib/auth/cf-access-reconcile.ts`) runs on the
 `"*/5 * * * *"` trigger. It is registered as the `cf-access-reconcile` job in
-`src/lib/jobs/registry.ts` and dispatched by `runCronBatch(FIVE_MIN_JOBS, …)`
+`src/lib/jobs/registry.ts` and dispatched by `dispatchCronJobs(FIVE_MIN_JOBS, …)`
 in `src/workers/cf-entry.ts` — not by an `if` branch inside `cf-entry.ts`, as
-this section said before.
+this section said before. Since 2026-09-27 it runs in its own invocation, with
+its own 10 ms of CPU, like every scheduled job
+([`CRON-CONTROL.md`](CRON-CONTROL.md) §5).
 
 Since `996c829` (2026-09-12) the pass is **gated**, not unconditional. Each
 tick it reads the active email list from Supabase, hashes it (SHA-256 over the
@@ -246,7 +248,7 @@ check `/dashboard/cron` before anything else.
 - Root-cause fix (body validation, pagination, Sentry) → `src/lib/auth/cf-access-sync.ts:syncCfAccessGroup`, `parseCfResponse`, `findSyncGroup`
 - Sync-outcome logging + per-user status sweep → `src/lib/auth/cf-access-sync-log.ts:recordCfSyncOutcome`
 - Gated 5-minute cron self-heal → `src/lib/auth/cf-access-reconcile.ts:reconcileCfAccessGroup`
-- Job registration and dispatch → `src/lib/jobs/registry.ts` (job id `cf-access-reconcile`, `gateKeys: CF_ACCESS_RECONCILE_KEYS`), run by `runCronBatch(FIVE_MIN_JOBS, …)` in `src/workers/cf-entry.ts`; criticality in `src/lib/jobs/tiers.ts`
+- Job registration and dispatch → `src/lib/jobs/registry.ts` (job id `cf-access-reconcile`, `gateKeys: CF_ACCESS_RECONCILE_KEYS`), run by `dispatchCronJobs(FIVE_MIN_JOBS, …)` in `src/workers/cf-entry.ts`; criticality in `src/lib/jobs/tiers.ts`
 - Inline call sites (create/update/delete) → `src/pages/api/users/manage.ts` (`POST`, `PATCH`, `DELETE` handlers)
 - Inline call site (account block) → `src/pages/api/sessions/active-sessions.ts` (`block_account`): deactivates the user and calls `syncCfAccessGroup()`, but **not** `recordCfSyncOutcome()`, so it writes no `cf_access_sync_log` row and leaves the pill on its previous value until the next executed cron tick. *Documented 2026-09-19 — wire it through `recordCfSyncOutcome` to close this.*
 - Manual force-resync → `src/pages/api/users/cf-resync.ts`

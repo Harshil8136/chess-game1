@@ -6,8 +6,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-20
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql]
-related_docs: [../operations/OPERATIONS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql]
+related_docs: [../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
 
@@ -158,7 +158,8 @@ than a gap in it.
 
 There are **12 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
-and `staff-storage-reconcile`, both dispatched through the same `runCronBatch`).
+and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
+each due job in its own invocation — §5).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
@@ -229,8 +230,8 @@ tick, no extra query". It is not. `readControl` issues its own `SELECT`
 (`src/lib/dal/CronControlRepository.ts`), separate from the batched gate-key read.
 The real per-tick cost is:*
 
-- **two single-row reads per tick** — one from `runCronBatch`
-  (`src/lib/jobs/runJob.ts`) and one from `cron-usage-probe`, which is essential
+- **two single-row reads per tick** — one from `dispatchCronJobs`
+  (`src/lib/jobs/dispatch.ts`) and one from `cron-usage-probe`, which is essential
   and ungated and so re-reads the document on every tick before checking its own
   60-minute clock;
 - **one write per hour** from the probe, plus one write per tick in which an
@@ -252,6 +253,32 @@ already had. *Added 2026-09-20.*
 
 A paused job still costs those reads, but nothing more: the gate runs before the
 job's own logic, so the job itself never reaches D1.
+
+**Each due job is its own invocation (2026-09-27).** `dispatchCronJobs` runs
+`decideJobRun` for every job in the scheduled invocation. A job it holds back
+(paused, off, shed, throttled) is recorded as `disabled` or `shed` right there,
+with no invocation and no query of its own. Every other job is called through
+the Worker's own `JobRunner` entrypoint (`src/workers/job-runner.ts`, reached
+through `ctx.exports`), with the control document the tick already read passed
+along. So a job gets its own 10 ms of Workers Free CPU, and a job that still
+overruns fails alone. Inside that invocation `runOneJob` reads only that job's
+`gateKeys` and then calls `runJob`, so the gate, lease, meter and telemetry
+are unchanged. Two costs moved:
+
+- **Gate keys are read per job.** The batched read of all jobs' keys became one
+  small `SELECT` per job that declares keys. The rows read stay the same,
+  because no two running jobs share a key (`gsc-sync` and `pagespeed-sync` do,
+  but both are off). D1 Free meters rows, not queries.
+- **Invocations per tick** are 1 plus the number of due jobs. With the live
+  document on 2026-09-27 (rev 303: `gsc-sync` and `pagespeed-sync` off,
+  `cron-usage-probe` throttled to 60 minutes), that is 8 on most five-minute
+  ticks, 9 once an hour, and 3 on Sunday. Service Binding calls are not billed
+  as requests, and one invocation may make up to 32 of them.
+
+Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
+tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
+ended every run at the limit — see
+[`../operations/incidents/2026-09-26-cron-exceeded-cpu.md`](../operations/incidents/2026-09-26-cron-exceeded-cpu.md).
 
 ## 6. Failure behaviour
 
@@ -393,6 +420,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-09-27 | claude | Trigger events pasted by the owner (`*/5` and Sunday both `exceededCpu`, `cpuTimeMs` 10); live `cron-control` row (rev 303) and `cf-audit-last-synced` / `backup:status.lastTickAt`, both stopped at 2026-09-26 22:45 UTC; `npm run verify` | Each due job now runs in its own invocation through `JobRunner` (§5); held-back jobs cost no invocation. `runCronBatch` removed; the §3 and §5 references now name `dispatchCronJobs`. Not re-checked: §1, §2, §4, §7 |
 | 2026-09-23 | claude | Chunk CB-2: `backup-tick` registered (`src/lib/jobs/registry.ts`), tier `essential`, budget 10/10 measured 0 queries on the configured path (`test/jobs-budget.test.ts`); catalog entry added to `scripts/lib/cron-catalog.mjs` — **reaches the page only after the owner re-seeds** (`node scripts/seed_cron_control.mjs --apply --remote`) | 12 jobs (10+2). Until the re-seed, the row shows the job by id |
 | 2026-09-21 | claude | **First pass made against the page as it actually renders.** The components were mounted in headless Chromium with a fixture payload and the real stylesheet, and read at 1440px and 390px | Found what three rounds of source review had not: ~1200px of dead space in every row, a red 82%-full bar on a healthy system, a card headlining its own configuration, section descriptions stranded at the far right, a status pill stretched to the width of a text input, and failure counts invisible on mobile. All fixed. Note for anyone repeating this: the page needs no server — a Vite build with `@tailwindcss/vite`, an alias for `@`, and a stubbed `fetch` on `/api/cron` renders the real components faithfully |
 | 2026-09-21 | claude | Run-console defects found from an owner's screenshot, verified by `npm run verify` (1075/1075) | The trace panel rendered before any run existed, so the dialog sat permanently at "Streaming execution trace from worker…" — a request that had not been made. It now appears only once a run starts, and its empty states key off running/finished. The catalog title **Failed sign-in monitor** was ambiguous (it reads as a monitor that has failed) and is now **Rejected sign-in monitor** — a re-seed is needed for that to reach production |
