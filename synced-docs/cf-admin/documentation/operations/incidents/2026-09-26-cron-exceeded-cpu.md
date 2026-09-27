@@ -49,9 +49,11 @@ tags: [incident, cron, cloudflare-workers, free-plan, cpu-limit]
 | 2026-09-27 03:03 | Fix pushed to `main` (`009c523`). Workers Builds deploys it as script version `51b39319…`; the failing runs were version `79d23754…`. |
 | 2026-09-27 03:05 | First tick on the new code: outcome `ok`, wall time 13 s, `cpuTimeMs` 35. It carried the backlog: about 6 hours of audit events, the hourly usage refresh and cf-backup's four queued alerts, all sent and delivered. |
 | 2026-09-27 03:10 | No tick fired. Every deploy re-sends the cron schedules, and Cloudflare says schedule changes take up to 15 minutes to propagate. |
-| 2026-09-27 03:15 | Outcome `ok`, wall time 2.5 s, `cpuTimeMs` 15, `invocation.sequence.number` 1 (a fresh isolate). The dispatcher stamped `cron-usage-probe`'s clock, which it does only after every job call returns. In the same trace, a `JobRunner.jsrpc` event with `rpcCallCount` 2 and `cpuTimeMs` 9: two jobs shared one invocation. The scheduled event's 15 ms is therefore the dispatcher's own. |
+| 2026-09-27 03:15 | Outcome `ok`, wall time 2.5 s, `cpuTimeMs` 15, `invocation.sequence.number` 1 (a fresh isolate). The dispatcher stamped `cron-usage-probe`'s clock, which it does only after every job call returns. In the same trace, a `JobRunner.jsrpc` event with its own `cpuTimeMs` (9), so the scheduled event's 15 ms is the dispatcher's own. |
 | 2026-09-27 03:20 | Tick ran; `backup:status.lastTickAt` 03:20:06. |
-| 2026-09-27 | Second pass: a binding per job (the job id as `ctx.props`) and the light Sentry options on the scheduled handler (§5). |
+| 2026-09-27 03:30 | Tick on a docs-only redeploy of the same code (version `25c215f7…`): dispatcher `cpuTimeMs` 6. |
+| 2026-09-27 03:31 | Second pass deployed (`453b215`, version `772d3b61…`): a binding per job (the job id as `ctx.props`) and the light Sentry options on the scheduled handler (§5). |
+| 2026-09-27 03:35 | First tick on `772d3b61…`: dispatcher `cpuTimeMs` 14. Each job in its own `jsrpc` invocation: `cf-access-audit-poll` 7 ms, `backup-tick` 5 ms, each under its own request ID. |
 
 ## 3. Root cause
 
@@ -112,13 +114,14 @@ Supporting changes:
 - `JobRunner` and the scheduled handler are wrapped by Sentry without
   console-log capture or tracing, so each 10 ms goes to the work. Narration
   still reaches Workers Observability, and errors still reach Sentry. The
-  scheduled handler got this in the second pass, after it measured 15 ms with
-  the HTTP options.
+  scheduled handler got this in the second pass.
 - Each job is called through a binding of its own,
   `ctx.exports.JobRunner({ props: { jobId } })`, and reads its id from
-  `ctx.props`. The first deploy called every job on one shared binding, and
-  Cloudflare carried two of those calls in one invocation (9 ms of its 10).
-  Props belong to one invocation, so per-job bindings cannot be merged.
+  `ctx.props`. Props belong to one invocation, so no two jobs can ever share
+  one budget. *Corrected 2026-09-27:* this was added because a `jsrpc` event
+  showing `rpcCallCount` 2 was read as two jobs in one invocation. The
+  03:35 events show `rpcCallCount` 2 on invocations that carry one job each,
+  so the count is not a count of jobs. The binding stays as a guarantee.
 - A named `WorkerEntrypoint` is reachable only through a binding, never from the
   Internet, so no new public endpoint exists.
 - Where the flag is missing, the handler falls back to running the job in the
@@ -173,11 +176,16 @@ sharing one batched read, and no two running jobs share a key.
   cf-backup writes `lastTickAt` only every other tick when nothing else
   changed, so it does not move on every tick.
 - **Settled:** the `JobRunner` calls report their own `cpuTimeMs` (event type
-  `jsrpc`), so the scheduled event's figure is the dispatcher's alone. Both
-  findings were fixed in the second pass. Before that pass shipped, local
-  workerd showed every job running on a fresh `JobRunner` instance, with its
-  props arriving through the Sentry wrapper. The next Trigger events should
-  show a scheduled event under 10 ms and `jsrpc` events with `rpcCallCount` 1.
+  `jsrpc`), so the scheduled event's figure is the dispatcher's alone. The job
+  invocations measured 5 and 7 ms, inside their budgets.
+- **Still open: the dispatcher's own CPU varies from tick to tick** (35, 15,
+  6 and 14 ms) whatever the Sentry options. Every tick starts a fresh isolate
+  (`invocation.sequence.number` 1). The high readings are the first ticks
+  after a code change, which fits V8 having no compiled code cached yet for
+  the new version. The ticks after a deploy decide what comes next. If they
+  settle near 6 ms, the only overrun is the first tick after each deploy,
+  which Cloudflare tolerates when it is occasional. If they stay over 10 ms,
+  the dispatcher's own work has to shrink further.
 
 ## 7. Follow-ups
 
