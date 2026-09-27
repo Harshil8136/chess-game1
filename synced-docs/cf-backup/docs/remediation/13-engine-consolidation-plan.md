@@ -83,7 +83,7 @@ pure part lives in `src/secondary/pipeline.ts`.
 | `kind`, `scope`, `lane` | `backup`, `full`, `actions` |
 | `trigger`, `requested_by` | GitHub's schedule: `fallback`, `fallback` (as the Primary Pipeline's own cron runs were). Started by hand on GitHub: `manual`, `github:<login>` |
 | `status`, `verdict` | `succeeded`, `ok` **only** when GitHub's conclusion is `success`, every file `SHA256SUMS` names is in the folder, and `manifest.json` reports all five stores verified. Otherwise `failed` (or `cancelled`), `failed`, with each reason in `verdict_reasons` and an `error_code` of `run_failed`, `archive_incomplete`, `nothing_archived` or `cancelled` |
-| `run_key`, `r2_prefix` | `<start day>_full_gh<run>a<attempt>`, and the folder `secondary/pipeline/<upload day>/<run>-<attempt>/` |
+| `run_key`, `r2_prefix` | `<start day>_full_gh<run>a<attempt>`, and the folder `secondary/pipeline/<upload day>/<run>-<attempt>/`. A run that archived nothing records the folder it would have written, so every row of this engine is found by its `secondary/` prefix |
 | sizes | `data_bytes` from the `.age` files, `evidence_bytes` from `manifest.json` and `SHA256SUMS`, and the file counts |
 
 The insert is one statement that does nothing when the run key is already recorded, so two ticks
@@ -110,7 +110,7 @@ The staleness alerts already follow from B1's rows. B2 finishes the reading side
 | Run detail: each store's restore verification (source counts before and after, restored count), and the folder's files with the checksums `SHA256SUMS` recorded | **built** 2026-09-27 (`src/api/runs.ts` `secondaryDetail`, `src/ui/screens/RunsScreen.tsx`) |
 | Keys → Restore proof accepts a recorded Secondary Pipeline run; no key fingerprint is claimed, because the engine's manifest lists no recipients | **works as built**, pinned by a test |
 | Files: `secondary/` and each level below it are described, and its run folders count as backup data | **built** 2026-09-27 (`src/files/layout.ts`) |
-| Diagnostics: a check that reads the engine's newest recorded run, in place of the retired runner's doctor record | not started |
+| Diagnostics: `runner.last` ("The backup engine's last run") reports the Secondary Pipeline's newest recorded run: pass when it verified every store within 26 hours, warn when older, fail when it failed. It falls back to the old doctor record only before the first recorded run | **built** 2026-09-27 (`src/diagnostics/probes-records.ts`) |
 
 While a verified recovery point is under 26 hours old, no staleness alert is raised.
 
@@ -214,8 +214,8 @@ day, against 5 million.
 | Decisions | **settled** 2026-09-27 | [07](07-decision-log.md) §0 |
 | B0.1 First scheduled run | pending | Due 08:41 UTC; not started at 09:30 UTC |
 | B0.2 to B0.5 | not started | Owner tasks, [README](README.md) §7 |
-| B1 Run records | **built** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts` (15 tests); `npm run verify` passing |
-| B2 | **mostly built** 2026-09-27: run detail, restore proof, Files | Pending: the Diagnostics check. Tests in `test/reads-runs.test.ts`, `test/restore-proof.test.ts`, `test/files-layout.test.ts` |
+| B1 Run records | **built and live** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts`. Production, 13:15 UTC: run `2026-09-26_full_gh36277447136a1` recorded as `succeeded`, 8 of 8 files, 908,022 bytes of data; postrun filed in the same tick (2 billed minutes) |
+| B2 | **built** 2026-09-27: run detail, restore proof, Files, Diagnostics | Tests in `test/reads-runs.test.ts`, `test/restore-proof.test.ts`, `test/files-layout.test.ts`, `test/diagnostics-records.test.ts` |
 | B3 | not started | Gate: B0.1 (it changes the workflow) |
 | B4, B5 | not started | |
 

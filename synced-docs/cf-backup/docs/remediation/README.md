@@ -101,8 +101,8 @@ replaced by the steps of [13](13-engine-consolidation-plan.md) (RD-15, option B)
 | Stage 1 Interim protection | **in progress**: built and commissioned | Pending: the first scheduled run (due 08:41 UTC on 2026-09-27; not started at 09:30, as GitHub runs this repository's schedules 4 to 5 hours late), the Owner's decryption of one file, the bucket rules on `secondary/`, a proven failure notification |
 | Authentication record coverage | **done** in the Secondary Pipeline | RD-1 applied on 2026-09-26; 6 users and 12 identities restored in every run since |
 | Decisions | **all settled** 2026-09-27 | [07](07-decision-log.md) §0 |
-| B1 Run records | **built** 2026-09-27: the console records every Secondary Pipeline run | [13](13-engine-consolidation-plan.md) §3 B1 |
-| B2 to B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
+| B1 Run records, B2 reading | **built and live** 2026-09-27: the console records every Secondary Pipeline run, shows its per-store verification, accepts a restore proof for it, and Diagnostics reports on it | [13](13-engine-consolidation-plan.md) §3 B1, B2 |
+| B3 to B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
 
 Per-step detail: [13](13-engine-consolidation-plan.md) §8.
 
