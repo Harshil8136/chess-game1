@@ -3,10 +3,10 @@
 | Field | Value |
 |-------|-------|
 | source_repo | mascotasmadagascar-cmd/cf-backup |
-| source_commit | 159132e9f1e8adcabab9bf4d8c1e2ada360efacb |
+| source_commit | 04aa2612f3cf063ebe7cb7c116017e0c4e58467a |
 | source_ref | main |
 | triggered_by | push |
-| synced_at | 2026-09-27T13:13:02.813Z |
+| synced_at | 2026-09-27T13:19:15.636Z |
 | files | 19 |
 
 Published by `.github/workflows/sync-docs.yml`. The list of published files is

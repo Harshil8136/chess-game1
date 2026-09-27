@@ -96,20 +96,22 @@ alert; `postrun` files GitHub's run, jobs and logs into the run's folder; Diagno
 `reconcile.last`, `postrun.last` and `r2.headroom` read it. The one exception is the runner's
 doctor record (`runner.last`), which only the Primary Pipeline writes; its lookup skips these rows.
 
-**Not yet:** the run detail screen reads only the Primary Pipeline's manifest format, and a
-restore proof cannot yet be recorded against a Secondary Pipeline run. Both are B2, the restore
-proof first: now that a good backup is on record, the daily check sends its half-yearly "no backup
-has been decrypted yet" reminder, which is correct (no decryption is recorded) but cannot yet be
-answered in the console.
+Now that a good backup is on record, the daily check sends its half-yearly "no backup has been
+decrypted yet" reminder. That is correct (no decryption is recorded), and B2 makes it answerable.
 
 **Exit:** the console lists the scheduled runs of B0.1 onward with the right verdict.
 
 ### B2 — Freshness, run detail and restore proof
 
-The staleness alerts already follow from B1's rows. B2 finishes the reading side: the run detail
-screen shows a Secondary Pipeline run's per-store results and table counts from its
-`manifest.json`; Keys → Restore proof accepts a Secondary Pipeline run; the Files screen explains
-`secondary/`; and Diagnostics' runner check reads the newest manifest instead of a doctor record.
+The staleness alerts already follow from B1's rows. B2 finishes the reading side:
+
+| Part | State |
+|---|---|
+| Run detail: each store's restore verification (source counts before and after, restored count), and the folder's files with the checksums `SHA256SUMS` recorded | **built** 2026-09-27 (`src/api/runs.ts` `secondaryDetail`, `src/ui/screens/RunsScreen.tsx`) |
+| Keys → Restore proof accepts a recorded Secondary Pipeline run; no key fingerprint is claimed, because the engine's manifest lists no recipients | **works as built**, pinned by a test |
+| Files: `secondary/` and each level below it are described, and its run folders count as backup data | **built** 2026-09-27 (`src/files/layout.ts`) |
+| Diagnostics: a check that reads the engine's newest recorded run, in place of the retired runner's doctor record | not started |
+
 While a verified recovery point is under 26 hours old, no staleness alert is raised.
 
 **Exit:** a day with a passing run raises no staleness alert; a day without one raises exactly one.
@@ -213,7 +215,7 @@ day, against 5 million.
 | B0.1 First scheduled run | pending | Due 08:41 UTC; not started at 09:30 UTC |
 | B0.2 to B0.5 | not started | Owner tasks, [README](README.md) §7 |
 | B1 Run records | **built** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts` (15 tests); `npm run verify` passing |
-| B2 | not started | Worker-only: may land before B0.1 |
+| B2 | **mostly built** 2026-09-27: run detail, restore proof, Files | Pending: the Diagnostics check. Tests in `test/reads-runs.test.ts`, `test/restore-proof.test.ts`, `test/files-layout.test.ts` |
 | B3 | not started | Gate: B0.1 (it changes the workflow) |
 | B4, B5 | not started | |
 
