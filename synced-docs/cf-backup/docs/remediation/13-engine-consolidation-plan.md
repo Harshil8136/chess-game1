@@ -5,7 +5,7 @@ audience: [owner, ai, technical, operator]
 last_verified: 2026-09-27
 verified_against: [code, infra, live-mcp]
 owner: harshil
-related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, .github/workflows/db-backup.yml, scripts/backup/lib/workflow-guards.ts, scripts/backup/lib/pins.ts, scripts/backup/lib/docs-mirror.ts]
+related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, src/secondary/pipeline.ts, src/tick/secondary-runs.ts, .github/workflows/db-backup.yml, scripts/backup/lib/workflow-guards.ts, scripts/backup/lib/pins.ts, scripts/backup/lib/docs-mirror.ts]
 related_docs: [README.md, 06-remediation-plan.md, 07-decision-log.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md]
 tags: [cf-backup, remediation, plan, consolidation, secondary-pipeline]
 ---
@@ -60,29 +60,57 @@ or change one.
 | B0.4 | External heartbeat (RD-9): the workflow pings `HEARTBEAT_PING_URL` after a passing verdict, and skips the step while the secret is absent. Engineering adds the step after B0.1; the Owner creates the check and the secret | Both | not started |
 | B0.5 | A failure notification from GitHub has reached the Owner ([06](06-remediation-plan.md) §4) | Owner | not started |
 
-**Gate, refined from [12](12-open-source-tool-assessment.md) §6.1:** B1 to B3 start once **B0.1**
-passes. They change what the console shows, not what is exported or how it is encrypted, so they do
-not need to wait for the key confirmation. **B0.2 gates B5:** nothing is deleted while no one has
-proven the offline key opens a recovery point.
+**Gates, refined from [12](12-open-source-tool-assessment.md) §6.1:**
 
-**No workflow change before B0.1.** A scheduled run executes whatever is on `main` when it starts,
-so the first scheduled run must meet the commissioned workflow.
+- **Worker-only steps (B1, B2) may land before B0.1.** They only read what the workflow already
+  produces, and they change what the console shows, never what is exported or how it is
+  encrypted. Landing B1 first means the console records the first scheduled run itself.
+- **No workflow change before B0.1.** A scheduled run executes whatever is on `main` when it
+  starts, so the first scheduled run must meet the commissioned workflow. B3 and B0.4 change the
+  workflow, so they wait.
+- **B0.2 gates B5:** nothing is deleted while no one has proven the offline key opens a recovery
+  point.
 
-### B1 — Run records
+### B1 — Run records (built 2026-09-27)
 
-The console's run list and `backup_runs` show every Secondary Pipeline run: those it dispatched and
-those GitHub's own schedule started. Each row carries the GitHub run, the verdict, the per-store
-result and the R2 prefix `secondary/pipeline/<date>/<run>-<attempt>/`. Persisted values keep their
-current vocabulary (`backup_runs.kind` is constrained by cf-admin migration `0057`), and the console
-labels them per [11](11-terminology-standard.md).
+**What it does.** A tick chore, `secondary-runs` (`src/tick/secondary-runs.ts`), runs every third
+five-minute tick. It asks GitHub for `secondary-pipeline.yml`'s finished runs of the last week (one
+request, five runs), and records each run it has not seen as one finished `backup_runs` row. The
+pure part lives in `src/secondary/pipeline.ts`.
+
+| Column | Value |
+|---|---|
+| `kind`, `scope`, `lane` | `backup`, `full`, `actions` |
+| `trigger`, `requested_by` | GitHub's schedule: `fallback`, `fallback` (as the Primary Pipeline's own cron runs were). Started by hand on GitHub: `manual`, `github:<login>` |
+| `status`, `verdict` | `succeeded`, `ok` **only** when GitHub's conclusion is `success`, every file `SHA256SUMS` names is in the folder, and `manifest.json` reports all five stores verified. Otherwise `failed` (or `cancelled`), `failed`, with each reason in `verdict_reasons` and an `error_code` of `run_failed`, `archive_incomplete`, `nothing_archived` or `cancelled` |
+| `run_key`, `r2_prefix` | `<start day>_full_gh<run>a<attempt>`, and the folder `secondary/pipeline/<upload day>/<run>-<attempt>/` |
+| sizes | `data_bytes` from the `.age` files, `evidence_bytes` from `manifest.json` and `SHA256SUMS`, and the file counts |
+
+The insert is one statement that does nothing when the run key is already recorded, so two ticks
+can never record a run twice. Runs started before 2026-09-26 22:48 UTC are not recorded: they
+predate `postgres-auth`, and are in [09](09-secondary-pipeline-specification.md) §7.
+
+**What follows from the row, unchanged:** the daily staleness check counts a succeeded row as a
+good backup (so the false "no successful backup" emails stop); a failed row raises the usual run
+alert; `postrun` files GitHub's run, jobs and logs into the run's folder; Diagnostics' `gh.runs`,
+`reconcile.last`, `postrun.last` and `r2.headroom` read it. The one exception is the runner's
+doctor record (`runner.last`), which only the Primary Pipeline writes; its lookup skips these rows.
+
+**Not yet:** the run detail screen reads only the Primary Pipeline's manifest format, and a
+restore proof cannot yet be recorded against a Secondary Pipeline run. Both are B2, the restore
+proof first: now that a good backup is on record, the daily check sends its half-yearly "no backup
+has been decrypted yet" reminder, which is correct (no decryption is recorded) but cannot yet be
+answered in the console.
 
 **Exit:** the console lists the scheduled runs of B0.1 onward with the right verdict.
 
-### B2 — Freshness and staleness alerts
+### B2 — Freshness, run detail and restore proof
 
-Recovery Point Actual (RPA) per store, the recovery point list, and the staleness alerts all read
-the Secondary Pipeline's archived recovery points. While a verified recovery point is under 26 hours
-old, no staleness alert is raised.
+The staleness alerts already follow from B1's rows. B2 finishes the reading side: the run detail
+screen shows a Secondary Pipeline run's per-store results and table counts from its
+`manifest.json`; Keys → Restore proof accepts a Secondary Pipeline run; the Files screen explains
+`secondary/`; and Diagnostics' runner check reads the newest manifest instead of a doctor record.
+While a verified recovery point is under 26 hours old, no staleness alert is raised.
 
 **Exit:** a day with a passing run raises no staleness alert; a day without one raises exactly one.
 
@@ -184,7 +212,9 @@ day, against 5 million.
 | Decisions | **settled** 2026-09-27 | [07](07-decision-log.md) §0 |
 | B0.1 First scheduled run | pending | Due 08:41 UTC; not started at 09:30 UTC |
 | B0.2 to B0.5 | not started | Owner tasks, [README](README.md) §7 |
-| B1 to B3 | not started | Gate: B0.1 |
+| B1 Run records | **built** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts` (15 tests); `npm run verify` passing |
+| B2 | not started | Worker-only: may land before B0.1 |
+| B3 | not started | Gate: B0.1 (it changes the workflow) |
 | B4, B5 | not started | |
 
 ## 9. Verification log
@@ -192,6 +222,7 @@ day, against 5 million.
 | Date | Checked by | Method | Result |
 |---|---|---|---|
 | 2026-09-27 | claude | Written from [07](07-decision-log.md) §0 and [12](12-open-source-tool-assessment.md) §6.1; live checks at 09:30 UTC: workflow states in both repositories, `backup:config`, `backup_runs`, the key registry, Supabase Storage, and the start times of this repository's scheduled runs; commissioning run durations from GitHub | §1 to §8 |
+| 2026-09-27 | claude | A map of every console path that assumes the Primary Pipeline (staleness, run list and detail, dispatch and reconcile, Diagnostics, `backup_runs` writers, the Secondary Pipeline's R2 output); B1 built against it | §3 B1, B2; §8 |
 
 ## 10. Related
 
