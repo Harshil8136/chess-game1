@@ -3,7 +3,7 @@
 title: "Disaster Recovery & Backup Restore Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-09-19
+last_verified: 2026-09-27
 verified_against: [code, config, infra, live-mcp]
 owner: harshil
 related_docs: [incident-response.md, ../operations/OPERATIONS.md, ../architecture/KV-RESILIENCE.md, ../security/compliance/SOC2-TSC-mapping.md]
@@ -18,6 +18,19 @@ tags: [disaster-recovery, backup, rto, rpo, soc2, iso22301, runbook]
 > have never been executed, and there is no backup file to restore from yet.**
 > The recovery targets are estimates derived from vendor documentation, not
 > measurements from a real drill.
+
+> **Superseded for backups, 2026-09-27.** `.github/workflows/backups.yml` was
+> deleted (cf-backup remediation decision RD-8): it never produced a backup.
+> Supabase Postgres (with its authentication records) and the three D1
+> databases are now backed up **daily** by the cf-backup repository's backup
+> engine, `secondary-pipeline.yml`: each store is exported, restored into a
+> scratch database and row-counted against the source, then encrypted and
+> archived to R2 (`secondary/pipeline/`), with a 14-day copy in GitHub. It is
+> started every day at 09:17 UTC by the cf-backup console's Scheduler, with
+> GitHub's own schedule as a fallback. How to restore from it: cf-backup
+> `docs/remediation/09-secondary-pipeline-specification.md` §5. §0, §1 and §8
+> below describe the retired workflow and are kept as the record of what was
+> planned; `scripts/backup_drill.mjs` still works locally.
 
 ## 0. Blocking prerequisites — owner actions, none taken (verified 2026-09-19)
 
