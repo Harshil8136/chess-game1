@@ -272,7 +272,7 @@ the cause, the fix commit).
 | Stage | State | Evidence |
 |---|---|---|
 | 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-26 20:35 UTC) | Registry: 0 confirmations, 0 reveals |
-| 0.3 Containment of scheduled runs | not started (re-checked 2026-09-26 20:35 UTC) | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
+| 0.3 Containment of scheduled runs | **(a) done** 2026-09-27 01:34 UTC: both schedule settings off; (b) and (c) not started | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
 | 0.4–0.5 Manual baseline export | **superseded** 2026-09-26 | The Secondary Pipeline exports the authentication records daily (run 36277447136) |
 | 1.1 Secondary Pipeline implemented | **done** 2026-09-26 | Commits `3abadc8`, `027feda`; `npm run verify` passing |
 | 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118, 36269595781 and 36277447136 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
