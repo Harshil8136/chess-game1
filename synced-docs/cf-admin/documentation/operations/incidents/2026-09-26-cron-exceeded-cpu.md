@@ -46,6 +46,10 @@ tags: [incident, cron, cloudflare-workers, free-plan, cpu-limit]
 | 2026-09-26 22:45 onward | Every five-minute invocation ends `exceededCpu` at 10 ms. |
 | 2026-09-27 02:00 | The Sunday invocation (`asset-cleanup`, `staff-storage-reconcile`) also ends `exceededCpu`. |
 | 2026-09-27 | Owner pastes the Trigger events from the Cloudflare dashboard. Cause confirmed and fix written. |
+| 2026-09-27 03:03 | Fix pushed to `main` (`009c523`). Workers Builds deploys it as script version `51b39319…`; the failing runs were version `79d23754…`. |
+| 2026-09-27 03:05 | First tick on the new code: outcome `ok`, wall time 13 s, `cpuTimeMs` 35. It carried the backlog: about 6 hours of audit events, the hourly usage refresh and cf-backup's four queued alerts, all sent and delivered. |
+| 2026-09-27 03:10 | No tick fired. Every deploy re-sends the cron schedules, and Cloudflare says schedule changes take up to 15 minutes to propagate. |
+| 2026-09-27 03:15 | Outcome `ok`, wall time 2.5 s, `cpuTimeMs` 15, `invocation.sequence.number` 1 (a fresh isolate). The dispatcher stamped `cron-usage-probe`'s clock, which it does only after every job call returns. |
 
 ## 3. Root cause
 
@@ -153,9 +157,16 @@ sharing one batched read, and no two running jobs share a key.
   The Sunday trigger made 2 calls. Without a control row, all 10 jobs were
   called (fail open). Temporary log lines in the built bundle showed which path
   ran; they were removed before the commit.
-- **After deploy:** to be recorded here. Proof that ticks resumed is a
-  `cf-audit-last-synced` newer than 2026-09-26 22:45, a new
-  `backup:status.lastTickAt`, and the Trigger events showing outcome `ok`.
+- **After deploy (2026-09-27):** ticks resumed. The 03:05 and 03:15 ticks
+  ended `ok` on version `51b39319…`. `cf-audit-last-synced` and
+  `backup:status.lastTickAt` moved to 03:05. At 03:15 `cron-control` was
+  stamped by `cron-tick`, and cf-backup recorded its alerts as delivered.
+  cf-backup writes `lastTickAt` only every other tick when nothing else
+  changed, so it does not move on every tick.
+- **Still open:** whether the scheduled event's `cpuTimeMs` (35, then 15)
+  counts only the dispatcher or also the `JobRunner` calls. The per-call
+  events (`entrypoint: JobRunner`) settle it. If the dispatcher alone stays
+  over 10 ms, the next step is to trim what runs in it (§7).
 
 ## 7. Follow-ups
 
