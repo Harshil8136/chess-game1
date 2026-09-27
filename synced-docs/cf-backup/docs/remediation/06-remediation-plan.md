@@ -2,11 +2,11 @@
 title: "cf-backup remediation — 06 Remediation plan (stages, tasks, exit criteria, acceptance)"
 status: draft
 audience: [owner, ai, technical, operator]
-last_verified: 2026-09-26
+last_verified: 2026-09-27
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_code: [.github/workflows/db-backup.yml, .github/workflows/secondary-pipeline.yml, scripts/backup/lib/pins.ts, scripts/backup/lib/pipeline.ts, scripts/backup/lib/workflow-guards.ts, sql/supabase/01_backup_reader.sql]
-related_docs: [README.md, 04-defect-register.md, 05-options-analysis.md, 07-decision-log.md, 09-secondary-pipeline-specification.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md]
+related_docs: [README.md, 04-defect-register.md, 05-options-analysis.md, 07-decision-log.md, 09-secondary-pipeline-specification.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md, 13-engine-consolidation-plan.md]
 tags: [cf-backup, remediation, plan, roadmap]
 ---
 
@@ -21,6 +21,12 @@ tags: [cf-backup, remediation, plan, roadmap]
 > Pipeline remediated, with every change validated against the real tools before production. Both
 > pipelines then run for a 30-day stabilization period, and a person performs one recovery test
 > from the archive. **From today onward, there is no day without a copy of the data.**
+
+> **Superseded in part, 2026-09-27.** The Owner settled every decision ([07](07-decision-log.md)
+> §0). Under RD-15 the Secondary Pipeline becomes the permanent engine and the Primary Pipeline is
+> retired instead of repaired, so **Stages 2 to 5 below are replaced by
+> [13](13-engine-consolidation-plan.md)** (steps B0 to B5, new acceptance criteria). Stages 0 and 1
+> stay in force as written. §5 to §10 remain as the record of the repair plan that was not chosen.
 
 > **Status: draft for owner review.** Every decision is a default that applies unless the Owner
 > decides otherwise ([07](07-decision-log.md)). *This plan supersedes the first plan of 2026-09-25
@@ -271,17 +277,17 @@ the cause, the fix commit).
 
 | Stage | State | Evidence |
 |---|---|---|
-| 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-26 20:35 UTC) | Registry: 0 confirmations, 0 reveals |
-| 0.3 Containment of scheduled runs | **(a) done** 2026-09-27 01:34 UTC: both schedule settings off; (b) and (c) not started | Schedule enabled; `db-backup.yml` and cf-admin's `backups.yml` active; a seventh scheduled run failed on 2026-09-26 at 09:20 UTC (`drill_failed`, no data) |
+| 0.1–0.2 Offline recovery keys | not started (re-checked 2026-09-27 09:30 UTC) | Registry: 0 confirmations, 0 reveals, 0 restore proofs |
+| 0.3 Containment of scheduled runs | **done** 2026-09-27: (a) both schedule settings off at 01:34 UTC; (b) and (c) about 02:00 UTC | `backup:config` rev 4; `db-backup.yml` and cf-admin's `backups.yml` `disabled_manually`; no `backup_runs` row since the seventh failure on 2026-09-26 at 09:20 UTC |
 | 0.4–0.5 Manual baseline export | **superseded** 2026-09-26 | The Secondary Pipeline exports the authentication records daily (run 36277447136) |
 | 1.1 Secondary Pipeline implemented | **done** 2026-09-26 | Commits `3abadc8`, `027feda`; `npm run verify` passing |
 | 1.2 Commissioning | **done** 2026-09-26 | Runs 36269275118, 36269595781 and 36277447136 passed; first verified recovery point under `secondary/pipeline/2026-09-26/36269595781-1/`; results in [09](09-secondary-pipeline-specification.md) §7 |
 | 1.3 to 1.5 Owner decryption, bucket rules, heartbeat monitor | not started | |
-| 1.6 First scheduled run | pending | Due 2026-09-27 08:41 UTC |
-| 2 Primary Pipeline remediation | not started | |
+| 1.6 First scheduled run | pending | Due 2026-09-27 08:41 UTC; not started at 09:30 UTC. GitHub starts this repository's scheduled runs 4 to 5 hours late (`tick-deadman`, due 10:47 UTC, started 14:45 to 15:35 UTC on 09-24 to 09-26) |
+| 2 Primary Pipeline remediation | **not needed** (RD-15, 2026-09-27) | Replaced by [13](13-engine-consolidation-plan.md) B1 to B5 |
 | 3 Authentication record coverage | **3.1–3.3 done for the Secondary Pipeline** 2026-09-26 | RD-1 applied (functions, [07](07-decision-log.md) §2); run 36277447136: 6 users, 12 identities restored. Pending: 3.3 for the Primary Pipeline (Stage 2), 3.4 monthly full-stack restore |
-| 4 Restore verification decoupling | not started | |
-| 5 Stabilization and acceptance | not started | |
+| 4 Restore verification decoupling | **not needed** (RD-15) | The Secondary Pipeline restores every export in the same run in about a minute; [13](13-engine-consolidation-plan.md) §4 |
+| 5 Stabilization and acceptance | replaced | [13](13-engine-consolidation-plan.md) B4 and §4 |
 
 ## 13. Verification log
 
@@ -293,6 +299,7 @@ the cause, the fix commit).
 | 2026-09-25 | claude | Terminology review; status re-checked at 16:00 UTC | §5.4 added; §12 current |
 | 2026-09-26 | claude | Stage 3 brought forward for the Secondary Pipeline: RD-1 applied, run 36277447136; 0.4–0.5 superseded | §6, §12 |
 | 2026-09-26 | claude | Secondary Pipeline built and commissioned; live re-check of `backup_runs`, `backup:config`, `backup:key-registry` and both repositories' workflow states at 20:35 UTC | §12 current |
+| 2026-09-27 | claude | Decisions settled ([07](07-decision-log.md) §0); live re-check at 09:30 UTC of workflow states, `backup:config`, `backup_runs`, the key registry and scheduled start times | Stages 2 to 5 replaced by [13](13-engine-consolidation-plan.md); §12 current |
 
 ## 14. Related
 
@@ -301,3 +308,4 @@ the cause, the fix commit).
 - [09-secondary-pipeline-specification.md](09-secondary-pipeline-specification.md): Stage 1 in detail.
 - [10-sop-manual-baseline-export.md](10-sop-manual-baseline-export.md): Stage 0.4, step by step.
 - [11-terminology-standard.md](11-terminology-standard.md): the vocabulary used here.
+- [13-engine-consolidation-plan.md](13-engine-consolidation-plan.md): what replaces Stages 2 to 5.

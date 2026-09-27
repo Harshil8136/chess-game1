@@ -6,7 +6,7 @@ last_verified: 2026-09-26
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_code: [.github/workflows/secondary-pipeline.yml, scripts/secondary-pipeline/verify.ts, scripts/secondary-pipeline/auth-export.sh, sql/supabase/04_auth_export.sql, scripts/backup/lib/pins.ts, scripts/backup/lib/workflow-guards.ts]
-related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md]
+related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 07-decision-log.md, 10-sop-manual-baseline-export.md, 11-terminology-standard.md, 13-engine-consolidation-plan.md]
 tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification]
 ---
 
@@ -43,7 +43,10 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
   workflow guard (`checkSecondaryPipelineWorkflow` in `scripts/backup/lib/workflow-guards.ts`)
   fails CI if the workflow ever runs anything under `scripts/backup/`.
 - **No console integration**: no `backup_runs` row, no heartbeat, no settings. It is visible in
-  GitHub Actions and in the archive bucket only.
+  GitHub Actions and in the archive bucket only. *Refined 2026-09-27
+  ([13](13-engine-consolidation-plan.md) §2, RD-15):* once the first scheduled run passes, the
+  console **reads** this pipeline's runs and files and records them. The workflow itself still
+  never calls the Worker and never writes a console row.
 - **Small and reviewable:** the workflow stays under 300 lines including comments, and the helper under 400. If either needs
   more, the design is wrong.
 - **No new secret**, except RD-9's ping URL if the Owner approves it.

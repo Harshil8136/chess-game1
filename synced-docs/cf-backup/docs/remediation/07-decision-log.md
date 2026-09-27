@@ -1,21 +1,54 @@
 ---
-title: "cf-backup remediation — 07 Decision log (RD-1 to RD-14)"
-status: draft
+title: "cf-backup remediation — 07 Decision log (RD-1 to RD-15)"
+status: active
 audience: [owner, ai, technical]
-last_verified: 2026-09-26
+last_verified: 2026-09-27
 verified_against: [code, infra, live-mcp]
 owner: harshil
-related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md]
+related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md, 13-engine-consolidation-plan.md]
 tags: [cf-backup, remediation, decisions, owner]
 ---
 
 # 07 — Decision log
 
-> **TL;DR (non-technical):** Fourteen decisions that only the Owner can make. Each has a
-> recommended default, and work proceeds on the default unless the Owner decides otherwise. RD-1
-> (authentication records) was applied on its default on 2026-09-26, refined as §2 explains. Two
-> are needed now: the test resources for Pre-production Validation (RD-2) and a feature freeze
-> until the recovery points are proven (RD-4). Every default can be revised later.
+> **TL;DR (non-technical):** Fifteen decisions that only the Owner can make. **On 2026-09-27 the
+> Owner asked for the best option on every open one; §0 records the outcome.** The central one is
+> RD-15: the small Secondary Pipeline becomes the permanent backup engine, and the large Primary
+> Pipeline is retired once the new arrangement is proven, instead of being repaired. Several other
+> decisions existed only to support that repair, and fall away with it. The work that follows is
+> [13](13-engine-consolidation-plan.md). Every decision can be revised later.
+
+## 0. Decisions of 2026-09-27
+
+The Owner instructed: "Select all best options." Each open decision was settled on the option below.
+Where it differs from the §1 default, the reason is given. §1 keeps the original register as the
+record of what was proposed.
+
+| ID | Decided | Reason |
+|---|---|---|
+| RD-1 | **As applied** 2026-09-26: two functions owned by `postgres` (§2) | Already in production; the Secondary Pipeline restores the records daily |
+| RD-2 | **Not needed.** No test resources are created | They served Pre-production Validation of the Primary Pipeline, which is retired instead of repaired (RD-15) |
+| RD-3 | **Default: no decryption key in GitHub.** A person decrypts a real recovery point with an offline recovery key monthly for 3 months, then quarterly | Unchanged: a key in GitHub plus bucket read access would expose every recovery point |
+| RD-4 | **Default, scoped: freeze on.** Allowed: defects that stop a recovery point, and the consolidation work in [13](13-engine-consolidation-plan.md). Lifts after 7 consecutive passing scheduled Secondary Pipeline runs | The consolidation *is* the recovery path now, so it cannot be frozen |
+| RD-5 | **Applied** 2026-09-27: both schedule settings off (01:34 UTC); `db-backup.yml` and cf-admin's `backups.yml` disabled (about 02:00 UTC) | The schedule returns in [13](13-engine-consolidation-plan.md) B3, dispatching the Secondary Pipeline |
+| RD-6 | **Superseded.** No Pre-production Validation. A change to the Secondary Pipeline's workflow or scripts is proven by a manual run the same day | The Secondary Pipeline verifies its own output on every run: a real restore, row counts against the source, and a checksum read-back from R2 |
+| RD-7 | **Default: 400-minute ceiling** | Measured need is far below it: about 2 minutes a run, about 60 to 90 minutes a month ([13](13-engine-consolidation-plan.md) §6) |
+| RD-8 | **Default:** delete cf-admin's `backups.yml` in a cf-admin commit once a **scheduled** Secondary Pipeline run passes | Disabled since 2026-09-27; nothing depends on it |
+| RD-9 | **Default, yes:** a free healthchecks.io check, pinged by the Secondary Pipeline after a passing verdict. Period 1 day, **grace 8 hours**, because GitHub starts this repository's scheduled runs 4 to 5 hours late | It is the only alarm that works when GitHub or Cloudflare itself is the problem. One secret, the ping URL; the step is skipped while the secret is absent |
+| RD-10 | **Default: no** `pg_read_all_data` | RD-1 already covers the authentication records without it |
+| RD-11 | **Superseded by RD-15: consolidate.** One engine, the Secondary Pipeline | See RD-15 |
+| RD-12 | **Approved, and permanent.** The Secondary Pipeline's own schedule stays as the fallback once the Scheduler dispatches it ([13](13-engine-consolidation-plan.md) B3). The bucket lock and lifecycle rules on `secondary/` remain an Owner task | It is now the only engine, not an interim exception |
+| RD-13 | **Moot.** | The Secondary Pipeline already isolates stores: one store's failure never stops the others. The Primary Pipeline's pre-flight policy leaves with it |
+| RD-14 | **Narrowed:** rename only what survives the retirement: console labels and living documents. Code that [13](13-engine-consolidation-plan.md) B5 deletes is not renamed. Persisted values stay as they are | Renaming code about to be deleted is wasted work and risk |
+| RD-15 | **Option B (default): no third-party engine; the Secondary Pipeline is the permanent engine; the Primary Pipeline's runner is retired after acceptance.** Not option (c) | The smallest proven path ([12](12-open-source-tool-assessment.md) §6): about 300 lines against about 44,000, no new secrets, already producing verified recovery points daily |
+
+**Open questions from [12](12-open-source-tool-assessment.md) §8, answered the same day:**
+
+| Question | Answer |
+|---|---|
+| Does anything use Supabase Storage (files)? | **No.** Live check 2026-09-27: 0 buckets, 0 objects. Nothing outside the database needs a copy. Revisit if files ever move there |
+| A copy outside the Cloudflare account? | **The 14-day GitHub artifact is that copy** (encrypted, the repository's maximum retention). A third location would need an account and two secrets; not now |
+| How often? | **Daily** (RPO 24 hours). About 60 minutes a month; every 6 hours would use about 240 |
 
 ## 1. Decision register (defaults: reversible at review)
 
@@ -92,15 +125,18 @@ configured.
 
 ## 6. Owner actions (not decisions)
 
+*Updated 2026-09-27 for the decisions in §0. The current, ordered list is [README](README.md) §7.*
+
 | When | Action | Time |
 |---|---|---|
-| Today | Verify the offline recovery key; ask the Vendor to do the same ([06](06-remediation-plan.md) 0.1, 0.2). **Nothing else in this plan compensates for a lost key** | 20 min |
-| Today | Stop the scheduled runs, in order ([06](06-remediation-plan.md) 0.3) | 5 min |
-| Today, then weekly | The manual baseline export ([10](10-sop-manual-baseline-export.md)) | 45 min |
-| Stage 1 | Decrypt one Secondary Pipeline file; add the lock and lifecycle rules | 15 min |
-| Stage 2 | Create the test resources; re-enable the workflow; one pre-flight run and one full run | 20 min |
-| Stage 3 | ~~Run one SQL file in the Supabase SQL editor~~ Done for the Owner on 2026-09-26 through the Supabase connector | 0 min |
-| Stage 5 | One recovery test from the archive bucket with the offline recovery key | 1 hour |
+| Now | Verify the offline recovery key by decrypting one Secondary Pipeline file; ask the Vendor to do the same ([06](06-remediation-plan.md) 0.1, 0.2, 1.3). **Nothing else in this plan compensates for a lost key** | 20 min |
+| ~~Today~~ | ~~Stop the scheduled runs, in order ([06](06-remediation-plan.md) 0.3)~~ Done 2026-09-27 | — |
+| ~~Today, then weekly~~ | ~~The manual baseline export ([10](10-sop-manual-baseline-export.md))~~ Superseded 2026-09-26 by the Secondary Pipeline | — |
+| Now | Add the lock and lifecycle rules on `secondary/` (RD-12) | 5 min |
+| Now | Create the healthchecks.io check and store its ping URL as a GitHub secret (RD-9; [13](13-engine-consolidation-plan.md) B0) | 10 min |
+| ~~Stage 2~~ | ~~Create the test resources; re-enable the workflow; one pre-flight run and one full run~~ Not needed: RD-2, RD-15 | — |
+| ~~Stage 3~~ | ~~Run one SQL file in the Supabase SQL editor~~ Done for the Owner on 2026-09-26 through the Supabase connector | 0 min |
+| Acceptance | One recovery test from the archive bucket with the offline recovery key ([13](13-engine-consolidation-plan.md) B4) | 1 hour |
 
 ## 7. Verification log
 
@@ -110,9 +146,12 @@ configured.
 | 2026-09-25 | claude | Second review: live schedule, key registry, cf-admin's legacy export workflow, workflow guards, pre-flight policy | RD-5 corrected; RD-8 to RD-13 added |
 | 2026-09-25 | claude | Live Supabase grants and project list; cf-admin migration `0057` constraint on `backup_runs.kind` | RD-1 options; no spare project; RD-14 scope |
 | 2026-09-26 | claude | RD-1 applied: views and functions compared against Auth-style column changes on a local PostgreSQL 16 with Supabase's privileges reproduced; live privilege checks after the migration | §1, §2 |
+| 2026-09-27 | claude | The Owner's instruction to settle every open decision on its best option; live checks: both workflows `disabled_manually`, `backup:config` rev 4 with both schedules off, Supabase Storage empty (0 buckets, 0 objects), the `tick-deadman` schedule's start times (4 to 5 hours late) | §0 |
 
 ## 8. Related
 
 - [05-options-analysis.md](05-options-analysis.md): the basis for these choices.
 - [06-remediation-plan.md](06-remediation-plan.md): where each decision applies.
 - [11-terminology-standard.md](11-terminology-standard.md): the naming RD-14 applies.
+- [12-open-source-tool-assessment.md](12-open-source-tool-assessment.md): the basis for RD-15.
+- [13-engine-consolidation-plan.md](13-engine-consolidation-plan.md): the work RD-15 starts.

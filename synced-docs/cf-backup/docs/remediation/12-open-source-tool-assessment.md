@@ -1,12 +1,12 @@
 ---
 title: "cf-backup remediation — 12 Open-source tool assessment (adopt a tool, or remediate cf-backup)"
-status: draft
+status: active
 audience: [owner, ai, technical]
-last_verified: 2026-09-26
-verified_against: [code, research]
+last_verified: 2026-09-27
+verified_against: [code, research, live-mcp]
 owner: harshil
 related_code: [.github/workflows/db-backup.yml, scripts/backup/cli.ts, sql/supabase/01_backup_reader.sql]
-related_docs: [README.md, 05-options-analysis.md, 07-decision-log.md, 08-industry-practice-review.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md]
+related_docs: [README.md, 05-options-analysis.md, 07-decision-log.md, 08-industry-practice-review.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 13-engine-consolidation-plan.md]
 tags: [cf-backup, remediation, open-source, build-vs-adopt, supabase, d1, decision]
 ---
 
@@ -24,9 +24,10 @@ tags: [cf-backup, remediation, open-source, build-vs-adopt, supabase, d1, decisi
 > the 8,662-line Primary Pipeline runner. Keep the console, and have it read the Secondary
 > Pipeline's results.**
 
-> **Status: draft for the Owner.** This is a discussion document. It changes no code and makes no
-> decision. It proposes one new decision (RD-15, §7), which would change RD-11's default. Terms
-> follow [11](11-terminology-standard.md).
+> **Status: decided 2026-09-27.** The Owner settled RD-15 on its default, option B
+> ([07](07-decision-log.md) §0): the Secondary Pipeline is the permanent engine, and the Primary
+> Pipeline's runner is retired after acceptance. The §8 questions are answered below. The work is
+> [13](13-engine-consolidation-plan.md). Terms follow [11](11-terminology-standard.md).
 
 ## 1. The question and the requirements
 
@@ -190,19 +191,19 @@ restore check untouched.
 |---|---|---|---|---|
 | RD-15 | Build or adopt, and the long-term engine | **Adopt no third-party tool as the engine. The Secondary Pipeline becomes the permanent engine (§6.1, B); the Primary Pipeline runner is retired at day 30 instead of being remediated.** Changes RD-11's default ("retain both") to its "consolidate" alternative, and makes Stage 2's validation work unnecessary | (a) Keep RD-11 as it is and remediate the Primary Pipeline (§6, A). (b) Adopt backupdrill for Supabase plus a D1 script (§6, C): two new secrets. (c) B, plus backupdrill's `drill` once a week as an independent restore check from third-party code: two new secrets | Stage 5 (the day-30 decision) |
 
-Until the Owner decides, nothing changes: [06](06-remediation-plan.md) and [07](07-decision-log.md)
-apply as written.
+**Decided 2026-09-27: option B, the default** ([07](07-decision-log.md) §0). RD-11 moves to its
+"consolidate" alternative, and Stage 2's Pre-production Validation is not built.
+[13](13-engine-consolidation-plan.md) replaces [06](06-remediation-plan.md) Stages 2 to 5 and
+refines §6.1 above.
 
-## 8. Open questions
+## 8. Open questions (answered 2026-09-27)
 
-1. Does anything still use Supabase **Storage** (files)? If it does, neither pipeline exports the
-   files, only their metadata (§5).
-2. Is a copy **outside the Cloudflare account** wanted, given that the database, the Worker and the
-   R2 copy share one account? The GitHub artifact covers 14 days; a third location would cover
-   account loss.
-3. How often is "frequently"? Daily fits the free minutes (about 3 minutes a run, about 90 a
-   month). Every 6 hours is about 360 minutes a month, which fits under RD-7's 400-minute ceiling
-   **only** if the Primary Pipeline is retired (B).
+1. Does anything still use Supabase **Storage** (files)? **No.** Live check: 0 buckets and 0
+   objects, so nothing outside the database needs a copy. Revisit if files ever move there.
+2. Is a copy **outside the Cloudflare account** wanted? **The 14-day GitHub artifact is that copy**,
+   encrypted like the rest. A third location would need an account and two secrets; not now.
+3. How often is "frequently"? **Daily** (RPO 24 hours). Measured runs take about 2 minutes, so
+   about 60 minutes a month.
 
 ## 9. Verification log
 
@@ -211,6 +212,7 @@ apply as written.
 | 2026-09-26 | claude | Read the remediation program 01 to 11, `main.md`, `RULES.md` | Requirements in §1 |
 | 2026-09-26 | claude | Web research: the READMEs of every project in §3; Cloudflare's D1 Workflow example | §3. Not verified: star counts, the Databasus and pgbackweb details, Patina's FTS5 handling, whether backupdrill works with `backup_reader` |
 | 2026-09-26 | claude | No commands run against live infrastructure | Nothing in this document comes from live checks |
+| 2026-09-27 | claude | RD-15 decided; Supabase `storage.buckets` and `storage.objects` counted through the Supabase connector | §7 and §8 |
 
 ## 10. Related
 
@@ -220,3 +222,4 @@ apply as written.
   reference implementations.
 - [09-secondary-pipeline-specification.md](09-secondary-pipeline-specification.md): the pipeline
   recommended here as the engine.
+- [13-engine-consolidation-plan.md](13-engine-consolidation-plan.md): the work option B starts.

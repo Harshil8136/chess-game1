@@ -3,11 +3,11 @@
 | Field | Value |
 |-------|-------|
 | source_repo | mascotasmadagascar-cmd/cf-backup |
-| source_commit | 883f600424c622a5b5786d8a4a14ef9581dfe711 |
+| source_commit | 935e3a832f51e58516505a315db63e98c87f9c00 |
 | source_ref | main |
 | triggered_by | push |
-| synced_at | 2026-09-27T04:22:19.629Z |
-| files | 18 |
+| synced_at | 2026-09-27T12:58:23.664Z |
+| files | 19 |
 
 Published by `.github/workflows/sync-docs.yml`. The list of published files is
 `PUBLISHED_DOCS` in `scripts/backup/lib/docs-mirror.ts`; every other file in the
@@ -31,3 +31,4 @@ repository is private. Links to files outside this folder do not resolve here.
 - `docs/remediation/10-sop-manual-baseline-export.md`
 - `docs/remediation/11-terminology-standard.md`
 - `docs/remediation/12-open-source-tool-assessment.md`
+- `docs/remediation/13-engine-consolidation-plan.md`
