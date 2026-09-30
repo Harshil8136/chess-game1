@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `VPS` → `cf-vps` added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-vps. Not re-checked: every other row |
 | 2026-09-27 | Cloudflare trigger events for `*/5 * * * *` and `0 2 * * SUN` (pasted by the owner); `src/lib/jobs/dispatch.ts`; `src/workers/job-runner.ts`; `wrangler.toml` | Both crons ended `exceededCpu` from 2026-09-26 22:45 UTC. The scheduled handler now calls each due job in its own invocation (§1 Scheduled triggers); `enable_ctx_exports` added to `compatibility_flags`; §3.1's CPU row now says per invocation. Not re-checked: every other row |
 | 2026-09-23 | `wrangler.toml` `[[services]]`; `src/lib/jobs/registry.ts` | `BACKUP` → `cf-backup` added (chunk CB-2; a binding, not a var — RULE #0.8's 42 unchanged); **12 jobs (10+2)** with `backup-tick`; deploy-order item added to §2. Not re-checked: every other row |
 | 2026-09-19 | `wrangler.toml` `[vars]` re-counted; live Worker env read; `src/lib/jobs/registry.ts`; `SELECT setting_key FROM admin_portal_settings` (remote); `ls migrations/` + `d1_migrations`; `src/lib/auth/security-logging.ts`; `src/lib/jobs/telemetry.ts`; Supabase MCP `list_projects`; `grep -rn PUBLIC_SENTRY_DSN src/` | **17 `[vars]` + 25 secrets = 42**, not 40 (15+25); **11 jobs (9+2)**, `cron-usage-probe` was missing; the three idle-tick gate keys **do not exist as rows** — the rollback is an INSERT; `migrations/` holds **33** files to `0055`, not 29 to `0051`; the failed-login alert path is **Brevo**, not Resend; the Sentry cooldown is per call site, not blanket; both Supabase free slots are in use; `PUBLIC_SENTRY_DSN` has no reader. §1, §2, §3.5, §4.1–4.3, §5, §6, §7 and §8 corrected. Not re-checked: §3.6 Upstash limits, §6's token permission tables (dashboard-only), "Account slots: 3 of 5" |
@@ -121,6 +122,7 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 | `CHATBOT_SERVICE` | `cf-chatbot` | Worker-to-Worker calls to the chatbot admin surface, without a public round trip |
 | `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes) |
 | `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
+| `VPS` | `cf-vps` | The private server-console Worker (no route, no `workers.dev`): the `/dashboard/vps/app/` gateway, including the browser terminal's WebSocket ([VPS Console](../features/VPS-CONSOLE.md)). **Deploy cf-vps first** — a deploy that binds a Worker that does not exist fails |
 
 ### Workers AI
 
@@ -277,7 +279,7 @@ wrangler secret list
 3. **Never `wrangler kv namespace create`** without updating BOTH projects' `wrangler.toml`
 4. **If IDs look wrong** — verify via Cloudflare Dashboard → Workers → KV/D1 → copy UUID from there
 5. **Verify required secrets** are set via `wrangler secret list`
-6. **Service-binding targets must exist first** — `BACKUP` → `cf-backup`: deploy cf-backup before any cf-admin deploy that carries the binding; otherwise the cf-admin deploy fails
+6. **Service-binding targets must exist first** — `BACKUP` → `cf-backup` and `VPS` → `cf-vps`: deploy each target Worker before any cf-admin deploy that carries its binding; otherwise the cf-admin deploy fails. Order: cf-backup and cf-vps (either order), then cf-admin
 
 ---
 

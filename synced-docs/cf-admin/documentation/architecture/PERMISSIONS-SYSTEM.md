@@ -461,6 +461,17 @@ incident.
 > page decision and same-origin itself and is pinned by
 > `test/backup-gateway.test.ts`. What each person may do inside the console is
 > cf-backup's capability model ([13](../program/cf-backup/13-access-control.md)).
+>
+> **Added 2026-09-30 (cf-vps console).** `/dashboard/vps/app/…` is a second
+> gateway of the same shape ([VPS Console](../features/VPS-CONSOLE.md)), with one
+> deliberate difference: its gateway and page do not use the inherited decision.
+> `mayUseConsole` (`src/lib/vps-proxy.ts`) requires the `/dashboard/vps` key
+> itself in the map (owner and vendor support still bypass), because an absent
+> key would otherwise resolve through the staff-level `/dashboard` row — a map
+> computed before migration `0059`, which a push deploys without, would open a
+> root console to every staff member. Its WebSocket handshake is a GET, so the
+> gateway checks `Origin` itself and refuses read-only roles; pinned by
+> `test/vps-gateway.test.ts` and `test/vps-chain.test.ts`.
 
 ---
 
