@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-30
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, test/vps-gateway.test.ts, test/vps-chain.test.ts]
+related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/VpsAccessPanel.tsx, src/components/admin/users/vps-access-model.ts, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/vps-access-model.test.ts]
 related_docs: [BACKUP-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
@@ -116,6 +116,34 @@ deliberate: it fails closed.
 A read-only role never gets a change or a terminal through, even with the page
 granted. What each permitted person may do inside the console is cf-vps's own
 model, enforced there.
+
+### Inside the console: capabilities on the Users page
+
+cf-vps divides the console into capabilities (host views, logs, files, audit,
+terminal, actions, access). Its policy is one row in this portal's D1,
+`admin_portal_settings` key `vps:access`: what each role holds by default, plus
+personal grants and denies keyed by email, each optionally with an end date and
+a reason. Owner and vendor support hold everything; a few capabilities (audit,
+session replay, reboot, admin terminal, managing access) can never be granted
+to anyone else.
+
+The policy is managed in two places, both through the gateway, so cf-vps checks
+and stores every change (floors, the one-year limit, the rule that someone must
+keep the right to manage access) and the change becomes an activity-log row:
+
+- the console's own **Access** page (every role and person at once);
+- the **Server console** section of a person's Access page on the Users page
+  (`VpsAccessPanel`), shown to anyone who can open the console. It lists each
+  capability as *From role*, *Granted*, *Denied*, *Not held* or *Owner &
+  Vendor only*; someone holding `access.manage` can set each one to
+  Role, Allow or Deny for that person, with an optional end date and reason.
+
+Changing someone's role changes their console capabilities at once, because
+cf-vps reads the role from each request. Deleting a user removes their personal
+grant in the same step as their page overrides
+(`src/lib/dal/VpsAccessRepository.ts`), and bumps the policy revision so an
+Access editor opened before the deletion cannot save it back. An address
+invited again later starts from its role.
 
 ## 5. The terminal
 
