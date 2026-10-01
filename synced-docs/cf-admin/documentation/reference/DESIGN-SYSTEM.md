@@ -3,7 +3,7 @@
 title: "Design System — 'Midnight Slate'"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-09-30
 verified_against: [code]
 owner: harshil
 related_code: [src/styles/, src/components/ui/, src/components/navigation/Sidebar/]
@@ -264,9 +264,9 @@ A full set of semantic badge color tokens for status badges across the admin UI.
 ### 2.11 Spacing, Radius, Shadow, Motion
 
 ```css
-/* 4px grid spacing */
+/* 4px grid spacing: plain custom properties in a :root block, not @theme keys (see the warning below) */
 --spacing-xs: 4px;  --spacing-sm: 8px;  --spacing-md: 16px;
---spacing-lg: 24px; --spacing-xl: 32px; --spacing-2xl: 48px;
+--spacing-lg: 24px; --spacing-xl: 32px; --spacing-2xl: 48px; --spacing-3xl: 64px;
 
 /* Border radius */
 --radius-sm: 6px;   --radius-md: 10px;  --radius-lg: 14px;
@@ -276,6 +276,16 @@ A full set of semantic badge color tokens for status badges across the admin UI.
 --duration-[120ms]: 120ms;  --duration-[200ms]: 200ms;  --duration-[350ms]: 350ms;
 --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
 ```
+
+🚨 **The spacing steps are plain custom properties, not Tailwind theme keys.** They sit in a
+`:root` block in `src/styles/global.css`, outside `@theme`, on purpose. In Tailwind v4 a theme
+key named `--spacing-<name>` also feeds `max-w-<name>`, `min-w-<name>`, `w-<name>` and
+`h-<name>`, and it wins over the container scale. While they were declared in `@theme`,
+`max-w-3xl` meant 64px (not 48rem) and `max-w-md` meant 16px, in 21 places: search boxes and
+empty-state text a few pixels wide, and the API Access settings form squeezed into a column of
+words (found 2026-09-30, from a screenshot of the live page). Use the steps as
+`var(--spacing-md)` in CSS; for Tailwind spacing use the numeric scale (`p-4`, `gap-6`).
+`test/theme-tokens.test.ts` fails if a `--spacing-<name>` key returns to `@theme`.
 
 🚨 **The three `--duration-*` entries are unusable via `var()`.** `[` and `]` are
 not valid CSS identifier characters, so `var(--duration-[200ms])` never resolves

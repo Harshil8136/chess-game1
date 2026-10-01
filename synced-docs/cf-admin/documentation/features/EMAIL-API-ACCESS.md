@@ -126,3 +126,4 @@ through the API or this binding.
 ## Verification log
 
 - 2026-09-30: written with the feature; the route, client and model tests above pass, and the three page rows are asserted by the migration replay test.
+- 2026-09-30, live: the first look at the page (a screenshot) showed the Settings view squeezed into a 64px column. `max-w-3xl` had resolved to `var(--spacing-3xl)` because the design system's `--spacing-*` steps were declared in `@theme`, where Tailwind v4 reads them as sizes. Fixed at the source (the steps moved to a plain `:root` block, which also repairs 20 other elements across the admin) and pinned by `test/theme-tokens.test.ts`; the form itself also uses `max-w-[48rem]`. The same day the backend door passed 24 of 24 checks over a remote service binding and the public API 23 of 23 against production (`npm run smoke:api` in cf-email-consumer).
