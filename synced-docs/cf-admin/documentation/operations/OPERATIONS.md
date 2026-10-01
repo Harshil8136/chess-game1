@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `EMAIL_CONSOLE` → `cf-email-api` (entrypoint `Console`) added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-email-api. Not re-checked: every other row |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `VPS` → `cf-vps` added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-vps. Not re-checked: every other row |
 | 2026-09-27 | Cloudflare trigger events for `*/5 * * * *` and `0 2 * * SUN` (pasted by the owner); `src/lib/jobs/dispatch.ts`; `src/workers/job-runner.ts`; `wrangler.toml` | Both crons ended `exceededCpu` from 2026-09-26 22:45 UTC. The scheduled handler now calls each due job in its own invocation (§1 Scheduled triggers); `enable_ctx_exports` added to `compatibility_flags`; §3.1's CPU row now says per invocation. Not re-checked: every other row |
 | 2026-09-23 | `wrangler.toml` `[[services]]`; `src/lib/jobs/registry.ts` | `BACKUP` → `cf-backup` added (chunk CB-2; a binding, not a var — RULE #0.8's 42 unchanged); **12 jobs (10+2)** with `backup-tick`; deploy-order item added to §2. Not re-checked: every other row |
@@ -123,6 +124,7 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 | `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes) |
 | `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
 | `VPS` | `cf-vps` | The private server-console Worker (no route, no `workers.dev`): the `/dashboard/vps/app/` gateway, including the browser terminal's WebSocket ([VPS Console](../features/VPS-CONSOLE.md)). **Deploy cf-vps first** — a deploy that binds a Worker that does not exist fails |
+| `EMAIL_CONSOLE` | `cf-email-api` (entrypoint `Console`) | The email service's API Worker, admin door only (it has no route from here; its public API is for clients): the `/api/emails/api-*` routes behind the Email Portal's API Access tab ([Email API Access](../features/EMAIL-API-ACCESS.md)). **Deploy cf-email-api first** — a deploy that binds a Worker that does not exist fails |
 
 ### Workers AI
 
@@ -279,7 +281,7 @@ wrangler secret list
 3. **Never `wrangler kv namespace create`** without updating BOTH projects' `wrangler.toml`
 4. **If IDs look wrong** — verify via Cloudflare Dashboard → Workers → KV/D1 → copy UUID from there
 5. **Verify required secrets** are set via `wrangler secret list`
-6. **Service-binding targets must exist first** — `BACKUP` → `cf-backup` and `VPS` → `cf-vps`: deploy each target Worker before any cf-admin deploy that carries its binding; otherwise the cf-admin deploy fails. Order: cf-backup and cf-vps (either order), then cf-admin
+6. **Service-binding targets must exist first** — `BACKUP` → `cf-backup`, `VPS` → `cf-vps` and `EMAIL_CONSOLE` → `cf-email-api`: deploy each target Worker before any cf-admin deploy that carries its binding; otherwise the cf-admin deploy fails. Order: cf-backup, cf-vps and cf-email-api (any order), then cf-admin
 
 ---
 

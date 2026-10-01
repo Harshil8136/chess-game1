@@ -201,7 +201,7 @@ Check only the page and a deny written on the fragment is ignored — the overri
 stored, shown in the access UI, and has no effect at the one point that matters.
 Check only the fragment and a user denied the whole page still reaches the action,
 because an undefined key resolves `unknown` and `requirePageAccess` permits unknown.
-`src/lib/auth/surface-guards.ts` exists to make that pair the default: `denyCron` and
+`src/lib/auth/surface-guards.ts` exists to make that pair the default: `denyCron`, `denyEmailApi` (the Email Portal's API Access fragments, migration `0060`) and
 `denySessions` take the page key first, then the action. This was got wrong twice
 before it was centralised — see MAINTENANCE.md D-4 and D-5.
 
