@@ -7,7 +7,7 @@ verified_against: [code, infra]
 owner: harshil
 related_code:
 
-- src/pages/dashboard/emails/index.astro
+- src/pages/dashboard/emails/[...section].astro
 - src/components/admin/emails/_components/EmailPortal.tsx
 - src/components/admin/emails/_components/Composer.tsx
 - src/components/admin/emails/_components/BrevoTelemetryView.tsx

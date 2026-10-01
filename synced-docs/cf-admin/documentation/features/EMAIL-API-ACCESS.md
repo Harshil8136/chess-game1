@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-01
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/email/sender-identities.ts, migrations/0061_email_sender_identities_seed.sql, src/lib/email-console.ts, src/lib/email-console-types.ts, src/lib/email-api-route.ts, src/lib/auth/surface-guards.ts, src/pages/api/emails/api-tokens.ts, src/pages/api/emails/api-activity.ts, src/pages/api/emails/api-messages.ts, src/pages/api/emails/api-settings.ts, src/pages/api/emails/api-overview.ts, src/components/admin/emails/api-access/ApiAccessView.tsx, src/pages/dashboard/emails/index.astro, migrations/0060_email_api_access_pages.sql, wrangler.toml]
+related_code: [src/lib/email/sender-identities.ts, migrations/0061_email_sender_identities_seed.sql, src/lib/email-console.ts, src/lib/email-console-types.ts, src/lib/email-api-route.ts, src/lib/auth/surface-guards.ts, src/pages/api/emails/api-tokens.ts, src/pages/api/emails/api-activity.ts, src/pages/api/emails/api-messages.ts, src/pages/api/emails/api-settings.ts, src/pages/api/emails/api-overview.ts, src/components/admin/emails/api-access/ApiAccessView.tsx, src/pages/dashboard/emails/[...section].astro, migrations/0060_email_api_access_pages.sql, wrangler.toml]
 related_docs: [EMAIL-PORTAL.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../operations/OPERATIONS.md]
 tags: [emails, api, tokens, plac, service-binding, audit]
 ---
@@ -27,7 +27,7 @@ routes behind it, the three permissions that gate it, and the one service bindin
 it needs. What it does not cover: the public API itself (how an app sends email
 with a token), which belongs to the email service. Its contract is the
 `docs/specs/2026-09-30-api-access-contract.md` document in the cf-email-consumer
-repository, and its client reference is that repository's `docs/API.md`.
+repository, and its client reference is that repository's `docs/reference/API.md`.
 
 ## 2. How it works
 
@@ -72,7 +72,7 @@ person's Access page like the existing nine:
   use the view.
 - **Role floor.** Every route also requires the administrator tier or above, so a
   per-person override cannot hand token management to staff.
-- The page (`index.astro`) hides the tab and buttons the person cannot use; the
+- The page (`[...section].astro`) hides the tab and buttons the person cannot use; the
   routes are what actually enforce it.
 
 ## 4. Routes
@@ -101,6 +101,13 @@ label instead.
 - **Senders come from Email Settings > Registered Senders.** A sender whose **API** switch is on (and that is Active) may be given to a token, if the person creating the token meets the sender's required role. Turning the switch on needs `#api-config`; turning it off, deactivating or deleting a sender needs no extra right. The API Settings view lists these senders read-only, with a link.
 - **The email service keeps a copy** (its `api_sender_identities` policy row). `src/lib/email/sender-identities.ts` pushes it over `EMAIL_CONSOLE` (`PUT /admin/senders`) whenever the API-enabled set changes; `GET /api/emails/api-settings` re-syncs it when it differs. A failed push is reported and shown (`apiSync` in the senders response); the email consumer re-reads the live row before every API send, so a stale copy can never let mail out from a sender that was switched off.
 - **Shared daily budget** (`api_daily_budget`, default 150 recipients a day for all tokens together, 0 to 250): keeps the provider's 300 a day for hotel mail. Over it, the API answers 429 `api_budget_reached`.
+
+## 4c. Layout, addresses and token actions (2026-10-01)
+
+- **Addresses.** Every Email Portal section has its own path (`src/lib/email-section.ts`, page `src/pages/dashboard/emails/[...section].astro`): `/dashboard/emails/api/tokens`, `/api/tokens/<id>` (one token's panel), `/api/activity`, `/api/settings`, plus `/compose`, `/templates`, `/drafts`, `/activity`, `/contacts` and `/settings`. Back and Forward work; an unknown path is a 404; a section the person may not open falls back to the composer. PLAC resolves every nested path to the `/dashboard/emails` row.
+- **Layout.** One toolbar row (tabs, a status strip with the old tiles' numbers plus today's shared limit, refresh, create) instead of a title block and four tiles; dense two-line token rows with search and status filters; a side panel with a quick start (address, a copyable request), today's shared limit and the latest events.
+- **Token panel** (`ApiTokenDrawer.tsx`): permissions, limits and use, lifetime, latest messages and history, and every action: edit, renew for 90 days (expired or expiring within a week), rotate the secret, block or unblock, delete.
+- **Rotate** (`PATCH /api/emails/api-tokens` with `{ id, rotate: true }`, Console `POST /admin/tokens/<id>/rotate`): the same token gets a new secret, shown once; the old one is refused from the next request. Audited as an update; the secret is never audited or logged.
 
 ## 5. Failure modes
 
