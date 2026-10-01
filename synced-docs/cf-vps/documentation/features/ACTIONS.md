@@ -61,6 +61,24 @@ instances, and the action units themselves (`isProtectedUnit`).
 A caller who skips the console still meets checks 2 to 5. A caller who skips the Worker still
 meets 3 to 5, because the agent trusts only the signed capability list.
 
+## Action tickets (the host trusts the Worker, not the agent)
+
+polkit lets the agent account start every action unit, so the units do not trust the agent.
+For each console action the Worker signs a ticket (`contract/action-ticket.ts`): it is valid for
+60 seconds, can be used once, and names the exact unit, the person and the request. The agent
+writes it to its own runtime folder and starts the unit. Every action unit runs
+`vps-act-ticket.mjs` as root first (`ExecStartPre`), which checks the following:
+
+- the signature, against the Worker's production key only (never the laptop dev key);
+- the unit, which must match the ticket;
+- the time;
+- the nonce.
+
+When the ticket passes, it logs who asked. Otherwise it stops the unit before anything runs.
+The server holds no signing key, so even a compromised agent cannot delete logs, change
+retention, reboot, upgrade or touch services by itself. The module's live test proves both
+refusals: an action with no ticket, and an action with a ticket signed by another key.
+
 ## Jobs and the audit trail
 
 - `actions/run` returns `{ unit, job }`. `actions/job` with that pair returns the job's state
