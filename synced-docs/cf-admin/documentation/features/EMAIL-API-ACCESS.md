@@ -2,10 +2,10 @@
 title: "Email API Access (tokens, activity and settings)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-30
+last_verified: 2026-10-01
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/email-console.ts, src/lib/email-console-types.ts, src/lib/email-api-route.ts, src/lib/auth/surface-guards.ts, src/pages/api/emails/api-tokens.ts, src/pages/api/emails/api-activity.ts, src/pages/api/emails/api-messages.ts, src/pages/api/emails/api-settings.ts, src/pages/api/emails/api-overview.ts, src/components/admin/emails/api-access/ApiAccessView.tsx, src/pages/dashboard/emails/index.astro, migrations/0060_email_api_access_pages.sql, wrangler.toml]
+related_code: [src/lib/email/sender-identities.ts, migrations/0061_email_sender_identities_seed.sql, src/lib/email-console.ts, src/lib/email-console-types.ts, src/lib/email-api-route.ts, src/lib/auth/surface-guards.ts, src/pages/api/emails/api-tokens.ts, src/pages/api/emails/api-activity.ts, src/pages/api/emails/api-messages.ts, src/pages/api/emails/api-settings.ts, src/pages/api/emails/api-overview.ts, src/components/admin/emails/api-access/ApiAccessView.tsx, src/pages/dashboard/emails/index.astro, migrations/0060_email_api_access_pages.sql, wrangler.toml]
 related_docs: [EMAIL-PORTAL.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../operations/OPERATIONS.md]
 tags: [emails, api, tokens, plac, service-binding, audit]
 ---
@@ -64,7 +64,7 @@ person's Access page like the existing nine:
 |---|---|---|
 | `/dashboard/emails#api-view` | see tokens (never secrets), the activity feed, message detail and the settings | owner |
 | `/dashboard/emails#api-manage` | create, edit, block, unblock and delete tokens, and re-queue a failed API message | owner |
-| `/dashboard/emails#api-config` | switch the API on or off, set defaults and the recipient cap, choose sender addresses | owner |
+| `/dashboard/emails#api-config` | switch the API on or off, set defaults, the recipient cap and the shared daily budget; turn on a Registered Sender's API switch | owner |
 
 - **Fail closed.** The routes use `placRequireGrant`: a key the registry does not
   define (the migration not applied yet, or a row deactivated) is refused. Until
@@ -95,6 +95,12 @@ so no new mapping was needed). Every mutation writes an `admin_audit_log` row
 Audit `context` keys never contain the word "token" as a whole segment
 (`isSensitiveKey` would redact them); the token's name is in the row's target
 label instead.
+
+## 4b. Senders and the shared budget (2026-10-01)
+
+- **Senders come from Email Settings > Registered Senders.** A sender whose **API** switch is on (and that is Active) may be given to a token, if the person creating the token meets the sender's required role. Turning the switch on needs `#api-config`; turning it off, deactivating or deleting a sender needs no extra right. The API Settings view lists these senders read-only, with a link.
+- **The email service keeps a copy** (its `api_sender_identities` policy row). `src/lib/email/sender-identities.ts` pushes it over `EMAIL_CONSOLE` (`PUT /admin/senders`) whenever the API-enabled set changes; `GET /api/emails/api-settings` re-syncs it when it differs. A failed push is reported and shown (`apiSync` in the senders response); the email consumer re-reads the live row before every API send, so a stale copy can never let mail out from a sender that was switched off.
+- **Shared daily budget** (`api_daily_budget`, default 150 recipients a day for all tokens together, 0 to 250): keeps the provider's 300 a day for hotel mail. Over it, the API answers 429 `api_budget_reached`.
 
 ## 5. Failure modes
 

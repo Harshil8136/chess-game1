@@ -2,7 +2,7 @@
 title: "Email Portal"
 status: active
 audience: [non-technical, ai, technical, operator, owner]
-last_verified: 2026-09-19
+last_verified: 2026-10-01
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -53,16 +53,18 @@ tags: [feature, email, queue, brevo, plac, rbac, suppression, deliverability]
 > suppression list, DNS deliverability diagnostics, and an AI HTML generator.
 > Every send is role-gated, rate-limited, sanitised, suppression-filtered and audited.
 
-> **Status:** Production Active — **with one open P1 defect, see §0**
+> **Status:** Production Active. The §0 defect is fixed in code (2026-10-01) and closes when migration 0061 is applied
 > **Surface:** `/dashboard/emails` (cf-admin)
 > **Role floor:** canonical **Manager or above** (stored `admin`/`super_admin`/`owner`/`dev`) for the page and the compose path; the Brevo Engine, Suppressions, DNS and sender-management routes require canonical **Admin** — see §4
 > **Last verified against live code + D1 + Supabase:** 2026-09-19
 
 ---
 
-## 0. OPEN DEFECT — sending is broken for Admin and Manager
+## 0. FIXED 2026-10-01 — sending was broken for Admin and Manager
 
-> **Severity: P1. Verified live 2026-09-11. Not yet fixed.**
+> **Fix:** `send.ts`, `senders.ts` and `engine.ts` now share one loader, `src/lib/email/sender-identities.ts` (the stored row, else the same defaults), and migration `0061_email_sender_identities_seed.sql` stores the row for the first time (the five senders the page showed; booking@ and admin@ with the email API switch on). Regression tests: `test/email-sender-identities.test.ts`. The composer suppression check now covers Cc and Bcc too (§3.3). Registered Senders is also the email API's sender list: each sender has an **API** switch (turning it on needs `#api-config`); see `EMAIL-API-ACCESS.md`.
+>
+> **Severity was P1. Verified live 2026-09-11; row still absent 2026-10-01. The description below is the record of the defect.**
 
 **Symptom.** A canonical **Admin** or **Manager** opens the portal, picks a sender
 from the dropdown, writes an email, hits Send, and receives:
