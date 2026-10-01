@@ -7,7 +7,7 @@ last_verified: 2026-10-01
 verified_against: [code, infra, docs]
 owner: harshil
 related_code: [src/lib/email-console.ts, src/lib/email-api-route.ts, src/lib/email-section.ts, src/components/admin/emails/api-access/ApiAccessView.tsx, src/components/admin/emails/api-access/ApiQuickStart.tsx, src/pages/api/emails/api-tokens.ts, src/lib/email/sender-identities.ts, src/lib/auth/security-logging.ts, cf-email-consumer/src/dispatch.ts, cf-email-consumer/src/handlers.ts, cf-email-consumer/src/lib/providers.ts, cf-email-consumer/api/src/store.ts, cf-email-consumer/test/helpers.ts]
-related_docs: [../features/EMAIL-API-ACCESS.md, ../features/EMAIL-PORTAL.md, ../features/VPS-CONSOLE.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../runbooks/brevo-webhook.md, ../reference/schema-change-ledger.md, ../MAINTENANCE.md]
+related_docs: [../features/EMAIL-API-ACCESS.md, ../features/EMAIL-PORTAL.md, ../features/VPS-CONSOLE.md, ../features/BACKUP-CONSOLE.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../runbooks/brevo-webhook.md, ../reference/schema-change-ledger.md, ../MAINTENANCE.md]
 tags: [email, research, vps, nodejs, api-access, brevo, cloudflare, deliverability]
 ---
 
@@ -44,8 +44,16 @@ tags: [email, research, vps, nodejs, api-access, brevo, cloudflare, deliverabili
 > - webhooks
 > - public docs
 >
+> **(4)** Added later the same day: permissions, and a home of its own for the
+> Email API. Today's three permission keys are too coarse. A list of small
+> capabilities, like the ones Backups and Server already use, should replace
+> them. The Email API should get its own page in the sidebar, and its screens
+> should move into the email repository as a private console shown inside the
+> admin portal, the way Backups and Server work. It should not move to the
+> public `email.madagascarhotelags.com` address.
+>
 > Every item says why it matters, where it lives and roughly how long it takes.
-> Nothing here is built yet. The owner's decisions are listed in §8.
+> Nothing here is built yet. The owner's decisions are listed in §9.
 
 ## 1. Scope, method and status
 
@@ -54,8 +62,10 @@ tags: [email, research, vps, nodejs, api-access, brevo, cloudflare, deliverabili
 1. What would it take to run the email service, from cf-email-consumer, on Node.js on our VPS? What are the factors, the likely problems, the pros and cons, and is it good for the long run?
 2. What else is necessary, or good to have, in the email system?
 3. The Email Portal's API Access system in cf-admin feels very basic. What does it need?
+4. (Added the same day.) Can the email API system have more accurate permissions?
+5. (Added the same day.) Should the Email API be a separate page in the sidebar, with its code moved into cf-email-consumer, the way cf-backup works?
 
-**Status.** A dated research record with status `draft`: a proposal, nothing built. It changes no earlier decision. Where it recommends one, §8 lists it as an owner decision.
+**Status.** A dated research record with status `draft`: a proposal, nothing built. It changes no earlier decision. Where it recommends one, §9 lists it as an owner decision.
 
 **How it was checked.**
 
@@ -66,9 +76,9 @@ tags: [email, research, vps, nodejs, api-access, brevo, cloudflare, deliverabili
   - the applied migrations and `admin_pages` rows in `madagascar-db`;
   - Supabase ledger counts;
   - Sentry issues for the last 30 days.
-- **Official documentation**, fetched on 2026-10-01, from Cloudflare, Oracle Cloud, Node.js, Brevo, Resend, Google, Yahoo, Microsoft, Postmark, SendGrid, Mailgun, Amazon SES and the IETF. Links are in §9.
+- **Official documentation**, fetched on 2026-10-01, from Cloudflare, Oracle Cloud, Node.js, Brevo, Resend, Google, Yahoo, Microsoft, Postmark, SendGrid, Mailgun, Amazon SES and the IETF. Links are in §10.
 
-Docs found to disagree with the code or the live state are listed in §7; they are not fixed here.
+Docs found to disagree with the code or the live state are listed in §8; they are not fixed here.
 
 ## 2. The answers in one page
 
@@ -149,6 +159,27 @@ It is missing these, in this order:
 12. Webhooks to client apps, and templates for API mail.
 
 Details are in §6.
+
+### Q4. More accurate permissions?
+
+**Yes.** Three keys (`#api-view`, `#api-manage`, `#api-config`) are too coarse:
+
+- reading guests' email is bundled with looking at tokens;
+- blocking a token needs the same right as creating one;
+- the API's off switch shares a key with raising the budget;
+- nothing asks for a recent sign-in before a credential is minted.
+
+§7.2 proposes about 25 small capabilities, like the ones Backups and Server use, each with a floor, a default per role, and per-person allow or deny with an expiry. One rule is added: reducing exposure (block, narrow, pause) is cheap; widening it (create, unblock, raise limits, resume) needs a higher role and a sign-in from the last 10 minutes.
+
+### Q5. A separate page, with the code in cf-email-consumer?
+
+**A separate sidebar page: yes. Moving the code into cf-email-consumer: yes, if the email API is going to grow.**
+
+- The move would follow the Backups and Server pattern: a private console Worker with no public address, shown inside the admin portal.
+- It is about 6 to 8 days of work. A separate page alone, with the code left in cf-admin, is about 1 to 1.5 days.
+- Now is the cheapest moment: one token, no outside users, no per-person grants.
+- The console should be a third, private Worker. It should not be served on `email.madagascarhotelags.com`, which must stay the public API only.
+- Details are in §7.4 to §7.6.
 
 ## 3. Where things stand (verified 2026-10-01)
 
@@ -479,7 +510,7 @@ API Access is two days old (cf-admin `15ac609`, 2026-09-30, to `cdcab8e`, 2026-1
 
 ### 6.2 How it compares
 
-From each provider's documentation (§9). "Yes" means the feature is documented; a blank cell means it was not found.
+From each provider's documentation (§10). "Yes" means the feature is documented; a blank cell means it was not found.
 
 | Capability | Hotel API today | Postmark | Resend | SendGrid | Mailgun | Amazon SES | Brevo |
 |---|---|---|---|---|---|---|---|
@@ -616,7 +647,193 @@ Everything stays in the email service's own database, `madagascar-email-db`. cf-
 | 5 | C1 (public docs, part of P4) | 2 |
 | 6 | A1 once P2 ships; then C3, C4, C5 when a client asks | 1 to 7 |
 
-## 7. Documentation drift found
+## 7. Part 4: sharper permissions, and the Email API as its own console
+
+Added on 2026-10-01 at the owner's request: assess two more ideas, without building anything.
+
+1. **More accurate permissions** for the email API system.
+2. **A separate sidebar page** for the Email API in cf-admin and, where possible, **moving its code into the cf-email-consumer repository**, the way Backups (cf-backup) and Server (cf-vps) own their consoles.
+
+### 7.1 The permissions today, and why they are too coarse
+
+**Today**
+
+- Three action keys on the Email Portal page control everything: `#api-view`, `#api-manage` and `#api-config` on `/dashboard/emails`.
+- Each defaults to the owner, and only the owner or vendor support can grant one to someone else.
+- The routes also require Admin or above (canonical Admin, stored `super_admin`).
+- The email service checks the same three keys again, from the `caps` list cf-admin sends it ([Email API Access](../features/EMAIL-API-ACCESS.md)).
+- Live state (2026-10-01): nobody holds a per-person grant on any Email Portal, Backups or Server key. So today only the owner and vendor support use API Access, and changing the keys costs nothing to migrate.
+
+**What is wrong with three keys**
+
+| # | Problem | Example |
+|---|---|---|
+| 1 | **Reading mail is bundled with looking at tokens.** `#api-view` shows token metadata, but also every message's recipients and body: personal data | someone asked to watch delivery health also gets to read guests' email |
+| 2 | **Routine and dangerous changes share one key.** `#api-manage` covers renaming and renewing, but also creating a token (which mints a credential), rotating it (a new secret is shown), raising its limits, adding senders, unblocking, deleting and re-sending real mail | you cannot let an on-call person block a token without also letting them create one |
+| 3 | **The emergency stop shares a key with widening.** `#api-config` covers switching the API off, raising the shared budget (which eats into the hotel's own mail allowance) and allowing a new sender for the API | the person who may pull the plug can also open the tap |
+| 4 | **No sign-in freshness.** Creating or rotating a token and raising the budget work on a session up to 24 hours old. Backups and Server already require a sign-in from the last 10 minutes for their dangerous actions; the email actor does not even carry the sign-in time | a laptop left signed in can mint a working token |
+| 5 | **Grants are coarse.** A per-person grant has no expiry. It is wiped when the person's role changes, and it cannot be given to a role, only one person at a time | "let one Manager block tokens, for this week only" cannot be expressed |
+| 6 | **The screen and the server disagree.** A Manager granted `#api-view` sees the tab, but every call is refused by the Admin floor. The Registered Senders API switch is shown to people the server will refuse | refusals arrive after the click |
+| 7 | **The API rides on the Email Portal's door.** All API Access routes sit behind the Email Portal page | API access cannot be given without portal access, and denying the portal silently denies the API |
+| 8 | **Nothing scopes a person to their own tokens** | once there are several apps or clients, one person can change every app's token |
+
+One more requirement before any key is renamed or deactivated: every action key must be checked on its exact key, and must refuse when that key is absent. The Server console's page check (`mayUseConsole` in `src/lib/vps-proxy.ts`) already works this way. The maintenance backlog tracks this as item E-11.
+
+### 7.2 A capability catalog for the Email API
+
+The proposal is the model Backups and Server already use (`cf-vps/documentation/security/PERMISSIONS.md`, `cf-backup/src/access/catalog.ts`): a closed list of small **capabilities**, defaults per role, and per-person allow or deny with an expiry and a reason.
+
+Each capability has:
+
+- a **class**: `read` looks; `operate` changes something without widening what the API can do; `admin` widens it, mints a credential, or touches the hotel's own mail allowance;
+- a **floor**: the lowest role that may ever hold it, whatever a grant says.
+
+The email version adds one rule the others do not need: **reducing exposure is cheap, widening it is guarded.** Blocking, narrowing and pausing are on a different capability from unblocking, widening and resuming.
+
+| Capability | Class | Allows | Default holders | Floor | Fresh sign-in |
+|---|---|---|---|---|---|
+| `console.view` | read | open the Email API page; overview numbers | Owner, Vendor, Admin | Manager | |
+| `tokens.view` | read | token list and details (never a secret) | Owner, Vendor, Admin | Manager | |
+| `messages.view` | read | the message list: time, token, status, error, recipient count, with addresses masked | Owner, Vendor, Admin | Manager | |
+| `messages.read_body` | read | full recipient addresses, subject and the rendered body (personal data) | Owner, Vendor | Admin | |
+| `requests.view` | read | the request log, with hashed IP addresses | Owner, Vendor, Admin | Manager | |
+| `audit.view` | read | the change trail, with old and new values | Owner, Vendor | Admin | |
+| `access.view` | read | who holds which capabilities | Owner, Vendor | Admin | |
+| `tokens.block` | operate | block a token at once (the emergency action) | Owner, Vendor, Admin | Manager | |
+| `tokens.narrow` | operate | lower limits; remove senders or permissions; add IP or recipient restrictions; shorten expiry; rename; describe | Owner, Vendor, Admin | Manager | |
+| `api.pause` | operate | switch the API off, or to hold | Owner, Vendor, Admin | Manager | |
+| `messages.resend` | operate | re-queue a failed or dead message | Owner, Vendor, Admin | Manager | |
+| `messages.test_send` | operate | a test send with a test token | Owner, Vendor, Admin | Manager | |
+| `tokens.delete` | operate | delete a token | Owner, Vendor | Admin | |
+| `activity.export` | operate | export activity as CSV (bulk personal data) | Owner, Vendor | Admin | yes |
+| `tokens.create` | admin | create a token; the secret is shown once | Owner, Vendor | Admin | yes |
+| `tokens.widen` | admin | raise limits; add senders or permissions; remove restrictions; extend expiry | Owner, Vendor | Admin | yes |
+| `tokens.unblock` | admin | unblock a token | Owner, Vendor | Admin | yes |
+| `tokens.rotate` | admin | give a token a new secret; the new secret is shown once | Owner, Vendor | Admin | yes |
+| `api.resume` | admin | switch the API back on | Owner, Vendor | Admin | |
+| `settings.limits` | admin | default limits for new tokens; recipients per message | Owner, Vendor | Admin | |
+| `settings.budget` | admin | the shared daily budget, which comes out of the hotel's own allowance | Owner, Vendor | Owner | yes |
+| `senders.allow` | admin | turn on a Registered Sender's API switch (in Email Settings) | Owner, Vendor | Owner | yes |
+| `retention.purge` | admin | remove old message bodies; erase by address for an ARCO request | Owner, Vendor | Owner | yes |
+| `webhooks.manage` | admin | client webhooks, when they exist | Owner, Vendor | Admin | yes |
+| `access.manage` | admin | change role defaults and per-person grants | Owner, Vendor | Owner | yes |
+
+Vendor means vendor support. "Floor: Owner" means only the owner and vendor support can ever hold it. Managers, Staff and Viewers hold nothing by default; the owner can grant a Manager anything with a Manager floor.
+
+How a decision is made, in the same order as Backups and Server:
+
+1. An unknown capability is refused.
+2. A capability whose floor is above the person's role is refused, whatever any grant says.
+3. A per-person deny wins.
+4. A per-person allow that has not expired grants.
+5. Otherwise the role's default decides.
+
+On top of that:
+
+- **Fresh sign-in.** The marked capabilities need a sign-in from the last 10 minutes, as on Backups and Server. That needs cf-admin to add `signedInAt` to the email actor (`src/lib/email-console.ts`).
+- **Every route names exactly one capability, and the server checks it.** The screen only hides what the person cannot use, from the proposed console's `/api/me` answer.
+- **Last-holder guard.** The owner or vendor support must always keep `access.manage`, as on Backups and Server.
+- **Later, if clients arrive (Velox):** a scope of "own tokens" or "all tokens" for the token capabilities, so a person can manage only the tokens of their own app. Also a second-person approval for widening beyond set thresholds, for example a token above 500 messages a day or a budget above 200.
+
+**Where the catalog lives** depends on §7.4:
+
+- **If API Access stays in cf-admin:** each capability becomes a PLAC action key on the new page. That works, but PLAC has no expiry, no grant to a role, and no floors except in code. About 25 extra registry rows would approximate the table.
+- **If the Email API becomes its own console:** the catalog lives in the email repository, next to the code that enforces it. The policy is stored as one row, `email:access`, in cf-admin's settings table, exactly as `backup:access` and `vps:access` are. cf-admin's Users page gets a small "Email API" panel, like the Server panel (`src/components/admin/users/VpsAccessPanel.tsx`), to edit one person.
+
+### 7.3 Token permissions: what an app may do
+
+Today a token has two permissions (`send`, `read`), a sender list, two limits and an expiry. Proposed:
+
+| Kind | Today | Proposed |
+|---|---|---|
+| Permissions | `send`, `read` | `messages.send`, `messages.read`, `messages.list`, `messages.cancel` (P5), `templates.use` (§6.3 C4), `suppressions.read`. Keep `send` and `read` as aliases, so existing tokens keep working |
+| Where mail may come from | senders (live) | unchanged |
+| Where mail may go | anyone | an optional list of allowed recipient domains or addresses (§6.3 B1) |
+| Where calls may come from | anywhere | an optional IP allow-list (§6.3 B2) |
+| How much | per minute, per day, shared budget | add recipients per message and a monthly cap for this token (§6.3 B1) |
+| Environment | live only | `live` or `test` (§6.3 B3) |
+| Safety | optional `Idempotency-Key` | optionally require it |
+
+### 7.4 Where the Email API should live: four options
+
+| | Y0. Today | Y1. Own sidebar page, code stays in cf-admin | Y2. Own console in cf-email-consumer, framed in cf-admin (the Backups and Server pattern) | Y3. Own console at `email.madagascarhotelags.com` |
+|---|---|---|---|---|
+| Where staff click | Email Portal, API Access tab | sidebar, "Email API" | sidebar, "Email API" | a separate web address, outside the admin portal |
+| Who owns the screens | cf-admin | cf-admin | cf-email-consumer | cf-email-consumer |
+| Who owns "who may do what" | cf-admin (3 keys) | cf-admin (more keys) | the email service's catalog (§7.2); cf-admin decides only who may open the page | a second, separate sign-in and permission system |
+| A new feature touches | both repositories | both repositories | the email repository only; cf-admin's gateway does not change | the email repository only |
+| Sign-in and audit | cf-admin | cf-admin | cf-admin (identity, the page door, one audit row per change), plus the console's own trail | Cloudflare Access plus new code; audit split from cf-admin |
+| Effort | none | 1 to 1.5 days | 6 to 8 days | 8 days or more, plus a security review |
+| Risk | none new | low | medium: a two-day-old feature is rebuilt, using a pattern already proven twice | high: an admin screen on the public API's hostname |
+
+**Y3 needs a word.** The public API already runs from this repository at `email.madagascarhotelags.com`, and should stay there. The management screens should not be served from that address. Backups and Server deliberately have no address at all: only cf-admin can reach them, through a service binding, so they can trust the identity cf-admin passes. A console on a public hostname would need its own sign-in and a signed identity, and would split the audit trail. The cf-backup integration record says as much: if a console ever gains a public address, "the actor header must become signed". A client self-service portal at that address may make sense one day (§6.3 C6), but that is a different product, with client sign-in, not the hotel's admin console.
+
+### 7.5 Is it a good idea?
+
+**Yes, with conditions.**
+
+**A separate sidebar page: yes, clearly.** Managing API tokens is an integration and security job, not part of writing email. Its own page:
+
+- gives the API its own door in the permission system (problem 7 in §7.1);
+- is where the future pages in §6.4 fit naturally.
+
+**A capability catalog: yes, in either shape.** It costs little if it is designed in from the start. Retrofitting it after more features exist costs more.
+
+**Moving the code into cf-email-consumer (Y2): yes, if the email API is going to grow.** The roadmap's P4 and P5 items, the §6 features and a possible client offer (Velox) all suggest it will.
+
+| For | Against |
+|---|---|
+| One repository owns the feature end to end: the API, the data, the screens, the permissions, the tests and the docs. Today every feature changes both repositories, and the message shapes are copied by hand (`src/lib/email-console-types.ts` mirrors the email service's Console) | 6 to 8 days of work that adds no new feature by itself |
+| A new permission or screen ships with one deploy of one repository; today it also needs a cf-admin migration, a release and a deploy | a third CSP framing exception in cf-admin (`src/lib/security/csp.ts` lists two today); each one is a reviewed exception |
+| The same mental model as Backups and Server; the gateway pattern, its tests and its pitfalls are already written down twice | a third Worker to deploy and watch (see below), and its own deploy connection |
+| cf-admin shrinks: about 2,900 lines of API Access code leave, and about 900 lines of gateway arrive | two UI code bases to keep visually consistent (the twins read the portal's theme from the parent page) |
+| The email service becomes a self-contained product: API, consumer, console and docs in one place. The same console could later absorb the rest of the Email Portal (the 2026-09-30 design's Track 3), if the owner ever wants that | each asset of the console loads through cf-admin's gateway, so it is a cf-admin request; the service-binding call itself is not billed as an extra request |
+| **Now is the cheapest moment:** one token, no API messages kept, no per-person grants, a two-day-old feature, and no outside users | deploy order matters in both directions: the console goes first, but cf-admin goes first when the console adds a new audit action |
+
+If the owner expects API Access to stay small and hotel-only, Y1 alone is enough. Doing Y1 now and Y2 later wastes about a day, so it is better to choose once.
+
+**Worker shape for Y2: a third, private Worker.** The admin console should not live inside today's public API Worker.
+
+- `cf-email-api` serves the public `/v1/*` door on `email.madagascarhotelags.com`. Putting the console's screens and admin routes in the same Worker would mean the internet-facing code carries the admin door. Its assets would also need careful gating so they are never served on the public hostname.
+- A new Worker, `cf-email-console`, with no route, no `workers.dev` address and no preview URLs, keeps the Backups and Server trust model exactly:
+  - its static assets are served only after the Worker runs;
+  - it binds the email database (tokens, messages, settings), the queue (for re-sending) and cf-admin's shared database (for its access row only);
+  - it holds no secrets.
+- The public API Worker then loses its `Console` entrypoint and gets smaller.
+
+### 7.6 If approved: the move in steps
+
+1. **Email repository.** Expected effort: 4 to 5 days.
+   - Create the private console Worker. Port its router, actor parsing, capability catalog, stored policy and fresh-sign-in check from cf-backup and cf-vps.
+   - Move today's Console routes over, keeping the old entrypoint working during the switch.
+   - Add the proposed console route `/api/me`, returning the person's capabilities.
+   - Build the screens with Preact under the console's own path, porting today's 12 components (about 2,000 lines) to the console's styles.
+   - Add an Access screen.
+   - Tests:
+     - no public surface;
+     - each route has exactly one capability;
+     - each change carries an audit action;
+     - the floors and the last-holder guard.
+2. **cf-admin.** Expected effort: 1.5 to 2 days.
+   - Add a gateway twin of `src/lib/vps-proxy.ts` (proxy, audit map, section addresses, the frame page and the gateway route), and the third frameable prefix in `src/lib/security/csp.ts`.
+   - Add one migration (the next free number, 0062 today) for the proposed `/dashboard/email-api` page row, with icon `key-round` and the door at Admin (decision O12). Use the exact-key page check, never an inherited one.
+   - Add a section rule so the page sits with the Email Portal in the sidebar, and point the `EMAIL_CONSOLE` binding at the new Worker.
+   - Add the Users-page panel.
+   - The Registered Senders API switch stays in Email Settings, but asks the console whether the person holds `senders.allow`.
+   - In the same change, remove the API Access tab, its 5 routes and its client, as the ratchet requires.
+   - Redirect the old addresses under the Email Portal's API section to the new page for a release or two.
+3. **Order.**
+   1. Deploy the console Worker.
+   2. Run cf-admin's `npm run release`, which applies the page row before the code.
+   3. The owner opens the page once.
+   4. After a quiet week, deactivate the three old `#api-*` keys, but only once nothing checks them and E-11 is fixed.
+   5. Then remove the old `Console` entrypoint from the public Worker.
+4. **Rollback.** Re-deploy the previous cf-admin version. The old tab works for as long as the old entrypoint exists.
+5. **Then build §6 in the new home.** Every API Access feature in §6.3 is cheaper to build once in the console than to build in cf-admin and move.
+
+The §6.6 order still applies, but after this move. Decisions O9 to O14 in §9 capture the choices.
+
+## 8. Documentation drift found
 
 Recorded for the owner; not changed in this document.
 
@@ -629,7 +846,7 @@ Recorded for the owner; not changed in this document.
 | `src/components/admin/emails/api-access/ApiTokenFormModal.tsx` | falls back to 30 a minute and 200 a day when settings have not loaded | the email service's code defaults are 10 and 50 (`cf-email-consumer/api/src/settings.ts`) |
 | cf-vps rebuild runbook | Ubuntu 24.04 | the VPS runs 26.04 since 2026-09-30 |
 
-## 8. Decisions for the owner
+## 9. Decisions for the owner
 
 | # | Decision | Recommendation |
 |---|---|---|
@@ -641,17 +858,24 @@ Recorded for the owner; not changed in this document.
 | O6 | Reselling (§5.1 item 10) | **Ask Brevo** about its agency or enterprise terms before any Velox client gets a token |
 | O7 | API Access order | **§6.6**, starting with steps 1 and 2 |
 | O8 | VPS side jobs | **Approve** the outside health check and canary (§5.2 item 16) as the first email job on the VPS |
+| O9 | Permissions | **Adopt the capability catalog** of §7.2, with floors, the reduce-or-widen split and fresh sign-in, whichever home the Email API gets |
+| O10 | Separate sidebar page | **Yes:** "Email API" next to the Email Portal, with its own page door |
+| O11 | Where the code lives | **Y2:** a console owned by cf-email-consumer and framed in cf-admin, done now, before more §6 features are built. Y1 only if the API is to stay small and hotel-only (§7.5) |
+| O12 | Who may open the page | **Admin and above**, with Admins holding read-only capabilities plus block and pause by default; or **Owner only**, as today |
+| O13 | Worker shape | **A third, private Worker** (`cf-email-console`, no address). Never a console on `email.madagascarhotelags.com` (Y3) |
+| O14 | Action keys that fail closed | **Fix maintenance item E-11 first:** it is a precondition for renaming or deactivating any key, and it protects the cron keys too |
 
 **Suggested overall order:**
 
-1. the §5.1 fixes that are cheap and close real risks: items 4, 5, 6, 7 and 9;
-2. P2 (delivery status) alongside API Access steps 1 and 2;
-3. P4 (protection and docs) alongside API Access step 3;
-4. everything else as clients appear.
+1. the §5.1 fixes that are cheap and close real risks: items 4, 5, 6, 7 and 9, plus maintenance item E-11;
+2. if O11 is approved, the move of §7.6 with the capability catalog, before any new API Access feature;
+3. P2 (delivery status) alongside API Access steps 1 and 2, built in the new console;
+4. P4 (protection and docs) alongside API Access step 3;
+5. everything else as clients appear.
 
 None of this needs the VPS, except item 16.
 
-## 9. Sources
+## 10. Sources
 
 All fetched on 2026-10-01. Where a page showed a last-updated date, it is given.
 
@@ -729,7 +953,7 @@ All fetched on 2026-10-01. Where a page showed a last-updated date, it is given.
 ## Related
 
 - [Email API Access](../features/EMAIL-API-ACCESS.md) and [Email Portal](../features/EMAIL-PORTAL.md): the living docs for what exists.
-- [VPS Console](../features/VPS-CONSOLE.md): the gateway pattern §4.8 reuses.
+- [VPS Console](../features/VPS-CONSOLE.md) and [Backup Console](../features/BACKUP-CONSOLE.md): the console and gateway pattern that §4.8 and §7 reuse.
 - [2026-09-26 cron CPU incident](../operations/incidents/2026-09-26-cron-exceeded-cpu.md): the Free-plan CPU limit, and the owner's no-paid-plan ruling.
 - [Brevo webhook runbook](../runbooks/brevo-webhook.md): who owns the live webhook.
 - In cf-email-consumer, the design records `docs/specs/2026-09-30-email-platform-design.md` and `docs/specs/2026-10-01-email-api-v2-plan.md`, and `docs/program/ROADMAP.md`.
