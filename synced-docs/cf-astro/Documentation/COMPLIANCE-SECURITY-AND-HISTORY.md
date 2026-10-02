@@ -35,7 +35,7 @@ The application implements a strict zero-trust edge security paradigm. Access co
 
 - **CSRF Defense (`assertOrigin`)**: Rejects all cross-origin HTTP `POST` requests by strictly matching request headers (`Origin` and `Referer`) against the authoritative `https://madagascarhotelags.com` base.
 - **Timing-Attack Defense (`timingSafeEq`)**: All API bearer tokens are validated using a constant-time comparison library. Standard string comparison (`==`) aborts on the first mismatched character, exposing token lengths and contents to timing enumeration probes; constant-time loops execute the full byte comparison under all circumstances.
-- **Dynamic Rate Limiting (Upstash)**: Implements sliding-window rate limiters per IP. If the proxy hides the IP, the rate limiter falls back to a randomized session UUID to prevent an anonymous attacker from polluting the shared "unidentified" rate limit bucket and denying service to valid users.
+- **Dynamic Rate Limiting (Upstash)**: Sliding-window limiters keyed per client IP (`cf-connecting-ip`). Every public limiter uses a 60 s window, so each key expires within 121 s. A production request with no `cf-connecting-ip` falls into one shared `no-ip` bucket — deliberately tight, never a per-request id, which would defeat the limit. If Upstash errors or takes longer than 3 s, the KV fallback decides. Limiter analytics are off (2026-10-02): they had kept visitor IPs in hourly keys with no expiry, cleared on 2026-10-02.
 
 ---
 
