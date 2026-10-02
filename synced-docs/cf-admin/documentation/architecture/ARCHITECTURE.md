@@ -296,7 +296,7 @@ passes — regressed once in 2026-08 and now guarded by
 
 **Two cron expressions** are declared (`*/5 * * * *` and `0 2 * * SUN`) against an
 account-wide cap of five, which is why jobs are multiplexed inside the 5-minute
-tick rather than given triggers of their own. **Twelve jobs** are registered in
+tick rather than given triggers of their own. **Thirteen jobs** are registered in
 `src/lib/jobs/`, each carrying a criticality tier in `src/lib/jobs/tiers.ts`:
 
 - **essential** — never shed automatically: `cf-access-audit-poll`,

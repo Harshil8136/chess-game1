@@ -3,7 +3,7 @@
 title: "Data Residency & Cross-Border Transfers"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-09-19
+last_verified: 2026-10-02
 verified_against: [code, config]
 owner: harshil
 related_docs: [../RoPA.md, ../SECURITY.md, ISO-27017-27018.md, ../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -69,7 +69,7 @@ and requires an Art. 46 safeguard.
 | Resend | SCCs | US |
 | Sentry | SCCs; PII scrubbed before transmission | `sendDefaultPii: false` + `src/lib/sentry-scrub.ts` |
 | PostHog | SCCs | US cloud |
-| Upstash | SCCs | **Rate-limit keys derived from raw client IP or user id, short-TTL, no durable storage.** *(Corrected 2026-09-19: this said "hashed identifiers only". `hashIp()` is applied on the D1 write path, not before the Upstash key is built — `src/lib/ratelimit.ts` vs `src/lib/audit-helpers.ts`.)* |
+| Upstash | SCCs | **Rate-limit keys derived from raw client IP or user id; each expires after 2 × its window + 1 s (≤ 2 days).** *(Corrected 2026-09-19: this said "hashed identifiers only". `hashIp()` is applied on the D1 write path, not before the Upstash key is built — `src/lib/ratelimit.ts` vs `src/lib/audit-helpers.ts`.)* *(Corrected 2026-10-02: until then limiter analytics also kept these identifiers in hourly keys with no expiry — see RoPA §2.)* |
 | OpenRouter | Varies by model provider | Optional; staff prompts only, no customer PII. **Code-supported, not configured in production** — no API key on the Worker (2026-09-19) |
 | Google | SCCs / adequacy per service terms | Search Console and PageSpeed Insights: site and page URLs, sitemap and index-coverage data — **no personal data**. Google is also one of the identity providers in front of Cloudflare Access, where it sees staff sign-in identity. *(Added 2026-09-19 to match `RoPA.md` §3.)* |
 

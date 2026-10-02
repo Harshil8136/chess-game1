@@ -3,7 +3,7 @@
 title: "Record of Processing Activities (GDPR Art. 30)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-09-20
+last_verified: 2026-10-02
 verified_against: [code, config]
 owner: harshil
 related_docs: [PRIVACY.md, SECURITY.md, THREAT-MODEL.md, ../runbooks/incident-response.md, compliance/data-residency.md, ../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -190,7 +190,7 @@ which records the raw address deliberately so that a sign-in can be investigated
 | D1 `admin_email_suppression` | Hashed | Indefinite |
 | Supabase `email_audit_logs` | Hashed sender IP | 365-day target, manual |
 | KV session records | **Raw** `ipAddress`, plus a derived `ipHash` used for audit rows | Session lifetime (24 h TTL) |
-| Upstash rate-limit keys | **Raw** client IP on the session-less routes (logout, the Brevo webhook, the four public storage routes); internal user UUIDs elsewhere | Sliding window (minutes to hours) |
+| Upstash rate-limit keys | **Raw** client IP on the session-less routes (cf-admin: logout, the Brevo webhook, the email unsubscribe, the four public storage routes; cf-astro: every public API route); internal user UUIDs elsewhere | 2 × the window + 1 s — about 2 minutes for per-minute limiters, at most 2 days for cf-admin's daily AI quotas. *(Corrected 2026-10-02: `analytics: true` had also written hourly ZSETs of these identifiers with no expiry — 648 keys back to 2026-08-07. They were cleared on 2026-10-02; analytics is off in both apps, and the weekly `redis-ttl-hygiene` job reports, and repairs, any key without an expiry.)* |
 
 Practical consequence for a data-subject request or a breach assessment: a raw IP
 is recoverable from the login log, the two dead-letter tables and any live KV
@@ -210,7 +210,7 @@ Treat rotation as a breaking change, not a privacy hygiene step.
 | Supabase | Postgres | Users, ARCO, consent, bookings, email ledger | US |
 | Brevo | Email delivery — transactional, marketing and security alerts | Recipient addresses, content | EU (France) |
 | Resend | Email delivery — staff invites and a diagnostics ping only | Staff addresses, invite content | US |
-| Upstash | Rate-limit counters | **Raw client IPs** (short-TTL keys) on session-less routes; internal user UUIDs elsewhere | US |
+| Upstash | Rate-limit counters, alert dedupe | **Raw client IPs** on session-less routes and on cf-astro's public routes, internal user UUIDs elsewhere — every key expires: rate-limit keys after 2 × their window + 1 s, alert dedupe after 5 minutes, the alert lists after 14 days, the daily AI counter after 7 days | US |
 | Sentry | Error tracking | Scrubbed traces — `sendDefaultPii: false` + PII scrubber | US |
 | PostHog | Product analytics | Usage events; read back through the admin API for the control-plane surface | US |
 | Google | Search Console API (`GSC_SERVICE_ACCOUNT_JSON`) and PageSpeed Insights (`PAGESPEED_API_KEY`) | Public site and page URLs, sitemap and index-coverage data — no personal data. Google is also an IdP option in front of Cloudflare Access, where it sees staff sign-in identity | US |
