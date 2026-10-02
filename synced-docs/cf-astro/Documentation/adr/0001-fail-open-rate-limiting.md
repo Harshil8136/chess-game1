@@ -29,4 +29,15 @@ emergency booking is not.
   that drift is now CI-enforced against).
 - Do NOT "fix" this to fail-closed/503 without explicit owner approval.
 
+## Amendment — 2026-10-02: an Upstash timeout is "unavailable"
+
+The decision is unchanged. What changed is how a slow Upstash is recognised.
+`@upstash/ratelimit` does not throw on a timeout: it answers
+`{ success: true, reason: 'timeout' }` after its timeout (5 s by default). That
+answer was read as "allowed", so a slow Upstash skipped the KV fallback this ADR
+relies on. The limiter now waits at most 3 s, and a `reason: 'timeout'` verdict
+takes the same KV path as an Upstash error; only when KV is also unavailable does
+the request go through unmetered, as decided above. See
+[`../INCIDENT-2026-10-02-REDIS-KEYS-WITHOUT-EXPIRY.md`](../INCIDENT-2026-10-02-REDIS-KEYS-WITHOUT-EXPIRY.md).
+
 {% endraw %}
