@@ -146,7 +146,13 @@ idle-reclaim check.
 `npm run dev` opens an SSH forward to the agent and serves the console on a local port. It
 signs with a dev key limited to `read`-class capabilities, so everything can be looked at and
 nothing changed: downloads, file changes, actions and the terminal work only in the portal.
-The preview offers only those capabilities, so the toolbar hides what the dev key cannot do.
+
+Every page and control still shows in the preview, the Terminal and the Access editor
+included, so they can be designed there. `/api/me` answers `preview: true`, `caps` (everything
+the dev actor holds: what the console shows) and `agentCaps` (the reads the agent accepts from
+a laptop). Pressing a control that changes the server gets the Worker's refusal, which the
+screen shows. Access edits save to the local test database on the PC, never the real one. A
+"Preview" banner, or a muted look for controls outside `agentCaps`, can key off those fields.
 
 ## Key code paths
 

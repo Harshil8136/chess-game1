@@ -45,14 +45,15 @@ support can hold.
 | `terminal.ops` | operate | A shell as the unprivileged `vps-ops` account through a 60-second certificate; recorded | owner, vendor | no |
 | `terminal.admin` | admin | A shell as `vps-admin` (sudo); recorded and the owner is alerted | owner, vendor | yes |
 | `access.view` | read | See who holds which capabilities | owner, vendor | no |
+| `access.delegate` | admin | Give or take away capabilities you hold yourself, for people below you, from cf-admin's Access Center (see Delegation) | owner, vendor, admin | no |
 | `access.manage` | admin | Change role defaults and per-person grants | owner, vendor | yes |
 
 ## Roles
 
 | Role | Default capabilities |
 |---|---|
-| `owner`, `vendor_support` | All 19 |
-| `admin` | `host.view`, `logs.view` |
+| `owner`, `vendor_support` | All 20 |
+| `admin` | `host.view`, `logs.view`, `access.delegate` |
 | `manager`, `staff`, `viewer` | None |
 
 The role comes from cf-admin in the actor header. These are the code defaults
@@ -88,8 +89,31 @@ rather than fall back. The Worker caches the row for 30 seconds; a save reads fr
 | Concurrency | Compare-and-swap on the revision; a stale save gets a conflict |
 
 People are edited on the console's Access page (`access.view` to read, `access.manage` to
-save) and from cf-admin's Users page, which calls the same API for one person. Each save
-returns an `x-vps-audit` line that becomes a cf-admin activity-log row.
+save) and from cf-admin's Access Center on a person's Users page, which calls the same API for
+one person. Each save returns an `x-vps-audit` line that becomes a cf-admin activity-log row.
+
+## Delegation
+
+cf-admin's Access Center lets people below owner hand out what they hold, following the
+portal's role ladder (vendor support, owner, admin, manager, staff, viewer; the design is in
+cf-admin's `documentation/specs/2026-10-02-access-center-design.md`). A per-person change from
+someone without `access.manage` is accepted only when all of these hold:
+
+| Rule | Check |
+|---|---|
+| Holds `access.delegate` | Otherwise `need: access.delegate` |
+| T1 trusted target | cf-admin names the person, with the role from its own user table, in `x-vps-target` (base64url JSON `{ v: 1, email, role }`). cf-admin's gateway never forwards that header from a browser. Missing, malformed or naming someone else: `need: trusted_target` |
+| T2 not yourself | `need: self` |
+| T3 outrank | The actor's role sits strictly above the person's; owner and vendor can never be changed by delegation (`need: outranked`) |
+| T4 hold it | Every capability added to or removed from the allow or deny list is one the actor holds now (`need: not-held:<cap>`) |
+| T5 not locked | No floor capability changes (`need: locked:<cap>`) |
+
+The save then runs through the same validation, limits and compare-and-swap as any other, and
+its audit line ends in `via=delegate`. Viewing one person needs `access.view`, or
+`access.delegate` with T1 to T3 and the same role as cf-admin's record.
+
+`GET /api/access/catalog` gives cf-admin every capability (label, class, floor), each role's
+level and current defaults, and what the caller holds and may delegate. It names nobody else.
 
 ## Fresh sign-in
 
@@ -115,7 +139,11 @@ service name for a stop); see [ACTIONS](../features/ACTIONS.md).
 | Root script | Each action script validates its own target again |
 
 The local preview signs with a dev key that the agent limits to `read`-class capabilities
-(`DEV_KEY_CAPS`), so a laptop can look at the server but change nothing.
+(`DEV_KEY_CAPS`), so a laptop can look at the server but change nothing. Its `/api/me` still
+lists every capability the dev actor holds as `caps`, with `preview: true` and the agent's
+read-only list as `agentCaps`, so every page and control can be designed there. A change the
+agent would have to make is refused by the Worker before it is signed, and access edits in the
+preview save to the local test database, never the real one.
 
 ## Related
 
