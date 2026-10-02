@@ -3,7 +3,7 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-10-01
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql]
@@ -156,9 +156,9 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **12 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
-`*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
-and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
+There are **13 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
+`*/5 * * * *` tick and 3 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`,
+`staff-storage-reconcile` and `redis-ttl-hygiene`, all dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
@@ -167,7 +167,7 @@ a corrupt or hand-edited row cannot mark a security job as sheddable.
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
 | `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick` | never |
-| `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
+| `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile`, `redis-ttl-hygiene` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
 > **A missing tier is not a compile error.** `JobDefinition.id` is typed `string`,
@@ -383,10 +383,11 @@ an empty table.
   you can test a job you have just paused, and it does **not** bypass the job's
   own gate: Run now on `gsc-sync` still does nothing while `gsc-sync-enabled` is
   `false`.
-- **Only the two weekly jobs take a lease.** `asset-cleanup` and
-  `staff-storage-reconcile` declare `leaseSeconds: 900`, because both delete and
+- **Only `asset-cleanup` and `staff-storage-reconcile` take a lease.** Both
+  declare `leaseSeconds: 900`, because both delete and
   a manual run bypasses the control document by design — two deleters walking the
-  same bucket is the one overlap worth a D1 write. The ten five-minute jobs
+  same bucket is the one overlap worth a D1 write. `redis-ttl-hygiene` takes
+  none: its only write, `EXPIRE … NX`, is idempotent. The ten five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
   trigger *can* still overlap a scheduled tick for those ten. The Run-now route

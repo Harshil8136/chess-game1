@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-10-01
 verified_against: [code, infra, live-mcp]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -148,13 +148,13 @@ and each one runs under `runJob` with a declared D1 budget:
 **Do not hand-count this list.** [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
-three times. As of 2026-09-23 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
+three times. As of 2026-10-01 it is **13 jobs — 10 on `*/5`, 3 on Sunday**
 (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`).
 
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
 | `*/5 * * * *` (10) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)) |
-| `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile` |
+| `0 2 * * SUN` (3) | `asset-cleanup`, `staff-storage-reconcile`, `redis-ttl-hygiene` (weekly Redis expiry census over the shared Upstash instance; report-only unless `admin_portal_settings` `redis-hygiene-mode` = `repair`) |
 
 > **One invocation per job (2026-09-27).** The scheduled handler no longer runs
 > the jobs itself. `dispatchCronJobs` (`src/lib/jobs/dispatch.ts`) reads the
