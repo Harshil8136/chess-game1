@@ -72,15 +72,17 @@ open; an unknown route is 404; the agent answers only loopback `Host` names.
 | Host config in `/etc/vps` | Retention table, service allow-list, Worker public keys | Written by host modules |
 | Audit disk | `/srv/audit`: the forensic record | A fixed-size image, so a full audit disk cannot fill the system disk |
 | System journal | Service logs and terminal recordings | Age-limited by retention |
-| R2 audit bucket | Off-server copy of security classes | Locked for 90 days; see [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md) |
+| R2 audit bucket | Off-server copy of security classes; encrypted database dumps under `backups/postgres/` | Security classes locked for 90 days, see [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md); dumps locked 30 days, expired at 35 |
 | Sentry | Alerts for real problems only | Not a record |
 | Agent releases | `/opt/vps/agent/releases/<version>`, `current` link | Rollback switches the link |
-| App data | `/srv/apps`, `/srv/share`, PostgreSQL dumps kept 7 days | Apps run with a read-only root and no capabilities |
+| Agent state | `/var/lib/vps/metrics`: one sample a minute, one file per day | The unit's `StateDirectory`; kept 30 days, at most 12 MiB; survives deploys. See [Metrics history](../features/CONSOLE.md#metrics-history) |
+| App data | `/srv/apps`, `/srv/share`, PostgreSQL dumps kept 7 days, each also sent off the server encrypted (R2 `backups/postgres/`) | Apps run with a read-only root and no capabilities. The server holds only the public half of the backup key |
 
 ## Agent hardening
 
 The agent runs as its own user with no capabilities, `ProtectSystem=strict`, `ProtectHome`, a
-256 MB memory cap, and writes only to the app and share folders. It reads logs and the audit
+256 MB memory cap, and writes only to the app and share folders and its own state folder (the
+metrics history). It reads logs and the audit
 record through supplementary groups, not root. Reads of files, logs and the audit record are
 written to the journal with the person's email.
 

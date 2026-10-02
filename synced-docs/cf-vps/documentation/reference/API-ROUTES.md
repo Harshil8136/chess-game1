@@ -5,7 +5,7 @@ audience: [ai, technical]
 last_verified: 2026-10-01
 verified_against: [code]
 owner: harshil
-related_code: [contract/capabilities.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
+related_code: [contract/capabilities.ts, contract/metrics-history.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
 related_docs: [../security/PERMISSIONS.md, ../features/ACTIONS.md, ../architecture/OVERVIEW.md]
 tags: [reference, api, routes, capabilities]
 ---
@@ -45,6 +45,7 @@ and the console. A route is reached in two forms:
 | `system` | GET | `host.view` | 15 s |
 | `metrics/snapshot` | GET | `host.view` | 15 s |
 | `metrics/stream` | stream | `host.view` | open |
+| `metrics/history` | GET | `host.view` | 15 s |
 | `services` | GET | `host.view` | 15 s |
 | `services/detail` | GET | `host.view` | 15 s |
 | `packages` | GET | `host.view` | 60 s |
@@ -57,6 +58,13 @@ and the console. A route is reached in two forms:
 | `network` | GET | `host.view` | 15 s |
 | `history` | GET | `host.view` | 60 s |
 | `diagnostics` | GET | `host.view` | 15 s |
+
+`metrics/history` takes one query parameter, `range`: `1h`, `24h`, `7d` or `30d`, and `24h`
+when it is absent. Any other value, including an empty one or a different case, is 400
+`bad_range`. The answer (`MetricsHistory` in `contract/metrics-history.ts`) is at most 720
+buckets: `from` and `stepS` place them, `n` counts the minutes in each (0 is a gap, with every
+series null there), `series` holds one array per value, and `recorder` says whether the agent
+is recording and what it has stored. See [Metrics history](../features/CONSOLE.md#metrics-history).
 
 ## Logs and files
 

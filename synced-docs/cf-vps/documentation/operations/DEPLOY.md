@@ -73,6 +73,11 @@ release other than the current one, and refuses if that one fails its health che
 rollback safety. The agent's public keys (`worker-signing.pub`) are installed by the `keys`
 step, not by an agent release.
 
+The unit file is not part of a release either. `60-agent apply.sh unit` installs it and
+reloads systemd, but the running agent keeps its old settings until it restarts. When an
+agent release needs a unit change (for example the `StateDirectory` the metrics history writes
+to), apply `unit` first, then deploy the agent, whose install restarts it.
+
 ## Host modules
 
 ```

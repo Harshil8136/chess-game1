@@ -68,6 +68,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | Doc | What it is |
 |---|---|
 | [`reference/API-ROUTES.md`](reference/API-ROUTES.md) **P** | The agent route table with the capability for each route |
+| [`reference/HOST-LAYOUT.md`](reference/HOST-LAYOUT.md) | Where everything lives on the server and in R2, and where something new goes |
 
 ## Program
 
@@ -83,6 +84,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`runbooks/break-glass.md`](runbooks/break-glass.md) | SSH does not work |
 | [`runbooks/disk-full.md`](runbooks/disk-full.md) | The audit disk or system disk is full and sudo refuses |
 | [`runbooks/tunnel-down.md`](runbooks/tunnel-down.md) | The console says the agent did not answer |
+| [`runbooks/restore-app-database.md`](runbooks/restore-app-database.md) | Restore an app database from the local or the encrypted off-box dump |
 | [`runbooks/agent-rollback.md`](runbooks/agent-rollback.md) | A new agent release misbehaves |
 | [`runbooks/audit-rule-change.md`](runbooks/audit-rule-change.md) | Changing audit rules after the lock |
 | [`runbooks/compromise.md`](runbooks/compromise.md) | Suspected compromise |
@@ -104,6 +106,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/2026-09-29-owner-rulings.md`](records/2026-09-29-owner-rulings.md) | Owner rulings that amend the design |
 | [`records/2026-09-29-oci-setup.md`](records/2026-09-29-oci-setup.md) | How the cloud instance was created from the CLI |
 | [`records/2026-09-30-antigravity-visual-transformation.md`](records/2026-09-30-antigravity-visual-transformation.md) | The console's visual redesign |
+| [`records/2026-10-02-p7-extras-decisions.md`](records/2026-10-02-p7-extras-decisions.md) | P7 extras: off-box dumps built, Netdata replaced, Cockpit and per-person accounts not built, and why |
 | [`records/2026-09-29-superseded-draft/README.md`](records/2026-09-29-superseded-draft/README.md) | The first draft of the plan, superseded; seven parts, indexed in its README |
 | [`records/plans/2026-09-29-dev-preview.md`](records/plans/2026-09-29-dev-preview.md) | Plan: the local dev preview |
 | [`records/plans/2026-09-30-p1-forensic-logging.md`](records/plans/2026-09-30-p1-forensic-logging.md) | Plan: P1 forensic logging |
