@@ -391,6 +391,7 @@ model without structural changes before it's written, not after.
 - **R2 Bucket:** `madagascar-images` → `cdn.madagascarhotelags.com` (CMS images, shared read/write)
 - **Analytics Engine:** `ANALYTICS` binding → dataset `madagascar_analytics` (shared, both projects)
 - **Queue:** `EMAIL_QUEUE` → `madagascar-emails` (async email dispatch)
+- **Upstash Redis:** one instance shared by cf-admin, cf-astro **and cf-chatbot** — key inventory and expiries in [`documentation/operations/OPERATIONS.md`](./documentation/operations/OPERATIONS.md) §3.6
 - **Cloudflare Account:** Mascotas Madagascar (ID: `[CF_ACCOUNT_ID]`)
 
 ### KV Namespaces (Isolated per project)
@@ -412,6 +413,13 @@ owned by [`documentation/operations/OPERATIONS.md`](./documentation/operations/O
 - cf-admin has its own KV namespace for sessions, separate from cf-astro's
 - cf-admin has its own Worker deployment (not shared with cf-astro)
 - Each project has its own `wrangler.toml`, `.dev.vars`, and deployment pipeline
+- **Every Redis key expires, and its expiry is set in the same request as the
+  write** — `SET … EX`, one `MULTI/EXEC`, or a Lua script; never a write followed
+  by a separate `EXPIRE`. The `analytics` option of `@upstash/ratelimit` stays
+  `false`: it writes hourly keys that never expire. A new key family needs a rule
+  in `src/lib/redis-hygiene.ts` (`KEY_RULES`) and a row in OPERATIONS.md §3.6, or
+  the weekly `redis-ttl-hygiene` job reports it as unrecognised. Why:
+  [`documentation/operations/incidents/2026-10-02-redis-keys-without-expiry.md`](./documentation/operations/incidents/2026-10-02-redis-keys-without-expiry.md).
 
 ---
 
@@ -477,7 +485,7 @@ bug — nothing compares them automatically (see the enforcement note below).
 | `preact` | `10.29.7` | UI islands |
 | `lucide-preact` | `1.26.0` | Icon library (Preact-native, no extra weight) |
 | `zod` | `4.4.3` | Runtime schema validation in API routes |
-| `@upstash/ratelimit` | `2.0.8` | Edge-compatible rate limiting |
+| `@upstash/ratelimit` | `2.0.8` | Edge-compatible rate limiting — `analytics` must stay `false` (§2b) |
 | `@upstash/redis` | `1.38.3` | Redis client for Upstash |
 | `@supabase/supabase-js` | `2.110.8` | Supabase client (service_role only) |
 | `@sentry/astro` | `10.73.0` | Error tracking (browser/client SDK only — its server SDK does not run in workerd) |

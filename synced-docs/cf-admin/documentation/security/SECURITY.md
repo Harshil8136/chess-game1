@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-10-02
 verified_against: [code, infra]
 owner: harshil
 related_docs: [THREAT-MODEL.md, RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/plac-and-audit.md, ../operations/OPERATIONS.md]
@@ -708,6 +708,16 @@ harmless. `safeRateLimit()` fails **closed** if the Upstash call itself errors;
 it is used by **11 route files**, not only the four public storage routes — the
 AI generation routes and the authenticated storage routes use it too
 (`grep -rln "safeRateLimit(" src/pages`). *Both corrections 2026-09-20.*
+
+**Upstash timeouts and key expiry (2026-10-02).** A limit check waits at most
+3 s for Upstash. On a timeout the library answers `success: true` rather than
+failing, so `getRateLimiter` turns it into a refusal (`success: false`,
+`reason: 'timeout'`): a slow Upstash now fails closed like an erroring one. Logout
+and the RFC 8058 unsubscribe proceed on a timeout, because refusing either does
+harm (a session left alive; an unsubscribe not honoured). Every limiter key
+expires after 2 × its window + 1 s, and limiter analytics are off — they had kept
+these identifiers with no expiry; see
+[`../operations/incidents/2026-10-02-redis-keys-without-expiry.md`](../operations/incidents/2026-10-02-redis-keys-without-expiry.md).
 
 ### Zod Schema Validation
 

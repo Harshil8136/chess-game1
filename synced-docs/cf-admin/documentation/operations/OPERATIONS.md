@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-01
+last_verified: 2026-10-02
 verified_against: [code, infra, live-mcp]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -339,9 +339,40 @@ dictate caching strategies and system design constraints.
 
 | Metric | Free Limit |
 |--------|-----------|
-| Commands/day | 10,000 |
+| Commands/month | 500,000 *(corrected 2026-10-02: this said 10,000/day; `RULESAd.md` has carried the corrected figure since 2026-09-19)* |
 | Max data size | 256 MB |
 | Concurrent connections | 10 |
+
+One instance, `modest-mastiff-88856`, is **shared by cf-admin, cf-astro and
+cf-chatbot**. Every key in it must expire, and the expiry must be set in the same
+request as the write. The table is the inventory `src/lib/redis-hygiene.ts`
+(`KEY_RULES`) recognises; a key family missing from it is reported by the weekly
+check as unrecognised. Add a row and a rule together.
+
+| Key family | Writer | Expiry |
+|---|---|---|
+| `cf-admin-rl:{limiter}:{id}:{window}` | cf-admin `getRateLimiter` | 2 × window + 1 s (at most 2 days, for the daily AI quotas) |
+| `madagascar:{endpoint}:{ip}:{window}` | cf-astro `checkRateLimit` | 121 s (every window is 60 s) |
+| `cf-admin-neurons:global:{date}` | cf-admin `trackAiNeurons` | 7 days |
+| `alert:dedup:{fingerprint}` | both alert gates | 5 minutes |
+| `alerts:{severity}` | both alert gates | 14 days (written, never read — MAINTENANCE R-3) |
+| `dedup:{messageId}` | cf-chatbot | 24 hours |
+| `rate:{channel}:{id}` | cf-chatbot | 120 s |
+| `conv:active:{channel}:{id}` | cf-chatbot | 24 hours (WhatsApp), 30 minutes (web) |
+| `cache:llm:v2:{sha256}` | cf-chatbot | 1 hour |
+| `session:{id}` | cf-chatbot | 7 days |
+| `{prefix}:events:{hour}` | `@upstash/ratelimit` analytics — **off since 2026-10-02 and must not come back** | given 1 hour if one is found |
+
+**The weekly check — `redis-ttl-hygiene`** (Sunday 02:00 UTC, on Cron Control).
+It reports keys with no expiry, expiries longer than their writer sets, and keys
+it does not recognise, and alerts at `warning` on any of them. With
+`admin_portal_settings` `redis-hygiene-mode` = `repair` (set 2026-10-02) it also
+gives recognised keys their writer's expiry (`EXPIRE … NX`); it never deletes and
+never touches an unrecognised key. Delete that row to make it report-only. For a
+check now, use **Run now** on Cron Control: the run console prints the census.
+One run spends at most 12 Upstash calls and 2,000 keys; a larger keyspace is
+reported as `truncated`. Why it exists:
+[`incidents/2026-10-02-redis-keys-without-expiry.md`](incidents/2026-10-02-redis-keys-without-expiry.md).
 
 ---
 

@@ -132,6 +132,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | Binding IDs, free-tier limits, secrets registry, deploy | ai, technical, operator | active |
 | [`operations/DEV-TOOLS.md`](operations/DEV-TOOLS.md) | Edge Command Center — debug tools, diagnostics | ai, technical | active |
 | [`operations/incidents/2026-09-12-cf-access-sync-gateway-timeout.md`](operations/incidents/2026-09-12-cf-access-sync-gateway-timeout.md) | Incident post-mortem: 504 Gateway Timeout in CF Access sync cron, root cause, blast radius, and fix | ai, technical, operator | historical |
+| [`operations/incidents/2026-10-02-redis-keys-without-expiry.md`](operations/incidents/2026-10-02-redis-keys-without-expiry.md) | Incident record: rate-limit analytics wrote Redis keys that never expired (648 of 651, raw visitor IPs and admin ids, up to 56 days); fixed in cf-admin, cf-astro and cf-chatbot, cleaned, and guarded by the weekly `redis-ttl-hygiene` job | ai, technical, operator, owner | active |
 | [`operations/incidents/2026-09-26-cron-exceeded-cpu.md`](operations/incidents/2026-09-26-cron-exceeded-cpu.md) | Incident record: every scheduled job stopped when the shared cron invocation hit the Workers Free 10 ms CPU limit; one invocation per job fix, alternatives weighed | ai, technical, operator, owner | active |
 
 ## Reference

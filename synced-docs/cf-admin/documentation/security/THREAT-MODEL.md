@@ -3,7 +3,7 @@
 title: "Threat Model (STRIDE)"
 status: active
 audience: [technical, operator, ai, owner]
-last_verified: 2026-09-20
+last_verified: 2026-10-02
 verified_against: [code, config]
 owner: harshil
 related_docs: [SECURITY.md, RoPA.md, ../runbooks/incident-response.md, compliance/ASVS-L2.md, ../architecture/plac-and-audit.md, ../architecture/PERMISSIONS-SYSTEM.md]
@@ -167,7 +167,7 @@ mitigated, not merely mitigatable.
 | Threat | Mitigation | Residual |
 |---|---|---|
 | PII in error tracking | `sendDefaultPii: false` + scrubber (`test/sentry-scrub.test.ts`) | Low |
-| Raw IPs at rest | Hashed (HMAC-SHA-256 with `IP_HASH_SECRET`) in the audit log, the storage access logs, the suppression list and the email ledger. **Raw** in `admin_login_logs` (by design, for forensics), in the `consent_attempts` / `booking_attempts` dead-letter tables, in KV session records, and in the Upstash keys for the session-less routes. Full table in [`RoPA.md`](RoPA.md) §2.1 | **Medium** — retention on the raw stores is manual, so the exposure window is whatever an operator last purged |
+| Raw IPs at rest | Hashed (HMAC-SHA-256 with `IP_HASH_SECRET`) in the audit log, the storage access logs, the suppression list and the email ledger. **Raw** in `admin_login_logs` (by design, for forensics), in the `consent_attempts` / `booking_attempts` dead-letter tables, in KV session records, and in the Upstash keys for the session-less routes (each expires within 2 × its window + 1 s; until 2026-10-02 limiter analytics also kept them with no expiry — [incident record](../operations/incidents/2026-10-02-redis-keys-without-expiry.md)). Full table in [`RoPA.md`](RoPA.md) §2.1 | **Medium** — retention on the raw stores is manual, so the exposure window is whatever an operator last purged |
 | Secrets in source | CI secret-scan (blocking); `.dev.vars` gitignored | Low |
 | Cross-tenant leakage | **N/A** — single tenant. Becomes the primary risk if multi-tenancy is ever added |
 | Search-engine indexing | `robots.txt` + `X-Robots-Tag`. The header lived only in `public/_headers` (static assets) until 2026-09-02, when `src/lib/security/csp.ts` started setting it on SSR responses too | Low |
