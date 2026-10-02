@@ -124,7 +124,7 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 | `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes) |
 | `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
 | `VPS` | `cf-vps` | The private server-console Worker (no route, no `workers.dev`): the `/dashboard/vps/app/` gateway, including the browser terminal's WebSocket ([VPS Console](../features/VPS-CONSOLE.md)). **Deploy cf-vps first** — a deploy that binds a Worker that does not exist fails |
-| `EMAIL_CONSOLE` | `cf-email-api` (entrypoint `Console`) | The email service's API Worker, admin door only (it has no route from here; its public API is for clients): the `/api/emails/api-*` routes behind the Email Portal's API Access tab ([Email API Access](../features/EMAIL-API-ACCESS.md)). **Deploy cf-email-api first** — a deploy that binds a Worker that does not exist fails |
+| `EMAIL_CONSOLE` | `cf-email-api` (entrypoint `Console`) | The email service's API Worker, admin door only (it has no route from here; its public API is for clients): the `/api/emails/api-*` routes behind the Email API page ([Email API page](../features/EMAIL-API-ACCESS.md)). **Deploy cf-email-api first** — a deploy that binds a Worker that does not exist fails |
 
 ### Workers AI
 

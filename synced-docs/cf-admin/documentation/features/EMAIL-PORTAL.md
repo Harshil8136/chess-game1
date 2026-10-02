@@ -62,7 +62,7 @@ tags: [feature, email, queue, brevo, plac, rbac, suppression, deliverability]
 
 ## 0. FIXED 2026-10-01 — sending was broken for Admin and Manager
 
-> **Fix:** `send.ts`, `senders.ts` and `engine.ts` now share one loader, `src/lib/email/sender-identities.ts` (the stored row, else the same defaults), and migration `0061_email_sender_identities_seed.sql` stores the row for the first time (the five senders the page showed; booking@ and admin@ with the email API switch on). Regression tests: `test/email-sender-identities.test.ts`. The composer suppression check now covers Cc and Bcc too (§3.3). Registered Senders is also the email API's sender list: each sender has an **API** switch (turning it on needs `#api-config`); see `EMAIL-API-ACCESS.md`.
+> **Fix:** `send.ts`, `senders.ts` and `engine.ts` now share one loader, `src/lib/email/sender-identities.ts` (the stored row, else the same defaults), and migration `0061_email_sender_identities_seed.sql` stores the row for the first time (the five senders the page showed; booking@ and admin@ with the email API switch on). Regression tests: `test/email-sender-identities.test.ts`. The composer suppression check now covers Cc and Bcc too (§3.3). Registered Senders is also the email API's sender list: each sender has an **API** switch (turning it on needs the Email API page's `#settings`); see `EMAIL-API-ACCESS.md`. The portal's API Access tab moved to that page on 2026-10-02, and its old addresses redirect there.
 >
 > **Severity was P1. Verified live 2026-09-11; row still absent 2026-10-01. The description below is the record of the defect.**
 

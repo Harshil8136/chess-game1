@@ -52,8 +52,12 @@ tags: [email, research, vps, nodejs, api-access, brevo, cloudflare, deliverabili
 > admin portal, the way Backups and Server work. It should not move to the
 > public `email.madagascarhotelags.com` address.
 >
+> **Decided on 2026-10-02 (§7.7):** no third Worker, ever, and the VPS idea is
+> parked. The Email API now has its own page in the admin portal, with five
+> permissions instead of three; the email service enforces the finer rules.
+>
 > Every item says why it matters, where it lives and roughly how long it takes.
-> Nothing here is built yet. The owner's decisions are listed in §9.
+> Apart from §7.7, nothing here is built yet. The owner's decisions are listed in §9.
 
 ## 1. Scope, method and status
 
@@ -833,6 +837,25 @@ If the owner expects API Access to stay small and hotel-only, Y1 alone is enough
 
 The §6.6 order still applies, but after this move. Decisions O9 to O14 in §9 capture the choices.
 
+### 7.7 The owner's decisions (2026-10-02), and what was built
+
+The owner answered on 2026-10-02.
+
+- **No third Worker, ever.** The email service keeps exactly two: `cf-astro-email-consumer` and `cf-email-api`. That rules out Y2 as §7.5 designed it (it needed `cf-email-console`), and Y3.
+- **The VPS stays parked.** Asked to double-check whether the Node.js and nginx already on the VPS could run the API management page instead (300 ms would be fine), the answer is still no, and not because of speed:
+  - the tokens and their log live in Cloudflare D1, so the VPS would reach them through the D1 REST API with an account token. Cloudflare lists D1 Edit as an account permission, not a per-database one: the same token could write cf-admin's own database, where the PLAC tables decide who may do what;
+  - blocking a leaked token, the emergency action, would then depend on the one server with no failover and no app rollback (§4.1, §4.4);
+  - the Node process already there is the server console's read-only agent; an admin app inside it would weaken that console's trust model;
+  - cf-admin would still be the door, so the move would save no requests and no code.
+- **A separate page, built as Y1 (§7.4), with the rules in the email service.** The page is `/dashboard/email-api`, "Email API" in the sidebar's Tools section after the Email Portal. The screens stay in cf-admin, the only private, signed-in place for them without a third Worker (`cf-email-api` serves the public API). The Console makes the decisions only it can: whether an edit widens a token, whether a settings change is a pause, and what a person without Read mail may see.
+- **Five permissions instead of the 25 of §7.2.** The owner was concerned that 25 capabilities would slow sign-in. Checked: sign-in reads every page key in one D1 query and keeps the map in the session it writes anyway, so 25 rows would not measurably slow it; the real cost is 25 switches per person. The five are the page itself, `#respond`, `#read-mail`, `#manage` and `#settings` ([Email API page](../features/EMAIL-API-ACCESS.md), section 3). They fix problems 1, 2, 3, 6 and 7 of §7.1. Problem 4 (fresh sign-in) was declined, problem 5 (grant expiry) is a PLAC limit, and problem 8 (own-token scope) waits for a second app.
+- **Defaults:** admins open the page and hold `#respond`; `#read-mail`, `#manage` and `#settings` are the owner's to grant.
+- **No 10-minute re-sign-in** for Manage tokens or API settings.
+- **No KV writes.** The feature adds none: its rows are in D1, its data in the email database.
+- **E-11 fixed in the same change** (O14): action keys, and the new page key, are checked on their exact rows.
+
+Built on 2026-10-02: in cf-email-consumer, commit `1744f1d` (the Console's five permissions, the reduce-or-widen rule, masked addresses, and the old key names still read); in cf-admin, the page, migration `0062`, the routes' new keys, the old addresses' redirect and the E-11 fix. The owner applies `0062` with `npm run release`, and `cf-email-api` deploys from `main` once its Workers Builds connection exists.
+
 ## 8. Documentation drift found
 
 Recorded for the owner; not changed in this document.
@@ -864,6 +887,8 @@ Recorded for the owner; not changed in this document.
 | O12 | Who may open the page | **Admin and above**, with Admins holding read-only capabilities plus block and pause by default; or **Owner only**, as today |
 | O13 | Worker shape | **A third, private Worker** (`cf-email-console`, no address). Never a console on `email.madagascarhotelags.com` (Y3) |
 | O14 | Action keys that fail closed | **Fix maintenance item E-11 first:** it is a precondition for renaming or deactivating any key, and it protects the cron keys too |
+
+**The owner's answers to O9 to O14 (2026-10-02, §7.7):** O9, five permissions instead of the catalog, with no fresh sign-in; O10, yes; O11, Y1, with the finer rules in the email service; O12, admins and above, holding view and respond; O13, no third Worker, ever; O14, done.
 
 **Suggested overall order:**
 
@@ -949,6 +974,7 @@ All fetched on 2026-10-01. Where a page showed a last-updated date, it is given.
 | Date | Checked by | Method | Result |
 |---|---|---|---|
 | 2026-10-01 | claude | code read of five repositories at the commits in §1; read-only queries on `madagascar-email-db`, `madagascar-db` and the Supabase ledger; Sentry issue search; official documentation | research record; findings as stated, with unconfirmed points marked |
+| 2026-10-02 | claude | §7.7 only: the sign-in path (`computeAccessMap`, `createSession`), the KV writes in `src/`, both email Workers' `wrangler.toml`, the VPS agent's plan, Cloudflare's API token permissions page, and read-only queries on `madagascar-db` (`admin_pages`, `admin_page_overrides`, `d1_migrations`) | the owner's decisions and what was built, as stated |
 
 ## Related
 

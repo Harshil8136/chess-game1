@@ -201,7 +201,7 @@ Check only the page and a deny written on the fragment is ignored — the overri
 stored, shown in the access UI, and has no effect at the one point that matters.
 Check only the fragment and a user denied the whole page still reaches the action,
 because an undefined key resolves `unknown` and `requirePageAccess` permits unknown.
-`src/lib/auth/surface-guards.ts` exists to make that pair the default: `denyCron`, `denyEmailApi` (the Email Portal's API Access fragments, migration `0060`) and
+`src/lib/auth/surface-guards.ts` exists to make that pair the default: `denyCron`, `denyEmailApi` (the Email API page and its four keys, migration `0062`) and
 `denySessions` take the page key first, then the action. This was got wrong twice
 before it was centralised — see MAINTENANCE.md D-4 and D-5.
 
@@ -217,7 +217,15 @@ its three cron fragments were inserted with a NULL `icon` against a NOT NULL
 column, `INSERT OR IGNORE` discarded all three silently, and every cron action
 check was a no-op for every role until `0055`. Under an explicit-allow check that
 same state refuses the action instead of opening it. The rows are asserted in
-`test/migrations-replay.test.ts`, so losing one is a failing build. The sessions
+`test/migrations-replay.test.ts`, so losing one is a failing build.
+*Corrected 2026-10-02:* `placRequireGrant` now requires the key itself to be in
+the map. Until then it asked `resolveAccess`, which answers an absent key through
+its longest ancestor, and every action key starts with `/dashboard/`, a staff-level
+row in every map, so a missing row read as **allow** for staff and above; the
+fail-closed tests passed only because their maps had no `/dashboard` key
+(MAINTENANCE.md E-11, now pinned in `test/guard-plac.test.ts`). `denyEmailApi`
+checks its page key the same way, as `mayUseConsole` does for the server console,
+so the Email API page cannot open through `/dashboard` before `0062` is applied. The sessions
 fragments are live and active (verified 2026-09-20) and could adopt the same
 helper, but `#flush` is deliberately deny-only — it keeps a hardcoded owner check
 alongside the PLAC one, so a grant alone must not become a capability — and
