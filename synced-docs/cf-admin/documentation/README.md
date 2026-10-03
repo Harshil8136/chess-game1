@@ -319,5 +319,7 @@ the public docs mirror (ADR-0001).
 |-----|---------|
 | [`../README.md`](../README.md) | Project entry point / quick start |
 | [`../RULESAd.md`](../RULESAd.md) | Operational Rules Bible + policy contract |
-| [`../main.md`](../main.md) | AI entry pointer into `documentation/` |
+| [`../main.md`](../main.md) | The contract every AI agent follows: session start, the owner's Golden Rules, what to read, what to update, definition of done |
+| [`../CLAUDE.md`](../CLAUDE.md) | Loaded by Claude Code at session start; imports `main.md` |
+| [`../.agents/rules/cf-admin.md`](../.agents/rules/cf-admin.md) | Antigravity's always-on workspace rule: a summary of `main.md` that points to it |
 | [`../AI_CODE_MAINTENANCE.md`](../AI_CODE_MAINTENANCE.md) | AI-agent code-maintenance rules |

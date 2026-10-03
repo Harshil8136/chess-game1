@@ -939,8 +939,11 @@ now standalone, so a pointer outside it can never resolve.
   protection; `main` auto-deploys **through Cloudflare Workers Builds** (the
   dashboard-side GitHub connection — no workflow in `.github/` runs
   `wrangler deploy`). The quality/security workflows run on the same push and
-  do **not** gate that deploy. (An agent working on an assigned feature branch
-  follows its own instructions and pushes there instead.)
+  do **not** gate that deploy. **This binds every agent, with no exception:**
+  one whose tool or session hands it a feature branch still commits on `main`
+  and pushes to `origin main`, and opens no pull request (the owner's standing
+  order, 2026-10-03; `main.md` Golden Rule 1). *Until then this line let an
+  agent on an assigned branch push there instead.*
 - 🔴 **Nothing gates the deploy today — corrected 2026-09-19.** This section
   said the gate was the Builds **build command** running `npm run build:ci` and
   the **deploy command** running `npm run deploy:ci`. Workers Builds is still
@@ -991,7 +994,9 @@ the registry in the same change. Docs elsewhere cite this rule as "§6".
 |------|---------|
 | `RULESAd.md` | This file — operational rules and quick-reference pointers |
 | `README.md` | Quick start guide for developers |
-| `main.md` | AI entry pointer into `documentation/` |
+| `main.md` | The contract every AI agent follows: session start, the owner's Golden Rules, what to read, what to update, definition of done |
+| `CLAUDE.md` | Loaded by Claude Code at session start; imports `main.md` |
+| `.agents/rules/cf-admin.md` | Antigravity's always-on workspace rule: a summary of `main.md` that points to it |
 | `AI_CODE_MAINTENANCE.md` | AI agent maintenance guidelines |
 | `documentation/` | All detailed technical documentation (governed tree — see [`documentation/README.md`](./documentation/README.md)) |
 

@@ -32,8 +32,16 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 |-----------|----------------------|
 | `README.md` | Repo entry point (humans + AI IDEs look here first) |
 | `RULESAd.md` | Operational Rules Bible + policy contract; the public-docs sync workflow targets this exact path |
-| `main.md` | AI entry pointer into `documentation/` |
+| `main.md` | The contract every AI agent follows: the session-start steps, the owner's Golden Rules, what to read for a task and which document to update |
 | `AI_CODE_MAINTENANCE.md` | AI-agent maintenance rules (referenced by `RULESAd.md`) |
+| `CLAUDE.md` | Claude Code loads it at the start of every session; it holds no rules and only imports `main.md` (added 2026-10-03) |
+
+One more entry file sits outside this table because it is not Markdown
+documentation: `.agents/rules/cf-admin.md`, Antigravity's always-on workspace
+rule, a short summary of `main.md` that points to it. Antigravity loads it only
+with `trigger: always_on` front-matter and only below 12,000 characters. It and
+`CLAUDE.md` were added on 2026-10-03 because agents started from a bare ping of
+`main.md` drifted in new sessions.
 
 > **Enforced since 2026-09-19.** `docs_check.py` now fails when a `.md` appears
 > at the repository root that is not in this table. It was a convention with
@@ -41,7 +49,7 @@ The only Markdown files that stay at the repository root are entry/discoverabili
 > `specs/2026-09-16-cron-dashboard-visual-redesign.md` on 2026-09-19) sat there
 > unnoticed, with no front-matter and no index entry.
 
-> **There is no fifth root file — corrected 2026-08-23.** This table once listed
+> **The git-rules file was never a root file — corrected 2026-08-23.** This table once listed
 > a git-rules file as a cf-admin root doc. It never lived here: it sat at the
 > **monorepo** root, and this repo is now standalone, so every reference to it
 > was a link that could not resolve. The rules still in force — verify the
