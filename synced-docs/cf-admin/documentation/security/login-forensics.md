@@ -6,8 +6,8 @@ audience: [ai, technical]
 last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
-related_docs: [SECURITY.md, RoPA.md, ../specs/2026-10-03-sign-in-alert-settings-design.md, ../architecture/plac-and-audit.md, ../features/USER-MANAGEMENT.md]
-related_code: [src/lib/auth/stages/bootstrap.ts, src/lib/auth/login-event.ts, src/lib/auth/security-logging.ts, src/lib/login-alerts/throttle.ts, src/lib/login-alerts/policy.ts, src/lib/login-alerts/store.ts, src/workers/scheduled-log-sync.ts, src/pages/api/audit/login-logs.ts]
+related_docs: [SECURITY.md, RoPA.md, ../specs/2026-10-03-sign-in-alerts-v2-design.md, ../specs/2026-10-03-sign-in-alert-settings-design.md, ../architecture/plac-and-audit.md, ../features/USER-MANAGEMENT.md]
+related_code: [src/lib/auth/stages/bootstrap.ts, src/lib/auth/login-event.ts, src/lib/auth/security-logging.ts, src/lib/login-alerts/throttle.ts, src/lib/login-alerts/policy.ts, src/lib/login-alerts/store.ts, src/lib/login-alerts/decide.ts, src/lib/login-alerts/dispatch.ts, src/lib/login-alerts/outcomes.ts, src/workers/scheduled-log-sync.ts, src/pages/api/audit/login-logs.ts]
 tags: [security, forensics, login, audit, cloudflare-access]
 ---
 
@@ -183,8 +183,9 @@ that is the case to check.
 | `cf_ray_id` ★ | TEXT | CF ZT | `CF-RAY` header | Tier 1 |
 | `cf_access_method` ★ | TEXT | CF ZT | Same value as `login_method` — `emitLoginEvent` passes `loginMethod` to both | Tier 1 |
 | `cf_identity_provider` ★ | TEXT | CF ZT | `claims.idp?.type` only — **not** a full descriptor, and there is no `idp.id` in the stored value. NULL on every production row (see the IdP note below) | Tier 1 |
-| `cf_jwt_tail` ★ | TEXT | CF ZT | Last 16 chars of JWT assertion (audit reference — not full token) | Tier 1 |
+| `cf_jwt_tail` ★ | TEXT | CF ZT | Last 16 chars of JWT assertion (audit reference — not full token). Since 2026-10-03 it also identifies the sign-in for the alerts: one email per tail (§7) | Tier 1 |
 | `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagement.score` — **⛔ N/A on this plan**: always `null`, so the `< 30` refusal in `bootstrap.ts` has never fired. Bot Management requires a paid Cloudflare plan | Tier 1 |
+| `alert` | TEXT | Outcome | What happened to the row's alert email: `sent`, `sent-urgent`, `failed` (`sending` until Brevo answers), or why none went: `repeat`, `paused`, `area`, `never`, `usual`, `throttled`, `off` (`src/lib/login-alerts/outcomes.ts`, §7). Migration `0064`, 2026-10-03; NULL on older rows and on `dev-login` rows | Server |
 
 ★ = Added in v3 (migration `0020_cf_zero_trust_schema.sql`). All nullable.
 
@@ -363,6 +364,7 @@ Login Forensics contains PII (full IPs, UA fingerprints, geo location, CF Ray ID
 ```
 Email          [email used]
 Event Type     LOGIN_SUCCESS / LOGIN_FAILED / LOGIN_BLOCKED
+Alert Email    Emailed / Not emailed: <why> / Not recorded (the `alert` column, §7)
 CF Method      Google / GitHub / OTP (with icon)
 Outcome        ✓ SUCCESS / ✗ FAILED / ⊘ BLOCKED
 CF Ray ID      [cfRayId]  ← clickable, links to CF trace if configured
@@ -414,61 +416,67 @@ note in §2.2.
 
 ## 7. Security Alert Emails
 
-Every login attempt is logged (§2). Each one is also emailed (light template) to the admin inbox via the Brevo transactional API (`api.brevo.com/v3/smtp/email`, `BREVO_API_KEY`), except the repeated failures the throttle below holds back and the successful sign-ins an account's alert settings keep quiet:
+Every login attempt is logged (§2). Whether it is also emailed is decided by
+`src/lib/login-alerts/` (`decide.ts`, run by `dispatch.ts` inside the login event's
+`waitUntil`) and recorded in the row's `alert` column (§2.2). The full rules and why are in
+[sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §3. An email goes out
+(light template) through the Brevo transactional API (`api.brevo.com/v3/smtp/email`,
+`BREVO_API_KEY`):
 
-- Dispatched via `ctx.waitUntil()` — zero latency impact
+- Dispatched via `ctx.waitUntil()` — zero latency impact. A Brevo call that has not answered
+  after 8 seconds is abandoned and the row records `failed`
 - The subject carries the outcome, the account and, when known, the location
   (`🟢 LOGIN SUCCESS: name@example.com · Toronto, CA`), so the inbox can be
-  triaged without opening each alert
+  triaged without opening each alert. A sign-in that moved reads `🚨 SIGN-IN MOVED: …`
 - Contains (`buildSecurityAlertHtml`): account, time and date, sign-in method, a
   device string (with the full UA in the `title` attribute), location when known,
   **masked** IP, the failure reason on a failed attempt, and one line saying why
   it was emailed. *Corrected 2026-09-20 — it does not contain the CF Ray ID.*
+  The device string names phones correctly since 2026-10-03: until then an Android
+  User-Agent read "Linux" and an iPhone one "macOS"
 - The time is printed in the sign-in's own time zone (`request.cf.timezone`), or
   in UTC when there is none, as on the cron path (`alertTime()`). Until
   2026-10-03 it was hardcoded to `America/Chicago`, an hour off Toronto all year
   and off Mexico, which has no daylight saving time, every summer
 - All user-controlled fields are HTML-escaped (`escHtml`, 2026-05-24 fix) —
   the `User-Agent` header reaches this template
-- Recipient is `SECURITY_ALERT_EMAIL`. That name is neither a `[vars]` entry nor
-  a declared secret, so in production the hardcoded business-address fallback is
-  what actually receives every alert
+- Recipients: the alert policy's, up to 5, else `SECURITY_ALERT_EMAIL`. That name is
+  neither a `[vars]` entry nor a declared secret, so in production the hardcoded
+  business-address fallback (`DEFAULT_ALERT_RECIPIENT`) receives every alert until the
+  policy names recipients
 - Inline HTML template (no external dependencies)
 
-**Failures are throttled on both paths, never dropped from the log** (inline path since 2026-10-03):
+**What is emailed** (since 2026-10-03):
 
-| Path | Rule | Where |
+| Event | Emailed? | Outcome when not |
 |---|---|---|
-| Inline (a refusal in `bootstrap.ts`) | At most one email per account and failure reason in each fixed 15-minute window. The email says how many attempts like it the past hour held. Decided before the row is written, from `LoginLogRepository.getFailureCounts()`; when that read fails, the email is sent | `src/lib/login-alerts/throttle.ts` |
-| Cron (a Cloudflare Access block) | At most 5 per batch, with a digest line on the fifth | `src/workers/scheduled-log-sync.ts` |
+| Success, the first row of its Access assertion | Per the policy's mode for the role: every sign-in (the default for every role), only unusual ones (a new place or device in 90 days), or none; and not inside the account's trusted areas or during its pause (below) | `never`, `usual`, `area`, `paused` |
+| Success, the same assertion again on the same device in the same country: another tab, a new portal session | No. The INSERT claims the sign-in, so two sessions opened at once cannot both email | `repeat` |
+| Success, the same assertion from another country or device | Yes, urgent, whatever the settings say; once per new country and device | — |
+| Failure, inline (a refusal in `bootstrap.ts`) | Unless the policy switched its kind off: at most one email per account and failure reason in each fixed window (15 minutes by default, 5 or 60 by policy), saying how many attempts like it the past hour held. Counted before the row is written (`LoginLogRepository.getFailureCounts()`); when that read fails, the email is sent | `off`, `throttled` |
+| Blocked at Cloudflare Access (cron) | Unless the policy switched `access_blocked` off: at most 5 per batch, with a digest line on the fifth (`src/workers/scheduled-log-sync.ts`) | `off`, `throttled` |
 
-Until 2026-10-03 the inline path had no cap: a person behind a live `revoked:`
-flag generated one email per request they made. A held-back failure writes an
-`auth.login_alert_skipped` line to Cloudflare Observability.
+Until 2026-10-03 the inline path had no cap, so a person behind a live `revoked:` flag
+generated one email per request, and a sign-in was emailed once for every portal session it
+opened: 88 extra emails over the table's life. A sign-in not emailed writes an
+`auth.login_alert_skipped` line to Cloudflare Observability with the reason. The Sessions
+history shows each row's outcome under its badge; both log drawers (Sessions and the
+Activity Center's Security tab) show it as **Alert Email**.
 
-**Successful sign-ins and the account's alert settings** (since 2026-10-03). A
-person holding `/dashboard/sessions#alerts` can pause their own sign-in alerts
-(at most 7 days, only for the country the pause was set in) and trust up to 3
-areas (where Cloudflare places them when they add it, radius 25, 50 or 100 km).
-Bootstrap passes the account and whether it still holds the key, read from the
-access map it just computed, and `successAlertGate` decides:
-
-| Successful sign-in | Emailed? |
-|---|---|
-| No permission, or no settings | Yes, as before |
-| Inside a trusted area: same country, within the radius | No |
-| Paused, from the country the pause was set in | No |
-| Paused, from another country | Yes, and the email says the account is paused |
-| Settings unreadable or malformed | Yes |
-
-A sign-in kept quiet is logged exactly like any other and writes the same
-`auth.login_alert_skipped` line with the reason. Turning alerts down (a pause, a
-new area) emails the security inbox once (`sendAlertSettingsEmail`, subject
-`🔕 SIGN-IN ALERTS PAUSED` or `🔕 TRUSTED AREA ADDED`) and writes a `security`
-audit row. The settings are one `admin_portal_settings` row per person (scope
-`user`, key `login_alerts`), deleted with the account. Design, decisions and
-residual risk:
-[`../specs/2026-10-03-sign-in-alert-settings-design.md`](../specs/2026-10-03-sign-in-alert-settings-design.md).
+**The account's own settings** (version 1). A person holding `/dashboard/sessions#alerts`
+can pause their own sign-in alerts (at most 7 days, only for the country the pause was set
+in) and trust up to 3 areas (where Cloudflare places them when they add it, radius 25, 50 or
+100 km). Bootstrap passes the account, its role, and whether it still holds the key, read
+from the access map it just computed. A paused sign-in from another country is emailed, and
+the email says the account is paused; unreadable or malformed settings read as none. Turning
+alerts down (a pause, a new area) emails the security inbox once (`sendAlertSettingsEmail`,
+subject `🔕 SIGN-IN ALERTS PAUSED` or `🔕 TRUSTED AREA ADDED`) and writes a `security` audit
+row. The settings are one `admin_portal_settings` row per person (scope `user`, key
+`login_alerts`), deleted with the account. The alert policy is one global row
+(`login_alerts_policy`); nothing writes it until its panel ships (v2 step 2), so the default,
+which switches nothing off, applies. Design, decisions and residual risk:
+[`../specs/2026-10-03-sign-in-alert-settings-design.md`](../specs/2026-10-03-sign-in-alert-settings-design.md)
+and [`../specs/2026-10-03-sign-in-alerts-v2-design.md`](../specs/2026-10-03-sign-in-alerts-v2-design.md).
 
 ---
 
@@ -554,8 +562,11 @@ of the applied history.
 | `src/lib/auth/security-logging.ts` | `SecurityLogData` interface + `logLoginAttempt()` + Brevo email |
 | `src/lib/auth/cloudflare-access.ts` | JWT verifier (`verifyZeroTrustJwt`) + header extractor (`extractCFHeaders`) |
 | `src/lib/auth/stages/bootstrap.ts` + `src/lib/auth/login-event.ts` | Inline `LOGIN_SUCCESS` / `LOGIN_FAILED` logging on CF ZT session bootstrap |
-| `src/lib/login-alerts/throttle.ts` | Whether an inline failure is emailed: once per account and reason per 15-minute window (§7) |
-| `src/lib/login-alerts/policy.ts` + `src/lib/login-alerts/store.ts` | A person's sign-in alert settings and whether a successful sign-in is emailed (§7) |
+| `src/lib/login-alerts/dispatch.ts` | One login event's row and alert email, in order: decide, write the row with its outcome, send, record the result (§7) |
+| `src/lib/login-alerts/decide.ts` | Whether a sign-in is emailed and the line that says why: repeats and moves, areas, pause, the mode, failure kinds and the repeat window (pure, §7) |
+| `src/lib/login-alerts/outcomes.ts` | The `alert` column's values and their labels, shared by the server and both log views |
+| `src/lib/login-alerts/throttle.ts` | Earlier failures of the same account and reason, in the policy's window and the past hour (§7) |
+| `src/lib/login-alerts/policy.ts` + `src/lib/login-alerts/store.ts` | The alert policy and a person's sign-in alert settings: shapes, parsing, storage, and the account's recent sign-ins the decision compares with (§7) |
 | `src/lib/login-alerts/handlers.ts` + `src/pages/api/sessions/sign-in-alerts.ts` | `GET`/`POST /api/sessions/sign-in-alerts`: pause, resume, trust or forget an area (self-service, `#alerts`) |
 | `src/components/admin/users/sessions/SignInAlertsCard.tsx` | "Your sign-in alerts" card on Security → Sessions, anchored `#alerts` |
 | `src/workers/scheduled-log-sync.ts` | 5-min cron: polls CF Audit Log API, writes LOGIN_BLOCKED, D1 watermark, ray-id dedupe, alert cap (wired in `cf-entry.ts`) |
@@ -591,6 +602,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-03 | §2.2 `alert` and `cf_jwt_tail`, §6.3, §7 and §10 against `src/lib/login-alerts/` (`decide.ts`, `dispatch.ts`, `outcomes.ts`, `store.ts`, `throttle.ts`), `src/lib/auth/security-logging.ts`, `src/workers/scheduled-log-sync.ts` and the two log views, after sign-in alerts v2 step 1 and migration `0064`; pinned by `test/login-alert-decide.test.ts`, `test/login-alerts.test.ts` and `test/migrations-replay.test.ts`. Live D1, all rows to 2026-10-03: 370 successful rows with an assertion tail held 282 distinct sign-ins (88 duplicate emails); 90 days of User-Agents were Chrome on Windows and Chrome on Android only. `0064` read back from production `sqlite_master` and `d1_migrations` after it was applied | Whether Brevo delivered each alert; the policy panel, which is step 2; the rest of this document, last re-read 2026-09-20 |
 | 2026-10-03 | §7 against `src/lib/auth/security-logging.ts`, `src/lib/auth/login-event.ts`, `src/lib/auth/stages/bootstrap.ts` and `src/lib/login-alerts/` after the inline failure throttle, the local-time and subject-location changes and the per-account alert settings; pinned by `test/login-alerts.test.ts` and `test/login-alert-settings.test.ts`. Live D1, 30 days to 2026-10-03: 64 `LOGIN_SUCCESS` and 13 `LOGIN_FAILED` rows, the 13 all `revocation_block_active` for one account on one day, spread over 5 of the 15-minute windows the throttle uses | Whether Brevo delivered each alert; the rest of this document, last re-read 2026-09-20 |
 | 2026-09-20 | The immutability claim, which was wrong in three places and is now stated once, in §8, with the write paths tabulated (`src/pages/api/audit/delete-targeted.ts`, `src/lib/dal/LoginLogRepository.ts`, `src/lib/retention-tables.ts`). The six `LOGIN_FAILED` reasons and the unlogged seventh refusal, re-read from `src/lib/auth/stages/bootstrap.ts`; the bootstrap order (the revocation-flag check follows the directory lookup, not precedes it); IdP attribution (`claims.idp?.type` only, absent in production); `user_agent` and the cron-path email as client-supplied; the watermark advance rules in `src/workers/scheduled-log-sync.ts`; the alert email's real contents and recipient fallback in `src/lib/auth/security-logging.ts`; the `session-status` gate; the USER-MANAGEMENT cross-reference; raw `ip_address` storage. Row counts removed rather than restated | Live row counts (the coordinator's 2026-09-19 reading was 350 rows, 0 with a bot score, 0 with a non-null `cf_identity_provider`); CF Access IdP configuration; whether a CF Access JWT carries `idp` for any provider on this plan; whether a retention purge has ever been run against this table |
 | 2026-09-14 | Cron cadence and dispatch (`wrangler.toml`, `cf-entry.ts`); the CF Access audit API call, pagination, D1 watermark, ray-id dedupe and alert cap in `scheduled-log-sync.ts`; where `LOGIN_SUCCESS` / `LOGIN_FAILED` are emitted (`bootstrap.ts`, `login-event.ts`); `admin_login_logs` columns in `migrations/0000_baseline.sql` against §2.2; `SecurityLogData` against §4; the login-logs API params; the Activity Center tab order; the shipped CSS classes; Brevo in `security-logging.ts`; PLAC `/dashboard/logs#security`; every file-map path. Twenty-one corrections above. | Live row counts; Supabase migration execution dates; CF Access IdP configuration; whether retention deletes have ever run |

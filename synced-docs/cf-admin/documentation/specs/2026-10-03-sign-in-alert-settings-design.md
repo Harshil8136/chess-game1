@@ -20,6 +20,12 @@ tags: [security, login, alerts, email, permissions, design]
 > email to the security inbox so it cannot be done unnoticed. Every sign-in is still recorded
 > exactly as before.
 
+> **Extended the same day by [sign-in alerts v2](2026-10-03-sign-in-alerts-v2-design.md):** one
+> email per sign-in instead of one per portal session, urgent alerts for a sign-in that moves,
+> an alert policy, failure kinds, and a record of each email. The pause, the trusted areas, the
+> `#alerts` permission and the API below are unchanged; §3 is how version 1 decided, and v2 §3
+> is how a sign-in is decided now.
+
 ## 1. Why (2026-10-03)
 
 Every sign-in, successful or not, was logged to `admin_login_logs` and emailed to the security
@@ -57,9 +63,13 @@ Two findings shaped the design:
 | D8 | Vendor support may turn down its own alerts in this deployment | Here the vendor and the operator are the same people, and D6 keeps the customer's inbox informed. For other customers, vendor support's settings could be made changeable only by their owner (`MAINTENANCE.md`) |
 | D9 | A **known-browser** requirement for trusted areas is deferred | It closes the VPN gap (§7) at the cost of one email per new or private-window browser. Recorded in `MAINTENANCE.md` |
 
-## 3. How a sign-in is decided
+## 3. How a sign-in was decided in version 1
 
-| Sign-in | Emailed? | Code |
+Replaced by [v2 §3](2026-10-03-sign-in-alerts-v2-design.md),
+where the code now lives in `src/lib/login-alerts/decide.ts` and `dispatch.ts`; the function
+names below are version 1's. The outcomes for these cases are the same.
+
+| Sign-in | Emailed? | Code (version 1) |
 |---|---|---|
 | Failed or blocked (inline) | Yes, at most once per account and reason per 15-minute window | `throttle.ts` `failureAlertGate` |
 | Blocked at Cloudflare Access (cron) | Yes, at most 5 per batch (unchanged) | `src/workers/scheduled-log-sync.ts` |

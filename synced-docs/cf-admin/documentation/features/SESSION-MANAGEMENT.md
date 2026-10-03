@@ -7,7 +7,7 @@ last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
 related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionCommandCenter.tsx, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
-related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md]
+related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md, ../specs/2026-10-03-sign-in-alerts-v2-design.md]
 tags: [sessions, security, plac, rbac, kv, forensics]
 ---
 
@@ -135,6 +135,12 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   *no signal* (never a false "safe").
 - **History filters** — outcome (success/failed) + method + search over the
   fetched window; **CSV/JSON export**.
+- **Alert email per row** (2026-10-03) — under each row's outcome badge, ✉ when the
+  sign-in was emailed and 🔕 with the reason when it was not (the same sign-in as
+  before, paused, trusted area, alert policy, usual place and device, a repeat of a
+  recent failure); the log drawer shows it as **Alert Email**. Read from
+  `admin_login_logs.alert` (migration `0064`); rows from before read "Not recorded".
+  Labels: `src/lib/login-alerts/outcomes.ts`.
 - **Bulk flush** (owner/dev) — Purge Orphaned (stale/dev/corrupt) or Flush All
   (type-to-confirm; keeps the operator's own session). See `flush-sessions.ts`.
 - **Lock Out User** — a `PATCH /api/users/manage` with `is_active: false`, gated
@@ -173,6 +179,9 @@ the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
 - Failed sign-ins are always emailed (throttled to one per 15 minutes per
   reason). Pausing or adding an area sends one email to the security inbox and
   writes an audit row.
+- Whatever the card says, a sign-in is emailed once, not once per tab or portal
+  session it opens, and a sign-in that turns up in another country or on another
+  device is emailed as urgent ([sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md)).
 
 The card makes one `GET` when the page loads and one `POST` per click: D1 only,
 no KV. Decisions, storage and residual risk:
@@ -209,5 +218,6 @@ Blocks** tab to confirm the tile updates from its deferred-fetch zero.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-03 | claude | The alert-email line in the history rows and the drawer, and the two lines added to "Your sign-in alerts", against `AuthHistoryPanel.tsx`, `AuthLogDetailDrawer.tsx`, `src/lib/login-alerts/outcomes.ts`, `src/pages/api/audit/login-logs.ts` and `test/login-alerts.test.ts`, with migration `0064` read back from production. Not rendered in a browser; the rest of the page was not re-read. |
 | 2026-10-03 | claude | The `#alerts` fragment, its row in the fragment table, the card and its section, against `src/pages/dashboard/sessions/index.astro`, `src/components/admin/users/sessions/SignInAlertsCard.tsx`, `src/lib/login-alerts/handlers.ts` and `test/login-alert-settings.test.ts`. The rest of the page was not re-read. |
 | 2026-09-19 | claude | Re-verified against code. Corrections: `API_PAGE_MAPPING` lives in `src/lib/auth/routes.ts`, not `src/middleware.ts`; IP masking is client-side only; the Edge Blocks tile shows a green zero until its tab is opened; `#export` has no route and `#flush` is inert; seven components and the Lock Out action were missing. |
