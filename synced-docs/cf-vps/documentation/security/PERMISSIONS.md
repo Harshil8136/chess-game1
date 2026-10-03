@@ -2,7 +2,7 @@
 title: "cf-vps Permissions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, src/access/policy.ts, src/access/save.ts, src/agent/proxy.ts, src/ui/pages.ts]
@@ -91,6 +91,24 @@ rather than fall back. The Worker caches the row for 30 seconds; a save reads fr
 People are edited on the console's Access page (`access.view` to read, `access.manage` to
 save) and from cf-admin's Access Center on a person's Users page, which calls the same API for
 one person. Each save returns an `x-vps-audit` line that becomes a cf-admin activity-log row.
+
+### One capability's default role
+
+cf-admin's page registry moves one capability's default with `POST /api/access/role` and the
+body `{ rev, capability, minRole }`, which needs `access.manage`. On the portal's role ladder
+(vendor support, owner, admin, manager, staff, viewer), `minRole` and every role above it hold
+the capability and every role below it does not. Nothing else changes:
+
+| Part | After the save |
+|---|---|
+| Every other capability | Each role keeps what it resolves to now: its stored list, or the code default for a capability the stored policy predates |
+| Personal grants | Carried over unchanged, including one that names the same capability; a grant that has already run out is dropped, as on the person route |
+| Floor capabilities | Refused with 400: a floor follows the Owner and Vendor support roles and cannot be moved |
+| Unknown capability or role, missing or non-integer `rev` | 400 |
+
+The save runs through the same validation, lock-out guard and compare-and-swap as the Access
+page (a stale `rev` is 409 `conflict`), and its audit line ends in `via=role`. The `changes`
+list compares what each role held before with the new lists, so only real changes are named.
 
 ## Delegation
 

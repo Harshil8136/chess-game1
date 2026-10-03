@@ -2,7 +2,7 @@
 title: "Agent Route Table"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, contract/metrics-history.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
@@ -128,6 +128,8 @@ These are under the same `/dashboard/vps/app/api/` prefix and never reach the ag
 | `access` | POST | `access.manage` | Save the policy (compare-and-swap on its revision; up to 64 KiB) |
 | `access/person` | GET | `access.view` | One person's role defaults, grant and effective capabilities |
 | `access/person` | POST | `access.manage` | Replace or remove one person's grant (up to 16 KiB) |
+| `access/role` | POST | `access.manage` | Move one capability's default to a minimum role, keeping every other default and every personal grant (up to 16 KiB; audit line ends in `via=role`) |
+| `access/catalog` | GET | none (a person, not a system job) | Every capability with its class and floor flag, each role's level and defaults, and what the caller holds and may delegate |
 
 ## Error shapes
 
