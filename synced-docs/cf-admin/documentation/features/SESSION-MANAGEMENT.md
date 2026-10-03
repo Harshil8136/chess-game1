@@ -6,7 +6,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
-related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionCommandCenter.tsx, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionCommandCenter.tsx, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md, ../specs/2026-10-03-sign-in-alerts-v2-design.md]
 tags: [sessions, security, plac, rbac, kv, forensics]
 ---
@@ -35,7 +35,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 - **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin` — the *stored* value; canonical **Admin**, level 2),
   seeded by `migrations/0002_promote_sessions_page.sql`, with action fragments
   `#revoke` / `#unblock` / `#flush` (owner) / `#export` / `#alerts` (owner, migration
-  `0063`). SSR access is enforced
+  `0063`) / `#alert-policy` (owner, migration `0065`). SSR access is enforced
   by the middleware `decideAccess` gate; per-user overrides are editable in the
   Access Policy Manager (grouped under "Security"). The model itself is owned by
   [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
@@ -54,6 +54,7 @@ gap **D-5**, closed 2026-09-16.
 | `#flush` | yes, but see below | `POST /api/sessions/flush-sessions` |
 | `#export` | **no** | No server route exists — export is built client-side from already-fetched data |
 | `#alerts` | yes, fail closed | `GET`/`POST /api/sessions/sign-in-alerts` and the page's card (`denySignInAlerts`, an explicit grant required); also re-checked at every sign-in |
+| `#alert-policy` | yes, fail closed | `GET`/`POST /api/sessions/alert-policy` and the page's policy panel (`denyAlertPolicy`, an explicit grant required) |
 
 Two honest caveats:
 
@@ -77,6 +78,7 @@ Two honest caveats:
 
 - `SessionCommandCenter.tsx` — shell: KPI ribbon, tabs, filters, export, auto-refresh.
 - `SignInAlertsCard.tsx` — "Your sign-in alerts", above the shell, for holders of `#alerts` only (2026-10-03).
+- `AlertPolicyPanel.tsx` — "Sign-in alert policy", below that card, for holders of `#alert-policy` only (2026-10-03).
 - `ActiveSessionsPanel.tsx`, `AuthHistoryPanel.tsx`, `EdgeBlocksPanel.tsx` — the three tab bodies.
 - `SessionDetailDrawer.tsx` — per-session detail; desktop side-panel, **mobile
   bottom-sheet** (`src/components/ui/BottomSheet.tsx`). Full IP rendered here only.
@@ -170,22 +172,50 @@ for the signed-in person's **own** sign-in alert emails. Rendered only for holde
 of `/dashboard/sessions#alerts` (owner and vendor support by default; grantable on
 the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
 
+- **Your successful sign-ins emailed:** as the alert policy says for your role,
+  every sign-in, or only unusual ones (a new place or a new device in 90 days).
+  Never is not offered here; only an alert-policy holder can set it for someone
+  else, and the card then shows who did.
 - **Pause** for 1 hour, 8 hours, 1 day, 3 days or 7 days. It ends by itself, and it
-  keeps quiet only sign-ins from the country it was set in. **Resume alerts now**
-  ends it early.
+  keeps quiet only sign-ins from the country it was set in, unless **Pause for every
+  country** is ticked. **Resume alerts now** ends it early.
 - **Trusted areas**, up to 3: **Trust this area** saves where Cloudflare places
-  this connection, with a 25, 50 or 100 km radius. Sign-ins inside an area are
-  logged but not emailed. **Remove** forgets one.
-- Failed sign-ins are always emailed (throttled to one per 15 minutes per
-  reason). Pausing or adding an area sends one email to the security inbox and
-  writes an audit row.
-- Whatever the card says, a sign-in is emailed once, not once per tab or portal
-  session it opens, and a sign-in that turns up in another country or on another
-  device is emailed as urgent ([sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md)).
+  this connection; **Trust** next to a place you signed in from in the last 90 days
+  saves that one (the browser sends the sign-in's reference, never coordinates).
+  Each area has a 25, 50 or 100 km radius, can be renamed or resized, and
+  **Remove** forgets it. Sign-ins inside an area are logged but not emailed.
+- **Also email me about my own sign-ins** sends you a copy of each alert.
+- Turning alerts down (a pause, a new or wider area, a lower mode) sends one email
+  to the alert recipients and writes an audit row. Settings you change are your
+  own again, even if an alert-policy holder set them before.
 
-The card makes one `GET` when the page loads and one `POST` per click: D1 only,
-no KV. Decisions, storage and residual risk:
-[`../specs/2026-10-03-sign-in-alert-settings-design.md`](../specs/2026-10-03-sign-in-alert-settings-design.md);
+Whatever the card says, a sign-in is emailed once, not once per tab or portal
+session it opens, and a sign-in that turns up in another country or on another
+device is emailed as urgent ([sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md)).
+
+## Sign-in alert policy (2026-10-03)
+
+A panel below the card, anchored `#alert-policy`, for holders of
+`/dashboard/sessions#alert-policy` (owner and vendor support by default);
+`GET`/`POST /api/sessions/alert-policy` checks the same key.
+
+- **Alerts go to:** up to 5 addresses; none means the built-in inbox. **Send a test
+  email** sends one to the current list.
+- **Successful sign-ins emailed, by role:** every sign-in, only unusual ones, or
+  none. Every role starts at every sign-in.
+- **Failed sign-ins emailed:** a switch for each of the five kinds, all on to
+  start, and the repeat window for the same failure (5, 15 or 60 minutes).
+- **Save policy** saves the lot. A save that turns alerts down, or changes the
+  recipients, emails the recipients before and after the change.
+- **People:** everyone active, with what their successful sign-ins send. A holder
+  can set another person to follow the policy, every, unusual or never, or clear
+  their settings; lowering someone emails the recipients. A holder's own row points
+  to "Your sign-in alerts".
+
+Both pieces make one `GET` when the page loads and one `POST` per change: D1, plus
+one Supabase read for the people list. No KV. Decisions, storage and residual
+risk: [`../specs/2026-10-03-sign-in-alerts-v2-design.md`](../specs/2026-10-03-sign-in-alerts-v2-design.md)
+and [`../specs/2026-10-03-sign-in-alert-settings-design.md`](../specs/2026-10-03-sign-in-alert-settings-design.md);
 what the email says and when it is sent:
 [`../security/login-forensics.md`](../security/login-forensics.md) §7.
 
@@ -218,6 +248,7 @@ Blocks** tab to confirm the tile updates from its deferred-fetch zero.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-03 | claude | The `#alert-policy` fragment, both card sections and the components list, against `src/pages/dashboard/sessions/index.astro`, `SignInAlertsCard.tsx`, `AlertPolicyPanel.tsx`, `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts`, with migration `0065` read back from production. Not rendered in a browser. |
 | 2026-10-03 | claude | The alert-email line in the history rows and the drawer, and the two lines added to "Your sign-in alerts", against `AuthHistoryPanel.tsx`, `AuthLogDetailDrawer.tsx`, `src/lib/login-alerts/outcomes.ts`, `src/pages/api/audit/login-logs.ts` and `test/login-alerts.test.ts`, with migration `0064` read back from production. Not rendered in a browser; the rest of the page was not re-read. |
 | 2026-10-03 | claude | The `#alerts` fragment, its row in the fragment table, the card and its section, against `src/pages/dashboard/sessions/index.astro`, `src/components/admin/users/sessions/SignInAlertsCard.tsx`, `src/lib/login-alerts/handlers.ts` and `test/login-alert-settings.test.ts`. The rest of the page was not re-read. |
 | 2026-09-19 | claude | Re-verified against code. Corrections: `API_PAGE_MAPPING` lives in `src/lib/auth/routes.ts`, not `src/middleware.ts`; IP masking is client-side only; the Edge Blocks tile shows a green zero until its tab is opened; `#export` has no route and `#flush` is inert; seven components and the Lock Out action were missing. |

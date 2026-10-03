@@ -5,7 +5,7 @@ audience: [owner, technical, ai, operator]
 last_verified: 2026-10-03
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/login-alerts/decide.ts, src/lib/login-alerts/dispatch.ts, src/lib/login-alerts/outcomes.ts, src/lib/login-alerts/policy.ts, src/lib/login-alerts/store.ts, src/lib/login-alerts/throttle.ts, src/lib/auth/security-logging.ts, src/lib/auth/login-event.ts, src/lib/auth/stages/bootstrap.ts, src/lib/dal/LoginLogRepository.ts, src/workers/scheduled-log-sync.ts, src/components/admin/users/sessions/AuthHistoryPanel.tsx, src/components/admin/users/sessions/AuthLogDetailDrawer.tsx, src/components/admin/logs/LoginForensicsTab.tsx, migrations/0064_login_alert_outcome.sql]
+related_code: [src/lib/login-alerts/decide.ts, src/lib/login-alerts/dispatch.ts, src/lib/login-alerts/handlers.ts, src/lib/login-alerts/policy-handlers.ts, src/pages/api/sessions/alert-policy.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, migrations/0065_alert_policy_permission.sql, src/lib/login-alerts/outcomes.ts, src/lib/login-alerts/policy.ts, src/lib/login-alerts/store.ts, src/lib/login-alerts/throttle.ts, src/lib/auth/security-logging.ts, src/lib/auth/login-event.ts, src/lib/auth/stages/bootstrap.ts, src/lib/dal/LoginLogRepository.ts, src/workers/scheduled-log-sync.ts, src/components/admin/users/sessions/AuthHistoryPanel.tsx, src/components/admin/users/sessions/AuthLogDetailDrawer.tsx, src/components/admin/logs/LoginForensicsTab.tsx, migrations/0064_login_alert_outcome.sql]
 related_docs: [2026-10-03-sign-in-alert-settings-design.md, ../security/login-forensics.md, ../security/SECURITY.md, ../features/SESSION-MANAGEMENT.md, ../reference/schema-change-ledger.md, ../MAINTENANCE.md]
 tags: [security, login, alerts, email, design]
 ---
@@ -18,8 +18,8 @@ tags: [security, login, alerts, email, design]
 > the settings say. Every sign-in in the history now shows whether it was emailed and, if not,
 > why. Behind that sits an alert policy: who receives alerts, whether each role's successful
 > sign-ins are emailed every time, only when unusual, or never, and which kinds of failed
-> sign-in are emailed. Until the policy screen ships (step 2) the policy is the default, which
-> emails exactly what was emailed before, minus the duplicates.
+> sign-in are emailed. The policy starts at the default, which emails exactly what was emailed
+> before, minus the duplicates, and the owner changes it on the Sessions page.
 
 This extends [the first version](2026-10-03-sign-in-alert-settings-design.md) (pause, trusted
 areas, the failure throttle and the `#alerts` permission), which still describes those parts.
@@ -156,6 +156,46 @@ millisecond; the 10 ms CPU limit is not in play. No KV.
 
 | Step | What | Status |
 |---|---|---|
-| 1 | The engine: one email per sign-in, urgent moves, the policy read (default only), failure kinds, the `alert` column and its display, the device-label fix; migration `0064` applied to production before the push | Pushed to `main` 2026-10-03 |
-| 2 | The alert policy panel on Sessions behind `#alert-policy` (a new key, migration `0065`), the personal card's new options, alert emails for every change that reduces alerts, `RoPA.md` for recipients and the holder copy | Next |
-| 3 | Delivery through the email queue, with the direct Brevo call as the fallback | After step 2 |
+| 1 | The engine: one email per sign-in, urgent moves, the policy read (default only), failure kinds, the `alert` column and its display, the device-label fix; migration `0064` applied to production before the push | Pushed to `main` 2026-10-03 (`30a3efe`) |
+| 2 | The alert policy panel on Sessions behind `#alert-policy` (a new key, migration `0065`, applied first), the personal card's new options, alert emails for every change that reduces alerts or changes the recipients, `RoPA.md` for the recipients and the holder copy (§8) | Pushed to `main` 2026-10-03 |
+| 3 | Delivery through the email queue, with the direct Brevo call as the fallback | Next |
+
+## 8. Step 2: the two screens and their APIs
+
+Both sit on Security → Sessions ([`SESSION-MANAGEMENT.md`](../features/SESSION-MANAGEMENT.md)).
+
+**"Your sign-in alerts"** (`#alerts`, `GET`/`POST /api/sessions/sign-in-alerts`,
+`src/lib/login-alerts/handlers.ts`). New actions beside version 1's pause, resume, trust and
+forget:
+
+| Body | Effect | Emails the recipients? |
+|---|---|---|
+| `{ action: 'set-mode', mode }`, mode `policy`, `every` or `unusual` | The person's own mode; `never` is refused | When the effective mode goes down |
+| `{ action: 'pause', hours, everywhere: true }` | A pause for every country, also when Cloudflare gives no country | Yes |
+| `{ action: 'trust-place', ref, radiusKm }` | Trust a place the account signed in from: `ref` is one of its own successful `admin_login_logs` rows, offered by `GET` as `places` (grouped within 10 km, up to 5, newest first, those already trusted left out) | Yes |
+| `{ action: 'edit-area', id, radiusKm?, label? }` | Rename or resize an area | When the radius grows |
+| `{ action: 'copy-to-me', on }` | A copy of each alert to the account holder (not when they are already a recipient) | No |
+
+A write through this API removes `managedBy`: the settings are the person's own again, and
+apply while they hold `#alerts`. The answer gains `mode`, `roleMode`, `effectiveMode`,
+`pausedEverywhere`, `copyToMe`, `managedBy` and `places`; still no coordinates.
+
+**"Sign-in alert policy"** (`#alert-policy`, migration `0065`, `GET`/`POST
+/api/sessions/alert-policy`, `src/lib/login-alerts/policy-handlers.ts`):
+
+| Body | Effect | Email |
+|---|---|---|
+| `{ action: 'save', policy }` | Replace the policy (recipients trimmed, lower-cased, without repeats; at most 5) | When it turns alerts down or changes the recipients: to the recipients before and after, with each change listed (`describePolicyChange`) |
+| `{ action: 'test' }` | A test email to the recipients, audited as `notify` | The test itself |
+| `{ action: 'set-person', userId, mode }` | Another person's mode, `never` included; stores `managedBy` (the holder's email) so it applies whether or not the person holds `#alerts` | When their effective mode goes down |
+| `{ action: 'reset-person', userId }` | Delete another person's settings | No |
+
+`GET` answers the policy, the built-in recipient, and `people`: every active person from the
+Supabase directory (`listActivePeople`, which `listActiveRoles` now reads through, so the
+number of Supabase call sites is unchanged) with their role, mode, effective mode, pause,
+areas and `managedBy`. A holder's own account is refused by `set-person` and `reset-person`:
+it is managed from the card, where never is not offered.
+
+Every change writes a `security` audit row. The emails reuse `sendAlertSettingsEmail`, which
+gains a "Changed by" row and a title for a recipients-only change; the test is
+`sendAlertTestEmail`.

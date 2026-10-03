@@ -238,7 +238,13 @@ requires an explicit grant through `placRequireGrant`. It is also the one key re
 **sign-in**: bootstrap evaluates it against the map it has just computed and passes the
 answer to the login event, so a person's sign-in alert settings
 ([spec](../specs/2026-10-03-sign-in-alert-settings-design.md)) apply only while they
-hold it.
+hold it, unless an alert-policy holder set them for that person.
+*Added 2026-10-03:* `#alert-policy` (migration `0065`, "Alert policy", default `owner`),
+fail-closed the same way through `denyAlertPolicy`: the sign-in alert policy (recipients,
+what each role's successful sign-ins send, which failed sign-ins are emailed, the repeat
+window) and other people's alert mode, never included
+([v2 spec](../specs/2026-10-03-sign-in-alerts-v2-design.md)). It is checked only by the
+Sessions page and `/api/sessions/alert-policy`, not at sign-in.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -887,6 +893,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 |------------|-----------|-------------------------------|------------------------|
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
 | 2026-09-02 | claude | chunk 10: §7 rewritten from the stage modules after the decomposition (`wc -l src/lib/auth/stages/*.ts`, `git show 794bc34`); §17 from the suites that ran (`npx vitest run`: 279 cases across the 11 auth-path files, 717 across the repository). §13.1's KV-read figures were not re-verified here — chunk 10b owns that correction | §7 and §17 match the code at `794bc34` |
+| 2026-10-03 | claude | **Scope-limited to the `#alert-policy` key.** Read `surface-guards.ts` (`denyAlertPolicy`), `src/pages/dashboard/sessions/index.astro`, `src/lib/login-alerts/policy-handlers.ts` and `migrations/0065_alert_policy_permission.sql`, applied to production and read back; the row pinned by `test/migrations-replay.test.ts` and the fail-closed gate by `test/login-alert-policy.test.ts` | One addition to §5. Nothing else re-derived |
 | 2026-10-03 | claude | **Scope-limited to the `#alerts` key.** Read `surface-guards.ts` (`denySignInAlerts`), `stages/bootstrap.ts` and `migrations/0063_sign_in_alerts_permission.sql`; the row pinned by `test/migrations-replay.test.ts` and the fail-closed gate by `test/login-alert-settings.test.ts` | One addition to §5. Nothing else re-derived; the 2026-09-16 registry counts in §5 are dated and were not re-taken |
 | 2026-09-20 | claude | **Scope-limited to the fragment/action model.** Read `guard.ts`, `decide-access.ts`, `surface-guards.ts` and `api/users/access.ts`; traced Gate D's arithmetic for a `dev` baseline; took live D1 counts for `admin_pages` (97 rows, 86 active, 51 fragments) and `admin_page_overrides` (4 rows, none on a cron key) | Three additions: an action key now fails closed where a page key does not (§5), a `dev`-baseline row cannot be delegated by the owner at all (§10, new gap row in §16), and two new test rows in §17. **Not re-derived:** §13's resource accounting, §11's revocation timings, §15.1's control ids |
 | 2026-09-19 | claude | Full re-derivation against `06f8ab7`. Read `decide-access.ts`, `guard.ts`, `routes.ts`, `pipeline.ts` and every module in `stages/`, plus `plac.ts`, `session.ts`, `rbac.ts`, `audit-helpers.ts`, `api/users/access.ts`, `api/users/force-kick.ts`, `api/sessions/active-sessions.ts` and `api/audit/logs.ts`; counted `API_PAGE_MAPPING` entries and `it(` cases; took live D1 counts for `admin_page_overrides`, `admin_audit_log` and `admin_login_logs` from the 2026-09-18 fact sheet | 17 corrections applied. Load-bearing: the owner/vendor bypass is now step 0 of §1 and §6.2; prefix matching inherits grants, not only denies; the warm path is 4 KV reads, reconciled across §1/§3/§7/§13/§15; the `/api/auth/` public prefix and the "39 mappings" count are gone; page-GET denials are not audited; Gate D caps at the actor's clearance; §13.3 arithmetic redone (~26 writes → ~38 users); §15/§16's "grant ≤ 1 h" and §17's "5xx revokes like a missing row" retired; D6/D7/D8 added to §16. **Not re-derived:** §13.2's Sentry figures (2026-08-23) and §15.1's ISO control ids |

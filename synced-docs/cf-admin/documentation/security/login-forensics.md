@@ -472,9 +472,11 @@ the email says the account is paused; unreadable or malformed settings read as n
 alerts down (a pause, a new area) emails the security inbox once (`sendAlertSettingsEmail`,
 subject `🔕 SIGN-IN ALERTS PAUSED` or `🔕 TRUSTED AREA ADDED`) and writes a `security` audit
 row. The settings are one `admin_portal_settings` row per person (scope `user`, key
-`login_alerts`), deleted with the account. The alert policy is one global row
-(`login_alerts_policy`); nothing writes it until its panel ships (v2 step 2), so the default,
-which switches nothing off, applies. Design, decisions and residual risk:
+`login_alerts`), deleted with the account; a person can also choose every or unusual for
+themselves, pause every country, trust a place from their recent sign-ins, and get a copy
+of each alert. The alert policy is one global row (`login_alerts_policy`), changed on the
+Sessions page by holders of `/dashboard/sessions#alert-policy`; until someone saves it, the
+default, which switches nothing off, applies. Design, decisions and residual risk:
 [`../specs/2026-10-03-sign-in-alert-settings-design.md`](../specs/2026-10-03-sign-in-alert-settings-design.md)
 and [`../specs/2026-10-03-sign-in-alerts-v2-design.md`](../specs/2026-10-03-sign-in-alerts-v2-design.md).
 
@@ -602,6 +604,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-03 | §7's last paragraph against `src/lib/login-alerts/handlers.ts` and `policy-handlers.ts` after v2 step 2 (the card's new options and the alert policy panel), pinned by `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts` | The rest of this document |
 | 2026-10-03 | §2.2 `alert` and `cf_jwt_tail`, §6.3, §7 and §10 against `src/lib/login-alerts/` (`decide.ts`, `dispatch.ts`, `outcomes.ts`, `store.ts`, `throttle.ts`), `src/lib/auth/security-logging.ts`, `src/workers/scheduled-log-sync.ts` and the two log views, after sign-in alerts v2 step 1 and migration `0064`; pinned by `test/login-alert-decide.test.ts`, `test/login-alerts.test.ts` and `test/migrations-replay.test.ts`. Live D1, all rows to 2026-10-03: 370 successful rows with an assertion tail held 282 distinct sign-ins (88 duplicate emails); 90 days of User-Agents were Chrome on Windows and Chrome on Android only. `0064` read back from production `sqlite_master` and `d1_migrations` after it was applied | Whether Brevo delivered each alert; the policy panel, which is step 2; the rest of this document, last re-read 2026-09-20 |
 | 2026-10-03 | §7 against `src/lib/auth/security-logging.ts`, `src/lib/auth/login-event.ts`, `src/lib/auth/stages/bootstrap.ts` and `src/lib/login-alerts/` after the inline failure throttle, the local-time and subject-location changes and the per-account alert settings; pinned by `test/login-alerts.test.ts` and `test/login-alert-settings.test.ts`. Live D1, 30 days to 2026-10-03: 64 `LOGIN_SUCCESS` and 13 `LOGIN_FAILED` rows, the 13 all `revocation_block_active` for one account on one day, spread over 5 of the 15-minute windows the throttle uses | Whether Brevo delivered each alert; the rest of this document, last re-read 2026-09-20 |
 | 2026-09-20 | The immutability claim, which was wrong in three places and is now stated once, in §8, with the write paths tabulated (`src/pages/api/audit/delete-targeted.ts`, `src/lib/dal/LoginLogRepository.ts`, `src/lib/retention-tables.ts`). The six `LOGIN_FAILED` reasons and the unlogged seventh refusal, re-read from `src/lib/auth/stages/bootstrap.ts`; the bootstrap order (the revocation-flag check follows the directory lookup, not precedes it); IdP attribution (`claims.idp?.type` only, absent in production); `user_agent` and the cron-path email as client-supplied; the watermark advance rules in `src/workers/scheduled-log-sync.ts`; the alert email's real contents and recipient fallback in `src/lib/auth/security-logging.ts`; the `session-status` gate; the USER-MANAGEMENT cross-reference; raw `ip_address` storage. Row counts removed rather than restated | Live row counts (the coordinator's 2026-09-19 reading was 350 rows, 0 with a bot score, 0 with a non-null `cf_identity_provider`); CF Access IdP configuration; whether a CF Access JWT carries `idp` for any provider on this plan; whether a retention purge has ever been run against this table |
