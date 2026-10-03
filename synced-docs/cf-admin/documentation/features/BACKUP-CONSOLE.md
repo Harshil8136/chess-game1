@@ -83,6 +83,17 @@ person to sign out and back in — signing out also ends the Access session, so
 the next sign-in is a real one. Sessions created before 2026-09-23 fall back to
 their creation time until they expire (24 h).
 
+**Per-person access from the Users page (2026-10-03).** A person's backup
+capabilities are also shown and changed in the Access Center on their Access
+page ([ACCESS-CENTER](ACCESS-CENTER.md)). Those calls do not go through this
+gateway: cf-admin's server calls cf-backup over the binding with the actor and an
+`x-backup-target` header naming the person, with the role from this portal's
+database. The gateway never forwards that header from a browser. An owner or
+vendor can change anything but a floor; an admin with cf-backup's
+`access.delegate` can hand out what it holds to people below it. Each save writes
+a `backup_config_change` activity-log row marked as made through the Access
+Center.
+
 ## 4. Audit
 
 cf-backup answers every change with a one-line `x-backup-audit` summary; the

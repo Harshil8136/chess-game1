@@ -39,7 +39,7 @@ The design behind it, and why, is
 | Replaced | The old "Server console" section of the same page (removed 2026-10-02) |
 | Unchanged | `AccessPolicyManager`, the page editor below it, which still makes every page change through `POST /api/users/access` |
 
-It shows one section per **system**. Stage 1 has two:
+It shows one section per **system**, three since stage 2 (2026-10-03):
 
 1. **Portal pages and actions** (`pages`): read only here, grouped (General, Bookings and
    inquiries, Content, Emails, Chatbot, People, sessions and logs, Privacy and retention,
@@ -47,8 +47,12 @@ It shows one section per **system**. Stage 1 has two:
    `/dashboard/emails#compose` sit under Emails.
 2. **Server console** (`vps`): every cf-vps capability, grouped Look / Operate / Administer,
    and an editor for this person's personal grant.
+3. **Backup console** (`backup`): every cf-backup capability, grouped Look / Operate /
+   Delete and download data / Backup keys / Administer, with the same editor. It is `hidden`
+   (`need: console`) for a viewer who cannot open `/dashboard/backup`.
 
-The backup console joins as a third system in stage 2, with the same shapes.
+Both consoles serve the same contract, so one editor (`ConsoleEditor`) serves every system
+whose `editVia` is `access-center`; a console added later appears the same way.
 
 ## 2. The data the panel receives
 
@@ -193,7 +197,7 @@ on them. The Tailwind classes in the component are placeholders and can all chan
 | `data-ac-panel` | the whole panel (`section`) | |
 | `data-ac-state` | the panel | `loading`, `error`, `ready` |
 | `data-ac-header` | the panel heading block | |
-| `data-ac-system` | each system (`section`) | `pages`, `vps` |
+| `data-ac-system` | each system (`section`) | `pages`, `vps`, `backup` |
 | `data-ac-status` | each system | `ok`, `unavailable`, `hidden` |
 | `data-ac-need` | each system, when hidden by a named rule | the rule, e.g. `console`, `outranked` |
 | `data-ac-group` | each group (`details` for pages, `div` for the console) | the group id, e.g. `emails`, `read` |
@@ -215,12 +219,12 @@ on them. The Tailwind classes in the component are placeholders and can all chan
 | `data-ac-grant-fields` | the end date, reason and buttons row | |
 | `data-ac-note` | explanatory notes | `page-editor`, `grant-expired`, `read-only`, `granted-by` |
 | `data-ac-message` | status and refusal messages | `loading`, `load-error`, `unavailable`, `hidden`, `conflict`, `forbidden`, `bad-request`, `error` |
-| `data-ac-link` | links | `vps-console` |
+| `data-ac-link` | links | `vps-console`, `backup-console` |
 
 ## 5. Working on it
 
-- When no cf-vps answers (for example a local run with no console behind the binding), the
-  server console system is `unavailable`. The other states are pinned with fixed answers in
+- When a console does not answer (for example a local run with no console behind its
+  binding), its system is `unavailable`. The other states are pinned with fixed answers in
   `test/access-center-profile.test.ts` and `test/access-center-api.test.ts`; those shapes
   are what the screen gets.
 - Icons come from `lucide-preact` only. No new dependencies (`RULESAd.md` §7.3).
@@ -236,7 +240,8 @@ on them. The Tailwind classes in the component are placeholders and can all chan
 
 1. **The API calls.** `GET /api/users/access-center?userId=<id>` on load and
    `POST /api/users/access-center` with `{ userId, system, rev, grant }`, the whole grant,
-   `rev` taken from the system as received. No other endpoint, and never cf-vps directly.
+   `rev` taken from the system as received, and `system` its `id` (`vps` or `backup`). No
+   other endpoint, and never a console directly.
 2. **The keys.** `item.key` values are permission keys in other systems; show them, never
    rewrite them. The draft is built from `system.grant` (`src/lib/access-center/draft.ts`),
    and an end date is saved as that whole day in UTC (`T23:59:59.000Z`).
@@ -252,7 +257,9 @@ on them. The Tailwind classes in the component are placeholders and can all chan
 ## 7. Where the rules live
 
 The same rules run twice: in cf-admin (`src/lib/access-center/rules.ts`) to mark items and
-refuse early, and in cf-vps, which decides. cf-admin also applies its own account rule first:
+refuse early, and in the console (cf-vps or cf-backup, each with its own target header,
+`x-vps-target` or `x-backup-target`), which decides. Each console is one entry in
+`src/lib/access-center/consoles.ts`; the calls are `console-client.ts`. cf-admin also applies its own account rule first:
 nobody changes a person they do not strictly outrank, or themselves, here. The full rule set
 (T1–T5, floors, delegation) is in section 4 of
 [the spec](../specs/2026-10-02-access-center-design.md), and how the portal's own page

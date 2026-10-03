@@ -210,8 +210,8 @@ editor among them, and Antigravity could not design them. From now on:
 
 | Stage | Delivers |
 |---|---|
-| **1 (this build)** | Server console: `access.delegate`, the trusted target header, the catalog, delegated saves, the full local preview. cf-admin: the rule library, the profile with pages (read) and server console (read and edit), the API, the plain panel replacing the old server-console panel. Page edits stay in the existing page editor on the same screen |
-| 2 | The backup console joins with the same console contract (`x-backup-target`, its own `access.delegate` and catalog) |
+| **1 (shipped 2026-10-02)** | Server console: `access.delegate`, the trusted target header, the catalog, delegated saves, the full local preview. cf-admin: the rule library, the profile with pages (read) and server console (read and edit), the API, the plain panel replacing the old server-console panel. Page edits stay in the existing page editor on the same screen |
+| **2 (shipped 2026-10-03)** | The backup console joins with the same console contract (`x-backup-target`, its own `access.delegate` and catalog; cf-backup `7d5c2b9`). cf-admin: one console client (`console-client.ts`) and a registry (`consoles.ts`) serve both consoles; the panel edits any console system |
 | 3 | Page edits move into the Access Center API, after the four existing page gates are extracted into the rule library with tests that pin today's behaviour; then the old page editor can go |
 
 ## 10. Testing
