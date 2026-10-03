@@ -84,7 +84,9 @@ is meant to stop.
 
 **What it explicitly does not defend.** It cannot express object-level permissions
 ("user X may edit document Y"). It has no relationship graph, no inheritance beyond
-path prefixes, and no delegation. See §15.
+path prefixes, and no delegation of page access. See §15. *Since 2026-10-02 the
+server console's capabilities can be delegated down the role ladder (§10.1);
+page access still cannot.*
 
 ---
 
@@ -520,6 +522,23 @@ whatever the target's baseline rank.*
 > they should, the lowest baseline that permits it is `owner`. The arithmetic is
 > pinned in `test/cron-permissions.test.ts`.
 
+### 10.1 The Access Center (one view of every system)
+
+*Added 2026-10-02.* A person's Access page opens with the Access Center
+(`src/components/admin/users/AccessCenterPanel.tsx`, served by
+`/api/users/access-center`): every page and action key in this model, and every
+server-console capability, each with the source that explains it (`role`,
+`grant`, `deny`, `top-tier`, and for the console `expired` and `locked`). Page
+items are read only there in stage 1; the gates above stay the only way to
+change one, through the page editor and `POST /api/users/access`. Server-console
+access can be changed there by delegation: whoever strictly outranks the person
+and holds a capability in cf-vps may give or take it away (never a floor
+capability). cf-admin names the person to cf-vps in `x-vps-target`, with the
+role read from this database, and cf-vps re-checks every change. The panel, its
+data and its states: [ACCESS-CENTER](../features/ACCESS-CENTER.md); the design
+and the delegation rules:
+[the Access Center spec](../specs/2026-10-02-access-center-design.md).
+
 ---
 
 ## 11. Revocation, and how fast it actually takes effect
@@ -843,6 +862,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/api-authz-inventory.test.ts` | **Every `/api/*` route is mapped** — CI fails otherwise |
 | `test/cron-permissions.test.ts` | The two-key guard end to end: a page deny reaching the action, an action grant not opening its siblings, a **missing registry row failing closed**, a session with no access map refused, the owner/vendor bypass — and Gate D's arithmetic, which is why `0056` exists (added 2026-09-20) |
 | `test/migrations-replay.test.ts` | The four cron registry rows exist, are active, have non-null icons and carry the expected `required_role` — the assertion `0054` needed and did not have (added 2026-09-20) |
+| `test/access-center-rules.test.ts`, `test/access-center-profile.test.ts`, `test/access-center-api.test.ts` | The Access Center (§10.1): the sources and edit rules as case tables, the profile against a real registry and a faked console (answering, unavailable, refusing), and the API reading the person's role from the database whatever the body claims (added 2026-10-02) |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 

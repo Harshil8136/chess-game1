@@ -5,8 +5,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-30
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/VpsAccessPanel.tsx, src/components/admin/users/vps-access-model.ts, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/vps-access-model.test.ts]
-related_docs: [BACKUP-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
+related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/AccessCenterPanel.tsx, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
+related_docs: [BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
 
@@ -127,16 +127,24 @@ a reason. Owner and vendor support hold everything; a few capabilities (audit,
 session replay, reboot, admin terminal, managing access) can never be granted
 to anyone else.
 
-The policy is managed in two places, both through the gateway, so cf-vps checks
-and stores every change (floors, the one-year limit, the rule that someone must
-keep the right to manage access) and the change becomes an activity-log row:
+The policy is managed in two places. cf-vps checks and stores every change
+(floors, the one-year limit, the rule that someone must keep the right to manage
+access) and each change becomes an activity-log row:
 
-- the console's own **Access** page (every role and person at once);
-- the **Server console** section of a person's Access page on the Users page
-  (`VpsAccessPanel`), shown to anyone who can open the console. It lists each
-  capability as *From role*, *Granted*, *Denied*, *Not held* or *Owner &
-  Vendor only*; someone holding `access.manage` can set each one to
-  Role, Allow or Deny for that person, with an optional end date and reason.
+- the console's own **Access** page (every role and person at once), through
+  the gateway;
+- the **Access Center** at the top of a person's Access page on the Users page
+  ([ACCESS-CENTER](ACCESS-CENTER.md)), which replaced the separate Server
+  console section on 2026-10-02. It lists each capability with the reason it is
+  on or off, and lets the viewer set Role, Allow or Deny for that person, with an
+  optional end date and reason. A holder of `access.manage` may change anything
+  but a floor; since 2026-10-02 a holder of the new `access.delegate` (owner,
+  vendor support and admin by default) may hand out or take away what they hold
+  themselves, for people strictly below them. These calls do not go through the
+  gateway: cf-admin's server calls cf-vps over the binding with the actor and an
+  `x-vps-target` header naming the person, with the role from this portal's
+  database, and the gateway never forwards that header from a browser. The
+  Access Center writes its own activity-log row for each save.
 
 Changing someone's role changes their console capabilities at once, because
 cf-vps reads the role from each request. Deleting a user removes their personal

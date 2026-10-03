@@ -742,7 +742,7 @@ On top of that:
 **Where the catalog lives** depends on §7.4:
 
 - **If API Access stays in cf-admin:** each capability becomes a PLAC action key on the new page. That works, but PLAC has no expiry, no grant to a role, and no floors except in code. About 25 extra registry rows would approximate the table.
-- **If the Email API becomes its own console:** the catalog lives in the email repository, next to the code that enforces it. The policy is stored as one row, `email:access`, in cf-admin's settings table, exactly as `backup:access` and `vps:access` are. cf-admin's Users page gets a small "Email API" panel, like the Server panel (`src/components/admin/users/VpsAccessPanel.tsx`), to edit one person.
+- **If the Email API becomes its own console:** the catalog lives in the email repository, next to the code that enforces it. The policy is stored as one row, `email:access`, in cf-admin's settings table, exactly as `backup:access` and `vps:access` are. cf-admin's Users page gets a small "Email API" panel, like the Server panel (`src/components/admin/users/VpsAccessPanel.tsx`), to edit one person. *(That panel was superseded on 2026-10-02 by the Access Center, [`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md); such a console would now join it as one more system.)*
 
 ### 7.3 Token permissions: what an app may do
 

@@ -133,6 +133,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/sessions/active-revocations.ts` | `denySessions` | KV revocation block list + unblock | ✅ `/dashboard/sessions`, **plus `#unblock` on DELETE**; 30/min RL |
 | `src/pages/api/sessions/flush-sessions.ts` | `denySessions` + `isOwnerOrDev` | Bulk session flush — **Owner/Vendor only** | ✅ `/dashboard/sessions`, plus `#flush` |
 | `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
+| `src/pages/api/users/access-center.ts` | `canManageUser`, `isOwnerOrVendor`, `isReadOnly` (in `src/lib/access-center/`) | The Access Center: one person's access in every system, and server-console changes ([ACCESS-CENTER](ACCESS-CENTER.md), added 2026-10-02) | ✅ `/dashboard/users`; changes also need `/dashboard/vps`; 5/min RL shared with `access.ts` |
 | `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ `/dashboard/sessions` |
 
 > *Corrected 2026-09-19.* The three `src/pages/api/sessions/` rows said "(admin+)"

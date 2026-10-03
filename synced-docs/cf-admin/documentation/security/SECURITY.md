@@ -635,6 +635,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/users` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/pages` | `/dashboard/users` | 2026-05-26 | |
 | `POST /api/users/access` | `/dashboard/users` | 2026-05-26 | Added before the existing 5-gate hierarchy check; a PLAC-denied admin can no longer mutate PLAC. |
+| `GET/POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | The Access Center. Hidden accounts answer 404 below owner and vendor; a server-console change also needs the `/dashboard/vps` key itself, strict outrank and not self, and cf-vps re-checks it ([`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md)). |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
 | `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. |
@@ -690,6 +691,7 @@ role-only gates "by design".*
 | `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
 | `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
 | `POST /api/users/access` | 5/min | `plac` | `session.userId` |
+| `POST /api/users/access-center` | 5/min (the same budget as the row above) | `plac` | `session.userId` |
 | `POST /api/storage/presign` | 30/min | `storage-presign` | `user.userId` |
 | `POST /api/storage/[id]/share` | 20/h | `storage-share-create` | `user.userId` |
 | `POST /api/storage/[id]/share/email` | 10/h | `storage-share-email` | `user.userId` |
