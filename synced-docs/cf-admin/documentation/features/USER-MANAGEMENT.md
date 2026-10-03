@@ -123,7 +123,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | File | Helper(s) Used | Gate Purpose | +PLAC |
 |------|---------------|--------------|:---:|
 | `src/pages/api/users/manage.ts` | `isVendorSupport` | Role mutation, privileged-account edit protection | ✅ `/dashboard/users` |
-| `src/pages/api/users/access.ts` | `isVendorSupport`, `isOwnerOrVendor` | PLAC provisioning | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/access-center.ts` (`src/lib/access-center/handlers.ts`) | `isVendorSupport`, `isOwnerOrVendor` (in `page-gates.ts`) | PLAC provisioning, one save for pages and consoles (`/api/users/access` was retired 2026-10-03) | ✅ `/dashboard/users` |
 | `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor` — **target protection only** | Session termination | ✅ `/dashboard/users` |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |

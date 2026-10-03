@@ -175,7 +175,7 @@ when the live row requires stored `admin`, i.e. manager and above.*
 ### 2.5 Provisioning gatekeepers (anti-escalation measures)
 
 → [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §10, which lists all five gates
-on `POST /api/users/access`. Note that Gate D caps a grant at the **actor's**
+on every page change the Access Center saves (`src/lib/access-center/page-gates.ts`; the one-page route `POST /api/users/access` was retired 2026-10-03). Note that Gate D caps a grant at the **actor's**
 clearance, not the target's.
 
 ### 2.6 PLAC enforcement on API routes (`placDenyResponse`)

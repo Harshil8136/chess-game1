@@ -5,7 +5,7 @@ audience: [owner, technical, ai, operator]
 last_verified: 2026-10-02
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/access-center/, src/pages/api/users/access-center.ts, src/components/admin/users/AccessCenterPanel.tsx, src/pages/dashboard/users/[id]/access.astro, src/lib/vps-proxy.ts, src/pages/api/users/access.ts]
+related_code: [src/lib/access-center/, src/pages/api/users/access-center.ts, src/components/admin/users/access-editor/, src/pages/dashboard/users/[id]/access.astro, src/lib/vps-proxy.ts]
 related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../features/VPS-CONSOLE.md, ../features/BACKUP-CONSOLE.md, ../features/ACCESS-CENTER.md]
 tags: [permissions, rbac, plac, acm, access-center, vps, delegation, design]
 ---
@@ -18,6 +18,11 @@ tags: [permissions, rbac, plac, acm, access-center, vps, delegation, design]
 > is on or off, and lets managers hand out what they themselves hold to people below them,
 > following the same hierarchy the portal already uses for pages. Each console still checks
 > every change itself, so nothing gets weaker.
+
+**Screen and save superseded 2026-10-03** by
+[Access Center v2](2026-10-03-access-center-v2-design.md): one editor per person, one save
+for every system. The decisions, the console contract and the delegation rules (§1–§5) here
+still hold.
 
 ## 1. Decisions (owner, 2026-10-02)
 
@@ -102,7 +107,7 @@ Page permissions keep their existing editor and gates in stage 1 (section 9).
 | Console client | cf-admin `src/lib/access-center/vps.ts` | Calls the VPS binding server-side with the actor and target headers |
 | Profile builder | cf-admin `src/lib/access-center/profile.ts` | Joins pages and console data into one profile with sources (section 6) |
 | Access Center API | cf-admin `src/pages/api/users/access-center.ts` | `GET` one profile, `POST` one console change |
-| Panel | cf-admin `src/components/admin/users/AccessCenterPanel.tsx` | Plain working UI on `/dashboard/users/<id>/access`, replacing the separate server-console panel; Antigravity restyles it |
+| Panel | cf-admin `src/components/admin/users/AccessCenterPanel.tsx` (removed 2026-10-03: superseded by the v2 editor, `access-editor/`) | Plain working UI on `/dashboard/users/<id>/access`, replacing the separate server-console panel |
 
 ```text
 browser → /dashboard/users/<id>/access → GET/POST /api/users/access-center

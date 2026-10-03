@@ -487,8 +487,11 @@ incident.
 
 ## 10. Provisioning gates
 
-`POST /api/users/access` enforces five gates before any override is written
-(`src/pages/api/users/access.ts`):
+Every page override is written by the Access Center's save
+(`POST /api/users/access-center`), which runs five gates on each page change
+before anything is written (`src/lib/access-center/page-gates.ts`, the same
+function that marks which rows the editor lets a viewer switch). The one-page
+route `POST /api/users/access` that ran them until 2026-10-03 is retired.
 
 | Gate | Rule | Prevents |
 |---|---|---|
@@ -504,7 +507,7 @@ finding, hardened 2026-05-25.
 
 *Corrected 2026-09-19: Gate D was described here as the **target's** ceiling. The
 code compares the **actor's** level against the page's required level
-(`src/pages/api/users/access.ts`), which is what T3 in §2 already said. Grants
+(`grantRefusal` in `src/lib/access-center/page-gates.ts`), which is what T3 in §2 already said. Grants
 above the actor's own clearance are refused; a grant at or below it is allowed
 whatever the target's baseline rank.*
 
@@ -524,20 +527,23 @@ whatever the target's baseline rank.*
 
 ### 10.1 The Access Center (one view of every system)
 
-*Added 2026-10-02.* A person's Access page opens with the Access Center
-(`src/components/admin/users/AccessCenterPanel.tsx`, served by
-`/api/users/access-center`): every page and action key in this model, and every
-server-console capability, each with the source that explains it (`role`,
-`grant`, `deny`, `top-tier`, and for the console `expired` and `locked`). Page
-items are read only there in stage 1; the gates above stay the only way to
-change one, through the page editor and `POST /api/users/access`. Server-console
-access can be changed there by delegation: whoever strictly outranks the person
-and holds a capability in cf-vps may give or take it away (never a floor
-capability). cf-admin names the person to cf-vps in `x-vps-target`, with the
-role read from this database, and cf-vps re-checks every change. The panel, its
-data and its states: [ACCESS-CENTER](../features/ACCESS-CENTER.md); the design
-and the delegation rules:
-[the Access Center spec](../specs/2026-10-02-access-center-design.md).
+*Added 2026-10-02, rebuilt 2026-10-03 (v2).* A person's Access page is one
+editor (`src/components/admin/users/access-editor/`, served by
+`/api/users/access-center`): every page and `#` feature in this model, every
+server-console and every backup-console capability, each with its default role,
+the source that explains it (`role`, `grant`, `deny`, `top-tier`, and for a
+console `expired` and `locked`) and what the viewer may change. Switches build a
+draft; one save applies it: page changes through the gates above, in one D1
+batch with one activity-log row each, and console changes by delegation
+(whoever strictly outranks the person and holds a capability in the console may
+give or take it away, never a floor). cf-admin names the person to each console
+in its trusted target header with the role read from this database, and the
+console re-checks every change. The page registry lists the consoles'
+capabilities under their pages, and vendor support can move a capability's
+default role there. The screen and its data:
+[ACCESS-CENTER](../features/ACCESS-CENTER.md); the design:
+[v2 spec](../specs/2026-10-03-access-center-v2-design.md); the delegation rules:
+[v1 spec](../specs/2026-10-02-access-center-design.md).
 
 ---
 

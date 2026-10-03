@@ -85,7 +85,10 @@ their creation time until they expire (24 h).
 
 **Per-person access from the Users page (2026-10-03).** A person's backup
 capabilities are also shown and changed in the Access Center on their Access
-page ([ACCESS-CENTER](ACCESS-CENTER.md)). Those calls do not go through this
+page ([ACCESS-CENTER](ACCESS-CENTER.md)), and the page registry
+(`/dashboard/debug/pages`) lists every backup capability under the Backups page,
+where vendor support can move one capability's default role through
+`POST /api/access/role`. Those calls do not go through this
 gateway: cf-admin's server calls cf-backup over the binding with the actor and an
 `x-backup-target` header naming the person, with the role from this portal's
 database. The gateway never forwards that header from a browser. An owner or

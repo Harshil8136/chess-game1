@@ -232,7 +232,7 @@ Different API surfaces have drastically different threat profiles. We partition 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                   TIER 1: CRITICAL AUTH & USER ADMIN                     │
-│  Endpoints: /api/users/manage, /api/users/access, /api/auth/logout       │
+│  Endpoints: /api/users/manage, /api/users/access-center, /api/auth/logout│
 │  Threshold: 5 to 10 requests / minute | Action on limit: Fail Closed 429 │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                   TIER 2: EXPENSIVE AI & MEDIA MUTATIONS                 │

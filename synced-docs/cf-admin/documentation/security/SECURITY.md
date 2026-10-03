@@ -452,7 +452,7 @@ their **next request**, bounded by KV's eventual consistency (≈60 s).
 | Trigger | Code |
 |---|---|
 | Role change, activation/deactivation metadata, display name | `src/pages/api/users/manage.ts` |
-| Page grant / revoke | `src/pages/api/users/access.ts` |
+| Page grant / revoke | `src/lib/access-center/handlers.ts` (`POST /api/users/access-center`), gates in `src/lib/access-center/page-gates.ts` |
 | Access-request approval | `src/pages/api/audit/requests/[id]/resolve.ts` |
 | Page-registry change | `src/pages/api/system/pages.ts` |
 
@@ -634,7 +634,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/users/access-data` | `/dashboard/users` | PR #2 | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
 | `GET /api/users` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/pages` | `/dashboard/users` | 2026-05-26 | |
-| `POST /api/users/access` | `/dashboard/users` | 2026-05-26 | Added before the existing 5-gate hierarchy check; a PLAC-denied admin can no longer mutate PLAC. |
+| `POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | Checked before anything is read; a PLAC-denied admin can no longer mutate PLAC. Replaced `POST /api/users/access` (2026-05-26) on 2026-10-03. |
 | `GET/POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | The Access Center. Hidden accounts answer 404 below owner and vendor; a server-console change also needs the `/dashboard/vps` key itself, strict outrank and not self, and cf-vps re-checks it ([`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md)). |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
@@ -690,7 +690,7 @@ role-only gates "by design".*
 | `POST /api/content/services` | 30/h | `content-services` | `user.userId` |
 | `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
 | `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
-| `POST /api/users/access` | 5/min | `plac` | `session.userId` |
+| `POST /api/users/access-center` | 5 saves/min (each save counts once, however many changes) | `plac` | `session.userId` |
 | `POST /api/users/access-center` | 5/min (the same budget as the row above) | `plac` | `session.userId` |
 | `POST /api/storage/presign` | 30/min | `storage-presign` | `user.userId` |
 | `POST /api/storage/[id]/share` | 20/h | `storage-share-create` | `user.userId` |

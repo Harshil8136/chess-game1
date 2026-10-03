@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-09-30
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/AccessCenterPanel.tsx, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
+related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
 related_docs: [BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
@@ -133,18 +133,23 @@ access) and each change becomes an activity-log row:
 
 - the console's own **Access** page (every role and person at once), through
   the gateway;
-- the **Access Center** at the top of a person's Access page on the Users page
+- the **Access Center**, a person's Access page on the Users page
   ([ACCESS-CENTER](ACCESS-CENTER.md)), which replaced the separate Server
-  console section on 2026-10-02. It lists each capability with the reason it is
-  on or off, and lets the viewer set Role, Allow or Deny for that person, with an
-  optional end date and reason. A holder of `access.manage` may change anything
+  console section on 2026-10-02 and became one editor for every system on
+  2026-10-03. Its Server console card lists each capability with its default
+  role and the reason it is on or off; a switch per capability, and the grant's
+  end date and note, are saved with the person's other changes after a review. A holder of `access.manage` may change anything
   but a floor; since 2026-10-02 a holder of the new `access.delegate` (owner,
   vendor support and admin by default) may hand out or take away what they hold
   themselves, for people strictly below them. These calls do not go through the
   gateway: cf-admin's server calls cf-vps over the binding with the actor and an
   `x-vps-target` header naming the person, with the role from this portal's
   database, and the gateway never forwards that header from a browser. The
-  Access Center writes its own activity-log row for each save.
+  Access Center writes its own activity-log row for each save;
+- the **page registry** (`/dashboard/debug/pages`, vendor support), which lists
+  every capability under the Server page and can move one capability's default
+  role (`POST /api/access/role`: that role and every role above it hold it,
+  personal grants kept, floors never).
 
 Changing someone's role changes their console capabilities at once, because
 cf-vps reads the role from each request. Deleting a user removes their personal

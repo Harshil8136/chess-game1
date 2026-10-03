@@ -86,7 +86,7 @@ shown, because the database still holds the pre-rename vocabulary.
 
 > **`#trigger` and `#configure` moved from `dev` to `owner` in migration
 > `0056` (2026-09-20), and no role's access changed.** Gate D in
-> `src/pages/api/users/access.ts` refuses a grant when
+> The page gates (`src/lib/access-center/page-gates.ts`) refuse a grant when
 > `ROLE_LEVEL[actor] > ROLE_LEVEL[page.required_role]`. `dev` normalises to
 > `vendor_support`, level 0, and the owner is level 1 — so while those rows
 > stored `dev`, `1 > 0` refused **every grant the owner attempted**, and only
