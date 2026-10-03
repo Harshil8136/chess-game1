@@ -157,8 +157,8 @@ millisecond; the 10 ms CPU limit is not in play. No KV.
 | Step | What | Status |
 |---|---|---|
 | 1 | The engine: one email per sign-in, urgent moves, the policy read (default only), failure kinds, the `alert` column and its display, the device-label fix; migration `0064` applied to production before the push | Pushed to `main` 2026-10-03 (`30a3efe`) |
-| 2 | The alert policy panel on Sessions behind `#alert-policy` (a new key, migration `0065`, applied first), the personal card's new options, alert emails for every change that reduces alerts or changes the recipients, `RoPA.md` for the recipients and the holder copy (§8) | Pushed to `main` 2026-10-03 |
-| 3 | Delivery through the email queue, with the direct Brevo call as the fallback | Next |
+| 2 | The alert policy panel on Sessions behind `#alert-policy` (a new key, migration `0065`, applied first), the personal card's new options, alert emails for every change that reduces alerts or changes the recipients, `RoPA.md` for the recipients and the holder copy (§8) | Pushed to `main` 2026-10-03 (`2b9ea1e`) |
+| 3 | Delivery through the email queue, with the direct Brevo call as the fallback (§9) | Pushed to `main` 2026-10-03 |
 
 ## 8. Step 2: the two screens and their APIs
 
@@ -199,3 +199,41 @@ it is managed from the card, where never is not offered.
 Every change writes a `security` audit row. The emails reuse `sendAlertSettingsEmail`, which
 gains a "Changed by" row and a title for a recipients-only change; the test is
 `sendAlertTestEmail`.
+
+## 9. Step 3: delivery through the email queue
+
+Every security email (sign-in alerts, the Access-block cron's, the settings and policy
+notices, the test) now leaves through `postSecurityEmail` in
+`src/lib/auth/security-logging.ts`:
+
+1. write its `email_audit_logs` row (Supabase): status `queued`, purpose `custom_email`,
+   `payload.source` `security-alert`, a fresh UUID as the id. A row that cannot be written
+   never holds the email back;
+2. put a `custom_email` on `EMAIL_QUEUE` from `Madagascar Security <security@madagascarhotelags.com>`,
+   with that UUID as the tracking id;
+3. only when the queue binding is missing or refuses the message, post to Brevo directly, as
+   before. A sign-in row records `queued` (or `queued-urgent`), `sent` for the direct path,
+   or `failed`.
+
+**What the consumer does with it.** Read from the deployed `cf-astro-email-consumer` bundle
+through the Cloudflare connector on 2026-10-03 (its source lives in another repository):
+
+| Question | Answer in the code |
+|---|---|
+| Is `from` checked? | Only its syntax (`parseAddress`): no domain allowlist, no registered-sender lookup. It is sent as given; an empty one falls back to the consumer's own sender |
+| Can an unsubscribe list drop it? | No: `admin_email_suppression` is read only for the email API's purpose, not `custom_email`, and nothing is added to the HTML |
+| Providers | Brevo first, then Resend on any Brevo error, with the same sender |
+| Delivery record | It updates the row by tracking id (`sent_to_resend`, `failed`); it never inserts one, which is why step 1 writes it |
+| Repeats | A tracking id already sent is skipped (a lease row per id); each email here has a new UUID |
+| Retries | 30 s, 2 min, 10 min, 1 h, 6 h, capped at 12 h; a malformed message or a provider 4xx is dropped without retry |
+
+**Not verified.** Whether Resend accepts `security@madagascarhotelags.com` as a sender:
+neither provider can be queried from here. Brevo does, since the direct path has sent from it
+all along. If Resend refuses it, a Brevo outage still loses the alert, as before this step.
+The queue's `max_retries` and dead-letter wiring are queue settings, not in the bundle.
+
+**Where the emails now show.** Each alert has a row in the email log, so the Activity
+Center's email tab and the Email Portal's Queue Logs list them, with delivery. Both need
+`/dashboard/logs`, Admin and above by default: the same people who can read sign-in
+forensics. A person granted `/dashboard/logs` alone could now read alert contents there
+(`MAINTENANCE.md` SA-9).

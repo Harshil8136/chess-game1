@@ -133,8 +133,11 @@ dropdown as showing addresses that only the owner can actually use.
 
 The Email Portal is the operator surface for **outbound custom email**. It does not
 handle transactional auth email (CF Access OTP, Supabase GoTrue recovery — see
-[USER-MANAGEMENT.md](USER-MANAGEMENT.md)) nor the automated security-alert fan-out
-from the scheduled log-sync worker.
+[USER-MANAGEMENT.md](USER-MANAGEMENT.md)) nor the automated security alerts. Since
+2026-10-03 those travel the same queue as `custom_email` from
+`security@madagascarhotelags.com`, so Queue Logs lists them (`payload.source`
+`security-alert`); see
+[sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §9.
 
 What it covers today:
 
@@ -580,6 +583,7 @@ RULE #0.9 working as intended. Two standing items, both predating it:
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-03 | claude | §1 only, against `src/lib/auth/security-logging.ts` | Security alerts now share the queue and Queue Logs; nothing else re-checked |
 | 2026-09-19 | claude | Re-grepped every `src/pages/api/emails/` route for its PLAC anchors and role floors; re-read `send.ts` end to end; live D1 re-check of `email_sender_identities` and `custom_email_max_recipients` | §0 defect **still live** (no `email_sender_identities` row). Corrections: owner/vendor **do** bypass every PLAC deny; `#templates`/`#ai-generate`/`#preview` are not server-enforced; `cc`/`bcc` escape the suppression partition; attachments are never swept; the composer *is* idempotent; `0008` **is** in the schema ledger; engine actions 5 not 3; senders POST has no `sync`; queue free tier is 10k ops/day; `admin_email_templates` is orphaned; E-8's fix is partial |
 | 2026-06-07 | claude | code read | pass — schema-provisioning gap noted |
 | 2026-06-07 | claude | deep UI + backend review | corrected sender-IP wording; added ledger detail |

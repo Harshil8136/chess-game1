@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-03 | `src/lib/auth/security-logging.ts` (`postSecurityEmail`); `wrangler.toml` `[[queues.producers]]` unchanged | The `EMAIL_QUEUE` paragraph now names the security emails and the backup alerts as producers beside the Email Portal. No binding, secret, variable or cron added. Nothing else re-checked |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `EMAIL_CONSOLE` → `cf-email-api` (entrypoint `Console`) added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-email-api. Not re-checked: every other row |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `VPS` → `cf-vps` added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-vps. Not re-checked: every other row |
 | 2026-09-27 | Cloudflare trigger events for `*/5 * * * *` and `0 2 * * SUN` (pasted by the owner); `src/lib/jobs/dispatch.ts`; `src/workers/job-runner.ts`; `wrangler.toml` | Both crons ended `exceededCpu` from 2026-09-26 22:45 UTC. The scheduled handler now calls each due job in its own invocation (§1 Scheduled triggers); `enable_ctx_exports` added to `compatibility_flags`; §3.1's CPU row now says per invocation. Not re-checked: every other row |
@@ -101,8 +102,10 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 | — | `madagascar-sync-revalidate-dlq` | consumer (dead-letter) | cf-admin |
 
 `EMAIL_QUEUE` is the producer side of the async email pipeline; the Email Portal
-(`/dashboard/emails`) enqueues custom sends onto it and the external
-`cf-astro-email-consumer` worker drains it. See
+(`/dashboard/emails`) enqueues custom sends onto it, as do the backup scheduler's alerts
+and, since 2026-10-03, every security email (`src/lib/auth/security-logging.ts`, with
+Brevo directly as the fallback), and the external `cf-astro-email-consumer` worker drains
+it. See
 [`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md).
 
 `SYNC_QUEUE` carries ISR revalidation redrive jobs. This Worker is both its

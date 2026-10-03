@@ -111,9 +111,9 @@ repositories need their own entries for a complete group-level RoPA.
 | Categories of subject | Customers, staff |
 | Categories of data | Recipient address, subject, body, attachments, delivery status, **hashed** sender IP |
 | Legal basis | Art. 6(1)(b) contract (transactional); 6(1)(a) consent (marketing) |
-| Stores | Supabase `email_audit_logs` (hashed sender IP — `src/pages/api/emails/send.ts`); D1 `admin_email_drafts`, `admin_email_templates`, `admin_email_suppression` (unsubscribe list — address plus hashed IP); R2 `email-attachments/` |
+| Stores | Supabase `email_audit_logs` (hashed sender IP — `src/pages/api/emails/send.ts`; since 2026-10-03 also one row per security alert, holding the alert as sent: the account, its masked IP, place and device); D1 `admin_email_drafts`, `admin_email_templates`, `admin_email_suppression` (unsubscribe list — address plus hashed IP); R2 `email-attachments/` |
 | Retention | 365-day target on `email_audit_logs`, manual. The suppression list is kept indefinitely — it is the record that proves an opt-out was honoured |
-| Recipients | **Brevo** carries transactional, marketing and security-alert mail — the default path. **Resend** carries only staff invite emails and a diagnostics ping (`src/pages/api/users/resend-invite.ts`) |
+| Recipients | **Brevo** carries transactional, marketing and security-alert mail — the default path. **Resend** carries staff invite emails and a diagnostics ping (`src/pages/api/users/resend-invite.ts`) and, since 2026-10-03, any queued email Brevo fails to take, security alerts included (`cf-astro-email-consumer`'s failover) |
 | Known gap | **Closed 2026-09-10.** `List-Unsubscribe` and `List-Unsubscribe-Post` are emitted (`src/lib/email/unsubscribe.ts`) and the suppression list ships. G5 is closed in code; confirm the header on a real Brevo send before citing it to an auditor. *This row said "still open" while §6 said closed — corrected 2026-09-20.* |
 
 ### G. AI-assisted content generation
@@ -209,7 +209,7 @@ Treat rotation as a breaking change, not a privacy hygiene step.
 | GitHub | Actions runners that take, encrypt and restore-test backups (cf-backup) | Database contents in transit, encrypted before upload; nothing kept after a run | US |
 | Supabase | Postgres | Users, ARCO, consent, bookings, email ledger | US |
 | Brevo | Email delivery — transactional, marketing and security alerts | Recipient addresses, content | EU (France) |
-| Resend | Email delivery — staff invites and a diagnostics ping only | Staff addresses, invite content | US |
+| Resend | Email delivery — staff invites, a diagnostics ping, and queued email when Brevo fails (security alerts included) | Staff and recipient addresses, email content | US |
 | Upstash | Rate-limit counters, alert dedupe | **Raw client IPs** on session-less routes and on cf-astro's public routes, internal user UUIDs elsewhere — every key expires: rate-limit keys after 2 × their window + 1 s, alert dedupe after 5 minutes, the alert lists after 14 days, the daily AI counter after 7 days | US |
 | Sentry | Error tracking | Scrubbed traces — `sendDefaultPii: false` + PII scrubber | US |
 | PostHog | Product analytics | Usage events; read back through the admin API for the control-plane surface | US |
@@ -281,6 +281,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-03 | Activity F's stores and recipients and §5's Resend row, for security alerts sent through the email queue (v2 step 3): `src/lib/auth/security-logging.ts`, and the consumer's Brevo-then-Resend failover read from its deployed bundle | Resend's own terms and region were not re-checked |
 | 2026-10-03 | Activity B for sign-in alerts v2 step 2: the personal mode, the copy to the account holder and `managedBy` (`src/lib/login-alerts/policy.ts`, `handlers.ts`), the alert policy's recipients (`policy-handlers.ts`, stored by `store.ts` `writePolicy`); alert emails already go through Brevo (§5). Places offered for trusting are read from the account's own `admin_login_logs` rows and leave the server as labels only | The rest of the record; legal basis and retention remain owner and counsel judgements |
 | 2026-10-03 | Activity B's categories, stores, retention and safeguards for the sign-in alert settings added that day: `src/lib/login-alerts/policy.ts` (the stored shape and the rounding), `src/lib/login-alerts/handlers.ts` (what reaches the browser), `src/pages/api/users/manage.ts` (deleted with the account) | The rest of the record; legal basis and retention remain owner and counsel judgements |
 | 2026-09-24 | Activity J's Stores, Retention and Recipients, for the backup alert emails cf-backup's program added that day: the `email_audit_logs` row from cf-admin `src/workers/scheduled-backup-tick.ts` (`emailLogRow`, and `EmailAuditLogRepository`), the alert texts from cf-backup `src/tick/run-alerts.ts` and each console action's notice (`src/api/downloads.ts`, `src/api/files.ts`, `src/keys/operations.ts`, `src/api/access.ts`, `src/api/config.ts`, `src/backups/prune.ts`), the digest from `src/notify/digest.ts`, and the actor field of the `v1/ops/` records from cf-backup `src/lib/ops.ts` | Whether alert recipients are set in production; the provider each alert actually used (cf-email-consumer's routing); legal basis and retention remain owner and counsel judgements |

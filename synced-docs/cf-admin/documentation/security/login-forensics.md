@@ -185,7 +185,7 @@ that is the case to check.
 | `cf_identity_provider` ★ | TEXT | CF ZT | `claims.idp?.type` only — **not** a full descriptor, and there is no `idp.id` in the stored value. NULL on every production row (see the IdP note below) | Tier 1 |
 | `cf_jwt_tail` ★ | TEXT | CF ZT | Last 16 chars of JWT assertion (audit reference — not full token). Since 2026-10-03 it also identifies the sign-in for the alerts: one email per tail (§7) | Tier 1 |
 | `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagement.score` — **⛔ N/A on this plan**: always `null`, so the `< 30` refusal in `bootstrap.ts` has never fired. Bot Management requires a paid Cloudflare plan | Tier 1 |
-| `alert` | TEXT | Outcome | What happened to the row's alert email: `sent`, `sent-urgent`, `failed` (`sending` until Brevo answers), or why none went: `repeat`, `paused`, `area`, `never`, `usual`, `throttled`, `off` (`src/lib/login-alerts/outcomes.ts`, §7). Migration `0064`, 2026-10-03; NULL on older rows and on `dev-login` rows | Server |
+| `alert` | TEXT | Outcome | What happened to the row's alert email: `queued` or `queued-urgent` (on the email queue; delivery is in the email log), `sent` or `sent-urgent` (Brevo directly), `failed` (`sending` until one of them answers), or why none went: `repeat`, `paused`, `area`, `never`, `usual`, `throttled`, `off` (`src/lib/login-alerts/outcomes.ts`, §7). Migration `0064`, 2026-10-03; NULL on older rows and on `dev-login` rows | Server |
 
 ★ = Added in v3 (migration `0020_cf_zero_trust_schema.sql`). All nullable.
 
@@ -419,12 +419,15 @@ note in §2.2.
 Every login attempt is logged (§2). Whether it is also emailed is decided by
 `src/lib/login-alerts/` (`decide.ts`, run by `dispatch.ts` inside the login event's
 `waitUntil`) and recorded in the row's `alert` column (§2.2). The full rules and why are in
-[sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §3. An email goes out
-(light template) through the Brevo transactional API (`api.brevo.com/v3/smtp/email`,
-`BREVO_API_KEY`):
+[sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §3. An email (light
+template) goes onto `EMAIL_QUEUE` as a `custom_email` from `Madagascar Security
+<security@madagascarhotelags.com>`, after its `email_audit_logs` row is written;
+`cf-astro-email-consumer` sends it through Brevo, then Resend, with retries (v2 spec §9).
+Only without the queue, or when it refuses the message, does it go to the Brevo
+transactional API directly (`api.brevo.com/v3/smtp/email`, `BREVO_API_KEY`):
 
-- Dispatched via `ctx.waitUntil()` — zero latency impact. A Brevo call that has not answered
-  after 8 seconds is abandoned and the row records `failed`
+- Dispatched via `ctx.waitUntil()` — zero latency impact. A direct Brevo call that has not
+  answered after 8 seconds is abandoned and the row records `failed`
 - The subject carries the outcome, the account and, when known, the location
   (`🟢 LOGIN SUCCESS: name@example.com · Toronto, CA`), so the inbox can be
   triaged without opening each alert. A sign-in that moved reads `🚨 SIGN-IN MOVED: …`
@@ -604,6 +607,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-03 | §2.2 `alert` and §7's transport against `src/lib/auth/security-logging.ts` (`postSecurityEmail`) and `src/lib/dal/EmailAuditLogRepository.ts` after v2 step 3, pinned by `test/login-alerts.test.ts` ("the queued email", the Brevo fallback); the consumer's handling read from its deployed bundle (v2 spec §9) | Whether Resend accepts the security sender; the rest of this document |
 | 2026-10-03 | §7's last paragraph against `src/lib/login-alerts/handlers.ts` and `policy-handlers.ts` after v2 step 2 (the card's new options and the alert policy panel), pinned by `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts` | The rest of this document |
 | 2026-10-03 | §2.2 `alert` and `cf_jwt_tail`, §6.3, §7 and §10 against `src/lib/login-alerts/` (`decide.ts`, `dispatch.ts`, `outcomes.ts`, `store.ts`, `throttle.ts`), `src/lib/auth/security-logging.ts`, `src/workers/scheduled-log-sync.ts` and the two log views, after sign-in alerts v2 step 1 and migration `0064`; pinned by `test/login-alert-decide.test.ts`, `test/login-alerts.test.ts` and `test/migrations-replay.test.ts`. Live D1, all rows to 2026-10-03: 370 successful rows with an assertion tail held 282 distinct sign-ins (88 duplicate emails); 90 days of User-Agents were Chrome on Windows and Chrome on Android only. `0064` read back from production `sqlite_master` and `d1_migrations` after it was applied | Whether Brevo delivered each alert; the policy panel, which is step 2; the rest of this document, last re-read 2026-09-20 |
 | 2026-10-03 | §7 against `src/lib/auth/security-logging.ts`, `src/lib/auth/login-event.ts`, `src/lib/auth/stages/bootstrap.ts` and `src/lib/login-alerts/` after the inline failure throttle, the local-time and subject-location changes and the per-account alert settings; pinned by `test/login-alerts.test.ts` and `test/login-alert-settings.test.ts`. Live D1, 30 days to 2026-10-03: 64 `LOGIN_SUCCESS` and 13 `LOGIN_FAILED` rows, the 13 all `revocation_block_active` for one account on one day, spread over 5 of the 15-minute windows the throttle uses | Whether Brevo delivered each alert; the rest of this document, last re-read 2026-09-20 |
