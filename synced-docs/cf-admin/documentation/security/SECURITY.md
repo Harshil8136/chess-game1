@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-02
+last_verified: 2026-10-03
 verified_against: [code, infra]
 owner: harshil
 related_docs: [THREAT-MODEL.md, RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/plac-and-audit.md, ../operations/OPERATIONS.md]
@@ -52,13 +52,14 @@ row with no evidence column is a claim, not a posture — do not add one.
 | CSP | Enforcing policy has **no `'unsafe-eval'`** (removed 2026-07-25) and still carries `'unsafe-inline'`. A hardened Report-Only canary without `'unsafe-inline'` **is live** — see §4. | 2026-08-13 | `src/lib/security/csp.ts` |
 | `public/_headers` | **Exists; its CSP no longer contains `'unsafe-eval'`** (0 matches, 2026-09-14). Chunk 2 settled what it does: Workers Static Assets applies `_headers` to static-asset responses only, never to SSR (C-12 closed by evidence, 2026-09-02 — see the chunk record). `src/lib/security/csp.ts` remains the only file to read for the live policy. *Corrected 2026-09-14* — this row still described the August drift. | 2026-09-14 | `public/_headers` vs `src/lib/security/csp.ts` |
 | Supabase `anon` role | Zero table grants, zero RLS policies. **Function EXECUTE is revoked on 4 of 6 public functions, not all 6** — `increment_conversation_metrics` and `purge_expired_privacy_data` are still callable by `anon` and `authenticated`. Neither is `SECURITY DEFINER` and `anon` has no table grants, so the body fails on table access: a posture defect, not an exposure path. REVOKE migration outstanding — see §10.3 | 2026-09-20 (live `has_function_privilege`) | `has_function_privilege` over `pg_proc` in the `public` schema |
-| Email alert amplification | Capped at 5/batch with digest line **on the cron path only**. The inline bootstrap path sends one Brevo alert per refused request, so a user sitting behind a live `revoked:` flag generates one email per request | 2026-09-20 | `src/workers/scheduled-log-sync.ts`; `src/lib/auth/stages/bootstrap.ts` |
+| Email alert amplification | **Throttled on both paths.** The cron path caps at 5/batch with a digest line; the inline bootstrap path (since 2026-10-03) emails a failure at most once per account and reason per 15-minute window, and the email counts the attempts of the past hour. Every attempt is still logged. *Until 2026-10-03 the inline path sent one Brevo alert per refused request.* | 2026-10-03 | `src/workers/scheduled-log-sync.ts`; `src/lib/login-alerts/throttle.ts`; `test/login-alerts.test.ts` |
 | Static security gates | `rules_check.py` 0 violations · `a11y_check.py` 0 findings | 2026-08-13 | `npm run verify` |
 
 **Verification log**
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-03 | The email-alert-amplification row and the §5 revocation-flag note, against `src/lib/login-alerts/throttle.ts`, `src/lib/auth/login-event.ts` and `test/login-alerts.test.ts` | Everything else; the last full pass is the 2026-09-20 row |
 | 2026-09-20 | §5 rewritten against the 2026-09-16 access-revocation work (the `authz-changed` mark vs the force-kick, the real Layer-3 endpoint and payload, layer order, the fixed 24 h flag TTL, which callers pass `ctx`). §6a rewritten — the pipeline **enforces** PLAC on `/api/*` and an unmapped route denies. §9 replaced by a link to the live-derived owner. §10.3 and the §0 `anon` row corrected from a live `has_function_privilege` check. Also: §0 counts (44 prefixes / 147 routes), the `AdminSession` shape, the timing matrix, the session-less route list, raw-IP limiter keys, the CSRF stage and its production fail-closed, the header sequence and `X-XSS-Protection`, the CSP blocker size (885) and the jsDelivr host, `VALID_ROLES`, the error-message claim, the session and media PLAC keys, `safeRateLimit` coverage, analytics timeouts, §7 (no `X-Request-ID`), §8, the Access application domain, the ZT token scope, and a historical banner over §13–§15 | Live Supabase table policies and grants (only function ACLs were queried); the Cloudflare Access bypass-policy scope; the "hidden accounts return an identical 404" claim; the CF Access JWT lifetime |
 
 **Review history (most recent first):**
@@ -484,9 +485,10 @@ Revoking **one** session instead uses `revokeSingleSession()`, which writes
   as at bootstrap, in one bulk read together with `revoked-session:` and
   `authz-changed:`
 - While the flag is live the user cannot sign in at all, and each refused
-  request emits a `revocation_block_active` row and one Brevo alert. Lifting it
-  early means reactivating the account or calling
-  `DELETE /api/sessions/active-revocations`
+  request emits a `revocation_block_active` row. The alert email for it is
+  throttled to one per 15 minutes (`src/lib/login-alerts/throttle.ts`, since
+  2026-10-03; before that, one per request). Lifting the flag early means
+  reactivating the account or calling `DELETE /api/sessions/active-revocations`
 
 **Layer 1 — KV session deletion (O(k)):**
 
