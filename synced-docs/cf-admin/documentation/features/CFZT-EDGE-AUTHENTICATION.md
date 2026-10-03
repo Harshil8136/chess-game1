@@ -71,7 +71,8 @@ The Madagascar Admin Portal operates on a **Pure Cloudflare Zero Trust (CFZT)** 
 │        - Revocation gate: revoked:{userId} checked in KV                                │
 │        - PLAC access map computed from D1 admin_pages                                   │
 │        - createSession() stores session in KV (ADMIN_SESSION) & sets cookie             │
-│        - Login event logged to D1 admin_login_logs & security alert emailed             │
+│        - Login event logged to D1 admin_login_logs; alert emailed per the account's     │
+│          settings and the failure throttle (security/login-forensics.md §7)             │
 │    • Stage 4/5 (access-map & decide): Page-level authorization enforced.                 │
 └────────────────────────────────────────────┬────────────────────────────────────────────┘
                                              │

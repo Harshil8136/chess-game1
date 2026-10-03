@@ -3,11 +3,11 @@
 title: "Record of Processing Activities (GDPR Art. 30)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-10-02
+last_verified: 2026-10-03
 verified_against: [code, config]
 owner: harshil
 related_docs: [PRIVACY.md, SECURITY.md, THREAT-MODEL.md, ../runbooks/incident-response.md, compliance/data-residency.md, ../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
-related_code: [src/lib/retention-tables.ts, src/lib/audit-helpers.ts, src/lib/auth/login-event.ts, src/workers/scheduled-asset-cleanup.ts]
+related_code: [src/lib/retention-tables.ts, src/lib/audit-helpers.ts, src/lib/auth/login-event.ts, src/lib/login-alerts/policy.ts, src/workers/scheduled-asset-cleanup.ts]
 tags: [gdpr, ropa, privacy, article-30, lfpdppp, compliance]
 ---
 
@@ -61,11 +61,11 @@ repositories need their own entries for a complete group-level RoPA.
 |---|---|
 | Purpose | Detect and investigate unauthorised access; produce evidence for incident response and assessors |
 | Categories of subject | Staff |
-| Categories of data | User ID/email/role, action, module, request method and path, CF-Ray ID, session ID, timestamps. IP handling differs per store — see §2.1 |
+| Categories of data | User ID/email/role, action, module, request method and path, CF-Ray ID, session ID, timestamps. IP handling differs per store — see §2.1. **Since 2026-10-03**, for a person who sets them, sign-in alert settings: when a pause ends and the country it applies to, and up to 3 trusted areas (a place label, country, a centre rounded to about 1 km, and a radius) |
 | Legal basis | Art. 6(1)(f) legitimate interests — security monitoring |
-| Stores | D1 `admin_audit_log` (mutation trail), `admin_login_logs` (sign-in forensics), KV session records (live sessions only) |
-| Retention | Per-table targets in `src/lib/retention-tables.ts`: `admin_audit_log` **180 days**, `admin_login_logs` **365 days**. Both are *targets* — deletion happens only when an Owner/DEV runs the Retention Review tool, so actual age can exceed the target. KV session records expire with the session (24 h TTL) |
-| Safeguards | `admin_audit_log` stores a keyed hash of the IP and no raw column. `admin_login_logs` stores the **raw** client IP by design (forensics) — see §2.1. Insert-only application paths; deletion is PLAC-gated and audited, but not prevented (`../architecture/plac-and-audit.md` §3.2) |
+| Stores | D1 `admin_audit_log` (mutation trail), `admin_login_logs` (sign-in forensics), KV session records (live sessions only), and one `admin_portal_settings` row per person who has sign-in alert settings (key `login_alerts`, scope `user`) |
+| Retention | Per-table targets in `src/lib/retention-tables.ts`: `admin_audit_log` **180 days**, `admin_login_logs` **365 days**. Both are *targets* — deletion happens only when an Owner/DEV runs the Retention Review tool, so actual age can exceed the target. KV session records expire with the session (24 h TTL). Sign-in alert settings last until the person removes them or the account is deleted, which deletes them (`src/pages/api/users/manage.ts`) |
+| Safeguards | `admin_audit_log` stores a keyed hash of the IP and no raw column. `admin_login_logs` stores the **raw** client IP by design (forensics) — see §2.1. Insert-only application paths; deletion is PLAC-gated and audited, but not prevented (`../architecture/plac-and-audit.md` §3.2). A trusted area's centre is Cloudflare's own city-level reading of the person's connection when they added it, rounded to 2 decimals, and no coordinates are sent to the browser (`src/lib/login-alerts/handlers.ts`) |
 
 ### C. Data-subject-rights (ARCO) request handling
 
@@ -281,6 +281,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-03 | Activity B's categories, stores, retention and safeguards for the sign-in alert settings added that day: `src/lib/login-alerts/policy.ts` (the stored shape and the rounding), `src/lib/login-alerts/handlers.ts` (what reaches the browser), `src/pages/api/users/manage.ts` (deleted with the account) | The rest of the record; legal basis and retention remain owner and counsel judgements |
 | 2026-09-24 | Activity J's Stores, Retention and Recipients, for the backup alert emails cf-backup's program added that day: the `email_audit_logs` row from cf-admin `src/workers/scheduled-backup-tick.ts` (`emailLogRow`, and `EmailAuditLogRepository`), the alert texts from cf-backup `src/tick/run-alerts.ts` and each console action's notice (`src/api/downloads.ts`, `src/api/files.ts`, `src/keys/operations.ts`, `src/api/access.ts`, `src/api/config.ts`, `src/backups/prune.ts`), the digest from `src/notify/digest.ts`, and the actor field of the `v1/ops/` records from cf-backup `src/lib/ops.ts` | Whether alert recipients are set in production; the provider each alert actually used (cf-email-consumer's routing); legal basis and retention remain owner and counsel judgements |
 | 2026-09-23 | Activity J and the GitHub sub-processor row added from the cf-backup plan of record (doc 05 §5) and its full-build design, for chunk CB-2: `backup_runs` from `migrations/0057_backup_runs.sql`, the audit module from `src/lib/audit.ts` | Nothing in J has run in production yet; the bucket-lock periods are the plan's and become facts only when the owner sets them; legal basis and retention are owner and counsel judgements |
 | 2026-09-20 | **§2 B/C/D/E/F/I and §5 re-derived from code.** The "IPs never stored raw" safeguard was false and is replaced by §2.1, a per-store table built from `src/lib/retention-tables.ts`, `migrations/0000_baseline.sql`, `src/lib/auth/login-event.ts`, `src/lib/auth/session.ts` and the `hashIp()` call sites. Per-table retention targets; the automatic 180-day purge in `src/workers/scheduled-asset-cleanup.ts`; `privacy_requests` quarantined; the ARCO identity document located in cf-astro's R2; F's G5 self-contradiction; Brevo/Resend split; Upstash key material; Google added to §3; the 2026-08-12 enforcement date; activity H weakness detail moved to the private backlog. §5's blanket "zero function ACLs" claim corrected from a live `has_function_privilege` check (4 of 6 revoked). The 2026-09-14 row below says the `anon` posture "still holds" — on function ACLs, it did not | Live Supabase *policy* and *grant* state (only function ACLs were queried); `email_audit_logs` sender-IP values in production; Upstash region; whether R2 offers object versioning at all (bucket locks are the R2 control, so I's known gap may name a feature that does not exist); §2's legal bases, which remain owner and counsel judgements |

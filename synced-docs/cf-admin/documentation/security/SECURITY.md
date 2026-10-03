@@ -643,6 +643,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. |
 | `GET /api/sessions/active-revocations` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | `denySessions()` + `#unblock`. DELETE additionally has a 30/min unblock rate limit. |
 | `POST /api/sessions/flush-sessions` | `/dashboard/sessions` | 2026-09 | `denySessions()` + `#flush`. |
+| `GET/POST /api/sessions/sign-in-alerts` | `/dashboard/sessions` | 2026-10-03 | `denySignInAlerts()`: the page, then an explicit grant of `#alerts` (fail closed). Self-service only; a change that turns alerts down emails the security inbox. |
 | `GET/POST /api/settings/portal` | `/dashboard/settings` | 2026-05-26 | |
 | `GET/POST /api/content/services` | `/dashboard/content` | 2026-05-26 | |
 | `POST /api/content/blocks` | `/dashboard/content` | 2026-05-26 | |

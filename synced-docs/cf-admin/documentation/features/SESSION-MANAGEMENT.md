@@ -3,10 +3,10 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
-related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionCommandCenter.tsx, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionCommandCenter.tsx, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md]
 tags: [sessions, security, plac, rbac, kv, forensics]
 ---
@@ -34,7 +34,8 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 - **Sidebar:** the **SECURITY** section (`deriveSection` in `src/lib/auth/plac.ts`).
 - **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin` — the *stored* value; canonical **Admin**, level 2),
   seeded by `migrations/0002_promote_sessions_page.sql`, with action fragments
-  `#revoke` / `#unblock` / `#flush` (owner) / `#export`. SSR access is enforced
+  `#revoke` / `#unblock` / `#flush` (owner) / `#export` / `#alerts` (owner, migration
+  `0063`). SSR access is enforced
   by the middleware `decideAccess` gate; per-user overrides are editable in the
   Access Policy Manager (grouped under "Security"). The model itself is owned by
   [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
@@ -52,6 +53,7 @@ gap **D-5**, closed 2026-09-16.
 | `#unblock` | yes | `DELETE /api/sessions/active-revocations` |
 | `#flush` | yes, but see below | `POST /api/sessions/flush-sessions` |
 | `#export` | **no** | No server route exists — export is built client-side from already-fetched data |
+| `#alerts` | yes, fail closed | `GET`/`POST /api/sessions/sign-in-alerts` and the page's card (`denySignInAlerts`, an explicit grant required); also re-checked at every sign-in |
 
 Two honest caveats:
 
@@ -74,6 +76,7 @@ Two honest caveats:
 (seven files were previously missing):
 
 - `SessionCommandCenter.tsx` — shell: KPI ribbon, tabs, filters, export, auto-refresh.
+- `SignInAlertsCard.tsx` — "Your sign-in alerts", above the shell, for holders of `#alerts` only (2026-10-03).
 - `ActiveSessionsPanel.tsx`, `AuthHistoryPanel.tsx`, `EdgeBlocksPanel.tsx` — the three tab bodies.
 - `SessionDetailDrawer.tsx` — per-session detail; desktop side-panel, **mobile
   bottom-sheet** (`src/components/ui/BottomSheet.tsx`). Full IP rendered here only.
@@ -154,6 +157,29 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §4; both are logged in
   [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
+## Your sign-in alerts (2026-10-03)
+
+A card at the top of the page, anchored `#alerts` (every alert email links to it),
+for the signed-in person's **own** sign-in alert emails. Rendered only for holders
+of `/dashboard/sessions#alerts` (owner and vendor support by default; grantable on
+the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
+
+- **Pause** for 1 hour, 8 hours, 1 day, 3 days or 7 days. It ends by itself, and it
+  keeps quiet only sign-ins from the country it was set in. **Resume alerts now**
+  ends it early.
+- **Trusted areas**, up to 3: **Trust this area** saves where Cloudflare places
+  this connection, with a 25, 50 or 100 km radius. Sign-ins inside an area are
+  logged but not emailed. **Remove** forgets one.
+- Failed sign-ins are always emailed (throttled to one per 15 minutes per
+  reason). Pausing or adding an area sends one email to the security inbox and
+  writes an audit row.
+
+The card makes one `GET` when the page loads and one `POST` per click: D1 only,
+no KV. Decisions, storage and residual risk:
+[`../specs/2026-10-03-sign-in-alert-settings-design.md`](../specs/2026-10-03-sign-in-alert-settings-design.md);
+what the email says and when it is sent:
+[`../security/login-forensics.md`](../security/login-forensics.md) §7.
+
 ## Authorization changes and re-verification (2026-09-16)
 
 A warm request reads three keys in one bulk KV read: `revoked-session:<sessionId>`,
@@ -183,4 +209,5 @@ Blocks** tab to confirm the tile updates from its deferred-fetch zero.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-03 | claude | The `#alerts` fragment, its row in the fragment table, the card and its section, against `src/pages/dashboard/sessions/index.astro`, `src/components/admin/users/sessions/SignInAlertsCard.tsx`, `src/lib/login-alerts/handlers.ts` and `test/login-alert-settings.test.ts`. The rest of the page was not re-read. |
 | 2026-09-19 | claude | Re-verified against code. Corrections: `API_PAGE_MAPPING` lives in `src/lib/auth/routes.ts`, not `src/middleware.ts`; IP masking is client-side only; the Edge Blocks tile shows a green zero until its tab is opened; `#export` has no route and `#flush` is inert; seven components and the Lock Out action were missing. |

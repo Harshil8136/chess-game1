@@ -3,7 +3,7 @@
 title: "Documentation Index & Map"
 status: active
 audience: [non-technical, ai, technical]
-last_verified: 2026-08-23
+last_verified: 2026-10-03
 verified_against: [code]
 owner: harshil
 related_docs: [CONTRIBUTING-DOCS.md, ../README.md, ../RULESAd.md]
@@ -40,7 +40,7 @@ is active" while listing four historical reports.*
 | **Security posture** | [`security/SECURITY.md`](security/SECURITY.md) | CSP, auth, RLS, current posture |
 | **Infrastructure, bindings & deploy** | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | **binding registry — authoritative** (`../RULESAd.md` §12) |
 | **What's still open** | [`MAINTENANCE.md`](MAINTENANCE.md) | the one live backlog |
-| **What things cost** | [`commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) | **the cost model — authoritative** |
+| **What things cost** | [`commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) | **the cost model**: the one exception to "active" above. A dated analysis, `historical` since 2026-09-20; read its corrections first. No living document owns the cost model yet |
 
 > **One fact, one home.** Where a number appears in several documents it goes
 > stale in all but one. The "Owns" column names the document that is allowed to
@@ -111,7 +111,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`features/USER-MANAGEMENT.md`](features/USER-MANAGEMENT.md) | RBAC hierarchy, user lifecycle, ghost protection, sessions | ai, technical | active |
 | [`features/CF-ACCESS-SYNC.md`](features/CF-ACCESS-SYNC.md) | CF Access Group whitelist sync: architecture, 2026-07-24 root-cause fix, durability (log + cron self-heal), Users-tab visibility, runbook | ai, technical, operator | active |
 | [`features/CFZT-EDGE-AUTHENTICATION.md`](features/CFZT-EDGE-AUTHENTICATION.md) | Cloudflare Zero Trust edge authentication, authoritative: the single-sign flow, Google Workspace + OTP, the decommissioned double sign-in, the landing-page contract, where each `?error=` code actually lands, local-dev isolation, and the verified ingress facts. Renamed from `CFZT-GOOGLE-QUICK-RESUME.md` on 2026-09-04 — Quick Resume was decommissioned | ai, technical, operator | active |
-| [`features/SESSION-MANAGEMENT.md`](features/SESSION-MANAGEMENT.md) | Security → Sessions page: live sessions, forensics, revocations, KV-budget discipline | ai, technical, operator | active |
+| [`features/SESSION-MANAGEMENT.md`](features/SESSION-MANAGEMENT.md) | Security → Sessions page: live sessions, forensics, revocations, the "Your sign-in alerts" card, KV-budget discipline | ai, technical, operator | active |
 | [`features/CMS.md`](features/CMS.md) | Content studio, ISR revalidation, KV injection, R2/CDN | ai, technical | active |
 | [`features/CHATBOT.md`](features/CHATBOT.md) | AI pipeline, proxy architecture, admin UI, analytics | ai, technical | active |
 | [`features/EMAIL-PORTAL.md`](features/EMAIL-PORTAL.md) | Email Portal: compose/send, drafts, templates, scheduling, queue delivery tracking; RBAC+PLAC gating | non-technical, ai, technical, operator | active |
@@ -184,6 +184,7 @@ record) · `draft` = in progress · `deprecated` = superseded, pending removal.
 | [`specs/2026-10-01-email-service-vps-node-and-api-access-research.md`](specs/2026-10-01-email-service-vps-node-and-api-access-research.md) | Research for the owner's three email questions of 2026-10-01. Should the email service (`email.madagascarhotelags.com` and the queue consumer) run on Node.js on the VPS? No: keep Workers and use the VPS for side jobs; it scores the options and gives the safe migration shape if a move is ever needed. Also 27 ranked gaps in the email system, an API Access v2 plan benchmarked against Postmark, Resend, SendGrid, Mailgun, Amazon SES and Brevo, and Part 4: a capability catalog to replace the three `#api-*` keys, and an assessment of moving the Email API to its own sidebar page as a console owned by cf-email-consumer (the Backups and Server pattern), with the owner's decisions of 2026-10-02 (no third Worker, the VPS parked, five permissions, the page built in cf-admin) | draft |
 | [`specs/2026-10-02-access-center-design.md`](specs/2026-10-02-access-center-design.md) | The Access Center: one page per person for every permission (portal pages and actions, the server console, later the backup console), each with the reason it is on or off; the owner's decisions (federate, hierarchy delegation), the `x-vps-target` header and cf-vps's `access.delegate` rules T1–T5, the API contract, failure handling and audit, the three stages, and what stage 1 built in cf-admin | active |
 | [`specs/2026-10-03-access-center-v2-design.md`](specs/2026-10-03-access-center-v2-design.md) | Access Center v2: one editor per person for every page, feature and console permission in the portal's design (category cards, role badges, switches, a draft reviewed and saved in one request), the batch save and its checks, the retirement of `POST /api/users/access`, and console permissions with editable default roles in the page registry | active |
+| [`specs/2026-10-03-sign-in-alert-settings-design.md`](specs/2026-10-03-sign-in-alert-settings-design.md) | Sign-in alert settings: why every sign-in email was mostly noise (live 30-day figures), the owner's decisions (a pause of at most 7 days limited to one country, up to 3 trusted areas from Cloudflare's own geolocation, failures never silenced but throttled to one per 15 minutes, the `/dashboard/sessions#alerts` permission re-checked at every sign-in, an email to the security inbox whenever alerts are turned down), storage in one per-user `admin_portal_settings` row, the API and card, the cost (no CPU concern, no KV), and the residual risk | active |
 | [`specs/2026-09-20-cron-control-improvement-plan.md`](specs/2026-09-20-cron-control-improvement-plan.md) | Triage and remediation plan for `/dashboard/cron`: 29 findings against HEAD `1f8cfc3` and live D1 — the owner cannot delegate `#trigger`/`#configure` (Gate D), the action guard and capability flags fail open on a missing registry row, a pause erases a job's interval, the tick invalidates the dashboard's compare-and-swap token — with a four-phase fix covering permissions, correctness, usability and features. **Executed in full 2026-09-20**; four items remain, tracked in MAINTENANCE.md | historical |
 
 ## Runbooks
