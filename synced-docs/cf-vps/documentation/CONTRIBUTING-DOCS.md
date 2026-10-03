@@ -42,7 +42,7 @@ and never edited to match today; their status is `historical`.
 | `runbooks/` | What to do when something breaks | living | no |
 | `program/` | Current status and what to resume (`HANDOFF.md`) | living | no |
 | `specs/` | Dated design specs; `active` while it is the plan of record | spec | no |
-| `records/` | Dated, frozen records, with executed plans in `records/plans/` | record | no |
+| `records/` | Dated, frozen records, with executed plans in `records/plans/` and incident reports in `records/incidents/` | record | no |
 | `_templates/` | The doc template | meta | no |
 
 The rule behind "published": publish how the system works, not the state of it. Runbooks,
