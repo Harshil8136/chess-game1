@@ -25,6 +25,7 @@ For documentation conventions (folders, front-matter, what is published), see [`
 - **Host changes go through `host/` modules.** Apply one step at a time and read its output before the next. Run destructive steps alone. Never `ufw`; the firewall module edits the provider's iptables rules in a marked block.
 - **Deploys.** The Worker deploys on push to `main` (Workers Builds runs `npm run verify` then `npx wrangler deploy`). The agent deploys with `npm run agent:deploy`. When a change spans parts, the agent and host go first.
 - **Verify before you push.** `npm run verify` runs typecheck, tests, build, the build-output test and the audit. `node scripts/docs-mirror.mjs check` covers the published docs.
+- **Dependencies are libraries the code imports.** Never `npm install` a tool for the machine (bash, node, wsl, the OCI CLI) into this repo; install it on the machine. The `node` package swaps the Node runtime under every npm script. `test/dependencies.test.ts` fails the build on either.
 - **Published docs carry no identifiers.** No hostnames, IP addresses, account ids, emails, fingerprints or tokens in anything on the `PUBLISHED_DOCS` list. Say "the server" and "the tunnel".
 - **Never put a secret value in a file or a chat.** Secret names only. The setup scripts under `scripts/setup/` write secrets without printing them.
 - **Records are frozen.** Do not edit dated files under `documentation/records/` or finished specs to match today; write or update a living doc instead.
