@@ -87,7 +87,7 @@ never edited to match today, and its `status` is `historical`. Records live in
 | `documentation/specs/` | Dated design specs (append-only) |
 | `documentation/runbooks/` | Operational error playbooks |
 | `documentation/archive/` | Superseded status/tracking docs, kept verbatim |
-| `documentation/_templates/` | The canonical doc template |
+| `documentation/_templates/` | The canonical doc template, and the change-record template every big change starts from (main.md §4, 2026-10-04) |
 
 ## 3. File naming
 
@@ -150,7 +150,8 @@ enforced on those.
 
 ## 7. Adding or moving a doc
 
-1. Start from `_templates/doc-template.md`.
+1. Start from `_templates/doc-template.md`; a big change's dated record starts from
+   `_templates/change-record.md` instead (main.md §4).
 2. Place it in the correct folder (§2) with a conforming name (§3).
 3. Add an entry to the index in [`README.md`](README.md) — CI fails if a doc is
    missing from the index (index-drift check).

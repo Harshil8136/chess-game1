@@ -247,6 +247,7 @@ published to the public mirror.
 | [`records/reports/2026-08-31-ai-system-overhaul.md`](records/reports/2026-08-31-ai-system-overhaul.md) | AI layer overhaul: why generation failed 100% of the time, the RAG grounding that never once read the knowledge base, a spend counter 6.3x under actual, per-inference telemetry with no new table, and the UI claims nobody had computed | non-technical, ai, technical, operator, owner | historical |
 | [`records/reports/2026-09-07-audit-log-hardening-sentry-and-dev-server.md`](records/reports/2026-09-07-audit-log-hardening-sentry-and-dev-server.md) | Session record: the audit/activity-log review (14 findings, live row counts, the production bulk-delete of 40 rows), the four owner decisions, Stage 1 shipped in 14 commits with what execution uncovered that the plan did not, the Sentry init-path correction, and the dev-server root cause that five optimizeDeps.exclude entries had been chasing | ai, technical, operator, owner, non-technical | historical |
 | [`records/reports/2026-09-22-ci-workflow-consolidation.md`](records/reports/2026-09-22-ci-workflow-consolidation.md) | CI workflow consolidation and optimisation: every `.github/` file reviewed; `security.yml` + `docs-quality.yml` folded into a one-job `quality.yml` (8 jobs per push → 1; measured ~9.4 → ~2–2.5 billed min per push, ~1 min for documentation-only changes); `backups.yml` one job, encrypted-only, gpg bug fixed; least privilege, SHA-pinned v7 actions, Dependabot cooldown; all 13 blocking gates kept, Lychee retired | ai, technical, operator, owner | historical |
+| [`records/reports/2026-10-04-agent-contract-and-change-records.md`](records/reports/2026-10-04-agent-contract-and-change-records.md) | Change record: `main.md` becomes the contract in all six repositories (each loaded by Claude Code and Antigravity, main-only, the first reply acknowledges it), the change-record rule and template every big change now follows, what each repository received and its own record, the cf-backup capability page corrected to 28, and the Supabase full export named in RoPA | owner, non-technical, technical, ai, operator | historical |
 
 ## Viability Program
 
@@ -310,6 +311,7 @@ the public docs mirror (ADR-0001).
 |-----|---------|--------|
 | [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) | Documentation conventions & governance | active |
 | [`_templates/doc-template.md`](_templates/doc-template.md) | Canonical doc template | active |
+| [`_templates/change-record.md`](_templates/change-record.md) | Change-record template: the dated record every big change gets (main.md §4), for non-technical and technical readers, with service impact and before/after mermaid flowcharts | active |
 | [`MAINTENANCE.md`](MAINTENANCE.md) | Single live maintenance backlog | active |
 | [`EFFICIENCY-TODO.md`](EFFICIENCY-TODO.md) | Efficiency to-do: KV reads per click, background polling, sidebar and session cost (EF- items) | active |
 | [`OPTIMIZATION-TODO.md`](OPTIMIZATION-TODO.md) | Optimization to-do: runtime cost, duplicated code and repository size (OPT- items) | active |

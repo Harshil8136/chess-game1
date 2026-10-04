@@ -15,7 +15,7 @@ tags: [program, cf-backup, permissions, rbac, audit, config]
 > **TL;DR (owner requirement, 2026-09-22).** Two layers.
 >
 > - **cf-admin** decides who may **open** the console: one page row, `/dashboard/backup`, managed in cf-admin exactly as today.
-> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 25 capabilities** (23 planned, plus the Files section's two, 2026-09-24). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
+> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 28 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
 >
 > The policy is **one JSON row** (`backup:access`); there is no new table. Every check runs on the server. Deny beats allow; an unknown capability is denied. Three safety floors cannot be granted away.
 
@@ -57,11 +57,14 @@ touch the backup key. **Admin** changes who may do what.
 | `runs.drill` | Start a restore drill now: the real-path drill, or a **check** (every export and restore drill, no data kept; never counts as a backup) | operate | typed confirmation | Owner, Vendor |
 | `schedule.toggle` | **Edit the backup schedule**: days, times, grace hours, the monthly drill (§7) | operate | a diff shown before saving; reason (3–200 characters); a notice | Owner, Vendor |
 | `config.edit` | **Change global config** (§7) | operate | a diff shown before saving; audited | Owner, Vendor |
-| `runs.prune` | **Delete** runs older than N days (never the newest 4 good full runs; never inside a lock) | destructive | typed confirmation; reason; a notice | Owner, Vendor |
+| `alerts.dismiss` | **Dismiss an open alert**, or undo a dismissal; who, when and an optional note are kept on the alert (owner, 2026-10-03) | operate | audited | Owner, Vendor |
+| `diagnostics.run` | **Run a Diagnostics step's probes** live, and start the **runner test** (it dispatches the backup workflow and uses about 2 GitHub Actions minutes) | operate | 15 s per person per step; audited (the runner test as `run.drill`) | Owner, Vendor |
+| `runs.prune` | **Delete** runs older than N days (never the newest 4 good full runs; never inside a lock) | destructive | typed confirmation; reason; a notice | Owner, Vendor (**floor**) |
 | `runs.download` | Download a run's **encrypted data** (`data/`, `checksums.sha256`), from the run detail or the Files section | destructive | fresh sign-in ≤ 10 min; confirmation; a notice | Owner, Vendor (**floor**) |
 | `keys.reveal` | **View / download the backup key** (the recovery kit) | secret | fresh sign-in; typed confirmation; ≤ 3/day per person; a notice | Owner, Vendor (**floor**) |
 | `keys.rotate` | **Generate a new key** and make it active; also confirm a recovery kit, and record a **restore proof** ("decrypted run X with the kit on date Y", doc 09 §5) | secret | rotate: fresh sign-in; typed confirmation; ≤ 1/day; a notice. Confirm-kit and restore proof: audited | Owner, Vendor (**floor**) |
 | `keys.rekey` | Re-key old runs to the current key (doc 10 §4) | secret | not built: answers 501 (below) | Owner, Vendor (**floor**) |
+| `access.delegate` | Give or take away, for one person below you in cf-admin's role ladder, capabilities you hold yourself, from **cf-admin's Access Center** ([its design](../../specs/2026-10-02-access-center-design.md)). Never a floor, never yourself | admin | cf-admin names the person in a trusted header; the same validation, last-holder guard and compare-and-swap as `access.manage` | Admin, Owner, Vendor |
 | `access.manage` | Change role defaults and per-person grants | admin | a diff shown before saving; a notice | Owner, Vendor (**floor**) |
 | `files.view` | **Files**: browse the backups bucket folder by folder, with folder totals and each object's details (never a value of unlisted metadata) | read | — | Admin, Owner, Vendor |
 | `files.download` | Download and preview files from the backups bucket (text evidence only is previewed). A run's encrypted `data/`, `checksums.sha256`, any `.age` file and the staff-storage mirror also need `runs.download` | operate | audited as `run.download via=files`; backup data: fresh sign-in, the typed confirmation `DOWNLOAD`, and a notice | Owner, Vendor; grantable per person |
@@ -121,7 +124,7 @@ cf-admin's page row lets their role in, and even then only what the policy (§4)
 2. **Deny beats allow.** A per-person deny overrides that person's role default.
 3. **Unknown means deny.** A capability id the running code does not know is refused. (The 2026-09-20 cron review found guards that failed *open* on a missing registry row; this rule exists so that cannot recur here.) A capability the code knows but the stored policy has never mentioned gets its **code default**, so new features work on the day they ship with safe defaults.
 4. **Three floors that no policy can cross** (OD-27; reversible only by a code change the owner approves):
-   - the **secret** class, `keys.status`, `runs.download` and `access.manage` belong to **Owner and Vendor support only**. The policy may take them *away* from one of those two, but never give them to Admin or below (doc 09 K-3);
+   - the **secret** class, `keys.status`, `runs.download`, `runs.prune` and `access.manage` belong to **Owner and Vendor support only** (`FLOOR_CAPABILITIES` in cf-backup's `src/access/catalog.ts`). The policy may take them *away* from one of those two, but never give them to Admin or below (doc 09 K-3);
    - **audit is always on**: no setting turns off `ops/events`, the gateway's audit row or the notifications;
    - the **locks, redaction and the recipient check** are not configurable.
 5. **Last-holder guard.** A change that would leave **no active person** holding `access.manage` or `keys.rotate` is refused. (The 2026-09-16 incident locked the only Owner out for 14 hours; this is the same lesson applied here.)
