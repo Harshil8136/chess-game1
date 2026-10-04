@@ -17,7 +17,8 @@ tags: [meta, index]
 ## Start here
 
 - **Operating rules & policy** → root `RULES.md`
-- **AI Start point** → root `main.md`
+- **AI start point** → root `main.md`, the contract every agent follows (Claude Code loads it through `CLAUDE.md`)
+- **Big changes** → a dated record in [`records/`](records/), from [`_templates/change-record.md`](_templates/change-record.md)
 
 ## Architecture & Systems
 
@@ -70,11 +71,28 @@ tags: [meta, index]
 | [`21-PLATFORM-STATUS-SUMMARY-2026-06.md`](21-PLATFORM-STATUS-SUMMARY-2026-06.md)                                           | Executive status, ratings, scale & cost                                  | non-technical, owner | historical |
 | [`22-BUSINESS-VIABILITY-AND-COMPLIANCE-ASSESSMENT-2026-06.md`](22-BUSINESS-VIABILITY-AND-COMPLIANCE-ASSESSMENT-2026-06.md) | Viability of selling the platform, multi-jurisdiction compliance posture | non-technical, owner | historical |
 
+## Records
+
+Dated change records: one per big change since 2026-10-04 (`main.md` §4), written for staff and
+engineers, with before-and-after flowcharts. A record is frozen once written.
+
+| Record                                                                                             | What it holds                                                                                                                                                                                 | Audience                            | Status     |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ---------- |
+| [`records/2026-10-04-agent-contract-alignment.md`](records/2026-10-04-agent-contract-alignment.md) | `main.md` becomes the contract every agent follows; `CLAUDE.md` and the Antigravity rule load it; branch work ends; the Pages-era comments in `wrangler.toml` corrected; change records begin | non-technical, ai, technical, owner | historical |
+
+## Templates
+
+| Template                                                     | Use it for                                            | Status |
+| ------------------------------------------------------------ | ----------------------------------------------------- | ------ |
+| [`_templates/change-record.md`](_templates/change-record.md) | The dated record every big change gets (`main.md` §4) | active |
+
 ## Root-level entry docs
 
-| Doc           | Purpose                                   |
-| ------------- | ----------------------------------------- |
-| `../RULES.md` | Operational Rules Bible + policy contract |
-| `../main.md`  | AI entry pointer into `Documentation/`    |
+| Doc            | Purpose                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| `../RULES.md`  | Operational Rules Bible + policy contract                                                                |
+| `../main.md`   | The contract for every AI agent: session start, the Golden Rules, what to read, which document to update |
+| `../CLAUDE.md` | Loads `main.md` in Claude Code                                                                           |
+| `../AGENTS.md` | The invariants (no CAPTCHA on booking, audit-first, fail-open rate limiting, least privilege)            |
 
 {% endraw %}
