@@ -115,6 +115,9 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/plans/2026-09-30-p4-console.md`](records/plans/2026-09-30-p4-console.md) | Plan: P4 console |
 | [`records/plans/2026-09-30-p6-terminal.md`](records/plans/2026-09-30-p6-terminal.md) | Plan: P6 browser terminal |
 | [`records/plans/2026-09-30-log-storage.md`](records/plans/2026-09-30-log-storage.md) | Plan: log storage |
+| [`records/plans/2026-10-02-vps-metrics-consolidation.md`](records/plans/2026-10-02-vps-metrics-consolidation.md) | Plan: one Metrics page instead of History and Metrics (moved from the repository root on 2026-10-04) |
+| [`records/plans/2026-10-02-vps-metrics-modernization.md`](records/plans/2026-10-02-vps-metrics-modernization.md) | Plan: the Metrics page redesign (moved from the repository root on 2026-10-04) |
+| [`records/2026-10-04-agent-contract-alignment.md`](records/2026-10-04-agent-contract-alignment.md) | Change record: `main.md` becomes the contract every agent follows; `CLAUDE.md` and the Antigravity rule load it; change records begin |
 
 ## Meta
 
@@ -122,6 +125,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|
 | [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) | Folder map, naming, front-matter, publishing rules |
 | [`_templates/doc-template.md`](_templates/doc-template.md) | The template to copy for a new doc |
+| [`_templates/change-record.md`](_templates/change-record.md) | The template for the dated record every big change gets (`main.md` §4) |
 
 ## Status legend
 

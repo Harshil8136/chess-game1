@@ -24,7 +24,8 @@ All documentation lives under `documentation/`. The old `docs/` folder was moved
 | Root file | Why it stays |
 |---|---|
 | `README.md` | Repo entry point; points at `documentation/README.md` |
-| `main.md` | Entry pointer for AI tools and new contributors |
+| `main.md` | The contract for every AI agent and contributor: session start, the Golden Rules, what to read, which document to update |
+| `CLAUDE.md` | Loads `main.md` in Claude Code |
 
 ## 2. Folder map
 
@@ -42,8 +43,8 @@ and never edited to match today; their status is `historical`.
 | `runbooks/` | What to do when something breaks | living | no |
 | `program/` | Current status and what to resume (`HANDOFF.md`) | living | no |
 | `specs/` | Dated design specs; `active` while it is the plan of record | spec | no |
-| `records/` | Dated, frozen records, with executed plans in `records/plans/` and incident reports in `records/incidents/` | record | no |
-| `_templates/` | The doc template | meta | no |
+| `records/` | Dated, frozen records, with executed plans in `records/plans/`, incident reports in `records/incidents/`, and a change record for every big change (`main.md` §4, from 2026-10-04) | record | no |
+| `_templates/` | The doc template and the change-record template | meta | no |
 
 The rule behind "published": publish how the system works, not the state of it. Runbooks,
 owner steps and the handoff carry operational identifiers, so they stay private.
@@ -105,7 +106,8 @@ until the two match).
 
 ## 7. Adding or moving a doc
 
-1. Copy `_templates/doc-template.md` and fill the header.
+1. Copy `_templates/doc-template.md` and fill the header; a big change's dated record starts
+   from `_templates/change-record.md` instead.
 2. Put it in the right folder (section 2) with a conforming name (section 3).
 3. Add one line to [`README.md`](README.md). A test fails if a living doc is not linked there.
 4. Use `git mv` when relocating, and fix every old path.
