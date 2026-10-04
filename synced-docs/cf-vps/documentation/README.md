@@ -118,6 +118,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/plans/2026-10-02-vps-metrics-consolidation.md`](records/plans/2026-10-02-vps-metrics-consolidation.md) | Plan: one Metrics page instead of History and Metrics (moved from the repository root on 2026-10-04) |
 | [`records/plans/2026-10-02-vps-metrics-modernization.md`](records/plans/2026-10-02-vps-metrics-modernization.md) | Plan: the Metrics page redesign (moved from the repository root on 2026-10-04) |
 | [`records/2026-10-04-agent-contract-alignment.md`](records/2026-10-04-agent-contract-alignment.md) | Change record: `main.md` becomes the contract every agent follows; `CLAUDE.md` and the Antigravity rule load it; change records begin |
+| [`records/2026-10-04-console-hidden-tab-stream.md`](records/2026-10-04-console-hidden-tab-stream.md) | Change record: the console closes its live metrics feed and health check while its tab is hidden, and reopens the feed at once on return |
 
 ## Meta
 

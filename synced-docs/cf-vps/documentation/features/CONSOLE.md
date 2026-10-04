@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-01
 verified_against: [code]
 owner: harshil
-related_code: [src/ui/pages.ts, src/ui/App.tsx, src/ui/screens, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
+related_code: [src/ui/pages.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/screens, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
 related_docs: [../security/PERMISSIONS.md, ACTIONS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
 tags: [feature, console, ui, pages]
 ---
@@ -31,10 +31,23 @@ tags: [feature, console, ui, pages]
 - After each navigation the console posts `{ type: 'cf-vps:route', v: 1, path, label }` to the
   portal so the address bar and tab title follow. A page lives at `/dashboard/vps/<page>`;
   Overview is `/dashboard/vps`.
+- **Live data stops while the tab is hidden.** The header's status and the Overview come from
+  a live stream that delivers one sample a second. While the tab is hidden (another tab, a
+  minimised window, a locked phone) the console closes that stream, and it stops the health
+  check it otherwise sends every 5 seconds while samples are late. When the tab is shown again
+  it reopens the stream at once and fetches the last five minutes again. When that fetch
+  answers, the charts start from it instead of joining the samples on either side of the hidden
+  spell; if it fails, the old samples stay and the new ones follow them, as after any outage.
+  The health check resumes too, with its first ask 5 seconds after the return, so the reopened
+  stream can answer first. While the tab is visible the stream reconnects as before: a dropped
+  connection is retried by the browser, and an error answer is retried after 2 seconds,
+  doubling to at most 30. The pages that refresh on a timer (Processes, Metrics, Apps,
+  Recordings) skip refreshes while the tab is hidden. The Logs live tail and the Terminal stay
+  connected.
 
 ## Pages
 
-Twenty-one pages, in sidebar order (`PAGES` in `src/ui/pages.ts`). The capability opens the
+Twenty pages, in sidebar order (`PAGES` in `src/ui/pages.ts`). The capability opens the
 page; the Worker and agent enforce it again on every call.
 
 | Page | Group | Needs | Shows |
@@ -48,7 +61,6 @@ page; the Worker and agent enforce it again on every call.
 | Packages | System | `host.view` | Available updates, installed packages, dependencies; Update lists and Upgrade need `packages.update` |
 | Storage | Resources | `host.view` | Filesystems, space and inodes |
 | Network | Resources | `host.view` | Interfaces, listening ports, the tunnel |
-| History | Resources | `host.view` | 24-hour and 7-day trends from sysstat (every 10 minutes); the idle-reclaim check |
 | Logs | Operations | `logs.view` | The system journal and a live tail; login and sudo sources also need `security.view`; shows how long the journal is kept |
 | Terminal | Operations | `terminal.ops` | A recorded shell through a 60-second certificate; the sudo-capable account needs `terminal.admin` and a sign-in from the last 10 minutes |
 | Files | Operations | `files.view` | The server as a folder browser; download needs `files.download`; create, upload, rename and delete need `files.write` |
@@ -138,8 +150,8 @@ and network also carry the bucket's highest minute, which the chart draws dashed
 average flattens a short spike. The answer is about 70 KB before compression. The agent reads
 each range from disk at most every 20 seconds, one day file at a time.
 
-The History page is separate: it reads sysstat's 10-minute samples and computes the
-idle-reclaim check.
+There is no separate History page any more: the one that read sysstat's 10-minute samples was
+folded into Metrics, and `/dashboard/vps/history` opens Metrics.
 
 ## Local preview
 
@@ -158,6 +170,10 @@ screen shows. Access edits save to the local test database on the PC, never the 
 
 - Page list, groups, icons, capability per page: `src/ui/pages.ts`
 - Capability gating and the route-table check: `src/ui/App.tsx`, `src/ui/me.ts`
+- The live stream and its reconnects: `openStream` in `src/ui/api.ts`, opened with the snapshot
+  by `openMetrics`; the health check while samples are late: `pollHealth` (same file); the
+  Overview's history: `withSnapshot` and `withSample` in `src/ui/status.ts`; the hidden-tab
+  rule: `useInterval` (timers) and `whileVisible` (open connections) in `src/ui/hooks.ts`
 - One screen per page: `src/ui/screens/*.tsx`
 - The `/api/me`, access and proxy routes: `src/http/router.ts`
 - Metrics history: the ranges and answer in `contract/metrics-history.ts`; the recorder in
