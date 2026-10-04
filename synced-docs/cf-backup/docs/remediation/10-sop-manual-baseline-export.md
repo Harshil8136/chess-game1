@@ -86,6 +86,13 @@ ls -l schema.sql data.sql auth-data.sql
 If the last command is refused, this recovery point does not include authentication records: note
 it, and retry the CLI procedure on another day.
 
+**For a complete copy of a project** (from 2026-10-04): `node scripts/full-export/supabase-full-export.ts`
+runs these same three commands, adds the migration history, a full archive of every schema, a CSV
+per table, an inventory, the project's settings, Edge Function code and Storage files, and encrypts
+the lot into one file. It avoids the CLI's Docker problem by running `pg_dump` in one container of
+its own. The owner guide is `docs/SUPABASE-FULL-EXPORT.md` in this repository (not on the public
+docs mirror). It covers Supabase only: §4 is still how D1 is exported by hand.
+
 ## 4. D1 export (three databases)
 
 D1 also has 7 days of Time Travel, so Supabase has the higher priority today. D1 takes about two
@@ -169,6 +176,7 @@ were included; these are recorded as evidence in [06](06-remediation-plan.md) §
 | 2026-09-25 | claude | Supabase CLI procedure reviewed; CLI version pinned as in `pins.ts` (2.117.0) | §3 commands |
 | 2026-09-25 | claude | Live `chatbot-kb` `sqlite_master` (5 base tables, 1 full-text table) | §4 |
 | 2026-09-25 | claude | Procedure not yet performed by the Owner | First execution pending |
+| 2026-10-04 | claude | §3 note on the full export added; the §3 commands were re-run in dry-run form with CLI 2.117.0 while building it. The rest of this procedure was not re-checked | §3 |
 
 ## 10. Related
 

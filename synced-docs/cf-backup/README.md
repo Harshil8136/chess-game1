@@ -20,8 +20,14 @@ Workers Builds is connected: a push to `main` installs dependencies, runs
 
 ## Design
 
-See `main.md`.
+Start with `main.md`, the contract every contributor and AI agent follows; `docs/README.md`
+indexes every document.
 
-Proposed next (not built yet): `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md`, which
-covers a Diagnostics page that tests every step of the flow, pre-flight checks that stop a run
-before it starts, and a simpler storage layout. Part A is written for everyone; Part B for engineers.
+`docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md` covers the Diagnostics page that tests every step of
+the flow (built 2026-09-24), pre-flight checks that stop a run before it starts, and a simpler
+storage layout; its Build log says which stages have shipped. Part A is written for everyone;
+Part B for engineers.
+
+To take a complete copy of a Supabase project by hand (every table, settings, Edge Functions
+and files, in one encrypted file): `node scripts/full-export/supabase-full-export.ts`, described
+in `docs/SUPABASE-FULL-EXPORT.md`.

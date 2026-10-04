@@ -386,3 +386,12 @@ artifact on GitHub.
 The procedure (fetch, `sha256sum -c SHA256SUMS`, decrypt with the same private key, then restore
 PostgreSQL before D1) is in
 [remediation doc 09 §5](remediation/09-secondary-pipeline-specification.md#5-operational-notes).
+
+## A full export taken by hand
+
+A Supabase full export (`node scripts/full-export/supabase-full-export.ts`, from 2026-10-04) is one
+`supabase-export-<project>-<time>.tar.gz.age` file holding the official restorable set, a full
+archive of every schema, a CSV per table, the project's settings, Edge Function code and Storage
+files. Check it with its `.sha256` file and decrypt it with the same private key; its `README.txt`
+gives the restore commands. The owner guide is `docs/SUPABASE-FULL-EXPORT.md` in this repository
+(not on the public docs mirror). It covers Supabase only: D1 still comes from the runs above.
