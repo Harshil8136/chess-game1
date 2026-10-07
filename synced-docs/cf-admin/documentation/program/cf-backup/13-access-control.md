@@ -51,7 +51,7 @@ touch the backup key. **Admin** changes who may do what.
 | `runs.annotate` | Add or edit a note on a run ("restored from this on …") | operate | — | Admin, Owner, Vendor |
 | `logs.download` | Download raw logs and GitHub's archive | operate | audited | Admin, Owner, Vendor |
 | `activity.export` | **Generate an activity log** export (CSV + JSON) for a date range | operate | audited | Admin, Owner, Vendor |
-| `runs.run` | **Run now** (full, or Supabase-only) | operate | typed confirmation; cooldown; **a per-person daily limit** (`runGuards.manualRunsPerPersonPerDay`, default 6, bounds 1–24, doc 13 §7, Ruling R-4); refused while a run is active (doc 14 §6) | Owner, Vendor |
+| `runs.run` | **Run now**, and **Export a Supabase project** (2026-10-07, README OD-28) | operate | typed confirmation; cooldown; **a per-person daily limit** (`runGuards.manualRunsPerPersonPerDay`, default 6, bounds 1–24, doc 13 §7, Ruling R-4); refused while a run is active (doc 14 §6). An export takes the typed `EXPORT`, is refused while its token is absent or another export is on GitHub, and does not count against the daily limit or wait for a backup | Owner, Vendor |
 | `runs.cancel` | Cancel a queued or running backup | operate | confirmation; reason | Owner, Vendor |
 | `runs.bypass-cooldown` | **Bypass** the Run-now cooldown | operate | reason required; a notice | Owner, Vendor |
 | `runs.drill` | Start a restore drill now: the real-path drill, or a **check** (every export and restore drill, no data kept; never counts as a backup) | operate | typed confirmation | Owner, Vendor |

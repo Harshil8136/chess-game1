@@ -25,6 +25,10 @@ tags: [program, cf-backup, secrets, api-keys, setup, runbook]
 >
 > Everything else is a public value (a variable or a console setting) or a binding.
 > cf-admin gains **one service binding and zero secrets**.
+>
+> **One temporary fifth key** (owner, 2026-10-07): `SUPABASE_ACCESS_TOKEN`, a GitHub secret
+> that exists only while the owner runs the console's *Export a Supabase project*, then is
+> deleted (§10). It is never held by the Worker or cf-admin.
 
 ## 1. Why four, and not fewer or more
 
@@ -353,3 +357,23 @@ it.
 
 A calendar row saved under key 4's former name, `SUPABASE_KEYS_URL`, is read as
 `VAULT_DB`'s until the next save.
+
+## 10. The temporary key — `SUPABASE_ACCESS_TOKEN` (owner, 2026-10-07)
+
+The console's **Run now → Export a Supabase project** makes a one-off, complete copy of one whole
+Supabase project (database, sign-in records, settings, Edge Functions, Storage files) on GitHub,
+encrypted to the archive key. It needs the Supabase Management API, which takes an **account**
+token: one that reaches every project in the account. The owner accepted it as an exception to
+the four-key set and to the RD-4 freeze, on these terms:
+
+| | |
+|---|---|
+| **Lives in** | A GitHub Actions secret in the cf-backup repo, read only by `supabase-project-export.yml`, and only in its two steps that call Supabase |
+| **Exists** | Only while an export is wanted. Created to expire after one day; deleted from GitHub and revoked at Supabase after the export. Normally absent, and then the console refuses to start one |
+| **Never** | In the Worker, in cf-admin, or in the backup engine's workflow. The Worker checks it exists by **name** through key 3, never its value |
+| **Cannot copy** | The project that holds the backup key: the export stops after connecting when it finds the key's schema. The account token must never reach the key (§1, "Why Supabase has two") |
+| **Signs in with** | A temporary database login the token creates (the Supabase CLI's login role), deleted at the end. The database password is never handed over |
+| **If it leaks** | Account-wide power over Supabase until it expires (at most a day): revoke it at once in Supabase, then remove the GitHub secret |
+
+It has no rotation-calendar row: it is created and deleted per export. The owner's steps are in
+cf-backup's export guide, "From the console".
