@@ -29,7 +29,8 @@ tags: [program, cf-backup, secrets, api-keys, setup, runbook]
 > **Optional, since 2026-10-07 (the owner's decision):** a Supabase access token named
 > `SUPABASE_ACCESS_TOKEN`, as a cf-backup Worker secret (lists the Supabase projects for
 > Settings → Databases and Run now) and as a GitHub secret (backs up Supabase projects other
-> than the live one). Neither is a backup key; §7a.
+> than the live one; a full-access token is allowed, with a warning on each run). Neither is a
+> backup key; §7a.
 
 ## 1. Why four, and not fewer or more
 
@@ -336,11 +337,12 @@ group). Two copies of a Supabase access token, with different reach:
 
 | Where | Used for | Scope it to | Without it |
 |---|---|---|---|
-| cf-backup **Worker secret** (`wrangler secret put SUPABASE_ACCESS_TOKEN`) | One call, `GET /v1/projects`, cached 5 minutes: the list Settings → Databases and Run now show | Reading the project list only. A token that can do more on the live project could reach its Vault, which holds the backup key | Only the live project and the D1 databases are listed |
-| cf-backup **GitHub secret** (`gh secret set SUPABASE_ACCESS_TOKEN`) | The backup engine asks the Management API for a temporary read-only database login to each chosen project **other than the live one**, and deletes it after the export | The other projects only. The engine refuses the token when it can read the live project, and refuses any project that holds the backup key schema | Other projects cannot be backed up; the live project and D1 are unaffected |
+| cf-backup **Worker secret** (`wrangler secret put SUPABASE_ACCESS_TOKEN`) | `GET /v1/projects`, and for each running project one read-only query that counts its size, tables and sign-in accounts (counts only), all cached 5 minutes: what Settings → Databases and Run now show | As narrow as Supabase allows: listing projects and read-only queries. A token that can do more on the live project could reach its Vault, which holds the backup key | Only the live project and the D1 databases are listed, without details |
+| cf-backup **GitHub secret** (`gh secret set SUPABASE_ACCESS_TOKEN`) | The backup engine asks the Management API for a temporary read-only database login to each chosen project **other than the live one**, and deletes it after the export | The other projects, ideally. A token that can also reach the live project is allowed (the owner's choice, 2026-10-07): each run warns, and the GitHub copy is deleted once no other project needs backing up. The engine refuses any project that holds the backup key schema | Other projects cannot be backed up; the live project and D1 are unaffected |
 
 D1 databases need no new key: the engine lists them with key 1 at the start of each run and
-stores the list in R2 for the console. Rotation: a Supabase token carries the expiry chosen when
+stores the list in R2 for the console, with the live project's id, which only the engine's own
+sign-in (key 2) can tell. Rotation: a Supabase token carries the expiry chosen when
 it is created; replace both copies before it.
 
 ## 8. Setup order, as built
