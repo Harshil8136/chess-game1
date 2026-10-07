@@ -134,7 +134,11 @@ GitHub secret `SUPABASE_ACCESS_TOKEN`, for a temporary read-only login and the p
 pooler, then exports, restores and verifies the database and its authentication records exactly as
 steps 2 to 4 do for the live project (stores `supabase-<project>` and `supabase-<project>-auth`). A
 token that can also reach the live project is allowed and warned about on each run (decision log
-§0.3); a project that holds the backup key schema is refused. It removes the login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
+§0.3); a project that holds the backup key schema is refused. The temporary login inherits none of
+its grants, so every connection first steps into Supabase's read-only role
+(`supabase_read_only_user`, which reads every table, `auth` included), as the Supabase CLI does with
+its own logins; without that step it reads nothing (run of 2026-10-07 20:19 UTC). It removes the
+login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
 a database backup.
 
 **Step 1 — Pre-flight.** Fail immediately, naming what is missing, if either secret or either
