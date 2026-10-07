@@ -88,6 +88,20 @@ The console export built the same day was deleted at his request.
 | Other Supabase projects | **The engine signs in with a temporary read-only login from the Supabase Management API, through the GitHub secret `SUPABASE_ACCESS_TOKEN`, and refuses a token that can reach the live project, or a project holding the backup key schema** | The live project's Vault holds the backup decryption key (RULE #0.9) |
 | Keys | **Two optional tokens, both named `SUPABASE_ACCESS_TOKEN`** (RULES.md 3) | The Owner added them; neither is a backup key |
 
+## 0.3 Decisions of 2026-10-07 evening: the first run of another project
+
+The first Run now with only the old Supabase project ticked failed: the engine could not tell which
+project was the live one, so it refused to back up the old one. The Worker had been naming the live
+project from the user name of its Hyperdrive login, which is Hyperdrive's own login, not Supabase's.
+The Owner then asked whether the account-wide `SUPABASE_ACCESS_TOKEN` could do the whole job, and
+chose "Allow it".
+
+| Item | Decided | Reason |
+|---|---|---|
+| Which project is live | **The engine says so.** Pre-flight reads the project from its own `SUPABASE_DB_URL` and passes only that project's id to the plan step, which stores it in the D1 listing in the bucket for the Worker to read | Only the engine holds the live sign-in; the Worker's binding cannot tell |
+| A full-access GitHub token | **Allowed, with a warning on each run** that names it, until the GitHub copy is deleted once no other project needs backing up. A project holding the backup key schema is still refused | The Owner's choice: the token he already has works now, and the warning keeps the risk visible |
+| What the console shows for each database | **Read live:** size, tables, sign-in accounts, Postgres version, region and creation month for each running Supabase project (a read-only count query through the Worker's token, cached 5 minutes); size and tables for D1 from the engine's listing; and when each database last had a verified copy, from the engine's manifests | The Owner asked for a clearer picker with more about each project, from live data |
+
 ## 1. Decision register (defaults: reversible at review)
 
 | ID | Decision | Default (applies unless the Owner decides otherwise) | Alternative | Required by |
@@ -186,6 +200,7 @@ configured.
 | 2026-09-26 | claude | RD-1 applied: views and functions compared against Auth-style column changes on a local PostgreSQL 16 with Supabase's privileges reproduced; live privilege checks after the migration | §1, §2 |
 | 2026-09-27 | claude | The Owner's instruction to settle every open decision on its best option; live checks: both workflows `disabled_manually`, `backup:config` rev 4 with both schedules off, Supabase Storage empty (0 buckets, 0 objects), the `tick-deadman` schedule's start times (4 to 5 hours late) | §0 |
 | 2026-10-07 | claude | The Owner's instruction of 2026-10-07 (choose databases in Run now and the schedule); the live D1 list (4 databases, one of them new since the engine's fixed list) and the live Hyperdrive config's user, read through the Cloudflare connector | §0.2 |
+| 2026-10-07 | claude | The failed run's GitHub log (the plan named no live project), the live projects' list and their Postgres versions and backup key schema, read through the Supabase connector | §0.3 |
 
 ## 8. Related
 

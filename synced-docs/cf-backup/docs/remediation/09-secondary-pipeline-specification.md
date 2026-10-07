@@ -118,6 +118,11 @@ databases this run backs up, and never fails the run:
    database;
 3. any doubt (no token, a failed listing, nothing chosen) backs up the fixed list below.
 
+The plan step never sees `SUPABASE_DB_URL`. Pre-flight, which holds it, writes only the live
+project's id to the work folder (`plan.ts live-ref`); the plan step reads it, backs up a chosen
+project with that id as the live one, and stores the id in the D1 listing so the console knows
+which project is live.
+
 Steps 2 to 5 then cover only the chosen stores, and the verdict expects exactly those. A run the
 console started without a database the schedule backs up is **partial**: its run name ends in
 `-partial` (so the fallback guard does not count it), and the console keeps it as a good backup that
@@ -127,9 +132,9 @@ is never counted as a full one.
 live one, `scripts/secondary-pipeline/other-projects.ts` asks the Supabase Management API, with the
 GitHub secret `SUPABASE_ACCESS_TOKEN`, for a temporary read-only login and the project's session
 pooler, then exports, restores and verifies the database and its authentication records exactly as
-steps 2 to 4 do for the live project (stores `supabase-<project>` and `supabase-<project>-auth`). It
-refuses a token that can reach the live project and a project that holds the backup key schema, and
-removes the login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
+steps 2 to 4 do for the live project (stores `supabase-<project>` and `supabase-<project>-auth`). A
+token that can also reach the live project is allowed and warned about on each run (decision log
+§0.3); a project that holds the backup key schema is refused. It removes the login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
 a database backup.
 
 **Step 1 — Pre-flight.** Fail immediately, naming what is missing, if either secret or either

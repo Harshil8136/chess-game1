@@ -39,10 +39,12 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    is a backup key, and without either the live project and the D1 databases are backed up
    as before:
    - the Worker secret lists the account's Supabase projects for Settings → Databases and
-     Run now. It needs only read access to the project list;
+     Run now, and reads each running project's size and counts with a read-only query;
    - the GitHub secret lets the backup engine sign in to another Supabase project with a
-     temporary read-only login. The engine refuses it when it can reach the live project,
-     so it is scoped to the other projects only.
+     temporary read-only login. A token that can also reach the live project is allowed
+     (the owner's decision of 2026-10-07): each run warns, and the GitHub copy is deleted
+     once no other project needs backing up. A project that holds the backup key schema is
+     still refused.
 4. **Dependencies are a whitelist.** `package.json` is the approved list, with exact pins.
    A new package needs the owner's approval first (plan doc 01 §6).
 5. **`npm run verify` before every push.** Workers Builds runs the same command as its
