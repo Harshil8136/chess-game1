@@ -33,13 +33,6 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    `.dev.vars`. Enter secrets only at the `gh secret set` / `wrangler secret put` prompts or
    through `scripts/setup/owner-secrets.mjs`. `PERSONAL_PAT` (rule 9) is not a backup key
    and is not one of the four.
-
-   **One temporary fifth key** (owner, 2026-10-07): `SUPABASE_ACCESS_TOKEN`, a GitHub secret
-   read only by `supabase-project-export.yml` (Run now → Export a Supabase project). It is a
-   Supabase account token, so it reaches every project in the account: it is created to expire
-   after one day, deleted from GitHub and Supabase after each export, and normally absent. The
-   Worker never holds it; it only checks the secret exists by name. The export refuses the
-   project that holds the backup key (`docs/SUPABASE-FULL-EXPORT.md`).
 4. **Dependencies are a whitelist.** `package.json` is the approved list, with exact pins.
    A new package needs the owner's approval first (plan doc 01 §6).
 5. **`npm run verify` before every push.** Workers Builds runs the same command as its
