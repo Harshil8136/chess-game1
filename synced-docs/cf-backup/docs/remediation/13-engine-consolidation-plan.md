@@ -78,10 +78,28 @@ or change one.
 
 ### B1 — Run records (built 2026-09-27)
 
-**What it does.** A tick chore, `secondary-runs` (`src/tick/secondary-runs.ts`), runs every third
-five-minute tick. It asks GitHub for `secondary-pipeline.yml`'s finished runs of the last week (one
-request, five runs), and records each run it has not seen as one finished `backup_runs` row. The
-pure part lives in `src/secondary/pipeline.ts`.
+**What it does.** A tick chore, `secondary-runs` (`src/tick/secondary-runs.ts`), asks GitHub for
+`secondary-pipeline.yml`'s finished runs of the last week (one request, five runs), and records
+each run it has not seen as one finished `backup_runs` row. The pure part lives in
+`src/secondary/pipeline.ts`.
+
+**When it asks (2026-10-04, the resource-usage plan; until then every third five-minute tick, 96
+requests a day).** Only when there is something to find (`secondaryScanNextAt`): every 15 minutes
+while a run is under way (or the active runs could not be read); every 15 minutes in the 12 hours
+after the workflow's own `schedule:` time (11:41 UTC, the fallback; a test holds the code's copy
+equal to the workflow's line) until a listing shows the run GitHub's schedule started that day;
+and otherwise every 3 hours, a safety sweep that records a run started by hand on GitHub or a
+fallback GitHub started even later. The time of each look is kept in
+`backup:status.secondaryScanAt`, and the fallback seen in `fallbackSeenAt`. A look GitHub refuses
+still counts, so it is tried again at that pace, not on every tick. A backlog (more new runs than
+the three one tick records) clears `secondaryScanAt`, and the quarter-hour ticks record the rest,
+as before. `db-backup.yml`'s fallback line needs no window: it is disabled on GitHub, and its
+runner writes its own row. Since the tick now sleeps when it has no work (Contract A, design C3),
+in practice the look rides on the calls the tick gets anyway: every five minutes while a run is
+under way, about hourly in the fallback's window, and the sweep with a later hourly call. So a
+fallback run is recorded, and its success or failure alert raised, up to about an hour after it
+finishes (about three hours when it finishes after the window's last hourly look, at 23:00 UTC),
+where the quarter-hour looks took about 15 minutes.
 
 | Column | Value |
 |---|---|
@@ -258,6 +276,8 @@ day, against 5 million.
 | 2026-09-27 | claude | Written from [07](07-decision-log.md) §0 and [12](12-open-source-tool-assessment.md) §6.1; live checks at 09:30 UTC: workflow states in both repositories, `backup:config`, `backup_runs`, the key registry, Supabase Storage, and the start times of this repository's scheduled runs; commissioning run durations from GitHub | §1 to §8 |
 | 2026-09-27 | claude | A map of every console path that assumes the Primary Pipeline (staleness, run list and detail, dispatch and reconcile, Diagnostics, `backup_runs` writers, the Secondary Pipeline's R2 output); B1 built against it | §3 B1, B2; §8 |
 | 2026-09-27 | claude | GitHub's record of runs 36325294293 and 36327225356; `backup_runs` in production; `npm run verify` for C1 and C2 | §1 update, §3 B0, B3; §8 |
+| 2026-10-04 | claude | B1's "When it asks" against `src/tick/secondary-runs.ts`, `test/next-tick.test.ts` (the 11:41 cron read from `secondary-pipeline.yml`) and `test/tick-contract-a.test.ts` (a quiet day: 16 looks with hourly calls, 52 with five-minute calls); 96 before, from the same fixture run against the parent commit in a scratch copy, since that test cannot run on the old code; the engine's scheduled runs of 2026-09-27 to 10-03 through the GitHub connector, read-only (2 h 35 min to 7 h 2 min after the cron). The rest of the document was not re-checked, so `last_verified` stays | §3 B1 |
+| 2026-10-06 | claude | Review of the unpushed Contract A commits: when a fallback run is recorded once cf-admin calls hourly, read from `secondaryScanNextAt` and `secondaryWakeAt` (no wake in the fallback's window once a look is recorded) and the whole-day test, now calling some seconds after each mark as cf-admin does (still 16 and 52 looks). The rest of the document was not re-checked, so `last_verified` stays | §3 B1 |
 
 ## 10. Related
 

@@ -44,7 +44,8 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    no Cloudflare cron triggers. Its one table, `backup_runs`, is created by cf-admin
    migration `0057` (design D-1). Its settings are `admin_portal_settings` rows with the
    `backup:` prefix (cf-admin RULESAd RULE #0.6–#0.9). The schedule rides cf-admin's
-   `backup-tick` job: from `docs/remediation/13` B3 it dispatches the backup engine,
+   `backup-tick` job (since 2026-10-04 it calls only when the last tick's `nextTickAt` says
+   there is work, at least hourly: design C3, Contract A): from `docs/remediation/13` B3 it dispatches the backup engine,
    `secondary-pipeline.yml`, daily at 09:17 UTC. The workflow's own `schedule:` line
    (11:41 UTC) is the fallback, and stands down once a run has succeeded that UTC day
    (RD-12, permanent). `db-backup.yml` keeps its fallback line until B5 deletes it, and is

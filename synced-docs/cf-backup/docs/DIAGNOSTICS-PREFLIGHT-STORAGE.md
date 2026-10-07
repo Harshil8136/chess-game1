@@ -323,9 +323,11 @@ interface Probe {
 
 **Costs:** "ext" counts external subrequests and "int" counts calls to Cloudflare services. Every GitHub call is external.
 
+**`tick.age` and a tick that sleeps (2026-10-04, Contract A).** A tick with nothing to do tells cf-admin when it next has work (`nextTickAt`, at most an hour away) and keeps that time in `backup:status`; cf-admin skips its five-minute calls until then. Such a tick is asleep, not late: `tick.age`, the Readiness check, the Overview card and the stale-tick banner count its age from five minutes before that time (`src/live/tick-age.ts`), so the 15- and 60-minute thresholds keep their meaning, and while it sleeps the summary adds "nothing is due until HH:MM UTC". The design's C3 section owns the rule.
+
 | id | Step | What it calls | Pass means | Warn | Fail | ext / int |
 |---|---|---|---|---|---|---|
-| `tick.age` | trigger | D1: `backup:status.lastTickAt` | tick within 15 min | 15–60 min | older than 60 min | 0 / 1 |
+| `tick.age` | trigger | D1: `backup:status.lastTickAt` and `nextTickAt` | tick within 15 min | 15–60 min | older than 60 min | 0 / 1 |
 | `schedule.next` | trigger | config + clock | next slot computed | schedule off | config unreadable | 0 / 1 |
 | `d1.ping` | guards | D1 `SELECT 1` | answers | slow | error | 0 / 1 |
 | `d1.settings` | guards | the 5 `backup:*` setting rows | all parse | a row missing (code defaults in use) | a row unparseable | 0 / 1 |
@@ -619,7 +621,7 @@ Built: B2, B3 and B4, less the runner test. Not built yet: the pre-flight gate (
 
 | Step | Probe | A pass proves |
 |---|---|---|
-| Trigger | `tick.age` | the 5-minute tick has run recently |
+| Trigger | `tick.age` | the tick has run recently (every 5 minutes, or asleep until the time it gave, at most an hour) |
 | Trigger | `schedule.next` | the schedule reads and has a next slot (warn: every slot is off) |
 | Guards | `d1.ping` | D1 answers (warn over 300 ms) |
 | Guards | `d1.settings` | every `backup:*` settings row is stored (warn: one is missing and code defaults are in use) |
