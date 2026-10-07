@@ -25,6 +25,13 @@ tags: [program, cf-backup, live, realtime, dashboard, observability]
 > heartbeat to R2 every 5 seconds, GitHub reports queue and step status, and the console
 > polls cf-backup through cf-admin's gateway.
 
+> **As rebuilt (2026-10-07, owner: "REAL AUTO UPDATING LIVE").** The backup engine, the
+> Secondary Pipeline, writes no heartbeat, so the heartbeat, live log and runner metrics below
+> never appeared for it. A run showed "starting" until it ended, and a run GitHub started
+> itself was not shown at all. The Live page now reads the engine from GitHub, for every run
+> whoever started it, and shows the services the backup uses. [§12](#12-the-backup-engine-on-the-live-page-as-rebuilt-2026-10-07)
+> describes it. §1 to §11 still describe the heartbeat design of the retired Primary Pipeline.
+
 ## 1. What "live" covers, and where each part comes from
 
 | What you see | Source | How fresh |
@@ -218,7 +225,7 @@ Doc 13's capabilities apply:
 | cf-admin requests (count toward 100k/day; each is also one cf-backup invocation) | as built: ~12 live polls a minute per viewer (5 s), each a `304` when nothing changed, plus a log request only when there are new lines | ~2 a minute per viewer (30 s), fewer while nothing changes; zero while the tab is hidden or paused |
 | cf-admin session reads (KV) | one per request, as for every portal request | same |
 | R2 Class B (reads) | one `state.json` read per poll, plus new log chunks | none |
-| GitHub API | only in the cases of §4; well under the 5,000/hour installation limit | none (as built) |
+| GitHub API | only in the cases of §4; well under the 5,000/hour installation limit | none (as built). As rebuilt on 2026-10-07 (§12): one run list at most every 4 s while a run is going, else every 15 s, plus the running job's steps; still well under the limit |
 
 A heavy day (three people watching ten minutes of runs) is at most about 720 cf-admin
 requests (3 × 10 min × 24 a minute, if every poll also fetched log lines), under 1% of the
@@ -230,3 +237,48 @@ daily allowance; counting cf-backup's own invocation for each, about 1,440 of th
 - How quickly GitHub's jobs endpoint reflects a step's status while a job is running.
 - S3 PUT latency from GitHub-hosted runners to R2, and that the runner image has what the uploader needs (the AWS CLI, or `curl` with SigV4).
 - That polling through the gateway adds no noticeable latency beyond cf-admin's normal request path.
+
+## 12. The backup engine on the Live page (as rebuilt 2026-10-07)
+
+The owner reported on 2026-10-07 that the Live page did "a terrible work" of showing a run
+across services. It had four causes. The engine writes no heartbeat. GitHub's soft steps
+(`continue-on-error`) report a success even when they failed. A run GitHub started itself
+had no `backup_runs` row to be found by. And a finished run vanished after a minute.
+`GET /api/live` now carries an `engine` part, built in cf-backup's `src/live/engine.ts`
+from GitHub's own answers:
+
+| What the page shows | Source | How fresh |
+|---|---|---|
+| The engine's 8 newest runs: queued, running or finished, started by the schedule, Run now, GitHub's fallback clock or a person on GitHub | GitHub's run list for `secondary-pipeline.yml` | 4 s while a run is going, else 15 s |
+| Each step: waiting, running (its own time, ticking), passed, done, failed, skipped or cancelled, and its typical time | The run's job (GitHub's steps, to the second) | 3 s while running; a finished job is kept for hours |
+| Whether a run is stalled | A step running past three times its typical time and 5 minutes over it, or past 80% of its time limit when there is nothing to compare with | per poll |
+| Time left | The median whole-run time of recent passing runs; with none, the page says there is no estimate | per poll |
+| Each database's result: verified or not, tables, rows restored, the engine's problem text | The verdict table in the finished job's log | once, when the run has finished |
+| The log's error lines | The finished job's log (`##[error]` lines) | once |
+| Who asked, and whether a Run now left out a scheduled database | The `backup_runs` row, matched by GitHub run id or the request id in the run's name | per poll |
+| Services: the scheduler tick, GitHub Actions, the engine, Supabase, Cloudflare D1, R2, the run records | The reads above, and the tick's `backup:status` | per poll |
+
+How each state is decided:
+
+- **Skipped** is a run GitHub calls a success in which pre-flight never ran: the fallback found
+  a backup already done that day, or the schedule names no backup for it. It is shown muted,
+  with that reason, never as a pass or a failure.
+- **Failed** names the databases the verdict did not verify, or else the step that failed, or a
+  run GitHub stopped at its time limit.
+- **Cancelled** is shown amber, not as a failure.
+- A soft step GitHub calls a success is shown as **done**, not passed, until the verdict says
+  how it went.
+
+Polling: every few seconds while a run is going, and the 15-minute pause for an idle tab now
+waits until no run is going (Settings → Live view). The live log panel is gone: GitHub gives a
+job's log only once the job has finished, and the page then shows its error lines and verdict.
+
+Who sees what (doc 13): `console.view` sees the runs, steps and services; table and row counts
+and the log's error lines need `logs.view`; a database's problem text needs `runs.view`.
+
+Budget: one answer makes at most one run list, one job list per run not already cached, and
+two log reads, well inside the Workers Free limit of 50 subrequests. The run records are read
+with one more range search of `backup_runs_requested`.
+
+No new secret or token was needed. The GitHub App's installation token is already narrowed to
+`actions: read`, which covers the run list, the jobs and the logs.
