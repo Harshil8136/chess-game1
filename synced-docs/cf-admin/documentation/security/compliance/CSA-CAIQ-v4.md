@@ -74,7 +74,7 @@ CSA-canonical column headers.
 | AIS-04 | Is output encoded to prevent injection? | Yes | Preact/Astro auto-escape; `src/lib/email/sanitize-html.ts` HTMLRewriter sanitizer. |
 | AIS-05 | Is CSRF protection in place for state-changing ops? | Yes | `src/lib/csrf.ts::validateCsrf()` on all mutation methods. |
 | AIS-06 | Are dependencies scanned for vulnerabilities? | Yes | `npm audit --omit=dev --audit-level=high` on every push + weekly Monday cron, gated by `scripts/audit_gate.py`, which fails the build on any undocumented high/critical advisory **and** on an expired exception. Blocking since **2026-07-25**; before that date the step was suffixed `|| true` and could not fail. Date added 2026-07-29. |
-| AIS-07 | Are APIs protected by strong authentication + rate limiting? | Yes | `requireAuth()` + Upstash Redis rate limiting (`src/lib/ratelimit.ts`). |
+| AIS-07 | Are APIs protected by strong authentication + rate limiting? | Yes | `requireAuth()` + per-route rate limits (`src/lib/ratelimit.ts`): Cloudflare's Workers Rate Limiting binding for one-minute limits, D1 counter rows for hour and day limits. *(Corrected 2026-10-07: Upstash Redis until 2026-10-04.)* |
 
 ### BCR — Business Continuity Management & Operational Resilience
 
@@ -249,3 +249,9 @@ exclusion list; `migrations/0000_baseline.sql`; `src/lib/audit.ts`
 `2026-09-18 04:49:11`). Still not checked: vendor SOC 2 / ISO 27001 reports,
 countersigned DPAs, GitHub repository settings, and Cloudflare Access policy
 contents.
+
+*2026-10-07 pass — one row changed.* **AIS-07** names the stores cf-admin's rate
+limits moved to on 2026-10-04 (the Rate Limiting binding and D1), checked against
+`src/lib/ratelimit.ts` and `wrangler.toml`. Upstash stays in the sub-processor and
+DCS rows: cf-astro and cf-chatbot still use it (`RoPA.md` §3). Not re-checked:
+every other row.

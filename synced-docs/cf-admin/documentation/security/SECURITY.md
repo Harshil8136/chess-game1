@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-03
+last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
 related_docs: [THREAT-MODEL.md, RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/plac-and-audit.md, ../operations/OPERATIONS.md]
@@ -60,6 +60,8 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-07 | §6b's opening sentence against `wrangler.toml`: the Rate Limiting binding is a new binding type (the owner-approved exception), not a store the Worker already had | Every other section |
+| 2026-10-04 | §2a's raw-IP note and §6b's rate-limit mechanism, rewritten for the move off Upstash, against `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `wrangler.toml` `[[ratelimits]]`, `test/ratelimit.test.ts` and `test/ratelimit-bindings-contract.test.ts`. No route, method, limit or key changed, so the §6b table and the route table are unchanged | Everything else; how long Cloudflare's limiter keeps a counter after its period |
 | 2026-10-03 | The route table's two sign-in alert rows, against `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `src/lib/auth/surface-guards.ts` and `test/login-alert-settings.test.ts` / `test/login-alert-policy.test.ts` (v2 step 2) | Everything else |
 | 2026-10-03 | The email-alert-amplification row rewritten and the sign-in-reuse row added for sign-in alerts v2 step 1, against `src/lib/login-alerts/decide.ts`, `src/lib/login-alerts/dispatch.ts`, `src/lib/auth/security-logging.ts` and `test/login-alert-decide.test.ts` / `test/login-alerts.test.ts` | Everything else; the API route table is unchanged (no route added) |
 | 2026-10-03 | The email-alert-amplification row and the §5 revocation-flag note, against `src/lib/login-alerts/throttle.ts`, `src/lib/auth/login-event.ts` and `test/login-alerts.test.ts` | Everything else; the last full pass is the 2026-09-20 row |
@@ -262,7 +264,8 @@ repository) plus the route's own HMAC-token verification.
 
 *Corrected 2026-09-20:* these four limiters were documented as "keyed on hashed
 client IP". They pass `cf-connecting-ip` straight to the limiter, so raw client
-IPs become Upstash keys. The access **telemetry** rows written by the same
+IPs become limiter keys: Upstash keys until 2026-10-04, and since then keys of
+Cloudflare's own Rate Limiting binding, which no store of ours holds (§6b). The access **telemetry** rows written by the same
 routes do hash the IP — the two are different things. See [`RoPA.md`](RoPA.md) §2.1.
 
 **Open operator action:** the scope of the Cloudflare Access bypass policy in
@@ -710,22 +713,35 @@ role-only gates "by design".*
 | `POST /api/auth/logout` | 10/min | `auth-logout` | raw client IP |
 | `POST /api/emails/webhook` | 120/min | `brevo-webhook` | raw client IP |
 
-Rate limiting uses Upstash Redis sliding-window via `src/lib/ratelimit.ts`.
-Missing Upstash credentials fall back to allow-all in local dev but **deny in
-production** — read `src/lib/ratelimit.ts` before assuming a missing binding is
-harmless. `safeRateLimit()` fails **closed** if the Upstash call itself errors;
-it is used by **11 route files**, not only the four public storage routes — the
-AI generation routes and the authenticated storage routes use it too
-(`grep -rln "safeRateLimit(" src/pages`). *Both corrections 2026-09-20.*
+Rate limiting goes through `getRateLimiter()` in `src/lib/ratelimit.ts`, backed
+since 2026-10-04 by one new binding type, the Workers Rate Limiting binding (the
+owner-approved exception), and by D1, which the Worker already had (Upstash Redis until then;
+[`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §3.6 owns the
+detail):
 
-**Upstash timeouts and key expiry (2026-10-02).** A limit check waits at most
-3 s for Upstash. On a timeout the library answers `success: true` rather than
-failing, so `getRateLimiter` turns it into a refusal (`success: false`,
-`reason: 'timeout'`): a slow Upstash now fails closed like an erroring one. Logout
-and the RFC 8058 unsubscribe proceed on a timeout, because refusing either does
-harm (a session left alive; an unsubscribe not honoured). Every limiter key
-expires after 2 × its window + 1 s, and limiter analytics are off — they had kept
-these identifiers with no expiry; see
+- **One-minute limits** (every IP-keyed limiter above, and most of the rest):
+  Cloudflare's Workers Rate Limiting binding, one `RL_PER_MIN_<n>` per limit
+  value, keyed `<limiter>:<caller>` so two limiters never share a counter. Its
+  counts are per Cloudflare location and approximate: an abuse guard, not an
+  accounting system.
+- **Hour and day limits** (signed-in routes only, keyed by `user.userId`): a
+  fixed-window counter row in D1 `admin_portal_settings`, counted by one atomic
+  upsert, so two concurrent requests cannot both read the same count.
+
+**Fail-closed is unchanged.** A missing binding or D1 in production is reported
+and refuses every request on that limiter (outside production it allows, so
+local work needs no setup); a binding or D1 call that throws refuses too, with
+`reason: 'unavailable'`. Logout and the RFC 8058 unsubscribe proceed on
+`unavailable`, because refusing either does harm (a session left alive; an
+unsubscribe not honoured). A one-minute limit with no binding would refuse
+every request on its route, so `test/ratelimit-bindings-contract.test.ts` fails
+the build when a `getRateLimiter(…, window: '1 m')` call names a limit
+`wrangler.toml` does not bind. `safeRateLimit()` still wraps the call on 11
+route files (`grep -rln "safeRateLimit(" src/pages`) and fails closed if
+`.limit()` itself throws. No limiter key is written to any store with an
+expiry to forget any more: the binding's counters are Cloudflare's, and a D1
+counter row holds a user id and a count, overwritten each window. The Upstash
+history (3 s timeouts, keys without expiry) is in
 [`../operations/incidents/2026-10-02-redis-keys-without-expiry.md`](../operations/incidents/2026-10-02-redis-keys-without-expiry.md).
 
 ### Zod Schema Validation

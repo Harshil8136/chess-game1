@@ -401,7 +401,7 @@ Supabase-outage case.*
 > **Force Re-sync, live Group-membership drift detection). This section is a**
 > **summary only — that document is the source of truth going forward.**
 
-The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker API synchronizes the Supabase `admin_authorized_users` whitelist with a Cloudflare Access Group named "Admin Portal Authorized Users" on every user create/update/delete, **and on a 5-minute cron reconciliation pass** (not purely event-driven — see `CF-ACCESS-SYNC.md`). This means unauthorized emails are intended to be blocked at the Cloudflare edge *before* they reach the Worker middleware — **contingent on the CF Access Application's Policy actually including this Group**, which is dashboard-side configuration this codebase cannot verify automatically (see `CF-ACCESS-SYNC.md`'s "Known limitation").
+The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker API synchronizes the Supabase `admin_authorized_users` whitelist with a Cloudflare Access Group named "Admin Portal Authorized Users" on every user create/update/delete, **and on a cron reconciliation pass** (every 5 minutes until 2026-10-04, hourly since through a Cron Control throttle; not purely event-driven — see `CF-ACCESS-SYNC.md`). This means unauthorized emails are intended to be blocked at the Cloudflare edge *before* they reach the Worker middleware — **contingent on the CF Access Application's Policy actually including this Group**, which is dashboard-side configuration this codebase cannot verify automatically (see `CF-ACCESS-SYNC.md`'s "Known limitation").
 
 ```
 Admin Portal Add/Update/Delete User 

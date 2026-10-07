@@ -5,7 +5,7 @@ audience: [ai, technical, operator, owner]
 last_verified: 2026-10-02
 verified_against: [code, infra, live]
 owner: harshil
-related_code: [src/lib/ratelimit.ts, src/lib/redis-hygiene.ts, src/workers/scheduled-redis-hygiene.ts, src/lib/alert-gate.ts, src/pages/api/auth/logout.ts, src/pages/api/emails/unsubscribe.ts]
+related_code: [src/lib/ratelimit.ts, src/lib/alert-gate.ts, src/pages/api/auth/logout.ts, src/pages/api/emails/unsubscribe.ts]
 related_docs: [../OPERATIONS.md, ../../security/RoPA.md, ../../security/compliance/data-residency.md, ../../security/SECURITY.md, ../../architecture/RATE-LIMITING-AND-REDIS-ELIMINATION-STRATEGY.md, ../../features/CRON-CONTROL.md, ../../MAINTENANCE.md]
 tags: [incident, redis, upstash, ratelimit, privacy, retention, ttl]
 ---
@@ -36,7 +36,7 @@ tags: [incident, redis, upstash, ratelimit, privacy, retention, ttl]
 | Oldest | 2026-08-07 17:00 UTC (cf-admin), 21:00 UTC (cf-astro) |
 | Cause | `analytics: true` on `@upstash/ratelimit`. Its analytics dependency, `@upstash/core-analytics` 0.0.10, never sets an expiry (§3) |
 | Detected | 2026-10-01, by the owner, in the Upstash console |
-| Status | **Resolved 2026-10-02.** No key without an expiry since 02:39:50 UTC; the 648 were gone by 03:40 UTC (§6). A weekly job now guards it (§5) |
+| Status | **Resolved 2026-10-02.** No key without an expiry since 02:39:50 UTC; the 648 were gone by 03:40 UTC (§6). A weekly job guarded it (§5) until 2026-10-04, when cf-admin stopped using Upstash and the job left with its Upstash code; checking cf-astro's and cf-chatbot's keys is now open ([`../../MAINTENANCE.md`](../../MAINTENANCE.md) RU-8, [record](../../records/reports/2026-10-04-resource-usage-optimisation.md)) |
 
 ## 2. Timeline (UTC)
 

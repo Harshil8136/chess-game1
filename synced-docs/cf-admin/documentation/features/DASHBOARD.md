@@ -3,7 +3,7 @@
 title: "Dashboard — Real-Data Command Center"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-10-04
 verified_against: [code]
 owner: harshil
 related_code:
@@ -15,6 +15,7 @@ related_code:
 - src/components/ui/MetricCard.tsx
 - src/pages/api/dashboard/metrics.ts
 - src/lib/analytics/providers/index.ts
+- src/lib/visible-poll.ts
 - src/lib/analytics/providers/cloudflare.ts
 - src/lib/analytics/providers/external.ts
 related_docs:
@@ -89,19 +90,25 @@ info) is fetched client-side after mount via the analytics API". There is no aud
 log and no user info on this page.*
 
 `DashboardController` calls `GET /api/dashboard/metrics` on mount and then every
-**60 seconds** while the page is open. That route calls `fetchAllAnalytics()`,
-which:
+**5 minutes, only while the tab is on screen** (`src/lib/visible-poll.ts`): a
+hidden tab asks for nothing, and a tab that comes back with data older than 5
+minutes asks at once. A manual refresh pushes the next automatic one back. That
+route calls `fetchAllAnalytics()`, which:
 
-1. reads a 5-minute KV cache (`telemetry_metrics_cache_v2`) from the `SESSION`
-   namespace and returns it on a hit;
-2. on a miss, fans out to the eight providers and, on success, writes **two** KV
-   keys — the 5-minute cache and a permanent stale copy.
+1. reads **one** KV key (`telemetry_metrics_cache_stale_v2`) from the `SESSION`
+   namespace, the last good snapshot, and returns it when its own `timestamp`
+   is less than 5 minutes old (`METRICS_CACHE_TTL_MS`);
+2. otherwise fans out to the eight providers and, on success, writes that one
+   key back.
 
-Two KV writes per cache miss matters: the free allowance is ~1,000 writes/day and
-this namespace is shared with sessions. A dashboard left open all day costs up to
-about 576 of them.
+*Changed 2026-10-04:* the poll was every 60 seconds, hidden tabs included, and
+each refill wrote two keys (a 5-minute copy, `telemetry_metrics_cache_v2`, and
+the permanent stale copy). The free allowance is about 1,000 KV writes a day for
+the whole account, shared with sessions, and a dashboard left open all day cost
+up to 576 of them. Now it is at most 288 (12 an hour) while visible, and none
+while hidden. The old 5-minute key simply expires.
 
-On a Cloudflare-provider failure the route serves the stale copy **with
+On a Cloudflare-provider failure the route serves the last snapshot **with
 `timestamp` reset to now**, so the "last sync" clock reads fresh over stale data.
 
 ---
@@ -237,5 +244,6 @@ animations and native `fetch` for all API calls. No third-party chart library �
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-04 | The polling and KV-cache paragraphs, against `DashboardController.tsx`, `src/lib/visible-poll.ts` and `src/lib/analytics/providers/index.ts`, with `test/visible-poll.test.ts` and `test/analytics-cache.test.ts` | Everything else on the page |
 | 2026-09-19 | `DashboardController.tsx` (KPI fallbacks, 60 s poll, tab ids), `ServiceStatusStrip.tsx` (the static `seo` card), `GscValidationWidget.tsx` (the static badge), `src/pages/api/dashboard/metrics.ts`, `src/lib/analytics/providers/index.ts` (KV cache + stale copy + timestamp rewrite), `external.ts` (Sentry top-5 lifetime sum, Brevo 100-event window), `cloudflare.ts` (queue backlog/DLQ). §0.1 and §0.2 added; the v4.5 historical sections removed; provider, token-scope and `_unconfigured` claims corrected. | The exact Cloudflare token-scope name the GraphQL D1 query needs; the D1 analytics lag figure; the Supabase Prometheus endpoint's stability |
 | 2026-09-14 | `DashboardController.tsx`, every file under `src/components/dashboard/widgets/`, `src/pages/dashboard/index.astro`, the provider layer (8 providers, `Promise.allSettled`, `_unconfigured`, snake-case GraphQL filters, `WORKER_SCRIPTS`), `wrangler.toml` crons, `package.json` (no `uplot`) | API-token permission scopes; D1 Analytics lag; Supabase Prometheus endpoint stability |

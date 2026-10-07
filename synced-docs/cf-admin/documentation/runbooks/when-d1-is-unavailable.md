@@ -3,7 +3,7 @@
 title: "When D1 Is Unavailable — What Degrades and What Fires"
 status: active
 audience: [operator, owner, technical, ai]
-last_verified: 2026-10-02
+last_verified: 2026-10-04
 verified_against: [code, live-mcp]
 owner: harshil
 related_code: [src/lib/observability.ts, src/lib/jobs/runJob.ts, src/lib/jobs/registry.ts, src/lib/jobs/budgets.ts, src/workers/cf-entry.ts, src/lib/auth/cf-access-sync-log.ts, src/workers/scheduled-log-sync.ts]
@@ -114,11 +114,32 @@ isolated by `allSettled`, so one failure cannot starve another.
 | `cron-usage-probe` | `*/5` | Cannot refresh the cached D1-usage reading, so `usage.checkedAt` goes stale — **the automatic shed decision then runs on an old number**. Its own 60-minute interval is enforced in code as well as in the control document, so it cannot storm the analytics API | Next tick after D1 returns |
 | `backup-tick` | `*/5` | cf-admin's side makes no D1 query, but cf-backup's tick reads and writes this same database, so it answers with an error: the job logs it and reports once an hour. No scheduled backup starts and no alert is sent while D1 is down | Next tick; cf-backup offers any unsent alert again, and the weekly GitHub safety net (Mondays) covers a longer outage |
 | `asset-cleanup`, `staff-storage-reconcile` | `0 2 * * SUN` | Run aborts **before** deleting anything | Next Sunday, or a manual run |
-| `redis-ttl-hygiene` | `0 2 * * SUN` | `redis-hygiene-mode` is unreadable, so the run is report-only — it never repairs blind. Its census still runs (Upstash, not D1); the alert's D1 row fails while console and Sentry still fire | Next Sunday, or a manual run |
 
 **Nothing in this table loses data.** Every job is a poll over durable state:
 the work is still there on the next tick. That is the whole reason these are
 polling crons rather than events — see the design doc §5.
+
+(`redis-ttl-hygiene`, a third Sunday job with its own row here, was removed on
+2026-10-04 with cf-admin's Upstash code.)
+
+**Throttles and sleeps lapse while D1 is down (2026-10-04).** The intervals and
+the next due times (`backup-tick`, `blog-scheduled-publish`) live in the
+`cron-control` row. When it cannot be read the tick fails open, so every job
+that is on is invoked on every five-minute tick, as before the control plane,
+and each fails as the table says. The clocks are not stamped, so nothing is
+lost: the throttles and sleeps resume on the first tick after D1 returns.
+
+### Requests that now depend on D1 (2026-10-04)
+
+Until 2026-10-04 rate limits and the AI neuron budget were Upstash, outside D1.
+Now:
+
+| Surface | If D1 is down | Recovered by |
+|---|---|---|
+| One-minute rate limits (most routes, every IP-keyed one) | Unaffected: a Cloudflare Rate Limiting binding, not D1 | — |
+| Hour and day rate limits (signed-in writes, exports, AI generation) | The counter cannot be read, so the request is **refused** with the route's usual "too many requests" answer, and `ratelimit.unavailable` is reported once per isolate. Most of these routes would fail on D1 anyway | D1 returning |
+| AI neuron budget | The sum cannot be read, so the budget **fails open** with `degraded: 'error'` (shown on the AI Health panel); the generation itself still needs D1 for its audit row | D1 returning |
+| Wakes (a backup-console change, a scheduled blog post) | The wake cannot be written and is logged as `backup.gateway.wake` or `blog.schedule.wake`; both jobs run on every tick while the control row is unreadable anyway | D1 returning |
 
 ### The one that deserves extra care
 
@@ -199,4 +220,5 @@ blog for this to hold (cf-astro `AGENTS.md` invariant 7).
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-04 | `src/lib/jobs/control.ts`, `dispatch.ts`, `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `src/lib/dal/CronControlRepository.ts` (`wakeJob`), `src/lib/jobs/registry.ts` | §3: the `redis-ttl-hygiene` row removed; the lapse of throttles and sleeps, and the D1-dependent request surfaces (hour/day limits fail closed, the neuron budget fails open, wakes) added. Not re-checked: every other row |
 | 2026-09-19 | `src/lib/jobs/registry.ts`, `tiers.ts`, `telemetry.ts`, `runJob.ts`, `src/lib/observability.ts` re-read; live `admin_portal_settings` queried for the `cron-control` document and the `job-alert:*` keys | §1 rewritten (Observability is conditional since `eb8cb12`; Sentry has three regimes, not one); §3 job table re-derived — **11 jobs, 9+2**, `cron-usage-probe` row added, `disabled`/`shed` outcomes documented; §4 reordered to put Analytics Engine first; `lease-held` marked unreachable; §1's stale "until chunk 8c" wording removed. `job-alert:cf-sync-log:sweep` and `job-alert:cf-sync:supabase_fetch_failed` confirmed present in D1 |

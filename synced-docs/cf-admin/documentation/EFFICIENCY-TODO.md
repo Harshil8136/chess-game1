@@ -2,7 +2,7 @@
 title: "Efficiency To-Do — KV per Click, Background Polling, Sidebar and Session Cost"
 status: active
 audience: [ai, technical, owner]
-last_verified: 2026-09-23
+last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/auth/pipeline.ts, src/lib/auth/stages/session-stage.ts, src/lib/auth/stages/access-map.ts, src/lib/auth/stages/refresh-role.ts, src/lib/auth/session.ts, src/lib/auth/plac.ts, src/layouts/AdminLayout.astro, src/components/dashboard/DashboardController.tsx, src/lib/analytics/providers/index.ts, src/components/admin/debug/SystemDiagnostics.tsx, src/lib/diagnostics/tests/functional.ts, src/lib/diagnostics/runner.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts]
@@ -95,6 +95,13 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 #### EF-1. The diagnostics page re-runs its full test suite every 30 seconds
 
+> **Partly done 2026-10-04** ([record](records/reports/2026-10-04-resource-usage-optimisation.md)):
+> the 30-second re-run is gone. The suite runs once when the page opens and
+> otherwise only on the button, and the audit-log probe no longer counts the
+> whole table (it reads the newest entry and counts the last 7 days up to
+> 1,000). Still open: the run on open includes the KV and R2 write-cycle
+> tests, and the 30-day prune is unchanged.
+
 - **Issue.** `/dashboard/debug/diagnostics` runs the suite when it opens and again
   every 30 s, with no opt-in and no pause when the tab is hidden. Each run does a
   KV write, read and delete (the `kv_write_cycle` test), an R2 write and delete,
@@ -126,6 +133,13 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 - **Size.** Small, one component and the runner's test selection.
 
 #### EF-2. The dashboard rewrites a KV cache all day while open
+
+> **Fixes 1 to 3 done 2026-10-04** ([record](records/reports/2026-10-04-resource-usage-optimisation.md)):
+> the dashboard polls every 5 minutes, only while the tab is on screen (and at
+> once on return when its data is older than that; `src/lib/visible-poll.ts`),
+> and each refill writes one KV key that carries its own fetch time. An open
+> tab now costs at most 12 KV writes an hour, and none while hidden. Fix 4
+> (move the snapshot to D1) is not done.
 
 - **Issue.** The dashboard home fetches `/api/dashboard/metrics` every 60 s and
   never pauses when the tab is hidden. The metrics are cached in KV for 5 minutes,
@@ -299,6 +313,11 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 #### EF-11. The Access-sync cron reads the whole user list every 5 minutes
 
+> **Done 2026-10-04 through Cron Control, not code:** `cf-access-reconcile`
+> carries a 60-minute interval in the live control document (read-only D1
+> query, 2026-10-04), so it runs about 24 times a day. The `shouldRun` gate
+> suggested below was not needed.
+
 - **Issue.** `src/lib/auth/cf-access-reconcile.ts` fetches every active user from
   Supabase on each 5-minute tick to hash the list, and usually finds nothing
   changed. **Measured: 312 Supabase reads of `admin_authorized_users` in the 24 h
@@ -315,8 +334,8 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 | Screen | Interval | On by default | Pauses when hidden | Action |
 |---|---|---|---|---|
-| Dashboard home | 60 s | yes | **no** | EF-2 |
-| Diagnostics | 30 s | yes | **no** | EF-1 |
+| Dashboard home | 5 min (60 s until 2026-10-04) | yes | **yes** since 2026-10-04 | EF-2, done |
+| Diagnostics | none since 2026-10-04: once on open, then the button (was 30 s) | — | — | EF-1, partly done |
 | Email portal queue | 15 s | only while queued or scheduled items are shown | **no** | add a hidden-tab pause |
 | Sessions | 30 s | no — opt-in "Live" mode, which switches itself off after 5 minutes (`SessionCommandCenter.tsx`); *corrected 2026-09-23, this said "yes"* | yes | none |
 | Cron control | 60 s | no (opt-in) | **no** — once switched on it keeps polling a hidden tab (`CronDashboard.tsx`); `/api/cron` was the most-requested app endpoint in the week to 2026-09-22 (253 real requests, 157 of them on 2026-09-21) | add a hidden-tab pause; *corrected 2026-09-23, this said "none"* |
@@ -371,4 +390,5 @@ never who *decides*.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-04 | claude | `src/components/dashboard/DashboardController.tsx`, `src/lib/visible-poll.ts`, `src/lib/analytics/providers/index.ts`, `src/components/admin/debug/SystemDiagnostics.tsx`, `src/lib/diagnostics/tests/security.ts`; read-only D1 query of the live `cron-control` row | EF-2 fixes 1-3 and EF-11 done, EF-1 partly; §EF-12's first two rows updated. Not re-checked: §1's per-click costs, EF-3 to EF-10, the other EF-12 rows |
 | 2026-09-23 | claude | Read the auth pipeline, `src/lib/auth/session.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`, every `setInterval` under `src/components/`, the metrics provider and the diagnostics runner. Cloudflare GraphQL Analytics for KV, D1 and Worker usage (16–22 Sep 2026); Supabase edge logs (24 h); Sentry spans (30 days); live D1 queries on `admin_access_requests`, `admin_pages` and `system_test_results`. Cloudflare docs for the KV limits and for Cache API availability behind Access. | List created. EF-1 and EF-2 are latent — neither has been triggered in the measured window. |

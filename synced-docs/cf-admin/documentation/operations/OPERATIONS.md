@@ -3,7 +3,7 @@
 title: "Operations — Infrastructure, Bindings & Observability"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-02
+last_verified: 2026-10-04
 verified_against: [code, infra, live-mcp]
 owner: harshil
 tags: [operations, bindings, cloudflare]
@@ -27,6 +27,8 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-07 | `wrangler.toml` (seven `[[ratelimits]]`, added on 2026-10-04 and absent before) | §3.6's opening sentence said the limits ran on "two things it already had"; the Rate Limiting binding is new, the owner-approved exception, and now says so. Nothing else re-checked |
+| 2026-10-04 | `wrangler.toml` (`[[ratelimits]]`, `[observability.*]`, `[secrets] required`); `worker-configuration.d.ts` regenerated with `npm run types`; `src/lib/jobs/registry.ts`; read-only D1 query of the live `cron-control` row; Cloudflare documentation search (traces and logs sampling, Observability pricing) | Resource-usage change ([record](../records/reports/2026-10-04-resource-usage-optimisation.md)): seven `RL_PER_MIN_<n>` Rate Limiting bindings added to §1; **12 jobs (10+2)**, `redis-ttl-hygiene` removed; §3.6 now describes the bindings and the D1 counters, Upstash retired from cf-admin; §4.0 states the logs and traces sampling and why; §5.1 drops the two Upstash names (**22 required**; the two secrets stay set until the owner deletes them, so the live count is still 25); §8 Upstash row. Not re-checked: the Upstash instance itself (no connector reaches it), the Rate Limiting binding's plan availability and price (its documentation page could not be read), every other row |
 | 2026-10-03 | `src/lib/auth/security-logging.ts` (`postSecurityEmail`); `wrangler.toml` `[[queues.producers]]` unchanged | The `EMAIL_QUEUE` paragraph now names the security emails and the backup alerts as producers beside the Email Portal. No binding, secret, variable or cron added. Nothing else re-checked |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `EMAIL_CONSOLE` → `cf-email-api` (entrypoint `Console`) added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-email-api. Not re-checked: every other row |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `VPS` → `cf-vps` added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-vps. Not re-checked: every other row |
@@ -141,6 +143,22 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 |---------|---------|---------|
 | `ANALYTICS` | `madagascar_analytics` | cf-admin, cf-astro |
 
+### Rate Limiting (one-minute limits)
+
+Seven [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+bindings, `RL_PER_MIN_3`, `_5`, `_10`, `_20`, `_30`, `_60` and `_120`, one per
+one-minute limit value in use (`[[ratelimits]]` in `wrangler.toml`; a binding's
+limit and period are fixed, so one binding serves every limiter with that number,
+keyed `<limiter>:<caller>`). Each `namespace_id` is a number we choose, unique
+in the account: cf-admin uses the **2000-2999** range (2000 plus the limit), and no
+other Worker may use it, because two bindings with the same id share counters
+(cf-astro's own change under the same plan takes 10000 plus the limit).
+Hour and day limits cannot be expressed as a binding and are D1 counter rows
+(§3.6). Added 2026-10-04, replacing Upstash Redis
+([record](../records/reports/2026-10-04-resource-usage-optimisation.md)).
+`test/ratelimit-bindings-contract.test.ts` fails when a one-minute limit in
+`src/` has no binding.
+
 ### Scheduled triggers
 
 **Two** cron expressions on this Worker (`[triggers]` in `wrangler.toml`), fired
@@ -151,13 +169,18 @@ and each one runs under `runJob` with a declared D1 budget:
 **Do not hand-count this list.** [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
-three times. As of 2026-10-01 it is **13 jobs — 10 on `*/5`, 3 on Sunday**
-(`FIVE_MIN_JOBS` + `SUNDAY_JOBS`).
+three times. As of 2026-10-04 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
+(`FIVE_MIN_JOBS` + `SUNDAY_JOBS`; `redis-ttl-hygiene` left with Upstash).
+Being on `*/5` no longer means running every five minutes: most of these jobs
+have an interval in Cron Control (15 or 60 minutes), and `backup-tick` and
+`blog-scheduled-publish` sleep until the time they report they next have work,
+never longer than an hour. [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
+owns how that is decided.
 
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
 | `*/5 * * * *` (10) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)) |
-| `0 2 * * SUN` (3) | `asset-cleanup`, `staff-storage-reconcile`, `redis-ttl-hygiene` (weekly Redis expiry census over the shared Upstash instance; report-only unless `admin_portal_settings` `redis-hygiene-mode` = `repair`) |
+| `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile`. (`redis-ttl-hygiene`, the weekly Redis expiry census, was removed on 2026-10-04 when cf-admin stopped using Upstash; its `admin_portal_settings` row `redis-hygiene-mode` is now read by nothing and is left for the owner to delete — [`../MAINTENANCE.md`](../MAINTENANCE.md)) |
 
 > **One invocation per job (2026-09-27).** The scheduled handler no longer runs
 > the jobs itself. `dispatchCronJobs` (`src/lib/jobs/dispatch.ts`) reads the
@@ -338,44 +361,41 @@ dictate caching strategies and system design constraints.
 | Auth MAUs | 50,000 |
 | File storage | 1 GB |
 
-### 3.6 Upstash (Redis rate limiting)
+### 3.6 Rate limiting: Workers Rate Limiting and D1 (Upstash retired 2026-10-04)
 
-| Metric | Free Limit |
-|--------|-----------|
-| Commands/month | 500,000 *(corrected 2026-10-02: this said 10,000/day; `RULESAd.md` has carried the corrected figure since 2026-09-19)* |
-| Max data size | 256 MB |
-| Concurrent connections | 10 |
+cf-admin's rate limits run on one binding type that is new (the Workers Rate
+Limiting binding, the owner-approved exception to "no new services") and on D1,
+which it already had, behind the one function every route calls,
+`getRateLimiter()` in `src/lib/ratelimit.ts`:
 
-One instance, `modest-mastiff-88856`, is **shared by cf-admin, cf-astro and
-cf-chatbot**. Every key in it must expire, and the expiry must be set in the same
-request as the write. The table is the inventory `src/lib/redis-hygiene.ts`
-(`KEY_RULES`) recognises; a key family missing from it is reported by the weekly
-check as unrecognised. Add a row and a rule together.
-
-| Key family | Writer | Expiry |
+| Window | Where it is counted | Cost |
 |---|---|---|
-| `cf-admin-rl:{limiter}:{id}:{window}` | cf-admin `getRateLimiter` | 2 × window + 1 s (at most 2 days, for the daily AI quotas) |
-| `madagascar:{endpoint}:{ip}:{window}` | cf-astro `checkRateLimit` | 121 s (every window is 60 s) |
-| `cf-admin-neurons:global:{date}` | cf-admin `trackAiNeurons` | 7 days |
-| `alert:dedup:{fingerprint}` | both alert gates | 5 minutes |
-| `alerts:{severity}` | both alert gates | 14 days (written, never read — MAINTENANCE R-3) |
-| `dedup:{messageId}` | cf-chatbot | 24 hours |
-| `rate:{channel}:{id}` | cf-chatbot | 120 s |
-| `conv:active:{channel}:{id}` | cf-chatbot | 24 hours (WhatsApp), 30 minutes (web) |
-| `cache:llm:v2:{sha256}` | cf-chatbot | 1 hour |
-| `session:{id}` | cf-chatbot | 7 days |
-| `{prefix}:events:{hour}` | `@upstash/ratelimit` analytics — **off since 2026-10-02 and must not come back** | given 1 hour if one is found |
+| One minute | A Workers Rate Limiting binding (§1, `RL_PER_MIN_<n>`), keyed `<limiter>:<caller>` | No D1, KV or outside call. Counts are kept per Cloudflare location and are approximate: an abuse guard, not an accounting system |
+| One hour, one day | A fixed-window counter row in `admin_portal_settings` (`setting_key` `ratelimit:<limiter>`, `scope_type` `user`, `scope_id` the user's id, category `ratelimit`), written by one atomic upsert in `src/lib/dal/RateLimitRepository.ts` | 1 row read and 1 row written per limited request. These limits sit only on signed-in routes (user management, content and SEO writes, exports, AI generation), each keyed by the user's id |
+| Workers AI daily neuron budget | The sum of today's `ai_inference` rows in `admin_audit_log`, which every AI route already writes | 1 indexed read per AI request, over today's rows only |
 
-**The weekly check — `redis-ttl-hygiene`** (Sunday 02:00 UTC, on Cron Control).
-It reports keys with no expiry, expiries longer than their writer sets, and keys
-it does not recognise, and alerts at `warning` on any of them. With
-`admin_portal_settings` `redis-hygiene-mode` = `repair` (set 2026-10-02) it also
-gives recognised keys their writer's expiry (`EXPIRE … NX`); it never deletes and
-never touches an unrecognised key. Delete that row to make it report-only. For a
-check now, use **Run now** on Cron Control: the run console prints the census.
-One run spends at most 12 Upstash calls and 2,000 keys; a larger keyspace is
-reported as `truncated`. Why it exists:
-[`incidents/2026-10-02-redis-keys-without-expiry.md`](incidents/2026-10-02-redis-keys-without-expiry.md).
+When a binding or D1 cannot answer, the request is refused with the route's
+usual "too many requests" answer, as it was when Upstash could not answer;
+sign-out and email unsubscribe proceed instead, because refusing them would
+trap a user. The budget read fails open and reports itself degraded on the AI Health
+panel. A counter row is overwritten each window and never deleted, so a user has
+at most one row per hour/day limiter.
+
+**Upstash.** Until 2026-10-04 all of this was Upstash Redis, through
+`@upstash/ratelimit`; critical alerts were also copied to a Redis list nobody
+read, and a weekly job (`redis-ttl-hygiene`) checked that every key expired.
+All three are gone from cf-admin, with both packages. The instance itself is
+shared with cf-astro and cf-chatbot and is **not** cf-admin's to delete
+(cf-astro's own change under the same plan moves cf-astro off it separately). The
+keys cf-admin used to write all carried an expiry of at most 14 days (the key
+table this section held until 2026-10-04 is in git history, and the last
+census, after the
+[2026-10-02 incident](incidents/2026-10-02-redis-keys-without-expiry.md), found
+no key without one), so they age out without anyone acting. This was not
+re-checked against the live instance on 2026-10-04: no connector here reaches
+it. The two Upstash secrets are still set on the Worker until the owner deletes
+them (§5.2). Why the change, with the measurements:
+[the change record](../records/reports/2026-10-04-resource-usage-optimisation.md).
 
 ---
 
@@ -389,6 +409,19 @@ reported as `truncated`. Why it exists:
 > header says "Do not add `Sentry.init(...)` here" — the Node-based `@sentry/astro` server SDK does not run in workerd.
 > Server capture goes through [`../../src/lib/sentry.ts`](../../src/lib/sentry.ts), which re-exports `@sentry/cloudflare`;
 > browser capture is configured in [`../../sentry.client.config.ts`](../../sentry.client.config.ts).
+
+### 4.0 Workers Logs and Traces (Cloudflare's own observability)
+
+Set in `wrangler.toml` `[observability]`, separate from Sentry:
+
+| Stream | Sampling | Why |
+|---|---|---|
+| Logs (`[observability.logs]`, invocation logs on) | **100 %** (`head_sampling_rate = 1`, stated explicitly since 2026-10-04; it was the default before) | They are the only record of a cron tick's outcome and the evidence the sign-in and job forensics read. A sampled log loses exactly the invocation someone later needs |
+| Traces (`[observability.traces]`) | **10 %** (`head_sampling_rate = 0.1`, since 2026-10-04; it was the default of 100 % before) | Traces show latency shape, which a one-in-ten sample shows as well. A trace is many spans per request, so it is the larger stream: from 2026-12-01 Cloudflare counts logs and traces against one shared observability allowance (on Free, 0.5 GB of ingestion a day, after which ingestion stops until 00:00 UTC), and sampling traces keeps that room for the logs. Errors still reach Sentry in full (§4.1) |
+
+Source: Cloudflare's Traces, Workers Logs and Observability pricing pages, read
+through the documentation search on 2026-10-04 (the sampling defaults of `1` and
+the 2026-12-01 allowance are quoted from them).
 
 ### 4.1 Architecture
 
@@ -476,8 +509,8 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 > their own number.* New feature config belongs in `admin_portal_settings`
 > (`src/lib/dal/PortalSettingsRepository.ts`); a new env var is the last option.
 >
-> **How this section is kept true (viability program chunk 2):** the 24 secrets the
-> Worker *requires* are declared in `wrangler.toml` under `[secrets] required`.
+> **How this section is kept true (viability program chunk 2):** the 22 secrets the
+> Worker *requires* (24 until 2026-10-04, when the two Upstash names left) are declared in `wrangler.toml` under `[secrets] required`.
 > `wrangler deploy` refuses when one is missing on the Worker, and
 > `worker-configuration.d.ts` (generated by `npm run types`, checked in CI by
 > `npm run types:check`) is the type every `env.X` access is checked against. The
@@ -500,7 +533,6 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
 | `RESEND_API_KEY` | Resend — invite re-send path (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Redis rate limiting and AI neuron budget — retired by viability program chunk 16 |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics and the control plane (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads |
 | `GSC_SERVICE_ACCOUNT_JSON` | Google Search Console service-account key (documented RULE #0.8 exception) |
@@ -511,6 +543,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | Secret | Status |
 |--------|--------|
 | `RESEND_WEBHOOK_API` | **No reader in `src/`**, and **overdue for deletion**. Chunk 2 shipped 2026-09-02; this was to be retired "one release after". It is still the 25th live secret on 2026-09-19 — 17 days later — and it is one of the 42 entries RULE #0.8 counts. Retire with `wrangler secret delete RESEND_WEBHOOK_API` on owner confirmation, or record a decision to keep it. |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | **No reader in `src/` since 2026-10-04** (rate limits moved to §1's Rate Limiting bindings and D1, §3.6), and no longer in `[secrets] required`. Still set, and still 2 of the 42 entries RULE #0.8 counts. Owner step, after one release: `wrangler secret delete` both. The Upstash database is not cf-admin's to delete: cf-astro and cf-chatbot shared it, and cf-astro's own change under the same plan moves cf-astro off it separately ([MAINTENANCE](../MAINTENANCE.md) RU-1) |
 
 ### 5.3 Optional secrets (not set in production; every reader degrades)
 
@@ -693,7 +726,7 @@ sits inside its free tier today:
 | Cloudflare Workers | $0 (free tier) |
 | D1, KV, R2, Queues, Workers AI | $0 (free tier) |
 | Supabase | $0 (free tier) |
-| Upstash | $0 (free tier) |
+| Upstash | $0 (free tier); cf-admin no longer uses it (§3.6). cf-chatbot still does, and so does cf-astro until its own change under the same plan ships |
 | Brevo / Resend (email) | $0 (free tier) |
 | Anthropic (Claude Haiku fallback) | ~$0.01–0.50/month |
 | **Total, direct spend** | **~$0.50/month** |

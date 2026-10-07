@@ -130,7 +130,7 @@ Read the code carefully:
 | `401` | ✅ The Access bypass works and the handler rejected the bad secret |
 | `302` (to `mascotas.cloudflareaccess.com`) | ❌ **No Access bypass — step 2 is not done.** This is the current state |
 | `503` | The Worker secret is not set (step 1) |
-| `429` | The per-IP rate limit tripped **before** the secret was checked — expect this under a bounce storm or an Upstash wobble |
+| `429` | The per-IP rate limit (120 a minute, Cloudflare's Rate Limiting binding since 2026-10-04) tripped **before** the secret was checked — expect this under a bounce storm, or if the binding is missing or failing |
 
 ```bash
 # Correct secret → 200 (empty payload is accepted as a no-op):
@@ -167,4 +167,5 @@ Remove the Brevo webhook URL (stops events), or delete the Access Bypass policy
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-07 | `src/pages/api/emails/webhook.ts` read (`getRateLimiter({ requests: 120, window: '1 m' }, 'brevo-webhook')`, before the secret check) and `src/lib/ratelimit.ts` | The `429` row (changed 2026-10-04): 120 a minute per IP on the `RL_PER_MIN_120` binding. Nothing else re-checked; no live webhook call made |
 | 2026-09-19 | Unauthenticated `GET /api/emails/webhook` from outside the tenant; `src/pages/api/emails/webhook.ts` read; cf-astro `src/pages/api/webhooks/brevo.ts` read; `email_audit_logs` delivery events grouped by shape (Supabase MCP) | `302` to the Access login — **no bypass exists**. 129 cf-astro-shaped events (2026-07-08 → 2026-09-20) vs 4 cf-admin-shaped (none after 2026-06-07). Banner added; the ledger verification replaced with a shape-specific query; the three auth forms reordered to put the header first; `429` added to the failure list; owner changed from `ai-agent` to a human |

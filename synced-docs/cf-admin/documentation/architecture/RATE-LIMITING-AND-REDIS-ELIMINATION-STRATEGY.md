@@ -2,7 +2,7 @@
 title: "Rate Limiting Architecture & Redis Elimination Strategy"
 status: draft
 audience: [ai, technical, owner, operator]
-last_verified: 2026-10-02
+last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/ratelimit.ts, src/lib/alert-gate.ts, src/lib/api.ts, src/lib/sync-contract.ts]
@@ -11,6 +11,22 @@ tags: [ratelimit, redis, upstash, cloudflare-bindings, waf, architecture, cost-o
 ---
 
 # Rate Limiting Architecture & Redis Elimination Strategy
+
+> ## Update 2026-10-04: cf-admin's half has been built
+>
+> cf-admin no longer uses Upstash. One-minute limits are seven Workers Rate
+> Limiting bindings (`RL_PER_MIN_<n>`, one per limit value, keyed
+> `<limiter>:<caller>`, namespace ids 2000-2999); hour and day limits are D1
+> counter rows in `admin_portal_settings`; the neuron budget is the sum of
+> today's `ai_inference` audit rows; the alert gate's Redis channel is gone;
+> both packages and both secret names left. That is chunk 16's scope as the
+> roadmap states it, not this document's §5 tiering or §6 settings row. The
+> owning descriptions are [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md)
+> §1 and §3.6 and [`../security/SECURITY.md`](../security/SECURITY.md) §6b; the
+> change record is
+> [`../records/reports/2026-10-04-resource-usage-optimisation.md`](../records/reports/2026-10-04-resource-usage-optimisation.md).
+> cf-astro's half (§2.2) is that repository's own work. The banner below and the
+> rest of this document describe the state before 2026-10-04.
 
 > ## ⚠ This is a proposal. None of it has shipped.
 >
@@ -106,7 +122,7 @@ A diagnostics surface also reports the Redis key count.
 `{prefix}:events:{hour}` ZSET per active hour with no expiry (`@upstash/core-analytics`
 0.0.10 ignores the `retention` option `@upstash/ratelimit` passes). It was turned off in
 both apps, and the 648 leftover keys were cleared on 2026-10-02. The weekly
-`redis-ttl-hygiene` job (`src/lib/redis-hygiene.ts`) now reports any key without an
+`redis-ttl-hygiene` job (`src/lib/redis-hygiene.ts`, deleted on 2026-10-04 with the job) reported any key without an
 expiry across the shared instance, cf-chatbot's included, and repairs the ones it
 recognises. **Chunk 16 must move it, not delete it**: cf-astro and cf-chatbot keep
 using the instance after cf-admin leaves. Also since 2026-10-02: an Upstash timeout
@@ -459,3 +475,4 @@ export async function enforceRateLimit(
 |---|---|---|---|
 | 2026-09-19 | claude | Checked `wrangler.toml` for `[[ratelimits]]` (absent) and for the Upstash entries in `[secrets] required` (present); counted importers of `src/lib/ratelimit.ts` under `src/pages/api` (50) and read `getRateLimiter` / `safeRateLimit`; read `src/lib/alert-gate.ts`'s Upstash channel; re-derived per-route limits from `git grep "getRateLimiter(" -- src/pages`; compared scope against `../program/ROADMAP.md` chunk 16; checked the Upstash and Cloudflare pricing pages and the Cloudflare Free-plan rate-limiting-rule constraints | Re-statused to `draft`. Corrected: Upstash free tier (500K/month, not 10K/day), paid KV writes (1M/month, not 1M/day), the secret names, five per-route limits, the `mcp.ts` limit, the WAF rule's period/action/exclusion, and the three-not-two Redis roles. Added: the fail-open/fail-closed inversion, the zero-importer gate on Phase 3, and the live cf-astro KV anti-pattern. **Not measured:** the 40–90 ms Upstash latency, the ~1,200 edge requests/day figure in §4.2, and the native binding's 10 s/60 s period constraint (corroborated only by the roadmap) |
 | 2026-10-02 | claude | Read-only census of the shared Upstash instance (see [the incident record](../operations/incidents/2026-10-02-redis-keys-without-expiry.md)), read `@upstash/ratelimit` 2.0.8 and `@upstash/core-analytics` 0.0.10 source, verified `EXPIRE … NX` and `POST /multi-exec` on the live instance | 648 of 651 keys had no expiry, all analytics buckets; recorded the fix, the timeout fail-closed change and the hygiene job's chunk-16 handoff |
+| 2026-10-04 | claude | `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `wrangler.toml` `[[ratelimits]]`, `package.json`; Cloudflare documentation search (the binding is generally available since 2025-09-19; `period` is 10 or 60) | Top banner added: cf-admin's half is built. The binding's Free-plan pricing could not be re-read (its page was unreachable from here); §4.1's "Included" is the 2026-09-19 reading. Nothing else in the body re-checked; it stays a description of the earlier state |

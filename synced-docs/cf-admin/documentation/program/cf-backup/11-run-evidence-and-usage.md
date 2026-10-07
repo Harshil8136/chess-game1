@@ -76,9 +76,10 @@ knows. But it dies with the runner. GitHub's archive is the authoritative record
 saw it, including set-up and clean-up lines. It survives a crashed or timed-out runner,
 already has registered secrets masked by GitHub, and costs **0 Actions minutes**, because
 cf-backup fetches it, not the runner. It must be fetched before the repo's log retention
-expires (14 days); **as built,** reconcile is one of the chores `/internal/tick` runs every
-five minutes rather than once a day, so in practice it is fetched within minutes of the run
-finishing, not after up to a day's delay. If it is ever missed, `postrun.json` records
+expires (14 days); **as built,** reconcile is one of the chores `/internal/tick` runs on each call rather than once a day, and
+while a run is being followed the tick is called every five minutes (still true after Contract A,
+2026-10-04, [02](02-admin-integration-contract.md)), so in practice it is fetched within minutes
+of the run finishing, not after up to a day's delay. If it is ever missed, `postrun.json` records
 `githubLogs: unavailable (expired)`.
 
 **The live log, while a run is active, is a different set of files** (doc 14 §5, C7):
@@ -222,7 +223,7 @@ Access floors from [02 §6](02-admin-integration-contract.md#6-permissions-cf-ad
 | R2 storage | ~0.1–0.3 MB of evidence per run → ~35–100 MB/year; ops records ~5 MB/year; indexes under 1 MB | Estimates until the first runs measure them (S-4, P-22) |
 | R2 operations | ~25 Class A per run + a few per day → ~10k/year, against 1M/month free | Uploads, `postrun/` writes, reconcile |
 | GitHub Actions minutes | Seconds per run for the logger, meter and redactor | GitHub's archive and the account snapshot are fetched by cf-backup, not the runner |
-| Workers | As built: the five-minute tick (288 cf-backup invocations a day, through cf-admin's existing cron), which reconciles, runs the daily and hourly chores and offers alerts | I/O-bound: streamed files and small JSON |
+| Workers | As built: the tick, through cf-admin's existing cron, which reconciles, runs the daily and hourly chores and offers alerts. 288 cf-backup invocations a day until 2026-10-04; since Contract A ([02](02-admin-integration-contract.md)) about 24 on a quiet day (cf-backup's estimate) | I/O-bound: streamed files and small JSON |
 | D1 | As built: `backup:status` written by a tick only when something changed, or when the stored `lastTickAt` is 10 minutes old | RE-5, p1a M14 |
 
 ## 9. To verify when building

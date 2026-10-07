@@ -365,6 +365,8 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
   Redis commands on each `limit()` call (library behaviour, not measured here) across
   50 route files, against Upstash's 500,000 commands a month. **Fix.**
   `analytics: false` (chunk 16 removes Upstash altogether). **Effort** S.
+- **Done.** Analytics went off on 2026-10-02, and cf-admin stopped using Upstash on
+  2026-10-04 ([record](records/reports/2026-10-04-resource-usage-optimisation.md)).
 
 ### OPT-R15 (P2). A registry "apply now" writes one KV mark per active user
 
@@ -595,7 +597,7 @@ export const POST = defineRoute({
 | OPT-D15 | Queue/DLQ and Worker-list reads implemented twice | analytics provider vs `cloudflare-admin.ts` | one implementation | −90 | 15 | P2 |
 | OPT-D16 | cf-astro "binding or URL" call pattern ×6, host spelled `https://internal` and `http://internal` | `cms/revalidate`, `cms-status`, `config-publisher`, diagnostics, `content/edge-verify`, `scheduled-booking-retry` | `src/lib/astro-client.ts` (proposed) | −16 | 15 | P2 |
 | OPT-D17 | `sFetch` and `phFetch` identical but for the base URL; `audit/enrich` makes raw calls with no timeout | `sentry-admin`, `posthog-admin` | one `providerFetch` in `provider-result.ts` | −10 | 15 | P2 |
-| OPT-D18 | Upstash reached over raw REST (4 sequential calls, no timeout) although `@upstash/redis` is installed | `src/lib/alert-gate.ts` | a pipelined client next to `getRedisClient` | −10; 4 → 1 subrequests | 16 | P2 |
+| OPT-D18 | Upstash reached over raw REST (4 sequential calls, no timeout) although `@upstash/redis` is installed | `src/lib/alert-gate.ts` | a pipelined client next to `getRedisClient` | −10; 4 → 1 subrequests | 16 | P2 — **done another way 2026-10-04**: the Upstash channel was removed, 4 → 0 |
 | OPT-D19 | Hashing/encoding copies | sha256-hex ×5, base64url ×7, `timingSafeEqual` ×2 (one duplicates an export the same file imports) | `src/lib/crypto/encoding.ts` (proposed) | −55 | — | P2 |
 | OPT-D20 | Job interval gates and error paths | GSC and PageSpeed gates line-for-line identical, 3 more variants; 12 log-then-capture pairs; 5 handler catch-alls that record a real failure as `ran` | `src/lib/jobs/interval-gate.ts` (proposed); a `log.fail()` on the job logger | −90 | 8c | P2 |
 | OPT-D21 | Raw SQL outside the DAL | A2 = 104 lines in 43 files; 49 hit tables that already have a repository (`admin_audit_log` 16, `admin_pages` 12, `gsc_index_log` 7 — inserted from 3 places); tables with no repository: `cms_content`, `sync_outbox`, `system_test_results`, `booking_attempts` | move into repositories; 9 route files first (their repository exists) | A2 −13 now | 12, 13.x | P2 |
@@ -703,4 +705,5 @@ the unused images and templates (OPT-S1–S4); the sitemap pings (OPT-R18).
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-07 | claude | `grep -rni "upstash\|getRedisClient" src/` (historical comments only, no import or client); read `src/lib/alert-gate.ts` | The two Upstash items marked done on 2026-10-04 (analytics off; OPT-D18 done another way, the Redis channel removed from the alert gate) hold. No other row re-checked |
 | 2026-09-23 | claude | Four parallel read-only reviews (API routes; UI components; server libraries, workers, scripts and tests; runtime cost), each finding counted with the command recorded in its review; their key claims re-checked by hand (dead routes and their comment-only references, the no-op `withTimeout`, the CMS history bypass, `writeRevocationFlag`'s 0 callers, the diagnostics prune and its 17 tests, the session-drawer drift, image references and SHA-256 duplicates, the `ios-*` classes). `jscpd` over `src/`; `git count-objects`, `git ls-files`, `git rev-list --objects` for size and history. Live: Cloudflare GraphQL Analytics (KV, D1 queries, Worker and scheduled invocations, zone requests by path, status, hour and request source, 16–23 Sep); Supabase edge logs (24 h); Sentry issues (7 days) and spans (30 days); D1 queries on `admin_pages`, `admin_access_requests` and `system_test_results`. Cloudflare docs for Workers limits, trace billing and Cache API availability. | File created. Not verified: the Workers plan (API 403); bundle sizes (no build run); D1 latency from the Worker (not traced); `knip` export analysis (it found no unused files, matching A17 = 0, but its export pass could not be relied on in this checkout because dependencies resolve from the parent folder). |

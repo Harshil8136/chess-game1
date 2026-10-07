@@ -2,7 +2,7 @@
 title: "Backup Console (cf-backup, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-24
+last_verified: 2026-10-04
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql, scripts/lib/cron-catalog.mjs]
@@ -16,9 +16,12 @@ tags: [backups, cf-backup, gateway, cron, audit, csp]
 > backup system's own console inside the page. The backup system (cf-backup) is
 > a separate, private service with no public address; the portal is the only way
 > to reach it, checks who you are first, and records every change anyone makes.
-> Every five minutes the portal also nudges it, so scheduled backups start on
-> time and its alerts are emailed to the alert recipients set in the console
-> (Settings → Alerts), with each email's delivery reported back.
+> The portal also nudges it on a timer, so scheduled backups start on time and
+> its alerts are emailed to the alert recipients set in the console (Settings →
+> Alerts), with each email's delivery reported back. Since 2026-10-04 the nudge
+> comes when the backup system says it next has work: every five minutes while
+> a backup runs, at least once an hour otherwise, and within five minutes of
+> any change made in the console.
 
 ## 1. What it is
 
@@ -148,7 +151,16 @@ policy is kept alongside the portal's, so it can only narrow what is allowed.
 
 The account's five scheduled triggers are all in use, so cf-backup has none of
 its own. The `backup-tick` job rides the portal's five-minute tick
-(`src/workers/scheduled-backup-tick.ts`):
+(`src/workers/scheduled-backup-tick.ts`), but since 2026-10-04 is not invoked on
+every one (Contract A, [`../program/cf-backup/02-admin-integration-contract.md`](../program/cf-backup/02-admin-integration-contract.md)):
+each tick answer carries cf-backup's `nextTickAt`, the job reports it as its
+next due time, and Cron Control skips the call until then, never for more than
+an hour ([`CRON-CONTROL.md`](CRON-CONTROL.md) §4a). The page shows it as
+**Sleeping until HH:MM**. Any change made through the console (every method but
+`GET` and `HEAD` through the gateway) wakes the job, so the next five-minute
+tick calls. A missing or malformed `nextTickAt`, or a tick that left an alert or
+a delivery report unsettled, means a call on the next tick, as before. When it
+runs:
 
 1. it calls cf-backup's internal tick as the `backup-tick` system actor (25 s);
 2. cf-backup starts any scheduled backup that is due, checks running ones and
@@ -178,8 +190,9 @@ every job — it can be paused, throttled or run by hand. If it stops, a weekly
 safety net in GitHub still runs a full backup on Mondays when none has
 succeeded for eight days (never while no backup key exists), and a daily
 workflow in cf-backup's repository (`tick-deadman.yml`) fails when the tick has
-not run for an hour, so GitHub's own failed-workflow email warns through a
-path the tick does not own.
+not run for an hour (since 2026-10-04 it allows for a tick resting until its
+stored `nextTickAt`, per cf-backup's own record), so GitHub's own
+failed-workflow email warns through a path the tick does not own.
 
 ## 7. The `backup_runs` table
 
@@ -221,5 +234,6 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-04 | claude | `src/workers/scheduled-backup-tick.ts` (`nextTickDue`, the settled-tick rule), `src/pages/dashboard/backup/app/[...path].ts` (rule 8, the wake), `src/lib/jobs/control.ts`; `test/backup-tick.test.ts`, `test/backup-gateway.test.ts`; cf-backup's record `docs/records/2026-10-04-resource-usage-tick.md` for its side | The TL;DR and §6 describe Contract A. Not re-checked: every other section, and cf-backup's dead-man script itself |
 | 2026-09-23 | claude | Built and verified in the `feat/cf-backup-console` worktree (chunk CB-2): `npm run verify`, `npm run types:check`, `node scripts/migrations_manifest.mjs --check` | See the CB-2 chunk record §11. Not yet deployed; no browser check yet (owner step) |
 | 2026-09-24 | claude | On `main` and pushed (Workers Builds deploys every push; cf-backup first, then cf-admin), with the section page, the alert sender, migration `0058` (applied by the release pipeline) and the delivery reports since. Re-read against the code at this commit: `src/lib/backup-section.ts` (path shape), `src/lib/backup-audit.ts` (the verb map), `src/workers/scheduled-backup-tick.ts` (steps 1–4 of §6) | Matches. The console's own screens are cf-backup's (its repository); a browser pass over them stays an owner step |

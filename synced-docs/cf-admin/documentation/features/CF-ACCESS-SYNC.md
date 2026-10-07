@@ -21,8 +21,10 @@ tags: [cf-access, zero-trust, whitelist, sync, incident, runbook]
 > fix, and the safety net now in place so a failure is always visible and
 > retried automatically.
 >
-> **Two recovery times, not one.** A change you make in the Users tab, or a
-> sync that failed, is retried on the next 5-minute tick. Drift caused
+> **Two recovery times, not one.** A change you make in the Users tab is
+> pushed at once; a sync that failed is retried on the reconcile job's next
+> run, which since 2026-10-04 is once an hour (a Cron Control throttle the owner
+> approved in that day's resource plan; it was every five minutes). Drift caused
 > *outside* the app — someone editing the Access Group by hand in the
 > Cloudflare dashboard — is only re-pushed once the last successful sync is
 > more than 24 hours old, because the cron now compares a hash of the
@@ -139,6 +141,12 @@ the cron reconciler go through `recordCfSyncOutcome()`
    whole-group, a single outcome is accurate for all active users at once).
 
 #### The 5-minute reconcile, and its hash-or-age gate
+
+> **Hourly since 2026-10-04.** The job still rides the five-minute trigger, but
+> the live Cron Control document gives `cf-access-reconcile` a 60-minute
+> interval (read-only D1 query, 2026-10-04), so it runs about 24 times a day.
+> User edits sync directly (`src/pages/api/users/manage.ts`), so this is the
+> safety net, as the interval's recorded reason says.
 
 `reconcileCfAccessGroup()` (`src/lib/auth/cf-access-reconcile.ts`) runs on the
 `"*/5 * * * *"` trigger. It is registered as the `cf-access-reconcile` job in
@@ -364,6 +372,7 @@ Access Groups → confirm only **one** group exists with that exact name.
 | 2026-07-24 | pending   | Manual CF dashboard Policy→Group wiring check (see "Known limitation") | **not yet verified — operator action required** |
 | 2026-09-08 | claude    | Re-verification for the 45-day staleness gate. All 7 `related_code` paths present; every named symbol still exported (`syncCfAccessGroup`, `parseCfResponse`, `findSyncGroup`, `recordCfSyncOutcome`, `reconcileCfAccessGroup`, `groupMembershipDrift`); `CF_SYNC_GROUP_NAME` still `"Admin Portal Authorized Users"`; cron still wired at `*/5 * * * *` in `cf-entry.ts`; `CF_ACCOUNT_ID` still a `[vars]` entry and `CF_API_TOKEN_ZT_WRITE` still in `[secrets] required`; `cf_access_sync_log` live via `--remote` | pass at the time. Live row count **12,999**, up from 11,418 on 2026-09-02 (~264/day) — the unbounded growth chunk 8 was scoped to fix. **Superseded: see the 2026-09-19 row** |
 | 2026-09-19 | claude    | Re-derived the whole document against HEAD and the live D1. Read `cf-access-reconcile.ts` (hash-or-age gate, the three tick outcomes, hash stored on success only), `cf-access-sync.ts` (`reportOnceCooled` fingerprints, the console-only missing-token branch, the empty-whitelist placeholder rule, `CF_API_TIMEOUT_MS = 12000`, `fetchAuthorizedUserEmails` 2 attempts), `jobs/registry.ts` + `jobs/tiers.ts` + `jobs/control.ts` (dispatch, `essential`, halt/pause/interval), `UserTableRow.tsx` (pill labels), `active-sessions.ts` (`block_account`) | pass after the corrections above. Live `cf_access_sync_log` **607 rows**, not 12,999: rows now arrive at ~1/day (2026-09-15..19: 1, 5, 1, 1, 1) because gated ticks write nothing, and older success rows were pruned. The growth problem is closed |
+| 2026-10-04 | claude    | Read-only D1 query of the live `cron-control` row: `cf-access-reconcile` throttled to 60 minutes; `src/pages/api/users/manage.ts` still syncs on every user change | The TL;DR's recovery times and the reconcile heading note updated. Nothing else re-checked |
 
 ## Related
 

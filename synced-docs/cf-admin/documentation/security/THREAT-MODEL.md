@@ -167,7 +167,7 @@ mitigated, not merely mitigatable.
 | Threat | Mitigation | Residual |
 |---|---|---|
 | PII in error tracking | `sendDefaultPii: false` + scrubber (`test/sentry-scrub.test.ts`) | Low |
-| Raw IPs at rest | Hashed (HMAC-SHA-256 with `IP_HASH_SECRET`) in the audit log, the storage access logs, the suppression list and the email ledger. **Raw** in `admin_login_logs` (by design, for forensics), in the `consent_attempts` / `booking_attempts` dead-letter tables, in KV session records, and in the Upstash keys for the session-less routes (each expires within 2 × its window + 1 s; until 2026-10-02 limiter analytics also kept them with no expiry — [incident record](../operations/incidents/2026-10-02-redis-keys-without-expiry.md)). Full table in [`RoPA.md`](RoPA.md) §2.1 | **Medium** — retention on the raw stores is manual, so the exposure window is whatever an operator last purged |
+| Raw IPs at rest | Hashed (HMAC-SHA-256 with `IP_HASH_SECRET`) in the audit log, the storage access logs, the suppression list and the email ledger. **Raw** in `admin_login_logs` (by design, for forensics), in the `consent_attempts` / `booking_attempts` dead-letter tables, and in KV session records. The session-less routes' rate-limit keys hold the raw IP only inside Cloudflare's Rate Limiting binding, for its 60-second period, and in no store of ours (since 2026-10-04; until then they were Upstash keys, which until 2026-10-02 limiter analytics also kept with no expiry — [incident record](../operations/incidents/2026-10-02-redis-keys-without-expiry.md)). Full table in [`RoPA.md`](RoPA.md) §2.1 | **Medium** — retention on the raw stores is manual, so the exposure window is whatever an operator last purged |
 | Secrets in source | CI secret-scan (blocking); `.dev.vars` gitignored | Low |
 | Cross-tenant leakage | **N/A** — single tenant. Becomes the primary risk if multi-tenancy is ever added |
 | Search-engine indexing | `robots.txt` + `X-Robots-Tag`. The header lived only in `public/_headers` (static assets) until 2026-09-02, when `src/lib/security/csp.ts` started setting it on SSR responses too | Low |
@@ -177,7 +177,7 @@ mitigated, not merely mitigatable.
 
 | Threat | Mitigation | Residual |
 |---|---|---|
-| Brute force / flooding | Cloudflare WAF + Upstash rate limiting on sensitive routes | Low |
+| Brute force / flooding | Cloudflare WAF + per-route rate limits on sensitive routes: Cloudflare's Rate Limiting binding for one-minute limits and D1 counters for hour/day limits (Upstash until 2026-10-04; [`SECURITY.md`](SECURITY.md) §6b) | Low |
 | Unbounded bulk operations | Array caps in zod (ids ≤500, bookings ≤200, tags ≤30) | Low |
 | Free-tier exhaustion | Quotas and usage dashboards | **Medium** — a determined attacker could burn D1/Workers quota |
 | AI cost abuse | Model IDs validated against the `AI_MODELS` catalogue, or — for OpenRouter — a deliberately bounded `openrouter/<vendor>/<model>` pattern rather than a closed enum (`src/lib/schemas/ai.ts`); per-user quota; 3/min and 20/day rate limits | Low |
@@ -240,4 +240,5 @@ If any of these stops being true, re-run this model:
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-07 | The "Raw IPs at rest" and "Brute force / flooding" rows, for the move of cf-admin's rate limits off Upstash on 2026-10-04: `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `wrangler.toml` `[[ratelimits]]`, `RoPA.md` §2.1 | Every other STRIDE row; how long Cloudflare keeps a limiter counter after its period |
 | 2026-09-20 | Every STRIDE row re-derived from code at HEAD. Corrected: the audit-log "append-only" claim (the table was bulk-cleared 2026-09-18; `prune` keeps no snapshot), the webhook "HMAC" claim (`src/pages/api/emails/webhook.ts` — shared secret, constant-time), raw IP storage (per-store table now in `RoPA.md` §2.1), ARCO identity documents (R2 via cf-astro, not Supabase RLS), the revocation window (`authz-changed` mark, 2026-09-16), audit silencing (removed 2026-07-26/27), the public allowlist, the route count (147), `hashPasscodeKeyed`, the SEC-03 grandfather list, the `waitUntil` retry claim, the `X-Robots-Tag` date, the AI model pattern, and the 2026-08-12 enforcement date. §3 re-ranked | Cloudflare edge WAF and rate-limit rule configuration (dashboard-side, not in this repo); the "no user-controlled URLs" outbound claim; live Supabase policy state; the cf-astro side of the ARCO document trust boundary |

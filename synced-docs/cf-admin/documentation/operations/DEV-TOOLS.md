@@ -3,7 +3,7 @@
 title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-19
+last_verified: 2026-10-04
 verified_against: [code]
 owner: harshil
 tags: []
@@ -124,7 +124,7 @@ route runs. The defence-in-depth argument stands; the example did not.
 ### 3.2 Diagnostics run
 
 `/dashboard/debug/diagnostics` mounts `SystemDiagnostics.tsx` (`client:idle`), which calls `POST /api/diagnostics/run`
-on load and every 30 seconds ("Force Sync" runs it on demand). The route checks
+once on load and otherwise only when "Force Sync" is pressed (*changed 2026-10-04:* it re-ran every 30 seconds, hidden tabs included). The route checks
 the vendor-support role, runs the probe suite in `src/lib/diagnostics/runner.ts`
 against the live bindings and returns the run; one row per probe is written to
 `system_test_results`.
@@ -143,7 +143,7 @@ answer 5).
 | `pages/dashboard/debug/index.astro` | Landing hub with DEV guard |
 | `pages/dashboard/debug/diagnostics.astro`, `debug/diagnostics/history.astro` | Diagnostics run and its history (`SystemDiagnosticsHistory.tsx`) |
 | `pages/dashboard/debug/pages.astro` + `components/admin/debug/PageRegistryManager.tsx`, `PageRegistryConfirmModal.tsx` | Page-registry manager (edit `admin_pages` rows) |
-| `components/admin/debug/SystemDiagnostics.tsx` (+ `DiagnosticsInfraBar.tsx`, `DiagnosticsTestList.tsx`) | Preact island: runs the suite on load and every 30 s, renders the infra bar and the per-probe list |
+| `components/admin/debug/SystemDiagnostics.tsx` (+ `DiagnosticsInfraBar.tsx`, `DiagnosticsTestList.tsx`) | Preact island: runs the suite once on load (every 30 s until 2026-10-04) and on the button, renders the infra bar and the per-probe list |
 | `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | API: run the probe suite / read persisted results / infra snapshot; results persist to `system_test_results` |
 | `lib/diagnostics/runner.ts`, `benchmarks.ts`, `types.ts`, `tests/` | The probe suite (tiers, latency grades, remediation text) |
 
@@ -301,5 +301,6 @@ Feature Configuration and System Debugging are now **DEV-exclusive**. SuperAdmin
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-04 | §3.2 and the file table's `SystemDiagnostics.tsx` row against `src/components/admin/debug/SystemDiagnostics.tsx` (no interval left) | Everything else |
 | 2026-09-19 | `grep -rn isDev src/pages --include=*.astro` (**five** guarded pages, not three); `api/diagnostics/run.ts` and `api/pages/toggle.ts` guards read in full; `lib/auth/stages/decide.ts` + `lib/auth/guard.ts` (PLAC is the middleware gate and default-denies); `lib/audit.ts` `handleAuditError` (console **and** Sentry); `admin_feature_flags` readers across both checkouts (none outside the toggle UI/repository) | Live `admin_pages` label for `/dashboard/debug`; historical redirect behaviour (§8.3) |
 | 2026-09-14 | The guarded pages and their guard pattern; `run.ts` and `toggle.ts` guards and messages; every file under `components/admin/debug/`, `pages/dashboard/debug/`, `pages/api/diagnostics/`, `lib/diagnostics/`; `FeatureFlagRepository.ts` (D1 only); cf-astro for any `admin_feature_flags` reader; audit-silence removal (no `silence.ts`, no `auditSilenced`, `supabase/migrations/20260727000000_drop_audit_silence.sql`); `ctx.waitUntil` audit writes. Ten corrections above. | Live `admin_pages` labels in D1; historical redirect behaviour |

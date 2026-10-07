@@ -3,11 +3,11 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql]
-related_docs: [../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/lib/blog/publish-scheduled.ts, scripts/lib/cron-catalog.mjs]
+related_docs: [../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
 
@@ -43,7 +43,12 @@ restating them — one fact, one home.
 > throttling a paused job does not require the browser to restate a pause reason
 > it did not author. An interval-only change audits as `config_change`, never as
 > `cron_pause`: "who stopped this job" has to stay answerable from the action
-> alone. Live today, only `cron-usage-probe` carries one (60 minutes).
+> alone. *Updated 2026-10-04:* this said only `cron-usage-probe` carried one.
+> The live document (read-only D1 query, rev 459) now throttles seven jobs: 15
+> minutes for `cf-access-audit-poll`, `booking-email-retry`,
+> `booking-outbox-poke` and `blog-scheduled-publish`; 60 minutes for
+> `cf-access-reconcile`, `cron-usage-probe` and `storage-notifications`. Each
+> carries its reason in the document.
 >
 > *Two things about it were wrong before that.* There was no UI at all
 > (*corrected 2026-09-19*), and the route rebuilt each control entry from the
@@ -156,10 +161,12 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **13 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
-`*/5 * * * *` tick and 3 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`,
-`staff-storage-reconcile` and `redis-ttl-hygiene`, all dispatched through the same `dispatchCronJobs`,
-each due job in its own invocation — §5).
+There are **12 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
+`*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
+and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
+each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
+job, was removed on 2026-10-04 when cf-admin stopped using Upstash
+([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §3.6).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
@@ -167,7 +174,7 @@ a corrupt or hand-edited row cannot mark a security job as sheddable.
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
 | `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick` | never |
-| `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile`, `redis-ttl-hygiene` | yes |
+| `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
 > **A missing tier is not a compile error.** `JobDefinition.id` is typed `string`,
@@ -219,6 +226,72 @@ so per-job rows-read history recorded **before 2026-09-17 undercounts** every
 0.18% of writes. The 70% default thresholds have never been approached; treat
 shedding as insurance, not as something that fires routinely.
 
+## 4a. When a job runs: intervals, next due times and wakes (2026-10-04)
+
+Being on the five-minute tick does not mean running every five minutes. After
+halt, pause and shedding (§4), `decideJobRun` (`src/lib/jobs/control.ts`) holds a
+job back for two more reasons, and the page shows each:
+
+| Reason | Where it comes from | Shown as |
+|---|---|---|
+| `interval` | The throttle (§1): at most every N minutes, measured from `lastRunAt` | **Standby** |
+| `sleeping` | The job itself said when it next has work (`nextDueAt`), and that time has not come | **Sleeping until HH:MM** |
+
+**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; two do.
+`backup-tick` passes on cf-backup's `nextTickAt` (Contract A in
+[`../program/cf-backup/02-admin-integration-contract.md`](../program/cf-backup/02-admin-integration-contract.md)):
+every five minutes while a backup is running, otherwise the next slot, chore or
+hour. `blog-scheduled-publish` reports the earliest scheduled post, or an hour
+from now when none is scheduled. The catalog's plain-English schedules
+(`scripts/lib/cron-catalog.mjs`) say this for staff.
+
+**The rules, all in `control.ts`:**
+
+- **A sleep never lasts more than an hour** (`MAX_SLEEP_MS`) after the run that
+  reported it, whatever the job said. A due time no more than five minutes away
+  (`MIN_SLEEP_MS`) is not stored at all: the next tick runs the job anyway.
+- **A minute early counts as due** (`DUE_EARLY_MS`), for sleeps and intervals
+  alike. Ticks fire some seconds into their minute, so two ticks are never
+  exactly N minutes apart. Without the slack a 15-minute throttle ran every 20
+  minutes, which the live document showed on 2026-10-04.
+- **The clock is the moment the tick began**, not the moment it wrote. The next
+  tick compares its own start against it.
+- **`skipped` stamps the clock too.** A job whose own gate found nothing to do
+  has still looked. Until 2026-10-04 only `ran` was stamped, so a job that
+  usually skips (`booking-outbox-poke`, `storage-notifications`) was invoked on
+  every tick whatever its interval said; the live document showed
+  `booking-outbox-poke` with an interval and no `lastRunAt` at all.
+  `failed`, a held lease and a held-back job leave the clocks alone, so the job
+  is tried on the next tick.
+- **A job's own time gate measures the same way.** `storage-notifications`'
+  gate (`storageNotifyDue`) and `cron-usage-probe`'s backstop
+  (`USAGE_PROBE_INTERVAL_MIN`) allow the same minute of slack, and
+  `storage-notify-last-run` holds the run's start, not its end. Cron Control
+  holds both jobs to 60 minutes too, and stamps a `skipped` outcome, so an own
+  gate even a second stricter than Cron Control turns every hourly invocation
+  away and the job works every two hours (found in review on 2026-10-07, before
+  release). Likewise `blog-scheduled-publish` reports its next post's time
+  plus `DUE_EARLY_MS`, so the slack cannot wake it a tick before the post is
+  ready. Pinned by a day of simulated ticks in `test/jobs-gates.test.ts`.
+- **A wake.** `wakeJob` (`src/lib/dal/CronControlRepository.ts`) clears a job's
+  sleep, sets `wokenAt` and moves `clockRev`, so the next tick runs it (subject to
+  its interval) and a tick already in flight cannot put it back to sleep with
+  an answer computed before the change. It leaves `rev` alone, so a pause or
+  halt from a Cron Control page loaded before the wake still lands (§5). The backup console gateway wakes
+  `backup-tick` after every change (any method but `GET` and `HEAD`); the blog
+  API wakes `blog-scheduled-publish` when a post is scheduled, moved,
+  unscheduled or deleted. A wake that cannot land is logged and changes nothing
+  else: the job still runs within its hour.
+
+A job held back for either reason costs no invocation and is recorded as
+`disabled` in the 24-hour figures, like a paused one.
+
+Every doubt means "run": no document, an unreadable due time, a last run in the
+future, a failed read of the next post, or a backup tick that left an alert
+unsettled. Pinned by `test/cron-next-due.test.ts`,
+`test/cron-control-decide.test.ts`, `test/backup-tick.test.ts`,
+`test/backup-gateway.test.ts` and `test/cron-blog-publish.test.ts`.
+
 ## 5. What it costs
 
 The control document is one JSON row in `admin_portal_settings`. No new table, no
@@ -230,13 +303,23 @@ tick, no extra query". It is not. `readControl` issues its own `SELECT`
 (`src/lib/dal/CronControlRepository.ts`), separate from the batched gate-key read.
 The real per-tick cost is:*
 
-- **two single-row reads per tick** — one from `dispatchCronJobs`
-  (`src/lib/jobs/dispatch.ts`) and one from `cron-usage-probe`, which is essential
-  and ungated and so re-reads the document on every tick before checking its own
-  60-minute clock;
-- **one write per hour** from the probe, plus one write per tick in which an
-  interval-gated job actually ran (`stampIntervalClocks`, a single write for the
-  whole tick).
+- **one single-row read per tick** from `dispatchCronJobs`
+  (`src/lib/jobs/dispatch.ts`), plus one from `cron-usage-probe` on each tick it
+  is invoked, where it re-reads the document before checking its own 60-minute
+  clock (hourly with the live interval; on every tick only if the document is
+  unreadable). *Corrected 2026-10-07: this said the probe re-read on every tick,
+  which stopped once its 60-minute throttle held;*
+- **one write per hour** from the probe, plus one write per tick in which a
+  clock moved (`stampIntervalClocks`, a single write for the whole tick): a
+  throttled job ran or was skipped by its own gate, or a job reported a new
+  sleep. With the live intervals of 2026-10-04 that is **at least 96 a day**,
+  if every throttled job runs on the same ticks, and at most one a tick (288)
+  plus a retry after each of the probe's 24 writes. Nothing keeps the jobs on
+  the same ticks: each keeps the phase of its own last run, and the sleeping
+  jobs wake at their own times, so the real figure lies between; [`MAINTENANCE.md`](../MAINTENANCE.md)
+  RU-9 measures it. Each is one row. A conflict (another writer moved `rev` or
+  `clockRev` in between) is re-read and retried once. *Corrected 2026-10-07:
+  this gave "about 96" as the figure.*
 
 *The same false claim was repeated in code comments at `src/lib/jobs/runJob.ts`
 and `src/lib/jobs/control.ts`; both were corrected on 2026-09-20.*
@@ -250,6 +333,20 @@ invalidated every open tab — the live document had reached **rev 179** by
 a tick's read and its stamp still wins; a human write landing just after
 overwrites a clock the next tick re-stamps, which is the tolerance this path
 already had. *Added 2026-09-20.*
+
+**`clockRev`, the machine writes' own revision.** The clock stamp moves
+`clockRev` instead of `rev`, and so does a wake (§4a). Both compare `clockRev`
+as well as `rev`, so a wake landing while a tick is in flight makes that tick's
+stamp conflict, re-read and see the wake, and a stamp landing while a wake is
+being written makes the wake re-read and keep the stamp. Operator writes and the
+usage probe compare `rev` alone, as before, so neither machine write can turn an
+open tab's next pause into a 409. The one window left: a wake landing in the
+milliseconds between an operator save's (or the probe's) read and its write is
+overwritten, and the job then wakes at its own due time or the hour cap. An
+absent `clockRev` counts as 0, so older documents need no change. *Added
+2026-10-07, in review before release: the first version of the wake moved
+`rev`, which every backup console action and blog schedule change would have
+turned into exactly that 409.*
 
 A paused job still costs those reads, but nothing more: the gate runs before the
 job's own logic, so the job itself never reaches D1.
@@ -275,6 +372,16 @@ are unchanged. Two costs moved:
   `cron-usage-probe` throttled to 60 minutes), that is 8 on most five-minute
   ticks, 9 once an hour, and 3 on Sunday. Service Binding calls are not billed
   as requests, and one invocation may make up to 32 of them.
+
+*Updated 2026-10-04.* With the live intervals and the two sleeping jobs, a
+quiet day costs about 410 job invocations instead of about 2,040 (seven jobs
+on all 288 ticks plus the hourly probe): 96 each for the three 15-minute jobs,
+24 each for the three hourly ones, and about 24 each for `backup-tick` and
+`blog-scheduled-publish` while nothing is due. A running backup adds a
+`backup-tick` call every five minutes for its duration. The scheduled
+invocation itself still fires 288 times a day. These are estimates from the
+rules above, not a measurement; the change record names how to read the real
+figure after a week.
 
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
@@ -386,8 +493,9 @@ an empty table.
 - **Only `asset-cleanup` and `staff-storage-reconcile` take a lease.** Both
   declare `leaseSeconds: 900`, because both delete and
   a manual run bypasses the control document by design — two deleters walking the
-  same bucket is the one overlap worth a D1 write. `redis-ttl-hygiene` takes
-  none: its only write, `EXPIRE … NX`, is idempotent. The ten five-minute jobs
+  same bucket is the one overlap worth a D1 write. (`redis-ttl-hygiene`, which
+  took none, was removed on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md)
+  R-1, RU-2, RU-8.) The ten five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
   trigger *can* still overlap a scheduled tick for those ten. The Run-now route
@@ -422,6 +530,8 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-07 | claude | Review of the unreleased 2026-10-04 change: `src/lib/jobs/control.ts`, `runJob.ts`, `CronControlRepository.ts`, `src/workers/scheduled-storage-notifications.ts`, `scheduled-usage-probe.ts`, `src/lib/blog/publish-scheduled.ts`, `src/pages/api/cron/state.ts` and `config.ts`; `npm run verify` | §4a: the own-gate bullet and the wake's `clockRev`. §5: the read and write figures corrected (writes a range, not "about 96"), the `clockRev` paragraph added. §7's lease note no longer describes `redis-ttl-hygiene` as current. Not re-checked: §1 to §4, §6, the rest of §7 |
+| 2026-10-04 | claude | Read-only D1 query of the live `cron-control` row (rev 459 and earlier rev 455); `src/lib/jobs/control.ts`, `runJob.ts`, `dispatch.ts`, `registry.ts`; `npm run verify` | §4a added (next due times, sleeps, wakes, the minute of slack, the tick-start stamp, `skipped` stamped). §1's live-throttle note, §3's job count (12) and tier table, and §5's write and invocation figures updated. Found live: `lastRunAt` stamped 47 s into the minute and a 15-minute throttle running every 20 minutes; `booking-outbox-poke` throttled with no `lastRunAt`. Not re-checked: §2, §4, §6, §7 |
 | 2026-09-27 | claude | Trigger events pasted by the owner (`*/5` and Sunday both `exceededCpu`, `cpuTimeMs` 10); live `cron-control` row (rev 303) and `cf-audit-last-synced` / `backup:status.lastTickAt`, both stopped at 2026-09-26 22:45 UTC; `npm run verify` | Each due job now runs in its own invocation through `JobRunner` (§5); held-back jobs cost no invocation. `runCronBatch` removed; the §3 and §5 references now name `dispatchCronJobs`. Not re-checked: §1, §2, §4, §7 |
 | 2026-09-23 | claude | Chunk CB-2: `backup-tick` registered (`src/lib/jobs/registry.ts`), tier `essential`, budget 10/10 measured 0 queries on the configured path (`test/jobs-budget.test.ts`); catalog entry added to `scripts/lib/cron-catalog.mjs` — **reaches the page only after the owner re-seeds** (`node scripts/seed_cron_control.mjs --apply --remote`) | 12 jobs (10+2). Until the re-seed, the row shows the job by id |
 | 2026-09-21 | claude | **First pass made against the page as it actually renders.** The components were mounted in headless Chromium with a fixture payload and the real stylesheet, and read at 1440px and 390px | Found what three rounds of source review had not: ~1200px of dead space in every row, a red 82%-full bar on a healthy system, a card headlining its own configuration, section descriptions stranded at the far right, a status pill stretched to the width of a text input, and failure counts invisible on mobile. All fixed. Note for anyone repeating this: the page needs no server — a Vite build with `@tailwindcss/vite`, an alias for `@`, and a stubbed `fetch` on `/api/cron` renders the real components faithfully |

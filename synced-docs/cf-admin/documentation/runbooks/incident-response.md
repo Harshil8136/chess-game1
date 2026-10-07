@@ -148,7 +148,9 @@ delay containment to gather more.
    `SUPABASE_SERVICE_ROLE_KEY` → `CF_API_TOKEN_ZT_WRITE` →
    `CLOUDFLARE_API_TOKEN` → `CF_API_TOKEN_READ_LOGS` → `IP_HASH_SECRET` (see
    caveat below) → `RESEND_API_KEY` / `BREVO_API_KEY` →
-   `CHATBOT_ADMIN_API_KEY` → `UPSTASH_REDIS_REST_TOKEN`.
+   `CHATBOT_ADMIN_API_KEY`. (`UPSTASH_REDIS_REST_TOKEN` closed this list until
+   2026-10-04; cf-admin no longer reads it, so rotate it in the services that do,
+   cf-astro and cf-chatbot, and delete it here: [`../MAINTENANCE.md`](../MAINTENANCE.md) RU-1.)
    `wrangler secret put <KEY>`; full registry in
    [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §5.
    > **`IP_HASH_SECRET` is the most consequential rotation in this list.**
@@ -276,4 +278,5 @@ Stated plainly, because an assessor will find these anyway:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-07 | `wrangler.toml` `[secrets] required` read (no `UPSTASH_*` name; the 2026-10-04 comment says they left it); `grep -rn UPSTASH src/` (no match: nothing reads either secret) | The secret-rotation list (changed 2026-10-04): cf-admin no longer reads `UPSTASH_REDIS_REST_TOKEN`. Nothing else re-checked |
 | 2026-09-19 | `grep -rn "SECURITY ALERT" src/`; `grep -rn login_failed src/`; `admin_login_logs` schema and `event_type` values queried live; `src/lib/auth/stages/refresh-role.ts` and `stages/session-stage.ts` read; `public-share-links-domain-isolation.md` §3; `wrangler.toml` service bindings | §3's failed-login triage pointed at the wrong table — corrected to `admin_login_logs` (`event_type`, `failure_reason`) with a working query; `users/manage.ts` dropped from the `[SECURITY ALERT]` sources; §4's revocation timing, the `refresh-role.ts` path and its two-interval outage grace corrected; the `IP_HASH_SECRET` caveat expanded to the four token families; cf-chatbot separated from the shared-store list; the restore-drill row handed to `disaster-recovery.md` §8. Not re-checked: the legal deadlines in §7 beyond GDPR/CCPA (not a legal review) |

@@ -354,7 +354,7 @@ Engine, Suppressions and DNS tabs and gets a 403 from each. *Added 2026-09-19.*
 | 1 | `requireAuth` | 401 |
 | 2 | `isAdmin` role floor (manager+) | 403 |
 | 3 | PLAC `#compose` | 403 |
-| 4 | Rate limit 10/hour/user (Upstash; owner+vendor bypass) | 429 + `X-RateLimit-*` |
+| 4 | Rate limit 10/hour/user (a D1 counter row since 2026-10-04, Upstash before; owner+vendor bypass) | 429 + `X-RateLimit-*` |
 | 5 | `DB` and `EMAIL_QUEUE` bindings | 500 |
 | 6 | Zod `sendEmailSchema` | 400 |
 | 7 | **HTML sanitisation** (`sanitizeEmailHtml`, HTMLRewriter) | — rewrites, never rejects |
@@ -583,6 +583,7 @@ RULE #0.9 working as intended. Two standing items, both predating it:
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-07 | claude | The send pipeline's step 4 only, against `src/pages/api/emails/send.ts` (`getRateLimiter({ requests: 10, window: '1 h' }, 'custom-emails')`) and `src/lib/ratelimit.ts` | 10 an hour per user, now a D1 counter row (since 2026-10-04); nothing else re-checked |
 | 2026-10-03 | claude | §1 only, against `src/lib/auth/security-logging.ts` | Security alerts now share the queue and Queue Logs; nothing else re-checked |
 | 2026-09-19 | claude | Re-grepped every `src/pages/api/emails/` route for its PLAC anchors and role floors; re-read `send.ts` end to end; live D1 re-check of `email_sender_identities` and `custom_email_max_recipients` | §0 defect **still live** (no `email_sender_identities` row). Corrections: owner/vendor **do** bypass every PLAC deny; `#templates`/`#ai-generate`/`#preview` are not server-enforced; `cc`/`bcc` escape the suppression partition; attachments are never swept; the composer *is* idempotent; `0008` **is** in the schema ledger; engine actions 5 not 3; senders POST has no `sync`; queue free tier is 10k ops/day; `admin_email_templates` is orphaned; E-8's fix is partial |
 | 2026-06-07 | claude | code read | pass — schema-provisioning gap noted |

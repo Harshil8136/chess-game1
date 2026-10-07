@@ -296,15 +296,15 @@ passes — regressed once in 2026-08 and now guarded by
 
 **Two cron expressions** are declared (`*/5 * * * *` and `0 2 * * SUN`) against an
 account-wide cap of five, which is why jobs are multiplexed inside the 5-minute
-tick rather than given triggers of their own. **Thirteen jobs** are registered in
+tick rather than given triggers of their own. **Twelve jobs** are registered in
 `src/lib/jobs/`, each carrying a criticality tier in `src/lib/jobs/tiers.ts`:
 
 - **essential** — never shed automatically: `cf-access-audit-poll`,
   `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`,
   `cron-usage-probe`, `backup-tick`.
 - **deferrable** — shed under D1 pressure: `storage-notifications`,
-  `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile`,
-  `redis-ttl-hygiene`.
+  `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile`
+  (`redis-ttl-hygiene` was removed on 2026-10-04 with cf-admin's Upstash code).
 - **idle** — shed under pressure and already off at source: `gsc-sync`,
   `pagespeed-sync`.
 
@@ -395,4 +395,5 @@ tier limits, the environment registry, Sentry integration and deploy commands.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-07 | claude | Read `src/lib/jobs/tiers.ts` and `src/lib/jobs/registry.ts` (`FIVE_MIN_JOBS`, `SUNDAY_JOBS`) | The cron paragraph: `redis-ttl-hygiene` removed on 2026-10-04, so **twelve** jobs (6 essential, 4 deferrable, 2 idle); "Thirteen" corrected. Nothing else re-checked |
 | 2026-09-19 | claude | Refreshed against `06f8ab7`. Read `src/lib/auth/pipeline.ts`, `src/workers/cf-entry.ts`, `src/lib/jobs/tiers.ts`, `eslint.config.js`, `wrangler.toml` `[triggers]`, `package.json`; listed `src/pages/dashboard/`, `src/pages/dashboard/content/`, `src/lib/` and `src/components/admin/`; took ratchet baselines from `.ratchet.json` | Rewritten as an overview that links rather than restates. Removed: the pre-chunk-10 lifecycle diagram, the directory tree, the CPU budget, the daily budget table, the bindings table and the package table. Added §7 on scheduled and queued work. Corrected: the stack banner, island state management, the ACM file name, the ESLint exception count, the add-a-module steps, the role-change behaviour, the "zero inline styles / zero SQL" claims and the bot-score property |

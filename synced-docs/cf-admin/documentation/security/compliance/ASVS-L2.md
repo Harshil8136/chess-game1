@@ -86,7 +86,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 2.1.2 | Passwords are not truncated | **N/A** | No password store — see 2.1.1. |
 | 2.1.6 | Password change requires current password | **N/A** | No password store — see 2.1.1. Credential lifecycle is handled by the Zero Trust IdP. |
 | 2.1.7 | Passwords compared to compromised-password corpus | **N/A** | **Corrected 2026-08-13.** Four documents gave four different answers (30-second free toggle / Pro-plan-only / N-A since GoTrue removed / awaiting owner action). The settled answer: **not applicable** — no GoTrue passwords exist, so the Supabase HIBP toggle protects nothing here. The Supabase advisor still emits `auth_leaked_password_protection` as a WARN because the advisor cannot tell that GoTrue is unused; it is a known false positive, recorded in `security/SECURITY.md` §0. `runbooks/supabase-leaked-password-protection.md` is retained only for the day a password path is ever introduced. |
-| 2.2.1 | Anti-automation on auth | ✅ | Cloudflare Zero Trust bot management + Upstash Redis rate limiting (`src/lib/ratelimit.ts`). |
+| 2.2.1 | Anti-automation on auth | ✅ | Cloudflare Zero Trust bot management + per-route rate limits (`src/lib/ratelimit.ts`): Cloudflare's Workers Rate Limiting binding for one-minute limits, D1 counter rows for hour and day limits (`SECURITY.md` §6b). *(Corrected 2026-10-07: Upstash Redis until 2026-10-04.)* |
 | 2.2.3 | MFA required for admin/priv | 🟡 | **Corrected 2026-09-19 — MFA is not established for every accepted login path.** `security/SECURITY.md` §1.1 lists three identity providers on the Cloudflare Access application: **Google**, **GitHub** and **One-Time PIN**. Google and GitHub can each carry MFA, but that is a property of the user's account at those providers, not something this platform enforces or can evidence. **One-Time PIN is single-factor** — an emailed code, possession of the mailbox only — and `session.ts` records it as a first-class login method (`loginMethod: 'google' \| 'github' \| 'otp'`, `SECURITY.md` §1.3). A Cloudflare Access policy requiring MFA, or removing the OTP provider, would make this ✅; no such policy is in this repository and the verification log below still records Zero Trust MFA as *not checked*. Treat "MFA enforced" as unverified until an operator screenshots the Access policy. |
 | 2.3.1 | Enrollment tokens random / time-bound | ✅ | Access-request tokens generated via `crypto.randomUUID()`. |
 | 2.5.1–2.5.7 | Credential recovery | ✅ | Handled by CF Zero Trust IdP. |
@@ -169,7 +169,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
 | 9.1.1–9.1.3 | TLS client comms | ✅ | Cloudflare edge TLS 1.3; HSTS `max-age=63072000; includeSubDomains; preload`. |
-| 9.2.1–9.2.5 | Server comms | ✅ | Supabase over TLS 1.2+; Upstash over TLS. |
+| 9.2.1–9.2.5 | Server comms | ✅ | Supabase over TLS 1.2+. Rate limits no longer leave Cloudflare: the Rate Limiting binding and D1 are reached inside the Worker runtime. *(Corrected 2026-10-07: the Upstash connection over TLS was removed on 2026-10-04.)* |
 
 ## V10 — Malicious Code
 
@@ -213,7 +213,7 @@ purge. `wrangler.toml` records the isolation reasoning in the binding comment.
 | 13.2.3 | REST access controls | ✅ | See V4. |
 | 13.2.5 | Endpoints protected against CSRF | ✅ | See 4.2.2. |
 | 13.2.6 | Reflection/introspection disabled | ✅ | There is no `/api/docs` and no public OpenAPI endpoint. |
-| 13.3.1 | Anti-automation on APIs | ✅ | Upstash Redis rate limits per user/IP. |
+| 13.3.1 | Anti-automation on APIs | ✅ | Rate limits per user, or per IP on the session-less routes: one-minute limits on Cloudflare's Rate Limiting binding, hour and day limits as D1 counter rows (`src/lib/ratelimit.ts`, `SECURITY.md` §6b). *(Corrected 2026-10-07: Upstash Redis until 2026-10-04.)* |
 | 13.4.1–13.4.2 | GraphQL | 🚫 | N/A — REST only. |
 
 ## V14 — Configuration
@@ -288,5 +288,6 @@ Residual partials are documented and tracked in `MAINTENANCE.md`.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-07 | Rows 2.2.1, 9.2.1–9.2.5 and 13.3.1, for the move of cf-admin's rate limits off Upstash: `src/lib/ratelimit.ts` (the `RL_PER_MIN_<n>` bindings for `'1 m'`, `RateLimitRepository.ts` for `'1 h'` / `'1 d'`), `wrangler.toml` `[[ratelimits]]`, and no Upstash client left under `src/` | Every other row; whether Cloudflare's limiter counts exactly (its documentation calls the counts approximate) |
 | 2026-09-19 | The four rows corrected this pass, each against code or config read today: `documentation/security/PRIVACY.md` headings and a `classification\|classify\|tier` grep over it (no match) for 6.1.1–6.1.3; `security/SECURITY.md` §1.1 identity-provider list and §1.3 `loginMethod` union for 2.2.3; `src/lib/auth/authz-signal.ts`, `stages/session-stage.ts` and `plac.ts` for 3.7.1; `RULESAd.md` §12 plus the CAIQ/SOC2 rows for 1.10.1. Also: `crypto.getRandomValues` in `src/lib/security/csp.ts` vs `crypto.randomUUID()` in `src/lib/auth/session.ts` (6.2.3); the six workflow files in `.github/workflows/` and `backups.yml`'s header, schedule and required secrets (1.1.1); `.audit-exceptions.json` and the struck-through `MAINTENANCE.md` C-14 (10.1.1); `src/pages/api/storage/presign.ts` (`aws4fetch`) and `LOG_RETENTION_DAYS = 180` in `src/workers/scheduled-asset-cleanup.ts` (V12). Every status mark re-counted from the tables. | Whether `backups.yml` succeeds once its secrets are set; Cloudflare Access policy contents (the MFA question above); everything in the 2026-09-14 "not checked" column still stands |
 | 2026-09-14 | Every row citing a file, header, middleware, script, workflow step or doc section: `csp.ts` (HSTS, nonce, allowlist, Report-Only, `frame-ancestors`), `middleware.ts` / `stages/decide.ts`, `session.ts` lifetimes and cookie flags, `csrf.ts`, `plac.ts`, `rbac.ts`, `sanitize-html.ts`, `ratelimit.ts` (live in 49 API files), `cloudflare-access.ts` algorithms, upload limits (`cms/storage.ts`, `attachments.ts`, `send.ts`), `sendDefaultPii`, service bindings, SEC-01…10 in `rules_check.py`, `quality.yml` steps (consolidated 2026-09-22 from `quality.yml` + `security.yml` + `docs-quality.yml`), `audit_gate.py` run, `.audit-exceptions.json`, `dependabot.yml`, `SessionWatchdog.tsx`, cross-referenced docs and sections. Eleven corrections above. | Cloudflare Zero Trust MFA / bot management / device posture; TLS versions on Supabase and Upstash; R2 checksums; key-rotation practice; GitHub branch policy |

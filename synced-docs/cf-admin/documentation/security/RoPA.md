@@ -3,7 +3,7 @@
 title: "Record of Processing Activities (GDPR Art. 30)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-10-03
+last_verified: 2026-10-04
 verified_against: [code, config]
 owner: harshil
 related_docs: [PRIVACY.md, SECURITY.md, THREAT-MODEL.md, ../runbooks/incident-response.md, compliance/data-residency.md, ../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -190,7 +190,9 @@ which records the raw address deliberately so that a sign-in can be investigated
 | D1 `admin_email_suppression` | Hashed | Indefinite |
 | Supabase `email_audit_logs` | Hashed sender IP | 365-day target, manual |
 | KV session records | **Raw** `ipAddress`, plus a derived `ipHash` used for audit rows | Session lifetime (24 h TTL) |
-| Upstash rate-limit keys | **Raw** client IP on the session-less routes (cf-admin: logout, the Brevo webhook, the email unsubscribe, the four public storage routes; cf-astro: every public API route); internal user UUIDs elsewhere | 2 × the window + 1 s — about 2 minutes for per-minute limiters, at most 2 days for cf-admin's daily AI quotas. *(Corrected 2026-10-02: `analytics: true` had also written hourly ZSETs of these identifiers with no expiry — 648 keys back to 2026-08-07. They were cleared on 2026-10-02; analytics is off in both apps, and the weekly `redis-ttl-hygiene` job reports, and repairs, any key without an expiry.)* |
+| Workers Rate Limiting counters (Cloudflare) | **Raw** client IP inside the key on cf-admin's session-less routes (logout, the Brevo webhook, the email unsubscribe, the four public storage routes, all one-minute limits); internal user UUIDs elsewhere. Held by Cloudflare's rate limiter, not written to any store of ours | The limit's 60-second period (since 2026-10-04; how long Cloudflare keeps a counter after its period is not stated in anything read here) |
+| D1 `admin_portal_settings` rate-limit counters (`category` `ratelimit`) | None: the row holds a signed-in user's internal UUID and a request count, never an IP | Overwritten each hour or day window, never deleted (a removed user's rows stay: [`../MAINTENANCE.md`](../MAINTENANCE.md) RU-5). Since 2026-10-04 |
+| Upstash rate-limit keys (cf-astro, cf-chatbot) | **Raw** client IP on cf-astro's public API routes. **cf-admin writes none since 2026-10-04**; until then it also keyed its session-less routes by raw IP here | 2 × the window + 1 s for cf-astro's per-minute limiters. *(Corrected 2026-10-02: `analytics: true` had also written hourly ZSETs of these identifiers with no expiry — 648 keys back to 2026-08-07. They were cleared on 2026-10-02 and analytics is off. The weekly `redis-ttl-hygiene` job that checked expiries left with cf-admin's Upstash code on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md) RU-8.)* |
 
 Practical consequence for a data-subject request or a breach assessment: a raw IP
 is recoverable from the login log, the two dead-letter tables and any live KV
@@ -210,7 +212,7 @@ Treat rotation as a breaking change, not a privacy hygiene step.
 | Supabase | Postgres | Users, ARCO, consent, bookings, email ledger | US |
 | Brevo | Email delivery — transactional, marketing and security alerts | Recipient addresses, content | EU (France) |
 | Resend | Email delivery — staff invites, a diagnostics ping, and queued email when Brevo fails (security alerts included) | Staff and recipient addresses, email content | US |
-| Upstash | Rate-limit counters, alert dedupe | **Raw client IPs** on session-less routes and on cf-astro's public routes, internal user UUIDs elsewhere — every key expires: rate-limit keys after 2 × their window + 1 s, alert dedupe after 5 minutes, the alert lists after 14 days, the daily AI counter after 7 days | US |
+| Upstash | Rate-limit counters for cf-astro (until cf-astro's own change under the same plan ships), and cf-chatbot's conversation state. **cf-admin sends it nothing since 2026-10-04** (its limits moved to Cloudflare and D1, §2.1; its alert dedupe and alert lists are gone) | **Raw client IPs** on cf-astro's public routes; every key expires (2 × the window + 1 s for rate-limit keys) | US |
 | Sentry | Error tracking | Scrubbed traces — `sendDefaultPii: false` + PII scrubber | US |
 | PostHog | Product analytics | Usage events; read back through the admin API for the control-plane surface | US |
 | Google | Search Console API (`GSC_SERVICE_ACCOUNT_JSON`) and PageSpeed Insights (`PAGESPEED_API_KEY`) | Public site and page URLs, sitemap and index-coverage data — no personal data. Google is also an IdP option in front of Cloudflare Access, where it sees staff sign-in identity | US |
@@ -281,6 +283,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-04 | §2.1's rate-limit rows and §3's Upstash row, for the move of cf-admin's limits off Upstash: `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, the limiter windows on the session-less routes (`src/pages/api/auth/logout.ts`, `src/pages/api/emails/webhook.ts`, `src/pages/api/emails/unsubscribe.ts`, `src/pages/api/storage/share/[token].ts`, `src/pages/api/storage/request/[token]/`: all one-minute, so their IPs go to Cloudflare's limiter and never to D1), and `src/lib/alert-gate.ts` (no Redis write left) | How long Cloudflare's limiter keeps a counter after its period; cf-astro's and cf-chatbot's current Upstash use (their own records); the Upstash instance itself |
 | 2026-10-04 | Activity J's Stores and the dormant project's outstanding action, for cf-backup's Supabase full export: what it writes and deletes, read from cf-backup `scripts/full-export/supabase-full-export.ts` and checked in a local end-to-end run | No full export has been taken in production yet, so where its second copy lives is not recorded; retention of manual exports is an owner decision |
 | 2026-10-03 | Activity F's stores and recipients and §5's Resend row, for security alerts sent through the email queue (v2 step 3): `src/lib/auth/security-logging.ts`, and the consumer's Brevo-then-Resend failover read from its deployed bundle | Resend's own terms and region were not re-checked |
 | 2026-10-03 | Activity B for sign-in alerts v2 step 2: the personal mode, the copy to the account holder and `managedBy` (`src/lib/login-alerts/policy.ts`, `handlers.ts`), the alert policy's recipients (`policy-handlers.ts`, stored by `store.ts` `writePolicy`); alert emails already go through Brevo (§5). Places offered for trusting are read from the account's own `admin_login_logs` rows and leave the server as labels only | The rest of the record; legal basis and retention remain owner and counsel judgements |

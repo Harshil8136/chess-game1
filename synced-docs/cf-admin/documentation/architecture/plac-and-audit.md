@@ -259,7 +259,7 @@ stack:
    `isDev(actor.role)` on `locals.user` — vendor support only. *Corrected
    2026-09-19: this said `requireAuth(context, 'dev')`; `'dev'` is no longer a
    canonical Role.*
-3. **Rate limiting** via Upstash Redis.
+3. **Rate limiting** via `getRateLimiter()` (`src/lib/ratelimit.ts`): Cloudflare's Rate Limiting binding for one-minute limits, D1 counters for hour/day limits (Upstash Redis until 2026-10-04).
 4. **Schema validation**: `admin_pages.required_role` carries a `CHECK` constraint
    pinning the legacy role names. *Corrected 2026-09-19: the migration cited here
    as `0018` lives in `database/legacy_migrations/`, not in `migrations/`.*
@@ -456,6 +456,7 @@ sampling or an aggregate, not reinstated as it was.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-07 | claude | Read `src/lib/ratelimit.ts` and `src/lib/dal/RateLimitRepository.ts` | The rate-limiting step (changed 2026-10-04): one-minute limits on the `RL_PER_MIN_<n>` bindings, hour and day limits as D1 counter rows, no Upstash client left. Nothing else re-checked |
 | 2026-09-19 | claude | Re-derived against `06f8ab7`. Read `src/lib/audit.ts`, `src/lib/audit-helpers.ts`, `src/lib/retention-tables.ts`, `src/lib/auth/stages/decide.ts`, `record.ts`, `bootstrap.ts`, `guard.ts`, `authz-signal.ts`; and every handler under `src/pages/api/audit/`. Live `admin_audit_log` state taken from the 2026-09-18 fact sheet (2 rows, the bulk delete and its own attempt row, `request_path` NULL) | §1 and §2 reduced to pointers; §3 rewritten. Load-bearing corrections: the middleware does **not** skip `/api/*`; `requirePageAccess` exempts owner as well as vendor and 403s on a missing map; permission changes write an `authz-changed` mark, not a force-logout; the §3.5 "view" telemetry never existed after 2026-08-06; the deletion-path table now names `DELETE /api/audit/logs` and drops `/api/audit/delete`; the "insert-only application path" phrasing is withdrawn |
 
 ## Related

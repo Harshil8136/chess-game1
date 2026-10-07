@@ -156,7 +156,7 @@ If a blank screen recurs, follow this checklist in order:
    boundary did not fire.
 3. **Run the diagnostics page** — `/dashboard/debug/diagnostics`
    (vendor-support only) mounts `SystemDiagnostics.tsx` and POSTs
-   `/api/diagnostics/run`, exercising the D1/R2/KV/Supabase/Upstash/Analytics
+   `/api/diagnostics/run`, exercising the D1/R2/KV/Supabase/rate-limit-binding/Analytics
    probes in `src/lib/diagnostics/`. `/dashboard/debug` itself is only a
    landing hub. *(This step previously said to hit `/api/debug-ssr`, a route that was removed and no longer exists. The hub-vs-page distinction was corrected 2026-09-19.)*
 4. **Verify the component**:
@@ -171,5 +171,6 @@ If a blank screen recurs, follow this checklist in order:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-07 | `src/lib/diagnostics/tests/connectivity.ts` and `src/lib/diagnostics/runner.ts` read | The diagnostics step (changed 2026-10-04): the suite checks the rate-limit bindings (`ratelimit_bindings`) where it pinged Upstash. Nothing else re-checked |
 | 2026-09-19 | `src/components/ui/ErrorBoundary.tsx` and `public/scripts/error-capture.js` read line by line; `grep -rln ErrorBoundary src/`; `grep` for every string the Diagnostic Playbook names | **Every string in the playbook was wrong** — the Sentry tags, both console prefixes and the fallback wording — and that is the only part anyone uses under pressure. Playbook rewritten with the real tags (`preact.island_boundary`, `preact.section_name`), the real prefixes and the real Spanish UI text; mounting files corrected from three to **two**; Layer 1's Sentry call marked conditional on a `window.Sentry` global nothing sets; Layer 2's heading corrected from `window.onerror` to listeners; the diagnostics link pointed at `/dashboard/debug/diagnostics`. Not re-derived: the three crash patterns and the April 2026 post-mortem (history) |
 | 2026-09-14 | `ls` / `grep` for every file and route this runbook names: `src/components/ui/ErrorBoundary.tsx`, `src/components/navigation/TopBar.tsx`, `src/pages/api/dashboard/metrics.ts`, `/dashboard/debug`, `src/lib/diagnostics/`, `public/scripts/error-capture.js` and its `<script>` tag in `AdminLayout.astro`, the Sentry wiring in `src/workers/cf-entry.ts` | All present. Two paragraphs corrected above (Layer 2's script is a static file, Layer 3 is `withSentry` + `consoleLoggingIntegration`, not the Astro server SDK); the three crash patterns and the April 2026 post-mortem are history and were not re-derived |
