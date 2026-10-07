@@ -10,18 +10,22 @@ console. Two hours of forensics later: not a single record was ever lost.
 ## The 30-second health check
 
 Run the **Consent heartbeat** workflow (GitHub → Actions → "Consent & booking
-heartbeat (hourly)" → Run workflow). Green = consents are being recorded, **but
-only when its two GitHub Actions secrets are set**: `HEALTH_CHECK_SECRET` (the
-probe and the outbox drains) and `CLOUDFLARE_API_TOKEN` (the D1 audit). It is
-scheduled every hour (GitHub runs a scheduled workflow late when it is busy),
-and a failed run emails you if consent writes stop or error.
+heartbeat (hourly)" → Run workflow). Green = consents are being recorded and no
+booking is stranded, **but only when its GitHub Actions secret
+`HEALTH_CHECK_SECRET` is set** (the same value as the Worker's). The check itself
+runs in the Worker (`/api/health/?probe=heartbeat`): the live insert probe, both
+outboxes and the D1 audit of consents and bookings; the workflow then drains both
+outboxes. It is scheduled every hour, but GitHub runs a scheduled workflow late
+or not at all when it is busy, so cf-admin's `heartbeat-watchdog` job runs the
+same check whenever nobody has for 70 minutes
+([CONSENT-RECORD-SYSTEM.md](./CONSENT-RECORD-SYSTEM.md) §4). A failed GitHub run
+emails you.
 
-> **Not working today (checked 2026-10-07 with the GitHub connector).** Neither
-> secret is set in this repository, so every run sampled from 2026-09-07 to
-> 2026-10-07 skipped both legs, checked nothing and still ended green. Since the
-> 2026-10-07 change, a run with neither secret fails and says so. Until the Owner
-> sets both secrets (Settings → Secrets and variables → Actions), use the D1
-> queries below instead; the backlog item is in
+> **GitHub's runs fail today (checked 2026-10-07 with the GitHub connector).**
+> `HEALTH_CHECK_SECRET` is not set in this repository, so every run sampled from
+> 2026-09-07 to 2026-10-07 checked nothing, and since 2026-10-07 such a run fails
+> and says so. Until the Owner sets it (Settings → Secrets and variables →
+> Actions), use the D1 queries below; the backlog item is in
 > [`TODO-BACKLOG.md`](./TODO-BACKLOG.md) §00.
 
 ## Consent data
@@ -61,8 +65,8 @@ GROUP BY day, status ORDER BY day DESC;
 
 Healthy = every row `db_success` (or `db_replayed`, meaning it reached Postgres
 on a later retry — equally valid). `db_error` / `env_missing` = recording is
-broken, fix immediately (the heartbeat workflow alerts on exactly this once
-`CLOUDFLARE_API_TOKEN` is set as a GitHub Actions secret; see the warning at the top).
+broken, fix immediately (the heartbeat fails on exactly this; see the warning at
+the top).
 `replay_exhausted` = a record gave up retrying and needs manual recovery.
 
 ```sql

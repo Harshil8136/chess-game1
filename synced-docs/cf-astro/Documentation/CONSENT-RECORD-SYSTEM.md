@@ -107,10 +107,10 @@ Two drain triggers:
   to 5 rows (3s budget). A healthy write proves Postgres is reachable, so it is
   the cheapest moment to flush a backlog.
 - **Scheduled** — `POST /api/consent/replay/` (bearer `HEALTH_CHECK_SECRET`),
-  called hourly by `consent-heartbeat.yml`. Covers a site with no traffic.
-  **Not running today:** the workflow has no `HEALTH_CHECK_SECRET` secret, so
-  this step has been skipped on every run sampled from 2026-09-07 to 2026-10-07
-  (GitHub connector, read 2026-10-07). See
+  called by every heartbeat run, right after `?probe=heartbeat` (§4). Covers a
+  site with no traffic. **Not running from GitHub today:** the workflow has no
+  `HEALTH_CHECK_SECRET` secret, so this step was skipped on every run sampled
+  from 2026-09-07 to 2026-10-07 (GitHub connector, read 2026-10-07). See
   [`WHERE-THE-DATA-LIVES.md`](./WHERE-THE-DATA-LIVES.md) and the backlog.
 
 Replay is idempotent: `consent_records.id` is generated before the first attempt
@@ -127,30 +127,43 @@ matters because `cf_astro_writer` is INSERT-only and cannot delete a duplicate.
 
 ## 4. Monitoring
 
-| Check                            | Frequency    | Credential             | Catches                                                 |
-| -------------------------------- | ------------ | ---------------------- | ------------------------------------------------------- |
-| `GET /api/health/?probe=consent` | hourly       | `HEALTH_CHECK_SECRET`  | schema drift, revoked grants, RLS changes, connectivity |
-| D1 audit query                   | hourly       | `CLOUDFLARE_API_TOKEN` | error rates, stuck/exhausted replay                     |
-| `npm run db:check`               | every CI run | none                   | schema.ts drifted from the migration chain              |
-| `test/consent-contract.test.ts`  | every CI run | none                   | a column written but not migrated                       |
-| Critical alert from the Worker   | immediate    | none                   | any failed consent write → email                        |
+| Check                                              | Frequency    | Credential            | Catches                                                                                         |
+| -------------------------------------------------- | ------------ | --------------------- | ----------------------------------------------------------------------------------------------- |
+| `GET /api/health/?probe=heartbeat` (the heartbeat) | hourly       | `HEALTH_CHECK_SECRET` | schema drift, revoked grants, RLS changes, connectivity; D1 error rates, stuck/exhausted replay |
+| `npm run db:check`                                 | every CI run | none                  | schema.ts drifted from the migration chain                                                      |
+| `test/consent-contract.test.ts`                    | every CI run | none                  | a column written but not migrated                                                               |
+| Critical alert from the Worker                     | immediate    | none                  | any failed consent write → email                                                                |
 
-The two heartbeat legs are **independent on purpose**: losing one credential
-must never blind both. The daily, single-legged, silently-skipping version of
-this workflow is why the 2026-08-07 outage ran for a day. Since 2026-10-04 the
-legs are two sets of steps in **one job**, not two jobs (each job bills at
-least a minute): each leg checks its own credential, every step runs whatever
-the steps before it did (`if: ${{ !cancelled() && … }}`), and the job fails if
-any step failed. With **neither** credential, nothing can be checked, and since
-2026-10-07 the run fails instead of ending green with two warnings.
-`test/heartbeat-workflow.test.ts` holds that shape
-([change record](./records/2026-10-04-resource-usage.md)).
+**One endpoint, several runners (since 2026-10-07).** `?probe=heartbeat` runs
+the live insert probe below, reads both outboxes, runs the two D1 audit queries
+(consents and bookings) and applies the pass/fail rules that used to live in the
+workflow, word for word (`src/lib/heartbeat.ts`, `test/heartbeat.test.ts`). It
+answers `heartbeat.verdict` (`ok`, `warn` or `fail`) with the problems as
+`errors`, `warnings` and `notices`, and records the run in D1
+`admin_portal_settings` row `heartbeat-last-run` (when, which runner, which
+verdict). Whoever runs it then drains both outboxes.
 
-> **Both heartbeat rows above are off today.** Neither `HEALTH_CHECK_SECRET` nor
-> `CLOUDFLARE_API_TOKEN` is set as a GitHub Actions secret in this repository
-> (GitHub connector, read 2026-10-07: every run sampled from 2026-09-07 on
-> skipped both legs). Until the Owner sets them, the two hourly rows check
-> nothing ([backlog](./TODO-BACKLOG.md) §00).
+The 2026-08-07 lesson ("losing one credential must never blind the whole
+check") used to be met by two legs with two credentials in one GitHub job. It is
+now met by independent **runners** sharing one narrow credential:
+
+- `consent-heartbeat.yml`, hourly on GitHub (which runs it late or not at all
+  when busy: 5 runs in the 25 hours to 2026-10-07 21:10 UTC). With no secret it
+  fails instead of ending green; `test/heartbeat-workflow.test.ts` holds its
+  shape.
+- cf-admin's Cron Control job `heartbeat-watchdog`, on cf-admin's existing
+  5-minute tick: whenever `heartbeat-last-run` is older than 70 minutes, it runs
+  the heartbeat itself through its service binding with the secret it already
+  holds.
+- A job on the VPS (cf-vps), the intended primary, being built.
+
+No runner needs `CLOUDFLARE_API_TOKEN` any more
+([change record](./records/2026-10-07-heartbeat-in-the-worker.md)).
+
+> **GitHub's runs are off today.** `HEALTH_CHECK_SECRET` is not set as a GitHub
+> Actions secret in this repository (GitHub connector, read 2026-10-07: every run
+> sampled from 2026-09-07 on checked nothing), so every GitHub run fails until
+> the Owner sets it ([backlog](./TODO-BACKLOG.md) §00).
 
 ### The probe
 

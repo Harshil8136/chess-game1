@@ -12,15 +12,16 @@
 > when the work was committed; only the heartbeat item below was checked against
 > production (GitHub connector, 2026-10-07).
 
-- [ ] 🔴 **Set the consent heartbeat's two secrets** (owner). Neither
-      `HEALTH_CHECK_SECRET` nor `CLOUDFLARE_API_TOKEN` is set as a GitHub Actions
-      secret in this repository (Settings → Secrets and variables → Actions), so
-      every run sampled from 2026-09-07 to 2026-10-07 skipped both legs, checked
-      nothing, drained no outbox and still ended green. Since 2026-10-07 such a run
-      fails, so the heartbeat goes red on every run until both are set. Use the same
-      value as the Worker's `HEALTH_CHECK_SECRET`, and a Cloudflare API token that
-      can read D1. Then run the workflow once by hand and check both legs ran
-      ([WHERE-THE-DATA-LIVES.md](./WHERE-THE-DATA-LIVES.md)).
+- [ ] 🔴 **Set the consent heartbeat's secret** (owner). `HEALTH_CHECK_SECRET`
+      is not set as a GitHub Actions secret in this repository (Settings → Secrets
+      and variables → Actions), so every run sampled from 2026-09-07 to 2026-10-07
+      checked nothing, drained no outbox and still ended green. Since 2026-10-07
+      such a run fails, so the heartbeat goes red on every GitHub run until it is
+      set. Use the same value as the Worker's `HEALTH_CHECK_SECRET` (make a new one
+      and set it in both places if the Worker's is not known). Since the D1 audit
+      moved into the Worker (2026-10-07), `CLOUDFLARE_API_TOKEN` is **no longer
+      needed**. Then run the workflow once by hand and check the summary shows a
+      verdict ([WHERE-THE-DATA-LIVES.md](./WHERE-THE-DATA-LIVES.md)).
 
 - [ ] 🔴 **Check the rate-limit bindings after the first deploy.** Read the Workers
       Builds log: wrangler must accept the ten `[[ratelimits]]` bindings on this
