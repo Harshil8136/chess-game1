@@ -65,9 +65,9 @@ One fine-grained token, `GITHUB_READ_TOKEN`, an optional Worker secret
 ([OPERATIONS.md](../operations/OPERATIONS.md)). It is made by the account that owns the
 repositories, with read-only Actions, Contents, Issues and Pull requests. A token made by a
 collaborator account cannot read them. Two parts are optional: **Dependabot alerts** needs the
-"Dependabot alerts" read permission, and the **Deploy** chip needs GitHub to let the token read the
-commit's checks and statuses. When GitHub refuses either, the card and the page footer say which,
-and everything else still shows.
+"Dependabot alerts" read permission (the live token has it), and the **Deploy** chip needs the
+commit's check results, which GitHub does not give to fine-grained tokens at all (confirmed on the
+live page, 2026-10-07). The page footer says so once; everything else still shows.
 
 A refresh is one GraphQL call for all repositories plus one Actions call for each. The result is
 kept in KV (`SESSION`, key `github:snapshot:v1`, 7 days). It is served as it is for 10 minutes,
@@ -75,9 +75,10 @@ then served while a refresh runs after the response. A Refresh asked for within 
 last read is ignored. Nobody looking means no calls at all. The
 [design](../specs/2026-10-07-github-page-design.md) §5 has the cost table.
 
-Deploy results come from the commit's check summary in GraphQL (`statusCheckRollup`), not the
-Checks API, which fine-grained tokens cannot call. Whether GitHub grants that summary to a
-fine-grained token is confirmed on the live page ([MAINTENANCE.md](../MAINTENANCE.md) GH-1).
+Deploy results would come from the commit's check summary in GraphQL (`statusCheckRollup`), but
+GitHub refuses it to fine-grained tokens just as it refuses the Checks API, so the Deploy chip
+appears only with a token GitHub lets read checks. Reading deploy status from Cloudflare instead is
+[MAINTENANCE.md](../MAINTENANCE.md) GH-1.
 
 ## When something is wrong
 
@@ -95,3 +96,4 @@ fine-grained token is confirmed on the live page ([MAINTENANCE.md](../MAINTENANC
 |---|---|---|---|
 | 2026-10-07 | claude | Unit and source-contract tests (`test/github-*.test.ts`, 99 cases), `astro check`, `npm run build` | Production render with the real token, CPU per view (recorded here once the token is set) |
 | 2026-10-07 | claude | v2 (overview, health, deploy chip, activity, languages, pull requests, tags, Dependabot alerts, durations): the GraphQL query run against GitHub's live schema with a collaborator's classic token (no errors, cost 1 point, all five repositories); unit and source-contract tests (124 cases); `astro check`; `npm run build`; the live snapshot in KV after the token was set (five repositories, no errors) | Which optional parts the fine-grained token may read (confirmed on the first live refresh); CPU per view |
+| 2026-10-07 | claude | Live, after the v2 deploy (`389f348`): the KV snapshot from the owner's first view (21:09:50 UTC) — five repositories, no errors, Dependabot alerts readable (0 open in each), `statusCheckRollup` refused for every repository; `wrangler tail` CPU per request — the view that read GitHub 116 ms CPU / 4.7 s wall, views served from KV 23–35 ms CPU / 67–120 ms wall (the server page 41 ms, the first inquiries load 175 ms, same window) | A Refresh on a warm isolate (none was tapped in the window) |

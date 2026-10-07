@@ -166,9 +166,9 @@ version moved to 2, so a version 1 snapshot is read again once.
   commits in 7 days, repositories with a failed workflow, open pull requests, Dependabot alerts.
 - **Health** per repository from each workflow's newest run (`repoHealth`), and a chip per
   workflow.
-- **Deploy chip** from the Workers Builds entry in the head commit's `statusCheckRollup`. This
-  replaces D12's "not shown" when GitHub grants the summary to the token; otherwise the card says
-  so (MAINTENANCE GH-1).
+- **Deploy chip** from the Workers Builds entry in the head commit's `statusCheckRollup`, when
+  GitHub grants that summary to the token. On the live page GitHub refused it to the fine-grained
+  token for every repository, so D12 stands; the footer says so once (MAINTENANCE GH-1).
 - **Activity:** commits per UTC day for 14 days (up to 100 dates read; "+" beyond).
 - **Languages** (top 4, GitHub's colours only when they are plain `#rrggbb`), **branches**,
   **tags** and the latest tag, **open pull requests** (up to 5), **Dependabot alerts**
