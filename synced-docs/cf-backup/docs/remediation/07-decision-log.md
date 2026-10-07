@@ -2,7 +2,7 @@
 title: "cf-backup remediation — 07 Decision log (RD-1 to RD-15)"
 status: active
 audience: [owner, ai, technical]
-last_verified: 2026-09-27
+last_verified: 2026-10-07
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md, 13-engine-consolidation-plan.md]
@@ -69,6 +69,22 @@ Pipeline. The Owner approved the plan below and answered its three questions.
 | Heartbeat (RD-9, B0.4) | **Built now**: the `heartbeat` step pings `HEARTBEAT_PING_URL` after a passing verdict; nothing while the secret is unset | The Owner creates the healthchecks.io check (period 1 day, grace 8 hours) and the secret |
 | Today's recovery point | **A manual run now** (Owner's choice): run 36327225356, passed 14:50 UTC | A verified recovery point for today regardless of the schedule |
 | Live settings | **Claude applies them** directly to the `backup:config` row, with a notice alert, as on 2026-09-27 01:34 UTC (Owner's choice) | The change is made and verified in the same session as the code that uses it |
+
+## 0.2 Decision of 2026-10-07: one exception to RD-4, a console export of a whole Supabase project
+
+The Owner asked for the console to find every active Supabase and D1 database and export a chosen
+one, so the legacy Supabase project could be copied and then paused. Building a general database
+list into the engine is feature work that RD-4 still freezes (the fallback run failed on
+2026-10-05, so the 7 passing days restart). The Owner chose the narrow exception below, in the
+thread that did the work.
+
+| Item | Decided | Reason |
+|---|---|---|
+| Scope | **Run now → Export a Supabase project**, now. The full Supabase and D1 database list waits for the freeze to lift | Copying the legacy project is the only thing blocked; the rest is not urgent |
+| Engine | **Untouched.** A separate workflow, `supabase-project-export.yml`, runs the existing full export tool | A change here cannot stop a recovery point |
+| Key | **A temporary fifth key**, `SUPABASE_ACCESS_TOKEN` (a GitHub secret): created to expire after one day, deleted after each export, absent otherwise (`RULES.md` rule 3) | The export needs the Supabase Management API; the account token reaches every project, so it must not stay |
+| The live project | **Refused**: the export stops when the project holds the backup key | The engine already copies it daily, and the account token must never copy the key |
+| Storage | The encrypted file in the backups bucket under `project-exports/`, not bucket-locked | A one-off copy, never a backup or a recovery point |
 
 ## 1. Decision register (defaults: reversible at review)
 
@@ -167,6 +183,7 @@ configured.
 | 2026-09-25 | claude | Live Supabase grants and project list; cf-admin migration `0057` constraint on `backup_runs.kind` | RD-1 options; no spare project; RD-14 scope |
 | 2026-09-26 | claude | RD-1 applied: views and functions compared against Auth-style column changes on a local PostgreSQL 16 with Supabase's privileges reproduced; live privilege checks after the migration | §1, §2 |
 | 2026-09-27 | claude | The Owner's instruction to settle every open decision on its best option; live checks: both workflows `disabled_manually`, `backup:config` rev 4 with both schedules off, Supabase Storage empty (0 buckets, 0 objects), the `tick-deadman` schedule's start times (4 to 5 hours late) | §0 |
+| 2026-10-07 | claude | The Owner's choice on a decision card in the resource-usage thread ("Old project now"); the engine workflow and its guard unchanged in the same commit | §0.2 |
 
 ## 8. Related
 
