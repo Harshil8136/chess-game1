@@ -2,7 +2,7 @@
 title: "cf-backup remediation — 07 Decision log (RD-1 to RD-15)"
 status: active
 audience: [owner, ai, technical]
-last_verified: 2026-09-27
+last_verified: 2026-10-07
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md, 13-engine-consolidation-plan.md]
@@ -69,6 +69,24 @@ Pipeline. The Owner approved the plan below and answered its three questions.
 | Heartbeat (RD-9, B0.4) | **Built now**: the `heartbeat` step pings `HEARTBEAT_PING_URL` after a passing verdict; nothing while the secret is unset | The Owner creates the healthchecks.io check (period 1 day, grace 8 hours) and the secret |
 | Today's recovery point | **A manual run now** (Owner's choice): run 36327225356, passed 14:50 UTC | A verified recovery point for today regardless of the schedule |
 | Live settings | **Claude applies them** directly to the `backup:config` row, with a notice alert, as on 2026-09-27 01:34 UTC (Owner's choice) | The change is made and verified in the same session as the code that uses it |
+
+## 0.2 Decisions of 2026-10-07: choosing the databases a backup covers
+
+The Owner asked to "mature existing system of Run Now with permission based feature where we can
+update default setting of what projects to export on MANUAL or auto-run", with a visual choice in
+Run now, the project listing done by the Worker with the `SUPABASE_ACCESS_TOKEN` he had added (not
+by a GitHub run, which spends Actions minutes), and the backup itself done by the existing engine.
+The console export built the same day was deleted at his request.
+
+| Item | Decided | Reason |
+|---|---|---|
+| RD-4 freeze | **An exception, by the Owner's instruction.** The engine's stores, verification and verdict are unchanged; what changes is which databases a run covers | The Owner asked for it directly. Every database the engine already backed up stays on by default, so a scheduled run covers at least what it did |
+| Where the choice lives | **`backup:config` `targets`**, saved only by `POST /api/targets` with the new `targets.edit` capability (Owner and Vendor by default), a reason, a notice alert and an audit line (`config.edit op=targets`) | One settings row and one revision, no new table (RULE #0.6); a separate permission so changing what is backed up is never a side effect of another settings edit |
+| Defaults | **On: the live project and every D1 database, including any created later. Off: any other Supabase project** | Nothing the engine backed up before is dropped, and a new D1 database is backed up from the first run that lists it |
+| Listing | **Supabase: the Worker, `GET /v1/projects`, cached 5 minutes. D1: the engine lists them with its own Cloudflare token at the start of each run and stores the list in the bucket** | No new key for D1; no GitHub run just to list |
+| Run now | **A picker, ticked from the defaults. Leaving out a database the schedule backs up makes the run partial**: kept and verified, never counted as a full backup, and its GitHub run name ends in `-partial` so the fallback still runs that day | A partial run must never hide a missing recovery point |
+| Other Supabase projects | **The engine signs in with a temporary read-only login from the Supabase Management API, through the GitHub secret `SUPABASE_ACCESS_TOKEN`, and refuses a token that can reach the live project, or a project holding the backup key schema** | The live project's Vault holds the backup decryption key (RULE #0.9) |
+| Keys | **Two optional tokens, both named `SUPABASE_ACCESS_TOKEN`** (RULES.md 3) | The Owner added them; neither is a backup key |
 
 ## 1. Decision register (defaults: reversible at review)
 
@@ -167,6 +185,7 @@ configured.
 | 2026-09-25 | claude | Live Supabase grants and project list; cf-admin migration `0057` constraint on `backup_runs.kind` | RD-1 options; no spare project; RD-14 scope |
 | 2026-09-26 | claude | RD-1 applied: views and functions compared against Auth-style column changes on a local PostgreSQL 16 with Supabase's privileges reproduced; live privilege checks after the migration | §1, §2 |
 | 2026-09-27 | claude | The Owner's instruction to settle every open decision on its best option; live checks: both workflows `disabled_manually`, `backup:config` rev 4 with both schedules off, Supabase Storage empty (0 buckets, 0 objects), the `tick-deadman` schedule's start times (4 to 5 hours late) | §0 |
+| 2026-10-07 | claude | The Owner's instruction of 2026-10-07 (choose databases in Run now and the schedule); the live D1 list (4 databases, one of them new since the engine's fixed list) and the live Hyperdrive config's user, read through the Cloudflare connector | §0.2 |
 
 ## 8. Related
 

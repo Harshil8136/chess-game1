@@ -107,6 +107,31 @@ If GitHub cannot be asked, the step warns and the run backs up anyway: the guard
 dispatched run (the Scheduler, "Run now", or a person on GitHub) never checks. The console records
 a stood-down run as `skipped` (`fallback_not_needed`), which never alerts.
 
+**Step 0b — Plan (from 2026-10-07).** `scripts/secondary-pipeline/plan.ts` decides which
+databases this run backs up, and never fails the run:
+
+1. it lists the account's D1 databases with the job's Cloudflare token and stores the list in the
+   bucket (`system/inventory/d1.json`), where the console reads it;
+2. a run the console started with a choice follows the plan the Worker stored for it
+   (`system/run-plans/<request id>.json`); otherwise the run follows Settings → Databases
+   (`backup:config` `targets.scheduled`); with neither, the live project and every listed D1
+   database;
+3. any doubt (no token, a failed listing, nothing chosen) backs up the fixed list below.
+
+Steps 2 to 5 then cover only the chosen stores, and the verdict expects exactly those. A run the
+console started without a database the schedule backs up is **partial**: its run name ends in
+`-partial` (so the fallback guard does not count it), and the console keeps it as a good backup that
+is never counted as a full one.
+
+**Step 5b — Other Supabase projects (from 2026-10-07).** For each chosen project other than the
+live one, `scripts/secondary-pipeline/other-projects.ts` asks the Supabase Management API, with the
+GitHub secret `SUPABASE_ACCESS_TOKEN`, for a temporary read-only login and the project's session
+pooler, then exports, restores and verifies the database and its authentication records exactly as
+steps 2 to 4 do for the live project (stores `supabase-<project>` and `supabase-<project>-auth`). It
+refuses a token that can reach the live project and a project that holds the backup key schema, and
+removes the login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
+a database backup.
+
 **Step 1 — Pre-flight.** Fail immediately, naming what is missing, if either secret or either
 variable is empty. Run `mkdir -p out/plain out/encrypted out/check` once, **before any tool writes**
 (the lesson of T1: `wrangler` and `age` do not create directories).
@@ -377,6 +402,7 @@ recomputes.
 | 2026-09-26 | claude | Commissioning runs 36269275118 and 36269595781 (job logs, step timings, artifact size); live read-only counts from Supabase and D1 | §7 |
 | 2026-09-26 | claude | Authentication records: local proof, live privilege checks, run 36277447136; Cloudflare's D1 export limitations and Supabase's restore guides re-read | §3.2 step 3a, §3.3, §5, §7.4 |
 | 2026-09-27 | claude | GitHub's record of runs 36325294293 (schedule) and 36327225356 (manual); `backup_runs` in production; GitHub's list-workflow-runs filters (`status`, `created`) for the fallback guard | Status update, §2, §3.1, step 0, step 9, §4, §5, §7 |
+| 2026-10-07 | claude | Code read: `scripts/secondary-pipeline/plan.ts`, `other-projects.ts`, the workflow and its guard; the live D1 list through the Cloudflare connector (4 databases). Not yet proven by a run; the rest of the document was not re-checked, so `last_verified` stays | Steps 0b and 5b |
 
 ## 9. Related
 

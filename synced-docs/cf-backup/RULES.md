@@ -33,6 +33,16 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    `.dev.vars`. Enter secrets only at the `gh secret set` / `wrangler secret put` prompts or
    through `scripts/setup/owner-secrets.mjs`. `PERSONAL_PAT` (rule 9) is not a backup key
    and is not one of the four.
+
+   Two optional Supabase access tokens, both named `SUPABASE_ACCESS_TOKEN`, choose and reach
+   the databases a backup covers (the owner's decision of 2026-10-07; plan doc 12). Neither
+   is a backup key, and without either the live project and the D1 databases are backed up
+   as before:
+   - the Worker secret lists the account's Supabase projects for Settings → Databases and
+     Run now. It needs only read access to the project list;
+   - the GitHub secret lets the backup engine sign in to another Supabase project with a
+     temporary read-only login. The engine refuses it when it can reach the live project,
+     so it is scoped to the other projects only.
 4. **Dependencies are a whitelist.** `package.json` is the approved list, with exact pins.
    A new package needs the owner's approval first (plan doc 01 §6).
 5. **`npm run verify` before every push.** Workers Builds runs the same command as its
