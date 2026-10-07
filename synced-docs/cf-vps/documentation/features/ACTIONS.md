@@ -2,7 +2,7 @@
 title: "Controlled Actions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [contract/actions.ts, contract/logstore.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, host/65-actions, src/ui/components/actions.tsx]
@@ -42,9 +42,11 @@ activity log uses. **Fresh** means a cf-admin sign-in from the last 10 minutes.
 | `logs.purge` | `logs.purge` | Dates and kinds | `delete` | yes | Delete stored log files for past days |
 | `logs.vacuum` | `logs.purge` | Days | `delete` | yes | Delete journal files (and recordings in them) older than N days |
 | `retention.set` | `retention.manage` | Key and days | none | yes | Change how long one kind of log is kept |
+| `job.run` | `jobs.run` | A job name | none | no | Start a server job now; it waits its turn like any run ([JOBS](JOBS.md)) |
 
 Target shapes (checked by `checkActionRequest`): a unit is `[A-Za-z0-9@._:-]` ending in
-`.service`, at most 120 characters; an app is lowercase letters, digits and hyphens;
+`.service`, at most 120 characters; an app is lowercase letters, digits and hyphens; a job is
+lowercase letters, digits and underscores (`JOB_NAME`, no hyphen, so no unit escaping);
 `app.resources` is `<app>:<memory>:<cpu %>:<weight>` (`parseAppResources`: memory 32M to 6G,
 CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10000);
 `logs.purge` is `YYYYMMDD:YYYYMMDD:kind.kind` (real dates, from before to, never today, at
@@ -102,7 +104,10 @@ refusals: an action with no ticket, and an action with a ticket signed by anothe
 ## Host side (`65-actions`)
 
 The module installs the root scripts, the oneshot units (`vps-act-<verb>` and templated
-`vps-act-<verb>@` forms), the service allow-list and the polkit rule. Its `test` step runs
+`vps-act-<verb>@` forms), the service allow-list and the polkit rule. `vps-act-job` is the
+one script that starts something and does not wait for it: it checks the job exists, refuses a
+second run of a job already waiting or running, marks the run as a person's, and starts
+`vps-job@<name>.service` with `--no-block` (the run then waits on the busy gate, [JOBS](JOBS.md)). Its `test` step runs
 the scripts on scratch trees. A unit-template test (`test/host-units.test.ts`) checks that
 every templated unit passes the unescaped instance (`%I`) to its script, because the Worker
 escapes unit names the way `systemd-escape` does (`escapeUnitInstance`).

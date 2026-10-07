@@ -2,7 +2,7 @@
 title: "cf-vps Architecture Overview"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-01
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [src/worker.ts, src/http/router.ts, src/agent/proxy.ts, src/gateway/actor.ts, contract/capabilities.ts, contract/signing.ts, agent/src/server.ts, agent/src/auth.ts, wrangler.json]
@@ -29,6 +29,7 @@ tags: [architecture, worker, agent, tunnel, trust]
 | Host modules | `host/NN-name/` | Everything installed on the server, as code, applied over SSH |
 | Audit plane | The server | auditd, Laurel, tlog, sudo I/O and process accounting into Vector, then local storage, R2 and Sentry |
 | App platform | The server | Rootful Podman apps behind one nginx ingress, PostgreSQL on a socket |
+| Job runner | The server, root, started by systemd | Runs a job's container to completion, but only once the server is not busy; one queue for every job ([JOBS](../features/JOBS.md)) |
 
 ## Request path
 
@@ -69,13 +70,14 @@ open; an unknown route is 404; the agent answers only loopback `Host` names.
 |---|---|---|
 | cf-admin's D1 database (binding `DB`) | One settings row, `vps:access`: role defaults and per-person grants | cf-vps owns no tables. Compare-and-swap on a revision; read cached 30 s per isolate |
 | Worker secret `VPS_SIGNING_KEY` | The Ed25519 private key | Deploys are refused without it (`secrets.required`) |
-| Host config in `/etc/vps` | Retention table, service allow-list, Worker public keys | Written by host modules |
+| Host config in `/etc/vps` | Retention table, service allow-list, Worker public keys, job manifests and the busy-gate settings | Written by host modules |
 | Audit disk | `/srv/audit`: the forensic record | A fixed-size image, so a full audit disk cannot fill the system disk |
 | System journal | Service logs and terminal recordings | Age-limited by retention |
 | R2 audit bucket | Off-server copy of security classes; encrypted database dumps under `backups/postgres/` | Security classes locked for 90 days, see [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md); dumps locked 30 days, expired at 35 |
 | Sentry | Alerts for real problems only | Not a record |
 | Agent releases | `/opt/vps/agent/releases/<version>`, `current` link | Rollback switches the link |
 | Agent state | `/var/lib/vps/metrics`: one sample a minute, one file per day | The unit's `StateDirectory`; kept 30 days, at most 12 MiB; survives deploys. See [Metrics history](../features/CONSOLE.md#metrics-history) |
+| Job runs | `/var/lib/vps/jobs`: the queue, and each run's record, output and report | Written by root, readable by the agent (2750 `root:vps-agent`); kept 30 days |
 | App data | `/srv/apps`, `/srv/share`, PostgreSQL dumps kept 7 days, each also sent off the server encrypted (R2 `backups/postgres/`) | Apps run with a read-only root and no capabilities. The server holds only the public half of the backup key |
 
 ## Agent hardening

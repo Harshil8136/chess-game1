@@ -2,11 +2,11 @@
 title: "Server Console Pages"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [src/ui/pages.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/screens, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
-related_docs: [../security/PERMISSIONS.md, ACTIONS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
+related_docs: [../security/PERMISSIONS.md, ACTIONS.md, JOBS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
 tags: [feature, console, ui, pages]
 ---
 
@@ -41,13 +41,13 @@ tags: [feature, console, ui, pages]
   The health check resumes too, with its first ask 5 seconds after the return, so the reopened
   stream can answer first. While the tab is visible the stream reconnects as before: a dropped
   connection is retried by the browser, and an error answer is retried after 2 seconds,
-  doubling to at most 30. The pages that refresh on a timer (Processes, Metrics, Apps,
+  doubling to at most 30. The pages that refresh on a timer (Processes, Metrics, Apps, Jobs,
   Recordings) skip refreshes while the tab is hidden. The Logs live tail and the Terminal stay
   connected.
 
 ## Pages
 
-Twenty pages, in sidebar order (`PAGES` in `src/ui/pages.ts`). The capability opens the
+Twenty-one pages, in sidebar order (`PAGES` in `src/ui/pages.ts`). The capability opens the
 page; the Worker and agent enforce it again on every call.
 
 | Page | Group | Needs | Shows |
@@ -57,7 +57,8 @@ page; the Worker and agent enforce it again on every call.
 | Processes | System | `host.view` | Every process with its CPU and memory |
 | Services | System | `host.view` | systemd services, state and logs; a service's detail page offers Restart, Start, Stop (needs `services.control`; protected services show no buttons) |
 | Apps | System | `host.view` | Hosted apps: state (running, paused, blocked, stopped), memory against its cap, CPU now as a share of the server with its cap and weight, health, restarts. Controls follow the state: Start, Restart, Pause, Resume and Stop need `apps.control`; Block, Unblock and the inspector's Change Allocation form (memory cap, CPU cap, CPU weight) need `apps.manage`; Deploy needs `apps.deploy`. Buttons the person does not hold stay visible but locked |
-| Timers | System | `host.view` | Scheduled jobs: next and last run |
+| Jobs | System | `host.view` | Server jobs: each job's limits and next run, what waits in line and why, every recent run with its steps; a run's output needs `logs.view` and Run now needs `jobs.run`; see [JOBS](JOBS.md) |
+| Timers | System | `host.view` | Every systemd timer on the host: next and last run |
 | Packages | System | `host.view` | Available updates, installed packages, dependencies; Update lists and Upgrade need `packages.update` |
 | Storage | Resources | `host.view` | Filesystems, space and inodes |
 | Network | Resources | `host.view` | Interfaces, listening ports, the tunnel |

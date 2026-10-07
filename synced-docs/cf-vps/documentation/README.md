@@ -53,6 +53,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|
 | [`features/CONSOLE.md`](features/CONSOLE.md) **P** | Every console page and the capability it needs |
 | [`features/ACTIONS.md`](features/ACTIONS.md) **P** | The controlled actions and the four-layer enforcement chain |
+| [`features/JOBS.md`](features/JOBS.md) | Server jobs: the busy gate every job waits on, the queue, a job's manifest and secrets, the Jobs page |
 | [`features/LOG-STORAGE.md`](features/LOG-STORAGE.md) **P** | Retention per kind, preview and delete, compression |
 
 ## Operations
@@ -98,7 +99,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|---|
 | [`specs/2026-09-29-cf-vps-design.md`](specs/2026-09-29-cf-vps-design.md) | The plan of record: architecture, phases P0 to P7, capabilities | active |
 | [`specs/2026-09-30-log-storage-design.md`](specs/2026-09-30-log-storage-design.md) | Log storage design; shipped, summarised in `features/LOG-STORAGE.md` | historical |
-| [`specs/2026-10-07-jobs-and-admission-queue-design.md`](specs/2026-10-07-jobs-and-admission-queue-design.md) | Scheduled jobs (`kind = "job"`) and the shared admission queue (a job waits while the server has been over 60% for 10 s); the interface the cf-astro heartbeat job must fit; not built | draft |
+| [`specs/2026-10-07-jobs-and-admission-queue-design.md`](specs/2026-10-07-jobs-and-admission-queue-design.md) | Scheduled jobs (`kind = "job"`) and the shared admission queue, drafted in parallel with the runner that shipped the same day; superseded by [JOBS](features/JOBS.md), kept for its reasoning | superseded |
 
 ## Records (dated, frozen)
 
@@ -121,6 +122,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/2026-10-04-agent-contract-alignment.md`](records/2026-10-04-agent-contract-alignment.md) | Change record: `main.md` becomes the contract every agent follows; `CLAUDE.md` and the Antigravity rule load it; change records begin |
 | [`records/2026-10-04-console-hidden-tab-stream.md`](records/2026-10-04-console-hidden-tab-stream.md) | Change record: the console closes its live metrics feed and health check while its tab is hidden, and reopens the feed at once on return |
 | [`records/2026-10-07-app-controls.md`](records/2026-10-07-app-controls.md) | Change record: apps can be started, stopped, paused, resumed, blocked and re-sized from the console, under `apps.control` and `apps.manage` |
+| [`records/2026-10-07-jobs-and-the-heartbeat.md`](records/2026-10-07-jobs-and-the-heartbeat.md) | Change record: server jobs with one busy gate for the whole server, and the public site's hourly heartbeat moved off GitHub Actions onto it |
 
 ## Meta
 
@@ -133,4 +135,5 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 ## Status legend
 
 `active` is current and maintained. `historical` is a dated snapshot kept for the record.
-`draft` is in progress. `deprecated` is superseded and waiting to be removed.
+`draft` is in progress. `superseded` was replaced by something that shipped and is kept for
+its reasoning, with a pointer at the top. `deprecated` is superseded and waiting to be removed.

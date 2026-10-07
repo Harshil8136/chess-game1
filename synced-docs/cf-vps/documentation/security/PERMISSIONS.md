@@ -2,7 +2,7 @@
 title: "cf-vps Permissions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-03
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, src/access/policy.ts, src/access/save.ts, src/agent/proxy.ts, src/ui/pages.ts]
@@ -41,6 +41,7 @@ support can hold.
 | `apps.deploy` | operate | Deploy hosted apps from their manifests (regenerate the unit and site, restart, health-check) | owner, vendor | no |
 | `apps.control` | operate | Start, stop, restart, pause and resume hosted apps | owner, vendor | no |
 | `apps.manage` | admin | Block or unblock a hosted app, and change its memory cap, CPU cap and CPU weight within the server's limits | owner, vendor | no |
+| `jobs.run` | operate | Start a server job now; it still waits its turn while the server is busy ([JOBS](../features/JOBS.md)) | owner, vendor | no |
 | `host.reboot` | admin | Reboot the server (one-minute delay, cancellable) | owner, vendor | yes |
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |
@@ -54,7 +55,7 @@ support can hold.
 
 | Role | Default capabilities |
 |---|---|
-| `owner`, `vendor_support` | All 22 |
+| `owner`, `vendor_support` | All 23 |
 | `admin` | `host.view`, `logs.view`, `access.delegate` |
 | `manager`, `staff`, `viewer` | None |
 

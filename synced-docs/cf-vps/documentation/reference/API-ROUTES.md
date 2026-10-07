@@ -2,7 +2,7 @@
 title: "Agent Route Table"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-03
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, contract/metrics-history.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
@@ -53,11 +53,19 @@ and the console. A route is reached in two forms:
 | `packages/info` | GET | `host.view` | 60 s |
 | `processes` | GET | `host.view` | 15 s |
 | `apps` | GET | `host.view` | 15 s |
+| `jobs` | GET | `host.view` | 60 s |
+| `jobs/log` | GET | `logs.view` | 60 s |
 | `timers` | GET | `host.view` | 15 s |
 | `storage` | GET | `host.view` | 15 s |
 | `network` | GET | `host.view` | 15 s |
 | `history` | GET | `host.view` | 60 s |
 | `diagnostics` | GET | `host.view` | 15 s |
+
+`jobs` is the Jobs page's whole answer (`JobsView` in `contract/jobs.ts`): the gate settings and
+any problem with them, every installed job, what waits or runs now with the reason it waits, and
+the latest finished runs. `jobs/log` takes `job` and `run` and returns the last 256 KiB of that
+run's output; anything that is not a job name and a run id is 400 `bad_run`, and a run that does
+not exist is 404. See [JOBS](../features/JOBS.md).
 
 `metrics/history` takes one query parameter, `range`: `1h`, `24h`, `7d` or `30d`, and `24h`
 when it is absent. Any other value, including an empty one or a different case, is 400

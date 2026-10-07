@@ -2,7 +2,7 @@
 title: "Forensic Audit Pipeline"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [host/20-audit/files/etc/audit/rules.d/50-vps.rules, host/25-logship/files/etc/vector/conf.d/10-sources.yaml, host/25-logship/files/etc/vector/conf.d/20-transforms.yaml, host/25-logship/files/etc/vector/conf.d/30-sinks.yaml, host/25-logship/files/opt/vps/bin/vps-r2-upload, host/25-logship/files/opt/vps/bin/vps-heartbeat, host/20-audit/files/opt/vps/bin/vps-audit-maintain]
@@ -40,7 +40,7 @@ Vector (`25-logship`) normalises everything to one schema (`ts`, `host`, `source
 | `privilege` | sudo | yes |
 | `config` | Changes to watched config paths (SSH, sudoers, PAM, accounts, cron, boot, polkit, units, firewall, platform files) | yes |
 | `security` | Failed logins, kernel module, clock, mount and ptrace events, audit-rule changes, terminal certificates, integrity findings, log deletion and retention changes | yes |
-| `probe` | External site checks: down, back up, certificate expiry | yes |
+| `probe` | External site checks (down, back up, certificate expiry) and every server job run ([JOBS](../features/JOBS.md)) | yes |
 | `service_command` | Commands run by services, daemons and containers | no |
 | `recording` | Terminal session recordings | no |
 | `process_exit` | Process exit records | no |
@@ -89,6 +89,8 @@ only if it passes this rule:
 | `terminal_admin` | A certificate was issued for the sudo-capable terminal account | warning |
 | `integrity` | AIDE or debsums found files changed outside a package or deploy | warning |
 | `probe_down` | A public site is down twice in a row | error |
+| `job_failed` | A server job's run failed (after its retries), keyed by job | error |
+| `job_missed` | A server job waited longer than its own limit and did not run, keyed by job | warning |
 | `tls_expiring` | A certificate is close to expiry | warning |
 | `log_purge` | The console deleted logs or vacuumed the journal | warning |
 

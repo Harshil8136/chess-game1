@@ -2,10 +2,10 @@
 title: "Deploying cf-vps"
 status: active
 audience: [operator, ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
-related_code: [package.json, scripts/deploy-agent.mjs, host/push.sh, host/60-agent/apply.sh, wrangler.json, scripts/setup]
+related_code: [package.json, scripts/deploy-agent.mjs, host/push.sh, host/60-agent/apply.sh, host/66-jobs/apply.sh, wrangler.json, scripts/setup]
 related_docs: [HOST-MODULES.md, ../architecture/OVERVIEW.md, ../security/PERMISSIONS.md]
 tags: [operations, deploy, rollback, workers-builds]
 ---
@@ -33,6 +33,13 @@ tags: [operations, deploy, rollback, workers-builds]
 2. **Agent**, so it can answer a new route before anything asks for it.
 3. **Host modules**, when the change needs new units, scripts or config.
 4. **Worker**, by pushing to `main`.
+
+A new server job (`host/66-jobs`) follows the same order, with its steps in this sequence:
+`install` (files only, nothing runs yet), `image` (builds what the manifest names
+`localhost/…`), then each of its secrets with `scripts/setup/job-secret.mjs`, then `enable`
+(switches the timers on). `test` runs each job once. Doing `enable` before the image and the
+secrets exist makes the first run fail for a reason the Jobs page then shows
+([JOBS](../features/JOBS.md)).
 
 The route table in `contract/capabilities.ts` is shared. The Worker refuses a route that is not
 in its copy, and the agent answers 404 for one that is not in its own, so a Worker newer than
@@ -95,7 +102,7 @@ Every step is idempotent and reads `host/lib/install.sh`, which does not rewrite
 file, so a re-run raises no audit alert. Run one step, read the output, then the next. Destructive
 steps run alone. A first-time build follows the numbering of [HOST-MODULES](HOST-MODULES.md):
 baseline, firewall, audit, log shipping, Node, tunnel, Podman, nginx, PostgreSQL, agent,
-actions, integrity, probes, terminal. The firewall step skips rules for a user that does not
+actions, jobs, integrity, probes, terminal. The firewall step skips rules for a user that does not
 exist yet (the tunnel and agent users) and says so; apply it again after those modules.
 
 After the audit rules are locked, new rules load only at boot; follow the runbook for that
@@ -108,6 +115,7 @@ After the audit rules are locked, new rules load only at boot; follow the runboo
 | Worker signing key (private) | The Worker secret `VPS_SIGNING_KEY` | `scripts/setup/signing-key.mjs`; the public half is committed to `host/60-agent/files/etc/vps/` |
 | Tunnel connector token | The server only | `scripts/setup/tunnel-token.mjs` |
 | R2 upload key pair | The server only, as systemd credentials | `scripts/setup/r2-audit-creds.mjs` |
+| A job's own secrets | The server only, as the systemd credential `job-<job>.<ENV_NAME>` | `scripts/setup/job-secret.mjs <job> <NAME>` (typed at a prompt, never echoed) |
 
 These scripts print no secret. Rotation steps are in the private runbook `key-rotation.md`.
 
