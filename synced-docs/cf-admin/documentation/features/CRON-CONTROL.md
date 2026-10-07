@@ -6,8 +6,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/lib/blog/publish-scheduled.ts, scripts/lib/cron-catalog.mjs]
-related_docs: [../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/lib/blog/publish-scheduled.ts, scripts/lib/cron-catalog.mjs]
+related_docs: [../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
 
@@ -161,19 +161,20 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **12 registered jobs** (`src/lib/jobs/registry.ts`): 10 on the
+There are **13 registered jobs** (`src/lib/jobs/registry.ts`): 11 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
 job, was removed on 2026-10-04 when cf-admin stopped using Upstash
 ([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §3.6).
+`heartbeat-watchdog`, the eleventh five-minute job, was added on 2026-10-07 (§3a).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
 
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
-| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick` | never |
+| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog` | never |
 | `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
@@ -195,8 +196,79 @@ shed tick silently skips a scheduled backup and holds back failure alerts. It
 is also the one job whose work happens in another Worker — see
 [`BACKUP-CONSOLE.md`](BACKUP-CONSOLE.md).
 
+`heartbeat-watchdog` (added 2026-10-07) is essential for the same kind of
+reason: its idle cost here is the two settings rows its gate reads, so shedding
+it relieves nothing, and it only ever works when the usual heartbeat runners
+have already failed — a shed watchdog then means a stranded booking or a broken
+consent write path goes unnoticed. §3a describes it.
+
 **A human pause can stop anything, including an essential job.** That is a
 deliberate, audited act. Automatic shedding is not, so it never touches them.
+
+## 3a. The heartbeat watchdog (2026-10-07)
+
+**Why it exists.** cf-astro has an hourly consent & booking heartbeat: one call,
+`GET /api/health/?probe=heartbeat`, proves the consent write path with a
+rolled-back insert and audits the consent and booking outboxes, and the runner
+then drains both replay outboxes. It ran on GitHub Actions, whose hourly
+schedule skips most runs. The VPS job platform (cf-vps) now runs it every hour,
+GitHub stays as a second runner, and `heartbeat-watchdog` is the third: the
+portal runs the heartbeat itself **only when nobody else has run it recently**.
+It rides the five-minute tick because every account cron slot is taken, and it
+adds no trigger, variable, table or secret.
+
+**How it knows.** cf-astro records every heartbeat run, whoever asked for it, in
+the `admin_portal_settings` row `heartbeat-last-run` (global, JSON
+`{ at, runner, verdict }`, `updated_by` `cf-astro:heartbeat`; the runner is
+`vps`, `cf-admin`, `github` or `manual`). The job's gate (`heartbeatDue`,
+`src/workers/scheduled-heartbeat-watchdog.ts`) runs it only when that row is
+missing, unreadable, more than a minute in the future, or older than the
+threshold, less the same minute of slack every Cron Control gate allows (§4a).
+Both rows are the job's gate keys, so the decision costs the one small
+gate-key query the job's invocation already makes (§5) and nothing else.
+
+**Its setting.** `heartbeat-watchdog-stale-minutes` (global) is the threshold:
+default **70** (an hourly runner plus ten minutes), clamped to **30..1440**; a
+value that is not a number reads as 70. Like the other gate bounds it is a code
+default, not a stored row, so changing it is an `INSERT`, not an `UPDATE`
+([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §1, the idle-tick
+gates). It has no screen, so it is not in `KNOWN_SETTING_KEYS`, like the other
+job bounds.
+
+**What it does when it runs**, in the GitHub workflow's order, through the
+`ASTRO_SERVICE` binding (or `PUBLIC_ASTRO_URL` where the binding is absent) with
+the shared `REVALIDATION_SECRET` (`HEALTH_CHECK_SECRET` as fallback), exactly as
+`booking-outbox-poke` calls cf-astro:
+
+1. `GET /api/health/?probe=heartbeat&runner=cf-admin`. An answer other than 200
+   or 207, one without a `heartbeat` object, or no answer at all is a failed run;
+2. `POST /api/consent/replay/` and `POST /api/booking/replay/` with
+   `{"limit":200}`, **even when step 1 failed** — stranded records are exactly
+   when a drain matters.
+
+**What it reports**, through `reportOnceCooled` (every occurrence reaches
+Workers Observability; Sentry is cooled per key):
+
+| Signal | Cooldown key | Cooldown | When |
+|---|---|---|---|
+| The fallback ran | `heartbeat-watchdog:fallback` | 6 hours | every run: the VPS job and GitHub both missed the heartbeat, and somebody should find out why |
+| A human is needed | `heartbeat-watchdog:failure` | 1 hour | a `fail` verdict (with the heartbeat's own error text), a failed run, a failed drain, or a drain reporting `permanent` or `exhausted` records |
+
+A `warn` verdict is logged, not reported, as the workflow treated its warnings.
+The handler never throws: a failure is logged and reported, and the job still
+counts as `ran`.
+
+**It sleeps after a run.** The handler reports the threshold from its start as
+its next due time, which the dispatcher caps at an hour (§4a). While cf-astro
+records each run that changes nothing, because the gate holds for the threshold
+anyway. It matters when a run is *not* recorded — a cf-astro without the
+heartbeat mode, a failed write, an outage — which would otherwise run the
+heartbeat, and its audit queries in cf-astro, on every five-minute tick. So the
+fallback runs at most hourly, like the workflow it replaces.
+
+**Release order.** cf-astro's heartbeat mode must be live first: against a
+cf-astro without it, every run is a failed run (no `heartbeat` object) and is
+reported hourly.
 
 ## 4. How shedding decides
 
@@ -237,12 +309,13 @@ job back for two more reasons, and the page shows each:
 | `interval` | The throttle (§1): at most every N minutes, measured from `lastRunAt` | **Standby** |
 | `sleeping` | The job itself said when it next has work (`nextDueAt`), and that time has not come | **Sleeping until HH:MM** |
 
-**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; two do.
+**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; three do.
 `backup-tick` passes on cf-backup's `nextTickAt` (Contract A in
 [`../program/cf-backup/02-admin-integration-contract.md`](../program/cf-backup/02-admin-integration-contract.md)):
 every five minutes while a backup is running, otherwise the next slot, chore or
 hour. `blog-scheduled-publish` reports the earliest scheduled post, or an hour
-from now when none is scheduled. The catalog's plain-English schedules
+from now when none is scheduled. `heartbeat-watchdog` (2026-10-07) reports its
+threshold from the start of a run, so it sleeps an hour after each run (§3a). The catalog's plain-English schedules
 (`scripts/lib/cron-catalog.mjs`) say this for staff.
 
 **The rules, all in `control.ts`:**
@@ -383,6 +456,17 @@ invocation itself still fires 288 times a day. These are estimates from the
 rules above, not a measurement; the change record names how to read the real
 figure after a week.
 
+*Added 2026-10-07.* `heartbeat-watchdog` adds about **288 invocations a day**
+while it only checks: it has no interval, and its gate decides inside its own
+invocation, after one gate-key query of at most two rows (at most about 576
+rows read a day). It writes nothing while it skips. A run adds the fallback
+report's cooldown claim and one clock write for its sleep; while the VPS job
+runs the heartbeat, it never runs. It is deliberately left without a Cron
+Control interval: a throttle would cut the invocations, but a throttled job's
+clock moves on every `skipped` outcome (§4a), trading cheap reads for writes,
+the scarcer resource. These are figures from the rules above, not a
+measurement.
+
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
 ended every run at the limit — see
@@ -495,10 +579,10 @@ an empty table.
   a manual run bypasses the control document by design — two deleters walking the
   same bucket is the one overlap worth a D1 write. (`redis-ttl-hygiene`, which
   took none, was removed on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md)
-  R-1, RU-2, RU-8.) The ten five-minute jobs
+  R-1, RU-2, RU-8.) The eleven five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
-  trigger *can* still overlap a scheduled tick for those ten. The Run-now route
+  trigger *can* still overlap a scheduled tick for those eleven. The Run-now route
   is an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
   there is no 409 path. *Corrected 2026-09-19: this section previously promised
   that Run now "still honours the lease … you get a 409 rather than a duplicate
@@ -530,6 +614,7 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-07 | claude | `heartbeat-watchdog` added: `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`, `scripts/lib/cron-catalog.mjs`; cf-astro's heartbeat module read (its src/lib/heartbeat.ts, uncommitted, built in parallel) for the `heartbeat-last-run` row it writes; `test/heartbeat-watchdog.test.ts`, `test/jobs-budget.test.ts`; `npm run verify` | §3: 13 jobs (11+2), the tier table and the reason it is essential; §3a added; §4a: three jobs sleep; §5: its invocation and read cost; §7: eleven five-minute jobs without a lease. The catalog entry reaches the page only after a re-seed (`node scripts/seed_cron_control.mjs --apply --remote`). Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (nothing deployed) |
 | 2026-10-07 | claude | Review of the unreleased 2026-10-04 change: `src/lib/jobs/control.ts`, `runJob.ts`, `CronControlRepository.ts`, `src/workers/scheduled-storage-notifications.ts`, `scheduled-usage-probe.ts`, `src/lib/blog/publish-scheduled.ts`, `src/pages/api/cron/state.ts` and `config.ts`; `npm run verify` | §4a: the own-gate bullet and the wake's `clockRev`. §5: the read and write figures corrected (writes a range, not "about 96"), the `clockRev` paragraph added. §7's lease note no longer describes `redis-ttl-hygiene` as current. Not re-checked: §1 to §4, §6, the rest of §7 |
 | 2026-10-04 | claude | Read-only D1 query of the live `cron-control` row (rev 459 and earlier rev 455); `src/lib/jobs/control.ts`, `runJob.ts`, `dispatch.ts`, `registry.ts`; `npm run verify` | §4a added (next due times, sleeps, wakes, the minute of slack, the tick-start stamp, `skipped` stamped). §1's live-throttle note, §3's job count (12) and tier table, and §5's write and invocation figures updated. Found live: `lastRunAt` stamped 47 s into the minute and a 15-minute throttle running every 20 minutes; `booking-outbox-poke` throttled with no `lastRunAt`. Not re-checked: §2, §4, §6, §7 |
 | 2026-09-27 | claude | Trigger events pasted by the owner (`*/5` and Sunday both `exceededCpu`, `cpuTimeMs` 10); live `cron-control` row (rev 303) and `cf-audit-last-synced` / `backup:status.lastTickAt`, both stopped at 2026-09-26 22:45 UTC; `npm run verify` | Each due job now runs in its own invocation through `JobRunner` (§5); held-back jobs cost no invocation. `runCronBatch` removed; the §3 and §5 references now name `dispatchCronJobs`. Not re-checked: §1, §2, §4, §7 |

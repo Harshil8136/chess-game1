@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-07 | `src/lib/jobs/registry.ts`, `src/workers/scheduled-heartbeat-watchdog.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **13 jobs (11+2)** with `heartbeat-watchdog`, its gate in the idle-tick block, the `ASTRO_SERVICE` row's purposes. No binding, secret, variable or cron added; §5 unchanged. Not re-checked: every other row, and nothing live (not deployed) |
 | 2026-10-07 | `src/env.d.ts`, `src/lib/github/cache.ts` (the only reader of `GITHUB_READ_TOKEN`) | §5.3 lists `GITHUB_READ_TOKEN`, optional, so `[secrets] required` is unchanged. Not checked: the secret on the Worker (set by the owner) |
 | 2026-10-07 | `wrangler.toml` (seven `[[ratelimits]]`, added on 2026-10-04 and absent before) | §3.6's opening sentence said the limits ran on "two things it already had"; the Rate Limiting binding is new, the owner-approved exception, and now says so. Nothing else re-checked |
 | 2026-10-04 | `wrangler.toml` (`[[ratelimits]]`, `[observability.*]`, `[secrets] required`); `worker-configuration.d.ts` regenerated with `npm run types`; `src/lib/jobs/registry.ts`; read-only D1 query of the live `cron-control` row; Cloudflare documentation search (traces and logs sampling, Observability pricing) | Resource-usage change ([record](../records/reports/2026-10-04-resource-usage-optimisation.md)): seven `RL_PER_MIN_<n>` Rate Limiting bindings added to §1; **12 jobs (10+2)**, `redis-ttl-hygiene` removed; §3.6 now describes the bindings and the D1 counters, Upstash retired from cf-admin; §4.0 states the logs and traces sampling and why; §5.1 drops the two Upstash names (**22 required**; the two secrets stay set until the owner deletes them, so the live count is still 25); §8 Upstash row. Not re-checked: the Upstash instance itself (no connector reaches it), the Rate Limiting binding's plan availability and price (its documentation page could not be read), every other row |
@@ -127,7 +128,7 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 | Binding | Target Worker | Purpose |
 |---------|---------------|---------|
 | `CHATBOT_SERVICE` | `cf-chatbot` | Worker-to-Worker calls to the chatbot admin surface, without a public round trip |
-| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes) |
+| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes, and since 2026-10-07 the `heartbeat-watchdog` job's fallback heartbeat run and outbox drains) |
 | `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
 | `VPS` | `cf-vps` | The private server-console Worker (no route, no `workers.dev`): the `/dashboard/vps/app/` gateway, including the browser terminal's WebSocket ([VPS Console](../features/VPS-CONSOLE.md)). **Deploy cf-vps first** — a deploy that binds a Worker that does not exist fails |
 | `EMAIL_CONSOLE` | `cf-email-api` (entrypoint `Console`) | The email service's API Worker, admin door only (it has no route from here; its public API is for clients): the `/api/emails/api-*` routes behind the Email API page ([Email API page](../features/EMAIL-API-ACCESS.md)). **Deploy cf-email-api first** — a deploy that binds a Worker that does not exist fails |
@@ -170,17 +171,18 @@ and each one runs under `runJob` with a declared D1 budget:
 **Do not hand-count this list.** [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
-three times. As of 2026-10-04 it is **12 jobs — 10 on `*/5`, 2 on Sunday**
-(`FIVE_MIN_JOBS` + `SUNDAY_JOBS`; `redis-ttl-hygiene` left with Upstash).
+three times. As of 2026-10-07 it is **13 jobs — 11 on `*/5`, 2 on Sunday**
+(`FIVE_MIN_JOBS` + `SUNDAY_JOBS`; `redis-ttl-hygiene` left with Upstash on
+2026-10-04, `heartbeat-watchdog` joined on 2026-10-07).
 Being on `*/5` no longer means running every five minutes: most of these jobs
-have an interval in Cron Control (15 or 60 minutes), and `backup-tick` and
-`blog-scheduled-publish` sleep until the time they report they next have work,
-never longer than an hour. [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
+have an interval in Cron Control (15 or 60 minutes), and `backup-tick`,
+`blog-scheduled-publish` and `heartbeat-watchdog` sleep until the time they
+report they next have work, never longer than an hour. [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 owns how that is decided.
 
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
-| `*/5 * * * *` (10) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)) |
+| `*/5 * * * *` (11) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)); and `heartbeat-watchdog`, which runs cf-astro's consent & booking heartbeat and drains both outboxes only when the VPS job and GitHub have both missed it ([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a) |
 | `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile`. (`redis-ttl-hygiene`, the weekly Redis expiry census, was removed on 2026-10-04 when cf-admin stopped using Upstash; its `admin_portal_settings` row `redis-hygiene-mode` is now read by nothing and is left for the owner to delete — [`../MAINTENANCE.md`](../MAINTENANCE.md)) |
 
 > **One invocation per job (2026-09-27).** The scheduled handler no longer runs
@@ -220,14 +222,19 @@ owns how that is decided.
 > still polls every tick but rewrites its watermark only past
 > `cf-audit-watermark-max-staleness-minutes` (60); `storage-notifications` runs once
 > per `storage-notify-interval-minutes` (60), stamping `storage-notify-last-run` on
-> success.
+> success. *Added 2026-10-07:* `heartbeat-watchdog` runs only when cf-astro's
+> `heartbeat-last-run` row is missing, unreadable or older than
+> `heartbeat-watchdog-stale-minutes` (70, clamped to 30..1440) — a fifth gate,
+> owned by [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a.
 >
 > ⚠️ **The three bounds above are code defaults, not rows.** Verified live
 > 2026-09-19: `admin_portal_settings` holds 28 keys and **none** of
 > `cf-access-reconcile-max-staleness-hours`,
 > `cf-audit-watermark-max-staleness-minutes` or
 > `storage-notify-interval-minutes` is among them — the 24/60/60 figures come
-> from `|| '24'`-style fallbacks in the code. This block used to say "all four
+> from `|| '24'`-style fallbacks in the code. `heartbeat-watchdog-stale-minutes`
+> (2026-10-07) is the same: its 70 is a code default, and no row is written for
+> it (not checked live: nothing is deployed yet). This block used to say "all four
 > bounds are `admin_portal_settings` rows; setting one to `0` restores the
 > ungated behaviour". **An `UPDATE` run mid-incident changes zero rows and the
 > operator believes the gate is off.** The rollback is an `INSERT`:

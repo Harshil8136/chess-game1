@@ -207,6 +207,7 @@ and `key=value` fields. The gateway maps the action onto a cf-admin verb, module
 | `app.start`, `app.stop`, `app.pause`, `app.resume` | `vps_app_control` |
 | `app.block`, `app.unblock` | `vps_app_block` |
 | `app.resources` (target `<app>:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
+| `job.run` | `vps_job_run` |
 | `files.upload`, `files.mkdir`, `files.rename`, `files.delete` | `vps_file_change` |
 | `access.save` | `vps_access_change` |
 | `terminal.open` | `vps_terminal_open` |

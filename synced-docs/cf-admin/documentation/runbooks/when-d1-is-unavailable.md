@@ -106,13 +106,14 @@ isolated by `allSettled`, so one failure cannot starve another.
 |---|---|---|---|
 | `cf-access-audit-poll` | `*/5` | Watermark unreadable → run skipped. Failed-login capture pauses | Next tick; watermark not advanced, so no window is lost |
 | `booking-email-retry` | `*/5` | Scan fails → no re-enqueue this tick | Next tick |
-| `booking-outbox-poke` | `*/5` | The pending-replay probe fails **open**, so the poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly GitHub Actions heartbeat |
+| `booking-outbox-poke` | `*/5` | The pending-replay probe fails **open**, so the poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly heartbeat (the VPS job, GitHub Actions, or `heartbeat-watchdog` below) |
 | `cf-access-reconcile` | `*/5` | Push to Cloudflare still happens; the D1 log row and Supabase sweep fail | Next tick |
 | `storage-notifications` | `*/5` | Gate settings unreadable → treated as due (fails open); the scans then fail → no quota or share-expiry mail this tick, and `storage-notify-last-run` is not stamped | Next tick |
 | `blog-scheduled-publish` | `*/5` | A matured post stays `scheduled` | Next tick |
 | `gsc-sync`, `pagespeed-sync` | `*/5` | Gate settings unreadable → treated as not-due. Both are `disabled` in the control plane today, so they never reach the gate at all | Next tick |
 | `cron-usage-probe` | `*/5` | Cannot refresh the cached D1-usage reading, so `usage.checkedAt` goes stale — **the automatic shed decision then runs on an old number**. Its own 60-minute interval is enforced in code as well as in the control document, so it cannot storm the analytics API | Next tick after D1 returns |
 | `backup-tick` | `*/5` | cf-admin's side makes no D1 query, but cf-backup's tick reads and writes this same database, so it answers with an error: the job logs it and reports once an hour. No scheduled backup starts and no alert is sent while D1 is down | Next tick; cf-backup offers any unsent alert again, and the weekly GitHub safety net (Mondays) covers a longer outage |
+| `heartbeat-watchdog` | `*/5` | Its gate rows are unreadable, which reads as "the heartbeat never ran", so it runs; the control row is unreadable too, so its sleep is neither read nor stored and it runs on every tick. cf-astro's heartbeat, which reads and writes this same database, answers with a failure; both cooled reports fail open, so Sentry hears of it on every tick | The first tick after D1 returns: cf-astro records the run and the gate holds again |
 | `asset-cleanup`, `staff-storage-reconcile` | `0 2 * * SUN` | Run aborts **before** deleting anything | Next Sunday, or a manual run |
 
 **Nothing in this table loses data.** Every job is a poll over durable state:
@@ -220,5 +221,6 @@ blog for this to hold (cf-astro `AGENTS.md` invariant 7).
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-07 | `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/dal/PortalSettingsRepository.ts` (`readSettings` returns an empty map on a failed read), `src/lib/observability.ts` (`reportOnceCooled` fails open) | §3: the `heartbeat-watchdog` row added; the `booking-outbox-poke` row's "recovered by" names the heartbeat's three runners. Not re-checked: every other row |
 | 2026-10-04 | `src/lib/jobs/control.ts`, `dispatch.ts`, `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `src/lib/dal/CronControlRepository.ts` (`wakeJob`), `src/lib/jobs/registry.ts` | §3: the `redis-ttl-hygiene` row removed; the lapse of throttles and sleeps, and the D1-dependent request surfaces (hour/day limits fail closed, the neuron budget fails open, wakes) added. Not re-checked: every other row |
 | 2026-09-19 | `src/lib/jobs/registry.ts`, `tiers.ts`, `telemetry.ts`, `runJob.ts`, `src/lib/observability.ts` re-read; live `admin_portal_settings` queried for the `cron-control` document and the `job-alert:*` keys | §1 rewritten (Observability is conditional since `eb8cb12`; Sentry has three regimes, not one); §3 job table re-derived — **11 jobs, 9+2**, `cron-usage-probe` row added, `disabled`/`shed` outcomes documented; §4 reordered to put Analytics Engine first; `lease-held` marked unreachable; §1's stale "until chunk 8c" wording removed. `job-alert:cf-sync-log:sweep` and `job-alert:cf-sync:supabase_fetch_failed` confirmed present in D1 |
