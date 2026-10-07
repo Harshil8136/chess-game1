@@ -53,8 +53,8 @@ feature appears in the portal as soon as cf-backup deploys. That takes no cf-adm
 | 9 | [09-key-management.md](09-key-management.md) | How the backup key works: Supabase Vault, Owner/Vendor only, one-click rotation, weekly automatic key check, recovery kit |
 | 10 | [10-free-tier-feasibility.md](10-free-tier-feasibility.md) | **Is all of it free?** Yes: per-service verdict, the GitHub Actions budget, years of backups in R2, Phase 0 checks, tripwires |
 | 11 | [11-run-evidence-and-usage.md](11-run-evidence-and-usage.md) | **The run evidence policy:** what every run records (logs, errors, sizes, resources, allowances), who writes it, how secrets stay out, how it feeds a viability view |
-| 12 | [12-keys-and-secrets.md](12-keys-and-secrets.md) | **Every API key, where it lives and exactly how to set it:** four secrets, three providers, none in cf-admin; permissions, creation steps, rotation, what a leak could do |
-| 13 | [13-access-control.md](13-access-control.md) | **Who may do what in the console:** the 23-capability catalog, role defaults, per-person grants, safety floors, activity logs and exports, the global config |
+| 12 | [12-keys-and-secrets.md](12-keys-and-secrets.md) | **Every API key, where it lives and exactly how to set it:** four secrets, three providers, none in cf-admin, plus an optional Supabase token for choosing the databases (2026-10-07); permissions, creation steps, rotation, what a leak could do |
+| 13 | [13-access-control.md](13-access-control.md) | **Who may do what in the console:** the capability catalog (29 since 2026-10-07), role defaults, per-person grants, safety floors, activity logs and exports, the global config, which databases are backed up |
 | 14 | [14-live-operations-view.md](14-live-operations-view.md) | **The live view:** what is running right now, step by step, with the live log, metrics and usage; how duplicates are prevented; what it costs |
 
 ## Verdict on the original idea

@@ -15,7 +15,7 @@ tags: [program, cf-backup, permissions, rbac, audit, config]
 > **TL;DR (owner requirement, 2026-09-22).** Two layers.
 >
 > - **cf-admin** decides who may **open** the console: one page row, `/dashboard/backup`, managed in cf-admin exactly as today.
-> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 28 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
+> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 29 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03; `targets.edit`, 2026-10-07). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
 >
 > The policy is **one JSON row** (`backup:access`); there is no new table. Every check runs on the server. Deny beats allow; an unknown capability is denied. Three safety floors cannot be granted away.
 
@@ -58,6 +58,7 @@ touch the backup key. **Admin** changes who may do what.
 | `schedule.toggle` | **Edit the backup schedule**: days, times, grace hours, the monthly drill (§7) | operate | a diff shown before saving; reason (3–200 characters); a notice | Owner, Vendor |
 | `config.edit` | **Change global config** (§7) | operate | a diff shown before saving; audited | Owner, Vendor |
 | `alerts.dismiss` | **Dismiss an open alert**, or undo a dismissal; who, when and an optional note are kept on the alert (owner, 2026-10-03) | operate | audited | Owner, Vendor |
+| `targets.edit` | **Choose the databases** (owner, 2026-10-07): in Settings → Databases, which Supabase projects and D1 databases the schedule backs up, and which Run now starts with ticked. Run now itself (`runs.run`) can still tick any listed database for one run | operate | a diff shown before saving; reason (3–200 characters); a notice; audited as `config.edit op=targets` | Owner, Vendor |
 | `diagnostics.run` | **Run a Diagnostics step's probes** live, and start the **runner test** (it dispatches the backup workflow and uses about 2 GitHub Actions minutes) | operate | 15 s per person per step; audited (the runner test as `run.drill`) | Owner, Vendor |
 | `runs.prune` | **Delete** runs older than N days (never the newest 4 good full runs; never inside a lock) | destructive | typed confirmation; reason; a notice | Owner, Vendor (**floor**) |
 | `runs.download` | Download a run's **encrypted data** (`data/`, `checksums.sha256`), from the run detail or the Files section | destructive | fresh sign-in ≤ 10 min; confirmation; a notice | Owner, Vendor (**floor**) |
@@ -213,6 +214,7 @@ key 1's D1 access, so the thresholds it applies are always the saved ones.
 | Evidence | Log cap and the head/tail kept (doc 11 RE-2) | redaction cannot be switched off. **As built:** `doctor` passes the saved values to the seal step, which caps `run.log` with them from the next run |
 | Retention suggestions | Daily-run days, weekly-full months, keep-first-of-month | suggestions only: nothing prunes by them (pruning is by hand, `runs.prune`, whose dialog shows them); locks still apply |
 | Keys | Rotation reminder (months), recovery-kit confirmation interval | reveal and rotate rate limits can be tightened, never loosened past §2 |
+| Databases (`targets`, owner 2026-10-07) | Per database (`supabase:live`, `supabase:<project>`, `d1:<name>`): on the schedule, and ticked when Run now opens; the live project's id, kept for the engine | saved only with `targets.edit` (`POST /api/targets`), never by a config save; a database not chosen keeps its default: on for the live project and every D1 database, off for any other Supabase project; the schedule keeps at least one |
 
 **The schedule (as built, design D-4):** the schedule is the config's `schedule` group
 (`backup:config.schedule`), edited in the console under Settings → Schedule with

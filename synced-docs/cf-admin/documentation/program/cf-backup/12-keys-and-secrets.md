@@ -25,6 +25,11 @@ tags: [program, cf-backup, secrets, api-keys, setup, runbook]
 >
 > Everything else is a public value (a variable or a console setting) or a binding.
 > cf-admin gains **one service binding and zero secrets**.
+>
+> **Optional, since 2026-10-07 (the owner's decision):** a Supabase access token named
+> `SUPABASE_ACCESS_TOKEN`, as a cf-backup Worker secret (lists the Supabase projects for
+> Settings → Databases and Run now) and as a GitHub secret (backs up Supabase projects other
+> than the live one). Neither is a backup key; §7a.
 
 ## 1. Why four, and not fewer or more
 
@@ -322,6 +327,21 @@ and the Worker reaches Vault through its `VAULT_DB` binding with the `pg` driver
 - **If it leaks,** an attacker could read the backup private keys, which is exactly this
   key's job. The ciphertext they open sits at a different provider (Cloudflare R2), behind
   key 1 or the console. That separation is the point of doc 09.
+
+## 7a. Optional — `SUPABASE_ACCESS_TOKEN` (choosing the databases, 2026-10-07)
+
+The owner asked that Run now and the schedule choose which databases a backup covers, with the
+Worker listing the Supabase projects itself (doc [13](13-access-control.md) §7, the `targets`
+group). Two copies of a Supabase access token, with different reach:
+
+| Where | Used for | Scope it to | Without it |
+|---|---|---|---|
+| cf-backup **Worker secret** (`wrangler secret put SUPABASE_ACCESS_TOKEN`) | One call, `GET /v1/projects`, cached 5 minutes: the list Settings → Databases and Run now show | Reading the project list only. A token that can do more on the live project could reach its Vault, which holds the backup key | Only the live project and the D1 databases are listed |
+| cf-backup **GitHub secret** (`gh secret set SUPABASE_ACCESS_TOKEN`) | The backup engine asks the Management API for a temporary read-only database login to each chosen project **other than the live one**, and deletes it after the export | The other projects only. The engine refuses the token when it can read the live project, and refuses any project that holds the backup key schema | Other projects cannot be backed up; the live project and D1 are unaffected |
+
+D1 databases need no new key: the engine lists them with key 1 at the start of each run and
+stores the list in R2 for the console. Rotation: a Supabase token carries the expiry chosen when
+it is created; replace both copies before it.
 
 ## 8. Setup order, as built
 
