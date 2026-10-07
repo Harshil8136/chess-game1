@@ -48,6 +48,12 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
   `types:check` (`wrangler types --check`), `test` (unit and agent projects), `build`,
   `test:build` (the built output, including that no dev-only code remains), and `audit`
   (`npm audit --audit-level=high`). Run it locally before every push.
+- A new advisory turns `audit` red with no code change (it did on 2026-10-06), and then every
+  push is refused until it is fixed. When the direct packages do not carry the fixed version
+  yet, pin it under `overrides` in `package.json` and remove the pin once they do. Never lower
+  the audit level, and never take `npm audit fix --force` when it offers a downgrade. Current
+  pin: `sharp` 0.35.5, which miniflare (under wrangler and the Vite plugin) still holds at
+  0.35.4 (GHSA-wq5f-xc86-pv6w).
 - Bindings: the shared D1 database (`DB`), the VPC service (`KROWN`), the assets binding.
   The required secret `VPS_SIGNING_KEY` must exist or `wrangler deploy` is refused.
 - The build token needs permission to edit Worker scripts, read D1 and bind to the
