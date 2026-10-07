@@ -31,13 +31,22 @@ activity log uses. **Fresh** means a cf-admin sign-in from the last 10 minutes.
 | `packages.upgrade` | `packages.update` | none | `upgrade` | no | Install updates; no removals, config files kept |
 | `host.reboot` | `host.reboot` | none | `reboot` | no | Reboot in one minute; cancellable on the host |
 | `app.deploy` | `apps.deploy` | An app name | none | no | Regenerate the app's unit and site from its manifest, restart, health-check |
-| `app.restart` | `apps.deploy` | An app name | none | no | Restart the app's container unit |
+| `app.start` | `apps.control` | An app name | none | no | Start the app's container unit |
+| `app.stop` | `apps.control` | An app name | the app name | no | Stop it; it stays stopped until started again or the server reboots |
+| `app.restart` | `apps.control` | An app name | none | no | Restart the app's container unit |
+| `app.pause` | `apps.control` | An app name | none | no | Freeze its processes in place (systemd's freezer): memory kept, no CPU, no answers |
+| `app.resume` | `apps.control` | An app name | none | no | Unfreeze a paused app |
+| `app.block` | `apps.manage` | An app name | the app name | no | Stop it and mask its unit, so nothing starts it (a start, a deploy, a reboot or an image update) until it is unblocked |
+| `app.unblock` | `apps.manage` | An app name | none | no | Unmask and start it |
+| `app.resources` | `apps.manage` | `<app>:<memory>:<cpu %>:<weight>` | none | no | New memory cap, CPU cap (a share of the whole server) and CPU weight; applied live without a restart, and written to the manifest and unit |
 | `logs.purge` | `logs.purge` | Dates and kinds | `delete` | yes | Delete stored log files for past days |
 | `logs.vacuum` | `logs.purge` | Days | `delete` | yes | Delete journal files (and recordings in them) older than N days |
 | `retention.set` | `retention.manage` | Key and days | none | yes | Change how long one kind of log is kept |
 
 Target shapes (checked by `checkActionRequest`): a unit is `[A-Za-z0-9@._:-]` ending in
 `.service`, at most 120 characters; an app is lowercase letters, digits and hyphens;
+`app.resources` is `<app>:<memory>:<cpu %>:<weight>` (`parseAppResources`: memory 32M to 6G,
+CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10000);
 `logs.purge` is `YYYYMMDD:YYYYMMDD:kind.kind` (real dates, from before to, never today, at
 most 400 days, known kinds without repeats); `logs.vacuum` is 1 to 3650 days; `retention.set`
 is `<key>:<days>` within that key's limits. An action that takes no target refuses one.
@@ -56,7 +65,7 @@ instances, and the action units themselves (`isProtectedUnit`).
 | 2 | Worker (`proxyToAgent`) | The route needs `host.view`; `checkActionRequest` validates the action, target and confirmation; the action's own capability is in the person's list; fresh sign-in where required. Then it signs the body hash, so the agent runs exactly this body |
 | 3 | Agent (`actions/run`) | Verifies the signature and nonce, repeats `checkActionRequest` and the capability check, then starts the unit with `systemctl start --no-block` as its own unprivileged user. The job id is the systemd invocation id |
 | 4 | polkit rule | Lets only the agent user start units named `vps-act-*` (fixed oneshot units, and templated ones with a restricted instance name). Any other verb, unit or polkit action is denied |
-| 5 | Root oneshot unit | Runs a fixed script that validates its target once more. `vps-act-svc` allows a unit only if it is an app unit created by the platform or is listed in a root-owned allow-list file, and never if it is protected |
+| 5 | Root oneshot unit | Runs a fixed script that validates its target once more. `vps-act-svc` allows a unit only if it is an app unit created by the platform or is listed in a root-owned allow-list file, and never if it is protected. The app controls run `vps act <verb>:<target>` from `vps-act-app@.service`, which accepts only the eight app verbs, a valid app name and resources within the bounds, and refuses to start, restart, pause or deploy a blocked app |
 
 A caller who skips the console still meets checks 2 to 5. A caller who skips the Worker still
 meets 3 to 5, because the agent trusts only the signed capability list.

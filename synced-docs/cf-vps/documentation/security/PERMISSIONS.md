@@ -38,7 +38,9 @@ support can hold.
 | `api.raw` | read | The raw read-only JSON explorer | owner, vendor | no |
 | `services.control` | operate | Start, stop and restart allow-listed services (never SSH, the tunnel, the audit pipeline or the agent) | owner, vendor | no |
 | `packages.update` | operate | Refresh package lists and install updates (no removals) | owner, vendor | no |
-| `apps.deploy` | operate | Deploy and restart hosted apps from their manifests | owner, vendor | no |
+| `apps.deploy` | operate | Deploy hosted apps from their manifests (regenerate the unit and site, restart, health-check) | owner, vendor | no |
+| `apps.control` | operate | Start, stop, restart, pause and resume hosted apps | owner, vendor | no |
+| `apps.manage` | admin | Block or unblock a hosted app, and change its memory cap, CPU cap and CPU weight within the server's limits | owner, vendor | no |
 | `host.reboot` | admin | Reboot the server (one-minute delay, cancellable) | owner, vendor | yes |
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |
@@ -52,7 +54,7 @@ support can hold.
 
 | Role | Default capabilities |
 |---|---|
-| `owner`, `vendor_support` | All 20 |
+| `owner`, `vendor_support` | All 22 |
 | `admin` | `host.view`, `logs.view`, `access.delegate` |
 | `manager`, `staff`, `viewer` | None |
 

@@ -98,6 +98,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|---|
 | [`specs/2026-09-29-cf-vps-design.md`](specs/2026-09-29-cf-vps-design.md) | The plan of record: architecture, phases P0 to P7, capabilities | active |
 | [`specs/2026-09-30-log-storage-design.md`](specs/2026-09-30-log-storage-design.md) | Log storage design; shipped, summarised in `features/LOG-STORAGE.md` | historical |
+| [`specs/2026-10-07-jobs-and-admission-queue-design.md`](specs/2026-10-07-jobs-and-admission-queue-design.md) | Scheduled jobs (`kind = "job"`) and the shared admission queue (a job waits while the server has been over 60% for 10 s); the interface the cf-astro heartbeat job must fit; not built | draft |
 
 ## Records (dated, frozen)
 
@@ -119,6 +120,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/plans/2026-10-02-vps-metrics-modernization.md`](records/plans/2026-10-02-vps-metrics-modernization.md) | Plan: the Metrics page redesign (moved from the repository root on 2026-10-04) |
 | [`records/2026-10-04-agent-contract-alignment.md`](records/2026-10-04-agent-contract-alignment.md) | Change record: `main.md` becomes the contract every agent follows; `CLAUDE.md` and the Antigravity rule load it; change records begin |
 | [`records/2026-10-04-console-hidden-tab-stream.md`](records/2026-10-04-console-hidden-tab-stream.md) | Change record: the console closes its live metrics feed and health check while its tab is hidden, and reopens the feed at once on return |
+| [`records/2026-10-07-app-controls.md`](records/2026-10-07-app-controls.md) | Change record: apps can be started, stopped, paused, resumed, blocked and re-sized from the console, under `apps.control` and `apps.manage` |
 
 ## Meta
 

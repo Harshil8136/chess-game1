@@ -56,7 +56,7 @@ page; the Worker and agent enforce it again on every call.
 | Metrics | Host | `host.view` | CPU, memory, load, disk space, disk I/O, network and processes over 1 hour, 24 hours, 7 days or 30 days, recorded by the agent once a minute; see [Metrics history](#metrics-history) |
 | Processes | System | `host.view` | Every process with its CPU and memory |
 | Services | System | `host.view` | systemd services, state and logs; a service's detail page offers Restart, Start, Stop (needs `services.control`; protected services show no buttons) |
-| Apps | System | `host.view` | Hosted apps: state, memory, health, restarts; Deploy and Restart need `apps.deploy` |
+| Apps | System | `host.view` | Hosted apps: state (running, paused, blocked, stopped), memory against its cap, CPU now as a share of the server with its cap and weight, health, restarts. Controls follow the state: Start, Restart, Pause, Resume and Stop need `apps.control`; Block, Unblock and the inspector's Change Allocation form (memory cap, CPU cap, CPU weight) need `apps.manage`; Deploy needs `apps.deploy`. Buttons the person does not hold stay visible but locked |
 | Timers | System | `host.view` | Scheduled jobs: next and last run |
 | Packages | System | `host.view` | Available updates, installed packages, dependencies; Update lists and Upgrade need `packages.update` |
 | Storage | Resources | `host.view` | Filesystems, space and inodes |
