@@ -174,6 +174,19 @@ that store is still in use.
 | Recipients | GitHub-hosted runners (US) process the data in transit while a backup or drill runs and keep nothing afterwards. **Since 2026-09-24**, backup alert emails leave through activity F's path (`EMAIL_QUEUE`, cf-email-consumer, the email provider) to the alert recipients set in the console (Settings → Alerts). Their text can name the staff member who acted (a data download, a key action, an access, schedule or prune change) and the daily digest lists console actions by the acting staff member's email; no backup data is ever in an email |
 | Safeguards | Every archive is encrypted to a public key before it leaves the runner, with the private half held at a second provider; cf-backup has no public address and is reached only through cf-admin's gateway; every change made through the console is audited (`admin_audit_log`, module `backup`) |
 
+### K. Repository status view (the GitHub page, since 2026-10-07)
+
+| Field | Detail |
+|---|---|
+| Purpose | Let the Owner and granted administrators review the platform's code repositories (latest changes, releases, automatic checks) in the admin portal (`src/pages/dashboard/github.astro`) |
+| Categories of subject | The people who commit to or run checks on the repositories (the platform's own developer accounts) |
+| Categories of data | GitHub logins of commit authors, commit messages and release notes as written. No email addresses: commit trailers (`Co-Authored-By:` and kin) are removed and Actions fields are copied by name (`src/lib/github/snapshot.ts`) |
+| Legal basis | Art. 6(1)(f) legitimate interests — operating and maintaining the service |
+| Stores | KV `SESSION`, key `github:snapshot:v1` (one snapshot, replaced at every refresh) |
+| Retention | 7 days (KV TTL) after the last refresh |
+| Recipients | None. Data is read from GitHub with a read-only token; nothing personal is sent to GitHub |
+| Safeguards | Page gated by PLAC with an admin floor (`canViewGitHub`); the token is read in one file and never logged |
+
 ### 2.1 IP addresses at rest — per store
 
 The register previously claimed IPs are "never stored raw". That is false and was
@@ -283,6 +296,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-07 | Activity K, new for the GitHub page: what `src/lib/github/snapshot.ts` keeps (logins, messages, release notes; trailers stripped; Actions fields copied by name, pinned by `test/github-snapshot.test.ts`) and where (`cache.ts`, KV, 7-day TTL) | The live snapshot (the token was not set yet) |
 | 2026-10-04 | §2.1's rate-limit rows and §3's Upstash row, for the move of cf-admin's limits off Upstash: `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, the limiter windows on the session-less routes (`src/pages/api/auth/logout.ts`, `src/pages/api/emails/webhook.ts`, `src/pages/api/emails/unsubscribe.ts`, `src/pages/api/storage/share/[token].ts`, `src/pages/api/storage/request/[token]/`: all one-minute, so their IPs go to Cloudflare's limiter and never to D1), and `src/lib/alert-gate.ts` (no Redis write left) | How long Cloudflare's limiter keeps a counter after its period; cf-astro's and cf-chatbot's current Upstash use (their own records); the Upstash instance itself |
 | 2026-10-07 | Activity J, for the database details the backup console shows: cf-backup's Worker reads each Supabase project's size, table count and sign-in account count (`cf-backup/src/targets/supabase-for-deps.ts`, a read-only count query); counts only, no row leaves the project, so J's categories are unchanged | Nothing in production yet |
 | 2026-10-07 | Activity J's Stores, for choosing the databases a backup covers: read from `cf-backup/src/targets/`, `cf-backup/scripts/secondary-pipeline/plan.ts` and `cf-backup/scripts/secondary-pipeline/other-projects.ts` | No backup of another project has run in production yet |

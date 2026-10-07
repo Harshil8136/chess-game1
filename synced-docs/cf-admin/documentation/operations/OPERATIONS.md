@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-07 | `src/env.d.ts`, `src/lib/github/cache.ts` (the only reader of `GITHUB_READ_TOKEN`) | §5.3 lists `GITHUB_READ_TOKEN`, optional, so `[secrets] required` is unchanged. Not checked: the secret on the Worker (set by the owner) |
 | 2026-10-07 | `wrangler.toml` (seven `[[ratelimits]]`, added on 2026-10-04 and absent before) | §3.6's opening sentence said the limits ran on "two things it already had"; the Rate Limiting binding is new, the owner-approved exception, and now says so. Nothing else re-checked |
 | 2026-10-04 | `wrangler.toml` (`[[ratelimits]]`, `[observability.*]`, `[secrets] required`); `worker-configuration.d.ts` regenerated with `npm run types`; `src/lib/jobs/registry.ts`; read-only D1 query of the live `cron-control` row; Cloudflare documentation search (traces and logs sampling, Observability pricing) | Resource-usage change ([record](../records/reports/2026-10-04-resource-usage-optimisation.md)): seven `RL_PER_MIN_<n>` Rate Limiting bindings added to §1; **12 jobs (10+2)**, `redis-ttl-hygiene` removed; §3.6 now describes the bindings and the D1 counters, Upstash retired from cf-admin; §4.0 states the logs and traces sampling and why; §5.1 drops the two Upstash names (**22 required**; the two secrets stay set until the owner deletes them, so the live count is still 25); §8 Upstash row. Not re-checked: the Upstash instance itself (no connector reaches it), the Rate Limiting binding's plan availability and price (its documentation page could not be read), every other row |
 | 2026-10-03 | `src/lib/auth/security-logging.ts` (`postSecurityEmail`); `wrangler.toml` `[[queues.producers]]` unchanged | The `EMAIL_QUEUE` paragraph now names the security emails and the backup alerts as producers beside the Email Portal. No binding, secret, variable or cron added. Nothing else re-checked |
@@ -547,7 +548,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 
 ### 5.3 Optional secrets (not set in production; every reader degrades)
 
-`SENTRY_PROJECT_SLUG_ASTRO`, `SUPABASE_ACCESS_TOKEN`, `POSTHOG_PROJECT_ID`, `POSTHOG_ORG_ID`, `CONTROL_PLANE_CF_TOKEN`, `SECURITY_ALERT_EMAIL`, `ADMIN_API_KEY` — typed as optional in `src/env.d.ts`. Dev-only: `LOCAL_DEV_ADMIN_EMAIL` (Cloudflare Access bypass on localhost, `.dev.vars` only).
+`SENTRY_PROJECT_SLUG_ASTRO`, `SUPABASE_ACCESS_TOKEN`, `POSTHOG_PROJECT_ID`, `POSTHOG_ORG_ID`, `CONTROL_PLANE_CF_TOKEN`, `SECURITY_ALERT_EMAIL`, `ADMIN_API_KEY`, `GITHUB_READ_TOKEN` (the GitHub page, [`features/GITHUB.md`](../features/GITHUB.md); without it the page says "not connected") — typed as optional in `src/env.d.ts`. Dev-only: `LOCAL_DEV_ADMIN_EMAIL` (Cloudflare Access bypass on localhost, `.dev.vars` only).
 
 Removed and gone: `PUBLIC_SUPABASE_ANON_KEY`, `TURNSTILE_SECRET_KEY` (GoTrue and the login form were retired).
 

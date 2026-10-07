@@ -191,6 +191,17 @@ sub-pages (49 active). The rise since 2026-08-24 (92/81/47/45) is mostly the cro
 control plane, which added `/dashboard/cron` plus `#pause`, `#trigger` and
 `#configure` in `migrations/0054`–`0055`.
 
+**Pages that ask for their own key exactly.** A new page row is invisible to a person's
+access map until that map is recomputed (§11), and until then the pipeline lets the page
+through on the inherited `/dashboard` row. A page that must fail closed therefore checks its
+own key with `placRequireGrant`, which needs the exact key. The Email API page does this
+(`denyEmailApi`), and since 2026-10-07 so does the GitHub page: `/dashboard/github`
+(migration `0066`, stored role `owner`), whose `canViewGitHub` (`src/lib/auth/surface-guards.ts`)
+also keeps an admin floor that no grant can lower. The floor is a row in
+`src/lib/auth/page-floors.ts`, which `computeNavItems` applies too, so the sidebar never offers
+a link the page would refuse. It has no API route; the check runs in the page itself
+([`features/GITHUB.md`](../features/GITHUB.md)).
+
 Hash fragments are the fine-grained layer. `/dashboard/sessions` is the page;
 `#revoke`, `#unblock`, `#flush`, `#export` are separately grantable actions within
 it. This is how a coarse per-page model reaches action-level granularity without a
@@ -891,6 +902,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-07 | claude | **Scope-limited to `/dashboard/github`.** Read `surface-guards.ts` (`canViewGitHub`), `guard.ts` (`placRequireGrant`), `decide-access.ts`; `test/github-access.test.ts` pins the role-by-grant matrix and the `0066` row | §5's exact-key paragraph added. Not re-derived: the registry counts (last measured 2026-09-16) |
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
 | 2026-09-02 | claude | chunk 10: §7 rewritten from the stage modules after the decomposition (`wc -l src/lib/auth/stages/*.ts`, `git show 794bc34`); §17 from the suites that ran (`npx vitest run`: 279 cases across the 11 auth-path files, 717 across the repository). §13.1's KV-read figures were not re-verified here — chunk 10b owns that correction | §7 and §17 match the code at `794bc34` |
 | 2026-10-03 | claude | **Scope-limited to the `#alert-policy` key.** Read `surface-guards.ts` (`denyAlertPolicy`), `src/pages/dashboard/sessions/index.astro`, `src/lib/login-alerts/policy-handlers.ts` and `migrations/0065_alert_policy_permission.sql`, applied to production and read back; the row pinned by `test/migrations-replay.test.ts` and the fail-closed gate by `test/login-alert-policy.test.ts` | One addition to §5. Nothing else re-derived |
