@@ -156,6 +156,31 @@ layout); this page adds one KV read to that.
 Workers Builds deploy status (D12), an editor for `github_repos`, Actions minutes and billing,
 and webhooks. Each would add cost or surface the owner did not ask for.
 
+## 11. v2, the same evening (owner: "improve visual, feature and all")
+
+Asked for after the token was set, with "a couple of extra permissions" in it. Still one GraphQL
+call plus one Actions call per repository, no client script, no new storage; the snapshot's
+version moved to 2, so a version 1 snapshot is read again once.
+
+- **Overview strip** (`StatCard` tiles rendered on the server): repositories and newest push,
+  commits in 7 days, repositories with a failed workflow, open pull requests, Dependabot alerts.
+- **Health** per repository from each workflow's newest run (`repoHealth`), and a chip per
+  workflow.
+- **Deploy chip** from the Workers Builds entry in the head commit's `statusCheckRollup`. This
+  replaces D12's "not shown" when GitHub grants the summary to the token; otherwise the card says
+  so (MAINTENANCE GH-1).
+- **Activity:** commits per UTC day for 14 days (up to 100 dates read; "+" beyond).
+- **Languages** (top 4, GitHub's colours only when they are plain `#rrggbb`), **branches**,
+  **tags** and the latest tag, **open pull requests** (up to 5), **Dependabot alerts**
+  (`vulnerabilityAlerts`), and each Actions run's **duration**.
+- **Optional parts:** `vulnerabilityAlerts` and `statusCheckRollup` can be null with a permission
+  error while the rest of the repository is fine. They become `securityAlerts: null` /
+  `headChecks: null` and a named entry in `missing`, shown on the card and in the page footer.
+  Links from GitHub's data are kept only when they are https.
+- **Order:** newest push first by default; `?order=configured` keeps `github_repos` order.
+- **Look:** the portal's section accent (`data-section="blue"`), the glow header used by Cron
+  Control, and a card with a health badge and chips. Antigravity may restyle it.
+
 ## Verification log
 
 | Date | Who | Checked | Not checked |

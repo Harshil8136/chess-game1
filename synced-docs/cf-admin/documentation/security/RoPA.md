@@ -180,7 +180,7 @@ that store is still in use.
 |---|---|
 | Purpose | Let the Owner and granted administrators review the platform's code repositories (latest changes, releases, automatic checks) in the admin portal (`src/pages/dashboard/github.astro`) |
 | Categories of subject | The people who commit to or run checks on the repositories (the platform's own developer accounts) |
-| Categories of data | GitHub logins of commit authors, commit messages and release notes as written. No email addresses: commit trailers (`Co-Authored-By:` and kin) are removed and Actions fields are copied by name (`src/lib/github/snapshot.ts`) |
+| Categories of data | GitHub logins of commit and pull request authors, commit messages, pull request titles and release notes as written. No email addresses: commit trailers (`Co-Authored-By:` and kin) are removed and Actions fields are copied by name (`src/lib/github/snapshot.ts`) |
 | Legal basis | Art. 6(1)(f) legitimate interests — operating and maintaining the service |
 | Stores | KV `SESSION`, key `github:snapshot:v1` (one snapshot, replaced at every refresh) |
 | Retention | 7 days (KV TTL) after the last refresh |

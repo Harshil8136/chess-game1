@@ -32,13 +32,28 @@ admin the link is greyed like any page a person cannot open.
 
 ## What it shows
 
-Per repository: private or public, archived, language, size; last push; commits in the last 7
-days and on the default branch; open issues and pull requests; the 5 latest commits, with the
-newest one's notes (the commit message body, trailers removed, up to 2,000 characters); the
-latest release and its notes; the last 10 GitHub Actions runs with a pass/fail summary.
+**Overview strip:** repositories (and the newest push), commits in the last 7 days, how many
+repositories have a failed workflow, open pull requests, and open Dependabot alerts.
 
-Page-wide: when GitHub was last read, a **Refresh** link, the token's expiry when it is within 14
-days or past, and GitHub's remaining rate limit.
+**Per repository:**
+
+- a health badge from each workflow's newest run: **Failing**, **Running**, **Healthy**, **Quiet**
+  (no runs) or **Unknown** (GitHub did not answer);
+- a **Deploy** chip from the Workers Builds check on the default branch's newest commit, and one
+  chip per workflow with its newest result;
+- last push, commits in 7 days and on the default branch, branches, open pull requests, size;
+- commits per day for 14 days (a bar chart; "+" when the fortnight held more than 100 commits);
+- the main languages as one bar;
+- the latest commit and its notes (the message body, trailers removed, up to 2,000 characters),
+  and the 4 before it;
+- open pull requests (up to 5), drafts marked;
+- the latest release, or else the latest tag and how many tags there are;
+- open Dependabot alerts;
+- the last 10 GitHub Actions runs, each with its result, trigger, branch, age and duration.
+
+**Page-wide:** **Newest first** or **Configured order**, when GitHub was last read, a **Refresh**
+link, the token's expiry when it is within 14 days or past, which parts the token may not read,
+and GitHub's remaining GraphQL allowance.
 
 The repositories and their order are the `admin_portal_settings` row `github_repos` (a JSON
 array, at most 12, seeded by `0066`). There is no editor yet: change the row with a D1 update. A
@@ -49,7 +64,10 @@ missing or broken row falls back to the five repositories in `src/lib/github/con
 One fine-grained token, `GITHUB_READ_TOKEN`, an optional Worker secret
 ([OPERATIONS.md](../operations/OPERATIONS.md)). It is made by the account that owns the
 repositories, with read-only Actions, Contents, Issues and Pull requests. A token made by a
-collaborator account cannot read them.
+collaborator account cannot read them. Two parts are optional: **Dependabot alerts** needs the
+"Dependabot alerts" read permission, and the **Deploy** chip needs GitHub to let the token read the
+commit's checks and statuses. When GitHub refuses either, the card and the page footer say which,
+and everything else still shows.
 
 A refresh is one GraphQL call for all repositories plus one Actions call for each. The result is
 kept in KV (`SESSION`, key `github:snapshot:v1`, 7 days). It is served as it is for 10 minutes,
@@ -57,8 +75,9 @@ then served while a refresh runs after the response. A Refresh asked for within 
 last read is ignored. Nobody looking means no calls at all. The
 [design](../specs/2026-10-07-github-page-design.md) §5 has the cost table.
 
-Not shown: Workers Builds deploy results. They reach GitHub as check runs, and fine-grained
-tokens cannot read the Checks API ([MAINTENANCE.md](../MAINTENANCE.md)).
+Deploy results come from the commit's check summary in GraphQL (`statusCheckRollup`), not the
+Checks API, which fine-grained tokens cannot call. Whether GitHub grants that summary to a
+fine-grained token is confirmed on the live page ([MAINTENANCE.md](../MAINTENANCE.md) GH-1).
 
 ## When something is wrong
 
@@ -75,3 +94,4 @@ tokens cannot read the Checks API ([MAINTENANCE.md](../MAINTENANCE.md)).
 | Date | Who | Checked | Not checked |
 |---|---|---|---|
 | 2026-10-07 | claude | Unit and source-contract tests (`test/github-*.test.ts`, 99 cases), `astro check`, `npm run build` | Production render with the real token, CPU per view (recorded here once the token is set) |
+| 2026-10-07 | claude | v2 (overview, health, deploy chip, activity, languages, pull requests, tags, Dependabot alerts, durations): the GraphQL query run against GitHub's live schema with a collaborator's classic token (no errors, cost 1 point, all five repositories); unit and source-contract tests (124 cases); `astro check`; `npm run build`; the live snapshot in KV after the token was set (five repositories, no errors) | Which optional parts the fine-grained token may read (confirmed on the first live refresh); CPU per view |
