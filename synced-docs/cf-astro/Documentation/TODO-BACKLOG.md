@@ -6,6 +6,64 @@
 
 ---
 
+## 00. ⚙️ Resource-usage follow-ups (2026-10-04)
+
+> Source: [the change record](./records/2026-10-04-resource-usage.md). Added 2026-10-07
+> when the work was committed; only the heartbeat item below was checked against
+> production (GitHub connector, 2026-10-07).
+
+- [ ] 🔴 **Set the consent heartbeat's two secrets** (owner). Neither
+      `HEALTH_CHECK_SECRET` nor `CLOUDFLARE_API_TOKEN` is set as a GitHub Actions
+      secret in this repository (Settings → Secrets and variables → Actions), so
+      every run sampled from 2026-09-07 to 2026-10-07 skipped both legs, checked
+      nothing, drained no outbox and still ended green. Since 2026-10-07 such a run
+      fails, so the heartbeat goes red on every run until both are set. Use the same
+      value as the Worker's `HEALTH_CHECK_SECRET`, and a Cloudflare API token that
+      can read D1. Then run the workflow once by hand and check both legs ran
+      ([WHERE-THE-DATA-LIVES.md](./WHERE-THE-DATA-LIVES.md)).
+
+- [ ] 🔴 **Check the rate-limit bindings after the first deploy.** Read the Workers
+      Builds log: wrangler must accept the ten `[[ratelimits]]` bindings on this
+      account's plan. Then send the contact form once from a phone. If the bindings
+      are refused, the deploy fails and the previous version stays live; if they
+      throw at runtime, the KV fallback decides and the logs say "Rate-limit binding
+      error". The Free-plan allowance for the binding was **not** re-read on
+      2026-10-04 (the pricing page could not be fetched from the session); check it
+      on the first bill or the account's usage page.
+- [ ] 🟡 **Delete the retired Upstash secret from cf-astro** (owner):
+      `npx wrangler secret delete UPSTASH_REDIS_REST_TOKEN`. The code no longer reads it.
+- [ ] 🟡 **Retire the Upstash database** once cf-admin and cf-chatbot no longer use it.
+      Not before: they still read and write it. cf-admin's record of processing
+      (RoPA) should stop listing Upstash for the public site's rate limiting.
+- [ ] 🟡 **cf-admin history rollback cannot reach two KV keys.** A rollback of
+      `about_stats` or `faq_items` sends those block ids, but the KV keys are `about`
+      and `faqs`, so `/api/revalidate` drops them as not allowlisted and the page
+      shows the old value until the 24 h `cms:` TTL ends or the block is published
+      again. The fix belongs in cf-admin (send the published key name).
+- [ ] 🟢 **Outbox redrive ordering.** cf-admin's sync outbox redrives a stored
+      `cmsData` snapshot; one that lands after a newer publish writes the older
+      value, now for up to 24 h instead of 1 h. A version or timestamp check would
+      close it.
+- [ ] 🟢 **Skip the ISR KV read for paths with a file extension.** Scanner probes
+      such as `/wp-login.php` still cost one KV read before the 404; a dotted path
+      is never an ISR page.
+- [ ] 🟢 **A free WAF rule for scanner paths** (`.env`, `.git`, `wp-`,
+      `phpmyadmin`) would stop them before the Worker runs. A dashboard change, so
+      it needs the owner.
+- [ ] 🟢 **cf-graph still says rate limiting is "Redis-backed".** Its public
+      Systems view (`data/platform-facts.source.ts` in cf-graph) should name
+      Cloudflare's built-in rate limiting once this site and cf-admin are deployed
+      without Upstash, in cf-graph's general wording (no binding names or limits).
+- [ ] 🟢 **This site's traces land in the Sentry project `cf-admin`.** The Sentry
+      connector (2026-10-07, last 7 days) shows every `cf-astro@…` release's spans
+      under project `cf-admin` and none under project `cf-astro`. Both the browser
+      and the server tag their events `cf-astro@<build>`, so at least one of the
+      site's DSNs points at cf-admin's project; check both and point them at
+      `cf-astro` (owner, a secret change) so the two apps' usage and alerts can be
+      told apart.
+
+---
+
 ## 0. 🔐 Security & Compliance Review Follow-ups (2026-05-29)
 
 > Source: [Documentation/19-SECURITY-COMPLIANCE-REVIEW-2026-05.md](./19-SECURITY-COMPLIANCE-REVIEW-2026-05.md).

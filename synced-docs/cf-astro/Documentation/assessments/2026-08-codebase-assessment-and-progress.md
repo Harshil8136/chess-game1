@@ -87,7 +87,7 @@ The following patterns are **deliberate, incident-hardened production choices**.
 │ Audit-First Ordering           │ The raw attempt is recorded locally BEFORE  │
 │                                │ origin or rate-limit checks can reject it.  │
 ├────────────────────────────────┼─────────────────────────────────────────────┤
-│ Fail-Open Rate Limiting        │ Upstash → shared KV → allow. Never 503 a    │
+│ Fail-Open Rate Limiting        │ CF binding → shared KV → allow. Never 503 a │
 │                                │ legitimate booking or contact request.      │
 ├────────────────────────────────┼─────────────────────────────────────────────┤
 │ Strict Origin Check on POST    │ CSRF defence stays strict. Rejections are   │
@@ -113,7 +113,7 @@ The following patterns are **deliberate, incident-hardened production choices**.
 │ Category-Based Privacy Copy    │ LFPDPPP / GDPR Art. 13 generic disclosure   │
 │                                │ (no internal vendor names in public text).  │
 ├────────────────────────────────┼─────────────────────────────────────────────┤
-│ Hard Env Var Cap (~21)         │ Zero new env vars for feature flags. Use    │
+│ Hard Env Var Cap (RULES §0.8)  │ Zero new env vars for feature flags. Use    │
 │                                │ the shared dynamic config store instead.    │
 └────────────────────────────────┴─────────────────────────────────────────────┘
 ```
@@ -223,7 +223,7 @@ graph LR
                                      ▼
         ┌──────────────────────────────────────────────────────────┐
         │  LAYER 2: Alert Gate (For 'critical' severity only)      │
-        │  • Pushes emergency alert to D1 + Upstash + Email        │
+        │  • Pushes emergency alert to D1 + Sentry + Email         │
         └──────────────────────────────────────────────────────────┘
 ```
 
@@ -244,7 +244,7 @@ graph LR
 | `checkBinding<T>()`    | **Missing-Binding Sentinel:** Validates required bindings (`DB`, `EMAIL_QUEUE`, `ANALYTICS`, `SESSION`, etc.) and alerts immediately if missing. |
 | `writeAnalytics()`     | **Telemetry Sentinel:** Safely writes to Analytics Engine; alerts via `reportOnce` if the binding is detached.                                   |
 | `background()`         | **Unanchored Task Guard:** Alerts if `ExecutionContext.waitUntil` is missing while ensuring promises never produce unhandled rejections.         |
-| `safeServiceCall<T>()` | **Universal Service Wrapper:** Executes any service call (D1, KV, Upstash, Brevo, AI) with execution timing and non-fatal fallback.              |
+| `safeServiceCall<T>()` | **Universal Service Wrapper:** Executes any service call (D1, KV, Brevo, AI) with execution timing and non-fatal fallback.                       |
 | `errorResponse()`      | Sanitized last-resort JSON response that never leaks internal SQL queries or stack traces.                                                       |
 
 ---

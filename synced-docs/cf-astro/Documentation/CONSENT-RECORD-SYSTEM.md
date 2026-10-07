@@ -108,6 +108,10 @@ Two drain triggers:
   the cheapest moment to flush a backlog.
 - **Scheduled** — `POST /api/consent/replay/` (bearer `HEALTH_CHECK_SECRET`),
   called hourly by `consent-heartbeat.yml`. Covers a site with no traffic.
+  **Not running today:** the workflow has no `HEALTH_CHECK_SECRET` secret, so
+  this step has been skipped on every run sampled from 2026-09-07 to 2026-10-07
+  (GitHub connector, read 2026-10-07). See
+  [`WHERE-THE-DATA-LIVES.md`](./WHERE-THE-DATA-LIVES.md) and the backlog.
 
 Replay is idempotent: `consent_records.id` is generated before the first attempt
 and reused, so `ON CONFLICT DO NOTHING` makes a double-submit a no-op. This
@@ -131,9 +135,22 @@ matters because `cf_astro_writer` is INSERT-only and cannot delete a duplicate.
 | `test/consent-contract.test.ts`  | every CI run | none                   | a column written but not migrated                       |
 | Critical alert from the Worker   | immediate    | none                   | any failed consent write → email                        |
 
-The two heartbeat legs are **separate jobs on purpose**: losing one credential
+The two heartbeat legs are **independent on purpose**: losing one credential
 must never blind both. The daily, single-legged, silently-skipping version of
-this workflow is why the 2026-08-07 outage ran for a day.
+this workflow is why the 2026-08-07 outage ran for a day. Since 2026-10-04 the
+legs are two sets of steps in **one job**, not two jobs (each job bills at
+least a minute): each leg checks its own credential, every step runs whatever
+the steps before it did (`if: ${{ !cancelled() && … }}`), and the job fails if
+any step failed. With **neither** credential, nothing can be checked, and since
+2026-10-07 the run fails instead of ending green with two warnings.
+`test/heartbeat-workflow.test.ts` holds that shape
+([change record](./records/2026-10-04-resource-usage.md)).
+
+> **Both heartbeat rows above are off today.** Neither `HEALTH_CHECK_SECRET` nor
+> `CLOUDFLARE_API_TOKEN` is set as a GitHub Actions secret in this repository
+> (GitHub connector, read 2026-10-07: every run sampled from 2026-09-07 on
+> skipped both legs). Until the Owner sets them, the two hourly rows check
+> nothing ([backlog](./TODO-BACKLOG.md) §00).
 
 ### The probe
 

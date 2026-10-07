@@ -116,10 +116,14 @@ All structured schema graphs are generated using linked `@id` hashes so search e
 
 ### 4.2 Dynamic Bilingual Sitemap API
 
-Because the default `@astrojs/sitemap` integration cannot embed crucial locale references inside XML nodes, the sitemaps are custom rendered at build time:
+Because the default `@astrojs/sitemap` integration cannot embed crucial locale references inside XML nodes, the sitemaps are custom endpoints, rendered on demand by the Worker (`export const prerender = false`) so a new blog post appears without a deploy:
 
 - `/sitemap-index.xml`: Main index file referencing the language-specific sitemaps.
 - `/sitemap-es.xml` / `/sitemap-en.xml`: Emits exact bilingual `<url>` nodes featuring nested `<xhtml:link rel="alternate" hreflang="..." href="...">` elements for precise SEO routing.
+
+**Feed cache (since 2026-10-04).** The three sitemaps and the two RSS feeds (`/es/rss.xml`, `/en/rss.xml`) are kept in KV `ISR_CACHE` under `feed:<path>#<build>` for 6 hours (`src/lib/feed-cache.ts`; the response carries `X-Feed-Cache: HIT` or `MISS`). A miss reads only the post columns the feed prints, not whole post bodies. A render that fell back to the bundled posts because D1 failed is served but never stored, and every revalidation from cf-admin clears the `feed:` entries, so a publish shows up on the next crawl. `/llms.txt` and `/llms-full.txt` are static files in `public/`; an unused on-demand `llms.txt` route that the static file had always shadowed was removed the same day.
+
+**Blog 404s (since 2026-10-04).** `/es/blog/tag/<tag>/` for a tag no post carries, and `/es/blog/?page=<n>` for a page number that is not a whole number from 1 to 9999 or is past the last page, render the 404 page with status 404 and are not cached (the same for `/en/`). A tag or page is still served when the database lookup failed, so a D1 outage never turns a real page into a 404 (AGENTS.md invariant #7).
 
 > An image sitemap (`/sitemap-images.xml`) does not exist. It is intentionally
 > deferred until real facility photos exist (see `SEO-OPERATIONS.md` §8), and

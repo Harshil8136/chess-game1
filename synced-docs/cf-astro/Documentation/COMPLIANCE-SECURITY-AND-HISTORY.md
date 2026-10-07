@@ -28,14 +28,14 @@ The application implements a strict zero-trust edge security paradigm. Access co
       │                                         │
       ├─► D1 dead-letter audit (pre-check)      ├─► timingSafeEq() (Constant-Time)
       │                                         │
-      └─► Upstash Redis Rate Limiting           └─► IP Allowlist Check
+      └─► Rate Limiting (CF binding → KV)       └─► IP Allowlist Check
 ```
 
 ### 1.1 Key API Defense Mechanisms
 
 - **CSRF Defense (`assertOrigin`)**: Rejects all cross-origin HTTP `POST` requests by strictly matching request headers (`Origin` and `Referer`) against the authoritative `https://madagascarhotelags.com` base.
 - **Timing-Attack Defense (`timingSafeEq`)**: All API bearer tokens are validated using a constant-time comparison library. Standard string comparison (`==`) aborts on the first mismatched character, exposing token lengths and contents to timing enumeration probes; constant-time loops execute the full byte comparison under all circumstances.
-- **Dynamic Rate Limiting (Upstash)**: Sliding-window limiters keyed per client IP (`cf-connecting-ip`). Every public limiter uses a 60 s window, so each key expires within 121 s. A production request with no `cf-connecting-ip` falls into one shared `no-ip` bucket — deliberately tight, never a per-request id, which would defeat the limit. If Upstash errors or takes longer than 3 s, the KV fallback decides. Limiter analytics are off (2026-10-02): they had kept visitor IPs in hourly keys with no expiry, cleared on 2026-10-02.
+- **Dynamic Rate Limiting (Workers Rate Limiting binding, since 2026-10-04)**: one-minute limits keyed per endpoint and client IP (`cf-connecting-ip`), counted by Cloudflare's Rate Limiting binding (`RL_PER_MIN_<n>` in `wrangler.toml`); this site stores none of those counters. If the binding is missing or fails, a KV counter decides (`rl:<endpoint>:<ip>`, expiring after 60 s), and if KV fails too the request is allowed (fail-open, ADR-0001). A production request with no `cf-connecting-ip` falls into one shared `no-ip` bucket — deliberately tight, never a per-request id, which would defeat the limit. Until 2026-10-04 the primary was an Upstash Redis sliding window; its limiter analytics, which had kept visitor IPs in hourly keys with no expiry, were switched off and cleared on 2026-10-02, and Upstash is no longer called at all ([change record](./records/2026-10-04-resource-usage.md)).
 
 ---
 

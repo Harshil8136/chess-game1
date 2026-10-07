@@ -9,9 +9,20 @@ console. Two hours of forensics later: not a single record was ever lost.
 
 ## The 30-second health check
 
-Run the **Consent heartbeat** workflow (GitHub → Actions → "Consent heartbeat
-(daily)" → Run workflow). Green = consents are being recorded. It also runs
-daily at 07:00 Aguascalientes and emails you if consent writes stop or error.
+Run the **Consent heartbeat** workflow (GitHub → Actions → "Consent & booking
+heartbeat (hourly)" → Run workflow). Green = consents are being recorded, **but
+only when its two GitHub Actions secrets are set**: `HEALTH_CHECK_SECRET` (the
+probe and the outbox drains) and `CLOUDFLARE_API_TOKEN` (the D1 audit). It is
+scheduled every hour (GitHub runs a scheduled workflow late when it is busy),
+and a failed run emails you if consent writes stop or error.
+
+> **Not working today (checked 2026-10-07 with the GitHub connector).** Neither
+> secret is set in this repository, so every run sampled from 2026-09-07 to
+> 2026-10-07 skipped both legs, checked nothing and still ended green. Since the
+> 2026-10-07 change, a run with neither secret fails and says so. Until the Owner
+> sets both secrets (Settings → Secrets and variables → Actions), use the D1
+> queries below instead; the backlog item is in
+> [`TODO-BACKLOG.md`](./TODO-BACKLOG.md) §00.
 
 ## Consent data
 
@@ -50,7 +61,8 @@ GROUP BY day, status ORDER BY day DESC;
 
 Healthy = every row `db_success` (or `db_replayed`, meaning it reached Postgres
 on a later retry — equally valid). `db_error` / `env_missing` = recording is
-broken, fix immediately (the heartbeat workflow alerts on exactly this).
+broken, fix immediately (the heartbeat workflow alerts on exactly this once
+`CLOUDFLARE_API_TOKEN` is set as a GitHub Actions secret; see the warning at the top).
 `replay_exhausted` = a record gave up retrying and needs manual recovery.
 
 ```sql
@@ -90,6 +102,20 @@ writing a row.
 There is deliberately **no** consent event in PostHog — rejected-consent
 clicks must not feed an analytics tool. Consent volume lives only in the two
 stores above.
+
+## Short-lived data: rate limits and the browser's config cache
+
+| What                                   | Store                                                  | Holds                                                  | Kept for                                      |
+| -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------- |
+| Rate-limit counters (since 2026-10-04) | Cloudflare's Workers Rate Limiting binding             | a count per `<endpoint>:<client IP>` key               | its one-minute window; we store nothing       |
+| Rate-limit fallback counters           | KV `ISR_CACHE` (`rl:<endpoint>:<ip>`, `burst:<ip>`)    | a count, keyed by the client IP                        | 60 s, only when a binding is missing or fails |
+| Runtime config in the browser          | the visitor's `sessionStorage` (`mada_runtime_config`) | PostHog and Sentry rates and toggles, no personal data | 10 minutes, and only for that tab             |
+
+Until 2026-10-04 the rate-limit counters were Upstash Redis keys (sliding
+windows, 121 s). cf-astro writes nothing to Redis now; the
+[change record](./records/2026-10-04-resource-usage.md) has the detail. The
+client IP leaves our code only as part of the key sent to Cloudflare's own
+rate limiter, inside the same Cloudflare account that already sees it.
 
 ## Admin dashboard (cf-admin, secure.madagascarhotelags.com)
 

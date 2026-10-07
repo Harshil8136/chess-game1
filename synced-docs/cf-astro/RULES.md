@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-09-14
+> **Last Updated:** 2026-10-06
 
 ## 🏢 PROJECT MISSION — COMMERCIAL-GRADE, $0 INFRASTRUCTURE
 
@@ -12,7 +12,7 @@
 - Deliver Lighthouse 95+ performance on mobile
 - Meet professional SEO, accessibility, and security standards
 
-Every architectural decision optimizes for one goal: maximum professional quality at exactly ZERO ongoing cost. We combine Cloudflare's free tier (Workers, D1, R2, KV, Queues) with Brevo (+ Resend failover), Supabase, Upstash, PostHog, and Sentry free tiers.
+Every architectural decision optimizes for one goal: maximum professional quality at exactly ZERO ongoing cost. We combine Cloudflare's free tier (Workers, D1, R2, KV, Queues) with Brevo (+ Resend failover), Supabase, PostHog, and Sentry free tiers. (Upstash Redis rate limiting was retired on 2026-10-04 for the Workers Rate Limiting binding.)
 
 ---
 
@@ -89,7 +89,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 
 ## 🧮 RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
-**cf-astro's own Worker deployment carries ~21 env vars** (7 `[vars]` + ~14 secrets — recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
+**cf-astro's own Worker deployment carries ~19 env vars** (6 `[vars]` + ~13 secrets since 2026-10-04, when the Upstash Redis rate limiter was retired: `UPSTASH_REDIS_REST_URL` left `[vars]`, and `UPSTASH_REDIS_REST_TOKEN` is no longer read and is to be deleted from the Worker with `wrangler secret delete` — until it is, it is still set but counts for nothing. The Workers Rate Limiting bindings that replaced it are bindings, not env vars. Before that: 7 `[vars]` + ~14 secrets, recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
 
 - ❌ **FORBIDDEN:** Introducing new environment variables for feature toggles, limits, or operational settings.
 - ✅ **REQUIRED INSTEAD:** Use D1 (`admin_portal_settings`, owned by cf-admin but shared) or the site-settings pattern already in use.
@@ -114,7 +114,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 | **UI Islands**     | Preact (3KB, React-compatible) for interactive components                                                                                                                                                                    |
 | **Hosting**        | Cloudflare Workers — static assets + SSR via `wrangler deploy`; left Cloudflare Pages in July 2026 (`Documentation/SYSTEM-ARCHITECTURE.md` §1)                                                                               |
 | **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)                                                                                                                                                        |
-| **Cache**          | Cloudflare KV + Upstash Redis                                                                                                                                                                                                |
+| **Cache**          | Cloudflare KV (`ISR_CACHE`: pages, CMS blocks, feeds, rate-limit fallback); rate limits on the Workers Rate Limiting binding (Upstash Redis until 2026-10-04)                                                                |
 | **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)                                                                                                                                                        |
 | **Email**          | Async via Cloudflare Queue → shared `cf-astro-email-consumer` worker. Brevo is primary for every send (cf-astro and cf-admin alike); Resend is an automatic same-request failover if Brevo throws — not a per-project split. |
 | **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges)                                                                                                                                                                            |

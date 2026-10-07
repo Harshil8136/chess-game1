@@ -40,4 +40,21 @@ takes the same KV path as an Upstash error; only when KV is also unavailable doe
 the request go through unmetered, as decided above. See
 [`../INCIDENT-2026-10-02-REDIS-KEYS-WITHOUT-EXPIRY.md`](../INCIDENT-2026-10-02-REDIS-KEYS-WITHOUT-EXPIRY.md).
 
+## Amendment — 2026-10-04: the Workers Rate Limiting binding replaces Upstash
+
+The decision is unchanged: when nothing can answer, the request is allowed
+through. What changed is the primary limiter. Upstash Redis was retired (the
+owner's approval of the 2026-10-04 resource-usage plan), and the primary is now
+Cloudflare's Workers Rate Limiting binding: a ladder of `RL_PER_MIN_<n>` bindings
+in `wrangler.toml`, where a limit uses the smallest binding at or above it. The
+chain is now **binding → shared KV counter → allow**: a binding that is missing
+or throws hands the request to the same KV counter the Upstash path used, and
+only when KV also fails does the request go through unmetered. The binding is
+not a network call this Worker makes, so the 2026-10-02 timeout amendment above
+has no successor: there is no "answered allowed because it was slow" case left.
+KV alone was rejected as the primary because every check is a KV write, and the
+free plan allows 1,000 KV writes a day for the namespace the page cache also
+uses. See [`../records/2026-10-04-resource-usage.md`](../records/2026-10-04-resource-usage.md)
+and `test/rate-limit-binding.test.ts`.
+
 {% endraw %}

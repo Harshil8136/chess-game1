@@ -157,4 +157,39 @@ Then by eye: `/en/blog/tag/dogs/` lists only dog-tagged articles;
   14 articles exist in D1 and D1 wins by slug. Retire the files only after a
   crawl confirms every URL serves from D1.
 
+## 5. Update 2026-10-04: unknown tags and pages are real 404s
+
+Rendering an unknown tag with an empty list (§1.1) was correct for the page but
+left a cost: every `/blog/tag/<anything>/` and every `?page=<anything>` rendered
+with a 200 and was stored in the ISR cache, so each random value spent one of
+the 1,000 KV writes the free plan allows a day. Since 2026-10-04:
+
+- A tag page whose tag no post carries, in D1 or in the bundled collection,
+  rewrites to the 404 page (status 404, never cached). It is matched exactly
+  against the stored tag, which `tagPath()` encodes, after a `LIKE` filter in D1.
+- `?page=` must be a whole number from 1 to 9999, and past the last page is a
+  404 too. Page 1 always exists, because it falls back to the bundled collection.
+- When a D1 lookup failed, neither rule applies: a failed lookup is never a
+  404 (AGENTS.md invariant #7). A page past 1 asked for while D1 is failing is
+  a 503 instead (it still shows the bundled posts), because a 200 would be kept
+  for 24 hours once per `?page=` value (`isDegradedLaterBlogPage`, added
+  2026-10-07).
+- The pages rewrite to `/404/`, with the trailing slash. A rewrite runs the
+  middleware again for its target, and the middleware redirects any page path
+  without a slash, so the first version's `Astro.rewrite('/404')` answered
+  `308 → /404/` instead of a 404. Found in review on 2026-10-07, before it
+  shipped, by running the built Worker locally; the same fix covers the
+  unknown-post and unknown-zone pages, which had answered that way since they
+  were written.
+- `?page=` is part of the ISR key only on `/es/blog/` and `/en/blog/`; on every
+  other page it is ignored (`src/lib/isr-cache-key.ts`), and `revalidate.ts`
+  still purges both key forms.
+
+The helpers are `parseBlogPageParam`, `[SUPABASE_PROJECT_REF]`,
+`isDegradedLaterBlogPage` and `isUnknownBlogTag` in `src/lib/blog.ts`, pinned by
+`test/cache-flood.test.ts`, which also holds every `Astro.rewrite` target to a
+trailing slash.
+The [change record](./records/2026-10-04-resource-usage.md) covers the rest of
+that day's work.
+
 {% endraw %}

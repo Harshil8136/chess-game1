@@ -75,7 +75,18 @@ Establishes the core compilation rules, [SUPABASE_PROJECT_REF] routing, and buil
 Defines the Cloudflare Workers environment, build directory (`./dist`), compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
 
 - **`DB` (D1 Database)**: Binds the local SQLite engine for fast content delivery and dead-letter queue audits.
-- **`ISR_CACHE` (KV Namespace)**: Caches HTML page structures and CMS content blocks. _(Note: standard static assets like images and fonts bypass KV entirely and are cached natively by Cloudflare's CDN using `public, max-age=31536000, immutable`)._
+- **`ISR_CACHE` (KV Namespace)**: Caches HTML page structures and CMS content blocks. _(Note: standard static assets like images and fonts bypass KV entirely and are cached natively by Cloudflare's CDN using `public, max-age=31536000, immutable`)._ Its key families (2026-10-04):
+
+  | Prefix                             | Written by                                          | Expiry | Notes                                                                                                                                       |
+  | ---------------------------------- | --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `isr:<path>#<build>`               | `src/middleware.ts` (`isr-cache-key.ts`)            | 24 h   | Only a 200 HTML page is stored. `?page=<n>` is part of the key on `/es/blog` and `/en/blog` only; everywhere else query params are ignored. |
+  | `cms:<key>`                        | `/api/revalidate` (cf-admin publish)                | 24 h   | Allowlisted and sanitized (`SECURITY.md` §8). Was 1 h until 2026-10-04.                                                                     |
+  | `feed:<path>#<build>`              | `src/lib/feed-cache.ts`                             | 6 h    | The three sitemaps and two RSS feeds. A degraded (fallback) render is never stored. Cleared by every path revalidation.                     |
+  | `rl:<endpoint>:<ip>`, `burst:<ip>` | `src/lib/rate-limit.ts`                             | 60 s   | Fallback counters only, used when a rate-limit binding is missing or throws.                                                                |
+  | `ping`, `analytics:weekly_digest`  | read only (`/api/health`, `/api/analytics/summary`) | n/a    | cf-astro never writes these.                                                                                                                |
+
+- **`RL_PER_MIN_<n>` (Workers Rate Limiting bindings, since 2026-10-04)**: ten bindings, one per step of the ladder 3, 5, 10, 20, 30, 60, 100, 200, 500, 1000 requests a minute. A rate limit uses the smallest binding at or above it; the KV counters above are the fallback, and the request is allowed when both fail (`SECURITY.md` §4, AGENTS.md invariant #3). They replaced Upstash Redis and need no secret.
+- **`[observability]`**: Workers Logs persisted at a 20% head-sampling rate and traces persisted at 5%, since 2026-10-04 (both were 100%). A sampled-out request keeps no console line in Cloudflare; errors a route captures still reach Sentry in full and `log.warn`/`log.error` still reach BetterStack. The server-side Sentry tracer samples 10% of page and API requests and none for probe paths (`/.env`, `/wp-…`), bots (by user agent) or 404s (`src/lib/server-trace-sampling.ts`).
 - **`SESSION` (KV Namespace)**: Stores transient session ids and validation state.
 - **`EMAIL_QUEUE` (Queue)**: Handles async email payloads to protect the user from booking timeouts.
 
@@ -87,7 +98,7 @@ Defines the Cloudflare Workers environment, build directory (`./dist`), compatib
 
 | Endpoint                | Method | Prerender | Security                                                        | Purpose                                                                                                  |
 | ----------------------- | ------ | --------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `/api/booking`          | `POST` | `false`   | CSRF + Upstash Rate Limit (fail-open) + D1 dead-letter audit    | Processes atomic booking transaction across D1 and Supabase.                                             |
+| `/api/booking`          | `POST` | `false`   | CSRF + Rate Limit binding (fail-open) + D1 dead-letter audit    | Processes atomic booking transaction across D1 and Supabase.                                             |
 | `/api/booking/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains booking outbox records from D1 into Supabase. Poked by `cf-admin` 5-min cron via `ASTRO_SERVICE`. |
 | `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                                | Hashes and logs GDPR/LFPDPPP privacy agreements.                                                         |
 | `/api/consent/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array) | Drains consent outbox records from D1 into Supabase.                                                     |
@@ -126,7 +137,7 @@ The booking submission flow is designed with extreme resilience to avoid losing 
 
 Marketing page texts, service pricing tables, and blog posts are loaded via a robust 3-tier fallback matrix inside Astro component frontmatter to guarantee that the site renders even if the database is completely offline:
 
-1. **`ISR_CACHE` KV (`cms:<key>`)**: The primary high-speed layer. Injected directly by the CMS revalidation webhook.
+1. **`ISR_CACHE` KV (`cms:<key>`)**: The primary high-speed layer. Injected directly by the CMS revalidation webhook, with a 24-hour expiry since 2026-10-04 (1 hour before). `getPricing`, `getTestimonials` and `getAboutStats` are also memoised **per request** (`src/lib/request-memo.ts`, wired by the middleware), so a page that shows the same block in three components reads KV, and on a miss D1, once.
 2. **D1 SQL Database (`cms_content`)**: The local edge database. Queried via `getJsonBlock(db, group, key)` if KV returns null.
 3. **Static Locale files (`es.json` / `en.json`)**: Code-level fallbacks. Hardcoded dictionary texts that ensure standard structures render instantly if all databases are unreachable.
 
@@ -159,7 +170,14 @@ What actually exists at the edge today:
 2. **ISR HTML caching**, in `src/middleware.ts`, keyed by `__BUILD_ID__` with a
    24-hour TTL — one KV write per unique path per deploy.
 3. **CMS content blocks**, injected into `ISR_CACHE` under `cms:<key>` by
-   `src/pages/api/revalidate.ts` with a 1-hour TTL.
+   `src/pages/api/revalidate.ts` with a 24-hour TTL (1 hour until 2026-10-04).
+4. **Sitemaps and RSS feeds**, cached in `ISR_CACHE` under `feed:<path>#<build>`
+   for 6 hours (`src/lib/feed-cache.ts`, since 2026-10-04). They select only the
+   columns they print, not whole post bodies.
+5. **The browser's runtime config** (`/api/runtime-config/`, PostHog and Sentry
+   settings): one shared request per page, kept in `sessionStorage`
+   (`mada_runtime_config`) for 10 minutes and only when the answer was good
+   (`src/scripts/runtime-config-client.ts`, since 2026-10-04).
 
 ---
 
@@ -281,16 +299,33 @@ Two layers exist:
 
 ## 9. Operations, Free Tier Limits & Resource Budgets
 
-The system operates strictly inside Cloudflare's free tier quotas, ensuring monthly operational cost is exactly **$0 USD**:
+The system operates strictly inside Cloudflare's free tier quotas, ensuring monthly operational cost is exactly **$0 USD**. The **Source** column says where each figure comes from; "estimate" means worked out from the code, not read from a dashboard.
 
-| Resource                | Current Usage | Cloudflare Free Tier Limit                                                                   | Status       |
-| ----------------------- | ------------- | -------------------------------------------------------------------------------------------- | ------------ |
-| **Workers Builds**      | ~30 / month   | 3,000 build minutes / month, 1 concurrent (Free — `workers/ci-cd/builds/limits-and-pricing`) | 🟢 Excellent |
-| **Worker Requests**     | ~1,200 / day  | 100,000 / day                                                                                | 🟢 Excellent |
-| **D1 Rows Read**        | ~5,000 / day  | 5,000,000 / day                                                                              | 🟢 Excellent |
-| **D1 Rows Written**     | ~150 / day    | 100,000 / day                                                                                | 🟢 Excellent |
-| **KV Storage Capacity** | ~2 MB         | 1 GB                                                                                         | 🟢 Excellent |
-| **R2 Storage Capacity** | ~450 MB       | 10 GB                                                                                        | 🟢 Excellent |
+| Resource                               | Current Usage                                                                                          | Free Tier Limit                                                                              | Source                                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Workers Builds**                     | ~30 / month                                                                                            | 3,000 build minutes / month, 1 concurrent (Free — `workers/ci-cd/builds/limits-and-pricing`) | earlier estimate                                                                              |
+| **Worker Requests**                    | ~1,200 / day                                                                                           | 100,000 / day                                                                                | earlier estimate, never measured: the Cloudflare connector has no per-Worker analytics        |
+| **D1 Rows Read**                       | ~70,000 / day, **account-wide** (all Workers and databases)                                            | 5,000,000 / day                                                                              | measured 2026-10-04 from cf-admin's D1 usage probe (Cloudflare D1 analytics)                  |
+| **D1 Rows Written**                    | ~650 / day, account-wide                                                                               | 100,000 / day                                                                                | measured 2026-10-04, same probe                                                               |
+| **KV writes (`ISR_CACHE`)**            | about one per page per deploy, ~20 / day for feeds, one per CMS block per publish                      | 1,000 / day (shared by every writer of the namespace)                                        | estimate. Rate-limit counters write KV only when a binding fails                              |
+| **KV reads (`ISR_CACHE`)**             | one per on-demand page render, plus `cms:` blocks on a page-cache miss                                 | 100,000 / day                                                                                | estimate                                                                                      |
+| **KV Storage Capacity**                | ~2 MB                                                                                                  | 1 GB                                                                                         | earlier estimate                                                                              |
+| **Workers Logs events**                | 20% of invocations since 2026-10-04 (was 100%)                                                         | 200,000 / day                                                                                | `wrangler.toml` `[observability]`; event counts not measurable here                           |
+| **Rate Limiting binding**              | one call per contact post or limited API call; two per booking or consent post (burst guard + limit)   | included in Workers; Free-plan allowance not re-verified on 2026-10-04                       | the code: `src/lib/rate-limit.ts`, `booking.ts`, `consent.ts`                                 |
+| **Sentry spans**                       | 10% of human page and API requests; none for probes, bots or 404s since 2026-10-04                     | 10M / month (Free)                                                                           | `src/lib/server-trace-sampling.ts`                                                            |
+| **GitHub Actions (consent heartbeat)** | at most 24 runs / day, each billed as one job (≥ 1 minute) since 2026-10-04; it was two jobs (≥ 2 min) | 2,000 minutes / month, shared by every private repository                                    | the workflow; GitHub ran it 579 times by 2026-10-04, about every 3–4 hours rather than hourly |
+| **R2 Storage Capacity**                | ~450 MB                                                                                                | 10 GB                                                                                        | earlier estimate                                                                              |
+
+### 9.1 What one request costs (2026-10-04)
+
+- **A prerendered page, an image or a font** is served from static assets and never wakes the Worker.
+- **An on-demand page** is one Worker invocation and one KV read on a cache hit. On a miss it renders, reads each `cms:` block once (the per-request memo, §4.3) and, if the page is a 200, writes one KV entry for 24 hours.
+- **An unknown blog tag, an invalid `?page=` or a page past the last one** is rewritten to `/404/` (with the slash, or the middleware would answer a 308) and answers a 404 that is not cached, so a random value costs no KV write. While D1 is failing, a page past 1 is a 503, also not cached. `?page=` only counts on `/es/blog/` and `/en/blog/`.
+- **A sitemap or RSS feed** is served from `feed:` KV for 6 hours; a miss queries D1 for the listed columns only.
+- **The browser's `/api/runtime-config/` call** happens at most once per page and, after a good answer, not again for 10 minutes in that tab.
+- **A form post** costs one rate-limit binding call for contact, two for a booking or a consent post (the burst guard on `RL_PER_MIN_30`, then the endpoint's limit), with no outbound HTTPS call and no KV write. The plan put form posts at about 50 a day on Upstash.
+
+The change record for this work is [`records/2026-10-04-resource-usage.md`](./records/2026-10-04-resource-usage.md).
 
 ---
 

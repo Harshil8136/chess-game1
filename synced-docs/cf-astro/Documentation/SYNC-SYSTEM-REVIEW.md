@@ -13,14 +13,14 @@ faster than D1 read-replica lag.
 
 ## What lives on this side
 
-| Concern                    | File                                                                      | Behavior                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| CMS read + 3-tier fallback | section `.astro` resolvers                                                | edge tag → `cms:*` KV (1h) → D1 `cms_content` → i18n defaults                            |
-| Revalidation webhook       | `src/pages/api/revalidate.ts`                                             | Bearer-auth; purge `isr:*`, inject allowlisted+sanitized `cms:*`, IndexNow, CF tag purge |
-| Service config read        | `src/lib/service-config.ts`                                               | mem 10s → Cache-API 60s → D1 `service_config` → hardcoded `DEFAULTS`                     |
-| Route-policy resolver      | `src/lib/route-policy.ts`                                                 | first-match-wins, clamped `[0,1]`, fail-safe to legacy                                   |
-| Client runtime config      | `src/pages/api/runtime-config.ts`, `src/scripts/runtime-config-client.ts` | secret-free subset, CDN-cached 60s                                                       |
-| Booking dual-write         | `src/pages/api/booking.ts`                                                | D1 `booking_attempts` (dead-letter) + Supabase + `EMAIL_QUEUE`                           |
+| Concern                    | File                                                                      | Behavior                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| CMS read + 3-tier fallback | section `.astro` resolvers                                                | edge tag → `cms:*` KV (24h since 2026-10-04; was 1h) → D1 `cms_content` → i18n defaults   |
+| Revalidation webhook       | `src/pages/api/revalidate.ts`                                             | Bearer-auth; purge `isr:*`, inject allowlisted+sanitized `cms:*`, IndexNow, CF tag purge  |
+| Service config read        | `src/lib/service-config.ts`                                               | mem 10s → Cache-API 60s → D1 `service_config` → hardcoded `DEFAULTS`                      |
+| Route-policy resolver      | `src/lib/route-policy.ts`                                                 | first-match-wins, clamped `[0,1]`, fail-safe to legacy                                    |
+| Client runtime config      | `src/pages/api/runtime-config.ts`, `src/scripts/runtime-config-client.ts` | secret-free subset, CDN-cached 60s; browser keeps a good answer 10 min (`sessionStorage`) |
+| Booking dual-write         | `src/pages/api/booking.ts`                                                | D1 `booking_attempts` (dead-letter) + Supabase + `EMAIL_QUEUE`                            |
 
 ## Top priority: durability (Phase 1)
 
@@ -43,8 +43,20 @@ cf-astro-side work — all shipped:
   `0008`, applied in prod); the reconciler runs in cf-admin's 5-min cron.
 - ✅ `sync-contract.ts` single-sources `RATE_LIMITS` / `DEFAULTS.ratelimit` /
   `CMS_KEY_ALLOWLIST` (Phase 3.1).
-- ⏳ still open: align the `cms:*` TTL vs ISR `s-maxage` clocks (deferred —
-  superseded by the redrive); CSP nonce; webhook HMAC (Phase 4).
+- ✅ `cms:*` TTL aligned with the ISR page cache: both 24h since 2026-10-04
+  ([change record](./records/2026-10-04-resource-usage.md)).
+- ⏳ still open: CSP nonce; webhook HMAC (Phase 4).
+
+**2026-10-04 notes for cf-admin (the canonical side):**
+
+- A config purge (`{kind:'config'}`) still clears the edge copy at once, but a
+  tab that already holds a good runtime config keeps it for up to 10 minutes
+  (`src/scripts/runtime-config-client.ts`); a new deploy or a new tab reads afresh.
+- With a 24h `cms:*` TTL, two cases can leave KV older than D1 for longer than
+  before: an outbox redrive that lands after a newer publish, and a history
+  rollback whose block id is not the KV key (`about_stats` is published as
+  `about`, `faq_items` as `faqs`), which this endpoint drops as not allowlisted.
+  Both are in [`TODO-BACKLOG.md`](./TODO-BACKLOG.md).
 
 See the canonical document for the full findings, phasing, and current status.
 
