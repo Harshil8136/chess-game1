@@ -198,8 +198,9 @@ dispatches through the GitHub App with a correlation id and the actor → GitHub
 record → returns the run handle → the gateway writes `admin_audit_log` with cf-backup's
 summary.
 
-**A scheduled run:** cf-admin's `backup-tick` job calls `POST /internal/tick` every five
-minutes; when a slot in `backup:config.schedule` is due, cf-backup inserts the
+**A scheduled run:** cf-admin's `backup-tick` job calls `POST /internal/tick` on its
+five-minute tick (since 2026-10-04 only when cf-backup's last answer said it has work, and at
+least once an hour: Contract A in [02](02-admin-integration-contract.md)); when a slot in `backup:config.schedule` is due, cf-backup inserts the
 `backup_runs` row (`schedule_slot` unique) and dispatches the same way as Run now → GitHub
 starts `db-backup.yml` → the runner itself writes the row's `running`/`sealing`/final
 transitions (D-6) → the run folder lands in R2, manifest last (doc 03) → the **next tick**
