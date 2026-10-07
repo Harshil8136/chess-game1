@@ -204,9 +204,14 @@ and `key=value` fields. The gateway maps the action onto a cf-admin verb, module
 | `packages.update`, `packages.upgrade` | `vps_package_update` |
 | `host.reboot` | `vps_host_reboot` |
 | `app.deploy`, `app.restart`, `app.rollback` | `vps_app_deploy` |
+| `app.start`, `app.stop`, `app.pause`, `app.resume` | `vps_app_control` |
+| `app.block`, `app.unblock` | `vps_app_block` |
+| `app.resources` (target `<app>:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
 | `files.upload`, `files.mkdir`, `files.rename`, `files.delete` | `vps_file_change` |
 | `access.save` | `vps_access_change` |
 | `terminal.open` | `vps_terminal_open` |
+| `logs.purge`, `logs.vacuum` | `vps_logs_purge` |
+| `retention.set` | `vps_retention_change` |
 
 For a terminal the gateway supplies `terminal.open` itself when cf-vps sends no
 header. The row holds the person, method, path (no query string), status,
