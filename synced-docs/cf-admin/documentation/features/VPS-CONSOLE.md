@@ -208,6 +208,8 @@ and `key=value` fields. The gateway maps the action onto a cf-admin verb, module
 | `app.block`, `app.unblock` | `vps_app_block` |
 | `app.resources` (target `<app>:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
 | `job.run` | `vps_job_run` |
+| `job.stop`, `job.restart`, `job.pause`, `job.resume` | `vps_job_control` |
+| `job.block`, `job.unblock`, `job.limits` (target `<job>:<limits>` or `<job>:reset`), `job.schedule` (target `<job>:<pattern>` or `<job>:repo`) | `vps_job_manage` |
 | `files.upload`, `files.mkdir`, `files.rename`, `files.delete` | `vps_file_change` |
 | `access.save` | `vps_access_change` |
 | `terminal.open` | `vps_terminal_open` |
