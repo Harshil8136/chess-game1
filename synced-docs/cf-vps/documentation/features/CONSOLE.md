@@ -2,11 +2,11 @@
 title: "Server Console Pages"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
-related_code: [src/ui/pages.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/screens, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
-related_docs: [../security/PERMISSIONS.md, ACTIONS.md, JOBS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
+related_code: [src/ui/pages.ts, src/ui/screens/RestoreTests.tsx, src/ui/restore.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/screens, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
+related_docs: [../security/PERMISSIONS.md, ACTIONS.md, JOBS.md, RESTORE-TESTS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
 tags: [feature, console, ui, pages]
 ---
 
@@ -42,12 +42,12 @@ tags: [feature, console, ui, pages]
   stream can answer first. While the tab is visible the stream reconnects as before: a dropped
   connection is retried by the browser, and an error answer is retried after 2 seconds,
   doubling to at most 30. The pages that refresh on a timer (Processes, Metrics, Apps, Jobs,
-  Recordings) skip refreshes while the tab is hidden. The Logs live tail and the Terminal stay
+  Restore tests, Recordings) skip refreshes while the tab is hidden. The Logs live tail and the Terminal stay
   connected.
 
 ## Pages
 
-Twenty-one pages, in sidebar order (`PAGES` in `src/ui/pages.ts`). The capability opens the
+Twenty-two pages, in sidebar order (`PAGES` in `src/ui/pages.ts`). The capability opens the
 page; the Worker and agent enforce it again on every call.
 
 | Page | Group | Needs | Shows |
@@ -57,7 +57,7 @@ page; the Worker and agent enforce it again on every call.
 | Processes | System | `host.view` | Every process with its CPU and memory |
 | Services | System | `host.view` | systemd services, state and logs; a service's detail page offers Restart, Start, Stop (needs `services.control`; protected services show no buttons) |
 | Apps | System | `host.view` | Hosted apps: state (running, paused, blocked, stopped), memory against its cap, CPU now as a share of the server with its cap and weight, health, restarts. Controls follow the state: Start, Restart, Pause, Resume and Stop need `apps.control`; Block, Unblock and the inspector's Change Allocation form (memory cap, CPU cap, CPU weight) need `apps.manage`; Deploy needs `apps.deploy`. Buttons the person does not hold stay visible but locked |
-| Jobs | System | `host.view` | Server jobs: each job's limits and next run, what waits in line and why, every recent run with its steps; a run's output needs `logs.view` and Run now needs `jobs.run`; see [JOBS](JOBS.md) |
+| Jobs | System | `host.view` | Server jobs: each job's limits and next run, what waits in line and why, every recent run with its steps; a run's output needs `logs.view` and Run now needs `jobs.run`. A job that takes input has no Run now: its row links to its own page (Restore tests); see [JOBS](JOBS.md) |
 | Timers | System | `host.view` | Every systemd timer on the host: next and last run |
 | Packages | System | `host.view` | Available updates, installed packages, dependencies; Update lists and Upgrade need `packages.update` |
 | Storage | Resources | `host.view` | Filesystems, space and inodes |
@@ -65,6 +65,7 @@ page; the Worker and agent enforce it again on every call.
 | Logs | Operations | `logs.view` | The system journal and a live tail; login and sudo sources also need `security.view`; shows how long the journal is kept |
 | Terminal | Operations | `terminal.ops` | A recorded shell through a 60-second certificate; the sudo-capable account needs `terminal.admin` and a sign-in from the last 10 minutes |
 | Files | Operations | `files.view` | The server as a folder browser; download needs `files.download`; create, upload, rename and delete need `files.write` |
+| Restore tests | Operations | `host.view` | The server's side of backup restore tests: whether the test container is installed and its lab key made (with the key's public half), the server's resource ceilings, the test waiting or running with its live steps, and every past test's verdict, report and whether it was cleaned up. A run's output needs `logs.view`; Cancel test needs `restore.test`. Tests are started from the backup console; see [RESTORE-TESTS](RESTORE-TESTS.md) |
 | Timeline | Security | `audit.view` | Sessions, commands, sudo and config changes; shows retention |
 | Recordings | Security | `sessions.replay` | Replay recorded terminal sessions; shows retention |
 | Alerts | Security | `security.view` | What the audit pipeline flagged |

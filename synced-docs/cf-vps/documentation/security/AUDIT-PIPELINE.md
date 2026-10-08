@@ -6,7 +6,7 @@ last_verified: 2026-10-07
 verified_against: [code]
 owner: harshil
 related_code: [host/20-audit/files/etc/audit/rules.d/50-vps.rules, host/25-logship/files/etc/vector/conf.d/10-sources.yaml, host/25-logship/files/etc/vector/conf.d/20-transforms.yaml, host/25-logship/files/etc/vector/conf.d/30-sinks.yaml, host/25-logship/files/opt/vps/bin/vps-r2-upload, host/25-logship/files/opt/vps/bin/vps-heartbeat, host/20-audit/files/opt/vps/bin/vps-audit-maintain]
-related_docs: [../features/LOG-STORAGE.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md, PERMISSIONS.md]
+related_docs: [../features/LOG-STORAGE.md, ../features/RESTORE-TESTS.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md, PERMISSIONS.md]
 tags: [security, audit, forensics, vector, r2, sentry]
 ---
 
@@ -98,6 +98,15 @@ Volume limits: one alert per key every 10 minutes, one `auth_failure` per accoun
 and at most 30 alerts an hour overall. Anything dropped by a limit is still in the local
 record and, for the leaving classes, in R2. The Sentry sink has a 256 MB disk buffer and drops
 the newest events when full. Every alert also appears on the console's Alerts page.
+
+A backup restore test is a server job, so it alerts the same way: `job_failed` when it fails,
+including a run whose cleanup could not be proven (`CLEANUP FAILED`), and `job_missed` when it
+waited too long. Its output stays in the run's folder on the server, not in the journal: the
+checker prints names, counts and timings only, and the runner withholds any output line shaped
+like an email address or phone number. Staging a copy, starting and cancelling a test are
+logged by the agent with the person's email, like every console change (`restore.stage`,
+`restore.start`, `restore.cancel`, which cf-admin's activity log records as
+`vps_restore_test`); see [RESTORE-TESTS](../features/RESTORE-TESTS.md).
 
 A release switch under the platform folder is recorded as a `deploy` info event, not sent;
 unpacking a release or pruning an old one is recorded and not alerted.

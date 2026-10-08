@@ -2,11 +2,11 @@
 title: "Controlled Actions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
-related_code: [contract/actions.ts, contract/logstore.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, host/65-actions, src/ui/components/actions.tsx]
-related_docs: [../security/PERMISSIONS.md, LOG-STORAGE.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md]
+related_code: [contract/actions.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, host/65-actions, src/ui/components/actions.tsx]
+related_docs: [../security/PERMISSIONS.md, LOG-STORAGE.md, JOBS.md, RESTORE-TESTS.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md]
 tags: [feature, actions, polkit, systemd, enforcement]
 ---
 
@@ -43,10 +43,14 @@ activity log uses. **Fresh** means a cf-admin sign-in from the last 10 minutes.
 | `logs.vacuum` | `logs.purge` | Days | `delete` | yes | Delete journal files (and recordings in them) older than N days |
 | `retention.set` | `retention.manage` | Key and days | none | yes | Change how long one kind of log is kept |
 | `job.run` | `jobs.run` | A job name | none | no | Start a server job now; it waits its turn like any run ([JOBS](JOBS.md)) |
+| `restore.start` | `restore.test` | `restore_test:<stage>` | `restore` | yes | Start a restore test of the copy staged under `<stage>`, with the resources its request asks for; it waits its turn while the server is busy ([RESTORE-TESTS](RESTORE-TESTS.md)) |
+| `restore.cancel` | `restore.test` | `restore_test` | none | no | Stop the restore test waiting or running; its container, work space and staged files are removed |
 
 Target shapes (checked by `checkActionRequest`): a unit is `[A-Za-z0-9@._:-]` ending in
 `.service`, at most 120 characters; an app is lowercase letters, digits and hyphens; a job is
 lowercase letters, digits and underscores (`JOB_NAME`, no hyphen, so no unit escaping);
+`restore.start` is `restore_test:` and 16 lowercase hex characters (`parseRestoreTarget`,
+`STAGE_ID`), and `restore.cancel` is exactly `restore_test`;
 `app.resources` is `<app>:<memory>:<cpu %>:<weight>` (`parseAppResources`: memory 32M to 6G,
 CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10000);
 `logs.purge` is `YYYYMMDD:YYYYMMDD:kind.kind` (real dates, from before to, never today, at
@@ -105,9 +109,13 @@ refusals: an action with no ticket, and an action with a ticket signed by anothe
 
 The module installs the root scripts, the oneshot units (`vps-act-<verb>` and templated
 `vps-act-<verb>@` forms), the service allow-list and the polkit rule. `vps-act-job` is the
-one script that starts something and does not wait for it: it checks the job exists, refuses a
-second run of a job already waiting or running, marks the run as a person's, and starts
-`vps-job@<name>.service` with `--no-block` (the run then waits on the busy gate, [JOBS](JOBS.md)). Its `test` step runs
+one script that starts something and does not wait for it: it checks the job exists, marks the
+run as a person's, and starts `vps-job@<name>.service` with `--no-block` (the run then waits on
+the busy gate, [JOBS](JOBS.md)); a Run now while that job already waits or runs starts nothing
+new. Its instance is either `<name>` (Run now) or `<name>:<stage>` (`restore.start`): a job
+whose manifest says `input = true` starts only the second way, only when the stage exists with
+its `request.json`, and a second start while it waits or runs is refused. `vps-act-jobstop@<name>`
+(`restore.cancel`) stops the job's unit, and only for a job that takes input. Its `test` step runs
 the scripts on scratch trees. A unit-template test (`test/host-units.test.ts`) checks that
 every templated unit passes the unescaped instance (`%I`) to its script, because the Worker
 escapes unit names the way `systemd-escape` does (`escapeUnitInstance`).

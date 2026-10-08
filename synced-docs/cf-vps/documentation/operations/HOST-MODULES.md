@@ -2,11 +2,11 @@
 title: "Host Modules"
 status: active
 audience: [operator, ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
 related_code: [host, host/push.sh, host/lib/install.sh]
-related_docs: [DEPLOY.md, ../security/AUDIT-PIPELINE.md, ../features/ACTIONS.md, ../architecture/OVERVIEW.md]
+related_docs: [DEPLOY.md, ../security/AUDIT-PIPELINE.md, ../features/ACTIONS.md, ../features/JOBS.md, ../features/RESTORE-TESTS.md, ../architecture/OVERVIEW.md]
 tags: [operations, host, modules, apply]
 ---
 
@@ -40,9 +40,9 @@ tags: [operations, host, modules, apply]
 | `50-podman` | Rootful Podman with Quadlet for apps: own user namespace per app, read-only root, no capabilities, loopback-only port; app firewall | `install`, `fw`, `status`, `test` |
 | `55-nginx` | nginx as the single app ingress on a loopback port; the client address comes from the Cloudflare header, trusted from loopback only | `install`, `config`, `status`, `test` |
 | `57-postgres` | PostgreSQL 18 from the vendor repository: socket only, SCRAM passwords, a resource slice, nightly dumps kept 7 days. After every dump, each new one is encrypted to the platform's backup key (public half only on the server) and sent to the R2 audit bucket under `backups/postgres/`, locked 30 days and expired at 35; the upload is checked against R2's MD5, and a failure alerts in Sentry | `install`, `config`, `dumps`, `offbox`, `offbox-test` (end to end with a throwaway database), `status`, `test` |
-| `60-agent` | The host agent as a hardened systemd service: user, unit (with the `StateDirectory` that holds the metrics history), Worker public keys, the `vps` CLI, release install and rollback | `user`, `unit`, `keys`, `cli`, `install <tarball> <version>`, `rollback`, `status`; `test.sh` runs install and rollback in a temp folder |
-| `65-actions` | The console's controlled actions: fixed root oneshot units (`vps-act-app@<verb>:<target>` for the app controls, which runs `vps act`, and `vps-act-job@<job>` for a job's Run now), the polkit rule, the service allow-list, the log storage scripts | `install`, `status`, `test` |
-| `66-jobs` | Server jobs: the one runner unit (`vps-job@`), each job's timer, the `vps-jobs` slice (3G, 60% of the cores), the busy-gate settings and each job's manifest and image. `install` writes files only, so nothing runs before its image and secrets exist; `image` builds the images named `localhost/…`; `enable` switches the timers on; `test` runs each job once and proves the agent's boundaries | `install`, `image`, `enable`, `status`, `test` |
+| `60-agent` | The host agent as a hardened systemd service: user, unit (with the `StateDirectory` folders that hold the metrics history and the input staged for jobs), Worker public keys, the `vps` CLI, release install and rollback | `user`, `unit`, `keys`, `cli`, `install <tarball> <version>`, `rollback`, `status`; `test.sh` runs install and rollback in a temp folder |
+| `65-actions` | The console's controlled actions: fixed root oneshot units (`vps-act-app@<verb>:<target>` for the app controls, which runs `vps act`; `vps-act-job@<job>` for a job's Run now and `vps-act-job@<job>:<stage>` for a start with staged input; `vps-act-jobstop@<job>` to stop a job that takes input), the polkit rule, the service allow-list, the log storage scripts | `install`, `status`, `test` |
+| `66-jobs` | Server jobs: the one runner unit (`vps-job@`), each job's timer, the `vps-jobs` slice (3G, 60% of the cores), the busy-gate settings and each job's manifest and image, including the restore test's container (`restore_test`). `install` writes files only, so nothing runs before its image and secrets exist; `image` builds the images named `localhost/…`; `enable` switches the timers on; `status` also says whether the restore test's lab key is installed; `test` runs each job once and proves the agent's boundaries, skipping a job that takes input. The lab key itself is made by `scripts/setup/lab-key.mjs` after `install` and `image`, never by this module | `install`, `image`, `enable`, `status`, `test` |
 | `70-integrity` | Hardening score and file integrity: Lynis weekly, AIDE nightly, debsums weekly; results feed the console's Posture page | `install`, `init`, `run`, `status` |
 | `72-probes` | Public-site checks every 5 minutes from the server: HTTP status and redirects, TLS expiry; state changes go to the journal | `install`, `run`, `status`, `test` |
 | `80-terminal` | The browser terminal's host side: the unprivileged and sudo-capable accounts (certificates only), an SSH certificate authority, the root-side signer, sshd on a loopback port, a reaper that ends old admin sessions | `install` (runs accounts, CA, signer, sshd), `status`, `test` |
@@ -68,4 +68,5 @@ change then needs a reboot.
 - What the audit modules record and ship: [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md)
 - What `65-actions` allows: [ACTIONS](../features/ACTIONS.md)
 - What `66-jobs` runs, and the rule every job waits on: [JOBS](../features/JOBS.md)
+- The restore test's container and lab key: [RESTORE-TESTS](../features/RESTORE-TESTS.md)
 - How the pieces connect: [OVERVIEW](../architecture/OVERVIEW.md)

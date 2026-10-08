@@ -2,11 +2,11 @@
 title: "Agent Route Table"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
-related_code: [contract/capabilities.ts, contract/metrics-history.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
-related_docs: [../security/PERMISSIONS.md, ../features/ACTIONS.md, ../architecture/OVERVIEW.md]
+related_code: [contract/capabilities.ts, contract/metrics-history.ts, contract/jobs.ts, contract/restore.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
+related_docs: [../security/PERMISSIONS.md, ../features/ACTIONS.md, ../features/JOBS.md, ../features/RESTORE-TESTS.md, ../architecture/OVERVIEW.md]
 tags: [reference, api, routes, capabilities]
 ---
 
@@ -27,7 +27,8 @@ and the console. A route is reached in two forms:
 | Worker to agent | `/v1/<route>`, signed |
 
 - **GET** routes read. **POST** routes (`CHANGE_ROUTES`) change something and carry a signed
-  body hash; the body is limited to 16 KiB, or 1 MiB for `files/upload`. Anything else is 405.
+  body hash; the body is limited to 16 KiB, or 1 MiB for `files/upload` and `restore/stage`.
+  Anything else is 405.
 - **Stream** routes stay open (`STREAM_ROUTES`); every other route is a bounded request.
 - **Wait** is how long the Worker waits for the agent's response headers (`timeoutFor`): 60
   seconds for the slow reads, 15 seconds otherwise, no limit for streams. A timeout is 504.
@@ -55,6 +56,9 @@ and the console. A route is reached in two forms:
 | `apps` | GET | `host.view` | 15 s |
 | `jobs` | GET | `host.view` | 60 s |
 | `jobs/log` | GET | `logs.view` | 60 s |
+| `jobs/progress` | GET | `host.view` | 15 s |
+| `jobs/report` | GET | `host.view` | 15 s |
+| `jobs/fit` | GET | `host.view` | 15 s |
 | `timers` | GET | `host.view` | 15 s |
 | `storage` | GET | `host.view` | 15 s |
 | `network` | GET | `host.view` | 15 s |
@@ -65,7 +69,31 @@ and the console. A route is reached in two forms:
 any problem with them, every installed job, what waits or runs now with the reason it waits, and
 the latest finished runs. `jobs/log` takes `job` and `run` and returns the last 256 KiB of that
 run's output; anything that is not a job name and a run id is 400 `bad_run`, and a run that does
-not exist is 404. See [JOBS](../features/JOBS.md).
+not exist is 404. `jobs/progress` and `jobs/report` take the same two parameters, with the same
+errors: the first returns the run's record and its live steps (the job's `@@step` lines), the
+second the record and the report the job left (404 when it left none). Both hold names, counts
+and timings only, never the data a job worked on. `jobs/fit` takes `job` and, optionally,
+`memory` (MiB), `cpus` (hundredths of a core), `workspace` (MiB), `timeout` and `max_wait`
+(seconds), each up to six digits (otherwise 400 `bad_<name>`); it answers whether a run with
+those resources is within the job's ceilings, what the busy gate would decide now with that
+memory counted, whether it could ever fit, and what is running (`JobFit` in
+`contract/jobs.ts`), or 404 for a job that is not installed. See [JOBS](../features/JOBS.md).
+
+## Restore tests
+
+| Route | Type | Capability | Wait |
+|---|---|---|---|
+| `restore/info` | GET | `host.view` | 15 s |
+| `restore/stage` | POST | `restore.test` | 15 s |
+
+`restore/info` returns the `restore_test` job's image, its resource ceilings and the lab key's
+public half (`RestoreInfo`; the key is `null` until it is made), or 404 when the job is not
+installed. `restore/stage` writes one chunk of one staged file: `{ stage, file, offset, b64,
+final }`, where `stage` is 16 hex characters, `file` a plain name, `offset` the bytes already
+received and `final` true on the last chunk. It also needs a cf-admin sign-in from the last 10
+minutes (the Worker checks it). A chunk out of order, a bad name, a stage past its size cap or
+one that would leave too little disk free is refused. See
+[RESTORE-TESTS](../features/RESTORE-TESTS.md).
 
 `metrics/history` takes one query parameter, `range`: `1h`, `24h`, `7d` or `30d`, and `24h`
 when it is absent. Any other value, including an empty one or a different case, is 400
@@ -113,7 +141,7 @@ The route needs only `host.view`; the request body then decides the real capabil
 
 | Route | Type | Route capability | Also needs |
 |---|---|---|---|
-| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for `logs.purge`, `logs.vacuum`, `retention.set` |
+| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start` |
 | `actions/job` | GET | `host.view` | Nothing more; only `vps-act-*` units can be read |
 | `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in |
 | `terminal/stream` | stream | `host.view` | `terminal.ops` or `terminal.admin` (checked by the agent); own session only |
