@@ -118,6 +118,7 @@ cannot. **Rollback:** hide the screen; nothing else depends on it.
 | 4.3 | Move cf-chatbot's admin integration to the service-binding pattern | Retires the published trust literal (critical finding, 2026-09-19 / 2026-09-21) |
 | 4.4 | Optional Workers AI summary of the PII-free evidence on the run view | "Executive summary" without shipping logs to a third party |
 | 4.5 | Client "Platform Trust Report" for Velox deployments | Commercial, single-tenant only (doc 05 §5) |
+| 4.6 | **Restore tests** ([15](15-restore-tests.md), the owner's plan approved 2026-10-08) **(built 2026-10-08, not yet live)**: a copy unlocked with the Vault key inside the Worker, rebuilt and checked in a sealed container on the cf-vps server, then deleted; the report kept in R2 | Proves, by hand with a reminder every 35 days (not on a schedule), that a stored copy opens with the key on record and rebuilds elsewhere. Live once the owner's server steps are done and a first test passes (doc 15 §13) |
 
 ## Parked
 
@@ -132,3 +133,9 @@ cannot. **Rollback:** hide the screen; nothing else depends on it.
 2. Live verification recorded (the command and its result), never a copied figure.
 3. Docs updated in the same change: this folder, RoPA/DR where touched, the `documentation/README.md` index.
 4. For cf-admin's shared checkout: stage only your own hunks; `git fetch` before trusting state; ratchet updated from a clean tree.
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-10-08 | Row 4.6 against cf-backup's and cf-vps's uncommitted Restore tests code (doc 15 §14 lists what was read) | The rest of the roadmap |

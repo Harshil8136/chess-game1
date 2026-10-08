@@ -2,11 +2,11 @@
 title: "Backup Console (cf-backup, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-04
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql, scripts/lib/cron-catalog.mjs]
-related_docs: [CRON-CONTROL.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md, ../program/cf-backup/02-admin-integration-contract.md, ../program/cf-backup/13-access-control.md]
+related_docs: [CRON-CONTROL.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md, ../program/cf-backup/02-admin-integration-contract.md, ../program/cf-backup/13-access-control.md, ../program/cf-backup/15-restore-tests.md]
 tags: [backups, cf-backup, gateway, cron, audit, csp]
 ---
 
@@ -49,6 +49,13 @@ label }` to the page. The page accepts it only from its own frame and origin,
 and only for a path of that shape, then updates the address bar with
 `history.replaceState` and the tab title ("Runs · Backups"). The frame's own
 history carries Back and Forward.
+
+**Restore tests** (`/dashboard/backup/restore`, since 2026-10-08, built and not yet
+run) is one of these sections: it rebuilds a chosen backup copy on the cf-vps
+server in a sealed container and checks it. Its page talks to both consoles from
+the phone, cf-backup's and cf-vps's ([VPS Console](VPS-CONSOLE.md)), each through
+its own gateway; cf-admin adds nothing but the two audit verbs (§4). The design is
+plan of record [15](../program/cf-backup/15-restore-tests.md).
 
 When the deployment has no `BACKUP` binding (local development), the page says
 "cf-backup is not connected" instead of showing a dead frame.
@@ -108,18 +115,24 @@ gateway maps its action onto a cf-admin verb, module `backup`
 
 | cf-backup action | Audit verb |
 |---|---|
-| `run.dispatch`, `run.drill`, `run.bypass-cooldown` | `backup_run` |
+| `run.dispatch`, `run.drill`, `run.bypass-cooldown`, `diagnostics.run` | `backup_run` |
 | `run.cancel` | `backup_cancel` |
-| `schedule.edit`, `config.edit`, `access.edit`, `secrets-calendar.edit` | `backup_config_change` |
+| `schedule.edit`, `config.edit`, `access.edit`, `secrets-calendar.edit`, `alerts.dismiss` | `backup_config_change` |
 | `keys.rotate`, `keys.reveal` | `backup_key_action` |
 | `run.download`, `activity.export`, `run.annotate` | `backup_data_access` |
 | `runs.prune` | `backup_prune` |
+| `restore.test` (`op=prepare`, `op=unlock`, `op=sample`, `op=file`) | `backup_restore_test` |
 
 Actions without a verb of their own reuse one, so they never raise the
 "unrecognised action" warning: confirming a recovery kit and recording a
 restore proof are `keys.rotate` (`op=confirm-kit`, `op=restore-proof`), a
 download from the Files section is `run.download` with `via=files`, and a
-check run (Run now → Check only) is `run.drill`.
+check run (Run now → Check only) is `run.drill`. Restore tests (since
+2026-10-08, built, not yet run) have a verb of their own, so "who unlocked which
+backup copy, and when" is one filter: preparing a test, unlocking its copy with
+the Vault key (or recording a recovery-kit unlock, `key=kit`), taking the live
+sample and filing the report are all `restore.test`; their settings and pinning
+the server's lab key are `config.edit` with `op=restore-tests` or `op=lab-key`.
 
 The row holds the person, method, path (no query string), status, request id
 (also the row's correlation id) and the summary — never the request body, and
@@ -234,6 +247,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-08 | claude | §4's verb table against `src/lib/backup-audit.ts` (`BACKUP_AUDIT_VERBS`, 17 actions; `test/backup-audit.test.ts` passes), and added the two actions the table had been missing (`diagnostics.run`, `alerts.dismiss`); §1's Restore tests paragraph against cf-backup's uncommitted routing and `restore-tests` routes | §4 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run in production |
 | 2026-10-04 | claude | `src/workers/scheduled-backup-tick.ts` (`nextTickDue`, the settled-tick rule), `src/pages/dashboard/backup/app/[...path].ts` (rule 8, the wake), `src/lib/jobs/control.ts`; `test/backup-tick.test.ts`, `test/backup-gateway.test.ts`; cf-backup's record `docs/records/2026-10-04-resource-usage-tick.md` for its side | The TL;DR and §6 describe Contract A. Not re-checked: every other section, and cf-backup's dead-man script itself |
 | 2026-09-23 | claude | Built and verified in the `feat/cf-backup-console` worktree (chunk CB-2): `npm run verify`, `npm run types:check`, `node scripts/migrations_manifest.mjs --check` | See the CB-2 chunk record §11. Not yet deployed; no browser check yet (owner step) |
 | 2026-09-24 | claude | On `main` and pushed (Workers Builds deploys every push; cf-backup first, then cf-admin), with the section page, the alert sender, migration `0058` (applied by the release pipeline) and the delivery reports since. Re-read against the code at this commit: `src/lib/backup-section.ts` (path shape), `src/lib/backup-audit.ts` (the verb map), `src/workers/scheduled-backup-tick.ts` (steps 1–4 of §6) | Matches. The console's own screens are cf-backup's (its repository); a browser pass over them stays an owner step |

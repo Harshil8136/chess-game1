@@ -2,11 +2,11 @@
 title: "VPS Console (cf-vps, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-09-30
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
-related_docs: [BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
+related_docs: [BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../program/cf-backup/15-restore-tests.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
 
@@ -40,6 +40,15 @@ After each navigation the console posts `{ type: 'cf-vps:route', v: 1, path,
 label }` to the page. The page accepts it only from its own frame and origin,
 and only for a path of that shape, then updates the address bar with
 `history.replaceState` and the tab title ("Services · Server").
+
+**Restore tests** (`/dashboard/vps/restore`, since 2026-10-08, built and not yet
+run) is one of these sections: it shows the server's lab key, its resource
+ceilings, a test's live steps, its report and its server log. A test is started
+from cf-backup's Restore tests section, which stages the copy here and starts the
+`restore_test` job, a sealed container with no network that is deleted when the
+test ends. Staging and starting need cf-vps's `restore.test` capability (a floor:
+Owner and Vendor support only) and a sign-in from the last 10 minutes. The design
+is cf-backup's plan of record [15](../program/cf-backup/15-restore-tests.md).
 
 When the deployment has no `VPS` binding (local development), the page says
 "cf-vps is not connected" instead of showing a dead frame.
@@ -210,11 +219,18 @@ and `key=value` fields. The gateway maps the action onto a cf-admin verb, module
 | `job.run` | `vps_job_run` |
 | `job.stop`, `job.restart`, `job.pause`, `job.resume` | `vps_job_control` |
 | `job.block`, `job.unblock`, `job.limits` (target `<job>:<limits>` or `<job>:reset`), `job.schedule` (target `<job>:<pattern>` or `<job>:repo`) | `vps_job_manage` |
+| `restore.stage`, `restore.start`, `restore.cancel` | `vps_restore_test` |
 | `files.upload`, `files.mkdir`, `files.rename`, `files.delete` | `vps_file_change` |
 | `access.save` | `vps_access_change` |
 | `terminal.open` | `vps_terminal_open` |
 | `logs.purge`, `logs.vacuum` | `vps_logs_purge` |
 | `retention.set` | `vps_retention_change` |
+
+Restore tests have a verb of their own: staging a backup copy's files on the
+server (`restore.stage`), starting the test (`restore.start`) and cancelling it
+(`restore.cancel`) are all `vps_restore_test`, so every step that put a backup
+copy on the server is one filter. cf-backup's side of the same test is
+`backup_restore_test` ([Backup Console](BACKUP-CONSOLE.md) §4).
 
 For a terminal the gateway supplies `terminal.open` itself when cf-vps sends no
 header. The row holds the person, method, path (no query string), status,
@@ -277,4 +293,5 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-08 | claude | §6's verb table against `src/lib/vps-audit.ts` (`VPS_AUDIT_VERBS`, 36 actions with the job controls of 92d42dc; `test/vps-audit.test.ts` passes); §1's Restore tests paragraph against cf-vps's `contract/capabilities.ts`, `contract/actions.ts`, its page list and its Worker proxy (the fresh sign-in on `restore/stage`) | §6 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run on the server |
 | 2026-09-30 | claude | Built in the `feat/vps-console` worktree: `npm run verify`, `npm run types:check`, `node scripts/migrations_manifest.mjs --check`; the gateway, proxy, audit, section, page and full-middleware-chain suites (`test/vps-*.test.ts`) run in workerd, where the 101 and its WebSocket are the real runtime objects. Checked against cf-vps at `c4e2664`: its actor parser (`x-vps-actor`, v1, extra keys ignored), its base path, and the contract items for query strings, downloads, event streams, `/dashboard/vps/app/api/me` and capability refusals, each pinned by a test here. Live D1 read of `admin_pages` for the sort order and the `/dashboard` row | Matches this document. Not deployed; no browser check yet (owner step); the console's own screens are cf-vps's |

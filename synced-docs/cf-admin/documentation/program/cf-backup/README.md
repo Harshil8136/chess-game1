@@ -3,7 +3,7 @@ title: "cf-backup — Plan of Record (overview and decisions)"
 status: draft
 audience: [owner, ai, technical, operator]
 owner: harshil
-related_docs: [01-architecture.md, 02-admin-integration-contract.md, 03-backup-pipeline.md, 05-security-and-compliance.md, 06-roadmap.md, 11-run-evidence-and-usage.md, ../adr/ADR-0001-program-constraints.md]
+related_docs: [01-architecture.md, 02-admin-integration-contract.md, 03-backup-pipeline.md, 05-security-and-compliance.md, 06-roadmap.md, 11-run-evidence-and-usage.md, 15-restore-tests.md, ../adr/ADR-0001-program-constraints.md]
 tags: [program, cf-backup, backups, architecture, plan]
 ---
 
@@ -54,8 +54,9 @@ feature appears in the portal as soon as cf-backup deploys. That takes no cf-adm
 | 10 | [10-free-tier-feasibility.md](10-free-tier-feasibility.md) | **Is all of it free?** Yes: per-service verdict, the GitHub Actions budget, years of backups in R2, Phase 0 checks, tripwires |
 | 11 | [11-run-evidence-and-usage.md](11-run-evidence-and-usage.md) | **The run evidence policy:** what every run records (logs, errors, sizes, resources, allowances), who writes it, how secrets stay out, how it feeds a viability view |
 | 12 | [12-keys-and-secrets.md](12-keys-and-secrets.md) | **Every API key, where it lives and exactly how to set it:** four secrets, three providers, none in cf-admin, plus an optional Supabase token for choosing the databases (2026-10-07); permissions, creation steps, rotation, what a leak could do |
-| 13 | [13-access-control.md](13-access-control.md) | **Who may do what in the console:** the capability catalog (29 since 2026-10-07), role defaults, per-person grants, safety floors, activity logs and exports, the global config, which databases are backed up |
+| 13 | [13-access-control.md](13-access-control.md) | **Who may do what in the console:** the capability catalog (32 since 2026-10-08), role defaults, per-person grants, safety floors, activity logs and exports, the global config, which databases are backed up |
 | 14 | [14-live-operations-view.md](14-live-operations-view.md) | **The live view:** what is running right now, step by step, with the live log, metrics and usage; how duplicates are prevented; what it costs |
+| 15 | [15-restore-tests.md](15-restore-tests.md) | **Restore tests** (owner's plan of 2026-10-08; built, not yet run): a copy unlocked with the Vault key inside the Worker, rebuilt and checked in a sealed container on the cf-vps server, then deleted; the capabilities, settings and bounds, the live sample by keyed fingerprints, what is kept where |
 
 ## Verdict on the original idea
 

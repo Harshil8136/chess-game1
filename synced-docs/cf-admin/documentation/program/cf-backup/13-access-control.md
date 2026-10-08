@@ -3,7 +3,7 @@ title: "cf-backup — 13 Access control, activity logs and global config"
 status: draft
 audience: [owner, ai, technical, operator]
 owner: harshil
-related_docs: [README.md, 02-admin-integration-contract.md, 09-key-management.md, 11-run-evidence-and-usage.md, 12-keys-and-secrets.md, 14-live-operations-view.md, ../../architecture/PERMISSIONS-SYSTEM.md]
+related_docs: [README.md, 02-admin-integration-contract.md, 09-key-management.md, 11-run-evidence-and-usage.md, 12-keys-and-secrets.md, 14-live-operations-view.md, 15-restore-tests.md, ../../architecture/PERMISSIONS-SYSTEM.md]
 tags: [program, cf-backup, permissions, rbac, audit, config]
 ---
 
@@ -15,7 +15,7 @@ tags: [program, cf-backup, permissions, rbac, audit, config]
 > **TL;DR (owner requirement, 2026-09-22).** Two layers.
 >
 > - **cf-admin** decides who may **open** the console: one page row, `/dashboard/backup`, managed in cf-admin exactly as today.
-> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 29 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03; `targets.edit`, 2026-10-07). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
+> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 32 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03; `targets.edit`, 2026-10-07; the three Restore tests capabilities, 2026-10-08, built and not yet live). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
 >
 > The policy is **one JSON row** (`backup:access`); there is no new table. Every check runs on the server. Deny beats allow; an unknown capability is denied. Three safety floors cannot be granted away.
 
@@ -69,6 +69,9 @@ touch the backup key. **Admin** changes who may do what.
 | `access.manage` | Change role defaults and per-person grants | admin | a diff shown before saving; a notice | Owner, Vendor (**floor**) |
 | `files.view` | **Files**: browse the backups bucket folder by folder, with folder totals and each object's details (never a value of unlisted metadata) | read | — | Admin, Owner, Vendor |
 | `files.download` | Download and preview files from the backups bucket (text evidence only is previewed). A run's encrypted `data/`, `checksums.sha256`, any `.age` file and the staff-storage mirror also need `runs.download` | operate | audited as `run.download via=files`; backup data: fresh sign-in, the typed confirmation `DOWNLOAD`, and a notice | Owner, Vendor; grantable per person |
+| `restoretests.view` | **Restore tests** ([15](15-restore-tests.md)): the copies, the history, each report, the reminder, Settings → Restore tests read-only; file a finished test's report | read | — | Admin, Owner, Vendor |
+| `restoretests.run` | **Start a restore test** and carry it on: the copy's files, the unlock with the Vault key (sealed to the server's lab key) and the live sample | secret | fresh sign-in ≤ 10 min; the typed word `restore`; the daily limit in Settings (default 3, whole platform); a notice; audited as `restore.test op=prepare\|unlock\|sample` | Owner, Vendor (**floor**) |
+| `restoretests.configure` | **Change Settings → Restore tests** (defaults, limits, reminder) and **pin the server's lab key** | secret | fresh sign-in; a stale-revision check; audited as `config.edit op=restore-tests` or `op=lab-key`; pinning sends a notice | Owner, Vendor (**floor**) |
 
 **A notice**, as built (Ruling R-1 and the notifications work of 2026-09-24): an alert of
 kind `notice` on `backup:status.pendingAlerts`, plus an `ops/events` record (doc 11). It
@@ -125,7 +128,7 @@ cf-admin's page row lets their role in, and even then only what the policy (§4)
 2. **Deny beats allow.** A per-person deny overrides that person's role default.
 3. **Unknown means deny.** A capability id the running code does not know is refused. (The 2026-09-20 cron review found guards that failed *open* on a missing registry row; this rule exists so that cannot recur here.) A capability the code knows but the stored policy has never mentioned gets its **code default**, so new features work on the day they ship with safe defaults.
 4. **Three floors that no policy can cross** (OD-27; reversible only by a code change the owner approves):
-   - the **secret** class, `keys.status`, `runs.download`, `runs.prune` and `access.manage` belong to **Owner and Vendor support only** (`FLOOR_CAPABILITIES` in cf-backup's `src/access/catalog.ts`). The policy may take them *away* from one of those two, but never give them to Admin or below (doc 09 K-3);
+   - the **secret** class, `keys.status`, `runs.download`, `runs.prune` and `access.manage` belong to **Owner and Vendor support only** (`FLOOR_CAPABILITIES` in cf-backup's `src/access/catalog.ts`: nine capabilities since 2026-10-08, when `restoretests.run` and `restoretests.configure` joined the secret class). The policy may take them *away* from one of those two, but never give them to Admin or below (doc 09 K-3);
    - **audit is always on**: no setting turns off `ops/events`, the gateway's audit row or the notifications;
    - the **locks, redaction and the recipient check** are not configurable.
 5. **Last-holder guard.** A change that would leave **no active person** holding `access.manage` or `keys.rotate` is refused. (The 2026-09-16 incident locked the only Owner out for 14 hours; this is the same lesson applied here.)
@@ -214,6 +217,7 @@ key 1's D1 access, so the thresholds it applies are always the saved ones.
 | Evidence | Log cap and the head/tail kept (doc 11 RE-2) | redaction cannot be switched off. **As built:** `doctor` passes the saved values to the seal step, which caps `run.log` with them from the next run |
 | Retention suggestions | Daily-run days, weekly-full months, keep-first-of-month | suggestions only: nothing prunes by them (pruning is by hand, `runs.prune`, whose dialog shows them); locks still apply |
 | Keys | Rotation reminder (months), recovery-kit confirmation interval | reveal and rotate rate limits can be tightened, never loosened past §2 |
+| Restore tests (owner 2026-10-08) | Not in this row: their defaults, limits and reminder live in their own row, `backup:restore-tests`, changed only with `restoretests.configure` ([15](15-restore-tests.md) §4) | the bounds in doc 15 §4 |
 | Databases (`targets`, owner 2026-10-07) | Per database (`supabase:live`, `supabase:<project>`, `d1:<name>`): on the schedule, and ticked when Run now opens; the live project's id, kept for the engine | saved only with `targets.edit` (`POST /api/targets`), never by a config save; a database not chosen keeps its default: on for the live project and every D1 database, off for any other Supabase project; the schedule keeps at least one |
 
 **The schedule (as built, design D-4):** the schedule is the config's `schedule` group
@@ -233,3 +237,9 @@ console cannot change.
 - An expired grant stops working at its `expiresAt`.
 - Deny beats allow, for every capability.
 - Concurrent saves: the second compare-and-swap fails with a clear "someone else changed this, reload" message.
+
+## 9. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-10-08 | The TL;DR count, the three Restore tests rows in §2, the floor list in §3 rule 4 and the §7 Restore tests row, against cf-backup's uncommitted `src/access/catalog.ts` (32 capabilities; nine floors; Admin's default gains `restoretests.view` only) and `src/api/routes.ts` (each route's capability and audit action) | The rest of the document; nothing of Restore tests has run in production |
