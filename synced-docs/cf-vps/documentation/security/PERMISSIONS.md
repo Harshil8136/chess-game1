@@ -41,8 +41,9 @@ support can hold.
 | `apps.deploy` | operate | Deploy hosted apps from their manifests (regenerate the unit and site, restart, health-check) | owner, vendor | no |
 | `apps.control` | operate | Start, stop, restart, pause and resume hosted apps | owner, vendor | no |
 | `apps.manage` | admin | Block or unblock a hosted app, and change its memory cap, CPU cap and CPU weight within the server's limits | owner, vendor | no |
-| `jobs.run` | operate | Start a server job now; it still waits its turn while the server is busy ([JOBS](../features/JOBS.md)) | owner, vendor | no |
 | `restore.test` | admin | Stage a backup copy on the server and start or cancel a restore test with the memory and processor chosen for it; the copy is unlocked in a sealed container with no network ([RESTORE-TESTS](../features/RESTORE-TESTS.md)) | owner, vendor | yes |
+| `jobs.run` | operate | Run and control server jobs: Run now (it still waits its turn while the server is busy), Stop or Restart the run in flight, Pause or Resume a job's schedule ([JOBS](../features/JOBS.md)) | owner, vendor | no |
+| `jobs.manage` | admin | Block or unblock a server job, and change its limits and schedule within the server's bounds | owner, vendor | no |
 | `host.reboot` | admin | Reboot the server (one-minute delay, cancellable) | owner, vendor | yes |
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |

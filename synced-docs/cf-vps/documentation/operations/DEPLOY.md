@@ -2,7 +2,7 @@
 title: "Deploying cf-vps"
 status: active
 audience: [operator, ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
 related_code: [package.json, scripts/deploy-agent.mjs, host/push.sh, host/60-agent/apply.sh, host/66-jobs/apply.sh, wrangler.json, scripts/setup]
@@ -37,9 +37,11 @@ tags: [operations, deploy, rollback, workers-builds]
 A new server job (`host/66-jobs`) follows the same order, with its steps in this sequence:
 `install` (files only, nothing runs yet), `image` (builds what the manifest names
 `localhost/…`), then each of its secrets with `scripts/setup/job-secret.mjs`, then `enable`
-(switches the timers on). `test` runs each job once. Doing `enable` before the image and the
-secrets exist makes the first run fail for a reason the Jobs page then shows
-([JOBS](../features/JOBS.md)).
+(switches the timers on). `test` runs each job once and proves the console's controls on the
+`selftest` job. Doing `enable` before the image and the secrets exist makes the first run fail
+for a reason the Jobs page then shows ([JOBS](../features/JOBS.md)). Applying the module again
+never undoes the console: a paused or blocked job keeps its timer off, and limits and schedules
+set from the console stay.
 
 The route table in `contract/capabilities.ts` is shared. The Worker refuses a route that is not
 in its copy, and the agent answers 404 for one that is not in its own, so a Worker newer than

@@ -100,6 +100,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|---|
 | [`specs/2026-09-29-cf-vps-design.md`](specs/2026-09-29-cf-vps-design.md) | The plan of record: architecture, phases P0 to P7, capabilities | active |
 | [`specs/2026-09-30-log-storage-design.md`](specs/2026-09-30-log-storage-design.md) | Log storage design; shipped, summarised in `features/LOG-STORAGE.md` | historical |
+| [`specs/2026-10-08-job-controls-and-jobs-page-design.md`](specs/2026-10-08-job-controls-and-jobs-page-design.md) | Job controls (Stop, Restart, Pause, Resume, Block, limits, schedule) on the Apps and Jobs pages, and the rebuilt Jobs page; built, summarised in `features/JOBS.md` | historical |
 | [`specs/2026-10-07-jobs-and-admission-queue-design.md`](specs/2026-10-07-jobs-and-admission-queue-design.md) | Scheduled jobs (`kind = "job"`) and the shared admission queue, drafted in parallel with the runner that shipped the same day; superseded by [JOBS](features/JOBS.md), kept for its reasoning | superseded |
 
 ## Records (dated, frozen)

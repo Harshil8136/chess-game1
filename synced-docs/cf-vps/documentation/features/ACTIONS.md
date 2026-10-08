@@ -45,12 +45,24 @@ activity log uses. **Fresh** means a cf-admin sign-in from the last 10 minutes.
 | `job.run` | `jobs.run` | A job name | none | no | Start a server job now; it waits its turn like any run ([JOBS](JOBS.md)) |
 | `restore.start` | `restore.test` | `restore_test:<stage>` | `restore` | yes | Start a restore test of the copy staged under `<stage>`, with the resources its request asks for; it waits its turn while the server is busy ([RESTORE-TESTS](RESTORE-TESTS.md)) |
 | `restore.cancel` | `restore.test` | `restore_test` | none | no | Stop the restore test waiting or running; its container, work space and staged files are removed |
+| `job.stop` | `jobs.run` | A job name | none | no | Stop the run that waits or runs; it is recorded as `cancelled`, never alerted |
+| `job.restart` | `jobs.run` | A job name | none | no | Stop the run in flight, then start a new one |
+| `job.pause` | `jobs.run` | A job name | none | no | Stop the job's schedule; a run in flight finishes and Run now still works |
+| `job.resume` | `jobs.run` | A job name | none | no | Start the job's schedule again |
+| `job.block` | `jobs.manage` | A job name | the job name | no | Stop it, mask its run unit and switch its timer off, so nothing starts it until it is unblocked |
+| `job.unblock` | `jobs.manage` | A job name | none | no | Unmask it; its timer starts again unless it is paused |
+| `job.limits` | `jobs.manage` | `<job>:<memory>:<cpus>:<timeout>:<max_wait>:<retry>` or `<job>:reset` | none | no | Limits for its next run, kept as an override beside the repository's manifest |
+| `job.schedule` | `jobs.manage` | `<job>:<pattern>` or `<job>:repo` | none | no | A schedule from the fixed patterns (never more often than every 5 minutes), kept as a timer drop-in |
 
 Target shapes (checked by `checkActionRequest`): a unit is `[A-Za-z0-9@._:-]` ending in
 `.service`, at most 120 characters; an app is lowercase letters, digits and hyphens; a job is
 lowercase letters, digits and underscores (`JOB_NAME`, no hyphen, so no unit escaping);
 `restore.start` is `restore_test:` and 16 lowercase hex characters (`parseRestoreTarget`,
 `STAGE_ID`), and `restore.cancel` is exactly `restore_test`;
+`job.limits` is checked by `parseJobLimits` against the manifest's own bounds (memory 16M to 3G,
+up to 4 cores, time 10s to 4h, wait 30s to 4h, retries 0 to 2) and `job.schedule` by
+`parseScheduleTarget` (every 5, 10, 15, 20 or 30 minutes; hourly at a minute; every 2, 3, 4, 6, 8
+or 12 hours at a minute; daily or weekly at a time, UTC);
 `app.resources` is `<app>:<memory>:<cpu %>:<weight>` (`parseAppResources`: memory 32M to 6G,
 CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10000);
 `logs.purge` is `YYYYMMDD:YYYYMMDD:kind.kind` (real dates, from before to, never today, at
@@ -115,7 +127,12 @@ the busy gate, [JOBS](JOBS.md)); a Run now while that job already waits or runs 
 new. Its instance is either `<name>` (Run now) or `<name>:<stage>` (`restore.start`): a job
 whose manifest says `input = true` starts only the second way, only when the stage exists with
 its `request.json`, and a second start while it waits or runs is refused. `vps-act-jobstop@<name>`
-(`restore.cancel`) stops the job's unit, and only for a job that takes input. Its `test` step runs
+(`restore.cancel`) stops the job's unit, and only for a job that takes input; like every console stop it
+leaves the cancel mark, so the run ends `cancelled` and raises no alert. Run now refuses a blocked
+job, with the way out. The other job controls share one template,
+`vps-act-jobctl@<verb>:<target>`, which runs `vps job act` as root under one lock
+(`flock /run/lock/vps-jobctl.lock`), so two people's presses are served one after the other;
+its lines sit with the job runner's in the journal. Its `test` step runs
 the scripts on scratch trees. A unit-template test (`test/host-units.test.ts`) checks that
 every templated unit passes the unescaped instance (`%I`) to its script, because the Worker
 escapes unit names the way `systemd-escape` does (`escapeUnitInstance`).

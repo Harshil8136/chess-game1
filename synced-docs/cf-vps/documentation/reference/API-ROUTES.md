@@ -59,6 +59,7 @@ and the console. A route is reached in two forms:
 | `jobs/progress` | GET | `host.view` | 15 s |
 | `jobs/report` | GET | `host.view` | 15 s |
 | `jobs/fit` | GET | `host.view` | 15 s |
+| `jobs/history` | GET | `host.view` | 60 s |
 | `timers` | GET | `host.view` | 15 s |
 | `storage` | GET | `host.view` | 15 s |
 | `network` | GET | `host.view` | 15 s |
@@ -66,10 +67,16 @@ and the console. A route is reached in two forms:
 | `diagnostics` | GET | `host.view` | 15 s |
 
 `jobs` is the Jobs page's whole answer (`JobsView` in `contract/jobs.ts`): the gate settings and
-any problem with them, every installed job, what waits or runs now with the reason it waits, and
-the latest finished runs. `jobs/log` takes `job` and `run` and returns the last 256 KiB of that
-run's output; anything that is not a job name and a run id is 400 `bad_run`, and a run that does
-not exist is 404. `jobs/progress` and `jobs/report` take the same two parameters, with the same
+any problem with them, every installed job with its standing (scheduled, Run now only, paused,
+blocked or off), its schedule, limits, last run, latest results and whether it has gone quiet,
+what waits or runs now with the reason it waits, the latest finished runs, and the busy gate as
+it stands this second (`gate`, read from the agent's own one-second readings; the agent caches
+the answer for 2 s). `jobs/log` takes `job` and `run` and returns the last 256 KiB of that run's
+output with the run's record; anything that is not a job name and a run id is 400 `bad_run`,
+and a run that does not exist is 404. `jobs/history` takes an optional `job` and `days` (1 to 31,
+7 when absent; a value outside is clamped) and returns every finished run of those days, newest
+first, with each job's counts and timings (`JobHistory`); a `job` that is not a job name is 400
+`bad_job`, and the answer is cached for 15 s. `jobs/progress` and `jobs/report` take the same two parameters, with the same
 errors: the first returns the run's record and its live steps (the job's `@@step` lines), the
 second the record and the report the job left (404 when it left none). Both hold names, counts
 and timings only, never the data a job worked on. `jobs/fit` takes `job` and, optionally,
