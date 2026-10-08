@@ -137,8 +137,10 @@ token that can also reach the live project is allowed and warned about on each r
 §0.3); a project that holds the backup key schema is refused. The temporary login inherits none of
 its grants, so every connection first steps into Supabase's read-only role
 (`supabase_read_only_user`, which reads every table, `auth` included), as the Supabase CLI does with
-its own logins; without that step it reads nothing (run of 2026-10-07 20:19 UTC). It removes the
-login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
+its own logins; without that step it reads nothing (run of 2026-10-07 20:19 UTC). The pooler can
+refuse a login it has just been given ("password authentication failed", run of 2026-10-08 04:15
+UTC), so that refusal, and only that, is tried again after 3, 6, 12, 24 and 45 seconds. It removes
+the login when it is done. Storage files, Edge Functions and scheduled jobs are not part of
 a database backup.
 
 **Step 1 — Pre-flight.** Fail immediately, naming what is missing, if either secret or either
@@ -392,6 +394,12 @@ tables and 2,201 rows; `chatbot-kb` 87 rows.
   sha256 of every row's typed text, integers read exactly), and `encryption.keyFingerprint`, the
   key the files were encrypted to. A restore test compares the tables it rebuilds against them
   (plan of record doc 15). A fingerprint that cannot be taken is a warning, never a failed store.
+- From 2026-10-08 (after the first real restore tests) each PostgreSQL store also records its export
+  boundary, `xidBefore`: `pg_snapshot_xmin(pg_current_snapshot())`, taken just before `pg_dump`
+  (`<store>.xid` in the results folder, merged by `verify.ts manifest`). Every row written by a
+  transaction below it is in the copy, so a restore test can prove which live rows are unchanged
+  since. Optional: if it cannot be taken the file is dropped and the backup goes on; the workflow
+  guard `export-boundary` holds both rules.
 
 ### 7.4 Authentication records (run 36277447136)
 
@@ -418,6 +426,7 @@ recomputes.
 | 2026-09-27 | claude | GitHub's record of runs 36325294293 (schedule) and 36327225356 (manual); `backup_runs` in production; GitHub's list-workflow-runs filters (`status`, `created`) for the fallback guard | Status update, §2, §3.1, step 0, step 9, §4, §5, §7 |
 | 2026-10-07 | claude | Code read: `scripts/secondary-pipeline/plan.ts`, `other-projects.ts`, the workflow and its guard; the live D1 list through the Cloudflare connector (4 databases). Not yet proven by a run; the rest of the document was not re-checked, so `last_verified` stays | Steps 0b and 5b |
 | 2026-10-08 | claude | Code read and tests: `scripts/secondary-pipeline/fingerprint.ts`, `verify.ts` and the workflow's two new lines (`test/runner/fingerprint.test.ts`). Not yet proven by a run; nothing else re-checked | §7.3 |
+| 2026-10-08 | claude | The export boundary: proven on a local PostgreSQL 16 (a restore test's classification of changed, damaged and added rows), unit tests in `test/runner/fingerprint.test.ts` and `test/runner/workflows.test.ts`. The login retry: run 2026-10-08_full_gh37726622973a1's job log and the old project's pooler log (Supabase connector), unit tests in `test/runner/secondary-plan.test.ts`. Neither proven by a run yet; nothing else re-checked | Step 5b, §7.3 |
 
 ## 9. Related
 
