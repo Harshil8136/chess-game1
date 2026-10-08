@@ -10,7 +10,7 @@ tags: [program, cf-backup, cf-vps, restore, testing, keys, privacy]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- Built 2026-10-08, not yet run for real. It names routes, files, settings keys and jobs in cf-backup's and cf-vps's repositories, not cf-admin's, so cf-admin's path check cannot resolve them. -->
+<!-- Built 2026-10-08, first run for real the same day (§13). It names routes, files, settings keys and jobs in cf-backup's and cf-vps's repositories, not cf-admin's, so cf-admin's path check cannot resolve them. -->
 
 # 15 — Restore tests
 
@@ -52,8 +52,8 @@ tags: [program, cf-backup, cf-vps, restore, testing, keys, privacy]
 | How long decrypting, rebuilding and reading took, and the peak memory | J |
 
 Gates make the verdict **fail** whatever the score: a failed check in A, B, C, D, E or I, a
-table whose content differs in F, and in G a live row that differs although it has not changed
-since the backup. H and J only feed the score. A Full test scores 0 to 100 and gives one of:
+table whose content differs in F, and in G a live row that differs although it is **proven** not
+to have changed since the backup (§6). H and J only feed the score. A Full test scores 0 to 100 and gives one of:
 *ready* (95 and up), *ready with notes* (85), *usable, fix soon* (70), *not trustworthy* (below
 70) or *fail*. A Quick test (A to D) ends *quick pass* or *fail*.
 
@@ -221,14 +221,29 @@ the key). It is not counted as a key reveal: the key is never shown to anyone.
 | other D1 databases | — | not sampled: cf-backup has no binding to them; the report says so |
 
 What it returns, per sampled row: an HMAC-SHA256 of the key columns, an HMAC-SHA256 of the whole
-row, and the row's last-change time (`updated_at` or `created_at`) when the table has one. Both
-HMACs are keyed with a 32-byte salt made on the phone for this one test, so they mean nothing
+row, and two times: `t`, the newest time on the row itself that has passed (every timestamp
+column, or in D1 every column typed or named as a time), and `u`, when the row last changed **as
+far as can be proven** (cf-backup `src/restore-tests/live.ts` `changeTime`). Both HMACs are keyed with a 32-byte salt made on the phone for this one test, so they mean nothing
 outside it. Per store it also returns an md5 of each catalog definition (columns, constraints,
 indexes, row-level security switches, policies, functions, triggers, grants) and the migration
 ledger's names. **No name, email, phone number or other row value leaves production.** The
 container computes the same recipe on the rebuilt copy and classifies each row as the same,
-changed since the backup (expected), new or deleted since (expected), or different although
-unchanged since (a finding). The recipes and their test vectors live in both repositories so
+changed since the backup (expected), new since (expected), different although proven unchanged
+since (a finding), older than the copy yet missing from it (a finding), or unknown (different,
+and nothing shows when it last changed: a note at half marks).
+
+**How "unchanged since" is proven.** A time on the row is not proof: a writer can change a row
+without stamping `updated_at`, and none of the live project's tables keeps it with a trigger. The
+first real test (2026-10-08) failed on exactly that: five `admin_authorized_users` rows whose
+sign-in time had moved after the copy while their `updated_at` stayed older, so they read as
+"different though unchanged" when the copy was right. Since then:
+
+- **PostgreSQL, a copy with an export boundary** (§7): the row's own transaction number (`xmin`,
+  made whole with the current epoch) against the boundary. Below it, the row was written before
+  the export began, so the copy must hold it exactly and a difference is a finding; at or above
+  it, the row changed since. This holds whatever the writer stamps.
+- **Without a boundary** (an older copy, or D1): only a time on the row at or after the copy
+  began proves a change. A different row whose times are all older is `unknown`, never a finding. The recipes and their test vectors live in both repositories so
 they cannot drift. A store that cannot be sampled is noted, and the live comparison is then "not
 run", not failed.
 
@@ -244,6 +259,9 @@ per table:
   to an intermediate `<store>.fingerprints.tsv`, which the manifest step merges.
 - **D1**: every row as typed canonical text, sha256 per row, sorted and joined, sha256 of that
   (64 hex characters).
+- **The export boundary** (from 2026-10-08): for the live project and each other project,
+  `xidBefore`, the `pg_snapshot_xmin` of a snapshot taken just before `pg_dump` starts, so every
+  row written below it is in the copy (§6). Optional: a run that cannot take it backs up as before.
 - The manifest also gains `encryption.keyFingerprint`, the fingerprint of the key the run
   encrypted to, so a test (and the Restore proof) names the key that should open the copy.
 
@@ -324,16 +342,29 @@ runner withholds any output line shaped like an email address or phone number an
 
 The owner's server steps, in cf-vps's ship order: install the job runner's additions and the
 `restore_test` job, build its image on the server, deploy the agent, make the lab key, then pin
-its public half in cf-backup → Settings → Restore tests.
+its public half in cf-backup → Settings → Restore tests. Done on 2026-10-08 from the owner's IDE
+session.
+
+**First real tests, 2026-10-08** (`rt-20261008T043435Z-e5626109`, larger live comparison, and
+`rt-20261008T043615Z-5c578dd6`, small; both Full, Vault, copy `2026-10-07_full_gh37566190802a1`,
+all five stores): the copy unlocked with the Vault key through the lab key, the PostgreSQL and
+SQLite rebuilds loaded, every count matched, the health, settings and works checks passed, and
+the live sample's PostgreSQL row text agreed with the lab's (137 of 144 rows the same). Both
+ended **FAIL, 90**, on G alone: the five rows of §6, a false finding, now fixed. Two notes were
+also wrong and are fixed: the memory estimate warned because the peak (161 MiB) was far
+**under** the estimate (527 MiB), which is the safe side; and a D1 row "with no time column" now
+reads as unknown in plain words. The copy predates content fingerprints, so F was at half marks.
 
 Not verified yet (tracked in [MAINTENANCE.md](../../MAINTENANCE.md), section "Restore test
-follow-ups"): the PostgreSQL fingerprint recipe has not been run against a real database on
-both sides (the pipeline's image and the lab's must give the same row text); the `restore_test`
-image has not been built on the arm64 server; no test has run for real.
+follow-ups"): the PostgreSQL content fingerprints on both sides (no copy carries them until the
+next backup, the first since they were added); the export boundary on a real copy (the same
+backup); the lab update (classification and memory check) on the server, which needs the job's
+image rebuilt.
 
 ## 14. Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-08 | §1, §6, §7 and §13 against the first real report and its cause: through the Supabase connector (counts only, no values), all 5 `admin_authorized_users` rows had a sign-in or sync time after 2026-10-07 while `updated_at` was older, and no `public` table has a trigger; the new sample query ran on the live project (counts only). The boundary and classification proven on a local PostgreSQL 16 against the server's own classifier: a row changed without any time stamp read as changed, a row damaged in the copy as a finding, others same or new. The old project's failed backup (2026-10-08 04:15 UTC) read from its job log and Supabase's pooler log | No backup has yet carried the boundary or PostgreSQL fingerprints; the lab update is not on the server; the phone was not used |
 | 2026-10-08 | §10 re-read against cf-backup's redesigned page (`src/ui/screens/RestoreTestsScreen.tsx`, `src/ui/screens/restore/`, `src/ui/restore-tests.ts` `setupSteps` and `headline`) and its tests (`test/ui-restore-screen.test.ts`) | The page has not been opened on a phone; the server side is not rolled out, so only the set-up list's not-yet-set-up state can show today |
 | 2026-10-08 | Read against the uncommitted code: cf-backup's restore-tests API, routes and capability catalog, its restore-tests settings, unlock, header, live and fingerprint modules, the daily chore, the ops kinds and audit actions, the engine's fingerprint and manifest steps and the workflow; cf-vps's contract (capabilities, actions, jobs, restore report), `restore_test.toml`, the job image, the lab, the runner's staging, cleanup and log guard, and the lab key setup script; cf-admin's audit words (`src/lib/backup-audit.ts`, `src/lib/vps-audit.ts`). The R2 bucket `madagascar-backups` exists (Cloudflare connector) | Nothing has run in production. The bucket's lock rules are not returned by the Cloudflare connector, so the lock on `ops/` is taken from cf-backup's records, not read live. The lab, its image and the PostgreSQL fingerprints were not run here |
