@@ -2,7 +2,7 @@
 title: "cf-backup remediation — 07 Decision log (RD-1 to RD-15)"
 status: active
 audience: [owner, ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_docs: [README.md, 05-options-analysis.md, 06-remediation-plan.md, 09-secondary-pipeline-specification.md, 11-terminology-standard.md, 12-open-source-tool-assessment.md, 13-engine-consolidation-plan.md]
@@ -101,6 +101,26 @@ chose "Allow it".
 | Which project is live | **The engine says so.** Pre-flight reads the project from its own `SUPABASE_DB_URL` and passes only that project's id to the plan step, which stores it in the D1 listing in the bucket for the Worker to read | Only the engine holds the live sign-in; the Worker's binding cannot tell |
 | A full-access GitHub token | **Allowed, with a warning on each run** that names it, until the GitHub copy is deleted once no other project needs backing up. A project holding the backup key schema is still refused | The Owner's choice: the token he already has works now, and the warning keeps the risk visible |
 | What the console shows for each database | **Read live:** size, tables, sign-in accounts, Postgres version, region and creation month for each running Supabase project (a read-only count query through the Worker's token, cached 5 minutes); size and tables for D1 from the engine's listing; and when each database last had a verified copy, from the engine's manifests | The Owner asked for a clearer picker with more about each project, from live data |
+
+## 0.4 Decisions of 2026-10-08: restore tests on the server
+
+The Owner asked for a way to prove a chosen backup copy restores: copy it to the cf-vps server,
+decrypt it there, rebuild every table in a container, run many checks (counts, content, settings,
+benchmarks, a comparison of random records with live production), then destroy the container and
+its data and keep only the logs, readable from both consoles, for authorized people only. He
+approved the plan on 2026-10-08 and added: a permission-based settings system, resources chosen per
+test with a check that the server has room, and "without any key" (no key pasted). The design is
+plan of record doc 15 in cf-admin.
+
+| Item | Decided | Reason |
+|---|---|---|
+| RD-4 freeze | **An exception, by the Owner's instruction.** The engine only gains per-table fingerprints in its manifest; what it backs up, how it verifies and its verdict are unchanged | The Owner asked for it directly; a restore test is the missing proof that a copy opens with the key on record and rebuilds elsewhere |
+| Unlocking without a pasted key | **The Worker opens only each file's header with the backup key in Vault and seals the 16-byte file keys to the server's lab key**, pinned in the console by `restoretests.configure`. The backup key never leaves the Worker; the recovery kit stays available as an option and, when used, is also recorded as a restore proof | Meets "without any key" without the backup key reaching the server or the phone |
+| Who may | **`restoretests.view` (Admin by default), `restoretests.run` and `restoretests.configure` (floors: Owner and Vendor)**; starting needs a sign-in from the last 10 minutes, the typed word `restore`, a daily limit and sends a notice email | Starting a test unlocks a copy, so it is guarded like a download of backup data |
+| Settings | **One row, `backup:restore-tests`**: defaults, limits, the reminder, the pinned lab key and the last 60 tests | No new table (RULE #0.6) |
+| Comparing with live data | **Keyed fingerprints only**: a salt made on the phone for one test, HMAC of a few random rows per table, read through Supabase's read-only query endpoint with the existing token and through the DB binding; sign-in records are compared by count only | No row value leaves production; the hashes mean nothing outside that test |
+| Fingerprints in the copy | **Per-table content digests in the plain `manifest.json`**, not a separate sealed file as the plan first said | They are one digest per table, never per row; the manifest is already private in the bucket |
+| Reminder | **Once a month while no Full test has passed within the reminder days (35 by default)**, only once a lab key is pinned | A test that is never repeated proves less every month |
 
 ## 1. Decision register (defaults: reversible at review)
 
@@ -201,6 +221,7 @@ configured.
 | 2026-09-27 | claude | The Owner's instruction to settle every open decision on its best option; live checks: both workflows `disabled_manually`, `backup:config` rev 4 with both schedules off, Supabase Storage empty (0 buckets, 0 objects), the `tick-deadman` schedule's start times (4 to 5 hours late) | §0 |
 | 2026-10-07 | claude | The Owner's instruction of 2026-10-07 (choose databases in Run now and the schedule); the live D1 list (4 databases, one of them new since the engine's fixed list) and the live Hyperdrive config's user, read through the Cloudflare connector | §0.2 |
 | 2026-10-07 | claude | The failed run's GitHub log (the plan named no live project), the live projects' list and their Postgres versions and backup key schema, read through the Supabase connector | §0.3 |
+| 2026-10-08 | claude | The Owner's approval and additions of 2026-10-08 in the restore test thread; the built code (`src/api/restore-tests.ts`, `src/restore-tests/`); the live Supabase session defaults and the read-only role's rights on `extensions.hmac`, read through the Supabase connector. The rest of the document was not re-checked | §0.4 |
 
 ## 8. Related
 

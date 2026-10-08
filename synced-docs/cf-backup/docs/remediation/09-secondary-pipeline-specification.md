@@ -387,6 +387,11 @@ tables and 2,201 rows; `chatbot-kb` 87 rows.
   not stop the others, and the verdict step then fails the run.
 - Encryption, upload and the verdict run without `continue-on-error`; only the export, restore
   target and verification steps use it, so that each store reaches the verdict.
+- From 2026-10-08 the manifest also carries, per restored table, a content `fingerprint` (PostgreSQL:
+  md5 of the sorted md5 of every row's text under fixed session settings; D1: sha256 of the sorted
+  sha256 of every row's typed text, integers read exactly), and `encryption.keyFingerprint`, the
+  key the files were encrypted to. A restore test compares the tables it rebuilds against them
+  (plan of record doc 15). A fingerprint that cannot be taken is a warning, never a failed store.
 
 ### 7.4 Authentication records (run 36277447136)
 
@@ -412,6 +417,7 @@ recomputes.
 | 2026-09-26 | claude | Authentication records: local proof, live privilege checks, run 36277447136; Cloudflare's D1 export limitations and Supabase's restore guides re-read | §3.2 step 3a, §3.3, §5, §7.4 |
 | 2026-09-27 | claude | GitHub's record of runs 36325294293 (schedule) and 36327225356 (manual); `backup_runs` in production; GitHub's list-workflow-runs filters (`status`, `created`) for the fallback guard | Status update, §2, §3.1, step 0, step 9, §4, §5, §7 |
 | 2026-10-07 | claude | Code read: `scripts/secondary-pipeline/plan.ts`, `other-projects.ts`, the workflow and its guard; the live D1 list through the Cloudflare connector (4 databases). Not yet proven by a run; the rest of the document was not re-checked, so `last_verified` stays | Steps 0b and 5b |
+| 2026-10-08 | claude | Code read and tests: `scripts/secondary-pipeline/fingerprint.ts`, `verify.ts` and the workflow's two new lines (`test/runner/fingerprint.test.ts`). Not yet proven by a run; nothing else re-checked | §7.3 |
 
 ## 9. Related
 

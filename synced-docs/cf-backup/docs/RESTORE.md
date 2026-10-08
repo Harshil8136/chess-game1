@@ -387,6 +387,15 @@ The procedure (fetch, `sha256sum -c SHA256SUMS`, decrypt with the same private k
 PostgreSQL before D1) is in
 [remediation doc 09 §5](remediation/09-secondary-pipeline-specification.md#5-operational-notes).
 
+### Testing a copy without restoring production
+
+The console's **Restore tests** section (from 2026-10-08) rebuilds a chosen copy on the server in
+a sealed container with no network, checks it against what was saved and, optionally, against a
+few random live rows compared as keyed fingerprints, then deletes it and keeps only the report. It
+needs no key pasted: the file keys are opened with the backup key in Vault and sealed to the
+server alone. It proves the copy opens and rebuilds; it does not replace this procedure, which is
+still the way to restore. The design is the plan of record's doc 15.
+
 ## A full export taken by hand
 
 A Supabase full export (`node scripts/full-export/supabase-full-export.ts`, from 2026-10-04) is one
