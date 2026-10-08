@@ -281,10 +281,24 @@ runner withholds any output line shaped like an email address or phone number an
 
 ## 10. The console sections
 
-- **cf-backup → Restore tests** (`/dashboard/backup/restore`): pre-flight checklist, copy and
-  database picker, options and resources with the three server checks, the optional kit step,
-  live status read from cf-vps, history and reports; **Settings → Restore tests** (read-only
-  without `restoretests.configure`).
+- **cf-backup → Restore tests** (`/dashboard/backup/restore`; redesigned 2026-10-08 after the
+  owner found the first version confusing). One line of state leads (a test running, then set-up
+  left, then the Full-test reminder), then three tabs:
+  - **Test a copy**: while anything is missing, a set-up list in the order a person fixes it
+    (the server console updated, the server set up, the lab key made, the lab key pinned here,
+    your permission here and on the server, Vault), each line saying in words what is missing,
+    with the command where it is run on a computer and a Pin button for the key. It reads
+    cf-vps's `/api/me` (whether its console knows `restore.test`, and whether you hold it) and
+    `restore/info`, so a server not rolled out yet reads as that, not as `not_found`. Then the
+    test running, if any (also one started from another device, found in cf-vps's job list),
+    and the new-test form in five numbered parts: the copy (as cards, with its last test), what
+    to check (Quick or Full, and the live comparison for Full), how it is unlocked, the server
+    resources in GB, cores and minutes with the server check, and a review that lists
+    everything still stopping the start, with Start disabled until that list is empty.
+  - **Past tests**: each test's verdict, score, kind, copy and who started it; its report opens
+    with the verdict and score, then the failed and warning checks, then every group.
+  - **Settings** (read-only without `restoretests.configure`): the lab key, what a new test
+    starts with, the limits and the reminder, in the same units, with a save bar.
 - **cf-vps → Restore tests** (`/dashboard/vps/restore`): the lab key's public half, the server's
   ceilings next to cf-backup's settings, a test's live steps, its report and its server log.
 
@@ -321,4 +335,5 @@ image has not been built on the arm64 server; no test has run for real.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-08 | §10 re-read against cf-backup's redesigned page (`src/ui/screens/RestoreTestsScreen.tsx`, `src/ui/screens/restore/`, `src/ui/restore-tests.ts` `setupSteps` and `headline`) and its tests (`test/ui-restore-screen.test.ts`) | The page has not been opened on a phone; the server side is not rolled out, so only the set-up list's not-yet-set-up state can show today |
 | 2026-10-08 | Read against the uncommitted code: cf-backup's restore-tests API, routes and capability catalog, its restore-tests settings, unlock, header, live and fingerprint modules, the daily chore, the ops kinds and audit actions, the engine's fingerprint and manifest steps and the workflow; cf-vps's contract (capabilities, actions, jobs, restore report), `restore_test.toml`, the job image, the lab, the runner's staging, cleanup and log guard, and the lab key setup script; cf-admin's audit words (`src/lib/backup-audit.ts`, `src/lib/vps-audit.ts`). The R2 bucket `madagascar-backups` exists (Cloudflare connector) | Nothing has run in production. The bucket's lock rules are not returned by the Cloudflare connector, so the lock on `ops/` is taken from cf-backup's records, not read live. The lab, its image and the PostgreSQL fingerprints were not run here |
