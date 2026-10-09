@@ -236,10 +236,18 @@ For a terminal the gateway supplies `terminal.open` itself when cf-vps sends no
 header. The row holds the person, method, path (no query string), status,
 request id (also the row's correlation id), the session's IP hash and the
 summary — never the request body, and never the value of a sensitive field
-(`token`, `password`, `api_key` and the like are stored as `[REDACTED]`). A
-missing or unknown action is recorded as `vps_change` with the summary
-"unrecognised action" and raises a Sentry warning at most once an hour per
-action.
+(`token`, `password`, `api_key` and the like are stored as `[REDACTED]`).
+
+cf-vps stamps the header only on a change it made. An error answer with no
+header is recorded as `vps_change` with the summary `refused: HTTP <status>`
+(a 4xx: bad input, a missing capability, a fresh sign-in, a conflict) or
+`failed: HTTP <status>` (a 5xx), and a 5xx also raises a Sentry warning
+(`vps.gateway.change_failed`) at most once an hour per status. A success with
+no header, or any header naming an action cf-admin does not know, is recorded
+as `vps_change` with the summary "unrecognised action" and raises a Sentry
+warning (`vps.gateway.unrecognised_audit`) at most once an hour per action.
+Until 2026-10-08 every refusal was reported as unrecognised (Sentry
+CF-ADMIN-1V).
 
 Reads are not audited here, and a file download is a read (a GET). If a
 download should leave a portal row, cf-vps must make it a POST, as the backup
@@ -293,5 +301,6 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-08 | claude | §6's paragraph on error answers against the gateway (`answered()`, the `vps.gateway.change_failed` report) and cf-vps's agent (`written()` and `actions/run` stamp `x-vps-audit` only on success); the new cases in `test/vps-gateway.test.ts` | §6 matches. Not re-checked: every other section |
 | 2026-10-08 | claude | §6's verb table against `src/lib/vps-audit.ts` (`VPS_AUDIT_VERBS`, 36 actions with the job controls of 92d42dc; `test/vps-audit.test.ts` passes); §1's Restore tests paragraph against cf-vps's `contract/capabilities.ts`, `contract/actions.ts`, its page list and its Worker proxy (the fresh sign-in on `restore/stage`) | §6 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run on the server |
 | 2026-09-30 | claude | Built in the `feat/vps-console` worktree: `npm run verify`, `npm run types:check`, `node scripts/migrations_manifest.mjs --check`; the gateway, proxy, audit, section, page and full-middleware-chain suites (`test/vps-*.test.ts`) run in workerd, where the 101 and its WebSocket are the real runtime objects. Checked against cf-vps at `c4e2664`: its actor parser (`x-vps-actor`, v1, extra keys ignored), its base path, and the contract items for query strings, downloads, event streams, `/dashboard/vps/app/api/me` and capability refusals, each pinned by a test here. Live D1 read of `admin_pages` for the sort order and the `/dashboard` row | Matches this document. Not deployed; no browser check yet (owner step); the console's own screens are cf-vps's |
