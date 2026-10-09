@@ -375,26 +375,41 @@ interface Probe {
 - Each run is compact: `{at, by, steps: {step: [{id, s, ms}]}, errors: [{id, summary}]}`. That is well under 64 KB.
 - `BackupSettingKey` and the readiness key list gain this key.
 
-**Page layout:**
+**Page layout.** The page as rebuilt in the console redesign of 2026-10-09 (Build log, "The Diagnostics page rebuilt"); the first design had a Runner test button in the header and a "Run again" button per step.
 
 ```
-Diagnostics                                   [Run all]  [Runner test · ~2 min]
-Last run 11:42 by owner · 21 pass · 1 warn · 0 fail · 3.1 s total
+Diagnostics                                     [Copy report]  [Run all]  (?)
+Latest result of each step: 21 pass · 1 warn · 0 fail (newest 2 min ago, oldest shown 3 h ago)
 
-▸ 1 Trigger            ● pass   2 tests    18 ms                          [Run again]
-▾ 3 Dispatch           ▲ warn   6 tests   1.9 s                           [Run again]
-    ● GitHub sign-in (installation token)   412 ms   token minted
-    ● Workflow db-backup.yml                  201 ms   active
-    ▲ Secrets present                         188 ms   CLOUDFLARE_API_TOKEN updated 11 months ago
-         How to fix: rotate the Cloudflare token (Settings → Secrets calendar shows its date)
-    ● Key variable matches the active key     176 ms   f782… = f782…
-    …   ▁▂▂▃▂▂▁ trend of the last 20 runs
-▸ 6 D1 export          ● pass   last run 2026-09-28 04:03 (from the run's evidence)
-…
+(a banner here only when the last Run all stopped part-way)
+
+1. Trigger: the 5-minute timer and the schedule                           [Run step]
+   Passed   2 tests   18 ms   Stored result from 3 h ago, run by <person>.
+3. Dispatch: the GitHub App and the workflow                              [Run step]
+   Warning  6 tests   1.9 s   Tested on this page 1 min ago.
+     Passed   GitHub sign-in (installation token)                 412 ms
+              gh.token
+              token minted
+              (trend of the last 20 stored times)
+     Warning  Secrets present                                     188 ms
+              gh.secrets
+              CLOUDFLARE_API_TOKEN updated 11 months ago
+              How to fix: rotate the Cloudflare token (Settings → Secrets calendar shows its date)
+              Details
+...
+Last pre-flight of a real run                     (a panel)
+Console connection   312 ms, measured by your browser
 ```
 
 **UI rules:**
-- **Existing components:** the page uses the console's cards, the StatePill tones (pass, warn, fail and skipped), the data table, and `NotAvailable` for anything unmeasurable. No new design system.
+- **The design system:** the page is built from the console's shared parts (docs/reference/DESIGN-SYSTEM.md in this repository), as every page is: a page header, panels, notices, a banner, the four data states and an About sheet. Each result is an icon and a word, never colour alone: **Passed**, **Warning**, **Failed**, **Skipped**, or **Not tested yet**.
+- **Now: the page header.** Its status sentence is the summary line: the latest result of each step counted together (pass, warn, fail, and skipped or not tested when there are any), with how old the newest and oldest are; "No test has been run yet." before any test; "Reading the list of steps." while the page reads; "The list of steps could not be read." when that read fails. The header holds **Copy report**, **Run all** and the About button. Under it come only a banner when the last Run all stopped part-way (the step it stopped at, why, and the steps it did not test), and a note for someone without the run permission.
+- **Work: the steps as a checklist.** Each step is a numbered card: its name, its worst result, its number of tests, its total time, where the result comes from ("Tested on this page", or "Stored result from *age*, run by *person*"), and its own **Run step** button. A step opens by itself only when it has a warning or a failure; a tap opens or closes any step. Inside, one row per test: its result, name and response time ("Slow" with the normal limit when over it), its id, its one-line answer, a **How to fix** line for a warning, failure or skip that has one, its trend, and **Details** for a result tested on this page. Under the steps: the **Last pre-flight of a real run** panel and the **Console connection** line.
+- **About:** a sheet opened from the header: what the page does, what a result means, what each step tests (from the catalogue the server sent), how results are kept, the pre-flight and the console connection, and that the runner test is retired.
+- **Copy report:** copies the page as plain text, to paste into a message: every step's shown result and each test's result, time, answer, fix and (for a result tested on this page that did not pass) its details, the last pre-flight, the console connection and where a Run all stopped. When the browser refuses the clipboard, the text is shown in a box to select and copy by hand.
+- **Who may run:** Run all and Run step need `diagnostics.run`, and the server's `canRun`. Without them both buttons show, disabled, with the reason "Needs diagnostics.run", and every stored result stays readable. One test runs at a time; while one runs, the other buttons say why they wait.
+- **No runner-test dialog.** Since docs/remediation/13 B3 the server answers `POST /api/diagnostics/runner` with 501 (the runner test belonged to the retired Primary Pipeline), so the page has no button or dialog for it; About says it is retired.
+- **Data the page does not have** reads "Not available yet: *reason*": a step with no stored or live result (which lists its tests), the pre-flight panel before any real run, and the console connection before its first answer. The old `NotAvailable` component is gone.
 - **Section registration:** it registers like every section, in `SECTIONS`, `TAB_CAPABILITY` (`usage.view`) and the routing. Its URL is `/dashboard/backup/diagnostics`.
 - **Real data only:**
   - a step never run shows "Not tested yet";
@@ -996,6 +1011,27 @@ Every real backup and drill failed at doctor, because of a check on output names
   - A restore-drill problem is `drill_failed` only when a drill failed. A store that never ran is `backup_not_taken`, and an export that failed before its drill is `export_failed`.
 - **The token without an expiry date** now shows as a pass, not a warning (see Decisions).
 - The runner runs from `main`, so the fix applies from the next run after the push.
+
+### The Diagnostics page rebuilt (2026-10-09, the console redesign)
+
+The whole backup console was rebuilt on one design system on 2026-10-09; this entry records what that changed on this page. The tests, the routes, the throttle, what is stored and what a pre-flight checks did not change.
+
+#### For everyone
+
+- **The top of the page** is one sentence: the latest result of each step, counted together, with how old the newest and oldest are. **Copy report** and **Run all** sit beside it, and the question-mark button opens **About**, which now holds every explanation that used to sit on the page.
+- **The steps are a checklist.** Each step is a numbered card with its worst result, its time, where its result comes from, and its own button, now called **Run step** (it was **Run again**). A step with a warning or a failure opens by itself.
+- **Each result is an icon and a word:** Passed, Warning, Failed or Skipped, drawn from the console's one icon set, where Stage 1 used typed marks.
+- **Without the Run Diagnostics tests permission** you now see Run all and Run step greyed out, with "Needs diagnostics.run" as the reason, instead of no buttons. You can still read every stored result, with its reason and How to fix line.
+- **No Runner test button.** The runner test belonged to the retired Primary Pipeline: since the engine consolidation (docs/remediation/13, B3) the server refuses it, as it refuses a restore drill and a check. The page has no button or dialog for any of them, and About says the runner test is retired. Stage 3's description of the runner test above is history.
+- **A run that starts with pre-flight warnings** no longer shows a card under the Now bar, which the redesign removed. Run now lives on the Overview and Live pages, and there the warnings open in a dialog, "Backup started, with warnings" (from Overview, Live opens once it is closed).
+- **Data the page does not have** reads "Not available yet:" and the reason, as on every page.
+
+#### For engineers
+
+- `src/ui/screens/DiagnosticsScreen.tsx` is rebuilt on the primitives in `src/ui/ui/` (`PageHeader`, `Panel`, `Notice`, `Banner`, `DataState`, `Sheet` with `AboutSection`), with `ProbeRow`, `ProbePill`, `NotTested` and `LatencyTrend` on the shared sparkline. `diagnosticsSentence` and `runLock` are exported and tested in `test/ui-diagnostics.test.ts`.
+- Run all and Run step are `CapButton`s on `diagnostics.run`, also held back, with the reason, while the server's `canRun` is false or another test is running; Run all also waits until the list of steps is read.
+- Deleted with the redesign's cleanup: the Diagnostics runner dialog and its started note, `startRunnerTest`, `startDrill` and `startCheck` in the console state, `PreflightStartWarnings` (Stage 2's card under the Now bar), the Now bar itself and the `NotAvailable` component. `POST /api/diagnostics/runner` and its tests stay on the server, answering 501, until docs/remediation/13 B5 deletes the routes.
+- `PreflightFailures` still lists a pre-flight refusal in the Run now dialog (`RunNowDialog`), and `PreflightWarningList` lists the warnings in "Backup started, with warnings" (`RunControls`).
 
 ## Decisions made during the build
 
