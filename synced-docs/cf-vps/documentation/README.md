@@ -71,6 +71,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|
 | [`reference/API-ROUTES.md`](reference/API-ROUTES.md) **P** | The agent route table with the capability for each route |
 | [`reference/HOST-LAYOUT.md`](reference/HOST-LAYOUT.md) | Where everything lives on the server and in R2, and where something new goes |
+| [`reference/DESIGN-SYSTEM.md`](reference/DESIGN-SYSTEM.md) | The console's design system: tokens, building blocks, the shell, and the rules that keep every page on it |
 
 ## Program
 
@@ -100,6 +101,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|---|
 | [`specs/2026-09-29-cf-vps-design.md`](specs/2026-09-29-cf-vps-design.md) | The plan of record: architecture, phases P0 to P7, capabilities | active |
 | [`specs/2026-09-30-log-storage-design.md`](specs/2026-09-30-log-storage-design.md) | Log storage design; shipped, summarised in `features/LOG-STORAGE.md` | historical |
+| [`specs/2026-10-08-console-redesign-design.md`](specs/2026-10-08-console-redesign-design.md) | The console redesign: one design system, three layers per page (Now, Work, About), phone first, emoji banned; delivered in waves 0 to 4 | active |
 | [`specs/2026-10-08-job-controls-and-jobs-page-design.md`](specs/2026-10-08-job-controls-and-jobs-page-design.md) | Job controls (Stop, Restart, Pause, Resume, Block, limits, schedule) on the Apps and Jobs pages, and the rebuilt Jobs page; built, summarised in `features/JOBS.md` | historical |
 | [`specs/2026-10-07-jobs-and-admission-queue-design.md`](specs/2026-10-07-jobs-and-admission-queue-design.md) | Scheduled jobs (`kind = "job"`) and the shared admission queue, drafted in parallel with the runner that shipped the same day; superseded by [JOBS](features/JOBS.md), kept for its reasoning | superseded |
 
@@ -123,12 +125,15 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/plans/2026-10-02-vps-metrics-modernization.md`](records/plans/2026-10-02-vps-metrics-modernization.md) | Plan: the Metrics page redesign (moved from the repository root on 2026-10-04) |
 | [`records/2026-10-04-agent-contract-alignment.md`](records/2026-10-04-agent-contract-alignment.md) | Change record: `main.md` becomes the contract every agent follows; `CLAUDE.md` and the Antigravity rule load it; change records begin |
 | [`records/2026-10-04-console-hidden-tab-stream.md`](records/2026-10-04-console-hidden-tab-stream.md) | Change record: the console closes its live metrics feed and health check while its tab is hidden, and reopens the feed at once on return |
+| [`records/2026-10-08-console-design-system.md`](records/2026-10-08-console-design-system.md) | Change record: the console gets one design system, a new top bar with page groups and Needs attention, no emoji, and four fixes (Packages, Diagnostics, Overview, Apps) |
+| [`records/2026-10-09-console-redesign.md`](records/2026-10-09-console-redesign.md) | Change record: every console page rebuilt on the design system, one stylesheet, the theme follows cf-admin, and the reboot armed only when updates need it |
 | [`records/2026-10-07-app-controls.md`](records/2026-10-07-app-controls.md) | Change record: apps can be started, stopped, paused, resumed, blocked and re-sized from the console, under `apps.control` and `apps.manage` |
 | [`records/2026-10-07-jobs-and-the-heartbeat.md`](records/2026-10-07-jobs-and-the-heartbeat.md) | Change record: server jobs with one busy gate for the whole server, and the public site's hourly heartbeat moved off GitHub Actions onto it |
 | [`records/2026-10-08-restore-test-rulings.md`](records/2026-10-08-restore-test-rulings.md) | Owner rulings on restore tests: the plan approved, permission-based settings, resources per test, no key to paste, and backup copies on the server only during a test |
 | [`records/2026-10-08-restore-tests.md`](records/2026-10-08-restore-tests.md) | Change record: restore tests, a backup copy unlocked, rebuilt and checked in a sealed container on the server, with jobs that take staged input |
 | [`records/2026-10-08-job-controls.md`](records/2026-10-08-job-controls.md) | Change record: server jobs can be stopped, restarted, paused, resumed, blocked and re-sized or re-scheduled from the Apps and Jobs pages, and the Jobs page is rebuilt for a phone |
 | [`records/plans/2026-10-08-job-controls.md`](records/plans/2026-10-08-job-controls.md) | Plan: job controls and the rebuilt Jobs page, with the rulings made while executing it |
+| [`records/plans/2026-10-08-console-redesign-wave-0.md`](records/plans/2026-10-08-console-redesign-wave-0.md) | Plan: the console redesign's Wave 0 (tokens, building blocks, shell, emoji purge, four fixes), with the rulings made while executing it |
 
 ## Meta
 
