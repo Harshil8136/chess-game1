@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql, scripts/lib/cron-catalog.mjs]
+related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql]
 related_docs: [CRON-CONTROL.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md, ../program/cf-backup/02-admin-integration-contract.md, ../program/cf-backup/13-access-control.md, ../program/cf-backup/15-restore-tests.md]
 tags: [backups, cf-backup, gateway, cron, audit, csp]
 ---
@@ -236,8 +236,9 @@ cf-admin's own code never reads or writes it; cf-backup and its runner do.
    before the code (see [release-and-rollback](../runbooks/release-and-rollback.md)).
 3. After the release, regenerate `database/schema.snapshot.sql`
    (`node scripts/d1_schema_snapshot.mjs`) and commit it.
-4. Re-seed the cron catalog so `/dashboard/cron` shows the job's description:
-   `node scripts/seed_cron_control.mjs --apply --remote --actor=<your sign-in email>`.
+4. Nothing to re-seed for `/dashboard/cron`: since 2026-10-09 the job's description is
+   its `about` in `src/lib/jobs/registry.ts` and reaches the page with the deploy
+   ([`CRON-CONTROL.md`](CRON-CONTROL.md) §7). Until then this step re-seeded the job catalog.
 5. Open `/dashboard/backup` once and confirm the console loads.
 
 Admins see the page within an hour of the release (their access maps refresh
@@ -247,6 +248,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-09 | claude | §9 step 4 against `src/lib/jobs/registry.ts` and `src/lib/jobs/read-model.ts` after the Scheduled Jobs rebuild; `scripts/lib/cron-catalog.mjs` deleted | Step 4 no longer re-seeds; the catalog path left `related_code`. Not re-checked: every other section |
 | 2026-10-08 | claude | §4's verb table against `src/lib/backup-audit.ts` (`BACKUP_AUDIT_VERBS`, 17 actions; `test/backup-audit.test.ts` passes), and added the two actions the table had been missing (`diagnostics.run`, `alerts.dismiss`); §1's Restore tests paragraph against cf-backup's uncommitted routing and `restore-tests` routes | §4 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run in production |
 | 2026-10-04 | claude | `src/workers/scheduled-backup-tick.ts` (`nextTickDue`, the settled-tick rule), `src/pages/dashboard/backup/app/[...path].ts` (rule 8, the wake), `src/lib/jobs/control.ts`; `test/backup-tick.test.ts`, `test/backup-gateway.test.ts`; cf-backup's record `docs/records/2026-10-04-resource-usage-tick.md` for its side | The TL;DR and §6 describe Contract A. Not re-checked: every other section, and cf-backup's dead-man script itself |
 | 2026-09-23 | claude | Built and verified in the `feat/cf-backup-console` worktree (chunk CB-2): `npm run verify`, `npm run types:check`, `node scripts/migrations_manifest.mjs --check` | See the CB-2 chunk record §11. Not yet deployed; no browser check yet (owner step) |

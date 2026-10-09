@@ -3,21 +3,24 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-04
+last_verified: 2026-10-09
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/TelemetryDeck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/lib/blog/publish-scheduled.ts, scripts/lib/cron-catalog.mjs]
-related_docs: [../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/lib/blog/publish-scheduled.ts]
+related_docs: [../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
 
 # Cron Control Plane
 
 > **TL;DR (non-technical):** The portal runs a set of background jobs on a timer.
-> This page is where you stop one, slow one down, run one by hand to see what it
-> does, and check whether each is healthy. It also stands non-essential jobs down
-> by itself if the free database allowance ever comes under pressure, and puts
-> them back when it passes.
+> This page is where you stop one, slow one down, check whether it has work
+> without running it, run one by hand to see what it does, and see how each has
+> done hour by hour. It also stands non-essential jobs down by itself if the free
+> database allowance ever comes under pressure, and puts them back when it
+> passes. Since 2026-10-09 everything it says about a job (its name, what it
+> does, when it next runs) is read from the code that is deployed, so a new or
+> changed job shows correctly on the deploy that brings it.
 
 **Where:** `/dashboard/cron`, titled **Scheduled Jobs**. It appears in the sidebar for
 anyone who can open it.
@@ -30,12 +33,14 @@ restating them — one fact, one home.
 
 | Control | What it does | Permission |
 |---|---|---|
-| **Manage** (pause, resume, throttle) | One panel per job with one **Save**. Pausing needs a reason and may take an expiry; the throttle runs a job at most every N minutes, from "every time" (the reset) to 24 hours. Nothing commits until you save. | `#pause` |
-| **Run now** | Opens the run console. **Start run** executes: it streams telemetry and a per-query trace, takes an optional reason, and bypasses the control document but not the job's own gate. | `#trigger` |
-| **Sync telemetry** | Forces a live probe of Cloudflare's D1 analytics instead of waiting for the hourly one. Refused within 60 s of the last reading. | `#trigger` |
-| **Refresh** | Re-reads this page's own data. Costs two D1 rows and an Analytics Engine query; probes nothing. | *page access only* |
-| **Thresholds** | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
-| **Halt** | Stops every job, essential ones included. Requires a reason, and may be given an expiry. | `#configure` |
+| **Check** | Asks, without running anything, what would happen if the job ran now: whether the scheduler would let it, whether its own check finds work, and whether a run already holds its lock. `GET /api/cron/jobs/[id]/check`. It only reads (the control document, the job's own check, its lock row) and writes nothing, not even an audit row. *Added 2026-10-09.* | *page access only* |
+| **History** | The job's last seven days, day by day, and its newest runs one by one. `GET /api/cron/jobs/[id]/history`: two Analytics Engine statements, fetched only when the History tab is opened. *Added 2026-10-09.* | *page access only* |
+| **Manage** (pause, resume, throttle) | The Settings tab of a job's details, with one **Save**. Pausing needs a reason and may take an expiry; the throttle runs a job at most every N minutes, from "every time" (the reset) to 24 hours. Nothing commits until you save. | `#pause` |
+| **Run** | Opens the run console, which checks the job first (the same read-only Check) and lists what the job touches. **Start run** executes: it streams telemetry and a per-query trace, takes an optional reason, and bypasses the control document but not the job's own gate. | `#trigger` |
+| **Measure now** | Forces a live probe of Cloudflare's D1 analytics instead of waiting for the hourly one. Refused within 60 s of the last reading. Called **Sync telemetry** until 2026-10-09. | `#trigger` |
+| **Refresh** and **Live** | Refresh re-reads this page's own data: one D1 row and one Analytics Engine query, side by side (a second query only if the first is refused, §7); it probes nothing. Until 2026-10-09 it read a second D1 row, the job catalog. Live, on by default since 2026-10-09 and remembered per browser, does the same once just after each tick, only while the tab is in view and not while a run is being watched: about 12 times an hour. | *page access only* |
+| **Limits and halt**: thresholds | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
+| **Limits and halt**: halt | Stops every job, essential ones included. Requires a reason, and may be given an expiry. | `#configure` |
 
 > **The throttle is a first-class control as of 2026-09-20.** Each row has a
 > **Throttle** button behind `#pause`, and `POST /api/cron/state` accepts an
@@ -306,7 +311,7 @@ job back for two more reasons, and the page shows each:
 
 | Reason | Where it comes from | Shown as |
 |---|---|---|
-| `interval` | The throttle (§1): at most every N minutes, measured from `lastRunAt` | **Standby** |
+| `interval` | The throttle (§1): at most every N minutes, measured from `lastRunAt` | **Throttled** (**Standby** until 2026-10-09) |
 | `sleeping` | The job itself said when it next has work (`nextDueAt`), and that time has not come | **Sleeping until HH:MM** |
 
 **Which jobs sleep.** A job's handler may return `{ nextDueAt }`; three do.
@@ -315,8 +320,10 @@ job back for two more reasons, and the page shows each:
 every five minutes while a backup is running, otherwise the next slot, chore or
 hour. `blog-scheduled-publish` reports the earliest scheduled post, or an hour
 from now when none is scheduled. `heartbeat-watchdog` (2026-10-07) reports its
-threshold from the start of a run, so it sleeps an hour after each run (§3a). The catalog's plain-English schedules
-(`scripts/lib/cron-catalog.mjs`) say this for staff.
+threshold from the start of a run, so it sleeps an hour after each run (§3a). The page shows a
+sleeping job as **Sleeping until HH:MM**, and gives the time it wakes as its next run (§7).
+Until 2026-10-09 a seeded catalog row (`scripts/lib/cron-catalog.mjs`, now deleted) said this
+in prose, which had to be re-seeded whenever it changed.
 
 **The rules, all in `control.ts`:**
 
@@ -472,6 +479,23 @@ tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
 ended every run at the limit — see
 [`../operations/incidents/2026-09-26-cron-exceeded-cpu.md`](../operations/incidents/2026-09-26-cron-exceeded-cpu.md).
 
+**What the page itself costs (2026-10-09).** None of it touches the tick, and
+each figure is per open tab:
+
+- **Opening the page, Refresh and each Live reload:** one D1 row (the control
+  document) and one Analytics Engine query for every job's last 24 hours, made
+  side by side. Live reloads once just after each tick, only while the tab is in
+  view: about 12 times an hour, so about 12 D1 rows an hour for a tab left open.
+  Until 2026-10-09 each load also read the catalog row.
+- **Check:** one control-document row, the job's gate keys (one small query, for
+  the jobs that declare any) and, for `booking-outbox-poke`, its one-row probe;
+  the lease row for the two jobs that take one. No write of any kind.
+- **History:** two Analytics Engine statements for one job, each time its
+  History tab is opened, and at no other time.
+- **Run** and **Measure now** cost what they did before (§1).
+
+These are counts from the code, not measurements.
+
 ## 6. Failure behaviour
 
 **Everything fails open.** A missing control row, malformed JSON, an unknown
@@ -485,86 +509,125 @@ an empty table.
 
 ## 7. Reading the page
 
-- **Ticks / ran / failed, rows read, average duration** come from Analytics
-  Engine, which records every tick's outcome. When that query cannot be made the
-  chip reads "24h history unavailable" — it never shows a zero, because a zero
-  run count reads as "this job has stopped". *Corrected 2026-09-19, fixed
-  2026-09-20:* the chip used to show `totalRuns`, which counts **every** recorded
-  outcome including `disabled` and `shed`, so a paused job on the five-minute
-  tick advertised about 288 "runs". It now reads "288 ticks · 0 ran", with
-  failures counted separately and called out in red; `runBreakdown`
-  (`src/components/admin/cron/status.ts`) does the split and
-  `test/cron-status-view.test.ts` pins it.
-- **The row is a grid, and its columns are the numbers you scan.** Name, status,
-  the last 24 hours, and when it next runs — so the eye can run down one column
-  instead of zig-zagging. *Rebuilt 2026-09-21: at 1440px the row was a name on
-  the left and two buttons on the right with roughly 1200px of nothing between
-  them, eleven times over. Below 900px the columns stack and the 24-hour figures
-  move under the name; "next run" is the one thing dropped, because it is not
-  why anyone opens this page.*
-- **A failing job does not look like a healthy one.** It carries a red left
-  border and a tinted row. Before this, one job with three failures was
-  distinguishable from ten healthy ones only by a small pill.
-- **The cards report measurements, not settings.** *Corrected 2026-09-21.* "Job
-  Health" showed `9/11` over a bar filled 82% in **red** — which reads as "most
-  of this is on fire" for a system that was entirely healthy bar one job. The
-  bar now tracks the share of jobs running, so a full bar is always the good
-  outcome, and the failure count becomes the headline when there is one. "D1
-  Quota Protection" led with `70% / 70%`, the configured threshold — a headline
-  that reported the page's own settings back and never moved. It now leads with
-  measured peak usage against that threshold.
-- **Failures are surfaced, not buried.** A job with any `failed` outcome in 24 h
-  carries a badge, appears in a banner at the top of the page naming it, and is
-  reachable through the **Failing** filter chip. Raw handler `console` output is
-  still only in Workers Observability.
-- **The schedule shown comes from code.** `FIVE_MIN_CRON` and `SUNDAY_CRON` are
-  declared once in `src/lib/jobs/registry.ts`; `cf-entry.ts` dispatches on them,
-  the read model carries each job's expression, and
-  `test/worker-entry-contract.test.ts` pins both against `wrangler.toml`. The
-  plain-English line beside it is still the seeded catalog text, which is prose
-  and can drift; the expression cannot.
-- **Last run and next tick** are shown per row — the first from Analytics
-  Engine's `lastSeen`, the second computed from the job's own trigger.
-  `nextTickAt` understands only the two expressions this Worker declares and
-  returns null for anything else rather than guessing.
-- **The page says how old it is** ("Data as of …"), has a **Refresh** that needs
-  no action permission, and offers auto-refresh as an opt-in remembered per
-  browser. It is off by default: each refresh is two D1 row reads plus an
-  Analytics Engine query, per open tab, for as long as the tab is open.
-- **A row collapses to one question: is this job all right?** Name, what it will
-  do next, and whether it has failed — plus the reason it is paused, when it is.
-  Schedule, 24-hour counts, timing, database cost and the consequence of
-  switching it off are one disclosure away, because they are what you read after
-  something looks wrong, not while scanning eleven rows for the one that is.
-  *Restructured 2026-09-21, after the page was called confusing on screen: the
-  row carried up to nine competing chips and three buttons.*
+*Rebuilt 2026-10-09.* The page was redesigned as cards with a details panel, and
+everything it says about a job is now worked out from the deployed code and live
+data. The change record,
+[`../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md`](../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md),
+has the before and after. The bullets below describe the page as it is; the
+older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
+"Standby" and "Paused (Quota)" labels) are in this section's history in git.
+
+- **Nothing about a job is stored as prose any more.** Its name, what it does,
+  what happens if it is switched off, its area and what it touches (sends
+  email, deletes, publishes, changes access, calls outside services) are
+  the job's `about` in `src/lib/jobs/registry.ts`, beside its handler, and the
+  type makes them required. `test/cron-contract.test.ts` holds every job to
+  plain words (no "cron", "D1", "lease", "tick" and the like) and unique titles,
+  and checks that the jobs that delete, send email, change access or publish say
+  so. A new job appears described on the
+  deploy that adds it; nothing needs re-seeding. Until 2026-10-09 the words came
+  from the `cron-job-catalog` row, written by `scripts/seed_cron_control.mjs`,
+  so a job added since the last seed showed as a bare id.
+- **The schedules are read from the code, in words.** `TRIGGERS`
+  (`src/lib/jobs/registry.ts`) lists each trigger with its jobs, and
+  `test/worker-entry-contract.test.ts` pins it to `wrangler.toml`.
+  `src/lib/jobs/cron-expr.ts` reads any five-field expression (lists, ranges,
+  steps, day and month names, both day fields as cron ORs them) and says it in
+  words ("Every 5 minutes", "Sundays at 02:00 UTC"). It replaced `nextTickAt`,
+  which understood only the two expressions this Worker declared.
+- **"Next" is when the dispatcher will really invoke the job**, not the next
+  tick. `nextInvocation` (`src/lib/jobs/schedule.ts`) walks the job's trigger
+  forward through the same `decideJobRun` the dispatcher uses, so a throttled
+  job gives the tick after its interval, a sleeping job the tick it wakes on,
+  and a timed pause the tick after it lifts. When no time can be given, it says
+  what the job waits for instead: someone resuming it, database use falling, or
+  no trigger in this build. A job with its own check reads "Looks for work in
+  …", because an invocation of it is not work. `test/cron-schedule.test.ts`
+  checks the projection against `decideJobRun` itself.
+- **"Last" keeps work apart from looking.** Analytics Engine's last time of each
+  outcome is kept separately (`lastAt` in `src/lib/jobs/health.ts`), so a card
+  reads "Last did its work 2h ago, looked 3m ago". Until 2026-10-09 one "last
+  seen" covered every outcome, and the dispatcher records a held job on every
+  tick, so a paused or sleeping five-minute job always read "last 3m ago".
+  Times also used to leave the server as Analytics Engine's
+  `YYYY-MM-DD HH:MM:SS`, which is UTC and which a browser reads as local time;
+  they now leave as epoch milliseconds, and the page shows them in the viewer's
+  clock.
+- **Each card has an hour-by-hour strip of its last 24 hours.** One cell per
+  UTC hour, coloured by the most important thing in it: a failure, then work
+  done, then a look that found nothing, then a held tick. Beside it the day in
+  words ("12 worked", "276 looked", "1 failed"). The strip comes from the same
+  single query as the totals, grouped by hour as well. Should that form ever be
+  refused, the page falls back to the 24-hour totals it read before (reported
+  once to Sentry) and leaves the strip out rather than drawing it empty.
+- **When the history cannot be read, the page says so.** The card reads "Run
+  history could not be read just now" and the overview says unavailable; it
+  never shows a zero, because a zero reads as "this job has stopped" (RULE
+  #0.5). `runBreakdown` (`src/components/admin/cron/status.ts`) still separates
+  what ran from what the control plane stopped, so a paused job no longer
+  advertises about 288 "runs" a day (*fixed 2026-09-20*).
+- **The status pill says why a job is idle, in this order:** **Halted**,
+  **Paused** (with when it resumes, or "until someone resumes it"),
+  **Failing** (its latest work failed; an older failure followed by a good run
+  does not count), **Held back** (stood down because the database is busy),
+  **Throttled** (at most once every N minutes), **Sleeping until HH:MM**, and
+  **Active**. `jobStatus` decides it and `test/cron-status-view.test.ts` pins
+  the order.
+- **The overview** has four tiles: how many jobs are running, paused or need a
+  look; the last 24 hours across all jobs (work done, looks, failures, runs by
+  hand); the next tick with a live countdown; and database use today against the
+  account's free daily allowance, with the shedding limits in words. **Measure
+  now** sits in that last tile for those with `#trigger`.
+- **Needs a look** filters to the jobs that failed in the last 24 hours, are
+  held back for the database or are halted; a job a person paused is not flagged. **Paused**
+  and **Running** filter the rest, and a search box matches names, ids,
+  descriptions and areas. Cards are grouped by trigger, each with its schedule in words
+  and a countdown to its next tick.
+- **Check** asks what would happen if the job ran now, and shows the answer on
+  the card: what the scheduler would decide and why, what the job's own check
+  found and how many rows it read, and whether its lock is held. It ends "Nothing
+  was run or changed." (`src/lib/jobs/check.ts`, `checkVerdict` in
+  `status.ts`). It is offered to anyone who can open the page, because it only
+  reads; `test/cron-api.test.ts` shows a check on a paused job writes no audit
+  row and leaves the document's revision unchanged.
+- **Details** opens a side panel with three tabs. **About**: what the job does,
+  a Check, what happens if it is switched off, what it touches, how it is
+  scheduled (schedule, next, throttle, whether it looks first, whether it runs
+  one at a time, priority, its quiet-tick database budget and its id) and its
+  last 24 hours. **History**: the last seven days as a stacked bar per day, and
+  the newest runs that did something (work, a failure, a held lock or a run by
+  hand), fetched only when the tab is opened. **Settings**: pause, resume and
+  throttle. `?job=<id>` opens the panel on that job and highlights its card.
 - **What you may not do is said in words, once**, naming the key that would
   grant it, rather than rendered as a row of disabled buttons on every job. The
   header line appears only when something **is** missing — four ticks shown to
   someone who holds all four is a line that says nothing. The principle is
   unchanged from 2026-09-20: a capability that is simply absent teaches nobody
   it exists, and an access review cannot be run against a page that silently
-  omits what it is hiding. *Reworded 2026-09-21.*
-- **Pause and throttle are one panel with one Save.** They are the same decision
-  from an operator's side and share one PLAC key, but they used to be two
-  identical-looking drawers with opposite commit rules — a throttle applied the
-  moment you touched a preset, a pause waited for a reason and a confirm. One
-  request now carries the switch, the reason, the expiry and the throttle, so
-  they cannot disagree half way through and one visit to the drawer writes one
-  audit row. *Changed 2026-09-21.*
-- **The status label** tells you why a job is idle. The current wording
-  (`src/components/admin/cron/status.ts`) is **Active** / **Paused** /
-  **Paused (Quota)** for an automatic shed / **Standby** while an interval window
-  is open / **System Halted** / **Inactive**. Tier headings read
-  "Essential Tasks", "Standard Tasks" and "Disabled / Inactive Tasks".
-  *Corrected 2026-09-19 — the earlier wording quoted labels that no longer exist.*
+  omits what it is hiding. *Reworded 2026-09-21.* Without `#pause`, the
+  Settings tab says which key it needs.
+- **Pause and throttle are one form with one Save**, in the Settings tab. They
+  are the same decision from an operator's side and share one PLAC key, and one
+  request carries the switch, the reason, the expiry and the throttle, so they
+  cannot disagree half way through and one save writes one audit row. *Changed
+  2026-09-21.* Pausing an essential job warns that the automatic hold for a busy
+  database never stops it, but a pause by hand does.
+- **Live** is on by default (*changed 2026-10-09; it was an opt-in
+  auto-refresh*). It reloads the page once just after each tick, only while the
+  tab is in view, and never while a run console is open; a tab that comes back
+  into view after a minute or more catches up at once. Each reload costs what
+  Refresh costs (§5). The page allows for the viewer's clock being off by
+  using the server's time from each load.
 - **The run console shows a trace only once there is a run.** Before that it is
   the confirm panel and nothing else. *Fixed 2026-09-21: the trace section
   rendered unconditionally and its "streaming" state keyed off the absence of
   data, so an open dialog claimed to be streaming from the worker indefinitely,
   before any request had been made. Found from a screenshot; no test would have
-  caught it, because the component was never rendered in one.*
-- **Run now** opens the console; **Start run** executes. The dialog used to run
+  caught it, because the component was never rendered in one.* Since
+  2026-10-09 the confirm panel runs a Check by itself, lists what the job
+  touches, and warns when an essential job with no lock could overlap a
+  scheduled run.
+- **Run** opens the console; **Start run** executes. The dialog used to run
   the job the instant it opened, so a misclick ran production work — a bucket
   cleaner, in one case — with nowhere to record intent; both `cron_trigger` rows
   in production are unexplained. The reason it asks for is optional and rides
@@ -614,7 +677,8 @@ an empty table.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
-| 2026-10-07 | claude | `heartbeat-watchdog` added: `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`, `scripts/lib/cron-catalog.mjs`; cf-astro's heartbeat module read (its src/lib/heartbeat.ts, uncommitted, built in parallel) for the `heartbeat-last-run` row it writes; `test/heartbeat-watchdog.test.ts`, `test/jobs-budget.test.ts`; `npm run verify` | §3: 13 jobs (11+2), the tier table and the reason it is essential; §3a added; §4a: three jobs sleep; §5: its invocation and read cost; §7: eleven five-minute jobs without a lease. The catalog entry reaches the page only after a re-seed (`node scripts/seed_cron_control.mjs --apply --remote`). Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (nothing deployed) |
+| 2026-10-09 | claude | Page rebuilt: `src/lib/jobs/registry.ts` (`about`, `TRIGGERS`), `cron-expr.ts`, `schedule.ts`, `check.ts`, `health.ts`, `history.ts`, `read-model.ts`, the two new routes and `src/components/admin/cron/`; Cloudflare's Analytics Engine SQL reference read for `toStartOfInterval` and `_sample_interval`; `test/cron-expr.test.ts`, `cron-schedule.test.ts`, `cron-health-history.test.ts`, `cron-status-view.test.ts`, `cron-api.test.ts`, `cron-contract.test.ts`; `npm run verify` | §1: Check, History, Live, Measure now, Refresh's cost. §4a: Throttled, the catalog sentence. §5: the page's own cost. §7 rewritten for the cards, the details panel, the hour strip, next from `decideJobRun`, last per outcome, UTC times. Not checked: the new hourly and seven-day Analytics Engine statements against the live dataset (no token in this session; the hourly one falls back to the old query if refused), and the page in a browser. Not re-checked: §2, §3, §3a, §4, §6 |
+| 2026-10-07 | claude | `heartbeat-watchdog` added: `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`, `scripts/lib/cron-catalog.mjs` (deleted 2026-10-09); cf-astro's heartbeat module read (its src/lib/heartbeat.ts, uncommitted, built in parallel) for the `heartbeat-last-run` row it writes; `test/heartbeat-watchdog.test.ts`, `test/jobs-budget.test.ts`; `npm run verify` | §3: 13 jobs (11+2), the tier table and the reason it is essential; §3a added; §4a: three jobs sleep; §5: its invocation and read cost; §7: eleven five-minute jobs without a lease. The catalog entry reaches the page only after a re-seed (`node scripts/seed_cron_control.mjs --apply --remote`). Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (nothing deployed) |
 | 2026-10-07 | claude | Review of the unreleased 2026-10-04 change: `src/lib/jobs/control.ts`, `runJob.ts`, `CronControlRepository.ts`, `src/workers/scheduled-storage-notifications.ts`, `scheduled-usage-probe.ts`, `src/lib/blog/publish-scheduled.ts`, `src/pages/api/cron/state.ts` and `config.ts`; `npm run verify` | §4a: the own-gate bullet and the wake's `clockRev`. §5: the read and write figures corrected (writes a range, not "about 96"), the `clockRev` paragraph added. §7's lease note no longer describes `redis-ttl-hygiene` as current. Not re-checked: §1 to §4, §6, the rest of §7 |
 | 2026-10-04 | claude | Read-only D1 query of the live `cron-control` row (rev 459 and earlier rev 455); `src/lib/jobs/control.ts`, `runJob.ts`, `dispatch.ts`, `registry.ts`; `npm run verify` | §4a added (next due times, sleeps, wakes, the minute of slack, the tick-start stamp, `skipped` stamped). §1's live-throttle note, §3's job count (12) and tier table, and §5's write and invocation figures updated. Found live: `lastRunAt` stamped 47 s into the minute and a 15-minute throttle running every 20 minutes; `booking-outbox-poke` throttled with no `lastRunAt`. Not re-checked: §2, §4, §6, §7 |
 | 2026-09-27 | claude | Trigger events pasted by the owner (`*/5` and Sunday both `exceededCpu`, `cpuTimeMs` 10); live `cron-control` row (rev 303) and `cf-audit-last-synced` / `backup:status.lastTickAt`, both stopped at 2026-09-26 22:45 UTC; `npm run verify` | Each due job now runs in its own invocation through `JobRunner` (§5); held-back jobs cost no invocation. `runCronBatch` removed; the §3 and §5 references now name `dispatchCronJobs`. Not re-checked: §1, §2, §4, §7 |

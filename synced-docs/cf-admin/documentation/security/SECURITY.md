@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-09 | §6a's new Cron Control row, against `src/pages/api/cron/jobs/[id]/check.ts`, `history.ts`, `src/lib/jobs/history.ts` (`SAFE_ID`) and `test/cron-api.test.ts` (401, 403, page key alone allowed, 404) | Every other section, the §0 route counts included |
 | 2026-10-07 | §6b's opening sentence against `wrangler.toml`: the Rate Limiting binding is a new binding type (the owner-approved exception), not a store the Worker already had | Every other section |
 | 2026-10-04 | §2a's raw-IP note and §6b's rate-limit mechanism, rewritten for the move off Upstash, against `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `wrangler.toml` `[[ratelimits]]`, `test/ratelimit.test.ts` and `test/ratelimit-bindings-contract.test.ts`. No route, method, limit or key changed, so the §6b table and the route table are unchanged | Everything else; how long Cloudflare's limiter keeps a counter after its period |
 | 2026-10-03 | The route table's two sign-in alert rows, against `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `src/lib/auth/surface-guards.ts` and `test/login-alert-settings.test.ts` / `test/login-alert-policy.test.ts` (v2 step 2) | Everything else |
@@ -661,6 +662,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `POST /api/media/upload` | `/dashboard/content/media` (middleware) | 2026-05-26 | |
 | `GET/DELETE /api/media/library` | `/dashboard/content/media` (middleware) | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
 | `POST /api/media/revalidate` | `/dashboard/content/media` (middleware) | 2026-05-26 | |
+| `GET /api/cron/jobs/[id]/check`, `GET /api/cron/jobs/[id]/history` | `/dashboard/cron` | 2026-10-09 | `denyCron()` (`src/lib/auth/surface-guards.ts`) on the page key alone, like `GET /api/cron`, because both only read: the check reads the control document, the job's own gate and its lease row and writes nothing; the history reads Analytics Engine. An id the registry does not hold answers 404 before anything is read, and the history query also refuses any id that is not lowercase letters, digits and hyphens. The other Cron Control routes and their action keys: [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §1. |
 
 **Media note (2026-09-20).** The four media handlers call
 `placDenyResponse(user, '/dashboard/media')`, but that key is neither a page nor
