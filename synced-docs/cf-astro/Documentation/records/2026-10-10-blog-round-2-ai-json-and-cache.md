@@ -44,14 +44,14 @@ tags: [record, blog, ai, cache, kv, seo]
 >   answers" section matches the site; "4 min read" has its space.
 > - **What it costs or saves:** fewer KV reads and lists on Cloudflare's free allowance.
 
-|                       |                                                                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Date**              | 2026-10-10                                                                                                                                  |
-| **Asked for by**      | Harshil: "each and every image in cf-astro screenshot attached is broken … ensuring that future cf-admin blog creation … doesnt break it"   |
-| **Done by**           | Claude Code (project thread session)                                                                                                        |
-| **Commits**           | cf-astro: this record's commit. cf-admin: the same day's "Blog round 2" commit (its record is in cf-admin `documentation/records/reports/`) |
-| **Risk**              | Medium: the page-cache code in the middleware changed (every page passes through it)                                                        |
-| **Can it be undone?** | Yes, by reverting the commit (§8)                                                                                                           |
+|                       |                                                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Date**              | 2026-10-10                                                                                                                                |
+| **Asked for by**      | Harshil: "each and every image in cf-astro screenshot attached is broken … ensuring that future cf-admin blog creation … doesnt break it" |
+| **Done by**           | Claude Code (project thread session)                                                                                                      |
+| **Commits**           | cf-astro: this record's commit. cf-admin: `30e00f4` (its record is in cf-admin `documentation/records/reports/`)                          |
+| **Risk**              | Medium: the page-cache code in the middleware changed (every page passes through it)                                                      |
+| **Can it be undone?** | Yes, by reverting the commit (§8)                                                                                                         |
 
 ## 1. What happened, for non-technical staff
 
