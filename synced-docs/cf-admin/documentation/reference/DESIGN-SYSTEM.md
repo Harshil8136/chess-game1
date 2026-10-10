@@ -409,13 +409,24 @@ Lives in its own file `src/components/navigation/ThemeToggle.tsx` (imported by `
 
 | State | Width | Trigger |
 |-------|-------|---------|
-| Expanded (default when the cookie is absent) | 280px | Page load |
+| Expanded (default when the cookie is absent) | 240px | Page load |
 | Collapsed | 66px | The arrow button at the top left (saved to the `cf_admin_sidebar_collapsed` cookie). Only the width moves (200 ms); every icon keeps its place and the names fade, so nothing jumps. Hovering shows a name beside each icon; it does not re-open the sidebar |
 | Hidden | 0 | < 1024px breakpoint; the top bar's menu button slides it in |
 
 Since 2026-10-10 the sidebar stays on screen from page to page (EF-9 in
 [EFFICIENCY-TODO](../EFFICIENCY-TODO.md)): it is not redrawn on a click, so it
 keeps its scroll position and its open or closed state.
+
+**Its look** (Harshil, 2026-10-10): 240px open, which fits the longest page name
+with room for a badge (it was 280px, which left a wide empty strip on the right).
+Page names are Inter at 14px, medium weight, slate-300 in the dark theme
+(slate-600 in the light one) and white on hover or when current; the icons and
+group titles take their section colour at the 400 tint in the dark theme
+(`SECTION_ACCENT` in `Sidebar/config.ts`). The page list scrolls with the slim
+4px bar of `.sidebar-scroll` in `global.css`: never put a standard
+`scrollbar-width` or `scrollbar-color` on it, because Chrome and Edge then drop
+the slim bar for their own, with arrows and a grey track
+(`test/sidebar-look.test.ts`).
 
 ### Login Portal — "Midnight Slate" *(historical — there is no login page; Cloudflare Access hosts login and `src/pages/index.astro` is the access-denied / dev gate. The orbs + `feTurbulence` noise live in `AdminLayout.css` at `opacity: 0.03`)*
 
@@ -566,10 +577,10 @@ The sidebar has exactly **one** breakpoint — `lg` (1024px). Re-verified
 
 | Breakpoint | Sidebar | Grid | Tables |
 |------------|---------|------|--------|
-| ≥1024px (`lg`) | Always present; 280px expanded / 72px collapsed | 2-col bento | Full |
-| <1024px | Slide-in overlay (`max-w-[280px]`, `slideInFromLeft`), hamburger | 1-col stack | Scroll |
+| ≥1024px (`lg`) | Always present; 240px expanded / 66px collapsed | 2-col bento | Full |
+| <1024px | Slide-in overlay (`max-w-[240px]`, `slideInFromLeft`), hamburger | 1-col stack | Scroll |
 
-- **The 280px ↔ 72px collapse is a user preference, not a width rule** — it is
+- **The 240px ↔ 66px collapse is a user preference, not a width rule** — it is
   driven by the `cf_admin_sidebar_collapsed` cookie.
 - There is no 1280px tier and no separate `<768px` sidebar behaviour. The
   four-tier table this replaced described neither the code nor a plan.
@@ -697,6 +708,7 @@ Base `.btn` minimum height: 36px. Sizes: `.btn--sm` (28px), `.btn--lg` (44px). A
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | The sidebar's look (§5 Sidebar States, §8.1) against `Sidebar/index.tsx`, `SidebarMenu.tsx`, `SidebarHeader.tsx`, `config.ts` and `global.css` `.sidebar-scroll`, after narrowing it to 240px, brightening its names and replacing Chrome's own scrollbar; the built stylesheet checked for the compiled rules | Every other section; the look in a phone or desktop browser, which Harshil checks |
 | 2026-10-10 | §5 Sidebar States against `src/components/navigation/Sidebar/index.tsx`, `SidebarHeader.tsx`, `SidebarMenu.tsx`, `SidebarProfile.tsx` and `utils.ts` (66 px, the arrow, the fade, no hover re-open) | Every other section |
 | 2026-09-14 | Every token value in §2 against `src/styles/themes/dark.css`, `light.css` and `global.css` (dark surfaces, text, borders, glass, section colours, role tokens, badge tokens, fonts, spacing, radii, shadows, motion); the `src/styles` tree; `theme-init.js`, `ThemeToggle.tsx`, `UserSettingsPanel.tsx`; `AdminLayout.astro` / `AdminLayout.css` (landmarks, orbs, content area); `TopBar.tsx` and `Sidebar/index.tsx` geometry; `utilities.css` reduced-motion block; grep for every class, hook and keyframe named in §6–§9. **Result:** §1, §2.1 (accents), §2.7, §2.11 (spacing/radius/shadow), §3 architecture prose, §4.1, §5 shell and §7.3 hold; the dark palette in §2.2–2.5 was the pre-slate zinc palette and is now corrected; §2.9 type scale, §6.1 extra tokens, §6.3, §6.4 extras, §8.2 and §9 describe a target vocabulary the code never adopted and are labelled as such rather than deleted; the `--theme-violet` mis-declaration was fixed in both theme files. | Contrast ratios for the slate palette; the "67–86 % payload reduction" figure; Phase 3B/7C history |
 | 2026-09-20 | §1 "What Was Eliminated" re-measured (five items genuinely gone; inline styles and `location.reload()` are **not** — `.ratchet.json` A6/A7, 6 reload call sites); §2.6 rebuilt as a seven-token table with both theme values, and the violet `data-section` plumbing confirmed **still unwired** (`global.css` and `sections.css` each duplicate the emerald group); §2.11/§6.1 motion tokens confirmed unusable via `var()`; `src/styles` tree re-listed (23 files, `pages/cron.css` added); §6.2 labelled target, with `slideInFromTop` recorded as a dangling animation with no `@keyframes`; §7.3 focus-trap claim corrected (native `<dialog>` ×50; the command palette is a `div` with no trap); §7.4 `progressbar` 0 / `tablist` 3-none-in-chatbot labelled unmet; §8.1 breakpoint table replaced with the one real `lg` breakpoint; §9/§9.8 rephrased (prefixed `--modifier` is shipped, `useFocusTrap`/`modalEnter` are 0). | Contrast ratios for the slate palette (still measured against the retired zinc palette); the "67–86 % payload reduction" figure (no measurement exists in the repo); Phase 3B/7C history |
