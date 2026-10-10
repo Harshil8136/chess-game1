@@ -55,6 +55,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`features/ACTIONS.md`](features/ACTIONS.md) **P** | The controlled actions and the four-layer enforcement chain |
 | [`features/JOBS.md`](features/JOBS.md) | Server jobs: the busy gate every job waits on, the queue, a job's manifest and secrets, jobs with staged input, the Jobs page |
 | [`features/RESTORE-TESTS.md`](features/RESTORE-TESTS.md) | Backup restore tests: a cf-backup copy staged, unlocked, rebuilt and checked in a sealed container; who may run one, the checks and score, resources, the lab key, testing PostgreSQL by hand |
+| [`features/MAILROOM.md`](features/MAILROOM.md) | Mailroom, the email service's attachment scanner: who reaches it and how, its signed routes, ClamAV scans under the busy rule, limits and expiry |
 | [`features/LOG-STORAGE.md`](features/LOG-STORAGE.md) **P** | Retention per kind, preview and delete, compression |
 
 ## Operations
@@ -132,6 +133,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/2026-10-08-restore-test-rulings.md`](records/2026-10-08-restore-test-rulings.md) | Owner rulings on restore tests: the plan approved, permission-based settings, resources per test, no key to paste, and backup copies on the server only during a test |
 | [`records/2026-10-08-restore-tests.md`](records/2026-10-08-restore-tests.md) | Change record: restore tests, a backup copy unlocked, rebuilt and checked in a sealed container on the server, with jobs that take staged input |
 | [`records/2026-10-08-job-controls.md`](records/2026-10-08-job-controls.md) | Change record: server jobs can be stopped, restarted, paused, resumed, blocked and re-sized or re-scheduled from the Apps and Jobs pages, and the Jobs page is rebuilt for a phone |
+| [`records/2026-10-10-mailroom.md`](records/2026-10-10-mailroom.md) | Change record: Mailroom, the app that holds an email's attachments while ClamAV scans them, built for the email service |
 | [`records/plans/2026-10-08-job-controls.md`](records/plans/2026-10-08-job-controls.md) | Plan: job controls and the rebuilt Jobs page, with the rulings made while executing it |
 | [`records/plans/2026-10-08-console-redesign-wave-0.md`](records/plans/2026-10-08-console-redesign-wave-0.md) | Plan: the console redesign's Wave 0 (tokens, building blocks, shell, emoji purge, four fixes), with the rulings made while executing it |
 
