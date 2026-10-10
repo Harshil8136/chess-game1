@@ -20,7 +20,7 @@ tags: [program, cf-backup, secrets, api-keys, setup, runbook]
 > |---|---|---|---|---|
 > | 1 | `CLOUDFLARE_API_TOKEN` | Cloudflare | GitHub secret, cf-backup repo | Everything the backup run does at Cloudflare: D1 exports and the monthly drill, uploads to R2 (the S3 keys are *derived* from this token), the usage snapshot, the daily tick dead-man check |
 > | 2 | `SUPABASE_DB_URL` | Supabase | GitHub secret, cf-backup repo | `supabase db dump`, as a read-only role |
-> | 3 | `GITHUB_APP_PRIVATE_KEY` | GitHub | cf-backup Worker secret | Everything cf-backup does at GitHub: start and cancel runs; read runs, steps and logs; set the public-key variable; list secret *names* for Readiness; read the App's own permissions; count Actions minutes |
+> | 3 | `GITHUB_APP_PRIVATE_KEY` | GitHub | cf-backup Worker secret | Everything cf-backup does at GitHub: start and cancel runs; read runs, steps and logs; set the public-key variable; list secret *names* for the Health page; read the App's own permissions; count Actions minutes |
 > | 4 | The Vault login (`backup_keyholder`) | Supabase | Hyperdrive config `cf-backup-vault`, which the cf-backup Worker binds as `VAULT_DB` | The backup-key screens only: rotate, reveal, the weekly key check. It can call three functions and nothing else |
 >
 > Everything else is a public value (a variable or a console setting) or a binding.
@@ -122,7 +122,7 @@ first and falls back to the user endpoint, so a user token with the same permiss
 works.
 
 **Expiry: 12 months.** Every run's `doctor` reads the expiry from the token-verify
-endpoint and warns within 30 days; Readiness shows that reading (the runner doctor), and
+endpoint and warns within 30 days; the Health page shows that reading (the runner doctor), and
 the secrets calendar raises a reminder 30 days ahead.
 
 ### 4.3 How to create it
@@ -161,7 +161,7 @@ R2_SECRET=$(printf %s "$CLOUDFLARE_API_TOKEN" | sha256sum | cut -d' ' -f1)
 **Checked on every run by `doctor`**: the token is active and not near expiry; a D1
 `select 1` answers per database; an R2 `HEAD` on the bucket answers. Each store runs only
 when its own checks pass (a D1 failure never stops the Postgres dump, and the reverse).
-Readiness shows whether the secret is set; with `keys.status`, when GitHub last updated
+The Health page shows whether the secret is set; with `keys.status`, when GitHub last updated
 it; the Connectors board shows the last run that reached D1 and R2 and the last refusal.
 
 ### 4.6 Rotation, and what a leak could do
@@ -263,7 +263,7 @@ npx wrangler secret put GITHUB_APP_PRIVATE_KEY < app.pkcs8.pem
 The **App ID** is entered in the console: Settings → GitHub (`backup:config`). Until it is
 set, every due slot records "not configured" instead of dispatching.
 
-**Checked:** Readiness mints a token and lists the cf-backup repo's secret names (cached
+**Checked:** the Health page mints a token and lists the cf-backup repo's secret names (cached
 briefly), which proves the App, its installation and the key all work; its GitHub App
 permissions card reads the installation's permissions as GitHub states them
 (`GET /repos/{owner}/{repo}/installation`) against what the console needs. **No expiry.**
@@ -316,13 +316,13 @@ and the Worker reaches Vault through its `VAULT_DB` binding with the `pg` driver
   (`"hyperdrive": [{ "binding": "VAULT_DB", "id": "<config id>" }]`) and deployed.
 - **Status (2026-09-24):** the code is deployed; the config and the binding wait for the
   owner's `--only=vault` run. Until then Keys → Rotate and Reveal and the weekly key check
-  answer "VAULT_DB Hyperdrive binding not configured", and Readiness shows the Vault node
+  answer "VAULT_DB Hyperdrive binding not configured", and the Health page shows the Vault node
   failing with that reason.
 - **The old route is retired:** until 2026-09-24 key 4 was a Worker secret,
   `SUPABASE_KEYS_URL`, read by postgres.js. Nothing reads it now; delete it
   (`npx wrangler secret delete SUPABASE_KEYS_URL --name cf-backup`).
 - **Checked:** by the weekly key check (it reads each registered key from Vault), and on
-  Readiness (a live Vault connection, cached five minutes; the key count is shown only with
+  the Health page (a live Vault connection, cached five minutes; the key count is shown only with
   `keys.status`).
 - **After a suspected leak, also rotate the backup key** (doc 09 §6).
 - **If it leaks,** an attacker could read the backup private keys, which is exactly this
@@ -356,7 +356,7 @@ it is created; replace both copies before it.
 | 5 | Key 3: create the App, install it, `owner-secrets.mjs --only=github-key`; enter the App ID in Settings → GitHub | Done for `cf-backup`. Installing it on `cf-admin-madagascar` and `cf-astro` (Actions: read, for the minutes meter) is pending |
 | 6 | Key 4: `owner-secrets.mjs --only=vault`, then the `VAULT_DB` binding in `wrangler.json`, deployed | Pending (owner) |
 | 7 | **The first backup key:** console → Keys → Rotate (needs keys 3 and 4). It stores the key in Vault, sets `BACKUP_AGE_RECIPIENT` and records the key in `backup:key-registry`. **Until it exists, no backup is dispatched** (the weekly full slot runs as a check, and the fallback schedule stands down) | Pending (after step 6) |
-| 8 | Open Readiness: every failing row names its cause; Run now → Check only proves every export and restore drill before the first backup | After step 7 |
+| 8 | Open Health: every failing check names its cause; Run now → Check only proves every export and restore drill before the first backup | After step 7 |
 
 ## 9. The rotation calendar
 

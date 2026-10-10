@@ -59,7 +59,7 @@ touch the backup key. **Admin** changes who may do what.
 | `config.edit` | **Change global config** (§7) | operate | a diff shown before saving; audited | Owner, Vendor |
 | `alerts.dismiss` | **Dismiss an open alert**, or undo a dismissal; who, when and an optional note are kept on the alert (owner, 2026-10-03) | operate | audited | Owner, Vendor |
 | `targets.edit` | **Choose the databases** (owner, 2026-10-07): in Settings → Databases, which Supabase projects and D1 databases the schedule backs up, and which Run now starts with ticked. Run now itself (`runs.run`) can still tick any listed database for one run | operate | a diff shown before saving; reason (3–200 characters); a notice; audited as `config.edit op=targets` | Owner, Vendor |
-| `diagnostics.run` | **Run a Diagnostics step's probes** live, and start the **runner test** (it dispatches the backup workflow and uses about 2 GitHub Actions minutes) | operate | 15 s per person per step; audited (the runner test as `run.drill`) | Owner, Vendor |
+| `diagnostics.run` | **Run the Health page's tests** live, one step or all of them (free: they use no GitHub Actions minutes). The **runner test** it also covered is retired with the Primary Pipeline (remediation 13 B3): its route answers 501 | operate | 15 s per person per step; audited as `diagnostics.run` | Owner, Vendor |
 | `runs.prune` | **Delete** runs older than N days (never the newest 4 good full runs; never inside a lock) | destructive | typed confirmation; reason; a notice | Owner, Vendor (**floor**) |
 | `runs.download` | Download a run's **encrypted data** (`data/`, `checksums.sha256`), from the run detail or the Files section | destructive | fresh sign-in ≤ 10 min; confirmation; a notice | Owner, Vendor (**floor**) |
 | `keys.reveal` | **View / download the backup key** (the recovery kit) | secret | fresh sign-in; typed confirmation; ≤ 3/day per person; a notice | Owner, Vendor (**floor**) |
@@ -242,4 +242,5 @@ console cannot change.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | The `diagnostics.run` row, after cf-backup merged Readiness and Diagnostics into one Health page (cf-backup `9832d82`): its description in `src/access/catalog.ts`, its two routes and audit actions in `src/api/routes.ts`, the 15-second throttle in `src/api/diagnostics.ts`, and the runner test's refusal (`engineRefusal` in `src/backups/start.ts`, answered as 501) | The other rows of §2, which this change does not touch |
 | 2026-10-08 | The TL;DR count, the three Restore tests rows in §2, the floor list in §3 rule 4 and the §7 Restore tests row, against cf-backup's uncommitted `src/access/catalog.ts` (32 capabilities; nine floors; Admin's default gains `restoretests.view` only) and `src/api/routes.ts` (each route's capability and audit action) | The rest of the document; nothing of Restore tests has run in production |
