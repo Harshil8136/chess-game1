@@ -202,6 +202,7 @@ An isolated, lightweight worker sidecar consumes the queue on behalf of **both**
 - **Webhook Endpoint**: `POST /api/webhooks/brevo` (cf-astro) captures delivery, bounces, and complaints from the primary provider. This lives in cf-astro itself, not the consumer worker — `cf-astro-email-consumer` is queue-only (no `fetch()` handler), so it cannot receive inbound HTTP webhooks at all.
 - **Security**: Brevo does not sign webhook payloads by default, so this is **not** signature/HMAC verification — it's a constant-time shared-secret comparison (`timingSafeEq`, `src/lib/security.ts`) against `BREVO_WEBHOOK_SECRET` (a cf-astro secret), checked from either the `Authorization` header or a `?secret=`/`?token=` query param. Never log the raw query string unredacted.
 - **Audit Log**: Verified webhook events are pushed into the `email_audit_logs` Supabase table inside a JSONB `delivery_events` array for auditing.
+- **Email API messages** (2026-10-10): an event whose tags carry `api_msg_<message id>` belongs to the email API, whose messages live in the email service's own D1 database. The webhook forwards it to `EMAIL_QUEUE` as purpose `api_delivery`, and `cf-astro-email-consumer` records the verdict, feeds the do-not-mail list and calls the client's webhook. A failed queue send answers `500` so Brevo retries.
 
 ---
 
