@@ -228,13 +228,15 @@ When an authorized admin adds a new member from the dashboard:
 
 ### 5.2 Role Selection UI (Invite Modal)
 
-The Invite Modal renders a "Command Console" two-panel dialog:
+The Invite Modal renders a "Command Console" two-panel dialog, on the shared Dialog
+(`src/components/ui/Dialog.tsx`, `size="xl"`) since 2026-10-10: the panels sit side by side
+on a wide screen and stack on a phone, and only the dialog's body scrolls.
 
 **Left panel — Identity:**
 
 - **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the five assignable roles, with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
 - **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors.
-- Email + Display Name inputs, Grant Access + Cancel buttons.
+- Email + Display Name inputs. Grant Access and Cancel sit in the dialog's footer, under both panels (2026-10-10).
 
 **Right panel — Page Access:**
 
@@ -296,7 +298,7 @@ The interface is composed of multiple Preact islands:
 | **Role Pill Selector** | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: two-column role pill grid with RBAC-gated availability |
 | **Hidden Account Toggle** | | Atomic: ghost-mode toggle (Vendor Support/Owner only) |
 | **Page Chip Grid** | | Atomic: interactive chip grid grouped by section, 4 chip states |
-| **Session Forensics Drawer** | `SessionForensicsDrawer.tsx` | Premium HUD slide-in panel: device identity (browser/OS via zero-dep UA parser), connection telemetry (IP, geo, Ray ID), live 24h session countdown, per-session revocation |
+| **Session drawer** | `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | One person's sessions on the shared Dialog's drawer (2026-10-10): device, place, sign-in method, times, when each ends by itself, address and Ray ID, and **End session** for every session but the one you are using. It reads session handles, never session IDs ([SESSION-MANAGEMENT.md](SESSION-MANAGEMENT.md)) |
 
 ### Event Bus (Cross-Island Communication)
 
@@ -470,7 +472,7 @@ When an admin expands a user row in the User Registry, the bottom of the expande
 
 The `summary` shows total login count, success count, and failure count across all time for this email.
 
-**Check Active Sessions:** The ExpandedRow also renders a "Check Active Sessions" button (admin+) which opens the `SessionForensicsDrawer` — a side-panel HUD providing real-time session telemetry (device identity, connection metadata, live 24h countdown) with per-session revocation controls. See §6 UI Implementation table for component details.
+**Check Active Sessions:** The ExpandedRow also renders a "Check Active Sessions" button (admin+) which opens the `SessionForensicsDrawer`: one person's sessions, with device, place, times, when each ends by itself and **End session** (on the shared Dialog since 2026-10-10). See §6 UI Implementation table for component details.
 
 ### 11.5 Access Probe Feed
 
@@ -513,7 +515,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | Data | Exposure | Rationale |
 |------|----------|-----------|
 | `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
-| Session IDs | Server-only | KV key names never returned to client. **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with **`/dashboard/sessions`** PLAC access (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
+| Session IDs | Server-only | KV key names never returned to client. *Corrected 2026-10-10: until then `active-sessions` and `session-status` did return each session's ID, which is its cookie; both now send a one-way handle (`sessionRef`, [SESSION-MANAGEMENT.md](SESSION-MANAGEMENT.md)).* **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with **`/dashboard/sessions`** PLAC access (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
 | Full IP addresses — **login history** | Vendor Support actor only | `GET /api/users/[id]/login-history` masks to `X.X.***.***` server-side for everyone below Vendor Support. |
 | Full IP addresses — **live sessions** | **Any canonical Admin** | *Corrected 2026-09-19: the single row here said "Vendor Support actor only", which is true of login history and false of live sessions.* `GET /api/sessions/active-sessions` and `GET /api/users/[id]/session-status` return the unmasked `ipAddress` of every session to anyone holding `/dashboard/sessions`. The masking those screens show is applied in the browser (`maskIp`), so it is a display convention, not an access boundary. See [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md); logged in [`../MAINTENANCE.md`](../MAINTENANCE.md). |
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |

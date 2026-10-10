@@ -299,6 +299,18 @@ owner. Below vendor support, a registry editor changes a page's required role an
 within their own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`): a grant on
 the registry cannot open a page above its holder. [`DEV-TOOLS.md`](../operations/DEV-TOOLS.md)
 §2 has the routes.
+*Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
+its route will allow it. Until then it decided from the role: any admin saw the block
+controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
+`#unblock` or `#flush` said. Now the page asks `denySessions` for `#revoke`, `#unblock`,
+`#flush` and `#export`, the same calls its routes make, and keeps the hard owner check on
+`#flush`. `#export` still has no server route: it governs the page's downloads only. Locking
+a person out by name follows `/dashboard/users`, the page its route belongs to. The History
+tab asks `canReadSignInHistory` (`surface-guards.ts`), which `GET /api/audit/login-logs` also
+asks: a deny on `/dashboard/logs` first, then a grant or deny on `/dashboard/logs#security`,
+else the owner and vendor support. A button the person's access does not cover stays visible
+and switched off with its reason, as [`SESSION-MANAGEMENT.md`](../features/SESSION-MANAGEMENT.md)
+describes.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -945,6 +957,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-10 | claude | **Scope-limited to the Sessions page's keys.** Read `src/pages/dashboard/sessions/index.astro` before and after the rebuild, `surface-guards.ts` (`denySessions`, `canReadSignInHistory`), `src/pages/api/sessions/active-sessions.ts` and `src/pages/api/audit/login-logs.ts`; `test/sessions-console.test.ts` pins `canReadSignInHistory` and the refusals the page shows | §5's Sessions paragraph. Not re-derived: every other section; the live registry rows for the sessions fragments (last read 2026-09-20) |
 | 2026-10-10 | claude | **Scope-limited to the Developer Tools and Page Registry keys.** Read the four pages under `src/pages/dashboard/debug/`, the diagnostics and `api/system/` routes, `surface-guards.ts`, `registry-impact.ts` and `access-center/registry.ts`; read the live `/dashboard/debug` and `/dashboard/debug/pages` rows (both `dev`, active) and their grants through the D1 connector; `test/debug-access.test.ts` pins the keys, the rank rule and that no debug page checks the role alone | §5's new paragraph. Not re-derived: every other section |
 | 2026-10-10 | claude | **Scope-limited to the Configuration and Settings keys.** Read `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, both pages and `migrations/0068`/`0069`; `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` pin the exact-key checks (a map holding only `/dashboard` is refused) and the rows | §5's new paragraph, and the live counts after both migrations (117 rows, 100 active, 63 permissions, 55 active, read through the D1 connector) |
 | 2026-10-10 | claude | **Scope-limited to the registry's names and groups.** Applied `migrations/0067` through the D1 connector and read back the live counts (113 rows, 99 active, 60 fragments, 55 active) and the category of every active row; read `page-registry.ts`, `plac.ts` (`computeNavItems`), `AdminLayout.astro`, `RegistryTabs.astro` and `api/system/pages.ts`; `test/page-registry.test.ts` pins the lookups, the one-minute copy, the groups and the rows `0067` writes | §5: the column table, the live counts, and the registry as the one home of names. §13.1: the sidebar's KV read is gone. Not re-derived: §13.2's latency figures, §11's revocation timings |

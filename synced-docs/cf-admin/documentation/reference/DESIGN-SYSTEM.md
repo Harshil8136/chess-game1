@@ -328,13 +328,15 @@ src/styles/
 ├── bookings.css            ← Bookings dashboard styles
 ├── components/             ← Component-scoped CSS (2026-09-14 listing)
 │   ├── blog-studio.css, cms-module-panel.css, seo-patterns.css
+│   ├── console.css      ← the console kit, `.ck-*` (§9.9, 2026-10-10)
 │   └── chatbot/
 │       ├── buttons-badges.css   ← .chatbot-badge-* (mostly --color-badge-* vars; three raw-hex selectors remain)
 │       ├── stats.css            ← .ad-* analytics dashboard classes (extracted from AnalyticsDashboard.tsx)
 │       └── cards, forms, layout, messages, modal-toast, tables, utilities .css
 └── pages/                  ← Page-level overrides
     ├── audit.css, cron.css, diagnostics.css
-    └── privacy-dashboard.css, session-registry.css
+    ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
+    └── privacy-dashboard.css  (session-registry.css was removed 2026-10-10 with the old Sessions screens)
 ```
 
 *(Listing re-checked 2026-09-20 — 23 files; `pages/cron.css` landed with the
@@ -685,13 +687,69 @@ Base `.btn` minimum height: 36px. Sizes: `.btn--sm` (28px), `.btn--lg` (44px). A
 
 `.toast` slides in from right with spring easing. Left-border color signals type (`toast--success/warning/error/info`). Rendered in `role="status" aria-live="polite"` container.
 
-### 9.8 Modal
+### 9.8 Dialog: the one pop-up *(implemented 2026-10-10)*
 
-`.modal-backdrop` with `blur(4px)` scrim. `.modal` uses spring `modalEnter` animation (`scale(0.96) → 1`). Focus trapped via `useFocusTrap`. `Escape` closes.
+Every confirm, prompt, form, detail view and drawer opens through
+`src/components/ui/Dialog.tsx`, styled by `src/components/ui/Dialog.css`. It opens with
+`showModal()` (the browser's top layer, so no scroll container clips it), names itself
+after its title (`aria-labelledby`), closes on Escape, the close button or a press on the
+backdrop, and keeps all three closed while `dismissible` is false (a save in flight). Its
+content renders only while open, so a form starts fresh each time. Why it is built this way:
+[`RULESAd.md`](../../RULESAd.md) §7.8.
 
-> **Not the pattern to follow.** `modalEnter` and `useFocusTrap` have 0
-> occurrences in `src/`. The mandatory modal pattern is native `<dialog>` +
-> `showModal()`, owned by `RULESAd.md` §7.8 — see §7.3 above.
+**The frame is the panel.** The `<dialog>` itself carries the background, border and
+radius, never scrolls (`overflow: hidden`), and only `.ui-dialog__body` scrolls, with a slim
+6 px bar. The old pop-ups slid a card inside a transparent `<dialog>` that the browser lets
+scroll, so the card's animation pushed past the frame and a small scrollbar showed beside it.
+The opening animation moves the whole frame. `test/dialog-look.test.ts` pins this.
+
+| Prop | Values |
+|---|---|
+| `size` | `sm` 26rem, `md` 30rem (default), `lg` 42rem, `xl` 60rem, `full` (the whole screen) |
+| `layout` | `center` (default); `drawer`: from the right on a wide screen, from the bottom on a phone; `sheet`: from the bottom everywhere |
+| `tone` | `accent`, `danger`, `warning`, `success`, `info`: the icon chip and the top glow |
+| `icon`, `title`, `description` | the head; `headerExtra` adds a row under it (tabs, a status), `header` replaces it |
+| `footer` | the buttons, right-aligned along the bottom edge |
+| `bodyClass` | `ui-dialog__body--flush` for an edge-to-edge preview |
+| `initialFocus`, `hideClose`, `class` | focus target, an alert with its own single button, extra classes (`ck-scope`, §9.9) |
+
+Built on it: `ConfirmDialog.tsx` (with `showConfirm`, `showAlert` and `showPrompt` in
+`src/stores/dialogStore.ts`, including the typed word for a destructive step),
+`SlideDrawer.tsx` and `BottomSheet.tsx` (their old props, now thin wrappers). Buttons and
+fields inside a dialog, and on the kit pages, are `.ui-btn` (`data-variant` `primary`,
+`danger`, `danger-soft`, `ghost`; `data-size="sm"`; 44 px tall on a touch screen) and
+`.ui-input`.
+
+**No hand-made pop-ups.** `test/dialog-system.test.ts` fails on a native `<dialog>`, a
+`showModal()` call or a full-screen `fixed inset-0` layer outside its short allow-list, each
+entry with its reason (the Email API pages, being rebuilt in their own thread; the command
+palette; layers that are not pop-ups, such as the page background and the phone menu).
+
+### 9.9 Console kit *(implemented 2026-10-10)*
+
+`src/styles/components/console.css`, the page frame Sessions, Settings and GitHub share, on
+the look of the cf-backup and cf-vps consoles. A page opts in with
+`<div class="ck-page" data-hue="rose|violet|blue">` and imports the file from its `.astro`
+page.
+
+Colour has three jobs: the theme's neutrals carry the screen; a state (`data-tone` `good`,
+`warn`, `bad`, `info`, `muted`) always sits beside an icon or a word, never colour alone;
+the page's hue marks what the page is (its title, icon and selected tab), never a state.
+The hues are mid-tones that read on the light and the dark theme alike.
+
+| Piece | Classes |
+|---|---|
+| Header | `ck-head`, `ck-head__icon`, `ck-head__title` (gradient), `ck-head__sub`, `ck-head__actions`, `ck-stamp`, `ck-toggle` (Live) |
+| Stat tiles | `ck-tiles`, `ck-tile` (a `button` when it opens something), `ck-tile__icon`, `__label`, `__value` (`data-unknown` for "—"), `__hint` |
+| Tabs | `ck-tabs`, `ck-tab`, `ck-tab__count`: one sideways-scrolling row, every option visible |
+| Filters and choices | `ck-toolbar`, `ck-search`, `ck-chips` (`data-wrap` to wrap), `ck-chip` (`aria-pressed`, or `role="radio"` with `aria-checked`) |
+| Records | `ck-cards`, `ck-card`, `ck-card__open`, `ck-card__actions`, `ck-avatar`, `ck-who`; `ck-table-wrap data-stack` with `data-label` on each cell becomes a stack of cards below 768 px |
+| Details | `ck-facts`, `ck-mono`, `ck-copy`, `ck-code`, `ck-details`, `ck-group`, `ck-section-label` |
+| Lists and settings | `ck-list`, `ck-item`, `ck-item__text`, `__meta`, `__actions`, `ck-pick`, `ck-setting`, `ck-rename`, `ck-spaced` |
+| States | `ck-empty`, `ck-notice`, `ck-skeleton`, `ck-note`, `ck-error`, `ck-badge`, `ck-dot` |
+
+A dialog opened on a page outside the kit takes its tokens with `class="ck-scope"` (the
+Users page's session drawer does).
 
 ---
 
@@ -708,6 +766,7 @@ Base `.btn` minimum height: 36px. Sizes: `.btn--sm` (28px), `.btn--lg` (44px). A
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §9.8 against `src/components/ui/Dialog.tsx`, `Dialog.css`, `ConfirmDialog.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx` and `src/stores/dialogStore.ts`; §9.9 against `src/styles/components/console.css`; the §3 file tree's `console.css`, `github.css`, `settings.css` and `session-registry.css` lines | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | The sidebar's look (§5 Sidebar States, §8.1) against `Sidebar/index.tsx`, `SidebarMenu.tsx`, `SidebarHeader.tsx`, `config.ts` and `global.css` `.sidebar-scroll`, after narrowing it to 240px, brightening its names and replacing Chrome's own scrollbar; the built stylesheet checked for the compiled rules | Every other section; the look in a phone or desktop browser, which Harshil checks |
 | 2026-10-10 | §5 Sidebar States against `src/components/navigation/Sidebar/index.tsx`, `SidebarHeader.tsx`, `SidebarMenu.tsx`, `SidebarProfile.tsx` and `utils.ts` (66 px, the arrow, the fade, no hover re-open) | Every other section |
 | 2026-09-14 | Every token value in §2 against `src/styles/themes/dark.css`, `light.css` and `global.css` (dark surfaces, text, borders, glass, section colours, role tokens, badge tokens, fonts, spacing, radii, shadows, motion); the `src/styles` tree; `theme-init.js`, `ThemeToggle.tsx`, `UserSettingsPanel.tsx`; `AdminLayout.astro` / `AdminLayout.css` (landmarks, orbs, content area); `TopBar.tsx` and `Sidebar/index.tsx` geometry; `utilities.css` reduced-motion block; grep for every class, hook and keyframe named in §6–§9. **Result:** §1, §2.1 (accents), §2.7, §2.11 (spacing/radius/shadow), §3 architecture prose, §4.1, §5 shell and §7.3 hold; the dark palette in §2.2–2.5 was the pre-slate zinc palette and is now corrected; §2.9 type scale, §6.1 extra tokens, §6.3, §6.4 extras, §8.2 and §9 describe a target vocabulary the code never adopted and are labelled as such rather than deleted; the `--theme-violet` mis-declaration was fixed in both theme files. | Contrast ratios for the slate palette; the "67–86 % payload reduction" figure; Phase 3B/7C history |

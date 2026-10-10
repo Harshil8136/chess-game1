@@ -610,7 +610,7 @@ There are **FOUR** separate CSS bugs that can squish modals/dialogs/cards inside
 > empirical fix below still holds and is still mandatory**; only the
 > explanation was fiction. Re-derive it before writing a new rationale here.
 
-**The fix:** Use **inline `style={{ }}` attributes** for ALL layout-critical properties on the `<dialog>` element itself.
+**The fix:** Use the shared `<Dialog>` (below), whose sizing is plain CSS outside Tailwind's layers. A file still allowed a `<dialog>` of its own uses **inline `style={{ }}` attributes** for ALL layout-critical properties on the `<dialog>` element itself.
 
 > **Cost of this mandate:** every dialog written this way raises ratchet metric
 > A6 (`inline style={`), a count that may only fall. §8.1 and this section
@@ -618,6 +618,11 @@ There are **FOUR** separate CSS bugs that can squish modals/dialogs/cards inside
 > styles are MANDATED by RULESAd 7.8" as the reason for a recorded rise.
 > Resolving it (a dialog-sizing class, or exempting `<dialog>` from A6) is an
 > open item, not something to solve by quietly ignoring one of the two.
+>
+> *Resolved 2026-10-10:* the shared `<Dialog>` sizes itself from plain CSS in
+> `Dialog.css`, outside Tailwind's layers, which wins without an inline style.
+> The inline-style fix is now needed only by the few files
+> `test/dialog-system.test.ts` still allows a native `<dialog>`.
 
 ---
 
@@ -632,105 +637,73 @@ There are **FOUR** separate CSS bugs that can squish modals/dialogs/cards inside
 
 #### ✅ THE CORRECT PATTERN (MANDATORY)
 
-Every modal/dialog in a Preact island **MUST** follow this exact pattern. Reference implementations: `ConfirmDialog.tsx`, `InviteUserModal.tsx` (`TemplatesPanel.tsx` was a third until 2026-09-14, when it was deleted as dead code left behind by the Emails portal overhaul).
+Every pop-up in a Preact island **MUST** open through the shared `<Dialog>` in
+`src/components/ui/Dialog.tsx` (since 2026-10-10). It defends against all four bugs once, so a
+pop-up does not repeat the defences by hand:
+
+- **Bug #1** is handled by `global.css` as above.
+- **Bug #2:** the Dialog opens with `showModal()`, so it sits in the browser's top layer and no
+  scroll container can clip it. It closes with `.close()`, on Escape, the close button or a press
+  on the backdrop.
+- **Bug #3:** its sizing lives in `Dialog.css`, plain CSS outside Tailwind's layers, which wins
+  over the browser's own dialog sizing without an inline style. That also ends the clash with
+  ratchet A6 that the cost note above describes: a pop-up on the Dialog adds no `style={`.
+- **The scrollbar the owner reported (2026-10-10):** the `<dialog>` is the panel itself with
+  `overflow: hidden`, and only its body scrolls. The old pattern put a moving card inside a
+  transparent `<dialog>` that the browser lets scroll, so the card's slide-in pushed past the
+  frame and a small scrollbar showed beside it.
 
 ```tsx
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { Dialog } from '../ui/Dialog';
 
-function MyModal() {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  // Open: ALWAYS use showModal() — NEVER use <dialog open> or toggle className
-  const openDialog = useCallback(() => {
-    dialogRef.current?.showModal();
-  }, []);
-
-  // Close: ALWAYS use .close()
-  const closeDialog = useCallback(() => {
-    dialogRef.current?.close();
-  }, []);
-
-  // Handle native Escape key
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const handleCancel = (e: Event) => { e.preventDefault(); closeDialog(); };
-    dialog.addEventListener('cancel', handleCancel);
-    return () => dialog.removeEventListener('cancel', handleCancel);
-  }, [closeDialog]);
-
-  // Click-outside (backdrop click)
-  const handleBackdropClick = (e: MouseEvent) => {
-    if (e.target === dialogRef.current) closeDialog();
-  };
-
+function MyModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <>
-      {/* Backdrop styling — MUST use unique ID selector */}
-      <style>{`
-        #myModalId::backdrop {
-          background: rgba(0, 0, 0, 0.7);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-        }
-      `}</style>
-
-      {/* DIALOG — inline style is MANDATORY for width/maxWidth/padding/margin.
-          aria-labelledby is MANDATORY too: a11y_check.py A11Y-03 is blocking,
-          and a <dialog> with no accessible name fails `npm run verify`.
-          Point it at the heading inside the modal (or use aria-label). */}
-      <dialog
-        id="myModalId"
-        aria-labelledby="myModalTitle"
-        ref={dialogRef}
-        onClick={handleBackdropClick}
-        style={{
-          backgroundColor: 'transparent',
-          border: 'none',
-          padding: 0,
-          margin: 'auto',
-          width: '100%',
-          maxWidth: '672px',   // Adjust per use case
-          zIndex: 99999,
-          outline: 'none',
-        }}
-      >
-        {/* Inner visual container — Tailwind classes are safe HERE */}
-        <div
-          className="bg-[var(--theme-surface)] border border-[var(--theme-border-subtle)] w-full rounded-2xl shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h2 id="myModalTitle">Modal title</h2>
-          {/* Modal content goes here */}
-        </div>
-      </dialog>
-    </>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Rename the file"            // names the dialog for screen readers (A11Y-03)
+      description="The link keeps working."
+      size="md"                          // sm, md, lg, xl or full; layout="drawer" or "sheet"
+      footer={
+        <>
+          <button type="button" class="ui-btn" data-variant="ghost" onClick={onClose}>Cancel</button>
+          <button type="button" class="ui-btn" data-variant="primary">Rename</button>
+        </>
+      }
+    >
+      {/* Content. Only this part scrolls. */}
+    </Dialog>
   );
 }
 ```
 
-#### 🚫 BANNED PATTERNS (Will cause squished modals or vertical text collapse)
+A confirm or a typed-word check is `showConfirm()` from `src/stores/dialogStore.ts`, rendered by
+`ConfirmDialog.tsx`; `SlideDrawer` and `BottomSheet` are thin wrappers over the Dialog's drawer and
+sheet layouts. [`DESIGN-SYSTEM.md`](./documentation/reference/DESIGN-SYSTEM.md) §9.8 lists every
+prop. `test/dialog-system.test.ts` fails on a new hand-made `<dialog>`, `showModal()` call or
+`fixed inset-0` overlay outside its short allow-list, and `test/dialog-look.test.ts` guards the
+frame's overflow and scrolling rules.
+
+#### 🚫 BANNED PATTERNS (Will cause squished modals, a clipped overlay or the stray scrollbar)
 
 | ❌ BANNED | Why It Fails |
 |-----------|-------------|
+| A hand-made `<dialog>` with its own `showModal()` | Repeats every defence by hand and drifts from the shared look; `test/dialog-system.test.ts` refuses it |
 | `<dialog open className="w-full max-w-2xl">` | `open` attr = no Top Layer; Tailwind `w-full` loses to UA `fit-content` |
 | `<dialog open className="fixed inset-0">` | Same: not in Top Layer, trapped in scroll container |
 | `<div className="fixed inset-0 z-50">` as overlay | Trapped by `overflow-y: auto` containing block |
-| `className="w-full"` on `<dialog>` | Tailwind v4 `@layer` loses to UA specificity |
+| `className="w-full"` on `<dialog>` | Loses to the browser's own dialog sizing (Bug #3) |
+| An animated card inside a transparent, scrollable `<dialog>` | The card's slide-in overflows the frame and a scrollbar shows beside it |
 | `<p className="w-full max-w-md mx-auto">` inside `flex flex-col items-center` | Flexbox auto-margins absorb cross-axis space, forcing text box to `min-content` width (every word wraps vertically) |
 | `setIsOpen(true)` + conditional `{isOpen && <div>...}` | No Top Layer escape, no native focus trap |
 
 #### ✅ REQUIRED CHECKLIST (Before merging any modal)
 
-- [ ] Uses `<dialog>` element (not a `<div>`)
-- [ ] Has an accessible name — `aria-labelledby` pointing at the modal's heading, or `aria-label` (**A11Y-03 is blocking in `npm run verify`**; the template above omitted this until 2026-09-19, so copying it failed the gate)
-- [ ] Opens via `dialogRef.current?.showModal()` (not `<dialog open>`)
-- [ ] Closes via `dialogRef.current?.close()` (not DOM removal)
-- [ ] Width/maxWidth set via **inline `style={{ }}`** (not Tailwind className)
-- [ ] Has `::backdrop` styling via `<style>` tag with unique ID
-- [ ] Handles `cancel` event (Escape key)
-- [ ] Handles backdrop click (`e.target === dialogRef.current`)
-- [ ] Inner content div uses `onClick={e => e.stopPropagation()}`
+- [ ] Opens through `<Dialog>` (or `showConfirm()` for a confirm), not a `<dialog>` of its own
+- [ ] Has a `title`, which gives it its accessible name (**A11Y-03 is blocking in `npm run verify`**)
+- [ ] Sets `dismissible={false}` while a save is in flight, so Escape and the backdrop cannot close it mid-save
+- [ ] Puts its buttons in `footer`, as `.ui-btn` with a `data-variant`
+- [ ] Adds no inline `style={{ }}` for its size: pick a `size` instead
 
 > ⚠️ **CRITICAL DEV WORKFLOW:** If you change a component's architecture from `.tsx` to `.astro` to fix layout bugs, Vite's Hot Module Replacement (HMR) will often cache the old ghost `.tsx` component in memory. **You MUST instruct the user to kill and restart the dev server (`npm run dev`) and hard-refresh the browser for the structural fix to appear.**
 

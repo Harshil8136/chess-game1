@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | The rows for `GET /api/users/[id]/session-status`, `GET /api/audit/login-logs` and `/api/sessions/active-sessions`, against those files, `src/lib/auth/session-ref.ts` and `surface-guards.ts`; pinned by `test/session-ref.test.ts` and `test/sessions-console.test.ts` | The rest of the route tables |
 | 2026-10-10 | §6a's rows for the Developer Tools and Page Registry routes, against `src/lib/auth/surface-guards.ts`, the three `src/pages/api/diagnostics/` routes, `src/pages/api/system/pages.ts`, `preview.ts`, `src/lib/access-center/registry.ts` and `test/debug-access.test.ts` | Every other section, the §0 route counts included |
 | 2026-10-10 | §6a's new `/api/emails/api-templates` row, against `src/pages/api/emails/api-templates.ts`, `src/lib/email-api-route.ts`, `src/lib/auth/routes.ts`, `test/email-api-routes.test.ts` and `test/api-authz-mapping.test.ts` | Every other section, the §0 route counts included |
 | 2026-10-10 | §6a's rows for `POST /api/configuration` and `POST /api/settings/user`, and the removal of the Feature Flags, page-toggle and generic settings routes, against `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, `src/lib/auth/routes.ts`, `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` | Every other section, the §0 route counts included |
@@ -601,7 +602,7 @@ try {
 | `GET /api/media/gallery` | `admin` | Gallery management |
 | `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
 | `GET /api/users` | bare `requireAuth` + PLAC on `/dashboard/users` | Full user list. Admin is the floor only because the registry row says so, so a PLAC grant can change it — *this row read "canonical Admin via `requireAuth`" until 2026-09-20* |
-| `GET /api/users/[id]/session-status` | bare `requireAuth` + PLAC on `/dashboard/sessions` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
+| `GET /api/users/[id]/session-status` | bare `requireAuth` + PLAC on `/dashboard/sessions` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary. Each session is named by a handle, never its ID, which is the session cookie (`src/lib/auth/session-ref.ts`, 2026-10-10) |
 
 ### Page-Level Access Control on API routes (`placDenyResponse`)
 
@@ -651,7 +652,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
 | `GET /api/audit/receipts` | `/dashboard/privacy` | PR #2 | Privacy dashboard surface. |
 | `DELETE /api/audit/prune` | `/dashboard/logs` | PR #2 | DEV-only + PLAC. |
-| `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. The existing hash-grant logic remains as secondary check. |
+| `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. Then `canReadSignInHistory` (`src/lib/auth/surface-guards.ts`, 2026-10-10), the same check the Sessions page makes before it shows its History tab. |
 | `POST /api/audit/export` | `/dashboard/logs` (parent) | 2026-05-26 | Same parent-deny propagation as above for the `#export` hash sub-page. |
 | `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | PR #2 | |
 | `DELETE /api/users/force-kick` | `/dashboard/users` | PR #2 | |
@@ -662,7 +663,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET/POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | The Access Center. Hidden accounts answer 404 below owner and vendor; a server-console change also needs the `/dashboard/vps` key itself, strict outrank and not self, and cf-vps re-checks it ([`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md)). |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
-| `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. |
+| `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. Since 2026-10-10 the list names each session by a handle and DELETE takes that handle (`sessionRef`), looked up only among the named person's own sessions: the list used to send each session's ID, which is the session cookie. |
 | `GET /api/sessions/active-revocations` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | `denySessions()` + `#unblock`. DELETE additionally has a 30/min unblock rate limit. |
 | `POST /api/sessions/flush-sessions` | `/dashboard/sessions` | 2026-09 | `denySessions()` + `#flush`. |
 | `GET/POST /api/sessions/sign-in-alerts` | `/dashboard/sessions` | 2026-10-03 | `denySignInAlerts()`: the page, then an explicit grant of `#alerts` (fail closed). Self-service only; a change that turns alerts down emails the alert recipients. A person cannot set their own successful sign-ins to never; places to trust are their own log rows, referenced by id, and no coordinates cross the API. |

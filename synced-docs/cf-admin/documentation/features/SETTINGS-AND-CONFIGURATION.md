@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-10
 verified_against: [code, local-test]
 owner: harshil
-related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/lib/access-center/your-access.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
+related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
 related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, EMAIL-PORTAL.md, USER-MANAGEMENT.md, ../architecture/GLOBAL-CONFIG.md, ../MAINTENANCE.md]
 tags: [settings, configuration, plac, theme, profile]
 ---
@@ -26,17 +26,34 @@ repeated the Page Registry; all three are gone.
 
 Every role may open it (stored role `staff` since migration `0069`).
 
-- **Your profile.** Your name (2 to 120 characters) and your theme. *System* follows the
+**How it looks** (rebuilt the same day on the console kit, `src/styles/components/console.css`,
+in violet, with the page's own rules in `src/styles/pages/settings.css`; the story is in the
+[change record](../records/reports/2026-10-10-sessions-settings-github-and-pop-ups.md)). A
+header with the page's name and description from the page registry, then up to three tiles,
+each a link to the section it counts: **Pages you can open**, **Extra actions** and, with
+`#others`, **People you can rename**. Every number comes from what the page already read
+(`accessTotals` and `editablePeople` in `src/components/admin/settings/settingsView.ts`); a
+count that could not be read shows a dash and "Could not be read just now", never a zero. The
+sections follow one under another on a phone, and in two columns from 1024 px wide, with Your
+access on the right. The header and Your access render on the server with no script; only Your
+profile and Other people are islands.
+
+- **Your profile.** Who you are (initials, name, email, role), your name with its own **Save
+  name** button, and your theme as three choices side by side: Light, Dark and System. A name
+  that is too short or too long says why before you save. A theme goes on screen as soon as it
+  is picked; if the save fails, the previous one comes back with the reason. *System* follows the
   device's light or dark mode, read by `public/scripts/theme-init.js` before the page paints, so
   there is no flash. Your theme is a row in D1 `admin_user_settings`, copied to the
   `cf_admin_theme` cookie; your name is `display_name` in Supabase `admin_authorized_users`, and
   your session shows the new name at once.
 - **Your access.** The pages and actions your role and your grants allow, grouped as the
-  sidebar groups them (`src/lib/access-center/your-access.ts`, from the page registry and your
-  access map). The owner and vendor support see one line: everything.
-- **Other people**, only with `/dashboard/settings#others` (default: Admin and above). A
-  sideways-scrolling row of the people below your own role (vendor support: everyone; hidden
-  accounts only to vendor support), and a name field for the one you pick. Only the name changes;
+  sidebar groups them and in the sidebar's colours (`src/lib/access-center/your-access.ts`, from
+  the page registry and your access map). Each page is a link chip; the extra actions are listed
+  under "You may also". The owner and vendor support see one line: everything. When the page
+  registry cannot be read, this section says so and the rest of the page still opens.
+- **Other people**, only with `/dashboard/settings#others` (default: Admin and above). Every
+  person below your own role as a chip, all on view (vendor support: everyone; hidden accounts
+  only to vendor support), and a card with the name field for the one you pick. Only the name changes;
   their theme stays theirs. Their sessions show the new name on their next click, because the
   change writes an `authz-changed` mark ([PERMISSIONS-SYSTEM §11](../architecture/PERMISSIONS-SYSTEM.md)).
 
@@ -103,4 +120,5 @@ it, and use its permission where one is named.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | The Settings section against the rebuilt page (`index.astro`, `SettingsHeader.tsx`, `AccessPanel.tsx`, `UserSettingsPanel.tsx`, `OtherProfilesPanel.tsx`, `settingsView.ts`); `test/settings-page.test.ts` (who may be renamed, the tile counts, the name limits, the theme shown) and `test/api-settings-user.test.ts` pass | The Configuration section; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-10 | Written from the code named in `related_code`; `test/api-configuration.test.ts` (the catalog, the API's exact-key checks, and migrations `0068` and `0069`) and `test/api-settings-user.test.ts` (your own theme and name, another person's name, the role and permission checks) pass | The pages in a phone browser, which Harshil tests after the deploy |

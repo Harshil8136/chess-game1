@@ -156,7 +156,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
   the 30-minute re-check and the hourly rebuild keep running for nobody.
 - **Fix, in order.**
   1. Pause while `document.hidden`. The pattern exists in
-     `src/components/admin/users/sessions/SessionCommandCenter.tsx`.
+     `src/components/admin/users/sessions/SessionsConsole.tsx` (the Sessions page's Live).
   2. Poll every 5 minutes, matching the cache TTL. Polling faster only re-reads
      the same cached value.
   3. Store one value holding its own fetch time instead of two keys: 1 write per
@@ -352,7 +352,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 | Dashboard home | 5 min (60 s until 2026-10-04) | yes | **yes** since 2026-10-04 | EF-2, done |
 | Diagnostics | none since 2026-10-04: once on open, then the button (was 30 s) | — | — | EF-1, partly done |
 | Email portal queue | 15 s | only while queued or scheduled items are shown | **no** | add a hidden-tab pause |
-| Sessions | 30 s | no — opt-in "Live" mode, which switches itself off after 5 minutes (`SessionCommandCenter.tsx`); *corrected 2026-09-23, this said "yes"* | yes | none |
+| Sessions | 30 s | no — opt-in "Live" mode, which switches itself off after 5 minutes (`SessionsConsole.tsx`, rebuilt 2026-10-10; the list is read once on open, not on every tab change); *corrected 2026-09-23, this said "yes"* | yes | none |
 | Cron control | 60 s | no (opt-in) | **no** — once switched on it keeps polling a hidden tab (`CronDashboard.tsx`); `/api/cron` was the most-requested app endpoint in the week to 2026-09-22 (253 real requests, 157 of them on 2026-09-21) | add a hidden-tab pause; *corrected 2026-09-23, this said "none"* |
 | System alerts | user-chosen | no (0 = off) | — | none |
 

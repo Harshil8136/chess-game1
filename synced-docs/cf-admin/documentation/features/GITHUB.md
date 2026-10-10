@@ -2,10 +2,10 @@
 title: "GitHub page"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-07
+last_verified: 2026-10-10
 verified_against: [code, local-test]
 owner: harshil
-related_code: [src/pages/dashboard/github.astro, src/components/admin/github/RepoCard.astro, src/lib/github/config.ts, src/lib/github/client.ts, src/lib/github/snapshot.ts, src/lib/github/cache.ts, src/lib/github/view.ts, src/lib/auth/surface-guards.ts, src/lib/auth/page-floors.ts, migrations/0066_github_page.sql]
+related_code: [src/pages/dashboard/github.astro, src/components/admin/github/RepoCard.astro, src/components/admin/github/Icon.astro, src/lib/github/display.ts, src/styles/pages/github.css, src/styles/components/console.css, src/lib/github/config.ts, src/lib/github/client.ts, src/lib/github/snapshot.ts, src/lib/github/cache.ts, src/lib/github/view.ts, src/lib/auth/surface-guards.ts, src/lib/auth/page-floors.ts, migrations/0066_github_page.sql]
 related_docs: [../specs/2026-10-07-github-page-design.md, ../architecture/PERMISSIONS-SYSTEM.md, ../operations/OPERATIONS.md, ../security/RoPA.md, ../records/reports/2026-10-07-github-page.md, ../MAINTENANCE.md]
 tags: [github, plac, operations, resource-usage]
 ---
@@ -32,6 +32,17 @@ admin the link is greyed like any page a person cannot open.
 
 ## What it shows
 
+**How it looks** (rebuilt on 2026-10-10 on the console kit, `src/styles/components/console.css`,
+in blue, with the page's own rules in `src/styles/pages/github.css`; the story is in the
+[change record](../records/reports/2026-10-10-sessions-settings-github-and-pop-ups.md)). Still
+no island and no script: the icons are inline SVG drawn on the server
+(`src/components/admin/github/Icon.astro`), and every badge's word, tone and icon comes from
+`src/lib/github/display.ts`, so a state is always a word beside a colour. Under the header and
+the tiles, a sideways row of links, one per repository with its health, jumps to that
+repository's card. One column of cards on a phone, more side by side on a wide screen. The
+four states (no access, not connected, GitHub unreadable, and the page itself) each have
+their own panel.
+
 **Overview strip:** repositories (and the newest push), commits in the last 7 days, how many
 repositories have a failed workflow, open pull requests, and open Dependabot alerts.
 
@@ -39,8 +50,8 @@ repositories have a failed workflow, open pull requests, and open Dependabot ale
 
 - a health badge from each workflow's newest run: **Failing**, **Running**, **Healthy**, **Quiet**
   (no runs) or **Unknown** (GitHub did not answer);
-- a **Deploy** chip from the Workers Builds check on the default branch's newest commit, and one
-  chip per workflow with its newest result;
+- a **Deploy** badge from the Workers Builds check on the default branch's newest commit, and one
+  badge per workflow with its newest result, each a link to that run;
 - last push, commits in 7 days and on the default branch, branches, open pull requests, size;
 - commits per day for 14 days (a bar chart; "+" when the fortnight held more than 100 commits);
 - the main languages as one bar;
@@ -65,7 +76,7 @@ One fine-grained token, `GITHUB_READ_TOKEN`, an optional Worker secret
 ([OPERATIONS.md](../operations/OPERATIONS.md)). It is made by the account that owns the
 repositories, with read-only Actions, Contents, Issues and Pull requests. A token made by a
 collaborator account cannot read them. Two parts are optional: **Dependabot alerts** needs the
-"Dependabot alerts" read permission (the live token has it), and the **Deploy** chip needs the
+"Dependabot alerts" read permission (the live token has it), and the **Deploy** badge needs the
 commit's check results, which GitHub does not give to fine-grained tokens at all (confirmed on the
 live page, 2026-10-07). The page footer says so once; everything else still shows.
 
@@ -76,7 +87,7 @@ last read is ignored. Nobody looking means no calls at all. The
 [design](../specs/2026-10-07-github-page-design.md) §5 has the cost table.
 
 Deploy results would come from the commit's check summary in GraphQL (`statusCheckRollup`), but
-GitHub refuses it to fine-grained tokens just as it refuses the Checks API, so the Deploy chip
+GitHub refuses it to fine-grained tokens just as it refuses the Checks API, so the Deploy badge
 appears only with a token GitHub lets read checks. Reading deploy status from Cloudflare instead is
 [MAINTENANCE.md](../MAINTENANCE.md) GH-1.
 
@@ -94,6 +105,7 @@ appears only with a token GitHub lets read checks. Reading deploy status from Cl
 
 | Date | Who | Checked | Not checked |
 |---|---|---|---|
+| 2026-10-10 | claude | **Scope-limited to "What it shows".** The page after its rebuild on the console kit: `github.astro`, `RepoCard.astro`, `ActivityBars.astro`, `LanguageBar.astro`, `Icon.astro` and `display.ts` read against this section; `test/github-display.test.ts` (every badge, the tiles, a card's facts, the links) and the existing `test/github-*.test.ts` pass | "How it reads GitHub" and "When something is wrong", unchanged and not re-read; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-07 | claude | Unit and source-contract tests (`test/github-*.test.ts`, 99 cases), `astro check`, `npm run build` | Production render with the real token, CPU per view (recorded here once the token is set) |
 | 2026-10-07 | claude | v2 (overview, health, deploy chip, activity, languages, pull requests, tags, Dependabot alerts, durations): the GraphQL query run against GitHub's live schema with a collaborator's classic token (no errors, cost 1 point, all five repositories); unit and source-contract tests (124 cases); `astro check`; `npm run build`; the live snapshot in KV after the token was set (five repositories, no errors) | Which optional parts the fine-grained token may read (confirmed on the first live refresh); CPU per view |
 | 2026-10-07 | claude | Live, after the v2 deploy (`389f348`): the KV snapshot from the owner's first view (21:09:50 UTC) — five repositories, no errors, Dependabot alerts readable (0 open in each), `statusCheckRollup` refused for every repository; `wrangler tail` CPU per request — the view that read GitHub 116 ms CPU / 4.7 s wall, views served from KV 23–35 ms CPU / 67–120 ms wall (the server page 41 ms, the first inquiries load 175 ms, same window) | A Refresh on a warm isolate (none was tapped in the window) |

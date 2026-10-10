@@ -573,14 +573,14 @@ of the applied history.
 | `src/lib/login-alerts/throttle.ts` | Earlier failures of the same account and reason, in the policy's window and the past hour (§7) |
 | `src/lib/login-alerts/policy.ts` + `src/lib/login-alerts/store.ts` | The alert policy and a person's sign-in alert settings: shapes, parsing, storage, and the account's recent sign-ins the decision compares with (§7) |
 | `src/lib/login-alerts/handlers.ts` + `src/pages/api/sessions/sign-in-alerts.ts` | `GET`/`POST /api/sessions/sign-in-alerts`: pause, resume, trust or forget an area (self-service, `#alerts`) |
-| `src/components/admin/users/sessions/SignInAlertsCard.tsx` | "Your sign-in alerts" card on Security → Sessions, anchored `#alerts` |
+| `src/components/admin/users/sessions/SignInAlertsCard.tsx` | The "Your alerts" tab on Security → Sessions; a link ending `#alerts` opens it |
 | `src/workers/scheduled-log-sync.ts` | 5-min cron: polls CF Audit Log API, writes LOGIN_BLOCKED, D1 watermark, ray-id dedupe, alert cap (wired in `cf-entry.ts`) |
-| `src/pages/api/audit/login-logs.ts` | Query API (PLAC-gated, v3 schema) |
+| `src/pages/api/audit/login-logs.ts` | Query API (v3 schema). A deny on `/dashboard/logs` refuses first; then `canReadSignInHistory` in `src/lib/auth/surface-guards.ts`, which the Sessions page also asks before it shows its History tab |
 | `src/pages/api/audit/stats.ts` | Stats API (login metrics) |
 | `src/pages/dashboard/logs/index.astro` | `canViewSecurity` PLAC gate |
 | `src/components/admin/logs/LoginForensicsTab.tsx` | SecurityForensicsTable + 3-section forensic panel (mounted by `ActivityCenter.tsx`) |
-| `src/pages/api/users/[id]/session-status.ts` | Session telemetry API — gated by bare `requireAuth` plus PLAC on `/dashboard/sessions`, not by a role argument, so the registry row and any per-user override decide who may call it. Returns IP, UA, geo, Ray ID, lastActiveAt; Ghost Protection at the DB boundary |
-| `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | Premium HUD drawer for live session forensics (device, connection telemetry, countdown, per-session revoke) |
+| `src/pages/api/users/[id]/session-status.ts` | Session telemetry API — gated by bare `requireAuth` plus PLAC on `/dashboard/sessions`, not by a role argument, so the registry row and any per-user override decide who may call it. Returns a handle for each session (never its ID, which is the session cookie: `src/lib/auth/session-ref.ts`), whether it is the caller's own, IP, UA, geo, Ray ID, lastActiveAt; Ghost Protection at the DB boundary |
+| `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | One person's sessions, opened from the Users page: device, place, address, Ray ID, when each ends by itself, and End session (through `/api/sessions/active-sessions`, `#revoke`). On the shared Dialog since 2026-10-10 |
 | `src/styles/pages/audit.css` | Shared `audit-*` / `security-*` classes (no `lf-` prefix) |
 
 **Deleted files (v3):**
@@ -607,6 +607,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §10's rows for `SignInAlertsCard.tsx`, `login-logs.ts`, `session-status.ts` and `SessionForensicsDrawer.tsx` against those files after the Sessions rebuild, pinned by `test/sessions-console.test.ts` and `test/session-ref.test.ts` | The rest of this document; not rendered in a browser |
 | 2026-10-03 | §2.2 `alert` and §7's transport against `src/lib/auth/security-logging.ts` (`postSecurityEmail`) and `src/lib/dal/EmailAuditLogRepository.ts` after v2 step 3, pinned by `test/login-alerts.test.ts` ("the queued email", the Brevo fallback); the consumer's handling read from its deployed bundle (v2 spec §9) | Whether Resend accepts the security sender; the rest of this document |
 | 2026-10-03 | §7's last paragraph against `src/lib/login-alerts/handlers.ts` and `policy-handlers.ts` after v2 step 2 (the card's new options and the alert policy panel), pinned by `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts` | The rest of this document |
 | 2026-10-03 | §2.2 `alert` and `cf_jwt_tail`, §6.3, §7 and §10 against `src/lib/login-alerts/` (`decide.ts`, `dispatch.ts`, `outcomes.ts`, `store.ts`, `throttle.ts`), `src/lib/auth/security-logging.ts`, `src/workers/scheduled-log-sync.ts` and the two log views, after sign-in alerts v2 step 1 and migration `0064`; pinned by `test/login-alert-decide.test.ts`, `test/login-alerts.test.ts` and `test/migrations-replay.test.ts`. Live D1, all rows to 2026-10-03: 370 successful rows with an assertion tail held 282 distinct sign-ins (88 duplicate emails); 90 days of User-Agents were Chrome on Windows and Chrome on Android only. `0064` read back from production `sqlite_master` and `d1_migrations` after it was applied | Whether Brevo delivered each alert; the policy panel, which is step 2; the rest of this document, last re-read 2026-09-20 |
