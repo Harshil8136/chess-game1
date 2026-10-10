@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-10 | `grep -rn "api.brevo.com\|api.resend.com\|BREVO_API_KEY\|RESEND_API_KEY" src/` after moving the storage, share, purge, Search Console and re-invite emails onto `src/lib/email/queue-mail.ts` | §1's `EMAIL_QUEUE` paragraph and §5's `RESEND_API_KEY` row: no email is sent through Resend directly any more; the key's one reader is the diagnostics ping. Not checked: anything else in §1 and §5 |
 | 2026-10-10 | `wrangler.toml` (`[placement]`, `assets` without `run_worker_first`), `public/_headers`, `npm run types:check` (up to date), `npx wrangler deploy --dry-run` (accepted), Cloudflare placement documentation (fetch handler only, all plans), Sentry resource spans for `/_astro/*` | §1 "Where requests run, and static files" added. Not checked: the live `cf-placement` header and timings, which wait for the deploy |
 | 2026-10-10 | §7's banner: `0069` applied by the deploy at 04:21:03 UTC (`d1_migrations` id 105), 15 s before the push's Workers Builds check finished ([release-and-rollback](../runbooks/release-and-rollback.md) §1) | The deploy command applies pending migrations; the banner said only to apply them by hand. Not checked: anything else in §7 |
 | 2026-10-10 | `scripts/release.mjs` build stage, `scripts/lib/release-guards.mjs` (`buildVerifyStep`); Workers Builds check-run times on three October pushes (`release-and-rollback.md` §1) | §7: the banner said Workers Builds ran its default command (true on 2026-09-19); it runs `build:ci`, which no longer repeats `verify`. Not checked: the dashboard's deploy command |
@@ -112,7 +113,9 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 `EMAIL_QUEUE` is the producer side of the async email pipeline; the Email Portal
 (`/dashboard/emails`) enqueues custom sends onto it, as do the backup scheduler's alerts
 and, since 2026-10-03, every security email (`src/lib/auth/security-logging.ts`, with
-Brevo directly as the fallback), and the external `cf-astro-email-consumer` worker drains
+Brevo directly as the fallback), and, since 2026-10-10, the portal's other system emails
+(storage notices and share links, the purge alert, the Search Console alert and re-sent
+invitations, through `src/lib/email/queue-mail.ts`), and the external `cf-astro-email-consumer` worker drains
 it. See
 [`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md).
 
@@ -564,7 +567,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | S3-compatible credential scoped to `madagascar-staff-storage`; `aws4fetch` presigned uploads (SigV4 needs this shape, no substitute) |
 | `BREVO_API_KEY` | Brevo transactional email (primary provider) |
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
-| `RESEND_API_KEY` | Resend — invite re-send path (`src/pages/api/users/resend-invite.ts`) |
+| `RESEND_API_KEY` | Resend — the diagnostics ping only (`resend_ping`). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics and the control plane (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads |

@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §9's `RESEND_API_KEY` note, against `src/lib/email/queue-mail.ts`, its five callers and `grep -rn "api.resend.com" src/` (the diagnostics ping only); pinned by `test/system-mail-queue.test.ts` | The rest of §9 |
 | 2026-10-10 | The rows for `GET /api/users/[id]/session-status`, `GET /api/audit/login-logs` and `/api/sessions/active-sessions`, against those files, `src/lib/auth/session-ref.ts` and `surface-guards.ts`; pinned by `test/session-ref.test.ts` and `test/sessions-console.test.ts` | The rest of the route tables |
 | 2026-10-10 | §6a's rows for the Developer Tools and Page Registry routes, against `src/lib/auth/surface-guards.ts`, the three `src/pages/api/diagnostics/` routes, `src/pages/api/system/pages.ts`, `preview.ts`, `src/lib/access-center/registry.ts` and `test/debug-access.test.ts` | Every other section, the §0 route counts included |
 | 2026-10-10 | §6a's new `/api/emails/api-hotel-mail` row, against `src/pages/api/emails/api-hotel-mail.ts`, `src/lib/email-api-route.ts`, `src/lib/auth/routes.ts`, `test/email-api-routes.test.ts` and `test/api-authz-mapping.test.ts` | Every other section, the §0 route counts included |
@@ -853,9 +854,13 @@ carrying here because they are security-relevant rather than operational:
   (`src/lib/storage/share-token.ts`). Rotating it invalidates every live share
   link, file-request link, stored passcode hash and unsubscribe link. It is not
   a routine rotation.
-- **`RESEND_API_KEY` is not the outgoing-mail key.** Brevo carries transactional,
-  marketing and security-alert mail; Resend is used only by staff invites and a
-  diagnostics ping.
+- **`RESEND_API_KEY` is not the outgoing-mail key.** cf-admin sends no email
+  through Resend directly: its one reader is a diagnostics ping. Since 2026-10-10
+  every system email the portal sends (invitations, storage notices and share
+  links, the purge and Search Console alerts) goes onto `EMAIL_QUEUE`
+  (`src/lib/email/queue-mail.ts`), and the email service sends it through Brevo,
+  then Resend if Brevo fails. Only a sign-in alert the queue refuses still goes
+  to Brevo directly (`src/lib/auth/security-logging.ts`).
 
 ---
 
