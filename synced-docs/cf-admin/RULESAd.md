@@ -296,6 +296,11 @@ SELECT COUNT(*) FROM sqlite_master
 > not applied yet (an owner release step), so the counts above are still the
 > live ones; after the release they become 31 / 64 (62 live). Re-count, don't add.
 
+> **2026-10-10:** `madagascar-db` holds **30** tables, re-counted live with the
+> query above after migration `0069` dropped `admin_feature_flags` (which nothing
+> read); `0057` had added `backup_runs`. The other three stores were not
+> re-counted.
+
 > The 2026-08-12 breakdown recorded 31 D1 / 19 Supabase. The **total was right**
 > and the split was wrong; the live query above is now the derivation, so the
 > next reader can re-check it in one command instead of trusting the number.
@@ -930,7 +935,7 @@ npm run release          # preflight → verify → build → drift check → MI
                          #   → wrangler deploy → smoke → tag   (local; cf:deploy is an alias)
 npm run build:ci         # the Workers Builds build command: astro build only
                          #   (verify is not repeated there since 2026-10-10)
-npm run deploy:ci        # the deploy command Workers Builds is meant to run
+npm run deploy:ci        # the Workers Builds deploy command (observed 2026-10-10)
                          #   (drift check → migrate → deploy → smoke)
 ```
 
@@ -966,10 +971,15 @@ now standalone, so a pointer outside it can never resolve.
   than a second pair of human eyes — see
   [`documentation/security/compliance/SOC2-TSC-mapping.md`](./documentation/security/compliance/SOC2-TSC-mapping.md)
   CC8.1.
-- **Run `npm run verify` before every push.** With the default Builds command in
-  place, that local run is the only gate there is. When the push carries a
-  migration, releasing it deliberately from a workstation (`npm run release`)
-  is what applies it — the push will not.
+- **Run `npm run verify` before every push.** That local run is the only gate
+  there is. **The push applies migrations** (observed 2026-10-10): the deploy
+  command (`deploy:ci`) applies every pending file in `migrations/` just before
+  the new code goes live, `-- contract:` files included. So apply an additive
+  migration by hand before the push as main.md §2 says (the deploy then finds
+  nothing pending), and put a destructive one in a later push, after the code
+  that stops using it is live. *Until 2026-10-10 this line said the push does
+  not apply migrations; `0069` was applied by the deploy, 15 seconds before its
+  code was live ([schema change ledger](./documentation/reference/schema-change-ledger.md)).*
 
 #### §6 — Binding IDs are never invented
 

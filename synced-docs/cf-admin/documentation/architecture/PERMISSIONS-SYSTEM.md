@@ -190,7 +190,8 @@ D1 `admin_pages`, primary key `path`:
 
 **Measured live, 2026-10-10** (after `migrations/0067`): 113 rows, **99 active**, **60** of
 them hash-fragment permissions (55 active). Every active row's `category` is one of the seven
-groups. The 2026-09-16 figures were 97/86/51/49.
+groups. The 2026-09-16 figures were 97/86/51/49. After `0068` and `0069` (re-measured the same
+day): 117 rows, 100 active, 63 permissions (55 active).
 
 **The registry is the one home of a page's name** *(2026-10-10, `migrations/0067`)*. The
 sidebar and its groups, the browser tab title ("Section · Page — Madagascar Admin"), the
@@ -933,7 +934,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
-| 2026-10-10 | claude | **Scope-limited to the Configuration and Settings keys.** Read `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, both pages and `migrations/0068`/`0069`; `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` pin the exact-key checks (a map holding only `/dashboard` is refused) and the rows | §5's new paragraph only; the live counts above are re-measured once `0068` and `0069` are applied |
+| 2026-10-10 | claude | **Scope-limited to the Configuration and Settings keys.** Read `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, both pages and `migrations/0068`/`0069`; `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` pin the exact-key checks (a map holding only `/dashboard` is refused) and the rows | §5's new paragraph, and the live counts after both migrations (117 rows, 100 active, 63 permissions, 55 active, read through the D1 connector) |
 | 2026-10-10 | claude | **Scope-limited to the registry's names and groups.** Applied `migrations/0067` through the D1 connector and read back the live counts (113 rows, 99 active, 60 fragments, 55 active) and the category of every active row; read `page-registry.ts`, `plac.ts` (`computeNavItems`), `AdminLayout.astro`, `RegistryTabs.astro` and `api/system/pages.ts`; `test/page-registry.test.ts` pins the lookups, the one-minute copy, the groups and the rows `0067` writes | §5: the column table, the live counts, and the registry as the one home of names. §13.1: the sidebar's KV read is gone. Not re-derived: §13.2's latency figures, §11's revocation timings |
 | 2026-10-07 | claude | **Scope-limited to `/dashboard/github`.** Read `surface-guards.ts` (`canViewGitHub`), `guard.ts` (`placRequireGrant`), `decide-access.ts`; `test/github-access.test.ts` pins the role-by-grant matrix and the `0066` row | §5's exact-key paragraph added. Not re-derived: the registry counts (last measured 2026-09-16) |
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |

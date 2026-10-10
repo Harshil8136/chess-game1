@@ -28,6 +28,7 @@ tags: [operations, bindings, cloudflare]
 | Date | Method | Result |
 |------|--------|--------|
 | 2026-10-10 | `wrangler.toml` (`[placement]`, `assets` without `run_worker_first`), `public/_headers`, `npm run types:check` (up to date), `npx wrangler deploy --dry-run` (accepted), Cloudflare placement documentation (fetch handler only, all plans), Sentry resource spans for `/_astro/*` | §1 "Where requests run, and static files" added. Not checked: the live `cf-placement` header and timings, which wait for the deploy |
+| 2026-10-10 | §7's banner: `0069` applied by the deploy at 04:21:03 UTC (`d1_migrations` id 105), 15 s before the push's Workers Builds check finished ([release-and-rollback](../runbooks/release-and-rollback.md) §1) | The deploy command applies pending migrations; the banner said only to apply them by hand. Not checked: anything else in §7 |
 | 2026-10-10 | `scripts/release.mjs` build stage, `scripts/lib/release-guards.mjs` (`buildVerifyStep`); Workers Builds check-run times on three October pushes (`release-and-rollback.md` §1) | §7: the banner said Workers Builds ran its default command (true on 2026-09-19); it runs `build:ci`, which no longer repeats `verify`. Not checked: the dashboard's deploy command |
 | 2026-10-08 | `sentry.client.config.ts`, `src/lib/sentry-scrub.ts` (`BROWSER_NETWORK_FAILURES`), `test/sentry-scrub.test.ts`; `@sentry/core`'s `getPossibleEventMessages` (what `ignoreErrors` tests: the value and `<type>: <value>`) | §4.1 "Browser noise filter" added. Not re-checked: the rest of §4 |
 | 2026-10-07 | `src/lib/jobs/registry.ts`, `src/workers/scheduled-heartbeat-watchdog.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **13 jobs (11+2)** with `heartbeat-watchdog`, its gate in the idle-tick block, the `ASTRO_SERVICE` row's purposes. No binding, secret, variable or cron added; §5 unchanged. Not re-checked: every other row, and nothing live (not deployed) |
@@ -682,7 +683,9 @@ organization. The `Access: Organizations — Revoke` permission below is what au
 > **Where each check runs (2026-10-10):** `npm run verify` on the workstation before
 > every push, and GitHub's `quality` job after it. Workers Builds runs `build:ci`,
 > which only builds since 2026-10-10. Evidence and the deploy stage:
-> `release-and-rollback.md` §1. **Apply migrations by hand before pushing.**
+> `release-and-rollback.md` §1. The deploy command (`deploy:ci`) applies any pending migration
+> before the new code (observed 2026-10-10). **Apply an additive migration by hand before
+> pushing; push a destructive one after the code that stops using it is live.**
 
 ```bash
 # cf-admin

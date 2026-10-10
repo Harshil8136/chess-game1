@@ -34,8 +34,12 @@ tags: [release, deploy, rollback, workers-builds, migrations, runbook]
 > workstation and before GitHub's `quality` job, so on 2026-10-10
 > `release.mjs build --ci` became build-only (`buildVerifyStep` in
 > `scripts/lib/release-guards.mjs`). The dashboard's deploy command cannot be
-> read from here; `npm run deploy:ci` is the command it is meant to run.
-> **Apply migrations by hand before you push** either way.
+> read from here, but it is `npm run deploy:ci` with a token that can write D1:
+> on 2026-10-10 `0069` was applied at 04:21:03 UTC (`d1_migrations` id 105),
+> 15 seconds before that push's Workers Builds check finished, and nothing else
+> had applied it. **Apply an additive migration by hand before you push**, and
+> push a destructive (`-- contract:`) one only after the code that stops using it
+> is live: the deploy applies a pending file before the new code.
 
 ```text
 git push origin main
@@ -159,6 +163,7 @@ and somebody has to actually run them.
 | 2026-09-02 | claude | `node scripts/release.mjs preflight` (refuses a dirty tree; `--allow-dirty` passes), `node scripts/release.mjs migrate` against production (drift check clean, nothing pending), `test/release-guards.test.ts` (12), `test/api-health.test.ts` (4) | pass; Builds commands not yet switched (owner step §3) |
 | 2026-09-19 | claude | `package.json` `verify`/`build:ci`/`deploy:ci` read; `.github/workflows/quality.yml` lines 9-16; Workers Builds vs `quality` check-run durations on `a9dd974` and `67a5cf6`; `d1_migrations` applied-at vs commit author times for `0052`/`0053`/`0054`; repository Actions secrets listed | **Builds still on its default command** — §1 rewritten with a banner and a target-state diagram; the `verify` chain, the Python-gate count, the `--ci` env triggers and the §5 snapshot row corrected. Not readable from here: the Build settings in the Cloudflare dashboard (the three lines above are inference from observable behaviour) |
 | 2026-10-10 | claude | Workers Builds check-run completion vs push time on `4b166d6` (6 m 44 s), `42e421f` (8 m 04 s, docs only) and `ab6b0c7` (10 m 10 s); GitHub `quality` run durations on the same pushes (4-6.5 min, 25-35 s docs only); `scripts/release.mjs` build stage; `test/release-guards.test.ts` (14) | Build command is `build:ci` (inferred from durations and the owner's report of tests in the build log; the dashboard is not readable from here); `build --ci` made build-only; §1 banner and diagram rewritten. Not re-checked: the deploy command, the build token's D1 grant, the smoke token |
+| 2026-10-10 | claude | `d1_migrations` read through the Cloudflare D1 connector after pushing `2979706`: `0069_settings_cleanup.sql` id 105, applied 04:21:03 UTC; the commit's Workers Builds check completed 04:21:18 UTC; no session or person had applied it (the thread that wrote it meant to apply it after the deploy). `scripts/release.mjs` `deploy` stage read (drift check, migrate, deploy, smoke) | The deploy command is `deploy:ci` and its token can write D1 (inferred from that timing; the dashboard is not readable from here). §1's banner now says so and how to order a destructive migration. Not checked: the smoke token |
 
 ## 7. Related
 
