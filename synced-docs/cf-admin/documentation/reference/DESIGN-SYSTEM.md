@@ -428,7 +428,10 @@ group titles take their section colour at the 400 tint in the dark theme
 4px bar of `.sidebar-scroll` in `global.css`: never put a standard
 `scrollbar-width` or `scrollbar-color` on it, because Chrome and Edge then drop
 the slim bar for their own, with arrows and a grey track
-(`test/sidebar-look.test.ts`).
+(`test/sidebar-look.test.ts`). Closed, the list scrolls with no bar at all
+(`.sidebar-scroll[data-closed]`): on the 66px rail the bar's 4px came off each
+row, so the highlight behind an icon was narrower than tall and sat left of the
+icon (Harshil's report, 2026-10-10).
 
 ### Login Portal — "Midnight Slate" *(historical — there is no login page; Cloudflare Access hosts login and `src/pages/index.astro` is the access-denied / dev gate. The orbs + `feTurbulence` noise live in `AdminLayout.css` at `opacity: 0.03`)*
 
@@ -776,6 +779,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §5 Sidebar States (the closed rail's scrollbar) against `SidebarMenu.tsx`, `Sidebar/utils.ts` `ROW`, `Sidebar/index.tsx` (66px, 1px border) and `global.css` `.sidebar-scroll` | Every other section; the look in a browser, which Harshil checks |
 | 2026-10-10 | §9.8's sizing against `Dialog.css` (every `height` rule) after pop-ups opened full height; §9.9's `ck-search` and `ck-rename` against `console.css` and every place they are used (`LockOutDialog.tsx`, `AlertPolicyPanel.tsx`, `SignInAlertsCard.tsx`, `SignedInPanel.tsx`, `HistoryPanel.tsx`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | §9.8 against `src/components/ui/Dialog.tsx`, `Dialog.css`, `ConfirmDialog.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx` and `src/stores/dialogStore.ts`; §9.9 against `src/styles/components/console.css`; the §3 file tree's `console.css`, `github.css`, `settings.css` and `session-registry.css` lines | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | The sidebar's look (§5 Sidebar States, §8.1) against `Sidebar/index.tsx`, `SidebarMenu.tsx`, `SidebarHeader.tsx`, `config.ts` and `global.css` `.sidebar-scroll`, after narrowing it to 240px, brightening its names and replacing Chrome's own scrollbar; the built stylesheet checked for the compiled rules | Every other section; the look in a phone or desktop browser, which Harshil checks |
