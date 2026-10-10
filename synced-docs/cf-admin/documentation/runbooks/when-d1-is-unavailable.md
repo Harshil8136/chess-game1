@@ -106,7 +106,7 @@ isolated by `allSettled`, so one failure cannot starve another.
 |---|---|---|---|
 | `cf-access-audit-poll` | `*/5` | Watermark unreadable → run skipped. Failed-login capture pauses | Next tick; watermark not advanced, so no window is lost |
 | `booking-email-retry` | `*/5` | Scan fails → no re-enqueue this tick | Next tick |
-| `booking-outbox-poke` | `*/5` | The pending-replay probe fails **open**, so the poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly heartbeat (the VPS job, GitHub Actions, or `heartbeat-watchdog` below) |
+| `booking-outbox-poke` | `*/5` | The pending-replay probe fails **open**, so the poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly heartbeat (the VPS job, or `heartbeat-watchdog` below) |
 | `cf-access-reconcile` | `*/5` | Push to Cloudflare still happens; the D1 log row and Supabase sweep fail | Next tick |
 | `storage-notifications` | `*/5` | Gate settings unreadable → treated as due (fails open); the scans then fail → no quota or share-expiry mail this tick, and `storage-notify-last-run` is not stamped | Next tick |
 | `blog-scheduled-publish` | `*/5` | A matured post stays `scheduled` | Next tick |
@@ -221,6 +221,7 @@ blog for this to hold (cf-astro `AGENTS.md` invariant 7).
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-10 | cf-astro's `consent-heartbeat.yml` (by hand only since 2026-10-10) | §3: the `booking-outbox-poke` row's "recovered by" no longer names GitHub Actions. Not re-checked: every other row |
 | 2026-10-07 | `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/dal/PortalSettingsRepository.ts` (`readSettings` returns an empty map on a failed read), `src/lib/observability.ts` (`reportOnceCooled` fails open) | §3: the `heartbeat-watchdog` row added; the `booking-outbox-poke` row's "recovered by" names the heartbeat's three runners. Not re-checked: every other row |
 | 2026-10-04 | `src/lib/jobs/control.ts`, `dispatch.ts`, `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `src/lib/dal/CronControlRepository.ts` (`wakeJob`), `src/lib/jobs/registry.ts` | §3: the `redis-ttl-hygiene` row removed; the lapse of throttles and sleeps, and the D1-dependent request surfaces (hour/day limits fail closed, the neuron budget fails open, wakes) added. Not re-checked: every other row |
 | 2026-09-19 | `src/lib/jobs/registry.ts`, `tiers.ts`, `telemetry.ts`, `runJob.ts`, `src/lib/observability.ts` re-read; live `admin_portal_settings` queried for the `cron-control` document and the `job-alert:*` keys | §1 rewritten (Observability is conditional since `eb8cb12`; Sentry has three regimes, not one); §3 job table re-derived — **11 jobs, 9+2**, `cron-usage-probe` row added, `disabled`/`shed` outcomes documented; §4 reordered to put Analytics Engine first; `lease-held` marked unreachable; §1's stale "until chunk 8c" wording removed. `job-alert:cf-sync-log:sweep` and `job-alert:cf-sync:supabase_fetch_failed` confirmed present in D1 |
