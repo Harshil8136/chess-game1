@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §4's page-swap paragraph, against `src/components/navigation/NativeNavigationState.astro`, Astro's router source in the installed package (the swap, `astro:after-swap`, then the scripts run), the build output after `npm run build` (the router script is an external file) and `test/client-navigation.test.ts` | Every other section; the live headers after the deploy |
 | 2026-10-10 | The `public/_headers` row, against `wrangler.toml` (`assets` without `run_worker_first`), `public/_headers`, `dist/client/_headers` after `npm run build` (the adapter's immutable rule first) and the Cloudflare static-assets documentation (`_headers` applies to asset responses, not Worker responses) | The live response headers of a static file, which wait for the deploy; every other section |
 | 2026-10-09 | §6a's new Cron Control row, against `src/pages/api/cron/jobs/[id]/check.ts`, `history.ts`, `src/lib/jobs/history.ts` (`SAFE_ID`) and `test/cron-api.test.ts` (401, 403, page key alone allowed, 404) | Every other section, the §0 route counts included |
 | 2026-10-07 | §6b's opening sentence against `wrangler.toml`: the Rate Limiting binding is a new binding type (the owner-approved exception), not a store the Worker already had | Every other section |
@@ -365,6 +366,17 @@ upgrade-insecure-requests
 
 Every first-party inline `<script>` is rewritten to carry the per-request nonce
 by the middleware itself (the `finalBody` replace at the end of `csp.ts`).
+
+**Page swaps (since 2026-10-10).** A click inside the portal no longer reloads the
+tab: Astro's `<ClientRouter />` fetches the next page and swaps it in, so the tab
+keeps the policy, and the nonce, of the page it first loaded. The new page's
+scripts carry *their* response's nonce, which the kept policy would refuse. So
+`src/components/navigation/NativeNavigationState.astro` captures the first page's
+nonce and, in `astro:after-swap`, sets it on every script the router is about to
+run; the policy itself is unchanged. That code runs only on documents this origin
+served through the auth pipeline, with each response's own nonce already checked
+by the middleware. The router script is an external file under `'self'`, and
+link prefetching is off. `test/client-navigation.test.ts` holds both in place.
 
 ### Framing exception — the backup console (added 2026-09-23)
 

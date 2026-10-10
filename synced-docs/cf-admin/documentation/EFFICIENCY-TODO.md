@@ -39,10 +39,9 @@ already uses `E-` for email-portal items.
 
 ## 1. What one click costs today
 
-**Navigation is a full page reload.** No `<ClientRouter />` is mounted (the
-comment in `src/components/navigation/TopBar.tsx` says so), so every click asks
-the Worker for a whole new page and the server rebuilds the sidebar and header
-each time.
+**A click swaps the page in place (since 2026-10-10, EF-9).** Every click still
+asks the Worker for a whole server-rendered page, with the steps below, but the
+browser keeps the sidebar and header it already has and swaps only the page.
 
 ### 1.1 A page load (code-derived, 2026-09-23)
 
@@ -284,19 +283,29 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
   accessibility; the badge can be minutes stale unless it refreshes on focus.
 - **Size.** Medium: the layout, one island, one endpoint, sign-out.
 
-#### EF-9. Client-side navigation — spike first
+#### EF-9. Client-side navigation — ✅ done 2026-10-10
 
-- **Idea.** Mount Astro's `<ClientRouter />` with `transition:persist` on the
-  sidebar and top bar, so a click swaps only the main content and the shell stays
-  mounted without re-hydrating.
-  `src/components/navigation/NativeNavigationState.astro` and
-  `src/components/navigation/TopBar.tsx` already anticipate a ClientRouter.
-- **Limit.** Each click is still one Worker request with its session read, and the
-  server still renders the full page unless the layout can skip the shell for
-  router requests. This makes clicks *feel* faster; it does not by itself remove
-  server work.
-- **Spike questions.** Nonce-based CSP with swapped scripts; island state across
-  swaps; Astro 7's router behaviour. Nothing here is verified yet.
+- **What shipped.** `<ClientRouter />` in `src/layouts/AdminLayout.astro`. The
+  sidebar, top bar, session watchdog, toasts and dialogs carry
+  `transition:persist` **and** `transition:persist-props`, so they stay mounted
+  and are never re-hydrated (a re-hydrated Preact island mounts a second copy
+  beside the first). Each page carries the frame's new data (current path, the
+  list of pages, breadcrumbs) in one `<script type="application/json"
+  id="shell-state">` block that the kept islands read after each swap
+  (`src/lib/shell-state.ts`). Link prefetching is off (`prefetch: false` in
+  `astro.config.ts`), so the router asks the Worker for nothing the person did
+  not click.
+- **The answers to the spike questions.** Swapped-in scripts get the first page's
+  nonce in `astro:after-swap`, before the router runs them
+  (`src/components/navigation/NativeNavigationState.astro`;
+  [SECURITY.md](./security/SECURITY.md) §4). Page scripts set themselves up on
+  `astro:page-load` only, which fires on the first load and after every swap
+  (`test/client-navigation.test.ts` fails a page that also checks
+  `document.readyState`, which would bind twice). Sign-out and an expired session
+  still do a full load on purpose.
+- **Limit, unchanged.** Each click is still one Worker request with its session
+  read, and the server still renders the whole page; the saving is the browser's
+  (no re-download, re-parse and re-hydration of the frame), not the Worker's.
 
 ### P3 — optional, or small and independent
 
@@ -396,6 +405,7 @@ never who *decides*.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-10 | claude | `src/layouts/AdminLayout.astro`, `src/lib/shell-state.ts`, `NativeNavigationState.astro`, `astro.config.ts`, the built router script after `npm run build`; `test/client-navigation.test.ts` | §1's opening and EF-9: the router is mounted. §1's step costs not re-derived (unchanged: every click is still one server render) |
 | 2026-10-10 | claude | `src/lib/auth/page-registry.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`; `test/page-registry.test.ts` | Step 3 and EF-4: the sidebar's KV copy is gone, replaced by a D1 read at most once a minute per isolate. The rest of §1 and §3 not re-derived |
 | 2026-10-04 | claude | `src/components/dashboard/DashboardController.tsx`, `src/lib/visible-poll.ts`, `src/lib/analytics/providers/index.ts`, `src/components/admin/debug/SystemDiagnostics.tsx`, `src/lib/diagnostics/tests/security.ts`; read-only D1 query of the live `cron-control` row | EF-2 fixes 1-3 and EF-11 done, EF-1 partly; §EF-12's first two rows updated. Not re-checked: §1's per-click costs, EF-3 to EF-10, the other EF-12 rows |
 | 2026-09-23 | claude | Read the auth pipeline, `src/lib/auth/session.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`, every `setInterval` under `src/components/`, the metrics provider and the diagnostics runner. Cloudflare GraphQL Analytics for KV, D1 and Worker usage (16–22 Sep 2026); Supabase edge logs (24 h); Sentry spans (30 days); live D1 queries on `admin_access_requests`, `admin_pages` and `system_test_results`. Cloudflare docs for the KV limits and for Cache API availability behind Access. | List created. EF-1 and EF-2 are latent — neither has been triggered in the measured window. |

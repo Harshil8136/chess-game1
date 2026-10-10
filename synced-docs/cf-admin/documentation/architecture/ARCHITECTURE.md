@@ -50,7 +50,7 @@ Exact versions live in `package.json`; the rules version lives in `RULESAd.md`.
 |-----------|----------|-----------|
 | RBAC + ACM | Hierarchical integers + route registry | 0 KB |
 | PLAC | Access map embedded in the KV session record + D1 overrides | ~3 KB |
-| Navigation | Full-page SSR navigation — **no** `ClientRouter` / View Transitions | 0 KB |
+| Navigation | Server-rendered pages swapped in place by `<ClientRouter />`; the sidebar and top bar stay mounted (since 2026-10-10) | ~6 KB gzip |
 | CSS architecture | Component-scoped + centralized tokens | 0 KB |
 | Security headers | Edge-injected via the middleware sequence | 0 KB |
 | Audit logging | `waitUntil()` fire-and-forget D1 writes, after the response | 0 KB |
