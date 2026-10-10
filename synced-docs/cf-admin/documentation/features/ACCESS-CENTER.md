@@ -17,8 +17,9 @@ tags: [permissions, access-center, plac, vps, backup, registry, ui]
 > permission, each with the role that gets it by default and whether this person has it
 > and why. Anything you are allowed to change has a switch. Switches only change a draft;
 > you review the changes and save them together. The page registry
-> (`/dashboard/debug/pages`) also lists the consoles' permissions, so vendor support can
-> change which role each one starts at.
+> (`/dashboard/debug/pages`) also lists the consoles' permissions, so vendor support, or
+> someone granted Page Registry, can change which role each one starts at (the latter only
+> within their own role).
 
 The design, and the reasons for it, are in
 [the v2 spec](../specs/2026-10-03-access-center-v2-design.md); the console rules (T1–T5,
@@ -127,7 +128,11 @@ row and one row per capability: key, label, class, default role, live personal g
 mention it, and an edit button. Edit opens a dialog: pick the new default ("Manager and
 above"), see who gains and who loses it among active people, give a reason, apply. Floors are
 locked. The save goes to the console's `POST access/role`, which keeps every personal grant,
-and writes one activity-log row under the console's module.
+and writes one activity-log row under the console's module. Since 2026-10-10 the rows are for
+anyone holding the Page Registry key, not vendor support alone; below vendor support a
+permission moves only when it starts at the editor's own role or below and stays there, and
+the console still checks the person's own `access.manage`
+([`DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2.2).
 
 ## 5. Working on the screen
 

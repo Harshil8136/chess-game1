@@ -46,21 +46,31 @@ All modules are protected by **Server-Side Rendering (SSR) authorization guards*
 
 ### 2.1 SSR-First Security
 
-Every sensitive page uses a strict **server-side role check** in the Astro frontmatter.
-The guard is `isVendorSupport` (level 0) — the samples below previously used
-`isDev`, which is now a `@deprecated` alias for exactly the same check:
+Every Developer Tools page checks its **page key on the server** in the Astro frontmatter
+(2026-10-10). The hub, Diagnostics and its history ask for `/dashboard/debug`
+(`canUseDebug`); Page Registry asks for its own key, `/dashboard/debug/pages`
+(`canUsePageRegistry`). Both are in `src/lib/auth/surface-guards.ts` and check the exact key
+in the person's access map (`placRequireGrant`): vendor support by default (the rows' stored
+role is `dev`), anyone an access grant names, and the owner and vendor support, who bypass
+page-level access everywhere (ADR-0002). A missing or switched-off row refuses.
 
 ```astro
 ---
 import { requireAuth } from '../../../lib/auth/guard';
-import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
+import { canUseDebug } from '../../../lib/auth/surface-guards';
 
 const user = await requireAuth(Astro);
-if (!isVendorSupport(user.role as Role)) {
+if (!canUseDebug(user)) {
   return Astro.rewrite('/dashboard/access-denied');
 }
 ---
 ```
+
+*Changed 2026-10-10 (the owner's report):* until then the four pages checked the role alone
+(`isDev`, an alias of `isVendorSupport`). A grant on `/dashboard/debug` showed the page in the
+sidebar, which follows the access map, and the page refused it, so a grant never worked.
+`test/debug-access.test.ts` fails the build if a page under `src/pages/dashboard/debug/` checks
+the role again instead of its key.
 
 **Why SSR, not client-side?** Client-side checks (e.g., `{isVendorSupport(user.role) && <Component />}`) still ship the component JavaScript to the browser. An attacker with browser DevTools could inspect, modify, or replay those components. SSR guards ensure the page HTML is never generated at all — the server rewrites to the access-denied view before any of the page's markup reaches the wire. *(2026-09-14: the guarded pages still import the deprecated `isDev` alias and use `Astro.rewrite`, not a redirect; this doc previously showed `Astro.redirect('/dashboard?error=unauthorized')`. 2026-09-19: there are **five** such pages, not three — `debug/index`, `debug/diagnostics`, `debug/diagnostics/history`, **`debug/pages`** (the page-registry manager, the highest-privilege of the set) and `settings/features`.)*
 
@@ -86,18 +96,20 @@ if (!isVendorSupport(sessionUser.role as Role)) {
 }
 ```
 
-The exception, live (a second, the Modules list's switch, let Super Admin change which role
-a page requires; it was deleted on 2026-10-10, and the page-registry manager of §3 is the one
-place that edits a page's row):
+Since 2026-10-10 the routes ask for the same key as their page:
 
-| Route(s) | Actual guard | Consequence |
+| Route(s) | Guard | Notes |
 |---|---|---|
-| `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | `checkPerm('/dashboard/debug', isDev(user.role))` — a **PLAC grant overrides the role**: `user.accessMap['/dashboard/debug'] === true` returns true before the role is consulted | A non-DEV user holding that grant can run the probe suite against live production bindings. The 403 body is `Insufficient permissions or access denied by PLAC policy` |
+| `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | `canUseDebug` | Until 2026-10-10 a local `checkPerm('/dashboard/debug', isDev(...))`, which honoured a grant while the pages did not, and refused the owner, whose stored map holds `false` for a vendor-only row. The 403 body is unchanged: `Insufficient permissions or access denied by PLAC policy` |
+| `pages/api/system/pages.ts` (GET, PATCH), `preview.ts` | `canUsePageRegistry` | PATCH below vendor support: `registryEditRefusal` (`src/lib/auth/registry-impact.ts`) |
+| `pages/api/system/console-features.ts` | `canUsePageRegistry` (`gate()` in `src/lib/access-center/registry.ts`) | Each console checks the person's own `access.manage` again; a move below vendor support stays within the editor's rank |
 
-Treat it as a decision to confirm or a defect to fix, not as documentation
-gaps. As written before this correction, the section asserted a stricter
-control than the code implements, which is the worse of the two failure modes
-for a threat model.
+**The rank rule.** A grant on Page Registry must not become a way up: an Admin who could lower
+an owner-only page to Admin would open it for themselves. So below vendor support a page's
+required role and its on/off switch change only when the editor's own role already opens the
+page, and only to a role at or below their own; a page's name, description, group and order
+may change on any row. Console permissions follow the same rule. The registry offers only
+those roles, and a row above the editor shows "Above your role" in place of the picker.
 
 ### 2.3 RBAC + PLAC Layering
 
@@ -106,7 +118,7 @@ Authorization is enforced at **three layers**:
 | Layer | Mechanism | File |
 |-------|-----------|------|
 | **Page-Level** (PLAC) | The **middleware authorization gate** for both pages and API routes, resolved from D1 `admin_pages`. It **default-denies**: an unmapped `/api/*` path is refused outright, and a refused page is rewritten to `/dashboard/access-denied`. Sidebar visibility is a consequence of the same map, not its purpose | `lib/auth/stages/decide.ts`, `lib/auth/guard.ts`, `lib/auth/plac.ts` |
-| **SSR Guard** | Astro frontmatter rewrites non-DEV users to the access-denied view | `pages/dashboard/debug/index.astro` |
+| **SSR Guard** | Astro frontmatter rewrites a person without the page's key to the access-denied view | `pages/dashboard/debug/index.astro` |
 | **API Guard** | The handler's own role/PLAC check (§2.2) | `pages/api/diagnostics/run.ts` |
 
 All three layers must independently agree. *Corrected 2026-09-19:* this section
@@ -284,6 +296,7 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §2.1 to §2.3 after the Developer Tools pages and routes moved to their page keys: `canUseDebug` and `canUsePageRegistry` in `src/lib/auth/surface-guards.ts`, the four pages under `src/pages/dashboard/debug/`, the three diagnostics routes, `api/system/pages.ts`, `preview.ts` and `access-center/registry.ts`; the live rows (`/dashboard/debug` and `/dashboard/debug/pages`, both `dev`, active) and their grants read through the D1 connector; `test/debug-access.test.ts`, `test/registry-impact.test.ts`, `test/registry-console-features.test.ts` | §3 onward; the pages in a browser |
 | 2026-10-10 | §1, §2.2, §4, §7 and §8.3 after the Feature Flags tab and the Modules list were deleted: `git grep` finds no `/api/features/toggle`, `/api/pages/toggle`, `FeatureFlagRepository` or `ModuleToggles` in `src/`; the page-registry manager calls `/api/system/preview` and `/api/system/pages` (`src/components/admin/debug/PageRegistryManager.tsx`) | Everything else |
 | 2026-10-04 | §3.2 and the file table's `SystemDiagnostics.tsx` row against `src/components/admin/debug/SystemDiagnostics.tsx` (no interval left) | Everything else |
 | 2026-09-19 | `grep -rn isDev src/pages --include=*.astro` (**five** guarded pages, not three); `api/diagnostics/run.ts` and `api/pages/toggle.ts` guards read in full; `lib/auth/stages/decide.ts` + `lib/auth/guard.ts` (PLAC is the middleware gate and default-denies); `lib/audit.ts` `handleAuditError` (console **and** Sentry); `admin_feature_flags` readers across both checkouts (none outside the toggle UI/repository) | Live `admin_pages` label for `/dashboard/debug`; historical redirect behaviour (§8.3) |
