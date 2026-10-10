@@ -652,6 +652,10 @@ pop-up does not repeat the defences by hand:
   `overflow: hidden`, and only its body scrolls. The old pattern put a moving card inside a
   transparent `<dialog>` that the browser lets scroll, so the card's slide-in pushed past the
   frame and a small scrollbar showed beside it.
+- **Height (2026-10-10):** a modal dialog is pinned to both edges of the screen, so the frame
+  is `height: fit-content`, as tall as its content. Never give it `height: auto` or a full-height
+  class: that stretched every pop-up to the whole screen with the space below its content empty.
+  Only the wide-screen drawer and `size="full"` take the full height on purpose.
 
 ```tsx
 import { Dialog } from '../ui/Dialog';

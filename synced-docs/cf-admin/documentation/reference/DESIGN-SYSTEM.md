@@ -701,7 +701,12 @@ content renders only while open, so a form starts fresh each time. Why it is bui
 radius, never scrolls (`overflow: hidden`), and only `.ui-dialog__body` scrolls, with a slim
 6 px bar. The old pop-ups slid a card inside a transparent `<dialog>` that the browser lets
 scroll, so the card's animation pushed past the frame and a small scrollbar showed beside it.
-The opening animation moves the whole frame. `test/dialog-look.test.ts` pins this.
+The opening animation moves the whole frame. A centred pop-up, a sheet and a drawer on a phone
+are as tall as their content (`height: fit-content`), up to the screen less a small margin;
+only the drawer on a wide screen and `size="full"` take the whole height. A modal dialog is
+pinned to both edges of the screen, so `height: auto` would stretch every pop-up to full
+height with the space below its content empty (the owner's report of 2026-10-10).
+`test/dialog-look.test.ts` pins all of this.
 
 | Prop | Values |
 |---|---|
@@ -751,6 +756,11 @@ The hues are mid-tones that read on the light and the dark theme alike.
 A dialog opened on a page outside the kit takes its tokens with `class="ck-scope"` (the
 Users page's session drawer does).
 
+`ck-search` and `ck-rename` work in a row and in a column alike: their 16rem flex basis
+applies only inside `ck-toolbar` and `ck-item`, because in a column (`ck-group`, a pop-up's
+body) a basis is a height, and it made a tall empty box around the field
+(`test/console-kit-look.test.ts`).
+
 ---
 
 ## 10. Cross-References
@@ -766,6 +776,7 @@ Users page's session drawer does).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §9.8's sizing against `Dialog.css` (every `height` rule) after pop-ups opened full height; §9.9's `ck-search` and `ck-rename` against `console.css` and every place they are used (`LockOutDialog.tsx`, `AlertPolicyPanel.tsx`, `SignInAlertsCard.tsx`, `SignedInPanel.tsx`, `HistoryPanel.tsx`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | §9.8 against `src/components/ui/Dialog.tsx`, `Dialog.css`, `ConfirmDialog.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx` and `src/stores/dialogStore.ts`; §9.9 against `src/styles/components/console.css`; the §3 file tree's `console.css`, `github.css`, `settings.css` and `session-registry.css` lines | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | The sidebar's look (§5 Sidebar States, §8.1) against `Sidebar/index.tsx`, `SidebarMenu.tsx`, `SidebarHeader.tsx`, `config.ts` and `global.css` `.sidebar-scroll`, after narrowing it to 240px, brightening its names and replacing Chrome's own scrollbar; the built stylesheet checked for the compiled rules | Every other section; the look in a phone or desktop browser, which Harshil checks |
 | 2026-10-10 | §5 Sidebar States against `src/components/navigation/Sidebar/index.tsx`, `SidebarHeader.tsx`, `SidebarMenu.tsx`, `SidebarProfile.tsx` and `utils.ts` (66 px, the arrow, the fade, no hover re-open) | Every other section |
