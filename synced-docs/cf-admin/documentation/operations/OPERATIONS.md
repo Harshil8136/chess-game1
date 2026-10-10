@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-10 | `scripts/release.mjs` build stage, `scripts/lib/release-guards.mjs` (`buildVerifyStep`); Workers Builds check-run times on three October pushes (`release-and-rollback.md` §1) | §7: the banner said Workers Builds ran its default command (true on 2026-09-19); it runs `build:ci`, which no longer repeats `verify`. Not checked: the dashboard's deploy command |
 | 2026-10-08 | `sentry.client.config.ts`, `src/lib/sentry-scrub.ts` (`BROWSER_NETWORK_FAILURES`), `test/sentry-scrub.test.ts`; `@sentry/core`'s `getPossibleEventMessages` (what `ignoreErrors` tests: the value and `<type>: <value>`) | §4.1 "Browser noise filter" added. Not re-checked: the rest of §4 |
 | 2026-10-07 | `src/lib/jobs/registry.ts`, `src/workers/scheduled-heartbeat-watchdog.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **13 jobs (11+2)** with `heartbeat-watchdog`, its gate in the idle-tick block, the `ASTRO_SERVICE` row's purposes. No binding, secret, variable or cron added; §5 unchanged. Not re-checked: every other row, and nothing live (not deployed) |
 | 2026-10-07 | `src/env.d.ts`, `src/lib/github/cache.ts` (the only reader of `GITHUB_READ_TOKEN`) | §5.3 lists `GITHUB_READ_TOKEN`, optional, so `[secrets] required` is unchanged. Not checked: the secret on the Worker (set by the owner) |
@@ -657,21 +658,19 @@ organization. The `Access: Organizations — Revoke` permission below is what au
 > Owner of the release path: [`../runbooks/release-and-rollback.md`](../runbooks/release-and-rollback.md)
 > (viability program chunk 3). This section is the command reference only.
 >
-> ⚠️ **Workers Builds still runs its default command** (`npx wrangler deploy`),
-> verified 2026-09-19. `build:ci` and `deploy:ci` below are the *intended*
-> commands, not the live ones, so a push to `main` today deploys without
-> `verify`, without the schema drift check, without applying migrations and
-> without the smoke probe. **Apply migrations by hand before pushing.** The
-> one-time owner step is `release-and-rollback.md` §3.
+> **Where each check runs (2026-10-10):** `npm run verify` on the workstation before
+> every push, and GitHub's `quality` job after it. Workers Builds runs `build:ci`,
+> which only builds since 2026-10-10. Evidence and the deploy stage:
+> `release-and-rollback.md` §1. **Apply migrations by hand before pushing.**
 
 ```bash
 # cf-admin
 npm run dev            # Local dev server (Astro on workerd)
-npm run verify         # the full gate — same set Workers Builds and CI run
+npm run verify         # the full gate: run before every push; GitHub `quality` runs it again after
 npm run build          # Production build (astro build; offline-safe via .env.build)
 npm run release        # preflight → verify → build → drift check (blocking) → migrate → deploy → smoke → tag
-npm run build:ci       # INTENDED Workers Builds build command  (verify + build)   — NOT YET SWITCHED ON
-npm run deploy:ci      # INTENDED Workers Builds deploy command (migrate BEFORE deploy, then smoke) — NOT YET SWITCHED ON
+npm run build:ci       # Workers Builds build command: astro build only (verify is not repeated there)
+npm run deploy:ci      # Workers Builds deploy command (drift check, migrate BEFORE deploy, deploy, smoke)
 
 # D1 migrations — through Wrangler's runner (RULESAd RULE #0.7, corrected 2026-09-02).
 # The shared d1_migrations ledger is keyed on FILENAME and holds both repos'

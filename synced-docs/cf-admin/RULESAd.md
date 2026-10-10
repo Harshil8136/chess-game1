@@ -928,10 +928,10 @@ npm run verify           # typecheck → ratchet → test:run → test:gates →
 # Release (viability program chunk 3 — documentation/runbooks/release-and-rollback.md)
 npm run release          # preflight → verify → build → drift check → MIGRATE
                          #   → wrangler deploy → smoke → tag   (local; cf:deploy is an alias)
-npm run build:ci         # the build command Workers Builds is MEANT to run
-npm run deploy:ci        # the deploy command Workers Builds is MEANT to run
-                         #   (migrate → deploy → smoke). See the correction below:
-                         #   neither is configured in the dashboard today.
+npm run build:ci         # the Workers Builds build command: astro build only
+                         #   (verify is not repeated there since 2026-10-10)
+npm run deploy:ci        # the deploy command Workers Builds is meant to run
+                         #   (drift check → migrate → deploy → smoke)
 ```
 
 ### Git & deployment protocol
@@ -953,26 +953,19 @@ now standalone, so a pointer outside it can never resolve.
   and pushes to `origin main`, and opens no pull request (the owner's standing
   order, 2026-10-03; `main.md` Golden Rule 1). *Until then this line let an
   agent on an assigned branch push there instead.*
-- 🔴 **Nothing gates the deploy today — corrected 2026-09-19.** This section
-  said the gate was the Builds **build command** running `npm run build:ci` and
-  the **deploy command** running `npm run deploy:ci`. Workers Builds is still
-  on its **default** command: it does not run `verify` and does not apply
-  migrations. Evidence: migrations `0054`/`0055` were applied to production at
-  13:05:09 and 13:06:50 UTC on 2026-09-16, before the commit that added them
-  was authored at 13:08:06; commit-to-deploy measures 78–110 s against the
-  ~4–6 min `verify` takes; and `.github/workflows/quality.yml` still states in
-  its own header that its jobs do not gate the deploy. Consequences to plan
-  around: the schema-drift check, migrate-before-deploy and the blocking budget
-  test are **inert in production**, and a doc that trips the 45-day staleness
-  gate reddens local `verify` and the `Docs Quality` workflow only. Switching
-  the dashboard commands to `npm run build:ci` / `npm run deploy:ci`
-  (`scripts/release.mjs`, viability program chunk 3) is the fix, per
+- 🔴 **Your local `npm run verify` is the only check before the code is live
+  (2026-10-10).** Workers Builds runs `npm run build:ci`, which since
+  2026-10-10 builds without repeating `verify`: the workstation runs it before
+  the push and GitHub's `quality` job runs it again after, so a third run only
+  delayed every deploy by 4-6 minutes. Neither GitHub nor Cloudflare stops a red
+  push from deploying. *Until 2026-09-19 this section claimed the build command
+  gated the deploy while the dashboard still ran its default command; the
+  owner has since switched the commands on.* Evidence and the deploy stage:
   [`documentation/runbooks/release-and-rollback.md`](./documentation/runbooks/release-and-rollback.md)
-  §3 — until an operator does it, read every claim of an automated gate in this
-  repo as aspirational. Compliance docs record this as a machine approval
-  rather than a second pair of human eyes — see
+  §1. Compliance docs record the deploy approval as a machine check rather
+  than a second pair of human eyes — see
   [`documentation/security/compliance/SOC2-TSC-mapping.md`](./documentation/security/compliance/SOC2-TSC-mapping.md)
-  CC8.1, which needs the same correction.
+  CC8.1.
 - **Run `npm run verify` before every push.** With the default Builds command in
   place, that local run is the only gate there is. When the push carries a
   migration, releasing it deliberately from a workstation (`npm run release`)

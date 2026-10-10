@@ -3,7 +3,7 @@
 title: "Release & Rollback Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-09-19
+last_verified: 2026-10-10
 verified_against: [code, infra]
 owner: harshil
 related_code: [scripts/release.mjs, scripts/lib/release-guards.mjs, scripts/d1_schema_snapshot.mjs, src/pages/api/health.ts, package.json, .githooks/pre-push]
@@ -13,54 +13,43 @@ tags: [release, deploy, rollback, workers-builds, migrations, runbook]
 
 # Release & Rollback Runbook
 
-> **TL;DR (non-technical):** A push to `main` goes live automatically. There is
-> a scripted path that would check everything, apply any database change,
-> deploy, and then confirm the live site reports the commit just pushed — but
-> **it is not switched on yet**, so today a push deploys the code and nothing
-> else. Database changes must be applied by hand, first, because rolling back
-> code does not roll back the database. This page says what actually happens
-> today, what to click once to switch the full path on, and what to do when a
-> release goes wrong.
+> **TL;DR (non-technical):** A push to `main` goes live automatically through
+> Cloudflare. The checks run twice: on the computer that pushes (`npm run
+> verify`, required before every push) and in GitHub's `quality` job after the
+> push. Cloudflare only builds and deploys; since 2026-10-10 it no longer runs
+> the checks a third time, which had made every deploy wait 4-6 extra minutes.
+> Database changes are applied first, by hand, because rolling back code does
+> not roll back the database. This page says what happens on a push and what
+> to do when a release goes wrong.
 
 ## 1. The path (viability program chunk 3)
 
-> 🚨 **Not switched on. Read this before the diagram.** Workers Builds is still
-> running its **default** command (`npx wrangler deploy`). A push to `main`
-> therefore deploys **without** `npm run verify`, **without** the schema drift
-> check, **without** applying migrations, and **without** the smoke probe. The
-> one-time owner step in §3 is what turns the diagram below into reality; §6
-> records that it has not been taken.
->
-> Evidence, three independent lines (2026-09-19):
->
-> - `.github/workflows/quality.yml` lines 9-16 at HEAD still say these jobs "do
->   NOT gate that deploy" and name the switch as future work.
-> - Workers Builds finishes 58 s–2 m 50 s after a push, while the `quality` job
->   (`npm ci` + `verify` — strictly less work than `build:ci`) takes 4 m 18 s–4 m 42 s
->   on the same commits.
-> - Migrations `0052`, `0053` and `0054` were applied to production **3–17
->   minutes before the commits that introduced them were authored** — i.e. by
->   hand. `deploy:ci` would have applied them after.
->
-> **Until the switch is taken: apply migrations by hand before you push**
-> (`npx wrangler d1 migrations apply madagascar-db --remote`), and run
-> `npm run verify` locally or rely on the pre-push hook (§3 step 4).
+> **Where each check runs (2026-10-10).** The Workers Builds build command
+> runs `npm run build:ci`: the owner switched it on after 2026-09-19, when this
+> page recorded the default command. Since then a build took 6-10 minutes from
+> the push (check-run completion against push time on `4b166d6`, `42e421f` and
+> `ab6b0c7`, 2026-10-08 and 2026-10-09; a documentation-only push took 8
+> minutes) against 1-3 minutes before, and the owner reports the build log
+> running the tests. That was `verify` running a third time, after the
+> workstation and before GitHub's `quality` job, so on 2026-10-10
+> `release.mjs build --ci` became build-only (`buildVerifyStep` in
+> `scripts/lib/release-guards.mjs`). The dashboard's deploy command cannot be
+> read from here; `npm run deploy:ci` is the command it is meant to run.
+> **Apply migrations by hand before you push** either way.
 
 ```text
 git push origin main
-  └─ Cloudflare Workers Builds (dashboard-side GitHub connection)
-       │
-       ├─ TODAY:  default command  npx wrangler deploy      ← no verify, no migrate, no smoke
-       │
-       └─ TARGET STATE (after the owner step in §3):
-            ├─ build command   npm run build:ci   →  node scripts/release.mjs build --ci
-            │      npm run verify  (the chain lives in package.json; do not restate it)
-            │      npm run build   (astro build)
-            └─ deploy command  npm run deploy:ci  →  node scripts/release.mjs deploy --ci
-                   schema drift check   node scripts/d1_schema_snapshot.mjs --check   (BLOCKING since chunk 5: exit 2 = drift → deploy stops; exit 1 = live schema unreadable → 3 tries, then deploy with a warning)
-                   migrations           wrangler d1 migrations list/apply madagascar-db --remote   ← BEFORE the code
-                   deploy               wrangler deploy   (refuses if a [secrets] required name is missing)
-                   smoke                GET /api/health through an Access service token; expects status ok and release == commit
+  ├─ before the push (workstation): npm run verify   ← the only check that runs before the code is live
+  ├─ Cloudflare Workers Builds (dashboard-side GitHub connection)
+  │    ├─ build command   npm run build:ci   →  node scripts/release.mjs build --ci
+  │    │      npm run build   (astro build; verify is NOT repeated here since 2026-10-10)
+  │    └─ deploy command  npm run deploy:ci  →  node scripts/release.mjs deploy --ci
+  │           schema drift check   node scripts/d1_schema_snapshot.mjs --check   (BLOCKING since chunk 5: exit 2 = drift → deploy stops; exit 1 = live schema unreadable → 3 tries, then deploy with a warning)
+  │           migrations           wrangler d1 migrations list/apply madagascar-db --remote   ← BEFORE the code
+  │           deploy               wrangler deploy   (refuses if a [secrets] required name is missing)
+  │           smoke                GET /api/health through an Access service token; expects status ok and release == commit
+  └─ GitHub Actions `quality` (after the push; does not stop the deploy)
+         the verify chain, types:check, build, SBOM; documentation-only pushes skip the code steps
 ```
 
 `npm run verify` is, at the time of writing:
@@ -72,12 +61,12 @@ subsumed by the ratchet.)
 
 Locally the same script runs the whole path with two extra stages:
 `npm run release` = preflight (right remote, on `main`, clean tree, Node ≥ 22.12)
-→ build → deploy → tag `release/<yyyymmdd>-<sha7>`. Flags: `--skip-verify`,
-`--allow-dirty` (local only). `npm run cf:deploy` is an alias.
+→ build (verify first, then `astro build`) → deploy → tag `release/<yyyymmdd>-<sha7>`.
+Flags: `--skip-verify`, `--allow-dirty` (local only). `npm run cf:deploy` is an alias.
 
 > `--ci` is also switched on implicitly by `CI=true` or `WORKERS_CI=1`
-> (`scripts/release.mjs`), which is how a runner skips preflight and tagging
-> without anyone passing a flag.
+> (`scripts/release.mjs`), which is how a runner skips preflight, verify and
+> tagging without anyone passing a flag.
 
 **Why migrate before deploy.** Two production incidents in Sentry
 (`no such table: blog_posts`, `no such table: storage_share_access_logs`) were
@@ -107,8 +96,8 @@ D1. So a migration must be one the *currently running* code tolerates:
 
 ## 3. One-time switch-on (owner, dashboard)
 
-Nothing changes until these are set; until then Builds keeps its default
-`npx wrangler deploy` and the script is only used locally.
+The build command (step 2) has been set: see §1 for the evidence. The rest is
+recorded here for a rebuild of the project or a check of the settings.
 
 1. **Build token — grant D1.** Cloudflare dashboard → **Workers & Pages** →
    `cf-admin-madagascar` → **Settings** → **Build** → **API token**. The
@@ -120,10 +109,8 @@ Nothing changes until these are set; until then Builds keeps its default
    *Edit*, **D1 *Edit***, Zone → Workers Routes *Edit*; select it in Builds.
 2. **Commands.** Same **Build** settings page: Build command `npm run build:ci`,
    Deploy command `npm run deploy:ci`. Root directory stays `/`. Node is
-   pinned by `.nvmrc` (22), matching CI; the build image ships Python 3.13,
-   which the Python gates in `verify` need (there are six entry points —
-   `ratchet.py`, the `unittest` gate self-tests, `rules_check.py`,
-   `docs_check.py`, `a11y_check.py`, `audit_gate.py`).
+   pinned by `.nvmrc` (22), matching CI. Since 2026-10-10 the build stage runs
+   no Python (it no longer runs `verify`).
 3. **Smoke probe (optional, recommended).** Zero Trust → **Access** →
    **Service Auth** → create a service token named `cf-admin-release-smoke`;
    on the `cf-admin` Access application add a **Service Auth** policy for it.
@@ -171,6 +158,7 @@ and somebody has to actually run them.
 |------------|-----------|-------------------------------|------------------------|
 | 2026-09-02 | claude | `node scripts/release.mjs preflight` (refuses a dirty tree; `--allow-dirty` passes), `node scripts/release.mjs migrate` against production (drift check clean, nothing pending), `test/release-guards.test.ts` (12), `test/api-health.test.ts` (4) | pass; Builds commands not yet switched (owner step §3) |
 | 2026-09-19 | claude | `package.json` `verify`/`build:ci`/`deploy:ci` read; `.github/workflows/quality.yml` lines 9-16; Workers Builds vs `quality` check-run durations on `a9dd974` and `67a5cf6`; `d1_migrations` applied-at vs commit author times for `0052`/`0053`/`0054`; repository Actions secrets listed | **Builds still on its default command** — §1 rewritten with a banner and a target-state diagram; the `verify` chain, the Python-gate count, the `--ci` env triggers and the §5 snapshot row corrected. Not readable from here: the Build settings in the Cloudflare dashboard (the three lines above are inference from observable behaviour) |
+| 2026-10-10 | claude | Workers Builds check-run completion vs push time on `4b166d6` (6 m 44 s), `42e421f` (8 m 04 s, docs only) and `ab6b0c7` (10 m 10 s); GitHub `quality` run durations on the same pushes (4-6.5 min, 25-35 s docs only); `scripts/release.mjs` build stage; `test/release-guards.test.ts` (14) | Build command is `build:ci` (inferred from durations and the owner's report of tests in the build log; the dashboard is not readable from here); `build --ci` made build-only; §1 banner and diagram rewritten. Not re-checked: the deploy command, the build token's D1 grant, the smoke token |
 
 ## 7. Related
 

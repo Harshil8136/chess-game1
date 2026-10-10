@@ -287,8 +287,8 @@ npx wrangler rollback                       # instant: previous Worker code, sam
 > rollback is the wrong move after a contract migration — is the table in
 > [`release-and-rollback.md`](release-and-rollback.md) §5.
 >
-> **A revert deploys without gates.** Workers Builds still runs its default
-> command, so a `git revert` push deploys the reverted code with no `verify`
+> **A revert deploys without gates.** Workers Builds does not run `verify`
+> (it only builds), so a `git revert` push deploys the reverted code unchecked
 > and applies **no** compensating migration — you must run
 > `wrangler d1 migrations apply madagascar-db --remote` yourself. See
 > [`release-and-rollback.md`](release-and-rollback.md) §1.
