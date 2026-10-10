@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-03
+last_verified: 2026-10-10
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -184,12 +184,33 @@ D1 `admin_pages`, primary key `path`:
 | `required_role` | Default minimum rank (legacy vocabulary, see §4.1) |
 | `is_active` | `0` removes the page from nav **and from the access map** |
 | `parent_path` | Groups sub-features under their page |
-| `sort_order`, `category`, `label`, `icon` | Presentation |
+| `label`, `description`, `icon` | The page's one name, summary and icon (see below) |
+| `category` | The sidebar group: one of the seven in `src/lib/access-center/categories.ts` |
+| `sort_order` | Order in the sidebar, in the access editors and in a page's tab row |
 
-**Measured live, 2026-09-16:** 97 rows, **86 active**, **51** of them hash-fragment
-sub-pages (49 active). The rise since 2026-08-24 (92/81/47/45) is mostly the cron
-control plane, which added `/dashboard/cron` plus `#pause`, `#trigger` and
-`#configure` in `migrations/0054`–`0055`.
+**Measured live, 2026-10-10** (after `migrations/0067`): 113 rows, **99 active**, **60** of
+them hash-fragment permissions (55 active). Every active row's `category` is one of the seven
+groups. The 2026-09-16 figures were 97/86/51/49.
+
+**The registry is the one home of a page's name** *(2026-10-10, `migrations/0067`)*. The
+sidebar and its groups, the browser tab title ("Section · Page — Madagascar Admin"), the
+breadcrumbs, every page heading and the sub-page tab rows (Website Content, Chatbot, Cloud
+Services) read `label`, `description`, `icon` and `category` through
+`src/lib/auth/page-registry.ts`, and nothing in the code repeats a page's name. Renaming a page,
+or moving it to another sidebar group, is one edit in Page Registry (`/dashboard/debug/pages`,
+`PATCH /api/system/pages`, which now accepts `label` and `category`). Until then the sidebar
+derived its groups from path rules in three places (`plac.ts`, `AccessPolicyGrid.tsx`,
+`Sidebar/config.ts`), and pages, tabs and titles each carried their own copy of the name, so a
+rename reached only the sidebar. A part of a page with no row of its own (one email section,
+one person's access) names itself as a section beside its page's name; only the access-denied
+card, which no row covers, passes its own title, and `test/page-registry.test.ts` fails the
+build if another page does.
+
+The registry is read straight from D1 once per isolate per minute (about 100 small rows; the
+Worker runs next to the database since the placement hint of 2026-10-10). An edit through
+`/api/system/pages` clears that isolate's copy; other isolates pick it up within a minute.
+It replaced a KV copy (`system:admin_pages_cache_v2`, TTL 1 h) that cost a KV read on every
+page and that a registry edit never cleared.
 
 **Pages that ask for their own key exactly.** A new page row is invisible to a person's
 access map until that map is recomputed (§11), and until then the pipeline lets the page
@@ -670,10 +691,10 @@ map refresh each add a `patchSession` read **and** write on top
 Session creation costs **two** KV writes, not one — the record plus the
 `user-session:` reverse index that makes per-user revocation possible.
 
-A sidebar render adds one more KV read for the `system:admin_pages_cache_v2` page
-registry cache (TTL 1 h), which falls back to D1 with three retries and exponential
-backoff — so a warm dashboard page render is **five** reads, or four on an
-isolate-cache hit.
+A sidebar render no longer reads KV *(2026-10-10)*: the page registry comes from D1 at
+most once a minute per isolate (one small query, §5), so a warm dashboard page render is
+**four** KV reads, or three on an isolate-cache hit. Until then it read the `system:admin_pages_cache_v2`
+KV copy on every render, five and four.
 
 ### 13.2 Measured latency
 
@@ -902,6 +923,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-10 | claude | **Scope-limited to the registry's names and groups.** Applied `migrations/0067` through the D1 connector and read back the live counts (113 rows, 99 active, 60 fragments, 55 active) and the category of every active row; read `page-registry.ts`, `plac.ts` (`computeNavItems`), `AdminLayout.astro`, `RegistryTabs.astro` and `api/system/pages.ts`; `test/page-registry.test.ts` pins the lookups, the one-minute copy, the groups and the rows `0067` writes | §5: the column table, the live counts, and the registry as the one home of names. §13.1: the sidebar's KV read is gone. Not re-derived: §13.2's latency figures, §11's revocation timings |
 | 2026-10-07 | claude | **Scope-limited to `/dashboard/github`.** Read `surface-guards.ts` (`canViewGitHub`), `guard.ts` (`placRequireGrant`), `decide-access.ts`; `test/github-access.test.ts` pins the role-by-grant matrix and the `0066` row | §5's exact-key paragraph added. Not re-derived: the registry counts (last measured 2026-09-16) |
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
 | 2026-09-02 | claude | chunk 10: §7 rewritten from the stage modules after the decomposition (`wc -l src/lib/auth/stages/*.ts`, `git show 794bc34`); §17 from the suites that ran (`npx vitest run`: 279 cases across the 11 auth-path files, 717 across the repository). §13.1's KV-read figures were not re-verified here — chunk 10b owns that correction | §7 and §17 match the code at `794bc34` |

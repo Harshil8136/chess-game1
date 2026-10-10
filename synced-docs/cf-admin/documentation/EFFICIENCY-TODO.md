@@ -52,7 +52,7 @@ In order — each step waits for the one before it:
 |---|---|---|---|
 | 1 | Read the session record `session:{id}` (skipped if the same isolate read it in the last 5 s) | KV, 1 read | `src/lib/auth/stages/session-stage.ts` → `src/lib/auth/session.ts` |
 | 2 | One bulk read of `revoked-session:{sessionId}`, `revoked:{userId}` and `authz-changed:{userId}` | KV, billed as **3** reads | `src/lib/auth/stages/session-stage.ts` |
-| 3 | Sidebar: read `system:admin_pages_cache_v2` — all 86 active registry rows with labels, icons and roles — parse it and filter it for this user. When the 1-hour cache expires: a D1 re-read and 1 KV write | KV, 1 read | `computeNavItems` in `src/lib/auth/plac.ts`, called from `src/layouts/AdminLayout.astro` |
+| 3 | Sidebar: read `system:admin_pages_cache_v2` — all 86 active registry rows with labels, icons and roles — parse it and filter it for this user. When the 1-hour cache expires: a D1 re-read and 1 KV write. *Since 2026-10-10: the registry comes from D1 at most once a minute per isolate, with no KV read or write (EF-4)* | KV, 1 read (now 0; D1, 1 query a minute per isolate) | `computeNavItems` in `src/lib/auth/plac.ts`, called from `src/layouts/AdminLayout.astro` |
 | 4 | Users-page badge, **admin tier and above only**: `SELECT COUNT(*) FROM admin_access_requests WHERE status = 'pending'` | D1, 1 query | `src/layouts/AdminLayout.astro` |
 | 5 | The page's own data | varies | the page |
 
@@ -185,6 +185,12 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 #### EF-4. Put the sidebar menu in the session
 
+- **Done differently, 2026-10-10.** The KV copy is gone: the registry, which now also names
+  every page heading, tab and title, is read from D1 at most once a minute per isolate and
+  filtered per person (`src/lib/auth/page-registry.ts`). That removes the KV read on every
+  page and the hourly KV write, and a registry edit shows within a minute instead of an hour,
+  without growing the session. The menu itself is still computed per page load (about 100
+  rows filtered in memory).
 - **Issue.** Step 3 above: every page load reads the whole registry from KV and
   filters it, although the menu only changes when the user's access changes.
 - **Fix.** Compute the menu items when the access map is computed (sign-in, the
@@ -390,5 +396,6 @@ never who *decides*.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-10 | claude | `src/lib/auth/page-registry.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`; `test/page-registry.test.ts` | Step 3 and EF-4: the sidebar's KV copy is gone, replaced by a D1 read at most once a minute per isolate. The rest of §1 and §3 not re-derived |
 | 2026-10-04 | claude | `src/components/dashboard/DashboardController.tsx`, `src/lib/visible-poll.ts`, `src/lib/analytics/providers/index.ts`, `src/components/admin/debug/SystemDiagnostics.tsx`, `src/lib/diagnostics/tests/security.ts`; read-only D1 query of the live `cron-control` row | EF-2 fixes 1-3 and EF-11 done, EF-1 partly; §EF-12's first two rows updated. Not re-checked: §1's per-click costs, EF-3 to EF-10, the other EF-12 rows |
 | 2026-09-23 | claude | Read the auth pipeline, `src/lib/auth/session.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`, every `setInterval` under `src/components/`, the metrics provider and the diagnostics runner. Cloudflare GraphQL Analytics for KV, D1 and Worker usage (16–22 Sep 2026); Supabase edge logs (24 h); Sentry spans (30 days); live D1 queries on `admin_access_requests`, `admin_pages` and `system_test_results`. Cloudflare docs for the KV limits and for Cache API availability behind Access. | List created. EF-1 and EF-2 are latent — neither has been triggered in the measured window. |

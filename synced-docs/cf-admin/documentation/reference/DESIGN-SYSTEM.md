@@ -538,7 +538,7 @@ Tab walks straight out of the palette into the page behind it.
 - Every icon-only button requires `aria-label` — *enforced by `scripts/a11y_check.py` A11Y-01, which also accepts `title`; see `coding-standards.md` §6*
 - Form errors announced via `role="alert"` + `aria-describedby`
 - `role="progressbar"` + `aria-valuenow` on quota bars — ***target, unmet:*** `role="progressbar"` has **0 occurrences** in `src/`
-- `role="tablist"` + `role="tab"` + `aria-selected` on chatbot admin tabs — ***target, unmet:*** `role="tablist"` has 3 uses (`ContentTabs.astro`, `ActivityCenter.tsx`, `ui/Tabs.tsx`), **none of them under `src/components/admin/chatbot/`**
+- `role="tablist"` + `role="tab"` + `aria-selected` on tabs that switch a panel in place (`ActivityCenter.tsx`, `ApiAccessView.tsx`, `ui/Tabs.tsx`). A row of links to sub-pages is navigation, not tabs: since 2026-10-10 the Website Content, Chatbot and Cloud Services rows are one component, `src/components/navigation/RegistryTabs.astro`, a `<nav>` whose current link carries `aria-current="page"`, with names from the page registry
 - Color must NOT be the only state indicator — add icons/text too
 - Live regions: `aria-live="polite"` on toast region and loading states
 

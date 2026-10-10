@@ -89,9 +89,17 @@ Nine pages under `src/pages/dashboard/content/` (re-listed 2026-09-14 — this
 table said "five core modules" and omitted four of them), all backed by
 Cloudflare D1:
 
+Each page's name, description and tab come from its page-registry row (`admin_pages`, migration
+`0067`): the shared header `src/components/admin/content/ContentHeader.astro` shows the name and
+description, then the tab row (`src/components/navigation/RegistryTabs.astro`), which lists only
+the pages this person may open. Until 2026-10-10 every page carried its own "Content Studio"
+heading, a "Sync Active" badge that reflected nothing, and its own copy of the tab list
+(`ContentTabs.astro`). The module names below are descriptive; the registry holds the names
+staff see.
+
 | Module | Route | Purpose |
 |--------|-------|---------|
-| Hub | `/dashboard/content` | Content Studio entry page |
+| Hub | `/dashboard/content` | The section's entry page (registry name: Website Content) |
 | Hero | `/dashboard/content/hero` | Hero background image (LCP critical) |
 | Gallery | `/dashboard/content/gallery` | Drag-and-drop visual asset manager |
 | Services | `/dashboard/content/services` | Pricing editor — syncs marketing pages + booking wizard |

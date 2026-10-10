@@ -53,7 +53,7 @@ overlap. It has more than expected:
 | A GET/POST API with RBAC + PLAC gating and audit logging | `src/pages/api/settings/portal.ts` (`admin`+ to write, PLAC-gated on `/dashboard/settings`) | **Built and in use** |
 | An admin UI to edit these settings | `PortalSettingsPanel.tsx` | **Built and in use** |
 | A separate boolean feature-flag table + repository + UI | `admin_feature_flags` / `FeatureFlagRepository.ts` / `FeatureToggles.tsx` | **Built, and a second, parallel mechanism to the one above (see §6)** |
-| The exact "KV cache, D1 source of truth, TTL refresh" pattern this proposal describes, already running for a *different* dataset | `system:admin_pages_cache_v2` in `computeNavItems()` (`src/lib/auth/plac.ts`), and the `cms:*` / `isr:*` keys documented in [`KV-RESILIENCE.md`](KV-RESILIENCE.md) | **Built and proven in production** |
+| The exact "KV cache, D1 source of truth, TTL refresh" pattern this proposal describes, already running for a *different* dataset | `system:admin_pages_cache_v2` in `computeNavItems()` (`src/lib/auth/plac.ts`), and the `cms:*` / `isr:*` keys documented in [`KV-RESILIENCE.md`](KV-RESILIENCE.md) | **Built and proven in production.** *2026-10-10: the page-registry key is retired; about 100 rows read from D1 once a minute per isolate cost less than a KV read on every page, and an edit no longer waits out a one-hour copy ([PERMISSIONS-SYSTEM §5](PERMISSIONS-SYSTEM.md))* |
 | The isolate-local in-memory cache trick (bypass KV entirely on a warm isolate) | `ISOLATE_CACHE` in `src/lib/auth/session.ts` (5-second TTL, per-session) | **Built and proven in production** |
 
 **The concrete, currently-live gap this document is really about:** `session.ts`

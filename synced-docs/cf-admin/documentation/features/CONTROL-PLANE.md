@@ -381,10 +381,10 @@ library (the Phase-6 redesign):
 | `ProviderControls`| Layer-B panel island: fetches a service's provider data and renders per-provider views |
 | `StatCard` / `MetricGrid` | KPI card (accent bar, loading/empty states) + responsive 1→2→3→4 grid |
 | `SectionCard`     | Consistent section container (title, accent, body)                          |
-| `ServiceSubNav`   | Sticky segmented sub-nav (native `<select>` on mobile, tabs on desktop)      |
+| Tab row           | `src/components/navigation/RegistryTabs.astro` since 2026-10-10: one sideways-scrolling row of links on every screen size (it replaced `ServiceSubNav`, which hid the choices in a `<select>` on phones), named from the page registry, and showing only the services this person may open |
 | `EmptyState`      | Consistent empty state (there is no `Skeleton` component; loading states are per-island) |
 | `IgnoreErrorsEditor` | Structured editor for the `sentry.cf_astro.ignore_errors` JSON key |
-| `Sparkline`, `ProviderTile.astro`, `SubPageShell.astro` | Trend glyph, provider summary tile, and the shared sub-page frame that carries the role / PLAC gating for the UI |
+| `Sparkline`, `ProviderTile.astro`, `SubPageShell.astro` | Trend glyph, provider summary tile, and the shared sub-page frame that carries the role / PLAC gating for the UI. The frame's heading and description are the page's registry row (`pageMeta`), so the page reads "Cloud Services" wherever it is named |
 
 Cross-island feedback uses the shared toast channel (a Preact signal) rather than per-island feedback
 state, and destructive actions use a typed confirmation dialog. Write controls only render for

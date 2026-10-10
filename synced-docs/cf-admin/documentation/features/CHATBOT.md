@@ -78,7 +78,7 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 | **PromptsEditor** | `PromptsEditor.tsx` | System prompt management |
 | **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking |
 | **ChatbotDashboard** | `ChatbotDashboard.tsx` | Overview page (`/dashboard/chatbot/dashboard`), served by the bare `/api/chatbot/analytics` |
-| **ChatbotSubnav** | `ChatbotSubnav.tsx` | The "AI Models" / hub sub-navigation |
+| **Tab row** | `src/components/navigation/RegistryTabs.astro`, in `src/layouts/ChatbotLayout.astro` | The sub-page row. Since 2026-10-10 its names, order and icons come from the page registry (`admin_pages`), as do each page's heading and tab title, and a tab shows only when the person may open that page. It replaced `ChatbotSubnav.tsx`, which kept its own list of eight names |
 
 All panels maintain the **Midnight Slate** aesthetic per standard cf-admin rules.
 

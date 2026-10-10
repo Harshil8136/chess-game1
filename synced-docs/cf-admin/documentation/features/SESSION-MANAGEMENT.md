@@ -31,7 +31,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
   `migrations/0002_promote_sessions_page.sql` re-pointed its PLAC overrides here
   and set `is_active = 0` on the old `admin_pages` rows (verified against live D1
   2026-08-23).
-- **Sidebar:** the **SECURITY** section (`deriveSection` in `src/lib/auth/plac.ts`).
+- **Sidebar:** the **People and access** group: the row's `category` (`people`, migration `0067`); path rules no longer place pages (2026-10-10).
 - **PLAC:** `admin_pages` row `/dashboard/sessions` (`required_role=super_admin` — the *stored* value; canonical **Admin**, level 2),
   seeded by `migrations/0002_promote_sessions_page.sql`, with action fragments
   `#revoke` / `#unblock` / `#flush` (owner) / `#export` / `#alerts` (owner, migration
