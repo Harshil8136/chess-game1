@@ -3,7 +3,7 @@
 title: "Dashboard — Real-Data Command Center"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-04
+last_verified: 2026-10-10
 verified_against: [code]
 owner: harshil
 related_code:
@@ -98,8 +98,17 @@ route calls `fetchAllAnalytics()`, which:
 1. reads **one** KV key (`telemetry_metrics_cache_stale_v2`) from the `SESSION`
    namespace, the last good snapshot, and returns it when its own `timestamp`
    is less than 5 minutes old (`METRICS_CACHE_TTL_MS`);
-2. otherwise fans out to the eight providers and, on success, writes that one
-   key back.
+2. when the snapshot is older, returns it **at once**, marked `refreshing`, and
+   fans out to the eight providers in the request's `waitUntil`, writing that one
+   key back on success (one background refresh per isolate per 30 seconds). The
+   dashboard sees `refreshing` and asks once more 5 seconds later, which gets the
+   fresh snapshot;
+3. only when there is no snapshot at all does the request wait for the providers.
+
+*Changed 2026-10-10:* step 2 used to make the page wait for the providers, up to
+2.6 s in Sentry (`GET /api/dashboard/metrics`), on every first visit of the day.
+The Service Control pages (`/dashboard/control-plane`) read the same snapshot the
+same way and show its own time.
 
 *Changed 2026-10-04:* the poll was every 60 seconds, hidden tabs included, and
 each refill wrote two keys (a 5-minute copy, `telemetry_metrics_cache_v2`, and
@@ -108,8 +117,10 @@ the whole account, shared with sessions, and a dashboard left open all day cost
 up to 576 of them. Now it is at most 288 (12 an hour) while visible, and none
 while hidden. The old 5-minute key simply expires.
 
-On a Cloudflare-provider failure the route serves the last snapshot **with
-`timestamp` reset to now**, so the "last sync" clock reads fresh over stale data.
+On a Cloudflare-provider failure the last snapshot is kept and served with its
+own `timestamp`, so the "last sync" clock says how old the numbers are. *Changed
+2026-10-10:* the timestamp used to be reset to now, which made stale numbers read
+as fresh.
 
 ---
 
@@ -244,6 +255,7 @@ animations and native `fetch` for all API calls. No third-party chart library �
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | The KV-cache steps and the provider-failure paragraph, against `src/lib/analytics/providers/index.ts`, `src/pages/api/dashboard/metrics.ts` and `DashboardController.tsx`, with `test/analytics-cache.test.ts` (three stale-while-revalidate tests) | Everything else on the page; the live timing after deploy |
 | 2026-10-04 | The polling and KV-cache paragraphs, against `DashboardController.tsx`, `src/lib/visible-poll.ts` and `src/lib/analytics/providers/index.ts`, with `test/visible-poll.test.ts` and `test/analytics-cache.test.ts` | Everything else on the page |
 | 2026-09-19 | `DashboardController.tsx` (KPI fallbacks, 60 s poll, tab ids), `ServiceStatusStrip.tsx` (the static `seo` card), `GscValidationWidget.tsx` (the static badge), `src/pages/api/dashboard/metrics.ts`, `src/lib/analytics/providers/index.ts` (KV cache + stale copy + timestamp rewrite), `external.ts` (Sentry top-5 lifetime sum, Brevo 100-event window), `cloudflare.ts` (queue backlog/DLQ). §0.1 and §0.2 added; the v4.5 historical sections removed; provider, token-scope and `_unconfigured` claims corrected. | The exact Cloudflare token-scope name the GraphQL D1 query needs; the D1 analytics lag figure; the Supabase Prometheus endpoint's stability |
 | 2026-09-14 | `DashboardController.tsx`, every file under `src/components/dashboard/widgets/`, `src/pages/dashboard/index.astro`, the provider layer (8 providers, `Promise.allSettled`, `_unconfigured`, snake-case GraphQL filters, `WORKER_SCRIPTS`), `wrangler.toml` crons, `package.json` (no `uplot`) | API-token permission scopes; D1 Analytics lag; Supabase Prometheus endpoint stability |
