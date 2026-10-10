@@ -119,7 +119,10 @@ Bing's top results**, and Copilot is Bing-native.
 1. Sign in and use **"Import from Google Search Console"** (one click).
 2. Confirm sitemap was imported; if not, submit `sitemap-index.xml`.
 3. IndexNow is already wired: key file `/[INDEXNOW_KEY].txt`,
-   plus per-publish pings from `/api/revalidate`. Check Webmaster Tools →
+   plus per-publish pings: cf-admin announces each published, renamed or
+   archived post URL (it owns the pause switch and the 429 guard), and
+   `/api/revalidate` announces only the canonical non-post pages it purged
+   (`[SUPABASE_PROJECT_REF]`, since 2026-10-10). Check Webmaster Tools →
    IndexNow for received URLs.
    **Deploy path changed July 2026:** the site now auto-deploys via
    **Cloudflare Workers Builds** on every push to `main` (laptop

@@ -6,6 +6,34 @@
 
 ---
 
+## 0b. 🔎 Blog SEO / GEO audit follow-ups (2026-10-10)
+
+> Source: [the change record](./records/2026-10-10-blog-seo-audit-fixes.md) and the audit
+> report in the project. Found by reading the code and fetching the live sitemaps and
+> pages on 2026-10-10; D1 was not queried directly.
+
+- [ ] 🟡 **A real author for each post.** cf-admin has no author field, so every post is by
+      "Madagascar Pet Hotel". The `author` column exists, and the schema already emits a
+      `Person` for any other name; the Studio needs a picker (a vet reviewer is the strongest
+      E-E-A-T signal for pet-health advice).
+- [ ] 🟡 **RSS with full content, and crawlable.** The feeds carry only the summary, and
+      robots.txt disallows them, which stops Google using them for discovery (they already
+      send `noindex`).
+- [ ] 🟢 **Articles in `llms.txt`.** It is static, so posts written in cf-admin never reach it.
+      Cheap if wanted; SEO-OPERATIONS.md §2 keeps llms.txt low-effort on purpose.
+- [ ] 🟢 **Thin tag pages.** About 25 tag pages per locale for 8 posts. Consider `noindex`
+      below 2–3 posts (an indexing-policy decision for the owner).
+- [ ] 🟢 **`410 Gone` for archived posts** instead of a 301 to the blog index (a soft 404 to
+      Google).
+- [ ] 🟢 **`og:image` size for covers.** BaseLayout always claims 1200×630.
+- [ ] 🟢 **`sitemap-index.xml` lastmod** follows the newest publish date only, not edits.
+- [ ] 🟢 **Blog index and un-imported Markdown posts.** Once D1 has a post in a locale, the
+      index lists only D1 posts; a Markdown post never re-published in D1 would drop off the
+      index while staying in the sitemap. Not the case today (all 14 are in D1, inferred
+      from the live sitemaps).
+- [ ] 🟢 **`google-site-verification` value** has the shape of a verification file name, not a
+      meta token. Harmless if the property is verified by DNS; confirm in Search Console.
+
 ## 00. ⚙️ Resource-usage follow-ups (2026-10-04)
 
 > Source: [the change record](./records/2026-10-04-resource-usage.md). Added 2026-10-07
