@@ -375,7 +375,7 @@ interface Probe {
 - Each run is compact: `{at, by, steps: {step: [{id, s, ms}]}, errors: [{id, summary}]}`. That is well under 64 KB.
 - `BackupSettingKey` and the readiness key list gain this key.
 
-**Page layout.** The page as rebuilt in the console redesign of 2026-10-09 (Build log, "The Diagnostics page rebuilt"); the first design had a Runner test button in the header and a "Run again" button per step.
+**Page layout.** The page as rebuilt in the console redesign of 2026-10-09 (Build log, "The Diagnostics page rebuilt"); the first design had a Runner test button in the header and a "Run again" button per step. Since 2026-10-10 these steps are the cards of the Health page, beside the readiness checks (Build log, "The Health page").
 
 ```
 Diagnostics                                     [Copy report]  [Run all]  (?)
@@ -1032,6 +1032,28 @@ The whole backup console was rebuilt on one design system on 2026-10-09; this en
 - Run all and Run step are `CapButton`s on `diagnostics.run`, also held back, with the reason, while the server's `canRun` is false or another test is running; Run all also waits until the list of steps is read.
 - Deleted with the redesign's cleanup: the Diagnostics runner dialog and its started note, `startRunnerTest`, `startDrill` and `startCheck` in the console state, `PreflightStartWarnings` (Stage 2's card under the Now bar), the Now bar itself and the `NotAvailable` component. `POST /api/diagnostics/runner` and its tests stay on the server, answering 501, until docs/remediation/13 B5 deletes the routes.
 - `PreflightFailures` still lists a pre-flight refusal in the Run now dialog (`RunNowDialog`), and `PreflightWarningList` lists the warnings in "Backup started, with warnings" (`RunControls`).
+
+### The Health page: Readiness and Diagnostics in one page (2026-10-10)
+
+The owner asked for the two pages to become one, with a better picture of the whole process. The tests, the checks, both API routes, the throttle, what is stored and what a pre-flight checks did not change; what changed is the page that shows them, and who sees backup key facts in the test answers.
+
+#### For everyone
+
+- **One page, Health,** at `/dashboard/backup/health`, in the Verify group of the page bar. The old addresses, `/dashboard/backup/readiness` and `/dashboard/backup/diagnostics`, open it, so a bookmark or an old link keeps working. Reading it needs `usage.view`; running the tests needs `diagnostics.run`, as before.
+- **The backup path** runs across the top: every step a backup passes through, from the timer that starts it to the email that reports it, with the pre-flight gate drawn between the guards and the dispatch. Each stop shows the worst of what the page holds for it as an icon and a word (OK, Needs attention, Failing, Unknown, or Not tested yet), and the Runner stop says "Backup running" while a backup is on a runner. Tapping a stop opens its card. On a phone the row scrolls sideways.
+- **One card per step** holds that step's checks (read when the page opens, the old Readiness rows) and its tests (run when you press Run, the old Diagnostics rows), with its own **Run step**. A card with something failing or warning opens by itself.
+- **One sentence** at the top says how the backup stands. "Everything is ready for the next backup" appears only when every step is OK, and the checks were read. A step nothing confirmed (a check that could not be made, a skipped test, or two steps no check covers, Reconcile and the After-run copy, before their tests have run) is never counted as ready.
+- **Parts and connections** sit below as tabs in one row: the System map (its table on a phone), the connections, the GitHub App's permissions, the bindings and secrets, and the runner doctor.
+- **Refresh** reads the checks and the stored test results again. **Run all tests** runs every step in order; **Copy report** now lists each step's checks above its tests.
+- **Backup key facts follow one rule.** Fingerprints, the Vault key count, the key holders' kit confirmations and the secrets' dates need `keys.status`, on the tests as on the checks. Without it, the four tests that name them (the active key, the Vault key list, the recipient variable and the repository secrets) show their result with the words withheld. The stored history keeps the full text for someone who holds `keys.status`.
+
+#### For engineers
+
+- `src/ui/screens/HealthScreen.tsx` replaces `ReadinessScreen.tsx` and `DiagnosticsScreen.tsx`. `src/ui/health-view.ts` places every readiness check on one flow step (`CHECK_STEP`), takes each step's worst state over its checks and its tests (`healthSteps`; a skipped test counts as unknown) and words the sentence (`healthSentence`). `src/ui/diagram/backup-path.tsx` draws the path on the page bar's sideways scroller (`useSideways`, `SidewaysEdges`).
+- `routing.ts` has one section, `health`, with `readiness` and `diagnostics` as aliases. `TAB_CAPABILITY.health` is `usage.view`; no capability id changed. The checks-by-area list and the links between the two pages are deleted (the step cards carry the checks).
+- `src/api/key-facts.ts` holds the key-fact rule (p1b Y3) for both routes: `GET /api/readiness` as before, and now `GET /api/diagnostics` (the stored reasons and the last pre-flight's failures and warnings) and `POST /api/diagnostics/run` (the answer, not the stored entry) for `keys.active`, `vault.list`, `gh.recipient` and `gh.secrets`.
+- Not merged on purpose: the probes and the readiness checks stay two engines. Several pairs judge the same dependency differently by design, and the Overview and the System map read the checks.
+- Tests: `test/ui-health-screen.test.ts` (the page, the path, the sentence, the aliases, About), `test/diagnostics-api.test.ts` (the key-fact rule on both test routes), and the trimmed `test/ui-diagnostics.test.ts` and `test/ui-readiness-parts.test.ts` for the parts the page is built from.
 
 ## Decisions made during the build
 
