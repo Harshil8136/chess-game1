@@ -18,8 +18,12 @@
 - [ ] 🔴 **Repair or archive `/en/blog/why-chose-us/` in D1** (owner decision). Its body still
       holds the AI's JSON envelope and its answers a templated question; the site now strips
       both at render, but the stored row, title ("Why Chose Us?") and description stay
-      wrong until the post is regenerated or archived in cf-admin. Needs the Cloudflare
-      connector to read the row.
+      wrong until the post is regenerated or archived in cf-admin. Read live 2026-10-10
+      (Cloudflare D1 connector): `published` since 2026-09-01, body still the envelope.
+- [ ] 🟢 **A redirect row left behind by a republish.** `blog_redirects` still holds
+      `why-chose-us` (en) → `/en/blog/` from the 2026-08-30 archive. The site ignores it while
+      the post is published, but cf-admin's `updatePost` does not delete a post's own redirect
+      when it goes live again. Deleting the row is a production write (owner).
 - [ ] 🟢 **Edge cache in front of KV.** Worker responses never enter Cloudflare's zone cache,
       so the `s-maxage`/`CDN-Cache-Control` headers and the zone purge by `Cache-Tag` in
       `/api/revalidate` have nothing to act on; KV is the only page cache. Serving pages

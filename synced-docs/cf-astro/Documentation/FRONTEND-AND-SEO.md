@@ -138,6 +138,10 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 - **AI Crawler Allowances**: `robots.txt.ts` explicitly grants crawling permissions to AI agent engines (such as GPTBot, ClaudeBot, Applebot-Extended, and PerplexityBot).
 - **`llms.txt` & `llms-full.txt`**: Plaintext summaries served from `/public` that provide concise system context, services, pricing grids, and legal information specifically designed for LLMs to scrape.
 - **Quick answers on a post** (`components/blog/AioDirectAnswers.astro`): a cf-admin post's `aio_data.direct_answers` render as a light "Quick answers" / "Preguntas frecuentes" section after the article, an `<h2>` with one `<h3>` per question, targeted by the BlogPosting `speakable` selector `.article-direct-answers`. An answer that only repeats the post's meta description is not shown (`parseBlogPostRow`, `src/lib/blog.ts`). Restyled 2026-10-10 from a dark purple panel.
+- **A moved or archived post** answers with a 301 to the `blog_redirects` target, cached for one
+  hour (`[SUPABASE_PROJECT_REF]` in `src/lib/blog.ts`), only when no published post has that slug.
+  Without the max-age a browser kept the 301 for good: a post brought back stayed unreachable on
+  any phone that had seen it archived.
 - **Leaked AI JSON in a post body** is stripped at render (`src/lib/blog-body-envelope.ts`, reported once per post as `blog.body_envelope_repaired`). cf-admin repairs and blocks such bodies at save; this guard covers rows stored before that. The `<blockquote class="cms-callout">` "Key takeaway" box the AI writer emits is styled in `global.css`.
 
 ---
@@ -147,10 +151,14 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 Client-side logging is implemented manually to guarantee performance isolation:
 
 - **Zero-Hydration Interference**: Initialized inside a `requestIdleCallback` boundary in `src/scripts/sentry.ts`. This prevents Sentry from blocking main thread loading or causing DOM hydration mismatch errors in Astro.
-- **Error Budget Management**: Implements a custom `tracesSampler` to filter metrics:
-  - 50% traces on `/booking` wizards and dynamic booking transactions.
-  - 10% traces on `/api` routes.
-  - 0% traces on static marketing routes and legal pages.
+- **Error Budget Management**: a custom `tracesSampler` rates each page load by its path
+  (`sampledPath` in `src/lib/sentry-shared.ts`, the span `name` Sentry v8+ passes). The rates
+  are the `sentry.cf_astro.*` rows of D1 `service_config`, served by `/api/runtime-config`, so
+  they change without a deploy. Until 2026-10-10 the sampler read the removed
+  `transactionContext` and threw on every page load, so no browser trace reached Sentry.
+- **DSN**: one public constant in `src/lib/sentry-shared.ts`, read by the browser and by the
+  Worker (`src/middleware.ts`). The Worker also sends `console.warn` and `console.error` lines to
+  Sentry Logs, with emails and phone numbers masked (`scrubLogText`).
 - **Quota Protection**: Session Replay and DOM profiling are fully disabled to stay safely within free-tier limits.
 
 ---
