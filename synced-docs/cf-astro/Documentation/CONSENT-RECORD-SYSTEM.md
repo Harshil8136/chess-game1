@@ -147,15 +147,17 @@ The 2026-08-07 lesson ("losing one credential must never blind the whole
 check") used to be met by two legs with two credentials in one GitHub job. It is
 now met by independent **runners** sharing one narrow credential:
 
-- `consent-heartbeat.yml`, hourly on GitHub (which runs it late or not at all
-  when busy: 5 runs in the 25 hours to 2026-10-07 21:10 UTC). With no secret it
-  fails instead of ending green; `test/heartbeat-workflow.test.ts` holds its
-  shape.
+- The server job `astro_heartbeat` (cf-vps), the primary: hourly at seven past
+  since 2026-10-08, then both drains.
 - cf-admin's Cron Control job `heartbeat-watchdog`, on cf-admin's existing
   5-minute tick: whenever `heartbeat-last-run` is older than 70 minutes, it runs
   the heartbeat itself through its service binding with the secret it already
   holds.
-- A job on the VPS (cf-vps), the intended primary, being built.
+- `consent-heartbeat.yml` on GitHub, **by hand only** since 2026-10-10.
+  Cloudflare's bot protection answers GitHub's runners with its "Just a
+  moment..." challenge, so every scheduled run from 2026-10-08 failed without
+  reaching the Worker. With no secret it fails instead of ending green;
+  `test/heartbeat-workflow.test.ts` holds its shape.
 
 No runner needs `CLOUDFLARE_API_TOKEN` any more
 ([change record](./records/2026-10-07-heartbeat-in-the-worker.md)).

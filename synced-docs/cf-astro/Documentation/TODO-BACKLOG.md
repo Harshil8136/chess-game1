@@ -12,7 +12,11 @@
 > when the work was committed; only the heartbeat item below was checked against
 > production (GitHub connector, 2026-10-07).
 
-- [ ] 🔴 **Set the consent heartbeat's secret** (owner). `HEALTH_CHECK_SECRET`
+- [x] ~~**Set the consent heartbeat's secret** (owner).~~ **Done by 2026-10-08:**
+      the GitHub runs from then reach the check step, where Cloudflare's bot
+      protection challenges them, so the workflow's schedule was turned off on
+      2026-10-10 and the server job runs the heartbeat (CONSENT-RECORD-SYSTEM.md
+      §4). The original item: `HEALTH_CHECK_SECRET`
       is not set as a GitHub Actions secret in this repository (Settings → Secrets
       and variables → Actions), so every run sampled from 2026-09-07 to 2026-10-07
       checked nothing, drained no outbox and still ended green. Since 2026-10-07

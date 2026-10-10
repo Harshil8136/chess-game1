@@ -9,24 +9,19 @@ console. Two hours of forensics later: not a single record was ever lost.
 
 ## The 30-second health check
 
-Run the **Consent heartbeat** workflow (GitHub → Actions → "Consent & booking
-heartbeat (hourly)" → Run workflow). Green = consents are being recorded and no
-booking is stranded, **but only when its GitHub Actions secret
-`HEALTH_CHECK_SECRET` is set** (the same value as the Worker's). The check itself
-runs in the Worker (`/api/health/?probe=heartbeat`): the live insert probe, both
-outboxes and the D1 audit of consents and bookings; the workflow then drains both
-outboxes. It is scheduled every hour, but GitHub runs a scheduled workflow late
-or not at all when it is busy, so cf-admin's `heartbeat-watchdog` job runs the
-same check whenever nobody has for 70 minutes
-([CONSENT-RECORD-SYSTEM.md](./CONSENT-RECORD-SYSTEM.md) §4). A failed GitHub run
-emails you.
+In the admin portal, open the server's **Jobs** page (`/dashboard/vps/jobs`),
+pick `astro_heartbeat` and press **Run now**. Green = consents are being recorded
+and no booking is stranded. The check itself runs in the Worker
+(`/api/health/?probe=heartbeat`): the live insert probe, both outboxes and the D1
+audit of consents and bookings; the job then drains both outboxes. The server
+runs it every hour, and cf-admin's `heartbeat-watchdog` job runs the same check
+whenever nobody has for 70 minutes
+([CONSENT-RECORD-SYSTEM.md](./CONSENT-RECORD-SYSTEM.md) §4).
 
-> **GitHub's runs fail today (checked 2026-10-07 with the GitHub connector).**
-> `HEALTH_CHECK_SECRET` is not set in this repository, so every run sampled from
-> 2026-09-07 to 2026-10-07 checked nothing, and since 2026-10-07 such a run fails
-> and says so. Until the Owner sets it (Settings → Secrets and variables →
-> Actions), use the D1 queries below; the backlog item is in
-> [`TODO-BACKLOG.md`](./TODO-BACKLOG.md) §00.
+> **Not the GitHub workflow (2026-10-10).** "Consent & booking heartbeat (by
+> hand)" still exists, but Cloudflare's bot protection answers GitHub's runners
+> with a challenge page, so a run from GitHub fails without reaching the site.
+> Its hourly schedule was turned off for that reason.
 
 ## Consent data
 
