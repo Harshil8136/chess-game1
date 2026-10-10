@@ -59,6 +59,12 @@ browser ─► /api/emails/api-*  (cf-admin: who may ask, forward, audit)
   SHA-256 of it is kept, so a leaked database does not leak tokens.
 - **Blocking is instant.** The public API reads the token row on every request
   (no cache), so a block, an expiry or a delete applies to the very next call.
+- **No accepted message is left behind** (2026-10-10). When the email queue refuses a
+  message the API has just accepted, the API keeps it `queued`. cf-admin's scheduled
+  job `email-api-sweep` asks the Console to hand such messages over again, as a system
+  actor with no person and no permission (`sweepEmailApi` in `src/lib/email-console.ts`;
+  [`CRON-CONTROL.md`](CRON-CONTROL.md) §3b). Each sweep that finds something shows in
+  the activity trail as **Stuck messages re-queued**.
 
 ## 3. Permissions
 
@@ -181,3 +187,4 @@ new one is sent, and cf-admin sends both.
 - 2026-09-30: written with the feature; the route, client and model tests above pass, and the three page rows are asserted by the migration replay test.
 - 2026-09-30, live: the first look at the page (a screenshot) showed the Settings view squeezed into a 64px column. `max-w-3xl` had resolved to `var(--spacing-3xl)` because the design system's `--spacing-*` steps were declared in `@theme`, where Tailwind v4 reads them as sizes. Fixed at the source (the steps moved to a plain `:root` block, which also repairs 20 other elements across the admin) and pinned by `test/theme-tokens.test.ts`; the form itself also uses `max-w-[48rem]`. The same day the backend door passed 24 of 24 checks over a remote service binding and the public API 23 of 23 against production (`npm run smoke:api` in cf-email-consumer).
 - 2026-10-02: the view moved to its own page with five permissions (owner's decisions of 2026-10-02 in the research spec's section 9). Checked against the code and its tests (`npm run verify`), and against live D1: no overrides held the three old keys, and `0061` was the last migration applied. Not yet seen in a browser.
+- 2026-10-10: the sweep's system actor and the **Stuck messages re-queued** event title checked against `src/lib/email-console.ts`, `api-access-model.ts` and `test/email-api-sweep.test.ts`. Not re-checked: the rest of the page.

@@ -3,10 +3,10 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-09
+last_verified: 2026-10-10
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/lib/blog/publish-scheduled.ts]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/lib/blog/publish-scheduled.ts]
 related_docs: [../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
@@ -166,20 +166,21 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **13 registered jobs** (`src/lib/jobs/registry.ts`): 11 on the
+There are **14 registered jobs** (`src/lib/jobs/registry.ts`): 12 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
 job, was removed on 2026-10-04 when cf-admin stopped using Upstash
 ([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §3.6).
-`heartbeat-watchdog`, the eleventh five-minute job, was added on 2026-10-07 (§3a).
+`heartbeat-watchdog`, the eleventh five-minute job, was added on 2026-10-07 (§3a);
+`email-api-sweep`, the twelfth, on 2026-10-10 (§3b).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
 
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
-| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog` | never |
+| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog`, `email-api-sweep` | never |
 | `deferrable` | `storage-notifications`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
@@ -206,6 +207,10 @@ reason: its idle cost here is the two settings rows its gate reads, so shedding
 it relieves nothing, and it only ever works when the usual heartbeat runners
 have already failed — a shed watchdog then means a stranded booking or a broken
 consent write path goes unnoticed. §3a describes it.
+
+`email-api-sweep` (added 2026-10-10) is essential like `backup-tick`: it costs
+this Worker no D1 rows, so shedding it relieves nothing, and a shed tick leaves a
+message the email API accepted waiting in its database. §3b describes it.
 
 **A human pause can stop anything, including an essential job.** That is a
 deliberate, audited act. Automatic shedding is not, so it never touches them.
@@ -274,6 +279,27 @@ fallback runs at most hourly, like the workflow it replaces.
 cf-astro without it, every run is a failed run (no `heartbeat` object) and is
 reported hourly.
 
+## 3b. The email API safety net (2026-10-10)
+
+The email API (cf-email-consumer, Worker `cf-email-api`) answers `202` once it
+has stored a message, then hands the message to the email queue. If the queue
+refuses at that moment, the message stays `queued` in the email API's own
+database instead of being lost. `email-api-sweep`
+(`src/workers/scheduled-email-api-sweep.ts`) calls the email API's Console,
+`POST /admin/sweep`, over the `EMAIL_CONSOLE` binding as the system actor
+`{ v: 1, kind: "system", job: "email-api-sweep" }`. That actor carries no
+person and no permission, and the Console lets it call the sweep and nothing
+else. The sweep hands over every message still `queued` 10 minutes after its
+last hand-over; the queue consumer's lease keeps a message that did go out from
+being sent twice. The rules live in cf-email-consumer `docs/features/EMAIL-API.md`.
+
+A sweep that finds nothing returns a next due time 15 minutes away
+(`QUIET_SLEEP_MS`), so a quiet day costs about 96 calls; after a sweep that
+handed messages over, or one that failed, it runs on the next tick. It never
+throws: an unbound binding and a Console older than the sweep (`404`) are logged
+and skipped, and any other failure is logged and reported once an hour
+(`email-api-sweep:failure`, the job's only D1 statement).
+
 ## 4. How shedding decides
 
 `cron-usage-probe` reads Cloudflare's own account-wide D1 analytics once an hour
@@ -313,13 +339,14 @@ job back for two more reasons, and the page shows each:
 | `interval` | The throttle (§1): at most every N minutes, measured from `lastRunAt` | **Throttled** (**Standby** until 2026-10-09) |
 | `sleeping` | The job itself said when it next has work (`nextDueAt`), and that time has not come | **Sleeping until HH:MM** |
 
-**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; three do.
+**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; four do.
 `backup-tick` passes on cf-backup's `nextTickAt` (Contract A in
 [`../program/cf-backup/02-admin-integration-contract.md`](../program/cf-backup/02-admin-integration-contract.md)):
 every five minutes while a backup is running, otherwise the next slot, chore or
 hour. `blog-scheduled-publish` reports the earliest scheduled post, or an hour
 from now when none is scheduled. `heartbeat-watchdog` (2026-10-07) reports its
-threshold from the start of a run, so it sleeps an hour after each run (§3a). The page shows a
+threshold from the start of a run, so it sleeps an hour after each run (§3a).
+`email-api-sweep` (2026-10-10) sleeps 15 minutes after a sweep that found nothing (§3b). The page shows a
 sleeping job as **Sleeping until HH:MM**, and gives the time it wakes as its next run (§7).
 Until 2026-10-09 a seeded catalog row (`scripts/lib/cron-catalog.mjs`, now deleted) said this
 in prose, which had to be re-seeded whenever it changed.
@@ -471,6 +498,13 @@ runs the heartbeat, it never runs. It is deliberately left without a Cron
 Control interval: a throttle would cut the invocations, but a throttled job's
 clock moves on every `skipped` outcome (§4a), trading cheap reads for writes,
 the scarcer resource. These are figures from the rules above, not a
+measurement.
+
+*Added 2026-10-10.* `email-api-sweep` adds about **96 invocations a day** while
+the sweep finds nothing (one every 15 minutes), and each makes one call to the
+email API, so the account's daily request count rises by about 192. It reads
+and writes no D1 rows here on success; the sweep's reads happen in
+`madagascar-email-db`. These are figures from the rules above, not a
 measurement.
 
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
@@ -641,10 +675,10 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   a manual run bypasses the control document by design — two deleters walking the
   same bucket is the one overlap worth a D1 write. (`redis-ttl-hygiene`, which
   took none, was removed on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md)
-  R-1, RU-2, RU-8.) The eleven five-minute jobs
+  R-1, RU-2, RU-8.) The twelve five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
-  trigger *can* still overlap a scheduled tick for those eleven. The Run-now route
+  trigger *can* still overlap a scheduled tick for those twelve. The Run-now route
   is an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
   there is no 409 path. *Corrected 2026-09-19: this section previously promised
   that Run now "still honours the lease … you get a 409 rather than a duplicate
@@ -676,6 +710,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-10 | claude | `email-api-sweep` added: `src/workers/scheduled-email-api-sweep.ts`, `src/lib/email-console.ts` (`sweepEmailApi`, the system actor), `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`; cf-email-consumer's Console sweep route read; `test/email-api-sweep.test.ts` (0 D1 queries on the configured path); `npm run verify` | §3: 14 jobs (12+2), the tier table and why it is essential; §3b added; §4a: four jobs sleep; §5: its invocation cost; §7: twelve five-minute jobs without a lease. Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (not deployed when written) |
 | 2026-10-09 | claude | Page rebuilt: `src/lib/jobs/registry.ts` (`about`, `TRIGGERS`), `cron-expr.ts`, `schedule.ts`, `check.ts`, `health.ts`, `history.ts`, `read-model.ts`, the two new routes and `src/components/admin/cron/`; Cloudflare's Analytics Engine SQL reference read for `toStartOfInterval` and `_sample_interval`; `test/cron-expr.test.ts`, `cron-schedule.test.ts`, `cron-health-history.test.ts`, `cron-status-view.test.ts`, `cron-api.test.ts`, `cron-contract.test.ts`; `npm run verify` | §1: Check, History, Live, Measure now, Refresh's cost. §4a: Throttled, the catalog sentence. §5: the page's own cost. §7 rewritten for the cards, the details panel, the hour strip, next from `decideJobRun`, last per outcome, UTC times. Not checked: the new hourly and seven-day Analytics Engine statements against the live dataset (no token in this session; the hourly one falls back to the old query if refused), and the page in a browser. Not re-checked: §2, §3, §3a, §4, §6 |
 | 2026-10-07 | claude | `heartbeat-watchdog` added: `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`, `scripts/lib/cron-catalog.mjs` (deleted 2026-10-09); cf-astro's heartbeat module read (its src/lib/heartbeat.ts, uncommitted, built in parallel) for the `heartbeat-last-run` row it writes; `test/heartbeat-watchdog.test.ts`, `test/jobs-budget.test.ts`; `npm run verify` | §3: 13 jobs (11+2), the tier table and the reason it is essential; §3a added; §4a: three jobs sleep; §5: its invocation and read cost; §7: eleven five-minute jobs without a lease. The catalog entry reaches the page only after a re-seed (`node scripts/seed_cron_control.mjs --apply --remote`). Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (nothing deployed) |
 | 2026-10-07 | claude | Review of the unreleased 2026-10-04 change: `src/lib/jobs/control.ts`, `runJob.ts`, `CronControlRepository.ts`, `src/workers/scheduled-storage-notifications.ts`, `scheduled-usage-probe.ts`, `src/lib/blog/publish-scheduled.ts`, `src/pages/api/cron/state.ts` and `config.ts`; `npm run verify` | §4a: the own-gate bullet and the wake's `clockRev`. §5: the read and write figures corrected (writes a range, not "about 96"), the `clockRev` paragraph added. §7's lease note no longer describes `redis-ttl-hygiene` as current. Not re-checked: §1 to §4, §6, the rest of §7 |
