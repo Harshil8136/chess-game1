@@ -137,6 +137,8 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 
 - **AI Crawler Allowances**: `robots.txt.ts` explicitly grants crawling permissions to AI agent engines (such as GPTBot, ClaudeBot, Applebot-Extended, and PerplexityBot).
 - **`llms.txt` & `llms-full.txt`**: Plaintext summaries served from `/public` that provide concise system context, services, pricing grids, and legal information specifically designed for LLMs to scrape.
+- **Quick answers on a post** (`components/blog/AioDirectAnswers.astro`): a cf-admin post's `aio_data.direct_answers` render as a light "Quick answers" / "Preguntas frecuentes" section after the article, an `<h2>` with one `<h3>` per question, targeted by the BlogPosting `speakable` selector `.article-direct-answers`. An answer that only repeats the post's meta description is not shown (`parseBlogPostRow`, `src/lib/blog.ts`). Restyled 2026-10-10 from a dark purple panel.
+- **Leaked AI JSON in a post body** is stripped at render (`src/lib/blog-body-envelope.ts`, reported once per post as `blog.body_envelope_repaired`). cf-admin repairs and blocks such bodies at save; this guard covers rows stored before that. The `<blockquote class="cms-callout">` "Key takeaway" box the AI writer emits is styled in `global.css`.
 
 ---
 

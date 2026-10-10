@@ -12,10 +12,21 @@
 > report in the project. Found by reading the code and fetching the live sitemaps and
 > pages on 2026-10-10; D1 was not queried directly.
 
-- [ ] 🟡 **A real author for each post.** cf-admin has no author field, so every post is by
-      "Madagascar Pet Hotel". The `author` column exists, and the schema already emits a
-      `Person` for any other name; the Studio needs a picker (a vet reviewer is the strongest
-      E-E-A-T signal for pet-health advice).
+- [x] ~~🟡 **A real author for each post.**~~ **Done 2026-10-10** (round 2, [record](./records/2026-10-10-blog-round-2-ai-json-and-cache.md)):
+      the cf-admin Studio has an Author field and saves it on edit; the schema emits a
+      `Person` for any name other than the business.
+- [ ] 🔴 **Repair or archive `/en/blog/why-chose-us/` in D1** (owner decision). Its body still
+      holds the AI's JSON envelope and its answers a templated question; the site now strips
+      both at render, but the stored row, title ("Why Chose Us?") and description stay
+      wrong until the post is regenerated or archived in cf-admin. Needs the Cloudflare
+      connector to read the row.
+- [ ] 🟢 **Edge cache in front of KV.** Worker responses never enter Cloudflare's zone cache,
+      so the `s-maxage`/`CDN-Cache-Control` headers and the zone purge by `Cache-Tag` in
+      `/api/revalidate` have nothing to act on; KV is the only page cache. Serving pages
+      through `caches.default` (or Workers cache) would make that purge real and save KV
+      reads. An owner decision: it changes how a publish becomes visible.
+- [ ] 🟢 **Pricing read memo.** `getPricing` falls back to D1 on a KV miss and never writes
+      the KV key back, so every miss repeats the D1 read.
 - [ ] 🟡 **RSS with full content, and crawlable.** The feeds carry only the summary, and
       robots.txt disallows them, which stops Google using them for discovery (they already
       send `noindex`).
