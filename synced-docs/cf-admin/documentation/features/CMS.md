@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-09-14
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/cms/revalidate.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
+related_code: [src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../operations/OPERATIONS.md]
 tags: [cms, blog, ai, rag, d1]
 ---
@@ -71,6 +71,16 @@ cf-admin wrote it. It does not: `ISR_CACHE` is a **cf-astro** binding and
 KV keys in the table are the `cms:` names cf-astro writes; they were read from
 the writer and reader source, not from a live KV listing (the connector exposes
 no key-level read).
+
+**What a blog save purges and announces (since 2026-10-10).** `blogPublishEffects`
+(`src/lib/blog/revalidation-paths.ts`) decides it for both `POST /api/content/blog` and the
+scheduled-publish job. Nothing happens for a post that is not and was not live. Otherwise
+the blog index and the live post are purged; an archived, unpublished or renamed post also
+has its old URL purged and sent to IndexNow, so the 301 recorded for it is served at once;
+and the post's tag pages and its translation (whose hreflang link is decided at render
+time) are purged when the post goes live or leaves, or when its tags or pairing change. A
+routine edit of a live post purges only the index and the post, as before. The live URL is
+sent to IndexNow and Search Console on every publish, scheduled ones included.
 
 ---
 
@@ -177,5 +187,6 @@ Clicking **"Apply to Editor"** populates the returned fields into `BlogManager.t
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | The blog purge and announce paragraph in §1 against `src/pages/api/content/blog.ts`, `src/lib/blog/publish-scheduled.ts` and `src/lib/blog/revalidation-paths.ts`, with `test/blog-publish-effects.test.ts` | The rest of the page; the purge against a live cf-astro (no Cloudflare connector in the session) |
 | 2026-09-19 | `src/lib/cms/revalidate.ts` (service binding, Bearer secret, read-back, outbox fallback) and cf-astro's `/api/revalidate` (`cms:<key>`, 1 h TTL, `ISR_CACHE`); `grep -rn ISR_CACHE src` in cf-admin (no hits); `src/lib/blog/article-schema.ts` (8 properties / 6 required, no `seo_score`); `BlogAiCopilotModal.tsx` (calls `ai-generate-stream`); `src/lib/blog/ai-prompt-template.ts` preset names; `src/pages/api/bookings/index.ts` and `[id].ts`; live `admin_pages` → `/dashboard/bookings` = `staff`; `getBlogPostBySlug` call sites in cf-astro; `src/lib/cms/storage.ts` `Cache-Control` | The `evaluateSeoGate` check count ("10-check" carried forward, not recounted); the D1 ids in §1 against the live `cms_content` rows; a live AI generation end to end |
 | 2026-09-14 | The nine content pages on disk; every writer endpoint in §1 mounted (`docs_check` route check); `src/lib/blog/seo-gate.ts` and `src/lib/ai-knowledge.ts` present; the prompt-override setting key referenced in six places; the CDN `Cache-Control` value at `src/lib/cms/storage.ts`; the three blog PLAC rows live in `admin_pages` (Cloudflare MCP); every cf-astro reader file in §1 present in the sibling checkout; the editor is in-house, not the `@tiptap` packages | The KV key names in §1 against a live KV read (the connector has no key-level read); the AI output schema in §4 against a live generation |
