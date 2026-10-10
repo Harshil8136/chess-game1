@@ -136,8 +136,9 @@ staff see.
 ### 1. Ground-Truth RAG Pipeline & Prompt Customization Studio
 - The AI content generator calls `getKnowledgeBaseContext(env)` in `src/lib/ai-knowledge.ts` to retrieve ground-truth facts from `cf-chatbot`.
 - Staff can open **"System Prompt & Style Studio"** in the Copilot modal to inspect the **full system prompt in detail**, view live interpolated prompt previews, insert variable chips (`{topic}`, `{tone}`, `{locale}`, `{target_words}`, `{knowledge_base}`), and select style presets (*Deep-Dive Educational Guide*, *Commercial Review & Comparison*, *Local Services & Pet Care Spotlight* — `src/lib/blog/ai-prompt-template.ts`). *Preset names corrected 2026-09-19.*
-- System prompts strictly enforce semantic HTML wrapping (`<h2>`, `<h3>`, `<p>`, `<ul>`, `<li>`, `<blockquote class="cms-callout">`), eliminating unformatted plain text lines.
-- Custom prompts persist in D1 `admin_portal_settings` (`blog_ai_system_prompt_override`) and are gated via PLAC capability `/dashboard/content/blog#edit-ai-prompts`.
+- System prompts strictly enforce semantic HTML wrapping (`<h2>`, `<h3>`, `<p>`, `<ul>`, `<li>`, `<blockquote class='cms-callout'>`, single-quoted so the body needs no escaped quotes inside the JSON), eliminating unformatted plain text lines.
+- Since 2026-10-10 the default prompt allows facts about the hotel only from the knowledge base (no "luxury", no invented statistics or quotes), asks for a 120–155 character description and 3–5 self-contained direct answers, and no longer asks for `cover_image_alt`. The built-in fallback knowledge base holds only what the public site states.
+- Custom prompts persist in D1 `admin_portal_settings` (`blog_ai_system_prompt_override`, at most 12,000 characters) and are gated via PLAC capability `/dashboard/content/blog#edit-ai-prompts`. An unsaved template sent from the copilot is used only for holders of that capability; anyone else gets the saved one.
 
 ### 2. Structured JSON Output
 
@@ -163,7 +164,25 @@ measured. The score now comes from `evaluateSeoGate()`
 absent for the same reason — the model has no cover image to describe.*
 
 ### 3. 1-Click Form Population
-Clicking **"Apply to Editor"** populates the returned fields into `BlogManager.tsx`.
+Clicking **"Apply to Editor"** populates the returned fields into `BlogManager.tsx`. The slug of an already published post is kept, so Apply never moves a live URL.
+
+### 4. AI JSON in a body, and answer checks (2026-10-10)
+
+The live post `/en/blog/why-chose-us/` was saved in August with the model's whole JSON response as its body. Three guards now share `src/lib/blog/body-envelope.ts`:
+
+- `sanitizeAiBody` un-wraps any leaked envelope (wrapped in `<p>`, double-encoded, escaped, or only its trailing fields).
+- The save route (`/api/content/blog`) repairs the body before sanitising it.
+- The quality gate's blocking `body-not-json` check fails on anything left; unlike the other blocking checks, `#bypass-quality-audit` cannot override it. The Studio's gate panel shows the same check.
+
+Direct answers from the writer, from the visibility audit and on every save pass `normalizeDirectAnswers` (`src/lib/blog/direct-answers.ts`): string question and answer, 8–200 and 20–1,000 characters, not just the meta description, no repeats, at most six. cf-astro strips a leaked envelope at render for rows saved before this.
+
+### 5. Inference limits (2026-10-10)
+
+- `runGuidedInference` reads Qwen3's chat-completion shape (`choices[0].message.content`, without a `<think>` block); the visibility audit, which runs on Qwen3, now goes through it. It had returned no answers since the 2026-08-31 model switch.
+- The timeout scales with the requested tokens (60–180 s, `timeoutForTokens`) and is not retried: a timed-out call is still billed. An unmet JSON schema is not retried either.
+- A failed generation is charged to the day's neuron budget: the full estimate for a timeout, the real usage for an unparseable answer. `AI_NEURON_RESERVE` is 1,900, the cost of the longest article on Llama 3.3 70B.
+- A body suggestion is refused for an article over 12,000 characters, and its answer budget grows with the body, so a rewrite can no longer come back truncated.
+- The Studio's date picker shows local time and stores UTC; the Author field is saved on edit, and a translation slug with no published partner shows a warning.
 
 ---
 
@@ -187,6 +206,7 @@ Clicking **"Apply to Editor"** populates the returned fields into `BlogManager.t
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §4.1, §4.3, §4.4 and §4.5 against `src/lib/blog/body-envelope.ts`, `direct-answers.ts`, `pub-date.ts`, `ai-prompt-template.ts`, `src/lib/ai/inference.ts`, `src/pages/api/content/blog.ts`, `ai-generate-stream.ts`, `ai-visibility.ts` and `blog/suggest.ts`, with `test/blog-body-envelope.test.ts`, `test/blog-direct-answers.test.ts` and `test/ai-inference.test.ts` | The live D1 row of why-chose-us and a live Workers AI call (no Cloudflare connector in the session) |
 | 2026-10-10 | The blog purge and announce paragraph in §1 against `src/pages/api/content/blog.ts`, `src/lib/blog/publish-scheduled.ts` and `src/lib/blog/revalidation-paths.ts`, with `test/blog-publish-effects.test.ts` | The rest of the page; the purge against a live cf-astro (no Cloudflare connector in the session) |
 | 2026-09-19 | `src/lib/cms/revalidate.ts` (service binding, Bearer secret, read-back, outbox fallback) and cf-astro's `/api/revalidate` (`cms:<key>`, 1 h TTL, `ISR_CACHE`); `grep -rn ISR_CACHE src` in cf-admin (no hits); `src/lib/blog/article-schema.ts` (8 properties / 6 required, no `seo_score`); `BlogAiCopilotModal.tsx` (calls `ai-generate-stream`); `src/lib/blog/ai-prompt-template.ts` preset names; `src/pages/api/bookings/index.ts` and `[id].ts`; live `admin_pages` → `/dashboard/bookings` = `staff`; `getBlogPostBySlug` call sites in cf-astro; `src/lib/cms/storage.ts` `Cache-Control` | The `evaluateSeoGate` check count ("10-check" carried forward, not recounted); the D1 ids in §1 against the live `cms_content` rows; a live AI generation end to end |
 | 2026-09-14 | The nine content pages on disk; every writer endpoint in §1 mounted (`docs_check` route check); `src/lib/blog/seo-gate.ts` and `src/lib/ai-knowledge.ts` present; the prompt-override setting key referenced in six places; the CDN `Cache-Control` value at `src/lib/cms/storage.ts`; the three blog PLAC rows live in `admin_pages` (Cloudflare MCP); every cf-astro reader file in §1 present in the sibling checkout; the editor is in-house, not the `@tiptap` packages | The KV key names in §1 against a live KV read (the connector has no key-level read); the AI output schema in §4 against a live generation |
