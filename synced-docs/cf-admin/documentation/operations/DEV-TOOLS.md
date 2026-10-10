@@ -3,7 +3,7 @@
 title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-04
+last_verified: 2026-10-10
 verified_against: [code]
 owner: harshil
 tags: []
@@ -31,8 +31,9 @@ The Developer Debug Portal is the developer-exclusive administrative module with
 - **System Debugging** — the probe suite in `lib/diagnostics/` (tiers, latency
   grades and remediation text) run against the live production bindings, plus
   its history and the page-registry manager (§3)
-- **Feature Configuration** — Runtime feature flag management (no deployment required)
 
+*(A second bullet, "Feature Configuration", was removed on 2026-10-10 with the feature: its
+flags table had no reader anywhere, so a switch changed nothing (§4).)*
 *(A third bullet, "Audit Suppression", was removed on 2026-09-19: the feature
 was deleted on 2026-07-26 and §5/§8.1 explain why it is not coming back. It
 should not have survived in the overview a reader hits first.)*
@@ -71,8 +72,8 @@ bypassing the UI. **The guards are not identical, and two of them are weaker
 than the role check** — corrected 2026-09-19, this section previously said
 "every API endpoint … enforces the same guard" and showed only the strict form.
 
-The strict form, used by `POST /api/features/toggle` and the `is_active` half
-of `POST /api/pages/toggle`:
+The strict form, the role alone, which the Feature Flags switch and the `is_active`
+half of the Modules list's switch used until both were deleted on 2026-10-10:
 
 ```typescript
 import { isVendorSupport, type Role } from '../../../lib/auth/rbac';
@@ -85,14 +86,15 @@ if (!isVendorSupport(sessionUser.role as Role)) {
 }
 ```
 
-The two exceptions, both live:
+The exception, live (a second, the Modules list's switch, let Super Admin change which role
+a page requires; it was deleted on 2026-10-10, and the page-registry manager of §3 is the one
+place that edits a page's row):
 
 | Route(s) | Actual guard | Consequence |
 |---|---|---|
 | `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | `checkPerm('/dashboard/debug', isDev(user.role))` — a **PLAC grant overrides the role**: `user.accessMap['/dashboard/debug'] === true` returns true before the role is consulted | A non-DEV user holding that grant can run the probe suite against live production bindings. The 403 body is `Insufficient permissions or access denied by PLAC policy` |
-| `pages/api/pages/toggle.ts` | `is_active` is DEV-only, but `required_role` is gated on `isSuperAdmin` | **Super Admin and above can change which role a page requires** — a privilege-boundary edit, from outside the DEV role |
 
-Treat both as decisions to confirm or defects to fix, not as documentation
+Treat it as a decision to confirm or a defect to fix, not as documentation
 gaps. As written before this correction, the section asserted a stricter
 control than the code implements, which is the worse of the two failure modes
 for a threat model.
@@ -149,34 +151,15 @@ answer 5).
 
 ---
 
-## 4. Feature Configuration (`/dashboard/settings/features`)
+## 4. Feature Configuration (removed)
 
-### 4.1 Purpose
-
-Feature Configuration enables instant, deployment-free toggling of experimental features across `cf-admin` and `cf-astro`. Flags are stored in D1 (`admin_feature_flags` table) and read from D1 on each request — `FeatureFlagRepository.ts` has no KV layer. *(2026-09-14: this said "cached in KV with a 60-second TTL".)*
-
-### 4.2 Toggle Flow
-
-```
-[DEV clicks toggle] → POST /api/features/toggle
-  → DEV role check (403 if not DEV)
-  → FeatureFlagRepository.setFlagStatus()
-  → auditLogger() via ctx.waitUntil()
-  → 200 OK
-```
-
-### 4.3 Cross-Project Propagation
-
-**Not implemented, and there is no consumer in either app.** This section said cf-astro picks a toggled flag up within 60 seconds via its middleware cache and pointed at a cf-astro file (`EDGE_FEATURE_ROUTING`) that does not exist in the cf-astro checkout (removed or never written), and cf-astro's `src/` contains no reader of `admin_feature_flags` (its `service-config.ts` header still mentions a "feature-flag 3-layer cache in middleware.ts" that the middleware no longer contains). *2026-09-19:* cf-**admin** has no runtime reader either — `admin_feature_flags` is written and read by the toggle UI and `FeatureFlagRepository.ts` and nothing else, so toggling a flag changes no behaviour anywhere. Read this as "the table is a UI with no consumer", not "it works locally". Cross-app runtime config goes through `service_config` — see [`../features/CONTROL-PLANE.md`](../features/CONTROL-PLANE.md), which is where this surface should fold in.
-
-### 4.4 File Map
-
-| File | Purpose |
-|------|---------|
-| `pages/dashboard/settings/features.astro` | SSR page with DEV guard |
-| `components/admin/settings/FeatureToggles.tsx` | Preact island for toggle UI |
-| `pages/api/features/toggle.ts` | API: updates flag in D1 |
-| `lib/dal/FeatureFlagRepository.ts` | Data access layer for feature flags |
+The Feature Flags tab of Settings, its switch `POST /api/features/toggle`, its repository
+`src/lib/dal/FeatureFlagRepository.ts` and its table `admin_feature_flags` were **deleted on
+2026-10-10** (Harshil's decision; the table by migration `0069`). Nothing in cf-admin or cf-astro
+read a flag, so a switch changed no behaviour anywhere (found 2026-09-19). A runtime switch that
+must change behaviour is an `admin_portal_settings` row, read by the code it governs (RULESAd
+RULE #0.8); cross-app runtime config goes through `service_config`
+([`../features/CONTROL-PLANE.md`](../features/CONTROL-PLANE.md)).
 
 ---
 
@@ -254,7 +237,7 @@ Page titles (rendered in `<h1>` tags) were also updated:
 | Page | Old Title | New Title |
 |------|-----------|-----------|
 | `debug/index.astro` | QA & Diagnostics Command Center | Developer Debug Portal *(the shipped `<h1>`; this row said "System Debugging")* |
-| `settings/features.astro` | Feature Flags | Feature Configuration |
+| `settings/features.astro` (deleted 2026-10-10) | Feature Flags | Feature Configuration |
 
 ---
 
@@ -295,12 +278,13 @@ No part of the audit log is immutable — see
 
 ### 8.3 DEV-Only Restriction
 
-Feature Configuration and System Debugging are now **DEV-exclusive**. SuperAdmin users who previously had access are **rewritten to `/dashboard/access-denied`** — the URL does not change, so this is not a redirect (corrected 2026-09-19; §2.1 already said so). This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators. Note the two exceptions in §2.2: a PLAC grant reaches the diagnostics API, and Super Admin can still change a page's required role.
+System Debugging is **DEV-exclusive** (Feature Configuration was too, until it was removed on 2026-10-10). SuperAdmin users who previously had access are **rewritten to `/dashboard/access-denied`** — the URL does not change, so this is not a redirect (corrected 2026-09-19; §2.1 already said so). This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators. Note the exception in §2.2: a PLAC grant reaches the diagnostics API.
 
 ## 9. Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §1, §2.2, §4, §7 and §8.3 after the Feature Flags tab and the Modules list were deleted: `git grep` finds no `/api/features/toggle`, `/api/pages/toggle`, `FeatureFlagRepository` or `ModuleToggles` in `src/`; the page-registry manager calls `/api/system/preview` and `/api/system/pages` (`src/components/admin/debug/PageRegistryManager.tsx`) | Everything else |
 | 2026-10-04 | §3.2 and the file table's `SystemDiagnostics.tsx` row against `src/components/admin/debug/SystemDiagnostics.tsx` (no interval left) | Everything else |
 | 2026-09-19 | `grep -rn isDev src/pages --include=*.astro` (**five** guarded pages, not three); `api/diagnostics/run.ts` and `api/pages/toggle.ts` guards read in full; `lib/auth/stages/decide.ts` + `lib/auth/guard.ts` (PLAC is the middleware gate and default-denies); `lib/audit.ts` `handleAuditError` (console **and** Sentry); `admin_feature_flags` readers across both checkouts (none outside the toggle UI/repository) | Live `admin_pages` label for `/dashboard/debug`; historical redirect behaviour (§8.3) |
 | 2026-09-14 | The guarded pages and their guard pattern; `run.ts` and `toggle.ts` guards and messages; every file under `components/admin/debug/`, `pages/dashboard/debug/`, `pages/api/diagnostics/`, `lib/diagnostics/`; `FeatureFlagRepository.ts` (D1 only); cf-astro for any `admin_feature_flags` reader; audit-silence removal (no `silence.ts`, no `auditSilenced`, `supabase/migrations/20260727000000_drop_audit_silence.sql`); `ctx.waitUntil` audit writes. Ten corrections above. | Live `admin_pages` labels in D1; historical redirect behaviour |

@@ -386,7 +386,7 @@ it** — only `senders.ts` and `send.ts` do. *Corrected 2026-09-19: this said
 
 | Setting | In D1? | Default in code | Consumed by the send path? |
 |---|---|---|---|
-| `custom_email_max_recipients` | ✅ `10` | `send.ts` 10 / `engine.ts` **100** ⚠ | **yes** |
+| `custom_email_max_recipients` | ✅ `10` | 10 in both, from `src/lib/configuration.ts` (since 2026-10-10) | **yes** — changed on the Configuration page, not here |
 | `email_sender_identities` *(not read by `engine.ts`)* | ❌ | none (`[]`) | **yes** — §0 defect |
 | `brevo_daily_limit` | ❌ | 300 | no — display only |
 | `brevo_monthly_limit` | ❌ | 9000 | no — display only |
@@ -395,7 +395,7 @@ it** — only `senders.ts` and `send.ts` do. *Corrected 2026-09-19: this said
 | `email_logo_url` | ❌ | site logo URL | no |
 | `email_brand_color` | ❌ | `#3b82f6` | no |
 | `email_footer_address` | ❌ | hardcoded street address | no |
-| `email_support_phone` | ❌ | `+52 (449) 123-4567` | no |
+| `email_support_phone` | ❌ | empty (the placeholder was removed 2026-10-10) | no |
 | `email_reply_to` | ❌ | `info@…` | no |
 
 Three honest observations:
@@ -411,19 +411,21 @@ Three honest observations:
    as-is (RULE #0.5). *Updated 2026-09-19 — MAINTENANCE item **E-8**:* on
    2026-09-16 `4cefa2b` removed the client-side fallback and added a "Saved, but
    not yet applied to outgoing email" notice. That is a partial fix only.
-   `engine.ts` still substitutes the placeholder when the setting is absent, and
-   `BrevoTelemetryView.tsx` loads whatever `engineSettings.email_support_phone`
-   returns into the input's **value** — so opening the branding panel and pressing
-   Save still persists the invented number as though an operator had typed it.
-   Separately, `LiveEmailPreviewPane.tsx` hard-codes the same number into the
-   operator's email preview.
-3. **The recipient-cap defaults disagree** — `send.ts` falls back to 10,
-   `engine.ts` to 100. No live impact while the D1 row exists (both read `10`), but
-   delete that row and the UI would advertise a cap ten times what is enforced.
+   *Updated 2026-10-10:* `engine.ts` no longer substitutes the placeholder (an
+   absent setting reads as empty), so pressing Save no longer stores the invented
+   number. `LiveEmailPreviewPane.tsx` still hard-codes it into the operator's email
+   preview.
+3. ~~**The recipient-cap defaults disagree**~~ — *fixed 2026-10-10:* `send.ts` and
+   `engine.ts` both read the limit through `configNumber` in `src/lib/configuration.ts`
+   (default 10, range 1 to 500). The limit moved to the Configuration page, under its own
+   permission `/dashboard/configuration#email-limit`; this page shows it read-only with a link,
+   and `save_settings` now saves only the engine form's own nine keys, each at most 500
+   characters.
 
 **`brevo_api_key` is a dead read.** Six routes do
 `settingsRepo.getSetting('brevo_api_key')` as a fallback to `env.BREVO_API_KEY`, but
-nothing ever writes it and it is not in `KNOWN_SETTING_KEYS`. `getSetting` is
+nothing ever writes it (the allow-list that named the writable keys was deleted on
+2026-10-10 with the generic settings route). `getSetting` is
 ungated, so each of those is a real D1 query that always returns `NULL` — six
 wasted reads per portal interaction. (Also worth noting: a provider secret in a
 settings table would be an anti-pattern; ROADMAP chunk 12 explicitly plans to move
@@ -583,6 +585,7 @@ RULE #0.9 working as intended. Two standing items, both predating it:
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-10 | claude | §6 only, against `src/pages/api/emails/engine.ts`, `send.ts`, `src/lib/configuration.ts` and `test/api-configuration.test.ts` | The recipient limit reads one default (10) in both routes and is changed on the Configuration page; `save_settings` takes nine keys; the placeholder phone is gone from `engine.ts`; nothing else re-checked |
 | 2026-10-07 | claude | The send pipeline's step 4 only, against `src/pages/api/emails/send.ts` (`getRateLimiter({ requests: 10, window: '1 h' }, 'custom-emails')`) and `src/lib/ratelimit.ts` | 10 an hour per user, now a D1 counter row (since 2026-10-04); nothing else re-checked |
 | 2026-10-03 | claude | §1 only, against `src/lib/auth/security-logging.ts` | Security alerts now share the queue and Queue Logs; nothing else re-checked |
 | 2026-09-19 | claude | Re-grepped every `src/pages/api/emails/` route for its PLAC anchors and role floors; re-read `send.ts` end to end; live D1 re-check of `email_sender_identities` and `custom_email_max_recipients` | §0 defect **still live** (no `email_sender_identities` row). Corrections: owner/vendor **do** bypass every PLAC deny; `#templates`/`#ai-generate`/`#preview` are not server-enforced; `cc`/`bcc` escape the suppression partition; attachments are never swept; the composer *is* idempotent; `0008` **is** in the schema ledger; engine actions 5 not 3; senders POST has no `sync`; queue free tier is 10k ops/day; `admin_email_templates` is orphaned; E-8's fix is partial |

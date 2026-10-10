@@ -3,10 +3,10 @@
 title: "Global Config Architecture — Dynamic System Settings via KV + D1"
 status: draft
 audience: [ai, technical, owner]
-last_verified: 2026-08-06
+last_verified: 2026-10-10
 verified_against: [code, research]
 owner: harshil
-related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/dal/FeatureFlagRepository.ts, src/pages/api/settings/portal.ts, src/lib/auth/session.ts, src/lib/auth/pipeline.ts, src/lib/auth/plac.ts, src/lib/cms/]
+related_code: [src/lib/dal/PortalSettingsRepository.ts, src/lib/configuration.ts, src/pages/api/configuration.ts, src/lib/auth/session.ts, src/lib/auth/pipeline.ts, src/lib/auth/plac.ts, src/lib/cms/]
 related_docs: [KV-RESILIENCE.md, plac-and-audit.md, ../reference/RBAC-AT-SCALE.md, ../features/CF-ACCESS-SYNC.md]
 tags: [kv, d1, cache, config, feature-flags, settings, architecture, research]
 ---
@@ -22,6 +22,16 @@ tags: [kv, d1, cache, config, feature-flags, settings, architecture, research]
 > already-built settings store to the code paths that actually enforce those
 > settings on every request — today, several of those settings can be changed in
 > the UI and silently do nothing. **Nothing in this document is implemented.**
+>
+> **Update 2026-10-10:** the settings that "silently do nothing" are gone rather than wired.
+> Harshil's Settings rework deleted the generic settings route and its free-text editor, the
+> Feature Flags table, repository and tab, and the five rows nothing read (`portal_name`,
+> `maintenance_mode`, `default_theme`, `session_max_lifetime`, `session_recheck_interval`;
+> migration `0069`). The portal-wide settings that do something are now a typed catalog,
+> `src/lib/configuration.ts`, edited on the Configuration page through
+> `POST /api/configuration`, and every other setting is changed on its own feature's page.
+> The proposal below (a cached `GLOBAL_CONFIG`) stays unbuilt, and the sections below describe
+> the state before that change, except where a row says otherwise.
 
 ## Context / Scope
 
@@ -49,10 +59,10 @@ overlap. It has more than expected:
 |---|---|---|
 | A generic, typed, D1-backed global settings table | `admin_portal_settings` (created by `migrations/0000_baseline.sql`; the `scope_type`/`scope_id` columns for global vs. per-user/per-role rows were added later, by `migrations/0037_widen_admin_portal_settings_scoped.sql` — *corrected 2026-09-19*) | **Built and in use** |
 | A repository with get/set, category filtering, and a **JSON-typed value** column (`setting_type: 'json'`) | `src/lib/dal/PortalSettingsRepository.ts` | **Built and in use** |
-| An authoritative allowlist of known setting keys | `KNOWN_SETTING_KEYS` in the same file — already includes `default_theme`, `session_max_lifetime`, `session_recheck_interval`, `maintenance_mode` | **Built** |
-| A GET/POST API with RBAC + PLAC gating and audit logging | `src/pages/api/settings/portal.ts` (`admin`+ to write, PLAC-gated on `/dashboard/settings`) | **Built and in use** |
-| An admin UI to edit these settings | `PortalSettingsPanel.tsx` | **Built and in use** |
-| A separate boolean feature-flag table + repository + UI | `admin_feature_flags` / `FeatureFlagRepository.ts` / `FeatureToggles.tsx` | **Built, and a second, parallel mechanism to the one above (see §6)** |
+| An authoritative allowlist of known setting keys | `KNOWN_SETTING_KEYS` in the same file — included `default_theme`, `session_max_lifetime`, `session_recheck_interval`, `maintenance_mode` | **Removed 2026-10-10**: replaced by the typed catalog in `src/lib/configuration.ts` |
+| A GET/POST API with RBAC + PLAC gating and audit logging | the generic settings route, PLAC-gated on `/dashboard/settings` | **Removed 2026-10-10**: `POST /api/configuration` takes only the catalog's keys, checked by type and range, each under its own permission |
+| An admin UI to edit these settings | the Settings page's Portal Configuration section | **Removed 2026-10-10**: the Configuration page (`/dashboard/configuration`) |
+| A separate boolean feature-flag table + repository + UI | `admin_feature_flags` and its repository and tab | **Deleted 2026-10-10** (table dropped by migration `0069`): nothing read a flag |
 | The exact "KV cache, D1 source of truth, TTL refresh" pattern this proposal describes, already running for a *different* dataset | `system:admin_pages_cache_v2` in `computeNavItems()` (`src/lib/auth/plac.ts`), and the `cms:*` / `isr:*` keys documented in [`KV-RESILIENCE.md`](KV-RESILIENCE.md) | **Built and proven in production.** *2026-10-10: the page-registry key is retired; about 100 rows read from D1 once a minute per isolate cost less than a KV read on every page, and an edit no longer waits out a one-hour copy ([PERMISSIONS-SYSTEM §5](PERMISSIONS-SYSTEM.md))* |
 | The isolate-local in-memory cache trick (bypass KV entirely on a warm isolate) | `ISOLATE_CACHE` in `src/lib/auth/session.ts` (5-second TTL, per-session) | **Built and proven in production** |
 
@@ -427,6 +437,7 @@ discovering by accident later:
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-10 | claude | The TL;DR update and §1's rows only, against `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `migrations/0069_settings_cleanup.sql` and a `git grep` of `src/` (no `KNOWN_SETTING_KEYS`, no feature-flag repository) | Those rows now read as removed; the cost and latency sections were not re-checked |
 | 2026-08-06 | claude | Read `PortalSettingsRepository.ts`, `FeatureFlagRepository.ts`, `src/pages/api/settings/portal.ts`, `PortalSettingsPanel.tsx` in full; grepped `src/` for `maintenance_mode`, `session_recheck_interval`, `session_max_lifetime`, `default_theme`, and `PortalSettingsRepository` usage; cross-checked against `session.ts`/`pipeline.ts`'s actual timing source (`SESSION_REFRESH_INTERVAL_MS` env var) | **Confirmed**: `admin_portal_settings` + UI already exist for these exact settings, and are disconnected from the runtime code that would need to read them. `default_theme` confirmed dead (superseded, commented out of the UI). `maintenance_mode` confirmed unenforced anywhere. |
 | 2026-08-06 | claude | Re-read `KV-RESILIENCE.md` and `plac.ts`'s `computeNavItems()`/`computeAccessMap()` for the existing KV+D1 cache precedent and TTL/fallback conventions | Confirmed the proposed pattern already exists twice in this codebase (page registry cache, CMS `cms:*`/`isr:*` keys) — this document generalizes an established pattern, not a new one |
 | 2026-09-19 | claude | Re-checked the premises, not the arithmetic. Read `src/lib/auth/pipeline.ts` (`touchLastActive`), `stages/refresh-role.ts`, `stages/access-map.ts`, `authz-signal.ts`, `cf-access-reconcile.ts`, `dal/ServiceConfigRepository.ts`, `dal/CronControlRepository.ts`, `migrations/0000_baseline.sql` and `migrations/0037_widen_admin_portal_settings_scoped.sql`; re-grepped `src/` for `maintenance_mode` and `documentation/MAINTENANCE.md` for an entry | **§4's central cost premise is refuted** — the `lastActiveAt` heartbeat has cost no KV write since `ae569e0` (2026-08-06, 14 h after this doc was written). Also corrected: the PLAC "write-through" precedent (it is the `authz-changed` mark), the `0037` scope columns, the flat-shape comment's new home, the CF-Access reconcile's gating, and "two mechanisms" → four. Status stays `draft`: **nothing here is implemented**, which remains true. **Not re-derived:** §5 and §6's cost and latency figures, which come from `RBAC-AT-SCALE.md` and rest on the same stale write model |

@@ -383,8 +383,10 @@ scoped to `global` — existing callers needed zero changes when this shipped.
 codebase, used by the cf-astro/cf-chatbot control plane. The two are not yet consolidated — that's a
 separate cleanup, not something to solve by picking whichever one is more convenient in the moment.
 For a *new* feature, prefer `admin_portal_settings` going forward; it's the one with scoping support.
-`admin_feature_flags` is a **third**, narrower (boolean-only) mechanism for the same general idea —
-same rule applies: don't add a fourth.
+`admin_feature_flags` was a **third**, narrower (boolean-only) mechanism for the same general idea;
+nothing read it, and it was dropped on 2026-10-10 (migration `0069`). Same rule applies: don't add
+another. A portal-wide setting is a row in `admin_portal_settings`, described once in the typed
+catalog `src/lib/configuration.ts` when people change it on the Configuration page.
 
 ### 8.1 The same check applies beyond D1 config tables
 
@@ -418,3 +420,4 @@ because the pattern it guards against has already recurred enough times to earn 
 |---|---|---|
 | 2026-09-14 | `tsconfig.json`, `eslint.config.js` (max-lines off, 600-line warn list, `prerender` guard), `scripts/ratchet.py` + `.ratchet.json` (A1 history), RULE #0.6 and §8.1 in `RULESAd.md`, every file and repository method this doc names, the motion token names in `global.css`. Five corrections above. | Whether `admin_sessions` / `privacy_requests` are dead on the Supabase side; Sentry dedup behaviour |
 | 2026-09-20 | `sentry.server.config.ts` (no-op, by design) and `src/workers/cf-entry.ts` (`@sentry/cloudflare` `withSentry`) — §4.4 rewritten; `var(--duration-…)` has 0 valid uses in `src/` — §7 rewritten; `scripts/rules_check.py` SEC-03 + its 18-file exempt list and the 19 `src/lib/dal/*Repository.ts` files — new §0; `scripts/a11y_check.py` (6 checks, `title` accepted as a name) — §6 labelled; 105 of 196 components over 200 lines — §3 labelled; `eslint.config.js` (`no-explicit-any: warn`, `max-lines: off`) and `.ratchet.json` re-read; the `admin_sessions` / `privacy_requests` question closed (renamed `zz_dead_*_20260916` by chunk 14a, removal tracked as D-15). | Sentry client-side dedup behaviour (still an SDK claim, not measured here) |
+| 2026-10-10 | §8's `admin_feature_flags` sentence, against `migrations/0069_settings_cleanup.sql` and `src/lib/configuration.ts` | Everything else |

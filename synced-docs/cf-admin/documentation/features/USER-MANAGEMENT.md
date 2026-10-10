@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-09-19
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -156,7 +156,6 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 > Every kick also writes a 24-hour `revoked:` sign-in block — see §5.4. Open; see
 > `documentation/specs/2026-09-16-access-revocation-remediation-design.md`.
 > *Added 2026-09-19.*
-| `src/pages/api/features/toggle.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Feature flag mutation | (role-only — Vendor Support is PLAC-exempt) |
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/logs.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Audit log deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/emails.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Email log deletion | ✅ `/dashboard/logs` |
@@ -357,6 +356,15 @@ Accepts email, display name, role, hidden status, and any initial page overrides
 ### 9.2 PATCH /api/users/manage (Modify User)
 
 Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation.
+
+### 9.3 POST /api/settings/user (a name, from Settings)
+
+*Added 2026-10-10.* Settings → Other people changes only another person's display name, for
+someone holding `/dashboard/settings#others` (checked by exact key; Admin and above by default,
+migration `0068`) whose role is above the target's (vendor support: anyone). It writes the same
+Supabase column as 9.2, audits the change and writes an `authz-changed` mark so the person's
+sessions show the new name on their next request. Theme and every other field stay the person's
+own.
 
 ## 10. Operational Resilience & Failure Modes
 

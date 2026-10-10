@@ -60,7 +60,7 @@ This is the **STRICTEST** rule and MUST be followed at ALL times:
 
 **Before creating a new D1 table, a new Supabase table, a new KV namespace, or integrating a new external service, three questions must be answered, in order — see [`documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) for the full live audit and reasoning this rule is based on.**
 
-This exists because the pattern has already recurred: `service_config` → `admin_portal_settings` → `admin_feature_flags` are three separate, never-consolidated mechanisms for the same general idea, and a live audit on 2026-08-06 found two confirmed-dead Supabase tables (`admin_sessions`, `privacy_requests`) that existed only because nobody checked for an existing fit before adding the next one.
+This exists because the pattern has already recurred: `service_config` → `admin_portal_settings` → `admin_feature_flags` were three separate, never-consolidated mechanisms for the same general idea (the third, which nothing read, was dropped on 2026-10-10 by migration `0069`), and a live audit on 2026-08-06 found two confirmed-dead Supabase tables (`admin_sessions`, `privacy_requests`) that existed only because nobody checked for an existing fit before adding the next one.
 
 > **Hard cap, not a guideline.** The counts that define these caps live in
 > **RULE #0.8** (env vars) and **RULE #0.9** (tables) below — this rule does not

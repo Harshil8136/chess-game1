@@ -237,8 +237,7 @@ default **70** (an hourly runner plus ten minutes), clamped to **30..1440**; a
 value that is not a number reads as 70. Like the other gate bounds it is a code
 default, not a stored row, so changing it is an `INSERT`, not an `UPDATE`
 ([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §1, the idle-tick
-gates). It has no screen, so it is not in `KNOWN_SETTING_KEYS`, like the other
-job bounds.
+gates). It has no screen, like the other job bounds.
 
 **What it does when it runs**, in the GitHub workflow's order, through the
 `ASTRO_SERVICE` binding (or `PUBLIC_ASTRO_URL` where the binding is absent) with

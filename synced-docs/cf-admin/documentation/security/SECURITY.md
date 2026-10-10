@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-10 | §6a's rows for `POST /api/configuration` and `POST /api/settings/user`, and the removal of the Feature Flags, page-toggle and generic settings routes, against `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, `src/lib/auth/routes.ts`, `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` | Every other section, the §0 route counts included |
 | 2026-10-10 | §4's page-swap paragraph, against `src/components/navigation/NativeNavigationState.astro`, Astro's router source in the installed package (the swap, `astro:after-swap`, then the scripts run), the build output after `npm run build` (the router script is an external file) and `test/client-navigation.test.ts` | Every other section; the live headers after the deploy |
 | 2026-10-10 | The `public/_headers` row, against `wrangler.toml` (`assets` without `run_worker_first`), `public/_headers`, `dist/client/_headers` after `npm run build` (the adapter's immutable rule first) and the Cloudflare static-assets documentation (`_headers` applies to asset responses, not Worker responses) | The live response headers of a static file, which wait for the deploy; every other section |
 | 2026-10-09 | §6a's new Cron Control row, against `src/pages/api/cron/jobs/[id]/check.ts`, `history.ts`, `src/lib/jobs/history.ts` (`SAFE_ID`) and `test/cron-api.test.ts` (401, 403, page key alone allowed, 404) | Every other section, the §0 route counts included |
@@ -598,7 +599,6 @@ try {
 | `GET /api/media/gallery` | `admin` | Gallery management |
 | `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
 | `GET /api/users` | bare `requireAuth` + PLAC on `/dashboard/users` | Full user list. Admin is the floor only because the registry row says so, so a PLAC grant can change it — *this row read "canonical Admin via `requireAuth`" until 2026-09-20* |
-| `POST /api/features/toggle` | `dev` + PLAC on `/dashboard/settings/features` | Feature flag mutations |
 | `GET /api/users/[id]/session-status` | bare `requireAuth` + PLAC on `/dashboard/sessions` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary |
 
 ### Page-Level Access Control on API routes (`placDenyResponse`)
@@ -665,7 +665,8 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `POST /api/sessions/flush-sessions` | `/dashboard/sessions` | 2026-09 | `denySessions()` + `#flush`. |
 | `GET/POST /api/sessions/sign-in-alerts` | `/dashboard/sessions` | 2026-10-03 | `denySignInAlerts()`: the page, then an explicit grant of `#alerts` (fail closed). Self-service only; a change that turns alerts down emails the alert recipients. A person cannot set their own successful sign-ins to never; places to trust are their own log rows, referenced by id, and no coordinates cross the API. |
 | `GET/POST /api/sessions/alert-policy` | `/dashboard/sessions` | 2026-10-03 | `denyAlertPolicy()`: the page, then an explicit grant of `#alert-policy` (fail closed). The alert policy and other people's mode (not the caller's own); a change that turns alerts down, or new recipients, emails the old and the new recipients. |
-| `GET/POST /api/settings/portal` | `/dashboard/settings` | 2026-05-26 | |
+| `POST /api/configuration` | `/dashboard/configuration` | 2026-10-10 | Replaced `POST /api/settings/portal` (deleted 2026-10-10), which took any of thirty-odd keys as free text. The page key, then the setting's own key (`#edit`, or `#email-limit` for the recipient limit), both by exact key (`placRequireGrant`, fail closed); the value must pass the catalog's type and range check in `src/lib/configuration.ts`. Audited. |
+| `POST /api/settings/user` | `/dashboard/settings` | 2026-10-10 | Your own name and theme. Another person's name needs `/dashboard/settings#others` by exact key, and their role below yours (vendor support: anyone); only the name can be changed for someone else. Audited when it names someone else, and their sessions pick the new name up on their next request. |
 | `GET/POST /api/content/services` | `/dashboard/content` | 2026-05-26 | |
 | `POST /api/content/blocks` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/faqs` | `/dashboard/content` | 2026-05-26 | |
@@ -688,8 +689,8 @@ All data-bearing API routes that map to a dashboard page enforce PLAC — and
 since the `enforce` flip, so does every other `/api/*` route, because an unmapped
 path is denied. `/api/health` is the only genuinely public endpoint of the three
 previously listed here: `/api/diagnostics` maps to `/dashboard/debug/diagnostics`
-and `/api/features/toggle` maps to `/dashboard/settings/features`
-(`src/lib/auth/routes.ts`). *That sentence previously said all three were on
+(`src/lib/auth/routes.ts`), and the third, the Feature Flags switch, was deleted with
+its table on 2026-10-10. *That sentence previously said all three were on
 role-only gates "by design".*
 
 ---

@@ -277,6 +277,16 @@ what each role's successful sign-ins send, which failed sign-ins are emailed, th
 window) and other people's alert mode, never included
 ([v2 spec](../specs/2026-10-03-sign-in-alerts-v2-design.md)). It is checked only by the
 Sessions page and `/api/sessions/alert-policy`, not at sign-in.
+*Added 2026-10-10:* the Configuration page and its keys (migration `0068`), all fail-closed
+through `placRequireGrant` on the exact key, in the page and in `POST /api/configuration`:
+`/dashboard/configuration` (the page, default `super_admin`, the stored name of the Admin
+tier), `#edit` (change its settings, `super_admin`) and `#email-limit` (change the email
+recipient limit, `owner`). Which key each setting needs is the setting's `permission` in
+`src/lib/configuration.ts`. The same migration adds `/dashboard/settings#others` (change the
+name of someone below your own role from Settings, `super_admin`), checked the same way by the
+Settings page and `POST /api/settings/user`. Settings itself became each person's own page and
+opens to every role (`staff`, migration `0069`), which also switched off its three retired
+sections, `#portal-config`, `#feature-flags` and `#modules`.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -923,6 +933,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-10 | claude | **Scope-limited to the Configuration and Settings keys.** Read `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, both pages and `migrations/0068`/`0069`; `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` pin the exact-key checks (a map holding only `/dashboard` is refused) and the rows | §5's new paragraph only; the live counts above are re-measured once `0068` and `0069` are applied |
 | 2026-10-10 | claude | **Scope-limited to the registry's names and groups.** Applied `migrations/0067` through the D1 connector and read back the live counts (113 rows, 99 active, 60 fragments, 55 active) and the category of every active row; read `page-registry.ts`, `plac.ts` (`computeNavItems`), `AdminLayout.astro`, `RegistryTabs.astro` and `api/system/pages.ts`; `test/page-registry.test.ts` pins the lookups, the one-minute copy, the groups and the rows `0067` writes | §5: the column table, the live counts, and the registry as the one home of names. §13.1: the sidebar's KV read is gone. Not re-derived: §13.2's latency figures, §11's revocation timings |
 | 2026-10-07 | claude | **Scope-limited to `/dashboard/github`.** Read `surface-guards.ts` (`canViewGitHub`), `guard.ts` (`placRequireGrant`), `decide-access.ts`; `test/github-access.test.ts` pins the role-by-grant matrix and the `0066` row | §5's exact-key paragraph added. Not re-derived: the registry counts (last measured 2026-09-16) |
 | 2026-08-24 | antigravity | Full read of `src/lib/auth/*`; live D1 queries via Cloudflare MCP (registry counts, access-map query timing, schema); Supabase user counts; Vitest auth suite execution (223/223 pass) | pass — all figures verified against live code and database |
