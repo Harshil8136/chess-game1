@@ -76,11 +76,18 @@ no key-level read).
 (`src/lib/blog/revalidation-paths.ts`) decides it for both `POST /api/content/blog` and the
 scheduled-publish job. Nothing happens for a post that is not and was not live. Otherwise
 the blog index and the live post are purged; an archived, unpublished or renamed post also
-has its old URL purged and sent to IndexNow, so the 301 recorded for it is served at once;
+has its old URL purged and sent to IndexNow, so what the site now answers there is served at
+once (a 301 for a rename, 410 Gone for an archive);
 and the post's tag pages and its translation (whose hreflang link is decided at render
 time) are purged when the post goes live or leaves, or when its tags or pairing change. A
 routine edit of a live post purges only the index and the post, as before. The live URL is
 sent to IndexNow and Search Console on every publish, scheduled ones included.
+
+**Redirect rows (since 2026-10-11).** `BlogRepository` records a `blog_redirects` row only when
+a published post's slug or locale changes; an archive records none, because cf-astro answers an
+archived post's URL with 410 Gone (`resolveMissingPost`). A post that is published at a slug,
+created or saved, deletes that slug's own redirect row, so a row left by an earlier archive or
+rename can never send its visitors away.
 
 ---
 
@@ -206,6 +213,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-11 | The redirect-rows paragraph in §1 against `src/lib/dal/BlogRepository.ts` (`updatePost`, `createPost`, `clearOwnRedirect`) with `test/blog-locale-and-redirects.test.ts`; the live `blog_redirects` rows (Cloudflare D1 connector, 1 row left: `welcome`/es) | The rest of the page |
 | 2026-10-10 | §4.1, §4.3, §4.4 and §4.5 against `src/lib/blog/body-envelope.ts`, `direct-answers.ts`, `pub-date.ts`, `ai-prompt-template.ts`, `src/lib/ai/inference.ts`, `src/pages/api/content/blog.ts`, `ai-generate-stream.ts`, `ai-visibility.ts` and `blog/suggest.ts`, with `test/blog-body-envelope.test.ts`, `test/blog-direct-answers.test.ts` and `test/ai-inference.test.ts` | The live D1 row of why-chose-us and a live Workers AI call (no Cloudflare connector in the session) |
 | 2026-10-10 | The blog purge and announce paragraph in §1 against `src/pages/api/content/blog.ts`, `src/lib/blog/publish-scheduled.ts` and `src/lib/blog/revalidation-paths.ts`, with `test/blog-publish-effects.test.ts` | The rest of the page; the purge against a live cf-astro (no Cloudflare connector in the session) |
 | 2026-09-19 | `src/lib/cms/revalidate.ts` (service binding, Bearer secret, read-back, outbox fallback) and cf-astro's `/api/revalidate` (`cms:<key>`, 1 h TTL, `ISR_CACHE`); `grep -rn ISR_CACHE src` in cf-admin (no hits); `src/lib/blog/article-schema.ts` (8 properties / 6 required, no `seo_score`); `BlogAiCopilotModal.tsx` (calls `ai-generate-stream`); `src/lib/blog/ai-prompt-template.ts` preset names; `src/pages/api/bookings/index.ts` and `[id].ts`; live `admin_pages` → `/dashboard/bookings` = `staff`; `getBlogPostBySlug` call sites in cf-astro; `src/lib/cms/storage.ts` `Cache-Control` | The `evaluateSeoGate` check count ("10-check" carried forward, not recounted); the D1 ids in §1 against the live `cms_content` rows; a live AI generation end to end |
