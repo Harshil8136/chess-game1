@@ -21,9 +21,8 @@
       (`why-chose-us` en → `/en/blog/`) was deleted. The previous row is revision v3 in
       `blog_posts_history`, restorable from the Studio. The title ("Why Chose Us?") and
       description are unchanged: rewriting them is an editorial choice for the owner.
-- [ ] 🟢 **A redirect row left behind by a republish.** cf-admin's `updatePost` does not delete a
-      post's own `blog_redirects` row when it goes live again (the why-chose-us case above). The
-      site ignores such a row while the post is published.
+- [x] ~~🟢 **A redirect row left behind by a republish.**~~ **Done 2026-10-11** in cf-admin's
+      `BlogRepository`: a post going live at a slug deletes that slug's own redirect row.
 - [ ] 🟢 **Edge cache in front of KV.** Worker responses never enter Cloudflare's zone cache,
       so the `s-maxage`/`CDN-Cache-Control` headers and the zone purge by `Cache-Tag` in
       `/api/revalidate` have nothing to act on; KV is the only page cache. Serving pages
@@ -38,8 +37,8 @@
       Cheap if wanted; SEO-OPERATIONS.md §2 keeps llms.txt low-effort on purpose.
 - [ ] 🟢 **Thin tag pages.** About 25 tag pages per locale for 8 posts. Consider `noindex`
       below 2–3 posts (an indexing-policy decision for the owner).
-- [ ] 🟢 **`410 Gone` for archived posts** instead of a 301 to the blog index (a soft 404 to
-      Google).
+- [x] ~~🟢 **`410 Gone` for archived posts**~~ **Done 2026-10-11**: `resolveMissingPost` in
+      `src/lib/blog.ts`; cf-admin no longer records a redirect to the index on archive.
 - [ ] 🟢 **`og:image` size for covers.** BaseLayout always claims 1200×630.
 - [ ] 🟢 **`sitemap-index.xml` lastmod** follows the newest publish date only, not edits.
 - [ ] 🟢 **Blog index and un-imported Markdown posts.** Once D1 has a post in a locale, the

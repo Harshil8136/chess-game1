@@ -138,10 +138,14 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 - **AI Crawler Allowances**: `robots.txt.ts` explicitly grants crawling permissions to AI agent engines (such as GPTBot, ClaudeBot, Applebot-Extended, and PerplexityBot).
 - **`llms.txt` & `llms-full.txt`**: Plaintext summaries served from `/public` that provide concise system context, services, pricing grids, and legal information specifically designed for LLMs to scrape.
 - **Quick answers on a post** (`components/blog/AioDirectAnswers.astro`): a cf-admin post's `aio_data.direct_answers` render as a light "Quick answers" / "Preguntas frecuentes" section after the article, an `<h2>` with one `<h3>` per question, targeted by the BlogPosting `speakable` selector `.article-direct-answers`. An answer that only repeats the post's meta description is not shown (`parseBlogPostRow`, `src/lib/blog.ts`). Restyled 2026-10-10 from a dark purple panel.
-- **A moved or archived post** answers with a 301 to the `blog_redirects` target, cached for one
-  hour (`[SUPABASE_PROJECT_REF]` in `src/lib/blog.ts`), only when no published post has that slug.
+- **A moved post** answers with a 301 to its `blog_redirects` target, cached for one hour
+  (`[SUPABASE_PROJECT_REF]` in `src/lib/blog.ts`), only when no published post has that slug.
   Without the max-age a browser kept the 301 for good: a post brought back stayed unreachable on
   any phone that had seen it archived.
+- **An archived post** answers 410 Gone with the 404 page's content, also cached for an hour
+  (`resolveMissingPost` and `blogGoneResponse`). So does an older archive recorded as a redirect
+  to the bare blog index: a 301 to the index read as a soft 404 to Google, while a 410 tells it
+  the post was removed on purpose.
 - **Leaked AI JSON in a post body** is stripped at render (`src/lib/blog-body-envelope.ts`, reported once per post as `blog.body_envelope_repaired`). cf-admin repairs and blocks such bodies at save; this guard covers rows stored before that. The `<blockquote class="cms-callout">` "Key takeaway" box the AI writer emits is styled in `global.css`.
 
 ---
