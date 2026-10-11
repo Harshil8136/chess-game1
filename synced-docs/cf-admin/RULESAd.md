@@ -900,9 +900,10 @@ npm run knip             # Dead-code sweep, run through `npx --yes knip` (the
                          # `--list A19` (catches that report nowhere).
 
 # The full gate — run this before any commit (see "Git & deployment protocol")
-npm run verify           # typecheck → ratchet → test:run → test:gates → rules_check
-                         #   → docs_check → lint:md → a11y_check → audit_gate (all blocking).
-                         # package.json owns this chain. `types:check` is NOT in it.
+npm run verify           # quick gates first: test:gates, rules_check, docs_check, lint:md,
+                         #   a11y_check, audit_gate (a failure stops here, in seconds);
+                         #   then typecheck, ratchet and test:run side by side (all blocking).
+                         # scripts/lib/verify-runner.mjs owns the list. `types:check` is NOT in it.
                          # ESLint *is* gated: scripts/ratchet.py runs `eslint . -f json`
                          # and exits 2 on any error, so `npm run lint` is only a
                          # faster way to see the same failures.

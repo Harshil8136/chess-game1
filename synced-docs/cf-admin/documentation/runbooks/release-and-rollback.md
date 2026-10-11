@@ -3,10 +3,10 @@
 title: "Release & Rollback Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-10-10
+last_verified: 2026-10-11
 verified_against: [code, infra]
 owner: harshil
-related_code: [scripts/release.mjs, scripts/lib/release-guards.mjs, scripts/d1_schema_snapshot.mjs, src/pages/api/health.ts, package.json, .githooks/pre-push]
+related_code: [scripts/release.mjs, scripts/lib/release-guards.mjs, scripts/verify.mjs, scripts/lib/verify-runner.mjs, scripts/d1_schema_snapshot.mjs, src/pages/api/health.ts, package.json, .githooks/pre-push]
 related_docs: [../operations/OPERATIONS.md, disaster-recovery.md, ../reference/schema-change-ledger.md, ../program/ROADMAP.md]
 tags: [release, deploy, rollback, workers-builds, migrations, runbook]
 ---
@@ -56,10 +56,12 @@ git push origin main
          the verify chain, types:check, build, SBOM; documentation-only pushes skip the code steps
 ```
 
-`npm run verify` is, at the time of writing:
-`typecheck → ratchet → test:run → test:gates → rules_check.py → docs_check.py →
-lint:md → a11y_check.py → audit_gate.py`. **`package.json` owns that chain** —
-read it there rather than trusting this line. (Note what is *not* in it:
+`npm run verify` (`scripts/verify.mjs`, since 2026-10-11) runs the quick gates
+first, `test:gates`, `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`
+and `audit_gate.py`, and stops there on a failure; then `typecheck`, `ratchet` and
+`test:run` side by side. About 3 minutes instead of the old chain's 4 to 6, with
+every gate kept. **`scripts/lib/verify-runner.mjs` owns that list** — read it
+there rather than trusting this line. (Note what is *not* in it:
 `types:check` is a separate step in `quality.yml`, and plain `lint` is
 subsumed by the ratchet.)
 
@@ -164,6 +166,7 @@ and somebody has to actually run them.
 | 2026-09-19 | claude | `package.json` `verify`/`build:ci`/`deploy:ci` read; `.github/workflows/quality.yml` lines 9-16; Workers Builds vs `quality` check-run durations on `a9dd974` and `67a5cf6`; `d1_migrations` applied-at vs commit author times for `0052`/`0053`/`0054`; repository Actions secrets listed | **Builds still on its default command** — §1 rewritten with a banner and a target-state diagram; the `verify` chain, the Python-gate count, the `--ci` env triggers and the §5 snapshot row corrected. Not readable from here: the Build settings in the Cloudflare dashboard (the three lines above are inference from observable behaviour) |
 | 2026-10-10 | claude | Workers Builds check-run completion vs push time on `4b166d6` (6 m 44 s), `42e421f` (8 m 04 s, docs only) and `ab6b0c7` (10 m 10 s); GitHub `quality` run durations on the same pushes (4-6.5 min, 25-35 s docs only); `scripts/release.mjs` build stage; `test/release-guards.test.ts` (14) | Build command is `build:ci` (inferred from durations and the owner's report of tests in the build log; the dashboard is not readable from here); `build --ci` made build-only; §1 banner and diagram rewritten. Not re-checked: the deploy command, the build token's D1 grant, the smoke token |
 | 2026-10-10 | claude | `d1_migrations` read through the Cloudflare D1 connector after pushing `2979706`: `0069_settings_cleanup.sql` id 105, applied 04:21:03 UTC; the commit's Workers Builds check completed 04:21:18 UTC; no session or person had applied it (the thread that wrote it meant to apply it after the deploy). `scripts/release.mjs` `deploy` stage read (drift check, migrate, deploy, smoke) | The deploy command is `deploy:ci` and its token can write D1 (inferred from that timing; the dashboard is not readable from here). §1's banner now says so and how to order a destructive migration. Not checked: the smoke token |
+| 2026-10-11 | claude | Each gate timed alone in a 4-CPU session: `typecheck` 42 s, `ratchet` 42 s, `test:run` 142 s, the six quick gates 11 s together; then `scripts/verify.mjs` end to end, 167 s, every gate green; `test/verify-runner.test.ts` (7) | §1's `verify` paragraph rewritten for the new runner. Tried and not kept: more test workers (142 s to 129 s at 6) and pre-bundling `lucide-preact` and `zod` (135 s); per-file module loading in workerd, not the tests (42 s), is most of the suite's time. Not re-checked: the rest of the runbook |
 
 ## 7. Related
 
