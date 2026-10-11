@@ -2,11 +2,11 @@
 title: "VPS Console (cf-vps, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-11
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
-related_docs: [BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../program/cf-backup/15-restore-tests.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
+related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, test/vps-notice.test.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
+related_docs: [../specs/2026-10-11-server-access-notice.md, BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../program/cf-backup/15-restore-tests.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
 
@@ -53,6 +53,19 @@ is cf-backup's plan of record [15](../program/cf-backup/15-restore-tests.md).
 When the deployment has no `VPS` binding (local development), the page says
 "cf-vps is not connected" instead of showing a dead frame.
 
+**The access notice** (since 2026-10-11). The first time a person opens the
+Server page in a sign-in, a pop-up headed "Authorized use only" says who owns
+and pays for the server, that only people the vendor authorized may use it,
+that activity is monitored and recorded, and that unauthorized use may lead to
+legal action. The console's frame is not rendered until they choose **I agree**;
+**Leave** goes to the Overview. Both answers go to `POST /api/vps/notice`, which
+writes one Audit Log row (§6) and, for an acceptance, keeps the notice's version
+in the session, so it lasts until the session ends. The words live in
+`src/lib/vps-notice.ts`; a change to them is a new version, which everyone
+accepts again. The gateway holds the console too (§2). Why each sentence says
+what it says, and the limits:
+[the notice's design](../specs/2026-10-11-server-access-notice.md).
+
 ## 2. The gateway contract
 
 Every request under `/dashboard/vps/app/` passes the normal auth pipeline
@@ -62,6 +75,7 @@ Every request under `/dashboard/vps/app/` passes the normal auth pipeline
 | Rule | What happens |
 |---|---|
 | Page access | The person must hold the `/dashboard/vps` key itself (§4) |
+| Access notice | A request that opens the console itself (a GET whose `Sec-Fetch-Dest` is `document`, `iframe` or `frame`) needs a session that accepted the current access notice (§1). Without it a frame gets a short "accept the notice" page (403, `notice_required`) and a tab is sent to the matching Server page (303), which shows the notice. The console's own calls and files are not held |
 | Path | Only a plain path under `/dashboard/vps/app/`: a doubled slash, a backslash, or an encoded slash, backslash or dot is a 404 and never reaches cf-vps |
 | Query string | Forwarded exactly as received (cf-vps signs the query it passes on, so it must not change); the path rules above apply to the path only |
 | Headers | Only `Accept`, `Accept-Language`, `Content-Type`, `Range` and `If-None-Match` are forwarded (plus the handshake headers of a terminal, §5). The session cookie, `Authorization`, the Access assertion and any `X-Vps-*` the browser sent never reach cf-vps |
@@ -249,6 +263,14 @@ warning (`vps.gateway.unrecognised_audit`) at most once an hour per action.
 Until 2026-10-08 every refusal was reported as unrecognised (Sentry
 CF-ADMIN-1V).
 
+The access notice (§1) has two verbs of its own, written by cf-admin rather
+than mapped from cf-vps: `vps_notice_accept` and `vps_notice_leave`, target
+type `vps_notice`, target id the notice's version. Each row keeps the version
+and a fingerprint of the words, the page, the session's start and sign-in
+times, Cloudflare's reading of the place and network, a keyed hash of the
+address (never the address), and the device; the fields are listed in the
+[notice's design](../specs/2026-10-11-server-access-notice.md) §5.
+
 Reads are not audited here, and a file download is a read (a GET). If a
 download should leave a portal row, cf-vps must make it a POST, as the backup
 console does.
@@ -277,6 +299,8 @@ is allowed. `test/csp.test.ts` fails if any other path loses `DENY`.
 |---|---|---|
 | No `VPS` binding | Page: "cf-vps is not connected" | — |
 | Page key not in the person's map | Page: "You do not have access to the server console" (403); gateway: 403 | — |
+| Access notice not accepted in this sign-in | Page: the notice; gateway: "Accept the server access notice" (403) in a frame, or a redirect to the Server page in a tab | The answer, when given: `vps_notice_accept` or `vps_notice_leave` |
+| A read-only role with the page granted | The notice, whose answer the portal refuses (read-only roles make no changes), so the console stays shut | `viewer_write_blocked` |
 | cf-vps slow (> 65 s to answer) | "Server console unavailable" (504) inside the frame | Observability every time, Sentry once per isolate |
 | cf-vps unreachable | Same, 502 | Same |
 | cf-vps refuses (e.g. a missing capability: `403`, `need`) | cf-vps's own answer, unchanged | cf-vps; for a change or a terminal, the audit row carries the status |
@@ -301,6 +325,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-11 | claude | §1's access notice paragraph, §2's Access notice row, §6's notice verbs and §8's two new rows, written with the code: `src/pages/dashboard/vps/[...section].astro`, the gateway, `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`; `test/vps-notice.test.ts`, `test/vps-gateway.test.ts` and `test/vps-page.test.ts` pass | Those parts match. Not re-checked: every other section; not yet seen on a phone |
 | 2026-10-08 | claude | §2's Time row against `endStreamCleanly` in `src/lib/vps-proxy.ts` (event streams only; a download still fails) and the cf-vps agent's stream intervals (`agent/src/main.ts`: a sample a second, a ping every 15 s); the new cases in `test/vps-proxy.test.ts` | The Time row matches. Not re-checked: every other section |
 | 2026-10-08 | claude | §6's paragraph on error answers against the gateway (`answered()`, the `vps.gateway.change_failed` report) and cf-vps's agent (`written()` and `actions/run` stamp `x-vps-audit` only on success); the new cases in `test/vps-gateway.test.ts` | §6 matches. Not re-checked: every other section |
 | 2026-10-08 | claude | §6's verb table against `src/lib/vps-audit.ts` (`VPS_AUDIT_VERBS`, 36 actions with the job controls of 92d42dc; `test/vps-audit.test.ts` passes); §1's Restore tests paragraph against cf-vps's `contract/capabilities.ts`, `contract/actions.ts`, its page list and its Worker proxy (the fresh sign-in on `restore/stage`) | §6 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run on the server |

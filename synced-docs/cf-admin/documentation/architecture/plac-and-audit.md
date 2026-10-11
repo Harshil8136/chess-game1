@@ -393,6 +393,11 @@ Every row carries identity (`user_id`, `user_email`, `user_role`), behaviour
 request context (`session_id`, `request_method`, `request_path`, `cf_ray_id`,
 `ip_hash`, `correlation_id`).
 
+`session_id` holds the session's handle (`sessionRef`, `src/lib/auth/session-ref.ts`), the same
+one the Sessions page shows, never the session's ID: the ID is the session cookie, and the Logs
+page shows this column to everyone who can read the log. `auditLog` and `createAuditLogger`
+hash it for every caller (since 2026-10-11, MAINTENANCE SP-9).
+
 The `details` column is a JSON string built by **`buildAuditDetails()`**
 (`src/lib/audit-helpers.ts`), and that function is the **single redaction
 chokepoint** — it moved there on 2026-09-07 so that no caller has to remember to
@@ -456,6 +461,7 @@ sampling or an aggregate, not reinstated as it was.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-11 | claude | Read `src/lib/audit.ts` (`withSessionHandle`) and `src/lib/auth/session-ref.ts`; `test/pipeline-session.test.ts` asserts the handle in the column | §3.4's `session_id` paragraph. Nothing else re-checked |
 | 2026-10-07 | claude | Read `src/lib/ratelimit.ts` and `src/lib/dal/RateLimitRepository.ts` | The rate-limiting step (changed 2026-10-04): one-minute limits on the `RL_PER_MIN_<n>` bindings, hour and day limits as D1 counter rows, no Upstash client left. Nothing else re-checked |
 | 2026-09-19 | claude | Re-derived against `06f8ab7`. Read `src/lib/audit.ts`, `src/lib/audit-helpers.ts`, `src/lib/retention-tables.ts`, `src/lib/auth/stages/decide.ts`, `record.ts`, `bootstrap.ts`, `guard.ts`, `authz-signal.ts`; and every handler under `src/pages/api/audit/`. Live `admin_audit_log` state taken from the 2026-09-18 fact sheet (2 rows, the bulk delete and its own attempt row, `request_path` NULL) | §1 and §2 reduced to pointers; §3 rewritten. Load-bearing corrections: the middleware does **not** skip `/api/*`; `requirePageAccess` exempts owner as well as vendor and 403s on a missing map; permission changes write an `authz-changed` mark, not a force-logout; the §3.5 "view" telemetry never existed after 2026-08-06; the deletion-path table now names `DELETE /api/audit/logs` and drops `/api/audit/delete`; the "insert-only application path" phrasing is withdrawn |
 
