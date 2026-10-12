@@ -2,7 +2,7 @@
 title: "VPS Console (cf-vps, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-11
+last_verified: 2026-10-12
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, test/vps-notice.test.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
@@ -54,8 +54,8 @@ When the deployment has no `VPS` binding (local development), the page says
 "cf-vps is not connected" instead of showing a dead frame.
 
 **The access notice** (since 2026-10-11). The first time a person opens the
-Server page in a sign-in, a pop-up headed "Authorized use only" says who owns
-and pays for the server, that only people the vendor authorized may use it,
+Server page in a sign-in, a pop-up headed "Authorized access only" says who owns
+and pays for the server (on a card with his email address), that only people the vendor authorized may use it,
 that activity is monitored and recorded, and that unauthorized use may lead to
 legal action. The console's frame is not rendered until they choose **I agree**;
 **Leave** goes to the Overview. Both answers go to `POST /api/vps/notice`, which
@@ -326,6 +326,7 @@ hourly); the owner and vendor support see it at once.
 | Date | Checked by | Method | Result |
 |---|---|---|---|
 | 2026-10-11 | claude | §1's access notice paragraph, §2's Access notice row, §6's notice verbs and §8's two new rows, written with the code: `src/pages/dashboard/vps/[...section].astro`, the gateway, `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`; `test/vps-notice.test.ts`, `test/vps-gateway.test.ts` and `test/vps-page.test.ts` pass | Those parts match. Not re-checked: every other section; not yet seen on a phone |
+| 2026-10-12 | claude | §1's access notice paragraph against `src/lib/vps-notice.ts` and `src/components/admin/vps/ServerNotice.tsx` after the notice's rewrite (version `2026-10-12`) | Heading and owner card updated. Not re-checked: every other section |
 | 2026-10-08 | claude | §2's Time row against `endStreamCleanly` in `src/lib/vps-proxy.ts` (event streams only; a download still fails) and the cf-vps agent's stream intervals (`agent/src/main.ts`: a sample a second, a ping every 15 s); the new cases in `test/vps-proxy.test.ts` | The Time row matches. Not re-checked: every other section |
 | 2026-10-08 | claude | §6's paragraph on error answers against the gateway (`answered()`, the `vps.gateway.change_failed` report) and cf-vps's agent (`written()` and `actions/run` stamp `x-vps-audit` only on success); the new cases in `test/vps-gateway.test.ts` | §6 matches. Not re-checked: every other section |
 | 2026-10-08 | claude | §6's verb table against `src/lib/vps-audit.ts` (`VPS_AUDIT_VERBS`, 36 actions with the job controls of 92d42dc; `test/vps-audit.test.ts` passes); §1's Restore tests paragraph against cf-vps's `contract/capabilities.ts`, `contract/actions.ts`, its page list and its Worker proxy (the fresh sign-in on `restore/stage`) | §6 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run on the server |
