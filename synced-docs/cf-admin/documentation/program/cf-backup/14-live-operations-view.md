@@ -124,7 +124,7 @@ after the cursor. The console appends them.
 - While a run's heartbeat is **fresh**, R2 alone answers. There is one R2 read per poll, and GitHub is not asked.
 - GitHub is asked only in four cases: before a heartbeat exists (queued or starting); when a heartbeat goes stale; right after a dispatch or cancel; and, when idle, to discover a scheduled run that just started. That last check happens at most every 30 s per isolate.
 - Answers are cached in memory for 2 s, so ten people watching cost about what one does.
-- **As built (2026-09-24):** `active` comes from the `backup_runs` rows, and GitHub is asked only about a run a row records, when it has no heartbeat or one older than 20 s (a GitHub failure is cached 10 s). An idle console asks GitHub nothing: the tick records a scheduled run the moment it dispatches it. A source is called "measured" only when this answer actually read it.
+- **As built (2026-09-24):** `active` comes from the `backup_runs` rows, and GitHub is asked only about a run a row records, when it has no heartbeat or one older than 20 s (a GitHub failure is cached 10 s, and since 2026-10-13 each GitHub read gives up after 4 s, so a slow GitHub reads as "GitHub did not answer" rather than running past cf-admin's 10 s gateway deadline). An idle console asks GitHub nothing: the tick records a scheduled run the moment it dispatches it. A source is called "measured" only when this answer actually read it.
 - Installation tokens are minted in memory and reused until they expire; they are never stored.
 
 ## 5. The heartbeat (runner side)
