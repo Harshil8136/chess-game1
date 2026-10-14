@@ -74,6 +74,8 @@ Establishes the core compilation rules, [SUPABASE_PROJECT_REF] routing, and buil
 
 Defines the Cloudflare Workers environment, build directory (`./dist`), compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
 
+- **`main = "./src/worker.ts"` (since 2026-10-14)**: the Worker entry. It hands every request to the Astro adapter's handler (`@astrojs/cloudflare/entrypoints/server`) except one whose path has broken percent-encoding (`/%c0`), which gets a `400 Bad Request: Malformed URI` there (`src/lib/malformed-path.ts`, §9.1). Before, Astro logged each such scanner request as `[ERROR] Error: Invalid URL encoding` in Workers Logs before any middleware ran. Keep anything that must run before Astro in this file, and keep the guard using `decodeURI`'s result: the bundler drops a bare `decodeURI(x);` as free of side effects.
+
 - **`DB` (D1 Database)**: Binds the local SQLite engine for fast content delivery and dead-letter queue audits.
 - **`ISR_CACHE` (KV Namespace)**: Caches HTML page structures and CMS content blocks. _(Note: standard static assets like images and fonts bypass KV entirely and are cached natively by Cloudflare's CDN using `public, max-age=31536000, immutable`)._ Its key families (2026-10-04):
 
@@ -322,6 +324,7 @@ The system operates strictly inside Cloudflare's free tier quotas, ensuring mont
 - **A prerendered page, an image or a font** is served from static assets and never wakes the Worker.
 - **An on-demand page** is one Worker invocation and one KV read on a cache hit. On a miss it renders, reads each `cms:` block once (the per-request memo, §4.3) and, if the page is a 200, writes one KV entry for 24 hours.
 - **An unknown blog tag, an invalid `?page=` or a page past the last one** is rewritten to `/404/` (with the slash, or the middleware would answer a 308) and answers a 404 that is not cached, so a random value costs no KV write. While D1 is failing, a page past 1 is a 503, also not cached. `?page=` only counts on `/es/blog/` and `/en/blog/`.
+- **A path with broken percent-encoding** (`/%c0`, `/%`) is answered `400` by the Worker entry before Astro starts (since 2026-10-14), cached at the edge for an hour, with no redirect, render or error log.
 - **A sitemap or RSS feed** is served from `feed:` KV for 6 hours; a miss queries D1 for the listed columns only.
 - **The browser's `/api/runtime-config/` call** happens at most once per page and, after a good answer, not again for 10 minutes in that tab.
 - **A form post** costs one rate-limit binding call for contact, two for a booking or a consent post (the burst guard on `RL_PER_MIN_30`, then the endpoint's limit), with no outbound HTTPS call and no KV write. The plan put form posts at about 50 a day on Upstash.
