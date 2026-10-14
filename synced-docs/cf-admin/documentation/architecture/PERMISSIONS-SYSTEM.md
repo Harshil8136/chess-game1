@@ -3,11 +3,11 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-10
+last_verified: 2026-10-14
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -311,6 +311,15 @@ asks: a deny on `/dashboard/logs` first, then a grant or deny on `/dashboard/log
 else the owner and vendor support. A button the person's access does not cover stays visible
 and switched off with its reason, as [`SESSION-MANAGEMENT.md`](../features/SESSION-MANAGEMENT.md)
 describes.
+*Changed 2026-10-14 (the access control room,
+[spec](../specs/2026-10-14-access-control-room.md)):* Page Registry became the portal-wide view
+of access: every page, person, personal setting and console permission, checks, the history of
+every change, and personal settings for many people at once (§10.2). Two rules moved with it. A
+change to a page's `required_role` or `is_active` now marks every active person for a re-check
+at once (`PATCH /api/system/pages`); until then only when the editor ticked "apply now", so for
+up to an hour a signed-in person kept the old answer. And Viewer is refused as a default
+(`pageRegistryPatchSchema`, `canStoreRole`), because the stored vocabulary has no name for it
+yet (§4.1, C-11); until then the save failed with a generic database error.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -338,6 +347,7 @@ granted INTEGER NOT NULL CHECK (granted IN (0, 1)),
 granted_by TEXT NOT NULL,
 granted_by_email TEXT NOT NULL,
 reason TEXT,
+expires_at TEXT,                  -- 0070: when it stops applying (ISO 8601 UTC), NULL = no end
 PRIMARY KEY (user_id, page_path),
 FOREIGN KEY (page_path) REFERENCES admin_pages(path) ON DELETE CASCADE
 ```
@@ -345,12 +355,18 @@ FOREIGN KEY (page_path) REFERENCES admin_pages(path) ON DELETE CASCADE
 Keyed on `user_id`, not email — an email change does not orphan grants. The cascade
 means retiring a page cleans up its overrides.
 
+**An override can end** *(2026-10-14, `migrations/0070`)*. `expires_at` is the whole chosen day
+in UTC (`2026-12-31T23:59:59.000Z`), at most 366 days ahead, set from a person's Access page or
+from Page Registry; a reset takes none. An ended override is ignored, not deleted: the role
+decides again, and the screens say "ended on" until someone removes the row (Page Registry,
+Personal settings). Every override made before `0070` has `NULL` and keeps applying.
+
 ### 6.1 The resolution query
 
 One batched LEFT JOIN, in `computeAccessMap()` (`src/lib/auth/plac.ts`):
 
 ```sql
-SELECT p.path, p.required_role, o.granted
+SELECT p.path, p.required_role, o.granted, o.expires_at
 FROM admin_pages p
 LEFT JOIN admin_page_overrides o
   ON o.user_id = ?1 AND o.page_path = p.path
@@ -358,8 +374,11 @@ WHERE p.is_active = 1
 ORDER BY p.sort_order
 ```
 
-Then per row: `granted = 0` → `false` (deny wins absolutely); `granted = 1` →
-`true`; otherwise `userLevel <= requiredLevel`.
+Then per row: an override whose `expires_at` has passed counts as none; `granted = 0` →
+`false` (deny wins absolutely); `granted = 1` → `true`; otherwise `userLevel <= requiredLevel`.
+The earliest end still ahead becomes the map's `refreshAt`, and the access-map stage
+(`stages/access-map.ts`) recomputes the map once it passes, so an ending override reaches the
+person on their next request rather than within the hour.
 
 The assignment goes through a guarded `Reflect.set` that refuses `__proto__` and
 `constructor` — a prototype-pollution guard, because the keys are database-supplied
@@ -567,9 +586,10 @@ incident.
 ## 10. Provisioning gates
 
 Every page override is written by the Access Center's save
-(`POST /api/users/access-center`), which runs five gates on each page change
+(`POST /api/users/access-center`) or, since 2026-10-14, by Page Registry's
+`POST /api/system/page-access` (§10.2). Both run five gates on each page change
 before anything is written (`src/lib/access-center/page-gates.ts`, the same
-function that marks which rows the editor lets a viewer switch). The one-page
+function that marks which rows the editors let a viewer switch). The one-page
 route `POST /api/users/access` that ran them until 2026-10-03 is retired.
 
 | Gate | Rule | Prevents |
@@ -622,7 +642,24 @@ capabilities under their pages, and vendor support can move a capability's
 default role there. The screen and its data:
 [ACCESS-CENTER](../features/ACCESS-CENTER.md); the design:
 [v2 spec](../specs/2026-10-03-access-center-v2-design.md); the delegation rules:
-[v1 spec](../specs/2026-10-02-access-center-design.md).
+[v1 spec](../specs/2026-10-02-access-center-design.md). Since 2026-10-14 it also has a History
+tab (`GET /api/users/access-history`, read from the activity log) and *Copy access from…*, which
+only fills the draft.
+
+### 10.2 Page Registry: many people at once
+
+*Added 2026-10-14.* `POST /api/system/page-access` (`src/lib/access-center/registry-access.ts`)
+takes up to 100 changes `{ userId, path, action, expiresAt? }` from someone holding the Page
+Registry key. Each change passes the same gates as above, plus: a switched-off page takes no
+new grant or revoke (a reset is allowed), and a setting left by an account no longer in the
+directory may only be removed, by vendor support. Every change is checked before any is
+written; one refusal refuses the whole request. Then one D1 batch, one activity-log row per
+change (`grant_access`, `revoke_access`, `reset_access`, surface `page-registry`), and one
+`authz-changed` mark per person. A request counts once against the `plac` limiter (5 a minute),
+which the Access Center's save shares. What the registry shows comes from one read,
+`GET /api/system/access-overview`, which applies the viewer's rules on the server: hidden
+accounts stay hidden below the owner and vendor support, and an owner's or vendor support's
+overrides are vendor support's alone.
 
 ---
 
@@ -913,14 +950,14 @@ re-checked against the 2022 edition, which restructured Annex A.*
 |---|---|---|
 | C-11 | Role vocabulary migration outstanding; `viewer` cannot be persisted (§4.1). | The read-only tier is enforced in code but unassignable. |
 | C-9 | Audit log is neither complete nor tamper-evident (§12). | Page reads are never recorded, and owner/vendor can bulk-delete rows. Append-only is designed, not shipped. |
-| D6 | `DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks. Anyone who clears the `/dashboard/users` gate — including a staff member holding a PLAC grant on it — can force-kick an admin or a peer, which writes the 24 h `revoked:` sign-in block. The owner-only `/dashboard/users#force-kick` registry row is checked nowhere. | Rank supremacy (T5, §4.1) does not hold on this path. |
-| D7 | The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase. | A peer can be deactivated. |
+| ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. Still open: the owner-only `/dashboard/users#force-kick` registry row is checked nowhere; enforcing it would take force sign-out away from Admins, so it waits on the owner's decision. | Rank supremacy now holds on this path. |
+| ~~D7~~ | ~~The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase.~~ **Fixed 2026-10-14:** the same rank rule for ending sessions and for blocking; blocking your own account is refused (400); a failed account update answers 502 instead of reporting success. | — |
 | D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Revoking one session signs the user out on every device. |
-| — | 4 overrides in production, 1 of them a deny (§6.3), **none on any cron key** (re-measured 2026-09-20). | PLAC is near-unexercised capability. |
-| — | A `dev`-baseline registry row cannot be delegated by the owner at all (§10). Two cron rows shipped that way and were repaired by `0056`; nothing prevents the next one. | A capability the customer can hold but never hand on, with no error explaining why. |
+| — | 4 overrides in production, 1 of them a deny (§6.3), **none on any cron key** (re-measured 2026-09-20); **none with an end date** (re-measured 2026-10-14, after `0070`). | PLAC is near-unexercised capability. |
+| — | A `dev`-baseline registry row cannot be delegated by the owner at all (§10). Two cron rows shipped that way and were repaired by `0056`; nothing prevents the next one. *Since 2026-10-14 Page Registry's Checks tab lists every such row.* | A capability the customer can hold but never hand on; now visible, still not prevented. |
 | — | Cold login costs ~240 ms to Supabase (§13.2). | Identity is not edge-local; only the decision is. |
 
-D6, D7 and D8 are open defects recorded in
+D8 is an open defect (D6 and D7 were fixed on 2026-10-14), all three recorded in
 [`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md)
 §2. *Added 2026-09-19; the row claiming "grants propagate in up to 1 h" was removed
 in the same pass — Stage 1 replaced it (§11).*
@@ -948,6 +985,10 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/cron-permissions.test.ts` | The two-key guard end to end: a page deny reaching the action, an action grant not opening its siblings, a **missing registry row failing closed**, a session with no access map refused, the owner/vendor bypass — and Gate D's arithmetic, which is why `0056` exists (added 2026-09-20) |
 | `test/migrations-replay.test.ts` | The four cron registry rows exist, are active, have non-null icons and carry the expected `required_role` — the assertion `0054` needed and did not have (added 2026-09-20) |
 | `test/access-center-rules.test.ts`, `test/access-center-profile.test.ts`, `test/access-center-api.test.ts` | The Access Center (§10.1): the sources and edit rules as case tables, the profile against a real registry and a faked console (answering, unavailable, refusing), and the API reading the person's role from the database whatever the body claims (added 2026-10-02) |
+| `test/access-center-end-dates.test.ts`, `test/plac.test.ts` | End dates (added 2026-10-14): an ended override counts as none, `refreshAt` is the earliest end ahead and the stage recomputes when it passes, and a save refuses an end in the past, more than a year ahead or on a reset |
+| `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): the visibility rules for a non-vendor holder of the key, the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
+| `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
+| `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502 |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 
@@ -957,6 +998,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-14 | claude | **Scope-limited to the access control room.** Read `plac.ts` (`computeAccessMap`), `stages/access-map.ts`, `registry-access.ts`, `history.ts`, `api/system/pages.ts`, `api/users/force-kick.ts`, `api/sessions/active-sessions.ts` and `schemas/admin.ts`; applied `migrations/0070` and read back the column and its ledger row, 117 registry rows (100 active) and 4 overrides (none with an end date) through the D1 connector; `npx vitest run`: 2,374 pass | §5's new paragraph, §6's end dates, §6.1's query, §10.2, D6 and D7 closed in §16, four rows in §17. Not re-derived: every other section, §13's figures included |
 | 2026-10-10 | claude | **Scope-limited to the Sessions page's keys.** Read `src/pages/dashboard/sessions/index.astro` before and after the rebuild, `surface-guards.ts` (`denySessions`, `canReadSignInHistory`), `src/pages/api/sessions/active-sessions.ts` and `src/pages/api/audit/login-logs.ts`; `test/sessions-console.test.ts` pins `canReadSignInHistory` and the refusals the page shows | §5's Sessions paragraph. Not re-derived: every other section; the live registry rows for the sessions fragments (last read 2026-09-20) |
 | 2026-10-10 | claude | **Scope-limited to the Developer Tools and Page Registry keys.** Read the four pages under `src/pages/dashboard/debug/`, the diagnostics and `api/system/` routes, `surface-guards.ts`, `registry-impact.ts` and `access-center/registry.ts`; read the live `/dashboard/debug` and `/dashboard/debug/pages` rows (both `dev`, active) and their grants through the D1 connector; `test/debug-access.test.ts` pins the keys, the rank rule and that no debug page checks the role alone | §5's new paragraph. Not re-derived: every other section |
 | 2026-10-10 | claude | **Scope-limited to the Configuration and Settings keys.** Read `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `src/pages/api/settings/user.ts`, both pages and `migrations/0068`/`0069`; `test/api-configuration.test.ts` and `test/api-settings-user.test.ts` pin the exact-key checks (a map holding only `/dashboard` is refused) and the rows | §5's new paragraph, and the live counts after both migrations (117 rows, 100 active, 63 permissions, 55 active, read through the D1 connector) |

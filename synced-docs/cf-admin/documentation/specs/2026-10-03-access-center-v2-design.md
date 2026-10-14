@@ -5,7 +5,7 @@ audience: [owner, technical, ai, operator]
 last_verified: 2026-10-03
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/system/console-features.ts, src/components/admin/debug/PageRegistryManager.tsx, src/components/admin/debug/ConsoleFeatures.tsx, src/styles/components/access-editor.css]
+related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/system/console-features.ts, src/components/admin/debug/registry/, src/components/admin/debug/ConsoleFeatures.tsx, src/styles/components/access-editor.css]
 related_docs: [2026-10-02-access-center-design.md, ../features/ACCESS-CENTER.md, ../architecture/PERMISSIONS-SYSTEM.md, ../reference/DESIGN-SYSTEM.md]
 tags: [permissions, access-center, plac, acm, registry, design]
 ---

@@ -3,7 +3,7 @@
 title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-10
+last_verified: 2026-10-14
 verified_against: [code]
 owner: harshil
 tags: []
@@ -101,7 +101,8 @@ Since 2026-10-10 the routes ask for the same key as their page:
 | Route(s) | Guard | Notes |
 |---|---|---|
 | `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | `canUseDebug` | Until 2026-10-10 a local `checkPerm('/dashboard/debug', isDev(...))`, which honoured a grant while the pages did not, and refused the owner, whose stored map holds `false` for a vendor-only row. The 403 body is unchanged: `Insufficient permissions or access denied by PLAC policy` |
-| `pages/api/system/pages.ts` (GET, PATCH), `preview.ts` | `canUsePageRegistry` | PATCH below vendor support: `registryEditRefusal` (`src/lib/auth/registry-impact.ts`) |
+| `pages/api/system/pages.ts` (GET, PATCH) | `canUsePageRegistry` | PATCH below vendor support: `registryEditRefusal` (`src/lib/auth/registry-impact.ts`). Since 2026-10-14 a new default role or switch reaches everyone on their next click, and Viewer is refused as a default. Its dry-run partner `preview.ts` was removed on 2026-10-14 with the old screen |
+| `pages/api/system/access-overview.ts` (GET), `page-access.ts` (POST), `access-history.ts` (GET) | `canUsePageRegistry` (`src/lib/access-center/registry-access.ts`, `history.ts`) | Added 2026-10-14 for the control room: one read of every page, person, personal setting and check; personal settings for many people at once, each through the Access Center's page gates; and the history of every access change |
 | `pages/api/system/console-features.ts` | `canUsePageRegistry` (`gate()` in `src/lib/access-center/registry.ts`) | Each console checks the person's own `access.manage` again; a move below vendor support stays within the editor's rank |
 
 **The rank rule.** A grant on Page Registry must not become a way up: an Admin who could lower
@@ -110,6 +111,10 @@ required role and its on/off switch change only when the editor's own role alrea
 page, and only to a role at or below their own; a page's name, description, group and order
 may change on any row. Console permissions follow the same rule. The registry offers only
 those roles, and a row above the editor shows "Above your role" in place of the picker.
+Personal settings made from the registry follow the person rules of the Access Center: strictly
+outrank the person, hold the page, page within your clearance; an Owner's or Vendor support's
+settings stay Vendor support's
+([control-room spec](../specs/2026-10-14-access-control-room.md) §6).
 
 ### 2.3 RBAC + PLAC Layering
 
@@ -156,7 +161,7 @@ answer 5).
 |------|---------|
 | `pages/dashboard/debug/index.astro` | Landing hub with DEV guard |
 | `pages/dashboard/debug/diagnostics.astro`, `debug/diagnostics/history.astro` | Diagnostics run and its history (`SystemDiagnosticsHistory.tsx`) |
-| `pages/dashboard/debug/pages.astro` + `components/admin/debug/PageRegistryManager.tsx`, `PageRegistryConfirmModal.tsx` | Page-registry manager (edit `admin_pages` rows) |
+| `pages/dashboard/debug/pages.astro` + `components/admin/debug/registry/` (`RegistryConsole.tsx` and one file per tab and pop-up), `ConsoleFeatures.tsx`, `styles/pages/page-registry.css` | Page Registry, the access control room (rebuilt 2026-10-14; the old `PageRegistryManager.tsx` was deleted): tiles, then Pages, Who opens what, Personal settings, Consoles, Checks and History, and a pop-up per page with its settings, its people and its actions ([spec](../specs/2026-10-14-access-control-room.md) §4) |
 | `components/admin/debug/SystemDiagnostics.tsx` (+ `DiagnosticsInfraBar.tsx`, `DiagnosticsTestList.tsx`) | Preact island: runs the suite once on load (every 30 s until 2026-10-04) and on the button, renders the infra bar and the per-probe list |
 | `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | API: run the probe suite / read persisted results / infra snapshot; results persist to `system_test_results` |
 | `lib/diagnostics/runner.ts`, `benchmarks.ts`, `types.ts`, `tests/` | The probe suite (tiers, latency grades, remediation text) |
@@ -296,6 +301,7 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-14 | §2.2 and §3.3 after the Page Registry rebuild: the page, `src/components/admin/debug/registry/`, the four `api/system/` routes and `registry-access.ts`; `git grep` finds no `PageRegistryManager`, `/api/system/preview` or `rolePreviewSchema` in `src/`; the screens server-rendered with edge-case data; `test/registry-access.test.ts`, `test/registry-ui-logic.test.ts` | §1, §3.1, §3.2 and §4 onward; the page in a browser (the owner's phone test) |
 | 2026-10-10 | §2.1 to §2.3 after the Developer Tools pages and routes moved to their page keys: `canUseDebug` and `canUsePageRegistry` in `src/lib/auth/surface-guards.ts`, the four pages under `src/pages/dashboard/debug/`, the three diagnostics routes, `api/system/pages.ts`, `preview.ts` and `access-center/registry.ts`; the live rows (`/dashboard/debug` and `/dashboard/debug/pages`, both `dev`, active) and their grants read through the D1 connector; `test/debug-access.test.ts`, `test/registry-impact.test.ts`, `test/registry-console-features.test.ts` | §3 onward; the pages in a browser |
 | 2026-10-10 | §1, §2.2, §4, §7 and §8.3 after the Feature Flags tab and the Modules list were deleted: `git grep` finds no `/api/features/toggle`, `/api/pages/toggle`, `FeatureFlagRepository` or `ModuleToggles` in `src/`; the page-registry manager calls `/api/system/preview` and `/api/system/pages` (`src/components/admin/debug/PageRegistryManager.tsx`) | Everything else |
 | 2026-10-04 | §3.2 and the file table's `SystemDiagnostics.tsx` row against `src/components/admin/debug/SystemDiagnostics.tsx` (no interval left) | Everything else |

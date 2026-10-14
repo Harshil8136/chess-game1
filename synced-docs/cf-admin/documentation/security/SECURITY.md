@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-11
+last_verified: 2026-10-14
 verified_against: [code, infra]
 owner: harshil
 related_docs: [THREAT-MODEL.md, RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/plac-and-audit.md, ../operations/OPERATIONS.md]
@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-14 | §5.1's page-registry trigger, §6a's rows for `force-kick`, `active-sessions`, the Access Center and the Page Registry routes (the new `access-overview`, `page-access`, `system/access-history` and `users/access-history`; `preview` removed), and §6b's `registry` and `plac` limiter rows, against those files, `src/lib/access-center/registry-access.ts`, `history.ts`, `src/lib/auth/routes.ts` (`/api/system`, `/api/users`) and `test/registry-access.test.ts`, `test/access-history.test.ts`, `test/session-rank.test.ts`, `test/api-authz-inventory.test.ts` | Every other section, the §0 route counts included (three routes added, one removed, under prefixes already mapped) |
 | 2026-10-14 | §6a's `/api/emails/api-attachments` row (it replaced `api-mailroom`), against `src/pages/api/emails/api-attachments.ts`, `src/lib/email-api-route.ts`, `src/lib/auth/routes.ts`, `test/email-api-routes.test.ts` and `test/api-authz-mapping.test.ts` | Every other section, the §0 route counts included (the count is unchanged: one route renamed) |
 | 2026-10-11 | §6a's new `POST /api/vps/notice` row, against `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`, `src/lib/auth/routes.ts` (`/api/vps` → `/dashboard/vps`), the gateway's notice check and `test/vps-notice.test.ts`, `test/vps-gateway.test.ts`, `test/api-authz-inventory.test.ts` | Every other section, the §0 route counts included |
 | 2026-10-10 | §9's `RESEND_API_KEY` note, against `src/lib/email/queue-mail.ts`, its five callers and `grep -rn "api.resend.com" src/` (the diagnostics ping only); pinned by `test/system-mail-queue.test.ts` | The rest of §9 |
@@ -486,7 +487,8 @@ their **next request**, bounded by KV's eventual consistency (≈60 s).
 | Role change, activation/deactivation metadata, display name | `src/pages/api/users/manage.ts` |
 | Page grant / revoke | `src/lib/access-center/handlers.ts` (`POST /api/users/access-center`), gates in `src/lib/access-center/page-gates.ts` |
 | Access-request approval | `src/pages/api/audit/requests/[id]/resolve.ts` |
-| Page-registry change | `src/pages/api/system/pages.ts` |
+| Page-registry change (a default role or switch marks every active person, 2026-10-14) | `src/pages/api/system/pages.ts` |
+| Page settings for many people from Page Registry | `src/lib/access-center/registry-access.ts` (`POST /api/system/page-access`), the same gates |
 
 A role change additionally calls `resetUserOverrides(env.DB, targetUser.id)`
 first, so the new role starts from its own PLAC baseline.
@@ -662,15 +664,16 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. Then `canReadSignInHistory` (`src/lib/auth/surface-guards.ts`, 2026-10-10), the same check the Sessions page makes before it shows its History tab. |
 | `POST /api/audit/export` | `/dashboard/logs` (parent) | 2026-05-26 | Same parent-deny propagation as above for the `#export` hash sub-page. |
 | `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | PR #2 | |
-| `DELETE /api/users/force-kick` | `/dashboard/users` | PR #2 | |
+| `DELETE /api/users/force-kick` | `/dashboard/users` | PR #2 | Below the owner and vendor support the caller must strictly outrank the target (`canManageUser`, 2026-10-14); until then any holder of the page could sign out a peer or a senior below the owner (PERMISSIONS-SYSTEM D6). The owner-only `#force-kick` key is still checked nowhere. |
 | `GET /api/users/access-data` | `/dashboard/users` | PR #2 | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
 | `GET /api/users` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/pages` | `/dashboard/users` | 2026-05-26 | |
 | `POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | Checked before anything is read; a PLAC-denied admin can no longer mutate PLAC. Replaced `POST /api/users/access` (2026-05-26) on 2026-10-03. |
-| `GET/POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | The Access Center. Hidden accounts answer 404 below owner and vendor; a server-console change also needs the `/dashboard/vps` key itself, strict outrank and not self, and cf-vps re-checks it ([`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md)). |
+| `GET/POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | The Access Center. Hidden accounts answer 404 below owner and vendor; a server-console change also needs the `/dashboard/vps` key itself, strict outrank and not self, and cf-vps re-checks it ([`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md)). Since 2026-10-14 a page grant or revoke may carry an end date (in the future, at most 366 days ahead). |
+| `GET /api/users/access-history` | `/dashboard/users` | 2026-10-14 | One person's access changes from the activity log, fifty at a time. The same person check as the Access Center (a hidden account answers 404 below owner and vendor); an owner's or vendor support's history answers empty with `hidden` below vendor support. `userId` must be a UUID and `before` a cursor the route itself made. |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
-| `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. Since 2026-10-10 the list names each session by a handle and DELETE takes that handle (`sessionRef`), looked up only among the named person's own sessions: the list used to send each session's ID, which is the session cookie. |
+| `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. Since 2026-10-10 the list names each session by a handle and DELETE takes that handle (`sessionRef`), looked up only among the named person's own sessions: the list used to send each session's ID, which is the session cookie. Since 2026-10-14, below the owner and vendor support, ending someone else's sessions or blocking them needs a strict outrank (`canManageUser`); nobody blocks their own account (400); and a block whose account update fails answers 502 (PERMISSIONS-SYSTEM D7). |
 | `GET /api/sessions/active-revocations` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | `denySessions()` + `#unblock`. DELETE additionally has a 30/min unblock rate limit. |
 | `POST /api/sessions/flush-sessions` | `/dashboard/sessions` | 2026-09 | `denySessions()` + `#flush`. |
 | `GET/POST /api/sessions/sign-in-alerts` | `/dashboard/sessions` | 2026-10-03 | `denySignInAlerts()`: the page, then an explicit grant of `#alerts` (fail closed). Self-service only; a change that turns alerts down emails the alert recipients. A person cannot set their own successful sign-ins to never; places to trust are their own log rows, referenced by id, and no coordinates cross the API. |
@@ -686,7 +689,8 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `POST /api/emails/api-messages` `{ id, action: "cancel" }` | `/dashboard/email-api` | 2026-10-10 | `guardEmailApi()` with `#respond` or `#manage`, as for a re-send. Cancels a scheduled message whose time has not come; the email service decides and answers 409 when it is too late. An action other than `requeue` or `cancel` is refused before the email service is called; each cancel is audited ([`../features/EMAIL-API-ACCESS.md`](../features/EMAIL-API-ACCESS.md) §4f). |
 | `POST /api/settings/user` | `/dashboard/settings` | 2026-10-10 | Your own name and theme. Another person's name needs `/dashboard/settings#others` by exact key, and their role below yours (vendor support: anyone); only the name can be changed for someone else. Audited when it names someone else, and their sessions pick the new name up on their next request. |
 | `POST /api/diagnostics/run`, `GET /api/diagnostics/results`, `GET /api/diagnostics/infrastructure` | `/dashboard/debug` | 2026-10-10 | `canUseDebug()` (`src/lib/auth/surface-guards.ts`), the exact key: vendor support by default, or a grant; the owner and vendor support bypass. Until 2026-10-10 a local check that honoured a grant while the pages refused it ([`../operations/DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2). |
-| `GET/PATCH /api/system/pages`, `POST /api/system/preview`, `GET/POST/PATCH /api/system/console-features` | `/dashboard/debug/pages` | 2026-10-10 | `canUsePageRegistry()`, the exact key, as above. Until 2026-10-10 vendor support only. Below vendor support a page's required role and switch, and a console permission's default role, move only within the editor's own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`). |
+| `GET/PATCH /api/system/pages`, `GET/POST/PATCH /api/system/console-features` | `/dashboard/debug/pages` | 2026-10-10 | `canUsePageRegistry()`, the exact key, as above. Until 2026-10-10 vendor support only. Below vendor support a page's required role and switch, and a console permission's default role, move only within the editor's own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`). Since 2026-10-14 PATCH refuses Viewer as a default (it cannot be stored) and a change of role or switch marks every active person for a re-check. `POST /api/system/preview` was removed on 2026-10-14 with the old registry screen, its only caller. |
+| `GET /api/system/access-overview`, `POST /api/system/page-access`, `GET /api/system/access-history` | `/dashboard/debug/pages` | 2026-10-14 | `canUsePageRegistry()`, the exact key ([control-room spec](../specs/2026-10-14-access-control-room.md)). The overview applies the viewer's rules on the server (hidden accounts, an owner's or vendor support's overrides). `page-access` takes at most 100 changes in a body of at most 32,768 characters, checks every change with the Access Center's page gates before writing any, writes one D1 batch with one audit row per change, and refuses a read-only viewer; a removed account's setting may only be removed, by vendor support. The history is a read over `admin_audit_log`. |
 | `GET/POST /api/content/services` | `/dashboard/content` | 2026-05-26 | |
 | `POST /api/content/blocks` | `/dashboard/content` | 2026-05-26 | |
 | `GET/POST /api/content/faqs` | `/dashboard/content` | 2026-05-26 | |
@@ -723,7 +727,6 @@ role-only gates "by design".*
 |-------|-------|-----------|-----|
 | `GET /api/bookings/[id]` | 60/min | `bookings-detail` | `user.userId` |
 | `GET /api/users` | 30/min | `users-list` | `session.userId` |
-| `POST /api/system/preview` | 20/min | `system-preview` | `actor.userId` |
 | `POST /api/system/pages` (PATCH) | 3/min | `registry` | `actor.userId` |
 | `POST/PATCH/DELETE /api/users/manage` | 10/h | `users-manage` | `session.userId` |
 | `DELETE /api/sessions/active-sessions` | 30/min | `session-revoke` | `session.userId` |
@@ -737,6 +740,7 @@ role-only gates "by design".*
 | `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
 | `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
 | `POST /api/users/access-center` | 5 saves/min (each save counts once, however many changes) | `plac` | `session.userId` |
+| `POST /api/system/page-access` | 5/min (the same `plac` budget; one request counts once, however many changes) | `plac` | `viewer.userId` |
 | `POST /api/users/access-center` | 5/min (the same budget as the row above) | `plac` | `session.userId` |
 | `POST /api/storage/presign` | 30/min | `storage-presign` | `user.userId` |
 | `POST /api/storage/[id]/share` | 20/h | `storage-share-create` | `user.userId` |

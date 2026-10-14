@@ -336,6 +336,7 @@ src/styles/
 └── pages/                  ← Page-level overrides
     ├── audit.css, cron.css, diagnostics.css
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
+    ├── page-registry.css  ← Page Registry's own rules on the console kit: page rows, role matrix, person choices (2026-10-14)
     └── privacy-dashboard.css  (session-registry.css was removed 2026-10-10 with the old Sessions screens)
 ```
 
@@ -735,8 +736,9 @@ palette; layers that are not pop-ups, such as the page background and the phone 
 
 ### 9.9 Console kit *(implemented 2026-10-10)*
 
-`src/styles/components/console.css`, the page frame Sessions, Settings and GitHub share, on
-the look of the cf-backup and cf-vps consoles. A page opts in with
+`src/styles/components/console.css`, the page frame Sessions, Settings, GitHub and Page
+Registry share (and, through `ck-scope`, a person's Access page since 2026-10-14), on the look
+of the cf-backup and cf-vps consoles. A page opts in with
 `<div class="ck-page" data-hue="rose|violet|blue">` and imports the file from its `.astro`
 page.
 
@@ -779,6 +781,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-14 | §3's `pages/page-registry.css` line and §9.9's list of pages on the kit, against `src/pages/dashboard/debug/pages.astro`, `src/styles/pages/page-registry.css` (theme tokens only) and `UserAccessEditor.tsx` (`ck-scope`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | §5 Sidebar States (the closed rail's scrollbar) against `SidebarMenu.tsx`, `Sidebar/utils.ts` `ROW`, `Sidebar/index.tsx` (66px, 1px border) and `global.css` `.sidebar-scroll` | Every other section; the look in a browser, which Harshil checks |
 | 2026-10-10 | §9.8's sizing against `Dialog.css` (every `height` rule) after pop-ups opened full height; §9.9's `ck-search` and `ck-rename` against `console.css` and every place they are used (`LockOutDialog.tsx`, `AlertPolicyPanel.tsx`, `SignInAlertsCard.tsx`, `SignedInPanel.tsx`, `HistoryPanel.tsx`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | §9.8 against `src/components/ui/Dialog.tsx`, `Dialog.css`, `ConfirmDialog.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx` and `src/stores/dialogStore.ts`; §9.9 against `src/styles/components/console.css`; the §3 file tree's `console.css`, `github.css`, `settings.css` and `session-registry.css` lines | Every other section; the look in a browser, which Harshil checks on his phone |

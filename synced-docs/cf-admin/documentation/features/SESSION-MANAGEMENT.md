@@ -3,7 +3,7 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-10
+last_verified: 2026-10-14
 verified_against: [code]
 owner: harshil
 related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionsConsole.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
@@ -185,9 +185,16 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   switch their account off **and write a 24-hour `revoked:` sign-in block**. Reactivating
   the account via the same PATCH clears the block; a force-kick from the user registry does
   not, and can only be lifted here under **Sign-in blocks** (`#unblock`). See
-  [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.4. The owner's and vendor support's
-  sessions and blocks are out of reach for anyone below them: the routes refuse, and the
-  page says so on the button.
+  [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.4. Below the owner and vendor support,
+  ending someone's sessions and locking them out reach only people whose role sits strictly
+  below yours: never a peer, never anyone above, never the owner or vendor support (*changed
+  2026-10-14*; until then only the owner and vendor support were protected, so an Admin could
+  lock out another Admin). Your own other sessions can always be ended, and nobody can block
+  their own account (the route answers 400). The page says so on the button first
+  (`beyondReach`, `SessionDrawer.tsx`). A block whose account update fails answers 502 with
+  what to do: the sessions are already ended, but the account would let them sign in again.
+  The owner's and vendor support's sign-in blocks can be lifted only by the owner or vendor
+  support.
 - **Session handles, never session IDs** (2026-10-10). A session's ID is the value of its
   cookie. Until 2026-10-10 `GET /api/sessions/active-sessions` and
   `GET /api/users/[id]/session-status` sent every session's ID to anyone who could open the
@@ -291,6 +298,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-14 | claude | **Scope-limited to who may end sessions and lock people out.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `active-revocations.ts` (unblock rule unchanged) and `SessionDrawer.tsx`; `test/session-rank.test.ts` pins the route and `test/sessions-console.test.ts` the buttons. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-10 | claude | The whole page after the rebuild, against `src/pages/dashboard/sessions/index.astro`, every file in `src/components/admin/users/sessions/`, `src/pages/api/sessions/active-sessions.ts`, `active-revocations.ts`, `flush-sessions.ts`, `src/pages/api/users/[id]/session-status.ts`, `src/pages/api/audit/login-logs.ts`, `src/lib/auth/surface-guards.ts` and `src/lib/auth/session-ref.ts`; `test/sessions-console.test.ts` and `test/session-ref.test.ts` added. Not rendered in a browser (the owner checks on his phone); the live KV and D1 were not read. |
 | 2026-10-03 | claude | The `#alert-policy` fragment, both card sections and the components list, against `src/pages/dashboard/sessions/index.astro`, `SignInAlertsCard.tsx`, `AlertPolicyPanel.tsx`, `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts`, with migration `0065` read back from production. Not rendered in a browser. |
 | 2026-10-03 | claude | The alert-email line in the history rows and the drawer, and the two lines added to "Your sign-in alerts", against `AuthHistoryPanel.tsx`, `AuthLogDetailDrawer.tsx`, `src/lib/login-alerts/outcomes.ts`, `src/pages/api/audit/login-logs.ts` and `test/login-alerts.test.ts`, with migration `0064` read back from production. Not rendered in a browser; the rest of the page was not re-read. |

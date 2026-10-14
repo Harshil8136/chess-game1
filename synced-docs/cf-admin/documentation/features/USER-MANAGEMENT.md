@@ -124,12 +124,12 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 |------|---------------|--------------|:---:|
 | `src/pages/api/users/manage.ts` | `isVendorSupport` | Role mutation, privileged-account edit protection | ✅ `/dashboard/users` |
 | `src/pages/api/users/access-center.ts` (`src/lib/access-center/handlers.ts`) | `isVendorSupport`, `isOwnerOrVendor` (in `page-gates.ts`) | PLAC provisioning, one save for pages and consoles (`/api/users/access` was retired 2026-10-03) | ✅ `/dashboard/users` |
-| `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor` — **target protection only** | Session termination | ✅ `/dashboard/users` |
+| `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor`, `canManageUser` | Session termination: below the owner and vendor support, only a strict outrank (*changed 2026-10-14*; until then target protection only) | ✅ `/dashboard/users` |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/probes.ts` | `requireAuth(context, 'owner')` | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/cf-access-audit.ts` | `requireAuth(context, 'owner')` | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
-| `src/pages/api/sessions/active-sessions.ts` | `denySessions` | KV active session list + revoke | ✅ `/dashboard/sessions`, **plus `#revoke` on DELETE**; 30/min RL |
+| `src/pages/api/sessions/active-sessions.ts` | `denySessions`, `canManageUser` | KV active session list + revoke and block; below the owner and vendor support, another person's sessions only with a strict outrank, and never your own account's block (*changed 2026-10-14*) | ✅ `/dashboard/sessions`, **plus `#revoke` on DELETE**; 30/min RL |
 | `src/pages/api/sessions/active-revocations.ts` | `denySessions` | KV revocation block list + unblock | ✅ `/dashboard/sessions`, **plus `#unblock` on DELETE**; 30/min RL |
 | `src/pages/api/sessions/flush-sessions.ts` | `denySessions` + `isOwnerOrDev` | Bulk session flush — **Owner/Vendor only** | ✅ `/dashboard/sessions`, plus `#flush` |
 | `src/pages/api/sessions/sign-in-alerts.ts` (`src/lib/login-alerts/handlers.ts`) | `denySignInAlerts` | The caller's own sign-in alert settings: pause, trusted areas (added 2026-10-03) | ✅ `/dashboard/sessions`, plus an explicit grant of `#alerts` |
@@ -147,7 +147,12 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 > Owner/Vendor only rather than admin+. The Sessions console is documented in
 > [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md), which owns these rows.
 
-> **Spec gap D6 — `#force-kick` is enforced nowhere.** The `admin_pages` row
+> **Spec gap D6 — `#force-kick` is enforced nowhere.** *Changed 2026-10-14: the rank half of
+> this gap is closed. The route now refuses a caller who does not strictly outrank the target
+> (`canManageUser`), so an Admin can sign out a Manager or Staff account and never another
+> Admin; `test/session-rank.test.ts`. The key itself is still checked nowhere, and enforcing it
+> would take force sign-out away from Admins: that waits on the owner. The text below is the
+> state before the change.* The `admin_pages` row
 > `/dashboard/users#force-kick` exists live with an Owner baseline, and the access
 > UI offers it, but a grep of `src/` finds no reference to the string. What the
 > route actually enforces is `/dashboard/users` plus a *target* check: a canonical
