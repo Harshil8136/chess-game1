@@ -68,7 +68,7 @@ Every request under `/dashboard/backup/app/` passes the normal auth pipeline
 
 | Rule | What happens |
 |---|---|
-| Page access | `/dashboard/backup` must be allowed for the person — nested paths inherit it; an unknown key is a deny |
+| Page access | The `/dashboard/backup` key itself must be allowed for the person (`mayUseBackupConsole`, `src/lib/backup-proxy.ts`): nested paths inherit it, and a key missing from their access map is a deny, never decided by the staff-level `/dashboard` row (2026-10-15; until then it was) |
 | Headers | Only `Accept`, `Accept-Language`, `Content-Type`, `Range` and `If-None-Match` are forwarded. The session cookie, `Authorization`, the Access assertion and any `X-Backup-*` the browser sent never reach cf-backup |
 | Identity | The gateway adds `x-backup-actor` (who, their role, and when they last signed in) and `x-backup-request-id`, built from the session |
 | Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site |
@@ -248,6 +248,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-15 | claude | §2's page-access rule against `src/lib/backup-proxy.ts` (`mayUseBackupConsole`) and `src/pages/dashboard/backup/app/[...path].ts`; `test/backup-gateway.test.ts` refuses staff on a map without the Backups key | Not re-checked: every other section |
 | 2026-10-09 | claude | §9 step 4 against `src/lib/jobs/registry.ts` and `src/lib/jobs/read-model.ts` after the Scheduled Jobs rebuild; `scripts/lib/cron-catalog.mjs` deleted | Step 4 no longer re-seeds; the catalog path left `related_code`. Not re-checked: every other section |
 | 2026-10-08 | claude | §4's verb table against `src/lib/backup-audit.ts` (`BACKUP_AUDIT_VERBS`, 17 actions; `test/backup-audit.test.ts` passes), and added the two actions the table had been missing (`diagnostics.run`, `alerts.dismiss`); §1's Restore tests paragraph against cf-backup's uncommitted routing and `restore-tests` routes | §4 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run in production |
 | 2026-10-04 | claude | `src/workers/scheduled-backup-tick.ts` (`nextTickDue`, the settled-tick rule), `src/pages/dashboard/backup/app/[...path].ts` (rule 8, the wake), `src/lib/jobs/control.ts`; `test/backup-tick.test.ts`, `test/backup-gateway.test.ts`; cf-backup's record `docs/records/2026-10-04-resource-usage-tick.md` for its side | The TL;DR and §6 describe Contract A. Not re-checked: every other section, and cf-backup's dead-man script itself |

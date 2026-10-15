@@ -595,6 +595,10 @@ incident.
 > page decision and same-origin itself and is pinned by
 > `test/backup-gateway.test.ts`. What each person may do inside the console is
 > cf-backup's capability model ([13](../program/cf-backup/13-access-control.md)).
+> *Changed 2026-10-15:* the gateway now asks `mayUseBackupConsole`
+> (`src/lib/backup-proxy.ts`), which needs the `/dashboard/backup` key itself, as the
+> server console's `mayUseConsole` does, so a missing or switched-off Backups row no longer
+> lets staff through on the `/dashboard` row.
 >
 > **Added 2026-09-30 (cf-vps console).** `/dashboard/vps/app/…` is a second
 > gateway of the same shape ([VPS Console](../features/VPS-CONSOLE.md)), with one

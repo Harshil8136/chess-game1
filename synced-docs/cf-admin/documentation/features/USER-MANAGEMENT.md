@@ -3,7 +3,7 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-19
+last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/pages/api/users/manage.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
@@ -78,7 +78,7 @@ Access levels operate dynamically based on strict numeric permissions (lower num
 | **2** | **Admin** 👑 | Second in command. Full operational control, including platform settings and users at or below their level. |
 | **3** | **Manager** 🛡️ | Runs day-to-day operations — bookings, content, customers, generalized audit logs. No user or platform administration. |
 | **4** | **Staff** 👤 | Works in their own area. Cannot change settings or other people. |
-| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Not currently assignable.** *Added 2026-09-19:* while `ROLE_VOCABULARY = 'legacy'` (`src/lib/auth/rbac.ts`) the database has no stored value for Viewer, so `toStoredRole` cannot persist it and `manage.ts` refuses it — but `ASSIGNABLE_ROLES` in the invite pill grid still offers it, so an admin can pick a role the server will reject. Tracked as C-11 in [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md). |
+| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Not currently assignable.** *Added 2026-09-19:* while `ROLE_VOCABULARY = 'legacy'` (`src/lib/auth/rbac.ts`) the database has no stored value for Viewer, so `toStoredRole` cannot persist it and `manage.ts` refuses it — but `ASSIGNABLE_ROLES` in the invite pill grid still offers it, so an admin can pick a role the server will reject. *Fixed 2026-10-15:* the invite grid and the role menu offer `PICKABLE_ROLES` (`rbac.ts`), the assignable roles the database can store, so Viewer is not offered until it can be. Tracked as C-11 in [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md). |
 
 ### Color Hierarchy: Thermal Gradient
 
@@ -243,7 +243,7 @@ on a wide screen and stack on a phone, and only the dialog's body scrolls.
 
 **Left panel — Identity:**
 
-- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the five assignable roles, with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
+- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the pickable roles (four since 2026-10-15: Viewer is left out until it can be stored), with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
 - **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors.
 - Email + Display Name inputs. Grant Access and Cancel sit in the dialog's footer, under both panels (2026-10-10).
 
@@ -291,7 +291,7 @@ If a user needs immediate revocation:
    > So: if a user reports being locked out after any administrative action, open
    > the Active Edge Blocks **tab** before concluding there is no block. Stage 2 of
    > the access-revocation remediation retires this flag; it has not shipped.
-3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
+3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, removes the person's server- and backup-console grants from `vps:access` and `backup:access` (`src/lib/dal/VpsAccessRepository.ts`; the backup grant since 2026-10-15, before which an address invited again got its old backup powers back), then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
 4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
 
 ## 6. UI Implementation (Manage Users Dashboard)
@@ -366,7 +366,15 @@ Accepts email, display name, role, hidden status, and any initial page overrides
 
 ### 9.2 PATCH /api/users/manage (Modify User)
 
-Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation.
+Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation. *Since 2026-10-15* the Users page shows the route's refusal in words when a role change, suspension or deletion fails; until then it went only to the browser console and the role menu snapped back.
+
+### 9.0 GET /api/users (the list)
+
+*Corrected 2026-10-15.* "Last sign-in" is the newer of `admin_authorized_users.last_login_at`
+and the person's newest successful sign-in in `admin_login_logs` (one grouped read,
+`LoginLogRepository.getLastSuccessByEmail`). This app never writes `last_login_at`; only an
+older system did, so on its own it was empty for four of five accounts and months old for the
+fifth (live, 2026-10-15). The sign-in log keeps a year.
 
 ### 9.3 POST /api/settings/user (a name, from Settings)
 
@@ -530,3 +538,9 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |
 | CF audit cross-reference | Owner+ only | Reveals CF Access org-level user list |
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-10-15 | **Scope-limited.** §2's Viewer row and §6's pill grid against `rbac.ts` (`PICKABLE_ROLES`), `InlineRoleSelector.tsx` and `RolePillSelector.tsx`; §5's full delete against `manage.ts` and `VpsAccessRepository.ts`; §9.0 against `api/users/index.ts`, `LoginLogRepository.ts` and the live `admin_login_logs` and `admin_authorized_users` rows (D1 and Supabase connectors); `test/users-last-sign-in.test.ts`, `test/vps-access.test.ts`, `test/rbac-roles.test.ts` | Every other section (last fully re-derived 2026-09-19) |
