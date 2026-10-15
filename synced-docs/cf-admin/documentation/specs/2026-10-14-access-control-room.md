@@ -104,8 +104,8 @@ optional end date and a reason. *Actions*: the page's own `#` actions, each open
 | Who | May |
 |---|---|
 | Vendor support | Everything on both screens |
-| Owner | Everything on both screens except: an Owner's or Vendor support's personal settings and history stay Vendor support's |
-| Anyone else holding the Page Registry key (`/dashboard/debug/pages`, by grant) | Read every tab; change a page's default and switch only where their own role opens the page and only to their own role or below; change personal settings with the same gates as the Access page (strictly outrank the person, hold the page, page within their clearance) |
+| Owner | Everything on the Access page except: an Owner's or Vendor support's personal settings and history stay Vendor support's. Page Registry: nothing since 2026-10-15 (§7); until then everything on it, with the same exception |
+| Anyone else holding the Page Registry key (`/dashboard/debug/pages`, by grant) | Nothing since 2026-10-15 (§7): the grant no longer opens it. Until then: read every tab; change a page's default and switch only where their own role opens the page and only to their own role or below; change personal settings with the same gates as the Access page (strictly outrank the person, hold the page, page within their clearance). Those rules stay in the code behind the floor |
 | A read-only account | Read only |
 | Vendor support alone | Remove a setting left by an account that is no longer in the directory |
 
@@ -115,7 +115,7 @@ The routes check all of this again; the screens only hide what the routes would 
 
 | Item | Why not here |
 |---|---|
-| **Should Page Registry be Vendor support only?** Today the Owner opens it too, because the Owner and Vendor support pass every page check (ADR-0002) | The owner's decision. Making it Vendor support only means one exact-role check in `canUsePageRegistry` |
+| ~~**Should Page Registry be Vendor support only?** Today the Owner opens it too, because the Owner and Vendor support pass every page check (ADR-0002)~~ | **Decided 2026-10-15: Vendor support only.** A floor in `src/lib/auth/page-floors.ts` that binds the owner too, checked by `canUsePageRegistry` in the page, its hub card and every `/api/system/` route it calls; a grant of the key no longer opens it ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §5) |
 | ~~**Should `/dashboard/users#force-kick` be enforced?** Its default is Owner, but nothing checks it~~ | **Decided 2026-10-15: enforced.** The owner chose to enforce it. `denyForceKick` checks it in the route and the Users page, so below the owner and vendor support only a grant opens it ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §5) |
 | Revoking one session signs the person out on every device (D8 in PERMISSIONS-SYSTEM) | A change to the Cloudflare Access call, outside these screens |
 | The Audit Log is not tamper-evident (C-9) | Designed, not built; ROADMAP chunk 19 |

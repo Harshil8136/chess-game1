@@ -56,7 +56,9 @@ language, and no per-request database call on the happy path. *Corrected
 0. `vendor_support` and `owner` resolve to allow before the map is consulted at
    all (ADR-0002: a self-inflicted lockout of the customer's top tier is the
    worse failure). A deny row written against either tier is stored, shown in
-   the access UI, and has no effect.
+   the access UI, and has no effect. *Since 2026-10-15 one page is the exception: Page
+   Registry is vendor support's alone, the owner included, through a floor in
+   `src/lib/auth/page-floors.ts` that the page and its routes check before the key (§5).*
 1. Explicit deny → 2. explicit grant → 3. role baseline.
 
 Steps 1–3 are what `computeAccessMap` folds into the map; step 0 is applied at
@@ -221,7 +223,8 @@ own key with `placRequireGrant`, which needs the exact key. The Email API page d
 (migration `0066`, stored role `owner`), whose `canViewGitHub` (`src/lib/auth/surface-guards.ts`)
 also keeps an admin floor that no grant can lower. The floor is a row in
 `src/lib/auth/page-floors.ts`, which `computeNavItems` applies too, so the sidebar never offers
-a link the page would refuse. It has no API route; the check runs in the page itself
+a link the page would refuse. Since 2026-10-15 the file holds a second floor, vendor support on
+`/dashboard/debug/pages`, the only floor that also binds the owner (below). It has no API route; the check runs in the page itself
 ([`features/GITHUB.md`](../features/GITHUB.md)).
 
 Hash fragments are the fine-grained layer. `/dashboard/sessions` is the page;
@@ -298,7 +301,8 @@ did not. Both rows keep their stored role `dev`, so without a grant nothing chan
 owner. Below vendor support, a registry editor changes a page's required role and switch only
 within their own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`): a grant on
 the registry cannot open a page above its holder. [`DEV-TOOLS.md`](../operations/DEV-TOOLS.md)
-§2 has the routes.
+§2 has the routes. *Since 2026-10-15 a grant no longer opens Page Registry (below); the
+Developer Tools grant is unchanged.*
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
 its route will allow it. Until then it decided from the role: any admin saw the block
 controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
@@ -329,6 +333,19 @@ its reason when the check fails. Below the owner and vendor support a person now
 and the rank rule still applies on top of it. Suspending an account (`PATCH /api/users/manage`)
 also ends its sessions and is not covered by this key: it follows the Users page and the rank
 rule, as before.
+*Changed 2026-10-15 (the owner's decision):* Page Registry (`/dashboard/debug/pages`) is
+vendor support's alone. It decides every page's default role and everyone's personal page
+settings, so neither the owner nor a grant of its key opens it any longer. The rule is a floor
+in `src/lib/auth/page-floors.ts` that `canUsePageRegistry` checks before the key, in the page,
+its hub card and every `/api/system/` route it calls (§10.2). It is the first floor that binds
+the owner, a deliberate exception to step 0 of §1 (ADR-0002): the owner cannot lock themselves
+out of a page they never held, and every change the registry makes can also be made person by
+person on the Access page. Until then the owner passed, as everywhere, and a grant opened it
+for anyone (the live grant on the Owner's account now does nothing). The rank rule for an
+editor below vendor support (`registryEditRefusal`) and the visibility rules for a viewer below
+vendor support (`buildOverview`) stay in the code behind the floor. The Access page still
+offers this key, and the GitHub key to a Manager, as grantable though the floor refuses them
+([`MAINTENANCE.md`](../MAINTENANCE.md)).
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -658,8 +675,8 @@ only fills the draft.
 ### 10.2 Page Registry: many people at once
 
 *Added 2026-10-14.* `POST /api/system/page-access` (`src/lib/access-center/registry-access.ts`)
-takes up to 100 changes `{ userId, path, action, expiresAt? }` from someone holding the Page
-Registry key. Each change passes the same gates as above, plus: a switched-off page takes no
+takes up to 100 changes `{ userId, path, action, expiresAt? }` from someone allowed into
+Page Registry, which since 2026-10-15 is vendor support only (§5). Each change passes the same gates as above, plus: a switched-off page takes no
 new grant or revoke (a reset is allowed), and a setting left by an account no longer in the
 directory may only be removed, by vendor support. Every change is checked before any is
 written; one refusal refuses the whole request. Then one D1 batch, one activity-log row per
@@ -995,7 +1012,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/migrations-replay.test.ts` | The four cron registry rows exist, are active, have non-null icons and carry the expected `required_role` — the assertion `0054` needed and did not have (added 2026-09-20) |
 | `test/access-center-rules.test.ts`, `test/access-center-profile.test.ts`, `test/access-center-api.test.ts` | The Access Center (§10.1): the sources and edit rules as case tables, the profile against a real registry and a faked console (answering, unavailable, refusing), and the API reading the person's role from the database whatever the body claims (added 2026-10-02) |
 | `test/access-center-end-dates.test.ts`, `test/plac.test.ts` | End dates (added 2026-10-14): an ended override counts as none, `refreshAt` is the earliest end ahead and the stage recomputes when it passes, and a save refuses an end in the past, more than a year ahead or on a reset |
-| `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): the visibility rules for a non-vendor holder of the key, the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
+| `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): vendor support only, the owner and a granted Admin refused (2026-10-15), the visibility rules for a viewer below vendor support (`buildOverview`), the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
 | `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
 | `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
 | `test/sessionRisk.test.ts` | Session risk scoring |
@@ -1007,6 +1024,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-15 | claude | **Scope-limited to Page Registry's floor.** Read `page-floors.ts`, `surface-guards.ts` (`canUsePageRegistry`), the four pages under `src/pages/dashboard/debug/`, `registry-access.ts`, `registry.ts`, `history.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one grant (the Owner's) through the D1 connector; `test/debug-access.test.ts`, `test/registry-access.test.ts` and `test/registry-console-features.test.ts` refuse the owner and a granted Admin and admit vendor support | §1 step 0's exception, §5's floor sentence and new paragraph, §10.2, the §17 row. Not re-derived: every other section |
 | 2026-10-15 | claude | **Scope-limited to `#force-kick`.** Read the live `/dashboard/users#force-kick` row through the D1 connector (`required_role` `owner`, active), `surface-guards.ts`, `api/users/force-kick.ts`, `pages/dashboard/users/index.astro` and `ExpandedRow.tsx`; `test/session-rank.test.ts` fails without the new check and passes with it | §4.1's D6/D7 sentence, §5's paragraph, D6 in §16, the §17 row. Not re-derived: every other section |
 | 2026-10-14 | claude | **Scope-limited to the access control room.** Read `plac.ts` (`computeAccessMap`), `stages/access-map.ts`, `registry-access.ts`, `history.ts`, `api/system/pages.ts`, `api/users/force-kick.ts`, `api/sessions/active-sessions.ts` and `schemas/admin.ts`; applied `migrations/0070` and read back the column and its ledger row, 117 registry rows (100 active) and 4 overrides (none with an end date) through the D1 connector; `npx vitest run`: 2,374 pass | §5's new paragraph, §6's end dates, §6.1's query, §10.2, D6 and D7 closed in §16, four rows in §17. Not re-derived: every other section, §13's figures included |
 | 2026-10-10 | claude | **Scope-limited to the Sessions page's keys.** Read `src/pages/dashboard/sessions/index.astro` before and after the rebuild, `surface-guards.ts` (`denySessions`, `canReadSignInHistory`), `src/pages/api/sessions/active-sessions.ts` and `src/pages/api/audit/login-logs.ts`; `test/sessions-console.test.ts` pins `canReadSignInHistory` and the refusals the page shows | §5's Sessions paragraph. Not re-derived: every other section; the live registry rows for the sessions fragments (last read 2026-09-20) |

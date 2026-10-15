@@ -2,7 +2,7 @@
 title: "Access Center (the per-person access editor)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-14
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
 related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts]
@@ -150,10 +150,10 @@ capability: label, key, class, default role and the live personal grants that me
 *Change* button. Change opens a dialog: pick the new default from a row of chips ("Manager and
 above"), see who gains and who loses it among active people, give a reason, apply. Floors are
 locked. The save goes to the console's `POST access/role`, which keeps every personal grant,
-and writes one activity-log row under the console's module. Since 2026-10-10 the rows are for
-anyone holding the Page Registry key, not vendor support alone; below vendor support a
-permission moves only when it starts at the editor's own role or below and stays there, and
-the console still checks the person's own `access.manage`
+and writes one activity-log row under the console's module. Since 2026-10-15 Page Registry,
+this tab included, is vendor support only (the owner's decision); from 2026-10-10 until then
+anyone holding its key used the rows, moving a permission only within their own role. The
+console still checks the person's own `access.manage`
 ([`DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2.2).
 
 ## 5. Working on the screen
@@ -181,4 +181,5 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | §4's Consoles paragraph after Page Registry became vendor support only: `canUsePageRegistry` and the `gate()` in `src/lib/access-center/registry.ts`; `test/registry-console-features.test.ts` | Everything else |
 | 2026-10-14 | §1 to §4 against the code after the 2026-10-14 work: `UserAccessEditor.tsx`, `AccessChrome.tsx`, `AccessRow.tsx`, `AccessReviewDialog.tsx`, `AccessHistoryList.tsx`, `CopyAccessDialog.tsx`, `labels.ts`, `draft.ts` (`toSave`, `copyFrom`), `handlers.ts` (`pageEndIssues`), `history.ts` and the registry under `src/components/admin/debug/registry/`; the live `admin_page_overrides.expires_at` column and the `0070` ledger row through the D1 connector; the screens server-rendered with edge-case data; `test/access-center-end-dates.test.ts`, `test/access-history.test.ts`, `test/registry-ui-logic.test.ts` | §5 and §6 re-read, not re-derived; the screens in a phone browser (the owner's test) |

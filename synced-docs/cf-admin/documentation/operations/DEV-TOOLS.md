@@ -3,7 +3,7 @@
 title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-14
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
 tags: []
@@ -52,7 +52,10 @@ Every Developer Tools page checks its **page key on the server** in the Astro fr
 (`canUsePageRegistry`). Both are in `src/lib/auth/surface-guards.ts` and check the exact key
 in the person's access map (`placRequireGrant`): vendor support by default (the rows' stored
 role is `dev`), anyone an access grant names, and the owner and vendor support, who bypass
-page-level access everywhere (ADR-0002). A missing or switched-off row refuses.
+page-level access everywhere (ADR-0002). A missing or switched-off row refuses. Page Registry
+is the exception since 2026-10-15 (the owner's decision): it is vendor support only, the owner
+included, through a floor in `src/lib/auth/page-floors.ts` that `canUsePageRegistry` checks
+before the key, so a grant no longer opens it and its hub card shows only to vendor support.
 
 ```astro
 ---
@@ -105,7 +108,9 @@ Since 2026-10-10 the routes ask for the same key as their page:
 | `pages/api/system/access-overview.ts` (GET), `page-access.ts` (POST), `access-history.ts` (GET) | `canUsePageRegistry` (`src/lib/access-center/registry-access.ts`, `history.ts`) | Added 2026-10-14 for the control room: one read of every page, person, personal setting and check; personal settings for many people at once, each through the Access Center's page gates; and the history of every access change |
 | `pages/api/system/console-features.ts` | `canUsePageRegistry` (`gate()` in `src/lib/access-center/registry.ts`) | Each console checks the person's own `access.manage` again; a move below vendor support stays within the editor's rank |
 
-**The rank rule.** A grant on Page Registry must not become a way up: an Admin who could lower
+**The rank rule.** *Since 2026-10-15 nobody below vendor support reaches Page Registry, so this
+rule no longer runs; it stays in the code behind the floor should the gate ever open wider.* A
+grant on Page Registry must not become a way up: an Admin who could lower
 an owner-only page to Admin would open it for themselves. So below vendor support a page's
 required role and its on/off switch change only when the editor's own role already opens the
 page, and only to a role at or below their own; a page's name, description, group and order
@@ -301,7 +306,8 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-10-14 | §2.2 and §3.3 after the Page Registry rebuild: the page, `src/components/admin/debug/registry/`, the four `api/system/` routes and `registry-access.ts`; `git grep` finds no `PageRegistryManager`, `/api/system/preview` or `rolePreviewSchema` in `src/`; the screens server-rendered with edge-case data; `test/registry-access.test.ts`, `test/registry-ui-logic.test.ts` | §1, §3.1, §3.2 and §4 onward; the page in a browser (the owner's phone test) |
+| 2026-10-15 | §2.1 and §2.2 after Page Registry became vendor support only: `page-floors.ts`, `canUsePageRegistry`, the four pages under `src/pages/dashboard/debug/` and the `api/system/` gates; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |
+| 2026-10-14 | §2.2 and §3.3 after the Page Registry rebuild: the page, `src/components/admin/debug/registry/`, the four `api/system/` routes and `registry-access.ts`; `git grep` finds no `PageRegistryManager`, `/api/system/preview` (removed that day) or `rolePreviewSchema` in `src/`; the screens server-rendered with edge-case data; `test/registry-access.test.ts`, `test/registry-ui-logic.test.ts` | §1, §3.1, §3.2 and §4 onward; the page in a browser (the owner's phone test) |
 | 2026-10-10 | §2.1 to §2.3 after the Developer Tools pages and routes moved to their page keys: `canUseDebug` and `canUsePageRegistry` in `src/lib/auth/surface-guards.ts`, the four pages under `src/pages/dashboard/debug/`, the three diagnostics routes, `api/system/pages.ts`, `preview.ts` and `access-center/registry.ts`; the live rows (`/dashboard/debug` and `/dashboard/debug/pages`, both `dev`, active) and their grants read through the D1 connector; `test/debug-access.test.ts`, `test/registry-impact.test.ts`, `test/registry-console-features.test.ts` | §3 onward; the pages in a browser |
 | 2026-10-10 | §1, §2.2, §4, §7 and §8.3 after the Feature Flags tab and the Modules list were deleted: `git grep` finds no `/api/features/toggle`, `/api/pages/toggle`, `FeatureFlagRepository` or `ModuleToggles` in `src/`; the page-registry manager calls `/api/system/preview` and `/api/system/pages` (`src/components/admin/debug/PageRegistryManager.tsx`) | Everything else |
 | 2026-10-04 | §3.2 and the file table's `SystemDiagnostics.tsx` row against `src/components/admin/debug/SystemDiagnostics.tsx` (no interval left) | Everything else |
