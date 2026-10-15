@@ -243,6 +243,18 @@ because an undefined key resolves `unknown` and `requirePageAccess` permits unkn
 `denySessions` take the page key first, then the action. This was got wrong twice
 before it was centralised — see MAINTENANCE.md D-4 and D-5.
 
+**Every action key is checked on the server, or says why not.** *Added 2026-10-15.* Three
+switches still only hid a button until that day: "View consent details"
+(`/dashboard/privacy#forensics`: the consent routes sent every record's IP address, browser
+and fingerprint; now `canViewConsentDetails`, and without it each record keeps only its row,
+[`security/PRIVACY.md`](../security/PRIVACY.md) §1), "Design emails with AI" and "Manage
+templates" ([`features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md) §4).
+`test/action-keys-enforced.test.ts` lists every `/dashboard/x#y` key the migrations define,
+with the file and the code that checks it, or the reason there is nothing on the server to
+check (a preview drawn in the browser; an export of what is already on screen; a route only
+the owner and vendor support reach; a switched-off row). A new key fails the build until it
+has an entry, and a check that leaves its file fails it too.
+
 **An action key fails CLOSED; a page key does not.** *Added 2026-09-20.* The two
 guards in that module differ deliberately. `denySessions` refuses only an explicit
 deny, which is `requirePageAccess`'s behaviour and is right for a page: a route
@@ -1012,6 +1024,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/pipeline-session.test.ts`, `test/pipeline-bootstrap.test.ts`, `test/pipeline-decision.test.ts` | Every status, redirect, rewrite, header, KV effect and audit row of the middleware on real KV and D1 (**49** cases today): session read, both revocation flags and the `authz-changed` mark; the 30-minute re-check, **including that a supabase-js 5xx keeps the session inside the grace window and only then ends it with `recheck_failed`**; the Cloudflare Access bootstrap with a real RS256 key and a stubbed identity store; the access-map refresh and its bounded fail-open; the viewer rule; `API_DENY_MODE`; the rows `recordEvents` writes |
 | `test/authz-signal.test.ts` | The Stage 1 mark: `markAuthzChanged` writes and TTLs, and `isAuthzStale` comparison (4 cases) |
 | `test/api-authz-inventory.test.ts` | **Every `/api/*` route is mapped** — CI fails otherwise |
+| `test/action-keys-enforced.test.ts` | **Every action key is checked on the server**, or carries the reason it cannot be; and "View consent details", "Design emails with AI" and "Manage templates" refuse or withhold for someone whose switch is off (added 2026-10-15) |
 | `test/cron-permissions.test.ts` | The two-key guard end to end: a page deny reaching the action, an action grant not opening its siblings, a **missing registry row failing closed**, a session with no access map refused, the owner/vendor bypass — and Gate D's arithmetic, which is why `0056` exists (added 2026-09-20) |
 | `test/migrations-replay.test.ts` | The four cron registry rows exist, are active, have non-null icons and carry the expected `required_role` — the assertion `0054` needed and did not have (added 2026-09-20) |
 | `test/access-center-rules.test.ts`, `test/access-center-profile.test.ts`, `test/access-center-api.test.ts` | The Access Center (§10.1): the sources and edit rules as case tables, the profile against a real registry and a faked console (answering, unavailable, refusing), and the API reading the person's role from the database whatever the body claims (added 2026-10-02) |
@@ -1028,6 +1041,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-15 | claude | **Scope-limited to screen-only action keys.** Listed every `/dashboard/x#y` key in `migrations/*.sql` (63) and read the live rows through the D1 connector (63, 55 active); grepped `src/pages/api` and `src/lib` with comments stripped for each; read `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and export, `ai-generate.ts`, `templates.ts`, `retention/purge.ts` and the email preview path; `test/action-keys-enforced.test.ts` fails when the AI or consent check is reverted | §5's new paragraph and the §17 row. Not re-derived: every other section |
 | 2026-10-15 | claude | **Scope-limited to Page Registry's floor.** Read `page-floors.ts`, `surface-guards.ts` (`canUsePageRegistry`), the four pages under `src/pages/dashboard/debug/`, `registry-access.ts`, `registry.ts`, `history.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one grant (the Owner's) through the D1 connector; `test/debug-access.test.ts`, `test/registry-access.test.ts` and `test/registry-console-features.test.ts` refuse the owner and a granted Admin and admit vendor support | §1 step 0's exception, §5's floor sentence and new paragraph, §10.2, the §17 row. Not re-derived: every other section |
 | 2026-10-15 | claude | **Scope-limited to `#force-kick`.** Read the live `/dashboard/users#force-kick` row through the D1 connector (`required_role` `owner`, active), `surface-guards.ts`, `api/users/force-kick.ts`, `pages/dashboard/users/index.astro` and `ExpandedRow.tsx`; `test/session-rank.test.ts` fails without the new check and passes with it | §4.1's D6/D7 sentence, §5's paragraph, D6 in §16, the §17 row. Not re-derived: every other section |
 | 2026-10-14 | claude | **Scope-limited to the access control room.** Read `plac.ts` (`computeAccessMap`), `stages/access-map.ts`, `registry-access.ts`, `history.ts`, `api/system/pages.ts`, `api/users/force-kick.ts`, `api/sessions/active-sessions.ts` and `schemas/admin.ts`; applied `migrations/0070` and read back the column and its ledger row, 117 registry rows (100 active) and 4 overrides (none with an end date) through the D1 connector; `npx vitest run`: 2,374 pass | §5's new paragraph, §6's end dates, §6.1's query, §10.2, D6 and D7 closed in §16, four rows in §17. Not re-derived: every other section, §13's figures included |

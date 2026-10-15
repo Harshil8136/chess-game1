@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | §6a's consent rows (`receipts`, the new `enrich` row, `consent`) and the `bookings/[id]` row, against `src/lib/consent-details.ts`, `src/lib/auth/surface-guards.ts` (`canViewConsentDetails`), those routes and `test/action-keys-enforced.test.ts` | Every other section, the §0 route counts included (no route added) |
 | 2026-10-15 | §6a's two Page Registry rows (`/api/system/*`) after it became vendor support only, against `src/lib/auth/page-floors.ts`, `surface-guards.ts` (`canUsePageRegistry`), `src/lib/access-center/registry.ts`, `registry-access.ts`, `history.ts` and `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Every other section |
 | 2026-10-15 | §6a's `force-kick` row, against `src/pages/api/users/force-kick.ts`, `src/lib/auth/surface-guards.ts` (`denyForceKick`), the live `/dashboard/users#force-kick` registry row (D1 connector: `owner`, active) and `test/session-rank.test.ts` | Every other section |
 | 2026-10-14 | §5.1's page-registry trigger, §6a's rows for `force-kick`, `active-sessions`, the Access Center and the Page Registry routes (the new `access-overview`, `page-access`, `system/access-history` and `users/access-history`; `preview` removed), and §6b's `registry` and `plac` limiter rows, against those files, `src/lib/access-center/registry-access.ts`, `history.ts`, `src/lib/auth/routes.ts` (`/api/system`, `/api/users`) and `test/registry-access.test.ts`, `test/access-history.test.ts`, `test/session-rank.test.ts`, `test/api-authz-inventory.test.ts` | Every other section, the §0 route counts included (three routes added, one removed, under prefixes already mapped) |
@@ -608,7 +609,7 @@ try {
 
 | Route | Minimum Role | Reason |
 |-------|-------------|--------|
-| `GET /api/bookings/[id]` | `admin` | Returns consent records, email audit logs, quality metadata (PII) |
+| `GET /api/bookings/[id]` | `admin` | Returns consent records, email audit logs, quality metadata (PII). Since 2026-10-15 the consent record keeps only its row's fields for someone without "View consent details" (`canViewConsentDetails`, [PRIVACY.md](./PRIVACY.md) §1) |
 | `GET /api/bookings` | authenticated | Booking list |
 | `GET /api/media/gallery` | `admin` | Gallery management |
 | `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
@@ -660,8 +661,9 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/audit/emails` (+ `DELETE`) | `/dashboard/logs` | PR #2 (2026-05-25) | Replaces the prior inline `accessMap[]` check; consistent across the audit endpoints. |
 | `GET /api/audit/stats` | `/dashboard/logs` | PR #2 | |
 | `GET /api/audit/logs` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
-| `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | PR #2 | |
-| `GET /api/audit/receipts` | `/dashboard/privacy` | PR #2 | Privacy dashboard surface. |
+| `GET /api/audit/consent` (+ `DELETE`) | `/dashboard/logs` | PR #2 | Since 2026-10-15 each record keeps only its row's fields for someone without `/dashboard/privacy#forensics` (`canViewConsentDetails`). |
+| `GET /api/audit/receipts` | `/dashboard/privacy` | PR #2 | Privacy dashboard surface. Since 2026-10-15 each record keeps only its row's fields for someone without `/dashboard/privacy#forensics` (`canViewConsentDetails`, [PRIVACY.md](./PRIVACY.md) §1). |
+| `GET /api/audit/enrich` | `/dashboard/logs` (mapping), then `/dashboard/privacy` | 2026-10-15 | Refuses with 403 without `/dashboard/privacy#forensics`: everything it returns is consent detail (session, trace and network lookups). |
 | `DELETE /api/audit/prune` | `/dashboard/logs` | PR #2 | DEV-only + PLAC. |
 | `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. Then `canReadSignInHistory` (`src/lib/auth/surface-guards.ts`, 2026-10-10), the same check the Sessions page makes before it shows its History tab. |
 | `POST /api/audit/export` | `/dashboard/logs` (parent) | 2026-05-26 | Same parent-deny propagation as above for the `#export` hash sub-page. |

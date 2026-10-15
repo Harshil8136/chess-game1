@@ -57,6 +57,17 @@ claim — records here are deletable, see §3.
   change who reaches it. *Corrected 2026-09-20; this said the route validated a
   role, and claimed a hidden-account visibility rule that belongs to the logs
   surface and has never existed here.*
+- **Consent details** (`/dashboard/privacy#forensics`, "View consent details",
+  stored `admin`): the IP address, browser string, fingerprint, interaction proof,
+  session, trace and Ray ids, text hash and accessibility notes recorded with each
+  consent. Checked on the server since 2026-10-15 by `canViewConsentDetails`
+  (`src/lib/auth/surface-guards.ts`), the same function the page asks. Without it,
+  `receipts.ts`, the Logs page's Consent tab (`/api/audit/consent`), a booking's
+  details (`/api/bookings/[id]`) and the Inquiries page send each record through
+  `withoutConsentDetails` (`src/lib/consent-details.ts`), which keeps the row's
+  fields and adds a `summary` (device and risk level, worked out on the server);
+  `/api/audit/enrich` refuses with 403. Until then the switch only hid the details
+  panel, and the routes sent everything.
 
 ---
 
@@ -109,7 +120,10 @@ ReceiptsApiResponse — full GET /api/audit/receipts response shape
 
 ```typescript
 {
-  records: ConsentRecord[],          // paginated, searchable
+  records: ConsentRecord[],          // paginated, searchable; without "View consent
+                                     // details" each carries only the row's fields,
+                                     // summary { os, browser, device, risk } and
+                                     // details_withheld: true (§1)
   pagination: { total, globalTotal, limit, offset },
   metrics: {
     totalConsents: number,
@@ -255,5 +269,6 @@ count in prose goes stale on the next commit.)*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | §1 "Consent details" and the `records` shape in §3, against `src/lib/consent-details.ts`, `src/lib/auth/surface-guards.ts`, `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and `test/action-keys-enforced.test.ts` | Everything else in this document; live `admin_pages` rows other than `#forensics` (read live: stored `admin`, active) |
 | 2026-09-20 | Scope: what this document is and is not, added at the top because two compliance documents were citing it as evidence of a data-classification scheme it does not contain. The per-record Delete path (`FeedItem.tsx` → `src/pages/api/audit/delete.ts`) and its audit gap, previously undocumented. The `receipts.ts` gate (bare `requireAuth` + PLAC, no role argument) and the removal of the hidden-accounts line, which belonged to the logs surface. The `style-src` reason. The `rgba` count dropped | Live RLS state and live `admin_pages` rows (unchanged since the 2026-09-14 pass); the 10K+/month pagination claim |
 | 2026-09-14 | Every path in §1–§4; the five interfaces in `types.ts` (plus `envUrls`, which the response also carries); the `receipts.ts` query fan-out and cache; island directives in `index.astro`; PLAC seeds for `/dashboard/privacy` and its fragments; metric-card, feed and FeedItem behaviour (keyboard handling, `aria-expanded`, data flags); keyframes in `privacy-dashboard.css`; cross-references. Ten corrections above. | Live RLS state; live `admin_pages` rows; the 10K+/month scaling claim |

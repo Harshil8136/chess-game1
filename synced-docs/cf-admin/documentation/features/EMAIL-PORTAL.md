@@ -272,8 +272,8 @@ mail starts landing in spam.
 ### 3.5 AI generator — `ai-generate.ts` + `AiGeneratorModal.tsx`
 
 Cloudflare Workers AI (`env.AI.run`) drafts raw HTML email bodies into the composer.
-A `#ai-generate` PLAC anchor exists in `admin_pages` and the UI honours it, but
-**the server does not** — see the table in §4. Has its own quota route
+The `#ai-generate` PLAC anchor ("Design emails with AI") is checked by the screen and,
+since 2026-10-15, by `ai-generate.ts` too — see the table in §4. Has its own quota route
 (`ai-quota.ts`).
 
 ### 3.6 Workspace redesign
@@ -300,30 +300,31 @@ actually checks.
 **All ten anchors, with the `required_role` actually stored in D1** (queried live
 2026-09-11; shown in stored vocabulary with the canonical name in brackets). The
 last column was added 2026-09-19 after grepping every route under
-`src/pages/api/emails/` for the anchor string — **three of the ten are UI-only**.
+`src/pages/api/emails/` for the anchor string, when three of the ten were UI-only; since
+2026-10-15 only `#preview` is, because it has nothing on the server to check.
+`test/action-keys-enforced.test.ts` fails if a check leaves its route.
 
 | Capability | `required_role` in D1 | Grants | Server-enforced? |
 |---|---|---|---|
 | `/dashboard/emails` | `admin` [manager] | See the portal; read drafts and templates | yes — every route |
 | `…#compose` | `admin` [manager] | Send email | yes (`send.ts`) |
 | `…#attachments` | `admin` [manager] | Attach files | yes (`send.ts`, `attachments.ts`) |
-| `…#templates` | `admin` [manager] | Create/update/delete shared templates | **no** — `templates.ts` checks only the page key, although its own header says `#templates` |
-| `…#ai-generate` | `admin` [manager] | AI HTML drafting | **no** — `ai-generate.ts` checks the page key twice; the second call is merely *labelled* "ai-generate" |
-| `…#preview` | `admin` [manager] | Preview and send a test copy to self | **no** — there is no preview route; a test send is an ordinary `send.ts` call under `#compose` |
+| `…#templates` | `admin` [manager] | Create/update/delete shared templates | yes since 2026-10-15 (`templates.ts` POST, PUT and DELETE; listing stays on the page key, because writing an email picks from the list) |
+| `…#ai-generate` | `admin` [manager] | AI HTML drafting | yes since 2026-10-15 (`ai-generate.ts`; until then it checked the page key twice) |
+| `…#preview` | `admin` [manager] | Preview and send a test copy to self | **no, by design** — the preview is drawn in the browser, and a test send is an ordinary `send.ts` call under `#compose` |
 | `…#contacts` | `admin` [manager] | Recent-recipient autocomplete | yes (`contacts.ts`) |
 | `…#bulk-send` | `super_admin` [admin] | More than one recipient per message | yes (`send.ts`) |
 | `…#custom-sender` | `owner` | Unmapped alias (see §0) | yes (`send.ts`) |
 | `…#queue-logs` | `owner` | Delivery-queue timeline | yes (`audit/emails.ts`) |
 
-> *Corrected 2026-09-19.* This section used to say "the page resolves them once
-> and passes a `permissions` object to the island; **every API route re-checks
-> independently**". The first half is true; the second is not. Denying an operator
-> `#templates` or `#ai-generate` hides the control and nothing more — the server
-> will still serve the request. This is the same class of gap as **D-5** in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md) (a hash key is not a path descendant,
-> so a page-key check never covers a fragment), and it is logged there for
-> triage. The fix is `src/lib/auth/surface-guards.ts`, which already does exactly
-> this for the cron and sessions surfaces.
+> *Corrected 2026-09-19, closed 2026-10-15.* This section used to say "the page
+> resolves them once and passes a `permissions` object to the island; **every API
+> route re-checks independently**". Until 2026-10-15 the second half was not true:
+> denying an operator `#templates` or `#ai-generate` hid the control and nothing
+> more. This was the same class of gap as **D-5** in
+> [`../MAINTENANCE.md`](../MAINTENANCE.md) (a hash key is not a path descendant, so
+> a page-key check never covers a fragment). Both routes now check the page key and
+> then the anchor, deny-only like the rest of this page.
 
 **Sender clearance is a second, independent layer.** Even with `#compose`, the
 `from` address must satisfy that identity's `minRole` (`send.ts:150-165`). An
@@ -585,6 +586,7 @@ RULE #0.9 working as intended. Two standing items, both predating it:
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-15 | claude | §3.5 and §4 only, against `src/pages/api/emails/ai-generate.ts`, `templates.ts` and `test/action-keys-enforced.test.ts` | `#ai-generate` and `#templates` are now checked on the server; `#preview` stays screen-only by design; nothing else re-checked |
 | 2026-10-10 | claude | §6 only, against `src/pages/api/emails/engine.ts`, `send.ts`, `src/lib/configuration.ts` and `test/api-configuration.test.ts` | The recipient limit reads one default (10) in both routes and is changed on the Configuration page; `save_settings` takes nine keys; the placeholder phone is gone from `engine.ts`; nothing else re-checked |
 | 2026-10-07 | claude | The send pipeline's step 4 only, against `src/pages/api/emails/send.ts` (`getRateLimiter({ requests: 10, window: '1 h' }, 'custom-emails')`) and `src/lib/ratelimit.ts` | 10 an hour per user, now a D1 counter row (since 2026-10-04); nothing else re-checked |
 | 2026-10-03 | claude | §1 only, against `src/lib/auth/security-logging.ts` | Security alerts now share the queue and Queue Logs; nothing else re-checked |
