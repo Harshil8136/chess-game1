@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -326,6 +326,55 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 | **Admins** | `ROLE_LEVEL[u.role] <= ROLE_LEVEL['manager']` — Vendor Support, Owner, Admin, and Manager (levels 0–3) |
 | **Staff** | `u.role === 'staff'` only (level 4; Viewer, level 5, appears only under **All**) |
 
+### 6.1 Access requests
+
+*Rebuilt 2026-10-15 (permissions items #2, #3, #6, #19 and #22; open item D11 in the
+[access-revocation design](../specs/2026-09-16-access-revocation-remediation-design.md)).*
+
+**Asking.** Someone who reaches a page they cannot open sees the Access denied card
+(`src/components/ui/AccessDeniedView.astro`) with **Request access**
+(`src/components/ui/RequestAccess.tsx`). The card first asks the server whether the page can be
+asked for at all. It cannot when no request could open it, and the card says why instead of
+offering a button: a page with a floor (Page Registry, GitHub: only the roles the floor names
+can ever open it), an address that is no page, a page the person can already open, or an Owner
+or Vendor support (they open every page already). Otherwise the person picks how long they need
+it (2 hours, 1 day, 1 week or 30 days, or nothing) and may write why (at most 500 characters).
+The request goes to everyone on the sign-in alert list as an email with a button to this page;
+the card says whether that email left, so nobody is told "an administrator has been notified"
+when none was. A second request for the same page while one waits is refused, and a person may
+send at most 5 requests an hour. Once decided, the card shows the decision, the note, and the
+end date.
+
+**Deciding.** The **Access requests** panel at the top of this page
+(`src/components/admin/users/AccessRequestsPanel.tsx`) lists what waits, with the reason and the
+length asked for, and the decisions of the last 14 days underneath. The Owner and Vendor support
+decide every request. Anyone else with this page decides the requests from the roles below
+theirs, and approves only pages they may give; a card they may not approve says why and still
+lets them decline. **Approve** opens a pop-up with how long the access lasts (the length asked
+for, else 30 days; 2 hours, 1 day, 1 week, 30 days, 90 days, or no end) and a note. **Decline**
+opens one with a note. The person gets an email either way and reads the note on their card.
+
+**What an approval writes.** A personal page switch in `admin_page_overrides` with the end date
+picked, and the decision, in one D1 batch, both only if the request is still waiting, so two
+people deciding at once cannot both win. If the person already holds that page for longer (or
+with no end), that switch is kept, not shortened. The person's open sessions pick the change up
+on their next request (`authz-changed`, [PERMISSIONS-SYSTEM §11](../architecture/PERMISSIONS-SYSTEM.md)).
+The activity log gets one row per decision (`grant_access` for an approval, `update` for a
+decline, surface `access-request`), with the request's id as its correlation id. The four new
+columns (reason, length, note, end) are migration `0071`.
+
+| Route | Who | What |
+|---|---|---|
+| `GET /api/access-requests?path=` | anyone signed in | whether this page can be asked for, and their latest request for it |
+| `POST /api/access-requests` | anyone signed in | ask: `{ requestedPath, reason?, wantedHours? }` |
+| `GET /api/access-requests?view=decide` | this page | the requests this person may decide, and what they may do with each |
+| `POST /api/access-requests/[id]` | this page, then the page gates | `{ decision: 'approve', hours?, note? }` or `{ decision: 'decline', note? }` |
+
+The routes are mapped to the Overview (`/dashboard`), which everyone has, so someone shut out of
+a page can still ask for it; until 2026-10-15 they were mapped to Inquiries. The old
+`POST /api/audit/requests/[id]/resolve` is gone. Server side: `src/lib/access-requests/`.
+Tests: `test/access-requests.test.ts`.
+
 ## 7. Security Boilerplates & Error Flow
 
 All actions within the API routes return specific error states handled by the UI:
@@ -543,4 +592,5 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | **Scope-limited to §6.1, new.** Access requests against `src/lib/access-requests/` (`rules.ts`, `handlers.ts`, `mail.ts`), `AccessRequestRepository.ts`, `RequestAccess.tsx`, `AccessRequestsPanel.tsx`, `src/lib/auth/routes.ts` and `test/access-requests.test.ts`; the live `admin_access_requests` columns after `0071` (D1 connector) | Whether the request email arrives in a real inbox (the owner's phone test) |
 | 2026-10-15 | **Scope-limited.** §2's Viewer row and §6's pill grid against `rbac.ts` (`PICKABLE_ROLES`), `InlineRoleSelector.tsx` and `RolePillSelector.tsx`; §5's full delete against `manage.ts` and `VpsAccessRepository.ts`; §9.0 against `api/users/index.ts`, `LoginLogRepository.ts` and the live `admin_login_logs` and `admin_authorized_users` rows (D1 and Supabase connectors); `test/users-last-sign-in.test.ts`, `test/vps-access.test.ts`, `test/rbac-roles.test.ts` | Every other section (last fully re-derived 2026-09-19) |

@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | §5.1's access-request trigger, §6a's two new `/api/access-requests` rows and §6b's two limits, against `src/lib/access-requests/handlers.ts`, `rules.ts`, `src/lib/auth/routes.ts` (`/api/access-requests` → `/dashboard`) and `test/access-requests.test.ts` | Everything else |
 | 2026-10-15 | §6a's consent rows (`receipts`, the new `enrich` row, `consent`) and the `bookings/[id]` row, against `src/lib/consent-details.ts`, `src/lib/auth/surface-guards.ts` (`canViewConsentDetails`), those routes and `test/action-keys-enforced.test.ts` | Every other section, the §0 route counts included (no route added) |
 | 2026-10-15 | §6a's two Page Registry rows (`/api/system/*`) after it became vendor support only, against `src/lib/auth/page-floors.ts`, `surface-guards.ts` (`canUsePageRegistry`), `src/lib/access-center/registry.ts`, `registry-access.ts`, `history.ts` and `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Every other section |
 | 2026-10-15 | §6a's `force-kick` row, against `src/pages/api/users/force-kick.ts`, `src/lib/auth/surface-guards.ts` (`denyForceKick`), the live `/dashboard/users#force-kick` registry row (D1 connector: `owner`, active) and `test/session-rank.test.ts` | Every other section |
@@ -489,7 +490,7 @@ their **next request**, bounded by KV's eventual consistency (≈60 s).
 |---|---|
 | Role change, activation/deactivation metadata, display name | `src/pages/api/users/manage.ts` |
 | Page grant / revoke | `src/lib/access-center/handlers.ts` (`POST /api/users/access-center`), gates in `src/lib/access-center/page-gates.ts` |
-| Access-request approval | `src/pages/api/audit/requests/[id]/resolve.ts` |
+| Access-request approval | `src/lib/access-requests/handlers.ts` (`POST /api/access-requests/[id]`), the same gates as a page grant |
 | Page-registry change (a default role or switch marks every active person, 2026-10-14) | `src/pages/api/system/pages.ts` |
 | Page settings for many people from Page Registry | `src/lib/access-center/registry-access.ts` (`POST /api/system/page-access`), the same gates |
 
@@ -675,6 +676,8 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | Checked before anything is read; a PLAC-denied admin can no longer mutate PLAC. Replaced `POST /api/users/access` (2026-05-26) on 2026-10-03. |
 | `GET/POST /api/users/access-center` | `/dashboard/users` | 2026-10-02 | The Access Center. Hidden accounts answer 404 below owner and vendor; a server-console change also needs the `/dashboard/vps` key itself, strict outrank and not self, and cf-vps re-checks it ([`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md)). Since 2026-10-14 a page grant or revoke may carry an end date (in the future, at most 366 days ahead). |
 | `GET /api/users/access-history` | `/dashboard/users` | 2026-10-14 | One person's access changes from the activity log, fifty at a time. The same person check as the Access Center (a hidden account answers 404 below owner and vendor); an owner's or vendor support's history answers empty with `hidden` below vendor support. `userId` must be a UUID and `before` a cursor the route itself made. |
+| `GET/POST /api/access-requests` | `/dashboard` | 2026-10-15 | Asking for a page for yourself, or reading whether you can and your latest request for it: anyone signed in, so the mapping is the Overview (it was `/dashboard/inquiries` until 2026-10-15, which shut out anyone without Inquiries). A page with a floor, a page you already open, an address that is no page, and any ask from the owner or vendor support are refused with 422. The body is checked strictly (a length is one of four, a reason at most 500 characters) and the reason is escaped in the email. `?view=decide` needs `/dashboard/users` and lists only requests from the roles below the viewer (every request for the owner and vendor support) |
+| `POST /api/access-requests/[id]` | `/dashboard`, then `/dashboard/users` | 2026-10-15 | Approve or decline. Read-only refused; then the same person and page gates as a page grant (`personPageRefusal`, the page floor, `pageEditability`), so an Admin decides only for the roles below theirs and for pages they may give. The switch and the decision are one D1 batch, both conditional on the request still waiting (409 otherwise). Replaced `POST /api/audit/requests/[id]/resolve` |
 | `GET /api/users/probes` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/cf-access-audit` | `/dashboard/users` | 2026-05-26 | Also added a 10/min rate limit — endpoint enumerates every user CF Access knows about in the account. |
 | `GET /api/sessions/active-sessions` (+ `DELETE`) | `/dashboard/sessions` | 2026-05-26 | Moved out of `/api/users` since. Gated by `denySessions()` (`src/lib/auth/surface-guards.ts`) on the page plus the `#revoke` action. DELETE additionally has a 30/min revoke rate limit. Since 2026-10-10 the list names each session by a handle and DELETE takes that handle (`sessionRef`), looked up only among the named person's own sessions: the list used to send each session's ID, which is the session cookie. Since 2026-10-14, below the owner and vendor support, ending someone else's sessions or blocking them needs a strict outrank (`canManageUser`); nobody blocks their own account (400); and a block whose account update fails answers 502 (PERMISSIONS-SYSTEM D7). |
@@ -745,6 +748,8 @@ role-only gates "by design".*
 | `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
 | `POST /api/users/access-center` | 5 saves/min (each save counts once, however many changes) | `plac` | `session.userId` |
 | `POST /api/system/page-access` | 5/min (the same `plac` budget; one request counts once, however many changes) | `plac` | `viewer.userId` |
+| `POST /api/access-requests/[id]` | 5/min (the same `plac` budget; one decision counts once) | `plac` | `viewer.userId` |
+| `POST /api/access-requests` | 5/h | `access-requests` | `user.userId` |
 | `POST /api/users/access-center` | 5/min (the same budget as the row above) | `plac` | `session.userId` |
 | `POST /api/storage/presign` | 30/min | `storage-presign` | `user.userId` |
 | `POST /api/storage/[id]/share` | 20/h | `storage-share-create` | `user.userId` |

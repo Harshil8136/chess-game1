@@ -462,8 +462,9 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
   resolution: exact key only, no normalisation, and a deny binds **owner**, which
   the canonical resolver never does (ADR-0002). Already owned by the audit spec's
   Stage 2.
-- **Aside for the owner.** `/api/access-requests` is gated on `/dashboard/inquiries`,
-  so a user denied inquiries cannot even request access.
+- ~~**Aside for the owner.** `/api/access-requests` is gated on `/dashboard/inquiries`,
+  so a user denied inquiries cannot even request access.~~ **Fixed 2026-10-15:** mapped
+  to `/dashboard` ([USER-MANAGEMENT §6.1](features/USER-MANAGEMENT.md)).
 - **Fix.** Correct the 4 mapping keys and 8 handler keys; add the three missing
   registry rows through a migration (rows only — RULE #0.9) or move those checks to
   `placRequireGrant`; add a migration for `alerts#resolve`; add a test that each
@@ -705,6 +706,7 @@ the unused images and templates (OPT-S1–S4); the sitemap pings (OPT-R18).
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-15 | claude | Read `src/lib/auth/routes.ts` (`/api/access-requests` → `/dashboard`) and `test/access-requests.test.ts` (`resolveApiAuthz`) | OPT-D3's aside on `/api/access-requests` struck through as fixed; the rest of OPT-D3 not re-checked |
 | 2026-10-10 | claude | `grep -rln "<dialog\b" src` and `grep -rln "showModal()" src` (only `Dialog.tsx` and the three Email API modals; `Menu.tsx` names it in a comment); read `SessionForensicsDrawer.tsx` | OPT-D29 and OPT-D34 marked done. No other row re-checked |
 | 2026-10-07 | claude | `grep -rni "upstash\|getRedisClient" src/` (historical comments only, no import or client); read `src/lib/alert-gate.ts` | The two Upstash items marked done on 2026-10-04 (analytics off; OPT-D18 done another way, the Redis channel removed from the alert gate) hold. No other row re-checked |
 | 2026-09-23 | claude | Four parallel read-only reviews (API routes; UI components; server libraries, workers, scripts and tests; runtime cost), each finding counted with the command recorded in its review; their key claims re-checked by hand (dead routes and their comment-only references, the no-op `withTimeout`, the CMS history bypass, `writeRevocationFlag`'s 0 callers, the diagnostics prune and its 17 tests, the session-drawer drift, image references and SHA-256 duplicates, the `ios-*` classes). `jscpd` over `src/`; `git count-objects`, `git ls-files`, `git rev-list --objects` for size and history. Live: Cloudflare GraphQL Analytics (KV, D1 queries, Worker and scheduled invocations, zone requests by path, status, hour and request source, 16–23 Sep); Supabase edge logs (24 h); Sentry issues (7 days) and spans (30 days); D1 queries on `admin_pages`, `admin_access_requests` and `system_test_results`. Cloudflare docs for Workers limits, trace billing and Cache API availability. | File created. Not verified: the Workers plan (API 403); bundle sizes (no build run); D1 latency from the Worker (not traced); `knip` export analysis (it found no unused files, matching A17 = 0, but its export pass could not be relied on in this checkout because dependencies resolve from the parent folder). |

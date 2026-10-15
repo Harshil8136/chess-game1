@@ -61,7 +61,10 @@ newest first, fifty at a time, with chips by kind):
    feature whose page is off says it has no effect until the page is on.
 4. **Console cards**, *Server console* then *Backup console*, each headed by the console's own
    page row (*Console page*), then its permissions by class, then **Personal grant** (end date
-   and note, which apply to everything granted there). Floors a role can never hold are one
+   and note, which apply to everything granted there). Since 2026-10-15 (item #23) a console
+   grant that starts giving a permission above the role, where none was in force, starts with
+   an end 90 days ahead; *No end* clears it, and the date stays cleared for the rest of that
+   draft. Floors a role can never hold are one
    collapsed line, not disabled rows. A console that is hidden from the viewer or does not
    answer still shows its page row, with the reason and *Retry*.
 5. **Save bar** (sticky): pages open, personal overrides; with unsaved changes, their count,
@@ -69,7 +72,12 @@ newest first, fifty at a time, with chips by kind):
 6. **Review dialog**: every change *was → will be*, by section; grant end date and note
    changes; with page changes, *Page changes end on* (a day from today to 366 days ahead, or
    *No end*), which ends every page grant and revoke in the save; warnings; an optional reason
-   for the activity log; *Apply*.
+   for the activity log; *Apply*. Since 2026-10-15 (item #23) a save that only opens pages
+   starts with an end 90 days ahead, until the person picks a day or *No end*; a save that also
+   closes a page starts with none, since the one date would end the closing too. The servers
+   still accept no end; the default is the editor's (`DEFAULT_GRANT_DAYS`,
+   `src/lib/access-center/limits.ts`). Page Registry's personal settings for many people do the
+   same on the first *Open*.
 
 ### 2.1 A row
 
@@ -181,5 +189,6 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | §2 steps 4 and 6, the default end of item #23, against `draft.ts` (`withDefaultEnd`, `defaultPageUntil`), `limits.ts`, `UserAccessEditor.tsx`, `AccessSections.tsx`, `AccessReviewDialog.tsx`, `PageSheet.tsx`; `test/access-center-draft.test.ts` | Everything else |
 | 2026-10-15 | §4's Consoles paragraph after Page Registry became vendor support only: `canUsePageRegistry` and the `gate()` in `src/lib/access-center/registry.ts`; `test/registry-console-features.test.ts` | Everything else |
 | 2026-10-14 | §1 to §4 against the code after the 2026-10-14 work: `UserAccessEditor.tsx`, `AccessChrome.tsx`, `AccessRow.tsx`, `AccessReviewDialog.tsx`, `AccessHistoryList.tsx`, `CopyAccessDialog.tsx`, `labels.ts`, `draft.ts` (`toSave`, `copyFrom`), `handlers.ts` (`pageEndIssues`), `history.ts` and the registry under `src/components/admin/debug/registry/`; the live `admin_page_overrides.expires_at` column and the `0070` ledger row through the D1 connector; the screens server-rendered with edge-case data; `test/access-center-end-dates.test.ts`, `test/access-history.test.ts`, `test/registry-ui-logic.test.ts` | §5 and §6 re-read, not re-derived; the screens in a phone browser (the owner's test) |

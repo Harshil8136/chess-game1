@@ -49,11 +49,11 @@ repositories need their own entries for a complete group-level RoPA.
 |---|---|
 | Purpose | Authenticate and authorise staff; enforce RBAC/PLAC |
 | Categories of subject | Staff, contractors |
-| Categories of data | Email, display name, role, CF Access subject ID, active/hidden flags, per-page overrides |
+| Categories of data | Email, display name, role, CF Access subject ID, active/hidden flags, per-page overrides; access requests (since 2026-10-15: the page asked for, the reason the person wrote, how long they asked for, the decider's note and the approval's end) |
 | Legal basis | Art. 6(1)(b) contract; 6(1)(f) legitimate interests (securing the system) |
-| Stores | Supabase `admin_authorized_users`; D1 `admin_page_overrides`, `admin_pages` |
-| Retention | Life of the working relationship, then deletion on request |
-| Recipients | Cloudflare (Zero Trust identity), Supabase |
+| Stores | Supabase `admin_authorized_users`; D1 `admin_page_overrides`, `admin_pages`, `admin_access_requests` |
+| Retention | Life of the working relationship, then deletion on request. Access requests stay until deleted from the activity log's Requests tab; a request still waiting goes with the audit prune once older than its age |
+| Recipients | Cloudflare (Zero Trust identity), Supabase. An access request is emailed (name, email, role, page, reason) to the sign-in alert list, and the decision (page, note, end) to the person who asked, through the email queue (activity F's providers) |
 
 ### B. Security audit logging
 
@@ -298,6 +298,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | Activity A's data, stores, retention and recipients, for access requests: `src/lib/access-requests/handlers.ts` and `mail.ts`, `src/lib/dal/AccessRequestRepository.ts`, `migrations/0071_access_request_details.sql`, `src/pages/api/audit/prune.ts` and `delete-targeted.ts` | The rest of the document |
 | 2026-10-14 | §F's Email API row's attachments sentence, for attachments on Cloudflare: `cf-email-consumer/src/lib/attachments.ts` (`ATTACHMENT_KEEP_MS`, `storeAttachment`, `deleteExpiredAttachments`), `cf-email-consumer/api/src/public.ts` (a refused file is answered 422 before it is stored) and both Workers' `EMAIL_FILES` binding in `cf-email-consumer/wrangler.toml`; the bucket exists and is private (Cloudflare connector) | The rest of the document |
 | 2026-10-11 | Activity B's Categories of data, for the server access notice's rows and the audit log's session handle: `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts` (`noticeAuditContext`), `src/lib/audit.ts` (`withSessionHandle`); pinned by `test/vps-notice.test.ts` (no raw address, no session ID in a row) and `test/pipeline-session.test.ts` | The rest of the document; legal basis and retention remain owner and counsel judgements |
 | 2026-10-10 | Activity F's Stores and Recipients and §5's Resend row, for the system emails moved onto the queue: `src/lib/email/queue-mail.ts` and its callers (`src/lib/storage/notify.ts`, `share-email.ts`, `src/lib/retention-email.ts`, `src/lib/gsc/ops-alert.ts`, `src/pages/api/users/resend-invite.ts`) | Resend's own terms and region; legal basis and retention remain owner and counsel judgements |

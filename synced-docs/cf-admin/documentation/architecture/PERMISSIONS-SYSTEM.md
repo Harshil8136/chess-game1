@@ -703,6 +703,32 @@ which the Access Center's save shares. What the registry shows comes from one re
 accounts stay hidden below the owner and vendor support, and an owner's or vendor support's
 overrides are vendor support's alone.
 
+### 10.3 Access requests
+
+*Added 2026-10-15.* A person shut out of a page can ask for it from the Access denied card,
+and the request is decided with the same gates as any page grant
+([USER-MANAGEMENT §6.1](../features/USER-MANAGEMENT.md) is the screen and its routes;
+the code is `src/lib/access-requests/`). Three rules matter here:
+
+- **Refused at the ask, not at the approval (open item D11).** `checkAsk` refuses a page with a
+  floor (§5), an address no registry page covers, a page the person already opens, and any ask
+  from the owner or vendor support (they bypass every deny). Until 2026-10-15 such a request
+  could be filed and then failed at approval, or approved without changing anything.
+- **Who decides.** `/dashboard/users`, not read-only, then `personPageRefusal` (strict outrank,
+  not yourself), the floor, and `pageEditability(...).canAllow` for that person and page: the
+  owner and vendor support decide every request; anyone else decides those from the roles
+  below theirs, for pages they may give (`decidesFor`, and the badge in the sidebar counts only
+  those).
+- **What an approval writes.** One D1 batch: the personal switch in `admin_page_overrides` with
+  its end date (`INSERT OR REPLACE ... WHERE EXISTS` the pending request) and the decision
+  (`UPDATE ... WHERE status = 'pending'`), so a decided request cannot be decided twice and a
+  lost race writes nothing. A switch already there for longer, or with no end, is kept. Then one
+  `authz-changed` mark (§11), one activity-log row, and an email to the person.
+
+The routes are mapped to `/dashboard` (`src/lib/auth/routes.ts`), which every role has;
+until 2026-10-15 they were mapped to `/dashboard/inquiries`, so someone without Inquiries could
+not ask for anything.
+
 ---
 
 ## 11. Revocation, and how fast it actually takes effect
@@ -1041,6 +1067,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-15 | claude | **Scope-limited to §10.3, new.** Read `src/lib/access-requests/` (`rules.ts`, `handlers.ts`), `AccessRequestRepository.ts` (`approve`, `decline`, `getPendingCount`), `page-gates.ts`, `access-center/rules.ts` and `routes.ts`; read the live `admin_access_requests` table before and after `0071` through the D1 connector (9 rows, none pending); `test/access-requests.test.ts` (17 tests) and `test/permission-change-no-lockout.test.ts` pass | §10.3 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to screen-only action keys.** Listed every `/dashboard/x#y` key in `migrations/*.sql` (63) and read the live rows through the D1 connector (63, 55 active); grepped `src/pages/api` and `src/lib` with comments stripped for each; read `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and export, `ai-generate.ts`, `templates.ts`, `retention/purge.ts` and the email preview path; `test/action-keys-enforced.test.ts` fails when the AI or consent check is reverted | §5's new paragraph and the §17 row. Not re-derived: every other section |
 | 2026-10-15 | claude | **Scope-limited to Page Registry's floor.** Read `page-floors.ts`, `surface-guards.ts` (`canUsePageRegistry`), the four pages under `src/pages/dashboard/debug/`, `registry-access.ts`, `registry.ts`, `history.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one grant (the Owner's) through the D1 connector; `test/debug-access.test.ts`, `test/registry-access.test.ts` and `test/registry-console-features.test.ts` refuse the owner and a granted Admin and admit vendor support | §1 step 0's exception, §5's floor sentence and new paragraph, §10.2, the §17 row. Not re-derived: every other section |
 | 2026-10-15 | claude | **Scope-limited to `#force-kick`.** Read the live `/dashboard/users#force-kick` row through the D1 connector (`required_role` `owner`, active), `surface-guards.ts`, `api/users/force-kick.ts`, `pages/dashboard/users/index.astro` and `ExpandedRow.tsx`; `test/session-rank.test.ts` fails without the new check and passes with it | §4.1's D6/D7 sentence, §5's paragraph, D6 in §16, the §17 row. Not re-derived: every other section |
