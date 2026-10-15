@@ -116,6 +116,17 @@ windows, 121 s). cf-astro writes nothing to Redis now; the
 client IP leaves our code only as part of the key sent to Cloudflare's own
 rate limiter, inside the same Cloudflare account that already sees it.
 
+## Who fetched an ARCO identity document (since 2026-10-15)
+
+| What                                 | Store                                                                               | Holds                                                                                                                                                                                                  | Kept for                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| One row per identity document served | Cloudflare D1 `madagascar-db`, table `platform_alerts` (source `arco_get_document`) | the ticket number, whether the call came through cf-admin's binding or the internet, the cf-ray and country; through the binding, the staff member's user id, email and role. No requester name, no IP | as long as other `platform_alerts` rows: no purge touches this table today |
+
+`/api/arco/get-document` writes the row before it sends the document and sends
+nothing if the write fails ([SECURITY.md](../SECURITY.md) §7). The staff email
+is personal data newly stored here; the platform's record of processing lives in
+cf-admin, so the owner has been told.
+
 ## Admin dashboard (cf-admin, secure.madagascarhotelags.com)
 
 `/dashboard/privacy` ("Consent Records") reads **Supabase** `consent_records`

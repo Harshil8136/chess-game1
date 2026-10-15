@@ -26,6 +26,11 @@ Requests arrive via the ARCO form (`/es/legal/arco/`), which notifies
 2. **Verify identity**: retrieve the submitted ID via
    `GET /api/arco/get-document/?ticket=ARCO-NNNNNN` with header
    `X-Admin-Secret: $ARCO_ADMIN_SECRET`. Compare the name against the request.
+   Every document served is recorded first (since 2026-10-15): one `info` row in
+   the D1 `platform_alerts` table, source `arco_get_document`, which cf-admin's
+   Alerts page lists. If the record cannot be written the endpoint answers 503
+   and sends nothing; try again a minute later. A fetch by hand is recorded as
+   "the holder of ARCO_ADMIN_SECRET, no person named" (SECURITY.md §7).
 3. **Locate the data** (by requester email):
    - Postgres: `bookings`, `booking_pets`, `consent_records`,
      `email_audit_logs`, `contact_messages`, `legal_requests`, `privacy_requests`

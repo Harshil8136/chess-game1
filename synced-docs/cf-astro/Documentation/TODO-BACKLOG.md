@@ -6,6 +6,65 @@
 
 ---
 
+## 0c. 🔐 Permissions review follow-ups (2026-10-15, item #40)
+
+> Source: [the change record](./records/2026-10-15-website-permissions.md). Checked against
+> the code, cf-admin's code (read-only), the live Supabase grants and the live D1 tables on
+> 2026-10-15. Each open item needs the owner, a secret, a dashboard change, a database
+> change or cf-admin.
+
+- [ ] 🟡 **Booking replay: cf-admin's secret through the binding only.** `/api/booking/replay`
+      is the one endpoint that still takes `REVALIDATION_SECRET` from the internet. cf-admin
+      already calls it through its binding (`https://internal/api/booking/replay/`), so the
+      change is one line (`bindingOnlySecret`, as in `/api/consent/replay`) plus its test. It
+      was left alone because the booking path is life-safety-adjacent and the 2026-09-02
+      incident was a change to exactly this check. Owner's yes first.
+- [ ] 🟡 **cf-admin: write the trailing slash on binding calls.** cf-admin calls
+      `https://internal/api/revalidate`, `https://internal/api/cms-status?keys=…` and (the
+      connectivity diagnostic) `http://internal/api/health` without the slash. Astro
+      (`trailingSlash: 'always'`) answers each with a redirect before any of our code runs,
+      and Cloudflare's documentation says a service-binding `fetch` follows a redirect over the
+      public internet, where `internal` does not resolve. Not settled in production: Sentry
+      has no revalidate issue and `sync_outbox` is empty, but no recorded publish proves it
+      works. The fix is in cf-admin: `/api/revalidate/`, `/api/cms-status/?keys=`,
+      `https://internal/api/health/`.
+- [ ] 🟡 **ARCO documents through the portal, named.** Nobody calls
+      `/api/arco/get-document` from code: the owner fetches by hand. The cf-astro side is ready:
+      a call through the binding may carry `x-arco-actor` (cf-admin's `encodeActor` v1 user
+      actor) and the record names that person. cf-admin would add a PLAC-gated route that
+      calls `https://internal/api/arco/get-document/?ticket=ARCO-NNNNNN` with `X-Admin-Secret`
+      and `x-arco-actor`, and writes its own `admin_audit_log` row (#20). That needs
+      `ARCO_ADMIN_SECRET` copied to cf-admin (not a new secret, a second holder): the owner's
+      decision. Then this endpoint can refuse the internet like `/api/revalidate`.
+- [ ] 🟡 **Narrow the writer's read of `legal_requests`.** `cf_astro_writer` may SELECT every
+      column of `legal_requests` (names, email, phone, description) with a `using (true)`
+      policy; the code reads five columns by ticket number. A database change for the owner,
+      as a tracked Supabase migration:
+
+      ```sql
+      begin;
+      revoke select on public.legal_requests from cf_astro_writer;
+      grant select (ticket_number, document_path, identity_doc_mime, full_name, arco_right)
+        on public.legal_requests to cf_astro_writer;
+      revoke insert on public.zz_dead_privacy_requests_20260916 from cf_astro_writer;
+      commit;
+      ```
+
+      Once documents are fetched through the portal (above), the SELECT can go entirely.
+      Then update `db/postgres-cf-astro-writer-grants.sql` and SECURITY.md §12.
+
+- [ ] 🟢 **Delete the unused superuser secret.** No code reads `DATABASE_URL_ADMIN`, and a
+      Worker secret cannot be read back, so it serves no emergency. Whether it is set could
+      not be checked (the connector lists Workers without their secrets). On the phone:
+      Cloudflare dashboard → Workers & Pages → `cf-astro` → Settings → Variables and Secrets →
+      `DATABASE_URL_ADMIN` → Delete. While there, also delete `UPSTASH_REDIS_REST_TOKEN`,
+      `SENTRY_DSN` and `SUPABASE_SERVICE_ROLE_KEY` if listed (none is read). Changing the
+      `postgres` password afterwards is the owner's call.
+- [ ] 🟢 **Preview URLs.** `wrangler.toml` sets neither `workers_dev` nor `preview_urls`, so
+      both are on, and the form origin check keeps accepting this Worker's own version URLs
+      (`<prefix>-cf-astro.mascotasmadagascar.workers.dev`). Nothing uses them (main-only
+      deploys). Turning previews off would let that rule go: an owner decision.
+
 ## 0b. 🔎 Blog SEO / GEO audit follow-ups (2026-10-10)
 
 > Source: [the change record](./records/2026-10-10-blog-seo-audit-fixes.md) and the audit
