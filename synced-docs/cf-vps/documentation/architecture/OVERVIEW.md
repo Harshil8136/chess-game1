@@ -2,10 +2,10 @@
 title: "cf-vps Architecture Overview"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-08
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
-related_code: [src/worker.ts, src/http/router.ts, src/agent/proxy.ts, src/gateway/actor.ts, contract/capabilities.ts, contract/signing.ts, agent/src/server.ts, agent/src/auth.ts, wrangler.json]
+related_code: [src/worker.ts, src/http/router.ts, src/agent/proxy.ts, src/gateway/actor.ts, contract/capabilities.ts, contract/signing.ts, agent/src/server.ts, agent/src/auth.ts, agent/src/limits.ts, wrangler.json]
 related_docs: [../security/PERMISSIONS.md, ../security/AUDIT-PIPELINE.md, ../features/ACTIONS.md, ../operations/DEPLOY.md, ../reference/API-ROUTES.md]
 tags: [architecture, worker, agent, tunnel, trust]
 ---
@@ -38,10 +38,13 @@ Browser
   -> cf-admin: Access login, portal role, page permission
   -> service binding, header x-vps-actor (email, role, signed-in time, request id)
   -> cf-vps Worker: parse actor, load access policy, compute capabilities,
-     refuse early (403 + the capability needed), Ed25519-sign path, query,
-     body hash, actor and capability list
+     refuse early (403 + the capability needed, or an old sign-in),
+     Ed25519-sign path, query, body hash, actor (email, role, sign-in time)
+     and capability list
   -> Workers VPC binding -> Cloudflare Tunnel (outbound from the server)
-  -> host agent on loopback: verify signature, re-check the route's capability
+  -> host agent on loopback: verify signature, re-check the route's capability,
+     then its own checks from the signed actor: owner or vendor support for the
+     root terminal and a reboot, the sign-in time, and the hourly limits
   -> read from the host, or start a fixed root unit through polkit
 ```
 
@@ -56,7 +59,7 @@ the Worker cannot be used as a general proxy onto the host.
 |---|---|---|
 | Browser to cf-admin | Nothing; the person logs in | Cloudflare Access, cf-admin roles and page permissions |
 | cf-admin to Worker | The actor header | The Worker has no public route; only the service binding reaches it. cf-admin drops any header a browser sent. Missing or invalid header gives `bad_actor` |
-| Worker to agent | The signed capability list | Ed25519 signature over method, path, query, timestamp, single-use nonce, body hash, actor and capabilities. 60-second skew. The agent holds public keys only |
+| Worker to agent | The signed capability list, and the signed actor's role and sign-in time | Ed25519 signature over method, path, query, timestamp, single-use nonce, body hash, actor and capabilities. 60-second skew. The agent holds public keys only. For the root terminal, a reboot and every change that needs a fresh sign-in, the agent also checks the signed role and sign-in time itself, and counts uses against hourly limits ([PERMISSIONS](../security/PERMISSIONS.md#the-agents-own-red-lines)) |
 | Agent to root | Nothing beyond named units | polkit lets the agent start only the fixed `vps-act-*` units; each root script validates its target again |
 | Terminal | A 30-second ticket | The Worker mints it, the root-side signer verifies it, and issues a 60-second SSH certificate for one account |
 
@@ -76,7 +79,7 @@ open; an unknown route is 404; the agent answers only loopback `Host` names.
 | R2 audit bucket | Off-server copy of security classes; encrypted database dumps under `backups/postgres/` | Security classes locked for 90 days, see [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md); dumps locked 30 days, expired at 35 |
 | Sentry | Alerts for real problems only | Not a record |
 | Agent releases | `/opt/vps/agent/releases/<version>`, `current` link | Rollback switches the link |
-| Agent state | `/var/lib/vps/metrics`: one sample a minute, one file per day | The unit's `StateDirectory`; kept 30 days, at most 12 MiB; survives deploys. See [Metrics history](../features/CONSOLE.md#metrics-history) |
+| Agent state | `/var/lib/vps/metrics`: one sample a minute, one file per day; and `limits.json`, each person's admin terminal opens and reboot requests in the last hour | The unit's `StateDirectory`; the samples kept 30 days, at most 12 MiB; survives deploys and reboots. See [Metrics history](../features/CONSOLE.md#metrics-history) and [Hourly limits](../security/PERMISSIONS.md#hourly-limits) |
 | Job runs | `/var/lib/vps/jobs`: the queue, each run's record, output and report, a day's index of finished runs, and a person's pause | Written by root, readable by the agent (2750 `root:vps-agent`); kept 30 days |
 | App data | `/srv/apps`, `/srv/share`, PostgreSQL dumps kept 7 days, each also sent off the server encrypted (R2 `backups/postgres/`) | Apps run with a read-only root and no capabilities. The server holds only the public half of the backup key |
 
@@ -84,7 +87,7 @@ open; an unknown route is 404; the agent answers only loopback `Host` names.
 
 The agent runs as its own user with no capabilities, `ProtectSystem=strict`, `ProtectHome`, a
 256 MB memory cap, and writes only to the app and share folders and its own state folder (the
-metrics history). It reads logs and the audit
+metrics history and the hourly limits). It reads logs and the audit
 record through supplementary groups, not root. Reads of files, logs and the audit record are
 written to the journal with the person's email.
 

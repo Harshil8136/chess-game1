@@ -135,6 +135,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/2026-10-08-job-controls.md`](records/2026-10-08-job-controls.md) | Change record: server jobs can be stopped, restarted, paused, resumed, blocked and re-sized or re-scheduled from the Apps and Jobs pages, and the Jobs page is rebuilt for a phone |
 | [`records/2026-10-10-mailroom.md`](records/2026-10-10-mailroom.md) | Change record: Mailroom, the app that holds an email's attachments while ClamAV scans them, built for the email service |
 | [`records/2026-10-14-mailroom-retired.md`](records/2026-10-14-mailroom-retired.md) | Change record: Mailroom retired; the email service checks attachments itself and keeps them on Cloudflare, so the server does no email work |
+| [`records/2026-10-15-fresh-sign-in-and-agent-red-lines.md`](records/2026-10-15-fresh-sign-in-and-agent-red-lines.md) | Change record: reboot, installing updates, stopping a service and deleting files need a recent sign-in; the agent itself keeps the admin terminal and reboot for Owner and Vendor support, checks the sign-in time, and limits both per hour |
 | [`records/plans/2026-10-08-job-controls.md`](records/plans/2026-10-08-job-controls.md) | Plan: job controls and the rebuilt Jobs page, with the rulings made while executing it |
 | [`records/plans/2026-10-08-console-redesign-wave-0.md`](records/plans/2026-10-08-console-redesign-wave-0.md) | Plan: the console redesign's Wave 0 (tokens, building blocks, shell, emoji purge, four fixes), with the rulings made while executing it |
 

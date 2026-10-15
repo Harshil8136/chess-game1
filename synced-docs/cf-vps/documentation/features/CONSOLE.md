@@ -169,8 +169,8 @@ Every page has the same three layers (see the [design system](../reference/DESIG
   which add up to the total.
 - Main: failed services in their own panel, then every unit in a table with Failed, Running and
   All chips and a search box. A unit opens a sheet with its state, live properties,
-  dependencies, journal and copyable commands. Restart, Start and Stop need `services.control`;
-  protected units show none.
+  dependencies, journal and copyable commands. Restart, Start and Stop need `services.control`,
+  and Stop also a sign-in from the last 10 minutes; protected units show none.
 - About: what each unit state means, who may control, what protected means, and where the logs
   come from.
 
@@ -193,7 +193,7 @@ Every page has the same three layers (see the [design system](../reference/DESIG
   everything is up to date; whether a reboot is needed; when the agent last checked.
 - Main: a Reboot required banner when the server asks for one; four counts (Installed,
   Security updates, Other updates, System); Refresh package lists and Upgrade every package for
-  people with `packages.update`; then an Updates tab (security updates first, in their own
+  people with `packages.update` (Upgrade also needs a sign-in from the last 10 minutes); then an Updates tab (security updates first, in their own
   group; name, from, to, a Security badge) and an Installed tab (a searchable table, loaded
   only when opened). Any package opens an inspector sheet (description, facts, depends on,
   required by, files) with back navigation.
@@ -265,8 +265,9 @@ Every page has the same three layers (see the [design system](../reference/DESIG
 - Main: Open session or End session in the header; the account choice under it when the person
   holds more than one; the dark terminal in a framed panel with its state badge; open sessions
   to reattach (reattaching clears the screen first, and ending is guarded while the session
-  runs). The sudo-capable account needs `terminal.admin` and a sign-in from the last 10
-  minutes.
+  runs). The sudo-capable account needs `terminal.admin` (Owner or Vendor support) and a
+  sign-in from the last 10 minutes, and each person can open it a few times an hour
+  ([Hourly limits](../security/PERMISSIONS.md#hourly-limits)).
 - About: certificates, recording, accounts, limits, reconnects, reattaching and colours.
 
 **Files**
@@ -275,7 +276,8 @@ Every page has the same three layers (see the [design system](../reference/DESIG
 - Main: a Places menu, parent folder, copy path, type a path, and a filter by name; the write
   bar in a folder where writing is allowed; and the folder as a sortable list. Tapping a file
   opens the Inspector sheet with its preview, find, download and the write actions the person
-  holds. Download needs `files.download`; create, upload, rename and delete need `files.write`.
+  holds. Download needs `files.download`; create, upload, rename and delete need `files.write`,
+  and delete also a sign-in from the last 10 minutes.
 - About: what the page does, where changes are allowed, what is always refused, the limits and
   the keyboard shortcuts.
 
@@ -338,8 +340,10 @@ Every page has the same three layers (see the [design system](../reference/DESIG
   pipeline, audit storage), External checks (each probe and certificate, with a filter and
   search) and Services (the platform units), failures first, each with a Pass, Warning or Fail
   badge and its evidence. A Reboot required banner shows only while the server reports it.
-  Reboot sits in the closed Host controls section at the end and needs `host.reboot`. It is
-  armed only while installed updates wait on a restart; otherwise it is greyed out and says why.
+  Reboot sits in the closed Host controls section at the end and needs `host.reboot` (Owner or
+  Vendor support) and a sign-in from the last 10 minutes; each person can ask for it a few
+  times an hour. It is armed only while installed updates wait on a restart; otherwise it is
+  greyed out and says why.
 - About: what each check proves, how external checks decide, and the Host controls.
 
 **Access**

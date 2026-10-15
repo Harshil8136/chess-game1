@@ -2,10 +2,10 @@
 title: "Controlled Actions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
-related_code: [contract/actions.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, host/65-actions, src/ui/components/actions.tsx]
+related_code: [contract/actions.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
 related_docs: [../security/PERMISSIONS.md, LOG-STORAGE.md, JOBS.md, RESTORE-TESTS.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md]
 tags: [feature, actions, polkit, systemd, enforcement]
 ---
@@ -15,21 +15,23 @@ tags: [feature, actions, polkit, systemd, enforcement]
 > **TL;DR (non-technical):** The console can change the server in only a handful of fixed
 > ways, such as restarting a service, installing updates or rebooting. Each one is a named
 > action with its own permission. The request is checked four times on its way to the server,
-> and risky ones ask you to type a confirmation word first.
+> and risky ones ask you to type a confirmation word first. The riskiest also need a sign-in
+> from the last 10 minutes.
 
 ## The actions
 
 Defined once in `contract/actions.ts` (`ACTIONS`). The ids are also the words cf-admin's
-activity log uses. **Fresh** means a cf-admin sign-in from the last 10 minutes.
+activity log uses. **Fresh** means a cf-admin sign-in from the last 10 minutes, checked by the
+Worker and again by the agent ([PERMISSIONS](../security/PERMISSIONS.md#fresh-sign-in)).
 
 | Action | Capability | Target | Typed confirmation | Fresh | What it does |
 |---|---|---|---|---|---|
 | `service.restart` | `services.control` | A service unit | none | no | Restart an allow-listed service |
 | `service.start` | `services.control` | A service unit | none | no | Start an allow-listed service |
-| `service.stop` | `services.control` | A service unit | the unit name | no | Stop an allow-listed service |
+| `service.stop` | `services.control` | A service unit | the unit name | yes | Stop an allow-listed service |
 | `packages.update` | `packages.update` | none | none | no | Refresh package lists (`apt-get update`) |
-| `packages.upgrade` | `packages.update` | none | `upgrade` | no | Install updates; no removals, config files kept |
-| `host.reboot` | `host.reboot` | none | `reboot` | no | Reboot in one minute; cancellable on the host |
+| `packages.upgrade` | `packages.update` | none | `upgrade` | yes | Install updates; no removals, config files kept |
+| `host.reboot` | `host.reboot` | none | `reboot` | yes | Reboot in one minute; cancellable on the host. Owner or Vendor support only, and a few times an hour per person, checked by the agent itself ([PERMISSIONS](../security/PERMISSIONS.md#the-agents-own-red-lines)) |
 | `app.deploy` | `apps.deploy` | An app name | none | no | Regenerate the app's unit and site from its manifest, restart, health-check |
 | `app.start` | `apps.control` | An app name | none | no | Start the app's container unit |
 | `app.stop` | `apps.control` | An app name | the app name | no | Stop it; it stays stopped until started again or the server reboots |
@@ -69,7 +71,9 @@ CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10
 most 400 days, known kinds without repeats); `logs.vacuum` is 1 to 3650 days; `retention.set`
 is `<key>:<days>` within that key's limits. An action that takes no target refuses one.
 Errors: `unknown_action`, `bad_target`, `protected`, `confirm_required`, `includes_today`,
-`range_too_long`, `out_of_range`.
+`range_too_long`, `out_of_range`. Refusals carry `need`: the capability, `fresh_sign_in`, or from
+the agent `owner_role` (403) and `hourly_limit` (429), each with a plain-words `message` that the
+console shows beside the button.
 
 Protected units are refused whatever the allow-list says: SSH, auditd, Vector, the agent,
 the terminal signer, the tunnel connector, dbus, polkit, `systemd-*`, user and getty
@@ -80,13 +84,14 @@ instances, and the action units themselves (`isProtectedUnit`).
 | # | Where | What it checks |
 |---|---|---|
 | 1 | Console | Hides or disables the button without the capability; asks for the typed word |
-| 2 | Worker (`proxyToAgent`) | The route needs `host.view`; `checkActionRequest` validates the action, target and confirmation; the action's own capability is in the person's list; fresh sign-in where required. Then it signs the body hash, so the agent runs exactly this body |
-| 3 | Agent (`actions/run`) | Verifies the signature and nonce, repeats `checkActionRequest` and the capability check, then starts the unit with `systemctl start --no-block` as its own unprivileged user. The job id is the systemd invocation id |
+| 2 | Worker (`proxyToAgent`) | The route needs `host.view`; `checkActionRequest` validates the action, target and confirmation; the action's own capability is in the person's list; fresh sign-in where required. Then it signs the body hash, so the agent runs exactly this body, and the actor with the person's role and sign-in time |
+| 3 | Agent (`actions/run`) | Verifies the signature and nonce, repeats `checkActionRequest` and the capability check, then its own checks from the signed actor: a reboot only for the owner or vendor support role, the fresh sign-in where required (refused when the time is missing, old, or more than a minute ahead), and the hourly limit on reboots. Then it starts the unit with `systemctl start --no-block` as its own unprivileged user. The job id is the systemd invocation id |
 | 4 | polkit rule | Lets only the agent user start units named `vps-act-*` (fixed oneshot units, and templated ones with a restricted instance name). Any other verb, unit or polkit action is denied |
 | 5 | Root oneshot unit | Runs a fixed script that validates its target once more. `vps-act-svc` allows a unit only if it is an app unit created by the platform or is listed in a root-owned allow-list file, and never if it is protected. The app controls run `vps act <verb>:<target>` from `vps-act-app@.service`, which accepts only the eight app verbs, a valid app name and resources within the bounds, and refuses to start, restart, pause or deploy a blocked app |
 
 A caller who skips the console still meets checks 2 to 5. A caller who skips the Worker still
-meets 3 to 5, because the agent trusts only the signed capability list.
+meets 3 to 5, because the agent trusts only what the Worker signed: the capability list, and the
+role and sign-in time in the actor.
 
 ## Action tickets (the host trusts the Worker, not the agent)
 

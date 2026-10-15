@@ -16,7 +16,8 @@ tags: [operations, deploy, rollback, workers-builds]
 > private Worker deploys itself when code is pushed to `main`; the host agent is installed
 > with one command that rolls itself back if the new version does not start; and the
 > server's own configuration is applied one small step at a time. When a change spans parts,
-> the server side goes first.
+> the server side usually goes first; when the server starts to require something only a
+> newer Worker sends, the Worker goes first.
 
 ## The three parts
 
@@ -42,6 +43,17 @@ A new server job (`host/66-jobs`) follows the same order, with its steps in this
 for a reason the Jobs page then shows ([JOBS](../features/JOBS.md)). Applying the module again
 never undoes the console: a paused or blocked job keeps its timer off, and limits and schedules
 set from the console stay.
+
+**The exception: the Worker first.** When the agent starts to require something that only a
+newer Worker sends, the Worker goes first and the agent after it. Since 2026-10-15 the agent
+requires the sign-in time (`s`) in the signed actor for every change that needs a fresh
+sign-in ([PERMISSIONS](../security/PERMISSIONS.md#fresh-sign-in)). A Worker older than that
+does not send it, so behind one the new agent refuses the admin terminal, a reboot, installing
+updates, stopping a service, deleting files or logs, retention changes and restore tests, and
+says the console is older than the agent. Push first, wait for the Workers Builds check on the
+commit to pass, then run `npm run agent:deploy`. Rolling the Worker back past such a change
+means rolling the agent back too (`60-agent apply.sh rollback`, under
+[The agent](#the-agent)). An agent older than the Worker simply ignores the field.
 
 The route table in `contract/capabilities.ts` is shared. The Worker refuses a route that is not
 in its copy, and the agent answers 404 for one that is not in its own, so a Worker newer than

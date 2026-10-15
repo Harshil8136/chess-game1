@@ -2,10 +2,10 @@
 title: "cf-vps Permissions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
-related_code: [contract/capabilities.ts, src/access/policy.ts, src/access/save.ts, src/agent/proxy.ts, src/ui/pages.ts]
+related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
 related_docs: [../architecture/OVERVIEW.md, ../features/ACTIONS.md, ../features/CONSOLE.md, ../features/RESTORE-TESTS.md, ../reference/API-ROUTES.md]
 tags: [security, permissions, capabilities, rbac]
 ---
@@ -17,6 +17,8 @@ tags: [security, permissions, capabilities, rbac]
 > remove capabilities for one person, and the most dangerous ones can never be given to
 > anyone except the owner and the vendor. The check is made three times: in the portal's
 > private service, on the server's agent, and again by the root script that makes a change.
+> The riskiest changes also need a sign-in from the last 10 minutes, and the server itself
+> keeps the root terminal and reboots for the owner and the vendor, a few times an hour.
 
 ## The catalog
 
@@ -31,24 +33,24 @@ support can hold.
 | `logs.view` | read | The system journal and its live tail (login and sudo sources also need `security.view`) | owner, vendor, admin | no |
 | `files.view` | read | Browse folders and preview files the agent can read; secrets are always refused | owner, vendor | no |
 | `files.download` | operate | Download files up to 200 MB | owner, vendor | no |
-| `files.write` | operate | Upload, create folders, rename, delete in app source and config folders and the share folder only | owner, vendor | no |
+| `files.write` | operate | Upload, create folders, rename, delete in app source and config folders and the share folder only; a delete needs a fresh sign-in | owner, vendor | no |
 | `security.view` | read | Posture, who is logged in, alerts, login sources in Logs, log storage usage | owner, vendor | no |
 | `audit.view` | read | Every session, command, sudo and config change on record | owner, vendor | yes |
 | `sessions.replay` | read | Replay recorded terminal sessions | owner, vendor | yes |
 | `api.raw` | read | The raw read-only JSON explorer | owner, vendor | no |
-| `services.control` | operate | Start, stop and restart allow-listed services (never SSH, the tunnel, the audit pipeline or the agent) | owner, vendor | no |
-| `packages.update` | operate | Refresh package lists and install updates (no removals) | owner, vendor | no |
+| `services.control` | operate | Start, stop and restart allow-listed services (never SSH, the tunnel, the audit pipeline or the agent); a stop needs a fresh sign-in | owner, vendor | no |
+| `packages.update` | operate | Refresh package lists and install updates (no removals); installing needs a fresh sign-in | owner, vendor | no |
 | `apps.deploy` | operate | Deploy hosted apps from their manifests (regenerate the unit and site, restart, health-check) | owner, vendor | no |
 | `apps.control` | operate | Start, stop, restart, pause and resume hosted apps | owner, vendor | no |
 | `apps.manage` | admin | Block or unblock a hosted app, and change its memory cap, CPU cap and CPU weight within the server's limits | owner, vendor | no |
 | `restore.test` | admin | Stage a backup copy on the server and start or cancel a restore test with the memory and processor chosen for it; the copy is unlocked in a sealed container with no network ([RESTORE-TESTS](../features/RESTORE-TESTS.md)) | owner, vendor | yes |
 | `jobs.run` | operate | Run and control server jobs: Run now (it still waits its turn while the server is busy), Stop or Restart the run in flight, Pause or Resume a job's schedule ([JOBS](../features/JOBS.md)) | owner, vendor | no |
 | `jobs.manage` | admin | Block or unblock a server job, and change its limits and schedule within the server's bounds | owner, vendor | no |
-| `host.reboot` | admin | Reboot the server (one-minute delay, cancellable) | owner, vendor | yes |
+| `host.reboot` | admin | Reboot the server (one-minute delay, cancellable); a fresh sign-in, at most 3 an hour per person | owner, vendor | yes |
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |
 | `terminal.ops` | operate | A shell as the unprivileged `vps-ops` account through a 60-second certificate; recorded | owner, vendor | no |
-| `terminal.admin` | admin | A shell as `vps-admin` (sudo); recorded and the owner is alerted | owner, vendor | yes |
+| `terminal.admin` | admin | A shell as `vps-admin` (sudo); a fresh sign-in, at most 6 opens an hour per person; recorded and the owner is alerted | owner, vendor | yes |
 | `access.view` | read | See who holds which capabilities | owner, vendor | no |
 | `access.delegate` | admin | Give or take away capabilities you hold yourself, for people below you, from cf-admin's Access Center (see Delegation) | owner, vendor, admin | no |
 | `access.manage` | admin | Change role defaults and per-person grants | owner, vendor | yes |
@@ -57,7 +59,7 @@ support can hold.
 
 | Role | Default capabilities |
 |---|---|
-| `owner`, `vendor_support` | All 24 |
+| `owner`, `vendor_support` | All 25 |
 | `admin` | `host.view`, `logs.view`, `access.delegate` |
 | `manager`, `staff`, `viewer` | None |
 
@@ -140,27 +142,62 @@ level and current defaults, and what the caller holds and may delegate. It names
 
 ## Fresh sign-in
 
-The Worker compares the actor's sign-in time with the clock. A sign-in older than **10
-minutes** is refused with `need: fresh_sign_in` for:
+The actor's sign-in time (cf-admin's `signedInAt`) is compared with the clock by
+`checkSignIn` in `contract/signing.ts`. A sign-in older than **10 minutes**, or more than
+**60 seconds ahead** of the clock (which can only be a wrong clock or a forged time), is
+refused with 403 and `need: fresh_sign_in`, in plain words ("Sign in to cf-admin again: this
+needs a sign-in from the last 10 minutes."). It applies to:
 
-| Request | Capability |
-|---|---|
-| Delete logs, delete old journal (`logs.purge`, `logs.vacuum`) | `logs.purge` |
-| Set retention (`retention.set`) | `retention.manage` |
-| Open a terminal as `vps-admin` | `terminal.admin` |
-| Stage a backup copy (`restore/stage`), start a restore test (`restore.start`) | `restore.test` |
+| Request | Capability | Marked in |
+|---|---|---|
+| Reboot (`host.reboot`) | `host.reboot` | `ACTIONS` (`fresh`) |
+| Install updates (`packages.upgrade`) | `packages.update` | `ACTIONS` (`fresh`) |
+| Stop a service (`service.stop`) | `services.control` | `ACTIONS` (`fresh`) |
+| Delete logs, delete old journal (`logs.purge`, `logs.vacuum`) | `logs.purge` | `ACTIONS` (`fresh`) |
+| Set retention (`retention.set`) | `retention.manage` | `ACTIONS` (`fresh`) |
+| Start a restore test (`restore.start`) | `restore.test` | `ACTIONS` (`fresh`) |
+| Delete a file or folder (`files/delete`) | `files.write` | `FRESH_SIGN_IN_ROUTES` |
+| Stage a backup copy (`restore/stage`) | `restore.test` | `FRESH_SIGN_IN_ROUTES` |
+| Open a terminal as `vps-admin` | `terminal.admin` | `FRESH_SIGN_IN_ACCOUNTS` |
 
-Other risky actions use a typed confirmation instead (`reboot`, `upgrade`, `delete`, or the
-service name for a stop); starting a restore test needs both the fresh sign-in and the word
-`restore`. See [ACTIONS](../features/ACTIONS.md).
+The capability is checked first, so someone without it hears about the capability, not the
+sign-in. Both the Worker and the agent check it. The Worker refuses before it signs anything;
+it also signs the sign-in time into the actor (`s`), and the agent checks that again with its
+own clock. The agent refuses a request whose signed actor carries no sign-in time, so a Worker
+older than this rule cannot pass a sign-in check on an agent that has it (see
+[DEPLOY](../operations/DEPLOY.md#order-for-a-change-that-spans-parts)).
+
+These actions also ask for a typed confirmation (`reboot`, `upgrade`, `delete`, `restore`, or
+the service name for a stop). Restarting or starting a service, refreshing package lists, and
+creating, uploading or renaming files need neither. See [ACTIONS](../features/ACTIONS.md).
+
+## The agent's own red lines
+
+The agent does not take the signed capability list alone for the two most dangerous powers.
+It refuses the root terminal (`terminal.admin`) and a reboot (`host.reboot`) unless the signed
+role (`r`) is owner or vendor support (`RED_LINE_CAPS`, `isFloorRole`), with 403,
+`need: owner_role` and "Only the Owner or Vendor support can reboot the server." (or "open the
+admin terminal"). The Worker already refuses both to every other role, because both are floors;
+this check holds even if the Worker signed a wider list by mistake.
+
+## Hourly limits
+
+Each person may open the admin terminal **6** times and ask for a reboot **3** times in any
+rolling hour (`HOURLY_LIMITS`). The agent counts a use once it has passed every other check,
+and refuses the next one with 429, `error: too_many`, `need: hourly_limit` and when to try
+again ("A reboot can be asked for 3 times an hour per person, and you have reached that. Try
+again after 14:05 UTC."). The count is kept in the agent's state folder
+(`/var/lib/vps/metrics/limits.json`), so neither an agent restart nor the reboot itself resets
+it. If the file cannot be written, the agent logs why and keeps counting in memory. The
+ordinary terminal (`vps-ops`) has no hourly limit.
 
 ## Where it is enforced
 
 | Layer | Check |
 |---|---|
 | Console | Hides pages and disables buttons the person cannot use (`/api/me` lists their capabilities) |
-| Worker | `proxyToAgent` refuses with 403 and the capability needed before anything is signed |
-| Agent | Re-checks the route's capability from the signed list; the Worker's headers alone are never trusted |
+| Worker | `proxyToAgent` refuses with 403 and the capability needed, or `fresh_sign_in`, before anything is signed |
+| Agent | Re-checks the route's capability from the signed list; the Worker's headers alone are never trusted. Then its own checks: the red lines from the signed role, the fresh sign-in from the signed sign-in time, and the hourly limits |
 | Root script | Each action script validates its own target again |
 
 The local preview signs with a dev key that the agent limits to `read`-class capabilities

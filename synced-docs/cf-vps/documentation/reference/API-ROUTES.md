@@ -2,7 +2,7 @@
 title: "Agent Route Table"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, contract/metrics-history.ts, contract/jobs.ts, contract/restore.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
@@ -98,7 +98,7 @@ public half (`RestoreInfo`; the key is `null` until it is made), or 404 when the
 installed. `restore/stage` writes one chunk of one staged file: `{ stage, file, offset, b64,
 final }`, where `stage` is 16 hex characters, `file` a plain name, `offset` the bytes already
 received and `final` true on the last chunk. It also needs a cf-admin sign-in from the last 10
-minutes (the Worker checks it). A chunk out of order, a bad name, a stage past its size cap or
+minutes (the Worker and the agent check it). A chunk out of order, a bad name, a stage past its size cap or
 one that would leave too little disk free is refused. See
 [RESTORE-TESTS](../features/RESTORE-TESTS.md).
 
@@ -124,6 +124,8 @@ is recording and what it has stored. See [Metrics history](../features/CONSOLE.m
 | `files/delete` | POST | `files.write` | 15 s |
 
 Logs from the login and sudo sources also need `security.view` (the agent checks it).
+`files/delete` also needs a cf-admin sign-in from the last 10 minutes (`FRESH_SIGN_IN_ROUTES`;
+the Worker and the agent check it), and deleting a folder with its contents needs its name typed.
 
 ## Audit, security and log storage
 
@@ -148,9 +150,9 @@ The route needs only `host.view`; the request body then decides the real capabil
 
 | Route | Type | Route capability | Also needs |
 |---|---|---|---|
-| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start` |
+| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
 | `actions/job` | GET | `host.view` | Nothing more; only `vps-act-*` units can be read |
-| `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in |
+| `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in, and (checked by the agent) the owner or vendor support role and the hourly limit |
 | `terminal/stream` | stream | `host.view` | `terminal.ops` or `terminal.admin` (checked by the agent); own session only |
 | `terminal/input` | POST | `host.view` | `terminal.ops` or `terminal.admin`; own session only |
 | `terminal/resize` | POST | `host.view` | Same |
@@ -158,7 +160,7 @@ The route needs only `host.view`; the request body then decides the real capabil
 | `terminal/list` | GET | `host.view` | `terminal.ops` or `terminal.admin`; lists only the person's sessions |
 
 See [ACTIONS](../features/ACTIONS.md) for the action ids and [PERMISSIONS](../security/PERMISSIONS.md)
-for the capabilities.
+for the capabilities, the fresh sign-in, the red lines and the hourly limits.
 
 ## Routes served by the Worker itself
 
@@ -181,4 +183,6 @@ Worker errors are `{ ok: false, code, message }` with `code` one of `bad_actor` 
 `conflict` (409), `actor_version_mismatch` (409), `internal` (500), `upstream_error` (502),
 `not_configured` (503) and `upstream_timeout` (504). The Worker never answers 401: only
 cf-admin decides a person is signed out. The agent answers 401 for an unsigned, stale,
-replayed or badly signed request.
+replayed or badly signed request. Its own refusals are `{ ok: false, error, need }`, with a
+plain-words `message` for its own checks: 403 `forbidden` with `need` the capability,
+`fresh_sign_in` or `owner_role`, and 429 `too_many` with `need: hourly_limit`.
