@@ -2,7 +2,7 @@
 title: "Access control room — the person Access page and the Page Registry"
 status: active
 audience: [owner, ai, technical, operator]
-last_verified: 2026-10-14
+last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
 related_code: [migrations/0070_page_override_end_dates.sql, src/lib/auth/plac.ts, src/lib/auth/stages/access-map.ts, src/lib/access-center/overview.ts, src/lib/access-center/registry-access.ts, src/lib/access-center/history.ts, src/lib/access-center/draft.ts, src/lib/access-center/rules.ts, src/pages/api/system/access-overview.ts, src/pages/api/system/page-access.ts, src/pages/api/system/access-history.ts, src/pages/api/users/access-history.ts, src/pages/api/system/pages.ts, src/pages/api/users/force-kick.ts, src/pages/api/sessions/active-sessions.ts, src/components/admin/debug/registry/, src/components/admin/users/access-editor/, src/styles/pages/page-registry.css, test/registry-access.test.ts, test/access-history.test.ts, test/session-rank.test.ts, test/access-center-end-dates.test.ts, test/registry-ui-logic.test.ts]
@@ -116,7 +116,7 @@ The routes check all of this again; the screens only hide what the routes would 
 | Item | Why not here |
 |---|---|
 | **Should Page Registry be Vendor support only?** Today the Owner opens it too, because the Owner and Vendor support pass every page check (ADR-0002) | The owner's decision. Making it Vendor support only means one exact-role check in `canUsePageRegistry` |
-| **Should `/dashboard/users#force-kick` be enforced?** Its default is Owner, but nothing checks it | The owner's decision: enforcing it takes force sign-out away from Admins, who can use it today on people below them |
+| ~~**Should `/dashboard/users#force-kick` be enforced?** Its default is Owner, but nothing checks it~~ | **Decided 2026-10-15: enforced.** The owner chose to enforce it. `denyForceKick` checks it in the route and the Users page, so below the owner and vendor support only a grant opens it ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §5) |
 | Revoking one session signs the person out on every device (D8 in PERMISSIONS-SYSTEM) | A change to the Cloudflare Access call, outside these screens |
 | The Audit Log is not tamper-evident (C-9) | Designed, not built; ROADMAP chunk 19 |
 | Viewer cannot be stored as a role (C-11) | The role-name migration, its own piece of work |
@@ -129,5 +129,5 @@ The routes check all of this again; the screens only hide what the routes would 
 | `test/access-center-end-dates.test.ts` | The Access page stores, shows and logs an end date, reads an ended setting as ended, and refuses an end in the past, more than a year ahead or on a reset before writing anything |
 | `test/registry-access.test.ts` | The overview's rules (who opens what, flags, checks, the impact of a default change), its visibility rules for an Admin holding the key, and the bulk route: one batch with end dates, nothing written when one change is refused, the person gates, switched-off pages, removed accounts, no-ops and bad input |
 | `test/access-history.test.ts` | Which activity rows count as access changes, the cursor across rows of the same second, the Page Registry key, and the hidden answer for top-tier people |
-| `test/session-rank.test.ts` | Force sign-out and block account refuse peers and seniors, nobody blocks themselves, ending your own session still works, and the 502 on a failed account update |
+| `test/session-rank.test.ts` | Force sign-out and block account refuse peers and seniors, nobody blocks themselves, ending your own session still works, and the 502 on a failed account update; since 2026-10-15, force sign-out without a grant of `#force-kick` is refused and the Users page's button follows the same check |
 | `test/registry-ui-logic.test.ts` | Which page fields a form sends, which personal-setting changes a set of choices makes, the open counts, and the "set by" line |

@@ -124,7 +124,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 |------|---------------|--------------|:---:|
 | `src/pages/api/users/manage.ts` | `isVendorSupport` | Role mutation, privileged-account edit protection | ✅ `/dashboard/users` |
 | `src/pages/api/users/access-center.ts` (`src/lib/access-center/handlers.ts`) | `isVendorSupport`, `isOwnerOrVendor` (in `page-gates.ts`) | PLAC provisioning, one save for pages and consoles (`/api/users/access` was retired 2026-10-03) | ✅ `/dashboard/users` |
-| `src/pages/api/users/force-kick.ts` | `isOwnerOrVendor`, `canManageUser` | Session termination: below the owner and vendor support, only a strict outrank (*changed 2026-10-14*; until then target protection only) | ✅ `/dashboard/users` |
+| `src/pages/api/users/force-kick.ts` | `denyForceKick`, `isOwnerOrVendor`, `canManageUser` | Session termination: below the owner and vendor support, only with a grant of `#force-kick` (*changed 2026-10-15*) and a strict outrank (*changed 2026-10-14*; until then target protection only) | ✅ `/dashboard/users`, **plus an explicit grant of `#force-kick`** |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/probes.ts` | `requireAuth(context, 'owner')` | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
@@ -147,12 +147,16 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 > Owner/Vendor only rather than admin+. The Sessions console is documented in
 > [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md), which owns these rows.
 
-> **Spec gap D6 — `#force-kick` is enforced nowhere.** *Changed 2026-10-14: the rank half of
-> this gap is closed. The route now refuses a caller who does not strictly outrank the target
-> (`canManageUser`), so an Admin can sign out a Manager or Staff account and never another
-> Admin; `test/session-rank.test.ts`. The key itself is still checked nowhere, and enforcing it
-> would take force sign-out away from Admins: that waits on the owner. The text below is the
-> state before the change.* The `admin_pages` row
+> **Spec gap D6 — `#force-kick` was enforced nowhere. Closed 2026-10-15.** *Changed 2026-10-14:
+> the rank half of this gap is closed. The route now refuses a caller who does not strictly
+> outrank the target (`canManageUser`), so an Admin can sign out a Manager or Staff account and
+> never another Admin; `test/session-rank.test.ts`. Changed 2026-10-15, the owner's decision:
+> the key is enforced too. The route and the Users page ask `denyForceKick`
+> (`src/lib/auth/surface-guards.ts`), which checks the page and then requires a grant of
+> `/dashboard/users#force-kick` (default Owner). Below the owner and vendor support nobody signs
+> anyone out without that grant, and the Users page switches "Terminate All" off with its
+> reason. Suspending an account still ends its sessions and follows the page and the rank rule,
+> not this key. The text below is the state before both changes.* The `admin_pages` row
 > `/dashboard/users#force-kick` exists live with an Owner baseline, and the access
 > UI offers it, but a grep of `src/` finds no reference to the string. What the
 > route actually enforces is `/dashboard/users` plus a *target* check: a canonical

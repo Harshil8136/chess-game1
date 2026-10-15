@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-14
+last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -75,7 +75,7 @@ is meant to stop.
 | T2 | A valid staff member reads a page above their rank | RBAC baseline computed from the page registry |
 | T3 | A valid staff member with a page grant escalates to *other* pages | Grants are per-path and capped at the granting actor's own clearance |
 | T4 | An administrator elevates themselves | Self-modification is refused outright; grants are capped at the actor's ceiling |
-| T5 | A lower tier edits a higher tier's account | Rank supremacy — strictly higher privilege required, on the paths that route through `canManageUser`. **Partial**: see §16 D6/D7. |
+| T5 | A lower tier edits a higher tier's account | Rank supremacy — strictly higher privilege required, on the paths that route through `canManageUser`. *The two account actions that did not (§16 D6/D7) were fixed 2026-10-14.* |
 | T6 | A revoked user keeps working from a live session | Three-layer revocation, including a Cloudflare API call that kills the edge cookie |
 | T7 | A read-only user mutates through the API | Viewer tier refused on every non-idempotent method, before page resolution |
 | T8 | An API route ships without a guard | Default-deny in the pipeline plus a CI inventory test |
@@ -159,9 +159,9 @@ rather than silently writing a different role. Tracked as C-11 in
 
 `canManageUser(actor, target)` requires *strictly* higher privilege, so nobody can
 act on a peer through it. An untranslatable stored role returns `false` — there is
-no safe level at which to compare it. Two account actions do **not** route through
-it and check only that the target is not an owner or vendor account; see §16
-D6/D7.
+no safe level at which to compare it. Two account actions did **not** route through
+it until 2026-10-14 and checked only that the target was not an owner or vendor
+account; see §16 D6/D7.
 
 ### 4.2 Deprecated aliases are load-bearing
 
@@ -320,6 +320,15 @@ at once (`PATCH /api/system/pages`); until then only when the editor ticked "app
 up to an hour a signed-in person kept the old answer. And Viewer is refused as a default
 (`pageRegistryPatchSchema`, `canStoreRole`), because the stored vocabulary has no name for it
 yet (§4.1, C-11); until then the save failed with a generic database error.
+*Changed 2026-10-15 (the owner's decision):* signing someone out, `/dashboard/users#force-kick`
+("Sign someone out", default `owner`), is enforced. The row had existed from the start with
+nothing checking it, so any holder of the Users page could do it (D6). `denyForceKick`
+(`surface-guards.ts`) checks the Users page and then the key through `placRequireGrant`, in
+`DELETE /api/users/force-kick` and in the Users page, which switches "Terminate All" off with
+its reason when the check fails. Below the owner and vendor support a person now needs a grant,
+and the rank rule still applies on top of it. Suspending an account (`PATCH /api/users/manage`)
+also ends its sessions and is not covered by this key: it follows the Users page and the rank
+rule, as before.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -950,7 +959,7 @@ re-checked against the 2022 edition, which restructured Annex A.*
 |---|---|---|
 | C-11 | Role vocabulary migration outstanding; `viewer` cannot be persisted (§4.1). | The read-only tier is enforced in code but unassignable. |
 | C-9 | Audit log is neither complete nor tamper-evident (§12). | Page reads are never recorded, and owner/vendor can bulk-delete rows. Append-only is designed, not shipped. |
-| ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. Still open: the owner-only `/dashboard/users#force-kick` registry row is checked nowhere; enforcing it would take force sign-out away from Admins, so it waits on the owner's decision. | Rank supremacy now holds on this path. |
+| ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. **Key enforced 2026-10-15** (the owner's decision): the owner-only `/dashboard/users#force-kick` row is now checked exactly (`denyForceKick`, §5), so below the owner only a grant opens it. | Rank supremacy holds on this path, and Admins sign people out only with a grant. |
 | ~~D7~~ | ~~The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase.~~ **Fixed 2026-10-14:** the same rank rule for ending sessions and for blocking; blocking your own account is refused (400); a failed account update answers 502 instead of reporting success. | — |
 | D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Revoking one session signs the user out on every device. |
 | — | 4 overrides in production, 1 of them a deny (§6.3), **none on any cron key** (re-measured 2026-09-20); **none with an end date** (re-measured 2026-10-14, after `0070`). | PLAC is near-unexercised capability. |
@@ -988,7 +997,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/access-center-end-dates.test.ts`, `test/plac.test.ts` | End dates (added 2026-10-14): an ended override counts as none, `refreshAt` is the earliest end ahead and the stage recomputes when it passes, and a save refuses an end in the past, more than a year ahead or on a reset |
 | `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): the visibility rules for a non-vendor holder of the key, the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
 | `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
-| `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502 |
+| `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 
@@ -998,6 +1007,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-15 | claude | **Scope-limited to `#force-kick`.** Read the live `/dashboard/users#force-kick` row through the D1 connector (`required_role` `owner`, active), `surface-guards.ts`, `api/users/force-kick.ts`, `pages/dashboard/users/index.astro` and `ExpandedRow.tsx`; `test/session-rank.test.ts` fails without the new check and passes with it | §4.1's D6/D7 sentence, §5's paragraph, D6 in §16, the §17 row. Not re-derived: every other section |
 | 2026-10-14 | claude | **Scope-limited to the access control room.** Read `plac.ts` (`computeAccessMap`), `stages/access-map.ts`, `registry-access.ts`, `history.ts`, `api/system/pages.ts`, `api/users/force-kick.ts`, `api/sessions/active-sessions.ts` and `schemas/admin.ts`; applied `migrations/0070` and read back the column and its ledger row, 117 registry rows (100 active) and 4 overrides (none with an end date) through the D1 connector; `npx vitest run`: 2,374 pass | §5's new paragraph, §6's end dates, §6.1's query, §10.2, D6 and D7 closed in §16, four rows in §17. Not re-derived: every other section, §13's figures included |
 | 2026-10-10 | claude | **Scope-limited to the Sessions page's keys.** Read `src/pages/dashboard/sessions/index.astro` before and after the rebuild, `surface-guards.ts` (`denySessions`, `canReadSignInHistory`), `src/pages/api/sessions/active-sessions.ts` and `src/pages/api/audit/login-logs.ts`; `test/sessions-console.test.ts` pins `canReadSignInHistory` and the refusals the page shows | §5's Sessions paragraph. Not re-derived: every other section; the live registry rows for the sessions fragments (last read 2026-09-20) |
 | 2026-10-10 | claude | **Scope-limited to the Developer Tools and Page Registry keys.** Read the four pages under `src/pages/dashboard/debug/`, the diagnostics and `api/system/` routes, `surface-guards.ts`, `registry-impact.ts` and `access-center/registry.ts`; read the live `/dashboard/debug` and `/dashboard/debug/pages` rows (both `dev`, active) and their grants through the D1 connector; `test/debug-access.test.ts` pins the keys, the rank rule and that no debug page checks the role alone | §5's new paragraph. Not re-derived: every other section |

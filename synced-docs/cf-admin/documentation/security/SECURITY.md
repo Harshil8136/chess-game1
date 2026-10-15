@@ -3,7 +3,7 @@
 title: "Security Architecture — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-14
+last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
 related_docs: [THREAT-MODEL.md, RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/plac-and-audit.md, ../operations/OPERATIONS.md]
@@ -60,6 +60,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | §6a's `force-kick` row, against `src/pages/api/users/force-kick.ts`, `src/lib/auth/surface-guards.ts` (`denyForceKick`), the live `/dashboard/users#force-kick` registry row (D1 connector: `owner`, active) and `test/session-rank.test.ts` | Every other section |
 | 2026-10-14 | §5.1's page-registry trigger, §6a's rows for `force-kick`, `active-sessions`, the Access Center and the Page Registry routes (the new `access-overview`, `page-access`, `system/access-history` and `users/access-history`; `preview` removed), and §6b's `registry` and `plac` limiter rows, against those files, `src/lib/access-center/registry-access.ts`, `history.ts`, `src/lib/auth/routes.ts` (`/api/system`, `/api/users`) and `test/registry-access.test.ts`, `test/access-history.test.ts`, `test/session-rank.test.ts`, `test/api-authz-inventory.test.ts` | Every other section, the §0 route counts included (three routes added, one removed, under prefixes already mapped) |
 | 2026-10-14 | §6a's `/api/emails/api-attachments` row (it replaced `api-mailroom`), against `src/pages/api/emails/api-attachments.ts`, `src/lib/email-api-route.ts`, `src/lib/auth/routes.ts`, `test/email-api-routes.test.ts` and `test/api-authz-mapping.test.ts` | Every other section, the §0 route counts included (the count is unchanged: one route renamed) |
 | 2026-10-11 | §6a's new `POST /api/vps/notice` row, against `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`, `src/lib/auth/routes.ts` (`/api/vps` → `/dashboard/vps`), the gateway's notice check and `test/vps-notice.test.ts`, `test/vps-gateway.test.ts`, `test/api-authz-inventory.test.ts` | Every other section, the §0 route counts included |
@@ -664,7 +665,7 @@ second is the per-handler opt-in, `placDenyResponse(actor, pagePath)` from
 | `GET /api/audit/login-logs` | `/dashboard/logs` (parent) | 2026-05-26 | `placDenyResponse` used as first gate so parent-deny propagates to the `#security` hash sub-page via longest-prefix matching. Then `canReadSignInHistory` (`src/lib/auth/surface-guards.ts`, 2026-10-10), the same check the Sessions page makes before it shows its History tab. |
 | `POST /api/audit/export` | `/dashboard/logs` (parent) | 2026-05-26 | Same parent-deny propagation as above for the `#export` hash sub-page. |
 | `POST/PATCH/DELETE /api/users/manage` | `/dashboard/users` | PR #2 | |
-| `DELETE /api/users/force-kick` | `/dashboard/users` | PR #2 | Below the owner and vendor support the caller must strictly outrank the target (`canManageUser`, 2026-10-14); until then any holder of the page could sign out a peer or a senior below the owner (PERMISSIONS-SYSTEM D6). The owner-only `#force-kick` key is still checked nowhere. |
+| `DELETE /api/users/force-kick` | `/dashboard/users`, then `/dashboard/users#force-kick` | PR #2 | Since 2026-10-15 the page and then the owner-only `#force-kick` key, granted exactly (`denyForceKick`, `src/lib/auth/surface-guards.ts`): below the owner and vendor support only a grant opens it. On top of that the caller must strictly outrank the target (`canManageUser`, 2026-10-14); until then any holder of the page could sign out a peer or a senior below the owner (PERMISSIONS-SYSTEM D6). |
 | `GET /api/users/access-data` | `/dashboard/users` | PR #2 | Also adds ghost protection — non-DEV actors cannot enumerate a DEV/Owner PLAC matrix via this endpoint. |
 | `GET /api/users` | `/dashboard/users` | 2026-05-26 | |
 | `GET /api/users/pages` | `/dashboard/users` | 2026-05-26 | |
