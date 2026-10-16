@@ -65,6 +65,7 @@ row with no evidence column is a claim, not a posture — do not add one.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §9's `CONSOLE_SIGNING_KEY` bullet against `src/lib/console-signature.ts`, `src/env.d.ts` and the three consoles' checks (`cf-backup/src/gateway/signature.ts`, `cf-vps/src/gateway/signature.ts`, `cf-email-consumer/api/src/signature.ts`) | Everything else; the secret on the Workers (the owner sets it) |
 | 2026-10-16 | §6a's new `GET/POST /api/users/approvals` row, the `/api/users/manage` row's second-person sentence and §6b's `approvals` limit, against `src/pages/api/users/approvals.ts`, `src/lib/approvals/handlers.ts` (`decisionSchema`, the 4096-character body cap, `mayDecide`, `claim`), `src/pages/api/users/manage.ts`, `src/lib/approvals/ask.ts` and `src/lib/auth/routes.ts` (`/api/users` → `/dashboard/users`); `test/two-person-rule.test.ts` passes | Everything else; the §0 route count (one route added under a prefix already mapped) |
 | 2026-10-16 | §6a's new `GET/POST/DELETE /api/users/access-templates` row and §6b's `access-templates` limit, against `src/pages/api/users/access-templates.ts`, `src/lib/access-center/templates.ts` (`manager`, `templateSaveSchema`, `TEMPLATE_ENTRY`), `src/lib/auth/routes.ts` (`/api/users` → `/dashboard/users`); `test/access-templates.test.ts` passes | Everything else; the §0 route count (one route added under a prefix already mapped) |
 | 2026-10-16 | §0's new "Audit log integrity" row and §6a's audit rows (`GET /api/audit/seals` added, `DELETE` gone from `/api/audit/logs`, the `/api/audit/prune` row removed with its file, a `delete-targeted` row added), against `src/pages/api/audit/seals.ts`, `logs.ts`, `delete-targeted.ts` (`targetTabOf`, the fresh sign-in on `DELETE`), `src/pages/api/retention/purge.ts` (the 180-day floor), a search of `src/` for any other delete from `admin_audit_log` (none), and `test/audit-seal.test.ts` | Everything else; the first live seal run; the R2 bucket lock (not added) |
@@ -905,6 +906,14 @@ carrying here because they are security-relevant rather than operational:
   (`src/lib/email/queue-mail.ts`), and the email service sends it through Brevo,
   then Resend if Brevo fails. Only a sign-in alert the queue refuses still goes
   to Brevo directly (`src/lib/auth/security-logging.ts`).
+- **`CONSOLE_SIGNING_KEY` (optional) is shared with three other Workers.** It
+  signs the "who you are" headers to cf-backup, cf-vps and cf-email-api
+  ([`../features/CONSOLE-SIGNATURE.md`](../features/CONSOLE-SIGNATURE.md)). A
+  console holding it refuses every unsigned request, so a rotation sets the new
+  value on cf-admin and the three consoles together; between the two the
+  consoles answer `400 bad_signature`. Any of the four Workers could forge the
+  portal's identity to the others with it: it keeps out Workers that do not hold
+  it, not one that does.
 
 ---
 

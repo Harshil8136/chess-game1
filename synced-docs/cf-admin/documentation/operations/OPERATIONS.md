@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-16 | `src/env.d.ts`, `src/lib/console-signature.ts` (the only reader of `CONSOLE_SIGNING_KEY`), `wrangler.toml` (`[secrets] required` unchanged) | §5.3 lists `CONSOLE_SIGNING_KEY`, optional. Not checked: the secret on the four Workers (the owner sets it) |
 | 2026-10-16 | `src/lib/jobs/registry.ts` (16 jobs: 14 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/` only), `wrangler.toml` (`[triggers]` and `STAFF_STORAGE` unchanged); the bucket read through the Cloudflare connector (exists, Standard class) | §1 Scheduled triggers: **16 jobs (14+2)**, the three jobs missing since 2026-10-10 added to the table and to the sleeping list; the `STAFF_STORAGE` row names the `audit-log/` copies. No binding, secret or variable added |
 | 2026-10-10 | `grep -rn "api.brevo.com\|api.resend.com\|BREVO_API_KEY\|RESEND_API_KEY" src/` after moving the storage, share, purge, Search Console and re-invite emails onto `src/lib/email/queue-mail.ts` | §1's `EMAIL_QUEUE` paragraph and §5's `RESEND_API_KEY` row: no email is sent through Resend directly any more; the key's one reader is the diagnostics ping. Not checked: anything else in §1 and §5 |
 | 2026-10-10 | `wrangler.toml` (`[placement]`, `assets` without `run_worker_first`), `public/_headers`, `npm run types:check` (up to date), `npx wrangler deploy --dry-run` (accepted), Cloudflare placement documentation (fetch handler only, all plans), Sentry resource spans for `/_astro/*` | §1 "Where requests run, and static files" added. Not checked: the live `cf-placement` header and timings, which wait for the deploy |
@@ -586,7 +587,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 
 ### 5.3 Optional secrets (not set in production; every reader degrades)
 
-`SENTRY_PROJECT_SLUG_ASTRO`, `SUPABASE_ACCESS_TOKEN`, `POSTHOG_PROJECT_ID`, `POSTHOG_ORG_ID`, `CONTROL_PLANE_CF_TOKEN`, `SECURITY_ALERT_EMAIL`, `ADMIN_API_KEY`, `GITHUB_READ_TOKEN` (the GitHub page, [`features/GITHUB.md`](../features/GITHUB.md); without it the page says "not connected") — typed as optional in `src/env.d.ts`. Dev-only: `LOCAL_DEV_ADMIN_EMAIL` (Cloudflare Access bypass on localhost, `.dev.vars` only).
+`SENTRY_PROJECT_SLUG_ASTRO`, `SUPABASE_ACCESS_TOKEN`, `POSTHOG_PROJECT_ID`, `POSTHOG_ORG_ID`, `CONTROL_PLANE_CF_TOKEN`, `SECURITY_ALERT_EMAIL`, `ADMIN_API_KEY`, `GITHUB_READ_TOKEN` (the GitHub page, [`features/GITHUB.md`](../features/GITHUB.md); without it the page says "not connected"), `CONSOLE_SIGNING_KEY` (the signature on the "who you are" headers to the three consoles, approved by the owner 2026-10-15 as permissions item #33; the same value goes on `cf-backup`, `cf-vps` and `cf-email-api`, and without it nothing is signed: [`features/CONSOLE-SIGNATURE.md`](../features/CONSOLE-SIGNATURE.md)) — typed as optional in `src/env.d.ts`. Dev-only: `LOCAL_DEV_ADMIN_EMAIL` (Cloudflare Access bypass on localhost, `.dev.vars` only).
 
 Removed and gone: `PUBLIC_SUPABASE_ANON_KEY`, `TURNSTILE_SECRET_KEY` (GoTrue and the login form were retired).
 

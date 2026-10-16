@@ -248,6 +248,11 @@ exceptions to this rule (bootstrap-time external credentials with no
 dynamic-config alternative, see
 [`documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](./documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
 
+*2026-10-16:* the owner approved one more secret on 2026-10-15 (permissions item #33):
+`CONSOLE_SIGNING_KEY`, optional and not in `[secrets] required`, shared with cf-backup, cf-vps
+and cf-email-api ([`documentation/features/CONSOLE-SIGNATURE.md`](./documentation/features/CONSOLE-SIGNATURE.md)).
+Once set it is the 26th secret; re-count with `wrangler secret list`.
+
 This is a hard cap, not a soft target. Do NOT introduce new environment variables
 (`env.VAR_NAME`, `.dev.vars`, or `wrangler.toml` `[vars]`/bindings) for feature toggles,
 limits, or operational settings. All application toggles, operational thresholds, and

@@ -716,7 +716,10 @@ console re-checks every change. Since 2026-10-16 (#35) the header also carries
 the person's account id (`admin_authorized_users.id`, the actor header's
 `userId`), and the console binds the grant it saves to it: if the account is
 removed and the email is later given a new account, the new account starts from
-its role, not from the earlier person's grant. The page registry lists the consoles'
+its role, not from the earlier person's grant. Since 2026-10-16 (#33) the portal can sign the
+actor and target headers, and a console holding the same `CONSOLE_SIGNING_KEY` refuses any
+request it did not sign ([CONSOLE-SIGNATURE](../features/CONSOLE-SIGNATURE.md)); until the owner
+sets the key, the consoles trust the headers as before. The page registry lists the consoles'
 capabilities under their pages, and vendor support can move a capability's
 default role there. The screen and its data:
 [ACCESS-CENTER](../features/ACCESS-CENTER.md); the design:
@@ -1261,6 +1264,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.1's signature sentence (#33).** Read `src/lib/console-signature.ts` and the three binding accessors that wrap with it; `cf-backup/src/gateway/signature.ts`, `cf-vps/src/gateway/signature.ts` and their routers, `cf-email-consumer/api/src/signature.ts` and `handleConsole`; `test/console-signature.test.ts` and each console's signature test pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.7, new, the two §10.5 rows, D14 in §16 and the §17 row (#36).** Read `src/lib/approvals/` (`rules.ts`, `store.ts`, `ask.ts`, `handlers.ts`, `retention.ts`, `mail.ts`), `src/lib/users/manage-apply.ts`, `src/pages/api/users/manage.ts` (POST, PATCH, DELETE), `src/pages/api/users/approvals.ts` and the gateway `src/pages/dashboard/vps/app/[...path].ts`; in cf-vps the Log storage screen's answer to `second_person`; `test/two-person-rule.test.ts` (22 tests), `test/fresh-sign-in.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | §10.7 and the rows match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's target-header sentence and §11's console paragraph (#35).** Read `consoleTarget` (`src/lib/access-center/profile.ts`) and its callers in `handlers.ts`, `role-preview.ts` and `profile.ts`; the bootstrap stage (`src/lib/auth/stages/bootstrap.ts`, session `userId` = the `admin_authorized_users` row id); in cf-backup `grantFor`, `readsFresh` and the router, in cf-vps `grantFor` and `FRESH_POLICY_ROUTES`; `admin_authorized_users.id` is `uuid` (Supabase connector); `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | Both match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's templates sentence (#32).** Read `src/lib/access-center/templates.ts` (`manager`, `parseTemplates`, `postTemplate`, `deleteTemplate`), `draft.ts` (`templateItems`, `applyTemplate`, `allowedOverride`), `TemplatesDialog.tsx` and `src/lib/auth/routes.ts` (`/api/users` → `/dashboard/users`); `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass | §10.1 matches the code. The rest of the document not re-read |

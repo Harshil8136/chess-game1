@@ -83,7 +83,7 @@ Every request under `/dashboard/vps/app/` passes the normal auth pipeline
 | Path | Only a plain path under `/dashboard/vps/app/`: a doubled slash, a backslash, or an encoded slash, backslash or dot is a 404 and never reaches cf-vps |
 | Query string | Forwarded exactly as received (cf-vps signs the query it passes on, so it must not change); the path rules above apply to the path only |
 | Headers | Only `Accept`, `Accept-Language`, `Content-Type`, `Range` and `If-None-Match` are forwarded (plus the handshake headers of a terminal, §5). The session cookie, `Authorization`, the Access assertion and any `X-Vps-*` the browser sent never reach cf-vps |
-| Identity | The gateway adds `x-vps-actor` (§3) and `x-vps-request-id`, built from the session |
+| Identity | The gateway adds `x-vps-actor` (§3) and `x-vps-request-id`, built from the session. Once `CONSOLE_SIGNING_KEY` is set (permissions item #33), it also adds `x-vps-signature` over those and `x-vps-target`, and cf-vps with the same key answers nothing without it, the terminal's WebSocket included ([CONSOLE-SIGNATURE](CONSOLE-SIGNATURE.md)) |
 | Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site; so must every terminal (§5) |
 | Read-only | A read-only role is refused every change and every terminal |
 | Second person | *Since 2026-10-16 (permissions item #36).* A `retention.set` (how long the server keeps a log) from someone cf-vps gives `retention.manage` is held here when another active Owner or Vendor support could approve it: after a recent sign-in (else 403 with `need: 'fresh_sign_in'`), it waits on the Users page and the console gets `202 { ok: false, code: 'second_person', message }`, which Log storage shows as a notice. It reaches cf-vps only once approved, sent as the approver. A body the hold cannot read, or a person without the capability, passes on as before, and cf-vps refuses it itself ([USER-MANAGEMENT](USER-MANAGEMENT.md) §6.3) |
@@ -94,8 +94,9 @@ Every request under `/dashboard/vps/app/` passes the normal auth pipeline
 | Audit | One `admin_audit_log` row per change and per terminal (§6) |
 
 `src/lib/vps-proxy.ts` is the only code that calls the binding. It has no HTTP
-fallback and no shared secret, because cf-vps must never have a public
-address. `Last-Event-ID` is not forwarded: a stream that needs to resume says
+fallback, because cf-vps must never have a public address. Its one shared
+secret is the optional signing key, which proves the actor came from this
+portal rather than from another Worker given a binding to cf-vps. `Last-Event-ID` is not forwarded: a stream that needs to resume says
 where in its query string.
 
 ## 3. The actor header
@@ -345,6 +346,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `vpsBinding` (`src/lib/vps-proxy.ts`), and `cf-vps/src/gateway/signature.ts` (checked before the actor, so before a terminal upgrade); `test/console-signature.test.ts` and `cf-vps/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |
 | 2026-10-16 | claude | §2's Access notice row (#38: changes and terminals held) against the gateway (`isChange && !vpsNoticeAccepted`) and the new case in `test/vps-gateway.test.ts`; `test/vps-chain.test.ts` passes with a session that accepted the notice | Not re-checked: every other section |
 | 2026-10-16 | claude | §2's Second person row and §6's paragraph on approved retention changes (permissions item #36) against the gateway (`src/pages/dashboard/vps/app/[...path].ts`), `src/lib/approvals/retention.ts` (`retentionAsked`, `holdRetention`, `runRetention`) and cf-vps's Log storage screen (`retentionRefusal`); `test/two-person-rule.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | Not re-checked: every other section; not yet seen on a phone |
 | 2026-10-16 | claude | §4's `x-vps-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-vps/src/gateway/target.ts` and `cf-vps/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |

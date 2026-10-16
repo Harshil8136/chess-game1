@@ -48,7 +48,10 @@ browser ─► /api/emails/api-*  (cf-admin: who may ask, forward, audit)
   entrypoint of the `cf-email-api` Worker.
 - `Console` has no HTTP route, so the `EMAIL_CONSOLE` binding is the only way in.
   That is why it may trust the `x-email-actor` header this module attaches: the
-  signed-in person, and the grants cf-admin found for them (`caps`).
+  signed-in person, and the grants cf-admin found for them (`caps`). Once
+  `CONSOLE_SIGNING_KEY` is set on both Workers (permissions item #33), the header,
+  `caps` included, counts only with this portal's signature
+  ([CONSOLE-SIGNATURE](CONSOLE-SIGNATURE.md)).
 - **Authorisation happens twice.** The route checks the person's grants
   (`denyEmailApi` in `src/lib/auth/surface-guards.ts`); the Console checks the
   same `caps` again and refuses a call the route should not have made. The finer
@@ -272,3 +275,4 @@ new one is sent, and cf-admin sends both.
 - 2026-10-14: §4g, the `api-attachments` route row and the attachments failure row rewritten for attachments on Cloudflare, checked against `src/pages/api/emails/api-attachments.ts`, `ApiAttachmentsPanel.tsx`, `test/email-api-routes.test.ts` (the gate, the forward to `/admin/attachments`, 503 without the binding) and `test/api-authz-mapping.test.ts`, and against cf-email-consumer's Console (`7a474f1`). The 2026-10-10 row above names the Mailroom files as they were then. Not checked: the panel in a browser.
 - 2026-10-16: §3's recent sign-in bullet checked against `src/pages/api/emails/api-tokens.ts` (POST, PATCH rotate), `api-clients.ts` (webhook secret), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and `test/fresh-sign-in.test.ts`, and against cf-email-consumer's Console (`api/src/console.ts`, `requireFreshSignIn`, its tests pass). Not checked: the dialog in a browser; the rest of the page.
 - 2026-10-16: the `api-messages` row's recorded read checked against `src/pages/api/emails/api-messages.ts`, `src/lib/audit-views.ts` and `test/sensitive-views.test.ts` (a masked read writes nothing). The rest not re-checked.
+- 2026-10-16: §2's binding-trust bullet (the signature, permissions item #33) checked against `src/lib/console-signature.ts`, `emailConsoleBinding` in `src/lib/email-console.ts` and `test/console-signature.test.ts`, and against `cf-email-consumer/api/src/signature.ts` and `cf-email-consumer/test/api-signature.test.ts` (both pass). Not checked: a signed request in production (the key is not set yet); the rest of the page.

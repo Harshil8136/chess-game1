@@ -31,6 +31,11 @@ tags: [program, cf-backup, secrets, api-keys, setup, runbook]
 > Settings → Databases and Run now) and as a GitHub secret (backs up Supabase projects other
 > than the live one; a full-access token is allowed, with a warning on each run). Neither is a
 > backup key; §7a.
+>
+> **Optional, since 2026-10-16 (the owner's yes of 2026-10-15, cf-admin permissions item #33):**
+> `CONSOLE_SIGNING_KEY`, a cf-backup Worker secret holding the same value as cf-admin's, which
+> lets cf-backup check that a request was signed by cf-admin. Not a backup key, and the one
+> exception to "cf-admin gets none"; §7b.
 
 ## 1. Why four, and not fewer or more
 
@@ -344,6 +349,22 @@ D1 databases need no new key: the engine lists them with key 1 at the start of e
 stores the list in R2 for the console, with the live project's id, which only the engine's own
 sign-in (key 2) can tell. Rotation: a Supabase token carries the expiry chosen when
 it is created; replace both copies before it.
+
+## 7b. Optional — `CONSOLE_SIGNING_KEY` (the portal's signature, 2026-10-16)
+
+The owner approved one shared key for cf-admin permissions item #33: cf-admin signs the actor
+header it sends over the `BACKUP` binding, and cf-backup checks it (doc
+[02](02-admin-integration-contract.md) §4).
+
+| Where | Used for | Without it |
+|---|---|---|
+| cf-backup **Worker secret** (dashboard: Workers & Pages → cf-backup → Settings → Variables and Secrets → Add → Secret) | Checking `X-Backup-Signature` on every console and `/internal/*` request: a missing, wrong or old signature is refused with 400 `bad_signature` | cf-backup trusts the actor header because of the private binding, as before |
+| cf-admin **Worker secret**, the same value | Signing every request to cf-backup (and to cf-vps and the email API's Console door, which hold the same value) | Nothing is signed |
+
+It is not in `secrets.required`, so a deploy never waits for it. Set it on cf-admin first, then
+here, so nothing is refused in between. Rotation: set the new value on all four Workers, one
+after the other; a console whose value differs answers 400 until it matches. It never goes into
+GitHub: the backup engine does not use it.
 
 ## 8. Setup order, as built
 

@@ -127,6 +127,17 @@ Proven by tests on both sides: cf-backup's public-surface test asserts the deplo
 configuration has no route, no `workers.dev` and no previews. cf-admin's gateway test
 asserts a browser-supplied `X-Backup-Actor` never reaches the binding.
 
+**The signature (2026-10-16, cf-admin permissions item #33).** Any Worker in the account can be
+given a binding to cf-backup, so the binding alone does not prove the caller is cf-admin. Once
+the owner sets `CONSOLE_SIGNING_KEY` on both Workers, cf-admin adds
+`X-Backup-Signature: v1.<seconds>.<HMAC-SHA256>` over the method, the path with its query and the
+actor, target and request-id headers. cf-backup (`cf-backup/src/gateway/signature.ts`) refuses a missing,
+wrong or older-than-60-seconds signature with **400 `bad_signature`**, before reading the actor,
+on the console path and on `/internal/*`. Without the key on cf-backup the signature is ignored,
+so cf-admin gets the key first and cf-backup refuses no one when it gets it too. The signed text
+and the owner's steps:
+cf-admin `documentation/features/CONSOLE-SIGNATURE.md`.
+
 > **Decided 2026-09-23 (Phase 1a build review):**
 >
 > 1. **The field is dropped.** cf-backup never needs cf-admin's session; `requestId` covers correlation, and per-person limits (doc 13 §2 — cooldowns, reveal/rotate rate limits) key on the email, not a session id.

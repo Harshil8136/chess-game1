@@ -70,7 +70,7 @@ Every request under `/dashboard/backup/app/` passes the normal auth pipeline
 |---|---|
 | Page access | The `/dashboard/backup` key itself must be allowed for the person (`mayUseBackupConsole`, `src/lib/backup-proxy.ts`): nested paths inherit it, and a key missing from their access map is a deny, never decided by the staff-level `/dashboard` row (2026-10-15; until then it was) |
 | Headers | Only `Accept`, `Accept-Language`, `Content-Type`, `Range` and `If-None-Match` are forwarded. The session cookie, `Authorization`, the Access assertion and any `X-Backup-*` the browser sent never reach cf-backup |
-| Identity | The gateway adds `x-backup-actor` (who, their role, and when they last signed in) and `x-backup-request-id`, built from the session |
+| Identity | The gateway adds `x-backup-actor` (who, their role, and when they last signed in) and `x-backup-request-id`, built from the session. Once `CONSOLE_SIGNING_KEY` is set (permissions item #33), it also adds `x-backup-signature`, and cf-backup with the same key answers nothing without it ([CONSOLE-SIGNATURE](CONSOLE-SIGNATURE.md)) |
 | Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site |
 | Time | cf-backup has 10 s to start answering; after that the answer streams for as long as it takes (downloads are never buffered) |
 | Failure | A missing binding, a timeout or an unreachable cf-backup gets a small "Backup console unavailable" page, or the console's JSON error on its API; the rest of the portal is unaffected |
@@ -78,8 +78,9 @@ Every request under `/dashboard/backup/app/` passes the normal auth pipeline
 | Audit | One `admin_audit_log` row per change (§4) |
 
 `src/lib/backup-proxy.ts` is the only code that calls the binding. It has no
-HTTP fallback and no shared secret, because cf-backup must never have a public
-address.
+HTTP fallback, because cf-backup must never have a public address. Its one
+shared secret is the optional signing key, which proves the actor came from this
+portal rather than from another Worker given a binding to cf-backup.
 
 ## 3. Identity and "fresh sign-in"
 
@@ -257,6 +258,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `backupBinding` (`src/lib/backup-proxy.ts`), and `cf-backup/src/gateway/signature.ts`; `test/console-signature.test.ts` and `cf-backup/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |
 | 2026-10-16 | claude | §3's `x-backup-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-backup/src/gateway/target.ts` and `cf-backup/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |
 | 2026-10-16 | claude | §4's recorded reads against `src/pages/dashboard/backup/app/[...path].ts` (`RECORDED_READS`) and `cf-backup/src/api/files.ts` (`previewFile`) and `cf-backup/src/api/restore-tests.ts` (`getRestoreTestFile`); `test/backup-gateway.test.ts`, `cf-backup/test/files-api.test.ts` and `cf-backup/test/restore-tests.test.ts` pass | Not re-checked: every other section |
 | 2026-10-15 | claude | §2's page-access rule against `src/lib/backup-proxy.ts` (`mayUseBackupConsole`) and `src/pages/dashboard/backup/app/[...path].ts`; `test/backup-gateway.test.ts` refuses staff on a map without the Backups key | Not re-checked: every other section |
