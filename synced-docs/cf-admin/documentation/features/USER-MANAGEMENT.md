@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/lib/auth/stages/decide.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/pages/api/users/approvals.ts, src/lib/approvals/handlers.ts, src/lib/users/manage-apply.ts, src/components/admin/users/SecondPersonPanel.tsx, src/lib/auth/stages/decide.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -298,7 +298,7 @@ If a user needs immediate revocation:
    > So: if a user reports being locked out after any administrative action, open
    > the Active Edge Blocks **tab** before concluding there is no block. Stage 2 of
    > the access-revocation remediation retires this flag; it has not shipped.
-3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, removes the person's server- and backup-console grants from `vps:access` and `backup:access` (`src/lib/dal/VpsAccessRepository.ts`; the backup grant since 2026-10-15, before which an address invited again got its old backup powers back), then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
+3. **Full Delete:** *Since 2026-10-16* it waits for a second person first, and nothing below runs until one approves (§6.3); suspend the person to cut off their access meanwhile. Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, removes the person's server- and backup-console grants from `vps:access` and `backup:access` (`src/lib/dal/VpsAccessRepository.ts`; the backup grant since 2026-10-15, before which an address invited again got its old backup powers back), then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
 4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
 
 ### 5.5 Accounts nobody uses
@@ -343,6 +343,7 @@ The interface is composed of multiple Preact islands:
 | **Users console** | `src/components/admin/users/UsersConsole.tsx` | The page since 2026-10-16 (permissions item #29), on the console kit ([DESIGN-SYSTEM](../reference/DESIGN-SYSTEM.md) §9.9): header with Refresh, **Invite someone**, and for the Owner and Vendor support **Check Cloudflare list** and **Re-send to Cloudflare**; four tiles (Active, Signed in now, Not used lately, Suspended) that pick a filter; the filters below; one card per person (role, suspended, devices signed in, unused days, a Cloudflare list problem, hidden, you; last sign-in and added). A card opens the person's drawer. One read of `GET /api/users` on open, on Refresh, after an invitation and after a change |
 | **Person drawer** | `src/components/admin/users/PersonDrawer.tsx` | One person's account on the shared Dialog's drawer: Account (email, account ID, added, last sign-in, Cloudflare sign-in and list), Role and access (the counts from `GET /api/users/access-data`, **Change role**, **Open their Access page**), Sessions (**See their sessions**, **Sign out everywhere**), Recent sign-ins (§11.4) and Account actions (**Send the invitation again**, **Suspend account** or **Reactivate account**, **Remove account**). Every action asks first; removing asks for the part of the email before the @. A control the viewer may not use shows switched off with the reason |
 | **Role dialog** | `src/components/admin/users/RoleDialog.tsx` | The roles the viewer may give as one row of chips, the preview of what the change does (§9.2), then **Change role** |
+| **Waiting for a second person** | `src/components/admin/users/SecondPersonPanel.tsx` | The changes waiting for a second person (§6.3), with Approve and Decline, or Cancel for your own; hidden when nothing waits |
 | **Users rules** | `src/components/admin/users/people.ts` | Pure: the filters and counts, why a control is switched off (in the routes' words), the roles to offer. `test/users-console.test.ts` |
 | **Page Access Manager** | `src/components/admin/users/access-editor/UserAccessEditor.tsx` | A person's Access page (`/dashboard/users/[id]/access`): their pages, actions and console powers ([ACCESS-CENTER](ACCESS-CENTER.md)) |
 | **Invite User Modal** | | Two-panel "Command Console" Preact island |
@@ -360,6 +361,7 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 | Modal open (`modal:open-invite`) | Users console → Invite Modal | Opens the creation dialog |
 | User invited (`user:invited`) | Invite Modal → Users console | Reads the list again |
 | Cloudflare check (`cf-audit:open`) | Users console → CF Access audit drawer | Opens the cross-reference (§11.6), Owner and Vendor support |
+| A change waits (`second-person:changed`) | Person drawer, role dialog → the second-person panel | Reads the waiting list again (§6.3) |
 
 ### Filters
 
@@ -503,6 +505,50 @@ support only since 2026-10-15. Panel: `src/components/admin/users/AccessReviewPa
 
 Tests: `test/access-review.test.ts`.
 
+### 6.3 Changes that need a second person
+
+*Added 2026-10-16 (permissions item #36).* Four changes wait for a second person instead of
+happening at once. The rule, its reasons and its limits:
+[PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.7 and the
+[design](../specs/2026-10-16-two-person-rule.md).
+
+| The change | Where it is asked |
+|---|---|
+| Making someone Owner or Vendor support | the person's drawer, **Change role** |
+| Removing a person | the person's drawer, **Remove account** |
+| Removing the last active Owner (a role change or a suspension) | the Owner's drawer |
+| Changing how long the server keeps a log | Server → Log storage (the portal's gateway holds it, [VPS-CONSOLE](VPS-CONSOLE.md) §2) |
+
+- **Asking.** The usual checks run first, the recent sign-in included (§9.2). Then the route
+  answers `202` with `{ success: false, pending: true, error }`, and the drawer or dialog shows
+  the message as a notice: why it waits, until when, and that nothing has changed. A removal's
+  message adds that suspending cuts off access now. Asking again for the same change returns the
+  one already waiting. A request that changes something else too (a name with a role) is refused
+  with 400: make the listed change on its own.
+- **Who is told.** Every active Owner and Vendor support but the asker is emailed **Needs a
+  second person**, with a link to `/dashboard/users#second-person`.
+- **The panel.** **Waiting for a second person** sits above Access requests. The Owner and
+  Vendor support see every waiting change and may approve or decline the ones they did not ask
+  for; anyone else with this page sees only their own and may cancel it. Each card says what the
+  change is, why it needs a second person, who asked and when, and until when it waits (3 days).
+- **Deciding.** Approve and Decline ask first, with an optional note of up to 200 characters for
+  the person who asked. Approving needs a sign-in from the last 10 minutes; it checks the change
+  again as the person who asked, makes it as the approver, and reloads the people list. When a
+  check fails nothing changes and the change stops waiting. Either way the asker is emailed the
+  outcome.
+- **Invitations.** Inviting someone straight in as Owner or Vendor support is refused while
+  someone else could approve (§9.1).
+- **Alone.** When nobody else could approve, the change is made at once and its activity row says
+  it had no second person.
+
+| Route | Who | What |
+|---|---|---|
+| `GET /api/users/approvals` | anyone with this page | the waiting changes: all of them for the Owner and Vendor support, your own for anyone else |
+| `POST /api/users/approvals` | the Owner and Vendor support who did not ask; the asker, to cancel | `{ id, decision: 'approve' \| 'decline' \| 'cancel', note? }`; 404 when it no longer waits, 409 when someone decided it first or a check failed |
+
+Every step writes one activity-log row, action `second_person`, beside the change's own row.
+Tests: `test/two-person-rule.test.ts`.
+
 ## 7. Security Boilerplates & Error Flow
 
 All actions within the API routes return specific error states handled by the UI:
@@ -541,6 +587,11 @@ All administrative user management actions are performed via `POST`, `PATCH`, an
 
 Accepts email, display name, role, hidden status, and any initial page overrides. Returns a sanitized success/error message without exposing internal stack traces.
 
+*Since 2026-10-16 (permissions item #36)* an invitation as Owner or Vendor support is refused
+with 403 while another active Owner or Vendor support could approve: invite with another role,
+then change it, which waits for a second person (§6.3). When nobody else could, as when Vendor
+support makes a new portal's first Owner, it goes ahead and its activity row says so.
+
 ### 9.2 PATCH /api/users/manage (Modify User)
 
 Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation. *Since 2026-10-15* the Users page shows the route's refusal in words when a role change, suspension or deletion fails; until then it went only to the browser console and the role menu snapped back. *Since 2026-10-16 (permissions item #29)* every change starts from the person's drawer and asks first, suspending included (until then Suspend acted on one tap), and a refusal shows in the drawer as well as in a toast.
@@ -548,6 +599,10 @@ Accepts updates for active status, display name, and role. Mutates the Supabase 
 *Since 2026-10-16 (permissions items #8 and #27)* a role change asks `GET /api/users/role-preview?userId=&role=` what it does before anything is saved. **Change role** in the person's drawer opens `RoleDialog.tsx`: the roles the viewer may give sit in a row of chips (the current one switched off, marked "(now)"), and picking one shows the answer below it (`RoleChangePreview.tsx`): the pages it opens and closes, the actions gained and lost, the personal page settings it deletes (each with "given" or "closed" and its end date, and a count of those that no longer apply), and, for each console the viewer can open, the permissions gained and lost there; console grants stay. Nothing is saved until **Change role** is pressed; Cancel or closing the dialog leaves the role as it was, and the card shows the new role only once it is saved. A preview the server refuses (the same refusals as this route) is shown in the dialog and **Change role** stays off; a preview that fails to load still lets the change go ahead, with what every role change does. A suspended account's role cannot be changed until it is reactivated. Until then a role change saved at once and deleted the settings without a word.
 
 *Since 2026-10-16 (permissions item #14)* changing a role, suspending a person (`is_active` from on to off) and deleting one (`DELETE`) need a sign-in from the last 10 minutes; so does signing someone out with `/api/users/force-kick`. Otherwise the route refuses with 403 and nothing changes, and the page opens **Confirm it's you**, which signs the viewer out and back in and returns them to Users. A name change or restoring a person does not ask. The rule and its full list of actions: [PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.5.
+
+*Since 2026-10-16 (permissions item #36)* making someone Owner or Vendor support, deleting a
+person and suspending or demoting the last active Owner answer `202` and wait for a second
+person instead (§6.3). Suspending anyone else stays immediate.
 
 *Since 2026-10-16 (permissions item #17)* every change also writes `updated_at`, which the
 check of accounts nobody uses (§5.5) reads as the last time the account was used. The column
@@ -739,6 +794,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to the second person (permissions item #36):** §5.4's delete step, §6's panel and event rows, §6.3, new, and the sentences in §9.1 and §9.2, against `src/pages/api/users/manage.ts`, `src/pages/api/users/approvals.ts`, `src/lib/approvals/` (`ask.ts`, `handlers.ts`, `mail.ts`, `rules.ts`), `SecondPersonPanel.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx` and `src/pages/dashboard/users/index.astro`; `test/two-person-rule.test.ts` (22 tests) passes | The panel in a phone browser (the owner's test); every other section |
 | 2026-10-16 | **Scope-limited to Viewer (permissions item #30): the role-names callout, §2's Viewer row and §6's pill grid.** `src/lib/auth/rbac.ts` (`LEGACY_TO_CANONICAL`, `CANONICAL_TO_LEGACY`, `canBePageDefault`, `PICKABLE_ROLES`), `stages/decide.ts` (the read-only rule and its one exception), `plac.ts` (the home page); `test/rbac-roles.test.ts`, `test/plac.test.ts`, `test/pipeline-decision.test.ts`, `test/users-console.test.ts` pass. Live: the Supabase role check after `20261016000000_role_check_add_viewer` (read back through the Supabase connector) | Giving someone Viewer in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to §6.1's console permissions paragraph and route rows (permissions item #22).** Read `src/lib/access-requests/handlers.ts` (`askForPower`, `decidePower`, `powerDecideView`), `rules.ts` (`checkPowerAsk`, `powerApproval`), `keys.ts`, `AccessRequestRepository.reopenApproval`, `AskForPermission.tsx` and `AccessRequestsPanel.tsx`; `test/access-console-requests.test.ts` (21 tests) | The rest of §6.1 and the document |
 | 2026-10-16 | **Scope-limited to §2's audit route rows (permissions item #21).** `src/pages/api/audit/logs.ts` (role-or-grant, no `DELETE`), `seals.ts` (`isOwnerOrVendor`, then the page check); `src/pages/api/audit/prune.ts` deleted, so its row went | The other rows of §2 |

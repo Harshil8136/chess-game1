@@ -2,11 +2,11 @@
 title: "VPS Console (cf-vps, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-12
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-proxy.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, test/vps-notice.test.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
-related_docs: [../specs/2026-10-11-server-access-notice.md, BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../program/cf-backup/15-restore-tests.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
+related_code: [src/lib/vps-proxy.ts, src/lib/approvals/retention.ts, test/two-person-rule.test.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, test/vps-notice.test.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
+related_docs: [../specs/2026-10-11-server-access-notice.md, ../specs/2026-10-16-two-person-rule.md, BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../program/cf-backup/15-restore-tests.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
 
@@ -86,6 +86,7 @@ Every request under `/dashboard/vps/app/` passes the normal auth pipeline
 | Identity | The gateway adds `x-vps-actor` (§3) and `x-vps-request-id`, built from the session |
 | Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site; so must every terminal (§5) |
 | Read-only | A read-only role is refused every change and every terminal |
+| Second person | *Since 2026-10-16 (permissions item #36).* A `retention.set` (how long the server keeps a log) from someone cf-vps gives `retention.manage` is held here when another active Owner or Vendor support could approve it: after a recent sign-in (else 403 with `need: 'fresh_sign_in'`), it waits on the Users page and the console gets `202 { ok: false, code: 'second_person', message }`, which Log storage shows as a notice. It reaches cf-vps only once approved, sent as the approver. A body the hold cannot read, or a person without the capability, passes on as before, and cf-vps refuses it itself ([USER-MANAGEMENT](USER-MANAGEMENT.md) §6.3) |
 | Body | Buffered, at most 1 MiB. **An upload larger than that must be sent in parts**; a larger request is refused with 413 before anything reaches cf-vps |
 | Time | cf-vps has 65 s to send the answer's headers (cf-vps gives the host up to 60 s on its slowest reads and answers 504 itself after that). After that nothing is timed: the body streams for as long as it takes, so the live metrics and log streams (`text/event-stream`) stay open, and a download (up to 200 MB) is never buffered. A live stream that cf-vps breaks off (the agent restarted, the tunnel reconnected) ends as a finished stream, which the console reopens by itself, and is logged once as the warning `vps.gateway.stream_lost` with how long it lived; it used to be logged as the request's error, "Network connection lost." (2026-10-08). A download that breaks off still fails, so a truncated file never looks whole |
 | Failure | A missing binding, a timeout or an unreachable cf-vps gets a small "Server console unavailable" page, or the console's JSON error (`{ ok: false, code, message }`) on its API; the rest of the portal is unaffected. The browser is told fixed words, never the runtime's error |
@@ -284,6 +285,12 @@ times, Cloudflare's reading of the place and network, a keyed hash of the
 address (never the address), and the device; the fields are listed in the
 [notice's design](../specs/2026-10-11-server-access-notice.md) §5.
 
+A `retention.set` made through the second person (§2) is recorded by cf-admin when the approver
+approves it, with the same verb, the approver as the person, the summary ending "(asked by …,
+approved by …)" and `secondPerson: { approvalId, askedBy, approvedBy }` in the row's context. One
+made at once because nobody else could approve it carries `secondPerson: 'none available'`. The
+waiting and the decision have rows of their own (`second_person`, module `vps`).
+
 Reads are not audited here, and a file download is a read (a GET). If a
 download should leave a portal row, cf-vps must make it a POST, as the backup
 console does.
@@ -338,6 +345,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §2's Second person row and §6's paragraph on approved retention changes (permissions item #36) against the gateway (`src/pages/dashboard/vps/app/[...path].ts`), `src/lib/approvals/retention.ts` (`retentionAsked`, `holdRetention`, `runRetention`) and cf-vps's Log storage screen (`retentionRefusal`); `test/two-person-rule.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | Not re-checked: every other section; not yet seen on a phone |
 | 2026-10-16 | claude | §4's `x-vps-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-vps/src/gateway/target.ts` and `cf-vps/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |
 | 2026-10-16 | claude | §1's frame features against the iframe in `src/pages/dashboard/vps/[...section].astro` (pinned by `test/vps-page.test.ts`); §5 against the gateway's `UNAUDITED` (now with `socket`) and cf-vps's live terminal connection (`cf-vps/src/agent/proxy.ts`, `cf-vps/agent/src/server.ts`); the new case in `test/vps-gateway.test.ts` passes | §5 matches. Not re-checked: every other section; the live connection not yet seen on a phone |
 | 2026-10-11 | claude | §1's access notice paragraph, §2's Access notice row, §6's notice verbs and §8's two new rows, written with the code: `src/pages/dashboard/vps/[...section].astro`, the gateway, `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`; `test/vps-notice.test.ts`, `test/vps-gateway.test.ts` and `test/vps-page.test.ts` pass | Those parts match. Not re-checked: every other section; not yet seen on a phone |

@@ -7,7 +7,7 @@ last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/approvals/, src/lib/users/manage-apply.ts, src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -849,6 +849,8 @@ Email API Console now ask the same before the actions below
 | Page Registry changes that reach more than one person | `POST /api/system/page-access`; `PATCH /api/system/pages`; `PATCH /api/system/console-features` | page access for more than one person, or an Owner-level grant; a page's default role or switch (not its name or description); every console permission default |
 | Delete sign-in, consent or email records, or activity entries past 180 days | `DELETE` on `/api/audit/consent`, `/api/audit/emails`, `/api/audit/delete-targeted`; `/api/audit/delete`; `/api/retention/purge` | always (the targeted delete's preview does not ask). Since 2026-10-16 no route deletes a younger activity entry ([`plac-and-audit.md`](plac-and-audit.md) §3.2) |
 | Create or rotate an Email API token; rotate a webhook secret | `POST`/`PATCH` `/api/emails/api-tokens`, `/api/emails/api-clients` | always; checked in the portal before the Console is called |
+| Approve a change waiting for a second person (§10.7) | `POST /api/users/approvals` | decision `approve`; declining and cancelling do not ask |
+| Change how long the server keeps a log | the server console gateway, `POST /dashboard/vps/app/api/actions/run` with `retention.set` | always; the portal asks before it holds the change for a second person, and cf-vps asks again when it runs |
 
 The time is the session's `signedInAt`, the Cloudflare Access assertion's issue time taken at
 bootstrap (`signedInAtFromAssertion`); a session from before that field falls back to its
@@ -881,6 +883,27 @@ reviewed with the account. Removals are made through the Access Center and Users
 is one `access_review` row in the activity log (§12), and the sign-in alert list is emailed once
 a week while a review is due. The screen and the rules:
 [`../features/USER-MANAGEMENT.md`](../features/USER-MANAGEMENT.md) §6.2.
+
+### 10.7 A second person for a few changes
+
+*Since 2026-10-16 (permissions item #36).* Four changes wait for a second person instead of
+being made at once: making someone **Owner or Vendor support**, **removing a person**,
+**removing the last active Owner** (a role change or a suspension, which closes D14 in §16), and
+changing **how long the server keeps a log**. The route makes all its usual checks (§10, §10.5),
+then stores the change as waiting for 3 days in one `admin_portal_settings` row,
+`approvals:pending`, and answers `202`. Any active Owner or Vendor support who did not ask
+approves or declines it on the Users page (`GET`/`POST /api/users/approvals`); they are emailed
+when it is asked. An approval takes the change off the list by compare-and-swap, checks it again
+as of now as the person who asked (still active, their current role may still make it, the person
+it is about unchanged), then makes it as the approver, and the activity log names both.
+
+Suspending anyone but the last Owner stays immediate, so access can always be cut off at once.
+Inviting someone straight in as Owner or Vendor support is refused while someone else could
+approve. When nobody else could, as when Vendor support makes a new portal's first Owner, the
+change goes ahead alone and its activity row says `secondPerson: 'none available'`. Code:
+`src/lib/approvals/`; the design and its decisions:
+[`../specs/2026-10-16-two-person-rule.md`](../specs/2026-10-16-two-person-rule.md); the screen:
+[`../features/USER-MANAGEMENT.md`](../features/USER-MANAGEMENT.md) §6.3.
 
 ---
 
@@ -1187,12 +1210,13 @@ re-checked against the 2022 edition, which restructured Annex A.*
 | ~~C-9~~ | ~~Audit log is neither complete nor tamper-evident (§12).~~ **Closed 2026-10-16:** each day is sealed the next morning and no route deletes an entry younger than 180 days ([`plac-and-audit.md`](plac-and-audit.md) §3.6). | What is left: today's entries are unsealed until the next morning, and page reads other than the sensitive ones are not recorded (§8). |
 | ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. **Key enforced 2026-10-15** (the owner's decision): the owner-only `/dashboard/users#force-kick` row is now checked exactly (`denyForceKick`, §5), so below the owner only a grant opens it. | Rank supremacy holds on this path, and Admins sign people out only with a grant. |
 | ~~D7~~ | ~~The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase.~~ **Fixed 2026-10-14:** the same rank rule for ending sessions and for blocking; blocking your own account is refused (400); a failed account update answers 502 instead of reporting success. | — |
+| ~~D14~~ | ~~Nothing stops the last active Owner being suspended, deleted or demoted.~~ **Closed 2026-10-16 (#36):** each of those waits for a second person (§10.7), who is the Owner themselves when Vendor support asks; `test/two-person-rule.test.ts`. | The last Owner leaves only with a second person's yes. |
 | D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Revoking one session signs the user out on every device. |
 | — | 4 overrides in production, 1 of them a deny (§6.3), **none on any cron key** (re-measured 2026-09-20); **none with an end date** (re-measured 2026-10-14, after `0070`). | PLAC is near-unexercised capability. |
 | — | A `dev`-baseline registry row cannot be delegated by the owner at all (§10). Two cron rows shipped that way and were repaired by `0056`; nothing prevents the next one. *Since 2026-10-14 Page Registry's Checks tab lists every such row.* | A capability the customer can hold but never hand on; now visible, still not prevented. |
 | — | Cold login costs ~240 ms to Supabase (§13.2). | Identity is not edge-local; only the decision is. |
 
-D8 is an open defect (D6 and D7 were fixed on 2026-10-14), all three recorded in
+D8 is an open defect (D6 and D7 were fixed on 2026-10-14, D14 on 2026-10-16), all four recorded in
 [`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md)
 §2. *Added 2026-09-19; the row claiming "grants propagate in up to 1 h" was removed
 in the same pass — Stage 1 replaced it (§11).*
@@ -1227,6 +1251,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
 | `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
 | `test/fresh-sign-in.test.ts` | The recent sign-in (added 2026-10-16, §10.5): the 10-minute and skew rule, an unknown time failing closed, the return path after signing in again, each guarded route refusing a stale session with the header and allowing the parts that do not ask, and the exact list of files that call `freshSignInRefusal`. `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` cover the sign-outs, Page Registry and the Access Center |
+| `test/two-person-rule.test.ts` | The second person (added 2026-10-16, §10.7): which changes wait and which do not, the last Owner (D14) included; who may approve; the waiting list written only over the exact value read; a removal that waits removes nothing and emails the approvers; a change made alone when nobody else could approve; the invitation refused; a mixed edit refused; the asker unable to approve their own; a recent sign-in to approve; the checks made again at approval; decline and cancel; the server log hold at the gateway and the approval sent to cf-vps as the approver |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 
@@ -1236,6 +1261,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.7, new, the two §10.5 rows, D14 in §16 and the §17 row (#36).** Read `src/lib/approvals/` (`rules.ts`, `store.ts`, `ask.ts`, `handlers.ts`, `retention.ts`, `mail.ts`), `src/lib/users/manage-apply.ts`, `src/pages/api/users/manage.ts` (POST, PATCH, DELETE), `src/pages/api/users/approvals.ts` and the gateway `src/pages/dashboard/vps/app/[...path].ts`; in cf-vps the Log storage screen's answer to `second_person`; `test/two-person-rule.test.ts` (22 tests), `test/fresh-sign-in.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | §10.7 and the rows match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's target-header sentence and §11's console paragraph (#35).** Read `consoleTarget` (`src/lib/access-center/profile.ts`) and its callers in `handlers.ts`, `role-preview.ts` and `profile.ts`; the bootstrap stage (`src/lib/auth/stages/bootstrap.ts`, session `userId` = the `admin_authorized_users` row id); in cf-backup `grantFor`, `readsFresh` and the router, in cf-vps `grantFor` and `FRESH_POLICY_ROUTES`; `admin_authorized_users.id` is `uuid` (Supabase connector); `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | Both match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's templates sentence (#32).** Read `src/lib/access-center/templates.ts` (`manager`, `parseTemplates`, `postTemplate`, `deleteTemplate`), `draft.ts` (`templateItems`, `applyTemplate`, `allowedOverride`), `TemplatesDialog.tsx` and `src/lib/auth/routes.ts` (`/api/users` → `/dashboard/users`); `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass | §10.1 matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5's delete row, §12's measurement and integrity paragraph, and §16's C-9 row (#21).** Read `src/pages/api/audit/logs.ts` (no `DELETE`), `delete-targeted.ts` (`targetTabOf`, the fresh sign-in on `DELETE`), `src/pages/api/retention/purge.ts` (the 180-day floor), `src/lib/audit-seal/` and `src/workers/scheduled-audit-seal.ts`; searched `src/` for any other delete from `admin_audit_log` (none); counted `admin_audit_log` and `admin_login_logs` through the D1 connector | §10.5 now lists the delete routes that exist; §12 says what the log guarantees and links §3.6 of plac-and-audit.md; C-9 closed. The rest of the document was not re-read, and §8 still does not describe the sensitive reads recorded since #20 (the docs pass after the build) |
