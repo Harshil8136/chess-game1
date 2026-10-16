@@ -121,7 +121,7 @@ gateway maps its action onto a cf-admin verb, module `backup`
 | `keys.rotate`, `keys.reveal` | `backup_key_action` |
 | `run.download`, `activity.export`, `run.annotate` | `backup_data_access` |
 | `runs.prune` | `backup_prune` |
-| `restore.test` (`op=prepare`, `op=unlock`, `op=sample`, `op=file`) | `backup_restore_test` |
+| `restore.test` (`op=prepare`, `op=unlock`, `op=sample`, `op=file`, `op=download`) | `backup_restore_test` |
 
 Actions without a verb of their own reuse one, so they never raise the
 "unrecognised action" warning: confirming a recovery kit and recording a
@@ -133,6 +133,14 @@ backup copy, and when" is one filter: preparing a test, unlocking its copy with
 the Vault key (or recording a recovery-kit unlock, `key=kit`), taking the live
 sample and filing the report are all `restore.test`; their settings and pinning
 the server's lab key are `config.edit` with `op=restore-tests` or `op=lab-key`.
+
+**Reads that hand over content** (since 2026-10-16, permissions item #20). Two
+reads stamp the same header from their handlers, and the gateway records them
+like a change: a file preview from the Files section (`run.download via=preview`,
+`backup_data_access`) and fetching one of a restore test's encrypted files
+(`restore.test op=download`, `backup_restore_test`). On a read the gateway
+accepts only those two actions (`RECORDED_READS`); any other header on a read is
+ignored and raises no warning. Every other read writes nothing.
 
 The row holds the person, method, path (no query string), status, request id
 (also the row's correlation id) and the summary — never the request body, and
@@ -248,6 +256,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §4's recorded reads against `src/pages/dashboard/backup/app/[...path].ts` (`RECORDED_READS`) and `cf-backup/src/api/files.ts` (`previewFile`) and `cf-backup/src/api/restore-tests.ts` (`getRestoreTestFile`); `test/backup-gateway.test.ts`, `cf-backup/test/files-api.test.ts` and `cf-backup/test/restore-tests.test.ts` pass | Not re-checked: every other section |
 | 2026-10-15 | claude | §2's page-access rule against `src/lib/backup-proxy.ts` (`mayUseBackupConsole`) and `src/pages/dashboard/backup/app/[...path].ts`; `test/backup-gateway.test.ts` refuses staff on a map without the Backups key | Not re-checked: every other section |
 | 2026-10-09 | claude | §9 step 4 against `src/lib/jobs/registry.ts` and `src/lib/jobs/read-model.ts` after the Scheduled Jobs rebuild; `scripts/lib/cron-catalog.mjs` deleted | Step 4 no longer re-seeds; the catalog path left `related_code`. Not re-checked: every other section |
 | 2026-10-08 | claude | §4's verb table against `src/lib/backup-audit.ts` (`BACKUP_AUDIT_VERBS`, 17 actions; `test/backup-audit.test.ts` passes), and added the two actions the table had been missing (`diagnostics.run`, `alerts.dismiss`); §1's Restore tests paragraph against cf-backup's uncommitted routing and `restore-tests` routes | §4 and the Restore tests paragraph match. Not re-checked: every other section. Restore tests have not run in production |

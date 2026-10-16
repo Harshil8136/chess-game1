@@ -69,7 +69,14 @@ nothing feature-specific:
 4. **Requires same-origin for any non-GET.** It uses the same check the rest of cf-admin applies (`validateCsrf`, re-applied in the gateway so this rule is provable by the gateway's own test alone).
 5. **Calls `env.BACKUP.fetch()` with a 10 s timeout** for API calls, and **streams** file downloads without buffering them. If the call fails, it answers with its own small "Backup console unavailable" page, or a JSON error for `/api/*`.
 6. **Passes the response through**, including cf-backup's own security headers (§5). It removes any `Set-Cookie`, since cf-backup has no reason to set one.
-7. **Audits** every non-GET into `admin_audit_log` through the existing `buildAuditDetails` chokepoint: actor, method, path (no query string), status, request id, and the one-line summary cf-backup returns in `X-Backup-Audit`. `action` must be one of `run.dispatch run.cancel run.bypass-cooldown run.drill run.annotate run.download runs.prune schedule.edit config.edit access.edit keys.rotate keys.reveal activity.export secrets-calendar.edit` (C5); an unknown or missing action is recorded as `backup_run` with the summary "unrecognised action" and a Sentry warning. The request body is never logged.
+7. **Audits** every non-GET (and, as built since 2026-10-16, the two reads below) into `admin_audit_log` through the existing `buildAuditDetails` chokepoint: actor, method, path (no query string), status, request id, and the one-line summary cf-backup returns in `X-Backup-Audit`. `action` must be one of `run.dispatch run.cancel run.bypass-cooldown run.drill run.annotate run.download runs.prune schedule.edit config.edit access.edit keys.rotate keys.reveal activity.export secrets-calendar.edit` (C5); an unknown or missing action is recorded as `backup_run` with the summary "unrecognised action" and a Sentry warning. The request body is never logged.
+
+> **As built (2026-10-16, permissions item #20).** Two reads hand over content, so cf-backup
+> stamps `X-Backup-Audit` on them from their handlers and the gateway records them too: a file
+> preview (`run.download via=preview`) and a restore test's encrypted file (`restore.test
+> op=download`). The route table still gives no GET an audit action; on a read the gateway
+> accepts only those two actions and ignores any other header. Details:
+> [BACKUP-CONSOLE.md](../../features/BACKUP-CONSOLE.md) §4.
 
 > **As built (full build, 2026-09-23).** Every change leaves **two** audit rows: this
 > gateway's `admin_audit_log` row (the summary above) plus the auth pipeline's own

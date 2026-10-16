@@ -124,7 +124,7 @@ closed, whoever with `restoretests.view` opens the page next files it.
 | `GET restore-tests` | `restoretests.view` | — |
 | `GET restore-tests/copy/:copyId` | `restoretests.view` | — |
 | `POST restore-tests/prepare` | `restoretests.run` | `restore.test op=prepare` |
-| `GET restore-tests/:testId/file` | `restoretests.run` | — (a read) |
+| `GET restore-tests/:testId/file` | `restoretests.run` | `restore.test op=download` (a read, recorded since 2026-10-16) |
 | `POST restore-tests/:testId/unlock` | `restoretests.run` | `restore.test op=unlock` |
 | `POST restore-tests/kit-keys` | `restoretests.run` | `restore.test op=unlock key=kit` |
 | `POST restore-tests/:testId/live` | `restoretests.run` | `restore.test op=sample` |
@@ -279,7 +279,7 @@ carries none, and group F then judges on row counts at half marks.
 | Settings, the pinned lab key, the newest 60 tests started (id, copy, options, who, when, key fingerprint, verdict, score, report key) | D1 `admin_portal_settings` row `backup:restore-tests` | the newest 60 tests |
 | The report: verdict, score, every check, timings, the not-covered list; no row values | R2 `madagascar-backups`, **`ops/restore-tests/<year>/<test id>.json`**, written once (it is never overwritten), under the bucket lock on `ops/` | permanently (a few KB each) |
 | Ops events, kind **`restore-test`**: prepare, unlock, sample, file, settings, lab-key | R2 `ops/` (doc 11) | as every ops event |
-| Who did what | cf-admin `admin_audit_log`, module `backup`: **`restore.test`** with `op=prepare`, `op=unlock`, `op=sample` or `op=file` becomes `backup_restore_test`; **`config.edit`** with `op=restore-tests` or `op=lab-key` becomes `backup_config_change` ([BACKUP-CONSOLE.md](../../features/BACKUP-CONSOLE.md) §4) | as the audit log |
+| Who did what | cf-admin `admin_audit_log`, module `backup`: **`restore.test`** with `op=prepare`, `op=unlock`, `op=sample`, `op=file` or `op=download` (each encrypted file fetched, since 2026-10-16) becomes `backup_restore_test`; **`config.edit`** with `op=restore-tests` or `op=lab-key` becomes `backup_config_change` ([BACKUP-CONSOLE.md](../../features/BACKUP-CONSOLE.md) §4) | as the audit log |
 | The run record, live steps and sanitized output on the server | cf-vps's job runs folder for `restore_test` | the job runner's 30 days |
 | The decrypted copy, rebuilt databases | the container's memory-only `/work` | the length of the test, then deleted |
 
@@ -365,6 +365,7 @@ image rebuilt.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | The `restore-tests/:testId/file` row and §13's "Who did what" row against cf-backup's `getRestoreTestFile` (`src/api/restore-tests.ts`) and cf-admin's gateway (`RECORDED_READS`); `test/restore-tests.test.ts` and `test/backup-gateway.test.ts` pass | The rest of the document |
 | 2026-10-08 | §1, §6, §7 and §13 against the first real report and its cause: through the Supabase connector (counts only, no values), all 5 `admin_authorized_users` rows had a sign-in or sync time after 2026-10-07 while `updated_at` was older, and no `public` table has a trigger; the new sample query ran on the live project (counts only). The boundary and classification proven on a local PostgreSQL 16 against the server's own classifier: a row changed without any time stamp read as changed, a row damaged in the copy as a finding, others same or new. The old project's failed backup (2026-10-08 04:15 UTC) read from its job log and Supabase's pooler log | No backup has yet carried the boundary or PostgreSQL fingerprints; the lab update is not on the server; the phone was not used |
 | 2026-10-08 | §10 re-read against cf-backup's redesigned page (`src/ui/screens/RestoreTestsScreen.tsx`, `src/ui/screens/restore/`, `src/ui/restore-tests.ts` `setupSteps` and `headline`) and its tests (`test/ui-restore-screen.test.ts`) | The page has not been opened on a phone; the server side is not rolled out, so only the set-up list's not-yet-set-up state can show today |
 | 2026-10-08 | Read against the uncommitted code: cf-backup's restore-tests API, routes and capability catalog, its restore-tests settings, unlock, header, live and fingerprint modules, the daily chore, the ops kinds and audit actions, the engine's fingerprint and manifest steps and the workflow; cf-vps's contract (capabilities, actions, jobs, restore report), `restore_test.toml`, the job image, the lab, the runner's staging, cleanup and log guard, and the lab key setup script; cf-admin's audit words (`src/lib/backup-audit.ts`, `src/lib/vps-audit.ts`). The R2 bucket `madagascar-backups` exists (Cloudflare connector) | Nothing has run in production. The bucket's lock rules are not returned by the Cloudflare connector, so the lock on `ops/` is taken from cf-backup's records, not read live. The lab, its image and the PostgreSQL fingerprints were not run here |

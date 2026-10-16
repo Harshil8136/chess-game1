@@ -578,7 +578,7 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 |----------|------|---------|
 | `GET /api/users` | PLAC (`/dashboard/users`); no role floor beyond authentication — see §2.1 | Returns `cfLinked: boolean` per user (cf_sub_id IS NOT NULL) |
 | `GET /api/users/[id]/session-status` | PLAC `/dashboard/sessions` (D-3, resolved 2026-09-16); `isOwnerOrVendor` gates the ghost-target sub-case only — see §2.1 | Live KV session telemetry — IP, User-Agent, geolocation, Ray ID, lastActiveAt, countdown; Ghost Protection at DB boundary |
-| `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata |
+| `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata. Since 2026-10-16 each open writes one `view` row (module `users`, target the person), through `recordView` (`src/lib/audit-views.ts`; permissions item #20) |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
 | `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `groupMembershipDrift` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
 | `POST /api/users/cf-resync` | owner+ | Force an immediate whitelist → CF Access Group resync (see `CF-ACCESS-SYNC.md`) |
@@ -653,6 +653,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §11.3's login-history row.** `src/pages/api/users/[id]/login-history.ts`, `src/lib/audit-views.ts`; `test/sensitive-views.test.ts` passes | The rest of §11 |
 | 2026-10-16 | **Scope-limited to §5.5 (new) and the #17 notes in §9.0 and §9.2.** `src/lib/unused-accounts.ts`, `src/workers/scheduled-unused-accounts.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuthorizedUserRepository.ts` (`listActiveWithDates`, `suspendIfActive`), `api/users/index.ts`, `manage.ts` (PATCH `updated_at`), `UnusedBadge.tsx`; `test/unused-accounts.test.ts` passes. Live: each active account's last successful sign-in (D1 connector) | The badge and the email in a phone browser and a real inbox (the owner's test) |
 | 2026-10-16 | **Scope-limited to §9.2's recent sign-in paragraph.** `src/pages/api/users/manage.ts` (PATCH, DELETE), `force-kick.ts`, `src/lib/auth/fresh-sign-in.ts`; `test/fresh-sign-in.test.ts` and `test/session-rank.test.ts` pass | The dialog and the return after signing in again in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to §9.2's role change confirmation.** `UsersTable.tsx` (`handleRoleChange`, `fetchRolePreview`), `InlineRoleSelector.tsx`, `RoleChangePreview.tsx` (server-rendered with sample data), `src/lib/access-center/role-preview.ts`; `test/role-preview.test.ts` passes | The dialog in a phone browser (the owner's test) |
