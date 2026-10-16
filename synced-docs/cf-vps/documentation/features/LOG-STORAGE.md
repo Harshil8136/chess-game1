@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-01
 verified_against: [code]
 owner: harshil
-related_code: [contract/logstore.ts, agent/src/collectors/logstore.ts, host/20-audit/files/opt/vps/lib/retention-keys.sh, host/20-audit/files/opt/vps/bin/vps-audit-maintain, host/65-actions/files/opt/vps/bin/vps-act-purge, host/65-actions/files/opt/vps/bin/vps-act-retention, host/65-actions/files/opt/vps/bin/vps-act-journal-vacuum, src/ui/screens/LogStorage.tsx, test/logstore.test.ts, test/host-units.test.ts]
+related_code: [contract/logstore.ts, agent/src/collectors/logstore.ts, host/20-audit/files/opt/vps/lib/retention-keys.sh, host/20-audit/files/opt/vps/bin/vps-audit-maintain, host/65-actions/files/opt/vps/bin/vps-act-purge, host/65-actions/files/opt/vps/bin/vps-act-retention, host/65-actions/files/opt/vps/bin/vps-act-journal-vacuum, src/ui/screens/LogStorage.tsx, src/ui/logstorage-view.ts, test/logstore.test.ts, test/host-units.test.ts, test/ui-logstorage.test.ts]
 related_docs: [../security/AUDIT-PIPELINE.md, ACTIONS.md, ../security/PERMISSIONS.md, ../specs/2026-09-30-log-storage-design.md]
 tags: [feature, logs, retention, purge, zstd]
 ---
@@ -69,6 +69,9 @@ Security, **Log storage** (`security.view` to open; route `logstore/usage`):
   files. The delete then runs with exactly that selection. A kind the agent cannot read
   (sudo output) is deleted too but not counted in the preview.
 - Logs, Recordings and Timeline show a retention line ("kept N days") with a link here.
+- A retention change can come back as **Waiting for a second person**, a notice rather than an
+  error: cf-admin holds it until an Owner or Vendor support who did not ask approves it on its
+  Users page, and nothing has changed until then (see the rule below).
 
 ## How a delete stays safe
 
@@ -80,12 +83,15 @@ Security, **Log storage** (`security.view` to open; route `logstore/usage`):
 | Never a file changed in the last hour; never R2 | `vps-act-purge` |
 | Preview and purge use one rule, kept identical in the agent's `purgeFiles` and the root script | `test/host-units.test.ts` checks they agree |
 | Purge and nightly cleanup share one lock, so they never interleave | `vps-audit-maintain`, `vps-act-purge` |
+| Changing how long a log is kept needs a second person when someone else could approve it (since 2026-10-16): cf-admin keeps the change on its Users page and sends it here as the approver once approved | cf-admin's gateway ([PERMISSIONS](../security/PERMISSIONS.md#a-second-person-in-cf-admin)) |
 | A failed retention write keeps the old value; a missing config file falls back to defaults, never to zero | `vps-act-retention`, `readRetention` |
 | The journal can be cut only by age, because journald cannot remove a middle range | `logs.vacuum` |
 
 Every change is recorded before it runs: a cf-admin activity-log row (`vps_logs_purge` or
 `vps_retention_change`), a host journal line (`vps-purge` or `vps-retention`) and, for a
 purge, a Sentry warning (`log_purge`). A retention change is also seen by the config watch.
+A change that waits for a second person adds a cf-admin `second_person` row when it is asked and
+when it is decided, and its `vps_retention_change` row names both people.
 Shortening retention or deleting logs is the classic way to hide tracks, so none of it is
 silent.
 

@@ -203,6 +203,18 @@ own clock. The agent refuses a request whose signed actor carries no sign-in tim
 older than this rule cannot pass a sign-in check on an agent that has it (see
 [DEPLOY](../operations/DEPLOY.md#order-for-a-change-that-spans-parts)).
 
+### A second person, in cf-admin
+
+Since 2026-10-16 (cf-admin's permissions item 36) cf-admin holds one change before it reaches
+this console: `retention.set`, how long a kind of log is kept. When the person holds
+`retention.manage` here and someone else could approve it in cf-admin (an active Owner or
+Vendor support who did not ask), cf-admin's gateway answers `202` with code `second_person`
+and keeps the change on its Users page; nothing reaches this Worker. Once it is approved,
+cf-admin sends it as the approver, and this Worker checks the approver as for any change: the
+capability, the floor and the recent sign-in. With nobody else to approve, it passes at once, as
+before. The rule and its record live in cf-admin; this console adds no rule of its own, and the
+Log storage page shows the answer as a notice rather than an error.
+
 These actions also ask for a typed confirmation (`reboot`, `upgrade`, `delete`, `restore`, or
 the service name for a stop). Restarting or starting a service, refreshing package lists, and
 creating, uploading or renaming files need neither. See [ACTIONS](../features/ACTIONS.md).

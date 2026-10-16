@@ -366,7 +366,8 @@ redraw it (`memo`), and the terminal fits its size at most once per animation fr
   be edited (shortening asks for the typed word); a stored-per-day panel; and a closed Delete
   logs section (by date, by space, journal vacuum, each with a preview and the typed
   confirmation). The calls and capabilities are unchanged: `logs.purge`, `logs.vacuum` and
-  `retention.set`.
+  `retention.set`. A retention change that cf-admin holds for a second person shows a blue
+  notice, **Waiting for a second person**, not an error ([LOG-STORAGE](LOG-STORAGE.md#the-console-page)).
 - About: the audit disk, amber and red, growth, retention, where logs are stored, deleting,
   preview, vacuum, and what is recorded.
 
