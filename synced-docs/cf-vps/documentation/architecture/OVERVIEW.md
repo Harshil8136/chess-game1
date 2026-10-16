@@ -51,7 +51,10 @@ Browser
 The Worker handles everything under `/dashboard/vps/app/` (`BASE_PATH`); the API lives under
 `/dashboard/vps/app/api/`. Paths with `//`, backslashes or encoded slashes or dots are refused
 before routing. Routes in `AGENT_ROUTE_CAPS` are the only ones that can reach the agent, so
-the Worker cannot be used as a general proxy onto the host.
+the Worker cannot be used as a general proxy onto the host. The browser terminal's live connection takes
+the same path as one long request: a WebSocket upgrade, signed like any other call, whose
+socket the Worker hands back untouched once the agent accepts it
+([How the terminal connects](../features/CONSOLE.md#how-the-terminal-connects)).
 
 ## Trust boundaries
 

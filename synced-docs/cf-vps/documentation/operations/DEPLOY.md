@@ -94,6 +94,25 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
    a second apart). On failure it switches back to the previous release, removes the bad one
    and exits non-zero. It keeps the newest five releases.
 
+### From a phone
+
+With no computer at hand, the same `install` runs from the console itself:
+
+1. Someone with the repository runs `npm run agent:deploy -- --bundle`. It builds and packs as
+   above, then packs `host/lib`, `00-baseline`, `30-node`, `60-agent` and the release into one
+   file, `agent/pkg/vps-host-<version>.tgz`, and prints its SHA-256 and the install command.
+2. Upload the file on the Files page to `/srv/share`.
+3. Open the Terminal as `vps-admin`. Check the file: `sha256sum /srv/share/vps-host-<version>.tgz`
+   must print the same sum.
+4. Unpack it where only root can write: `sudo tar --no-same-owner -xzf
+   /srv/share/vps-host-<version>.tgz -C /root`.
+5. Run the printed command, which starts `install` as its own systemd unit:
+   `sudo systemd-run --unit=vps-agent-install --collect bash /root/vps-host-<version>/60-agent/apply.sh install …`.
+   The restart ends every terminal session, the one that started it included; the unit
+   carries on without it, and still rolls back on a failed health check.
+6. Open the Terminal again and check: `sudo bash /root/vps-host-<version>/60-agent/apply.sh status`.
+   The install's own output: `sudo journalctl -u vps-agent-install --no-pager`.
+
 Manual rollback: `sudo bash /tmp/vps-host/60-agent/apply.sh rollback` switches to the newest
 release other than the current one, and refuses if that one fails its health check. Use
 `status` to see the current release. `npm run test:host` runs the module's checks, including

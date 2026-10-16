@@ -263,12 +263,51 @@ Every page has the same three layers (see the [design system](../reference/DESIG
 - Status: Live with the account and how long ago it opened, reconnecting, opening, ended, or
   no session open. People without a terminal capability see a note instead.
 - Main: Open session or End session in the header; the account choice under it when the person
-  holds more than one; the dark terminal in a framed panel with its state badge; open sessions
-  to reattach (reattaching clears the screen first, and ending is guarded while the session
-  runs). The sudo-capable account needs `terminal.admin` (Owner or Vendor support) and a
-  sign-in from the last 10 minutes, and each person can open it a few times an hour
+  holds more than one; the dark terminal in a framed panel; open sessions to reattach
+  (reattaching clears the screen first, and ending is guarded while the session runs). The
+  sudo-capable account needs `terminal.admin` (Owner or Vendor support) and a sign-in from the
+  last 10 minutes, and each person can open it a few times an hour
   ([Hourly limits](../security/PERMISSIONS.md#hourly-limits)).
-- About: certificates, recording, accounts, limits, reconnects, reattaching and colours.
+- The bar above the terminal: the state badge, the account, the link in use (Fast link or Basic
+  link, see [How the terminal connects](#how-the-terminal-connects)), and one row of tools that
+  scrolls sideways on a narrow screen: Copy (the selection), Paste, Select text (the newest
+  2,000 lines as plain text, to select with a phone's own handles or Copy all), smaller and
+  larger text (9 to 24 px, kept on this device), and Full screen.
+- Keyboard: copy with Ctrl+C while text is selected (Ctrl+C with nothing selected stops the
+  command, as in a shell), Ctrl+Shift+C or Ctrl+Insert; paste with Ctrl+V, Ctrl+Shift+V or
+  Shift+Insert. On a Mac, Cmd+C and Cmd+V, and Ctrl+C and Ctrl+V stay the shell's. Every other
+  key goes to the shell. The rules are `shortcut` in `src/ui/terminal-keys.ts`.
+- On a phone (a touch screen): a key row under the terminal with Esc, Tab, Ctrl, Alt, the
+  arrows, Home, End, Page up, Page down and `| ~ / -`. Ctrl and Alt apply to the next key typed,
+  then turn off. Its buttons do not take the focus, so the phone's keyboard stays open. A swipe
+  scrolls the history; in a full-screen program it sends the mouse wheel (when the program reads
+  the mouse) or the arrow keys. Full screen asks the browser for the whole screen where it
+  allows that, and keeps the bottom of the terminal above the on-screen keyboard.
+- About: certificates, the connection, the keyboard, phone use, recording, accounts, limits,
+  reconnects, reattaching and colours.
+
+#### How the terminal connects
+
+A session has one live connection: a WebSocket from the page, through cf-admin's gateway and
+this Worker, to the agent (`GET /api/terminal/socket`, upgraded). The output, each keystroke
+and window size travel on it as small messages, so typing does not wait for a request through
+two Workers. The message format is in `contract/terminal.ts`: output is binary, a 4-byte
+sequence number and the bytes; typing is binary; a window size is the text
+`{"t":"resize","cols":…,"rows":…}`; the end of the session is the text `{"t":"end","reason":…}`.
+The Worker checks the capability, signs the request, and hands back the agent's socket
+untouched, so it spends no CPU per message.
+
+If the socket cannot open at all (an agent from before 2026-10-16, or a network path that
+refuses upgrades), the page uses the older way for the rest of its life: the output as
+server-sent events (`terminal/stream`), typing and window sizes as POSTs. Typing then goes one
+request at a time, in order, so nothing typed is reordered. Either way a dropped connection
+reconnects by itself after 1, 2 and then every 5 seconds, resuming from the last output
+received, and gives up after 12 failures (about a minute). The session itself stays on the
+server until its own limits end it, and Open sessions lists it to reattach. The rules are in
+`src/ui/terminal-link.ts`.
+
+The page draws only when its own state changes: the console's once-a-second clock does not
+redraw it (`memo`), and the terminal fits its size at most once per animation frame.
 
 **Files**
 
@@ -374,6 +413,8 @@ Every page has the same three layers (see the [design system](../reference/DESIG
 - **Terminal.** Opening a session asks the Worker to mint a 30-second ticket; the server's
   signer turns it into a 60-second SSH certificate for one account. Only the person who opened
   a session can see it or type into it. Sessions are recorded and replayable under Recordings.
+  The live socket attaches only to a session its person opened; the agent closes it if the
+  browser falls more than 4 MiB behind, and the page reconnects from where it stopped.
 - **Logs and recordings** read the system journal; the audit record behind Timeline is a
   separate store (see [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md)).
 - **Access.** Role defaults, per-person grants with an optional end date and a note. The
@@ -471,6 +512,9 @@ screen shows. Access edits save to the local test database on the PC, never the 
   `src/ui/<page>-view.ts` (the status sentence, counts, filters, ordering), tested in
   a matching `test/ui-*.test.ts`; the screen only draws what it returns. Alerts and Timeline
   share `audit-view.ts`; Restore tests use `restore.ts`.
+- The Terminal: `src/ui/screens/Terminal.tsx`; its keys, swipes and text size in
+  `src/ui/terminal-keys.ts`; its connection in `src/ui/terminal-link.ts`; the socket in
+  `agent/src/websocket.ts` and `terminalSocket` in `agent/src/server.ts`
 - The shell (top bar, group tabs, launcher, Needs attention): `src/ui/shell/`,
   `src/ui/attention.ts`; the theme: `src/ui/theme.ts`
 - The `/api/me`, access and proxy routes: `src/http/router.ts`

@@ -153,11 +153,20 @@ The route needs only `host.view`; the request body then decides the real capabil
 | `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
 | `actions/job` | GET | `host.view` | Nothing more; only `vps-act-*` units can be read |
 | `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in, and (checked by the agent) the owner or vendor support role and the hourly limit |
+| `terminal/socket` | stream (WebSocket) | `host.view` | `terminal.ops` or `terminal.admin` (Worker and agent); own session only; a GET with `Upgrade: websocket`, else 400 at the Worker and 426 at the agent |
 | `terminal/stream` | stream | `host.view` | `terminal.ops` or `terminal.admin` (checked by the agent); own session only |
 | `terminal/input` | POST | `host.view` | `terminal.ops` or `terminal.admin`; own session only |
 | `terminal/resize` | POST | `host.view` | Same |
 | `terminal/close` | POST | `host.view` | Same |
 | `terminal/list` | GET | `host.view` | `terminal.ops` or `terminal.admin`; lists only the person's sessions |
+
+`terminal/socket` is a session's live connection, added 2026-10-16; `terminal/stream`,
+`input` and `resize` are its fallback. The query is `id` (the session) and `from` (the last
+output sequence received). The agent answers 101 and the Worker returns that answer, socket
+included, without reading the messages. A refusal is an ordinary answer: 403 with
+`need: terminal.ops` (Worker) or `own_session` (agent), 404 for an unknown session. The
+message format is in `contract/terminal.ts` and
+[CONSOLE](../features/CONSOLE.md#how-the-terminal-connects).
 
 See [ACTIONS](../features/ACTIONS.md) for the action ids and [PERMISSIONS](../security/PERMISSIONS.md)
 for the capabilities, the fresh sign-in, the red lines and the hourly limits.

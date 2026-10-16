@@ -103,6 +103,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`specs/2026-09-29-cf-vps-design.md`](specs/2026-09-29-cf-vps-design.md) | The plan of record: architecture, phases P0 to P7, capabilities | active |
 | [`specs/2026-09-30-log-storage-design.md`](specs/2026-09-30-log-storage-design.md) | Log storage design; shipped, summarised in `features/LOG-STORAGE.md` | historical |
 | [`specs/2026-10-08-console-redesign-design.md`](specs/2026-10-08-console-redesign-design.md) | The console redesign: one design system, three layers per page (Now, Work, About), phone first, emoji banned; delivered in waves 0 to 4 | active |
+| [`specs/2026-10-16-terminal-live-connection-design.md`](specs/2026-10-16-terminal-live-connection-design.md) | The Terminal's live connection (one WebSocket per session, the old stream as fallback), its copy and paste keys and its phone layout; built, summarised in `features/CONSOLE.md` | active |
 | [`specs/2026-10-08-job-controls-and-jobs-page-design.md`](specs/2026-10-08-job-controls-and-jobs-page-design.md) | Job controls (Stop, Restart, Pause, Resume, Block, limits, schedule) on the Apps and Jobs pages, and the rebuilt Jobs page; built, summarised in `features/JOBS.md` | historical |
 | [`specs/2026-10-07-jobs-and-admission-queue-design.md`](specs/2026-10-07-jobs-and-admission-queue-design.md) | Scheduled jobs (`kind = "job"`) and the shared admission queue, drafted in parallel with the runner that shipped the same day; superseded by [JOBS](features/JOBS.md), kept for its reasoning | superseded |
 
@@ -136,6 +137,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`records/2026-10-10-mailroom.md`](records/2026-10-10-mailroom.md) | Change record: Mailroom, the app that holds an email's attachments while ClamAV scans them, built for the email service |
 | [`records/2026-10-14-mailroom-retired.md`](records/2026-10-14-mailroom-retired.md) | Change record: Mailroom retired; the email service checks attachments itself and keeps them on Cloudflare, so the server does no email work |
 | [`records/2026-10-15-fresh-sign-in-and-agent-red-lines.md`](records/2026-10-15-fresh-sign-in-and-agent-red-lines.md) | Change record: reboot, installing updates, stopping a service and deleting files need a recent sign-in; the agent itself keeps the admin terminal and reboot for Owner and Vendor support, checks the sign-in time, and limits both per hour |
+| [`records/2026-10-16-faster-terminal.md`](records/2026-10-16-faster-terminal.md) | Change record: the Terminal keeps one live connection instead of a request per key, copy and paste work with the usual keys, and a phone gets a key row, swipe scrolling, text size and full screen |
 | [`records/plans/2026-10-08-job-controls.md`](records/plans/2026-10-08-job-controls.md) | Plan: job controls and the rebuilt Jobs page, with the rulings made while executing it |
 | [`records/plans/2026-10-08-console-redesign-wave-0.md`](records/plans/2026-10-08-console-redesign-wave-0.md) | Plan: the console redesign's Wave 0 (tokens, building blocks, shell, emoji purge, four fixes), with the rulings made while executing it |
 
