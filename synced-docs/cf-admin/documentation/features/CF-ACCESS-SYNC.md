@@ -70,7 +70,7 @@ attempt — whose rejection was then also swallowed by the primary bug.
 ### Why no warning appeared, even though a warning path existed
 
 `manage.ts` already had a `warning` field in its response, and the frontend
-(`InviteUserModal.tsx`, `UsersTable.tsx`) already checked for it and called
+(`InviteUserModal.tsx`, and the Users table that `PersonDrawer.tsx` and `RoleDialog.tsx` replaced on 2026-10-16) already checked for it and called
 `pushToast('warning', ...)`. That plumbing was correct — it simply never
 fired, because `syncCfAccessGroup()` never told it there was a failure to
 report. Fixing the detection bug alone makes this pre-existing warning path
@@ -223,20 +223,23 @@ check `/dashboard/cron` before anything else.
 
 ### Visibility — Users tab + audit panel
 
-- **Per-user status pill** (`UserTableRow.tsx`, `UserCardStack.tsx`), sourced
-  from `admin_authorized_users.cf_sync_status`. *Corrected 2026-09-19 — the
-  labels and colours here were wrong.*
+- **Per-person state**, sourced from `admin_authorized_users.cf_sync_status`.
+  *Since 2026-10-16* (the Users page rebuild) a person's card in
+  `UsersConsole.tsx` shows a badge only when something needs attention, and
+  their drawer (`PersonDrawer.tsx`, **Cloudflare list**) always says the state
+  in words. Until then a pill (**CF**, **CF Fail**, **CF Pending**) sat on every
+  row.
 
-  | `cf_sync_status` | Pill label | Colour |
+  | `cf_sync_status` | Card badge | Drawer says |
   |---|---|---|
-  | `synced` | **CF** | sky |
-  | `failed` | **CF Fail** | amber |
-  | `pending` | **CF Pending** | slate |
+  | `synced` | none | "On the list, checked …" (how long ago) |
+  | `failed` | **Cloudflare list not updated** | "Not updated:" and the exact Cloudflare error text |
+  | `pending` | **Not on the Cloudflare list yet** | "Not added yet" |
 
-  On failure, the tooltip shows the exact Cloudflare error text and the
-  last-attempt relative time; on success it also says whether the identity has
+  The drawer's **Cloudflare sign-in** line also says whether the identity has
   been linked by a first SSO login.
-- **Force Re-sync** (`RegistryToolbar.tsx` button, owner+): calls
+- **Re-send to Cloudflare** (the Users page header, Owner and Vendor support;
+  "Force Re-sync" in the old toolbar until 2026-10-16): calls
   `POST /api/users/cf-resync`, which runs `syncCfAccessGroup()` immediately
   and reports the result — for when an admin doesn't want to wait for the
   next cron tick.
@@ -263,8 +266,8 @@ check `/dashboard/cron` before anything else.
 - Live drift detection → `src/pages/api/users/cf-access-audit.ts` (`groupMembershipDrift`)
 - Regression test for the fixed bug → `test/cf-access-sync.test.ts`
 - Gate behaviour test → `test/cf-access-reconcile-gate.test.ts`
-- Per-user status pill → `src/components/admin/users/UserTableRow.tsx`, `UserCardStack.tsx`
-- Force Re-sync button → `src/components/admin/users/RegistryToolbar.tsx`
+- Per-person state → `src/components/admin/users/UsersConsole.tsx` (card badge), `PersonDrawer.tsx` (drawer)
+- Re-send to Cloudflare button → `src/components/admin/users/UsersConsole.tsx`
 - `AuthorizedUser` type fields (`cfSyncStatus`, `cfSyncError`, `cfSyncAt`) → `src/components/admin/users/types.ts`
 
 ## Configuration / Bindings
@@ -373,6 +376,7 @@ Access Groups → confirm only **one** group exists with that exact name.
 | 2026-09-08 | claude    | Re-verification for the 45-day staleness gate. All 7 `related_code` paths present; every named symbol still exported (`syncCfAccessGroup`, `parseCfResponse`, `findSyncGroup`, `recordCfSyncOutcome`, `reconcileCfAccessGroup`, `groupMembershipDrift`); `CF_SYNC_GROUP_NAME` still `"Admin Portal Authorized Users"`; cron still wired at `*/5 * * * *` in `cf-entry.ts`; `CF_ACCOUNT_ID` still a `[vars]` entry and `CF_API_TOKEN_ZT_WRITE` still in `[secrets] required`; `cf_access_sync_log` live via `--remote` | pass at the time. Live row count **12,999**, up from 11,418 on 2026-09-02 (~264/day) — the unbounded growth chunk 8 was scoped to fix. **Superseded: see the 2026-09-19 row** |
 | 2026-09-19 | claude    | Re-derived the whole document against HEAD and the live D1. Read `cf-access-reconcile.ts` (hash-or-age gate, the three tick outcomes, hash stored on success only), `cf-access-sync.ts` (`reportOnceCooled` fingerprints, the console-only missing-token branch, the empty-whitelist placeholder rule, `CF_API_TIMEOUT_MS = 12000`, `fetchAuthorizedUserEmails` 2 attempts), `jobs/registry.ts` + `jobs/tiers.ts` + `jobs/control.ts` (dispatch, `essential`, halt/pause/interval), `UserTableRow.tsx` (pill labels), `active-sessions.ts` (`block_account`) | pass after the corrections above. Live `cf_access_sync_log` **607 rows**, not 12,999: rows now arrive at ~1/day (2026-09-15..19: 1, 5, 1, 1, 1) because gated ticks write nothing, and older success rows were pruned. The growth problem is closed |
 | 2026-10-04 | claude    | Read-only D1 query of the live `cron-control` row: `cf-access-reconcile` throttled to 60 minutes; `src/pages/api/users/manage.ts` still syncs on every user change | The TL;DR's recovery times and the reconcile heading note updated. Nothing else re-checked |
+| 2026-10-16 | claude    | Scope-limited to the Users page parts ("Visibility" and the code map), against `UsersConsole.tsx` and `PersonDrawer.tsx` after the Users page rebuild | pass; the sync code, cron and live state were not re-checked |
 
 ## Related
 

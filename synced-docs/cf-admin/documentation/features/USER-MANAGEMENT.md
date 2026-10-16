@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -133,7 +133,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/sessions/active-revocations.ts` | `denySessions` | KV revocation block list + unblock | ✅ `/dashboard/sessions`, **plus `#unblock` on DELETE**; 30/min RL |
 | `src/pages/api/sessions/flush-sessions.ts` | `denySessions` + `isOwnerOrDev` | Bulk session flush — **Owner/Vendor only** | ✅ `/dashboard/sessions`, plus `#flush` |
 | `src/pages/api/sessions/sign-in-alerts.ts` (`src/lib/login-alerts/handlers.ts`) | `denySignInAlerts` | The caller's own sign-in alert settings: pause, trusted areas (added 2026-10-03) | ✅ `/dashboard/sessions`, plus an explicit grant of `#alerts` |
-| `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | Per-user PLAC matrix (ghost-protected) | ✅ `/dashboard/users` |
+| `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | How much of the portal one person opens: switched-on pages and actions, each answered by the enforced rules (`personOpens`, in `src/lib/access-center/counts.ts`), and their personal settings in force. Ghost-protected. *Since 2026-10-16* it sends only these counts; until then it sent the whole page table and the person's raw settings | ✅ `/dashboard/users` |
 | `src/pages/api/users/access-center.ts` | `canManageUser`, `isOwnerOrVendor`, `isReadOnly` (in `src/lib/access-center/`) | The Access Center: one person's access in every system, and server-console changes ([ACCESS-CENTER](ACCESS-CENTER.md), added 2026-10-02) | ✅ `/dashboard/users`; changes also need `/dashboard/vps`; 5/min RL shared with `access.ts` |
 | `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ `/dashboard/sessions` |
 
@@ -154,8 +154,8 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 > the key is enforced too. The route and the Users page ask `denyForceKick`
 > (`src/lib/auth/surface-guards.ts`), which checks the page and then requires a grant of
 > `/dashboard/users#force-kick` (default Owner). Below the owner and vendor support nobody signs
-> anyone out without that grant, and the Users page switches "Terminate All" off with its
-> reason. Suspending an account still ends its sessions and follows the page and the rank rule,
+> anyone out without that grant, and the Users page switches "Sign out everywhere" ("Terminate
+> All" until 2026-10-16) off with its reason. Suspending an account still ends its sessions and follows the page and the rank rule,
 > not this key. The text below is the state before both changes.* The `admin_pages` row
 > `/dashboard/users#force-kick` exists live with an Owner baseline, and the access
 > UI offers it, but a grep of `src/` finds no reference to the string. What the
@@ -176,7 +176,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/dashboard/users/[id]/access.astro` | `isVendorSupport`, `isOwnerOrVendor` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
 
 > [!NOTE]
-> **Client-side Preact components** (e.g., `DangerZone.tsx`, `ExpandedRow.tsx`, `UsersRegistry.tsx`) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (ghost protection badges, filter tabs). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
+> **Client-side Preact components** (e.g., `DangerZone.tsx`, and on Users `people.ts`, which `UsersConsole.tsx` and `PersonDrawer.tsx` read) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (which controls show switched off, and why; the filters). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
 
 ### 3.1 Session Revocation Workflow (3-Layer Ghost Sweep)
 
@@ -312,8 +312,9 @@ through it.
   the last change made to it on Users (`updated_at`, which §9.2 writes on every change). So a
   person invited but never signed in counts from the invitation, and restoring a suspended
   person starts the count again.
-- **At 45 days** the Users page shows an amber **Unused N d** badge beside the last sign-in, and
-  the expanded row says since when and what happens next. The sign-in alert list hears about it
+- **At 45 days** the person's card on Users shows a **Not used for N days** badge, and their
+  drawer says since when and what happens next (an amber **Unused N d** badge and the expanded
+  row until 2026-10-16). The sign-in alert list hears about it
   once: one email, **Accounts nobody uses**, naming each account newly past 45 days.
 - **At 90 days** the account is suspended at the next daily check (14:00 UTC, 08:00 in
   Aguascalientes), exactly as a suspension on Users: `is_active` off, the three-layer force-kick
@@ -338,9 +339,11 @@ The interface is composed of multiple Preact islands:
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| **Users Manager** | | Main orchestrator — user list, search, role filtering. Dispatches events to open invite modal |
-| **User Card** | | Individual user card with role badge, actions, permission display |
-| **Page Access Manager** | | Per-user PLAC override toggle grid (for existing users) |
+| **Users console** | `src/components/admin/users/UsersConsole.tsx` | The page since 2026-10-16 (permissions item #29), on the console kit ([DESIGN-SYSTEM](../reference/DESIGN-SYSTEM.md) §9.9): header with Refresh, **Invite someone**, and for the Owner and Vendor support **Check Cloudflare list** and **Re-send to Cloudflare**; four tiles (Active, Signed in now, Not used lately, Suspended) that pick a filter; the filters below; one card per person (role, suspended, devices signed in, unused days, a Cloudflare list problem, hidden, you; last sign-in and added). A card opens the person's drawer. One read of `GET /api/users` on open, on Refresh, after an invitation and after a change |
+| **Person drawer** | `src/components/admin/users/PersonDrawer.tsx` | One person's account on the shared Dialog's drawer: Account (email, account ID, added, last sign-in, Cloudflare sign-in and list), Role and access (the counts from `GET /api/users/access-data`, **Change role**, **Open their Access page**), Sessions (**See their sessions**, **Sign out everywhere**), Recent sign-ins (§11.4) and Account actions (**Send the invitation again**, **Suspend account** or **Reactivate account**, **Remove account**). Every action asks first; removing asks for the part of the email before the @. A control the viewer may not use shows switched off with the reason |
+| **Role dialog** | `src/components/admin/users/RoleDialog.tsx` | The roles the viewer may give as one row of chips, the preview of what the change does (§9.2), then **Change role** |
+| **Users rules** | `src/components/admin/users/people.ts` | Pure: the filters and counts, why a control is switched off (in the routes' words), the roles to offer. `test/users-console.test.ts` |
+| **Page Access Manager** | `src/components/admin/users/access-editor/UserAccessEditor.tsx` | A person's Access page (`/dashboard/users/[id]/access`): their pages, actions and console powers ([ACCESS-CENTER](ACCESS-CENTER.md)) |
 | **Invite User Modal** | | Two-panel "Command Console" Preact island |
 | **Role Pill Selector** | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: two-column role pill grid with RBAC-gated availability |
 | **Hidden Account Toggle** | | Atomic: ghost-mode toggle (Vendor Support/Owner only) |
@@ -353,16 +356,22 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 
 | Event | Direction | Purpose |
 |-------|-----------|---------|
-| Modal open | Users Manager → Invite Modal | Opens the creation dialog |
-| User invited | Invite Modal → Users Manager | Triggers user list refresh |
+| Modal open (`modal:open-invite`) | Users console → Invite Modal | Opens the creation dialog |
+| User invited (`user:invited`) | Invite Modal → Users console | Reads the list again |
+| Cloudflare check (`cf-audit:open`) | Users console → CF Access audit drawer | Opens the cross-reference (§11.6), Owner and Vendor support |
 
-### Filter Tabs
+### Filters
 
-| Tab | Shows |
-|-----|-------|
-| **All** | Every account returned by `GET /api/users` — no hidden-account exclusion since 2026-07-26 (see §4) |
-| **Admins** | `ROLE_LEVEL[u.role] <= ROLE_LEVEL['manager']` — Vendor Support, Owner, Admin, and Manager (levels 0–3) |
-| **Staff** | `u.role === 'staff'` only (level 4; Viewer, level 5, appears only under **All**) |
+*Since 2026-10-16* (permissions item #29; until then three tabs: All, Admins, Staff). Two rows
+of chips that scroll sideways, and a search; `filterPeople` in `people.ts` decides.
+
+| Row | Choices |
+|-----|---------|
+| **Show** | **Everyone** (every account `GET /api/users` returns, hidden ones included since 2026-07-26, §4), **Active**, **Signed in now** (active, with at least one device), **Not used lately** (§5.5), **Suspended**; each with its count |
+| **Role** | **Any role**, then each role someone on the list holds, in ladder order. An account whose stored role cannot be read appears only under **Any role** |
+| **Search** | Name, email or role name. It is kept in the address as `?search=`, and an address that names one person's exact email opens their drawer (the links in the access request and review emails) |
+
+The list is sorted active first, then by role from the top of the ladder, then by name.
 
 ### 6.1 Access requests
 
@@ -512,9 +521,9 @@ Accepts email, display name, role, hidden status, and any initial page overrides
 
 ### 9.2 PATCH /api/users/manage (Modify User)
 
-Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation. *Since 2026-10-15* the Users page shows the route's refusal in words when a role change, suspension or deletion fails; until then it went only to the browser console and the role menu snapped back.
+Accepts updates for active status, display name, and role. Mutates the Supabase whitelist, writes an `authz-changed` mark for every change, and runs the force-kick cascade only on deactivation. *Since 2026-10-15* the Users page shows the route's refusal in words when a role change, suspension or deletion fails; until then it went only to the browser console and the role menu snapped back. *Since 2026-10-16 (permissions item #29)* every change starts from the person's drawer and asks first, suspending included (until then Suspend acted on one tap), and a refusal shows in the drawer as well as in a toast.
 
-*Since 2026-10-16 (permissions items #8 and #27)* picking a new role in the role menu first asks `GET /api/users/role-preview?userId=&role=` what the change does, then shows it in a confirmation (`RoleChangePreview.tsx` on the shared ConfirmDialog): the pages it opens and closes, the actions gained and lost, the personal page settings it deletes (each with "given" or "closed" and its end date, and a count of those that no longer apply), and, for each console the viewer can open, the permissions gained and lost there; console grants stay. Nothing is saved until **Change role** is pressed; Cancel or closing the dialog leaves the role as it was, and the badge shows the new role only once it is saved. A preview the server refuses (the same refusals as this route) is shown as an error and no dialog opens; a preview that fails to load still asks, with what every role change does. Until then a role change saved at once and deleted the settings without a word.
+*Since 2026-10-16 (permissions items #8 and #27)* a role change asks `GET /api/users/role-preview?userId=&role=` what it does before anything is saved. **Change role** in the person's drawer opens `RoleDialog.tsx`: the roles the viewer may give sit in a row of chips (the current one switched off, marked "(now)"), and picking one shows the answer below it (`RoleChangePreview.tsx`): the pages it opens and closes, the actions gained and lost, the personal page settings it deletes (each with "given" or "closed" and its end date, and a count of those that no longer apply), and, for each console the viewer can open, the permissions gained and lost there; console grants stay. Nothing is saved until **Change role** is pressed; Cancel or closing the dialog leaves the role as it was, and the card shows the new role only once it is saved. A preview the server refuses (the same refusals as this route) is shown in the dialog and **Change role** stays off; a preview that fails to load still lets the change go ahead, with what every role change does. A suspended account's role cannot be changed until it is reactivated. Until then a role change saved at once and deleted the settings without a word.
 
 *Since 2026-10-16 (permissions item #14)* changing a role, suspending a person (`is_active` from on to off) and deleting one (`DELETE`) need a sign-in from the last 10 minutes; so does signing someone out with `/api/users/force-kick`. Otherwise the route refuses with 403 and nothing changes, and the page opens **Confirm it's you**, which signs the viewer out and back in and returns them to Users. A name change or restoring a person does not ask. The rule and its full list of actions: [PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.5.
 
@@ -631,23 +640,30 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `groupMembershipDrift` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
 | `POST /api/users/cf-resync` | owner+ | Force an immediate whitelist → CF Access Group resync (see `CF-ACCESS-SYNC.md`) |
 
-### 11.4 Login Intelligence Panel (ExpandedRow)
+### 11.4 Recent sign-ins (the person drawer)
 
-When an admin expands a user row in the User Registry, the bottom of the expanded panel shows a "Login Intelligence" section (Owner+ only, on-demand fetch). It displays the last 15 login events from `admin_login_logs` with:
+*Since 2026-10-16 (permissions item #29)* in the person's drawer (§6); until then in the
+expanded table row. For the Owner and Vendor support only, as its route
+(`GET /api/users/{id}/login-history`, `requireAuth(context, 'owner')`); anyone else sees a line
+saying so. **Show recent sign-ins** reads the last 15 sign-in events from `admin_login_logs`, and
+the read is recorded as a view (`recordView`). Each row shows:
 
-| Column | Source | Notes |
+| Shown | Source | Notes |
 |--------|--------|-------|
-| Outcome | `event_type` + `success` | SUCCESS (emerald) / FAILED / BLOCKED (red) |
-| Method | `cf_access_method` or `login_method` | OTP (sky) / Google (blue) / GitHub |
-| Location | `geo_location` + `colo` | "City, Country (CF data center)" |
-| Bot Score | `cf_bot_score` | CF bot management score; emerald < 20, amber 20–49, red ≥ 50 |
-| CF Ray | `cf_ray_id` | First 10 chars of CF Ray ID (full value in tooltip) |
-| IP | `ip_address` | Masked to `X.X.***.***` **server-side** for non-Vendor-Support actors; full IP for Vendor Support. (The live-sessions APIs behave differently — see §11.8.) |
-| Date | `created_at` | Relative ("2h ago") with absolute ISO tooltip |
+| When | `created_at` | Date and time, and how long ago |
+| Outcome | `event_type` + `success` | "Signed in", or the refusal (Failed, Blocked) |
+| Method | `cf_access_method` or `login_method` | Google, GitHub, an email code, or unknown |
+| Place | `geo_location` + `colo` | "City, Country (Cloudflare data centre)", or "Place not recorded" |
+| Address | `ip_address` | Masked to `X.X.***.***` **server-side** for anyone but Vendor Support. (The live-sessions APIs behave differently — see §11.8.) |
+| Bot score | `cf_bot_score` | Cloudflare's bot score, when recorded |
+| Ray | `cf_ray_id` | The full Cloudflare Ray ID |
 
-The `summary` shows total login count, success count, and failure count across all time for this email.
+Above the rows, the `summary`: how many sign-ins worked and how many were refused, of all on
+record for this email.
 
-**Check Active Sessions:** The ExpandedRow also renders a "Check Active Sessions" button (admin+) which opens the `SessionForensicsDrawer`: one person's sessions, with device, place, times, when each ends by itself and **End session** (on the shared Dialog since 2026-10-10). See §6 UI Implementation table for component details.
+**See their sessions** in the same drawer opens `SessionForensicsDrawer`: one person's sessions,
+with device, place, times, when each ends by itself and **End session** (on the shared Dialog
+since 2026-10-10). See §6 for the component.
 
 ### 11.5 Access Probe Feed
 
@@ -659,7 +675,7 @@ Each probe row shows: email | attempt count | last seen | CF access method | bot
 
 ### 11.6 CF Access Audit Cross-Reference
 
-The "CF Audit" button in the Registry Toolbar (Owner+ only) opens `CfAuditDrawer`, which fetches live data from the CF Access users API and cross-references with the Supabase whitelist:
+**Check Cloudflare list** in the Users page's header ("CF Audit" in the toolbar until 2026-10-16; Owner+ only) opens `CfAuditDrawer`, which fetches live data from the CF Access users API and cross-references with the Supabase whitelist:
 
 | Tab | Description |
 |-----|-------------|
@@ -701,6 +717,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to the Users page rebuild (permissions item #29):** §2.1's `access-data` row and the client-side note, §5.5's badge, §6 (components, events, filters), §9.2's drawer and role dialog, §11.4 and §11.6's button, against `UsersConsole.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx`, `people.ts`, `src/pages/dashboard/users/index.astro`, `src/pages/api/users/access-data.ts`, `src/lib/access-center/counts.ts` and `src/pages/api/users/[id]/login-history.ts`; `test/users-console.test.ts` passes (the counts agree with `computeAccessMap` and the page gate over the test D1) | The page in a phone browser (the owner's test); every other section |
 | 2026-10-16 | **Scope-limited to §6.2 (new).** `src/lib/access-review/` (`rules.ts`, `store.ts`, `handlers.ts`), `src/pages/api/users/access-review.ts`, `src/workers/scheduled-access-review.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuditLogRepository.ts` (`getLatestTargetRow`, `getLastConsoleUse`), `AccessReviewPanel.tsx`, `src/pages/dashboard/users/index.astro`; `test/access-review.test.ts` passes. Live: the console-use query against `madagascar-db` through the D1 connector (two people with Server rows, none with Backups rows) | The panel, the removals and the reminder email in a phone browser and a real inbox (the owner's test) |
 | 2026-10-16 | **Scope-limited to §11.3's login-history row.** `src/pages/api/users/[id]/login-history.ts`, `src/lib/audit-views.ts`; `test/sensitive-views.test.ts` passes | The rest of §11 |
 | 2026-10-16 | **Scope-limited to §5.5 (new) and the #17 notes in §9.0 and §9.2.** `src/lib/unused-accounts.ts`, `src/workers/scheduled-unused-accounts.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuthorizedUserRepository.ts` (`listActiveWithDates`, `suspendIfActive`), `api/users/index.ts`, `manage.ts` (PATCH `updated_at`), `UnusedBadge.tsx`; `test/unused-accounts.test.ts` passes. Live: each active account's last successful sign-in (D1 connector) | The badge and the email in a phone browser and a real inbox (the owner's test) |

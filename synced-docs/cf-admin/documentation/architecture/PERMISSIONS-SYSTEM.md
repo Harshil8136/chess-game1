@@ -340,8 +340,9 @@ yet (§4.1, C-11); until then the save failed with a generic database error.
 ("Sign someone out", default `owner`), is enforced. The row had existed from the start with
 nothing checking it, so any holder of the Users page could do it (D6). `denyForceKick`
 (`surface-guards.ts`) checks the Users page and then the key through `placRequireGrant`, in
-`DELETE /api/users/force-kick` and in the Users page, which switches "Terminate All" off with
-its reason when the check fails. Below the owner and vendor support a person now needs a grant,
+`DELETE /api/users/force-kick` and in the Users page, which switches "Sign out everywhere" in
+the person's drawer ("Terminate All" in the old table until 2026-10-16) off with its reason
+when the check fails. Below the owner and vendor support a person now needs a grant,
 and the rank rule still applies on top of it. Suspending an account (`PATCH /api/users/manage`)
 also ends its sessions and is not covered by this key: it follows the Users page and the rank
 rule, as before.
@@ -1185,6 +1186,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §5's `#force-kick` sentence after the Users page rebuild (#29).** Read `PersonDrawer.tsx` (`forceKickRefusal` from `people.ts`, the `canForceKick` prop from `denyForceKick` in `src/pages/dashboard/users/index.astro`); `test/session-rank.test.ts` passes | The sentence matches the code. The rest not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.2's See it as paragraph (#26) and its §17 row.** Read `src/lib/access-center/see-as.ts`, `src/lib/auth/nav-pages.ts`, `computeNavItems` in `plac.ts` and `SeeAsPanel.tsx`; `test/see-as.test.ts` and `test/page-registry.test.ts` pass | The paragraph and the row match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.6, new, and §15.1's A.9.2 row.** Read `src/lib/access-review/` (`rules.ts` `reviewLines`, `removalPlan`; `handlers.ts`; `store.ts`), `AccessReviewPanel.tsx` and `src/workers/scheduled-access-review.ts`; `test/access-review.test.ts` passes | §10.6 matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §11's automatic deactivation (#17).** Read `src/workers/scheduled-unused-accounts.ts` (`checkUnusedAccounts`: `suspendIfActive`, `forceLogoutUser`, `markAuthzChanged`) and `src/lib/unused-accounts.ts` (`neverSuspended`); `test/unused-accounts.test.ts` passes | §11's new paragraph. The rest of the document not re-read |

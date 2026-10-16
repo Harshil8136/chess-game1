@@ -622,7 +622,7 @@ Used for components that adapt to their container width (bento cards) rather tha
 
 ---
 
-## 9. Component Patterns *(target vocabulary — see §11: as of 2026-09-14 the code has no `.btn` base / `.btn--sm` / `.badge--*` / `.input--error` / `.cell-mono` / `.toast--*` / `modalEnter`; `.bento-card` lived in `DashboardStyles.astro` until that file was deleted on 2026-09-15 (`4e60c9d`) — no `.bento-card` rule exists now; `.data-table__*` in `global.css` does use BEM `__`)*
+## 9. Component Patterns *(target vocabulary — see §11: as of 2026-09-14 the code has no `.btn` base / `.btn--sm` / `.badge--*` / `.input--error` / `.cell-mono` / `.toast--*` / `modalEnter`; `.bento-card` lived in `DashboardStyles.astro` until that file was deleted on 2026-09-15 (`4e60c9d`) — no `.bento-card` rule exists now; `.data-table__*` used BEM `__` until the Users table it styled was replaced on 2026-10-16, and the console kit's `ck-*__*` (§9.9) uses it now)*
 
 ### 9.1 Naming Convention
 
@@ -640,8 +640,8 @@ only.** The `base--modifier` half of this convention is shipped and widespread,
 under per-module prefixes: `.role-badge--vendor_support|owner|admin|manager|staff|viewer|suspended`
 (`global.css`, documented in §2.8), `.sr-btn--sm/--ghost/--danger`,
 `.hero-badge--warning/--success/--amber`, plus diff badges in `pages/audit.css`
-and query-kind badges in `pages/cron.css`. And `__` does appear —
-`.data-table__*` in `global.css` uses it. Read §9 as: *the generic `.btn` /
+and query-kind badges in `pages/cron.css`. And `__` does appear: the console kit's
+`ck-head__title`, `ck-tile__value` and the rest (§9.9). Read §9 as: *the generic `.btn` /
 `.badge` vocabulary was never adopted; the shipped convention is a per-module
 prefix with `--modifier`.*
 
@@ -685,6 +685,8 @@ Base `.btn` minimum height: 36px. Sizes: `.btn--sm` (28px), `.btn--lg` (44px). A
 
 ### 9.6 Data Table
 
+*Target: no `.data-table` rule exists since 2026-10-16, when the Users table that used it was
+rebuilt as cards on the console kit; a list of records is `ck-cards` or `ck-table-wrap` (§9.9).*
 `.data-table` with sticky headers (`position: sticky; top: 0`). Row hover uses `--theme-accent-subtle`. Selected rows use `--theme-accent-muted`. Monospace cell class: `.cell-mono`. Mobile: transforms to stacked cards via media query.
 
 ### 9.7 Toast
@@ -736,8 +738,9 @@ palette; layers that are not pop-ups, such as the page background and the phone 
 
 ### 9.9 Console kit *(implemented 2026-10-10)*
 
-`src/styles/components/console.css`, the page frame Sessions, Settings, GitHub and Page
-Registry share (and, through `ck-scope`, a person's Access page since 2026-10-14), on the look
+`src/styles/components/console.css`, the page frame Sessions, Settings, GitHub, Page
+Registry and Users (since 2026-10-16) share (and, through `ck-scope`, a person's Access page
+since 2026-10-14), on the look
 of the cf-backup and cf-vps consoles. A page opts in with
 `<div class="ck-page" data-hue="rose|violet|blue">` and imports the file from its `.astro`
 page.
@@ -758,8 +761,8 @@ The hues are mid-tones that read on the light and the dark theme alike.
 | Lists and settings | `ck-list`, `ck-item`, `ck-item__text`, `__meta`, `__actions`, `ck-pick`, `ck-setting`, `ck-rename`, `ck-spaced` |
 | States | `ck-empty`, `ck-notice`, `ck-skeleton`, `ck-note`, `ck-error`, `ck-badge`, `ck-dot` |
 
-A dialog opened on a page outside the kit takes its tokens with `class="ck-scope"` (the
-Users page's session drawer does).
+A dialog opened on a page outside the kit takes its tokens with `class="ck-scope"` (a person's
+Access page and its copy dialog do).
 
 `ck-search` and `ck-rename` work in a row and in a column alike: their 16rem flex basis
 applies only inside `ck-toolbar` and `ck-item`, because in a column (`ck-group`, a pop-up's
@@ -781,6 +784,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §9's `.data-table` notes and §9.9's list of pages on the kit, against `global.css` (the `.data-table`, `.toolbar-search`, `.toolbar-tab` and `.btn-cta` rules removed with the old Users table, none used elsewhere) and `src/pages/dashboard/users/index.astro` (`ck-page`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-14 | §3's `pages/page-registry.css` line and §9.9's list of pages on the kit, against `src/pages/dashboard/debug/pages.astro`, `src/styles/pages/page-registry.css` (theme tokens only) and `UserAccessEditor.tsx` (`ck-scope`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | §5 Sidebar States (the closed rail's scrollbar) against `SidebarMenu.tsx`, `Sidebar/utils.ts` `ROW`, `Sidebar/index.tsx` (66px, 1px border) and `global.css` `.sidebar-scroll` | Every other section; the look in a browser, which Harshil checks |
 | 2026-10-10 | §9.8's sizing against `Dialog.css` (every `height` rule) after pop-ups opened full height; §9.9's `ck-search` and `ck-rename` against `console.css` and every place they are used (`LockOutDialog.tsx`, `AlertPolicyPanel.tsx`, `SignInAlertsCard.tsx`, `SignedInPanel.tsx`, `HistoryPanel.tsx`) | Every other section; the look in a browser, which Harshil checks on his phone |
