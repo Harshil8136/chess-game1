@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -424,6 +424,54 @@ none, as the alert policy says. Which changes count, and the summary:
 [PERMISSIONS-SYSTEM §10.4](../architecture/PERMISSIONS-SYSTEM.md). Tests:
 `test/access-changes.test.ts`.
 
+### 6.2 Quarterly access review
+
+*Added 2026-10-16 (permissions item #24).* Every 90 days the Owner or Vendor support confirms
+who can still do what. The **Access review** panel on this page is shown to them only (its API
+refuses everyone else), because Page Registry, where the suggestion first put it, is Vendor
+support only since 2026-10-15. Panel: `src/components/admin/users/AccessReviewPanel.tsx`; rules:
+`src/lib/access-review/rules.ts`; server: `src/lib/access-review/`.
+
+- **When it is due.** 90 days after the last sign-off, or now when none is on record. The panel's
+  badge says **Due now**, **N days overdue** or **Next due** with the date, and opens by itself
+  while it is due or when the page is opened at `#access-review` (the reminder's link).
+- **The walk-through.** Every active account, hidden ones included, one at a time, highest role
+  first. For each: their last successful sign-in (the sign-in log, as §9.0), and their last
+  recorded action in the Server and Backups consoles, read from the activity log. A refused
+  request is not a use, an access change made from the Access Center or Page Registry is about
+  someone else, and looking at a console is not recorded, so "no recorded action" can still mean
+  they look.
+- **The lines, each Keep or Remove.** The account itself (Remove is **Suspend**), each page or
+  action someone gave them personally, and each Backups or Server power given to them
+  personally. What their role gives is listed under **What their role gives** for reference:
+  only the role gives it, so it is kept or removed with the account. A line the reviewer may not
+  change (their own account, someone at or above their role, a power they do not hold) offers
+  Keep only, with the reason. A system the review could not read is named, so the review is
+  known to be incomplete for it.
+- **Removing.** Moving on from a person with a line marked Remove asks first, then removes it at
+  once through the same routes as the rest of this page: one `POST /api/users/access-center`
+  save (a page setting is reset; a console grant is sent again without the removed powers, or
+  removed when nothing is left), then `PATCH /api/users/manage` to suspend. Every rule, record
+  and email of those routes applies, the recent sign-in for a suspension (§9.2) included.
+- **Sign-off.** After the last person, **Sign off the review**, with an optional note. It must
+  cover every active account, so someone added during the review is refused back to the screen
+  by name. It writes one activity-log row: action `access_review`, module `users`, target
+  `access_review` / `quarterly`, with each person's email, role, how many lines were kept, what
+  was removed and whether they were suspended. That row is the review's only record, and the next
+  due date counts from it. The log keeps 180 days.
+- **The reminder.** While the review is due, the sign-in alert list gets **Access review due**,
+  then again every 7 days until someone signs off. It is sent by the `access-change-summary` job
+  in the hour after 14:00 UTC (`src/workers/scheduled-access-review.ts`; cost in
+  [CRON-CONTROL](CRON-CONTROL.md)), and each email leaves a `notify` row (target
+  `access_review` / `reminder`, labelled with the due date).
+
+| Route | Who | What |
+|---|---|---|
+| `GET /api/users/access-review` | Owner and Vendor support | when it is due, the last sign-off, every active account with its last sign-in and console use |
+| `POST /api/users/access-review` | Owner and Vendor support | the sign-off: `{ people: [{ userId, kept, removed, suspended }], note? }`; 409 names any active account left out |
+
+Tests: `test/access-review.test.ts`.
+
 ## 7. Security Boilerplates & Error Flow
 
 All actions within the API routes return specific error states handled by the UI:
@@ -653,6 +701,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §6.2 (new).** `src/lib/access-review/` (`rules.ts`, `store.ts`, `handlers.ts`), `src/pages/api/users/access-review.ts`, `src/workers/scheduled-access-review.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuditLogRepository.ts` (`getLatestTargetRow`, `getLastConsoleUse`), `AccessReviewPanel.tsx`, `src/pages/dashboard/users/index.astro`; `test/access-review.test.ts` passes. Live: the console-use query against `madagascar-db` through the D1 connector (two people with Server rows, none with Backups rows) | The panel, the removals and the reminder email in a phone browser and a real inbox (the owner's test) |
 | 2026-10-16 | **Scope-limited to §11.3's login-history row.** `src/pages/api/users/[id]/login-history.ts`, `src/lib/audit-views.ts`; `test/sensitive-views.test.ts` passes | The rest of §11 |
 | 2026-10-16 | **Scope-limited to §5.5 (new) and the #17 notes in §9.0 and §9.2.** `src/lib/unused-accounts.ts`, `src/workers/scheduled-unused-accounts.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuthorizedUserRepository.ts` (`listActiveWithDates`, `suspendIfActive`), `api/users/index.ts`, `manage.ts` (PATCH `updated_at`), `UnusedBadge.tsx`; `test/unused-accounts.test.ts` passes. Live: each active account's last successful sign-in (D1 connector) | The badge and the email in a phone browser and a real inbox (the owner's test) |
 | 2026-10-16 | **Scope-limited to §9.2's recent sign-in paragraph.** `src/pages/api/users/manage.ts` (PATCH, DELETE), `force-kick.ts`, `src/lib/auth/fresh-sign-in.ts`; `test/fresh-sign-in.test.ts` and `test/session-rank.test.ts` pass | The dialog and the return after signing in again in a phone browser (the owner's test) |

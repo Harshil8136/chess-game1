@@ -354,6 +354,17 @@ the same stretch from being emailed twice, so a second run that hour, or a manua
 sends nothing new. A run the dispatcher defers past the hour skips that day, and the
 next day catches up. A failure is reported and the check runs again the next day.
 
+*Added 2026-10-16 (permissions item #24).* The same job reminds about the quarterly
+access review (`remindAccessReview` in `src/workers/scheduled-access-review.ts`, run
+after the check of unused accounts), only in the hour after 14:00 UTC. It reads the
+last sign-off and the last reminder (two indexed reads through the
+`(target_type, target_id, created_at)` index, targets `access_review`/`quarterly` and
+`access_review`/`reminder`). When the review is due and no reminder went out in the
+last seven days for it, it emails the alert list and writes one `notify` row (target
+`access_review`/`reminder`, labelled with the due date), which keeps a second run that
+hour, or a manual one, from sending again. A failed send leaves no row and is tried
+the next day. What the review is: [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §6.2.
+
 ## 4. How shedding decides
 
 `cron-usage-probe` reads Cloudflare's own account-wide D1 analytics once an hour
@@ -577,7 +588,10 @@ policy row, one Supabase read of the active accounts, the grouped read of
 `admin_login_logs` (a scan of the table: 442 rows on 2026-10-16, read through the D1
 connector; the log keeps a year), one indexed read per flagged account (2 on
 2026-10-16), and one activity-log row per account suspended or emailed. These are
-counts from the code, not a measurement; outside that hour it adds nothing.
+counts from the code, not a measurement; outside that hour it adds nothing. The
+access review reminder (2026-10-16) adds, in that hour, two indexed reads, and on a
+day it sends, the policy row and one activity-log row; outside that hour it adds
+nothing.
 
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
@@ -782,6 +796,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | The access review reminder added to `access-change-summary`: `src/workers/scheduled-access-review.ts`, `src/lib/access-review/store.ts`, `AuditLogRepository.getLatestTargetRow`, `src/lib/jobs/registry.ts` (its about), `budgets.ts`; `test/access-review.test.ts` (the window, a week later, after a sign-off) and `test/jobs-budget.test.ts` pass | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The check of accounts nobody uses added to `access-change-summary`: `src/workers/scheduled-unused-accounts.ts`, `src/lib/unused-accounts.ts`, `src/lib/jobs/registry.ts` (its about), `budgets.ts`; `test/unused-accounts.test.ts` (the window, off, a repeat run, a failed send) and `test/jobs-budget.test.ts` pass; the live `admin_login_logs` row count and each account's last sign-in read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The monthly clean-up added to `access-change-summary`: `src/workers/scheduled-access-summary.ts` (`clearEndedSettings`), `PageRegistryRepository.deleteEndedBefore`, `src/lib/jobs/registry.ts` (its about now says it deletes), `budgets.ts`; `test/ended-settings-cleanup.test.ts` and `test/jobs-budget.test.ts` pass; a first-week run measured with a fixed date; the live row count read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-15 | claude | `access-change-summary` added: `src/workers/scheduled-access-summary.ts`, `src/lib/access-changes/notify.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`; `test/jobs-budget.test.ts` measured 3 queries, 1 row read, 0 written on an idle run; `test/access-changes.test.ts` (the window, the mark, the 50-row limit, a refused send) | §3: 15 jobs (13+2), the tier table and why it is deferrable; §3c added; §4a: five jobs sleep; §5: its cost; §7: thirteen five-minute jobs without a lease. Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (not deployed when written) |

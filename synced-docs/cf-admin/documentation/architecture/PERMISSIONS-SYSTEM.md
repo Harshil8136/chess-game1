@@ -819,6 +819,17 @@ On its own the rule proves only that someone could sign in again in this browser
 person once Cloudflare Access asks for its own second step at every sign-in (item #13, an owner
 step in the Cloudflare dashboard).
 
+### 10.6 The quarterly access review
+
+*Since 2026-10-16 (permissions item #24).* Every 90 days the Owner or Vendor support walks
+through every active account on Users and keeps or removes each line: the account, each page
+given personally (a §6 override) and each console power given personally. What the role gives is
+reviewed with the account. Removals are made through the Access Center and Users, so §10.1's and
+§10.5's gates apply unchanged; the review adds no way to change access of its own. The sign-off
+is one `access_review` row in the activity log (§12), and the sign-in alert list is emailed once
+a week while a review is due. The screen and the rules:
+[`../features/USER-MANAGEMENT.md`](../features/USER-MANAGEMENT.md) §6.2.
+
 ---
 
 ## 11. Revocation, and how fast it actually takes effect
@@ -1100,7 +1111,7 @@ Those are `draft` and forward-looking. **This document describes what is built.*
 | SOC 2 | CC6.1 logical access | Cloudflare Access + RBAC baseline |
 | SOC 2 | CC6.2 registration/authorisation | `admin_authorized_users`, §10 gates |
 | SOC 2 | CC6.3 role-based restriction | §4–§6 |
-| ISO 27001 | A.9.2 user access management | §10, access-review export |
+| ISO 27001 | A.9.2 user access management | §10, access-review export, the quarterly access review (§10.6, A.9.2.5) |
 | ISO 27001 | A.9.4 system access control | §7–§9 |
 | OWASP ASVS L2 | V1/V4 access control | [`../security/compliance/ASVS-L2.md`](../security/compliance/ASVS-L2.md) |
 
@@ -1165,6 +1176,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.6, new, and §15.1's A.9.2 row.** Read `src/lib/access-review/` (`rules.ts` `reviewLines`, `removalPlan`; `handlers.ts`; `store.ts`), `AccessReviewPanel.tsx` and `src/workers/scheduled-access-review.ts`; `test/access-review.test.ts` passes | §10.6 matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §11's automatic deactivation (#17).** Read `src/workers/scheduled-unused-accounts.ts` (`checkUnusedAccounts`: `suspendIfActive`, `forceLogoutUser`, `markAuthzChanged`) and `src/lib/unused-accounts.ts` (`neverSuspended`); `test/unused-accounts.test.ts` passes | §11's new paragraph. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5, new.** Read `src/lib/auth/fresh-sign-in.ts`, `src/lib/fresh-sign-in-client.ts`, `GlobalDialogProvider.tsx`, `stages/bootstrap.ts` (`signedInAtFromAssertion`), `pipeline.ts`, every route that calls `freshSignInRefusal` (18 files), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn`); `test/fresh-sign-in.test.ts`, `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` pass | §10.5 and the §17 row. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to the role change confirmation (#8, #27) and the monthly clean-up (#31).** Read `role-preview.ts`, `UsersTable.tsx`, `RoleChangePreview.tsx`, `api/users/manage.ts` (PATCH), `scheduled-access-summary.ts` (`clearEndedSettings`); ran `test/role-preview.test.ts` and `test/ended-settings-cleanup.test.ts` | §6's end-date paragraph and §10's role-change paragraph match the code. The rest not re-read |
