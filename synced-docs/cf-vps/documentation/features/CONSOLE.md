@@ -213,9 +213,10 @@ Every page has the same three layers (see the [design system](../reference/DESIG
 **Network**
 
 - Status: whether the tunnel is connected (red when down), then what listens beyond this
-  server. SSH (22/tcp, reached through the tunnel) and the DHCP client (68/udp) are expected
-  and named. Any other port listening beyond loopback is a warning that names each port: the
-  cloud firewall, which the console cannot see, decides whether it is reachable.
+  server. The DHCP client (68/udp) is expected and named. Any other port listening beyond
+  loopback is a warning that names each port: the cloud firewall, which the console cannot see,
+  decides whether it is reachable. That includes SSH (22/tcp), which listens on loopback only
+  since 2026-10-16, where the tunnel reaches it.
 - Main: a warning banner with a Show these ports button when such ports exist; then tabs for
   Interfaces (kind, state, addresses with copy, MTU, MAC), Listening ports (reach, protocol,
   address, usual use, owner; filters All, Public, Local, TCP, UDP; search) and Tunnel details.
@@ -353,8 +354,8 @@ redraw it (`memo`), and the terminal fits its size at most once per animation fr
 - Main: counts, a Needs a look panel, then four tabs of scored checks (pass, warn or fail, each
   with its evidence): Baseline (SSH rules, updates, reboot, auth failures), Integrity (Lynis,
   AIDE, debsums), Accounts (login accounts, user ID 0, groups, sudoers, sessions) and Exposure
-  (listeners; SSH is expected because it is reached through the tunnel). A tab shows how many
-  of its checks need a look.
+  (listeners; SSH on a public address is a warning, since it should listen on loopback only).
+  A tab shows how many of its checks need a look.
 - About: how a check is scored, the SSH settings, where the data comes from, and the integrity
   tools.
 

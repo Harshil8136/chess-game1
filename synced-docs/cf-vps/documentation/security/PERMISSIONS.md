@@ -51,7 +51,7 @@ support can hold.
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |
 | `terminal.ops` | operate | A shell as the unprivileged `vps-ops` account through a 60-second certificate; recorded | owner, vendor | no |
-| `terminal.admin` | admin | A shell as `vps-admin` (sudo); a fresh sign-in, at most 6 opens an hour per person; recorded and the owner is alerted | owner, vendor | yes |
+| `terminal.admin` | admin | A shell as `vps-admin` (sudo); a fresh sign-in, at most 6 opens an hour per person; recorded and the owner is alerted. Root needs no password: these checks stand in for one, and what the account types under sudo is recorded ([AUDIT-PIPELINE](AUDIT-PIPELINE.md)) | owner, vendor | yes |
 | `access.view` | read | See who holds which capabilities | owner, vendor | no |
 | `access.delegate` | admin | Give or take away capabilities you hold yourself, for people below you, from cf-admin's Access Center (see Delegation) | owner, vendor, admin | no |
 | `access.manage` | admin | Change role defaults and per-person grants | owner, vendor | yes |

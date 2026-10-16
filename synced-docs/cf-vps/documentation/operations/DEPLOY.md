@@ -142,6 +142,29 @@ exist yet (the tunnel and agent users) and says so; apply it again after those m
 After the audit rules are locked, new rules load only at boot; follow the runbook for that
 (private: `runbooks/audit-rule-change.md`).
 
+### Host modules from a phone
+
+With no computer at hand, someone with the repository packs the modules a change needs, from a
+commit on `main`, and prints the file's SHA-256:
+
+```
+git archive --prefix=vps-host-<commit>/ -o vps-host-<commit>.tgz <commit>:host lib <module> ...
+sha256sum vps-host-<commit>.tgz
+```
+
+Then, in the console:
+
+1. Upload the file on the Files page to `/srv/share`.
+2. Open the Terminal as `vps-admin` and check it: `sha256sum /srv/share/vps-host-<commit>.tgz`
+   must print the same sum.
+3. Unpack it where only root can write:
+   `sudo tar --no-same-owner -xzf /srv/share/vps-host-<commit>.tgz -C /root`.
+4. Run one step at a time, reading each output first:
+   `sudo bash /root/vps-host-<commit>/<module>/apply.sh <step>`.
+
+A step that restarts sshd (`80-terminal sshd`) does not end the open terminal: sessions survive
+the restart.
+
 ## Secrets and keys
 
 | Secret | Where it lives | Made by |
