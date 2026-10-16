@@ -7,7 +7,7 @@ last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/access-changes/notify.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -729,6 +729,30 @@ The routes are mapped to `/dashboard` (`src/lib/auth/routes.ts`), which every ro
 until 2026-10-15 they were mapped to `/dashboard/inquiries`, so someone without Inquiries could
 not ask for anything.
 
+### 10.4 Access changes are emailed
+
+*Added 2026-10-15 (item #18).* The people on the sign-in alert list hear about the changes that
+widen or reshape access, after each save has answered (`waitUntil`), through the email queue
+(`src/lib/access-changes/notify.ts`):
+
+| Change | Where it is made |
+|---|---|
+| A role changed; a person added, suspended, restored or deleted | Users (`/api/users/manage`) |
+| An Owner-level page given: one whose default role is Owner or Vendor support | the Access Center, the Page Registry's people view, an approved access request |
+| A page's default role moved, or a console permission's | the Page Registry (`/api/system/pages`, `/api/system/console-features`) |
+| Backups or Server permissions given beyond what the person held | the Access Center |
+| Backups or Server permissions changed on a console's own access screen | the console gateways; the console's audit line says how, not whose, so the email points to the activity log |
+
+Removals, resets and ordinary page grants are not emailed; every one of them is in the activity
+log (§12). The alert policy's **Access changes emailed** row
+([SESSION-MANAGEMENT](../features/SESSION-MANAGEMENT.md), "Sign-in alert policy") chooses one
+email per save (the default), one summary a day, or none. A summary-day change is kept as a
+`notify` row in `admin_audit_log` (module `security`, target `access_change`/`daily`, so the
+access history does not list the change twice); the `access-change-summary`
+job ([CRON-CONTROL](../features/CRON-CONTROL.md) §3c) sends what was kept since the last summary
+at 14:00 UTC, 08:00 in Aguascalientes, and marks it sent. A failure to send is reported, never
+shown to the person who saved: their change stands.
+
 ---
 
 ## 11. Revocation, and how fast it actually takes effect
@@ -1067,6 +1091,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-15 | claude | **Scope-limited to §10.4, new.** Read every save point it names (`api/users/manage.ts`, `access-center/handlers.ts`, `registry-access.ts`, `registry.ts`, `api/system/pages.ts`, `access-requests/handlers.ts`, both console gateways) and the live `admin_pages.required_role` values through the D1 connector (owner 28, dev 3); `test/access-changes.test.ts` (20 tests) | §10.4 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to §10.3, new.** Read `src/lib/access-requests/` (`rules.ts`, `handlers.ts`), `AccessRequestRepository.ts` (`approve`, `decline`, `getPendingCount`), `page-gates.ts`, `access-center/rules.ts` and `routes.ts`; read the live `admin_access_requests` table before and after `0071` through the D1 connector (9 rows, none pending); `test/access-requests.test.ts` (17 tests) and `test/permission-change-no-lockout.test.ts` pass | §10.3 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to screen-only action keys.** Listed every `/dashboard/x#y` key in `migrations/*.sql` (63) and read the live rows through the D1 connector (63, 55 active); grepped `src/pages/api` and `src/lib` with comments stripped for each; read `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and export, `ai-generate.ts`, `templates.ts`, `retention/purge.ts` and the email preview path; `test/action-keys-enforced.test.ts` fails when the AI or consent check is reverted | §5's new paragraph and the §17 row. Not re-derived: every other section |
 | 2026-10-15 | claude | **Scope-limited to Page Registry's floor.** Read `page-floors.ts`, `surface-guards.ts` (`canUsePageRegistry`), the four pages under `src/pages/dashboard/debug/`, `registry-access.ts`, `registry.ts`, `history.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one grant (the Owner's) through the D1 connector; `test/debug-access.test.ts`, `test/registry-access.test.ts` and `test/registry-console-features.test.ts` refuse the owner and a granted Admin and admit vendor support | §1 step 0's exception, §5's floor sentence and new paragraph, §10.2, the §17 row. Not re-derived: every other section |

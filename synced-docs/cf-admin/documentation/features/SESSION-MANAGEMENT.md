@@ -3,7 +3,7 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-14
+last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
 related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionsConsole.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
@@ -255,6 +255,10 @@ The **Alert policy** tab, opened by `#alert-policy`, every choice a row of chips
   none. Every role starts at every sign-in.
 - **Failed sign-ins emailed:** a switch for each of the five kinds, all on to
   start, and the repeat window for the same failure (5, 15 or 60 minutes).
+- **Access changes emailed** (2026-10-15): each change (the default), one summary a
+  day at 08:00 in Aguascalientes, or off. They go to the same recipients. What counts
+  as an access change and how the summary is gathered:
+  [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §10.4.
 - **Save policy** saves the lot. A save that turns alerts down, or changes the
   recipients, emails the recipients before and after the change.
 - **People:** everyone active, with what their successful sign-ins send. A holder
@@ -298,6 +302,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-15 | claude | **Scope-limited to the alert policy's new "Access changes emailed" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` and `policy-handlers.ts`; `test/access-changes.test.ts` pins the setting's default and its change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-14 | claude | **Scope-limited to who may end sessions and lock people out.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `active-revocations.ts` (unblock rule unchanged) and `SessionDrawer.tsx`; `test/session-rank.test.ts` pins the route and `test/sessions-console.test.ts` the buttons. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-10 | claude | The whole page after the rebuild, against `src/pages/dashboard/sessions/index.astro`, every file in `src/components/admin/users/sessions/`, `src/pages/api/sessions/active-sessions.ts`, `active-revocations.ts`, `flush-sessions.ts`, `src/pages/api/users/[id]/session-status.ts`, `src/pages/api/audit/login-logs.ts`, `src/lib/auth/surface-guards.ts` and `src/lib/auth/session-ref.ts`; `test/sessions-console.test.ts` and `test/session-ref.test.ts` added. Not rendered in a browser (the owner checks on his phone); the live KV and D1 were not read. |
 | 2026-10-03 | claude | The `#alert-policy` fragment, both card sections and the components list, against `src/pages/dashboard/sessions/index.astro`, `SignInAlertsCard.tsx`, `AlertPolicyPanel.tsx`, `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts`, with migration `0065` read back from production. Not rendered in a browser. |

@@ -375,6 +375,13 @@ a page can still ask for it; until 2026-10-15 they were mapped to Inquiries. The
 `POST /api/audit/requests/[id]/resolve` is gone. Server side: `src/lib/access-requests/`.
 Tests: `test/access-requests.test.ts`.
 
+**Access changes are emailed** (2026-10-15, item #18). Adding, suspending, restoring or
+deleting someone and changing a role on this page, and approving a request for an Owner-level
+page, email the sign-in alert list after the save: one email per save, or one summary a day, or
+none, as the alert policy says. Which changes count, and the summary:
+[PERMISSIONS-SYSTEM §10.4](../architecture/PERMISSIONS-SYSTEM.md). Tests:
+`test/access-changes.test.ts`.
+
 ## 7. Security Boilerplates & Error Flow
 
 All actions within the API routes return specific error states handled by the UI:
@@ -592,5 +599,6 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-15 | **Scope-limited to §6.1's access-change paragraph.** `src/pages/api/users/manage.ts` (POST, PATCH, DELETE) and `src/lib/access-requests/handlers.ts` against `src/lib/access-changes/notify.ts`; `test/access-changes.test.ts` | Whether the email arrives in a real inbox (the owner's phone test) |
 | 2026-10-15 | **Scope-limited to §6.1, new.** Access requests against `src/lib/access-requests/` (`rules.ts`, `handlers.ts`, `mail.ts`), `AccessRequestRepository.ts`, `RequestAccess.tsx`, `AccessRequestsPanel.tsx`, `src/lib/auth/routes.ts` and `test/access-requests.test.ts`; the live `admin_access_requests` columns after `0071` (D1 connector) | Whether the request email arrives in a real inbox (the owner's phone test) |
 | 2026-10-15 | **Scope-limited.** §2's Viewer row and §6's pill grid against `rbac.ts` (`PICKABLE_ROLES`), `InlineRoleSelector.tsx` and `RolePillSelector.tsx`; §5's full delete against `manage.ts` and `VpsAccessRepository.ts`; §9.0 against `api/users/index.ts`, `LoginLogRepository.ts` and the live `admin_login_logs` and `admin_authorized_users` rows (D1 and Supabase connectors); `test/users-last-sign-in.test.ts`, `test/vps-access.test.ts`, `test/rbac-roles.test.ts` | Every other section (last fully re-derived 2026-09-19) |
