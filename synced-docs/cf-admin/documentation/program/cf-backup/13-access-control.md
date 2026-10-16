@@ -132,7 +132,7 @@ cf-admin's page row lets their role in, and even then only what the policy (§4)
    - **audit is always on**: no setting turns off `ops/events`, the gateway's audit row or the notifications;
    - the **locks, redaction and the recipient check** are not configurable.
 5. **Last-holder guard.** A change that would leave **no active person** holding `access.manage` or `keys.rotate` is refused. (The 2026-09-16 incident locked the only Owner out for 14 hours; this is the same lesson applied here.)
-6. **Time-boxed grants.** A per-person grant can carry `expiresAt`, for example "let this admin run backups this week". Expiry is checked on every request; nothing needs cleaning up.
+6. **Time-boxed grants.** A per-person grant can carry `expiresAt`, for example "let this admin run backups this week". Expiry is checked on every request; nothing needs cleaning up. *Since 2026-10-16 (cf-admin permissions #22):* a grant can also carry `temporary`, one permission at a time, each with its own `until` (at most 90 days ahead) and an optional note: a power given for a while, which is what an approved request from cf-admin's Settings → Your access writes. `can()` counts it until `until`, whatever the grant's own `expiresAt`, after the deny check (a deny still wins) and never for a floor. An entry whose end has passed is dropped on the next save; a delegated change compares against the running ones only (`delegationBase` in `src/access/delegate.ts`).
 7. **Effect is prompt.** The policy row is read at most every 30 s per isolate, so a change applies within half a minute. *(As built: the 30 s settings cache exists, with write-through on save.)*
 8. **Every change is recorded** (§6): who, when, the before/after diff, and the reason if one was given.
 
@@ -157,7 +157,8 @@ people saving at once cannot overwrite each other.
     "<sign-in email, lowercase>": {
       "allow": ["runs.run"], "deny": [],
       "expiresAt": "2026-10-31T23:59:59Z", "note": "covering the owner's leave",
-      "grantedBy": "<email>", "grantedAt": "2026-10-01T15:04:00Z"
+      "grantedBy": "<email>", "grantedAt": "2026-10-01T15:04:00Z",
+      "temporary": { "runs.drill": { "until": "2026-10-17T12:00:00Z", "note": "approved request" } }
     }
   },
   "updatedBy": "<email>", "updatedAt": "2026-10-01T15:04:00Z"
@@ -235,6 +236,7 @@ console cannot change.
 - The floors: a policy granting a secret-class capability to Admin is rejected on save *and* ignored on read.
 - The last-holder guard refuses a change that would leave `access.manage` or `keys.rotate` with no active holder.
 - An expired grant stops working at its `expiresAt`.
+- A power given for a while counts until its own `until` and not after, loses to a deny, never opens a floor, and outlives the grant's own end (`test/access-temporary.test.ts`, 2026-10-16).
 - Deny beats allow, for every capability.
 - Concurrent saves: the second compare-and-swap fails with a clear "someone else changed this, reload" message.
 
@@ -242,6 +244,7 @@ console cannot change.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §3 rule 6's powers given for a while, the §4 example's `temporary` and the §8 line, against cf-backup `9f0116c`: `src/access/policy.ts` (`temporaryUntil`, `liveTemporary`, `liveGrant`, `can()`), `validate.ts` (`MAX_TEMPORARY_DAYS`, `validateTemporary`), `delegate.ts` (`delegationBase`); `test/access-temporary.test.ts` passes | The rest of the document |
 | 2026-10-16 | The `files.download` row's audit, against cf-backup's `previewFile` (`src/api/files.ts`) and cf-admin's gateway (`RECORDED_READS`); `test/files-api.test.ts` passes | The other rows of §2 |
 | 2026-10-10 | The `diagnostics.run` row, after cf-backup merged Readiness and Diagnostics into one Health page (cf-backup `9832d82`): its description in `src/access/catalog.ts`, its two routes and audit actions in `src/api/routes.ts`, the 15-second throttle in `src/api/diagnostics.ts`, and the runner test's refusal (`engineRefusal` in `src/backups/start.ts`, answered as 501) | The other rows of §2, which this change does not touch |
 | 2026-10-08 | The TL;DR count, the three Restore tests rows in §2, the floor list in §3 rule 4 and the §7 Restore tests row, against cf-backup's uncommitted `src/access/catalog.ts` (32 capabilities; nine floors; Admin's default gains `restoretests.view` only) and `src/api/routes.ts` (each route's capability and audit action) | The rest of the document; nothing of Restore tests has run in production |

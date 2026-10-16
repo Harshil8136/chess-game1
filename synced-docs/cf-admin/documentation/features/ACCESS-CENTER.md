@@ -5,7 +5,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts, test/see-as.test.ts]
+related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts, test/see-as.test.ts, test/access-console-requests.test.ts]
 related_docs: [../specs/2026-10-14-access-control-room.md, ../specs/2026-10-03-access-center-v2-design.md, ../specs/2026-10-02-access-center-design.md, ../architecture/PERMISSIONS-SYSTEM.md, VPS-CONSOLE.md, BACKUP-CONSOLE.md, USER-MANAGEMENT.md, ../reference/DESIGN-SYSTEM.md]
 tags: [permissions, access-center, plac, vps, backup, registry, ui]
 ---
@@ -85,7 +85,7 @@ newest first, fifty at a time, with chips by kind):
 |---|---|
 | Default-role badge | The lowest role that has it by default (that role and every role above). *Custom* with role dots: a console default that is not a ladder. *Owner & Vendor*: a floor. *Admin and above* or *Vendor support only*: a page's role floor (`src/lib/auth/page-floors.ts`). *Unrecognised*: a page whose stored role this portal cannot read (nobody below Owner is let in) |
 | State | *From role*, *Not in role*, *Granted* and *Revoked* (each with its end date), *Ended* (a setting whose end date has passed: the role decides again), *Full access* (Owner and Vendor support open every page), *Owner & Vendor only* (floor), *Not for this role* (a page whose role floor keeps the person's role out, whatever is stored: since 2026-10-16 such a row is closed and fixed, and offers only a Reset when a setting is stored; open item AC-9) |
-| The line under it | For a stored setting: who set it, when, why and until when, or when it ended (`overrideMeta` in `labels.ts`) |
+| The line under it | For a stored setting: who set it, when, why and until when, or when it ended (`overrideMeta` in `labels.ts`). A console permission given for a while (an approved request, #22) reads *Given for a while · until* its own end |
 | Reset / Undo | Reset removes a stored override; Undo drops an unsaved change |
 | Switch | Whether the person will have it. Disabled with a tooltip when the viewer may not make that change |
 | *Unsaved* tag and amber edge | The row differs from what is stored |
@@ -94,6 +94,13 @@ A switch sets the smallest override: off for what the role gives is a deny, on f
 does not give is a grant, and back to the role's answer removes the override. A viewer may
 be able to take something away but not give it (above their clearance), or give but not
 take; the switch is disabled in the direction they cannot go.
+
+**Permissions given for a while** (since 2026-10-16, permissions item #22). An approved console
+permission request ([USER-MANAGEMENT §6.1](USER-MANAGEMENT.md)) is kept by the console beside the
+grant, in `temporary`, with its own end. Here it shows as *Granted* with that end. Saving the
+person keeps it exactly as it is, and never moves it into the allow list, so it still ends on
+its own date; turning it off takes it away. The **Personal grant** end date does not cover it,
+and the card says so when the person has one.
 
 ## 3. The data
 
@@ -111,7 +118,7 @@ cached. The shapes are in `src/lib/access-center/types.ts`; import them, do not 
 | `system.groups` | Pages: one per category (`category` is its colour). Console: `page` (the door's `#` features, if any) and one per capability class |
 | `system.door` | Console: its page in this portal, a pages item |
 | `system.lockedItems` | Console: floors this person's role can never hold |
-| `system.rev`, `grant`, `grantExpired`, `canManage`, `canDelegate` | Console: the policy revision, the person's grant, and what the viewer holds there |
+| `system.rev`, `grant`, `grantExpired`, `canManage`, `canDelegate` | Console: the policy revision, the person's grant (with `temporary`, the permissions given for a while still running), and what the viewer holds there |
 | `item.kind` | `page`, `feature` (`parent` is its page) or `capability` |
 | `item.requiredRole`, `customRoles` | The default role, or the roles of a custom console default |
 | `item.baseline` | Whether the role gives it, before any override |
@@ -119,6 +126,7 @@ cached. The shapes are in `src/lib/access-center/types.ts`; import them, do not 
 | `item.effective`, `source` | On or off now, and why (`role`, `grant`, `deny`, `expired`, `top-tier`, `locked`, `none`) |
 | `item.editable`, `canAllow`, `canDeny`, `whyNot` | What the viewer may change, and why not (`self`, `outranked`, `top-tier-target`, `full-access`, `read-only`, `not-held`, `above-clearance`, `locked`, `no-delegate`) |
 | `item.overrideBy`, `overrideAt`, `overrideReason`, `expiresAt` | Who set a page override, when and why; when a page override or a console grant ends (`source: expired` once it has) |
+| `item.temporaryUntil` | A console permission given for a while: when it ends (`expiresAt` is the same). It counts until then whatever the grant's own end, and a deny still wins |
 
 ### 3.2 POST: one save
 
@@ -132,7 +140,10 @@ cached. The shapes are in `src/lib/access-center/types.ts`; import them, do not 
 `action` is `grant`, `revoke` or `reset`. A grant or revoke may carry `expiresAt` (ISO 8601,
 UTC, the whole chosen day: `2026-12-31T23:59:59.000Z`), stored in
 `admin_page_overrides.expires_at` (migration `0070`); a reset may not. A console's grant is sent whole; `null`, or empty
-lists, removes it. The person and their role are read from the database by `userId`;
+lists, removes it. It may carry `temporary`, `{ "<capability>": { "until", "note"? } }`: the
+editor sends back the running permissions given for a while, and one left out is taken away.
+One whose end has passed is dropped before sending; one that is a floor, has no future end or
+runs past 90 days is refused, as the console would. The person and their role are read from the database by `userId`;
 anything else in the body is ignored. The browser builds this with `toSave` in `draft.ts`.
 
 | Status | Meaning |
@@ -212,6 +223,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to permissions given for a while (#22).** §2.1's line and new paragraph, §3.1's `grant` and `temporaryUntil` rows and §3.2's `temporary` sentence against `types.ts`, `temporary.ts`, `rules.ts` (`vpsSource`, `vpsOverride`, `activeGrant`, `changedCapabilities`, `vpsChangeRefusal`, `grantIssues`), `profile.ts`, `draft.ts` (`consoleGrant`), `handlers.ts` (`toGrantInput`), `labels.ts` and `AccessSections.tsx`; `test/access-console-requests.test.ts` and the Access Center suites pass | The editor in a phone browser (the owner's test) |
 | 2026-10-16 | §4's See it as paragraph (#26) against `SeeAsPanel.tsx`, `RegistryConsole.tsx`, `src/lib/access-center/see-as.ts` and `src/lib/auth/nav-pages.ts`; `test/see-as.test.ts` passes; the live registry's sub-pages and their sidebar pages read through the D1 connector (every sub-page's sidebar page is switched on today, so "Only by address" is empty) | The tab in a phone browser (the owner's test) |
 | 2026-10-16 | §4's console warning (#28) against `ConsoleFeatures.tsx`, `RegistryConsole.tsx`, `logic.ts` (`consoleGap`), `registry.ts` (`viewKey`), `vps.ts` and `backup.ts` (`viewCapability`); `test/registry-ui-logic.test.ts` passes; the two console pages' default roles read live through the D1 connector | The warning in a phone browser; it shows only when a console page's role is lowered |
 | 2026-10-16 | §2.1's floor state and §4's floor paragraph (AC-9) against `pages.ts` (`pageItem`), `rules.ts` (`pageEditability`), `overview.ts` (`personOpens`, `roleOpensPage`, `switchFlags`, `changeRefusal`), `labels.ts`, `AccessRow.tsx` and the registry panels; `test/access-why.test.ts` and the AC-9 case in `test/access-center-api.test.ts` pass | The rest of the page; the screens in a phone browser (the owner's test) |

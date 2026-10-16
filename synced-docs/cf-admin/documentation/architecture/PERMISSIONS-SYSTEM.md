@@ -7,7 +7,7 @@ last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/access-changes/notify.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -706,7 +706,10 @@ default role there. The screen and its data:
 [v2 spec](../specs/2026-10-03-access-center-v2-design.md); the delegation rules:
 [v1 spec](../specs/2026-10-02-access-center-design.md). Since 2026-10-14 it also has a History
 tab (`GET /api/users/access-history`, read from the activity log) and *Copy access from…*, which
-only fills the draft.
+only fills the draft. Since 2026-10-16 (#22) it shows and keeps the console permissions given
+for a while (§10.3): each has its own end, a save carries it back unchanged and never into the
+allow list, and the early checks compare a change with what the console's `delegationBase`
+would (`activeGrant` in `src/lib/access-center/rules.ts`).
 
 ### 10.2 Page Registry: many people at once
 
@@ -760,6 +763,23 @@ the code is `src/lib/access-requests/`). Three rules matter here:
   session was read, and the card offers a reload. A page switched off in Page Registry is named
   as such (`getSwitchedOffPageFor`) instead of "not a page", and cannot be asked for.
 
+- **Console permissions, for a while (#22, since 2026-10-16).** From Settings → Your access a
+  person may ask for one permission in the Backup or Server console. The request is a row of the
+  same table, its `requested_path` the key `console:<console>:<permission>`
+  (`src/lib/access-requests/keys.ts`). What may be asked for is the console's own catalog answer
+  to the asker (`checkPowerAsk`): not a permission they hold, not one their role gives that a
+  personal setting closes, not a floor. An approval always ends, at most 90 days ahead: the
+  console keeps the permission in the person's grant as `temporary`, `{ until, note? }` per
+  permission, and its `can()` counts it until `until`, whatever the grant's own end, after the
+  deny check and before the allow list (`cf-backup/src/access/policy.ts`, `cf-vps/src/access/policy.ts`). The
+  approval reads the person from the console as the decider; `powerApproval` refuses a floor and
+  a personally closed permission (the deny would win, so it would open nothing, and when it ended
+  the role default would not come back either), keeps a longer hold, and otherwise sends the grant
+  as it stands plus the new power, which `checkConsoleGrant` and then the console check as any
+  delegated change: an Admin gives only what they hold there. The request is marked approved
+  before the console is written and put back to waiting on a refusal, so two deciders never both
+  give it; the console's audit line becomes the activity-log row.
+
 The routes are mapped to `/dashboard` (`src/lib/auth/routes.ts`), which every role has;
 until 2026-10-15 they were mapped to `/dashboard/inquiries`, so someone without Inquiries could
 not ask for anything.
@@ -775,7 +795,7 @@ widen or reshape access, after each save has answered (`waitUntil`), through the
 | A role changed; a person added, suspended, restored or deleted | Users (`/api/users/manage`) |
 | An Owner-level page given: one whose default role is Owner or Vendor support | the Access Center, the Page Registry's people view, an approved access request |
 | A page's default role moved, or a console permission's | the Page Registry (`/api/system/pages`, `/api/system/console-features`) |
-| Backups or Server permissions given beyond what the person held | the Access Center |
+| Backups or Server permissions given beyond what the person held | the Access Center, an approved console permission request (#22) |
 | Backups or Server permissions changed on a console's own access screen | the console gateways; the console's audit line says how, not whose, so the email points to the activity log |
 
 Removals, resets and ordinary page grants are not emailed; every one of them is in the activity
@@ -1192,6 +1212,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | 2026-10-16 | claude | **Scope-limited to §11's automatic deactivation (#17).** Read `src/workers/scheduled-unused-accounts.ts` (`checkUnusedAccounts`: `suspendIfActive`, `forceLogoutUser`, `markAuthzChanged`) and `src/lib/unused-accounts.ts` (`neverSuspended`); `test/unused-accounts.test.ts` passes | §11's new paragraph. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5, new.** Read `src/lib/auth/fresh-sign-in.ts`, `src/lib/fresh-sign-in-client.ts`, `GlobalDialogProvider.tsx`, `stages/bootstrap.ts` (`signedInAtFromAssertion`), `pipeline.ts`, every route that calls `freshSignInRefusal` (18 files), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn`); `test/fresh-sign-in.test.ts`, `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` pass | §10.5 and the §17 row. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to the role change confirmation (#8, #27) and the monthly clean-up (#31).** Read `role-preview.ts`, `UsersTable.tsx`, `RoleChangePreview.tsx`, `api/users/manage.ts` (PATCH), `scheduled-access-summary.ts` (`clearEndedSettings`); ran `test/role-preview.test.ts` and `test/ended-settings-cleanup.test.ts` | §6's end-date paragraph and §10's role-change paragraph match the code. The rest not re-read |
+| 2026-10-16 | claude | **Scope-limited to console permissions given for a while (#22).** Read cf-backup and cf-vps `src/access/policy.ts` (`temporaryUntil`, `liveTemporary`, `liveGrant`, `can()`), `delegate.ts` (`changedCapabilities`, `delegationBase`) and the save validation; cf-admin `access-center/temporary.ts`, `rules.ts`, `profile.ts`, `draft.ts`, `handlers.ts`, `access-requests/keys.ts`, `rules.ts` (`checkPowerAsk`, `powerApproval`) and `handlers.ts` (`askForPower`, `decidePower`); `test/access-console-requests.test.ts` (21 tests) and both consoles' `test/access-temporary.test.ts` | §10.1's new sentence, §10.3's new bullet and §10.4's row only |
 | 2026-10-16 | claude | **Scope-limited to page floors on the access screens (AC-9), invitation gates (AC-10) and the Access denied reason (#25).** Read `page-floors.ts` (`pageFloor`), `access-center/rules.ts` (`pageEditability`), `pages.ts`, `overview.ts`, `page-gates.ts` (`inviteSettingRefusals`), `api/users/manage.ts`, `access-requests/rules.ts` (`whyClosed`, `checkAsk`) and `handlers.ts`, `your-access.ts`; ran `test/access-why.test.ts`, `test/access-center-api.test.ts`, `test/registry-access.test.ts` and `test/access-requests.test.ts` | §5's floor paragraph, §10's invitation paragraph and §10.3's new bullet match the code. The rest of the document not re-read |
 | 2026-10-15 | claude | **Scope-limited to §10.4, new.** Read every save point it names (`api/users/manage.ts`, `access-center/handlers.ts`, `registry-access.ts`, `registry.ts`, `api/system/pages.ts`, `access-requests/handlers.ts`, both console gateways) and the live `admin_pages.required_role` values through the D1 connector (owner 28, dev 3); `test/access-changes.test.ts` (20 tests) | §10.4 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to §10.3, new.** Read `src/lib/access-requests/` (`rules.ts`, `handlers.ts`), `AccessRequestRepository.ts` (`approve`, `decline`, `getPendingCount`), `page-gates.ts`, `access-center/rules.ts` and `routes.ts`; read the live `admin_access_requests` table before and after `0071` through the D1 connector (9 rows, none pending); `test/access-requests.test.ts` (17 tests) and `test/permission-change-no-lockout.test.ts` pass | §10.3 only; the rest of the document was not re-checked in this pass |

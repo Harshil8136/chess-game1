@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -414,17 +414,38 @@ The activity log gets one row per decision (`grant_access` for an approval, `upd
 decline, surface `access-request`), with the request's id as its correlation id. The four new
 columns (reason, length, note, end) are migration `0071`.
 
+**Console permissions** (since 2026-10-16, permissions item #22). Settings → Your access lists,
+under Backups and Server, an **Ask for a permission** button: a pop-up with every permission the
+person may ask for in each console they can open, as chips, how long they need it (2 hours to 30
+days, a day picked to start) and why. The list is the console's own answer to them: nothing they
+already hold, nothing their role gives that a personal setting closes, no Owner and Vendor
+support permission; the server checks the same again before storing it. The request is stored
+like a page request, with `requested_path` set to `console:<console>:<permission>` (for example
+`console:backup:runs.run`; `src/lib/access-requests/keys.ts`), so it reuses the table, the
+emails, the sidebar badge and this panel. Approving one has no **No end**: the permission is
+given **for a while**, kept by the console beside the person's grant (`temporary` in cf-backup
+and cf-vps), and counted only until its end, whatever the grant's own end. The approval reads the
+person from the console as the decider, refuses a floor and a permission a personal setting
+closes (it would open nothing), keeps a longer hold already there, and is checked by the same
+delegation rules as an Access Center save: an Admin gives only what they hold in that console.
+The request is marked approved first and put back to waiting if the console refuses, so two
+people deciding at once never both give it; when the console does not answer, the request stays
+approved and the activity log says the outcome is unknown. The console's own audit line becomes
+the activity-log row (module `backup` or `vps`, surface `access-request`), with the request's id
+as its correlation id.
+
 | Route | Who | What |
 |---|---|---|
 | `GET /api/access-requests?path=` | anyone signed in | whether this page can be asked for, and their latest request for it |
-| `POST /api/access-requests` | anyone signed in | ask: `{ requestedPath, reason?, wantedHours? }` |
+| `POST /api/access-requests` | anyone signed in | ask: `{ requestedPath, reason?, wantedHours? }`, or for a console permission `{ console, capability, reason?, wantedHours? }` |
 | `GET /api/access-requests?view=decide` | this page | the requests this person may decide, and what they may do with each |
-| `POST /api/access-requests/[id]` | this page, then the page gates | `{ decision: 'approve', hours?, note? }` or `{ decision: 'decline', note? }` |
+| `POST /api/access-requests/[id]` | this page, then the page gates, or for a console permission the console's delegation rules | `{ decision: 'approve', hours?, note? }` (a console permission always has hours) or `{ decision: 'decline', note? }` |
 
 The routes are mapped to the Overview (`/dashboard`), which everyone has, so someone shut out of
 a page can still ask for it; until 2026-10-15 they were mapped to Inquiries. The old
 `POST /api/audit/requests/[id]/resolve` is gone. Server side: `src/lib/access-requests/`.
-Tests: `test/access-requests.test.ts`.
+Tests: `test/access-requests.test.ts`, and for console permissions
+`test/access-console-requests.test.ts`.
 
 **Access changes are emailed** (2026-10-15, item #18). Adding, suspending, restoring or
 deleting someone and changing a role on this page, and approving a request for an Owner-level
@@ -717,6 +738,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §6.1's console permissions paragraph and route rows (permissions item #22).** Read `src/lib/access-requests/handlers.ts` (`askForPower`, `decidePower`, `powerDecideView`), `rules.ts` (`checkPowerAsk`, `powerApproval`), `keys.ts`, `AccessRequestRepository.reopenApproval`, `AskForPermission.tsx` and `AccessRequestsPanel.tsx`; `test/access-console-requests.test.ts` (21 tests) | The rest of §6.1 and the document |
 | 2026-10-16 | **Scope-limited to §2's audit route rows (permissions item #21).** `src/pages/api/audit/logs.ts` (role-or-grant, no `DELETE`), `seals.ts` (`isOwnerOrVendor`, then the page check); `src/pages/api/audit/prune.ts` deleted, so its row went | The other rows of §2 |
 | 2026-10-16 | **Scope-limited to the Users page rebuild (permissions item #29):** §2.1's `access-data` row and the client-side note, §5.5's badge, §6 (components, events, filters), §9.2's drawer and role dialog, §11.4 and §11.6's button, against `UsersConsole.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx`, `people.ts`, `src/pages/dashboard/users/index.astro`, `src/pages/api/users/access-data.ts`, `src/lib/access-center/counts.ts` and `src/pages/api/users/[id]/login-history.ts`; `test/users-console.test.ts` passes (the counts agree with `computeAccessMap` and the page gate over the test D1) | The page in a phone browser (the owner's test); every other section |
 | 2026-10-16 | **Scope-limited to §6.2 (new).** `src/lib/access-review/` (`rules.ts`, `store.ts`, `handlers.ts`), `src/pages/api/users/access-review.ts`, `src/workers/scheduled-access-review.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuditLogRepository.ts` (`getLatestTargetRow`, `getLastConsoleUse`), `AccessReviewPanel.tsx`, `src/pages/dashboard/users/index.astro`; `test/access-review.test.ts` passes. Live: the console-use query against `madagascar-db` through the D1 connector (two people with Server rows, none with Backups rows) | The panel, the removals and the reminder email in a phone browser and a real inbox (the owner's test) |

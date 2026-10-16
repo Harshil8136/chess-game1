@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, local-test]
 owner: harshil
-related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
+related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/AskForPermission.tsx, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
 related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, EMAIL-PORTAL.md, USER-MANAGEMENT.md, ../architecture/GLOBAL-CONFIG.md, ../MAINTENANCE.md]
 tags: [settings, configuration, plac, theme, profile]
 ---
@@ -36,7 +36,7 @@ each a link to the section it counts: **Pages you can open**, **Extra actions** 
 count that could not be read shows a dash and "Could not be read just now", never a zero. The
 sections follow one under another on a phone, and in two columns from 1024 px wide, with Your
 access on the right. The header and Your access render on the server with no script; only Your
-profile and Other people are islands.
+profile, Other people and Your access's **Ask for a permission** button are islands.
 
 - **Your profile.** Who you are (initials, name, email, role), your name with its own **Save
   name** button, and your theme as three choices side by side: Light, Dark and System. A name
@@ -62,6 +62,14 @@ profile and Other people are islands.
   is asked once per page view, beside the page's other reads, and has 3 seconds to answer; a slow
   or unreachable console says so in its own part and the rest of the page still opens. The
   consoles do not share a grant's end date, and the section says so.
+  Since 2026-10-16 (permissions item #22), under the consoles, **Ask for a permission**
+  (`src/components/admin/settings/AskForPermission.tsx`) opens a pop-up: the console (when you
+  can open both), every permission you may ask for there as chips, how long you need it (2 hours,
+  1 day, 1 week or 30 days; 1 day to start) and why. The list comes from the same console answer:
+  nothing you hold, nothing a personal setting closes, no Owner and Vendor support permission. A
+  permission already asked for and still waiting shows "(asked)" and cannot be picked twice. The
+  request is decided on Users ([USER-MANAGEMENT §6.1](USER-MANAGEMENT.md)), and an approved one
+  ends by itself; it shows in Your access requests with its end.
 - **Other people**, only with `/dashboard/settings#others` (default: Admin and above). Every
   person below your own role as a chip, all on view (vendor support: everyone; hidden accounts
   only to vendor support), and a card with the name field for the one you pick. Only the name changes;
@@ -131,6 +139,7 @@ it, and use its permission where one is named.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to Ask for a permission (#22).** The new paragraph of the Your access bullet against `AskForPermission.tsx`, `AccessPanel.tsx` (its children), `your-consoles.ts` (`readCatalogFor`, `askable`, `labels`) and `index.astro`; `test/access-console-requests.test.ts` and `test/access-why.test.ts` pass | The pop-up in a phone browser, which Harshil tests after the deploy |
 | 2026-10-16 | The Your access bullet against `AccessPanel.tsx`, `your-access.ts`, `your-consoles.ts` and `index.astro`; `test/access-why.test.ts` (given and closed pages, a floored page never listed, the console powers read from a catalog answer) and `test/settings-page.test.ts` pass | The rest of the page; the console parts against live consoles, and the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-10 | The Settings section against the rebuilt page (`index.astro`, `SettingsHeader.tsx`, `AccessPanel.tsx`, `UserSettingsPanel.tsx`, `OtherProfilesPanel.tsx`, `settingsView.ts`); `test/settings-page.test.ts` (who may be renamed, the tile counts, the name limits, the theme shown) and `test/api-settings-user.test.ts` pass | The Configuration section; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-10 | Written from the code named in `related_code`; `test/api-configuration.test.ts` (the catalog, the API's exact-key checks, and migrations `0068` and `0069`) and `test/api-settings-user.test.ts` (your own theme and name, another person's name, the role and permission checks) pass | The pages in a phone browser, which Harshil tests after the deploy |
