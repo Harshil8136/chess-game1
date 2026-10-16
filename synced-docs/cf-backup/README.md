@@ -25,12 +25,14 @@ they may open the Backups page. It then forwards each request over the `BACKUP` 
 `x-backup-actor` header naming them, signed with `x-backup-signature` once the optional
 `CONSOLE_SIGNING_KEY` is set (`RULES.md` rules 1 and 2).
 
-Inside, every API route needs one capability from a closed catalog. Owner and Vendor support hold
-all of them, Admin a read-mostly set, and the other roles none until someone gives them one. The
-floors (the backup key, downloading backup data, deleting old runs, changing access, running
-or configuring restore tests) can never be given to anyone else (`RULES.md` rule 12). The full model is the plan of
-record's `13-access-control.md`; on the docs mirror it is under
-`synced-docs/cf-admin/documentation/program/cf-backup/`.
+Inside, every API route needs one capability from a closed catalog. By default Owner and Vendor
+support hold all of them, Admin a read-mostly set, and the other roles none until someone gives
+them one. The floors (the backup key, downloading backup data, deleting old runs, changing
+access, running or configuring restore tests) can never be given to anyone else (`RULES.md`
+rule 12). The full model is the plan of record's `13-access-control.md`; on the docs mirror it
+is under `synced-docs/cf-admin/documentation/program/cf-backup/`. Every capability, its role
+defaults and the routes that need it are listed in `docs/reference/PERMISSIONS.md` (private),
+which is generated from the code.
 
 ## Design
 
@@ -39,9 +41,9 @@ Start with `main.md`, the contract every contributor and AI agent follows; `docs
 
 `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md` covers the Health page (until 2026-10-10 the Diagnostics
 page) that tests every step of the flow (built 2026-09-24), pre-flight checks that stop a run
-before it starts, and a simpler storage layout; its Build log says which stages have shipped. Part A is written for everyone;
-Part B for engineers.
+before it starts, and a simpler storage layout; its Build log says when each stage shipped.
+Part A is written for everyone; Part B for engineers.
 
 To take a complete copy of a Supabase project by hand (every table, settings, Edge Functions
 and files, in one encrypted file): `node scripts/full-export/supabase-full-export.ts`, described
-in `docs/SUPABASE-FULL-EXPORT.md`.
+in `docs/SUPABASE-FULL-EXPORT.md` (private).

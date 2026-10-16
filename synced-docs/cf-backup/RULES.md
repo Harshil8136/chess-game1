@@ -117,4 +117,5 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
     access; running and configuring restore tests) belong to Owner and Vendor support only:
     no role setting, personal grant or power given for a while can pass one on, and changing
     that is a code change the owner approves (OD-27). The full model is plan doc 13; the
-    generated map of every capability, default and route is `docs/reference/PERMISSIONS.md`.
+    generated map of every capability, default and route is `docs/reference/PERMISSIONS.md`
+    (private to this repository).

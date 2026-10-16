@@ -47,6 +47,8 @@ A **weekly full** backup copies D1 and Supabase. A **daily** backup (Monday to S
 
 ### A3. What will change
 
+This is the design as approved on 2026-09-24. What shipped, and what changed after it, is in the Build log: in short, the runner test is retired, and since 2026-10-10 the Diagnostics page is part of the **Health** page, at `/dashboard/backup/health` (the old address opens it).
+
 #### A3.1 A Diagnostics page
 
 A new page, **Diagnostics**, in the backup console at `/dashboard/backup/diagnostics`:
@@ -97,6 +99,7 @@ A new page, **Diagnostics**, in the backup console at `/dashboard/backup/diagnos
 #### A3.3 Simpler storage folders
 
 **Today:**
+
 ```
 v1/
 ├── runs/full/2026/09/<run>/            (plus runs/daily/…)
@@ -109,6 +112,7 @@ v1/
 ```
 
 **Proposed:**
+
 ```
 backups/
 ├── full/2026-09/<run>/                 kept 90 days, cannot be deleted sooner
@@ -360,19 +364,17 @@ interface Probe {
 ### B4. Diagnostics API and page
 
 **Routes:**
-- `GET /api/diagnostics`: capability `usage.view`, the same as Readiness. Returns the probe catalogue (labels, steps, thresholds, costs) and the last 20 stored runs.
+- `GET /api/diagnostics`: capability `usage.view`, the same as Readiness. Returns the probe catalogue (labels, steps, thresholds, costs) and the stored history (below).
 - `POST /api/diagnostics/run`: body `{ step: FlowStep }`, capability `diagnostics.run`. Runs one step's probes and returns their `ProbeResult[]`.
   - **Throttle:** once every 15 s per person per step, on top of the router's usual limits.
   - **Audit:** `diagnostics.run`, recording the step and the counts of pass, warn and fail.
-- `POST /api/diagnostics/runner`: capability `diagnostics.run`. Dispatches the runner test (B6).
-  - **Limits:** it uses the check-mode counter and the per-person daily limit, and is capped at 5 a day overall.
-  - **Refused** while any run is active.
+- `POST /api/diagnostics/runner`: capability `diagnostics.run`. Since docs/remediation/13 B3 it answers 501 `not_implemented`: the runner test (B6) belonged to the retired Primary Pipeline. Until then it dispatched the runner test, with the check-mode counter and the per-person daily limit, at most 5 a day overall, and never while another run was active.
 
 **New capability:** `diagnostics.run`, class `operate`, "Run the Health page's tests (free: they use no GitHub Actions minutes)" (the runner test, which used about 2 minutes, is retired). It is in the Owner and Vendor support defaults. It is added to the catalogue with its `known` handling, so stored policies treat it as a new id.
 
 **History:**
-- It is stored in a new settings row, `backup:diagnostics`, holding the last 20 runs.
-- Each run is compact: `{at, by, steps: {step: [{id, s, ms}]}, errors: [{id, summary}]}`. That is well under 64 KB.
+- It is stored in a new settings row, `backup:diagnostics`, holding the last 20 runs of each step (`HISTORY_KEPT`, `src/diagnostics/history.ts`) and the newest pre-flight of a real start.
+- Each run is compact: `{at, by, step, results: [{id, s, ms}], errors: [{id, summary, fix?}]}`, with a summary only for a test that did not pass and never the details. That is well under 64 KB.
 - `BackupSettingKey` and the readiness key list gain this key.
 
 **Page layout.** The page as rebuilt in the console redesign of 2026-10-09 (Build log, "The Diagnostics page rebuilt"); the first design had a Runner test button in the header and a "Run again" button per step. Since 2026-10-10 these steps are the cards of the Health page, beside the readiness checks (Build log, "The Health page").
@@ -572,6 +574,8 @@ Console connection   312 ms, measured by your browser
 ---
 
 ## Build log
+
+All four stages shipped on 2026-09-24. The entries after Stage 4 record later changes, oldest first.
 
 ### Stage 1: the probe library and the Diagnostics page (2026-09-24, commits `5491f72` and `7159680`)
 
@@ -932,6 +936,7 @@ Built: B7. **Live since 2026-09-25 at 02:49 UTC:** the Worker was deployed from 
   - **Confirmed (Task 16, step 7):** the first run after the deploy, a runner test on 2026-09-25 at 03:17 UTC, was stored under `checks/2026-09/…`, the new layout. GitHub billed it 2 minutes.
 
 **Before (layout v1, until the switch):**
+
 ```
 v1/
 ├── runs/full/2026/09/<run>/            (and runs/daily/…)
@@ -944,6 +949,7 @@ v1/
 ```
 
 **After (layout v2, from the switch):**
+
 ```
 backups/
 ├── full/2026-09/<run>/                 kept 90 days (rule backups-full)
