@@ -29,6 +29,10 @@ integration can break the other. cf-vps owns every screen inside the frame and
 decides what each person may do there; cf-admin decides who may open the page
 at all, and passes cf-vps a trustworthy statement of who is asking.
 
+The frame is allowed three browser features and no others
+(`allow="fullscreen; clipboard-read; clipboard-write"`): the console's Terminal
+uses them for its full screen mode and its Copy and Paste buttons.
+
 Every console section has its own address: `/dashboard/vps/services` frames
 `/dashboard/vps/app/services`. The page,
 `src/pages/dashboard/vps/[...section].astro`, knows only the path *shape*
@@ -183,16 +187,23 @@ invited again later starts from its role.
 
 ## 5. The terminal
 
-cf-vps runs its terminal over ordinary requests. Nothing depends on WebSockets passing through Workers VPC:
+A terminal session has one live connection, a WebSocket, and a fallback over
+ordinary requests (cf-vps's own Console document describes both):
 
 - `POST …/api/terminal/open` starts a session. It is audited as `terminal.open`.
-- `GET …/api/terminal/stream` streams the output as server-sent events.
-- `POST …/api/terminal/input`, `/resize` and `/close` carry keystrokes, window sizes and the end of the session.
+- `GET …/api/terminal/socket` with `Upgrade: websocket` is the session's live
+  connection: output, typing and window sizes all travel on it.
+- The fallback, when the socket cannot open: `GET …/api/terminal/stream` streams
+  the output as server-sent events, and `POST …/api/terminal/input`, `/resize`
+  and `/close` carry keystrokes, window sizes and the end of the session.
 
-Those three are still changes: same-origin, and refused for read-only roles. They write **no** audit row each (`UNAUDITED` in the gateway): the session was audited when it opened, and everything typed in it is recorded on the server.
+`socket`, `input`, `resize` and `close` are still changes: same-origin, and
+refused for read-only roles. They write **no** audit row each (`UNAUDITED` in the
+gateway): the session was audited when it opened, everything typed in it is
+recorded on the server, and the socket is opened again on every reconnect.
 
-The gateway also accepts a WebSocket handshake, for a future WebSocket transport: a GET carrying a GET carrying
-`Upgrade: websocket`. The gateway accepts one **only** under
+The gateway accepts a WebSocket handshake (a GET carrying
+`Upgrade: websocket`) **only** under
 `/dashboard/vps/app/api/terminal/`; anywhere else it is refused with 400
 (`upgrade_refused`) and nothing is sent. An upgrade is treated as a change:
 
@@ -200,8 +211,9 @@ The gateway also accepts a WebSocket handshake, for a future WebSocket transport
    a handshake, so the gateway requires an `Origin` header equal to the
    request's own origin; a missing or foreign one is refused with 403.
 2. **Read-only** roles are refused with 403.
-3. **Audit.** Every terminal opened writes a `terminal.open` row (§6), whether
-   cf-vps accepted it or not; the row carries cf-vps's status.
+3. **Audit.** An upgrade to any other terminal path writes a `terminal.open`
+   row (§6), whether cf-vps accepted it or not; the row carries cf-vps's
+   status. The `socket` upgrade writes none, as above.
 4. **Handshake headers.** Only for a terminal, `Upgrade`, `Connection`,
    `Sec-WebSocket-Key`, `Sec-WebSocket-Version`, `Sec-WebSocket-Protocol` and
    `Sec-WebSocket-Extensions` are forwarded as well.
@@ -282,7 +294,7 @@ browser disconnected before the body was read); `'unknown'` ("outcome
 unknown") when cf-vps may have received it (a timeout, a dropped connection,
 an answer cf-admin could not use). The auth pipeline also writes its usual
 `page_mutation_attempt` row for a POST, PUT, PATCH or DELETE, so each of those
-leaves two rows; a terminal, being a GET, leaves one.
+leaves two rows; a terminal upgrade, being a GET, leaves at most one (§5).
 
 ## 7. Framing
 
@@ -325,6 +337,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §1's frame features against the iframe in `src/pages/dashboard/vps/[...section].astro` (pinned by `test/vps-page.test.ts`); §5 against the gateway's `UNAUDITED` (now with `socket`) and cf-vps's live terminal connection (`cf-vps/src/agent/proxy.ts`, `cf-vps/agent/src/server.ts`); the new case in `test/vps-gateway.test.ts` passes | §5 matches. Not re-checked: every other section; the live connection not yet seen on a phone |
 | 2026-10-11 | claude | §1's access notice paragraph, §2's Access notice row, §6's notice verbs and §8's two new rows, written with the code: `src/pages/dashboard/vps/[...section].astro`, the gateway, `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`; `test/vps-notice.test.ts`, `test/vps-gateway.test.ts` and `test/vps-page.test.ts` pass | Those parts match. Not re-checked: every other section; not yet seen on a phone |
 | 2026-10-12 | claude | §1's access notice paragraph against `src/lib/vps-notice.ts` and `src/components/admin/vps/ServerNotice.tsx` after the notice's rewrite (version `2026-10-12`) | Heading and owner card updated. Not re-checked: every other section |
 | 2026-10-08 | claude | §2's Time row against `endStreamCleanly` in `src/lib/vps-proxy.ts` (event streams only; a download still fails) and the cf-vps agent's stream intervals (`agent/src/main.ts`: a sample a second, a ping every 15 s); the new cases in `test/vps-proxy.test.ts` | The Time row matches. Not re-checked: every other section |
