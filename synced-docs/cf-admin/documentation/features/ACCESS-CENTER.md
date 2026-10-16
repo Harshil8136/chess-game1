@@ -2,10 +2,10 @@
 title: "Access Center (the per-person access editor)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts]
+related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts]
 related_docs: [../specs/2026-10-14-access-control-room.md, ../specs/2026-10-03-access-center-v2-design.md, ../specs/2026-10-02-access-center-design.md, ../architecture/PERMISSIONS-SYSTEM.md, VPS-CONSOLE.md, BACKUP-CONSOLE.md, USER-MANAGEMENT.md, ../reference/DESIGN-SYSTEM.md]
 tags: [permissions, access-center, plac, vps, backup, registry, ui]
 ---
@@ -83,8 +83,8 @@ newest first, fifty at a time, with chips by kind):
 
 | Part | Meaning |
 |---|---|
-| Default-role badge | The lowest role that has it by default (that role and every role above). *Custom* with role dots: a console default that is not a ladder. *Owner & Vendor*: a floor. *Unrecognised*: a page whose stored role this portal cannot read (nobody below Owner is let in) |
-| State | *From role*, *Not in role*, *Granted* and *Revoked* (each with its end date), *Ended* (a setting whose end date has passed: the role decides again), *Full access* (Owner and Vendor support open every page), *Owner & Vendor only* (floor) |
+| Default-role badge | The lowest role that has it by default (that role and every role above). *Custom* with role dots: a console default that is not a ladder. *Owner & Vendor*: a floor. *Admin and above* or *Vendor support only*: a page's role floor (`src/lib/auth/page-floors.ts`). *Unrecognised*: a page whose stored role this portal cannot read (nobody below Owner is let in) |
+| State | *From role*, *Not in role*, *Granted* and *Revoked* (each with its end date), *Ended* (a setting whose end date has passed: the role decides again), *Full access* (Owner and Vendor support open every page), *Owner & Vendor only* (floor), *Not for this role* (a page whose role floor keeps the person's role out, whatever is stored: since 2026-10-16 such a row is closed and fixed, and offers only a Reset when a setting is stored; open item AC-9) |
 | The line under it | For a stored setting: who set it, when, why and until when, or when it ended (`overrideMeta` in `labels.ts`) |
 | Reset / Undo | Reset removes a stored override; Undo drops an unsaved change |
 | Switch | Whether the person will have it. Disabled with a tooltip when the viewer may not make that change |
@@ -152,6 +152,10 @@ page pop-up and who may do what are in
 [the control-room spec](../specs/2026-10-14-access-control-room.md) §4 and §6; the routes are
 in [`DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2. Personal settings made there go through the
 same page gates as this screen (`page-gates.ts`) and appear in the person's History tab.
+Since 2026-10-16 (open item AC-9) Page Registry reads a page's role floor first too: *Who opens
+what* shows a floored page as closed to the roles it keeps out ("Not for the role"), a stored
+grant the floor ignores is flagged *No effect: page floor* on Personal settings and counted on
+Checks, and a new grant the floor would ignore is refused, as it is here and at an invitation.
 
 The **Consoles** tab shows one block per console (Server, then Backup) with one row per
 capability: label, key, class, default role and the live personal grants that mention it, and a
@@ -189,6 +193,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §2.1's floor state and §4's floor paragraph (AC-9) against `pages.ts` (`pageItem`), `rules.ts` (`pageEditability`), `overview.ts` (`personOpens`, `roleOpensPage`, `switchFlags`, `changeRefusal`), `labels.ts`, `AccessRow.tsx` and the registry panels; `test/access-why.test.ts` and the AC-9 case in `test/access-center-api.test.ts` pass | The rest of the page; the screens in a phone browser (the owner's test) |
 | 2026-10-15 | §2 steps 4 and 6, the default end of item #23, against `draft.ts` (`withDefaultEnd`, `defaultPageUntil`), `limits.ts`, `UserAccessEditor.tsx`, `AccessSections.tsx`, `AccessReviewDialog.tsx`, `PageSheet.tsx`; `test/access-center-draft.test.ts` | Everything else |
 | 2026-10-15 | §4's Consoles paragraph after Page Registry became vendor support only: `canUsePageRegistry` and the `gate()` in `src/lib/access-center/registry.ts`; `test/registry-console-features.test.ts` | Everything else |
 | 2026-10-14 | §1 to §4 against the code after the 2026-10-14 work: `UserAccessEditor.tsx`, `AccessChrome.tsx`, `AccessRow.tsx`, `AccessReviewDialog.tsx`, `AccessHistoryList.tsx`, `CopyAccessDialog.tsx`, `labels.ts`, `draft.ts` (`toSave`, `copyFrom`), `handlers.ts` (`pageEndIssues`), `history.ts` and the registry under `src/components/admin/debug/registry/`; the live `admin_page_overrides.expires_at` column and the `0070` ledger row through the D1 connector; the screens server-rendered with edge-case data; `test/access-center-end-dates.test.ts`, `test/access-history.test.ts`, `test/registry-ui-logic.test.ts` | §5 and §6 re-read, not re-derived; the screens in a phone browser (the owner's test) |

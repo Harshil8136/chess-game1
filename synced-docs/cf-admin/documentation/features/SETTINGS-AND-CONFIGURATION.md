@@ -2,10 +2,10 @@
 title: "Settings and Configuration"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-10
+last_verified: 2026-10-16
 verified_against: [code, local-test]
 owner: harshil
-related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
+related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
 related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, EMAIL-PORTAL.md, USER-MANAGEMENT.md, ../architecture/GLOBAL-CONFIG.md, ../MAINTENANCE.md]
 tags: [settings, configuration, plac, theme, profile]
 ---
@@ -51,6 +51,17 @@ profile and Other people are islands.
   the page registry and your access map). Each page is a link chip; the extra actions are listed
   under "You may also". The owner and vendor support see one line: everything. When the page
   registry cannot be read, this section says so and the rest of the page still opens.
+  Since 2026-10-16 (permissions item #25) it also says where each comes from: a page or action
+  given to you personally carries a "given" or "until" note with its end date, and anything
+  without a note comes from your role. What your role gives but a personal setting closes is
+  listed as closed. A page whose role floor keeps your role out is never listed, as the sidebar
+  does not offer it. Below that, **Your access requests** lists the ones waiting and those
+  decided in the last 14 days, with the decider's note, and **Backups and Server** lists what you
+  may do in each console you can open, from that console's own answer, marking what was given to
+  you there and what is closed for you (`src/lib/access-center/your-consoles.ts`). Each console
+  is asked once per page view, beside the page's other reads, and has 3 seconds to answer; a slow
+  or unreachable console says so in its own part and the rest of the page still opens. The
+  consoles do not share a grant's end date, and the section says so.
 - **Other people**, only with `/dashboard/settings#others` (default: Admin and above). Every
   person below your own role as a chip, all on view (vendor support: everyone; hidden accounts
   only to vendor support), and a card with the name field for the one you pick. Only the name changes;
@@ -120,5 +131,6 @@ it, and use its permission where one is named.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | The Your access bullet against `AccessPanel.tsx`, `your-access.ts`, `your-consoles.ts` and `index.astro`; `test/access-why.test.ts` (given and closed pages, a floored page never listed, the console powers read from a catalog answer) and `test/settings-page.test.ts` pass | The rest of the page; the console parts against live consoles, and the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-10 | The Settings section against the rebuilt page (`index.astro`, `SettingsHeader.tsx`, `AccessPanel.tsx`, `UserSettingsPanel.tsx`, `OtherProfilesPanel.tsx`, `settingsView.ts`); `test/settings-page.test.ts` (who may be renamed, the tile counts, the name limits, the theme shown) and `test/api-settings-user.test.ts` pass | The Configuration section; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-10 | Written from the code named in `related_code`; `test/api-configuration.test.ts` (the catalog, the API's exact-key checks, and migrations `0068` and `0069`) and `test/api-settings-user.test.ts` (your own theme and name, another person's name, the role and permission checks) pass | The pages in a phone browser, which Harshil tests after the deploy |

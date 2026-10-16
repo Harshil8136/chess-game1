@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -355,9 +355,14 @@ out of a page they never held, and every change the registry makes can also be m
 person on the Access page. Until then the owner passed, as everywhere, and a grant opened it
 for anyone (the live grant on the Owner's account now does nothing). The rank rule for an
 editor below vendor support (`registryEditRefusal`) and the visibility rules for a viewer below
-vendor support (`buildOverview`) stay in the code behind the floor. The Access page still
-offers this key, and the GitHub key to a Manager, as grantable though the floor refuses them
-([`MAINTENANCE.md`](../MAINTENANCE.md)).
+vendor support (`buildOverview`) stay in the code behind the floor. *Since 2026-10-16 (open
+item AC-9)* every screen that shows or changes access reads a page's floor first, as the pages
+do: the Access page shows the row as *Not for this role* and offers only a Reset (so the
+Owner's stored grant of this key can be removed), Page Registry shows the page as closed to
+those roles and flags such a grant *No effect: page floor*, Settings → Your access never lists
+it, and a new grant a floor would ignore is refused by `pageEditability`, `changeRefusal` and,
+at an invitation, `inviteSettingRefusals` ([`MAINTENANCE.md`](../MAINTENANCE.md)). Until then
+the Access page offered this key, and the GitHub key to a Manager, as grantable.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -642,6 +647,11 @@ route `POST /api/users/access` that ran them until 2026-10-03 is retired.
 | **C** | Actor must have access to the page they are granting | Granting a door you cannot open |
 | **D** | A page whose required role sits above the **actor's** clearance cannot be granted to anyone | Manufacturing a super-user by accumulating grants |
 
+*Since 2026-10-16* the page settings an invitation carries (`POST /api/users/manage`) meet
+gates C and D and the page's floor too (`inviteSettingRefusals`); one refused setting refuses
+the invitation, and nobody is invited. Until then they were written unchecked (MAINTENANCE
+AC-10). The person gates are the invitation's own: the new role sits below the inviter's.
+
 Gate A reading the target role from the database rather than the payload is the
 single most important line in the file; trusting `body.targetUserRole` was a real
 finding, hardened 2026-05-25.
@@ -724,6 +734,13 @@ the code is `src/lib/access-requests/`). Three rules matter here:
   (`UPDATE ... WHERE status = 'pending'`), so a decided request cannot be decided twice and a
   lost race writes nothing. A switch already there for longer, or with no end, is kept. Then one
   `authz-changed` mark (§11), one activity-log row, and an email to the person.
+
+- **Why it is closed (#25, since 2026-10-16).** The card's `GET ?path=` answer also carries
+  `whyClosed`, read from the person's own registry row for that page in computeAccessMap's
+  order: a personal close, a personal grant whose end date has passed, else their role (with
+  the role the page opens for). When none of those closes it, their access changed after the
+  session was read, and the card offers a reload. A page switched off in Page Registry is named
+  as such (`getSwitchedOffPageFor`) instead of "not a page", and cannot be asked for.
 
 The routes are mapped to `/dashboard` (`src/lib/auth/routes.ts`), which every role has;
 until 2026-10-15 they were mapped to `/dashboard/inquiries`, so someone without Inquiries could
@@ -1091,6 +1108,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to page floors on the access screens (AC-9), invitation gates (AC-10) and the Access denied reason (#25).** Read `page-floors.ts` (`pageFloor`), `access-center/rules.ts` (`pageEditability`), `pages.ts`, `overview.ts`, `page-gates.ts` (`inviteSettingRefusals`), `api/users/manage.ts`, `access-requests/rules.ts` (`whyClosed`, `checkAsk`) and `handlers.ts`, `your-access.ts`; ran `test/access-why.test.ts`, `test/access-center-api.test.ts`, `test/registry-access.test.ts` and `test/access-requests.test.ts` | §5's floor paragraph, §10's invitation paragraph and §10.3's new bullet match the code. The rest of the document not re-read |
 | 2026-10-15 | claude | **Scope-limited to §10.4, new.** Read every save point it names (`api/users/manage.ts`, `access-center/handlers.ts`, `registry-access.ts`, `registry.ts`, `api/system/pages.ts`, `access-requests/handlers.ts`, both console gateways) and the live `admin_pages.required_role` values through the D1 connector (owner 28, dev 3); `test/access-changes.test.ts` (20 tests) | §10.4 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to §10.3, new.** Read `src/lib/access-requests/` (`rules.ts`, `handlers.ts`), `AccessRequestRepository.ts` (`approve`, `decline`, `getPendingCount`), `page-gates.ts`, `access-center/rules.ts` and `routes.ts`; read the live `admin_access_requests` table before and after `0071` through the D1 connector (9 rows, none pending); `test/access-requests.test.ts` (17 tests) and `test/permission-change-no-lockout.test.ts` pass | §10.3 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to screen-only action keys.** Listed every `/dashboard/x#y` key in `migrations/*.sql` (63) and read the live rows through the D1 connector (63, 55 active); grepped `src/pages/api` and `src/lib` with comments stripped for each; read `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and export, `ai-generate.ts`, `templates.ts`, `retention/purge.ts` and the email preview path; `test/action-keys-enforced.test.ts` fails when the AI or consent check is reverted | §5's new paragraph and the §17 row. Not re-derived: every other section |

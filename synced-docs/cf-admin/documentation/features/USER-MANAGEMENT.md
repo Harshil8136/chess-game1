@@ -3,7 +3,7 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/pages/api/users/manage.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
@@ -257,6 +257,12 @@ on a wide screen and stack on a phone, and only the dialog's body scrolls.
   - `force_deny` (✕) — click to deny despite role baseline (override written)
 - Click once to force-override; click again to revert to role default.
 - Override count badge shown when customisations are active.
+- *Since 2026-10-16* the server checks each setting with the gates a later change on the
+  person's Access page meets: you hold the page, you may give it, and a grant clears the page's
+  floor for the new role (`inviteSettingRefusals` in `src/lib/access-center/page-gates.ts`). One
+  refused setting refuses the whole invitation (403, nobody is invited) and the message names up
+  to three of them. The grid still offers every page; until then such settings were written
+  unchecked (MAINTENANCE AC-10).
 
 ### 5.3 Restoring / Enabling Access
 
@@ -336,8 +342,12 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 (`src/components/ui/RequestAccess.tsx`). The card first asks the server whether the page can be
 asked for at all. It cannot when no request could open it, and the card says why instead of
 offering a button: a page with a floor (Page Registry, GitHub: only the roles the floor names
-can ever open it), an address that is no page, a page the person can already open, or an Owner
-or Vendor support (they open every page already). Otherwise the person picks how long they need
+can ever open it), a page switched off in Page Registry (named as such since 2026-10-16), an
+address that is no page, a page the person can already open, or an Owner or Vendor support (they
+open every page already). *Since 2026-10-16 (#25)* the card also says why the page is closed to
+them, from their own setting on it: closed for them personally (with the day), a grant whose end
+date has passed (with that date), or their role, with the role the page opens for. When none of
+those closes it, their access changed a moment ago and the card offers only a Reload. Otherwise the person picks how long they need
 it (2 hours, 1 day, 1 week or 30 days, or nothing) and may write why (at most 500 characters).
 The request goes to everyone on the sign-in alert list as an email with a button to this page;
 the card says whether that email left, so nobody is told "an administrator has been notified"
@@ -599,6 +609,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to the invitation's page settings (§5's right panel) and §6.1's asking paragraph.** `src/pages/api/users/manage.ts` (POST), `page-gates.ts` (`inviteSettingRefusals`), `src/lib/access-requests/rules.ts` (`whyClosed`, `checkAsk`), `handlers.ts`, `RequestAccess.tsx`; `test/access-why.test.ts` passes | The rest of the document; the card and the invitation in a phone browser (the owner's test) |
 | 2026-10-15 | **Scope-limited to §6.1's access-change paragraph.** `src/pages/api/users/manage.ts` (POST, PATCH, DELETE) and `src/lib/access-requests/handlers.ts` against `src/lib/access-changes/notify.ts`; `test/access-changes.test.ts` | Whether the email arrives in a real inbox (the owner's phone test) |
 | 2026-10-15 | **Scope-limited to §6.1, new.** Access requests against `src/lib/access-requests/` (`rules.ts`, `handlers.ts`, `mail.ts`), `AccessRequestRepository.ts`, `RequestAccess.tsx`, `AccessRequestsPanel.tsx`, `src/lib/auth/routes.ts` and `test/access-requests.test.ts`; the live `admin_access_requests` columns after `0071` (D1 connector) | Whether the request email arrives in a real inbox (the owner's phone test) |
 | 2026-10-15 | **Scope-limited.** §2's Viewer row and §6's pill grid against `rbac.ts` (`PICKABLE_ROLES`), `InlineRoleSelector.tsx` and `RolePillSelector.tsx`; §5's full delete against `manage.ts` and `VpsAccessRepository.ts`; §9.0 against `api/users/index.ts`, `LoginLogRepository.ts` and the live `admin_login_logs` and `admin_authorized_users` rows (D1 and Supabase connectors); `test/users-last-sign-in.test.ts`, `test/vps-access.test.ts`, `test/rbac-roles.test.ts` | Every other section (last fully re-derived 2026-09-19) |
