@@ -65,7 +65,7 @@ the way GitHub bills, 2026-08-23 → 2026-09-22): cf-admin **~1,173**, cf-astro 
 the hourly heartbeat** (two workflow names, 2 jobs per run). Both repositories are private (*measured*), so they share the
 account's allowance. **Target: combined under 1,000 min/month.**
 
-**What the 2026-09-22 consolidation changes** ([report](../../records/reports/2026-09-22-ci-workflow-consolidation.md)):
+**What the 2026-09-22 consolidation changes** (report (private)):
 cf-admin's push CI went from 8 jobs (~15–20 min per push) to **1 job (~2–2.5 min)**,
 with stale runs cancelled. At the last 30 days' ~116 pushes, that is roughly **290 min**
 plus the weekly audit, instead of the majority of today's 936.

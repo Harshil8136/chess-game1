@@ -124,7 +124,7 @@ and the coverage gap is its mirror image.
 3. **Both**, plus a regression test asserting a Manager can send with the setting
    absent. This is what closes it permanently.
 
-Tracked in [`../MAINTENANCE.md`](../MAINTENANCE.md). Until fixed, treat the sender
+Tracked in `../MAINTENANCE.md` (private). Until fixed, treat the sender
 dropdown as showing addresses that only the owner can actually use.
 
 ---
@@ -252,7 +252,7 @@ are written to the audit log with the suppressed addresses in `context`.
 > a message is mailed anyway, which is the CAN-SPAM/CASL failure the mechanism
 > exists to prevent. It is **latent, not active** — the suppression list has had 0
 > rows since it shipped — but it should be fixed before any campaign use.
-> Logged in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+> Logged in `../MAINTENANCE.md` (private).
 
 Table `admin_email_suppression`: `email` (PK), `reason` (default `unsubscribe`),
 `source` (default `one_click`), `actor_email`, `ip_hash`, `created_at`.
@@ -322,7 +322,7 @@ last column was added 2026-09-19 after grepping every route under
 > route re-checks independently**". Until 2026-10-15 the second half was not true:
 > denying an operator `#templates` or `#ai-generate` hid the control and nothing
 > more. This was the same class of gap as **D-5** in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md) (a hash key is not a path descendant, so
+> `../MAINTENANCE.md` (private) (a hash key is not a path descendant, so
 > a page-key check never covers a fragment). Both routes now check the page key and
 > then the anchor, deny-only like the rest of this page.
 
@@ -554,7 +554,7 @@ demonstrated to a paying client.
   `src/workers/scheduled-asset-cleanup.ts` and is **always excluded** from
   deletion, deliberately, because the DB reference queries may be incomplete if
   Supabase is down. Orphaned attachment blobs therefore accumulate indefinitely.
-  Tracked as **E-1** in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+  Tracked as **E-1** in `../MAINTENANCE.md` (private).
 - **Server errors reach Sentry via `@sentry/cloudflare`** (`withSentry` in
   `cf-entry.ts`). `@sentry/astro`'s server SDK is a silent no-op in workerd.
 

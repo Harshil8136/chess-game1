@@ -28,7 +28,7 @@ trees). This ledger is the third artifact — it did not exist anywhere in the
 repo until 2026-08-12, when a docs-consistency review found RULE #0.7
 referencing it while nothing implemented it (unlike RULE #0.6/#0.9, which
 point at the real, live
-[`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)).
+`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (private)).
 
 **Backfilled 2026-09-15 (viability program chunk 5).** Every file in
 `migrations/` has a row; the 24 rows for files applied before this ledger
@@ -152,4 +152,4 @@ even when the change is data rather than schema.
 
 - [`../../RULESAd.md`](../../RULESAd.md) RULE #0.7 — the rule this ledger satisfies.
 - `database/schema.snapshot.sql` — the current DDL, and `RULESAd.md` RULE #0.9 for the estate counts. **This is what "exists today" means**; the ledger is the change history, not the inventory.
-- [`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the 2026-08-06 reuse analysis (why the estate looks the way it does). A dated audit, not a live inventory.
+- `../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (private) — the 2026-08-06 reuse analysis (why the estate looks the way it does). A dated audit, not a live inventory.

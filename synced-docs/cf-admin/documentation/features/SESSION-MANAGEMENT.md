@@ -6,7 +6,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionsConsole.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionsConsole.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts, src/lib/approvals/ask.ts, src/pages/api/users/force-kick.ts]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md, ../specs/2026-10-03-sign-in-alerts-v2-design.md]
 tags: [sessions, security, plac, rbac, kv, forensics]
 ---
@@ -24,7 +24,7 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 > (stored `super_admin`+) via a dedicated PLAC page row; what each person may do on it
 > comes from the page's permission keys, and a control they lack shows switched off
 > with the reason. Rebuilt from scratch on 2026-10-10 on the console kit
-> ([change record](../records/reports/2026-10-10-sessions-settings-github-and-pop-ups.md)).
+> (change record (private)).
 > Built KV-budget-aware: the list is read once, Live is opt-in and self-limiting.
 
 ## Location & access
@@ -77,7 +77,7 @@ One honest caveat:
   could apply to are already refused by the role check, and the two it would need
   to apply to cannot be denied. The in-code comment calling the fragment
   "deny-only — it can remove the capability from an owner" is wrong; it is inert.
-  Raised for triage in [`../MAINTENANCE.md`](../MAINTENANCE.md) (D-5) and
+  Raised for triage in `../MAINTENANCE.md` (private) (D-5) and
   `PERMISSIONS-SYSTEM.md`, both of which record the same claim.
 
 ## Components (code-split)
@@ -157,23 +157,29 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
 
 - **Per-session drawer**: tap a card for the full address, place, device, sign-in method,
   Ray ID and times, with **End this session** and **Lock out**. The session you are using
-  now cannot be ended from here (sign out instead), and you cannot lock yourself out.
+  now cannot be ended from here (sign out instead), and you cannot lock yourself out. A
+  session's method is the one its Cloudflare Access token named when it was created, and the
+  token names none in production, so session cards read **Unknown**; since 2026-10-16 the
+  sign-in history row carries the provider Access reports
+  ([`login-forensics.md`](../security/login-forensics.md) §2.2).
 - **Unusual sessions**: `sessionRisk.ts` flags a person signed in from more than one country
   at once (the **Unusual** tile and filter). In the history: an email not on the user list
   and a refused attempt (high), outdated TLS (medium), and a Cloudflare bot score below 30
   ("Likely automated", high). Cloudflare scores 1 for certainly automated and 99 for
   certainly a person; until 2026-10-10 this read scores above 50 as the risk, which flagged
-  people and passed bots. The score is null on the free plan and is treated as no signal.
+  people and passed bots. A sign-in with no score (every row before 2026-10-10, and the
+  Cloudflare log sync's rows) is treated as no signal.
 - **History filters**: outcome (Everything, Signed in, Failed, Refused), method (Google,
   GitHub, Email code, Unknown) and a search over email, place, address and Ray ID, over what
   has been read; **CSV and JSON** downloads of what the filters leave, for holders of
   `#export`. The method chip and the method label now agree: until 2026-10-10 the filter
   said "OTP" and matched the text, while the label said "Email code".
-- **Alert email per row** (2026-10-03): an envelope icon when the sign-in was emailed, a
-  muted bell with the reason when it was not (the same sign-in as before, paused, trusted
-  area, alert policy, usual place and device, a repeat of a recent failure); the sign-in
-  drawer shows it too. Read from `admin_login_logs.alert` (migration `0064`); rows from
-  before read "Not recorded". Labels: `src/lib/login-alerts/outcomes.ts`.
+- **Alert email per row** (2026-10-03): an envelope icon when the sign-in was emailed (with
+  why it was urgent: it moved, or it was made without Google), a muted bell with the reason
+  when it was not (the same sign-in as before, paused, trusted area, alert policy, usual place
+  and device, a repeat of a recent failure); the sign-in drawer shows it too. Read from
+  `admin_login_logs.alert` (migration `0064`); rows from before read "Not recorded". Labels:
+  `src/lib/login-alerts/outcomes.ts`.
 - **Everyone at once** (under the Signed in list): **Lock out a person**, **Clear stale
   sessions** (sessions whose account is off or gone, and entries that cannot be read) and
   **Sign everyone else out** (type SIGN OUT to confirm; keeps your own session). The last
@@ -183,27 +189,37 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   `action: block_account` (`#revoke`); by name, a `PATCH /api/users/manage` with
   `is_active: false`, gated by `/dashboard/users`. Both sign the person out everywhere,
   switch their account off **and write a 24-hour `revoked:` sign-in block**. Reactivating
-  the account via the same PATCH clears the block; a force-kick from the user registry does
-  not, and can only be lifted here under **Sign-in blocks** (`#unblock`). See
-  [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.4. Below the owner and vendor support,
-  ending someone's sessions and locking them out reach only people whose role sits strictly
-  below yours: never a peer, never anyone above, never the owner or vendor support (*changed
-  2026-10-14*; until then only the owner and vendor support were protected, so an Admin could
-  lock out another Admin). Your own other sessions can always be ended, and nobody can block
-  their own account (the route answers 400). The page says so on the button first
-  (`beyondReach`, `SessionDrawer.tsx`). A block whose account update fails answers 502 with
-  what to do: the sessions are already ended, but the account would let them sign in again.
-  The owner's and vendor support's sign-in blocks can be lifted only by the owner or vendor
-  support.
+  the account via the same PATCH clears the block; a force sign-out from Users
+  (`DELETE /api/users/force-kick`) does not, and can only be lifted here under **Sign-in
+  blocks** (`#unblock`). That sign-out needs its own key, `/dashboard/users#force-kick`
+  (Owner by default, enforced since 2026-10-15), on top of the Users page. See
+  [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.4.
+- **Who you can reach.** Below the owner and vendor support, ending someone's sessions and
+  locking them out from a session reach only people whose role sits strictly below yours
+  (`canManageUser`): never a peer, never anyone above, never the owner or vendor support
+  (*changed 2026-10-14*; until then only the owner and vendor support were protected, so an
+  Admin could lock out another Admin). The owner and vendor support reach everyone but
+  themselves. **Lock out a person** by name follows the Users page's rule instead: people below
+  your level, or anyone for vendor support. Your own other sessions can always be ended, and
+  nobody can block their own account (the route answers 400). The page says so on the button
+  first (`beyondReach`, `SessionDrawer.tsx`). A block whose account update fails answers 502
+  with what to do: the sessions are already ended, but the account would let them sign in
+  again. The owner's and vendor support's sign-in blocks can be lifted only by the owner or
+  vendor support. Tests: `test/session-rank.test.ts`.
 - **Locking out the last Owner waits for a second person** (*2026-10-16*, permissions item
   #36). A lock-out is a suspension, so both ways in follow the
-  [two-person rule](../architecture/PERMISSIONS-SYSTEM.md): locking out the only active Owner
-  answers 202, nobody is signed out, and the change waits on Users until another Owner or
-  Vendor support approves it there, where it is made as a suspension. The page shows a notice
-  instead of an error. Every lock-out that goes ahead is emailed to the sign-in alert list as
-  "Person suspended" (permissions item #18), from Sessions as from Users. A person the user
-  directory does not have answers 404, and a directory that cannot be read answers 502 with
-  nobody signed out. Tests: `test/two-person-rule.test.ts`.
+  [two-person rule](../architecture/PERMISSIONS-SYSTEM.md) (§10.7, `personChangeGate` in
+  `src/lib/approvals/ask.ts`): locking out the only active Owner answers `202` with
+  `pending: true`, nobody is signed out and no block is written, and the change waits on Users
+  for up to 3 days until another Owner or Vendor support approves it there (the Owner it is
+  about counts: approving is their consent), where it is made as a suspension. When nobody
+  else could approve, it goes ahead at once. The page shows the route's message as a notice,
+  not an error, from a session's **Lock out** and from **Lock out a person** alike. Every
+  lock-out of an active account that goes ahead is an access change, "Person suspended"
+  (permissions item #18), emailed to the alert recipients as the alert policy's **Access
+  changes emailed** says, from Sessions as from Users. A person the user directory does not
+  have answers 404, and a directory that cannot be read answers 502 with nobody signed out.
+  Tests: `test/two-person-rule.test.ts`.
 - **A recent sign-in first** (*2026-10-16*, permissions item #14). Ending someone else's
   session, **Lock out**, a force sign-out from Users and **Sign everyone else out** need a
   sign-in from the last 10 minutes. Otherwise the route answers 403, nothing is ended, and the
@@ -228,7 +244,7 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   server-side and reveals the full address only to Vendor Support. `active-sessions` also
   hides `vendor_support` sessions from non-vendor viewers, which is at odds with the
   2026-07-26 no-hiding policy recorded in [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §4;
-  both are logged in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+  both are logged in `../MAINTENANCE.md` (private).
 
 ## Your sign-in alerts (2026-10-03)
 
@@ -256,8 +272,13 @@ the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
   own again, even if an alert-policy holder set them before.
 
 Whatever the card says, a sign-in is emailed once, not once per tab or portal
-session it opens, and a sign-in that turns up in another country or on another
-device is emailed as urgent ([sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md)).
+session it opens, and two kinds are always emailed as urgent: a sign-in that turns
+up in another country or on another device
+([sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md)), and, since
+2026-10-16 (permissions item #37), a sign-in made without Google, the emergency way
+in, titled **SIGN-IN WITHOUT GOOGLE**. A pause, a trusted area or a quieter mode
+does not hold either back. The rules:
+[`../security/login-forensics.md`](../security/login-forensics.md) §7.
 
 ## Sign-in alert policy (2026-10-03)
 
@@ -315,20 +336,22 @@ sign-in block. A missing row ends the session with `access_denied`, an inactive
 row with `account_inactive`, an untranslatable role with `role_unrecognised`.
 A Supabase outage keeps the session for up to two intervals since the last good
 check, then ends it with `recheck_failed`; a re-check forced by a mark gets no grace.
-Design and rationale: [`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md).
+Design and rationale: `../specs/2026-09-16-access-revocation-remediation-design.md` (private).
 
 ## Verification
 
 `npm run typecheck`; `npx vitest run test/sessions-console.test.ts test/session-ref.test.ts
 test/sessions-permissions.test.ts test/pipeline-session.test.ts test/sessionRisk.test.ts
-test/exportSessions.test.ts test/login-method.test.ts` (the page's decisions, the session
-handle, fragment denies, the session pipeline, the risk signals, the downloads and the
-method labels). On a phone: open `/dashboard/sessions` as canonical Admin, check the five
+test/exportSessions.test.ts test/login-method.test.ts test/session-rank.test.ts
+test/two-person-rule.test.ts` (the page's decisions, the session handle, fragment denies, the
+session pipeline, the risk signals, the downloads, the method labels, who may end sessions and
+lock people out, and the lock-out of the last Owner). On a phone: open `/dashboard/sessions` as canonical Admin, check the five
 tiles, open each tab, open a session and a sign-in, and confirm a `manager`/`staff` user
 is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-16 | claude | **Scope-limited to Lock out, the force sign-out key, the alert lines and the method and bot-score notes.** Read `src/pages/api/sessions/active-sessions.ts` (GET and DELETE), `src/lib/approvals/ask.ts` (`personChangeGate`, `askForSecondPerson`) and `rules.ts` (`kindForPersonChange`, `approversFor`, the 3-day wait), `src/lib/api.ts` (`jsonPending`), `src/pages/api/users/manage.ts` and `src/lib/users/manage-apply.ts` (the by-name rule), `src/pages/api/users/force-kick.ts` and `denyForceKick` in `src/lib/auth/surface-guards.ts`, `SessionsConsole.tsx`, `LockOutDialog.tsx`, `SessionDrawer.tsx`, `parts.tsx`, `sessionFormat.ts`, `sessionRisk.ts`, `src/lib/login-alerts/decide.ts` and `outcomes.ts`; the Sessions cases in `test/two-person-rule.test.ts` read. Live D1 (read only): every sign-in since 2026-10-10 carries a bot score. Corrected: the session card's method reads Unknown in production; the bot-score note; the by-name lock-out's own rule; the 202 body, the 3-day wait and who may approve; the access-change email follows the alert policy; a sign-in without Google is always urgent. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to Lock out and the two-person rule.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE, `block_account`), `src/lib/approvals/ask.ts` (`personChangeGate`), `SessionsConsole.tsx` and `LockOutDialog.tsx`; `test/two-person-rule.test.ts` and `test/session-rank.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to the alert policy's new "Audit log seal" row.** Read `AlertPolicyPanel.tsx` (`AUDIT_SEAL_TEXT`), `src/lib/login-alerts/policy.ts` (`AUDIT_SEAL_MODES`, `describePolicyChange`), `policy-handlers.ts` and `src/workers/scheduled-audit-seal.ts` (`checkAndEmail`); `test/audit-seal.test.ts` covers the quiet setting and the turn-down line. The rest of the page was not re-read |
 | 2026-10-16 | claude | **Scope-limited to the alert policy's new "Accounts nobody uses" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` (`UNUSED_MODES`, `describePolicyChange`) and `policy-handlers.ts`; `test/unused-accounts.test.ts` pins the default and the change line. Not re-read: the rest of the page. Not rendered in a browser. |

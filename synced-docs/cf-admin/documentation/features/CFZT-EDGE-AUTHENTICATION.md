@@ -2,7 +2,7 @@
 title: "Cloudflare Zero Trust Edge Authentication & Single-Sign Architecture"
 status: active
 audience: [operator, technical, ai]
-last_verified: 2026-09-19
+last_verified: 2026-10-16
 verified_against: [code, infra, tests]
 owner: harshil
 related_docs: [./CF-ACCESS-SYNC.md, ../runbooks/public-share-links-domain-isolation.md, ../runbooks/release-and-rollback.md, ../security/SECURITY.md, ../architecture/ARCHITECTURE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../../RULESAd.md]
@@ -33,15 +33,15 @@ The Madagascar Admin Portal operates on a **Pure Cloudflare Zero Trust (CFZT)** 
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │ 1. CLOUDFLARE ZERO TRUST EDGE GATEWAY                                                   │
 │    • Domain: secure.madagascarhotelags.com                                              │
-│    • Identity Providers: Google Workspace (@madagascarhotelags.com) + Email OTP        │
+│    • Identity Providers: Google (the way in) + an emergency way in (§3)                 │
 │    • Access Policy: expected Include = Group "Admin Portal Authorized Users"            │
-│      (dashboard-only state — operator-verified, still pending; see §3)                   │
+│      (dashboard-only state — operator-verified, still pending; see §3)                  │
 │    • Edge Interception: All unauthenticated inbound requests challenged at edge         │
 └────────────────────────────────────────────┬────────────────────────────────────────────┘
-                                             │ User completes Google OAuth or OTP
+                                             │ User completes the Access sign-in
                                              ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ 2. CLOUDFLARE EDGE INJECTS IDENTITY ASSERTION HEADERS                                    │
+│ 2. CLOUDFLARE EDGE INJECTS IDENTITY ASSERTION HEADERS                                   │
 │    Upon successful authentication, CFZT injects:                                        │
 │      • CF-Access-Authenticated-User-Email: user's verified corporate email              │
 │      • CF-Access-JWT-Assertion: RS256-signed JWT issued by Cloudflare Access JWKS       │
@@ -50,30 +50,32 @@ The Madagascar Admin Portal operates on a **Pure Cloudflare Zero Trust (CFZT)** 
                                              │ Request forwarded to origin Worker
                                              ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ 3. WORKER INGRESS & AUTH PIPELINE (src/middleware.ts → src/lib/auth/pipeline.ts)         │
-│    • Stage 1 (classify): Assets, webhooks, /privacy, /terms, and / handled;              │
-│        then the CSRF gate (validateCsrf, every non-GET method).                          │
-│    • Stage 2 (session-stage): Looks up KV session via __Host-admin_session,              │
-│        refuses a revoked session, reads the authz-changed mark.                          │
-│    • Stage 3a (refresh-role): warm sessions only — re-verify against the                 │
-│        directory every 30 min, or at once when the authz-changed mark is new.            │
-│        Writes no sign-in block (see §4.1).                                               │
+│ 3. WORKER INGRESS & AUTH PIPELINE (src/middleware.ts → src/lib/auth/pipeline.ts)        │
+│    • Stage 1 (classify): Assets, webhooks, /privacy, /terms, and / handled;             │
+│        then the CSRF gate (validateCsrf, every non-GET method).                         │
+│    • Stage 2 (session-stage): Looks up KV session via __Host-admin_session,             │
+│        refuses a revoked session, reads the authz-changed mark.                         │
+│    • Stage 3a (refresh-role): warm sessions only — re-verify against the                │
+│        directory every 30 min, or at once when the authz-changed mark is new.           │
+│        Writes no sign-in block (see §4.1).                                              │
 │    • Stage 3b-i (assertion): Extracts headers & verifies RS256 JWT against JWKS:        │
 │        - Validates issuer: https://{CF_TEAM_NAME}.cloudflareaccess.com                  │
 │        - Validates audience: CF_ACCESS_AUD from wrangler.toml                           │
 │        - Validates exp & iat (clock skew protection)                                    │
 │    • Stage 3b-ii (bootstrap):                                                           │
-│        - Bot score gate (cfBotScore >= 30)                                              │
+│        - Bot score gate (a score below 30 is refused)                                   │
 │        - Assertion email must equal the CF-Access header email                          │
-│        - Supabase whitelist check: email must exist in admin_authorized_users with       │
-│          is_active = true. A lookup error other than PGRST116 is an outage, not          │
+│        - Supabase whitelist check: email must exist in admin_authorized_users with      │
+│          is_active = true. A lookup error other than PGRST116 is an outage, not         │
 │          an answer: directory_unavailable (503 on /api/*), never "not authorized"       │
 │        - Revocation gate: revoked:{userId} checked in KV                                │
 │        - PLAC access map computed from D1 admin_pages                                   │
-│        - createSession() stores session in KV (ADMIN_SESSION) & sets cookie             │
-│        - Login event logged to D1 admin_login_logs; alert emailed per the account's     │
-│          settings and the failure throttle (security/login-forensics.md §7)             │
-│    • Stage 4/5 (access-map & decide): Page-level authorization enforced.                 │
+│        - createSession() stores session in KV (SESSION binding) with its sign-in time   │
+│          (the assertion's iat, for the recent-sign-in rule) & sets cookie               │
+│        - After the response: the provider asked of Access's get-identity when the       │
+│          token names none; login event logged to D1 admin_login_logs; alert emailed     │
+│          per the alert rules (security/login-forensics.md §7)                           │
+│    • Stage 4/5 (access-map & decide): Page-level authorization enforced.                │
 └────────────────────────────────────────────┬────────────────────────────────────────────┘
                                              │
                    ┌─────────────────────────┴─────────────────────────┐
@@ -126,11 +128,28 @@ Under the **Authentication** tab:
 
 Google is the way in; any other provider is the emergency way in. Since 2026-10-16
 (permissions item #37) the portal learns which provider each sign-in used from Access's
-get-identity endpoint and emails every sign-in made without Google as urgent
+get-identity endpoint (§6) and emails every successful sign-in made without Google as urgent,
+**SIGN-IN WITHOUT GOOGLE**, whatever the alert settings say
 ([`login-forensics.md`](../security/login-forensics.md) §7). Limiting the other providers to the
 Owner's account is an Access policy in the dashboard, the owner's step; which providers the
 application accepts today is set there and was not readable from this repository when this
-was written.
+was written. Why: the
+change record (private).
+
+### A second sign-in step (item #13)
+
+Cloudflare Access can ask for a second step after Google (biometrics or an authenticator
+app) before the portal opens, so that a Google password alone is not enough. It is set in the
+dashboard (Access settings, then the Admin Portal application's MFA settings), and turning it
+on is an owner step; like the Group reference below, whether it is on is dashboard-only state
+that nothing in this repository can read, so it is not recorded here as configured.
+
+Nothing in the portal's code depends on it, but one rule draws its full strength from it. The
+recent sign-in that dangerous actions ask for (item #14, `e504044`:
+`src/lib/auth/fresh-sign-in.ts`, [`PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
+§10.5) is built and enforced: the session records the assertion's issue time at sign-in, and
+**Confirm it's you** sends the person through a new Cloudflare Access sign-in. With the second
+step on, that new sign-in proves the person, not only the browser.
 
 ### Access applications and policies
 
@@ -190,7 +209,7 @@ Constraints that matter if these are ever edited:
   Revisit only if external monitoring is added.
 - **`/api/emails/webhook`** — the Brevo inbound webhook. It is a `WEBHOOK_ROUTES`
   entry in code, dispatched before session bootstrap and authenticated by a
-  **shared secret** compared in constant time (header, `Bearer`, or `?secret=` —
+  **shared secret** compared in constant time (header, `Bearer`, `?secret=` or `?token=` —
   `src/pages/api/emails/webhook.ts`), not by an HMAC signature. *Corrected
   2026-09-19.* Whether it also has an edge bypass has not been verified live.
 
@@ -203,7 +222,7 @@ every code has a card. That was not true until 2026-09-04: four codes were
 appended to `/cdn-cgi/access/logout` — Cloudflare's endpoint, which does not
 forward an `error` parameter to the application — so their cards could never
 render, and three codes that did reach `/` had no card at all. Two of six
-screens worked. See [`../MAINTENANCE.md`](../MAINTENANCE.md) C-21.
+screens worked. See `../MAINTENANCE.md` (private) C-21.
 
 **Two refusals are the exception** and never produce a code: a bot score below
 the threshold and an assertion-email/header-email mismatch both return a flat
@@ -242,11 +261,16 @@ Stage files are under `src/lib/auth/stages/`.
 > `access_revoked` is now exclusively the `revoked:{userId}` path.
 >
 > **Recovering from it.** `revoked:{userId}` is a 24-hour KV block written by
-> the three-layer force-kick, and `forceLogoutUser` also writes it on ordinary
-> permission changes — which is how an owner can lock themselves out. An
-> operator lists and clears live blocks from the Sessions page
-> (`GET /api/sessions/active-revocations`, owner+); see
-> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
+> the three-layer force-kick (`forceLogoutUser` in `src/lib/auth/plac.ts`): a
+> suspension or removal on Users, a force sign-out, a lock-out from Sessions, and
+> the automatic suspension of an account nobody uses. No permission change has
+> written it since 2026-09-16 (until then a page or role change did, which is how
+> an owner could lock themselves out). Reactivating the account clears it. An
+> operator lists live blocks on the Sessions page's **Sign-in blocks** tab
+> (`GET /api/sessions/active-revocations`, the page's own access: canonical
+> Admin and above by default) and lifts one with `DELETE` on the same route,
+> which needs `#unblock` (an Owner's or Vendor support's block only by the
+> Owner or Vendor support); see [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
 
 `test/error-code-contract.test.ts` compares the emitted set against the cards
 in `ERROR_DESCRIPTIONS` in both directions and fails on a code with no card, a
@@ -260,7 +284,8 @@ used to do exactly that is gone. *Added 2026-09-19.*
 ### 4.2 The same rejections on `/api/*`
 
 A rejection forks on the caller: a page gets the redirect above, an API client
-gets JSON. Two branches did not fork until 2026-09-04 (C-20) — a missing
+gets JSON. The one exception is the access-map stage's, which redirects both (the
+row near the end of the table). Two branches did not fork until 2026-09-04 (C-20) — a missing
 identity header redirected an API client to the HTML landing page, and an
 untranslatable role handed a browser a raw JSON body.
 
@@ -281,7 +306,7 @@ untranslatable role handed a browser a raw JSON body.
 | Account deactivated during a warm session | refresh-role | `403 {"error":"Account inactive"}` + `Clear-Site-Data` | `/?error=account_inactive` |
 | Role stopped translating during a warm session | refresh-role | `403 {"error":"Account role not recognised"}` + `Clear-Site-Data` | `/?error=role_unrecognised` |
 | Re-check could not reach the directory past the grace window, or D1 failed recomputing the map | refresh-role | `503 {"error":"Verification unavailable"}` + `Clear-Site-Data` | `/?error=recheck_failed` |
-| PLAC map unavailable and no cached copy | access-map | `403 Access policy unavailable for this session` | `/?error=system_error` |
+| PLAC map unavailable and no cached copy | access-map | the same `302` as the page: this branch does not fork, and the session is destroyed | `/?error=system_error` |
 | Bot score below threshold | bootstrap | `403 {"error":"Automated traffic blocked"}` | same 403 |
 | Assertion email ≠ header email | bootstrap | `403 {"error":"Identity verification failed"}` | same 403 |
 
@@ -342,10 +367,12 @@ In local development (`localhost` or `127.0.0.1`):
 | Component | File Path | Primary Responsibility |
 | :--- | :--- | :--- |
 | **Pipeline Orchestrator** | `src/lib/auth/pipeline.ts` | Multi-stage auth flow (classify → session → bootstrap → decide). |
-| **Assertion Stage** | `src/lib/auth/stages/assertion.ts` | Header extraction and RS256 JWT signature/claims validation. |
-| **Bootstrap Stage** | `src/lib/auth/stages/bootstrap.ts` | Whitelist verification, role normalization, PLAC map, session creation. |
-| **JWT Verifier** | `src/lib/auth/cloudflare-access.ts` | Web Crypto RS256 validation against CF JWKS certs endpoint. |
-| **Session Manager** | `src/lib/auth/session.ts` | Cloudflare KV storage (`ADMIN_SESSION`), 24h hard expiry, `__Host-admin_session`. |
+| **Assertion Stage** | `src/lib/auth/stages/assertion.ts` | Header extraction and RS256 JWT signature/claims validation; prepares the get-identity lookup for the login event. |
+| **Bootstrap Stage** | `src/lib/auth/stages/bootstrap.ts` | Bot score and email checks, whitelist verification, revocation flag, role normalization, PLAC map, session creation with its sign-in time, login events. |
+| **JWT Verifier and identity lookup** | `src/lib/auth/cloudflare-access.ts` | `verifyZeroTrustJwt`: Web Crypto RS256 validation against the CF JWKS certs endpoint. `resolveLoginMethod` / `loginMethodFromIdp`: the provider type as `google`, `github`, `otp` or `unknown`. `accessIdentityProvider` (since 2026-10-16, item #37): asks the team domain's `/cdn-cgi/access/get-identity` for the provider, sending the verified assertion as the `CF_Authorization` cookie, with a 2 s timeout (`IDENTITY_TIMEOUT_MS`); it keeps only `idp.type` and answers null on any failure. The assertion stage hands it to bootstrap as `identityProvider`, and only the login event calls it, inside its `waitUntil` after the response, when the token carried no `idp` claim (in production it never does). |
+| **Login Event** | `src/lib/auth/login-event.ts` | `emitLoginEvent`: after the response, fills in the provider, then writes the `admin_login_logs` row and its alert through `src/lib/login-alerts/dispatch.ts` ([`login-forensics.md`](../security/login-forensics.md)). |
+| **Recent sign-in rule** | `src/lib/auth/fresh-sign-in.ts` | The 10-minute rule dangerous actions ask for, read from the session's `signedInAt` (the assertion's `iat`, `signedInAtFromAssertion` in `bootstrap.ts`); see §3 and PERMISSIONS-SYSTEM §10.5. |
+| **Session Manager** | `src/lib/auth/session.ts` | Cloudflare KV storage (binding `SESSION`), 24h hard expiry, `__Host-admin_session`. |
 | **Auth Gateway** | `src/pages/index.astro` | Single-sign redirect to `/dashboard`, explicit error gate, and dev picker. |
 | **Logout Endpoint** | `src/pages/api/auth/logout.ts` | KV session destruction. `POST` returns JSON `{redirect}` to the app-domain logout; `GET` 302s and refuses a cross-site `Sec-Fetch-Site` (MAINTENANCE C-25). *Corrected 2026-09-19 — this said "302 redirect" for both.* |
 | **Dev Login Route** | `src/pages/api/auth/dev-login.ts` | Dev-only session establishment (compiled out of production). |
@@ -366,7 +393,7 @@ only way in.** Re-derived 2026-09-04 rather than assumed.
 
 `preview_urls = false` is now declared beside `workers_dev`, so row 3 no longer
 depends on what a future Wrangler defaults to — that default has changed twice
-([`../MAINTENANCE.md`](../MAINTENANCE.md) C-26, closed 2026-09-04).
+(`../MAINTENANCE.md` (private) C-26, closed 2026-09-04).
 
 ### The Access bypass paths are operator-configured, not code-verifiable
 
@@ -404,7 +431,7 @@ share-link authorization chain.
 
 The 2026-09-04 end-to-end review of this system opened eight items and closed
 all eight in the same pass. Full detail, including what was wrong in each case,
-is in [`../MAINTENANCE.md`](../MAINTENANCE.md); the short version:
+is in `../MAINTENANCE.md` (private); the short version:
 
 | Item | What changed |
 | :--- | :--- |
@@ -423,22 +450,21 @@ recorded any unrecognised identity provider as a **Google** sign-in, and
 Two fabricated answers to "how did this person authenticate", on the records the
 login forensics screen and the sign-in alert email are built from. Both now say
 unknown. The raw claim is unaffected: it is stored and shown as
-`cf_identity_provider`.
+`cf_identity_provider`. Since 2026-10-16 (item #37), when the token carries no
+claim, which in production it never does, the provider comes from Access's
+get-identity instead (§6), through the same `loginMethodFromIdp()`.
 
 Reviewed and left unchanged: the RS256 verifier in
 `src/lib/auth/cloudflare-access.ts` — `alg` pinned, `kid` required, the JWKS
 re-fetched once on rotation, and `exp`, `iat` skew, `iss` and `aud` all checked.
 
-### 2026-09-19 re-verification
+### Verification log
 
-The pipeline changed on 2026-09-16 (`6571216`, `c4a1f3e`, `46b8f4d`,
-`84c38db`) and this document had not been re-derived since 2026-09-04, while
-still being cited as the authoritative code list. Re-derived against HEAD:
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-10-16 | claude, the whole document after permissions items #13, #14 and #37: `src/lib/auth/pipeline.ts`, `stages/classify.ts`, `assertion.ts`, `bootstrap.ts`, `refresh-role.ts`, `session-stage.ts`, `access-map.ts`, `decision.ts`, `src/lib/auth/cloudflare-access.ts` (`accessIdentityProvider`, `loginMethodFromIdp`), `login-event.ts`, `fresh-sign-in.ts`, `session.ts`, `routes.ts`, `landing.ts`, `src/lib/auth/plac.ts` (`forceLogoutUser` callers), `src/pages/index.astro`, `src/pages/api/auth/logout.ts` and `dev-login.ts`, `src/pages/api/emails/webhook.ts`, `src/pages/api/sessions/active-revocations.ts`, `wrangler.toml`; `grep -rn "error=" src` against `ERROR_DESCRIPTIONS`; the four checks in `test/error-code-contract.test.ts` and the access-map case in `test/pipeline-session.test.ts` read; the owner's dashboard steps for items #13 and #37. Corrected: the session KV binding is `SESSION`; the access-map refusal does not fork (§4.2); listing sign-in blocks needs the Sessions page, not owner+; no permission change writes a sign-in block; the webhook also takes `?token=`; §1, §3 and §6 now describe get-identity, the sign-in time and the second sign-in step | Everything in the Cloudflare dashboard: the identity providers, the Access app session duration, the second sign-in step (item #13), whether the Policy includes the Group, whether `/api/emails/webhook` has an edge bypass; `CF-ACCESS-SYNC.md`'s figures; a real get-identity answer (no sign-in since the deploy) |
+| 2026-09-19 | The pipeline changed on 2026-09-16 (`6571216`, `c4a1f3e`, `46b8f4d`, `84c38db`) and this document had not been re-derived since 2026-09-04, while still being cited as the authoritative code list. Re-derived against HEAD: `src/lib/auth/routes.ts` (all seven allowlist entries); `grep -rn "error=" src` against `ERROR_DESCRIPTIONS` in `src/pages/index.astro`; `stages/assertion.ts`, `bootstrap.ts`, `refresh-role.ts`, `session-stage.ts`, `access-map.ts` for every emitter and API status; `test/error-code-contract.test.ts` (four checks); the card's logout href and the "Check Access Again" action; `src/pages/api/emails/webhook.ts` (shared secret, constant-time); `src/pages/api/sessions/active-revocations.ts`; the edge bypass inventory against the live-verified runbook | IdP configuration (Google restricted to the company domain; OTP); the Access app session duration of 24 h; the Cloudflare One dashboard URL; whether the Policy includes the Group (§3, still pending); whether `/api/emails/webhook` has an edge bypass |
 
-| Checked | Not checked |
-|---|---|
-| `src/lib/auth/routes.ts` (all seven allowlist entries); `grep -rn "error=" src` against `ERROR_DESCRIPTIONS` in `src/pages/index.astro`; `stages/assertion.ts`, `bootstrap.ts`, `refresh-role.ts`, `session-stage.ts`, `access-map.ts` for every emitter and API status; `test/error-code-contract.test.ts` (four checks); the card's logout href and the "Check Access Again" action; `src/pages/api/emails/webhook.ts` (shared secret, constant-time); `src/pages/api/sessions/active-revocations.ts`; the edge bypass inventory against the live-verified runbook | IdP configuration (Google restricted to the company domain; OTP); the Access app session duration of 24 h; the Cloudflare One dashboard URL; whether the Policy includes the Group (§3, still pending); whether `/api/emails/webhook` has an edge bypass |
-
-Four claims were corrected: the Access bypass list (§3, §7), the `?error=`
+On 2026-09-19 four claims were corrected: the Access bypass list (§3, §7), the `?error=`
 tables (§4.1, §4.2), the logout target and its `returnTo` (§2, §4.3 preamble),
 and the group-sync cadence (§3, now a link to `CF-ACCESS-SYNC.md`).

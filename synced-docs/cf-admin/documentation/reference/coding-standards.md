@@ -393,7 +393,7 @@ catalog `src/lib/configuration.ts` when people change it on the Configuration pa
 This section used to cover only "don't add a new settings table." The check is broader than that, and
 it's worth stating explicitly because it's already been skipped three times in this codebase's history
 (`service_config` → `admin_portal_settings` → `admin_feature_flags`, none consolidated) — see
-[`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md)
+`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (private)
 for the live audit that found this, plus two confirmed-dead tables (`admin_sessions`,
 `privacy_requests`) that existed only because nobody checked before adding the next thing.
 

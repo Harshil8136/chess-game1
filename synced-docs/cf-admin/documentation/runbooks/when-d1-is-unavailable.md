@@ -86,13 +86,10 @@ a Worker `outcome: exception` and kill its siblings in the same tick. Jobs are
 isolated by `allSettled`, so one failure cannot starve another.
 
 > **Do not trust a job count in prose — derive it.** The list is
-> [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
-> (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`), the tiers are in
-> [`../../src/lib/jobs/tiers.ts`](../../src/lib/jobs/tiers.ts), and the outcomes
-> are in [`../../src/lib/jobs/telemetry.ts`](../../src/lib/jobs/telemetry.ts).
-> This runbook said "all eight jobs" over a ten-row table until 2026-09-19; the
-> real figure that day was **11 — 9 on `*/5`, 2 on Sunday**. Three other
-> documents carried a different wrong number.
+> `src/lib/jobs/registry.ts` (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`), the tiers are
+> in `src/lib/jobs/tiers.ts`, and the outcomes are in
+> `src/lib/jobs/telemetry.ts`. On 2026-10-16 the registry held **16 jobs: 14 on
+> `*/5`, 2 on Sunday**, and the table below has a row for each.
 >
 > **Possible outcomes an operator will see**, since the 2026-09-16 control
 > plane: `ran`, `failed`, `skipped` (the job's own gate said no), `disabled`
@@ -102,18 +99,27 @@ isolated by `allSettled`, so one failure cannot starve another.
 > `gsc-sync` and `pagespeed-sync` sit in `state: "off"`, so their normal
 > outcome is `disabled` and they log nothing to Observability (§1).
 
-| Job | Cron | If D1 is down | Recovered by |
+Every five-minute job rides the `*/5` trigger, and Cron Control throttles several
+of them further: `cf-access-reconcile`, for one, runs hourly. The live intervals
+belong to [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §1. While
+D1 is down those throttles lapse and every job that is on runs on every tick
+(below the table), so "next tick" here means five minutes.
+
+| Job | Trigger | If D1 is down | Recovered by |
 |---|---|---|---|
 | `cf-access-audit-poll` | `*/5` | Watermark unreadable → run skipped. Failed-login capture pauses | Next tick; watermark not advanced, so no window is lost |
 | `booking-email-retry` | `*/5` | Scan fails → no re-enqueue this tick | Next tick |
 | `booking-outbox-poke` | `*/5` | The pending-replay probe fails **open**, so the poke still fires; cf-astro's own drain is what touches D1 | Next tick, plus cf-astro's hourly heartbeat (the VPS job, or `heartbeat-watchdog` below) |
-| `cf-access-reconcile` | `*/5` | Push to Cloudflare still happens; the D1 log row and Supabase sweep fail | Next tick |
+| `cf-access-reconcile` | `*/5`, hourly by its Cron Control interval | The list is read from Supabase, not D1, so the push to Cloudflare still happens; its gate (the last hash and sync time) is unreadable, so it pushes the whole list on every run. The `cf_access_sync_log` row fails and is reported; the Supabase status stamp still works | Its next run once D1 is back |
 | `storage-notifications` | `*/5` | Gate settings unreadable → treated as due (fails open); the scans then fail → no quota or share-expiry mail this tick, and `storage-notify-last-run` is not stamped | Next tick |
 | `blog-scheduled-publish` | `*/5` | A matured post stays `scheduled` | Next tick |
 | `gsc-sync`, `pagespeed-sync` | `*/5` | Gate settings unreadable → treated as not-due. Both are `disabled` in the control plane today, so they never reach the gate at all | Next tick |
 | `cron-usage-probe` | `*/5` | Cannot refresh the cached D1-usage reading, so `usage.checkedAt` goes stale — **the automatic shed decision then runs on an old number**. Its own 60-minute interval is enforced in code as well as in the control document, so it cannot storm the analytics API | Next tick after D1 returns |
-| `backup-tick` | `*/5` | cf-admin's side makes no D1 query, but cf-backup's tick reads and writes this same database, so it answers with an error: the job logs it and reports once an hour. No scheduled backup starts and no alert is sent while D1 is down | Next tick; cf-backup offers any unsent alert again, and the weekly GitHub safety net (Mondays) covers a longer outage |
+| `backup-tick` | `*/5` | cf-admin's side makes no D1 query, but cf-backup's tick reads and writes this same database, so it answers with an error: the job logs it and reports once an hour. No scheduled backup starts and no alert is sent while D1 is down | Next tick; cf-backup offers any unsent alert again, and the backup engine's own daily GitHub schedule covers a longer outage: when it cannot read the schedule it backs up anyway (`cf-backup/scripts/secondary-pipeline/schedule-guard.ts`) |
 | `heartbeat-watchdog` | `*/5` | Its gate rows are unreadable, which reads as "the heartbeat never ran", so it runs; the control row is unreadable too, so its sleep is neither read nor stored and it runs on every tick. cf-astro's heartbeat, which reads and writes this same database, answers with a failure; both cooled reports fail open, so Sentry hears of it on every tick | The first tick after D1 returns: cf-astro records the run and the gate holds again |
+| `email-api-sweep` | `*/5` | Unaffected unless D1 is down account-wide: the sweep is the email API's, which reads its own database (`madagascar-email-db`), not this one. cf-admin's only D1 statement is the hourly cooldown of a failure report, which fails open, so a failed sweep reports on every tick. Its 15-minute sleep cannot be stored, so it is called on every tick | Next tick |
+| `access-change-summary` | `*/5`, sleeps until 14:00 UTC | The alert policy is unreadable, so its defaults apply; reading the kept changes fails, so no daily summary goes. In the hour after 14:00 UTC the check of unused accounts cannot read the last sign-ins and **suspends nobody**, and the access-review reminder fails too; in a month's first week the clean-up of ended page settings fails. Each failure is reported, uncooled | The first run after D1 returns sends any summary due, covering every change kept since the last one (at most seven days back); a check or reminder missed in its hour runs the next day |
+| `audit-seal` | `*/5`, sleeps until 14:00 UTC | The seals cannot be read, so nothing is sealed, checked again or emailed; reported as `cron.audit_seal` | The first run after D1 returns seals every ended day it missed, so no day goes unsealed, and the morning email follows once it has caught up |
 | `asset-cleanup`, `staff-storage-reconcile` | `0 2 * * SUN` | Run aborts **before** deleting anything | Next Sunday, or a manual run |
 
 **Nothing in this table loses data.** Every job is a poll over durable state:
@@ -124,8 +130,9 @@ polling crons rather than events — see the design doc §5.
 2026-10-04 with cf-admin's Upstash code.)
 
 **Throttles and sleeps lapse while D1 is down (2026-10-04).** The intervals and
-the next due times (`backup-tick`, `blog-scheduled-publish`) live in the
-`cron-control` row. When it cannot be read the tick fails open, so every job
+the next due times (six jobs sleep: `backup-tick`, `blog-scheduled-publish`,
+`heartbeat-watchdog`, `email-api-sweep`, `access-change-summary`, `audit-seal`)
+live in the `cron-control` row. When it cannot be read the tick fails open, so every job
 that is on is invoked on every five-minute tick, as before the control plane,
 and each fails as the table says. The clocks are not stamped, so nothing is
 lost: the throttles and sleeps resume on the first tick after D1 returns.
@@ -221,6 +228,8 @@ blog for this to hold (cf-astro `AGENTS.md` invariant 7).
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-16 | claude: cf-backup `.github/workflows/secondary-pipeline.yml` and `scripts/secondary-pipeline/schedule-guard.ts` (the daily fallback backs up when it cannot read the schedule) | The `backup-tick` row named a weekly Monday safety net (the retired engine's fallback); it now names the engine's daily one. Not re-checked: the other rows |
+| 2026-10-16 | claude: `src/lib/jobs/registry.ts` (16 jobs, 14 + 2), `dispatch.ts`, `src/lib/auth/cf-access-reconcile.ts`, `cf-access-sync-log.ts`, `src/lib/dal/PortalSettingsRepository.ts` (`readSettings`, `writeSetting`, `getScopedSetting` return or swallow on a failed query), `src/lib/dal/LoginLogRepository.ts` (`getLastSuccessByEmail` throws), `src/workers/scheduled-email-api-sweep.ts`, `scheduled-access-summary.ts`, `scheduled-unused-accounts.ts`, `scheduled-access-review.ts`, `scheduled-audit-seal.ts`, `src/lib/login-alerts/policy.ts` (defaults); cf-email-consumer `wrangler.toml` (the API's database); the live `cron-control` row through the D1 connector (`cf-access-reconcile` every 60 minutes) | §3: the `cf-access-reconcile` row corrected (hourly, not five-minute; the Supabase stamp does not fail; it pushes the whole list while the gate is unreadable); rows added for `email-api-sweep`, `access-change-summary` and `audit-seal`; the lapse paragraph names the six jobs that sleep; the source paths written as paths. Not re-checked: the other rows, §1, §2, §4 to §6 |
 | 2026-10-10 | cf-astro's `consent-heartbeat.yml` (by hand only since 2026-10-10) | §3: the `booking-outbox-poke` row's "recovered by" no longer names GitHub Actions. Not re-checked: every other row |
 | 2026-10-07 | `src/workers/scheduled-heartbeat-watchdog.ts`, `src/lib/dal/PortalSettingsRepository.ts` (`readSettings` returns an empty map on a failed read), `src/lib/observability.ts` (`reportOnceCooled` fails open) | §3: the `heartbeat-watchdog` row added; the `booking-outbox-poke` row's "recovered by" names the heartbeat's three runners. Not re-checked: every other row |
 | 2026-10-04 | `src/lib/jobs/control.ts`, `dispatch.ts`, `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `src/lib/dal/CronControlRepository.ts` (`wakeJob`), `src/lib/jobs/registry.ts` | §3: the `redis-ttl-hygiene` row removed; the lapse of throttles and sleeps, and the D1-dependent request surfaces (hour/day limits fail closed, the neuron budget fails open, wakes) added. Not re-checked: every other row |

@@ -43,7 +43,7 @@ theme, and per-page maintenance notices/blocks — and fact-checks a secondary i
 actually needs to do.
 
 It does **not** cover per-user permission caching (see
-[`../reference/RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) — a related but
+`../reference/RBAC-AT-SCALE.md` (private) — a related but
 distinct problem with a different consistency requirement) or the existing
 CMS/ISR KV pipeline (see [`KV-RESILIENCE.md`](KV-RESILIENCE.md), which this
 document deliberately mirrors the shape of).
@@ -250,7 +250,7 @@ it's a literal in the code. That much is still true.
 > cost argument for making it configurable does not hold.**
 >
 > This section claimed, following
-> [`RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) §8.5/§8.6, that the 5-minute
+> `RBAC-AT-SCALE.md` (private) §8.5/§8.6, that the 5-minute
 > heartbeat is "the single tightest constraint on how many staff the true $0
 > Workers-Free tier can support", being "the dominant source of KV writes per
 > active user per day" — around 113 writes per active user per day.
@@ -412,7 +412,7 @@ discovering by accident later:
    drift into an unstructured blob nobody can audit. Keep the allowlist as
    mandatory, and keep descriptions/categories (already present in the schema)
    populated for every key, the same governance principle
-   [`RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) §5 point 9 recommends for the
+   `RBAC-AT-SCALE.md` (private) §5 point 9 recommends for the
    permission registry.
 
 5. **Security boundary: this blob must stay non-sensitive by policy, not just by
@@ -447,5 +447,5 @@ discovering by accident later:
 - [`KV-RESILIENCE.md`](KV-RESILIENCE.md) — the existing KV+D1 fallback pattern this document mirrors.
 - [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) — the `authz-changed` mark (§11) and the per-request KV accounting (§13), both of which this document's cost model depends on.
 - [`plac-and-audit.md`](plac-and-audit.md) — the Ghost Audit engine.
-- [`../reference/RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) — §3 (KV/D1 latency and consistency facts, reused here). **Its §8.5/§8.6 `lastActiveAt` heartbeat cost finding is stale** on the same `ae569e0` change; see the refutation in §4.
+- `../reference/RBAC-AT-SCALE.md` (private) — §3 (KV/D1 latency and consistency facts, reused here). **Its §8.5/§8.6 `lastActiveAt` heartbeat cost finding is stale** on the same `ae569e0` change; see the refutation in §4.
 - [`../features/CF-ACCESS-SYNC.md`](../features/CF-ACCESS-SYNC.md) — the durable sync-log + cron self-heal + status-pill pattern proposed for reuse in §3 point 7.

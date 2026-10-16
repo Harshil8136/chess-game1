@@ -36,7 +36,7 @@ tags: [incident, redis, upstash, ratelimit, privacy, retention, ttl]
 | Oldest | 2026-08-07 17:00 UTC (cf-admin), 21:00 UTC (cf-astro) |
 | Cause | `analytics: true` on `@upstash/ratelimit`. Its analytics dependency, `@upstash/core-analytics` 0.0.10, never sets an expiry (§3) |
 | Detected | 2026-10-01, by the owner, in the Upstash console |
-| Status | **Resolved 2026-10-02.** No key without an expiry since 02:39:50 UTC; the 648 were gone by 03:40 UTC (§6). A weekly job guarded it (§5) until 2026-10-04, when cf-admin stopped using Upstash and the job left with its Upstash code; checking cf-astro's and cf-chatbot's keys is now open ([`../../MAINTENANCE.md`](../../MAINTENANCE.md) RU-8, [record](../../records/reports/2026-10-04-resource-usage-optimisation.md)) |
+| Status | **Resolved 2026-10-02.** No key without an expiry since 02:39:50 UTC; the 648 were gone by 03:40 UTC (§6). A weekly job guarded it (§5) until 2026-10-04, when cf-admin stopped using Upstash and the job left with its Upstash code; checking cf-astro's and cf-chatbot's keys is now open (`../../MAINTENANCE.md` (private) RU-8, record (private)) |
 
 ## 2. Timeline (UTC)
 
@@ -151,7 +151,7 @@ because `fetch` does not throw on a 4xx or 5xx.
 
 ## 7. Follow-ups
 
-Tracked in [`../../MAINTENANCE.md`](../../MAINTENANCE.md) "Redis TTL remediation":
+Tracked in `../../MAINTENANCE.md` (private) "Redis TTL remediation":
 
 - **R-1** — when roadmap chunk 16 removes Upstash from cf-admin, **move** the
   hygiene job to whatever still holds the instance's credentials; do not delete

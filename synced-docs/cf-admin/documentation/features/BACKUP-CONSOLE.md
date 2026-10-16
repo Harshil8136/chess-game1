@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-08
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql]
+related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/app/[...path].ts, src/lib/access-changes/notify.ts, src/lib/dal/VpsAccessRepository.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql]
 related_docs: [CRON-CONTROL.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md, ../program/cf-backup/02-admin-integration-contract.md, ../program/cf-backup/13-access-control.md, ../program/cf-backup/15-restore-tests.md]
 tags: [backups, cf-backup, gateway, cron, audit, csp]
 ---
@@ -15,8 +15,8 @@ tags: [backups, cf-backup, gateway, cron, audit, csp]
 > **TL;DR (non-technical):** The Backups page in the admin portal shows the
 > backup system's own console inside the page. The backup system (cf-backup) is
 > a separate, private service with no public address; the portal is the only way
-> to reach it, checks who you are first, and records every change anyone makes.
-> The portal also nudges it on a timer, so scheduled backups start on time and
+> to reach it, checks who you are first, and records every change anyone makes
+> and every backup file anyone opens to read. The portal also nudges it on a timer, so scheduled backups start on time and
 > its alerts are emailed to the alert recipients set in the console (Settings →
 > Alerts), with each email's delivery reported back. Since 2026-10-04 the nudge
 > comes when the backup system says it next has work: every five minutes while
@@ -68,14 +68,17 @@ Every request under `/dashboard/backup/app/` passes the normal auth pipeline
 
 | Rule | What happens |
 |---|---|
-| Page access | The `/dashboard/backup` key itself must be allowed for the person (`mayUseBackupConsole`, `src/lib/backup-proxy.ts`): nested paths inherit it, and a key missing from their access map is a deny, never decided by the staff-level `/dashboard` row (2026-10-15; until then it was) |
+| Page access | The `/dashboard/backup` key itself must be allowed for the person (`mayUseBackupConsole`, `src/lib/backup-proxy.ts`), or the answer is 403 `forbidden`: nested paths inherit it, and a key missing from their access map is a deny, never decided by the staff-level `/dashboard` row (2026-10-15; until then it was). The Access Center, access requests and the role preview ask the same check (`CONSOLES.backup.mayOpen`, 2026-10-16; `test/console-doors.test.ts`) |
+| Path | Only a plain path under `/dashboard/backup/app/` (`isConsolePath`): a doubled slash, a backslash, or an encoded slash, backslash or dot is a 404 and never reaches cf-backup |
 | Headers | Only `Accept`, `Accept-Language`, `Content-Type`, `Range` and `If-None-Match` are forwarded. The session cookie, `Authorization`, the Access assertion and any `X-Backup-*` the browser sent never reach cf-backup |
 | Identity | The gateway adds `x-backup-actor` (who, their role, and when they last signed in) and `x-backup-request-id`, built from the session. Once `CONSOLE_SIGNING_KEY` is set (permissions item #33), it also adds `x-backup-signature`, and cf-backup with the same key answers nothing without it ([CONSOLE-SIGNATURE](CONSOLE-SIGNATURE.md)) |
-| Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site |
+| Read-only | A read-only role (Viewer) is refused every change with 403 `read_only`, before anything is sent; it can still look |
+| Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site, or it is refused with 403 `cross_origin` |
+| Body | Buffered, at most 1 MiB; a larger request is refused with 413 before anything reaches cf-backup |
 | Time | cf-backup has 10 s to start answering; after that the answer streams for as long as it takes (downloads are never buffered) |
 | Failure | A missing binding, a timeout or an unreachable cf-backup gets a small "Backup console unavailable" page, or the console's JSON error on its API; the rest of the portal is unaffected |
-| Answer | Passed through, minus any `Set-Cookie` |
-| Audit | One `admin_audit_log` row per change (§4) |
+| Answer | Passed through, minus any `Set-Cookie` and cf-backup's `x-backup-audit` |
+| Audit | One `admin_audit_log` row per change, and per read that hands over a file's contents (§4) |
 
 `src/lib/backup-proxy.ts` is the only code that calls the binding. It has no
 HTTP fallback, because cf-backup must never have a public address. Its one
@@ -88,26 +91,45 @@ The actor carries `signedInAt`: the time Cloudflare Access issued the sign-in
 assertion (its `iat`), recorded when the session is created
 (`src/lib/auth/stages/bootstrap.ts`). It is deliberately **not** the session's
 creation time: cf-admin can re-create a session from an assertion that is hours
-old without anyone signing in again. cf-backup refuses key actions and
-encrypted downloads unless that sign-in is at most 10 minutes old, and asks the
-person to sign out and back in — signing out also ends the Access session, so
-the next sign-in is a real one. Sessions created before 2026-09-23 fall back to
-their creation time until they expire (24 h).
+old without anyone signing in again. cf-backup refuses key actions, downloads of
+backup data, and preparing, unlocking or configuring a restore test unless that
+sign-in is at most 10 minutes old (`reauth_required`), and asks the person to
+sign out and back in — signing out also ends the Access session, so the next
+sign-in is a real one. A session without that time falls back to its creation
+time.
 
 **Per-person access from the Users page (2026-10-03).** A person's backup
 capabilities are also shown and changed in the Access Center on their Access
 page ([ACCESS-CENTER](ACCESS-CENTER.md)), and the page registry
 (`/dashboard/debug/pages`) lists every backup capability under the Backups page,
-where vendor support can move one capability's default role through
-`POST /api/access/role`. Those calls do not go through this
+where vendor support can move one capability's default role (cf-admin's
+`PATCH /api/system/console-features`, which calls cf-backup's `access/role`).
+Those calls do not go through this
 gateway: cf-admin's server calls cf-backup over the binding with the actor and an
 `x-backup-target` header naming the person, with the role from this portal's
-database and (since 2026-10-16) their account id, to which cf-backup binds the
-grant it saves. The gateway never forwards that header from a browser. An owner or
+database and (since 2026-10-16, permissions item #35) their account id, to which
+cf-backup binds the grant it saves (`grantFor` in `cf-backup/src/access/policy.ts`):
+a later account with the same email starts from its role. The gateway never
+forwards that header from a browser. An owner or
 vendor can change anything but a floor; an admin with cf-backup's
 `access.delegate` can hand out what it holds to people below it. Each save writes
 a `backup_config_change` activity-log row marked as made through the Access
 Center.
+
+**Asking for a permission** (since 2026-10-16, permissions item #22). Someone who
+needs one backup capability can ask for it on Settings → Your access; the request
+is decided on Users → Access requests, like a request for a page. An approval
+always ends, at most 90 days ahead. cf-admin writes it to cf-backup over the
+binding as the person deciding, and cf-backup keeps it in the person's grant as a
+power given for a while (`temporary`, one `{ until, note? }` per capability): it
+counts until its own end, a deny still beats it, and a floor can never be one. The
+rules for who may ask and decide are in
+[PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.3.
+
+**Removing a person** on Users also removes their backup grant
+(`removeBackupGrant`, `src/lib/dal/VpsAccessRepository.ts`, since 2026-10-15) and
+bumps the policy's revision, so an address invited again later starts from its
+role and an Access editor opened before the removal cannot save the grant back.
 
 ## 4. Audit
 
@@ -143,6 +165,17 @@ like a change: a file preview from the Files section (`run.download via=preview`
 (`restore.test op=download`, `backup_restore_test`). On a read the gateway
 accepts only those two actions (`RECORDED_READS`); any other header on a read is
 ignored and raises no warning. Every other read writes nothing.
+
+**Access changes are emailed** (since 2026-10-15, permissions item #18). When
+cf-backup accepts an `access.edit` through the gateway (a save on the console's
+own Access screen), the gateway also tells the sign-in alert list, after the
+answer (`noteAccessChanges` in `src/lib/access-changes/notify.ts`). cf-backup's
+audit line says how the change was made, not whose or which, so the email names
+the Backup console and points to the activity log. The alert policy chooses one
+email per save, one summary a day, or none
+([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.4). Saves made
+through the Access Center or an approved request (§3) are emailed by those paths
+instead, when they give the person something they did not hold.
 
 The row holds the person, method, path (no query string), status, request id
 (also the row's correlation id) and the summary — never the request body, and
@@ -258,6 +291,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §2 against the gateway `src/pages/dashboard/backup/app/[...path].ts` and `src/lib/backup-proxy.ts` (`isConsolePath`, `isReadOnly`, `MAX_REQUEST_BYTES`); §3 against `cf-backup/src/lib/fresh.ts` and its callers, `cf-backup/src/access/policy.ts` (`temporary`, `grantFor`, `can`), `src/lib/access-center/registry.ts` and `src/lib/users/manage-apply.ts` with `src/lib/dal/VpsAccessRepository.ts`; §4 against `src/lib/backup-audit.ts`, `src/lib/access-changes/notify.ts` and cf-backup's `access.edit` stamps (`cf-backup/src/api/access.ts`, `access-person.ts`) | Added the Path, Read-only (403 `read_only`) and Body rows; §3 now names every fresh-sign-in step, asking for a permission (#22) and what removing a person removes; §4 says an `access.edit` is emailed (#18). The TL;DR names the recorded reads. The Page access row names the Access Center's door check, which used the inherited page decision until this pass (`src/lib/access-center/consoles.ts`; `test/console-doors.test.ts` passes). Not re-checked: §1, §5 to §9; a signed request in production |
 | 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `backupBinding` (`src/lib/backup-proxy.ts`), and `cf-backup/src/gateway/signature.ts`; `test/console-signature.test.ts` and `cf-backup/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |
 | 2026-10-16 | claude | §3's `x-backup-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-backup/src/gateway/target.ts` and `cf-backup/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |
 | 2026-10-16 | claude | §4's recorded reads against `src/pages/dashboard/backup/app/[...path].ts` (`RECORDED_READS`) and `cf-backup/src/api/files.ts` (`previewFile`) and `cf-backup/src/api/restore-tests.ts` (`getRestoreTestFile`); `test/backup-gateway.test.ts`, `cf-backup/test/files-api.test.ts` and `cf-backup/test/restore-tests.test.ts` pass | Not re-checked: every other section |

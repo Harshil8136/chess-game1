@@ -64,7 +64,7 @@ Health tab and no Audit Log tab.
 ### 0.1 Values on this page that are not measurements
 
 *Added 2026-09-19. These are **code** defects against RULE #0.5, not wording
-problems, and they are logged in [`../MAINTENANCE.md`](../MAINTENANCE.md). They
+problems, and they are logged in `../MAINTENANCE.md` (private). They
 are recorded here because anyone reading a number off this page needs to know
 which ones mean nothing.*
 

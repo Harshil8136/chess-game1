@@ -19,7 +19,7 @@ tags: []
 > treat a grep hit in this file as a current rule. Its closing pointer to
 > `PENDING_PHASES.md` as "a completion notice" was never true; that file is an
 > archived residue list, and the live backlog is
-> [`../MAINTENANCE.md`](../MAINTENANCE.md).
+> `../MAINTENANCE.md` (private).
 
 > **REFACTORING COMPLETE** — All 8 phases (1A through 8B) are done. Final verification: `npx astro check` and `npm run build` both pass with **0 errors**. Build output: `✓ Complete!`
 

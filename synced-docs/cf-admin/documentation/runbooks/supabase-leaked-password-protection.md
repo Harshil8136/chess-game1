@@ -14,7 +14,7 @@ tags: [runbook, supabase, auth, compliance, historical]
 
 > ## ⛔ Do not follow this runbook. The finding it closes should not be actioned.
 >
-> [`supabase-account-advisor-sweep.md`](supabase-account-advisor-sweep.md) §3 is
+> `supabase-account-advisor-sweep.md` (private) §3 is
 > the owner of the `auth_leaked_password_protection` advisor line, and it says:
 > *"Not applicable — authentication is Cloudflare Access, not Supabase Auth …
 > **Do not re-raise it as a finding**."* This page used to give step-by-step

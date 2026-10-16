@@ -7,7 +7,7 @@ last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/approvals/, src/lib/users/manage-apply.ts, src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/approvals/, src/lib/users/manage-apply.ts, src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -158,15 +158,13 @@ rename of the other four names stays optional (C-11). A page's default still can
 (`canBePageDefault`): a Viewer opens only the pages given to them, and the D1
 `admin_pages.required_role` CHECK admits only the five old names. The home page (`/dashboard`,
 `HOME_PAGE` in `decide-access.ts`) opens to every role, Viewer included: the gate always opened
-it, and since 2026-10-16 `computeAccessMap`, `personOpens` and the access editor say so too. Verified live on
-2026-08-23: every `required_role` in D1 `admin_pages` still holds a legacy value,
-and the table's CHECK constraint still admits only
-`('dev','owner','super_admin','admin','staff')`. *Corrected 2026-09-19: `manager`
-**does** persist — as the stored value `admin` — so `viewer` is the one canonical
-role with no legacy equivalent and therefore the only one that cannot be written
-(`src/lib/auth/rbac.ts`, matching the §4 table above).* `toStoredRole()` **throws**
-rather than silently writing a different role. Tracked as C-11 in
-[`../MAINTENANCE.md`](../MAINTENANCE.md).
+it, and since 2026-10-16 `computeAccessMap`, `personOpens` and the access editor say so too.
+Read live on 2026-10-16: all 117 rows of D1 `admin_pages` hold a legacy `required_role` (`dev`,
+`owner`, `super_admin`, `admin`, `staff`), and the table's CHECK constraint still admits only
+those five. Every canonical role now has a stored value, so `toStoredRole()` throws only if
+`ROLE_VOCABULARY` names a vocabulary the data does not use: it never silently writes a
+different role. The rename of the old names is tracked as C-11 in
+`../MAINTENANCE.md` (private).
 
 `canManageUser(actor, target)` requires *strictly* higher privilege, so nobody can
 act on a peer through it. An untranslatable stored role returns `false` — there is
@@ -181,7 +179,7 @@ account; see §16 D6/D7.
 Renaming the helpers without preserving their level would have silently shifted a
 privilege boundary at ~200 call sites — invisible in review. (That figure is from
 the rename in July 2026 and is history, not a current count; the ratchet counter
-for deprecated-alias uses, `E1` in `.ratchet.json`, stands at 70 today.)
+for deprecated-alias uses, `E1` in `.ratchet.json`, holds the current count.)
 
 ---
 
@@ -343,8 +341,9 @@ every change, and personal settings for many people at once (§10.2). Two rules 
 change to a page's `required_role` or `is_active` now marks every active person for a re-check
 at once (`PATCH /api/system/pages`); until then only when the editor ticked "apply now", so for
 up to an hour a signed-in person kept the old answer. And Viewer is refused as a default
-(`pageRegistryPatchSchema`, `canStoreRole`), because the stored vocabulary has no name for it
-yet (§4.1, C-11); until then the save failed with a generic database error.
+(`pageRegistryPatchSchema`, now `canBePageDefault`): a Viewer opens only the pages given to them,
+and the `admin_pages` CHECK admits only the five old names (§4.1); until then the save failed
+with a generic database error.
 *Changed 2026-10-15 (the owner's decision):* signing someone out, `/dashboard/users#force-kick`
 ("Sign someone out", default `owner`), is enforced. The row had existed from the start with
 nothing checking it, so any holder of the Users page could do it (D6). `denyForceKick`
@@ -371,7 +370,7 @@ do: the Access page shows the row as *Not for this role* and offers only a Reset
 Owner's stored grant of this key can be removed), Page Registry shows the page as closed to
 those roles and flags such a grant *No effect: page floor*, Settings → Your access never lists
 it, and a new grant a floor would ignore is refused by `pageEditability`, `changeRefusal` and,
-at an invitation, `inviteSettingRefusals` ([`MAINTENANCE.md`](../MAINTENANCE.md)). Until then
+at an invitation, `inviteSettingRefusals` (`MAINTENANCE.md` (private)). Until then
 the Access page offered this key, and the GitHub key to a Manager, as grantable.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
@@ -410,7 +409,9 @@ means retiring a page cleans up its overrides.
 
 **An override can end** *(2026-10-14, `migrations/0070`)*. `expires_at` is the whole chosen day
 in UTC (`2026-12-31T23:59:59.000Z`), at most 366 days ahead, set from a person's Access page or
-from Page Registry; a reset takes none. An ended override is ignored, not deleted: the role
+from Page Registry; a reset takes none. *Since 2026-10-15 (#23)* a new grant above the person's
+role starts with an end 90 days ahead in both editors (`DEFAULT_GRANT_DAYS` in
+`src/lib/access-center/limits.ts`); "No end" is one tap away, and the server still accepts none. An ended override is ignored, not deleted: the role
 decides again, and the screens say "ended on" until someone removes the row (Page Registry,
 Personal settings) or, *since 2026-10-16 (#31)*, the monthly clean-up deletes it 30 days after
 it ended ([CRON-CONTROL §3c](../features/CRON-CONTROL.md)). Every override made before `0070`
@@ -429,8 +430,9 @@ WHERE p.is_active = 1
 ORDER BY p.sort_order
 ```
 
-Then per row: an override whose `expires_at` has passed counts as none; `granted = 0` →
-`false` (deny wins absolutely); `granted = 1` → `true`; otherwise `userLevel <= requiredLevel`.
+Then per row: the home page (`/dashboard`) is always `true`, whatever is stored (§4.1); an
+override whose `expires_at` has passed counts as none; `granted = 0` → `false` (deny wins
+absolutely); `granted = 1` → `true`; otherwise `userLevel <= requiredLevel`.
 The earliest end still ahead becomes the map's `refreshAt`, and the access-map stage
 (`stages/access-map.ts`) recomputes the map once it passes, so an ending override reaches the
 person on their next request rather than within the hour.
@@ -473,8 +475,9 @@ whereas the other way round costs a page.
 
 ### 6.3 PLAC in production is barely exercised
 
-**Measured live 2026-09-19: `admin_page_overrides` contains 4 rows, one of them a
-deny.** *(It held exactly one row when this section was written on 2026-08-23.)*
+**Measured live 2026-10-16: `admin_page_overrides` contains 4 rows, one of them a
+deny, none with an end.** *(It held exactly one row when this section was written on
+2026-08-23, and the same 4 on 2026-09-19.)*
 
 This matters for an honest comparison. PLAC is a *designed* capability carrying
 real complexity, but essentially all authorization decisions in this deployment are
@@ -490,7 +493,7 @@ override machinery as capability, not as exercised behaviour.
 1. `sentryErrorBoundary` — catches downstream throws, tags them, returns JSON 500
    for `/api/*` and re-throws for pages.
 2. `securityHeaders` — CSP with a per-request nonce (`src/lib/security/csp.ts`).
-3. `authMiddleware` — everything below (`src/lib/auth/pipeline.ts`, a 77-line
+3. `authMiddleware` — everything below (`src/lib/auth/pipeline.ts`, a short
    orchestrator over the stage modules in `src/lib/auth/stages/` since chunk 10).
 
 Ordered, with the file that owns each stage and the store it touches (chunk 10,
@@ -531,7 +534,7 @@ login screen can explain itself.
 > are fixed and pinned: `test/pipeline-bootstrap.test.ts` asserts each fork in both
 > directions, and `test/error-code-contract.test.ts` fails on any code without a
 > card, any card without a code, and any redirect that puts a code on the
-> Cloudflare logout endpoint. See [`../MAINTENANCE.md`](../MAINTENANCE.md) C-20 and
+> Cloudflare logout endpoint. See `../MAINTENANCE.md` (private) C-20 and
 > C-21, and
 > [`../features/CFZT-EDGE-AUTHENTICATION.md`](../features/CFZT-EDGE-AUTHENTICATION.md)
 > §4 for the full code list.
@@ -539,7 +542,7 @@ login screen can explain itself.
 | Trigger | Status | Page behaviour | Audited |
 |---|---|---|---|
 | No Cloudflare identity header at all | 401 `{"error":"Missing identity"}` | → `/?error=missing_identity` | — |
-| No `CF_Authorization` token | 401 `{"error":"Missing auth token"}` | → `/?error=missing_token` | — *(corrected 2026-09-19: `stages/assertion.ts` returns before any login event is emitted)* |
+| No `CF-Access-JWT-Assertion` header (the signed Access token) | 401 `{"error":"Missing auth token"}` | → `/?error=missing_token` | — *(corrected 2026-09-19: `stages/assertion.ts` returns before any login event is emitted)* |
 | Invalid or expired JWT | 401 `{"error":"Invalid or expired auth token"}` | → `/?error=expired_token` | — *(same: no event)* |
 | JWT valid, **email not in `admin_authorized_users`** | 403 `{"error":"Access denied"}` | → `/?error=access_denied` | **yes — `is_authorized_email = 0`** |
 | Account exists but `is_active = 0` **at bootstrap** | 403 `{"error":"Access denied"}` — deliberately the same flat 403 as "not whitelisted", so the API never reveals directory membership | → `/?error=account_inactive` | yes — `account_inactive` |
@@ -550,11 +553,11 @@ login screen can explain itself.
 | Warm session carries a revocation flag (`revoked-session:{sessionId}` or `revoked:{userId}`) | 403 `{"error":"Session revoked"}` + `Clear-Site-Data` | → `/?error=session_revoked` | — *(corrected 2026-09-19: `stages/session-stage.ts` emits no event)* |
 | **`revoked:{userId}` present at sign-in** (the 24 h block the three-layer force-kick writes) | 403 `{"error":"Access revoked"}` + `Clear-Site-Data` | → `/?error=access_revoked` | yes — LOGIN_FAILED `revocation_block_active` |
 | Re-check failed: Supabase unreachable past the grace window (or on a forced re-check), or D1 unreachable while recomputing the map | 503 `{"error":"Verification unavailable"}` + `Clear-Site-Data` | → `/?error=recheck_failed` | Sentry / cooled report |
-| Bot score below threshold | 403 `{"error":"Automated traffic blocked"}` | 403 | yes |
-| Identity mismatch between JWT and session | 403 `{"error":"Identity verification failed"}` | 403 | yes |
-| **PLAC deny on the page** | 403 `{"error":"Forbidden"}` for `/api/*` — `api_authz_deny` | → `/dashboard/access-denied` | **API denials: yes. Page GETs: no** — *corrected 2026-09-19: `stages/decide.ts` records reads nowhere, "to spare the D1 write budget". A page **mutation** is recorded as `page_mutation_attempt` with `granted: false`.* |
-| **Viewer attempting a mutation** | 403 | 403 | yes — `viewer_write_blocked` |
-| Access map unreadable | 403 `Access policy unavailable for this session` | destroy session → `/?error=system_error` | Sentry |
+| Bot score below threshold | 403 `{"error":"Automated traffic blocked"}` | 403 | yes — LOGIN_FAILED `bot_score_too_low_<score>` |
+| The token's email differs from the identity header's | 403 `{"error":"Identity verification failed"}` | 403 | yes — LOGIN_FAILED `jwt_email_mismatch` |
+| **PLAC deny on the page** | 403 `{"success":false,"error":"Forbidden"}` for `/api/*` — `api_authz_deny` | rewritten to `/dashboard/access-denied` (the address bar keeps the page asked for) | **API denials: yes. Page GETs: no** — *corrected 2026-09-19: `stages/decide.ts` records reads nowhere, "to spare the D1 write budget". A page **mutation** is recorded as `page_mutation_attempt` with `granted: false`.* |
+| **Viewer attempting a mutation** (except asking for access, §8.1) | 403 `{"success":false,"error":"This account has read-only access."}` | rewritten to `/dashboard/access-denied` | yes — `viewer_write_blocked` |
+| Access map cannot be computed (D1 failing) and the session has no earlier map to keep | the session is destroyed and the answer is a redirect to `/?error=system_error`, as for a page: `stages/access-map.ts` does not fork on API vs page (MAINTENANCE.md PD-2). A route that still finds no map answers 403 `Access policy unavailable for this session` (`guard.ts`) | destroy session → `/?error=system_error` | Sentry |
 | CSRF failure | 403 | 403 | — |
 | Method not allowed on a public route | 405 | 405 | — |
 
@@ -597,8 +600,8 @@ widen by prefix). It changes nothing the portal holds; deciding a request
 > and a count of 39 mappings. The prefix was replaced by the two named `/api/auth/`
 > routes above on 2026-09-04 (MAINTENANCE C-25) — as a prefix, any file added under
 > `src/pages/api/auth/` became unauthenticated and PLAC-exempt the moment it
-> existed. The mapping count is 44 today; counts in a doc drift, so
-> `src/lib/auth/routes.ts` is now cited instead of copied.
+> existed. Counts in a doc drift, so `src/lib/auth/routes.ts` is cited instead of
+> copied.
 
 `resolveApiAuthz()` returns `public | webhook | mapped | null`. **`null` is
 default-deny.** `API_DENY_MODE` in `wrangler.toml` selects the behaviour: `shadow`
@@ -934,15 +937,15 @@ the access-revocation design (§16).
 page revoke, an access-request approval, a role change and a page-registry change
 all called the three-layer force-kick above, and its `revoked:{userId}` flag
 refused every sign-in for 24 hours — which is how the only Owner was locked out
-on 2026-09-16 ([`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md)).
+on 2026-09-16 (`../specs/2026-09-16-access-revocation-remediation-design.md` (private)).
 Those changes now write a random `authz-changed:{userId}` mark instead. The
 session stage reads it in the same bulk KV read as the flags, and a session
 whose stored `authzMark` differs re-reads its role from Supabase and its map from
 D1 on that request. Grants and revocations therefore both reach a signed-in user
 on their next request, subject only to KV's eventual consistency (about 60 s),
 and nobody is signed out. The three-layer force-kick is left to force-kick,
-deactivation, deletion and the Sessions page's block action; stage 2 of the
-remediation retires its user-level flag.
+deactivation, deletion and the Sessions page's block action. Stage 2 of the
+remediation, which would retire its user-level flag, has not shipped.
 
 *Since 2026-10-16 (permissions item #17)* the daily check of accounts nobody uses is a
 fifth path: an account unused for 90 days is deactivated by `system` at the 14:00 UTC
@@ -991,6 +994,7 @@ Each day is sealed the next morning: a fingerprint over its entries, chained to 
 before, kept in the log, in R2 and in an email, and checked again each morning and under
 *Check seals* on the Audit Log page. Today's entries are unsealed until then, and someone
 with database access can still change the table; the seals show it, they do not prevent it.
+The sign-in log (`admin_login_logs`) is not sealed.
 Page reads are not recorded (§8), except the sensitive reads that write a `view` row
 ([`../security/SECURITY.md`](../security/SECURITY.md) §0). [`plac-and-audit.md`](plac-and-audit.md)
 owns the engine, what the log guarantees (§3.2) and the seal (§3.6). C-9 is closed.
@@ -1006,7 +1010,7 @@ This is a code-derived count, not a measurement.
 
 | Path | KV reads | KV writes | D1 | Supabase | External |
 |---|---:|---:|---:|---:|---|
-| Warm authenticated page | **4** (3 on an isolate-cache hit) | 0 | 0 (+1 audit per event via `waitUntil`) | 0 | 0 |
+| Warm authenticated page | **4** (3 on an isolate-cache hit) | 0 | 0, or 1 when the isolate's page-registry copy is over a minute old (+1 audit per event via `waitUntil`) | 0 | 0 |
 | Cold login | 1 | **2** | 1 (map) + 1 (audit) | **1 GET + 1 PATCH** | JWKS if cache cold |
 | Role re-check (30 min elapsed, or a new `authz-changed` mark) | 4 + 1 | 1 | 1 on a role change or a forced re-check | 1 | 0 |
 | PLAC refresh (map > 1 h old) | 4 + 1 | 1 | 1 | 0 | 0 |
@@ -1135,7 +1139,7 @@ analytics before anyone quotes a number.
 | D1 unreachable during map recompute, prior map exists | Prior map extended with a new `computedAt` | **Open, bounded** — serves the last known-good policy rather than locking everyone out |
 | Supabase unreachable at login | Login fails | **Closed** |
 | JWKS fetch fails | JWT cannot be verified → 401 | **Closed** |
-| Page registry cache miss | 3 D1 retries with exponential backoff, then throw | Closed |
+| Page registry read fails | No retry: the sidebar falls back to a plain list built from the person's own access map, and the page is headed by its address | **Closed** — nothing beyond the person's own map is shown |
 
 Every branch except one fails closed. The exception is deliberate and bounded: an
 already-authenticated user with a valid map keeps their existing policy through a
@@ -1186,7 +1190,7 @@ sharper edge than it looks. *Corrected 2026-09-19: this paragraph also cited "th
 one-hour grant delay". Stage 1 removed it on 2026-09-16; §11 has the mechanism.*
 
 Prior comparative research lives in
-[`../reference/RBAC-AT-SCALE.md`](../reference/RBAC-AT-SCALE.md) and
+`../reference/RBAC-AT-SCALE.md` (private) and
 [`../reference/PERMISSION-ARCHITECTURE-ASSESSMENT.md`](../reference/PERMISSION-ARCHITECTURE-ASSESSMENT.md);
 a proposed successor model is sketched in
 [`../reference/DYNAMIC-ROLES-PBAC-DESIGN.md`](../reference/DYNAMIC-ROLES-PBAC-DESIGN.md).
@@ -1208,31 +1212,23 @@ re-checked against the 2022 edition, which restructured Annex A.*
 
 ---
 
-## 16. Known gaps
+## 16. Known limits
 
-| # | Gap | Impact |
+These are limits of the design as built, not open security defects; the live backlog,
+with every defect and its fix, is `../MAINTENANCE.md` (private).
+
+| # | Limit | Impact |
 |---|---|---|
-| C-11 | Role vocabulary migration outstanding (§4.1). *Since 2026-10-16 Viewer is stored as `viewer` and can be given; what is left is renaming the four old names, which is tidying, not a blocker.* | None for the running portal: the translation layer keeps code and data agreeing. |
-| ~~C-9~~ | ~~Audit log is neither complete nor tamper-evident (§12).~~ **Closed 2026-10-16:** each day is sealed the next morning and no route deletes an entry younger than 180 days ([`plac-and-audit.md`](plac-and-audit.md) §3.6). | What is left: today's entries are unsealed until the next morning, and page reads other than the sensitive ones are not recorded (§8). |
-| ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. **Key enforced 2026-10-15** (the owner's decision): the owner-only `/dashboard/users#force-kick` row is now checked exactly (`denyForceKick`, §5), so below the owner only a grant opens it. | Rank supremacy holds on this path, and Admins sign people out only with a grant. |
-| ~~D7~~ | ~~The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase.~~ **Fixed 2026-10-14:** the same rank rule for ending sessions and for blocking; blocking your own account is refused (400); a failed account update answers 502 instead of reporting success. | — |
-| ~~D14~~ | ~~Nothing stops the last active Owner being suspended, deleted or demoted.~~ **Closed 2026-10-16 (#36):** each of those waits for a second person (§10.7), who is the Owner themselves when Vendor support asks; `test/two-person-rule.test.ts`. | The last Owner leaves only with a second person's yes. |
-| D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Revoking one session signs the user out on every device. |
-| — | 4 overrides in production, 1 of them a deny (§6.3), **none on any cron key** (re-measured 2026-09-20); **none with an end date** (re-measured 2026-10-14, after `0070`). | PLAC is near-unexercised capability. |
-| — | A `dev`-baseline registry row cannot be delegated by the owner at all (§10). Two cron rows shipped that way and were repaired by `0056`; nothing prevents the next one. *Since 2026-10-14 Page Registry's Checks tab lists every such row.* | A capability the customer can hold but never hand on; now visible, still not prevented. |
+| C-11 | Role vocabulary migration outstanding (§4.1). Since 2026-10-16 Viewer is stored as `viewer` and can be given; what is left is renaming the four old names. | None for the running portal: the translation layer keeps code and data agreeing. |
+| D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Ending one session signs the person out on every device: more than asked, never less. |
+| — | 4 overrides in production, 1 of them a deny (§6.3), none on any cron key and none with an end date. | PLAC is near-unexercised capability. |
+| — | A `dev`-baseline registry row cannot be delegated by the owner (§10). Page Registry's Checks tab lists every such row. | A capability the customer can hold but never hand on; visible, not prevented. |
 | — | Cold login costs ~240 ms to Supabase (§13.2). | Identity is not edge-local; only the decision is. |
 
-D8 is an open defect (D6 and D7 were fixed on 2026-10-14, D14 on 2026-10-16), all four recorded in
-[`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md)
-§2. *Added 2026-09-19; the row claiming "grants propagate in up to 1 h" was removed
-in the same pass — Stage 1 replaced it (§11).*
-
-**Closed 2026-09-16:** D-3 (`session-status.ts` gated on a deactivated key) and D-4
-(`/api/sessions` mapped to one page while its handlers checked another) are both
-fixed and verified against code; the route mapping and all three handlers now agree
-on `/dashboard/sessions`. D-5, found while closing them — four sessions
-sub-permissions defined in `admin_pages` and enforced nowhere — is fixed in the same
-pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
+**Closed:** the force-kick and Sessions block rank rules (D6, D7, 2026-10-14; §5 and
+`test/session-rank.test.ts`), the last-Owner guard (D14, 2026-10-16; §10.7) and the
+tamper-evident audit log (C-9, 2026-10-16; §12). D-3 to D-5, the sessions permission
+mismatches, closed on 2026-09-16.
 
 ---
 
@@ -1244,7 +1240,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/plac.test.ts` | Map computation against a real D1 registry, deny-beats-grant |
 | `test/guard-plac.test.ts` | `requirePageAccess` exact match, prefix propagation, fail-closed on a missing map, owner bypass, an unknown key is not a deny |
 | `test/decide-access.test.ts` | The one page-access rule: vendor and owner bypass, exact key, longest-ancestor inheritance, unknown vs deny |
-| `test/pipeline-session.test.ts`, `test/pipeline-bootstrap.test.ts`, `test/pipeline-decision.test.ts` | Every status, redirect, rewrite, header, KV effect and audit row of the middleware on real KV and D1 (**49** cases today): session read, both revocation flags and the `authz-changed` mark; the 30-minute re-check, **including that a supabase-js 5xx keeps the session inside the grace window and only then ends it with `recheck_failed`**; the Cloudflare Access bootstrap with a real RS256 key and a stubbed identity store; the access-map refresh and its bounded fail-open; the viewer rule; `API_DENY_MODE`; the rows `recordEvents` writes |
+| `test/pipeline-session.test.ts`, `test/pipeline-bootstrap.test.ts`, `test/pipeline-decision.test.ts` | Every status, redirect, rewrite, header, KV effect and audit row of the middleware on real KV and D1 (**53** cases on 2026-10-16): session read, both revocation flags and the `authz-changed` mark; the 30-minute re-check, **including that a supabase-js 5xx keeps the session inside the grace window and only then ends it with `recheck_failed`**; the Cloudflare Access bootstrap with a real RS256 key and a stubbed identity store; the access-map refresh and its bounded fail-open; the viewer rule; `API_DENY_MODE`; the rows `recordEvents` writes |
 | `test/authz-signal.test.ts` | The Stage 1 mark: `markAuthzChanged` writes and TTLs, and `isAuthzStale` comparison (4 cases) |
 | `test/api-authz-inventory.test.ts` | **Every `/api/*` route is mapped** — CI fails otherwise |
 | `test/action-keys-enforced.test.ts` | **Every action key is checked on the server**, or carries the reason it cannot be; and "View consent details", "Design emails with AI" and "Manage templates" refuse or withhold for someone whose switch is off (added 2026-10-15) |
@@ -1258,6 +1254,12 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
 | `test/fresh-sign-in.test.ts` | The recent sign-in (added 2026-10-16, §10.5): the 10-minute and skew rule, an unknown time failing closed, the return path after signing in again, each guarded route refusing a stale session with the header and allowing the parts that do not ask, and the exact list of files that call `freshSignInRefusal`. `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` cover the sign-outs, Page Registry and the Access Center |
 | `test/two-person-rule.test.ts` | The second person (added 2026-10-16, §10.7): which changes wait and which do not, the last Owner (D14) included; who may approve; the waiting list written only over the exact value read; a removal that waits removes nothing and emails the approvers; a change made alone when nobody else could approve; the invitation refused; a mixed edit refused; the asker unable to approve their own; a recent sign-in to approve; the checks made again at approval; decline and cancel; the server log hold at the gateway and the approval sent to cf-vps as the approver |
+| `test/access-requests.test.ts`, `test/access-console-requests.test.ts` | Access requests (added 2026-10-15 and 2026-10-16, §10.3): asking with a reason and a length, the refusals at once, who may decide, approving with an end date or declining with a note, the emails; a console permission asked for and given for a while, kept by the Access Center and removed by the review |
+| `test/access-changes.test.ts` | Access-change emails (added 2026-10-15, §10.4): each change, one summary a day or off; what each save point says; the daily summary job |
+| `test/role-preview.test.ts`, `test/access-why.test.ts`, `test/access-templates.test.ts` | The role change preview, "Why can't I?" and page floors, and access templates (added 2026-10-16) |
+| `test/unused-accounts.test.ts`, `test/ended-settings-cleanup.test.ts`, `test/access-review.test.ts` | Accounts nobody uses (flag at 45 days, suspend at 90, never the Owner or Vendor support), the monthly clean-up of ended settings, and the quarterly access review (added 2026-10-16, §10.6, §11) |
+| `test/sensitive-views.test.ts`, `test/audit-seal.test.ts` | One `view` row for each sensitive read, none for a refused one; the daily seal, what each kind of tampering shows, and the delete routes that are gone or floored at 180 days (added 2026-10-16, §12) |
+| `test/console-signature.test.ts` | The portal's signature on the console identity headers, against vectors computed outside this code, and nothing changed until `CONSOLE_SIGNING_KEY` is set (added 2026-10-16) |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 
@@ -1267,6 +1269,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Docs pass after the 41 permission items, scope-limited to §4.1, §4.2, §5's Viewer note, §6 to §9, §11, §12, §13.1, §14, §16 and §17.** Read `src/lib/auth/stages/assertion.ts`, `bootstrap.ts`, `decide.ts`, `decision.ts` and `access-map.ts` (each refusal's status, body and audit reason; a page refusal is a rewrite; the access-map refusal redirects an API call too), `src/lib/auth/rbac.ts` (`ROLE_VOCABULARY`, `canBePageDefault`), `src/lib/access-center/limits.ts`, `src/lib/auth/page-registry.ts` and `src/layouts/AdminLayout.astro` (one read a minute per isolate, no retry, the sidebar's fallback), `src/lib/audit-seal/seal.ts` (`admin_audit_log` only); counted the `it(` cases in the three pipeline tests (53); through the D1 connector: `admin_pages` (117 rows, all legacy names, the CHECK) and `admin_page_overrides` (4, 1 deny, none with an end date) | §8's refusal table, §9's count, §11's stage 2, §12's unsealed sign-in log, §13.1's registry read, §14's registry row and §17's count corrected; §16 rewritten as the design's known limits, with the closed defects in one line. **Not re-derived:** §13.2 and §13.3's figures (2026-08-23 and 2026-09-19), §15's comparison and §15.1's control ids |
 | 2026-10-16 | claude | **Scope-limited to §10.7's Lock out sentence.** Read `src/pages/api/sessions/active-sessions.ts` (`block_account`) and `src/lib/approvals/ask.ts` (`personChangeGate`); `test/two-person-rule.test.ts` passes | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's signature sentence (#33).** Read `src/lib/console-signature.ts` and the three binding accessors that wrap with it; `cf-backup/src/gateway/signature.ts`, `cf-vps/src/gateway/signature.ts` and their routers, `cf-email-consumer/api/src/signature.ts` and `handleConsole`; `test/console-signature.test.ts` and each console's signature test pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.7, new, the two §10.5 rows, D14 in §16 and the §17 row (#36).** Read `src/lib/approvals/` (`rules.ts`, `store.ts`, `ask.ts`, `handlers.ts`, `retention.ts`, `mail.ts`), `src/lib/users/manage-apply.ts`, `src/pages/api/users/manage.ts` (POST, PATCH, DELETE), `src/pages/api/users/approvals.ts` and the gateway `src/pages/dashboard/vps/app/[...path].ts`; in cf-vps the Log storage screen's answer to `second_person`; `test/two-person-rule.test.ts` (22 tests), `test/fresh-sign-in.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | §10.7 and the rows match the code. The rest of the document not re-read |

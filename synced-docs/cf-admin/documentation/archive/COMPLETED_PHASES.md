@@ -18,7 +18,7 @@ tags: []
 > blocked at the edge by Access Group synchronisation. Current posture is in
 > [`../security/SECURITY.md`](../security/SECURITY.md), and the open items this
 > file hands off to `PENDING_PHASES.md` and `ToDoList.md` now live in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md).
+> `../MAINTENANCE.md` (private).
 
 ---
 

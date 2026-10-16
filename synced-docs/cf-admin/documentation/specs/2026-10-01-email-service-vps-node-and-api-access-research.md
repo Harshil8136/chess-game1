@@ -469,7 +469,7 @@ What item 6 involves:
 
 | # | Item | Why | Effort |
 |---|---|---|---|
-| 11 | **Forward the unsubscribe headers.** The portal creates RFC 8058 one-click headers for each recipient (`src/pages/api/emails/send.ts`), but the consumer drops them | still open as follow-up 2 of item C-4 in [MAINTENANCE.md](../MAINTENANCE.md). Gmail and Yahoo require one-click unsubscribe only from bulk senders, but it keeps complaints down, and the endpoint already exists | 0.5 |
+| 11 | **Forward the unsubscribe headers.** The portal creates RFC 8058 one-click headers for each recipient (`src/pages/api/emails/send.ts`), but the consumer drops them | still open as follow-up 2 of item C-4 in MAINTENANCE.md (private). Gmail and Yahoo require one-click unsubscribe only from bulk senders, but it keeps complaints down, and the endpoint already exists | 0.5 |
 | 12 | **Two kinds of suppression.** An unsubscribe stops marketing-type mail, not a booking confirmation; a hard bounce or a complaint stops everything. Store a scope with each entry | today the API applies every entry to every message. The 2026-09-30 design already chose this split (decision 22) | 1 |
 | 13 | **One status vocabulary.** The webhook writes `hard_bounce`, `soft_bounce`, `blocked` and `invalid_email`, while backup alerts and the portal expect `bounced` and `failed`. Settle one list, and add `email_error` to cf-astro's schema files | cf-backup receives these statuses as `unknown`. The `email_error` column exists only in the live database | 0.5 |
 | 14 | **Harden the Brevo webhook.** cf-astro's endpoint (`cf-astro/src/pages/api/webhooks/brevo.ts`) checks only a shared secret. Add Brevo's published address ranges, a replay window, and a 429 answer when the database is down | Brevo signs nothing, retries only on a timeout or a 429, and discards events answered with a 5xx. cf-admin's twin endpoint (`src/pages/api/emails/webhook.ts`) is not in service ([Brevo webhook runbook](../runbooks/brevo-webhook.md)) | 0.5 |
@@ -864,7 +864,7 @@ Recorded for the owner; not changed in this document.
 |---|---|---|
 | [Schema change ledger](../reference/schema-change-ledger.md) | migrations 0057 to 0060 are **pending** | all of 0057 to 0061 are applied in `madagascar-db` (`d1_migrations`), and the three `#api-*` rows exist and are active (checked 2026-10-01) |
 | cf-email-consumer `docs/program/ROADMAP.md` | P3 (dashboard addresses) "Not started" | cf-admin `0a31247` (2026-10-01) gave every Email Portal section an address and added the token panel, rotation and renewal |
-| cf-admin [MAINTENANCE.md](../MAINTENANCE.md) | E-7 (composer senders) open | [Email Portal](../features/EMAIL-PORTAL.md) §0 says it was fixed in code on 2026-10-01, and closes once 0061 is applied. 0061 is applied |
+| cf-admin MAINTENANCE.md (private) | E-7 (composer senders) open | [Email Portal](../features/EMAIL-PORTAL.md) §0 says it was fixed in code on 2026-10-01, and closes once 0061 is applied. 0061 is applied |
 | [Email Portal](../features/EMAIL-PORTAL.md) §3.3 and §5 | only To recipients are checked against the suppression list | To, Cc and Bcc are checked since cf-admin `d653e75` |
 | `src/components/admin/emails/api-access/ApiTokenFormModal.tsx` | falls back to 30 a minute and 200 a day when settings have not loaded | the email service's code defaults are 10 and 50 (`cf-email-consumer/api/src/settings.ts`) |
 | cf-vps rebuild runbook | Ubuntu 24.04 | the VPS runs 26.04 since 2026-09-30 |

@@ -23,7 +23,7 @@ tags: [incident-response, breach, gdpr, soc2, runbook, security]
 
 Closes gaps **G1** (no breach-notification runbook) and **G4** (no
 incident-response runbook or drill cadence) from
-[`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
+`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private).
 
 Satisfies: GDPR Art. 33/34, SOC 2 CC7.3–CC7.5, ISO/IEC 27001 A.5.24–A.5.28,
 CSA STAR SEF-01…SEF-05, and the breach-notification clauses of the US state
@@ -85,9 +85,12 @@ Detection sources, in the order they usually fire:
 
 | Source | Where | Notes |
 |--------|-------|-------|
-| Sentry alert | `cf-admin` project | `[SECURITY ALERT]` messages — emitted **only** by `src/pages/api/retention/purge.ts` (unauthorized purge, PLAC-denied purge, deactivated-actor purge). `users/manage.ts` emits none; that name was wrong until 2026-09-19 |
-| Audit log | D1 `admin_audit_log` | `api_authz_deny`, `api_mutation_attempt` |
-| **Login logs** | D1 `admin_login_logs` | **Failed logins live here, not in the audit log.** `event_type` is one of `LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`, with a `failure_reason`. There is no `login_failed` audit action anywhere in `src/` — querying the audit log for one returns nothing and looks like "no brute force" |
+| **Sign-in alert email** | The sign-in alert list (Security → Sessions → Alert policy; the business inbox when the policy names nobody) | Two kinds are emailed as urgent whatever the account's own alert settings say: **"SIGN-IN WITHOUT GOOGLE"**, every sign-in made any way but Google, which is the emergency way in, and **"SIGN-IN MOVED"**, a sign-in first seen on one device and country now used on another, which is what a copied cookie looks like. Other sign-ins and failed sign-ins are emailed as the policy says (`src/lib/login-alerts/decide.ts`; the rules: [`../security/login-forensics.md`](../security/login-forensics.md)) |
+| **Access-change email** | The same list | Every change that widens or reshapes who can do what: a role changed; a person added, suspended, restored or deleted; an Owner-level page given; a page's or a console permission's default role moved; Backups or Server permissions changed. One email per save, one summary a day at 08:00 in Aguascalientes, or off, as the alert policy's "Access changes emailed" says (`src/lib/access-changes/notify.ts`). A change nobody on the team made is an incident |
+| **Audit log seal email** | The same list, each morning at 08:00 in Aguascalientes (14:00 UTC) | The fingerprint of the previous day of `admin_audit_log`, and the past week checked again; every morning, or only when a sealed day changed, as the alert policy says. **A "Warning: … of the audit log changed" email is the tamper signal:** sealed entries were changed or removed outside the portal, for example straight in the database. Check any day on Logs → Check seals (Owner and Vendor support). Engine `src/lib/audit-seal/`; what a seal proves: [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6 |
+| Sentry alert | `cf-admin` project | `[SECURITY ALERT]` messages, emitted **only** by `src/pages/api/retention/purge.ts` (an unauthorized, PLAC-denied or deactivated-actor purge) |
+| Audit log | D1 `admin_audit_log` | `api_authz_deny`, `api_mutation_attempt`; `view` rows for who opened someone's sign-in history, a consent record's details or an email message's body. The portal cannot delete an entry younger than 180 days |
+| **Login logs** | D1 `admin_login_logs` | **Failed logins live here, not in the audit log.** `event_type` is one of `LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`, with a `failure_reason`; `cf_identity_provider` says how a sign-in was made, and `alert` what became of its alert email. There is no `login_failed` audit action anywhere in `src/`: querying the audit log for one returns nothing and looks like "no brute force" |
 | CF Access logs | Zero Trust dashboard | Failed auth, unexpected geography |
 | Supabase advisors | `get_advisors` MCP | RLS/policy drift |
 | CI | `quality.yml` | `audit_gate.py`, secret-scan, `rules_check.py` |
@@ -126,31 +129,61 @@ credible.
 Containment precedes investigation. Preserve evidence where possible, but never
 delay containment to gather more.
 
-1. **Revoke sessions.** `/dashboard/sessions` → force-kick. Layer 3 revocation
-   uses `CF_API_TOKEN_ZT_WRITE`. **KV revocation flags apply on the next
-   request, not "within 30 minutes"** — `revoked:<userId>` and
-   `revoked-session:<sessionId>` are read on every warm request in a single
-   bulk KV get and destroy the session on the spot
-   (`src/lib/auth/stages/session-stage.ts`); `forceLogoutUser` writes the flag
-   with a 24-hour TTL *before* deleting the sessions. (The 30 minutes belongs
-   to step 2, not to revocation; this step said both until 2026-09-19.)
-2. **Deactivate accounts.** Set `is_active = false` in
-   `admin_authorized_users`. The middleware re-checks role and active state
-   every `SESSION_REFRESH_INTERVAL_MS` (30 min) and destroys the session on
-   failure — `src/lib/auth/stages/refresh-role.ts`, orchestrated by
-   `pipeline.ts` since the chunk-10 split.
+1. **Sign the person out.** Users → the person → **Sign out everywhere**
+   (`DELETE /api/users/force-kick`). It needs the Users page and its own key,
+   `/dashboard/users#force-kick`, granted exactly: the Owner and Vendor support
+   hold it, anyone else only once it is granted on their Access page (since
+   2026-10-15). Below Owner and Vendor support you can sign out only people
+   below your role. **Security → Sessions** (the `#revoke` key) offers **End
+   session** for one device, and **Lock out**, which signs the person out and
+   suspends the account (step 2). Each of these, except ending one of your own
+   sessions, needs a sign-in from the last 10 minutes: when the portal asks you
+   to confirm it is you, sign out, sign in again and repeat.
+
+   A sign-out has three layers (`forceLogoutUser`, `src/lib/auth/plac.ts`): a
+   `revoked:<userId>` mark in KV for 24 hours, written *before* the sessions are
+   deleted; every KV session deleted; and the person's Cloudflare Access
+   sessions revoked at the edge through `CF_API_TOKEN_ZT_WRITE`. **It applies on
+   the next request:** `revoked:<userId>` and `revoked-session:<sessionId>` are
+   read on every warm request in a single bulk KV get and end the session on the
+   spot (`src/lib/auth/stages/session-stage.ts`). The `revoked:` mark also
+   refuses a new sign-in for its 24 hours (`src/lib/auth/stages/bootstrap.ts`);
+   after that the person can sign in again, so for a compromised account do
+   step 2 as well.
+2. **Suspend the account.** Users → the person → **Suspend**
+   (`PATCH /api/users/manage` with `is_active: false`; `applyUserUpdate` in
+   `src/lib/users/manage-apply.ts`). One action does all of it:
+   `is_active = false` in Supabase `admin_authorized_users`; every session ended
+   by the same three-layer sign-out as step 1; an `authz-changed:` mark, so a
+   session still open re-checks on its next request; an activity-log row; an
+   access-change email to the alert list; and the Cloudflare Access group of
+   authorised users synced without them. It needs the Users page, a role above
+   theirs (Vendor support may suspend anyone), and a sign-in from the last
+   10 minutes. Suspending the last active Owner waits for a second person (the
+   two-person rule). Sessions → **Lock out** makes the same suspension from the
+   Sessions page, where the Owner and Vendor support reach everyone. **Suspend,
+   do not remove:** removing a person waits for a second person whenever someone
+   else could approve it.
+
+   If the portal itself cannot be used, set `is_active = false` in
+   `admin_authorized_users` directly, and expect it to be slower: no mark is
+   written, so the middleware sees it at its next re-check of role and active
+   state, every `SESSION_REFRESH_INTERVAL_MS` (30 min,
+   `src/lib/auth/stages/refresh-role.ts`), and the Cloudflare Access group
+   follows at the hourly Access list sync (`cf-access-reconcile`).
+
    > **Outage grace:** if Supabase is *also* unwell, the re-check reports and
    > then lets the session proceed on its last good verification for up to
    > **two** intervals. Containment by `is_active = false` can therefore take
    > ~60 minutes when the directory is degraded. If that is not fast enough,
-   > use step 1 — revocation does not consult Supabase.
+   > use step 1: revocation does not consult Supabase.
 3. **Rotate credentials** — order matters, most privileged first:
    `SUPABASE_SERVICE_ROLE_KEY` → `CF_API_TOKEN_ZT_WRITE` →
    `CLOUDFLARE_API_TOKEN` → `CF_API_TOKEN_READ_LOGS` → `IP_HASH_SECRET` (see
    caveat below) → `RESEND_API_KEY` / `BREVO_API_KEY` →
    `CHATBOT_ADMIN_API_KEY`. (`UPSTASH_REDIS_REST_TOKEN` closed this list until
    2026-10-04; cf-admin no longer reads it, so rotate it in the services that do,
-   cf-astro and cf-chatbot, and delete it here: [`../MAINTENANCE.md`](../MAINTENANCE.md) RU-1.)
+   cf-astro and cf-chatbot, and delete it here: `../MAINTENANCE.md` (private) RU-1.)
    `wrangler secret put <KEY>`; full registry in
    [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §5.
    > **`IP_HASH_SECRET` is the most consequential rotation in this list.**
@@ -175,9 +208,8 @@ delay containment to gather more.
 4. **Tighten the edge if under active attack.** Cloudflare security level →
    `under_attack` via `/dashboard/control-plane` or
    `POST /api/control-plane/cloudflare {"action":"set-security-level","level":"under_attack"}`.
-5. **Cross-repo containment.** The two neighbours share different things, and
-   the rotation scope differs accordingly (this step lumped them together
-   until 2026-09-19):
+5. **Cross-repo containment.** The neighbours share different things, and the
+   rotation scope differs accordingly:
    - **`cf-astro`** shares the Supabase project, the D1 database
      `madagascar-db` **and** the R2 bucket `madagascar-images`. A compromised
      `SUPABASE_SERVICE_ROLE_KEY` is compromised for it too — rotate and
@@ -186,6 +218,12 @@ delay containment to gather more.
      storage: it has its own D1 (`chatbot-kb`) and no shared R2. Its scope is
      its own copy of the Supabase key plus `CHATBOT_ADMIN_API_KEY`, which must
      be set to the same value in both Workers in one sitting.
+   - **The consoles** (`cf-backup`, `cf-vps` and the email API's Console) are
+     reached only over service bindings. `cf-backup` also reads and writes the
+     shared D1 database `madagascar-db`. `CONSOLE_SIGNING_KEY`, once set, is the
+     same value in cf-admin and in each console that checks it: set the new
+     value in cf-admin first, then in each console, in one sitting, because a
+     console whose key differs refuses every request.
 
 ## 5. Phase 3 — Assess (runs in parallel; must conclude before hour 60)
 
@@ -199,7 +237,11 @@ Answer, in writing:
 3. **Special categories?** Identity documents attached to ARCO requests are
    the realistic worst case and raise the risk assessment materially.
 4. **Was it actually accessed, or merely accessible?** Exposure and access are
-   different findings and lead to different notification outcomes.
+   different findings and lead to different notification outcomes. The
+   activity log's `view` rows (§3) say who opened someone's sign-in history, a
+   consent record's details or an email message's body
+   (`src/lib/audit-views.ts`); ARCO identity documents have no viewer in the
+   portal, so no row records a look at them.
 5. **Is it contained?** Ongoing exposure changes the risk calculus.
 
 ## 6. Phase 4 — GDPR Art. 33/34 notification decision
@@ -278,5 +320,6 @@ Stated plainly, because an assessor will find these anyway:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-16 | claude: `src/pages/api/users/force-kick.ts`, `src/lib/auth/surface-guards.ts` (`denyForceKick`, `denySessions`), `src/lib/auth/guard.ts` (`placRequireGrant`), `src/pages/api/users/manage.ts` (PATCH), `src/lib/users/manage-apply.ts` (`applyUserUpdate`, `updateClearance`), `src/lib/approvals/ask.ts` and `rules.ts` (`kindForPersonChange`), `src/pages/api/sessions/active-sessions.ts` and `flush-sessions.ts`, `src/components/admin/users/PersonDrawer.tsx`, `src/lib/auth/plac.ts` (`forceLogoutUser`), `stages/session-stage.ts`, `stages/bootstrap.ts`, `stages/refresh-role.ts`, `src/lib/auth/fresh-sign-in.ts`, `src/lib/login-alerts/decide.ts` and `dispatch.ts`, `src/lib/auth/security-logging.ts`, `src/lib/access-changes/notify.ts`, `src/lib/audit-seal/mail.ts`, `src/pages/api/audit/seals.ts`, `src/lib/login-alerts/policy.ts`, `src/lib/audit-views.ts`, `src/lib/console-signature.ts`; the `cf-access-reconcile` interval read live (D1 connector, `cron-control`: 60 minutes); cf-backup `wrangler.json` | §3: rows for the sign-in alert, access-change and audit-seal emails, `view` rows and the login logs' method and alert columns. §4 step 1 rewritten for Users → Sign out everywhere (`#force-kick`, since `b78965c`) and the Sessions actions, the 10-minute sign-in and the 24-hour sign-in block; step 2 rewritten for Users → Suspend and Sessions → Lock out (what one suspension does, the two-person rule), with a direct database edit as the slower fallback; step 5 gains the consoles and `CONSOLE_SIGNING_KEY`; §5 step 4 names the `view` rows. Not re-checked: step 3's rotation order and the `IP_HASH_SECRET` caveat, §1, §2, §6 to §9, the legal deadlines in §7 |
 | 2026-10-07 | `wrangler.toml` `[secrets] required` read (no `UPSTASH_*` name; the 2026-10-04 comment says they left it); `grep -rn UPSTASH src/` (no match: nothing reads either secret) | The secret-rotation list (changed 2026-10-04): cf-admin no longer reads `UPSTASH_REDIS_REST_TOKEN`. Nothing else re-checked |
 | 2026-09-19 | `grep -rn "SECURITY ALERT" src/`; `grep -rn login_failed src/`; `admin_login_logs` schema and `event_type` values queried live; `src/lib/auth/stages/refresh-role.ts` and `stages/session-stage.ts` read; `public-share-links-domain-isolation.md` §3; `wrangler.toml` service bindings | §3's failed-login triage pointed at the wrong table — corrected to `admin_login_logs` (`event_type`, `failure_reason`) with a working query; `users/manage.ts` dropped from the `[SECURITY ALERT]` sources; §4's revocation timing, the `refresh-role.ts` path and its two-interval outage grace corrected; the `IP_HASH_SECRET` caveat expanded to the four token families; cf-chatbot separated from the shared-store list; the restore-drill row handed to `disaster-recovery.md` §8. Not re-checked: the legal deadlines in §7 beyond GDPR/CCPA (not a legal review) |

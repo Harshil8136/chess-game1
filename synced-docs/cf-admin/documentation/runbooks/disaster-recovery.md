@@ -22,12 +22,14 @@ tags: [disaster-recovery, backup, rto, rpo, soc2, iso22301, runbook]
 > **Superseded for backups, 2026-09-27.** `.github/workflows/backups.yml` was
 > deleted (cf-backup remediation decision RD-8): it never produced a backup.
 > Supabase Postgres (with its authentication records) and the three D1
-> databases are now backed up **daily** by the cf-backup repository's backup
-> engine, `secondary-pipeline.yml`: each store is exported, restored into a
-> scratch database and row-counted against the source, then encrypted and
-> archived to R2 (`secondary/pipeline/`), with a 14-day copy in GitHub. It is
-> started every day at 09:17 UTC by the cf-backup console's Scheduler, with
-> GitHub's own schedule as a fallback. How to restore from it: cf-backup
+> databases are now backed up by the cf-backup repository's backup engine,
+> `secondary-pipeline.yml`: each store is exported, restored into a scratch
+> database and row-counted against the source, then encrypted and archived to
+> R2 (`secondary/pipeline/`), with a 14-day copy in GitHub. cf-backup's tick
+> starts it on the days the backup console's Settings → Schedule names (read
+> 2026-10-16: a full backup on Sundays and Wednesdays at 09:17 UTC), and
+> GitHub's own daily schedule is the fallback, which stands down on a day that
+> already has a good backup or names none. How to restore from it: cf-backup
 > `docs/remediation/09-secondary-pipeline-specification.md` §5. §0, §1 and §8
 > below describe the retired workflow and are kept as the record of what was
 > planned; `scripts/backup_drill.mjs` still works locally.
@@ -60,7 +62,7 @@ audit finding, not evidence.
 ## Context / Scope
 
 Closes gap **G3** from
-[`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md),
+`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private),
 and addresses SOC 2 **A1.2/A1.3** and the underlying control behind ISO 22301
 (full 22301 certification is out of scope — see that audit §4.6).
 
@@ -86,7 +88,7 @@ feature that needs no artifact.
 |---|---|---|---|---|
 | **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** within 7 days (Time Travel). **Unbounded beyond 7 days** — the weekly export has never produced an artifact (§0) | Time Travel: minutes, per Cloudflare's documentation; never drilled on production, by design. From the export: unknown, and unmeasurable until §0 item 1 | Time Travel, **7-day window on Workers Free**; weekly `wrangler d1 export` artifact, 90 days (`backups` workflow, chunk 6) — **not yet producing artifacts** |
 | **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **Unbounded.** The organisation is on the **free** plan: Supabase backs up Pro/Team/Enterprise projects daily, not free ones, and there is no Dashboard restore here (§3). The weekly `pg_dump` has never run (§0 item 2) | n/a — there is nothing to restore from | Self-service `pg_dump` only. **This is the platform's single largest recovery gap.** |
-| **KV** `ADMIN_SESSION` (binding `SESSION`) | Sessions, access maps | N/A — by design | ~0 | Not backed up (§4) |
+| **KV** `ADMIN_SESSION` (binding `SESSION`) | Sessions, sign-out marks, caches | N/A — by design | ~0 | Not backed up (§4); losing it lifts the last 24 hours' sign-out blocks |
 | **R2** `madagascar-images` | CMS images, email attachments | **No backup** | Unbounded | See §5 — real gap |
 | **R2** `madagascar-staff-storage` | Staff drive files — **including payroll and medical records** | **No backup** | Unbounded | See §5 — same gap, higher-sensitivity data |
 | **Worker** | Application code | 0 | ~5 min | `git` + redeploy |
@@ -224,12 +226,25 @@ subsection describes a procedure, not an option.
 
 ## 4. KV — deliberately not backed up
 
-`ADMIN_SESSION` (the namespace behind the `SESSION` binding — there is no
-namespace called `cf-admin-session`, which is what this line said until
-2026-09-19) holds only sessions and cached access maps. Total loss logs
-everyone out; they re-authenticate through Cloudflare Access and the access map
-rebuilds from D1 on the next request. **No backup is needed and none exists** —
-this is a design decision, not an oversight. See
+`ADMIN_SESSION` (the namespace behind the `SESSION` binding) holds short-lived
+state only:
+
+| What | Keys | If it is lost |
+|---|---|---|
+| Sessions, each with its access map | `session:`, `user-session:` | Everyone is signed out. They sign in again through Cloudflare Access, and the access map is rebuilt from D1 at sign-in |
+| Sign-out marks | `revoked:<userId>` (24 hours), `revoked-session:<sessionId>` | **A person signed out in the last 24 hours can sign in again at once**, unless their account is suspended: the `revoked:` mark is what refused their new sign-in (`src/lib/auth/stages/bootstrap.ts`). A lost `revoked-session:` mark changes nothing, since its session is gone too |
+| Access-change marks | `authz-changed:<userId>` | Nothing: they tell a live session to re-check its access, and no session survives the loss |
+| Caches | the dashboard numbers, the GitHub page snapshot | Refilled from their sources on the next request |
+
+**After a loss during an incident**, sign out again, or better suspend, anyone
+signed out in the last 24 hours who must stay out
+([`incident-response.md`](incident-response.md) §4 steps 1 and 2). The activity
+log names them: its `force_logout` rows, and its `revoke_access` rows of module
+`auth`. Sessions → **Sign-in blocks** will say no one is blocked, because it
+reads the lost marks.
+
+Apart from that, **no backup is needed and none exists**: this is a design
+decision, not an oversight. See
 [`../architecture/KV-RESILIENCE.md`](../architecture/KV-RESILIENCE.md).
 
 ## 5. R2 — the real gap
@@ -352,5 +367,7 @@ Record the quarterly results in `../security/reviews/` as a dated snapshot.
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-16 | claude: `backup:config`'s schedule read live (D1 connector: full backups on weekdays 0 and 3 at 09:17 UTC, the daily Supabase-only backup off); cf-backup `.github/workflows/secondary-pipeline.yml` (its daily fallback and when it stands down) | The superseded banner said backups ran daily at 09:17 UTC; it now names the schedule's days and the fallback. Not re-checked: the rest of the banner |
+| 2026-10-16 | claude: `src/lib/auth/plac.ts` (`forceLogoutUser`, `revokeSingleSession`), `src/lib/auth/stages/session-stage.ts` and `bootstrap.ts` (where the marks are read), `src/lib/auth/authz-signal.ts`, `src/lib/auth/session.ts`, `src/lib/github/cache.ts`, `src/lib/analytics/providers/index.ts`, `src/pages/api/sessions/active-revocations.ts`, `src/components/admin/users/sessions/BlocksPanel.tsx`; every `SESSION` key prefix in `src/` listed; the links in this runbook resolved | §4 rewritten as a table of what the namespace holds and what losing each part means: the sign-out marks are the one loss that matters, and the step after it; §1's KV row says so. The §0–§3 backup status, §5 and §8 not re-checked |
 | 2026-10-16 | `src/lib/audit-seal/seal.ts` (`copyKey`, `copyBody`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/`) | §5's new paragraph on the activity log's copies only. The rest of the runbook was not re-checked; its backup status (§0, §2) predates the backups that have run since 2026-09-26 |
 | 2026-09-19 | `npx wrangler d1 time-travel restore --help` and `info --help` (wrangler 4.128.0); Supabase MCP `get_organization`; `.github/workflows/backups.yml` read; repository Actions secrets/variables/environments listed; `scripts/backup_drill.mjs` read | `--dry-run` does not exist on `restore`; org plan is `free`; the workflow needs four secrets and the repository has only `PERSONAL_PAT`; one workflow run ever, failed. §0 added; §1, §2, §3, §4, §7 and §8 rewritten. `scripts/backup_drill.mjs` and the §2.1 `wrangler d1 create/execute` flags re-checked and correct |

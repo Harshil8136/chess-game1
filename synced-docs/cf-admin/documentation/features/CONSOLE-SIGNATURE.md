@@ -16,7 +16,8 @@ tags: [security, consoles, cf-backup, cf-vps, cf-email-api, service-binding, hma
 > a "who you are" header. Until now the consoles believed that header because only the portal can
 > reach them. Once the owner sets one shared key, `CONSOLE_SIGNING_KEY`, on the portal and on a
 > console, the portal signs the header and that console refuses anything it did not sign. Nothing
-> changes until the key is set. Permissions item #33, approved by the owner on 2026-10-15.
+> changes until the key is set, which is the owner's step (§3). Permissions item #33, approved by
+> the owner on 2026-10-15.
 
 ## 1. What it protects against
 
@@ -32,7 +33,7 @@ service binding, and only cf-admin has one, so each console trusts the header cf
 
 Cloudflare lets any Worker in the account be given a binding to these Workers. A Worker added
 later, or a mistake in one, could then send the header and claim to be the Owner
-([MAINTENANCE](../MAINTENANCE.md) AC-3). The signature closes that: a console with the key
+(MAINTENANCE (private) AC-3). The signature closes that: a console with the key
 answers only requests the portal signed.
 
 What it does not protect against: a Worker that holds the key. The same key sits on all four
@@ -85,11 +86,19 @@ the last minute is what a forger would lack.
 Every caller goes through the accessors, so all of them are signed:
 
 - the Backups and Server gateways, the server terminal's WebSocket included;
-- the Access Center;
-- the second-person hold for server log retention;
+- the Access Center, the Page Registry's console permissions, and approving a request for a
+  console permission;
+- the second-person hold for server log retention, and sending the change once it is approved;
+- the Email API page's routes (`/api/emails/api-*`) and the Registered Senders copy they keep
+  in step;
+- removing a person on Users, which blocks the Email API tokens they made;
 - the `backup-tick` and `email-api-sweep` jobs.
 
-A browser cannot send the header. Each gateway forwards only an allow-list of headers.
+A browser cannot send the header. Each gateway forwards only an allow-list of headers, and the
+binding sets the signature itself, over whatever a browser may have sent.
+
+A console checks the signature only on a request that carries its actor header. One without it
+is refused as before, because outside local development a console answers nobody it cannot name.
 
 The key is read with surrounding spaces and line breaks removed, on all four Workers, so a pasted
 value with a trailing newline still matches.
@@ -133,7 +142,8 @@ Deleting it from cf-admin first makes every console that still has it refuse.
 The consoles never answer 401 for this: 401 means "signed out", and only the portal says that.
 The Access Center counts `bad_signature` as the portal's own fault (`OUR_FAULT` in
 `src/lib/access-center/console-client.ts`). It shows "could not complete the request" and logs
-the code. Each console also logs its refusals (`signature_refused`).
+the code. Each console also logs its refusals with the reason: `signature_refused` in cf-backup,
+`console.signature_refused` in the email service, and a "signature refused" warning in cf-vps.
 
 ## 5. Cost
 
@@ -157,4 +167,5 @@ Both are microseconds, far inside the 10 ms CPU budget.
 
 | Date | Checked | Result |
 |---|---|---|
+| 2026-10-16 | Re-read against `src/lib/console-signature.ts` (`signedText`, `signingBinding`, `consoleSigningKey`), every caller of `backupBinding`, `vpsBinding` and `emailConsoleBinding` in `src/`, `cf-backup/src/gateway/signature.ts` and `src/http/router.ts` (`refuseUnsigned`), `cf-vps/src/gateway/signature.ts` and `src/http/router.ts`, `cf-email-consumer/api/src/signature.ts` and `api/src/console.ts` (`handleConsole`); the `[secrets] required` lists in the four `wrangler` files; the test names in `test/console-signature.test.ts` | The caller list now names the Email API routes, Registered Senders, access requests, the approved retention change and removing a person; a console checks only a request with an actor header; the refusal log names corrected per console. No test run (shared checkout). Not checked: whether the key is set on any Worker (the Cloudflare connector did not answer), and §5's cost figures |
 | 2026-10-16 | The code and tests above in all four repositories; the dashboard steps against Cloudflare's "Secrets" documentation (Settings → Variables and Secrets → Add → Secret → Deploy) | Built and tested. Not checked: a signed request in production, which waits for the owner to set the key |

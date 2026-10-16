@@ -8,7 +8,7 @@ tags: [program, cf-backup, contract, gateway, permissions, embedding]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan: nothing in it is built yet. It names routes, files and folders that do not exist yet, in cf-admin and in the future cf-backup repo. -->
+<!-- Built and deployed 2026-09-23/24; the "As built" notes record where the build differs from the plan. It names routes, files and folders in both cf-admin's and cf-backup's repositories, so cf-admin's path check cannot resolve all of them. -->
 
 # 02 — How cf-admin embeds cf-backup, and why it cannot break
 
@@ -27,10 +27,10 @@ sequenceDiagram
   participant A as cf-admin (secure.*)
   participant K as cf-backup (no route)
   B->>A: GET /dashboard/backup
-  A-->>B: AdminLayout + <iframe src="/dashboard/backup/app/">
+  A-->>B: AdminLayout and a frame showing /dashboard/backup/app/
   B->>A: GET /dashboard/backup/app/… (inside the frame)
   Note over A: Access JWT, session, page permission<br/>(the normal pipeline, unchanged)
-  A->>A: drop client identity headers, add the actor
+  A->>A: drop client identity headers, add the actor (signed once the key is set)
   A->>K: env.BACKUP.fetch(request)
   K-->>A: console page / API JSON / file stream
   A-->>B: response (+ audit row for any change)
@@ -63,13 +63,14 @@ through **in dev only**.
 One endpoint, `src/pages/dashboard/backup/app/[...path].ts`, that does exactly this and
 nothing feature-specific:
 
-1. **Runs behind the normal pipeline.** Access, session and role refresh are the middleware's job, as for every page. Page permission resolves through the nearest ancestor key, `/dashboard/backup` (*measured*: `src/lib/auth/decide-access.ts:41`), so the one page row gates every forwarded request.
-2. **Forwards only an allow-list of request headers**: `Accept`, `Accept-Language`, `Content-Type`, `Content-Length`, `Range`, `If-None-Match`. It **drops** `Cookie`, `Authorization`, `Cf-Access-Jwt-Assertion` and every `X-Backup-*` header the browser sent. cf-backup never sees cf-admin's session cookie or the Access token.
-3. **Adds the actor** as `X-Backup-Actor` (base64url JSON, §4) and `X-Backup-Request-Id`.
-4. **Requires same-origin for any non-GET.** It uses the same check the rest of cf-admin applies (`validateCsrf`, re-applied in the gateway so this rule is provable by the gateway's own test alone).
-5. **Calls `env.BACKUP.fetch()` with a 10 s timeout** for API calls, and **streams** file downloads without buffering them. If the call fails, it answers with its own small "Backup console unavailable" page, or a JSON error for `/api/*`.
+1. **Runs behind the normal pipeline.** Access, session and role refresh are the middleware's job, as for every page; nested paths resolve through their longest ancestor key (`resolveAccess`, `src/lib/auth/decide-access.ts`). The gateway then asks for the `/dashboard/backup` key itself (`mayUseBackupConsole`, `src/lib/backup-proxy.ts`): Owner and Vendor support always pass, anyone else needs that key allowed in their access map. Since 2026-10-15 a missing key is a deny, never decided by the staff-level `/dashboard` row, so the one page row gates every forwarded request.
+2. **Forwards only an allow-list of request headers**: `Accept`, `Accept-Language`, `Content-Type`, `Range`, `If-None-Match` (`FORWARDED_REQUEST_HEADERS`). `Content-Length` is not copied: the runtime sets it from the buffered body, which is capped at 1 MiB (413 otherwise). Every other header the browser sent stays behind, among them `Cookie`, `Authorization`, `Cf-Access-Jwt-Assertion` and any `X-Backup-*`, because the outgoing headers are built from nothing rather than copied and pruned. cf-backup never sees cf-admin's session cookie or the Access token.
+3. **Adds the actor** as `X-Backup-Actor` (base64url JSON, §4) and `X-Backup-Request-Id`, and, once `CONSOLE_SIGNING_KEY` is set on cf-admin, `X-Backup-Signature` over them (§4).
+4. **Guards every change** (POST, PUT, PATCH, DELETE; GET and HEAD are reads, any other method is 405). A change from a read-only role (the Viewer, `isReadOnly`) is refused with **403 `read_only`** before cf-backup is called. A change must also be same-origin: the same check the rest of cf-admin applies (`validateCsrf`, re-applied in the gateway so this rule is provable by the gateway's own test alone), 403 `cross_origin` otherwise.
+5. **Calls `env.BACKUP.fetch()` with 10 s to the answer's headers**; the body then streams untimed, so file downloads are never buffered. If the call fails, it answers with its own small "Backup console unavailable" page, or a JSON error for `/api/*`.
 6. **Passes the response through**, including cf-backup's own security headers (§5). It removes any `Set-Cookie`, since cf-backup has no reason to set one.
-7. **Audits** every non-GET (and, as built since 2026-10-16, the two reads below) into `admin_audit_log` through the existing `buildAuditDetails` chokepoint: actor, method, path (no query string), status, request id, and the one-line summary cf-backup returns in `X-Backup-Audit`. `action` must be one of `run.dispatch run.cancel run.bypass-cooldown run.drill run.annotate run.download runs.prune schedule.edit config.edit access.edit keys.rotate keys.reveal activity.export secrets-calendar.edit` (C5); an unknown or missing action is recorded as `backup_run` with the summary "unrecognised action" and a Sentry warning. The request body is never logged.
+7. **Audits** every change (and, as built since 2026-10-16, the two reads below) into `admin_audit_log` through the existing `buildAuditDetails` chokepoint: actor, method, path (no query string), status, request id, and the one-line summary cf-backup returns in `X-Backup-Audit`. `action` must be one of the closed list in `src/lib/backup-audit.ts` (`BACKUP_AUDIT_VERBS`, C5), which [BACKUP-CONSOLE.md](../../features/BACKUP-CONSOLE.md) §4 sets out with each action's audit verb; an unknown or missing action is recorded as `backup_run` with the summary "unrecognised action" and a Sentry warning. The request body is never logged. An `access.edit` that cf-backup accepted (a change on the console's own Access screen) is also sent to the people on cf-admin's sign-in alert list, as one email per save or in the daily summary, as the alert policy says (`noteAccessChanges`, `src/lib/access-changes/notify.ts`, cf-admin permissions #18).
+8. **Wakes the `backup-tick` job** after every change cf-backup answered (or may have), so the next five-minute tick calls it whatever sleep it last reported (§8, Contract A).
 
 > **As built (2026-10-16, permissions item #20).** Two reads hand over content, so cf-backup
 > stamps `X-Backup-Audit` on them from their handlers and the gateway records them too: a file
@@ -119,9 +120,10 @@ owner configured with a binding can call it. This is the opposite of the cf-chat
 ```
 
 - `kind` is `user` for the gateway and `system` for cf-admin's jobs (§8).
+- `userId` is the person's cf-admin account id. A user actor without it is refused (400 `bad_actor`). Since 2026-10-16 (cf-admin permissions #35) a grant saved through cf-admin's Access Center is bound to that id, so another account with the same email gets nothing from it (doc 13 §4).
 - `role` is the canonical role after `normalizeRole()`.
-- `signedInAt` **is the Cloudflare Access assertion's `iat`** (as built, doc 09 §7), recorded when cf-admin's session is created. It is deliberately not the session's own creation time: cf-admin can re-create a session from an assertion that is hours old without a fresh sign-in, so `createdAt` would let a stolen Access cookie look fresh. A missing `iat` reads as `0` (never fresh); sessions created before this field existed fall back to their `createdAt` until they expire (24 h). It backs the "fresh sign-in" (≤ 10 min) rule for key actions. **Known limitation:** Access JWTs carry no `auth_time`, and cf-admin can reissue its own app token from the org session without new credentials — so "fresh sign-in" in practice means "Access issued the app token within the last 10 minutes", not "the person just typed a password". The reauth message says to sign out (which also ends the Access session) and back in, so the next sign-in is a real one.
-- `v` is the header's schema version. cf-backup answers a major it does not know with a clear "cf-admin and cf-backup versions do not match" page, never a guess.
+- `signedInAt` **is the Cloudflare Access assertion's `iat`** (as built, doc 09 §7), recorded when cf-admin's session is created. It is deliberately not the session's own creation time: cf-admin can re-create a session from an assertion that is hours old without a fresh sign-in, so `createdAt` would let a stolen Access cookie look fresh. A missing `iat` reads as `0` (never fresh); sessions created before this field existed fall back to their `createdAt` until they expire (24 h). It backs the "fresh sign-in" (≤ 10 min) rule (§6). Access assertions carry no `auth_time`, so the 10 minutes count from when Access issued the assertion. The refusal (403 `reauth_required`) says to sign out, which also ends the Access session, and back in, so the next sign-in is a full one; what that proves is set out in cf-admin's [PERMISSIONS-SYSTEM.md](../../architecture/PERMISSIONS-SYSTEM.md) §10.5.
+- `v` is the header's schema version. cf-backup answers a major it does not know with 409 `actor_version_mismatch`, which the console shows as "cf-admin and cf-backup versions do not match" (§7), never a guess.
 
 Proven by tests on both sides: cf-backup's public-surface test asserts the deployed
 configuration has no route, no `workers.dev` and no previews. cf-admin's gateway test
@@ -130,17 +132,22 @@ asserts a browser-supplied `X-Backup-Actor` never reaches the binding.
 **The signature (2026-10-16, cf-admin permissions item #33).** Any Worker in the account can be
 given a binding to cf-backup, so the binding alone does not prove the caller is cf-admin. Once
 the owner sets `CONSOLE_SIGNING_KEY` on both Workers, cf-admin adds
-`X-Backup-Signature: v1.<seconds>.<HMAC-SHA256>` over the method, the path with its query and the
-actor, target and request-id headers. cf-backup (`cf-backup/src/gateway/signature.ts`) refuses a missing,
-wrong or older-than-60-seconds signature with **400 `bad_signature`**, before reading the actor,
-on the console path and on `/internal/*`. Without the key on cf-backup the signature is ignored,
-so cf-admin gets the key first and cf-backup refuses no one when it gets it too. The signed text
-and the owner's steps:
-cf-admin `documentation/features/CONSOLE-SIGNATURE.md`.
+`X-Backup-Signature: v1.<seconds>.<HMAC-SHA256, unpadded base64url>` to every call it makes over
+the binding: the gateway's, the Access Center's and the tick's. The signed text is one field per
+line: `cf-console-signature-v1`, `backup`, the Unix time in seconds, the method, the path with its
+query, then the `x-backup-actor`, `x-backup-target` and `x-backup-request-id` headers (empty when
+absent). The body is not signed.
+cf-backup (`src/gateway/signature.ts` in its repository) checks it on any request that carries an
+actor, on the console path and on `/internal/*`, before it reads the actor: a missing or wrong
+signature, or one more than 60 seconds from cf-backup's clock either way, is refused with
+**400 `bad_signature`**. Without the key on cf-backup the signature is ignored, so cf-admin gets
+the key first and cf-backup refuses no one when it gets it too. A signed actor of an unknown
+version is still 409 `actor_version_mismatch`. The owner's steps:
+[CONSOLE-SIGNATURE.md](../../features/CONSOLE-SIGNATURE.md).
 
 > **Decided 2026-09-23 (Phase 1a build review):**
 >
-> 1. **The field is dropped.** cf-backup never needs cf-admin's session; `requestId` covers correlation, and per-person limits (doc 13 §2 — cooldowns, reveal/rotate rate limits) key on the email, not a session id.
+> 1. **The `sessionId` field is dropped.** cf-backup never needs cf-admin's session; `requestId` covers correlation, and per-person limits (doc 13 §2 — cooldowns, reveal/rotate rate limits) key on the email, not a session id.
 > 2. **Actor errors are 400 `bad_actor`** (missing, too large, malformed or invalid) **and 409 `actor_version_mismatch`** (an unsupported major). **cf-backup never returns 401.** 401 means only "signed out", and it comes from cf-admin, never from cf-backup.
 > 3. **503 `not_configured`** answers any action or endpoint whose backend is not bound yet, with a reason naming what is missing (for example "BACKUPS bucket binding not configured"). It is sent only after the 403 capability check, so a person lacking the capability still gets 403 first.
 > 4. **`GET /api/health` returns `capabilities: string[]`**, the actor's effective capabilities, computed server-side from the same policy doc 13 describes. The console gates every tab and button on that list, never on a client-side guess.
@@ -160,17 +167,19 @@ same-origin frame (`frame-src 'self'`, `csp.ts:119`).
 
 | Layer | Rule |
 |---|---|
-| The door (cf-admin) | `/dashboard/backup` has one `admin_pages` row, seeded for **Admin and above**. Below that, the gateway denies before cf-backup is called |
-| The actions (cf-backup) | A closed catalog of 23 capabilities (view, run, cancel, bypass the cooldown, edit config, prune, export activity, see and rotate keys, manage access…), role defaults plus per-person grants, managed by Owner/Vendor on the console's Access screen. Every endpoint enforces its capability against `actor.role` and `actor.email`. **Full design: [13-access-control.md](13-access-control.md)** |
-| Floors | Key actions, encrypted downloads and access management stay **Owner and Vendor support only**, with a fresh sign-in (≤ 10 min, from `signedInAt`) and typed confirmation (doc 09 K-3) |
+| The door (cf-admin) | `/dashboard/backup` has one `admin_pages` row, seeded for **Admin and above**. The gateway asks for that key itself (§3 rule 1) and denies before cf-backup is called. A read-only role let in can look, but every change it sends is refused (403 `read_only`, §3 rule 4) |
+| The actions (cf-backup) | A closed catalog of 32 capabilities (view, run, cancel, bypass the cooldown, edit config and the schedule, prune, export activity, see and rotate keys, restore tests, manage access…), role defaults plus per-person grants, managed by Owner/Vendor on the console's Access screen and, for one person below the editor, from cf-admin's Access Center (doc 13 §4). Every endpoint enforces its capability against the actor's `role`, `email` and `userId`. **Full design: [13-access-control.md](13-access-control.md)**; every route and the capability it needs: cf-backup's generated `docs/reference/PERMISSIONS.md` |
+| Floors | Nine capabilities stay **Owner and Vendor support only**, whatever the policy says: the secret class (`keys.reveal`, `keys.rotate`, `keys.rekey`, `restoretests.run`, `restoretests.configure`), `keys.status`, `runs.download`, `runs.prune` and `access.manage` (doc 13 §3 rule 4, doc 09 K-3) |
+| Fresh sign-in | The handler asks for a sign-in within the last 10 minutes (from `signedInAt`, §4), or answers 403 `reauth_required`, before rotating the key, revealing the recovery kit, downloading a run's encrypted data (from the run or from the Files section), preparing a restore test or unlocking its copy with the Vault key, and changing the Restore tests settings or pinning the lab key. Typed confirmations are listed per capability in doc 13 §2 |
 
 Cooldowns and rate limits (Run now 6 h by default, rotate 1/day, reveal 3/day per person)
-are enforced in cf-backup, with their timestamps in `backup:status`.
+are enforced in cf-backup: the cooldown is counted from the `backup_runs` table, rotations and
+reveals from the key registry (`backup:key-registry`, doc 09 §4).
 
 ## 7. The frame, as a user sees it
 
 - **Size.** The frame fills the content area at full height and scrolls internally, so it reads as part of the page.
-- **Live.** The console refreshes itself while anything runs (every 2 s, [14](14-live-operations-view.md)); every refresh is an ordinary gateway request, authenticated like any other.
+- **Live.** The console refreshes itself while anything runs (every 5 s by default, Settings → Live view, [14](14-live-operations-view.md)); every refresh is an ordinary gateway request, authenticated like any other.
 - **Theme.** Same-origin, so the app reads the parent's theme attribute on load and watches it for changes. No message protocol needed.
 - **Dialogs** follow RULESAd §7.8 (`showModal()`), but they cover the frame, not the sidebar. This is an accepted cosmetic limit.
 - **Session expiry.** The frame never navigates to a login page. A sign-in flow inside a frame is fragile, and whether Access allows its login page to be framed is not something to depend on. Every API call uses `redirect: 'manual'`. An opaque redirect or a 401 makes the app show "Your session has ended" with a **Reload the page** button; clicking it reloads the top page (`window.top`), and the full page then goes through sign-in normally. A 409 `actor_version_mismatch` instead shows "cf-admin and cf-backup versions do not match" (§4). Anything else not ok shows failed, with the envelope's own message. The reload is user-initiated, not automatic, because an automatic reload would loop if the session stayed expired (decided 2026-09-23, §4).
@@ -189,7 +198,7 @@ are enforced in cf-backup, with their timestamps in `backup:status`.
 
 - **Reached only over the binding**, as internal paths (`/internal/tick`, `/internal/alerts/ack`) that the gateway never forwards — `/dashboard/backup/app/*` is a disjoint prefix. `/internal/*` accepts only `actor.kind === 'system'` with `job === 'backup-tick'`; anything else is 403, and a user actor is refused here just as a system actor is refused on the console API (C3).
 - **The call:** `env.BACKUP.fetch('https://cf-backup/internal/tick', { method: 'POST' })` with headers `x-backup-actor` (the system actor JSON) and `x-backup-request-id`, a 25 s timeout, and a body `{ tickAt: ISO }`.
-- **The answer says when to call next (Contract A, 2026-10-04).** The tick's JSON answer carries an optional `nextTickAt`: an ISO-8601 time, or `null` for "no opinion", never later than the request's `tickAt` plus 60 minutes. cf-admin stores it as `backup-tick`'s next due time in its Cron Control document and does not call before it, with three guards on its side: it never sleeps more than 60 minutes after the last call whatever the answer says; it ignores a missing, malformed or long-past value, and any tick that left an alert or a delivery report unsettled, and calls on the next tick instead; and every change (any method but `GET` and `HEAD`) through `/dashboard/backup/app/*` wakes the job, so the next five-minute tick calls. A cf-backup without the field, or a cf-admin that ignores it, means a call every five minutes, as before. cf-admin's side: `src/workers/scheduled-backup-tick.ts` (`nextTickDue`) and `src/lib/jobs/control.ts` (`MAX_SLEEP_MS`); the record is [`../../records/reports/2026-10-04-resource-usage-optimisation.md`](../../records/reports/2026-10-04-resource-usage-optimisation.md), and cf-backup's own is `docs/records/2026-10-04-resource-usage-tick.md` in its repository.
+- **The answer says when to call next (Contract A, 2026-10-04).** The tick's JSON answer carries an optional `nextTickAt`: an ISO-8601 time, or `null` for "no opinion", never later than the request's `tickAt` plus 60 minutes. cf-admin stores it as `backup-tick`'s next due time in its Cron Control document and does not call before it, with three guards on its side: it never sleeps more than 60 minutes after the last call whatever the answer says; it ignores a missing, malformed or long-past value, and any tick that left an alert or a delivery report unsettled, and calls on the next tick instead; and every change (any method but `GET` and `HEAD`) through `/dashboard/backup/app/*` wakes the job, so the next five-minute tick calls. A cf-backup without the field, or a cf-admin that ignores it, means a call every five minutes, as before. cf-admin's side: `src/workers/scheduled-backup-tick.ts` (`nextTickDue`) and `src/lib/jobs/control.ts` (`MAX_SLEEP_MS`); the record is cf-admin's resource usage optimisation of 2026-10-04 (private), and cf-backup's own is `docs/records/2026-10-04-resource-usage-tick.md` in its repository.
 - **The tick has its own budget**, independent of cf-admin's job budget: it stops starting new chores after 20 s of wall time or 30 external subrequests (the Free limit is 50 per invocation).
 - **The meter rule (factor C2)** still applies to the job itself: `backup-tick` costs cf-admin **0 D1 rows** on success (its own real-path test asserts zero queries), because every D1 read and write it triggers happens inside cf-backup, not in cf-admin.
 - **If `BACKUP` is unbound**, the job logs `skipped: binding missing` and returns; it never throws.
@@ -213,7 +222,7 @@ are enforced in cf-backup, with their timestamps in `backup:status`.
 | 3 | **Unavailable is visible, not fatal.** A dead or slow cf-backup gives an error page inside the frame; the portal keeps working | Gateway timeout test |
 | 4 | **Deploy order.** cf-backup first (the binding target must exist), cf-admin second; rollback in reverse. **As built:** confirmed as owner instructions, not just a plan — a cf-admin deploy that binds a Worker which does not exist fails outright | Runbook (doc 06); operator steps in `documentation/features/BACKUP-CONSOLE.md` §9 |
 | 5 | **The deploy runs the gate.** Workers Builds for cf-backup runs `npm run verify` before `wrangler deploy` | Configured in Phase 0 (OD-10) |
-| 6 | **No public surface, ever.** A test fails the build if `wrangler.toml` gains a route, a custom domain, `workers_dev` or preview URLs | cf-backup `test/public-surface.test.ts` |
+| 6 | **No public surface, ever.** A test fails the build if `wrangler.json` gains a route, a custom domain, `workers_dev` or preview URLs | cf-backup `test/public-surface.test.ts` |
 | 7 | **The header exception cannot widen.** | cf-admin guard test (§5) |
 | 8 | **Post-deploy smoke.** After a cf-backup deploy the owner opens `/dashboard/backup` once (no browser automation) | Runbook |
 

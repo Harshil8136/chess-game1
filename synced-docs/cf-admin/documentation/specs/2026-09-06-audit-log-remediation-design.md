@@ -32,7 +32,7 @@ tags: [audit, logging, security, design]
 > was bulk-deleted again on 2026-09-18 at 04:49:11 UTC, and a read-only query on
 > 2026-09-20 returns 7 rows, the oldest being that deletion's own entry.
 > **Unreconciled decision:** assessment D-9 (2026-09-15, item 13 in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md)) settles this differently — the
+> `../MAINTENANCE.md` (private)) settles this differently — the
 > interactive delete routes are removed in viability chunk 19, retention stays
 > manual and owner/vendor-only, and no gated erasure path is planned. §4's
 > `legal_requests`-linked erasure endpoint is therefore not agreed scope, and
@@ -320,7 +320,7 @@ Stage-specific evidence, re-queried live rather than asserted:
 
 ## Related
 
-- [`../MAINTENANCE.md`](../MAINTENANCE.md) — items #13, C-9 and C-13
+- `../MAINTENANCE.md` (private) — items #13, C-9 and C-13
 - [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — the engine this design changes
-- [`../program/ROADMAP.md`](../program/ROADMAP.md) — chunks 11, 12, 13.2, 17, 19
-- [`../program/adr/ADR-0002-feature-first-sequencing.md`](../program/adr/ADR-0002-feature-first-sequencing.md) — the sequence Stage 3 defers to
+- `../program/ROADMAP.md` (private) — chunks 11, 12, 13.2, 17, 19
+- `../program/adr/ADR-0002-feature-first-sequencing.md` (private) — the sequence Stage 3 defers to

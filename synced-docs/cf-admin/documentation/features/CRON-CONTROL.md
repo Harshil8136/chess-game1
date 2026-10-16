@@ -132,7 +132,7 @@ one is a failing build rather than a silent opening. *Added 2026-09-20.*
 in `resolveAccess` is `startsWith(key + '/')`, and `#pause` supplies no `/`. Every
 cron API route therefore checks the page key *and* its action key, through
 `src/lib/auth/surface-guards.ts`. Gap **D-5** in
-[`../MAINTENANCE.md`](../MAINTENANCE.md) is this same mistake made once already
+`../MAINTENANCE.md` (private) is this same mistake made once already
 elsewhere — in the sessions routes, three of whose four sub-permissions were fixed
 alongside this doc and now share that module (`#export` has no server route and is
 left unmapped). *Corrected 2026-09-19: this said "D-4 in PERMISSIONS-SYSTEM.md";
@@ -519,7 +519,7 @@ The real per-tick cost is:*
   if every throttled job runs on the same ticks, and at most one a tick (288)
   plus a retry after each of the probe's 24 writes. Nothing keeps the jobs on
   the same ticks: each keeps the phase of its own last run, and the sleeping
-  jobs wake at their own times, so the real figure lies between; [`MAINTENANCE.md`](../MAINTENANCE.md)
+  jobs wake at their own times, so the real figure lies between; `MAINTENANCE.md` (private)
   RU-9 measures it. Each is one row. A conflict (another writer moved `rev` or
   `clockRev` in between) is re-read and retried once. *Corrected 2026-10-07:
   this gave "about 96" as the figure.*
@@ -673,7 +673,7 @@ an empty table.
 *Rebuilt 2026-10-09.* The page was redesigned as cards with a details panel, and
 everything it says about a job is now worked out from the deployed code and live
 data. The change record,
-[`../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md`](../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md),
+`../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md` (private),
 has the before and after. The bullets below describe the page as it is; the
 older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 "Standby" and "Paused (Quota)" labels) are in this section's history in git.
@@ -802,7 +802,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   declare `leaseSeconds: 900`, because both delete and
   a manual run bypasses the control document by design — two deleters walking the
   same bucket is the one overlap worth a D1 write. (`redis-ttl-hygiene`, which
-  took none, was removed on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md)
+  took none, was removed on 2026-10-04: `../MAINTENANCE.md` (private)
   R-1, RU-2, RU-8.) The fourteen five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual

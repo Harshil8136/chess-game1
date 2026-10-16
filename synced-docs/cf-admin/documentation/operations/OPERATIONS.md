@@ -37,7 +37,7 @@ tags: [operations, bindings, cloudflare]
 | 2026-10-07 | `src/lib/jobs/registry.ts`, `src/workers/scheduled-heartbeat-watchdog.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **13 jobs (11+2)** with `heartbeat-watchdog`, its gate in the idle-tick block, the `ASTRO_SERVICE` row's purposes. No binding, secret, variable or cron added; §5 unchanged. Not re-checked: every other row, and nothing live (not deployed) |
 | 2026-10-07 | `src/env.d.ts`, `src/lib/github/cache.ts` (the only reader of `GITHUB_READ_TOKEN`) | §5.3 lists `GITHUB_READ_TOKEN`, optional, so `[secrets] required` is unchanged. Not checked: the secret on the Worker (set by the owner) |
 | 2026-10-07 | `wrangler.toml` (seven `[[ratelimits]]`, added on 2026-10-04 and absent before) | §3.6's opening sentence said the limits ran on "two things it already had"; the Rate Limiting binding is new, the owner-approved exception, and now says so. Nothing else re-checked |
-| 2026-10-04 | `wrangler.toml` (`[[ratelimits]]`, `[observability.*]`, `[secrets] required`); `worker-configuration.d.ts` regenerated with `npm run types`; `src/lib/jobs/registry.ts`; read-only D1 query of the live `cron-control` row; Cloudflare documentation search (traces and logs sampling, Observability pricing) | Resource-usage change ([record](../records/reports/2026-10-04-resource-usage-optimisation.md)): seven `RL_PER_MIN_<n>` Rate Limiting bindings added to §1; **12 jobs (10+2)**, `redis-ttl-hygiene` removed; §3.6 now describes the bindings and the D1 counters, Upstash retired from cf-admin; §4.0 states the logs and traces sampling and why; §5.1 drops the two Upstash names (**22 required**; the two secrets stay set until the owner deletes them, so the live count is still 25); §8 Upstash row. Not re-checked: the Upstash instance itself (no connector reaches it), the Rate Limiting binding's plan availability and price (its documentation page could not be read), every other row |
+| 2026-10-04 | `wrangler.toml` (`[[ratelimits]]`, `[observability.*]`, `[secrets] required`); `worker-configuration.d.ts` regenerated with `npm run types`; `src/lib/jobs/registry.ts`; read-only D1 query of the live `cron-control` row; Cloudflare documentation search (traces and logs sampling, Observability pricing) | Resource-usage change (record (private)): seven `RL_PER_MIN_<n>` Rate Limiting bindings added to §1; **12 jobs (10+2)**, `redis-ttl-hygiene` removed; §3.6 now describes the bindings and the D1 counters, Upstash retired from cf-admin; §4.0 states the logs and traces sampling and why; §5.1 drops the two Upstash names (**22 required**; the two secrets stay set until the owner deletes them, so the live count is still 25); §8 Upstash row. Not re-checked: the Upstash instance itself (no connector reaches it), the Rate Limiting binding's plan availability and price (its documentation page could not be read), every other row |
 | 2026-10-03 | `src/lib/auth/security-logging.ts` (`postSecurityEmail`); `wrangler.toml` `[[queues.producers]]` unchanged | The `EMAIL_QUEUE` paragraph now names the security emails and the backup alerts as producers beside the Email Portal. No binding, secret, variable or cron added. Nothing else re-checked |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `EMAIL_CONSOLE` → `cf-email-api` (entrypoint `Console`) added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-email-api. Not re-checked: every other row |
 | 2026-09-30 | `wrangler.toml` `[[services]]`; `worker-configuration.d.ts` regenerated with `npm run types` | `VPS` → `cf-vps` added (a binding, not a var — RULE #0.8's 42 unchanged); deploy-order item in §2 now names cf-vps. Not re-checked: every other row |
@@ -102,7 +102,7 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 |---------|-------------|---------|
 | `IMAGES` | `madagascar-images` | cf-admin, cf-astro |
 | `ARCO_DOCS` | `arco-documents` | cf-astro |
-| `STAFF_STORAGE` | `madagascar-staff-storage` | cf-admin (created 2026-08-05) — **private, no CDN custom domain** (unlike `IMAGES`). Staff Managed Storage file drive under `staff-storage/`; access only via Worker-issued presigned PUT (aws4fetch, `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets scoped to this bucket only) and Worker-proxied GET. See [`features/STAFF-MANAGED-STORAGE.md`](../features/STAFF-MANAGED-STORAGE.md). Since 2026-10-16 also the activity log's daily copies under `audit-log/`, written by the `audit-seal` job ([`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6); a bucket lock on that prefix and how long the copies are kept are open owner steps ([`MAINTENANCE.md`](../MAINTENANCE.md) AL-1, AL-2). The weekly `staff-storage-reconcile` lists only `staff-storage/`, so it never touches them |
+| `STAFF_STORAGE` | `madagascar-staff-storage` | cf-admin (created 2026-08-05) — **private, no CDN custom domain** (unlike `IMAGES`). Staff Managed Storage file drive under `staff-storage/`; access only via Worker-issued presigned PUT (aws4fetch, `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets scoped to this bucket only) and Worker-proxied GET. See [`features/STAFF-MANAGED-STORAGE.md`](../features/STAFF-MANAGED-STORAGE.md). Since 2026-10-16 also the activity log's daily copies under `audit-log/`, written by the `audit-seal` job ([`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6); a bucket lock on that prefix and how long the copies are kept are open owner steps (`MAINTENANCE.md` (private) AL-1, AL-2). The weekly `staff-storage-reconcile` lists only `staff-storage/`, so it never touches them |
 
 ### Queues
 
@@ -166,7 +166,7 @@ other Worker may use it, because two bindings with the same id share counters
 (cf-astro's own change under the same plan takes 10000 plus the limit).
 Hour and day limits cannot be expressed as a binding and are D1 counter rows
 (§3.6). Added 2026-10-04, replacing Upstash Redis
-([record](../records/reports/2026-10-04-resource-usage-optimisation.md)).
+(record (private)).
 `test/ratelimit-bindings-contract.test.ts` fails when a one-minute limit in
 `src/` has no binding.
 
@@ -197,7 +197,7 @@ through the custom entrypoint `src/workers/cf-entry.ts`. Jobs are no longer
 listed inline in the entrypoint — the single list is `src/lib/jobs/registry.ts`,
 and each one runs under `runJob` with a declared D1 budget:
 
-**Do not hand-count this list.** [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
+**Do not hand-count this list.** `../../src/lib/jobs/registry.ts` (private)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
 four times. As of 2026-10-16 it is **16 jobs — 14 on `*/5`, 2 on Sunday**
@@ -214,7 +214,7 @@ owns how that is decided.
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
 | `*/5 * * * *` (14) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)); and `heartbeat-watchdog`, which runs cf-astro's consent & booking heartbeat and drains both outboxes only when the VPS job and GitHub have both missed it ([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a); `email-api-sweep`, the email API's safety net (§3b); `access-change-summary`, the daily access summary and the daily account checks (§3c); and `audit-seal`, which seals the activity log each morning and copies each day to `STAFF_STORAGE` under `audit-log/` (§3d) |
-| `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile`. (`redis-ttl-hygiene`, the weekly Redis expiry census, was removed on 2026-10-04 when cf-admin stopped using Upstash; its `admin_portal_settings` row `redis-hygiene-mode` is now read by nothing and is left for the owner to delete — [`../MAINTENANCE.md`](../MAINTENANCE.md)) |
+| `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile`. (`redis-ttl-hygiene`, the weekly Redis expiry census, was removed on 2026-10-04 when cf-admin stopped using Upstash; its `admin_portal_settings` row `redis-hygiene-mode` is now read by nothing and is left for the owner to delete — `../MAINTENANCE.md` (private)) |
 
 > **One invocation per job (2026-09-27).** The scheduled handler no longer runs
 > the jobs itself. `dispatchCronJobs` (`src/lib/jobs/dispatch.ts`) reads the
@@ -395,7 +395,7 @@ dictate caching strategies and system design constraints.
 
 | Metric | Free Limit |
 |--------|-----------|
-| Projects | 2 — **both slots in use** (2026-09-19): `Cloudflare` (production, shared by cf-astro + cf-admin) and `supabase-pink-village` (superseded, still `ACTIVE_HEALTHY`, never paused). Decommissioning the second is owned by [`../runbooks/supabase-account-advisor-sweep.md`](../runbooks/supabase-account-advisor-sweep.md) |
+| Projects | 2 — **both slots in use** (2026-09-19): `Cloudflare` (production, shared by cf-astro + cf-admin) and `supabase-pink-village` (superseded, still `ACTIVE_HEALTHY`, never paused). Decommissioning the second is owned by `../runbooks/supabase-account-advisor-sweep.md` (private) |
 | PostgreSQL size | 500 MB |
 | Auth MAUs | 50,000 |
 | File storage | 1 GB |
@@ -434,20 +434,20 @@ no key without one), so they age out without anyone acting. This was not
 re-checked against the live instance on 2026-10-04: no connector here reaches
 it. The two Upstash secrets are still set on the Worker until the owner deletes
 them (§5.2). Why the change, with the measurements:
-[the change record](../records/reports/2026-10-04-resource-usage-optimisation.md).
+the change record (private).
 
 ---
 
 ## 4. Observability — Sentry
 
 **Package:** `@sentry/cloudflare` (`^10.73.0`)
-**Where it is initialized:** [`../../src/workers/cf-entry.ts`](../../src/workers/cf-entry.ts) — `Sentry.withSentry()` wraps the whole Worker and builds a client per invocation.
+**Where it is initialized:** `../../src/workers/cf-entry.ts` (private) — `Sentry.withSentry()` wraps the whole Worker and builds a client per invocation.
 
 > **Corrected 2026-09-07.** This line read "Config file: `sentry.server.config.ts`" and pointed at the wrong file.
-> [`../../sentry.server.config.ts`](../../sentry.server.config.ts) is an intentional **no-op** (`export {}`) whose own
+> `../../sentry.server.config.ts` (private) is an intentional **no-op** (`export {}`) whose own
 > header says "Do not add `Sentry.init(...)` here" — the Node-based `@sentry/astro` server SDK does not run in workerd.
-> Server capture goes through [`../../src/lib/sentry.ts`](../../src/lib/sentry.ts), which re-exports `@sentry/cloudflare`;
-> browser capture is configured in [`../../sentry.client.config.ts`](../../sentry.client.config.ts).
+> Server capture goes through `../../src/lib/sentry.ts` (private), which re-exports `@sentry/cloudflare`;
+> browser capture is configured in `../../sentry.client.config.ts` (private).
 
 ### 4.0 Workers Logs and Traces (Cloudflare's own observability)
 
@@ -471,7 +471,7 @@ Sentry is integrated at the Cloudflare Edge layer (CDN-native). Key decisions:
 - **No browser integrations — because there are none to disable.** *Corrected 2026-09-19:* this bullet claimed the defaults were switched off. Nothing in `src/workers/cf-entry.ts` sets `integrations: []` or `defaultIntegrations: false`; `@sentry/cloudflare` simply ships no browser integrations, and the init only *adds* `consoleLoggingIntegration`. The underlying rule still stands: Workers run on `workerd`, not a browser, and a browser-targeting integration (`BrowserTracing`, `GlobalHandlers`, `LinkedErrors`) would reference `window`/`document` and throw `ReferenceError: window is not defined` at startup
 - **`consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] })`** — console output is forwarded to Sentry, so handlers do not need `Sentry.captureException()` scattered through them. *Corrected 2026-09-07:* this bullet named a "Console Capture integration", which is not what the code configures.
 - **`enableLogs: true`, with `beforeSend: scrubEvent` and `beforeSendLog: scrubLog`** — both scrubbers run before anything leaves the Worker; `environment` and `release` are derived per invocation in `cf-entry.ts`
-- **Browser noise filter** — `ignoreErrors` in [`../../sentry.client.config.ts`](../../sentry.client.config.ts) drops browser errors with no cause on cf-admin's side: extension and in-app-browser noise, aborted View Transitions, stale chunks after a deploy, and (since 2026-10-08, Sentry CF-ADMIN-1X/1Y) the bare network failure each browser raises when a fetch never completed (`BROWSER_NETWORK_FAILURES` in [`../../src/lib/sentry-scrub.ts`](../../src/lib/sentry-scrub.ts)). Those patterns are anchored to each browser's exact wording, so an HTTP failure the code reports itself still arrives
+- **Browser noise filter** — `ignoreErrors` in `../../sentry.client.config.ts` (private) drops browser errors with no cause on cf-admin's side: extension and in-app-browser noise, aborted View Transitions, stale chunks after a deploy, and (since 2026-10-08, Sentry CF-ADMIN-1X/1Y) the bare network failure each browser raises when a fetch never completed (`BROWSER_NETWORK_FAILURES` in `../../src/lib/sentry-scrub.ts` (private)). Those patterns are anchored to each browser's exact wording, so an HTTP failure the code reports itself still arrives
 - **Hardcoded DSN** — Astro's Cloudflare adapter had inconsistent Vite env injection during SSR. DSN is a public routing key, not a secret, so hardcoding is safe and guarantees 100% telemetry uptime
 
 > **workerd Compatibility Rule:** Any future Sentry integration must be validated against `workerd`. Browser-targeting integrations WILL crash the Worker at startup.
@@ -494,7 +494,7 @@ them. That is a decision, not an oversight:
   `response_time=200` — **were already in this codebase once**, emitted on every
   call of the health route, and were deleted on 2026-09-02 as fabricated
   telemetry under RULE #0.5 (viability program chunk 3; the history note is in
-  [`../../src/pages/api/health.ts`](../../src/pages/api/health.ts)). Do not
+  `../../src/pages/api/health.ts` (private)). Do not
   reintroduce them.
 - Quota, checked 2026-09-07: application metrics are included on the Developer
   (free) plan, with **5 GB** across plan tiers, and overage is charged only
@@ -509,7 +509,7 @@ added inside `withSentry`, and recorded here.
 Owned by [`../runbooks/ssr-silent-blank-screen.md`](../runbooks/ssr-silent-blank-screen.md)
 — read it there; this summary is a pointer.
 
-`AdminLayout.astro` loads [`../../public/scripts/error-capture.js`](../../public/scripts/error-capture.js)
+`AdminLayout.astro` loads `../../public/scripts/error-capture.js` (private)
 (a nonce-carrying `<script is:inline src>`), which registers `error` and
 `unhandledrejection` **listeners** — not `window.onerror` handlers, which is
 what this section claimed until 2026-09-19. It does **not** itself report to
@@ -583,7 +583,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | Secret | Status |
 |--------|--------|
 | `RESEND_WEBHOOK_API` | **No reader in `src/`**, and **overdue for deletion**. Chunk 2 shipped 2026-09-02; this was to be retired "one release after". It is still the 25th live secret on 2026-09-19 — 17 days later — and it is one of the 42 entries RULE #0.8 counts. Retire with `wrangler secret delete RESEND_WEBHOOK_API` on owner confirmation, or record a decision to keep it. |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | **No reader in `src/` since 2026-10-04** (rate limits moved to §1's Rate Limiting bindings and D1, §3.6), and no longer in `[secrets] required`. Still set, and still 2 of the 42 entries RULE #0.8 counts. Owner step, after one release: `wrangler secret delete` both. The Upstash database is not cf-admin's to delete: cf-astro and cf-chatbot shared it, and cf-astro's own change under the same plan moves cf-astro off it separately ([MAINTENANCE](../MAINTENANCE.md) RU-1) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | **No reader in `src/` since 2026-10-04** (rate limits moved to §1's Rate Limiting bindings and D1, §3.6), and no longer in `[secrets] required`. Still set, and still 2 of the 42 entries RULE #0.8 counts. Owner step, after one release: `wrangler secret delete` both. The Upstash database is not cf-admin's to delete: cf-astro and cf-chatbot shared it, and cf-astro's own change under the same plan moves cf-astro off it separately (MAINTENANCE (private) RU-1) |
 
 ### 5.3 Optional secrets (not set in production; every reader degrades)
 
@@ -633,7 +633,7 @@ Local development: copy `.dev.vars.example` to `.dev.vars` and fill the values; 
 
 > ⚠️ **These alerts go via Brevo, not Resend.** *Corrected 2026-09-19.*
 > `sendSecurityAlertEmail` POSTs to `https://api.brevo.com/v3/smtp/email` with
-> an `api-key` header ([`../../src/lib/auth/security-logging.ts`](../../src/lib/auth/security-logging.ts)).
+> an `api-key` header (`../../src/lib/auth/security-logging.ts` (private)).
 > The secret that keeps this path alive is **`BREVO_API_KEY`**; rotating
 > `RESEND_API_KEY` mid-incident restores nothing here.
 
@@ -775,7 +775,7 @@ sits inside its free tier today:
 > interchangeably.** The fully-loaded figure — which adds the paid tiers a real
 > client deployment needs, plus operational time — is derived, with its
 > assumptions, in
-> [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md).
+> `../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md` (private).
 > That document owns the cost model: **link it, do not restate its number
 > here** (this note used to quote the figure two lines before telling you not
 > to). The "$0.00/month" figure that appeared in `RULESAd.md` §15 was this

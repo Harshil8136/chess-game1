@@ -70,7 +70,7 @@ The codebase's posture remains strong — RBAC numeric hierarchy, KV-backed sess
 
 > *Pointer updated 2026-09-19:* `PENDING_PHASES.md` was archived. The items
 > that are still open — chiefly item 4 below — are tracked in
-> [`../../MAINTENANCE.md`](../../MAINTENANCE.md), not there.
+> `../../MAINTENANCE.md` (private), not there.
 
 ### 🟡 Medium (14)
 

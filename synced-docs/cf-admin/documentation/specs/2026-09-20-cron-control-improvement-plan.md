@@ -20,7 +20,7 @@ tags: [cron, jobs, control-plane, plac, permissions, ux, plan]
 > **Executed in full on 2026-09-20 — do not run this plan again.** All four
 > phases shipped (`c123447`, `80fc292`, `09929f2`, `f8e11ca`). Of the 29
 > findings, **25 are fixed**; the four that remain are in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md) under "Cron control plane" as CR-1 to
+> `../MAINTENANCE.md` (private) under "Cron control plane" as CR-1 to
 > CR-5, and one of them is an owner action: `migrations/0056_cron_action_roles.sql`
 > is written, frozen and ledgered but **not applied to production**, because a
 > push to `main` does not apply migrations. The living description of what the
@@ -90,7 +90,7 @@ tags: [cron, jobs, control-plane, plac, permissions, ux, plan]
 them, the control document, and the dashboard island. **Not in scope:** the job
 handlers themselves, the tick dispatcher, Analytics Engine telemetry, and the
 wider PLAC model outside this surface (gaps D6/D7/D8 belong to
-[`2026-09-16-access-revocation-remediation-design.md`](./2026-09-16-access-revocation-remediation-design.md)).
+`2026-09-16-access-revocation-remediation-design.md` (private)).
 
 This plan is the triage record that [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 §1 promised and never got: that document says the Sync-telemetry defect was

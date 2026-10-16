@@ -41,7 +41,7 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
 > allocation, so the worst case is the one the budget's fail-open already
 > accepts: AI calls refused by Cloudflare later that day instead of by cf-admin.
 > The interactive delete routes are due to go
-> ([`../MAINTENANCE.md`](../MAINTENANCE.md) item 13).
+> (`../MAINTENANCE.md` (private) item 13).
 
 ### Core Tenets
 

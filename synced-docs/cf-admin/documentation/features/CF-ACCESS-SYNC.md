@@ -3,10 +3,10 @@
 title: "CF Access Group Sync — Architecture, Root-Cause Fix & Hardening"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/auth/cf-access-sync.ts, src/lib/auth/cf-access-sync-log.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/pages/api/users/manage.ts, src/pages/api/users/cf-resync.ts, src/pages/api/users/cf-access-audit.ts, src/pages/api/sessions/active-sessions.ts, src/workers/cf-entry.ts, test/cf-access-sync.test.ts, test/cf-access-reconcile-gate.test.ts]
+related_code: [src/lib/auth/cf-access-sync.ts, src/lib/auth/cf-access-sync-log.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/pages/api/users/manage.ts, src/lib/users/manage-apply.ts, src/lib/approvals/handlers.ts, src/workers/scheduled-unused-accounts.ts, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/pages/api/users/cf-resync.ts, src/pages/api/users/cf-access-audit.ts, src/pages/api/sessions/active-sessions.ts, src/workers/cf-entry.ts, test/cf-access-sync.test.ts, test/cf-access-reconcile-gate.test.ts]
 related_docs: [USER-MANAGEMENT.md, CRON-CONTROL.md, CFZT-EDGE-AUTHENTICATION.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-12-cf-access-sync-gateway-timeout.md]
 tags: [cf-access, zero-trust, whitelist, sync, incident, runbook]
 ---
@@ -21,15 +21,16 @@ tags: [cf-access, zero-trust, whitelist, sync, incident, runbook]
 > fix, and the safety net now in place so a failure is always visible and
 > retried automatically.
 >
-> **Two recovery times, not one.** A change you make in the Users tab is
-> pushed at once; a sync that failed is retried on the reconcile job's next
-> run, which since 2026-10-04 is once an hour (a Cron Control throttle the owner
-> approved in that day's resource plan; it was every five minutes). Drift caused
-> *outside* the app — someone editing the Access Group by hand in the
-> Cloudflare dashboard — is only re-pushed once the last successful sync is
-> more than 24 hours old, because the cron now compares a hash of the
-> whitelist before calling Cloudflare at all. *Corrected 2026-09-19 — this
-> said "self-corrects within 5 minutes" for every case.*
+> **Two recovery times, not one.** A change you make on Users (an invitation, a
+> role change, a suspension, a removal) and a lock-out on Sessions are pushed at
+> once. A sync that failed, and a change that is not pushed at once (the daily
+> suspension of accounts nobody uses), are picked up by the Access list sync
+> job's next run, once an hour (a Cron Control interval the owner approved on
+> 2026-10-04; it was every five minutes). Drift caused *outside* the app —
+> someone editing the Access Group by hand in the Cloudflare dashboard — is
+> only re-pushed once the last successful sync is more than 24 hours old,
+> because the job compares a hash of the whitelist before calling Cloudflare at
+> all. **Re-send to Cloudflare** on Users pushes the list now.
 
 ## Context / Scope
 
@@ -113,51 +114,67 @@ Every Cloudflare API call now goes through `parseCfResponse()`, which:
 following `result_info.total_count`) so an existing group is never missed
 regardless of how many groups exist in the account.
 
+Every Cloudflare API attempt is cut after `CF_API_TIMEOUT_MS` (12 s) and retried
+on a 429, 502, 503, 504 or 522 (`fetchWithRetry`, three attempts).
+
 Every failure branch reports through `reportOnceCooled()`
-(`src/lib/observability.ts`, called from `cf-access-sync.ts`), which writes a
-`platform_alerts` row and raises **one** Sentry event per hour per fingerprint
-— `cf-sync:list_groups_failed`, `cf-sync:write_failed:<label>`,
-`cf-sync:count_mismatch`, `cf-sync:supabase_fetch_failed`,
+(`src/lib/observability.ts`, called from `cf-access-sync.ts`), which logs every
+occurrence to Cloudflare's Workers Logs and raises **one** Sentry event per hour
+per fingerprint (the hour is claimed by a `job-alert:<fingerprint>` row in
+`admin_portal_settings`) — `cf-sync:list_groups_failed`,
+`cf-sync:write_failed:<label>`, `cf-sync:count_mismatch`,
+`cf-sync:supabase_fetch_failed`, `cf-sync:supabase_null_users`,
 `cf-sync:unexpected_error:<step>`. The cooldown was added on 2026-09-12 after a
 tick-rate Supabase timeout produced four Sentry issues; see the
 [post-mortem](../operations/incidents/2026-09-12-cf-access-sync-gateway-timeout.md).
 
-**One branch reports nothing:** a missing `CF_ACCOUNT_ID` or
-`CF_API_TOKEN_ZT_WRITE` only `console.warn`s and returns `{success: false}`. In
-Workers, console output is not queryable after the fact except via live
-`wrangler tail`, so a rotated-away token is visible in the Users-tab pill and
-`cf_access_sync_log` but **not** in Sentry. *Corrected 2026-09-19 — this said
-every failure branch reaches Sentry.*
+**One branch skips Sentry:** a missing `CF_ACCOUNT_ID` or
+`CF_API_TOKEN_ZT_WRITE` only `console.warn`s and returns `{success: false}`. The
+warning reaches Workers Logs (`[observability.logs]` in `wrangler.toml` keeps
+every invocation's logs), and the failure shows on Users and in
+`cf_access_sync_log`, but it raises **no** Sentry event.
 
 ### Durability layer — logging + cron self-heal (no new infrastructure)
 
-Calls to `syncCfAccessGroup()` from `manage.ts` (POST/PATCH/DELETE) and from
-the cron reconciler go through `recordCfSyncOutcome()`
-(`src/lib/auth/cf-access-sync-log.ts`), which:
+Every call to `syncCfAccessGroup()` but one goes through `recordCfSyncOutcome()`
+(`src/lib/auth/cf-access-sync-log.ts`):
+
+| Caller | When | `action` in the log |
+|---|---|---|
+| `src/pages/api/users/manage.ts` (`POST`) | someone is invited | `create` |
+| `src/lib/users/manage-apply.ts` (`applyUserUpdate`) | a role change, a suspension, a restore or a name change, made at once (`PATCH /api/users/manage`) or approved by a second person (`src/lib/approvals/handlers.ts`) | `update` |
+| `src/lib/users/manage-apply.ts` (`applyUserDelete`) | someone is removed, at once or once a second person approves | `delete` |
+| `src/pages/api/users/cf-resync.ts` | **Re-send to Cloudflare** on Users | `manual_resync` |
+| `src/lib/auth/cf-access-reconcile.ts` | the hourly Access list sync job | `cron_reconcile` |
+| `src/pages/api/sessions/active-sessions.ts` (`block_account`) | **Lock out** on Sessions | none: it records no outcome (below) |
+
+`recordCfSyncOutcome()`:
+
 1. Inserts one row into the D1 table `cf_access_sync_log` (durable, queryable
    history — see schema below).
 2. Sweeps `cf_sync_status` / `cf_sync_error` / `cf_sync_at` across **every**
    currently-active `admin_authorized_users` row (since the sync is
    whole-group, a single outcome is accurate for all active users at once).
 
-#### The 5-minute reconcile, and its hash-or-age gate
+The daily suspension of accounts nobody uses (`src/workers/scheduled-unused-accounts.ts`,
+[USER-MANAGEMENT §5.5](USER-MANAGEMENT.md)) does not call the sync at all: the
+hourly job sees the active list change and pushes it on its next run.
 
-> **Hourly since 2026-10-04.** The job still rides the five-minute trigger, but
-> the live Cron Control document gives `cf-access-reconcile` a 60-minute
-> interval (read-only D1 query, 2026-10-04), so it runs about 24 times a day.
-> User edits sync directly (`src/pages/api/users/manage.ts`), so this is the
-> safety net, as the interval's recorded reason says.
+#### The hourly reconcile, and its hash-or-age gate
 
-`reconcileCfAccessGroup()` (`src/lib/auth/cf-access-reconcile.ts`) runs on the
-`"*/5 * * * *"` trigger. It is registered as the `cf-access-reconcile` job in
-`src/lib/jobs/registry.ts` and dispatched by `dispatchCronJobs(FIVE_MIN_JOBS, …)`
-in `src/workers/cf-entry.ts` — not by an `if` branch inside `cf-entry.ts`, as
-this section said before. Since 2026-09-27 it runs in its own invocation, with
-its own 10 ms of CPU, like every scheduled job
+`reconcileCfAccessGroup()` (`src/lib/auth/cf-access-reconcile.ts`) is the
+`cf-access-reconcile` job ("Access list sync") in `src/lib/jobs/registry.ts`.
+It rides the `"*/5 * * * *"` trigger (`wrangler.toml`), dispatched by
+`dispatchCronJobs(FIVE_MIN_JOBS, …)` in `src/workers/cf-entry.ts`, and its Cron
+Control interval of 60 minutes, set on 2026-10-04 in the owner's resource plan,
+makes it run about once an hour (read live from the `cron-control` row,
+2026-10-16). User changes sync directly, so this is the safety net, as the
+interval's recorded reason says. Since 2026-09-27 it runs in its own
+invocation, with its own 10 ms of CPU, like every scheduled job
 ([`CRON-CONTROL.md`](CRON-CONTROL.md) §5).
 
 Since `996c829` (2026-09-12) the pass is **gated**, not unconditional. Each
-tick it reads the active email list from Supabase, hashes it (SHA-256 over the
+run it reads the active email list from Supabase, hashes it (SHA-256 over the
 sorted, lower-cased addresses) and compares against two
 `admin_portal_settings` rows:
 
@@ -173,25 +190,26 @@ and log rows, and it changes the recovery guarantee:
 
 | Cause of drift | Corrected within |
 |---|---|
-| Whitelist changed in the Users tab, inline sync failed | **5 minutes** — the hash differs from the stored one, so the next tick pushes |
-| Any failed push | **5 minutes** — the hash is stored *only* on success, so a failure retries every tick |
-| Out-of-band edit to the Access Group in the Cloudflare dashboard | **up to 24 hours** — the whitelist is unchanged, so only the staleness timer forces a re-push |
+| Whitelist changed on Users or Sessions, inline sync failed | **the next run, within the hour** — the hash differs from the stored one, so the next run pushes |
+| Whitelist changed with no inline sync (the daily suspension of unused accounts) | **the next run, within the hour** — the same |
+| Any failed push | **the next run, within the hour** — the hash is stored *only* on this job's success, so a failure retries every run |
+| Out-of-band edit to the Access Group in the Cloudflare dashboard | **up to about 24 hours** — the whitelist is unchanged, so only the staleness timer forces a re-push |
 
-Setting `cf-access-reconcile-max-staleness-hours` to `0` restores the old
-unconditional behaviour without a deploy. *Corrected 2026-09-19 — this section
-said the cron "unconditionally re-runs `syncCfAccessGroup()`" and that any
-stale dashboard-side state "is corrected on the next tick".*
+Only this job stores the hash: an inline push or **Re-send to Cloudflare** does
+not, so the run after any change on Users pushes the list once more, which is
+harmless. Setting `cf-access-reconcile-max-staleness-hours` to `0` restores the
+old unconditional behaviour without a deploy.
 
-#### Three tick outcomes, and what each one records
+#### Three run outcomes, and what each one records
 
-| Tick outcome | `cf_access_sync_log` row | Users-tab pill |
+| Run outcome | `cf_access_sync_log` row | State on Users |
 |---|---|---|
 | **Gated (skipped)** — hash matches and the last success is fresh | none | unchanged |
-| **Supabase fetch failed** — after two attempts (retried on `timeout`/`502`/`503`/`504`/`gateway`; `CF_API_TIMEOUT_MS` is 12 s) | `status: failed`, written with `skipSupabaseSweep: true` | **not** updated — Supabase is the thing that is unreachable |
+| **Supabase fetch failed** — after two attempts (the second only after a timeout or a 502, 503, 504 or gateway error) | `status: failed`, written with `skipSupabaseSweep: true` | **not** updated — Supabase is the thing that is unreachable |
 | **Executed** — hash changed or staleness expired | `status: success` or `failed`, with the sweep | updated for every active user |
 
-So "every cron call records an outcome and sweeps every active user" is no
-longer true of the gated and Supabase-failure paths. *Corrected 2026-09-19.*
+So a run that is gated, or cannot read Supabase, does not sweep the active
+users.
 
 #### It can be paused
 
@@ -208,16 +226,16 @@ check `/dashboard/cron` before anything else.
 > problem (`sync_outbox` D1 table + `SYNC_QUEUE`/DLQ + `sync-revalidate-consumer.ts`,
 > used for CMS/Astro revalidation — see `../reference/SYNC-SYSTEM-REVIEW.md`).
 > A `madagascar-cf-access-sync` queue was designed to mirror it (30s/2m/8m
-> backoff instead of a flat 5-minute cron), but the queue does not exist in
+> backoff instead of an hourly job), but the queue does not exist in
 > the Cloudflare account yet, and Wrangler hard-fails `wrangler deploy` if
 > `wrangler.toml` references a queue binding that doesn't exist. **To add it:**
 > run `wrangler queues create madagascar-cf-access-sync` and
 > `wrangler queues create madagascar-cf-access-sync-dlq`, then wire a
 > `[[queues.producers/consumers]]` block (mirroring the `SYNC_QUEUE` block
 > already in `wrangler.toml`) and a consumer module mirroring
-> `sync-revalidate-consumer.ts`. The gated 5-minute cron is a complete
+> `sync-revalidate-consumer.ts`. The gated hourly job is a complete
 > durability layer on its own in the meantime — the queue would only shorten
-> recovery time for a failure that would otherwise wait up to 5 minutes. It
+> recovery time for a failure that would otherwise wait up to an hour. It
 > would not help with out-of-band dashboard drift, which is bounded by the
 > staleness window rather than by retry speed.
 
@@ -238,11 +256,13 @@ check `/dashboard/cron` before anything else.
 
   The drawer's **Cloudflare sign-in** line also says whether the identity has
   been linked by a first SSO login.
-- **Re-send to Cloudflare** (the Users page header, Owner and Vendor support;
-  "Force Re-sync" in the old toolbar until 2026-10-16): calls
-  `POST /api/users/cf-resync`, which runs `syncCfAccessGroup()` immediately
-  and reports the result — for when an admin doesn't want to wait for the
-  next cron tick.
+- **Re-send to Cloudflare** (the Users page header, shown to the Owner and
+  Vendor support; "Force Re-sync" in the old toolbar until 2026-10-16): calls
+  `POST /api/users/cf-resync` (`requireAuth(context, 'owner')`, the Users page,
+  at most 10 an hour), which pushes the whole list at once, past the job's
+  gate, and records a `manual_resync` row with the sweep. A success says how
+  many people were sent and reads the list again; a failure answers 502 with
+  Cloudflare's error. For when you do not want to wait for the next run.
 - **Live Group-membership diff** (`GET /api/users/cf-access-audit`): now also
   fetches the *actual* Access Group's current `include` list
   (`findSyncGroup()`, reused from the sync module) and diffs it directly
@@ -258,11 +278,13 @@ check `/dashboard/cron` before anything else.
 
 - Root-cause fix (body validation, pagination, Sentry) → `src/lib/auth/cf-access-sync.ts:syncCfAccessGroup`, `parseCfResponse`, `findSyncGroup`
 - Sync-outcome logging + per-user status sweep → `src/lib/auth/cf-access-sync-log.ts:recordCfSyncOutcome`
-- Gated 5-minute cron self-heal → `src/lib/auth/cf-access-reconcile.ts:reconcileCfAccessGroup`
+- Gated hourly self-heal → `src/lib/auth/cf-access-reconcile.ts:reconcileCfAccessGroup`
 - Job registration and dispatch → `src/lib/jobs/registry.ts` (job id `cf-access-reconcile`, `gateKeys: CF_ACCESS_RECONCILE_KEYS`), run by `dispatchCronJobs(FIVE_MIN_JOBS, …)` in `src/workers/cf-entry.ts`; criticality in `src/lib/jobs/tiers.ts`
-- Inline call sites (create/update/delete) → `src/pages/api/users/manage.ts` (`POST`, `PATCH`, `DELETE` handlers)
-- Inline call site (account block) → `src/pages/api/sessions/active-sessions.ts` (`block_account`): deactivates the user and calls `syncCfAccessGroup()`, but **not** `recordCfSyncOutcome()`, so it writes no `cf_access_sync_log` row and leaves the pill on its previous value until the next executed cron tick. *Documented 2026-09-19 — wire it through `recordCfSyncOutcome` to close this.*
-- Manual force-resync → `src/pages/api/users/cf-resync.ts`
+- Inline call site (invite) → `src/pages/api/users/manage.ts` (`POST`)
+- Inline call sites (update, delete) → `src/lib/users/manage-apply.ts` (`applyUserUpdate`, `applyUserDelete`), called by `PATCH` and `DELETE` in `manage.ts` and, for a change a second person approved, by `src/lib/approvals/handlers.ts`
+- Inline call site (account block) → `src/pages/api/sessions/active-sessions.ts` (`block_account`, **Lock out** on Sessions): deactivates the user and calls `syncCfAccessGroup()` after the answer (`waitUntil`), but **not** `recordCfSyncOutcome()`, so it writes no `cf_access_sync_log` row and leaves the state on Users at its previous value until the next executed run of the hourly job, which the changed list triggers. Routing it through `recordCfSyncOutcome` would close this.
+- No inline call: the daily unused-accounts suspension → `src/workers/scheduled-unused-accounts.ts`
+- Manual re-send → `src/pages/api/users/cf-resync.ts`
 - Live drift detection → `src/pages/api/users/cf-access-audit.ts` (`groupMembershipDrift`)
 - Regression test for the fixed bug → `test/cf-access-sync.test.ts`
 - Gate behaviour test → `test/cf-access-reconcile-gate.test.ts`
@@ -321,17 +343,18 @@ Applied to the production Supabase project (`[SUPABASE_PROJECT_REF]`) on
 ## Operational notes / Runbook
 
 **A user reports they can't log in / aren't seeing expected access:**
-1. Check their row's `cf_sync_status` in the Users tab pill. If `failed`,
-   read the tooltip for the exact Cloudflare error.
-2. Click **Force Re-sync** (owner+) to retry immediately. This bypasses the
-   hash-or-age gate entirely, so it is also the right lever when you suspect
-   the Access Group was edited outside the app and do not want to wait out the
-   24-hour staleness window.
+1. Open the person on Users: their card shows **Cloudflare list not updated**
+   when the last push failed, and their drawer's **Cloudflare list** line gives
+   the exact Cloudflare error.
+2. Press **Re-send to Cloudflare** in the Users header (Owner and Vendor
+   support) to retry immediately. This bypasses the hash-or-age gate entirely,
+   so it is also the right lever when you suspect the Access Group was edited
+   outside the app and do not want to wait out the 24-hour staleness window.
 3. Check `/dashboard/cron` — if the scheduler is halted or
-   `cf-access-reconcile` is paused, no tick is running at all.
+   `cf-access-reconcile` is paused, no run is happening at all.
 4. If it keeps failing, query `cf_access_sync_log` (D1) ordered by
    `created_at DESC` for the full error history and attempt count. Remember
-   that gated (skipped) ticks write nothing, so a gap in this table is normal.
+   that gated (skipped) runs write nothing, so a gap in this table is normal.
 5. Open `GET /api/users/cf-access-audit` and check `groupMembershipDrift` —
    if `groupFound: false`, the Access Group itself is missing or misnamed in
    Cloudflare (see "Known limitation" below); if `inSupabaseNotInGroup` is
@@ -377,6 +400,7 @@ Access Groups → confirm only **one** group exists with that exact name.
 | 2026-09-19 | claude    | Re-derived the whole document against HEAD and the live D1. Read `cf-access-reconcile.ts` (hash-or-age gate, the three tick outcomes, hash stored on success only), `cf-access-sync.ts` (`reportOnceCooled` fingerprints, the console-only missing-token branch, the empty-whitelist placeholder rule, `CF_API_TIMEOUT_MS = 12000`, `fetchAuthorizedUserEmails` 2 attempts), `jobs/registry.ts` + `jobs/tiers.ts` + `jobs/control.ts` (dispatch, `essential`, halt/pause/interval), `UserTableRow.tsx` (pill labels), `active-sessions.ts` (`block_account`) | pass after the corrections above. Live `cf_access_sync_log` **607 rows**, not 12,999: rows now arrive at ~1/day (2026-09-15..19: 1, 5, 1, 1, 1) because gated ticks write nothing, and older success rows were pruned. The growth problem is closed |
 | 2026-10-04 | claude    | Read-only D1 query of the live `cron-control` row: `cf-access-reconcile` throttled to 60 minutes; `src/pages/api/users/manage.ts` still syncs on every user change | The TL;DR's recovery times and the reconcile heading note updated. Nothing else re-checked |
 | 2026-10-16 | claude    | Scope-limited to the Users page parts ("Visibility" and the code map), against `UsersConsole.tsx` and `PersonDrawer.tsx` after the Users page rebuild | pass; the sync code, cron and live state were not re-checked |
+| 2026-10-16 | claude    | Re-derived the whole document after the permission changes of 2026-10-14..16. Read `cf-access-sync.ts` (`fetchWithRetry`, `findSyncGroup`, `parseCfResponse`, every `reportOnceCooled` fingerprint, the missing-token branch, the placeholder rule), `observability.ts` (`reportOnceCooled`: Workers Logs every time, Sentry once an hour, no `platform_alerts` row), `cf-access-sync-log.ts`, `cf-access-reconcile.ts`, the callers (`manage.ts` POST, `src/lib/users/manage-apply.ts`, `src/lib/approvals/handlers.ts`, `cf-resync.ts`, `active-sessions.ts` `block_account`, and `src/workers/scheduled-unused-accounts.ts`, which does not sync), `jobs/registry.ts`, `jobs/tiers.ts`, `cf-entry.ts`, `wrangler.toml` (`[triggers]`, `[observability.logs]`, the variable and the required secret), `UsersConsole.tsx` and `PersonDrawer.tsx`. Live: the `cron-control` row (D1 connector: `cf-access-reconcile` on, 60-minute interval), `cf_access_sync_log` (645 rows; the latest `cron_reconcile` row a success on 2026-10-15, the gated runs since writing nothing; the job last ran 2026-10-16 10:05 UTC), the three `cf_sync_*` columns (Supabase connector) | pass after the corrections: hourly, not five-minute; the call sites; Re-send to Cloudflare; the unused-accounts suspension; what `reportOnceCooled` writes; console output is kept in Workers Logs. No test run (shared checkout). The dashboard Policy→Group wiring is still not verified |
 
 ## Related
 

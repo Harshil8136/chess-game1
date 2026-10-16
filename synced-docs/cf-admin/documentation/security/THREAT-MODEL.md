@@ -21,7 +21,7 @@ tags: [threat-model, stride, security, owasp, asvs, dfd]
 ## Context / Scope
 
 Closes gap **G8** from
-[`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
+`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private).
 Serves OWASP ASVS V1.1, OWASP Top 10 A04 (Insecure Design), SOC 2 CC3.2 and
 ISO 27001 A.5.8.
 
@@ -210,7 +210,7 @@ Ranked by exploitability × impact:
    succeeded backups between 2026-09-26 and 2026-10-14 (D1 connector,
    2026-10-16). The restore tests on the server ran end to end on 2026-10-08 and
    both ended FAIL on a false finding, fixed the same day; no passing test is
-   recorded since ([`../records/reports/2026-10-08-restore-tests.md`](../records/reports/2026-10-08-restore-tests.md),
+   recorded since (`../records/reports/2026-10-08-restore-tests.md` (private),
    `../MAINTENANCE.md` RT-1 and RT-6).
 3. **`'unsafe-inline'` in `script-src`** — materially weakens XSS defence. The
    Report-Only canary is live; the flip is blocked on operator verification of

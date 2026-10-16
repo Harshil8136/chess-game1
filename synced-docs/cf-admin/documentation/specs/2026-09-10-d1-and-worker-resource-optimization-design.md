@@ -21,10 +21,10 @@ tags: [d1, performance, cron, observability, design]
 > (`424737f`); chunk 8b shipped 2026-09-15 (`8fcc3d6`, migration `0052`); chunk
 > 8c shipped the same day in cf-astro. What was measured, kept and dropped is in
 > the chunk records, which supersede this design:
-> [07](../program/chunks/2026-09-10-07-cron-consolidation-and-job-observability.md),
-> [08](../program/chunks/2026-09-10-08-idle-tick-gates.md),
-> [08b](../program/chunks/2026-09-10-08b-hot-query-correctness.md),
-> [08c](../program/chunks/2026-09-10-08c-visitor-facing-resilience.md).
+> 07 (private),
+> 08 (private),
+> 08b (private),
+> 08c (private).
 > Three things here are no longer the plan of record: the daily-read
 > trajectory ending at "~21,700/day" was **withdrawn** by chunk 8b's record —
 > the projection double-counted the sweep's own rows — and two 8b items (the

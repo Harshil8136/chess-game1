@@ -28,7 +28,7 @@ tags: []
 > **Replaced (added 2026-10-16).** The table registry this spec describes was rebuilt on the
 > console kit as cards and a person drawer (permissions item #29), and its seven parts were
 > deleted. The current page: [USER-MANAGEMENT](../features/USER-MANAGEMENT.md) §6 and the
-> [change record](../records/reports/2026-10-16-users-page-console-kit.md).
+> change record (private).
 
 > **Approach:** B — Premium Slate Hybrid  
 > **Module:** `/dashboard/users` (Sapphire Network → Command Center)  

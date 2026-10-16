@@ -410,6 +410,6 @@ No new bindings required. Uses existing `DB` (D1), `IMAGES` (R2), `ISR_CACHE` (K
 - [`2026-07-26-payload-cms-evaluation-and-dynamic-blog.md`](2026-07-26-payload-cms-evaluation-and-dynamic-blog.md) — the base blueprint; §8 is the build spec
 - [`../features/CMS.md`](../features/CMS.md) — the CMS this extends
 - [`../architecture/KV-RESILIENCE.md`](../architecture/KV-RESILIENCE.md) — the write-quota ceiling phase 4 gates on
-- [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) — the cost model this amends on AI allowance
-- [`../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md`](../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md) — the agentic-visibility wedge this productizes
+- `../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md` (private) — the cost model this amends on AI allowance
+- `../commercial/analyses/2026-07-27-go-to-market-prospecting-and-roadmap.md` (private) — the agentic-visibility wedge this productizes
 - [`../security/compliance/AI-GOVERNANCE.md`](../security/compliance/AI-GOVERNANCE.md) — output-evaluation gap affecting §9

@@ -203,7 +203,7 @@ accepted trade-off (see §1.4).
 > not in an hour, and a revoke no longer writes a 24-hour sign-in block. That
 > block is what stranded the only Owner for more than 14 hours, which is why the
 > remediation happened; see `src/lib/auth/authz-signal.ts` and
-> [`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md).
+> `../specs/2026-09-16-access-revocation-remediation-design.md` (private).
 > **Do not reason from "revocation force-logs-out" anywhere in this document.**
 
 ### 1.4 The cache layer — why this is fast
@@ -404,7 +404,7 @@ permissions are delivered via a server-held cache or a browser-held token.
 > **The "≈113 KV writes per active staff member per 8-hour day" figure that used
 > to stand here is wrong, and it is wrong at the root.** This document is where
 > it originated; it then propagated into
-> [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) §8.5/§8.6 and
+> `RBAC-AT-SCALE.md` (private) §8.5/§8.6 and
 > [`DYNAMIC-ROLES-PBAC-DESIGN.md`](DYNAMIC-ROLES-PBAC-DESIGN.md) §9. All the
 > derived figures have been removed there too. Both the per-person table and the
 > 10/20/50/100/1,000 breakpoint table are deleted rather than patched, because
@@ -540,7 +540,7 @@ codebase (the page-access override table, the compute-once-cache-everywhere patt
 The full reasoning, cost modeling, and a real-world proof point for each model
 (Discord's bitmask permissions, AWS IAM's policy model, Google's relationship-graph
 model) is written out in full in the companion document
-[`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md).
+`RBAC-AT-SCALE.md` (private).
 
 ### 6.5 A second, independent axis: permission-catalog growth
 
@@ -745,7 +745,7 @@ doesn't touch the revocation guarantee at all.
 ## Related
 
 - [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) — **the owner of every current-system fact in §1.** Read it instead of §1.
-- [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) — the full industry-model comparison and scaling blueprint referenced throughout §6.4. *(Also `historical`; its §8.5/§8.6 inherited the refuted write model from §5.2 here.)*
+- `RBAC-AT-SCALE.md` (private) — the full industry-model comparison and scaling blueprint referenced throughout §6.4. *(Also `historical`; its §8.5/§8.6 inherited the refuted write model from §5.2 here.)*
 - [`../architecture/GLOBAL-CONFIG.md`](../architecture/GLOBAL-CONFIG.md) — the write-on-change caching pattern referenced in §8.
 - [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — the current page-access engine this document summarizes in §1.3.
 - [`../security/compliance/ASVS-L2.md`](../security/compliance/ASVS-L2.md) and [`../security/compliance/SOC2-TSC-mapping.md`](../security/compliance/SOC2-TSC-mapping.md) — the tracked standards mappings referenced in §7.

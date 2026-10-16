@@ -305,9 +305,12 @@ grant execute on function backup_private.backup_key_put(text, text),
 **As built (2026-09-24):** the login lives in a **Hyperdrive config**, `cf-backup-vault`,
 and the Worker reaches Vault through its `VAULT_DB` binding with the `pg` driver.
 
-- **The connection:** the Supavisor **transaction pooler** (port 6543, user
+- **The connection:** the Supavisor **session pooler** (port 5432, user
   `backup_keyholder.<project-ref>`), with **`sslmode verify-full`** against Supabase's
-  root CA (uploaded to Cloudflare once), and query caching **off**.
+  root CA (uploaded to Cloudflare once), query caching **off** and at most five origin
+  connections. Never the transaction pooler (port 6543): the config was first made on it, and
+  on 2026-09-24 Vault calls began to hang after a few minutes, so it was moved the same day
+  (cf-backup's `docs/OWNER-SETUP.md` §5, "Session mode, not transaction mode").
 - **Why Hyperdrive:** Supabase's pooler certificate chains to Supabase's own private root
   CA. A Worker's TLS verifies only against public roots and cannot be given another CA, so
   a direct connection from the Worker never completes (it showed as "Too many
@@ -319,10 +322,13 @@ and the Worker reaches Vault through its `VAULT_DB` binding with the `pg` driver
   `vault.decrypted_secrets` and can list the keys, then creates the Hyperdrive config, or
   updates it on a rotation. Then the binding is added to cf-backup's `wrangler.json`
   (`"hyperdrive": [{ "binding": "VAULT_DB", "id": "<config id>" }]`) and deployed.
-- **Status (2026-09-24):** the code is deployed; the config and the binding wait for the
-  owner's `--only=vault` run. Until then Keys → Rotate and Reveal and the weekly key check
-  answer "VAULT_DB Hyperdrive binding not configured", and the Health page shows the Vault node
-  failing with that reason.
+- **Status: done.** The owner's `--only=vault` run made the config on 2026-09-24, and
+  cf-backup's `wrangler.json` has carried the `VAULT_DB` binding since 2026-09-26, the oldest
+  commit in its history. Read back through the Cloudflare connector on 2026-10-16:
+  `cf-backup-vault` is on port 5432 with five origin connections, caching off and
+  `verify-full`. Without the binding, Keys → Rotate and Reveal and the weekly key check would
+  answer "VAULT_DB Hyperdrive binding not configured", and the Health page would show the Vault
+  node failing with that reason.
 - **The old route is retired:** until 2026-09-24 key 4 was a Worker secret,
   `SUPABASE_KEYS_URL`, read by postgres.js. Nothing reads it now; delete it
   (`npx wrangler secret delete SUPABASE_KEYS_URL --name cf-backup`).
@@ -368,15 +374,15 @@ GitHub: the backup engine does not use it.
 
 ## 8. Setup order, as built
 
-| Step | Action | Status (2026-09-24) |
+| Step | Action | Status (2026-09-24; steps 6 and 7 re-read 2026-10-16) |
 |---|---|---|
 | 1 | Create the private repo `cf-backup` | Done |
 | 2 | Key 1: create (IP filtering off), store it, set the `CLOUDFLARE_ACCOUNT_ID` variable | Done |
 | 3 | Supabase: `01_backup_reader.sql`, `02_backup_keys.sql`, `03_backup_keyholder.sql` (the reader with per-schema grants, the three key functions, the key holder) | Done |
 | 4 | Key 2: `owner-secrets.mjs --only=db` | Done |
 | 5 | Key 3: create the App, install it, `owner-secrets.mjs --only=github-key`; enter the App ID in Settings → GitHub | Done for `cf-backup`. Installing it on `cf-admin-madagascar` and `cf-astro` (Actions: read, for the minutes meter) is pending |
-| 6 | Key 4: `owner-secrets.mjs --only=vault`, then the `VAULT_DB` binding in `wrangler.json`, deployed | Pending (owner) |
-| 7 | **The first backup key:** console → Keys → Rotate (needs keys 3 and 4). It stores the key in Vault, sets `BACKUP_AGE_RECIPIENT` and records the key in `backup:key-registry`. **Until it exists, no backup is dispatched** (the weekly full slot runs as a check, and the fallback schedule stands down) | Pending (after step 6) |
+| 6 | Key 4: `owner-secrets.mjs --only=vault`, then the `VAULT_DB` binding in `wrangler.json`, deployed | Done 2026-09-24: the config `cf-backup-vault` exists (session pooler, port 5432) and the binding is deployed (§7) |
+| 7 | **The first backup key:** console → Keys → Rotate (needs keys 3 and 4). It stores the key in Vault, sets `BACKUP_AGE_RECIPIENT` and records the key in `backup:key-registry`. **Until it exists, no backup is dispatched** (the weekly full slot runs as a check, and the fallback schedule stands down) | Done: `backup:key-registry` holds an active key made on 2026-09-28 (read through the Cloudflare D1 connector, 2026-10-16) |
 | 8 | Open Health: every failing check names its cause; Run now → Check only proves every export and restore drill before the first backup | After step 7 |
 
 ## 9. The rotation calendar

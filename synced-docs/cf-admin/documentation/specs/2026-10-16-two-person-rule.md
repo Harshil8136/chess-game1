@@ -109,6 +109,6 @@ see every waiting change on the Users page; anyone else with the Users page sees
 ## 5. What is not covered
 
 - Anything that can write the settings table or Supabase directly bypasses the rule, as it can
-  bypass every check in the portal ([MAINTENANCE AC-3, AC-4](../MAINTENANCE.md)).
+  bypass every check in the portal (MAINTENANCE AC-3, AC-4 (private)).
 - Data Retention's purge stays as it is: Owner or Vendor support, a recent sign-in and an exact
   count. It removes data past its window; it does not change a window.

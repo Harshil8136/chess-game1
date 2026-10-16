@@ -144,6 +144,12 @@ enforced on those.
   `reference/commercial-readiness-checklist.md` and `reference/RBAC-AT-SCALE.md`.
   The rule behind the list: publish how the system works, not the list of what is
   wrong with it, and not what it costs to run or sell.
+- **Links into private files.** A published doc may link a private doc or a source
+  file: the link works in this repository, and on the mirror it becomes plain text
+  marked "(private)" (`scripts/mirror_links.py`, which `sync-docs.yml` runs on the
+  published copy after copying it). So a published doc still has to make sense
+  without the private file it points at; a known weakness belongs in
+  `MAINTENANCE.md`, with at most a pointer from the published doc.
 - **Publishing cannot be undone.** The public repo keeps its git history, so a
   value that shipped in an earlier sync stays reachable after the source is
   redacted. Treat an accidental publish as a rotation, not an edit.

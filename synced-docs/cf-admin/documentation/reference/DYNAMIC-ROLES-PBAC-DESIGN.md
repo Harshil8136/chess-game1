@@ -81,7 +81,7 @@ guild's roles are entirely user-created bundles of those bits). Both are proven 
 scales many orders of magnitude larger than this project will ever need. The industry
 name for this shape is **Policy-Based Access Control (PBAC)** — already covered, at the
 conceptual level, in the companion document
-[`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) §4.2. This document is the concrete version of
+`RBAC-AT-SCALE.md` (private) §4.2. This document is the concrete version of
 that idea, worked all the way down to a data model and a request flow.
 
 ---
@@ -144,7 +144,7 @@ table, just keyed by permission instead of by page path.
 > the majority, not "almost exactly half", and the override count has quadrupled.
 >
 > **The trigger claim does not follow from these numbers.** The companion
-> [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) §7 states the 15–20 threshold for a
+> `RBAC-AT-SCALE.md` (private) §7 states the 15–20 threshold for a
 > role's **own** grant set. The figures below are **cumulative inherited** totals —
 > the table says so ("a higher role already inherits everything a lower one has").
 > Under the threshold's own counting rule, `staff`'s own bundle is 5 and each
@@ -284,7 +284,7 @@ that the per-user mark does not:
 **Reserve the three-layer force-kick for what it is now scoped to:** force-kick,
 deactivation, deletion and the Sessions page's block action — cases where refusing
 sign-in for a day is the *intent*. See
-[`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md).
+`../specs/2026-09-16-access-revocation-remediation-design.md` (private).
 (The page-required-role-tightening precedent the original text cited is real, but it
 is the same force-kick and carries the same 24-hour block.)
 
@@ -549,5 +549,5 @@ dynamic as the goal asks for.
 ## Related
 
 - [`PERMISSION-ARCHITECTURE-ASSESSMENT.md`](PERMISSION-ARCHITECTURE-ASSESSMENT.md) — the current system explained in full, the JWT-design fact-check, and the full per-staff-count scaling model this document's §9 reuses.
-- [`RBAC-AT-SCALE.md`](RBAC-AT-SCALE.md) — the original PBAC/ABAC/bitmask industry-model comparison this document's §1 builds on.
+- `RBAC-AT-SCALE.md` (private) — the original PBAC/ABAC/bitmask industry-model comparison this document's §1 builds on.
 - [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — the current page-access engine this design's §2/§4 generalizes from.

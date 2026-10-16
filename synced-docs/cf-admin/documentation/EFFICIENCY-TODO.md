@@ -25,7 +25,7 @@ tags: [performance, efficiency, kv, d1, sessions, sidebar, polling, todo]
 > **Not published.** This file is listed in `SYNC_EXCLUDE_PREFIXES`
 > (`.github/workflows/sync-docs.yml`): it is a list of what is wrong, which
 > [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) §6 keeps out of the public mirror.
-> [`MAINTENANCE.md`](MAINTENANCE.md) remains the live defect backlog and points here
+> `MAINTENANCE.md` (private) remains the live defect backlog and points here
 > for efficiency work.
 
 **How to use this list.** Items are ordered by priority. Each one states the
@@ -94,7 +94,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 #### EF-1. The diagnostics page re-runs its full test suite every 30 seconds
 
-> **Partly done 2026-10-04** ([record](records/reports/2026-10-04-resource-usage-optimisation.md)):
+> **Partly done 2026-10-04** (record (private)):
 > the 30-second re-run is gone. The suite runs once when the page opens and
 > otherwise only on the button, and the audit-log probe no longer counts the
 > whole table (it reads the newest entry and counts the last 7 days up to
@@ -133,7 +133,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 #### EF-2. The dashboard rewrites a KV cache all day while open
 
-> **Fixes 1 to 3 done 2026-10-04** ([record](records/reports/2026-10-04-resource-usage-optimisation.md)):
+> **Fixes 1 to 3 done 2026-10-04** (record (private)):
 > the dashboard polls every 5 minutes, only while the tab is on screen (and at
 > once on return when its data is older than that; `src/lib/visible-poll.ts`),
 > and each refill writes one KV key that carries its own fetch time. An open
@@ -178,7 +178,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 - **Issue.** Read on every request (in the bulk read) and at every sign-in, to
   honour a 24-hour sign-in block that ordinary permission changes no longer write.
 - **Fix.** Stage 2 of the access-revocation remediation
-  ([`specs/2026-09-16-access-revocation-remediation-design.md`](specs/2026-09-16-access-revocation-remediation-design.md)):
+  (`specs/2026-09-16-access-revocation-remediation-design.md` (private)):
   deactivation is the only lockout; the flag goes.
 - **Saving.** 1 KV read per request, 1 per sign-in.
 
@@ -399,7 +399,7 @@ never who *decides*.
   over to it unchanged.
 - [`architecture/KV-RESILIENCE.md`](architecture/KV-RESILIENCE.md) — KV failure
   behaviour and the account-wide budget shared with cf-astro.
-- [`MAINTENANCE.md`](MAINTENANCE.md) — the live defect backlog.
+- `MAINTENANCE.md` (private) — the live defect backlog.
 
 ## Verification log
 

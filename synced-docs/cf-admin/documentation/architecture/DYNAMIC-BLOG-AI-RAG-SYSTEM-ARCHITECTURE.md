@@ -27,9 +27,9 @@ tags: [blog, ai, rag, seo, architecture, blueprint, historical]
 > | For | Go to |
 > |---|---|
 > | The blog studio, the AI author and the knowledge-base grounding as built | [`../features/CMS.md`](../features/CMS.md) — the living feature doc |
-> | The production-readiness hardening: security fixes, the publish quality gate, cadence locks, SEO/AIO mechanics | [`../records/reports/2026-08-03-blog-ai-seo-production-readiness.md`](../records/reports/2026-08-03-blog-ai-seo-production-readiness.md) |
-> | What the blog system became | [`../records/reports/2026-08-30-blog-system-overhaul.md`](../records/reports/2026-08-30-blog-system-overhaul.md) |
-> | What the AI system became, including the "RAG" correction | [`../records/reports/2026-08-31-ai-system-overhaul.md`](../records/reports/2026-08-31-ai-system-overhaul.md) |
+> | The production-readiness hardening: security fixes, the publish quality gate, cadence locks, SEO/AIO mechanics | `../records/reports/2026-08-03-blog-ai-seo-production-readiness.md` (private) |
+> | What the blog system became | `../records/reports/2026-08-30-blog-system-overhaul.md` (private) |
+> | What the AI system became, including the "RAG" correction | `../records/reports/2026-08-31-ai-system-overhaul.md` (private) |
 > | ISR revalidation, the durable outbox and the queue redrive | [`KV-RESILIENCE.md`](KV-RESILIENCE.md) |
 > | Schema changes | RULE #0.7 in [`../../RULESAd.md`](../../RULESAd.md) — **not** §6 below |
 >
@@ -80,7 +80,7 @@ This document defines the end-to-end architecture, data flows, security posture,
 > whose result was then discarded.
 >
 > Both are fixed. See
-> [`../records/reports/2026-08-31-ai-system-overhaul.md`](../records/reports/2026-08-31-ai-system-overhaul.md) §1.2 and §2.5.
+> `../records/reports/2026-08-31-ai-system-overhaul.md` (private) §1.2 and §2.5.
 
 ### Industry Benchmark Positioning
 

@@ -15,15 +15,16 @@ tags: [program, cf-backup, permissions, rbac, audit, config]
 > **TL;DR (owner requirement, 2026-09-22).** Two layers.
 >
 > - **cf-admin** decides who may **open** the console: one page row, `/dashboard/backup`, managed in cf-admin exactly as today.
-> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, delete old runs, export activity logs, see or rotate keys, and more. It works from a **closed catalog of 32 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03; `targets.edit`, 2026-10-07; the three Restore tests capabilities, 2026-10-08, built and not yet live). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date), and the Owner or Vendor manages it all on the console's **Access** screen.
+> - **cf-backup** decides what each person may **do** inside it: view, run, cancel, bypass a cooldown, edit settings, change or skip the schedule, delete old runs, export activity logs, see or rotate keys, run restore tests, and more. It works from a **closed catalog of 32 capabilities** (23 planned; the Files section's two, 2026-09-24; `diagnostics.run`, 2026-09-24; `access.delegate`, 2026-10-02; `alerts.dismiss`, 2026-10-03; `targets.edit`, 2026-10-07; the three Restore tests capabilities, 2026-10-08, live and first run that day). Every role has defaults, individual people can be granted or denied capabilities (optionally until a date, and single powers for a while), and the Owner or Vendor manages it all on the console's **Access** screen.
+> - **cf-admin's Access Center** edits the same grants for one person at a time: cf-admin's server names the person in its trusted `x-backup-target` header (their role and account id, never from the browser), and an Admin holding `access.delegate` can pass on what they hold to people below them, never a floor (§2, §4).
 >
-> The policy is **one JSON row** (`backup:access`); there is no new table. Every check runs on the server. Deny beats allow; an unknown capability is denied. Three safety floors cannot be granted away.
+> The policy is **one JSON row** (`backup:access`); there is no new table. Every check runs on the server. Deny beats allow; an unknown capability is denied. Three safety floors cannot be configured away: nine capabilities stay with the Owner and Vendor support, audit is always on, and the locks, redaction and recipient check are fixed (§3 rule 4). A refusal says in plain words what the person cannot do and that they can ask the Owner (cf-admin permissions item #41, 2026-10-15), and with no alert recipients the Keys page warns that no one will be told of a key action ([09](09-key-management.md) K-4).
 
 ## 1. The two layers
 
 | Layer | Question | Decided by | Managed in |
 |---|---|---|---|
-| 1. The door | "Can this person open `/dashboard/backup` at all?" | cf-admin: session, role, the `/dashboard/backup` page row (nested paths inherit it, `decide-access.ts:41`) | cf-admin's existing page and user administration, unchanged |
+| 1. The door | "Can this person open `/dashboard/backup` at all?" | cf-admin: session, role, the `/dashboard/backup` page row (nested paths inherit it; the gateway asks for that key itself, `mayUseBackupConsole`, doc 02 §3 rule 1) | cf-admin's existing page and user administration, unchanged |
 | 2. The actions | "Can this person run a backup, see logs, rotate the key…?" | cf-backup, against the actor cf-admin's gateway attaches to every request (doc 02 §4) | The console's **Access** screen (§5) |
 
 cf-admin's permission model stays the authority for identity and entry
@@ -55,7 +56,7 @@ touch the backup key. **Admin** changes who may do what.
 | `runs.cancel` | Cancel a queued or running backup | operate | confirmation; reason | Owner, Vendor |
 | `runs.bypass-cooldown` | **Bypass** the Run-now cooldown | operate | reason required; a notice | Owner, Vendor |
 | `runs.drill` | Start a restore drill now: the real-path drill, or a **check** (every export and restore drill, no data kept; never counts as a backup) | operate | typed confirmation | Owner, Vendor |
-| `schedule.toggle` | **Edit the backup schedule**: days, times, grace hours, the monthly drill (§7) | operate | a diff shown before saving; reason (3–200 characters); a notice | Owner, Vendor |
+| `schedule.toggle` | **Edit the backup schedule**: days, times, grace hours, the monthly drill (§7); and **skip one upcoming scheduled full backup** (up to 14 days ahead), or undo the skip before it is due (owner, 2026-10-03) | operate | an edit: a diff shown before saving; reason (3–200 characters); a notice. A skip: an optional reason (up to 200 characters); a notice; audited as `schedule.edit op=skip` or `op=unskip` | Owner, Vendor |
 | `config.edit` | **Change global config** (§7) | operate | a diff shown before saving; audited | Owner, Vendor |
 | `alerts.dismiss` | **Dismiss an open alert**, or undo a dismissal; who, when and an optional note are kept on the alert (owner, 2026-10-03) | operate | audited | Owner, Vendor |
 | `targets.edit` | **Choose the databases** (owner, 2026-10-07): in Settings → Databases, which Supabase projects and D1 databases the schedule backs up, and which Run now starts with ticked. Run now itself (`runs.run`) can still tick any listed database for one run | operate | a diff shown before saving; reason (3–200 characters); a notice; audited as `config.edit op=targets` | Owner, Vendor |
@@ -65,12 +66,12 @@ touch the backup key. **Admin** changes who may do what.
 | `keys.reveal` | **View / download the backup key** (the recovery kit) | secret | fresh sign-in; typed confirmation; ≤ 3/day per person; a notice | Owner, Vendor (**floor**) |
 | `keys.rotate` | **Generate a new key** and make it active; also confirm a recovery kit, and record a **restore proof** ("decrypted run X with the kit on date Y", doc 09 §5) | secret | rotate: fresh sign-in; typed confirmation; ≤ 1/day; a notice. Confirm-kit and restore proof: audited | Owner, Vendor (**floor**) |
 | `keys.rekey` | Re-key old runs to the current key (doc 10 §4) | secret | not built: answers 501 (below) | Owner, Vendor (**floor**) |
-| `access.delegate` | Give or take away, for one person below you in cf-admin's role ladder, capabilities you hold yourself, from **cf-admin's Access Center** ([its design](../../specs/2026-10-02-access-center-design.md)). Never a floor, never yourself | admin | cf-admin names the person in a trusted header; the same validation, last-holder guard and compare-and-swap as `access.manage` | Admin, Owner, Vendor |
+| `access.delegate` | Give or take away, for one person below you in cf-admin's role ladder, capabilities you hold yourself, from **cf-admin's Access Center** ([its design](../../specs/2026-10-02-access-center-design.md)). Never a floor, never yourself | admin | cf-admin names the person in a trusted header; every capability whose state the save changes must be one you hold and not a floor (rules T4 and T5 of the Access Center design): an allow or deny added or removed, a power given for a while added, removed or given another end, and, when the grant's own end date is set, moved or removed, every capability on its allow and deny lists (since 2026-10-16, `changedCapabilities` in `src/access/delegate.ts`), so you cannot keep a power you lack running longer or end a deny early; a change to the note alone changes none; then the same validation, last-holder guard and compare-and-swap as `access.manage` | Admin, Owner, Vendor |
 | `access.manage` | Change role defaults and per-person grants | admin | a diff shown before saving; a notice | Owner, Vendor (**floor**) |
 | `files.view` | **Files**: browse the backups bucket folder by folder, with folder totals and each object's details (never a value of unlisted metadata) | read | — | Admin, Owner, Vendor |
 | `files.download` | Download and preview files from the backups bucket (text evidence only is previewed). A run's encrypted `data/`, `checksums.sha256`, any `.age` file and the staff-storage mirror also need `runs.download` | operate | audited as `run.download via=files`, a preview as `run.download via=preview` (since 2026-10-16); backup data: fresh sign-in, the typed confirmation `DOWNLOAD`, and a notice | Owner, Vendor; grantable per person |
 | `restoretests.view` | **Restore tests** ([15](15-restore-tests.md)): the copies, the history, each report, the reminder, Settings → Restore tests read-only; file a finished test's report | read | — | Admin, Owner, Vendor |
-| `restoretests.run` | **Start a restore test** and carry it on: the copy's files, the unlock with the Vault key (sealed to the server's lab key) and the live sample | secret | fresh sign-in ≤ 10 min; the typed word `restore`; the daily limit in Settings (default 3, whole platform); a notice; audited as `restore.test op=prepare\|unlock\|sample` | Owner, Vendor (**floor**) |
+| `restoretests.run` | **Start a restore test** and carry it on: the copy's files, the unlock with the Vault key (sealed to the server's lab key), a recovery-kit unlock and the live sample | secret | preparing a test: a fresh sign-in ≤ 10 min, the typed word `restore`, the daily limit in Settings (default 3, whole platform) and a notice; unlocking its copy with the Vault key: a fresh sign-in ≤ 10 min. The other steps (fetching the copy's files, recording a recovery-kit unlock, the live sample) ask for no fresh sign-in: only the person who prepared the test can take them, within 3 hours of preparing it. Audited as `restore.test op=prepare\|unlock\|sample\|download` | Owner, Vendor (**floor**) |
 | `restoretests.configure` | **Change Settings → Restore tests** (defaults, limits, reminder) and **pin the server's lab key** | secret | fresh sign-in; a stale-revision check; audited as `config.edit op=restore-tests` or `op=lab-key`; pinning sends a notice | Owner, Vendor (**floor**) |
 
 **A notice**, as built (Ruling R-1 and the notifications work of 2026-09-24): an alert of
@@ -93,13 +94,15 @@ of `files.download` to someone below Admin goes beyond that, so grant it knowing
 data stays Owner and Vendor only (the `runs.download` floor).
 Staff, Manager and Viewer get nothing by default. They cannot open the page until
 cf-admin's page row lets their role in, and even then only what the policy (§4) grants.
+cf-admin's gateway refuses every change from a Viewer (403 `read_only`), so only a read
+capability given to a Viewer takes effect.
 
 > **As built in Phase 1a (2026-09-23):**
 >
 > - **System actors hold no console capability.** cf-admin's jobs (the `system` actor
 >   kind, doc 02 §8) get 403 on every console endpoint, including `/api/health`.
 >   Capabilities belong to people (floor K-3); the jobs reach cf-backup through internal
->   paths or RPC outside the gateway prefix, never through the console API.
+>   paths outside the gateway prefix (doc 02 §8), never through the console API.
 > - **The typed-confirmation dialogs** (`runs.run`, `runs.drill`, `runs.prune`,
 >   `keys.rotate`, `keys.reveal`, `keys.rekey`) require typing one of three words —
 >   `RUN`, `ROTATE` or `REVEAL` — matching the action underway.
@@ -132,8 +135,8 @@ cf-admin's page row lets their role in, and even then only what the policy (§4)
    - **audit is always on**: no setting turns off `ops/events`, the gateway's audit row or the notifications;
    - the **locks, redaction and the recipient check** are not configurable.
 5. **Last-holder guard.** A change that would leave **no active person** holding `access.manage` or `keys.rotate` is refused. (The 2026-09-16 incident locked the only Owner out for 14 hours; this is the same lesson applied here.)
-6. **Time-boxed grants.** A per-person grant can carry `expiresAt`, for example "let this admin run backups this week". Expiry is checked on every request; nothing needs cleaning up. *Since 2026-10-16 (cf-admin permissions #22):* a grant can also carry `temporary`, one permission at a time, each with its own `until` (at most 90 days ahead) and an optional note: a power given for a while, which is what an approved request from cf-admin's Settings → Your access writes. `can()` counts it until `until`, whatever the grant's own `expiresAt`, after the deny check (a deny still wins) and never for a floor. An entry whose end has passed is dropped on the next save; a delegated change compares against the running ones only (`delegationBase` in `src/access/delegate.ts`).
-7. **Effect is prompt.** The policy row is read at most every 30 s per isolate, so a change applies within half a minute. *(As built: the 30 s settings cache exists, with write-through on save. Since 2026-10-16, cf-admin permissions #35, a route that needs a destructive, secret or admin capability reads the row fresh, so taking one of those away stops it at once: `readsFresh` in `src/access/catalog.ts`, and the data download in the Files section.)*
+6. **Time-boxed grants.** A per-person grant can carry `expiresAt`, for example "let this admin run backups this week". Expiry is checked on every request; nothing needs cleaning up. *Since 2026-10-16 (cf-admin permissions #22):* a grant can also carry `temporary`, one permission at a time, each with its own `until` (at most 90 days ahead) and an optional note: a power given for a while, which is what an approved request from cf-admin's Settings → Your access writes. `can()` counts it until `until`, whatever the grant's own `expiresAt`, after the deny check (a deny still wins) and never for a floor. An entry whose end has passed is dropped on the next save; a delegated change compares against the running ones only, and keeps a running grant's own end, so a save that leaves it alone changes nothing (`delegationBase` in `src/access/delegate.ts`). What a delegated change may touch is in the `access.delegate` row of §2.
+7. **Effect is prompt.** Each isolate keeps a copy of the policy row for at most 30 s, written through on save, so a change applies within half a minute. The dangerous powers do not wait: since 2026-10-16 (cf-admin permissions #35) a route that needs a destructive, secret or admin capability reads the stored row instead (`readsFresh` in `src/access/catalog.ts`), and so do saving one person's access (`saveAccessPerson`, `src/api/access-person.ts`, which decides `access.manage` and `access.delegate` again on the row it reads) and a backup-data download in the Files section. Taking one of those powers away stops it at once.
 8. **Every change is recorded** (§6): who, when, the before/after diff, and the reason if one was given.
 
 ## 4. Where the policy lives
@@ -168,6 +171,12 @@ people saving at once cannot overwrite each other.
 
 People are keyed by their sign-in email, which is what the gateway's actor carries. A grant
 for someone who has never signed in simply waits until they do.
+
+**When cf-admin deletes a person** (since 2026-10-15), their entry under `people` goes too, in
+the same statement that bumps `rev`, so an Access screen opened before the deletion cannot save
+it back, and an address invited again starts from its role (`removeBackupGrant` in cf-admin's
+`src/lib/dal/VpsAccessRepository.ts`, called from `src/lib/users/manage-apply.ts`; the server
+console's grant goes the same way).
 
 > **Bound to an account (2026-10-16, cf-admin permissions #35):** a grant saved through
 > cf-admin's Access Center also carries `userId`, the person's cf-admin account id, taken from
@@ -249,6 +258,7 @@ console cannot change.
 - The last-holder guard refuses a change that would leave `access.manage` or `keys.rotate` with no active holder.
 - An expired grant stops working at its `expiresAt`.
 - A power given for a while counts until its own `until` and not after, loses to a deny, never opens a floor, and outlives the grant's own end (`test/access-temporary.test.ts`, 2026-10-16).
+- A delegated change of a grant's own end date counts every capability on it, and a save that leaves a running grant's end alone changes nothing (`test/access-temporary.test.ts`, 2026-10-16).
 - Deny beats allow, for every capability.
 - Concurrent saves: the second compare-and-swap fails with a clear "someone else changed this, reload" message.
 
@@ -256,6 +266,7 @@ console cannot change.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | The TL;DR; §1's door; the `schedule.toggle`, `access.delegate` and `restoretests.run` rows of §2; §2's Viewer line; §3 rules 6 and 7; §4's deletion paragraph; §8's new line. Read cf-backup `src/access/catalog.ts` (32 capabilities, nine floors, `readsFresh`, `refusalText`), `delegate.ts` (`changedCapabilities`, `delegationBase`, cf-backup `4aacbf9`), `policy.ts` (`grantFor`, `can()`), `src/api/access-person.ts` (`saveAccessPerson`, cf-backup `1e06c19`), `src/api/routes.ts`, `src/api/restore-tests.ts` (which handlers call `requireFreshSignIn`; `ownTest`, `TEST_WINDOW_MS`), `src/api/config.ts` (`saveScheduleSkip`), `src/gateway/target.ts`, `src/lib/fresh.ts`, the generated `docs/reference/PERMISSIONS.md` and cf-backup's HANDOFF on the restore tests' first run; cf-admin's `src/lib/backup-proxy.ts` (`mayUseBackupConsole`), `src/pages/dashboard/backup/app/[...path].ts` (`read_only`), `src/lib/dal/VpsAccessRepository.ts` (`removeBackupGrant`) and `src/lib/users/manage-apply.ts`. Tests read, not run: `test/access-temporary.test.ts` in cf-backup, `test/vps-access.test.ts` in cf-admin | The other rows of §2, §5 to §7 and the Phase 1a notes |
 | 2026-10-16 | §3 rule 7's fresh reads and §4's `userId` binding (#35), against cf-backup's `src/access/policy.ts` (`grantFor`, `can()`, `parseStoredPolicy`, `liveGrant`), `validate.ts` (`owner`), `diff.ts`, `catalog.ts` (`readsFresh`), `source.ts`, `src/http/router.ts`, `src/api/access-person.ts`, `src/api/files.ts` and `src/gateway/target.ts`; `test/access-binding.test.ts` passes | The rest of the document |
 | 2026-10-16 | §3 rule 6's powers given for a while, the §4 example's `temporary` and the §8 line, against cf-backup `9f0116c`: `src/access/policy.ts` (`temporaryUntil`, `liveTemporary`, `liveGrant`, `can()`), `validate.ts` (`MAX_TEMPORARY_DAYS`, `validateTemporary`), `delegate.ts` (`delegationBase`); `test/access-temporary.test.ts` passes | The rest of the document |
 | 2026-10-16 | The `files.download` row's audit, against cf-backup's `previewFile` (`src/api/files.ts`) and cf-admin's gateway (`RECORDED_READS`); `test/files-api.test.ts` passes | The other rows of §2 |

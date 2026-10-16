@@ -30,20 +30,20 @@ tags: [program, cf-backup, security, keys, disaster-recovery]
 ```mermaid
 flowchart LR
   subgraph CF[Cloudflare]
-    R2[(R2 madagascar-backups<br/>encrypted runs)]
-    ADM[cf-admin gateway<br/>Access SSO · session · page permission]
-    KB[cf-backup console<br/>Owner / Vendor only<br/>fresh sign-in · typed confirm]
+    R2[("R2 madagascar-backups<br/>encrypted runs")]
+    ADM["cf-admin gateway<br/>Access SSO · session · page permission"]
+    KB["cf-backup console<br/>Owner / Vendor only<br/>fresh sign-in · typed confirm"]
   end
   subgraph SB[Supabase]
-    V[(Vault<br/>backup private keys<br/>encrypted at rest)]
+    V[("Vault<br/>backup private keys<br/>encrypted at rest")]
   end
-  GH[GitHub Actions<br/>holds the PUBLIC key only] -->|encrypts to public key| R2
-  ADM -->|service binding| KB
-  KB -->|rotate · reveal kit · key check| V
-  KB -->|download encrypted run| R2
-  KB -->|ops event + email to Owner AND Vendor| LOG[[R2 ops record · alert email]]
-  ADM -->|audit row| AUD[[admin_audit_log]]
-  KIT[/Recovery kit<br/>Owner's + Vendor's password managers/] -.only if Supabase is lost.-> V
+  GH["GitHub Actions<br/>holds the PUBLIC key only"] -->|"encrypts to public key"| R2
+  ADM -->|"service binding"| KB
+  KB -->|"rotate · reveal kit · key check"| V
+  KB -->|"download encrypted run"| R2
+  KB -->|"ops event + notice to the alert recipients"| LOG[["R2 ops record · alert email"]]
+  ADM -->|"audit row"| AUD[["admin_audit_log"]]
+  KIT[/"Recovery kit<br/>Owner's + Vendor's password managers"/] -.->|"only if Supabase is lost"| V
 ```
 
 **What an attacker has to get past to read one backup:**
@@ -74,8 +74,8 @@ for the length of one request (rotate, reveal, the weekly check, a re-key).
 |---|---|
 | K-1 | **One active backup key** (an `age` X25519 key pair). GitHub holds only its **public** half, as the repo variable `BACKUP_AGE_RECIPIENT`. |
 | K-2 | **Private keys live only in Supabase Vault**, named `backup-key:<fingerprint>`. Retired keys **stay** in Vault (never deleted automatically), so old backups always remain openable. |
-| K-3 | **Only Owner and Vendor support** can see key status, rotate, reveal the recovery kit, or download an encrypted run. This is **non-delegable**: no page grant can extend it to another role. cf-backup enforces it on every call (doc 13, the `keys.*` capabilities). |
-| K-4 | **Every key action** requires a fresh sign-in, a typed confirmation and a rate limit (rotate ≤ 1/day, reveal ≤ 3/day per person). The gateway writes `admin_audit_log`, cf-backup writes an `ops/events` record, and a **notice** is emailed, so neither can act unseen. **As built:** the notice goes to the alert recipients in Settings → Alerts (not to two fixed people): for this rule to hold, both the Owner's and the Vendor's addresses must be on that list. Notices cannot be switched off email, and each email's delivery is tracked (doc 13 §2). |
+| K-3 | **Only Owner and Vendor support** can see key status, rotate, reveal the recovery kit, download an encrypted run, or start a restore test, which unlocks one copy with the Vault key ([15](15-restore-tests.md)). This is **non-delegable**: no page grant, console grant or delegation can extend it to another role. cf-backup enforces it on every call (doc 13 §3 rule 4: the floors, among them the `keys.*` capabilities). |
+| K-4 | **Rotating the key and revealing the recovery kit** each require a fresh sign-in (≤ 10 min), a typed confirmation (`ROTATE`, `REVEAL`) and a per-person rate limit (rotate ≤ 1/day, reveal ≤ 3/day). The gateway writes `admin_audit_log`, cf-backup writes an `ops/events` record, and a **notice** is emailed, so neither person can act unseen. Confirming that you still have your kit and recording a restore proof (§4, both under `keys.rotate`) touch no key material, so they ask for neither a fresh sign-in nor a typed word and send no notice; they are audited as `keys.rotate op=confirm-kit` and `op=restore-proof`. **As built:** the notice goes to the alert recipients in Settings → Alerts (not to two fixed people): for this rule to hold, both the Owner's and the Vendor's addresses must be on that list. Notices cannot be switched off email, and each email's delivery is tracked (doc 13 §2). **Since 2026-10-15 (cf-admin permissions item #41):** with no alert recipients, the Keys page (its panel and the Rotate and Reveal dialogs) and Settings → Alerts warn that no one will be told; the action is still recorded, its notice waits in Alerts until an address is added, and a reveal's audit line and ops record carry `recipients=<count>`. |
 | K-5 | **The recovery kit** is the private key shown **once** at creation. Owner and Vendor each save it in their own password manager. It is needed only if the Supabase project is lost, because Vault contents cannot be restored from a dump. |
 | K-6 | **The system checks the key itself, weekly**. No human chores (§4). |
 
@@ -143,8 +143,8 @@ last "I still have my kit" confirmation, the third row above). Both are additive
 | Piece | Where | Notes |
 |---|---|---|
 | Three Postgres functions: `backup_key_put(fingerprint, secret)`, `backup_key_get(fingerprint)`, `backup_key_list()` (fingerprints and dates only) | Supabase migration (RULE #0.7) | `SECURITY DEFINER`, wrapping `vault.create_secret` / `vault.decrypted_secrets`; `EXECUTE` revoked from `public`, `anon` and `authenticated`. **No new table** (RULE #0.9): Vault's own table holds the keys |
-| The Vault credential (key 4, OD-24) | Supabase migration + the Hyperdrive config `cf-backup-vault`, bound to the cf-backup Worker as `VAULT_DB` | A key-holder role granted `EXECUTE` on the three functions and nothing else (doc 12 §7). **As built (2026-09-24):** reached with the `pg` driver through Hyperdrive, over the Supavisor **transaction pooler** (port 6543), with `sslmode verify-full` against Supabase's root CA and query caching off. The earlier Worker secret `SUPABASE_KEYS_URL` and postgres.js are retired. Key 4 is required: the planned by-hand scripts were not built (doc 12 §1) |
-| Key screens: status, rotate, reveal, confirm kit | cf-backup console | Owner/Vendor only (K-3), fresh sign-in, typed confirmation |
+| The Vault credential (key 4, OD-24) | Supabase migration + the Hyperdrive config `cf-backup-vault`, bound to the cf-backup Worker as `VAULT_DB` | A key-holder role granted `EXECUTE` on the three functions and nothing else (doc 12 §7). **As built (2026-09-24):** reached with the `pg` driver through Hyperdrive, over the Supavisor **session pooler** (port 5432, never the transaction pooler: doc 12 §7), with `sslmode verify-full` against Supabase's root CA and query caching off. The earlier Worker secret `SUPABASE_KEYS_URL` and postgres.js are retired. Key 4 is required: the planned by-hand scripts were not built (doc 12 §1) |
+| Key screens: status, rotate, reveal, confirm kit | cf-backup console | Owner/Vendor only (K-3); rotate and reveal also need a fresh sign-in and a typed confirmation (K-4) |
 | Updating `BACKUP_AGE_RECIPIENT` | cf-backup, through the GitHub App | Variables r/w (key 3) |
 | First key, before the console exists | The planned `scripts/backup-key-init` (same code path, run once by the Owner) | Needed for P1, since backups start before the P2 console. **As built, load-bearing:** every run's `doctor` fails until `backup:key-registry` holds an active key matching `BACKUP_AGE_RECIPIENT` — the first key must exist **before the first dispatch**, not just before the console |
 | Weekly key check | cf-backup's `/internal/tick` chores | §4 |

@@ -13,37 +13,28 @@ tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 
 # Manage Users & RBAC Architecture
 
-> **Scope note (2026-08-23, restated 2026-09-19).** This document covers the
-> account lifecycle and the admin UI. The permission model it rests on — roles,
-> PLAC, the provisioning gates, the helper semantics — is owned by
-> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md)
-> and that document wins on any disagreement; the tables reproduced below in §2
-> are a convenience copy. Everything about the **Sessions console** — the tabs, the
-> edge-block list, the fragment enforcement — belongs to
-> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
-> The banner below calls `plac-and-audit.md` "authoritative"; that predates the
-> split and is no longer accurate for the model itself, only for the audit side.
+> **TL;DR (non-technical):** How admin users are managed: the six role tiers, how accounts are
+> invited, changed and removed, how higher-privilege accounts are protected, which changes wait
+> for a second person, and how active sessions are controlled.
 
+> **Scope.** This document covers the account lifecycle and the Users screen. The permission
+> model it rests on (roles, PLAC, the provisioning gates, the helper semantics) is owned by
+> [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md), which wins
+> on any disagreement; the tables in §2 are a convenience copy. Everything about the **Sessions
+> console** (the tabs, the edge-block list, the fragment enforcement) belongs to
+> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md).
 
 > [!IMPORTANT]
-> **Role names changed on 2026-07-27.** The ladder is now
-> `vendor_support > owner > admin > manager > staff > viewer` (six tiers,
-> including a read-only Viewer). The database still holds the previous values
-> and they are translated in code, so `super_admin` in a stored row means
-> **Admin** (level 2) and `admin` in a stored row means **Manager** (level 3).
-> Viewer, which had no previous name, is stored as `viewer` since 2026-10-16.
-> The body of this document was brought in line with the current model on
-> 2026-08-12 (role table, helper-function references, route/enforcement
-> tables, Hidden Accounts visibility, filter tabs). See
-> `architecture/plac-and-audit.md` §1.1-1.2, which remains the authoritative
-> reference and covers the collision this rename creates.
-
-> **TL;DR (non-technical):** How admin users are managed: the six role tiers, how accounts are invited/changed/removed, how higher-privilege accounts are protected, and how active sessions are controlled.
+> **Stored role names differ from the labels.** The ladder is
+> `vendor_support > owner > admin > manager > staff > viewer` (six tiers, including a read-only
+> Viewer). The database still holds the names from before the 2026-07-27 rename and they are
+> translated in code, so `super_admin` in a stored row means **Admin** (level 2) and `admin` in a
+> stored row means **Manager** (level 3). Viewer is stored as `viewer`. The translation table and
+> the collision it avoids: [PERMISSIONS-SYSTEM §4](../architecture/PERMISSIONS-SYSTEM.md).
 
 > **Component:** CF-Admin Role-Based Access Control (RBAC) System
-> **Framework:** Astro 7 + Preact + Cloudflare Workers *(corrected 2026-09-19 — this said Astro 6; the pinned version is 7.3.2)*
+> **Framework:** Astro 7 + Preact + Cloudflare Workers
 > **Auth Provider:** Cloudflare Zero Trust Access (identity) + Supabase authorization whitelist (access control)
-> **Last Updated:** 2026-09-19 (corrections pass — see §12). Previously 2026-08-12 (docs-consistency pass: role table, helper-function references, enforcement/route tables, and Hidden Accounts visibility rewritten to match the 2026-07-27 role rename and the 2026-07-26 removal of DEV/Owner list-hiding — no code changes, documentation only. Previously 2026-07-24 v4.8: CF Access Group sync hardened — root-cause fix for a silent-failure bug in `syncCfAccessGroup`'s response validation, durable per-attempt logging, 5-minute cron self-heal, per-user sync-status pill, Force Re-sync action, and live Group-membership drift detection; see `CF-ACCESS-SYNC.md`. Previously v4.7: PLAC enforcement now applied to all `/api/users/*` routes via `placDenyResponse(actor, '/dashboard/users')`; rate limits added on revoke/unblock/cf-access-audit; `users/access` PLAC-gates the actor before running the existing 5-gate hierarchy)
 
 This document details the exact flow and architecture for managing administrative access within the internal admin portal (`cf-admin`).
 
@@ -57,7 +48,7 @@ The CF-Admin portal enforces a strict separation between **identity** (who you a
 - **No GoTrue:** `auth.admin.createUser()`, `auth.admin.deleteUser()`, `supabase.auth.signInWithOtp()`, and the `admin_sessions` table have been fully removed from all code paths.
 - **CSRF Protection:** All mutation requests are validated via stateless Origin + Referer header checking, applied globally by middleware.
 - **Error Sanitization:** All API error responses return generic messages — no internal stack traces, SQL errors, or schema details leak to the client.
-- **Ghost Protection (3-Layer Force-Kick):** Deactivation, deletion, force-kick and the Sessions page's block action trigger a synchronous security cascade across KV + CF API to prevent privilege persistence via stale sessions. *Corrected 2026-09-19: this said "role mutations trigger" the cascade, which contradicted §3.1 and §8 of this same document. Since `46b8f4d` (2026-09-16) a **role change** instead resets the user's page overrides and writes an `authz-changed` mark — each live session re-reads its role and page map on its next request, and nobody is signed out.*
+- **Ghost Protection (3-Layer Force-Kick):** Deactivation, deletion, force-kick and the Sessions page's block action trigger a synchronous security cascade across KV + CF API to prevent privilege persistence via stale sessions. A **role change** does not: since 2026-09-16 it resets the user's page overrides and writes an `authz-changed` mark, so each live session re-reads its role and page map on its next request, and nobody is signed out (§3.1, §8).
 
 ### Technical Interaction Model (Authorize a New User)
 
@@ -70,7 +61,7 @@ The CF-Admin portal enforces a strict separation between **identity** (who you a
 
 ## 2. Role Hierarchy (6-Tier)
 
-Access levels operate dynamically based on strict numeric permissions (lower number = higher clearance). Defined centrally in the RBAC module (`src/lib/auth/rbac.ts`). Renamed 2026-07-27 from the previous 5-tier `dev > owner > super_admin > admin > staff` ladder — the database still stores the old values and `normalizeRole()`/`toStoredRole()` translate at the boundary; see the disclosure banner at the top of this document and `architecture/plac-and-audit.md` §1.2 for the full translation table and the naming collision it warns about.
+Access levels operate dynamically based on strict numeric permissions (lower number = higher clearance). Defined centrally in the RBAC module (`src/lib/auth/rbac.ts`). Renamed 2026-07-27 from the previous 5-tier `dev > owner > super_admin > admin > staff` ladder — the database still stores the old values and `normalizeRole()`/`toStoredRole()` translate at the boundary; see the banner at the top of this document and [PERMISSIONS-SYSTEM §4](../architecture/PERMISSIONS-SYSTEM.md) for the full translation table and the naming collision it warns about.
 
 | Level | Role | Capabilities |
 |:-----:|:-----|:------------|
@@ -79,7 +70,7 @@ Access levels operate dynamically based on strict numeric permissions (lower num
 | **2** | **Admin** 👑 | Second in command. Full operational control, including platform settings and users at or below their level. |
 | **3** | **Manager** 🛡️ | Runs day-to-day operations — bookings, content, customers, generalized audit logs. No user or platform administration. |
 | **4** | **Staff** 👤 | Works in their own area. Cannot change settings or other people. |
-| **5** | **Viewer** | Read-only. Opens the home page (Overview) and only the pages given to them with a personal setting; no page can have Viewer as its default (`canBePageDefault`). Refused on every mutating request regardless of page grants, except asking for access (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Assignable since 2026-10-16** (permissions #30): stored as `viewer`, which the Supabase role check admits since `supabase/migrations/20261016000000_role_check_add_viewer.sql`. *History, added 2026-09-19:* while `ROLE_VOCABULARY = 'legacy'` (`src/lib/auth/rbac.ts`) the database has no stored value for Viewer, so `toStoredRole` cannot persist it and `manage.ts` refuses it — but `ASSIGNABLE_ROLES` in the invite pill grid still offers it, so an admin can pick a role the server will reject. *Fixed 2026-10-15:* the invite grid and the role menu offer `PICKABLE_ROLES` (`rbac.ts`), the assignable roles the database can store, so Viewer is not offered until it can be. Tracked as C-11 in [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md). |
+| **5** | **Viewer** | Read-only. Opens the home page (Overview) and only the pages given to them with a personal setting; no page can have Viewer as its default (`canBePageDefault`). Refused on every mutating request regardless of page grants, except asking for access (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Can be given since 2026-10-16** (permissions #30): the invite grid and the role dialog offer it (`PICKABLE_ROLES`), and it is stored as `viewer`, which the Supabase role check admits (`supabase/migrations/20261016000000_role_check_add_viewer.sql`). |
 
 ### Color Hierarchy: Thermal Gradient
 
@@ -105,7 +96,8 @@ Permission checks are performed using an integer-based comparison of the `ROLE_L
 | `isReadOnly` | `role === 'viewer'` | Refused on every mutating request regardless of page grants |
 | `canManageUser` | `ROLE_LEVEL[actor] < ROLE_LEVEL[target]` | May `actor` edit/delete/re-role `target`? (Vendor Support exempt) |
 
-> **Deprecated aliases (still live — 70 pre-rename call sites across 50 files, measured 2026-09-19; this said ~200):**
+> **Deprecated aliases (still live; the ratchet counter `E1` in `.ratchet.json` holds the current
+> number of call sites):**
 > `isDev` = `isVendorSupport`, `isOwnerOrDev` = `isOwnerOrVendor`,
 > `isSuperAdmin` = `isAdminOrAbove` (still level 2, now named Admin),
 > `isAdmin` = `isManagerOrAbove` (still level 3, now named Manager). New code
@@ -123,8 +115,8 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 
 | File | Helper(s) Used | Gate Purpose | +PLAC |
 |------|---------------|--------------|:---:|
-| `src/pages/api/users/manage.ts` | `isVendorSupport` | Role mutation, privileged-account edit protection | ✅ `/dashboard/users` |
-| `src/pages/api/users/access-center.ts` (`src/lib/access-center/handlers.ts`) | `isVendorSupport`, `isOwnerOrVendor` (in `page-gates.ts`) | PLAC provisioning, one save for pages and consoles (`/api/users/access` was retired 2026-10-03) | ✅ `/dashboard/users` |
+| `src/pages/api/users/manage.ts` (`src/lib/users/manage-apply.ts`) | `isVendorSupport` and `ROLE_LEVEL` comparisons | Invite, role change, suspend, delete; privileged-account edit protection; the two-person rule (`src/lib/approvals/ask.ts`, §6.3) | ✅ `/dashboard/users`; 10/h RL |
+| `src/pages/api/users/access-center.ts` (`src/lib/access-center/handlers.ts`) | `isVendorSupport`, `isOwnerOrVendor` (in `page-gates.ts`), `canManageUser`, `isReadOnly` (in `src/lib/access-center/`) | The Access Center: one person's access in every system, pages and both consoles in one save ([ACCESS-CENTER](ACCESS-CENTER.md); `/api/users/access` was retired 2026-10-03) | ✅ `/dashboard/users`; a console change also needs that console's page (`/dashboard/vps`, `/dashboard/backup`); 5/min RL shared with access-request decisions and Page Registry's personal settings |
 | `src/pages/api/users/force-kick.ts` | `denyForceKick`, `isOwnerOrVendor`, `canManageUser` | Session termination: below the owner and vendor support, only with a grant of `#force-kick` (*changed 2026-10-15*) and a strict outrank (*changed 2026-10-14*; until then target protection only) | ✅ `/dashboard/users`, **plus an explicit grant of `#force-kick`** |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
@@ -135,37 +127,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/sessions/flush-sessions.ts` | `denySessions` + `isOwnerOrDev` | Bulk session flush — **Owner/Vendor only** | ✅ `/dashboard/sessions`, plus `#flush` |
 | `src/pages/api/sessions/sign-in-alerts.ts` (`src/lib/login-alerts/handlers.ts`) | `denySignInAlerts` | The caller's own sign-in alert settings: pause, trusted areas (added 2026-10-03) | ✅ `/dashboard/sessions`, plus an explicit grant of `#alerts` |
 | `src/pages/api/users/access-data.ts` | `isVendorSupport`, `isOwnerOrVendor` | How much of the portal one person opens: switched-on pages and actions, each answered by the enforced rules (`personOpens`, in `src/lib/access-center/counts.ts`), and their personal settings in force. Ghost-protected. *Since 2026-10-16* it sends only these counts; until then it sent the whole page table and the person's raw settings | ✅ `/dashboard/users` |
-| `src/pages/api/users/access-center.ts` | `canManageUser`, `isOwnerOrVendor`, `isReadOnly` (in `src/lib/access-center/`) | The Access Center: one person's access in every system, and server-console changes ([ACCESS-CENTER](ACCESS-CENTER.md), added 2026-10-02) | ✅ `/dashboard/users`; changes also need `/dashboard/vps`; 5/min RL shared with `access.ts` |
 | `src/pages/api/users/[id]/session-status.ts` | `requireAuth()` + PLAC; `isOwnerOrVendor` gates only the ghost-target sub-case | Session telemetry + per-session revocation (ghost-protected) | ✅ `/dashboard/sessions` |
-
-> *Corrected 2026-09-19.* The three `src/pages/api/sessions/` rows said "(admin+)"
-> with PLAC on **`/dashboard/users`**, and `session-status.ts` was described as
-> having an "effective gate" of `/dashboard/users` reached through a deactivated
-> page key. Both changed on 2026-09-16 (gaps **D-3** and **D-4** in
-> [`../MAINTENANCE.md`](../MAINTENANCE.md)): every one of them now gates on
-> `/dashboard/sessions`, the mutating routes additionally check their action
-> fragment through `src/lib/auth/surface-guards.ts`, and `flush-sessions` is
-> Owner/Vendor only rather than admin+. The Sessions console is documented in
-> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md), which owns these rows.
-
-> **Spec gap D6 — `#force-kick` was enforced nowhere. Closed 2026-10-15.** *Changed 2026-10-14:
-> the rank half of this gap is closed. The route now refuses a caller who does not strictly
-> outrank the target (`canManageUser`), so an Admin can sign out a Manager or Staff account and
-> never another Admin; `test/session-rank.test.ts`. Changed 2026-10-15, the owner's decision:
-> the key is enforced too. The route and the Users page ask `denyForceKick`
-> (`src/lib/auth/surface-guards.ts`), which checks the page and then requires a grant of
-> `/dashboard/users#force-kick` (default Owner). Below the owner and vendor support nobody signs
-> anyone out without that grant, and the Users page switches "Sign out everywhere" ("Terminate
-> All" until 2026-10-16) off with its reason. Suspending an account still ends its sessions and follows the page and the rank rule,
-> not this key. The text below is the state before both changes.* The `admin_pages` row
-> `/dashboard/users#force-kick` exists live with an Owner baseline, and the access
-> UI offers it, but a grep of `src/` finds no reference to the string. What the
-> route actually enforces is `/dashboard/users` plus a *target* check: a canonical
-> **Admin** with page access can force-kick any manager or staff account, and
-> `isOwnerOrVendor` only protects owner and vendor_support targets from them.
-> Every kick also writes a 24-hour `revoked:` sign-in block — see §5.4. Open; see
-> `documentation/specs/2026-09-16-access-revocation-remediation-design.md`.
-> *Added 2026-09-19.*
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/logs.ts` | role-or-grant | The activity log (read only: its `DELETE` was removed on 2026-10-16) | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/seals.ts` | `isOwnerOrVendor` | The daily seals, checked (2026-10-16, [plac-and-audit](../architecture/plac-and-audit.md) §3.6) | ✅ `/dashboard/logs` |
@@ -173,15 +135,31 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/audit/stats.ts` | (admin+ for stats; owner+ for the `#security` tab, via `ROLE_LEVEL`) | Audit summary stats | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/login-logs.ts` | role-or-grant | Login forensics (PII) | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
 | `src/pages/api/audit/export.ts` | role-or-grant | CSV export | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
-| `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` (deprecated aliases) | Feature flag computation | (page-level — uses middleware PLAC) |
-| `src/pages/dashboard/users/[id]/access.astro` | `isVendorSupport`, `isOwnerOrVendor` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
+| `src/pages/dashboard/logs/index.astro` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`), `isOwnerOrVendor`, `isAdminOrAbove` | Feature flag computation (export, delete, the security tab, the seals, the AI tab) | (page-level — uses middleware PLAC) |
+| `src/pages/dashboard/users/[id]/access.astro` | `isVendorSupport`, `isOwnerOrVendor`, `canManageUser` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
+
+> **The Sessions rows.** The three `src/pages/api/sessions/` rows and `session-status.ts` gate
+> on `/dashboard/sessions` since 2026-09-16 (gaps **D-3** and **D-4** in
+> `../MAINTENANCE.md` (private)), and the mutating routes also check their action
+> fragment through `src/lib/auth/surface-guards.ts`. The Sessions console is documented in
+> [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md), which owns these rows.
+
+> **Signing someone out (`#force-kick`).** Since 2026-10-15 (spec gap D6, closed) the route and
+> the Users page ask `denyForceKick` (`src/lib/auth/surface-guards.ts`): the page, then a grant
+> of `/dashboard/users#force-kick` (default Owner). Below the Owner and Vendor support nobody
+> signs anyone out without that grant, and then only someone they strictly outrank
+> (`canManageUser`, since 2026-10-14), so an Admin can sign out a Manager or Staff account and
+> never another Admin; `test/session-rank.test.ts`. Without the grant the Users page switches
+> **Sign out everywhere** off with its reason. Suspending an account still ends its sessions and
+> follows the page and the rank rule, not this key. Every kick also writes a 24-hour `revoked:`
+> sign-in block (§5.4).
 
 > [!NOTE]
-> **Client-side Preact components** (e.g., `DangerZone.tsx`, and on Users `people.ts`, which `UsersConsole.tsx` and `PersonDrawer.tsx` read) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (which controls show switched off, and why; the filters). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
+> **Client-side Preact components** (on Users, `people.ts`, which `UsersConsole.tsx` and `PersonDrawer.tsx` read) use `ROLE_LEVEL` from the shared `types.ts` for UI-only display hints (which controls show switched off, and why; the filters). These are **not** security boundaries — all actual enforcement happens server-side in the routes above.
 
 ### 3.1 Session Revocation Workflow (3-Layer Ghost Sweep)
 
-**Changed 2026-09-16.** A role change no longer triggers this cascade, and neither does granting, revoking or resetting a page or approving an access request. Those write an `authz-changed:{userId}` mark; each of the user's live sessions re-reads its role and page map on its next request and nobody is signed out ([`../specs/2026-09-16-access-revocation-remediation-design.md`](../specs/2026-09-16-access-revocation-remediation-design.md), D1). The cascade below still runs for deactivation, deletion, force-kick and the Sessions page's block action; stage 2 of that remediation retires Layer 2.
+**Changed 2026-09-16.** A role change no longer triggers this cascade, and neither does granting, revoking or resetting a page or approving an access request. Those write an `authz-changed:{userId}` mark; each of the user's live sessions re-reads its role and page map on its next request and nobody is signed out (`../specs/2026-09-16-access-revocation-remediation-design.md` (private), D1). The cascade below still runs for deactivation, deletion, force-kick and the Sessions page's block action; stage 2 of that remediation retires Layer 2.
 
 When an account is deactivated, deleted or force-kicked, the system triggers a **3-Layer Security Cascade** to prevent stale sessions from retaining access at any layer:
 
@@ -230,7 +208,7 @@ When an authorized admin adds a new member from the dashboard:
 5. **Whitelist Insertion:** `INSERT INTO admin_authorized_users (email, display_name, role, is_active, is_hidden)` via Supabase admin client. Returns the new UUID (`id`) via `.select('id').single()`.
 6. **Page Override Batch Write:** If the admin customised page access during creation, D1 overrides are batch-inserted (`INSERT OR REPLACE INTO admin_page_overrides`) using the new user's Supabase UUID. Batch is capped at 50 overrides.
 7. **Audit Log:** Mutation is logged via Ghost Audit Engine (`waitUntil`).
-8. **CF Access whitelist (Automated):** The CF Access Group ("Admin Portal Authorized Users") is automatically synchronized with the Supabase whitelist via a background task (`cf-access-sync.ts`) hooked into the Worker API. No manual intervention is needed in the Cloudflare dashboard.
+8. **CF Access whitelist (Automated):** Before it answers, the route pushes the whole whitelist to the CF Access Group ("Admin Portal Authorized Users", `syncCfAccessGroup` in `src/lib/auth/cf-access-sync.ts`) and records the outcome ([CF-ACCESS-SYNC](CF-ACCESS-SYNC.md)). No manual intervention is needed in the Cloudflare dashboard. When the push fails, the person is still added, the answer carries a warning, the hourly Access list sync job tries again (§11.1), and the invitation email below is **not** sent: send it from the person's drawer with **Send the invitation again**.
 
 > **Non-fatal override writes:** If the batch override write fails, user creation still succeeds. The admin can set page permissions manually via the Page Access Manager after creation.
 > **No GoTrue:** There is no call to `auth.admin.createUser()`.
@@ -244,20 +222,15 @@ on a wide screen and stack on a phone, and only the dialog's body scrolls.
 
 **Left panel — Identity:**
 
-- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the pickable roles (five since 2026-10-16, Viewer included; four from 2026-10-15, while Viewer could not be stored), with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
-- **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors.
+- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the five pickable roles (`PICKABLE_ROLES`: Owner, Admin, Manager, Staff and, since 2026-10-16, Viewer), with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too); Vendor Support may pick any of them.
+- **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors. The server honours it only for Vendor Support (`manage.ts`, §4): an Owner who switches it on invites an ordinary, visible account.
 - Email + Display Name inputs. Grant Access and Cancel sit in the dialog's footer, under both panels (2026-10-10).
 
 **Right panel — Page Access:**
 
-- **Page Chip Grid**: Live page list fetched lazily on first modal open. Grouped by section (MAIN / CONTENT / TOOLS / MANAGEMENT). Error state with retry button displayed if fetch fails.
-- Chips have four states:
-  - `default_on` (●) — role naturally has access, no override written
-  - `default_off` (○) — role has no natural access, no override written
-  - `force_grant` (+) — click to grant above role baseline (override written)
-  - `force_deny` (✕) — click to deny despite role baseline (override written)
-- Click once to force-override; click again to revert to role default.
-- Override count badge shown when customisations are active.
+- **Access Policy** (`invite/PageAccessMatrix.tsx` on the shared `AccessPolicyGrid.tsx`): the live page list (`GET /api/users/pages`), fetched lazily on first modal open, with an error state and **Retry** if the fetch fails. One switch per page, grouped by registry category as the sidebar groups them, each page's `#` features under it; each row says **Active** or **Restricted** for the chosen role.
+- A switch starts at the role's answer. Flipping it writes a personal setting the other way (a grant above the role, or a close the role would open), marked **Override**; flipping it back removes the setting.
+- The header counts the pages that open and, when there are any, the overrides.
 - *Since 2026-10-16* the server checks each setting with the gates a later change on the
   person's Access page meets: you hold the page, you may give it, and a grant clears the page's
   floor for the new role (`inviteSettingRefusals` in `src/lib/access-center/page-gates.ts`). One
@@ -273,7 +246,7 @@ Access is managed via the active flag in the authorization table. When set to tr
 
 If a user needs immediate revocation:
 
-1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false`. The 3-layer force-kick fires on the PATCH itself, and the PATCH writes an `authz-changed` mark, so any session the kick misses re-verifies on its next request and ends with `account_inactive`. The re-check writes no sign-in block.
+1. **Soft Lock:** PATCH `/api/users/manage` with `is_active: false` (**Suspend account** in the person's drawer; it needs a recent sign-in, §9.2, and suspending the last active Owner waits for a second person, §6.3). The 3-layer force-kick fires on the PATCH itself, and the PATCH writes an `authz-changed` mark, so any session the kick misses re-verifies on its next request and ends with `account_inactive`. The re-check writes no sign-in block.
 2. **Hard Lock (Force Logout via `/api/users/force-kick`):** Triggers `forceLogoutUser()` directly — all 3 layers (KV revocation flag + KV session delete + CF API org-wide revoke). User is ejected within seconds.
 
    > ### How to get someone back in after a kick
@@ -298,8 +271,16 @@ If a user needs immediate revocation:
    > So: if a user reports being locked out after any administrative action, open
    > the Active Edge Blocks **tab** before concluding there is no block. Stage 2 of
    > the access-revocation remediation retires this flag; it has not shipped.
-3. **Full Delete:** *Since 2026-10-16* it waits for a second person first, and nothing below runs until one approves (§6.3); suspend the person to cut off their access meanwhile. Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, removes the person's server- and backup-console grants from `vps:access` and `backup:access` (`src/lib/dal/VpsAccessRepository.ts`; the backup grant since 2026-10-15, before which an address invited again got its old backup powers back), blocks every email API token the person made (*since 2026-10-16*, permissions item #39: cf-email-consumer `POST /admin/tokens/block-by-creator`, asked as the person removing them with their own Email API permissions; an app that should keep its token is unblocked on Email API → Tokens, and a refusal is a warning on the answer, never a stop: [`EMAIL-API-ACCESS.md`](EMAIL-API-ACCESS.md)), then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
-4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
+3. **Full Delete:** *Since 2026-10-16* it needs a recent sign-in (§9.2) and waits for a second person, and nothing below runs until one approves ([PERMISSIONS-SYSTEM §10.7](../architecture/PERMISSIONS-SYSTEM.md), §6.3); suspend the person to cut off their access meanwhile. Then `applyUserDelete` (`src/lib/users/manage-apply.ts`, the same code for a delete made at once and one approved later) removes:
+   - their sessions: the 3-layer force-kick (§3.1);
+   - their personal page settings: `resetUserOverrides(env.DB, id)` clears their D1 PLAC rows;
+   - their Server and Backups console powers: their entries in `vps:access` and `backup:access` (`src/lib/dal/VpsAccessRepository.ts`), so an address invited again starts from its role (the backup entry since 2026-10-15; until then an address invited again got its old backup powers back);
+   - the Email API tokens they made, which are blocked (*since 2026-10-16*, permissions item #39: cf-email-consumer `POST /admin/tokens/block-by-creator`, asked as the person removing them with their own Email API permissions; an app that should keep its token is unblocked on Email API → Tokens; [`EMAIL-API-ACCESS.md`](EMAIL-API-ACCESS.md));
+   - their settings row (D1 `admin_user_settings`) and their sign-in alert settings, which can hold an approximate location;
+   - their whitelist entry: `DELETE FROM admin_authorized_users WHERE email = ?`. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
+
+   Then the activity-log row, the access-change email (§6.1) and the Cloudflare Access sync. A sync that fails, or tokens that could not be blocked, are a warning on the answer, never a stop: the person is removed either way, and the warning says what to do.
+4. **CF Access policy (manual):** The delete's own sync takes the person out of the Access group (§11.1). If the CF Zero Trust application policy also names them in any other way (an email rule, another group), remove that in the Cloudflare Dashboard too, so CF Access never authenticates them again.
 
 ### 5.5 Accounts nobody uses
 
@@ -320,8 +301,10 @@ through it.
 - **At 90 days** the account is suspended at the next daily check (14:00 UTC, 08:00 in
   Aguascalientes), exactly as a suspension on Users: `is_active` off, the three-layer force-kick
   (§3.1), the permission mark, and one activity-log row "Suspended automatically: not used for
-  N days" by `system`. The Cloudflare Access group follows on the next five-minute reconcile
-  (§11). The email that day names it as suspended. Restore it on Users as any suspended person
+  N days" by `system`. Unlike a suspension on Users, it does not push the Cloudflare Access
+  group itself: the group follows on the next run of the hourly Access list sync job (§11.1),
+  which sees the list of active emails change; until then the portal refuses the person on its
+  own. The email that day names it as suspended. Restore it on Users as any suspended person
   (§5.3).
 - **Never suspended automatically:** the Owner, Vendor support, and an account whose stored role
   cannot be read. They are still flagged and emailed.
@@ -346,10 +329,10 @@ The interface is composed of multiple Preact islands:
 | **Waiting for a second person** | `src/components/admin/users/SecondPersonPanel.tsx` | The changes waiting for a second person (§6.3), with Approve and Decline, or Cancel for your own; hidden when nothing waits |
 | **Users rules** | `src/components/admin/users/people.ts` | Pure: the filters and counts, why a control is switched off (in the routes' words), the roles to offer. `test/users-console.test.ts` |
 | **Page Access Manager** | `src/components/admin/users/access-editor/UserAccessEditor.tsx` | A person's Access page (`/dashboard/users/[id]/access`): their pages, actions and console powers ([ACCESS-CENTER](ACCESS-CENTER.md)) |
-| **Invite User Modal** | | Two-panel "Command Console" Preact island |
+| **Invite User Modal** | `src/components/admin/users/InviteUserModal.tsx` | Two-panel "Command Console" Preact island (§5.2) |
 | **Role Pill Selector** | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: two-column role pill grid with RBAC-gated availability |
-| **Hidden Account Toggle** | | Atomic: ghost-mode toggle (Vendor Support/Owner only) |
-| **Page Chip Grid** | | Atomic: interactive chip grid grouped by section, 4 chip states |
+| **Hidden Account Toggle** | `src/components/admin/users/invite/HiddenAccountToggle.tsx` | Atomic: ghost-mode toggle (shown to Vendor Support and the Owner; honoured for Vendor Support only) |
+| **Access Policy** | `src/components/admin/users/invite/PageAccessMatrix.tsx` | The invitation's page switches, grouped by category, on `src/components/admin/users/shared/AccessPolicyGrid.tsx` |
 | **Session drawer** | `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | One person's sessions on the shared Dialog's drawer (2026-10-10): device, place, sign-in method, times, when each ends by itself, address and Ray ID, and **End session** for every session but the one you are using. It reads session handles, never session IDs ([SESSION-MANAGEMENT.md](SESSION-MANAGEMENT.md)) |
 
 ### Event Bus (Cross-Island Communication)
@@ -379,7 +362,7 @@ The list is sorted active first, then by role from the top of the ladder, then b
 ### 6.1 Access requests
 
 *Rebuilt 2026-10-15 (permissions items #2, #3, #6, #19 and #22; open item D11 in the
-[access-revocation design](../specs/2026-09-16-access-revocation-remediation-design.md)).*
+access-revocation design (private)).*
 
 **Asking.** Someone who reaches a page they cannot open sees the Access denied card
 (`src/components/ui/AccessDeniedView.astro`) with **Request access**
@@ -399,14 +382,19 @@ when none was. A second request for the same page while one waits is refused, an
 send at most 5 requests an hour. Once decided, the card shows the decision, the note, and the
 end date.
 
-**Deciding.** The **Access requests** panel at the top of this page
-(`src/components/admin/users/AccessRequestsPanel.tsx`) lists what waits, with the reason and the
-length asked for, and the decisions of the last 14 days underneath. The Owner and Vendor support
-decide every request. Anyone else with this page decides the requests from the roles below
-theirs, and approves only pages they may give; a card they may not approve says why and still
-lets them decline. **Approve** opens a pop-up with how long the access lasts (the length asked
-for, else 30 days; 2 hours, 1 day, 1 week, 30 days, 90 days, or no end) and a note. **Decline**
-opens one with a note. The person gets an email either way and reads the note on their card.
+**Deciding.** The **Access requests** panel sits below the list of people, under **Waiting for a
+second person** (§6.3), and hides itself when nothing waits
+(`src/components/admin/users/AccessRequestsPanel.tsx`). It lists what waits, with the reason and
+the length asked for, and the decisions of the last 14 days underneath. The Owner and Vendor
+support decide every request. Anyone else with this page decides the requests from the roles
+below theirs, and approves only pages they may give; a card they may not approve says why and
+still lets them decline. **Approve** opens a pop-up with how long the access lasts (the length
+asked for, else 30 days; 2 hours, 1 day, 1 week, 30 days, 90 days, or no end) and a note.
+**Decline** opens one with a note. The person gets an email either way and reads the note on
+their card. Approving a request for an Owner-level page (one whose default role is Owner or
+Vendor support) needs a sign-in from the last 10 minutes when it writes a new grant
+([PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)). Decisions share the Access
+Center's limit of 5 access changes a minute.
 
 **What an approval writes.** A personal page switch in `admin_page_overrides` with the end date
 picked, and the decision, in one D1 batch, both only if the request is still waiting, so two
@@ -450,12 +438,15 @@ a page can still ask for it; until 2026-10-15 they were mapped to Inquiries. The
 Tests: `test/access-requests.test.ts`, and for console permissions
 `test/access-console-requests.test.ts`.
 
-**Access changes are emailed** (2026-10-15, item #18). Adding, suspending, restoring or
-deleting someone and changing a role on this page, and approving a request for an Owner-level
-page, email the sign-in alert list after the save: one email per save, or one summary a day, or
-none, as the alert policy says. Which changes count, and the summary:
-[PERMISSIONS-SYSTEM §10.4](../architecture/PERMISSIONS-SYSTEM.md). Tests:
-`test/access-changes.test.ts`.
+**Access changes are emailed** (2026-10-15, item #18). On this page: adding someone, changing a
+role, suspending, restoring or deleting someone (`src/lib/users/manage-apply.ts`, also when a
+second person approves the change), approving a request for an Owner-level page, and approving
+a console permission request. A name change, a declined request and an approved request for
+any other page are not emailed (the activity log has each). Each
+emails the sign-in alert list after the save: one email per save, or one summary a day, or none,
+as the alert policy says (`src/lib/access-changes/notify.ts`). Every change that counts, across
+the portal, and the summary: [PERMISSIONS-SYSTEM §10.4](../architecture/PERMISSIONS-SYSTEM.md).
+Tests: `test/access-changes.test.ts`.
 
 ### 6.2 Quarterly access review
 
@@ -508,15 +499,16 @@ Tests: `test/access-review.test.ts`.
 ### 6.3 Changes that need a second person
 
 *Added 2026-10-16 (permissions item #36).* Four changes wait for a second person instead of
-happening at once. The rule, its reasons and its limits:
-[PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.7 and the
-[design](../specs/2026-10-16-two-person-rule.md).
+happening at once, among them making someone Owner or Vendor support and removing a person. The
+rule, its reasons and its limits are owned by
+[PERMISSIONS-SYSTEM §10.7](../architecture/PERMISSIONS-SYSTEM.md); the decisions behind it are
+in the [design](../specs/2026-10-16-two-person-rule.md). This section is the screen.
 
 | The change | Where it is asked |
 |---|---|
 | Making someone Owner or Vendor support | the person's drawer, **Change role** |
 | Removing a person | the person's drawer, **Remove account** |
-| Removing the last active Owner (a role change or a suspension) | the Owner's drawer |
+| Removing the last active Owner (a role change or a suspension) | the Owner's drawer; or **Lock out** on Security → Sessions, which is a suspension too ([SESSION-MANAGEMENT](SESSION-MANAGEMENT.md)) |
 | Changing how long the server keeps a log | Server → Log storage (the portal's gateway holds it, [VPS-CONSOLE](VPS-CONSOLE.md) §2) |
 
 - **Asking.** The usual checks run first, the recent sign-in included (§9.2). Then the route
@@ -524,7 +516,9 @@ happening at once. The rule, its reasons and its limits:
   the message as a notice: why it waits, until when, and that nothing has changed. A removal's
   message adds that suspending cuts off access now. Asking again for the same change returns the
   one already waiting. A request that changes something else too (a name with a role) is refused
-  with 400: make the listed change on its own.
+  with 400: make the listed change on its own. At most 20 changes wait at once across the portal
+  (`MAX_WAITING`, `src/lib/approvals/rules.ts`); a 21st is refused with 409 until one is decided
+  or cancelled.
 - **Who is told.** Every active Owner and Vendor support but the asker is emailed **Needs a
   second person**, with a link to `/dashboard/users#second-person`.
 - **The panel.** **Waiting for a second person** sits above Access requests. The Owner and
@@ -544,7 +538,7 @@ happening at once. The rule, its reasons and its limits:
 | Route | Who | What |
 |---|---|---|
 | `GET /api/users/approvals` | anyone with this page | the waiting changes: all of them for the Owner and Vendor support, your own for anyone else |
-| `POST /api/users/approvals` | the Owner and Vendor support who did not ask; the asker, to cancel | `{ id, decision: 'approve' \| 'decline' \| 'cancel', note? }`; 404 when it no longer waits, 409 when someone decided it first or a check failed |
+| `POST /api/users/approvals` | the Owner and Vendor support who did not ask; the asker, to cancel | `{ id, decision: 'approve' \| 'decline' \| 'cancel', note? }`; 404 when it no longer waits, 409 when someone decided it first or a check failed, 429 past 10 decisions a minute |
 
 Every step writes one activity-log row, action `second_person`, beside the change's own row.
 Tests: `test/two-person-rule.test.ts`.
@@ -572,9 +566,9 @@ For detailed PLAC documentation, see the dedicated [PLAC-AND-AUDIT.md](../archit
 
 **Key integration with User Management:**
 
-- The Page Access Manager renders a toggle grid showing all pages and their access state for a target user.
-- Changes save immediately via optimistic UI with toast confirmation.
-- Pages the actor cannot modify are shown locked (grayed out with lock icon).
+- A person's Access page (the Access Center, [ACCESS-CENTER](ACCESS-CENTER.md)) lists every page, page action and console permission with this person's state and why.
+- Switches change a draft; the changes are reviewed and saved together in one `POST /api/users/access-center`.
+- A switch the viewer may not use is disabled, with the reason.
 - **Role Mutation Pipeline (Ghost Protection Invalidation):** Changing a user's role is a high-risk event. Any role update triggers a synchronous security cascade:
   1. `resetUserOverrides`: Purges all historical custom page overrides, returning the user to a clean RBAC state.
   2. `markAuthzChanged` (`src/lib/auth/authz-signal.ts`): each live session re-reads role and page map on its next request. Until 2026-09-16 this step was `forceLogoutUser`, whose 24-hour sign-in block locked the changed user out of the portal.
@@ -665,31 +659,29 @@ Supabase-outage case.*
 
 ### 11.1 Architecture Overview (Automated Access Group Model)
 
-> **See [`CF-ACCESS-SYNC.md`](CF-ACCESS-SYNC.md) for the full architecture,**
-> **a 2026-07-24 root-cause fix (a silent-failure bug in the sync's response**
-> **validation), and the durability/visibility hardening now in place**
-> **(sync-attempt logging, 5-minute cron self-heal, per-user status pill,**
-> **Force Re-sync, live Group-membership drift detection). This section is a**
-> **summary only — that document is the source of truth going forward.**
+> **[`CF-ACCESS-SYNC.md`](CF-ACCESS-SYNC.md) is the source of truth** for this system: the
+> architecture, the 2026-07-24 root-cause fix (a silent-failure bug in the sync's response
+> validation), the sync-attempt log, the hourly reconcile, the per-person state on Users,
+> **Re-send to Cloudflare**, and live Group-membership drift detection. This section is a
+> summary only.
 
-The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker API synchronizes the Supabase `admin_authorized_users` whitelist with a Cloudflare Access Group named "Admin Portal Authorized Users" on every user create/update/delete, **and on a cron reconciliation pass** (every 5 minutes until 2026-10-04, hourly since through a Cron Control throttle; not purely event-driven — see `CF-ACCESS-SYNC.md`). This means unauthorized emails are intended to be blocked at the Cloudflare edge *before* they reach the Worker middleware — **contingent on the CF Access Application's Policy actually including this Group**, which is dashboard-side configuration this codebase cannot verify automatically (see `CF-ACCESS-SYNC.md`'s "Known limitation").
+The admin portal integrates **CF Zero Trust with an automated Access Group**. The Worker pushes the whole Supabase `admin_authorized_users` whitelist to a Cloudflare Access Group named "Admin Portal Authorized Users" whenever someone is invited, changed or removed on Users (`manage.ts`, and `src/lib/users/manage-apply.ts` for changes, including those a second person approves) and when someone is locked out on Sessions, **and on a reconciliation pass** that runs hourly (the `cf-access-reconcile` job: it rides the five-minute trigger, and its Cron Control interval has been 60 minutes since 2026-10-04). The daily suspension of accounts nobody uses (§5.5) does not push the group itself; that pass catches it. This means unauthorized emails are intended to be blocked at the Cloudflare edge *before* they reach the Worker middleware — **contingent on the CF Access Application's Policy actually including this Group**, which is dashboard-side configuration this codebase cannot verify automatically (see `CF-ACCESS-SYNC.md`'s "Known limitation").
 
-```
-Admin Portal Add/Update/Delete User 
-  → Worker API (`manage.ts`) + `syncCfAccessGroup`
+```text
+Invite / change / remove on Users, Lock out on Sessions
+  → syncCfAccessGroup (manage.ts, manage-apply.ts, active-sessions.ts)
   → CF Access Group ("Admin Portal Authorized Users") is updated
-  → outcome logged to D1 `cf_access_sync_log` + swept to `cf_sync_status` on every active user
+  → outcome logged to D1 cf_access_sync_log + swept to cf_sync_status on every active user
+    (Users only; the Sessions lock-out records no outcome)
 
-Self-heal: `reconcileCfAccessGroup()` is evaluated on every 5-minute tick, but
-since chunk 8 it is hash-or-age gated — it only calls Cloudflare when the active
-whitelist's hash has changed, or the last successful sync is older than the
-max-staleness window (`cf-access-reconcile-max-staleness-hours`, default 24 h).
-*Corrected 2026-09-19: this said it "unconditionally re-runs the sync regardless
-of whether the last inline attempt succeeded".* Out-of-band drift is still
-self-healed, just within a day rather than within five minutes.
+Self-heal: reconcileCfAccessGroup(), hourly. It is hash-or-age gated: it calls
+Cloudflare only when the active whitelist's hash differs from the one stored at
+its last successful push, or that push is older than the max-staleness window
+(cf-access-reconcile-max-staleness-hours, default 24 h). A failed inline push is
+caught within the hour; out-of-band drift in the Cloudflare dashboard within a day.
 
 Login Flow:
-CF Access → (checks Access Group, if the Policy is wired to it) 
+CF Access → (checks Access Group, if the Policy is wired to it)
   → user NOT in group → BLOCKED AT EDGE (Worker never sees it) ❌
   → user IN group → Authenticated by CF → Worker middleware
   → checks Supabase admin_authorized_users AND is_active = true → KV session created ✅
@@ -715,7 +707,7 @@ Each `admin_authorized_users` row has a `cf_sub_id` column — the CF Access int
 | `GET /api/users/[id]/login-history` | owner+ | Last 15 login events from `admin_login_logs` with CF ZT metadata. Since 2026-10-16 each open writes one `view` row (module `users`, target the person), through `recordView` (`src/lib/audit-views.ts`; permissions item #20) |
 | `GET /api/users/probes` | owner+ | Unauthorized access attempts (is_authorized_email = 0), grouped by email |
 | `GET /api/users/cf-access-audit` | owner+ | Live cross-reference: CF Access users list vs Supabase whitelist, plus `groupMembershipDrift` (live Access Group membership vs whitelist — see `CF-ACCESS-SYNC.md`) |
-| `POST /api/users/cf-resync` | owner+ | Force an immediate whitelist → CF Access Group resync (see `CF-ACCESS-SYNC.md`) |
+| `POST /api/users/cf-resync` | owner+; 10/h RL | **Re-send to Cloudflare** in the Users header: an immediate whitelist → CF Access Group push, past the reconcile's gate (see `CF-ACCESS-SYNC.md`) |
 
 ### 11.4 Recent sign-ins (the person drawer)
 
@@ -785,7 +777,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 | `cf_sub_id` UUID | Server-only | Used for CF API revocation — leaking enables targeted session enumeration |
 | Session IDs | Server-only | KV key names never returned to client. *Corrected 2026-10-10: until then `active-sessions` and `session-status` did return each session's ID, which is its cookie; both now send a one-way handle (`sessionRef`, [SESSION-MANAGEMENT.md](SESSION-MANAGEMENT.md)).* **Note:** session *metadata* (IP, User-Agent, geolocation, Ray ID, lastActiveAt) is returned via the `session-status` API to any actor with **`/dashboard/sessions`** PLAC access (ghost-protected targets require Owner+ — see §2.1) — only the session ID itself remains server-only. |
 | Full IP addresses — **login history** | Vendor Support actor only | `GET /api/users/[id]/login-history` masks to `X.X.***.***` server-side for everyone below Vendor Support. |
-| Full IP addresses — **live sessions** | **Any canonical Admin** | *Corrected 2026-09-19: the single row here said "Vendor Support actor only", which is true of login history and false of live sessions.* `GET /api/sessions/active-sessions` and `GET /api/users/[id]/session-status` return the unmasked `ipAddress` of every session to anyone holding `/dashboard/sessions`. The masking those screens show is applied in the browser (`maskIp`), so it is a display convention, not an access boundary. See [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md); logged in [`../MAINTENANCE.md`](../MAINTENANCE.md). |
+| Full IP addresses — **live sessions** | **Any canonical Admin** | *Corrected 2026-09-19: the single row here said "Vendor Support actor only", which is true of login history and false of live sessions.* `GET /api/sessions/active-sessions` and `GET /api/users/[id]/session-status` return the unmasked `ipAddress` of every session to anyone holding `/dashboard/sessions`. The masking those screens show is applied in the browser (`maskIp`), so it is a display convention, not an access boundary. See [`SESSION-MANAGEMENT.md`](SESSION-MANAGEMENT.md); logged in `../MAINTENANCE.md` (private). |
 | `cf_ray_id` | Owner+ via Login Intelligence | Non-sensitive; useful for CF dashboard cross-reference |
 | Probe emails | Owner+ only | Reveals who is probing the system |
 | CF audit cross-reference | Owner+ only | Reveals CF Access org-level user list |
@@ -794,6 +786,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Accuracy and GitHub pass (`claude`).** §2.1's table rebuilt so every row renders (its two notes moved below it, the duplicate Access Center row merged, `manage.ts`, `logs/index.astro` and `access.astro` helper names corrected against `src/lib/auth/rbac.ts` and each file); §2's Viewer row cut to what is true now; the top banners trimmed; §5.1's sync step (pushed before the answer, and a failed push skips the invitation email) against `manage.ts`; §5.2's hidden toggle and right panel against `InviteUserModal.tsx`, `HiddenAccountToggle.tsx`, `PageAccessMatrix.tsx` and `AccessPolicyGrid.tsx`; §5.4's delete against `applyUserDelete` and `blockEmailTokens` in `src/lib/users/manage-apply.ts`; §5.5's Access group (no inline push) against `src/workers/scheduled-unused-accounts.ts`; §6.1's panel place, Owner-level approval sign-in and emailed actions against `src/pages/dashboard/users/index.astro`, `src/lib/access-requests/handlers.ts` and `src/lib/access-changes/notify.ts`; §6.3's Lock out, `MAX_WAITING` and decision limit against `src/lib/approvals/` and `active-sessions.ts`; §8's editor; §11.1 and §11.3 against `cf-access-reconcile.ts`, `cf-resync.ts`, `UsersConsole.tsx` and the live `cron-control` row (D1 connector: `cf-access-reconcile` on, 60 minutes) | No test run (shared checkout); §3, §4, §7, §9 to §10 and §11.4 to §11.8 not re-derived; the screens in a phone browser |
 | 2026-10-16 | **Scope-limited to §5.4's delete step (email API tokens blocked, permissions item #39).** `src/lib/users/manage-apply.ts` (`applyUserDelete`, `blockEmailTokens`, `syncWarning`), `src/lib/email-console.ts` (`blockTokensByCreator`) and cf-email-consumer's `api/src/console.ts` (`tokens.block_by_creator`); `test/two-person-rule.test.ts` passes | The live email service; every other section |
 | 2026-10-16 | **Scope-limited to the second person (permissions item #36):** §5.4's delete step, §6's panel and event rows, §6.3, new, and the sentences in §9.1 and §9.2, against `src/pages/api/users/manage.ts`, `src/pages/api/users/approvals.ts`, `src/lib/approvals/` (`ask.ts`, `handlers.ts`, `mail.ts`, `rules.ts`), `SecondPersonPanel.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx` and `src/pages/dashboard/users/index.astro`; `test/two-person-rule.test.ts` (22 tests) passes | The panel in a phone browser (the owner's test); every other section |
 | 2026-10-16 | **Scope-limited to Viewer (permissions item #30): the role-names callout, §2's Viewer row and §6's pill grid.** `src/lib/auth/rbac.ts` (`LEGACY_TO_CANONICAL`, `CANONICAL_TO_LEGACY`, `canBePageDefault`, `PICKABLE_ROLES`), `stages/decide.ts` (the read-only rule and its one exception), `plac.ts` (the home page); `test/rbac-roles.test.ts`, `test/plac.test.ts`, `test/pipeline-decision.test.ts`, `test/users-console.test.ts` pass. Live: the Supabase role check after `20261016000000_role_check_add_viewer` (read back through the Supabase connector) | Giving someone Viewer in a phone browser (the owner's test) |

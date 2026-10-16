@@ -173,4 +173,4 @@ and somebody has to actually run them.
 - [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §7 — the command reference this runbook expands
 - [`disaster-recovery.md`](disaster-recovery.md) — when a release is not the problem
 - [`../reference/schema-change-ledger.md`](../reference/schema-change-ledger.md) — the third artifact of every schema change
-- [`../program/ROADMAP.md`](../program/ROADMAP.md) — chunk 5 (drift check blocking since 2026-09-15) and chunk 6 (backups)
+- `../program/ROADMAP.md` (private) — chunk 5 (drift check blocking since 2026-09-15) and chunk 6 (backups)

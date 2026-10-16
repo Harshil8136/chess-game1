@@ -28,7 +28,7 @@ Every role may open it (stored role `staff` since migration `0069`).
 
 **How it looks** (rebuilt the same day on the console kit, `src/styles/components/console.css`,
 in violet, with the page's own rules in `src/styles/pages/settings.css`; the story is in the
-[change record](../records/reports/2026-10-10-sessions-settings-github-and-pop-ups.md)). A
+change record (private)). A
 header with the page's name and description from the page registry, then up to three tiles,
 each a link to the section it counts: **Pages you can open**, **Extra actions** and, with
 `#others`, **People you can rename**. Every number comes from what the page already read

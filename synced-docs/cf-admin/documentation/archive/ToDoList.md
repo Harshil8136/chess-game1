@@ -12,7 +12,7 @@ tags: []
 
 > **ARCHIVED — not a live tracker.** This is the 2026-05-02 backlog, frozen, and
 > the sentence below ("tracks all remaining hardening items") has not been true
-> for months. The live backlog is [`../MAINTENANCE.md`](../MAINTENANCE.md).
+> for months. The live backlog is `../MAINTENANCE.md` (private).
 > Items still flagged 🟡 open here are resolved or decided: 16, 18, 20 and 22
 > were fixed on 2026-07-08, and 13 was decided on 2026-09-15. Item 14 is the
 > same privilege-ceiling gap as M-5 in `PENDING_PHASES.md` and is still open —

@@ -29,7 +29,7 @@ tags: [accessibility, wcag, ada, en301549, compliance]
 ## Context / Scope
 
 Closes gap **G9** from
-[`../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md),
+`../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private),
 which found no accessibility tracking in any compliance document and no
 automated checking in CI.
 

@@ -3,22 +3,22 @@
 title: "Login Forensics — Security Audit Subsystem"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-03
-verified_against: [code]
+last_verified: 2026-10-16
+verified_against: [code, infra]
 owner: harshil
 related_docs: [SECURITY.md, RoPA.md, ../specs/2026-10-03-sign-in-alerts-v2-design.md, ../specs/2026-10-03-sign-in-alert-settings-design.md, ../architecture/plac-and-audit.md, ../features/USER-MANAGEMENT.md]
-related_code: [src/lib/auth/stages/bootstrap.ts, src/lib/auth/login-event.ts, src/lib/auth/security-logging.ts, src/lib/login-alerts/throttle.ts, src/lib/login-alerts/policy.ts, src/lib/login-alerts/store.ts, src/lib/login-alerts/decide.ts, src/lib/login-alerts/dispatch.ts, src/lib/login-alerts/outcomes.ts, src/workers/scheduled-log-sync.ts, src/pages/api/audit/login-logs.ts]
+related_code: [src/lib/auth/stages/assertion.ts, src/lib/auth/stages/bootstrap.ts, src/lib/auth/cloudflare-access.ts, src/lib/auth/login-event.ts, src/lib/auth/security-logging.ts, src/lib/login-alerts/throttle.ts, src/lib/login-alerts/policy.ts, src/lib/login-alerts/store.ts, src/lib/login-alerts/decide.ts, src/lib/login-alerts/dispatch.ts, src/lib/login-alerts/outcomes.ts, src/lib/dal/LoginLogRepository.ts, src/workers/scheduled-log-sync.ts, src/pages/api/audit/login-logs.ts, src/pages/api/audit/delete-targeted.ts, src/pages/api/users/probes.ts]
 tags: [security, forensics, login, audit, cloudflare-access]
 ---
 
 # Login Forensics — Security Audit Subsystem
 
-> **TL;DR (non-technical):** How the system records and investigates sign-in activity — successful and failed logins, where they came from, and the alerts that fire on suspicious attempts.
+> **TL;DR (non-technical):** How the system records and investigates sign-in activity — successful and failed logins, where they came from, how each person signed in, and the alert emails sent about them (urgent for a sign-in that moves or one made without Google).
 
 > **Status:** Production Active (v3 — CF Zero Trust)
-> **Access Gate:** DEV/Owner default; grantable via PLAC pseudo-path `/dashboard/logs#security`
-> **Migrations:** `0014_create_admin_login_logs_table.sql`, `0015_enhance_admin_login_logs.sql`, `0020_cf_zero_trust_schema.sql` — all applied; the v3 columns are carried by `migrations/0000_baseline.sql`
-> **Writability:** the query API is read-only, but the table is **not** immutable — see §8
+> **Access Gate:** Owner and Vendor support by default; grantable via PLAC pseudo-path `/dashboard/logs#security`
+> **Migrations:** `0014_create_admin_login_logs_table.sql`, `0015_enhance_admin_login_logs.sql`, `0020_cf_zero_trust_schema.sql` — all applied; the v3 columns are carried by `migrations/0000_baseline.sql`, and the `alert` column by `migrations/0064_login_alert_outcome.sql`
+> **Writability:** the query API is read-only, but the table is **not** immutable and is **not** sealed — see §8
 > **Related:** `supabase/migrations/supabase_0001_add_cf_sub_id.sql` (adds `cf_sub_id` to `admin_authorized_users` — executed 2026-04-27)
 
 Dedicated security pipeline that captures, stores, and surfaces all authentication events against the `cf-admin` portal. Operates independently from the general-purpose Ghost Audit Engine (`admin_audit_log`). v3 removes all GoTrue/Supabase Auth coupling and Tier 2 client-side telemetry; replaces with CF Zero Trust edge data.
@@ -33,14 +33,14 @@ Dedicated security pipeline that captures, stores, and surfaces all authenticati
 1. User navigates to secure.madagascarhotelags.com (the Worker's only route)
    │
    ▼  CF Zero Trust Edge (CF_Authorization cookie validation)
-   │  If no valid cookie → CF redirects to CF Access login (Google/GitHub/OTP)
+   │  If no valid cookie → CF redirects to CF Access login (the providers the Access application offers)
    │  If valid cookie → CF injects headers into request
    │
    ▼
 2. CF-Access-JWT-Assertion header present in Worker request
-   ├─ verifyZeroTrustJwt(jwt, audience, teamName) — RS256 via JWKS
-   ├─ Extract: email, cfSubId (sub claim), loginMethod (IdP type), cfRayId
-   ├─ Bot score gate (never fires on this plan — the score is always null)
+   ├─ stages/assertion.ts: verifyZeroTrustJwt(jwt, audience, teamName) — RS256 via JWKS
+   ├─ Extract: email, cfSubId (sub claim), loginMethod (the token's idp.type, when it has one), cfRayId
+   ├─ stages/bootstrap.ts from here: bot score gate (a score below 30 is refused)
    ├─ JWT/email match check
    ├─ Lookup email in admin_authorized_users (Supabase)
    │    directory unreachable → directory_unavailable
@@ -49,12 +49,14 @@ Dedicated security pipeline that captures, stores, and surfaces all authenticati
    │    comes AFTER the lookup, not before
    └─ createSession() + computeAccessMap()
 
-3. Auth pipeline bootstrap stage (src/lib/auth/stages/bootstrap.ts → emitLoginEvent() in src/lib/auth/login-event.ts)
-   ├─ Calls logLoginAttempt() → D1 INSERT to admin_login_logs (LOGIN_SUCCESS, or LOGIN_FAILED via refuse() — see §2.1 for the six reasons)
-   └─ Calls sendSecurityAlertEmail() via waitUntil() → Brevo alert
-        (a repeated failure is emailed at most once per 15 minutes — §7)
+3. Login event (emitLoginEvent() in src/lib/auth/login-event.ts), inside waitUntil, after the response
+   ├─ No provider in the token: ask Access's get-identity (accessIdentityProvider(), 2 s timeout)
+   ├─ logAndAlert() (src/lib/login-alerts/dispatch.ts): decide the alert (decide.ts), then
+   │    logLoginAttempt() → D1 INSERT to admin_login_logs (LOGIN_SUCCESS, or LOGIN_FAILED via refuse() — see §2.1 for the six reasons)
+   └─ sendSecurityAlertEmail() when the decision says so → the email queue, else Brevo directly
+        (a repeated failure is emailed at most once per repeat window: 15 minutes by default, 5 or 60 by policy — §7)
 
-4. admin_login_logs (D1 — written here by INSERT only; other write paths exist, §8)
+4. admin_login_logs (D1 — written here by INSERT, then the row's alert outcome; other write paths exist, §8)
 
 5. Failed/blocked events (CF Access denied, unauthorized email)
    ├─ Polled from CF Access Audit Log API every 5 minutes
@@ -83,24 +85,27 @@ is whatever the visitor typed at the Cloudflare Access prompt, so a
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  TIER 1 — SERVER-TRUSTED (cannot be spoofed by client)          │
-│                                                                   │
-│  Source: Cloudflare request.cf object + CF headers              │
-│  • latitude, longitude, postalCode, timezone                    │
-│  • asn, asOrganization, colo, continent                         │
-│  • tlsVersion, httpProtocol, clientTcpRtt                       │
-│  • CF-Connecting-IP, CF-IPCountry, CF-IPCity, CF-IPRegion       │
-│                                                                   │
+│  TIER 1 — SERVER-TRUSTED (cannot be spoofed by client)           │
+│                                                                  │
+│  Source: Cloudflare request.cf object + CF-Connecting-IP header  │
+│  • city, country (joined into geo_location)                      │
+│  • latitude, longitude, postalCode, timezone                     │
+│  • asn, asOrganization, colo, continent                          │
+│  • tlsVersion, httpProtocol, clientTcpRtt                        │
+│  • botManagement.score (cf_bot_score)                            │
+│                                                                  │
 │  Source: CF-Access-JWT-Assertion claims                          │
-│  • cfSubId (sub), loginMethod (IdP type), cfJwtTail             │
-│  • cfIdentityProvider (idp.type only — absent in production)     │
-│                                                                   │
+│  • cfSubId (sub), cfJwtTail                                      │
+│  • idp.type when the token has one (absent in production)        │
+│                                                                  │
+│  Source: Cloudflare Access get-identity (since 2026-10-16)       │
+│  • idp.type → cfIdentityProvider and loginMethod                 │
+│                                                                  │
 │  Source: CF-RAY header                                           │
-│  • cfRayId — links directly to CF dashboard trace               │
-│                                                                   │
+│  • cfRayId — links directly to CF dashboard trace                │
+│                                                                  │
 │  Source: Application logic                                       │
-│  • Event type, success/fail, authorized status                  │
-│  • CF bot management score (request.cf.botManagementScore)      │
+│  • Event type, success/fail, authorized status                   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -115,7 +120,7 @@ is whatever the visitor typed at the Cloudflare Access prompt, so a
 | Separate D1 table (`admin_login_logs`) | Different schema from the general audit log, and a different access gate |
 | `waitUntil()` for all side-effects | Zero latency impact on auth/navigation flow |
 | IP masked in table view | Privacy-first: masked in list, **raw** IP in the expanded panel and in the stored row |
-| Append-mostly, **not immutable** | Forensic-grade records, but the writes after INSERT are real: `dismissProbe()` (`is_authorized_email = -1`), the targeted-delete tool (`POST /api/audit/delete-targeted`, security tab) and the retention registry — see §8 |
+| Append-mostly, **not immutable** | Forensic-grade records, but the writes after INSERT are real: the row's own `alert` outcome, `dismissProbe()` (`is_authorized_email = -1`), the targeted-delete tool (`DELETE /api/audit/delete-targeted` with `targetTab: 'security'`) and the retention purge — see §8 |
 
 ---
 
@@ -127,7 +132,7 @@ is whatever the visitor typed at the Cloudflare Access prompt, so a
 |------------|-----------|-------------|
 | `LOGIN_SUCCESS` | bootstrap.ts (inline) | CF ZT authentication + whitelist check passed → KV session created |
 | `LOGIN_FAILED` | bootstrap.ts (inline, `refuse()`) | Worker-side refusal after a valid CF JWT — six reasons, below |
-| `LOGIN_BLOCKED` | cron: scheduled-log-sync.ts | CF Access explicitly blocked — not in CF Access policy |
+| `LOGIN_BLOCKED` | cron: scheduled-log-sync.ts | CF Access explicitly blocked — not in CF Access policy. `failure_reason` is `cf_access_denied` |
 
 **Removed in v3:** `MAGIC_LINK_REQUESTED`, `MAGIC_LINK_SENT` (no OTP dispatch in Worker).
 
@@ -135,12 +140,12 @@ is whatever the visitor typed at the Cloudflare Access prompt, so a
 
 | `failure_reason` | Meaning | Page redirect |
 |---|---|---|
-| `bot_score_too_low_<n>` | CF bot score below 30. Never fires here — the score is always null on this plan | — (403) |
+| `bot_score_too_low_<n>` | CF bot score below 30 (1 is certainly automated, 99 certainly a person). Applies to every sign-in that carries a score; one without a score is not refused here (§2.2, `cf_bot_score`) | — (403) |
 | `jwt_email_mismatch` | The verified JWT's `email` claim does not match the `CF-Access-Authenticated-User-Email` header | — (403) |
 | `directory_unavailable` | The Supabase whitelist lookup failed for a reason other than "no row". Added 2026-09-16 — a directory outage must not be rendered as "not authorized" | `/?error=directory_unavailable` |
 | `account_inactive` | Row found, `is_active = false` | `/?error=account_inactive` |
 | `not_whitelisted` | No row for that address | `/?error=access_denied` |
-| `revocation_block_active` | A live `revoked:{userId}` KV flag. **The most common failure in production** — 13 of the 14 failed rows on record. It is written by the force-kick path with a fixed 24 h TTL, so a deactivation, a deletion or a Sessions-page block locks the address out for a day unless an operator lifts it (reactivating the user, or `DELETE /api/sessions/active-revocations`) | `/?error=access_revoked` |
+| `revocation_block_active` | A live `revoked:{userId}` KV flag. **The most common failure in production** — 13 of the 14 `LOGIN_FAILED` rows on record (read 2026-10-16). It is written by the force-kick path with a fixed 24 h TTL, so a deactivation, a deletion or a Sessions-page block locks the address out for a day unless an operator lifts it (reactivating the user, or `DELETE /api/sessions/active-revocations`) | `/?error=access_revoked` |
 
 A seventh refusal exists and is deliberately **not** logged here: an unrecognised
 stored role (`/?error=role_unrecognised`) is a configuration error, not a sign-in
@@ -168,7 +173,7 @@ that is the case to check.
 | `created_at` | TEXT NOT NULL | Timing | D1 default | Server |
 | `ip_address` | TEXT | Network | `CF-Connecting-IP` header — stored **raw**, not hashed. This is the deliberate exception to the platform's IP-hashing posture ([`RoPA.md`](RoPA.md) §2.1) | Tier 1 |
 | `user_agent` | TEXT | Network | `User-Agent` header, truncated to 512 chars — **client-controlled** | Client |
-| `geo_location` | TEXT | Network | Joined CF headers (v1 compat: "City, Region, Country") | Tier 1 |
+| `geo_location` | TEXT | Network | `request.cf.city` and `request.cf.country` joined ("Toronto, CA"); on the cron path, the audit log's country only | Tier 1 |
 | `latitude` | TEXT | Network | `request.cf.latitude` | Tier 1 |
 | `longitude` | TEXT | Network | `request.cf.longitude` | Tier 1 |
 | `postal_code` | TEXT | Network | `request.cf.postalCode` | Tier 1 |
@@ -184,7 +189,7 @@ that is the case to check.
 | `cf_access_method` ★ | TEXT | CF ZT | Same value as `login_method` — `emitLoginEvent` passes `loginMethod` to both | Tier 1 |
 | `cf_identity_provider` ★ | TEXT | CF ZT | The provider type only (`google`, `github`, `onetimepin`, …): the assertion's `idp.type` when it has one, else get-identity's (since 2026-10-16); **not** a full descriptor, and no `idp.id`. On the cron path, the audit log's `connection_type`. NULL when neither says (see the IdP note below) | Tier 1 |
 | `cf_jwt_tail` ★ | TEXT | CF ZT | Last 16 chars of JWT assertion (audit reference — not full token). Since 2026-10-03 it also identifies the sign-in for the alerts: one email per tail (§7) | Tier 1 |
-| `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagement.score` — **⛔ N/A on this plan**: always `null`, so the `< 30` refusal in `bootstrap.ts` has never fired. Bot Management requires a paid Cloudflare plan | Tier 1 |
+| `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagement.score`, 1 to 99. NULL when Cloudflare sends none: on every row before 2026-10-10, and on the cron path. Every sign-in row since 2026-10-10 carries one (read 2026-10-16), so the `< 30` refusal in `bootstrap.ts` (§2.1) applies to them | Tier 1 |
 | `alert` | TEXT | Outcome | What happened to the row's alert email: `queued`, `queued-urgent` or `queued-method` (on the email queue; delivery is in the email log), `sent`, `sent-urgent` or `sent-method` (Brevo directly); `-urgent` is a sign-in that moved, `-method` one made without Google (since 2026-10-16); `failed` (`sending` until one of them answers), or why none went: `repeat`, `paused`, `area`, `never`, `usual`, `throttled`, `off` (`src/lib/login-alerts/outcomes.ts`, §7). Migration `0064`, 2026-10-03; NULL on older rows and on `dev-login` rows | Server |
 
 ★ = Added in v3 (migration `0020_cf_zero_trust_schema.sql`). All nullable.
@@ -195,15 +200,20 @@ that is the case to check.
 > `login_method = 'unknown'` and a NULL `cf_identity_provider`; the `google`
 > values on older rows were a hardcoded default, not evidence of the provider
 > used, so those rows answer nothing. Since 2026-10-16 the login event asks
-> Access instead: inside its `waitUntil`, after the response, it sends the
-> assertion as the `CF_Authorization` cookie to the team domain's
-> `/cdn-cgi/access/get-identity` (`accessIdentityProvider()` in
-> `src/lib/auth/cloudflare-access.ts`, 2 s timeout) and keeps only `idp.type`.
-> When that call fails the row is logged as before (`unknown`, NULL), never
-> guessed (RULE #0.5). Cloudflare documents that a Worker's own `ctx.access`
-> does not reach a Worker with static assets, which this one is, so the
-> endpoint is the route. For rows before the change, use the Cloudflare Access
-> audit log.
+> Access instead, for successful and refused sign-ins alike: the assertion
+> stage hands it a lookup (`identityProvider`), and inside its `waitUntil`,
+> after the response, `emitLoginEvent()` calls it when the token named no
+> provider. The lookup (`accessIdentityProvider()` in
+> `src/lib/auth/cloudflare-access.ts`) sends the verified assertion as the
+> `CF_Authorization` cookie to the team domain's `/cdn-cgi/access/get-identity`,
+> with a 2 s timeout, and keeps only `idp.type`; `loginMethodFromIdp()` turns
+> that into `login_method` and `cf_access_method`. When the call fails or the
+> answer has no `idp.type`, the row is logged as before (`unknown`, NULL),
+> never guessed (RULE #0.5). Cloudflare documents that a Worker's own
+> `ctx.access` does not reach a Worker with static assets, which this one is,
+> so the endpoint is the route. The session itself keeps the token's method, so
+> the Sessions page's session cards still read Unknown; the sign-in row has the
+> provider. For rows before the change, use the Cloudflare Access audit log.
 
 **Columns removed in v3 (migration drops these):** `cores`, `ram_gb`, `screen_res`, `color_depth`, `platform`, `browser_time`, `is_webdriver`, `was_pasted`, `keystroke_avg_iki_ms`, `keystroke_entropy`, `email_sent_at`, `email_latency_ms`, `client_origin`, `server_env`.
 
@@ -211,33 +221,32 @@ that is the case to check.
 
 ## 3. CF Zero Trust Data Extraction
 
-**File:** `src/lib/auth/stages/bootstrap.ts` + `src/lib/auth/login-event.ts` (on KV session bootstrap — `src/middleware.ts` only sequences the header and auth middlewares) and `src/workers/scheduled-log-sync.ts` (cron polling)
+**File:** `src/lib/auth/stages/assertion.ts`, `src/lib/auth/stages/bootstrap.ts` + `src/lib/auth/login-event.ts` (on KV session bootstrap — `src/middleware.ts` only sequences the header and auth middlewares) and `src/workers/scheduled-log-sync.ts` (cron polling)
 
-### 3.1 Inline Success Logging (bootstrap.ts)
+### 3.1 Inline logging (assertion, bootstrap, login event)
 
-On successful CF ZT login and KV session creation:
+On every sign-in that reaches bootstrap, successful or refused (excerpts, abridged):
 
 ```typescript
-// Extract CF Zero Trust data
-const jwtHeader = request.headers.get('CF-Access-JWT-Assertion') ?? '';
-const cfRayId = request.headers.get('CF-RAY') ?? '';
-const cfJwtTail = jwtHeader.slice(-16);
-const cfData = (request as any).cf as Record<string, unknown> | undefined;
-const botScore = cfData?.botManagement?.score ?? null; // always null on this plan
+// stages/assertion.ts: the verified claims, and a lookup for later
+const claims = await verifyZeroTrustJwt(jwt, env.CF_ACCESS_AUD, env.CF_TEAM_NAME);
+const loginMethod = resolveLoginMethod(claims);   // claims.idp?.type → 'google'|'github'|'otp'|'unknown'
+const jwtTail = jwt.length > 16 ? jwt.slice(-16) : jwt;
+const identityProvider = () => accessIdentityProvider(env.CF_TEAM_NAME, jwt);
 
-// Claims from verified JWT
-const { sub: cfSubId, email, idp } = claims;          // verifyZeroTrustJwt result
-const loginMethod = resolveLoginMethod(claims);       // 'google'|'github'|'otp'|'unknown'
-const cfIdentityProvider = idp?.type ?? null;         // the raw type, or null — no idp.id
+// stages/bootstrap.ts: what every login event of this request carries
+const cfBotScore = cf?.botManagement?.score ?? null;
+const telemetry = { loginMethod, rayId, cfIdentityProvider: claims.idp?.type ?? null, cfJwtTail: jwtTail, cfBotScore, identityProvider };
 
-// In production there is no idp claim: emitLoginEvent's waitUntil asks Access (since 2026-10-16)
-//   cfIdentityProvider = await accessIdentityProvider(env.CF_TEAM_NAME, jwt);  // get-identity's idp.type, or null
-//   if (cfIdentityProvider) loginMethod = loginMethodFromIdp(cfIdentityProvider);
-
-// Standard Tier 1 network fields (unchanged from v2)
-const latitude = String(cfData?.latitude ?? '');
-const longitude = String(cfData?.longitude ?? '');
-// ... (postalCode, timezone, continent, asn, colo, tlsVersion, httpProtocol, clientTcpRtt)
+// login-event.ts, emitLoginEvent(): inside waitUntil, after the response
+if (!cfIdentityProvider && identityProvider) {
+  cfIdentityProvider = await identityProvider();      // get-identity's idp.type, or null
+  if (cfIdentityProvider) loginMethod = loginMethodFromIdp(cfIdentityProvider);
+}
+const geoLocation = [cf.city, cf.country].filter(Boolean).join(', ');   // "Toronto, CA"
+const latitude = cf.latitude?.toString() ?? null;
+// ... postalCode, timezone, continent, asn, asOrganization, colo, tlsVersion, httpProtocol, clientTcpRtt
+await logAndAlert(env, data, { subject: alertSubject, place: placeFromCf(cf) });   // row, decision, email (§7)
 ```
 
 In local dev, `request.cf` is undefined — all network fields will be empty/null. Expected.
@@ -269,36 +278,36 @@ poll that is failing, not of one that has nothing to do.
 
 ```typescript
 export interface SecurityLogData {
-  // Core identity
+  // ── Core ──
   email: string;
-  eventType: 'LOGIN_SUCCESS' | 'LOGIN_FAILED' | 'LOGIN_BLOCKED';
+  eventType: LoginEvent;        // 'LOGIN_SUCCESS' | 'LOGIN_FAILED' | 'LOGIN_BLOCKED'
   success: boolean;
   isAuthorizedEmail: boolean;
   failureReason?: string;
-  loginMethod: string;         // 'google' | 'github' | 'otp' | 'unknown'
+  ipAddress: string;            // CF-Connecting-IP
+  userAgent: string;            // client-controlled (§1.2)
+  geoLocation: string;          // "City, CC" from request.cf; the country alone on the cron path
+  loginMethod: string;          // 'google' | 'github' | 'otp' | 'unknown'
 
-  // Network (Tier 1 — unchanged from v2)
-  ipAddress: string;
-  userAgent: string;
-  geoLocation: string;         // backward-compat joined string "City, Region, Country"
-  latitude?: string;
-  longitude?: string;
-  postalCode?: string;
-  timezone?: string;
-  continent?: string;
+  // ── Network / Geo — Tier 1 (Cloudflare request.cf, server-trusted) ──
+  latitude?: string | null;
+  longitude?: string | null;
+  postalCode?: string | null;
+  timezone?: string | null;
+  continent?: string | null;
   asn?: number | null;
-  asnOrg?: string;
-  colo?: string;
-  tlsVersion?: string;
-  httpProtocol?: string;
+  asnOrg?: string | null;
+  colo?: string | null;
+  tlsVersion?: string | null;
+  httpProtocol?: string | null;
   clientRttMs?: number | null;
 
-  // CF Zero Trust (v3 — new)
-  cfRayId?: string;            // CF-RAY header — links to CF dashboard trace
-  cfAccessMethod?: string;     // IdP name from JWT: 'google' | 'github' | 'otp' | 'unknown'
-  cfIdentityProvider?: string; // IdP type: the JWT's idp claim, else get-identity's idp.type
-  cfJwtTail?: string;          // Last 16 chars of JWT (audit reference)
-  cfBotScore?: number | null;  // request.cf.botManagementScore
+  // ── Cloudflare Zero Trust fields ──
+  cfRayId?: string | null;            // CF-RAY header — links to CF dashboard trace
+  cfAccessMethod?: string | null;     // the same bucket as loginMethod
+  cfIdentityProvider?: string | null; // provider type: the token's idp.type, else get-identity's
+  cfJwtTail?: string | null;          // last 16 chars of the assertion (audit reference)
+  cfBotScore?: number | null;         // request.cf.botManagement.score
 }
 ```
 
@@ -312,7 +321,7 @@ export interface SecurityLogData {
 
 Fetches paginated, filtered login forensics from D1.
 
-**Access Control:** DEV/Owner by default, or explicit `/dashboard/logs#security` PLAC grant.
+**Access Control:** a deny on `/dashboard/logs` refuses first; then `canReadSignInHistory` (`src/lib/auth/surface-guards.ts`): an explicit grant or deny on `/dashboard/logs#security`, and with neither, Owner and Vendor support only.
 
 | Param | Description |
 |-------|-------------|
@@ -324,11 +333,11 @@ Fetches paginated, filtered login forensics from D1.
 | `method` | Filter by IdP (`login_method = ?`: `google`, `github`, `otp`, `unknown`) |
 | `dateFrom` / `dateTo` | ISO date range |
 
-> **2026-09-14:** this note previously said `method` had been replaced by a `cfAccessMethod` param. The handler (`src/pages/api/audit/login-logs.ts`) reads `method` and there is no `cfAccessMethod` param; only the accepted values changed (`magic_link` is gone).
+There is no `cfAccessMethod` parameter: `method` filters `login_method`, which holds the same value as `cf_access_method` (§2.2). `magic_link` is no longer a value.
 
 ### `GET /api/audit/stats`
 
-Returns login forensic metrics to users with security clearance:
+Returns login forensic metrics to users with security clearance (`/dashboard/logs#security`, Owner and Vendor support by default):
 
 - **Total Login Logs** — cumulative count
 - **Failed Logins Today** — count of rows with `success = 0` today (`LoginLogRepository`; equivalent to `LOGIN_FAILED` + `LOGIN_BLOCKED`)
@@ -337,7 +346,7 @@ Returns login forensic metrics to users with security clearance:
 
 ## 6. Dashboard UI
 
-**Tab:** "Security" tab (5th of six) in Activity Center at `/dashboard/logs`
+**Tab:** "Login Forensics" (tab id `security`, 5th of six) in the Activity Center at `/dashboard/logs`
 
 ### 6.1 Access Control
 
@@ -354,10 +363,11 @@ Login Forensics contains PII (full IPs, UA fingerprints, geo location, CF Ray ID
 | Email | Email used, with ⚠ UNAUTH chip if not in whitelist |
 | Event | Color-coded badge (cyan=SUCCESS, rose=FAILED, amber=BLOCKED) |
 | Outcome | ✓ OK (emerald) / ✗ FAIL (rose) |
-| Method | CF IdP icon (🔵 Google, ⚫ GitHub, 🔗 OTP) |
+| Method | Icon and value (🔵 `google`, ⚫ `github`, 🔑 `otp`, ❓ anything else, `unknown` included) |
 | IP Address | **Masked** in table view (e.g., `192.168.***.***`) |
-| Location | Geo from CF headers |
-| Ray ID | CF-RAY (links to CF dashboard trace) |
+| Location | `geo_location` (city and country from `request.cf`) |
+
+The Ray ID is in the expanded panel, not the table.
 
 **Visual indicators:**
 
@@ -367,45 +377,47 @@ Login Forensics contains PII (full IPs, UA fingerprints, geo location, CF Ray ID
 
 ### 6.3 Expanded Forensic Detail Panel (3 Sections)
 
-**Section 1 — IDENTITY & AUTH (CF Zero Trust)**
+`ForensicPanel` in `LoginForensicsTab.tsx`. Its header shows the outcome badge, the email
+(with ⚠ UNAUTH EMAIL when it is not on the user list) and the UTC time.
+
+**Section 1 — IDENTITY & AUTH**
 
 ```
-Email          [email used]
 Event Type     LOGIN_SUCCESS / LOGIN_FAILED / LOGIN_BLOCKED
+Auth Method    [cf_access_method, else login_method] (with icon)
+Failure Reason [failure_reason]
 Alert Email    Emailed / Not emailed: <why> / Not recorded (the `alert` column, §7)
-CF Method      Google / GitHub / OTP (with icon)
-Outcome        ✓ SUCCESS / ✗ FAILED / ⊘ BLOCKED
-CF Ray ID      [cfRayId]  ← clickable, links to CF trace if configured
-JWT Reference  [cfJwtTail] (last 16 chars — not the full token)
-Identity Prov. [cfIdentityProvider]
-Bot Score      [cfBotScore] / N/A
+CF Ray ID      [cf_ray_id]
+JWT Tail       …[cf_jwt_tail] (last 16 chars — not the full token)
+Record ID      [id]
 ```
 
-**Section 2 — NETWORK ORIGIN** (Tier 1 — unchanged from v2)
+**Section 2 — NETWORK ORIGIN** (Tier 1)
 
 ```
 IP Address     [full unmasked IP]
-City           [cf-ipcity]
-Region         [cf-ipregion]
-Country        [cf-ipcountry]
+Location       [geo_location]  e.g. "Toronto, CA"
 Coordinates    [latitude], [longitude]
-Timezone       [request.cf.timezone]
-Postal Code    [request.cf.postalCode]
-ISP / ASN      [asOrganization] ([asn])
-Data Center    [colo]  e.g. "JFK"
-Protocol       [httpProtocol] · [tlsVersion]
-RTT            [clientTcpRtt] ms
+Postal Code    [postal_code]
+Timezone       [timezone]
+Continent      [continent]
+ASN            AS[asn] ([asn_org])
+CF Colo        [colo]  e.g. "JFK"
+TLS Version    [tls_version]
+HTTP Protocol  [http_protocol]
+Client RTT     [client_rtt_ms]ms
+User Agent     [user_agent], in full (client-controlled, §1.2)
 ```
 
-**Section 3 — CF ZERO TRUST CONTEXT** (replaces Behavioral + Hardware + Email Delivery from v2)
+**Section 3 — CF ZERO TRUST** (replaces Behavioral + Hardware + Email Delivery from v2)
 
 ```
-Auth Source    Cloudflare Zero Trust Access
-Login Method   [cfAccessMethod]
-IdP Details    [cfIdentityProvider]
-CF Ray ID      [cfRayId]
-Bot Protection [cfBotScore] or "Not available"
+Access Method     [cf_access_method]
+Identity Provider [cf_identity_provider]
+Bot Score         [cf_bot_score], with "⚠ Likely Bot" below 30
 ```
+
+Below the sections, **View Raw Event Payload** opens the whole row as JSON.
 
 **Design rules:**
 
@@ -416,17 +428,20 @@ Bot Protection [cfBotScore] or "Not available"
 
 Email search, event type dropdown (`LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`), outcome toggle, CF access method dropdown (`google` / `github` / `otp`), date range picker.
 
-The method dropdown is currently inert: every row written since 2026-09-05 carries
-`login_method = 'unknown'`, so filtering by provider returns nothing. See the IdP
-note in §2.2.
+The method dropdown filters `login_method`. Rows from 2026-09-05 until permissions item #37
+(2026-10-16) all carry `unknown`, which the dropdown does not offer, so a provider filter over
+that stretch returns nothing; rows written since carry the provider whenever get-identity
+answered. Older `google` rows are the hardcoded default described in the IdP note in §2.2.
 
 ---
 
 ## 7. Security Alert Emails
 
 Every login attempt is logged (§2). Whether it is also emailed is decided by
-`src/lib/login-alerts/` (`decide.ts`, run by `dispatch.ts` inside the login event's
-`waitUntil`) and recorded in the row's `alert` column (§2.2). The full rules and why are in
+`src/lib/login-alerts/` (`decide.ts`, run by `logAndAlert()` in `dispatch.ts` inside the login
+event's `waitUntil`) and recorded in the row's `alert` column (§2.2). Two kinds of sign-in are
+emailed as urgent whatever the settings say: one whose assertion turns up on another country or
+device, and, since 2026-10-16, one made without Google (the table below). The full rules and why are in
 [sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §3. An email (light
 template) goes onto `EMAIL_QUEUE` as a `custom_email` from `Madagascar Security
 <security@madagascarhotelags.com>`, after its `email_audit_logs` row is written;
@@ -506,20 +521,28 @@ path. See §1.2.
 **SQL injection:** All fields use D1 parameterized binds. No string concatenation.
 
 **This table is not immutable.** The query API (`GET /api/audit/login-logs`) is
-read-only, and nothing in the login pipeline updates a row — but three other
-write paths exist, and a forensic reader needs to know all three:
+read-only, and the login pipeline changes a row only once after its INSERT: it
+records what became of the row's alert email in the `alert` column
+(`LoginLogRepository.setAlertOutcome()`). Three other write paths exist, and a
+forensic reader needs to know all three:
 
 | Path | Effect | Audited? |
 |---|---|---|
-| `LoginLogRepository.dismissProbe()`, via `GET /api/users/probes` | Flags a row `is_authorized_email = -1` | Only as the generic `api_mutation_attempt` row — no entry names the dismissed probe |
-| `POST /api/audit/delete-targeted` with `tab = 'security'` | **Deletes** rows by filter; type-to-confirm, PLAC-gated, keeps a 10-row sample in the audit details | Yes, with the sample |
-| Retention Review (`/dashboard/retention`) | Deletes rows past the 365-day target. Manual — nothing purges this table automatically (`src/lib/retention-tables.ts`) | Yes |
+| `LoginLogRepository.dismissProbe()`, via `DELETE /api/users/probes?email=` (Owner and above, and the `/dashboard/users` page) | Flags that address's unauthorized rows `is_authorized_email = -1`, so they leave the probe feed | Only as the generic `api_mutation_attempt` row — no entry names the dismissed probe |
+| `DELETE /api/audit/delete-targeted` with `targetTab: 'security'` | **Deletes** up to 5,000 matching rows by filter. Owner and Vendor support only, refused by a deny on `/dashboard/logs`, and it needs a sign-in from the last 10 minutes ([`PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §10.5). The screen previews the match first (`POST`, the same filters, which does not ask for the recent sign-in) and asks for a typed confirmation | Yes: one `delete` row in the activity log, with the filters, the count and a 10-row sample |
+| Retention Review (`/dashboard/retention`, `DELETE /api/retention/purge`) | Deletes rows older than the age the operator chooses (365 days by default). Owner and Vendor support only, with a recent sign-in. Manual — nothing purges this table automatically (`src/lib/retention-tables.ts`) | Yes |
 
-The earlier wording ("INSERT/SELECT only, immutable" in §1, "all audited" here)
-was wrong on both counts and is corrected throughout as of 2026-09-20. Use the
-accurate claim instead: *sign-in events are written through an insert-only
-application path; deletion is restricted and audited, but the record is not
-tamper-evident.*
+**It is not sealed either.** The daily seal covers the activity log
+(`admin_audit_log`) only ([`plac-and-audit.md`](../architecture/plac-and-audit.md)
+§3.6); no seal fingerprints or copies `admin_login_logs`. The record that a
+targeted delete or a purge happened is its row in the activity log, which is
+sealed.
+
+The accurate claim: *sign-in events are written through an insert-only
+application path, which afterwards records only the alert outcome; deletion is
+restricted and audited, but the record is not tamper-evident.* (Until
+2026-09-20 this document called the table "INSERT/SELECT only, immutable" and
+its deletions "all audited"; both were wrong.)
 
 **JWT tail is not sensitive:** The last 16 chars of a JWT are from the signature segment — no claims data. Storing it provides an audit correlation reference without exposing the full token.
 
@@ -574,9 +597,13 @@ of the applied history.
 | `database/legacy_migrations/0015_enhance_admin_login_logs.sql` | 24 new v2 columns via ALTER TABLE |
 | `database/legacy_migrations/0020_cf_zero_trust_schema.sql` | v3: drop Tier 2, add CF ZT columns (applied; carried by `migrations/0000_baseline.sql`) |
 | `supabase/migrations/supabase_0001_add_cf_sub_id.sql` | Adds `cf_sub_id` to `admin_authorized_users` (executed 2026-04-27) |
-| `src/lib/auth/security-logging.ts` | `SecurityLogData` interface + `logLoginAttempt()` + Brevo email |
-| `src/lib/auth/cloudflare-access.ts` | JWT verifier (`verifyZeroTrustJwt`) + header extractor (`extractCFHeaders`) |
-| `src/lib/auth/stages/bootstrap.ts` + `src/lib/auth/login-event.ts` | Inline `LOGIN_SUCCESS` / `LOGIN_FAILED` logging on CF ZT session bootstrap |
+| `src/lib/auth/security-logging.ts` | `SecurityLogData` interface + `logLoginAttempt()` + the alert emails (email queue, else Brevo directly) |
+| `src/lib/auth/cloudflare-access.ts` | JWT verifier (`verifyZeroTrustJwt`), header extractor (`extractCFHeaders`), the method bucket (`resolveLoginMethod`, `loginMethodFromIdp`) and the get-identity lookup (`accessIdentityProvider`, 2 s) |
+| `src/lib/auth/stages/assertion.ts` | Verifies the assertion and hands bootstrap the method, the tail and the get-identity lookup |
+| `src/lib/auth/stages/bootstrap.ts` + `src/lib/auth/login-event.ts` | Inline `LOGIN_SUCCESS` / `LOGIN_FAILED` logging on CF ZT session bootstrap; `emitLoginEvent()` asks get-identity, after the response, when the token named no provider |
+| `src/lib/dal/LoginLogRepository.ts` | Reads of the table (history, counts, probes) and its two updates: `setAlertOutcome()` and `dismissProbe()` |
+| `src/pages/api/users/probes.ts` | `GET` the unauthorized-probe feed, `DELETE ?email=` dismiss one (Owner and above) |
+| `src/pages/api/audit/delete-targeted.ts` | Targeted delete: `POST` previews, `DELETE` deletes (§8) |
 | `src/lib/login-alerts/dispatch.ts` | One login event's row and alert email, in order: decide, write the row with its outcome, send, record the result (§7) |
 | `src/lib/login-alerts/decide.ts` | Whether a sign-in is emailed and the line that says why: repeats and moves, areas, pause, the mode, failure kinds and the repeat window (pure, §7) |
 | `src/lib/login-alerts/outcomes.ts` | The `alert` column's values and their labels, shared by the server and both log views |
@@ -608,7 +635,9 @@ of the applied history.
 - **Ghost Audit Engine** (separate system) → See [PLAC-AND-AUDIT.md](../architecture/plac-and-audit.md)
 - **RBAC tiers** → See [USER-MANAGEMENT.md](../features/USER-MANAGEMENT.md)
 - **CF Zero Trust session lifecycle** → See [SECURITY.md](./SECURITY.md) §1
-- **3-Layer Force-Kick** → See [SECURITY.md](./SECURITY.md) §5
+- **3-Layer Force-Kick** → See [SECURITY.md](./SECURITY.md) §5.2
+- **The activity log's daily seal** (which this table does not have) → See [PLAC-AND-AUDIT.md](../architecture/plac-and-audit.md) §3.6
+- **Why a sign-in without Google is urgent** → the change record (private)
 - **Session Forensics Drawer** (live session telemetry) → See [USER-MANAGEMENT.md](../features/USER-MANAGEMENT.md) §6 and §11.4 (§11.3 is the CF ZT endpoint list, not the drawer)
 - **Raw vs hashed IP storage across the platform** → See [RoPA.md](RoPA.md) §2.1
 - **Migration plan** → the original phase plan file is no longer in the repository (2026-09-14)
@@ -617,6 +646,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | claude, the whole document after permissions items #14, #21, #36 and #37: `src/lib/auth/stages/assertion.ts`, `bootstrap.ts`, `src/lib/auth/login-event.ts`, `cloudflare-access.ts`, `security-logging.ts`, `src/lib/login-alerts/` (`dispatch.ts`, `decide.ts`, `store.ts`, `throttle.ts`, `policy.ts`, `outcomes.ts`), `src/lib/dal/LoginLogRepository.ts`, `src/workers/scheduled-log-sync.ts`, `src/pages/api/audit/login-logs.ts`, `stats.ts`, `delete-targeted.ts`, `src/pages/api/users/probes.ts`, `src/pages/api/retention/purge.ts`, `src/lib/retention-tables.ts`, `LoginForensicsTab.tsx`, `ActivityFilterBar.tsx` and `shared.tsx`, and `migrations/0000_baseline.sql`; the targeted-delete case in `test/fresh-sign-in.test.ts` read. Live D1 through the connector (read only): no sign-in since the get-identity deploy; 14 `LOGIN_FAILED` rows (13 `revocation_block_active`); every sign-in since 2026-10-10 carries a bot score. Corrected: the flow in §1.1 (get-identity, `logAndAlert`, the queue, the repeat window), §1.2's sources, `geo_location` and `cf_bot_score` (it said the score was always null), §3.1's excerpt, §4's interface, §5's gates, §6.2–§6.4 against the shipped component, §8 (the probe dismiss is a `DELETE`, the targeted delete is `DELETE` with `targetTab` and asks for a recent sign-in, the alert update, the table is not sealed) and §10 | A real get-identity answer (no sign-in yet since the deploy); the Access application's providers; whether Brevo or the queue delivered any alert; not rendered in a browser |
 | 2026-10-16 | §2.2's `login_method`, `cf_identity_provider` and `alert` rows, the IdP note, §3.1's snippet, §3.2's method mapping and §7's subject line and success rows against `src/lib/auth/cloudflare-access.ts` (`accessIdentityProvider`, `loginMethodFromIdp`), `src/lib/auth/login-event.ts`, `src/lib/login-alerts/decide.ts` and `dispatch.ts`, `src/lib/login-alerts/outcomes.ts` and `src/workers/scheduled-log-sync.ts`; pinned by `test/login-method.test.ts`, `test/login-alert-decide.test.ts` and `test/login-alerts.test.ts`. The live rows read through the D1 connector (method `unknown` on 115 sign-ins since 2026-09-05, `cf_identity_provider` NULL on all). Cloudflare's documentation for get-identity and for `ctx.access` with static assets | A real get-identity answer from production (it is first seen on the next sign-in after the deploy); which providers the Access application accepts today; the rest of this document |
 | 2026-10-10 | §10's rows for `SignInAlertsCard.tsx`, `login-logs.ts`, `session-status.ts` and `SessionForensicsDrawer.tsx` against those files after the Sessions rebuild, pinned by `test/sessions-console.test.ts` and `test/session-ref.test.ts` | The rest of this document; not rendered in a browser |
 | 2026-10-03 | §2.2 `alert` and §7's transport against `src/lib/auth/security-logging.ts` (`postSecurityEmail`) and `src/lib/dal/EmailAuditLogRepository.ts` after v2 step 3, pinned by `test/login-alerts.test.ts` ("the queued email", the Brevo fallback); the consumer's handling read from its deployed bundle (v2 spec §9) | Whether Resend accepts the security sender; the rest of this document |

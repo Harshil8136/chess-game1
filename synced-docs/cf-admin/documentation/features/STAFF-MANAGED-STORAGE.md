@@ -150,7 +150,7 @@ An Owner decides, from the Configuration screen, how the system should react whe
 > weekly job deletes at the storage level **cannot be recovered**. There is no R2
 > versioning, no bucket lock and no working backup for `madagascar-staff-storage`
 > (see [`../runbooks/disaster-recovery.md`](../runbooks/disaster-recovery.md) and
-> **S-2** in [`../MAINTENANCE.md`](../MAINTENANCE.md)). The application-level Trash
+> **S-2** in `../MAINTENANCE.md` (private)). The application-level Trash
 > covers in-app deletes only; it does not cover this job. The category at risk is
 > "uploaded to storage but never confirmed in the drive" — normally a dropped
 > browser connection, but also anything the confirm step missed.
@@ -265,7 +265,7 @@ No database schema here by design — see the migration files themselves (`migra
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — how roles and per-user permission grants work portal-wide
 - [`reference/coding-standards.md`](../reference/coding-standards.md) — the universal scoped-config pattern this feature established for future features to reuse
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) — bucket and secret registry
-- [`../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`](../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md) — the live D1/Supabase table inventory and RULE #0.6/#0.8/#0.9 reuse policy this feature (and File Request Links) were built to follow
+- `../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (private) — the live D1/Supabase table inventory and RULE #0.6/#0.8/#0.9 reuse policy this feature (and File Request Links) were built to follow
 
 ## 13. Verification log
 

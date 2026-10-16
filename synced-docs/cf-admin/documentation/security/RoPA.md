@@ -22,7 +22,7 @@ tags: [gdpr, ropa, privacy, article-30, lfpdppp, compliance]
 ## Context / Scope
 
 Closes gap **G2** from
-[`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
+`../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private).
 Also serves ISO/IEC 27701 and the equivalent inventory duties under Mexico's
 LFPDPPP, which is this platform's primary regime today.
 
@@ -139,11 +139,11 @@ that store is still in use.
 |---|---|
 | Purpose | None ongoing. Residual data from an earlier product version, retained pending export and disposal |
 | Status | **Dormant.** No application, worker or API connects to it. Most recent write 2026-06-22; most tables last written between February and April 2026 |
-| Location | A separate, superseded Supabase project in a US region. Its identifiers are held with the disposal task in [`../MAINTENANCE.md`](../MAINTENANCE.md), not here |
+| Location | A separate, superseded Supabase project in a US region. Its identifiers are held with the disposal task in `../MAINTENANCE.md` (private), not here |
 | Categories of subject | Staff/administrators of the earlier version; data subjects who submitted consent or ARCO requests to it |
 | Categories of data | 37 tables of operational history — email delivery logs, admin audit and permission logs, forensic access logs, consent receipts, session and login-attempt records, administrator accounts — and **2 `legal_requests` rows (ARCO requests, PII)**, which are the reason this activity is registered at all |
 | Legal basis for retention | Art. 6(1)(c) / Art. 17(3)(b) — retention pending verification that no outstanding data-subject obligation attaches to the ARCO rows, then disposal |
-| Known weaknesses | A security-advisor sweep on 2026-07-29 returned two orders of magnitude more findings than the production project, across database-level authorisation and function hardening. **This store does not meet the standard claimed for the production database and no assurance about it should be given to anyone.** It is still unremediated, so the finding detail is held in the private backlog ([`../MAINTENANCE.md`](../MAINTENANCE.md)) rather than in this published record — the fix is disposal, not hardening |
+| Known weaknesses | A security-advisor sweep on 2026-07-29 returned two orders of magnitude more findings than the production project, across database-level authorisation and function hardening. **This store does not meet the standard claimed for the production database and no assurance about it should be given to anyone.** It is still unremediated, so the finding detail is held in the private backlog (`../MAINTENANCE.md` (private)) rather than in this published record — the fix is disposal, not hardening |
 | Owner decision | Superseded version, not connected to any production or testing environment. Data to be exported for safekeeping, then the project decommissioned once the client approves. Recorded 2026-07-29; re-confirmed 2026-09-16 (leave dormant for now) |
 | Disposal method | Export → verify the two `legal_requests` rows carry no outstanding obligation → record the disposal in `deletion_audit` (currently 0 rows) → delete the project |
 | Action outstanding | **Export before pausing.** Pausing a Supabase project makes its data inaccessible until restored, so pausing ahead of the export would block the export it is meant to protect. Sequence matters. Since 2026-10-04 the export has a tool: cf-backup's Supabase full export (`docs/SUPABASE-FULL-EXPORT.md` in cf-backup) takes every schema, the project's settings, its Edge Functions and its Storage files into one encrypted file, stored as activity J describes. Not yet run against this project |
@@ -205,8 +205,8 @@ which records the raw address deliberately so that a sign-in can be investigated
 | Supabase `email_audit_logs` | Hashed sender IP | 365-day target, manual |
 | KV session records | **Raw** `ipAddress`, plus a derived `ipHash` used for audit rows | Session lifetime (24 h TTL) |
 | Workers Rate Limiting counters (Cloudflare) | **Raw** client IP inside the key on cf-admin's session-less routes (logout, the Brevo webhook, the email unsubscribe, the four public storage routes, all one-minute limits); internal user UUIDs elsewhere. Held by Cloudflare's rate limiter, not written to any store of ours | The limit's 60-second period (since 2026-10-04; how long Cloudflare keeps a counter after its period is not stated in anything read here) |
-| D1 `admin_portal_settings` rate-limit counters (`category` `ratelimit`) | None: the row holds a signed-in user's internal UUID and a request count, never an IP | Overwritten each hour or day window, never deleted (a removed user's rows stay: [`../MAINTENANCE.md`](../MAINTENANCE.md) RU-5). Since 2026-10-04 |
-| Upstash rate-limit keys (cf-astro, cf-chatbot) | **Raw** client IP on cf-astro's public API routes. **cf-admin writes none since 2026-10-04**; until then it also keyed its session-less routes by raw IP here | 2 × the window + 1 s for cf-astro's per-minute limiters. *(Corrected 2026-10-02: `analytics: true` had also written hourly ZSETs of these identifiers with no expiry — 648 keys back to 2026-08-07. They were cleared on 2026-10-02 and analytics is off. The weekly `redis-ttl-hygiene` job that checked expiries left with cf-admin's Upstash code on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md) RU-8.)* |
+| D1 `admin_portal_settings` rate-limit counters (`category` `ratelimit`) | None: the row holds a signed-in user's internal UUID and a request count, never an IP | Overwritten each hour or day window, never deleted (a removed user's rows stay: `../MAINTENANCE.md` (private) RU-5). Since 2026-10-04 |
+| Upstash rate-limit keys (cf-astro, cf-chatbot) | **Raw** client IP on cf-astro's public API routes. **cf-admin writes none since 2026-10-04**; until then it also keyed its session-less routes by raw IP here | 2 × the window + 1 s for cf-astro's per-minute limiters. *(Corrected 2026-10-02: `analytics: true` had also written hourly ZSETs of these identifiers with no expiry — 648 keys back to 2026-08-07. They were cleared on 2026-10-02 and analytics is off. The weekly `redis-ttl-hygiene` job that checked expiries left with cf-admin's Upstash code on 2026-10-04: `../MAINTENANCE.md` (private) RU-8.)* |
 
 Practical consequence for a data-subject request or a breach assessment: a raw IP
 is recoverable from the login log, the two dead-letter tables and any live KV

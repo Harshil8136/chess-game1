@@ -46,8 +46,8 @@ tags: [performance, efficiency, duplication, refactoring, repo-size, dead-code, 
 |---|---|
 | [`EFFICIENCY-TODO.md`](EFFICIENCY-TODO.md) | The sign-in/session path: KV reads per click, the sidebar and header, dashboard and diagnostics polling (EF-1 … EF-12) |
 | **This file** | Everything else found on 2026-09-23: runtime cost beyond the session path (`OPT-R`), duplicated code and boilerplate (`OPT-D`), repo size and dead weight (`OPT-S`) |
-| [`MAINTENANCE.md`](MAINTENANCE.md) | The live defect backlog |
-| [`program/ROADMAP.md`](program/ROADMAP.md) and [`program/DEBT-REGISTRY.md`](program/DEBT-REGISTRY.md) | The planned consolidation chunks and the ratchet counters that measure them |
+| `MAINTENANCE.md` (private) | The live defect backlog |
+| `program/ROADMAP.md` (private) and `program/DEBT-REGISTRY.md` (private) | The planned consolidation chunks and the ratchet counters that measure them |
 
 **The roadmap already plans most of the consolidation**: chunk 11 (API baseplate +
 island data layer + rate-limit registry), 12 (DAL v2 + SettingsService), 13.x
@@ -83,7 +83,7 @@ consolidation; **P3** tidy-up.
 6. **UI changes need the owner's browser check** — agents do not open a browser
    (`main.md`). Each UI item lists what to click.
 7. **Route handlers are removed by decision, not by sweep**
-   ([`../AI_CODE_MAINTENANCE.md`](../AI_CODE_MAINTENANCE.md) §4). Pruning (dead
+   (`../AI_CODE_MAINTENANCE.md` (private) §4). Pruning (dead
    code) and consolidation (shared building blocks) go in separate commits (§2's
    critical rule there).
 8. **This checkout is shared.** Stage only your own files.
@@ -366,7 +366,7 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
   50 route files, against Upstash's 500,000 commands a month. **Fix.**
   `analytics: false` (chunk 16 removes Upstash altogether). **Effort** S.
 - **Done.** Analytics went off on 2026-10-02, and cf-admin stopped using Upstash on
-  2026-10-04 ([record](records/reports/2026-10-04-resource-usage-optimisation.md)).
+  2026-10-04 (record (private)).
 
 ### OPT-R15 (P2). A registry "apply now" writes one KV mark per active user
 
@@ -625,7 +625,7 @@ re-export (a test seam), the documented `NavIcon` switch and
 |---|---|---|---|---:|---|
 | OPT-D27 | CSV/download helpers rewritten per screen; **3 CSV builders skip the formula-injection guard** | 7 sites in 6 files. `BookingDashboard` joins values with `,` unquoted (a comma breaks the row, a leading `=` runs as a formula) and never revokes the object URL; `QueueTracker` and `RetentionInspectModal` quote but skip neutralisation. The good version (`exportSessions.ts`: `toCsv`, `downloadFile`) has 1 user | move `toCsv`/`toJson` into `src/lib/csv.ts`; a proposed `src/lib/client/download.ts` | −50, closes CSV injection | P1 |
 | OPT-D28 | No client fetch layer | 84 files, 217 raw `fetch(` calls; 27 files with the full load/error/finally block; 141 mutation literals in 68 files; **192 `res.json()` calls, 18 guarded** — an edge HTML 502 surfaces as "Unexpected token <". `useChatbotApi` (8 chatbot islands) is the seed | proposed: `src/lib/client/api.ts` (`apiFetch`, `ApiError`, `ApiEnvelope`) and a `useApi` hook in a new `src/components/ui/hooks/` (proposed) | −800 (±40%) | P1 |
-| OPT-D29 | ~~The §7.8 modal setup copied into every dialog~~ **Done 2026-10-10** another way: one shared `src/components/ui/Dialog.tsx` (title required, so A11Y-03 holds) with `SlideDrawer` and `BottomSheet` rebuilt on it; every pop-up moved onto it bar the three Email API modals, which `test/dialog-system.test.ts` allows until that thread moves them, and `CommandPalette` ([record](records/reports/2026-10-10-sessions-settings-github-and-pop-ups.md)) | `<dialog` 50 times in 37 files; `showModal()` 36, `cancel` handler 33, backdrop click 32, `::backdrop` 32 (15 identical); 3 overlays RULESAd §7.8 bans (`SeoConfigModal`, `SessionForensicsDrawer`, `CommandPalette`) | `src/components/ui/ModalShell.tsx` (proposed) with `labelledBy` required; rebuild `SlideDrawer` on it | −825; A6 falls | P1 |
+| OPT-D29 | ~~The §7.8 modal setup copied into every dialog~~ **Done 2026-10-10** another way: one shared `src/components/ui/Dialog.tsx` (title required, so A11Y-03 holds) with `SlideDrawer` and `BottomSheet` rebuilt on it; every pop-up moved onto it bar the three Email API modals, which `test/dialog-system.test.ts` allows until that thread moves them, and `CommandPalette` (record (private)) | `<dialog` 50 times in 37 files; `showModal()` 36, `cancel` handler 33, backdrop click 32, `::backdrop` 32 (15 identical); 3 overlays RULESAd §7.8 bans (`SeoConfigModal`, `SessionForensicsDrawer`, `CommandPalette`) | `src/components/ui/ModalShell.tsx` (proposed) with `labelledBy` required; rebuild `SlideDrawer` on it | −825; A6 falls | P1 |
 | OPT-D30 | Three ways to confirm | `showConfirm` 8 files; 15 local `<ConfirmDialog>` copies (~20 lines of state each); native `confirm()` ×8 in 5 files; native `alert()` ×5 in 3 files | `confirmAsync`/`alertAsync` in `src/stores/dialogStore.ts` | −300 | P1 |
 | OPT-D31 | No shared polling hook — the tool EF-1, EF-2 and EF-12 need | 6 polling sites, 1 pauses when hidden | `usePolling(fn, { intervalMs, enabled, pauseWhenHidden = true, maxDurationMs })` | −30 | P1 |
 | OPT-D32 | Local toasts instead of `pushToast` | 11 files with their own auto-dismiss banner, none with `aria-live` (`ToastProvider` has it) | existing `pushToast`; delete the per-editor toast CSS | −190 | P2 |

@@ -202,7 +202,7 @@ list, so the API half of a new module does have to touch the baseplate.
 > `src/pages/dashboard/[...slug].astro` rendering a "Module Under Construction"
 > card. That file does not exist — every dashboard route is a real physical page.
 > Unmatched paths fall through to
-> [`src/pages/404.astro`](../../src/pages/404.astro); denied ones render
+> `src/pages/404.astro` (private); denied ones render
 > `src/pages/dashboard/access-denied.astro`.
 
 ---

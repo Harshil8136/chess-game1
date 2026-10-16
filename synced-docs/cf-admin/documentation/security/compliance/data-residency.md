@@ -21,7 +21,7 @@ tags: [data-residency, gdpr, transfers, scc, gpc, ccpa, compliance]
 
 Addresses gap **G17** (no data-residency/region pinning) and the residency half
 of **G6** (GPC) from
-[`../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
+`../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private).
 
 ## 1. Where data lives today
 

@@ -15,11 +15,14 @@ tags: [permissions, access-center, plac, vps, backup, registry, ui]
 > **TL;DR (non-technical):** A person's Access page is one editor. It lists every portal
 > page and page action, every server-console permission and every backup-console
 > permission, each with the role that gets it by default and whether this person has it
-> and why. Anything you are allowed to change has a switch. Switches only change a draft;
+> and why. Anything you are allowed to change has a switch: anyone who opens Users may change
+> people below their own role (only Vendor support changes an Owner), within each system's
+> rules (a page only if they open it themselves, a console permission only if that console lets
+> them hand it out); a Viewer can only look. Switches only change a draft;
 > you review the changes and save them together, with an optional end date for page
 > changes. A History tab shows every access change made to the person, *Copy access
 > from…* fills the draft from someone else's access, and *Templates* switches on a named set
-> ("Front desk") the Owner saved. Page Registry
+> ("Front desk") the Owner or Vendor support saved. Page Registry
 > (`/dashboard/debug/pages`) is the portal-wide view of the same thing: every page, person,
 > personal setting and console permission, checks, and the history of every change; it can
 > change one page for many people at once ([its design](../specs/2026-10-14-access-control-room.md)).
@@ -160,10 +163,20 @@ anything else in the body is ignored. The browser builds this with `toSave` in `
 |---|---|
 | 200 | `data` is `{ profile, results }`: the fresh profile and `{ ok, changes }` or `{ ok: false, code, message, need?, issues? }` per system sent. A console can still refuse here (a stale revision): only that system's changes stay in the draft |
 | 400 | Malformed, nothing to save, an unknown or repeated page, an unknown capability, an end date (page or console) in the past or over 366 days, an end date on a reset, a long note. Nothing was saved |
+| 401 | The session has ended |
 | 403 | A rule refused (`need`, and `system` for the part). Nothing was saved |
+| 403, `need: read_only` | The viewer is a Viewer, who may not save anything. Nothing was saved |
+| 403, `need: fresh_sign_in` | The save gives an Owner-level page or action (one whose default role is Owner or Vendor support) and the viewer has not signed in within the last 10 minutes. The answer carries `x-fresh-sign-in: required`, which opens **Confirm it's you** ([PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)). Nothing was saved |
 | 404 | No such person, or a hidden account the viewer may not see |
-| 429 | More than 5 access saves a minute (one save counts once) |
-| 502 | A console that had to be asked did not answer. Nothing was saved |
+| 429 | More than 5 access saves a minute (one save counts once; the limit is shared with access-request decisions and Page Registry's personal settings) |
+| 502 | A console that had to be asked did not answer, or the user directory could not be read. Nothing was saved |
+
+A save that gives an Owner-level page, or gives Backups or Server permissions beyond what the
+person held, emails the sign-in alert list after it has answered, as the alert policy says (one
+email per save, a daily summary, or none). Removals, resets and other page grants are not
+emailed; every change is in the activity log. The whole list:
+[PERMISSIONS-SYSTEM §10.4](../architecture/PERMISSIONS-SYSTEM.md); the code: `accessChanges` in
+`src/lib/access-center/handlers.ts`.
 
 ### 3.3 Templates
 
@@ -189,6 +202,7 @@ activity-log row (module `users`, target `access_template`, the entries in its c
 | 404 | The template no longer exists |
 | 409 | Already 20 templates, or another template has that name (in any case) |
 | 429 | More than 10 template changes a minute |
+| 500 | The row could not be written; nothing changed |
 
 The templates are one JSON row of `admin_portal_settings` (`access:templates`, category
 `access`), so there is no new table. Two saves at the same moment can lose one; with only the
@@ -209,6 +223,16 @@ Since 2026-10-16 (open item AC-9) Page Registry reads a page's role floor first 
 what* shows a floored page as closed to the roles it keeps out ("Not for the role"), a stored
 grant the floor ignores is flagged *No effect: page floor* on Personal settings and counted on
 Checks, and a new grant the floor would ignore is refused, as it is here and at an invitation.
+
+*Since 2026-10-16 (#14)* Page Registry asks for a sign-in from the last 10 minutes before a
+change that reaches more than one person or gives an Owner-level page: personal settings
+(`POST /api/system/page-access`) for more than one person, or with an Owner-level grant
+(`src/lib/access-center/registry-access.ts`); a page's default role or switch
+(`PATCH /api/system/pages`); and every console permission's default role
+(`PATCH /api/system/console-features`, `src/lib/access-center/registry.ts`). Otherwise it
+answers 403 with the `x-fresh-sign-in: required` header (and `need: fresh_sign_in` on the two
+`src/lib/access-center/` routes), and nothing changes. The whole list of actions that ask:
+[PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md).
 
 *Since 2026-10-16 (#26)* **See it as** previews, read-only, what a role or one person gets: pick
 *A role* or *A person* from the chips, and see their sidebar as the sidebar draws it (each page
@@ -268,6 +292,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited (`claude`): the TL;DR, §3.2's answers and emails, §3.3's statuses, §4's recent sign-in.** Who may save, against `gate`, `personWhyNot` and `pageEditability` (`src/lib/access-center/handlers.ts`, `rules.ts`, `page-gates.ts`) and `manager` in `templates.ts`; the `read_only` and `fresh_sign_in` refusals, the shared `plac` limit and the 502 on a directory failure in `postAccessSave`; what a save emails (`accessChanges`, `src/lib/access-changes/notify.ts`); Page Registry's sign-in rule in `postPageAccess` (`registry-access.ts`), `saveConsoleFeature` (`registry.ts`) and `PATCH /api/system/pages`; templates (#32) and permissions given for a while (#22) re-read against `templates.ts`, `limits.ts`, `toGrantInput`, `grantIssues` and `AccessSections.tsx` | No test run (shared checkout); §2 and §5 not re-derived; the screens in a phone browser |
 | 2026-10-16 | **Scope-limited to §6's target header (#35).** `consoleTarget` in `profile.ts` and its callers (`handlers.ts`, `role-preview.ts`); `grantFor` and the person route in cf-backup and cf-vps; `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | The screen itself: nothing on it changed |
 | 2026-10-16 | **Scope-limited to templates (#32).** The TL;DR, §1's rows, §2 step 2's *Templates* paragraph and the new §3.3 against `TemplatesDialog.tsx`, `AccessChrome.tsx` (`onTemplates`), `UserAccessEditor.tsx`, `draft.ts` (`templateItems`, `applyTemplate`), `limits.ts`, `templates.ts` and the route; `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass; every live `admin_pages.path` (117) matches the entry pattern, read through the D1 connector; the read's CPU measured with a 20-template, 200-item row | The dialog in a phone browser (the owner's test); it was not server-rendered |
 | 2026-10-16 | **Scope-limited to permissions given for a while (#22).** §2.1's line and new paragraph, §3.1's `grant` and `temporaryUntil` rows and §3.2's `temporary` sentence against `types.ts`, `temporary.ts`, `rules.ts` (`vpsSource`, `vpsOverride`, `activeGrant`, `changedCapabilities`, `vpsChangeRefusal`, `grantIssues`), `profile.ts`, `draft.ts` (`consoleGrant`), `handlers.ts` (`toGrantInput`), `labels.ts` and `AccessSections.tsx`; `test/access-console-requests.test.ts` and the Access Center suites pass | The editor in a phone browser (the owner's test) |

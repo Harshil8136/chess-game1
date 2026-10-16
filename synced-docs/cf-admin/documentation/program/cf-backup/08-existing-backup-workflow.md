@@ -16,7 +16,7 @@ tags: [program, cf-backup, backups, as-is, github-actions]
 > needs were never added to the repository, which holds only `PERSONAL_PAT`.
 > **Fifteen minutes of owner setup would give the business its first real backup
 > this week**, long before cf-backup exists (§7). This document is the baseline
-> that doc 03 migrates. Its history lives in the [chunk 6 record](../chunks/2026-09-15-06-backups-and-dr-truth.md),
+> that doc 03 migrates. Its history lives in the chunk 6 record (private),
 > and restore procedures in the [DR runbook](../../runbooks/disaster-recovery.md).
 > Neither is restated here beyond what the analysis needs.
 

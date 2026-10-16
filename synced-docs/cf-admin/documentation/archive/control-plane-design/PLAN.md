@@ -419,7 +419,7 @@ CREATE TABLE service_config_history (
 ### 5.2 PLAC page registration (migration `0030`)
 
 > **Pattern:** `INSERT OR IGNORE INTO admin_pages (path, label, icon, required_role, description, sort_order, is_active)`
-> See existing references: [0027_seed_session_management_page.sql](../../../database/legacy_migrations/0027_seed_session_management_page.sql), [0021_seed_settings_subfeatures.sql](../../../migrations/0021_seed_settings_subfeatures.sql), [0003_seed_admin_pages.sql](../../../database/legacy_migrations/0003_seed_admin_pages.sql)
+> See existing references: 0027_seed_session_management_page.sql (private), 0021_seed_settings_subfeatures.sql (private), 0003_seed_admin_pages.sql (private)
 
 **Sort order strategy:** Existing pages use 0–19 (core), 30–32 (settings subfeatures),
 700–770 (chatbot). Control-plane uses the **800 range** (dedicated block, no collisions):
@@ -480,7 +480,7 @@ VALUES
 
 ### 5.3 How PLAC enforcement works for the new page
 
-> **Reference:** [plac.ts](../../../src/lib/auth/plac.ts), [guard.ts](../../../src/lib/auth/guard.ts)
+> **Reference:** plac.ts (private), guard.ts (private)
 
 **Middleware flow (already automatic — no middleware edits needed):**
 
@@ -536,7 +536,7 @@ export const POST: APIRoute = async (ctx) => {
 
 ### 5.4 Sidebar section routing
 
-> **Reference:** [plac.ts → deriveSection()](../../../src/lib/auth/plac.ts#L88-L95), [Sidebar/config.ts](../../../src/components/navigation/Sidebar/config.ts)
+> **Reference:** plac.ts → deriveSection() (private), Sidebar/config.ts (private)
 
 **Current `deriveSection` mapping (plac.ts line 88–95):**
 
@@ -560,7 +560,7 @@ if (path.startsWith('/dashboard/control-plane')) return 'MANAGEMENT';
 
 **Why MANAGEMENT:** Control-plane is an operational management tool alongside Settings and Users.
 The sidebar config already has `MANAGEMENT: { label: 'Management', color: 'blue' }` in
-[Sidebar/config.ts](../../../src/components/navigation/Sidebar/config.ts#L21).
+Sidebar/config.ts (private).
 
 **Mirror deriveSection in 3 files `[v2.1 — verified: only 3 real copies]`** (each has its own copy):
 
@@ -583,7 +583,7 @@ are reached via in-page navigation (tabs, cards, etc.).
 
 ### 5.5 CSRF protection (automatic — no changes needed)
 
-> **Reference:** [csrf.ts](../../../src/lib/csrf.ts)
+> **Reference:** csrf.ts (private)
 
 CSRF validation runs in middleware **before** any auth check (middleware.ts line 166–175) on
 ALL mutation methods (POST/PUT/PATCH/DELETE). It validates `Origin` or `Referer` headers against
@@ -602,7 +602,7 @@ fetch('/api/control-plane/config', {
 
 ### 5.6 Audit system integration
 
-> **Reference:** [audit.ts](../../../src/lib/audit.ts)
+> **Reference:** audit.ts (private)
 
 **New types to add:**
 
@@ -650,7 +650,7 @@ await env.DB.prepare(`
 
 ### 5.7 API response patterns
 
-> **Reference:** [api.ts](../../../src/lib/api.ts)
+> **Reference:** api.ts (private)
 
 All control-plane API routes MUST use the shared helpers:
 
@@ -673,7 +673,7 @@ catch (err: unknown) {
 
 ### 5.8 Page component patterns
 
-> **Reference:** [settings/index.astro](../../../src/pages/dashboard/settings/index.astro)
+> **Reference:** settings/index.astro (private)
 
 **Mandatory page structure (from settings page):**
 

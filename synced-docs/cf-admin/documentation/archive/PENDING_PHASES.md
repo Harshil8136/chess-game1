@@ -12,7 +12,7 @@ tags: []
 
 > **ARCHIVED — not a live tracker.** This is the 2026-05-26 residue list from
 > the 2026-05-25 deep review, frozen. The live backlog is
-> [`../MAINTENANCE.md`](../MAINTENANCE.md); anything below that still matters is
+> `../MAINTENANCE.md` (private); anything below that still matters is
 > there, and anything that is not there is either closed or not tracked at all.
 > Several items marked open below are closed: M-7, M-9, M-11 and M-13 were
 > resolved on 2026-07-08, and M-4 was decided on 2026-09-15 (append-only; the

@@ -33,8 +33,8 @@ tags: [program, cf-backup, cf-vps, restore, testing, keys, privacy]
 > - **No new secret, table, binding, variable or outside service.** One new library,
 >   `age-encryption`, approved with the plan.
 >
-> **Status: built 2026-10-08, not yet run for real.** The code is written in cf-backup, cf-vps
-> and cf-admin; the server's side waits for the owner's rollout (§13).
+> **Status: built and first run for real on 2026-10-08** (§13). The code is in cf-backup, cf-vps
+> and cf-admin, and the owner rolled the server's side out the same day.
 
 ## 1. What a restore test proves, and what it cannot
 
@@ -355,7 +355,7 @@ also wrong and are fixed: the memory estimate warned because the peak (161 MiB) 
 **under** the estimate (527 MiB), which is the safe side; and a D1 row "with no time column" now
 reads as unknown in plain words. The copy predates content fingerprints, so F was at half marks.
 
-Not verified yet (tracked in [MAINTENANCE.md](../../MAINTENANCE.md), section "Restore test
+Not verified yet (tracked in MAINTENANCE.md (private), section "Restore test
 follow-ups"): the PostgreSQL content fingerprints on both sides (no copy carries them until the
 next backup, the first since they were added); the export boundary on a real copy (the same
 backup); the lab update (classification and memory check) on the server, which needs the job's
@@ -365,6 +365,7 @@ image rebuilt.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | The TL;DR's status line against §13 (the first real tests of 2026-10-08) and cf-backup's `docs/HANDOFF.md` ("Rolled out and first run on 2026-10-08") | Whether §13's "not verified yet" items have since been met |
 | 2026-10-16 | The `restore-tests/:testId/file` row and §13's "Who did what" row against cf-backup's `getRestoreTestFile` (`src/api/restore-tests.ts`) and cf-admin's gateway (`RECORDED_READS`); `test/restore-tests.test.ts` and `test/backup-gateway.test.ts` pass | The rest of the document |
 | 2026-10-08 | §1, §6, §7 and §13 against the first real report and its cause: through the Supabase connector (counts only, no values), all 5 `admin_authorized_users` rows had a sign-in or sync time after 2026-10-07 while `updated_at` was older, and no `public` table has a trigger; the new sample query ran on the live project (counts only). The boundary and classification proven on a local PostgreSQL 16 against the server's own classifier: a row changed without any time stamp read as changed, a row damaged in the copy as a finding, others same or new. The old project's failed backup (2026-10-08 04:15 UTC) read from its job log and Supabase's pooler log | No backup has yet carried the boundary or PostgreSQL fingerprints; the lab update is not on the server; the phone was not used |
 | 2026-10-08 | §10 re-read against cf-backup's redesigned page (`src/ui/screens/RestoreTestsScreen.tsx`, `src/ui/screens/restore/`, `src/ui/restore-tests.ts` `setupSteps` and `headline`) and its tests (`test/ui-restore-screen.test.ts`) | The page has not been opened on a phone; the server side is not rolled out, so only the set-up list's not-yet-set-up state can show today |

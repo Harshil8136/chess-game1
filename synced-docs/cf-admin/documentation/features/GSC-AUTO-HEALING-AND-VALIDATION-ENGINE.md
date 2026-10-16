@@ -118,7 +118,7 @@ Neither contributes to the overall score. The underlying *claims* are reasonable
 — admin routes should be robots-blocked, utility pages should be `noindex` — but
 the portal is not verifying them, and a fixed "100% — Verified correct security
 isolation" reads as a measurement. This is a **RULE #0.5** defect against the
-code, logged in [`../MAINTENANCE.md`](../MAINTENANCE.md); the fix is either to
+code, logged in `../MAINTENANCE.md` (private); the fix is either to
 measure the two categories or to render them as "not measured".
 
 ## 4. The remediation drawer (RULESAd §7.8)
@@ -158,7 +158,7 @@ that do not exist as written.*
 
 All four of those are code defects, not documentation gaps. They are listed in
 [`DASHBOARD.md`](DASHBOARD.md) §0 and logged in
-[`../MAINTENANCE.md`](../MAINTENANCE.md).
+`../MAINTENANCE.md` (private).
 
 ## 6. Vite / dev-server stability
 

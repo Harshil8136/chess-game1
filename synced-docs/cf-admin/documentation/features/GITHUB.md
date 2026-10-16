@@ -34,7 +34,7 @@ admin the link is greyed like any page a person cannot open.
 
 **How it looks** (rebuilt on 2026-10-10 on the console kit, `src/styles/components/console.css`,
 in blue, with the page's own rules in `src/styles/pages/github.css`; the story is in the
-[change record](../records/reports/2026-10-10-sessions-settings-github-and-pop-ups.md)). Still
+change record (private)). Still
 no island and no script: the icons are inline SVG drawn on the server
 (`src/components/admin/github/Icon.astro`), and every badge's word, tone and icon comes from
 `src/lib/github/display.ts`, so a state is always a word beside a colour. Under the header and
@@ -89,7 +89,7 @@ last read is ignored. Nobody looking means no calls at all. The
 Deploy results would come from the commit's check summary in GraphQL (`statusCheckRollup`), but
 GitHub refuses it to fine-grained tokens just as it refuses the Checks API, so the Deploy badge
 appears only with a token GitHub lets read checks. Reading deploy status from Cloudflare instead is
-[MAINTENANCE.md](../MAINTENANCE.md) GH-1.
+MAINTENANCE.md (private) GH-1.
 
 ## When something is wrong
 

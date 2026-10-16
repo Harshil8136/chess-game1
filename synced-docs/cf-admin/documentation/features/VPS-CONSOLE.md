@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-proxy.ts, src/lib/approvals/retention.ts, test/two-person-rule.test.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, test/vps-notice.test.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
+related_code: [src/lib/vps-proxy.ts, src/pages/dashboard/vps/app/[...path].ts, src/lib/access-changes/notify.ts, src/lib/users/manage-apply.ts, src/lib/approvals/retention.ts, test/two-person-rule.test.ts, src/lib/vps-audit.ts, src/lib/vps-section.ts, src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, test/vps-notice.test.ts, src/pages/dashboard/vps/[...section].astro, src/lib/security/csp.ts, src/lib/audit.ts, migrations/0059_vps_console_page.sql, src/components/admin/users/access-editor/, src/lib/access-center/, src/lib/dal/VpsAccessRepository.ts, test/vps-gateway.test.ts, test/vps-chain.test.ts, test/vps-access.test.ts, test/access-center-api.test.ts]
 related_docs: [../specs/2026-10-11-server-access-notice.md, ../specs/2026-10-16-two-person-rule.md, BACKUP-CONSOLE.md, ACCESS-CENTER.md, ../program/cf-backup/15-restore-tests.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/OPERATIONS.md]
 tags: [vps, cf-vps, gateway, websocket, terminal, audit, csp]
 ---
@@ -83,15 +83,15 @@ Every request under `/dashboard/vps/app/` passes the normal auth pipeline
 | Path | Only a plain path under `/dashboard/vps/app/`: a doubled slash, a backslash, or an encoded slash, backslash or dot is a 404 and never reaches cf-vps |
 | Query string | Forwarded exactly as received (cf-vps signs the query it passes on, so it must not change); the path rules above apply to the path only |
 | Headers | Only `Accept`, `Accept-Language`, `Content-Type`, `Range` and `If-None-Match` are forwarded (plus the handshake headers of a terminal, §5). The session cookie, `Authorization`, the Access assertion and any `X-Vps-*` the browser sent never reach cf-vps |
-| Identity | The gateway adds `x-vps-actor` (§3) and `x-vps-request-id`, built from the session. Once `CONSOLE_SIGNING_KEY` is set (permissions item #33), it also adds `x-vps-signature` over those and `x-vps-target`, and cf-vps with the same key answers nothing without it, the terminal's WebSocket included ([CONSOLE-SIGNATURE](CONSOLE-SIGNATURE.md)) |
+| Identity | The gateway adds `x-vps-actor` (§3) and `x-vps-request-id`, built from the session. Once `CONSOLE_SIGNING_KEY` is set (permissions item #33), it also adds `x-vps-signature` over those headers (and over `x-vps-target`, which only the Access Center sends, §4), and cf-vps with the same key answers nothing without it, the terminal's WebSocket included ([CONSOLE-SIGNATURE](CONSOLE-SIGNATURE.md)) |
 | Same origin | Every change (POST, PUT, PATCH, DELETE) must come from this site; so must every terminal (§5) |
-| Read-only | A read-only role is refused every change and every terminal |
+| Read-only | A read-only role (Viewer) is refused every change and every terminal with 403 `read_only`, before anything is sent |
 | Second person | *Since 2026-10-16 (permissions item #36).* A `retention.set` (how long the server keeps a log) from someone cf-vps gives `retention.manage` is held here when another active Owner or Vendor support could approve it: after a recent sign-in (else 403 with `need: 'fresh_sign_in'`), it waits on the Users page and the console gets `202 { ok: false, code: 'second_person', message }`, which Log storage shows as a notice. It reaches cf-vps only once approved, sent as the approver. A body the hold cannot read, or a person without the capability, passes on as before, and cf-vps refuses it itself ([USER-MANAGEMENT](USER-MANAGEMENT.md) §6.3) |
 | Body | Buffered, at most 1 MiB. **An upload larger than that must be sent in parts**; a larger request is refused with 413 before anything reaches cf-vps |
 | Time | cf-vps has 65 s to send the answer's headers (cf-vps gives the host up to 60 s on its slowest reads and answers 504 itself after that). After that nothing is timed: the body streams for as long as it takes, so the live metrics and log streams (`text/event-stream`) stay open, and a download (up to 200 MB) is never buffered. A live stream that cf-vps breaks off (the agent restarted, the tunnel reconnected) ends as a finished stream, which the console reopens by itself, and is logged once as the warning `vps.gateway.stream_lost` with how long it lived; it used to be logged as the request's error, "Network connection lost." (2026-10-08). A download that breaks off still fails, so a truncated file never looks whole |
 | Failure | A missing binding, a timeout or an unreachable cf-vps gets a small "Server console unavailable" page, or the console's JSON error (`{ ok: false, code, message }`) on its API; the rest of the portal is unaffected. The browser is told fixed words, never the runtime's error |
 | Answer | Passed through, status, body and headers, minus `Set-Cookie` and `x-vps-audit` — including a download's `Content-Type`, `Content-Disposition` (`filename*=UTF-8''…`) and `Content-Length`, and cf-vps's own capability refusal (`403 { code: 'forbidden', need: '<capability>' }`) |
-| Audit | One `admin_audit_log` row per change and per terminal (§6) |
+| Audit | One `admin_audit_log` row per change and per terminal opened (§6); a terminal's typing, resizing, closing and live socket write none (§5) |
 
 `src/lib/vps-proxy.ts` is the only code that calls the binding. It has no HTTP
 fallback, because cf-vps must never have a public address. Its one shared
@@ -148,20 +148,45 @@ model, enforced there.
 
 ### Inside the console: capabilities on the Users page
 
-cf-vps divides the console into capabilities (host views, logs, files, audit,
-terminal, actions, access). Its policy is one row in this portal's D1,
-`admin_portal_settings` key `vps:access`: what each role holds by default, plus
-personal grants and denies keyed by email, each optionally with an end date and
-a reason. Owner and vendor support hold everything; a few capabilities (audit,
-session replay, reboot, admin terminal, managing access) can never be granted
-to anyone else.
+cf-vps divides the console into capabilities (host views, logs, files, security
+and audit, services, packages, apps and jobs, restore tests, log storage, the
+terminal, and access), listed in `cf-vps/contract/capabilities.ts`. Its policy is
+one row in this portal's D1, `admin_portal_settings` key `vps:access`: what each
+role holds by default, plus personal grants and denies keyed by email, each
+optionally with an end date (at most a year) and a note. Owner and vendor support
+hold everything by default. Eight capabilities are **floors** (`FLOOR_CAPABILITIES`):
+the audit timeline (`audit.view`), session replay (`sessions.replay`), reboot
+(`host.reboot`), the admin terminal (`terminal.admin`), managing access
+(`access.manage`), log retention (`retention.manage`), deleting logs
+(`logs.purge`) and restore tests (`restore.test`). Only Owner and Vendor support
+ever hold a floor; it can never be granted to anyone else, even for a while.
 
-The policy is managed in two places. cf-vps checks and stores every change
-(floors, the one-year limit, the rule that someone must keep the right to manage
-access) and each change becomes an activity-log row:
+- **A grant belongs to one account** (since 2026-10-16, permissions item #35). A
+  grant saved from the Access Center carries the person's account id, and
+  cf-vps counts it for nobody else (`grantFor` in `cf-vps/src/access/policy.ts`):
+  a later account with the same email starts from its role. A grant saved from
+  the console's own Access page keeps the id it has; one never saved through the
+  Access Center follows the email.
+- **Powers given for a while** (since 2026-10-16, permissions item #22, cf-vps
+  `14b2d7a`). A person can ask for one capability on Settings → Your access, and
+  it is decided on Users → Access requests
+  ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.3). An
+  approved one is kept in their grant as `temporary`, one `{ until, note? }` per
+  capability, at most 90 days ahead: it counts until its own end whatever the
+  grant's end date, a deny still beats it, and a floor can never be one.
+
+The policy is managed in the places below. cf-vps checks and stores every change
+(floors, the one-year and 90-day limits, the rule that Owner or Vendor support
+must keep the right to manage access, and that the person saving does not lock
+themselves out of it) and each change becomes an activity-log row:
 
 - the console's own **Access** page (every role and person at once), through
-  the gateway;
+  the gateway. Since 2026-10-15 (permissions item #18) the gateway also emails
+  each `access.save` that changed something to the sign-in alert list, after the
+  answer, with its number of changes but not whose
+  (`noteAccessChanges` in `src/lib/access-changes/notify.ts`); the alert policy
+  can make that one summary a day or nothing
+  ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.4);
 - the **Access Center**, a person's Access page on the Users page
   ([ACCESS-CENTER](ACCESS-CENTER.md)), which replaced the separate Server
   console section on 2026-10-02 and became one editor for every system on
@@ -182,11 +207,16 @@ access) and each change becomes an activity-log row:
   personal grants kept, floors never).
 
 Changing someone's role changes their console capabilities at once, because
-cf-vps reads the role from each request. Deleting a user removes their personal
-grant in the same step as their page overrides
-(`src/lib/dal/VpsAccessRepository.ts`), and bumps the policy revision so an
-Access editor opened before the deletion cannot save it back. An address
-invited again later starts from its role.
+cf-vps reads the role from each request. Removing a person on Users (which waits
+for a second person when another Owner or Vendor support could approve it,
+[USER-MANAGEMENT](USER-MANAGEMENT.md) §6.3) removes their server-console grant
+and, since 2026-10-15, their backup-console grant, along with their page
+overrides (`removeVpsGrant` and `removeBackupGrant` in
+`src/lib/dal/VpsAccessRepository.ts`, called from `src/lib/users/manage-apply.ts`).
+Each removal bumps that policy's revision, so an Access editor opened before the
+removal cannot save the grant back, and an address invited again later starts
+from its role. The same step blocks the Email API tokens the person made
+([EMAIL-API-ACCESS](EMAIL-API-ACCESS.md) §3).
 
 ## 5. The terminal
 
@@ -232,9 +262,12 @@ by cf-admin.
 
 ## 6. Audit
 
-cf-vps answers every change with a one-line `x-vps-audit` summary: an action
-and `key=value` fields. The gateway maps the action onto a cf-admin verb, module
-`vps`, target type `vps_console` (`src/lib/vps-audit.ts`):
+The gateway writes one activity-log row for every change it passes on (or tries
+to) and every terminal it opens; a terminal's typing, resizing, closing and live
+socket write none (§5). cf-vps answers each change it made with a one-line
+`x-vps-audit` summary: an action and `key=value` fields. The gateway maps the
+action onto a cf-admin verb, module `vps`, target type `vps_console`
+(`src/lib/vps-audit.ts`):
 
 | cf-vps action | Audit verb |
 |---|---|
@@ -292,9 +325,9 @@ approved by …)" and `secondPerson: { approvalId, askedBy, approvedBy }` in the
 made at once because nobody else could approve it carries `secondPerson: 'none available'`. The
 waiting and the decision have rows of their own (`second_person`, module `vps`).
 
-Reads are not audited here, and a file download is a read (a GET). If a
-download should leave a portal row, cf-vps must make it a POST, as the backup
-console does.
+Reads are not recorded here, and a file download is a read (a GET), so it leaves
+no portal row. The backup gateway records the two reads cf-backup marks with its
+audit header ([Backup Console](BACKUP-CONSOLE.md) §4); this gateway records none.
 
 When cf-admin itself failed the request, the row's `delivered` field says what
 is known: `false` ("not delivered") only when the request certainly never left
@@ -346,6 +379,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §2's Identity, Read-only and Audit rows against the gateway (`src/pages/dashboard/vps/app/[...path].ts`: `isReadOnly`, `UNAUDITED`, the `access.save` email); §4 against `cf-vps/contract/capabilities.ts` (`CAPABILITIES`, `FLOOR_CAPABILITIES`), `cf-vps/src/access/policy.ts` (`temporary`, `grantFor`, `can`), `cf-vps/src/access/save.ts` (the one-year and 90-day limits, the two lock-out rules), `src/lib/access-changes/notify.ts` (`consoleScreenChange`), `src/lib/users/manage-apply.ts` and `src/lib/dal/VpsAccessRepository.ts`; §6's opening and reads paragraph against the gateway and cf-vps's Files screen (a download is a GET link) | The floors were five and are eight; §4 now says a grant is bound to an account, what a power given for a while is, that an Access page save is emailed and that removing a person also removes the backup grant and blocks their Email API tokens. Not re-checked: §1, §3, §5, §7 to §9; no test run (shared checkout) |
 | 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `vpsBinding` (`src/lib/vps-proxy.ts`), and `cf-vps/src/gateway/signature.ts` (checked before the actor, so before a terminal upgrade); `test/console-signature.test.ts` and `cf-vps/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |
 | 2026-10-16 | claude | §2's Access notice row (#38: changes and terminals held) against the gateway (`isChange && !vpsNoticeAccepted`) and the new case in `test/vps-gateway.test.ts`; `test/vps-chain.test.ts` passes with a session that accepted the notice | Not re-checked: every other section |
 | 2026-10-16 | claude | §2's Second person row and §6's paragraph on approved retention changes (permissions item #36) against the gateway (`src/pages/dashboard/vps/app/[...path].ts`), `src/lib/approvals/retention.ts` (`retentionAsked`, `holdRetention`, `runRetention`) and cf-vps's Log storage screen (`retentionRefusal`); `test/two-person-rule.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | Not re-checked: every other section; not yet seen on a phone |

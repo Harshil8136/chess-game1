@@ -26,8 +26,8 @@ tags: [emails, api, tokens, plac, service-binding, audit]
 
 ## 1. Scope
 
-What this covers: the **Email API** page (`/dashboard/email-api`), the six
-routes behind it, the five permissions that gate it, and the one service binding
+What this covers: the **Email API** page (`/dashboard/email-api`), the eleven
+routes behind it (§4), the five permissions that gate it, and the one service binding
 it needs. What it does not cover: the public API itself (how an app sends email
 with a token), which belongs to the email service. Its contract is the
 `docs/specs/2026-09-30-api-access-contract.md` document in the cf-email-consumer
@@ -113,13 +113,17 @@ than the 25 capabilities first proposed: the owner wanted fewer switches to mana
 - **A recent sign-in for credentials and widening** (since 2026-10-16, permissions
   item #15, which the owner approved on 2026-10-15; until then nothing here asked,
   his choice of 2026-10-02). Creating a token, rotating a token's secret and
-  rotating a client's webhook secret need a sign-in from the last 10 minutes,
-  checked by the route before the Console is called. The portal sends the sign-in
-  time in the actor header (`userActor`, `signedInAt`), and the Console itself
-  refuses with `fresh_sign_in` a token edit that widens it and a settings change
-  other than pausing the API, since only it knows the stored values. Blocking,
-  narrowing and pausing never ask: the emergency stop is never held up. A refusal
-  opens **Confirm it's you** ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md)
+  rotating a client's webhook secret need a sign-in from the last 10 minutes. The
+  route checks first, before the Console is called (`freshSignInRefusal`), and the
+  Console checks the same three again from the sign-in time the portal sends in
+  the actor header (`userActor`, `signedInAt`; cf-email-consumer
+  `api/src/console.ts`, `requireFreshSignIn`). The Console alone also asks it for
+  a token edit that widens the token (unblocking it included) and for a settings
+  change other than pausing the API (new limits or budget, switching the API back
+  on), since only it knows the stored values. It refuses with `fresh_sign_in`,
+  which the portal turns into the same answer as its own. Blocking, narrowing and
+  pausing never ask: the emergency stop is never held up. A refusal opens
+  **Confirm it's you** ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md)
   §10.5).
 - **Nothing new at sign-in.** The five rows join every person's access map, which
   sign-in already computes in one database query, and nothing in this feature
@@ -129,8 +133,9 @@ than the 25 capabilities first proposed: the owner wanted fewer switches to mana
 - **A token ends with the person who made it** (since 2026-10-16, permissions item
   #39). Removing a person on Users asks the Console's
   `POST /admin/tokens/block-by-creator` to block every active token they created,
-  as the person removing them and with that person's own keys (`#respond` or
-  `#manage`), so the Console still decides. Each blocked token gets a
+  as the person who makes the removal (the approver, when it waited for a second
+  person) and with that person's own keys (`#respond` or `#manage`), so the
+  Console still decides. Each blocked token gets a
   `token.blocked` event; an app that should keep its token is unblocked here
   (`#manage`). A refusal never stops the removal: the answer carries a warning to
   block them here, and the activity row records `emailTokensBlocked` (a count,
@@ -288,3 +293,4 @@ new one is sent, and cf-admin sends both.
 - 2026-10-16: the `api-messages` row's recorded read checked against `src/pages/api/emails/api-messages.ts`, `src/lib/audit-views.ts` and `test/sensitive-views.test.ts` (a masked read writes nothing). The rest not re-checked.
 - 2026-10-16: §2's binding-trust bullet (the signature, permissions item #33) checked against `src/lib/console-signature.ts`, `emailConsoleBinding` in `src/lib/email-console.ts` and `test/console-signature.test.ts`, and against `cf-email-consumer/api/src/signature.ts` and `cf-email-consumer/test/api-signature.test.ts` (both pass). Not checked: a signed request in production (the key is not set yet); the rest of the page.
 - 2026-10-16: the token-ends-with-its-maker bullet in §3 checked against `src/lib/users/manage-apply.ts`, `src/lib/email-console.ts` (`blockTokensByCreator`) and `test/two-person-rule.test.ts`, and against cf-email-consumer's `api/src/console.ts` (`tokens.block_by_creator`, `RESPOND`) and its test. Not checked: against the live email service, or in a browser. Not re-checked: the rest of the page.
+- 2026-10-16: §3 re-read against `src/pages/api/emails/api-tokens.ts` and `api-clients.ts` (`freshSignInRefusal` on create, rotate and webhook secret), `src/lib/email-api-route.ts` (`guardEmailApi`), `src/lib/auth/surface-guards.ts` (`denyEmailApi`, `emailApiCaps`), `src/lib/users/manage-apply.ts` (`blockEmailTokens`, also run by an approval in `src/lib/approvals/handlers.ts`) and `src/lib/email-console.ts` (`blockTokensByCreator`, `consoleCall`), and against cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn` on create, widening, rotate, webhook secret and `settingsNeed`; `blockCreatorTokens`, `RESPOND`). The recent-sign-in bullet now says the Console re-checks the three the route checks; the removal bullet names who blocks the tokens after a second person approves; §1's route count corrected from six to eleven (`API_PAGE_MAPPING`). No test run (shared checkout). Not re-checked: §2 and §4 to §7.

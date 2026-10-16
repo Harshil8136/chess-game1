@@ -25,7 +25,7 @@ tags: [cms, payload, blog, evaluation, cost, architecture, cloudflare]
 > `src/pages/dashboard/content/blog.astro` and the blog tables, with the 14
 > posts imported on 2026-08-30 and scheduled publishing built. What was built
 > is described in
-> [`../records/reports/2026-08-30-blog-system-overhaul.md`](../records/reports/2026-08-30-blog-system-overhaul.md)
+> `../records/reports/2026-08-30-blog-system-overhaul.md` (private)
 > and owned by
 > [`../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md`](../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md).
 > Two premises have since expired: Cloudflare removed the compressed 3 MB
@@ -196,14 +196,14 @@ band, against a **10 ms hard ceiling**.
 
 **The $5 is per-account, and it is a one-time floor.** Once paid, every additional Worker
 costs $0 until aggregate quotas are crossed — a point already established in
-[`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) §5.1.
+`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md` (private) §5.1.
 So the honest framing is: *Payload does not cost $5/month; Payload is the thing that forces
 us across the $0 → $5 threshold.*
 
 ### 5.4 What else that $5 would buy
 
 If the threshold is crossed anyway, the money is not wasted — it also delivers, per
-[`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) §5:
+`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md` (private) §5:
 
 - **Queue retention 24 h → 4 days (configurable to 14).** Today, if `cf-astro-email-consumer`
   is down over a weekend, queued booking emails are lost. This is a real data-loss exposure.
@@ -568,14 +568,14 @@ Corrected in this pass using the repo's existing strikethrough + superseded-note
 
 | File | What was wrong | Fix |
 |---|---|---|
-| [`../records/reports/2026-06-13-platform-status-summary.md`](../records/reports/2026-06-13-platform-status-summary.md) §4 | Compute ceiling quoted only the Workers **Paid** figure | Annotated as Paid-plan; Free-plan 100k/day added |
-| [`../records/reports/2026-06-13-platform-status-summary.md`](../records/reports/2026-06-13-platform-status-summary.md) §6 | Cost table asserted "Workers Paid … **~$5**" as current spend | Struck through + superseded note: account is Free tier |
+| `../records/reports/2026-06-13-platform-status-summary.md` (private) §4 | Compute ceiling quoted only the Workers **Paid** figure | Annotated as Paid-plan; Free-plan 100k/day added |
+| `../records/reports/2026-06-13-platform-status-summary.md` (private) §6 | Cost table asserted "Workers Paid … **~$5**" as current spend | Struck through + superseded note: account is Free tier |
 
 Verified as **already correct** and left unchanged:
 [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) §8 ($0 free tier),
 [`RULESAd.md`](../../RULESAd.md) §15 ($0 total),
 [`features/CMS.md`](../features/CMS.md) (already carries both Free and Paid KV rows),
-[`../records/reviews/2026-07-22-codebase-services-architecture-and-setup-review.md`](../records/reviews/2026-07-22-codebase-services-architecture-and-setup-review.md) §8
+`../records/reviews/2026-07-22-codebase-services-architecture-and-setup-review.md` (private) §8
 (already annotated 2026-07-26 as describing an all-free-tier posture).
 
 ---
@@ -635,7 +635,7 @@ Verified as **already correct** and left unchanged:
 - [`reference/SYNC-SYSTEM-REVIEW.md`](../reference/SYNC-SYSTEM-REVIEW.md) — sync contract, C4 drift rule
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) — PLAC + audit model
 - [`operations/OPERATIONS.md`](../operations/OPERATIONS.md) §8 — canonical cost statement
-- [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md) §5–6 — verified vendor rates, scale ceiling
+- `../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md` (private) §5–6 — verified vendor rates, scale ceiling
 - [`RULESAd.md`](../../RULESAd.md) §7.3 whitelist policy, §15 $0 cost rule
 
 ---
@@ -645,5 +645,5 @@ Verified as **already correct** and left unchanged:
 - [`features/CMS.md`](../features/CMS.md)
 - [`reference/SYNC-SYSTEM-REVIEW.md`](../reference/SYNC-SYSTEM-REVIEW.md)
 - [`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md)
-- [`../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md`](../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md)
+- `../commercial/analyses/2026-07-26-commercial-model-costing-pricing-and-scale.md` (private)
 - [`specs/2026-05-13-cms-ui-redesign.md`](2026-05-13-cms-ui-redesign.md)

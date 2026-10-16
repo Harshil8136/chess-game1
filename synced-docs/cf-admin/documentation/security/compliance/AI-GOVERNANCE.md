@@ -28,7 +28,7 @@ tags: [ai-governance, iso42001, eu-ai-act, nist-ai-rmf, transparency, compliance
 
 Closes gaps **G15** (no AI governance documentation) and **G16** (EU AI Act
 transparency-disclosure verification) from
-[`../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`](../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md).
+`../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md` (private).
 
 Covers AI used by **`cf-admin`**. The customer-facing chatbot itself is a
 separate Worker (`cf-chatbot`); this repo is its configuration proxy and

@@ -24,7 +24,7 @@ tags: [ratelimit, redis, upstash, cloudflare-bindings, waf, architecture, cost-o
 > owning descriptions are [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md)
 > §1 and §3.6 and [`../security/SECURITY.md`](../security/SECURITY.md) §6b; the
 > change record is
-> [`../records/reports/2026-10-04-resource-usage-optimisation.md`](../records/reports/2026-10-04-resource-usage-optimisation.md).
+> `../records/reports/2026-10-04-resource-usage-optimisation.md` (private).
 > cf-astro's half (§2.2) is that repository's own work. The banner below and the
 > rest of this document describe the state before 2026-10-04.
 
@@ -39,7 +39,7 @@ tags: [ratelimit, redis, upstash, cloudflare-bindings, waf, architecture, cost-o
 >   (ratchet counter A12 = 57 call sites).
 > - `[secrets] required` in `wrangler.toml` still lists both Upstash secrets.
 > - The plan of record,
->   [`../program/ROADMAP.md`](../program/ROADMAP.md) chunk 16, is **planned** —
+>   `../program/ROADMAP.md` (private) chunk 16, is **planned** —
 >   dependent on chunks 11, 13.9 and 15, none of which has shipped.
 >
 > **Where the plan of record differs from this document**, the roadmap wins. Chunk
@@ -306,7 +306,7 @@ In `cf-admin/src/lib/ratelimit.ts`, Redis is currently used for `trackAiNeurons(
 ### The Native Replacement: D1
 
 > **Superseded by the plan of record** *(2026-09-19)*.
-> [`../program/ROADMAP.md`](../program/ROADMAP.md) chunk 16 specifies the **neuron
+> `../program/ROADMAP.md` (private) chunk 16 specifies the **neuron
 > budget derived from the audit log** — `ai_inference` rows already carry per-call
 > cost and outcome telemetry — rather than a new `admin_portal_settings` row. The
 > settings-row sketch below is kept as the alternative that was considered, not as
