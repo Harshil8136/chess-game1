@@ -168,6 +168,17 @@ anyone holding its key used the rows, moving a permission only within their own 
 console still checks the person's own `access.manage`
 ([`DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2.2).
 
+*Since 2026-10-16 (#28)* a console's block warns when its page lets in a role that holds no
+permission there by default: a Manager opening a console whose permissions all start at Admin
+would find a console that refuses everything. The warning names those roles and offers **Give
+{front-page permission} to {the page's role} and above**, which opens the Change dialog with that
+role already picked, so the impact preview shows before anything is applied. The front-page
+permission is the console's `viewCapability` (`host.view` on the Server console, `console.view`
+on the Backup console); when it is a floor, the warning only says what to do. The check is
+`consoleGap` in `src/components/admin/debug/registry/logic.ts`, from the registry's page roles
+and the console's role defaults; personal grants are left out. On 2026-10-16 both console pages
+start at Admin (read through the D1 connector), so no warning shows today.
+
 ## 5. Working on the screen
 
 - The words are in `labels.ts` and `src/lib/access-center/messages.ts` (shared with the
@@ -193,6 +204,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §4's console warning (#28) against `ConsoleFeatures.tsx`, `RegistryConsole.tsx`, `logic.ts` (`consoleGap`), `registry.ts` (`viewKey`), `vps.ts` and `backup.ts` (`viewCapability`); `test/registry-ui-logic.test.ts` passes; the two console pages' default roles read live through the D1 connector | The warning in a phone browser; it shows only when a console page's role is lowered |
 | 2026-10-16 | §2.1's floor state and §4's floor paragraph (AC-9) against `pages.ts` (`pageItem`), `rules.ts` (`pageEditability`), `overview.ts` (`personOpens`, `roleOpensPage`, `switchFlags`, `changeRefusal`), `labels.ts`, `AccessRow.tsx` and the registry panels; `test/access-why.test.ts` and the AC-9 case in `test/access-center-api.test.ts` pass | The rest of the page; the screens in a phone browser (the owner's test) |
 | 2026-10-15 | §2 steps 4 and 6, the default end of item #23, against `draft.ts` (`withDefaultEnd`, `defaultPageUntil`), `limits.ts`, `UserAccessEditor.tsx`, `AccessSections.tsx`, `AccessReviewDialog.tsx`, `PageSheet.tsx`; `test/access-center-draft.test.ts` | Everything else |
 | 2026-10-15 | §4's Consoles paragraph after Page Registry became vendor support only: `canUsePageRegistry` and the `gate()` in `src/lib/access-center/registry.ts`; `test/registry-console-features.test.ts` | Everything else |

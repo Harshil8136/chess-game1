@@ -402,7 +402,9 @@ means retiring a page cleans up its overrides.
 in UTC (`2026-12-31T23:59:59.000Z`), at most 366 days ahead, set from a person's Access page or
 from Page Registry; a reset takes none. An ended override is ignored, not deleted: the role
 decides again, and the screens say "ended on" until someone removes the row (Page Registry,
-Personal settings). Every override made before `0070` has `NULL` and keeps applying.
+Personal settings) or, *since 2026-10-16 (#31)*, the monthly clean-up deletes it 30 days after
+it ended ([CRON-CONTROL §3c](../features/CRON-CONTROL.md)). Every override made before `0070`
+has `NULL` and keeps applying.
 
 ### 6.1 The resolution query
 
@@ -651,6 +653,13 @@ route `POST /api/users/access` that ran them until 2026-10-03 is retired.
 gates C and D and the page's floor too (`inviteSettingRefusals`); one refused setting refuses
 the invitation, and nobody is invited. Until then they were written unchecked (MAINTENANCE
 AC-10). The person gates are the invitation's own: the new role sits below the inviter's.
+
+*Since 2026-10-16 (#8, #27)* a role change made on the Users page is confirmed first: the
+dialog says which pages, actions and console permissions the person gains and loses, and which
+personal page settings the change deletes (`GET /api/users/role-preview`,
+`src/lib/access-center/role-preview.ts`, read only and refused to anyone PATCH would refuse).
+The deletion itself is unchanged: `PATCH /api/users/manage` still calls `resetUserOverrides`, so
+the new role starts from its own defaults; console grants are kept.
 
 Gate A reading the target role from the database rather than the payload is the
 single most important line in the file; trusting `body.targetUserRole` was a real
@@ -1108,6 +1117,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to the role change confirmation (#8, #27) and the monthly clean-up (#31).** Read `role-preview.ts`, `UsersTable.tsx`, `RoleChangePreview.tsx`, `api/users/manage.ts` (PATCH), `scheduled-access-summary.ts` (`clearEndedSettings`); ran `test/role-preview.test.ts` and `test/ended-settings-cleanup.test.ts` | §6's end-date paragraph and §10's role-change paragraph match the code. The rest not re-read |
 | 2026-10-16 | claude | **Scope-limited to page floors on the access screens (AC-9), invitation gates (AC-10) and the Access denied reason (#25).** Read `page-floors.ts` (`pageFloor`), `access-center/rules.ts` (`pageEditability`), `pages.ts`, `overview.ts`, `page-gates.ts` (`inviteSettingRefusals`), `api/users/manage.ts`, `access-requests/rules.ts` (`whyClosed`, `checkAsk`) and `handlers.ts`, `your-access.ts`; ran `test/access-why.test.ts`, `test/access-center-api.test.ts`, `test/registry-access.test.ts` and `test/access-requests.test.ts` | §5's floor paragraph, §10's invitation paragraph and §10.3's new bullet match the code. The rest of the document not re-read |
 | 2026-10-15 | claude | **Scope-limited to §10.4, new.** Read every save point it names (`api/users/manage.ts`, `access-center/handlers.ts`, `registry-access.ts`, `registry.ts`, `api/system/pages.ts`, `access-requests/handlers.ts`, both console gateways) and the live `admin_pages.required_role` values through the D1 connector (owner 28, dev 3); `test/access-changes.test.ts` (20 tests) | §10.4 only; the rest of the document was not re-checked in this pass |
 | 2026-10-15 | claude | **Scope-limited to §10.3, new.** Read `src/lib/access-requests/` (`rules.ts`, `handlers.ts`), `AccessRequestRepository.ts` (`approve`, `decline`, `getPendingCount`), `page-gates.ts`, `access-center/rules.ts` and `routes.ts`; read the live `admin_access_requests` table before and after `0071` through the D1 connector (9 rows, none pending); `test/access-requests.test.ts` (17 tests) and `test/permission-change-no-lockout.test.ts` pass | §10.3 only; the rest of the document was not re-checked in this pass |

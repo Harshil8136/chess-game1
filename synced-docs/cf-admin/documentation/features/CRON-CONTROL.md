@@ -3,7 +3,7 @@
 title: "Cron Control Plane"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/lib/blog/publish-scheduled.ts]
@@ -328,6 +328,18 @@ most hourly (`MAX_SLEEP_MS`). It never throws.
 Two runs at once (a manual run during a scheduled one) could both send before
 either marks; the job takes no lease (§7), so that duplicate is accepted.
 
+*Added 2026-10-16 (permissions item #31).* The same job clears ended personal page
+settings once a month (`clearEndedSettings`, run before the summary). In the first
+seven days of a month, until it has run, it deletes the `admin_page_overrides` rows
+whose end date passed more than 30 days ago and writes one `prune` row (module
+`plac`, target `admin_page_overrides`/`ended-cleanup`, labelled with the month)
+naming up to 50 of them; that row marks the month done, so it is written even when
+nothing was deleted. After the first week it makes no query. An ended setting already
+does nothing (`computeAccessMap` ignores it), so the deletion changes nobody's access
+and writes no `authz-changed` mark. Two runs at once would both delete the same rows,
+the second finding none, and could write two marks; nothing else differs. A failure
+is reported and tried again on the next run.
+
 ## 4. How shedding decides
 
 `cron-usage-probe` reads Cloudflare's own account-wide D1 analytics once an hour
@@ -542,7 +554,10 @@ changes are off, the last summary mark and the kept rows, both through the
 `(target_type, target_id, created_at)` index: measured at 3 queries and 1 row read
 on an idle run (`budgets.ts`). Its sleep is stored with the other jobs' clocks, at
 most one control-document write per tick it runs in. The day's one send reads at
-most 51 kept rows and writes one mark.
+most 51 kept rows and writes one mark. The monthly clean-up (2026-10-16) adds, in a
+month's first week only, one indexed read per run until it has run, then once a
+DELETE over `admin_page_overrides` (4 rows on 2026-10-16) and one activity-log row:
+measured at 6 queries, 4 rows read and 8 written for that run (`budgets.ts`).
 
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
@@ -747,6 +762,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | The monthly clean-up added to `access-change-summary`: `src/workers/scheduled-access-summary.ts` (`clearEndedSettings`), `PageRegistryRepository.deleteEndedBefore`, `src/lib/jobs/registry.ts` (its about now says it deletes), `budgets.ts`; `test/ended-settings-cleanup.test.ts` and `test/jobs-budget.test.ts` pass; a first-week run measured with a fixed date; the live row count read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-15 | claude | `access-change-summary` added: `src/workers/scheduled-access-summary.ts`, `src/lib/access-changes/notify.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`; `test/jobs-budget.test.ts` measured 3 queries, 1 row read, 0 written on an idle run; `test/access-changes.test.ts` (the window, the mark, the 50-row limit, a refused send) | §3: 15 jobs (13+2), the tier table and why it is deferrable; §3c added; §4a: five jobs sleep; §5: its cost; §7: thirteen five-minute jobs without a lease. Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (not deployed when written) |
 | 2026-10-10 | claude | `email-api-sweep` added: `src/workers/scheduled-email-api-sweep.ts`, `src/lib/email-console.ts` (`sweepEmailApi`, the system actor), `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`; cf-email-consumer's Console sweep route read; `test/email-api-sweep.test.ts` (0 D1 queries on the configured path); `npm run verify` | §3: 14 jobs (12+2), the tier table and why it is essential; §3b added; §4a: four jobs sleep; §5: its invocation cost; §7: twelve five-minute jobs without a lease. Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (not deployed when written) |
 | 2026-10-10 | claude | §3a only: cf-astro's `consent-heartbeat.yml` (schedule removed, by hand only) and its run history through the GitHub API (runs 595 to 604 failed on Cloudflare's challenge) | §3a: GitHub is no longer a scheduled runner. Not re-checked: everything else |
