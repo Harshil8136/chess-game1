@@ -124,6 +124,14 @@ Under the **Authentication** tab:
 - **Google Workspace / Google OAuth:** Configured with client ID and secret restricted to authorized domains.
 - **One-time PIN (OTP):** Enabled as secondary fallback for emergency owner access.
 
+Google is the way in; any other provider is the emergency way in. Since 2026-10-16
+(permissions item #37) the portal learns which provider each sign-in used from Access's
+get-identity endpoint and emails every sign-in made without Google as urgent
+([`login-forensics.md`](../security/login-forensics.md) §7). Limiting the other providers to the
+Owner's account is an Access policy in the dashboard, the owner's step; which providers the
+application accepts today is set there and was not readable from this repository when this
+was written.
+
 ### Access applications and policies
 
 *Rebuilt 2026-09-19 from

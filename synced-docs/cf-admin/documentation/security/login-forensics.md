@@ -164,7 +164,7 @@ that is the case to check.
 | `success` | INTEGER NOT NULL | Outcome | App logic | Server |
 | `is_authorized_email` | INTEGER NOT NULL | Outcome | Whitelist check | Server |
 | `failure_reason` | TEXT | Outcome | App logic | Server |
-| `login_method` | TEXT | Identity | Coarse bucket derived from the JWT `idp.type` by `resolveLoginMethod()`: `google` / `github` / `otp` / `unknown`. **`unknown` on every login since 2026-09-05** — see the IdP note below | Tier 1 |
+| `login_method` | TEXT | Identity | Coarse bucket of the provider type (`loginMethodFromIdp()`): `google` / `github` / `otp` / `unknown`. **`unknown` on every login from 2026-09-05 to 2026-10-16**, and since then whenever Access does not answer; see the IdP note below | Tier 1 |
 | `created_at` | TEXT NOT NULL | Timing | D1 default | Server |
 | `ip_address` | TEXT | Network | `CF-Connecting-IP` header — stored **raw**, not hashed. This is the deliberate exception to the platform's IP-hashing posture ([`RoPA.md`](RoPA.md) §2.1) | Tier 1 |
 | `user_agent` | TEXT | Network | `User-Agent` header, truncated to 512 chars — **client-controlled** | Client |
@@ -182,24 +182,28 @@ that is the case to check.
 | `client_rtt_ms` | INTEGER | Network | `request.cf.clientTcpRtt` | Tier 1 |
 | `cf_ray_id` ★ | TEXT | CF ZT | `CF-RAY` header | Tier 1 |
 | `cf_access_method` ★ | TEXT | CF ZT | Same value as `login_method` — `emitLoginEvent` passes `loginMethod` to both | Tier 1 |
-| `cf_identity_provider` ★ | TEXT | CF ZT | `claims.idp?.type` only — **not** a full descriptor, and there is no `idp.id` in the stored value. NULL on every production row (see the IdP note below) | Tier 1 |
+| `cf_identity_provider` ★ | TEXT | CF ZT | The provider type only (`google`, `github`, `onetimepin`, …): the assertion's `idp.type` when it has one, else get-identity's (since 2026-10-16); **not** a full descriptor, and no `idp.id`. On the cron path, the audit log's `connection_type`. NULL when neither says (see the IdP note below) | Tier 1 |
 | `cf_jwt_tail` ★ | TEXT | CF ZT | Last 16 chars of JWT assertion (audit reference — not full token). Since 2026-10-03 it also identifies the sign-in for the alerts: one email per tail (§7) | Tier 1 |
 | `cf_bot_score` ★ | INTEGER | CF ZT | `request.cf.botManagement.score` — **⛔ N/A on this plan**: always `null`, so the `< 30` refusal in `bootstrap.ts` has never fired. Bot Management requires a paid Cloudflare plan | Tier 1 |
-| `alert` | TEXT | Outcome | What happened to the row's alert email: `queued` or `queued-urgent` (on the email queue; delivery is in the email log), `sent` or `sent-urgent` (Brevo directly), `failed` (`sending` until one of them answers), or why none went: `repeat`, `paused`, `area`, `never`, `usual`, `throttled`, `off` (`src/lib/login-alerts/outcomes.ts`, §7). Migration `0064`, 2026-10-03; NULL on older rows and on `dev-login` rows | Server |
+| `alert` | TEXT | Outcome | What happened to the row's alert email: `queued`, `queued-urgent` or `queued-method` (on the email queue; delivery is in the email log), `sent`, `sent-urgent` or `sent-method` (Brevo directly); `-urgent` is a sign-in that moved, `-method` one made without Google (since 2026-10-16); `failed` (`sending` until one of them answers), or why none went: `repeat`, `paused`, `area`, `never`, `usual`, `throttled`, `off` (`src/lib/login-alerts/outcomes.ts`, §7). Migration `0064`, 2026-10-03; NULL on older rows and on `dev-login` rows | Server |
 
 ★ = Added in v3 (migration `0020_cf_zero_trust_schema.sql`). All nullable.
 
-> **IdP attribution is currently lost — a real forensic gap (recorded 2026-09-20).**
-> The bootstrap stage stores `claims.idp?.type ?? null`. In production the CF
-> Access JWT carries no `idp` claim, so `cf_identity_provider` is NULL on every
-> row and `login_method` resolves to `unknown` for every sign-in from 2026-09-05
-> onward. The `google` values on older rows were a hardcoded default, not
-> evidence of the provider used, so they must not be read as attribution either.
-> Consequence: the Method column, the IdP filter and the method dropdown cannot
-> distinguish anything today, and "which provider did this person sign in with?"
-> is not answerable from this table — use the Cloudflare Access audit log
-> instead. `resolveLoginMethod()` deliberately answers `unknown` rather than
-> guessing (RULE #0.5); the fix belongs in how the claim is obtained, not here.
+> **IdP attribution: lost from 2026-09-05, asked of Access since 2026-10-16.**
+> In production the Cloudflare Access application token carries no `idp` claim,
+> so every sign-in from 2026-09-05 until permissions item #37 was logged with
+> `login_method = 'unknown'` and a NULL `cf_identity_provider`; the `google`
+> values on older rows were a hardcoded default, not evidence of the provider
+> used, so those rows answer nothing. Since 2026-10-16 the login event asks
+> Access instead: inside its `waitUntil`, after the response, it sends the
+> assertion as the `CF_Authorization` cookie to the team domain's
+> `/cdn-cgi/access/get-identity` (`accessIdentityProvider()` in
+> `src/lib/auth/cloudflare-access.ts`, 2 s timeout) and keeps only `idp.type`.
+> When that call fails the row is logged as before (`unknown`, NULL), never
+> guessed (RULE #0.5). Cloudflare documents that a Worker's own `ctx.access`
+> does not reach a Worker with static assets, which this one is, so the
+> endpoint is the route. For rows before the change, use the Cloudflare Access
+> audit log.
 
 **Columns removed in v3 (migration drops these):** `cores`, `ram_gb`, `screen_res`, `color_depth`, `platform`, `browser_time`, `is_webdriver`, `was_pasted`, `keystroke_avg_iki_ms`, `keystroke_entropy`, `email_sent_at`, `email_latency_ms`, `client_origin`, `server_env`.
 
@@ -226,6 +230,10 @@ const { sub: cfSubId, email, idp } = claims;          // verifyZeroTrustJwt resu
 const loginMethod = resolveLoginMethod(claims);       // 'google'|'github'|'otp'|'unknown'
 const cfIdentityProvider = idp?.type ?? null;         // the raw type, or null — no idp.id
 
+// In production there is no idp claim: emitLoginEvent's waitUntil asks Access (since 2026-10-16)
+//   cfIdentityProvider = await accessIdentityProvider(env.CF_TEAM_NAME, jwt);  // get-identity's idp.type, or null
+//   if (cfIdentityProvider) loginMethod = loginMethodFromIdp(cfIdentityProvider);
+
 // Standard Tier 1 network fields (unchanged from v2)
 const latitude = String(cfData?.latitude ?? '');
 const longitude = String(cfData?.longitude ?? '');
@@ -243,7 +251,7 @@ GET /accounts/{CF_ACCOUNT_ID}/access/logs/access-requests?since={lastSynced}&unt
 Authorization: Bearer {CF_API_TOKEN_READ_LOGS}
 ```
 
-Maps CF Access log fields to `admin_login_logs` schema and INSERTs `LOGIN_BLOCKED` events, skipping any `cf_ray_id` already present (dedupe). The `cf-audit-last-synced` watermark lives in D1 `admin_portal_settings` (global scope — not KV). Fires `sendSecurityAlertEmail()` via Brevo for at most 5 events per batch, with a suppression digest beyond that. *Corrected 2026-09-14 — this paragraph described the 2026-05 version (KV watermark, Resend, unlimited alerts).*
+Maps CF Access log fields to `admin_login_logs` schema (the method through the same `loginMethodFromIdp()`, so an unrecognised `connection_type` is `unknown`; until 2026-10-16 it was recorded as `google`, MAINTENANCE SP-8) and INSERTs `LOGIN_BLOCKED` events, skipping any `cf_ray_id` already present (dedupe). The `cf-audit-last-synced` watermark lives in D1 `admin_portal_settings` (global scope — not KV). Fires `sendSecurityAlertEmail()` via Brevo for at most 5 events per batch, with a suppression digest beyond that. *Corrected 2026-09-14 — this paragraph described the 2026-05 version (KV watermark, Resend, unlimited alerts).*
 
 **Watermark advance is not simply "after each successful poll"** *(corrected
 2026-09-20)*. On a poll that returns nothing, the watermark moves only once the
@@ -288,7 +296,7 @@ export interface SecurityLogData {
   // CF Zero Trust (v3 — new)
   cfRayId?: string;            // CF-RAY header — links to CF dashboard trace
   cfAccessMethod?: string;     // IdP name from JWT: 'google' | 'github' | 'otp' | 'unknown'
-  cfIdentityProvider?: string; // Full IdP descriptor from JWT idp claim
+  cfIdentityProvider?: string; // IdP type: the JWT's idp claim, else get-identity's idp.type
   cfJwtTail?: string;          // Last 16 chars of JWT (audit reference)
   cfBotScore?: number | null;  // request.cf.botManagementScore
 }
@@ -430,7 +438,8 @@ transactional API directly (`api.brevo.com/v3/smtp/email`, `BREVO_API_KEY`):
   answered after 8 seconds is abandoned and the row records `failed`
 - The subject carries the outcome, the account and, when known, the location
   (`🟢 LOGIN SUCCESS: name@example.com · Toronto, CA`), so the inbox can be
-  triaged without opening each alert. A sign-in that moved reads `🚨 SIGN-IN MOVED: …`
+  triaged without opening each alert. A sign-in that moved reads `🚨 SIGN-IN MOVED: …`, and
+  one made without Google `🚨 SIGN-IN WITHOUT GOOGLE: …` (since 2026-10-16)
 - Contains (`buildSecurityAlertHtml`): account, time and date, sign-in method, a
   device string (with the full UA in the `title` attribute), location when known,
   **masked** IP, the failure reason on a failed attempt, and one line saying why
@@ -456,6 +465,7 @@ transactional API directly (`api.brevo.com/v3/smtp/email`, `BREVO_API_KEY`):
 | Success, the first row of its Access assertion | Per the policy's mode for the role: every sign-in (the default for every role), only unusual ones (a new place or device in 90 days), or none; and not inside the account's trusted areas or during its pause (below) | `never`, `usual`, `area`, `paused` |
 | Success, the same assertion again on the same device in the same country: another tab, a new portal session | No. The INSERT claims the sign-in, so two sessions opened at once cannot both email | `repeat` |
 | Success, the same assertion from another country or device | Yes, urgent, whatever the settings say; once per new country and device | — |
+| Success made without Google: the provider Access names is not `google` (since 2026-10-16, permissions item #37) | Yes, urgent, whatever the settings say, for every new Access sign-in: any way in but Google is the emergency way in. The same assertion again is still a `repeat`. A sign-in whose provider is not known (get-identity did not answer) follows the rows above | `repeat` |
 | Failure, inline (a refusal in `bootstrap.ts`) | Unless the policy switched its kind off: at most one email per account and failure reason in each fixed window (15 minutes by default, 5 or 60 by policy), saying how many attempts like it the past hour held. Counted before the row is written (`LoginLogRepository.getFailureCounts()`); when that read fails, the email is sent | `off`, `throttled` |
 | Blocked at Cloudflare Access (cron) | Unless the policy switched `access_blocked` off: at most 5 per batch, with a digest line on the fifth (`src/workers/scheduled-log-sync.ts`) | `off`, `throttled` |
 
@@ -607,6 +617,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §2.2's `login_method`, `cf_identity_provider` and `alert` rows, the IdP note, §3.1's snippet, §3.2's method mapping and §7's subject line and success rows against `src/lib/auth/cloudflare-access.ts` (`accessIdentityProvider`, `loginMethodFromIdp`), `src/lib/auth/login-event.ts`, `src/lib/login-alerts/decide.ts` and `dispatch.ts`, `src/lib/login-alerts/outcomes.ts` and `src/workers/scheduled-log-sync.ts`; pinned by `test/login-method.test.ts`, `test/login-alert-decide.test.ts` and `test/login-alerts.test.ts`. The live rows read through the D1 connector (method `unknown` on 115 sign-ins since 2026-09-05, `cf_identity_provider` NULL on all). Cloudflare's documentation for get-identity and for `ctx.access` with static assets | A real get-identity answer from production (it is first seen on the next sign-in after the deploy); which providers the Access application accepts today; the rest of this document |
 | 2026-10-10 | §10's rows for `SignInAlertsCard.tsx`, `login-logs.ts`, `session-status.ts` and `SessionForensicsDrawer.tsx` against those files after the Sessions rebuild, pinned by `test/sessions-console.test.ts` and `test/session-ref.test.ts` | The rest of this document; not rendered in a browser |
 | 2026-10-03 | §2.2 `alert` and §7's transport against `src/lib/auth/security-logging.ts` (`postSecurityEmail`) and `src/lib/dal/EmailAuditLogRepository.ts` after v2 step 3, pinned by `test/login-alerts.test.ts` ("the queued email", the Brevo fallback); the consumer's handling read from its deployed bundle (v2 spec §9) | Whether Resend accepts the security sender; the rest of this document |
 | 2026-10-03 | §7's last paragraph against `src/lib/login-alerts/handlers.ts` and `policy-handlers.ts` after v2 step 2 (the card's new options and the alert policy panel), pinned by `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts` | The rest of this document |
