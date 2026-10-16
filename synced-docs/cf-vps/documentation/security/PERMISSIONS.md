@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
+related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/gateway/target.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
 related_docs: [../architecture/OVERVIEW.md, ../features/ACTIONS.md, ../features/CONSOLE.md, ../features/RESTORE-TESTS.md, ../reference/API-ROUTES.md]
 tags: [security, permissions, capabilities, rbac]
 ---
@@ -85,11 +85,15 @@ floor capability can never be added to a role outside `FLOOR_ROLES`.
 
 The policy is one row, `vps:access`, in cf-admin's settings table (schema `cf-vps/access@1`).
 With no row, the code defaults apply. A row that exists but is invalid makes requests fail
-rather than fall back. The Worker caches the row for 30 seconds; a save reads fresh.
+rather than fall back. The Worker keeps a copy of the row for 30 seconds. Every change except
+typing into, resizing or closing a terminal already open, and every read a floor guards (the
+audit trail, session recordings and the log store preview), reads the row itself instead
+(`FRESH_POLICY_ROUTES` in `contract/capabilities.ts`, since 2026-10-16), so a power taken away
+stops those at once and everything else within 30 seconds. A save reads it fresh too.
 
 | Rule | Value |
 |---|---|
-| A person's grant | `allow` list, `deny` list, optional `expiresAt`, `note` and `temporary` |
+| A person's grant | `allow` list, `deny` list, optional `expiresAt`, `note`, `temporary` and `userId` |
 | Most people with a grant | 50 |
 | Longest grant | 366 days ahead; a past date is refused |
 | Powers given for a while | `temporary`, by capability: an `until` at most 90 days ahead and an optional `note`. One whose end has passed is dropped on the next save without an issue; never a floor |
@@ -112,6 +116,24 @@ still counts of everyone else's grant: a grant whose end has passed keeps only i
 its running powers, or is dropped when it has none. A build that does not know the field drops
 it on its next save, so a power ends early, never late. In the activity line, `~cap until …` is
 a power given for a while and `-~cap` one taken away.
+
+### A grant belongs to one account
+
+Since 2026-10-16 (cf-admin permissions #35) a grant saved from cf-admin's Access Center is
+bound to the person's cf-admin account: cf-admin adds the account id to `x-vps-target`, and the
+save stores it in the grant as `userId`. The id comes only from that header; one in the body is
+ignored, and a save that names no id keeps the one already stored. `grantFor()` in
+`src/access/policy.ts` then gives the grant only to that account. If the account is removed and
+someone later gets an account with the same email, the old grant, its denies included, does not
+count for them: they start from their role, and the Access Center shows them with no grant. The
+first save for the new account replaces the old grant; the activity line names the earlier one
+as removed (`removed (an earlier account with this email)`) and delegation counts every
+capability in the new grant as given.
+
+A grant saved before binding, or from the console's own Access page, has no `userId` and counts
+for whoever signs in with the email, as before. The console's Access page keeps the `userId` of
+every grant it saves. Anything that can write the settings row can still write any grant; that
+is cf-admin's database to guard.
 
 ### One capability's default role
 
@@ -141,7 +163,7 @@ someone without `access.manage` is accepted only when all of these hold:
 | Rule | Check |
 |---|---|
 | Holds `access.delegate` | Otherwise `need: access.delegate` |
-| T1 trusted target | cf-admin names the person, with the role from its own user table, in `x-vps-target` (base64url JSON `{ v: 1, email, role }`). cf-admin's gateway never forwards that header from a browser. Missing, malformed or naming someone else: `need: trusted_target` |
+| T1 trusted target | cf-admin names the person, with the role from its own user table, in `x-vps-target` (base64url JSON `{ v: 1, email, role, id? }`, `id` being their cf-admin account id). cf-admin's gateway never forwards that header from a browser. Missing, malformed or naming someone else: `need: trusted_target` |
 | T2 not yourself | `need: self` |
 | T3 outrank | The actor's role sits strictly above the person's; owner and vendor can never be changed by delegation (`need: outranked`) |
 | T4 hold it | Every capability added to or removed from the allow or deny list, or given, ended or given another end for a while, is one the actor holds now (`need: not-held:<cap>`) |

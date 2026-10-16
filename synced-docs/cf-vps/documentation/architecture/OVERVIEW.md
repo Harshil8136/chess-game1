@@ -74,7 +74,7 @@ open; an unknown route is 404; the agent answers only loopback `Host` names.
 
 | Store | Holds | Notes |
 |---|---|---|
-| cf-admin's D1 database (binding `DB`) | One settings row, `vps:access`: role defaults and per-person grants | cf-vps owns no tables. Compare-and-swap on a revision; read cached 30 s per isolate |
+| cf-admin's D1 database (binding `DB`) | One settings row, `vps:access`: role defaults and per-person grants | cf-vps owns no tables. Compare-and-swap on a revision; read cached 30 s per isolate, and fresh for a change or a read a floor guards ([PERMISSIONS](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)) |
 | Worker secret `VPS_SIGNING_KEY` | The Ed25519 private key | Deploys are refused without it (`secrets.required`) |
 | Host config in `/etc/vps` | Retention table, service allow-list, Worker public keys, job manifests and the busy-gate settings | Written by host modules; a job's limits changed from the console sit beside its manifest as an override, which the modules never touch |
 | Audit disk | `/srv/audit`: the forensic record | A fixed-size image, so a full audit disk cannot fill the system disk |
