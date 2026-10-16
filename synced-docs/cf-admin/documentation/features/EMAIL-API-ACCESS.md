@@ -2,7 +2,7 @@
 title: "Email API page (overview, tokens, clients, activity, usage, templates and settings)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-02
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/auth/routes.ts, src/pages/dashboard/email-api/[...section].astro, src/components/admin/email-api/EmailApiPage.tsx, src/lib/email-api-section.ts, migrations/0062_email_api_page.sql, src/lib/auth/guard.ts, src/lib/email/sender-identities.ts, migrations/0061_email_sender_identities_seed.sql, src/lib/email-console.ts, src/lib/email-console-types.ts, src/lib/email-api-route.ts, src/lib/auth/surface-guards.ts, src/pages/api/emails/api-tokens.ts, src/pages/api/emails/api-activity.ts, src/pages/api/emails/api-messages.ts, src/pages/api/emails/api-settings.ts, src/pages/api/emails/api-overview.ts, src/pages/api/emails/api-templates.ts, src/pages/api/emails/api-hotel-mail.ts, src/pages/api/emails/api-clients.ts, src/pages/api/emails/api-usage.ts, src/pages/api/emails/api-export.ts, src/pages/api/emails/api-attachments.ts, src/components/admin/emails/api-access/ApiAttachmentsPanel.tsx, src/components/admin/emails/api-access/ApiMessageModal.tsx, src/components/admin/emails/api-access/ApiWebhookSecretDialog.tsx, src/components/admin/emails/api-access/ApiAccessView.tsx, src/components/admin/emails/api-access/ApiClientsPanel.tsx, src/components/admin/emails/api-access/ApiClientFormDialog.tsx, src/components/admin/emails/api-access/ApiUsagePanel.tsx, src/components/admin/emails/api-access/ApiTokenFormModal.tsx, src/components/admin/emails/api-access/ApiTokenDrawer.tsx, src/components/admin/emails/api-access/api-clients-model.ts, src/components/admin/emails/api-access/ApiOverviewPanel.tsx, src/components/admin/emails/api-access/ApiActivityPanel.tsx, src/components/admin/emails/api-access/ApiTemplatesPanel.tsx, src/components/admin/emails/api-access/ApiHotelMailPanel.tsx, src/components/admin/emails/api-access/ApiTemplateEditor.tsx, src/components/admin/emails/api-access/ApiSettingsPanel.tsx, src/pages/dashboard/emails/[...section].astro, migrations/0060_email_api_access_pages.sql, wrangler.toml]
@@ -107,8 +107,17 @@ than the 25 capabilities first proposed: the owner wanted fewer switches to mana
 - **Role floor.** Every route, and the page itself, also requires the
   administrator tier or above, so a per-person override cannot hand token
   management to a manager or staff.
-- **No re-sign-in.** Unlike Backups and Server, nothing here asks for a sign-in
-  from the last 10 minutes (the owner's choice, 2026-10-02).
+- **A recent sign-in for credentials and widening** (since 2026-10-16, permissions
+  item #15, which the owner approved on 2026-10-15; until then nothing here asked,
+  his choice of 2026-10-02). Creating a token, rotating a token's secret and
+  rotating a client's webhook secret need a sign-in from the last 10 minutes,
+  checked by the route before the Console is called. The portal sends the sign-in
+  time in the actor header (`userActor`, `signedInAt`), and the Console itself
+  refuses with `fresh_sign_in` a token edit that widens it and a settings change
+  other than pausing the API, since only it knows the stored values. Blocking,
+  narrowing and pausing never ask: the emergency stop is never held up. A refusal
+  opens **Confirm it's you** ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md)
+  §10.5).
 - **Nothing new at sign-in.** The five rows join every person's access map, which
   sign-in already computes in one database query, and nothing in this feature
   writes to KV.
@@ -261,3 +270,4 @@ new one is sent, and cf-admin sends both.
 - 2026-10-10 (20:19 phone test): the email service of 2026-10-10 is live (deployed 15:39 UTC) and Harshil's test send and token creation worked. His screenshot showed a token's expiry as a raw number in Activity; `describeEvent` now shows a `…_at` time as a date (`test/email-api-access-model.test.ts`). Not re-checked: the rest of the page.
 - 2026-10-10: the hotel emails (§4 rows, §4d, the two event titles) checked against `src/pages/api/emails/api-hotel-mail.ts`, `ApiHotelMailPanel.tsx`, `src/lib/email-console.ts` and their tests (`test/email-api-routes.test.ts`, `test/api-authz-mapping.test.ts`, `test/email-api-access-model.test.ts`) and `npm run verify`, and against cf-email-consumer's Console (commit `62dc4a0`). Not checked: the page in a browser, or the email service's deploy of that commit.
 - 2026-10-14: §4g, the `api-attachments` route row and the attachments failure row rewritten for attachments on Cloudflare, checked against `src/pages/api/emails/api-attachments.ts`, `ApiAttachmentsPanel.tsx`, `test/email-api-routes.test.ts` (the gate, the forward to `/admin/attachments`, 503 without the binding) and `test/api-authz-mapping.test.ts`, and against cf-email-consumer's Console (`7a474f1`). The 2026-10-10 row above names the Mailroom files as they were then. Not checked: the panel in a browser.
+- 2026-10-16: §3's recent sign-in bullet checked against `src/pages/api/emails/api-tokens.ts` (POST, PATCH rotate), `api-clients.ts` (webhook secret), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and `test/fresh-sign-in.test.ts`, and against cf-email-consumer's Console (`api/src/console.ts`, `requireFreshSignIn`, its tests pass). Not checked: the dialog in a browser; the rest of the page.

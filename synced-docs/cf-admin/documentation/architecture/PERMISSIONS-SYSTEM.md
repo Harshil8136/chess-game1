@@ -779,6 +779,46 @@ job ([CRON-CONTROL](../features/CRON-CONTROL.md) §3c) sends what was kept since
 at 14:00 UTC, 08:00 in Aguascalientes, and marks it sent. A failure to send is reported, never
 shown to the person who saved: their change stands.
 
+### 10.5 Dangerous actions ask for a recent sign-in
+
+*Added 2026-10-16 (items #14 and #15).* The Backups and Server consoles already asked for a
+sign-in from the last 10 minutes before keys, downloads, restores and reboots. The portal and the
+Email API Console now ask the same before the actions below
+(`src/lib/auth/fresh-sign-in.ts`, `freshSignInRefusal`):
+
+| Action | Route | When it asks |
+|---|---|---|
+| Change a person's role; suspend them | `PATCH /api/users/manage` | the role differs, or `is_active` goes from on to off |
+| Delete a person | `DELETE /api/users/manage` | always |
+| Sign a person out | `DELETE /api/users/force-kick` | always |
+| End sessions, block an account | `DELETE /api/sessions/active-sessions` | someone else's session, or the block action; ending your own session does not ask |
+| Sign everyone out | `POST /api/sessions/flush-sessions` | scope `all`; clearing orphaned sessions does not ask |
+| Give an Owner-level page or action | the Access Center save, an approved access request | a grant of a page whose default role is Owner or Vendor support (`isOwnerLevelPage`), when the approval writes one |
+| Page Registry changes that reach more than one person | `POST /api/system/page-access`; `PATCH /api/system/pages`; `PATCH /api/system/console-features` | page access for more than one person, or an Owner-level grant; a page's default role or switch (not its name or description); every console permission default |
+| Delete activity, sign-in, consent or email records | `DELETE` on `/api/audit/logs`, `/api/audit/consent`, `/api/audit/emails`, `/api/audit/delete-targeted`; `/api/audit/delete`; `/api/audit/prune`; `/api/retention/purge` | always (the targeted delete's preview does not ask) |
+| Create or rotate an Email API token; rotate a webhook secret | `POST`/`PATCH` `/api/emails/api-tokens`, `/api/emails/api-clients` | always; checked in the portal before the Console is called |
+
+The time is the session's `signedInAt`, the Cloudflare Access assertion's issue time taken at
+bootstrap (`signedInAtFromAssertion`); a session from before that field falls back to its
+creation time. The rule: no more than 10 minutes old, and no more than 60 s ahead of the clock;
+an unknown time (0) fails closed. Each route refuses in its own shape (a `fail(...)` route adds
+`need: 'fresh_sign_in'`) and adds the header `x-fresh-sign-in: required`. The shell wraps
+`fetch` once (`src/lib/fresh-sign-in-client.ts`, from `GlobalDialogProvider`) and on that header
+opens **Confirm it's you**: *Sign in again* remembers the page in the browser, signs out of the
+portal and of Cloudflare Access as Sign out does, and the first page after the next sign-in,
+within 15 minutes, goes back to it. Nothing was written, so the person makes the change once
+more.
+
+The Email API Console also checks the time itself, because only it knows the stored values: the
+portal sends `signedInAt` in the actor header (`src/lib/email-console.ts`, `userActor`), and the
+Console refuses with code `fresh_sign_in` a token change that widens what it may do and a
+settings change other than pausing the API. The portal turns that code into the same header.
+Pausing never asks, so stopping the API is never held up.
+
+On its own the rule proves only that someone could sign in again in this browser. It proves the
+person once Cloudflare Access asks for its own second step at every sign-in (item #13, an owner
+step in the Cloudflare dashboard).
+
 ---
 
 ## 11. Revocation, and how fast it actually takes effect
@@ -1108,6 +1148,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): vendor support only, the owner and a granted Admin refused (2026-10-15), the visibility rules for a viewer below vendor support (`buildOverview`), the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
 | `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
 | `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
+| `test/fresh-sign-in.test.ts` | The recent sign-in (added 2026-10-16, §10.5): the 10-minute and skew rule, an unknown time failing closed, the return path after signing in again, each guarded route refusing a stale session with the header and allowing the parts that do not ask, and the exact list of files that call `freshSignInRefusal`. `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` cover the sign-outs, Page Registry and the Access Center |
 | `test/sessionRisk.test.ts` | Session risk scoring |
 | `test/cf-access-sync.test.ts` | Group sync behaviour |
 
@@ -1117,6 +1158,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.5, new.** Read `src/lib/auth/fresh-sign-in.ts`, `src/lib/fresh-sign-in-client.ts`, `GlobalDialogProvider.tsx`, `stages/bootstrap.ts` (`signedInAtFromAssertion`), `pipeline.ts`, every route that calls `freshSignInRefusal` (18 files), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn`); `test/fresh-sign-in.test.ts`, `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` pass | §10.5 and the §17 row. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to the role change confirmation (#8, #27) and the monthly clean-up (#31).** Read `role-preview.ts`, `UsersTable.tsx`, `RoleChangePreview.tsx`, `api/users/manage.ts` (PATCH), `scheduled-access-summary.ts` (`clearEndedSettings`); ran `test/role-preview.test.ts` and `test/ended-settings-cleanup.test.ts` | §6's end-date paragraph and §10's role-change paragraph match the code. The rest not re-read |
 | 2026-10-16 | claude | **Scope-limited to page floors on the access screens (AC-9), invitation gates (AC-10) and the Access denied reason (#25).** Read `page-floors.ts` (`pageFloor`), `access-center/rules.ts` (`pageEditability`), `pages.ts`, `overview.ts`, `page-gates.ts` (`inviteSettingRefusals`), `api/users/manage.ts`, `access-requests/rules.ts` (`whyClosed`, `checkAsk`) and `handlers.ts`, `your-access.ts`; ran `test/access-why.test.ts`, `test/access-center-api.test.ts`, `test/registry-access.test.ts` and `test/access-requests.test.ts` | §5's floor paragraph, §10's invitation paragraph and §10.3's new bullet match the code. The rest of the document not re-read |
 | 2026-10-15 | claude | **Scope-limited to §10.4, new.** Read every save point it names (`api/users/manage.ts`, `access-center/handlers.ts`, `registry-access.ts`, `registry.ts`, `api/system/pages.ts`, `access-requests/handlers.ts`, both console gateways) and the live `admin_pages.required_role` values through the D1 connector (owner 28, dev 3); `test/access-changes.test.ts` (20 tests) | §10.4 only; the rest of the document was not re-checked in this pass |

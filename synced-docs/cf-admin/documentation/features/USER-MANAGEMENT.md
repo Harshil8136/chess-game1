@@ -436,6 +436,8 @@ Accepts updates for active status, display name, and role. Mutates the Supabase 
 
 *Since 2026-10-16 (permissions items #8 and #27)* picking a new role in the role menu first asks `GET /api/users/role-preview?userId=&role=` what the change does, then shows it in a confirmation (`RoleChangePreview.tsx` on the shared ConfirmDialog): the pages it opens and closes, the actions gained and lost, the personal page settings it deletes (each with "given" or "closed" and its end date, and a count of those that no longer apply), and, for each console the viewer can open, the permissions gained and lost there; console grants stay. Nothing is saved until **Change role** is pressed; Cancel or closing the dialog leaves the role as it was, and the badge shows the new role only once it is saved. A preview the server refuses (the same refusals as this route) is shown as an error and no dialog opens; a preview that fails to load still asks, with what every role change does. Until then a role change saved at once and deleted the settings without a word.
 
+*Since 2026-10-16 (permissions item #14)* changing a role, suspending a person (`is_active` from on to off) and deleting one (`DELETE`) need a sign-in from the last 10 minutes; so does signing someone out with `/api/users/force-kick`. Otherwise the route refuses with 403 and nothing changes, and the page opens **Confirm it's you**, which signs the viewer out and back in and returns them to Users. A name change or restoring a person does not ask. The rule and its full list of actions: [PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.5.
+
 ### 9.0 GET /api/users (the list)
 
 *Corrected 2026-10-15.* "Last sign-in" is the newer of `admin_authorized_users.last_login_at`
@@ -611,6 +613,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §9.2's recent sign-in paragraph.** `src/pages/api/users/manage.ts` (PATCH, DELETE), `force-kick.ts`, `src/lib/auth/fresh-sign-in.ts`; `test/fresh-sign-in.test.ts` and `test/session-rank.test.ts` pass | The dialog and the return after signing in again in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to §9.2's role change confirmation.** `UsersTable.tsx` (`handleRoleChange`, `fetchRolePreview`), `InlineRoleSelector.tsx`, `RoleChangePreview.tsx` (server-rendered with sample data), `src/lib/access-center/role-preview.ts`; `test/role-preview.test.ts` passes | The dialog in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to the invitation's page settings (§5's right panel) and §6.1's asking paragraph.** `src/pages/api/users/manage.ts` (POST), `page-gates.ts` (`inviteSettingRefusals`), `src/lib/access-requests/rules.ts` (`whyClosed`, `checkAsk`), `handlers.ts`, `RequestAccess.tsx`; `test/access-why.test.ts` passes | The rest of the document; the card and the invitation in a phone browser (the owner's test) |
 | 2026-10-15 | **Scope-limited to §6.1's access-change paragraph.** `src/pages/api/users/manage.ts` (POST, PATCH, DELETE) and `src/lib/access-requests/handlers.ts` against `src/lib/access-changes/notify.ts`; `test/access-changes.test.ts` | Whether the email arrives in a real inbox (the owner's phone test) |

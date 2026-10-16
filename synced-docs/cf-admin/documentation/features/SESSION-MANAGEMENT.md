@@ -3,7 +3,7 @@
 title: "Session Management (Security section)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionsConsole.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts]
@@ -195,6 +195,13 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   what to do: the sessions are already ended, but the account would let them sign in again.
   The owner's and vendor support's sign-in blocks can be lifted only by the owner or vendor
   support.
+- **A recent sign-in first** (*2026-10-16*, permissions item #14). Ending someone else's
+  session, **Lock out**, a force sign-out from Users and **Sign everyone else out** need a
+  sign-in from the last 10 minutes. Otherwise the route answers 403, nothing is ended, and the
+  page opens **Confirm it's you**: it signs you out and back in and brings you back to this
+  page, where you press the button again. Ending your own other sessions and **Clear stale
+  sessions** do not ask. The rule: [PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md)
+  §10.5.
 - **Session handles, never session IDs** (2026-10-10). A session's ID is the value of its
   cookie. Until 2026-10-10 `GET /api/sessions/active-sessions` and
   `GET /api/users/[id]/session-status` sent every session's ID to anyone who could open the
@@ -302,6 +309,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-16 | claude | **Scope-limited to the recent sign-in bullet.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `flush-sessions.ts`, `src/pages/api/users/force-kick.ts` and `src/lib/auth/fresh-sign-in.ts`; `test/session-rank.test.ts` and `test/fresh-sign-in.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-15 | claude | **Scope-limited to the alert policy's new "Access changes emailed" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` and `policy-handlers.ts`; `test/access-changes.test.ts` pins the setting's default and its change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-14 | claude | **Scope-limited to who may end sessions and lock people out.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `active-revocations.ts` (unblock rule unchanged) and `SessionDrawer.tsx`; `test/session-rank.test.ts` pins the route and `test/sessions-console.test.ts` the buttons. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-10 | claude | The whole page after the rebuild, against `src/pages/dashboard/sessions/index.astro`, every file in `src/components/admin/users/sessions/`, `src/pages/api/sessions/active-sessions.ts`, `active-revocations.ts`, `flush-sessions.ts`, `src/pages/api/users/[id]/session-status.ts`, `src/pages/api/audit/login-logs.ts`, `src/lib/auth/surface-guards.ts` and `src/lib/auth/session-ref.ts`; `test/sessions-console.test.ts` and `test/session-ref.test.ts` added. Not rendered in a browser (the owner checks on his phone); the live KV and D1 were not read. |
