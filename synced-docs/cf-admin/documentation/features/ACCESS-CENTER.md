@@ -5,7 +5,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts, test/see-as.test.ts, test/access-console-requests.test.ts]
+related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-templates.ts, test/access-templates.test.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts, test/see-as.test.ts, test/access-console-requests.test.ts]
 related_docs: [../specs/2026-10-14-access-control-room.md, ../specs/2026-10-03-access-center-v2-design.md, ../specs/2026-10-02-access-center-design.md, ../architecture/PERMISSIONS-SYSTEM.md, VPS-CONSOLE.md, BACKUP-CONSOLE.md, USER-MANAGEMENT.md, ../reference/DESIGN-SYSTEM.md]
 tags: [permissions, access-center, plac, vps, backup, registry, ui]
 ---
@@ -17,8 +17,9 @@ tags: [permissions, access-center, plac, vps, backup, registry, ui]
 > permission, each with the role that gets it by default and whether this person has it
 > and why. Anything you are allowed to change has a switch. Switches only change a draft;
 > you review the changes and save them together, with an optional end date for page
-> changes. A History tab shows every access change made to the person, and *Copy access
-> from…* fills the draft from someone else's access. Page Registry
+> changes. A History tab shows every access change made to the person, *Copy access
+> from…* fills the draft from someone else's access, and *Templates* switches on a named set
+> ("Front desk") the Owner saved. Page Registry
 > (`/dashboard/debug/pages`) is the portal-wide view of the same thing: every page, person,
 > personal setting and console permission, checks, and the history of every change; it can
 > change one page for many people at once ([its design](../specs/2026-10-14-access-control-room.md)).
@@ -34,10 +35,10 @@ dates, history, copying and the registry's control room were added on 2026-10-14
 | | |
 |---|---|
 | Screen | `/dashboard/users/[id]/access`: the header (name, email, role badge, *Back to Users*), then the `UserAccessEditor` island |
-| Components | `src/components/admin/users/access-editor/`: `UserAccessEditor` (load, draft, save, the Access and History tabs), `AccessChrome` (summary pills, toolbar, save bar), `AccessSections` (category and console cards), `AccessRow`, `AccessReviewDialog`, `AccessHistoryList` (the history, shared with Page Registry), `CopyAccessDialog`, `labels.ts` (every word the rows use) |
+| Components | `src/components/admin/users/access-editor/`: `UserAccessEditor` (load, draft, save, the Access and History tabs), `AccessChrome` (summary pills, toolbar, save bar), `AccessSections` (category and console cards), `AccessRow`, `AccessReviewDialog`, `AccessHistoryList` (the history, shared with Page Registry), `CopyAccessDialog`, `TemplatesDialog`, `labels.ts` (every word the rows use) |
 | Styles | `src/styles/components/access-editor.css`, imported by `global.css`; colours from `data-category` and `data-class` |
-| Data | `GET /api/users/access-center?userId=<id>` on load; `POST /api/users/access-center` to save; `GET /api/users/access-history?userId=<id>&before=<cursor>` for the History tab |
-| Server | `src/lib/access-center/`: `page-gates.ts` and `rules.ts` (who may change what), `pages.ts` and `profile.ts` (the profile), `handlers.ts` (the two verbs), `history.ts` (the history), `console-client.ts` and `consoles.ts` (the console calls), `draft.ts` (the browser's draft and the copy, pure) |
+| Data | `GET /api/users/access-center?userId=<id>` on load; `POST /api/users/access-center` to save; `GET /api/users/access-history?userId=<id>&before=<cursor>` for the History tab; `GET/POST/DELETE /api/users/access-templates` for *Templates* (§3.3) |
+| Server | `src/lib/access-center/`: `page-gates.ts` and `rules.ts` (who may change what), `pages.ts` and `profile.ts` (the profile), `handlers.ts` (the two verbs), `history.ts` (the history), `console-client.ts` and `consoles.ts` (the console calls), `draft.ts` (the browser's draft, the copy and the templates' apply, pure), `templates.ts` (the stored templates) |
 | Registry | `src/components/admin/debug/registry/` (the control room, §4) and `ConsoleFeatures.tsx` (its Consoles tab); `GET /api/system/access-overview`, `POST /api/system/page-access`, `GET /api/system/access-history`, `GET/POST/PATCH /api/system/console-features` (`src/lib/access-center/registry-access.ts`, `history.ts`, `registry.ts`) |
 
 ## 2. The screen
@@ -56,6 +57,15 @@ newest first, fifty at a time, with chips by kind):
    everything) and offers *Match everything* (what they can open and use) or *Personal
    settings only* (their own grants and revokes). It fills the draft with the changes the
    viewer may make, says how many it skipped, and saves nothing.
+   *Templates* (since 2026-10-16, item #32) lists the saved templates, each with its note and
+   the first items it opens. Picking one says how many switches it would turn on for this
+   person; *Switch on N* puts them in the draft. It never switches anything off: a page or
+   permission the person already has, or one the template does not name, stays as it is. An
+   item the viewer may not give is counted and left alone, and an item this person's access
+   does not list (a console not answering, a page since removed) is counted as missing. The
+   Owner and Vendor support also see *Save as a new template* (what this person opens with the
+   unsaved changes, without what their role or a floor fixes), *Replace* and *Remove* (tap
+   twice). At most 20 templates, names unique and up to 40 characters, notes up to 200.
 3. **Category cards**, one per registry category in registry order, coloured as in the
    registry. A page's `#` actions sit under it with a tree line and a *Feature* tag. A
    feature whose page is off says it has no effect until the page is on.
@@ -155,6 +165,38 @@ anything else in the body is ignored. The browser builds this with `toSave` in `
 | 429 | More than 5 access saves a minute (one save counts once) |
 | 502 | A console that had to be asked did not answer. Nothing was saved |
 
+### 3.3 Templates
+
+`GET /api/users/access-templates` answers `{ templates, canManage }` to anyone the Users page
+opens for; `canManage` is true for the Owner and Vendor support. A template is
+`{ id, name, note, items: [{ entry, label }], savedBy, savedAt }`, where `entry` is the draft's
+key: `pages|<path>` for a page or `#` feature, `vps|<capability>` or `backup|<capability>`.
+
+```json
+{ "id": "…", "name": "Front desk", "note": "Reception shifts",
+  "items": [{ "entry": "pages|/dashboard/bookings", "label": "Bookings" },
+            { "entry": "backup|runs.view", "label": "Backup console: See runs" }] }
+```
+
+`POST` saves one: without `id` a new template, with `id` a replacement. `DELETE ?id=<id>`
+removes one. Both answer `{ templates, canManage }` (a save adds `template`) and write one
+activity-log row (module `users`, target `access_template`, the entries in its context).
+
+| Status | Meaning |
+|---|---|
+| 400 | Malformed: no name, no items, more than 200 items, an entry that is not a page or console permission, an unknown field, a name over 40 or a note over 200 characters |
+| 403 | Not the Owner or Vendor support (saving and removing), or the Users page is closed |
+| 404 | The template no longer exists |
+| 409 | Already 20 templates, or another template has that name (in any case) |
+| 429 | More than 10 template changes a minute |
+
+The templates are one JSON row of `admin_portal_settings` (`access:templates`, category
+`access`), so there is no new table. Two saves at the same moment can lose one; with only the
+Owner and Vendor support writing, that is accepted. A read checks the row by hand rather than
+with the save schema, which keeps a full row (20 templates of 200 items) at about 1.3 ms of CPU
+(measured in the test pool, 2026-10-16). Applying a template runs only in the browser
+(`applyTemplate` in `draft.ts`).
+
 ## 4. Page Registry and its Consoles tab
 
 Page Registry (`/dashboard/debug/pages`) is the control room for everyone's access: tiles, then
@@ -223,6 +265,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to templates (#32).** The TL;DR, §1's rows, §2 step 2's *Templates* paragraph and the new §3.3 against `TemplatesDialog.tsx`, `AccessChrome.tsx` (`onTemplates`), `UserAccessEditor.tsx`, `draft.ts` (`templateItems`, `applyTemplate`), `limits.ts`, `templates.ts` and the route; `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass; every live `admin_pages.path` (117) matches the entry pattern, read through the D1 connector; the read's CPU measured with a 20-template, 200-item row | The dialog in a phone browser (the owner's test); it was not server-rendered |
 | 2026-10-16 | **Scope-limited to permissions given for a while (#22).** §2.1's line and new paragraph, §3.1's `grant` and `temporaryUntil` rows and §3.2's `temporary` sentence against `types.ts`, `temporary.ts`, `rules.ts` (`vpsSource`, `vpsOverride`, `activeGrant`, `changedCapabilities`, `vpsChangeRefusal`, `grantIssues`), `profile.ts`, `draft.ts` (`consoleGrant`), `handlers.ts` (`toGrantInput`), `labels.ts` and `AccessSections.tsx`; `test/access-console-requests.test.ts` and the Access Center suites pass | The editor in a phone browser (the owner's test) |
 | 2026-10-16 | §4's See it as paragraph (#26) against `SeeAsPanel.tsx`, `RegistryConsole.tsx`, `src/lib/access-center/see-as.ts` and `src/lib/auth/nav-pages.ts`; `test/see-as.test.ts` passes; the live registry's sub-pages and their sidebar pages read through the D1 connector (every sub-page's sidebar page is switched on today, so "Only by address" is empty) | The tab in a phone browser (the owner's test) |
 | 2026-10-16 | §4's console warning (#28) against `ConsoleFeatures.tsx`, `RegistryConsole.tsx`, `logic.ts` (`consoleGap`), `registry.ts` (`viewKey`), `vps.ts` and `backup.ts` (`viewCapability`); `test/registry-ui-logic.test.ts` passes; the two console pages' default roles read live through the D1 connector | The warning in a phone browser; it shows only when a console page's role is lowered |

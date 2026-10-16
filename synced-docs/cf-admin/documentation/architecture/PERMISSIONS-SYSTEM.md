@@ -7,7 +7,7 @@ last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -722,7 +722,13 @@ tab (`GET /api/users/access-history`, read from the activity log) and *Copy acce
 only fills the draft. Since 2026-10-16 (#22) it shows and keeps the console permissions given
 for a while (§10.3): each has its own end, a save carries it back unchanged and never into the
 allow list, and the early checks compare a change with what the console's `delegationBase`
-would (`activeGrant` in `src/lib/access-center/rules.ts`).
+would (`activeGrant` in `src/lib/access-center/rules.ts`). Since 2026-10-16 (#32) *Templates*
+switches on, in the draft, a named set of pages, features and console permissions ("Front
+desk"). Applying one only adds switches the viewer may set, so a template never gives more than
+the person applying it could give by hand, and the save is the Access Center's with all its
+gates. The Owner and Vendor support save and remove templates (`/api/users/access-templates`,
+one `admin_portal_settings` row, `src/lib/access-center/templates.ts`); each change writes an
+activity-log row (`access_template`).
 
 ### 10.2 Page Registry: many people at once
 
@@ -1218,6 +1224,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.1's templates sentence (#32).** Read `src/lib/access-center/templates.ts` (`manager`, `parseTemplates`, `postTemplate`, `deleteTemplate`), `draft.ts` (`templateItems`, `applyTemplate`, `allowedOverride`), `TemplatesDialog.tsx` and `src/lib/auth/routes.ts` (`/api/users` → `/dashboard/users`); `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass | §10.1 matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5's delete row, §12's measurement and integrity paragraph, and §16's C-9 row (#21).** Read `src/pages/api/audit/logs.ts` (no `DELETE`), `delete-targeted.ts` (`targetTabOf`, the fresh sign-in on `DELETE`), `src/pages/api/retention/purge.ts` (the 180-day floor), `src/lib/audit-seal/` and `src/workers/scheduled-audit-seal.ts`; searched `src/` for any other delete from `admin_audit_log` (none); counted `admin_audit_log` and `admin_login_logs` through the D1 connector | §10.5 now lists the delete routes that exist; §12 says what the log guarantees and links §3.6 of plac-and-audit.md; C-9 closed. The rest of the document was not re-read, and §8 still does not describe the sensitive reads recorded since #20 (the docs pass after the build) |
 | 2026-10-16 | claude | **Scope-limited to §5's `#force-kick` sentence after the Users page rebuild (#29).** Read `PersonDrawer.tsx` (`forceKickRefusal` from `people.ts`, the `canForceKick` prop from `denyForceKick` in `src/pages/dashboard/users/index.astro`); `test/session-rank.test.ts` passes | The sentence matches the code. The rest not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.2's See it as paragraph (#26) and its §17 row.** Read `src/lib/access-center/see-as.ts`, `src/lib/auth/nav-pages.ts`, `computeNavItems` in `plac.ts` and `SeeAsPanel.tsx`; `test/see-as.test.ts` and `test/page-registry.test.ts` pass | The paragraph and the row match the code. The rest of the document not re-read |
