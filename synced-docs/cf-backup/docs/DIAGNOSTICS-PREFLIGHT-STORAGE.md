@@ -1,6 +1,6 @@
 # Diagnostics, pre-flight checks and a simpler storage layout
 
-- **Status:** Approved 2026-09-24; being built (see Build log). It is built in four stages, in the order of B8. Until the Build log at the end of this document says a stage has shipped, that stage is **not built yet**. "How it works today" describes the live system; every other section describes the plan.
+- **Status:** Approved 2026-09-24 and built in four stages, in the order of B8; the Build log at the end says when each shipped. Since 2026-10-10 the Diagnostics page is part of the Health page. "How it works today" describes the live system; the Build log's entries describe the page as it shipped on their date, and B4 is current.
 - **Who it is for:** Part A is for everyone, including staff who do not write code. Part B is for engineers and gives the exact technical design.
 - **Where it came from:** the owner asked for three things:
   1. a way to test every step of the backup flow and see each part's health, response time and result;
@@ -368,7 +368,7 @@ interface Probe {
   - **Limits:** it uses the check-mode counter and the per-person daily limit, and is capped at 5 a day overall.
   - **Refused** while any run is active.
 
-**New capability:** `diagnostics.run`, class `operate`, "Run diagnostics tests (the runner test uses about 2 GitHub Actions minutes)". It is in the Owner and Vendor support defaults. It is added to the catalogue with its `known` handling, so stored policies treat it as a new id.
+**New capability:** `diagnostics.run`, class `operate`, "Run the Health page's tests (free: they use no GitHub Actions minutes)" (the runner test, which used about 2 minutes, is retired). It is in the Owner and Vendor support defaults. It is added to the catalogue with its `known` handling, so stored policies treat it as a new id.
 
 **History:**
 - It is stored in a new settings row, `backup:diagnostics`, holding the last 20 runs.
@@ -410,7 +410,7 @@ Console connection   312 ms, measured by your browser
 - **Who may run:** Run all and Run step need `diagnostics.run`, and the server's `canRun`. Without them both buttons show, disabled, with the reason in plain words ("You cannot run diagnostics tests. Ask the Owner if you need access.", since 2026-10-15), and every stored result stays readable. One test runs at a time; while one runs, the other buttons say why they wait.
 - **No runner-test dialog.** Since docs/remediation/13 B3 the server answers `POST /api/diagnostics/runner` with 501 (the runner test belonged to the retired Primary Pipeline), so the page has no button or dialog for it; About says it is retired.
 - **Data the page does not have** reads "Not available yet: *reason*": a step with no stored or live result (which lists its tests), the pre-flight panel before any real run, and the console connection before its first answer. The old `NotAvailable` component is gone.
-- **Section registration:** it registers like every section, in `SECTIONS`, `TAB_CAPABILITY` (`usage.view`) and the routing. Its URL is `/dashboard/backup/diagnostics`.
+- **Section registration:** it registers like every section, in `SECTIONS`, `TAB_CAPABILITY` (`usage.view`) and the routing. Its URL is `/dashboard/backup/health`; `/dashboard/backup/diagnostics` and `/dashboard/backup/readiness` open it (since 2026-10-10).
 - **Real data only:**
   - a step never run shows "Not tested yet";
   - a probe that cannot run shows Skipped with the reason;

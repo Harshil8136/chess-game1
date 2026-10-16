@@ -14,12 +14,15 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
 2. **No actor, nothing.** The Worker answers two path families and 404s everything else:
    - `/dashboard/backup/app/` — the console and its API (`…/app/api/`). Every request needs
      a valid `x-backup-actor` header (`v: 1`) from cf-admin's gateway. A bad header is 400
-     `bad_actor` and an unknown version 409; cf-backup never answers 401.
+     `bad_actor` and an unknown version 409 `actor_version_mismatch`; cf-backup never answers
+     401.
    - `/internal/*` — accepts only cf-admin's `backup-tick` system actor.
 
    Once the owner sets `CONSOLE_SIGNING_KEY` on this Worker (rule 3), an actor header on
-   either path counts only with cf-admin's `x-backup-signature` over it, made within 60
-   seconds; anything else is 400 `bad_signature` (`src/gateway/signature.ts`, plan doc 02 §4).
+   either path counts only with cf-admin's `x-backup-signature`: an HMAC-SHA256 over the
+   method, the path and query, and the `x-backup-actor`, `x-backup-target` and
+   `x-backup-request-id` headers (not the body), stamped within 60 seconds of this Worker's
+   clock. Anything else is 400 `bad_signature` (`src/gateway/signature.ts`, plan doc 02 §4).
 
    The address bar shows `/dashboard/backup/<section>`; cf-admin frames
    `/dashboard/backup/app/<section>`, and the `/app` path is never shown. The local dev
@@ -107,3 +110,11 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
 11. **Every response** carries `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options:
     nosniff`, `Referrer-Policy: same-origin`, `no-transform` in `Cache-Control` and, outside
     dev, the CSP. API answers are `no-store`, and `Set-Cookie` is always stripped.
+12. **Who may do what is decided here, on every request.** Every API route declares one
+    capability from the closed catalog in `src/access/catalog.ts`; an unknown id, a system
+    actor or a missing capability gets a 403 in plain words. The floors (key status, rotate,
+    reveal and re-key; downloading a run's encrypted data; deleting old runs; changing
+    access; running and configuring restore tests) belong to Owner and Vendor support only:
+    no role setting, personal grant or power given for a while can pass one on, and changing
+    that is a code change the owner approves (OD-27). The full model is plan doc 13; the
+    generated map of every capability, default and route is `docs/reference/PERMISSIONS.md`.
