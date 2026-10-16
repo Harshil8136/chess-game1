@@ -266,6 +266,12 @@ The **Alert policy** tab, opened by `#alert-policy`, every choice a row of chips
   day at 08:00 in Aguascalientes, or off. They go to the same recipients. What counts
   as an access change and how the summary is gathered:
   [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §10.4.
+- **Accounts nobody uses** (2026-10-16): flag an account not signed in to or changed for
+  45 days and suspend it at 90 (the default), flag at 45 days only, or off. The flags go to
+  the same recipients, one email per account and stretch; the Owner and Vendor support are
+  never suspended. The rule and what a suspension does:
+  [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.5. Choosing a lighter setting counts as
+  turning alerts down.
 - **Save policy** saves the lot. A save that turns alerts down, or changes the
   recipients, emails the recipients before and after the change.
 - **People:** everyone active, with what their successful sign-ins send. A holder
@@ -309,6 +315,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-16 | claude | **Scope-limited to the alert policy's new "Accounts nobody uses" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` (`UNUSED_MODES`, `describePolicyChange`) and `policy-handlers.ts`; `test/unused-accounts.test.ts` pins the default and the change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to the recent sign-in bullet.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `flush-sessions.ts`, `src/pages/api/users/force-kick.ts` and `src/lib/auth/fresh-sign-in.ts`; `test/session-rank.test.ts` and `test/fresh-sign-in.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-15 | claude | **Scope-limited to the alert policy's new "Access changes emailed" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` and `policy-handlers.ts`; `test/access-changes.test.ts` pins the setting's default and its change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-14 | claude | **Scope-limited to who may end sessions and lock people out.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `active-revocations.ts` (unblock rule unchanged) and `SessionDrawer.tsx`; `test/session-rank.test.ts` pins the route and `test/sessions-console.test.ts` the buttons. Not re-read: the rest of the page. Not rendered in a browser. |

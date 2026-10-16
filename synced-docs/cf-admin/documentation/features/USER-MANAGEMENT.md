@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -300,6 +300,38 @@ If a user needs immediate revocation:
 3. **Full Delete:** Fetches `targetUser.id` from whitelist, runs 3-layer force-kick, `resetUserOverrides(env.DB, id)` clears D1 PLAC data, removes the person's server- and backup-console grants from `vps:access` and `backup:access` (`src/lib/dal/VpsAccessRepository.ts`; the backup grant since 2026-10-15, before which an address invited again got its old backup powers back), then `DELETE FROM admin_authorized_users WHERE email = ?` removes the whitelist entry. **No `auth.admin.deleteUser()` call** — GoTrue is not involved.
 4. **CF Access policy (manual):** For permanent revocation, also remove the user from the CF Zero Trust application policy in the Cloudflare Dashboard to prevent CF Access from ever authenticating them again.
 
+### 5.5 Accounts nobody uses
+
+*Added 2026-10-16 (permissions item #17).* An active account nobody uses is switched off on
+its own, following CIS Controls v8 safeguard 5.3 (disable an account unused for 45 days). The
+rule lives in `src/lib/unused-accounts.ts`; the Users list and the daily job both decide
+through it.
+
+- **When an account counts as unused.** From the latest of: its last successful sign-in (the
+  sign-in log, or the older stored `last_login_at`, as §9.0), its invitation (`created_at`) and
+  the last change made to it on Users (`updated_at`, which §9.2 writes on every change). So a
+  person invited but never signed in counts from the invitation, and restoring a suspended
+  person starts the count again.
+- **At 45 days** the Users page shows an amber **Unused N d** badge beside the last sign-in, and
+  the expanded row says since when and what happens next. The sign-in alert list hears about it
+  once: one email, **Accounts nobody uses**, naming each account newly past 45 days.
+- **At 90 days** the account is suspended at the next daily check (14:00 UTC, 08:00 in
+  Aguascalientes), exactly as a suspension on Users: `is_active` off, the three-layer force-kick
+  (§3.1), the permission mark, and one activity-log row "Suspended automatically: not used for
+  N days" by `system`. The Cloudflare Access group follows on the next five-minute reconcile
+  (§11). The email that day names it as suspended. Restore it on Users as any suspended person
+  (§5.3).
+- **Never suspended automatically:** the Owner, Vendor support, and an account whose stored role
+  cannot be read. They are still flagged and emailed.
+- **The switch** is the alert policy's **Accounts nobody uses** row (Security → Sessions →
+  Alert policy, [SESSION-MANAGEMENT](SESSION-MANAGEMENT.md)): flag at 45 days and suspend at 90
+  (the default), flag at 45 days only, or off. Off hides the badge and stops the check.
+- **The daily check** runs inside the `access-change-summary` job, only in the hour after
+  14:00 UTC (`src/workers/scheduled-unused-accounts.ts`; cost in
+  [CRON-CONTROL](CRON-CONTROL.md)). A `notify` row per account (target type `unused_account`,
+  labelled with the date its count starts) keeps the same stretch from being emailed twice; a
+  send that fails is tried again the next day, and a suspension stands either way.
+
 ## 6. UI Implementation (Manage Users Dashboard)
 
 The interface is composed of multiple Preact islands:
@@ -438,6 +470,10 @@ Accepts updates for active status, display name, and role. Mutates the Supabase 
 
 *Since 2026-10-16 (permissions item #14)* changing a role, suspending a person (`is_active` from on to off) and deleting one (`DELETE`) need a sign-in from the last 10 minutes; so does signing someone out with `/api/users/force-kick`. Otherwise the route refuses with 403 and nothing changes, and the page opens **Confirm it's you**, which signs the viewer out and back in and returns them to Users. A name change or restoring a person does not ask. The rule and its full list of actions: [PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §10.5.
 
+*Since 2026-10-16 (permissions item #17)* every change also writes `updated_at`, which the
+check of accounts nobody uses (§5.5) reads as the last time the account was used. The column
+existed but nothing wrote it.
+
 ### 9.0 GET /api/users (the list)
 
 *Corrected 2026-10-15.* "Last sign-in" is the newer of `admin_authorized_users.last_login_at`
@@ -445,6 +481,10 @@ and the person's newest successful sign-in in `admin_login_logs` (one grouped re
 `LoginLogRepository.getLastSuccessByEmail`). This app never writes `last_login_at`; only an
 older system did, so on its own it was empty for four of five accounts and months old for the
 fifth (live, 2026-10-15). The sign-in log keeps a year.
+
+*Since 2026-10-16* each active person also carries `unused`: null, or since when the account
+has gone unused, for how many days, and the day it is suspended (null when it never is), as
+§5.5 decides with the alert policy's setting.
 
 ### 9.3 POST /api/settings/user (a name, from Settings)
 
@@ -613,6 +653,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §5.5 (new) and the #17 notes in §9.0 and §9.2.** `src/lib/unused-accounts.ts`, `src/workers/scheduled-unused-accounts.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuthorizedUserRepository.ts` (`listActiveWithDates`, `suspendIfActive`), `api/users/index.ts`, `manage.ts` (PATCH `updated_at`), `UnusedBadge.tsx`; `test/unused-accounts.test.ts` passes. Live: each active account's last successful sign-in (D1 connector) | The badge and the email in a phone browser and a real inbox (the owner's test) |
 | 2026-10-16 | **Scope-limited to §9.2's recent sign-in paragraph.** `src/pages/api/users/manage.ts` (PATCH, DELETE), `force-kick.ts`, `src/lib/auth/fresh-sign-in.ts`; `test/fresh-sign-in.test.ts` and `test/session-rank.test.ts` pass | The dialog and the return after signing in again in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to §9.2's role change confirmation.** `UsersTable.tsx` (`handleRoleChange`, `fetchRolePreview`), `InlineRoleSelector.tsx`, `RoleChangePreview.tsx` (server-rendered with sample data), `src/lib/access-center/role-preview.ts`; `test/role-preview.test.ts` passes | The dialog in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to the invitation's page settings (§5's right panel) and §6.1's asking paragraph.** `src/pages/api/users/manage.ts` (POST), `page-gates.ts` (`inviteSettingRefusals`), `src/lib/access-requests/rules.ts` (`whyClosed`, `checkAsk`), `handlers.ts`, `RequestAccess.tsx`; `test/access-why.test.ts` passes | The rest of the document; the card and the invitation in a phone browser (the owner's test) |

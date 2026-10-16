@@ -340,6 +340,20 @@ and writes no `authz-changed` mark. Two runs at once would both delete the same 
 the second finding none, and could write two marks; nothing else differs. A failure
 is reported and tried again on the next run.
 
+*Added 2026-10-16 (permissions item #17).* The same job checks for accounts nobody
+uses (`checkUnusedAccounts` in `src/workers/scheduled-unused-accounts.ts`, run before
+the summary), only in the hour after 14:00 UTC: in any other hour, and with the alert
+policy's "Accounts nobody uses" set to off, it makes no query. Since the job sleeps
+until the next 14:00, capped at an hour, one run a day lands in that hour. It reads
+the active accounts (one Supabase read) and each one's last successful sign-in (the
+grouped read of `admin_login_logs` the Users page also makes), suspends the accounts
+due at 90 days and emails the alert list once about the rest; the rule and what a
+suspension does are in [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.5. A `notify` row
+per account (target `unused_account`, labelled with the date its count starts) keeps
+the same stretch from being emailed twice, so a second run that hour, or a manual one,
+sends nothing new. A run the dispatcher defers past the hour skips that day, and the
+next day catches up. A failure is reported and the check runs again the next day.
+
 ## 4. How shedding decides
 
 `cron-usage-probe` reads Cloudflare's own account-wide D1 analytics once an hour
@@ -557,7 +571,13 @@ most one control-document write per tick it runs in. The day's one send reads at
 most 51 kept rows and writes one mark. The monthly clean-up (2026-10-16) adds, in a
 month's first week only, one indexed read per run until it has run, then once a
 DELETE over `admin_page_overrides` (4 rows on 2026-10-16) and one activity-log row:
-measured at 6 queries, 4 rows read and 8 written for that run (`budgets.ts`).
+measured at 6 queries, 4 rows read and 8 written for that run (`budgets.ts`). The check of
+accounts nobody uses (2026-10-16) adds, once a day in the hour after 14:00 UTC, the
+policy row, one Supabase read of the active accounts, the grouped read of
+`admin_login_logs` (a scan of the table: 442 rows on 2026-10-16, read through the D1
+connector; the log keeps a year), one indexed read per flagged account (2 on
+2026-10-16), and one activity-log row per account suspended or emailed. These are
+counts from the code, not a measurement; outside that hour it adds nothing.
 
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
@@ -762,6 +782,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | The check of accounts nobody uses added to `access-change-summary`: `src/workers/scheduled-unused-accounts.ts`, `src/lib/unused-accounts.ts`, `src/lib/jobs/registry.ts` (its about), `budgets.ts`; `test/unused-accounts.test.ts` (the window, off, a repeat run, a failed send) and `test/jobs-budget.test.ts` pass; the live `admin_login_logs` row count and each account's last sign-in read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The monthly clean-up added to `access-change-summary`: `src/workers/scheduled-access-summary.ts` (`clearEndedSettings`), `PageRegistryRepository.deleteEndedBefore`, `src/lib/jobs/registry.ts` (its about now says it deletes), `budgets.ts`; `test/ended-settings-cleanup.test.ts` and `test/jobs-budget.test.ts` pass; a first-week run measured with a fixed date; the live row count read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-15 | claude | `access-change-summary` added: `src/workers/scheduled-access-summary.ts`, `src/lib/access-changes/notify.ts`, `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`; `test/jobs-budget.test.ts` measured 3 queries, 1 row read, 0 written on an idle run; `test/access-changes.test.ts` (the window, the mark, the 50-row limit, a refused send) | §3: 15 jobs (13+2), the tier table and why it is deferrable; §3c added; §4a: five jobs sleep; §5: its cost; §7: thirteen five-minute jobs without a lease. Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (not deployed when written) |
 | 2026-10-10 | claude | `email-api-sweep` added: `src/workers/scheduled-email-api-sweep.ts`, `src/lib/email-console.ts` (`sweepEmailApi`, the system actor), `src/lib/jobs/registry.ts`, `tiers.ts`, `budgets.ts`; cf-email-consumer's Console sweep route read; `test/email-api-sweep.test.ts` (0 D1 queries on the configured path); `npm run verify` | §3: 14 jobs (12+2), the tier table and why it is essential; §3b added; §4a: four jobs sleep; §5: its invocation cost; §7: twelve five-minute jobs without a lease. Not re-checked: §1, §2, §4, §6, the rest of §7; not checked live (not deployed when written) |

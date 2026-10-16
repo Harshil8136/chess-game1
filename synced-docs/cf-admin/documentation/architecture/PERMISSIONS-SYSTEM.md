@@ -852,6 +852,13 @@ and nobody is signed out. The three-layer force-kick is left to force-kick,
 deactivation, deletion and the Sessions page's block action; stage 2 of the
 remediation retires its user-level flag.
 
+*Since 2026-10-16 (permissions item #17)* the daily check of accounts nobody uses is a
+fifth path: an account unused for 90 days is deactivated by `system` at the 14:00 UTC
+check, with the same force-kick and an `authz-changed` mark, unless the alert policy
+says to flag only. The Owner, Vendor support and an unreadable role are never
+deactivated this way. The rule:
+[`../features/USER-MANAGEMENT.md`](../features/USER-MANAGEMENT.md) §5.5.
+
 ---
 
 ## 12. Audit
@@ -1158,6 +1165,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §11's automatic deactivation (#17).** Read `src/workers/scheduled-unused-accounts.ts` (`checkUnusedAccounts`: `suspendIfActive`, `forceLogoutUser`, `markAuthzChanged`) and `src/lib/unused-accounts.ts` (`neverSuspended`); `test/unused-accounts.test.ts` passes | §11's new paragraph. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5, new.** Read `src/lib/auth/fresh-sign-in.ts`, `src/lib/fresh-sign-in-client.ts`, `GlobalDialogProvider.tsx`, `stages/bootstrap.ts` (`signedInAtFromAssertion`), `pipeline.ts`, every route that calls `freshSignInRefusal` (18 files), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn`); `test/fresh-sign-in.test.ts`, `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` pass | §10.5 and the §17 row. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to the role change confirmation (#8, #27) and the monthly clean-up (#31).** Read `role-preview.ts`, `UsersTable.tsx`, `RoleChangePreview.tsx`, `api/users/manage.ts` (PATCH), `scheduled-access-summary.ts` (`clearEndedSettings`); ran `test/role-preview.test.ts` and `test/ended-settings-cleanup.test.ts` | §6's end-date paragraph and §10's role-change paragraph match the code. The rest not re-read |
 | 2026-10-16 | claude | **Scope-limited to page floors on the access screens (AC-9), invitation gates (AC-10) and the Access denied reason (#25).** Read `page-floors.ts` (`pageFloor`), `access-center/rules.ts` (`pageEditability`), `pages.ts`, `overview.ts`, `page-gates.ts` (`inviteSettingRefusals`), `api/users/manage.ts`, `access-requests/rules.ts` (`whyClosed`, `checkAsk`) and `handlers.ts`, `your-access.ts`; ran `test/access-why.test.ts`, `test/access-center-api.test.ts`, `test/registry-access.test.ts` and `test/access-requests.test.ts` | §5's floor paragraph, §10's invitation paragraph and §10.3's new bullet match the code. The rest of the document not re-read |
