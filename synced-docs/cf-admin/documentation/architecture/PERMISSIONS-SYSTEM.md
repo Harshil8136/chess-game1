@@ -7,7 +7,7 @@ last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -712,7 +712,11 @@ batch with one activity-log row each, and console changes by delegation
 (whoever strictly outranks the person and holds a capability in the console may
 give or take it away, never a floor). cf-admin names the person to each console
 in its trusted target header with the role read from this database, and the
-console re-checks every change. The page registry lists the consoles'
+console re-checks every change. Since 2026-10-16 (#35) the header also carries
+the person's account id (`admin_authorized_users.id`, the actor header's
+`userId`), and the console binds the grant it saves to it: if the account is
+removed and the email is later given a new account, the new account starts from
+its role, not from the earlier person's grant. The page registry lists the consoles'
 capabilities under their pages, and vendor support can move a capability's
 default role there. The screen and its data:
 [ACCESS-CENTER](../features/ACCESS-CENTER.md); the design:
@@ -917,6 +921,14 @@ check, with the same force-kick and an `authz-changed` mark, unless the alert po
 says to flag only. The Owner, Vendor support and an unreadable role are never
 deactivated this way. The rule:
 [`../features/USER-MANAGEMENT.md`](../features/USER-MANAGEMENT.md) §5.5.
+
+**Console permissions** are not in a session: each console reads its policy row on the
+request, through a copy each isolate keeps for 30 seconds. *Since 2026-10-16 (#35)* the
+dangerous routes read the row itself, so a console permission taken away stops them at once:
+in the backup console every destructive, secret and admin capability; in the server console
+every change except typing into a terminal already open, and every read a floor guards
+([cf-backup 13-access-control](../program/cf-backup/13-access-control.md) §3 rule 7, cf-vps
+`documentation/security/PERMISSIONS.md`). Everything else stops within 30 seconds.
 
 ---
 
@@ -1224,6 +1236,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.1's target-header sentence and §11's console paragraph (#35).** Read `consoleTarget` (`src/lib/access-center/profile.ts`) and its callers in `handlers.ts`, `role-preview.ts` and `profile.ts`; the bootstrap stage (`src/lib/auth/stages/bootstrap.ts`, session `userId` = the `admin_authorized_users` row id); in cf-backup `grantFor`, `readsFresh` and the router, in cf-vps `grantFor` and `FRESH_POLICY_ROUTES`; `admin_authorized_users.id` is `uuid` (Supabase connector); `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | Both match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's templates sentence (#32).** Read `src/lib/access-center/templates.ts` (`manager`, `parseTemplates`, `postTemplate`, `deleteTemplate`), `draft.ts` (`templateItems`, `applyTemplate`, `allowedOverride`), `TemplatesDialog.tsx` and `src/lib/auth/routes.ts` (`/api/users` → `/dashboard/users`); `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass | §10.1 matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5's delete row, §12's measurement and integrity paragraph, and §16's C-9 row (#21).** Read `src/pages/api/audit/logs.ts` (no `DELETE`), `delete-targeted.ts` (`targetTabOf`, the fresh sign-in on `DELETE`), `src/pages/api/retention/purge.ts` (the 180-day floor), `src/lib/audit-seal/` and `src/workers/scheduled-audit-seal.ts`; searched `src/` for any other delete from `admin_audit_log` (none); counted `admin_audit_log` and `admin_login_logs` through the D1 connector | §10.5 now lists the delete routes that exist; §12 says what the log guarantees and links §3.6 of plac-and-audit.md; C-9 closed. The rest of the document was not re-read, and §8 still does not describe the sensitive reads recorded since #20 (the docs pass after the build) |
 | 2026-10-16 | claude | **Scope-limited to §5's `#force-kick` sentence after the Users page rebuild (#29).** Read `PersonDrawer.tsx` (`forceKickRefusal` from `people.ts`, the `canForceKick` prop from `denyForceKick` in `src/pages/dashboard/users/index.astro`); `test/session-rank.test.ts` passes | The sentence matches the code. The rest not re-read |

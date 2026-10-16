@@ -133,7 +133,7 @@ cf-admin's page row lets their role in, and even then only what the policy (§4)
    - the **locks, redaction and the recipient check** are not configurable.
 5. **Last-holder guard.** A change that would leave **no active person** holding `access.manage` or `keys.rotate` is refused. (The 2026-09-16 incident locked the only Owner out for 14 hours; this is the same lesson applied here.)
 6. **Time-boxed grants.** A per-person grant can carry `expiresAt`, for example "let this admin run backups this week". Expiry is checked on every request; nothing needs cleaning up. *Since 2026-10-16 (cf-admin permissions #22):* a grant can also carry `temporary`, one permission at a time, each with its own `until` (at most 90 days ahead) and an optional note: a power given for a while, which is what an approved request from cf-admin's Settings → Your access writes. `can()` counts it until `until`, whatever the grant's own `expiresAt`, after the deny check (a deny still wins) and never for a floor. An entry whose end has passed is dropped on the next save; a delegated change compares against the running ones only (`delegationBase` in `src/access/delegate.ts`).
-7. **Effect is prompt.** The policy row is read at most every 30 s per isolate, so a change applies within half a minute. *(As built: the 30 s settings cache exists, with write-through on save.)*
+7. **Effect is prompt.** The policy row is read at most every 30 s per isolate, so a change applies within half a minute. *(As built: the 30 s settings cache exists, with write-through on save. Since 2026-10-16, cf-admin permissions #35, a route that needs a destructive, secret or admin capability reads the row fresh, so taking one of those away stops it at once: `readsFresh` in `src/access/catalog.ts`, and the data download in the Files section.)*
 8. **Every change is recorded** (§6): who, when, the before/after diff, and the reason if one was given.
 
 ## 4. Where the policy lives
@@ -158,7 +158,8 @@ people saving at once cannot overwrite each other.
       "allow": ["runs.run"], "deny": [],
       "expiresAt": "2026-10-31T23:59:59Z", "note": "covering the owner's leave",
       "grantedBy": "<email>", "grantedAt": "2026-10-01T15:04:00Z",
-      "temporary": { "runs.drill": { "until": "2026-10-17T12:00:00Z", "note": "approved request" } }
+      "temporary": { "runs.drill": { "until": "2026-10-17T12:00:00Z", "note": "approved request" } },
+      "userId": "<cf-admin account id>"
     }
   },
   "updatedBy": "<email>", "updatedAt": "2026-10-01T15:04:00Z"
@@ -167,6 +168,17 @@ people saving at once cannot overwrite each other.
 
 People are keyed by their sign-in email, which is what the gateway's actor carries. A grant
 for someone who has never signed in simply waits until they do.
+
+> **Bound to an account (2026-10-16, cf-admin permissions #35):** a grant saved through
+> cf-admin's Access Center also carries `userId`, the person's cf-admin account id, taken from
+> cf-admin's trusted `x-backup-target` header and never from the request body. A person signed in
+> under another account with the same email gets nothing from that grant, its denies included:
+> they start from their role, as a new account should (`grantFor` in `src/access/policy.ts`).
+> The console's own Access page keeps the account a grant is already bound to. A grant saved
+> before that date has no `userId` and follows the email until it is next saved through the
+> Access Center; the one grant in the live row on that date was bound by hand the same day.
+> Moving a grant to a new account is reported as the earlier account's grant
+> removed and the new one added.
 
 > **As built in Phase 1a (2026-09-23):** the stored row also carries an additive
 > `known: string[]` field — the capability ids the policy was last saved against. It lets
@@ -244,6 +256,7 @@ console cannot change.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §3 rule 7's fresh reads and §4's `userId` binding (#35), against cf-backup's `src/access/policy.ts` (`grantFor`, `can()`, `parseStoredPolicy`, `liveGrant`), `validate.ts` (`owner`), `diff.ts`, `catalog.ts` (`readsFresh`), `source.ts`, `src/http/router.ts`, `src/api/access-person.ts`, `src/api/files.ts` and `src/gateway/target.ts`; `test/access-binding.test.ts` passes | The rest of the document |
 | 2026-10-16 | §3 rule 6's powers given for a while, the §4 example's `temporary` and the §8 line, against cf-backup `9f0116c`: `src/access/policy.ts` (`temporaryUntil`, `liveTemporary`, `liveGrant`, `can()`), `validate.ts` (`MAX_TEMPORARY_DAYS`, `validateTemporary`), `delegate.ts` (`delegationBase`); `test/access-temporary.test.ts` passes | The rest of the document |
 | 2026-10-16 | The `files.download` row's audit, against cf-backup's `previewFile` (`src/api/files.ts`) and cf-admin's gateway (`RECORDED_READS`); `test/files-api.test.ts` passes | The other rows of §2 |
 | 2026-10-10 | The `diagnostics.run` row, after cf-backup merged Readiness and Diagnostics into one Health page (cf-backup `9832d82`): its description in `src/access/catalog.ts`, its two routes and audit actions in `src/api/routes.ts`, the 15-second throttle in `src/api/diagnostics.ts`, and the runner test's refusal (`engineRefusal` in `src/backups/start.ts`, answered as 501) | The other rows of §2, which this change does not touch |

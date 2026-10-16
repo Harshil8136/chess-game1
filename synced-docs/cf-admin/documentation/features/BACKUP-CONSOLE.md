@@ -101,7 +101,8 @@ where vendor support can move one capability's default role through
 `POST /api/access/role`. Those calls do not go through this
 gateway: cf-admin's server calls cf-backup over the binding with the actor and an
 `x-backup-target` header naming the person, with the role from this portal's
-database. The gateway never forwards that header from a browser. An owner or
+database and (since 2026-10-16) their account id, to which cf-backup binds the
+grant it saves. The gateway never forwards that header from a browser. An owner or
 vendor can change anything but a floor; an admin with cf-backup's
 `access.delegate` can hand out what it holds to people below it. Each save writes
 a `backup_config_change` activity-log row marked as made through the Access
@@ -256,6 +257,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §3's `x-backup-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-backup/src/gateway/target.ts` and `cf-backup/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |
 | 2026-10-16 | claude | §4's recorded reads against `src/pages/dashboard/backup/app/[...path].ts` (`RECORDED_READS`) and `cf-backup/src/api/files.ts` (`previewFile`) and `cf-backup/src/api/restore-tests.ts` (`getRestoreTestFile`); `test/backup-gateway.test.ts`, `cf-backup/test/files-api.test.ts` and `cf-backup/test/restore-tests.test.ts` pass | Not re-checked: every other section |
 | 2026-10-15 | claude | §2's page-access rule against `src/lib/backup-proxy.ts` (`mayUseBackupConsole`) and `src/pages/dashboard/backup/app/[...path].ts`; `test/backup-gateway.test.ts` refuses staff on a map without the Backups key | Not re-checked: every other section |
 | 2026-10-09 | claude | §9 step 4 against `src/lib/jobs/registry.ts` and `src/lib/jobs/read-model.ts` after the Scheduled Jobs rebuild; `scripts/lib/cron-catalog.mjs` deleted | Step 4 no longer re-seeds; the catalog path left `related_code`. Not re-checked: every other section |

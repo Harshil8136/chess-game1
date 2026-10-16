@@ -171,7 +171,8 @@ access) and each change becomes an activity-log row:
   themselves, for people strictly below them. These calls do not go through the
   gateway: cf-admin's server calls cf-vps over the binding with the actor and an
   `x-vps-target` header naming the person, with the role from this portal's
-  database, and the gateway never forwards that header from a browser. The
+  database and (since 2026-10-16) their account id, to which cf-vps binds the
+  grant it saves; the gateway never forwards that header from a browser. The
   Access Center writes its own activity-log row for each save;
 - the **page registry** (`/dashboard/debug/pages`, vendor support), which lists
   every capability under the Server page and can move one capability's default
@@ -337,6 +338,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | §4's `x-vps-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-vps/src/gateway/target.ts` and `cf-vps/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |
 | 2026-10-16 | claude | §1's frame features against the iframe in `src/pages/dashboard/vps/[...section].astro` (pinned by `test/vps-page.test.ts`); §5 against the gateway's `UNAUDITED` (now with `socket`) and cf-vps's live terminal connection (`cf-vps/src/agent/proxy.ts`, `cf-vps/agent/src/server.ts`); the new case in `test/vps-gateway.test.ts` passes | §5 matches. Not re-checked: every other section; the live connection not yet seen on a phone |
 | 2026-10-11 | claude | §1's access notice paragraph, §2's Access notice row, §6's notice verbs and §8's two new rows, written with the code: `src/pages/dashboard/vps/[...section].astro`, the gateway, `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`; `test/vps-notice.test.ts`, `test/vps-gateway.test.ts` and `test/vps-page.test.ts` pass | Those parts match. Not re-checked: every other section; not yet seen on a phone |
 | 2026-10-12 | claude | §1's access notice paragraph against `src/lib/vps-notice.ts` and `src/components/admin/vps/ServerNotice.tsx` after the notice's rewrite (version `2026-10-12`) | Heading and owner card updated. Not re-checked: every other section |

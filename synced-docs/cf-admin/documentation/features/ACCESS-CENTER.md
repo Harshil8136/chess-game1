@@ -256,7 +256,10 @@ start at Admin (read through the D1 connector), so no warning shows today.
 
 The page gates run in `page-gates.ts`, for both the rows and the save. The console rules run
 twice: in cf-admin (`rules.ts`) to mark rows and refuse early, and in the console (cf-vps or
-cf-backup, trusted target header `x-vps-target` or `x-backup-target`), which decides. Every
+cf-backup, trusted target header `x-vps-target` or `x-backup-target`), which decides. The
+header names the person by email, this portal's role and (since 2026-10-16, #35) their account
+id; the console binds the grant it saves to that id, and shows a grant bound to an earlier
+account with the same email as no grant at all. Every
 page change writes a `grant_access`, `revoke_access` or `reset_access` row (module `plac`);
 every console save writes one row under the console's module; all rows of one save share a
 correlation id.
@@ -265,6 +268,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §6's target header (#35).** `consoleTarget` in `profile.ts` and its callers (`handlers.ts`, `role-preview.ts`); `grantFor` and the person route in cf-backup and cf-vps; `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | The screen itself: nothing on it changed |
 | 2026-10-16 | **Scope-limited to templates (#32).** The TL;DR, §1's rows, §2 step 2's *Templates* paragraph and the new §3.3 against `TemplatesDialog.tsx`, `AccessChrome.tsx` (`onTemplates`), `UserAccessEditor.tsx`, `draft.ts` (`templateItems`, `applyTemplate`), `limits.ts`, `templates.ts` and the route; `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass; every live `admin_pages.path` (117) matches the entry pattern, read through the D1 connector; the read's CPU measured with a 20-template, 200-item row | The dialog in a phone browser (the owner's test); it was not server-rendered |
 | 2026-10-16 | **Scope-limited to permissions given for a while (#22).** §2.1's line and new paragraph, §3.1's `grant` and `temporaryUntil` rows and §3.2's `temporary` sentence against `types.ts`, `temporary.ts`, `rules.ts` (`vpsSource`, `vpsOverride`, `activeGrant`, `changedCapabilities`, `vpsChangeRefusal`, `grantIssues`), `profile.ts`, `draft.ts` (`consoleGrant`), `handlers.ts` (`toGrantInput`), `labels.ts` and `AccessSections.tsx`; `test/access-console-requests.test.ts` and the Access Center suites pass | The editor in a phone browser (the owner's test) |
 | 2026-10-16 | §4's See it as paragraph (#26) against `SeeAsPanel.tsx`, `RegistryConsole.tsx`, `src/lib/access-center/see-as.ts` and `src/lib/auth/nav-pages.ts`; `test/see-as.test.ts` passes; the live registry's sub-pages and their sidebar pages read through the D1 connector (every sub-page's sidebar page is switched on today, so "Only by address" is empty) | The tab in a phone browser (the owner's test) |
