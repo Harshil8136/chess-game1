@@ -188,7 +188,8 @@ These are under the same `/dashboard/vps/app/api/` prefix and never reach the ag
 ## Error shapes
 
 Worker errors are `{ ok: false, code, message }` with `code` one of `bad_actor` (400),
-`bad_request` (400), `forbidden` (403), `not_found` (404), `method_not_allowed` (405),
+`bad_signature` (400: the console signing key is set and cf-admin's signature is missing, older
+than 60 seconds or wrong), `bad_request` (400), `forbidden` (403), `not_found` (404), `method_not_allowed` (405),
 `conflict` (409), `actor_version_mismatch` (409), `internal` (500), `upstream_error` (502),
 `not_configured` (503) and `upstream_timeout` (504). The Worker never answers 401: only
 cf-admin decides a person is signed out. The agent answers 401 for an unsigned, stale,

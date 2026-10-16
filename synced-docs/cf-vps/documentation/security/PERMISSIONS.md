@@ -244,7 +244,7 @@ ordinary terminal (`vps-ops`) has no hourly limit.
 | Layer | Check |
 |---|---|
 | Console | Hides pages and disables buttons the person cannot use (`/api/me` lists their capabilities) |
-| Worker | `proxyToAgent` refuses with 403 and the capability needed, or `fresh_sign_in`, before anything is signed |
+| Worker | With `CONSOLE_SIGNING_KEY` set, first refuses identity headers cf-admin did not sign (400 `bad_signature`, [OVERVIEW](../architecture/OVERVIEW.md#trust-boundaries)). Then `proxyToAgent` refuses with 403 and the capability needed, or `fresh_sign_in`, before anything is signed |
 | Agent | Re-checks the route's capability from the signed list; the Worker's headers alone are never trusted. Then its own checks: the red lines from the signed role, the fresh sign-in from the signed sign-in time, and the hourly limits |
 | Root script | Each action script validates its own target again |
 

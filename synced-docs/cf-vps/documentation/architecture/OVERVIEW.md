@@ -5,7 +5,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-15
 verified_against: [code]
 owner: harshil
-related_code: [src/worker.ts, src/http/router.ts, src/agent/proxy.ts, src/gateway/actor.ts, contract/capabilities.ts, contract/signing.ts, agent/src/server.ts, agent/src/auth.ts, agent/src/limits.ts, wrangler.json]
+related_code: [src/worker.ts, src/http/router.ts, src/agent/proxy.ts, src/gateway/actor.ts, src/gateway/signature.ts, contract/capabilities.ts, contract/signing.ts, agent/src/server.ts, agent/src/auth.ts, agent/src/limits.ts, wrangler.json]
 related_docs: [../security/PERMISSIONS.md, ../security/AUDIT-PIPELINE.md, ../features/ACTIONS.md, ../operations/DEPLOY.md, ../reference/API-ROUTES.md]
 tags: [architecture, worker, agent, tunnel, trust]
 ---
@@ -61,7 +61,7 @@ socket the Worker hands back untouched once the agent accepts it
 | Boundary | What is trusted across it | How it is protected |
 |---|---|---|
 | Browser to cf-admin | Nothing; the person logs in | Cloudflare Access, cf-admin roles and page permissions |
-| cf-admin to Worker | The actor header | The Worker has no public route; only the service binding reaches it. cf-admin drops any header a browser sent. Missing or invalid header gives `bad_actor` |
+| cf-admin to Worker | The actor header | The Worker has no public route; only the service binding reaches it. cf-admin drops any header a browser sent. Missing or invalid header gives `bad_actor`. Once the owner sets `CONSOLE_SIGNING_KEY` on cf-admin and this Worker, the actor, target and request-id headers count only with cf-admin's `x-vps-signature` over them, the method and the path (HMAC-SHA256, 60-second skew); otherwise `bad_signature` (`src/gateway/signature.ts`) |
 | Worker to agent | The signed capability list, and the signed actor's role and sign-in time | Ed25519 signature over method, path, query, timestamp, single-use nonce, body hash, actor and capabilities. 60-second skew. The agent holds public keys only. For the root terminal, a reboot and every change that needs a fresh sign-in, the agent also checks the signed role and sign-in time itself, and counts uses against hourly limits ([PERMISSIONS](../security/PERMISSIONS.md#the-agents-own-red-lines)) |
 | Agent to root | Nothing beyond named units | polkit lets the agent start only the fixed `vps-act-*` units; each root script validates its target again |
 | Terminal | A 30-second ticket | The Worker mints it, the root-side signer verifies it, and issues a 60-second SSH certificate for one account |
@@ -76,6 +76,7 @@ open; an unknown route is 404; the agent answers only loopback `Host` names.
 |---|---|---|
 | cf-admin's D1 database (binding `DB`) | One settings row, `vps:access`: role defaults and per-person grants | cf-vps owns no tables. Compare-and-swap on a revision; read cached 30 s per isolate, and fresh for a change or a read a floor guards ([PERMISSIONS](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)) |
 | Worker secret `VPS_SIGNING_KEY` | The Ed25519 private key | Deploys are refused without it (`secrets.required`) |
+| Worker secret `CONSOLE_SIGNING_KEY` | The key cf-admin signs the identity headers with, the same value on cf-admin | Optional and not in `secrets.required`; without it the Worker checks no signature. A different key from `VPS_SIGNING_KEY` |
 | Host config in `/etc/vps` | Retention table, service allow-list, Worker public keys, job manifests and the busy-gate settings | Written by host modules; a job's limits changed from the console sit beside its manifest as an override, which the modules never touch |
 | Audit disk | `/srv/audit`: the forensic record | A fixed-size image, so a full audit disk cannot fill the system disk |
 | System journal | Service logs and terminal recordings | Age-limited by retention |

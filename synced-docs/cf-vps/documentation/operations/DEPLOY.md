@@ -76,7 +76,8 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
   pin: `sharp` 0.35.5, which miniflare (under wrangler and the Vite plugin) still holds at
   0.35.4 (GHSA-wq5f-xc86-pv6w).
 - Bindings: the shared D1 database (`DB`), the VPC service (`KROWN`), the assets binding.
-  The required secret `VPS_SIGNING_KEY` must exist or `wrangler deploy` is refused.
+  The required secret `VPS_SIGNING_KEY` must exist or `wrangler deploy` is refused. The
+  optional secret `CONSOLE_SIGNING_KEY` is not required, so a deploy never waits for it.
 - The build token needs permission to edit Worker scripts, read D1 and bind to the
   connectivity directory. Build secrets are visible to install scripts, so keep none there.
 - The Worker has no public route. After a deploy, check the console through the portal.
@@ -146,6 +147,7 @@ After the audit rules are locked, new rules load only at boot; follow the runboo
 | Secret | Where it lives | Made by |
 |---|---|---|
 | Worker signing key (private) | The Worker secret `VPS_SIGNING_KEY` | `scripts/setup/signing-key.mjs`; the public half is committed to `host/60-agent/files/etc/vps/` |
+| Console signing key (optional) | The Worker secret `CONSOLE_SIGNING_KEY`, the same value as cf-admin's | The owner, in the Cloudflare dashboard (Settings → Variables and Secrets → Add → Secret), on cf-admin first. It lets the Worker check that cf-admin signed the identity headers ([OVERVIEW](../architecture/OVERVIEW.md#trust-boundaries)) |
 | Tunnel connector token | The server only | `scripts/setup/tunnel-token.mjs` |
 | R2 upload key pair | The server only, as systemd credentials | `scripts/setup/r2-audit-creds.mjs` |
 | A job's own secrets | The server only, as the systemd credential `job-<job>.<ENV_NAME>` | `scripts/setup/job-secret.mjs <job> <NAME>` (typed at a prompt, never echoed) |
