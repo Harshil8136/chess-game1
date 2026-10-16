@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/lib/auth/stages/decide.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -31,6 +31,7 @@ tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 > including a read-only Viewer). The database still holds the previous values
 > and they are translated in code, so `super_admin` in a stored row means
 > **Admin** (level 2) and `admin` in a stored row means **Manager** (level 3).
+> Viewer, which had no previous name, is stored as `viewer` since 2026-10-16.
 > The body of this document was brought in line with the current model on
 > 2026-08-12 (role table, helper-function references, route/enforcement
 > tables, Hidden Accounts visibility, filter tabs). See
@@ -78,7 +79,7 @@ Access levels operate dynamically based on strict numeric permissions (lower num
 | **2** | **Admin** 👑 | Second in command. Full operational control, including platform settings and users at or below their level. |
 | **3** | **Manager** 🛡️ | Runs day-to-day operations — bookings, content, customers, generalized audit logs. No user or platform administration. |
 | **4** | **Staff** 👤 | Works in their own area. Cannot change settings or other people. |
-| **5** | **Viewer** | Read-only. Refused on every mutating request regardless of page grants (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Not currently assignable.** *Added 2026-09-19:* while `ROLE_VOCABULARY = 'legacy'` (`src/lib/auth/rbac.ts`) the database has no stored value for Viewer, so `toStoredRole` cannot persist it and `manage.ts` refuses it — but `ASSIGNABLE_ROLES` in the invite pill grid still offers it, so an admin can pick a role the server will reject. *Fixed 2026-10-15:* the invite grid and the role menu offer `PICKABLE_ROLES` (`rbac.ts`), the assignable roles the database can store, so Viewer is not offered until it can be. Tracked as C-11 in [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md). |
+| **5** | **Viewer** | Read-only. Opens the home page (Overview) and only the pages given to them with a personal setting; no page can have Viewer as its default (`canBePageDefault`). Refused on every mutating request regardless of page grants, except asking for access (enforced in `src/lib/auth/stages/decide.ts`, not merely absent from the UI). **Assignable since 2026-10-16** (permissions #30): stored as `viewer`, which the Supabase role check admits since `supabase/migrations/20261016000000_role_check_add_viewer.sql`. *History, added 2026-09-19:* while `ROLE_VOCABULARY = 'legacy'` (`src/lib/auth/rbac.ts`) the database has no stored value for Viewer, so `toStoredRole` cannot persist it and `manage.ts` refuses it — but `ASSIGNABLE_ROLES` in the invite pill grid still offers it, so an admin can pick a role the server will reject. *Fixed 2026-10-15:* the invite grid and the role menu offer `PICKABLE_ROLES` (`rbac.ts`), the assignable roles the database can store, so Viewer is not offered until it can be. Tracked as C-11 in [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md). |
 
 ### Color Hierarchy: Thermal Gradient
 
@@ -243,7 +244,7 @@ on a wide screen and stack on a phone, and only the dialog's body scrolls.
 
 **Left panel — Identity:**
 
-- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the pickable roles (four since 2026-10-15: Viewer is left out until it can be stored), with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
+- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the pickable roles (five since 2026-10-16, Viewer included; four from 2026-10-15, while Viewer could not be stored), with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too). *Corrected 2026-09-19: described as "2×2" — five roles do not fit a 2×2, and one of the five (Viewer) cannot currently be persisted at all.*
 - **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors.
 - Email + Display Name inputs. Grant Access and Cancel sit in the dialog's footer, under both panels (2026-10-10).
 
@@ -738,6 +739,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to Viewer (permissions item #30): the role-names callout, §2's Viewer row and §6's pill grid.** `src/lib/auth/rbac.ts` (`LEGACY_TO_CANONICAL`, `CANONICAL_TO_LEGACY`, `canBePageDefault`, `PICKABLE_ROLES`), `stages/decide.ts` (the read-only rule and its one exception), `plac.ts` (the home page); `test/rbac-roles.test.ts`, `test/plac.test.ts`, `test/pipeline-decision.test.ts`, `test/users-console.test.ts` pass. Live: the Supabase role check after `20261016000000_role_check_add_viewer` (read back through the Supabase connector) | Giving someone Viewer in a phone browser (the owner's test) |
 | 2026-10-16 | **Scope-limited to §6.1's console permissions paragraph and route rows (permissions item #22).** Read `src/lib/access-requests/handlers.ts` (`askForPower`, `decidePower`, `powerDecideView`), `rules.ts` (`checkPowerAsk`, `powerApproval`), `keys.ts`, `AccessRequestRepository.reopenApproval`, `AskForPermission.tsx` and `AccessRequestsPanel.tsx`; `test/access-console-requests.test.ts` (21 tests) | The rest of §6.1 and the document |
 | 2026-10-16 | **Scope-limited to §2's audit route rows (permissions item #21).** `src/pages/api/audit/logs.ts` (role-or-grant, no `DELETE`), `seals.ts` (`isOwnerOrVendor`, then the page check); `src/pages/api/audit/prune.ts` deleted, so its row went | The other rows of §2 |
 | 2026-10-16 | **Scope-limited to the Users page rebuild (permissions item #29):** §2.1's `access-data` row and the client-side note, §5.5's badge, §6 (components, events, filters), §9.2's drawer and role dialog, §11.4 and §11.6's button, against `UsersConsole.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx`, `people.ts`, `src/pages/dashboard/users/index.astro`, `src/pages/api/users/access-data.ts`, `src/lib/access-center/counts.ts` and `src/pages/api/users/[id]/login-history.ts`; `test/users-console.test.ts` passes (the counts agree with `computeAccessMap` and the page gate over the test D1) | The page in a phone browser (the owner's test); every other section |

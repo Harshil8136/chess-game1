@@ -7,7 +7,7 @@ last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/decide-access.ts, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -79,7 +79,7 @@ is meant to stop.
 | T4 | An administrator elevates themselves | Self-modification is refused outright; grants are capped at the actor's ceiling |
 | T5 | A lower tier edits a higher tier's account | Rank supremacy — strictly higher privilege required, on the paths that route through `canManageUser`. *The two account actions that did not (§16 D6/D7) were fixed 2026-10-14.* |
 | T6 | A revoked user keeps working from a live session | Three-layer revocation, including a Cloudflare API call that kills the edge cookie |
-| T7 | A read-only user mutates through the API | Viewer tier refused on every non-idempotent method, before page resolution |
+| T7 | A read-only user mutates through the API | Viewer tier refused on every non-idempotent method, before page resolution, except the one exact route for asking for access (§8.1) |
 | T8 | An API route ships without a guard | Default-deny in the pipeline plus a CI inventory test |
 | T9 | Session theft via XSS | `__Host-` cookie prefix, `HttpOnly`, strict CSP with nonces |
 | T10 | Cross-site request forgery | Custom CSRF validation in `src/lib/csrf.ts` |
@@ -137,7 +137,7 @@ Six tiers. Lower number means higher privilege (`src/lib/auth/rbac.ts`).
 | 2 | `admin` | `super_admin` | Yes | Full operational control including settings and users. |
 | 3 | `manager` | `admin` | Yes | Day-to-day operations. No user or platform administration. |
 | 4 | `staff` | `staff` | Yes | Own area only. |
-| 5 | `viewer` | *(none)* | Not yet | Read-only. Refused on every mutation. |
+| 5 | `viewer` | `viewer` | Yes, since 2026-10-16 | Read-only. Opens the home page and only the pages given to them; refused on every mutation but asking for access. |
 
 ### 4.1 The vocabulary split, and why it exists
 
@@ -149,7 +149,16 @@ This is not laziness — **the rename collides**. `super_admin` becomes `admin`,
 `admin` becomes `manager`. The string `"admin"` therefore means level 3 before the
 migration and level 2 after it, and no amount of looking at a bare row tells you
 which. Translating in code behind an explicit flag means the deployed Worker and
-the database can never disagree about what a role means. Verified live on
+the database can never disagree about what a role means.
+*Changed 2026-10-16 (permissions #30):* Viewer is stored under its own name, `viewer`. It was
+never a stored name for another tier, so it cannot collide the way `admin` does, and it needed
+no rename of any row: only the Supabase role check had to admit it
+(`supabase/migrations/20261016000000_role_check_add_viewer.sql`, applied before the code). The
+rename of the other four names stays optional (C-11). A page's default still cannot be Viewer
+(`canBePageDefault`): a Viewer opens only the pages given to them, and the D1
+`admin_pages.required_role` CHECK admits only the five old names. The home page (`/dashboard`,
+`HOME_PAGE` in `decide-access.ts`) opens to every role, Viewer included: the gate always opened
+it, and since 2026-10-16 `computeAccessMap`, `personOpens` and the access editor say so too. Verified live on
 2026-08-23: every `required_role` in D1 `admin_pages` still holds a legacy value,
 and the table's CHECK constraint still admits only
 `('dev','owner','super_admin','admin','staff')`. *Corrected 2026-09-19: `manager`
@@ -567,6 +576,10 @@ mutation path open. It is deliberately not staged behind `API_DENY_MODE`: that f
 exists to protect legitimate traffic on routes that pre-dated it, and a brand-new
 tier has none. A refused mutation is recorded as `viewer_write_blocked` rather than
 a generic denial, so the audit trail distinguishes "wrong tier" from "wrong page".
+One write is exempt, since Viewer could be given (2026-10-16): `POST /api/access-requests`,
+asking for a page or a console permission (`READ_ONLY_MAY_ASK`, one exact path, so it cannot
+widen by prefix). It changes nothing the portal holds; deciding a request
+(`/api/access-requests/<id>`) stays refused, here and in the handler.
 
 ---
 
@@ -1152,7 +1165,7 @@ re-checked against the 2022 edition, which restructured Annex A.*
 
 | # | Gap | Impact |
 |---|---|---|
-| C-11 | Role vocabulary migration outstanding; `viewer` cannot be persisted (§4.1). | The read-only tier is enforced in code but unassignable. |
+| C-11 | Role vocabulary migration outstanding (§4.1). *Since 2026-10-16 Viewer is stored as `viewer` and can be given; what is left is renaming the four old names, which is tidying, not a blocker.* | None for the running portal: the translation layer keeps code and data agreeing. |
 | ~~C-9~~ | ~~Audit log is neither complete nor tamper-evident (§12).~~ **Closed 2026-10-16:** each day is sealed the next morning and no route deletes an entry younger than 180 days ([`plac-and-audit.md`](plac-and-audit.md) §3.6). | What is left: today's entries are unsealed until the next morning, and page reads other than the sensitive ones are not recorded (§8). |
 | ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. **Key enforced 2026-10-15** (the owner's decision): the owner-only `/dashboard/users#force-kick` row is now checked exactly (`denyForceKick`, §5), so below the owner only a grant opens it. | Rank supremacy holds on this path, and Admins sign people out only with a grant. |
 | ~~D7~~ | ~~The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase.~~ **Fixed 2026-10-14:** the same rank rule for ending sessions and for blocking; blocking your own account is refused (400); a failed account update answers 502 instead of reporting success. | — |
@@ -1212,6 +1225,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | 2026-10-16 | claude | **Scope-limited to §11's automatic deactivation (#17).** Read `src/workers/scheduled-unused-accounts.ts` (`checkUnusedAccounts`: `suspendIfActive`, `forceLogoutUser`, `markAuthzChanged`) and `src/lib/unused-accounts.ts` (`neverSuspended`); `test/unused-accounts.test.ts` passes | §11's new paragraph. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5, new.** Read `src/lib/auth/fresh-sign-in.ts`, `src/lib/fresh-sign-in-client.ts`, `GlobalDialogProvider.tsx`, `stages/bootstrap.ts` (`signedInAtFromAssertion`), `pipeline.ts`, every route that calls `freshSignInRefusal` (18 files), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn`); `test/fresh-sign-in.test.ts`, `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` pass | §10.5 and the §17 row. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to the role change confirmation (#8, #27) and the monthly clean-up (#31).** Read `role-preview.ts`, `UsersTable.tsx`, `RoleChangePreview.tsx`, `api/users/manage.ts` (PATCH), `scheduled-access-summary.ts` (`clearEndedSettings`); ran `test/role-preview.test.ts` and `test/ended-settings-cleanup.test.ts` | §6's end-date paragraph and §10's role-change paragraph match the code. The rest not re-read |
+| 2026-10-16 | claude | **Scope-limited to Viewer (#30).** Read `src/lib/auth/rbac.ts` (both name maps, `canBePageDefault`), `decide-access.ts` (`HOME_PAGE`), `stages/decide.ts` (`READ_ONLY_MAY_ASK`), `plac.ts` (`computeAccessMap`), `access-center/overview.ts` (`personOpens`), `pages.ts` (`pageItem`), `schemas/admin.ts`; `test/rbac-roles.test.ts`, `test/plac.test.ts`, `test/pipeline-decision.test.ts`, `test/role-preview.test.ts` pass. Live, through the Supabase connector: `admin_authorized_users_role_check` before and after `20261016000000_role_check_add_viewer`, and the role counts (one each of the five old names, no `viewer` yet); through the D1 connector: the `admin_pages` CHECK and that no person has a setting on `/dashboard` | T7, §4's Viewer row, §4.1's new note, §8.1's exemption and C-11 in §16 only |
 | 2026-10-16 | claude | **Scope-limited to console permissions given for a while (#22).** Read cf-backup and cf-vps `src/access/policy.ts` (`temporaryUntil`, `liveTemporary`, `liveGrant`, `can()`), `delegate.ts` (`changedCapabilities`, `delegationBase`) and the save validation; cf-admin `access-center/temporary.ts`, `rules.ts`, `profile.ts`, `draft.ts`, `handlers.ts`, `access-requests/keys.ts`, `rules.ts` (`checkPowerAsk`, `powerApproval`) and `handlers.ts` (`askForPower`, `decidePower`); `test/access-console-requests.test.ts` (21 tests) and both consoles' `test/access-temporary.test.ts` | §10.1's new sentence, §10.3's new bullet and §10.4's row only |
 | 2026-10-16 | claude | **Scope-limited to page floors on the access screens (AC-9), invitation gates (AC-10) and the Access denied reason (#25).** Read `page-floors.ts` (`pageFloor`), `access-center/rules.ts` (`pageEditability`), `pages.ts`, `overview.ts`, `page-gates.ts` (`inviteSettingRefusals`), `api/users/manage.ts`, `access-requests/rules.ts` (`whyClosed`, `checkAsk`) and `handlers.ts`, `your-access.ts`; ran `test/access-why.test.ts`, `test/access-center-api.test.ts`, `test/registry-access.test.ts` and `test/access-requests.test.ts` | §5's floor paragraph, §10's invitation paragraph and §10.3's new bullet match the code. The rest of the document not re-read |
 | 2026-10-15 | claude | **Scope-limited to §10.4, new.** Read every save point it names (`api/users/manage.ts`, `access-center/handlers.ts`, `registry-access.ts`, `registry.ts`, `api/system/pages.ts`, `access-requests/handlers.ts`, both console gateways) and the live `admin_pages.required_role` values through the D1 connector (owner 28, dev 3); `test/access-changes.test.ts` (20 tests) | §10.4 only; the rest of the document was not re-checked in this pass |

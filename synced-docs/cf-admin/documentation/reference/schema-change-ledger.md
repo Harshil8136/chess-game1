@@ -43,7 +43,7 @@ Add a row whenever a new migration file lands in `migrations/` (D1) or
 build when a D1 file has no row.
 
 **Scope, precisely.** `migrations/` (D1, cf-admin) is complete and enforced:
-49 files today (to `0071`), 49 rows — re-count with `ls migrations/*.sql | wc -l` rather than trusting this. Supabase (`supabase/migrations/`, 11 files) and
+49 files today (to `0071`), 49 rows — re-count with `ls migrations/*.sql | wc -l` rather than trusting this. Supabase (`supabase/migrations/`, 12 files) and
 cf-astro rows are added by convention only from 2026-08-12 onward, so earlier
 Supabase files have no row here by design. `database/legacy_migrations/`
 (44 files, consolidated into `migrations/0000_baseline.sql`) is deliberately
@@ -105,6 +105,7 @@ not itemised.
 | `cf-astro/db/migrations/0015_booking_replay_outbox.sql` | 2026-09-03 | claude/gemini (outbox unblocking remediation) | Adds `replay_payload`, `replay_attempts`, `replayed_at`, `next_replay_at`, and partial index `idx_booking_attempts_pending_replay` to `booking_attempts` in D1 (`madagascar-db`), activating the durable booking replay outbox and resolving 5-min `no such column: replay_payload` cron errors. |
 | `cf-admin/supabase/migrations/20260909000001_enhance_contact_messages.sql` | 2026-09-09 | antigravity | Widens `public.contact_messages` in Supabase with `consent_id` FK (`consent_records.id`), `priority`, `assigned_to`, `tags`, `metadata`, and performance indexes for admin inquiries CRM overhaul (RULE #0.9 schema reuse). |
 | `cf-admin/supabase/migrations/20260916000000_supabase_objects_chunk_14a.sql` | 2026-09-16 | claude (viability program chunk 14a) — via the Supabase connector `apply_migration`, recorded in `supabase_migrations` under the same name | Adds the two missing FK indexes on `tool_call_events`; removes the five never-used indexes no query path can use (`idx_authorized_users_cf_sub_id`, `idx_bookings_owner_email`, `idx_contact_messages_email`, `idx_legal_requests_email`, `idx_privacy_requests_email`); renames the two dead tables to `zz_dead_admin_sessions_20260916` and `zz_dead_privacy_requests_20260916` (removal = D-15, after the first green backup); removes the `cf_astro_writer_insert` policy on the quarantined table; replaces `purge_expired_privacy_data()` without its `privacy_requests` block. Rollback statements in the chunk record §9. |
+| `cf-admin/supabase/migrations/20261016000000_role_check_add_viewer.sql` | 2026-10-16 | claude (Viewer as a real role, permissions item #30, pushed to `main`) — applied before the push through the Supabase connector `apply_migration`, recorded in `supabase_migrations.schema_migrations` under the same name (version `20261016055946`), then the constraint read back | Widens `admin_authorized_users_role_check` to admit `viewer` beside the five stored names, so Viewer can be given; no row renamed (live: one row each of `admin`, `dev`, `owner`, `staff`, `super_admin`). Rollback in the file's header, only while no row holds `viewer`. |
 
 ### Out-of-band data corrections (not migrations)
 
