@@ -29,8 +29,10 @@ tags: [operations, deploy, rollback, workers-builds]
 
 ## Order for a change that spans parts
 
-1. **cf-admin first** if the change adds an action id. cf-admin accepts only a closed list of
-   action names in its activity log, so it must know a new one before the console offers it.
+1. **cf-admin first** if the change adds an action id. cf-admin's activity log names each
+   action from a closed list. A change with a name it does not know is still recorded, but as
+   an "unrecognised action" under a general verb, with a warning to Sentry, so it must know a new
+   one before the console offers it.
 2. **Agent**, so it can answer a new route before anything asks for it.
 3. **Host modules**, when the change needs new units, scripts or config.
 4. **Worker**, by pushing to `main`.
@@ -75,7 +77,7 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
   the audit level, and never take `npm audit fix --force` when it offers a downgrade. Current
   pin: `sharp` 0.35.5, which miniflare (under wrangler and the Vite plugin) still holds at
   0.35.4 (GHSA-wq5f-xc86-pv6w).
-- Bindings: the shared D1 database (`DB`), the VPC service (`KROWN`), the assets binding.
+- Bindings: the shared D1 database (`DB`), the VPC service binding to the server, the assets binding.
   The required secret `VPS_SIGNING_KEY` must exist or `wrangler deploy` is refused. The
   optional secret `CONSOLE_SIGNING_KEY` is not required, so a deploy never waits for it.
 - The build token needs permission to edit Worker scripts, read D1 and bind to the
@@ -187,5 +189,5 @@ restart it.
 
 - [HOST-MODULES](HOST-MODULES.md): every module and its steps.
 - [OVERVIEW](../architecture/OVERVIEW.md): how the parts connect.
-- Private: [`OWNER-SETUP.md`](OWNER-SETUP.md) for the steps only the owner can do;
-  [`../program/HANDOFF.md`](../program/HANDOFF.md) for current state.
+- Private, in the repository only: `documentation/operations/OWNER-SETUP.md` for the steps only
+  the owner can do, and `documentation/program/HANDOFF.md` for the current state.

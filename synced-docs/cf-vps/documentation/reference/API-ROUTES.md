@@ -2,7 +2,7 @@
 title: "Agent Route Table"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, contract/metrics-history.ts, contract/jobs.ts, contract/restore.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
@@ -34,6 +34,12 @@ and the console. A route is reached in two forms:
   seconds for the slow reads, 15 seconds otherwise, no limit for streams. A timeout is 504.
 - The Worker refuses a missing capability with 403 and `need: <capability>` before it signs
   anything. The agent re-checks it from the signed list.
+- The Worker decides on its 30-second copy of the access policy, except for 14 routes that read
+  the stored row first (`FRESH_POLICY_ROUTES`): every change except typing into, resizing or
+  closing a terminal already open (`restore/stage`, the four `files/` changes, `actions/run`,
+  `terminal/open`), and the reads a floor guards (`audit/days`, `audit/events`, `audit/event`,
+  `audit/sessions`, `audit/recordings`, `audit/recording`, `logstore/preview`). A power taken
+  away stops those at once ([PERMISSIONS](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)).
 - A route missing from this table is 404 on the Worker and on the agent.
 - `ROUTE_TABLE_ID` is a fingerprint of the table. `GET /api/me` returns the Worker's; the
   console compares it with its own and warns about a version mismatch.
@@ -59,7 +65,7 @@ and the console. A route is reached in two forms:
 | `jobs/progress` | GET | `host.view` | 15 s |
 | `jobs/report` | GET | `host.view` | 15 s |
 | `jobs/fit` | GET | `host.view` | 15 s |
-| `jobs/history` | GET | `host.view` | 60 s |
+| `jobs/history` | GET | `host.view` | 15 s |
 | `timers` | GET | `host.view` | 15 s |
 | `storage` | GET | `host.view` | 15 s |
 | `network` | GET | `host.view` | 15 s |
@@ -177,11 +183,11 @@ These are under the same `/dashboard/vps/app/api/` prefix and never reach the ag
 
 | Route | Method | Capability | What it does |
 |---|---|---|---|
-| `me` | GET | none | The person's role, capabilities, the catalog, whether signing and the agent are configured, and `ROUTE_TABLE_ID` |
+| `me` | GET | none | The person's email and role, `caps` (what the console shows) and `agentCaps` (what the agent will accept; the same outside the local preview), `preview`, `policyStored`, the catalog, whether signing and the agent are configured, and `routes` (`ROUTE_TABLE_ID`) |
 | `access` | GET | `access.view` | The whole access policy and whether it is stored |
 | `access` | POST | `access.manage` | Save the policy (compare-and-swap on its revision; up to 64 KiB) |
-| `access/person` | GET | `access.view` | One person's role defaults, grant and effective capabilities |
-| `access/person` | POST | `access.manage` | Replace or remove one person's grant (up to 16 KiB) |
+| `access/person` | GET | `access.view`, or `access.delegate` for a person cf-admin names in `x-vps-target` whom the caller outranks | One person's role defaults, grant and effective capabilities, and what the caller may change |
+| `access/person` | POST | `access.manage`, or `access.delegate` under the delegation rules; both read from the stored policy | Replace or remove one person's grant (up to 16 KiB) ([Delegation](../security/PERMISSIONS.md#delegation)) |
 | `access/role` | POST | `access.manage` | Move one capability's default to a minimum role, keeping every other default and every personal grant (up to 16 KiB; audit line ends in `via=role`) |
 | `access/catalog` | GET | none (a person, not a system job) | Every capability with its class and floor flag, each role's level and defaults, and what the caller holds and may delegate |
 
@@ -195,4 +201,6 @@ than 60 seconds or wrong), `bad_request` (400), `forbidden` (403), `not_found` (
 cf-admin decides a person is signed out. The agent answers 401 for an unsigned, stale,
 replayed or badly signed request. Its own refusals are `{ ok: false, error, need }`, with a
 plain-words `message` for its own checks: 403 `forbidden` with `need` the capability,
-`fresh_sign_in` or `owner_role`, and 429 `too_many` with `need: hourly_limit`.
+`fresh_sign_in`, `owner_role`, `own_ticket` (a terminal ticket made for someone else) or
+`own_session`, and 429 `too_many` with `need: hourly_limit`. A body or ticket it cannot use is
+400 with `error` `bad_json` or `bad_ticket`.

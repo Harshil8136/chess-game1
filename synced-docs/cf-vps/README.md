@@ -1,8 +1,8 @@
 # cf-vps
 
-The Madagascar platform's VPS layer: the host `krown` (Oracle Cloud A1, Ubuntu 26.04 arm64) managed as code, its forensic audit trail, its app platform, and a private Cloudflare Worker that serves the VPS console embedded in cf-admin.
+The Madagascar platform's VPS layer: the server (Oracle Cloud A1, Ubuntu 26.04 arm64) managed as code, its forensic audit trail, its app platform, and a private Cloudflare Worker that serves the VPS console embedded in cf-admin.
 
-**Documentation:** start at [`documentation/README.md`](documentation/README.md) (index of every doc). Conventions: [`documentation/CONTRIBUTING-DOCS.md`](documentation/CONTRIBUTING-DOCS.md). Current state and what to resume: [`documentation/program/HANDOFF.md`](documentation/program/HANDOFF.md). AI tools: [`main.md`](main.md).
+**Documentation:** start at [`documentation/README.md`](documentation/README.md) (index of every doc). Conventions: [`documentation/CONTRIBUTING-DOCS.md`](documentation/CONTRIBUTING-DOCS.md). Current state and what to resume: `documentation/program/HANDOFF.md` (private). AI tools: [`main.md`](main.md).
 
 | Folder | What it holds |
 |---|---|
@@ -15,7 +15,7 @@ The Madagascar platform's VPS layer: the host `krown` (Oracle Cloud A1, Ubuntu 2
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Live console on your PC, reading the server through SSH (needs Node 22.13 or newer and working `ssh krown`; open <http://localhost:5173/dashboard/vps/app/>) |
+| `npm run dev` | Live console on your PC, reading the server through SSH (needs Node 22.13 or newer and a working SSH alias for the server, which `dev.local.json` can name; open <http://localhost:5173/dashboard/vps/app/>) |
 | `npm run verify` | Typecheck, tests, build, build-output test, audit. Run before every commit; Workers Builds runs it on push to `main` |
 | `npm run agent:deploy` | Build the agent and install it on the server as a new release (health-checked; rolls back on failure) |
 | `node scripts/docs-mirror.mjs check` | Check that every published doc is free of identifiers and credentials |
@@ -23,8 +23,8 @@ The Madagascar platform's VPS layer: the host `krown` (Oracle Cloud A1, Ubuntu 2
 Run a host step one at a time and read its output before the next:
 
 ```bash
-bash host/push.sh                                   # copy host/ to krown:/tmp/vps-host
-ssh krown 'sudo bash /tmp/vps-host/00-baseline/apply.sh accounts'
+bash host/push.sh                                     # copy host/ to /tmp/vps-host on the server
+ssh <server> 'sudo bash /tmp/vps-host/00-baseline/apply.sh accounts'
 ```
 
 Details: [`documentation/operations/DEPLOY.md`](documentation/operations/DEPLOY.md) and [`documentation/operations/HOST-MODULES.md`](documentation/operations/HOST-MODULES.md).

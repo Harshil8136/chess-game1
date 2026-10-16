@@ -72,7 +72,8 @@ cf-vps has three parts that ship three ways
 - **Host modules:** `bash host/push.sh`, then one `apply.sh <step>` at a time, reading each
   output before the next. Run destructive steps alone. Never `ufw`.
 - **Order when a change spans parts:** cf-admin first if it adds an action id, then the agent,
-  then host modules, then the Worker.
+  then host modules, then the Worker. The exception: when the agent starts to require
+  something only a newer Worker sends, the Worker goes first (DEPLOY.md, "The exception").
 - **`npm run verify`** runs `typecheck`, `types:check`, the unit and agent tests (the published
   docs check and the dependency rules among them), `build`, `test:build` and `audit`.
   `package.json` owns the chain.
@@ -88,7 +89,7 @@ cf-vps has three parts that ship three ways
 | Your task touches | Read first |
 |---|---|
 | Anything at all | the [documentation index](./documentation/README.md), then [`architecture/OVERVIEW.md`](./documentation/architecture/OVERVIEW.md): components, request path, trust boundaries, data stores |
-| Access, a new route or action | [`security/PERMISSIONS.md`](./documentation/security/PERMISSIONS.md): the capability catalog, roles, floors and fresh sign-in |
+| Access, a new route or action | [`security/PERMISSIONS.md`](./documentation/security/PERMISSIONS.md): the capability catalog, roles, floors, grants, delegation, fresh sign-in, the agent's own red lines and where each rule is enforced |
 | Resuming work, the current state | [`program/HANDOFF.md`](./documentation/program/HANDOFF.md) (private) |
 | Deploying, the server's modules | [`operations/DEPLOY.md`](./documentation/operations/DEPLOY.md), [`operations/HOST-MODULES.md`](./documentation/operations/HOST-MODULES.md), [`reference/HOST-LAYOUT.md`](./documentation/reference/HOST-LAYOUT.md) |
 | Controlled changes on the server | [`features/ACTIONS.md`](./documentation/features/ACTIONS.md): the actions and their enforcement chain |
@@ -98,6 +99,9 @@ cf-vps has three parts that ship three ways
 | Something broke | [`runbooks/README.md`](./documentation/runbooks/README.md) |
 | The design and its phases | [`specs/2026-09-29-cf-vps-design.md`](./documentation/specs/2026-09-29-cf-vps-design.md) and [`records/2026-09-29-owner-rulings.md`](./documentation/records/2026-09-29-owner-rulings.md) |
 | Writing, moving or naming documents | [`CONTRIBUTING-DOCS.md`](./documentation/CONTRIBUTING-DOCS.md) |
+
+This file is on the public docs mirror. Its links into private files (the handoff, the
+runbooks, specs, records and `HOST-LAYOUT.md`) open only in the private repository.
 
 ## 4. Which document to update (Golden Rule 2)
 
@@ -133,7 +137,7 @@ For every document you touch:
 ## 5. The laws
 
 - **One contract.** Capabilities, the agent route table and the action list live in `contract/`. Change them there; the Worker, agent and console read the same file. Add a test, and expect the route-table fingerprint to change.
-- **Check in layers.** The Worker refuses early, the agent re-checks from the signed capability list, and the root script validates its own target. Do not weaken one layer because another exists.
+- **Check in layers.** cf-admin's gateway checks the person and their page, the Worker refuses early, the agent re-checks from the signed capability list, an action's root unit refuses to run without the Worker's ticket for it, and the root script validates its own target. Do not weaken one layer because another exists.
 - **Host changes go through `host/` modules.** Apply one step at a time and read its output before the next. Run destructive steps alone. Never `ufw`; the firewall module edits the provider's iptables rules in a marked block.
 - **Dependencies are libraries the code imports.** Never `npm install` a tool for the machine (bash, node, wsl, the OCI CLI) into this repo; install it on the machine. The `node` package swaps the Node runtime under every npm script. `test/dependencies.test.ts` fails the build on either.
 - **Published docs carry no identifiers.** No hostnames, IP addresses, account ids, emails, fingerprints or tokens in anything on the `PUBLISHED_DOCS` list. Say "the server" and "the tunnel".

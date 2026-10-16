@@ -2,7 +2,7 @@
 title: "Documentation Conventions"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 related_code: [scripts/docs-mirror.mjs, .github/workflows/sync-docs.yml, test/docs-mirror.test.ts]
@@ -37,9 +37,9 @@ and never edited to match today; their status is `historical`.
 |---|---|---|---|
 | `architecture/` | How the parts fit and where trust changes | living | yes |
 | `security/` | Permissions and the audit pipeline | living | yes |
-| `features/` | One document per feature (console, actions, log storage) | living | yes |
+| `features/` | One document per feature (console, actions, log storage, jobs, restore tests) | living | partly: console, actions and log storage |
 | `operations/` | Deploy and host modules (public); owner setup (private) | living | partly |
-| `reference/` | Lookup tables, such as the agent route table | living | yes |
+| `reference/` | Lookup tables: the agent route table (public); the server's layout and the console's design system (private) | living | partly |
 | `runbooks/` | What to do when something breaks | living | no |
 | `program/` | Current status and what to resume (`HANDOFF.md`) | living | no |
 | `specs/` | Dated design specs; `active` while it is the plan of record | spec | no |
@@ -58,7 +58,7 @@ owner steps and the handoff carry operational identifiers, so they stay private.
 ## 4. Front-matter
 
 Every `.md` under `documentation/` starts with the block from
-[`_templates/doc-template.md`](_templates/doc-template.md). Required for living docs and
+`_templates/doc-template.md` (private). Required for living docs and
 specs: `title`, `status`, `last_verified`. Records may carry a minimal header
 (`status: historical`).
 
@@ -79,6 +79,11 @@ That date says when they last changed, not that they were re-checked.
 - One fact, one home. Link to the doc that owns a fact instead of restating it.
 - Names of secrets only, never values. Capability, action and route ids are code names and are fine.
 - Links are repo-relative and case-exact. Add `related_docs` for machine readers.
+- A published doc names a private one in plain text with "(private)", as a path in code
+  (`documentation/runbooks/compromise.md`), rather than as a link: on the mirror the link would
+  lead nowhere. The index, `main.md` and `README.md` are the exceptions; they say which of their
+  links are private. A published doc may link a feature doc that waits on the owner's decision
+  to publish it.
 
 ## 6. Published docs (the public mirror)
 
@@ -90,11 +95,15 @@ Published docs must contain **no** hostnames, IP addresses, account or resource 
 key fingerprints or tokens. Say "the server", "the tunnel", "the R2 audit bucket", "the
 loopback address". `node scripts/docs-mirror.mjs check` fails closed on these shapes:
 
-- UUIDs and 32- or 64-character hex ids
+- UUIDs, 32- and 64-character hex ids, and OCI resource ids
 - email addresses (except `example.*` and no-reply addresses)
-- IPv4 addresses, and hostnames under the business domain or the Access domain
-- worker, R2, Sentry and Supabase host names; connection strings with passwords
-- private key blocks, JWTs, GitHub, Slack, AWS and `sk-` keys, bearer tokens, SSH key fingerprints
+- IPv4 addresses (except loopback and link-local), the server's own host name, and hostnames
+  under the business domain, the Access team domain or `workers.dev`
+- connection strings with a password
+- private key blocks, JWTs, GitHub, AWS and `sk-` keys, bearer tokens, SSH key fingerprints
+
+The list is `PATTERNS` in `scripts/docs-mirror.mjs`; it matches shapes, so a name it cannot know
+(a bucket, a tunnel) is the writer's to leave out.
 
 The check names the file, line and kind of match, never the matched text.
 
@@ -115,6 +124,9 @@ until the two match).
 ## 8. What the tests enforce
 
 `test/docs-mirror.test.ts` checks that: the workflow's push paths equal `PUBLISHED_DOCS` plus
-the script; every published file exists and passes `check`; every doc outside `records/` and
-`_templates/` has `title`, `status` and `last_verified`; and `README.md` links every living doc.
-It does not check that a claim is true. That is what `last_verified` is for.
+the script; every published file exists and passes `check`; the check catches an IP address,
+an internal hostname, an email address, a 32-hex id and the server's name in any case; there is
+no `docs/` folder; and every doc under `architecture/`, `security/`,
+`features/`, `operations/` and `reference/`, plus this one, has `title`, `status` and
+`last_verified` and is linked from `README.md`. It does not check that a claim is true, or that
+a published doc links only published ones. That is what `last_verified` and review are for.

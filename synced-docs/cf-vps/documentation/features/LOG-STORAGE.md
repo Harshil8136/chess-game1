@@ -18,9 +18,8 @@ tags: [feature, logs, retention, purge, zstd]
 > sign-in, is recorded in three places, and can never touch today's logs or the locked
 > off-server copy.
 
-The design and reasoning are in the dated spec
-[`../specs/2026-09-30-log-storage-design.md`](../specs/2026-09-30-log-storage-design.md),
-now `historical`. This page describes what shipped.
+The design and reasoning are in the dated spec `documentation/specs/2026-09-30-log-storage-design.md`
+(private), now `historical`. This page describes what shipped.
 
 ## Retention per kind
 
@@ -78,7 +77,7 @@ Security, **Log storage** (`security.view` to open; route `logstore/usage`):
 | Rule | Where enforced |
 |---|---|
 | Both `logs.purge` and `retention.manage` are floor capabilities: owner and vendor only, and either can be denied for one person | `contract/capabilities.ts` |
-| Needs a sign-in from the last 10 minutes and the typed word `delete` (retention edits need the sign-in, and the console asks for a typed confirmation when shortening) | Worker, console |
+| Needs a sign-in from the last 10 minutes and the typed word `delete` (retention edits need the sign-in, and the console asks for a typed confirmation when shortening, a check the console alone makes) | Worker and agent; the console asks first |
 | Whole past days only: never today, from before to, at most 400 days, known kinds, no repeats | `parsePurgeTarget` in the Worker and agent; the root script validates again |
 | Never a file changed in the last hour; never R2 | `vps-act-purge` |
 | Preview and purge use one rule, kept identical in the agent's `purgeFiles` and the root script | `test/host-units.test.ts` checks they agree |

@@ -51,7 +51,7 @@ support can hold.
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |
 | `terminal.ops` | operate | A shell as the unprivileged `vps-ops` account through a 60-second certificate; recorded | owner, vendor | no |
-| `terminal.admin` | admin | A shell as `vps-admin` (sudo); a fresh sign-in, at most 6 opens an hour per person; recorded and the owner is alerted. Root needs no password: these checks stand in for one, and what the account types under sudo is recorded ([AUDIT-PIPELINE](AUDIT-PIPELINE.md)) | owner, vendor | yes |
+| `terminal.admin` | admin | A shell as `vps-admin` (sudo); a fresh sign-in, at most 6 opens an hour per person; recorded, and each opening raises an alert. Root needs no password: these checks stand in for one, and what the account types under sudo is recorded once the server's `80-terminal sudoers` step is applied ([AUDIT-PIPELINE](AUDIT-PIPELINE.md)) | owner, vendor | yes |
 | `access.view` | read | See who holds which capabilities | owner, vendor | no |
 | `access.delegate` | admin | Give or take away capabilities you hold yourself, for people below you, from cf-admin's Access Center (see Delegation) | owner, vendor, admin | no |
 | `access.manage` | admin | Change role defaults and per-person grants | owner, vendor | yes |
@@ -91,9 +91,14 @@ audit trail, session recordings and the log store preview), reads the row itself
 (`FRESH_POLICY_ROUTES` in `contract/capabilities.ts`, since 2026-10-16), so a power taken away
 stops those at once and everything else within 30 seconds. A save reads it fresh too.
 
+A connection already open is checked when it opens and not again: a terminal, and the live
+views of logs and metrics. Taking a power away ends none of them. A terminal ends after 10
+minutes without input or 30 minutes in all (`agent/src/terminal.ts`, at most 2 open per person
+and 4 in all); a live view lasts while its page stays open.
+
 | Rule | Value |
 |---|---|
-| A person's grant | `allow` list, `deny` list, optional `expiresAt`, `note`, `temporary` and `userId` |
+| A person's grant | `allow` list, `deny` list, optional `expiresAt`, `note`, `temporary` and `userId`; the save stamps `grantedBy` and `grantedAt` |
 | Most people with a grant | 50 |
 | Longest grant | 366 days ahead; a past date is refused |
 | Powers given for a while | `temporary`, by capability: an `until` at most 90 days ahead and an optional `note`. One whose end has passed is dropped on the next save without an issue; never a floor |
@@ -108,8 +113,8 @@ save) and from cf-admin's Access Center on a person's Users page, which calls th
 one person. Each save returns an `x-vps-audit` line that becomes a cf-admin activity-log row.
 
 Powers given for a while come from cf-admin (permissions item #22, 2026-10-16): a person asks
-for one in Settings → Your access, with how long and why, and someone who may give it approves
-it there. The portal then saves the person's grant with the power in `temporary`, through the
+for one in Settings → Your access → Backups and Server, with how long and why, and someone who
+may give it approves it on Users → Access requests. The portal then saves the person's grant with the power in `temporary`, through the
 same person route and rules as any other change. The Access page lists them on the person's row
 and keeps them when the grant is edited there; a deny ends one early. A save carries over what
 still counts of everyone else's grant: a grant whose end has passed keeps only its denies and
@@ -165,8 +170,8 @@ someone without `access.manage` is accepted only when all of these hold:
 | Holds `access.delegate` | Otherwise `need: access.delegate` |
 | T1 trusted target | cf-admin names the person, with the role from its own user table, in `x-vps-target` (base64url JSON `{ v: 1, email, role, id? }`, `id` being their cf-admin account id). cf-admin's gateway never forwards that header from a browser. Missing, malformed or naming someone else: `need: trusted_target` |
 | T2 not yourself | `need: self` |
-| T3 outrank | The actor's role sits strictly above the person's; owner and vendor can never be changed by delegation (`need: outranked`) |
-| T4 hold it | Every capability added to or removed from the allow or deny list, or given, ended or given another end for a while, is one the actor holds now (`need: not-held:<cap>`) |
+| T3 outrank | The actor's role sits strictly above the person's (`need: outranked`). Vendor support outranks the owner, and nobody outranks vendor support |
+| T4 hold it | Every capability added to or removed from the allow or deny list, or given, ended or given another end for a while, is one the actor holds now (`need: not-held:<cap>`). A new end date for the whole grant changes every capability on it (since 2026-10-16), so nobody delegating can keep a power they could not give running longer; a new note changes none |
 | T5 not locked | No floor capability changes (`need: locked:<cap>`) |
 
 The save then runs through the same validation, limits and compare-and-swap as any other, and
@@ -199,9 +204,18 @@ needs a sign-in from the last 10 minutes."). It applies to:
 The capability is checked first, so someone without it hears about the capability, not the
 sign-in. Both the Worker and the agent check it. The Worker refuses before it signs anything;
 it also signs the sign-in time into the actor (`s`), and the agent checks that again with its
-own clock. The agent refuses a request whose signed actor carries no sign-in time, so a Worker
-older than this rule cannot pass a sign-in check on an agent that has it (see
+own clock. The agent refuses such a request when the signed actor carries no sign-in time, so a
+Worker older than this rule cannot pass a sign-in check on an agent that has it (see
 [DEPLOY](../operations/DEPLOY.md#order-for-a-change-that-spans-parts)).
+
+Most of these also ask for a typed word: `reboot`, `upgrade`, `delete` for logs, `restore`, or
+the service's name for a stop, checked again by the Worker and the agent (`checkAction` in
+`contract/actions.ts`). Deleting a folder asks for its name, which the agent checks; deleting a
+single file, staging a backup copy and opening the admin terminal ask for none. Shortening how
+long a log is kept asks for `shorten` in the console only. Stopping or blocking an app and
+blocking a job ask for its name without a recent sign-in. Restarting or starting a service,
+refreshing package lists, and creating, uploading or renaming files need neither. See
+[ACTIONS](../features/ACTIONS.md).
 
 ### A second person, in cf-admin
 
@@ -209,15 +223,13 @@ Since 2026-10-16 (cf-admin's permissions item 36) cf-admin holds one change befo
 this console: `retention.set`, how long a kind of log is kept. When the person holds
 `retention.manage` here and someone else could approve it in cf-admin (an active Owner or
 Vendor support who did not ask), cf-admin's gateway answers `202` with code `second_person`
-and keeps the change on its Users page; nothing reaches this Worker. Once it is approved,
+and keeps the change on its Users page; nothing reaches this Worker. Before holding it,
+cf-admin asks the person for a sign-in from the last 10 minutes, as this console would. Once it
+is approved,
 cf-admin sends it as the approver, and this Worker checks the approver as for any change: the
 capability, the floor and the recent sign-in. With nobody else to approve, it passes at once, as
 before. The rule and its record live in cf-admin; this console adds no rule of its own, and the
 Log storage page shows the answer as a notice rather than an error.
-
-These actions also ask for a typed confirmation (`reboot`, `upgrade`, `delete`, `restore`, or
-the service name for a stop). Restarting or starting a service, refreshing package lists, and
-creating, uploading or renaming files need neither. See [ACTIONS](../features/ACTIONS.md).
 
 ## The agent's own red lines
 
@@ -243,10 +255,11 @@ ordinary terminal (`vps-ops`) has no hourly limit.
 
 | Layer | Check |
 |---|---|
+| cf-admin's gateway | Opens the console only for a person whose role and page settings allow `/dashboard/vps`; refuses every change from a Viewer, and holds every change until the server access notice is accepted; names the person in `x-vps-actor` (signed once `CONSOLE_SIGNING_KEY` is set), and the person changed in `x-vps-target` only from its Access Center, never from a browser |
 | Console | Hides pages and disables buttons the person cannot use (`/api/me` lists their capabilities) |
 | Worker | With `CONSOLE_SIGNING_KEY` set, first refuses identity headers cf-admin did not sign (400 `bad_signature`, [OVERVIEW](../architecture/OVERVIEW.md#trust-boundaries)). Then `proxyToAgent` refuses with 403 and the capability needed, or `fresh_sign_in`, before anything is signed |
 | Agent | Re-checks the route's capability from the signed list; the Worker's headers alone are never trusted. Then its own checks: the red lines from the signed role, the fresh sign-in from the signed sign-in time, and the hourly limits |
-| Root script | Each action script validates its own target again |
+| Root script | Runs only with a fresh, unused action ticket the Worker signed for that exact unit (`contract/action-ticket.ts`, checked by `vps-act-ticket.mjs`), so the agent cannot start an action on its own; then validates its own target again |
 
 The local preview signs with a dev key that the agent limits to `read`-class capabilities
 (`DEV_KEY_CAPS`), so a laptop can look at the server but change nothing. Its `/api/me` still

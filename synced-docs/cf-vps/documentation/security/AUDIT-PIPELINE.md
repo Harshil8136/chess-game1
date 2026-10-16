@@ -22,12 +22,12 @@ tags: [security, audit, forensics, vector, r2, sentry]
 | Source | Captures | Module |
 |---|---|---|
 | Kernel audit (auditd) read by Laurel as JSON | Every command run by a logged-in person (the login id survives sudo), commands run by services and containers, changes to watched config paths, kernel modules, clock changes, mounts, ptrace, and changes to the audit rules themselves | `20-audit` |
-| System journal | SSH logins and failures, sudo, a per-login session record, terminal recordings (tlog), terminal certificates, integrity scan results, site probes, console purge and retention lines, pipeline chatter | `20-audit`, `25-logship` |
+| System journal | SSH logins and failures, sudo, a per-login session record, terminal recordings (tlog: what the screen showed, never the keys typed), terminal certificates, integrity scan results, site probes, console purge and retention lines, pipeline chatter | `20-audit`, `25-logship` |
 | Process accounting | The exit code or signal of every process | `20-audit` |
 | sudo I/O | The terminal output of sudo sessions. For `vps-admin`, the browser terminal's admin account, also what it typed (since 2026-10-16, once `80-terminal sudoers` is applied), with the input after a password, passphrase, secret or token prompt replaced by stars | `20-audit`, `80-terminal` |
 
-The audit rules are locked (`-e 2`) after P1, so a rule change needs a reboot; see
-[`../runbooks/audit-rule-change.md`](../runbooks/audit-rule-change.md). The login id is
+The audit rules are locked (`-e 2`) after P1, so a rule change needs a reboot; the steps are in
+the private runbook `documentation/runbooks/audit-rule-change.md`. The login id is
 immutable, so a person cannot hide behind `su` or `sudo`.
 
 Vector (`25-logship`) normalises everything to one schema (`ts`, `host`, `source`, `class`,

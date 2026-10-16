@@ -18,7 +18,8 @@ tags: [meta, index]
 
 Single index for every document under `documentation/`. Conventions (folders, front-matter,
 what is published) are in [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md). A test fails if a
-living document is missing from this index.
+document under `architecture/`, `security/`, `features/`, `operations/` or `reference/` is
+missing from this index.
 
 **Published or private.** Documents marked **P** are copied to the public docs mirror and
 contain no identifiers. Everything else is private, so links to it do not resolve on the mirror.
@@ -44,7 +45,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 
 | Doc | What it is |
 |---|---|
-| [`security/PERMISSIONS.md`](security/PERMISSIONS.md) **P** | The capability catalog, roles, floors, per-person grants, fresh sign-in |
+| [`security/PERMISSIONS.md`](security/PERMISSIONS.md) **P** | The capability catalog, roles, floors, per-person grants and powers given for a while, delegation from cf-admin, fresh sign-in, the agent's own red lines and hourly limits, and where each rule is enforced |
 | [`security/AUDIT-PIPELINE.md`](security/AUDIT-PIPELINE.md) **P** | Sources, classes, local record, R2 copy, redaction, what reaches Sentry |
 
 ## Features
@@ -52,7 +53,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | Doc | What it is |
 |---|---|
 | [`features/CONSOLE.md`](features/CONSOLE.md) **P** | Every console page and the capability it needs |
-| [`features/ACTIONS.md`](features/ACTIONS.md) **P** | The controlled actions and the four-layer enforcement chain |
+| [`features/ACTIONS.md`](features/ACTIONS.md) **P** | The controlled actions, the enforcement chain from the console to the root script, and the Worker's action tickets |
 | [`features/JOBS.md`](features/JOBS.md) | Server jobs: the busy gate every job waits on, the queue, a job's manifest and secrets, jobs with staged input, the Jobs page |
 | [`features/RESTORE-TESTS.md`](features/RESTORE-TESTS.md) | Backup restore tests: a cf-backup copy staged, unlocked, rebuilt and checked in a sealed container; who may run one, the checks and score, resources, the lab key, testing PostgreSQL by hand |
 | [`features/MAILROOM.md`](features/MAILROOM.md) | **Retired 2026-10-14**, kept as history: Mailroom, the app that held the email service's attachments while ClamAV scanned them. The email service now checks files itself and keeps them on Cloudflare |
@@ -147,7 +148,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 
 | Doc | What it is |
 |---|---|
-| [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) | Folder map, naming, front-matter, publishing rules |
+| [`CONTRIBUTING-DOCS.md`](CONTRIBUTING-DOCS.md) **P** | Folder map, naming, front-matter, publishing rules |
 | [`_templates/doc-template.md`](_templates/doc-template.md) | The template to copy for a new doc |
 | [`_templates/change-record.md`](_templates/change-record.md) | The template for the dated record every big change gets (`main.md` §4) |
 

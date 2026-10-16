@@ -29,7 +29,7 @@ tags: [feature, console, ui, pages]
   things that need a person, which opens their list (Needs attention); and the live status as
   a dot and its words. Under 1024 px the current group's pages are one tap each (group tabs)
   instead of the icons. The look and the building blocks are the
-  [design system](../reference/DESIGN-SYSTEM.md).
+  design system (`documentation/reference/DESIGN-SYSTEM.md`, private).
 - **The console follows the portal's theme.** It is framed same-origin by the portal, so it
   reads the portal's `data-theme` (dark or light, set by the portal's theme toggle) when it
   opens and keeps in step when the toggle is flipped. Opened on its own, or if the portal's
@@ -71,7 +71,7 @@ tags: [feature, console, ui, pages]
 Twenty-two pages in five groups, by how often they are used (`PAGES` in `src/ui/pages.ts`). The
 capability opens the page; the Worker and agent enforce it again on every call.
 
-Every page has the same three layers (see the [design system](../reference/DESIGN-SYSTEM.md)):
+Every page has the same three layers (see the design system, `documentation/reference/DESIGN-SYSTEM.md`, private):
 
 - **Status** is one sentence under the title that says how the page stands. Its logic is a pure
   function in the page's view module (`src/ui/<page>-view.ts`), tested in a `test/ui-*.test.ts`.
@@ -215,8 +215,8 @@ Every page has the same three layers (see the [design system](../reference/DESIG
 - Status: whether the tunnel is connected (red when down), then what listens beyond this
   server. The DHCP client (68/udp) is expected and named. Any other port listening beyond
   loopback is a warning that names each port: the cloud firewall, which the console cannot see,
-  decides whether it is reachable. That includes SSH (22/tcp), which listens on loopback only
-  since 2026-10-16, where the tunnel reaches it.
+  decides whether it is reachable. That includes SSH (22/tcp), which listens on loopback only, where the tunnel reaches it, once
+  the 2026-10-16 change to the SSH settings is applied on the server.
 - Main: a warning banner with a Show these ports button when such ports exist; then tabs for
   Interfaces (kind, state, addresses with copy, MTU, MAC), Listening ports (reach, protocol,
   address, usual use, owner; filters All, Public, Local, TCP, UDP; search) and Tunnel details.
@@ -268,7 +268,10 @@ Every page has the same three layers (see the [design system](../reference/DESIG
   (reattaching clears the screen first, and ending is guarded while the session runs). The
   sudo-capable account needs `terminal.admin` (Owner or Vendor support) and a sign-in from the
   last 10 minutes, and each person can open it a few times an hour
-  ([Hourly limits](../security/PERMISSIONS.md#hourly-limits)).
+  ([Hourly limits](../security/PERMISSIONS.md#hourly-limits)). Each person can have two sessions
+  open, and the server four in all; a session ends after 10 minutes without typing or 30 minutes
+  in all, and taking the capability away does not end one already open
+  ([Stored policy](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)).
 - The bar above the terminal: the state badge, the account, the link in use (Fast link or Basic
   link, see [How the terminal connects](#how-the-terminal-connects)), and one row of tools that
   scrolls sideways on a narrow screen: Copy (the selection), Paste, Select text (the newest
@@ -366,8 +369,10 @@ redraw it (`memo`), and the terminal fits its size at most once per animation fr
 - Main: a meter for the disk; a table per kind of log with the retention ("Kept for") that can
   be edited (shortening asks for the typed word); a stored-per-day panel; and a closed Delete
   logs section (by date, by space, journal vacuum, each with a preview and the typed
-  confirmation). The calls and capabilities are unchanged: `logs.purge`, `logs.vacuum` and
-  `retention.set`. A retention change that cf-admin holds for a second person shows a blue
+  confirmation). Deleting (the `logs.purge` and `logs.vacuum` actions) needs the `logs.purge`
+  capability, and changing how long a kind is kept (`retention.set`) needs `retention.manage`;
+  both need a sign-in from the last 10 minutes. The typed word for shortening is the page's own
+  check; the server checks the typed word for a delete. A retention change that cf-admin holds for a second person shows a blue
   notice, **Waiting for a second person**, not an error ([LOG-STORAGE](LOG-STORAGE.md#the-console-page)).
 - About: the audit disk, amber and red, growth, retention, where logs are stored, deleting,
   preview, vacuum, and what is recorded.
@@ -393,7 +398,9 @@ redraw it (`memo`), and the terminal fits its size at most once per animation fr
   capabilities the signed-in person holds.
 - Main: tabs for People (personal grants as a list, and the editor), Roles (a matrix that reads
   the saved policy's defaults) and Capabilities (by class; one opens a sheet with who holds it
-  and what it unlocks). Editing needs `access.manage`. The rules are in
+  and what it unlocks). Editing needs `access.manage`. Changing access for someone below you
+  with `access.delegate`, and asking for a power for a while, happen in cf-admin (the Access
+  Center on a person's Access page, and Settings → Your access), not here. The rules are in
   [PERMISSIONS](../security/PERMISSIONS.md).
 - About: capabilities and classes, roles, floors, personal grants, saving, and who enforces
   what.
