@@ -166,12 +166,12 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 > `documentation/specs/2026-09-16-access-revocation-remediation-design.md`.
 > *Added 2026-09-19.*
 | `src/pages/api/audit/consent.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Consent record deletion | ✅ `/dashboard/logs` |
-| `src/pages/api/audit/logs.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Audit log deletion | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/logs.ts` | role-or-grant | The activity log (read only: its `DELETE` was removed on 2026-10-16) | ✅ `/dashboard/logs` |
+| `src/pages/api/audit/seals.ts` | `isOwnerOrVendor` | The daily seals, checked (2026-10-16, [plac-and-audit](../architecture/plac-and-audit.md) §3.6) | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/emails.ts` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`) | Email log deletion | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/stats.ts` | (admin+ for stats; owner+ for the `#security` tab, via `ROLE_LEVEL`) | Audit summary stats | ✅ `/dashboard/logs` |
 | `src/pages/api/audit/login-logs.ts` | role-or-grant | Login forensics (PII) | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
 | `src/pages/api/audit/export.ts` | role-or-grant | CSV export | ✅ `/dashboard/logs` parent-deny propagation (2026-05-26) |
-| `src/pages/api/audit/prune.ts` | `isDev` (deprecated alias for `isVendorSupport`) | Log pruning | ✅ `/dashboard/logs` |
 | `src/pages/dashboard/logs/index.astro` | `isDev`, `isOwnerOrDev` (deprecated aliases) | Feature flag computation | (page-level — uses middleware PLAC) |
 | `src/pages/dashboard/users/[id]/access.astro` | `isVendorSupport`, `isOwnerOrVendor` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
 
@@ -717,6 +717,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | **Scope-limited to §2's audit route rows (permissions item #21).** `src/pages/api/audit/logs.ts` (role-or-grant, no `DELETE`), `seals.ts` (`isOwnerOrVendor`, then the page check); `src/pages/api/audit/prune.ts` deleted, so its row went | The other rows of §2 |
 | 2026-10-16 | **Scope-limited to the Users page rebuild (permissions item #29):** §2.1's `access-data` row and the client-side note, §5.5's badge, §6 (components, events, filters), §9.2's drawer and role dialog, §11.4 and §11.6's button, against `UsersConsole.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx`, `people.ts`, `src/pages/dashboard/users/index.astro`, `src/pages/api/users/access-data.ts`, `src/lib/access-center/counts.ts` and `src/pages/api/users/[id]/login-history.ts`; `test/users-console.test.ts` passes (the counts agree with `computeAccessMap` and the page gate over the test D1) | The page in a phone browser (the owner's test); every other section |
 | 2026-10-16 | **Scope-limited to §6.2 (new).** `src/lib/access-review/` (`rules.ts`, `store.ts`, `handlers.ts`), `src/pages/api/users/access-review.ts`, `src/workers/scheduled-access-review.ts`, the `access-change-summary` handler in `src/lib/jobs/registry.ts`, `AuditLogRepository.ts` (`getLatestTargetRow`, `getLastConsoleUse`), `AccessReviewPanel.tsx`, `src/pages/dashboard/users/index.astro`; `test/access-review.test.ts` passes. Live: the console-use query against `madagascar-db` through the D1 connector (two people with Server rows, none with Backups rows) | The panel, the removals and the reminder email in a phone browser and a real inbox (the owner's test) |
 | 2026-10-16 | **Scope-limited to §11.3's login-history row.** `src/pages/api/users/[id]/login-history.ts`, `src/lib/audit-views.ts`; `test/sensitive-views.test.ts` passes | The rest of §11 |

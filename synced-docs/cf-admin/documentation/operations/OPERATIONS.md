@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-16 | `src/lib/jobs/registry.ts` (16 jobs: 14 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/` only), `wrangler.toml` (`[triggers]` and `STAFF_STORAGE` unchanged); the bucket read through the Cloudflare connector (exists, Standard class) | §1 Scheduled triggers: **16 jobs (14+2)**, the three jobs missing since 2026-10-10 added to the table and to the sleeping list; the `STAFF_STORAGE` row names the `audit-log/` copies. No binding, secret or variable added |
 | 2026-10-10 | `grep -rn "api.brevo.com\|api.resend.com\|BREVO_API_KEY\|RESEND_API_KEY" src/` after moving the storage, share, purge, Search Console and re-invite emails onto `src/lib/email/queue-mail.ts` | §1's `EMAIL_QUEUE` paragraph and §5's `RESEND_API_KEY` row: no email is sent through Resend directly any more; the key's one reader is the diagnostics ping. Not checked: anything else in §1 and §5 |
 | 2026-10-10 | `wrangler.toml` (`[placement]`, `assets` without `run_worker_first`), `public/_headers`, `npm run types:check` (up to date), `npx wrangler deploy --dry-run` (accepted), Cloudflare placement documentation (fetch handler only, all plans), Sentry resource spans for `/_astro/*` | §1 "Where requests run, and static files" added. Not checked: the live `cf-placement` header and timings, which wait for the deploy |
 | 2026-10-10 | §7's banner: `0069` applied by the deploy at 04:21:03 UTC (`d1_migrations` id 105), 15 s before the push's Workers Builds check finished ([release-and-rollback](../runbooks/release-and-rollback.md) §1) | The deploy command applies pending migrations; the banner said only to apply them by hand. Not checked: anything else in §7 |
@@ -100,7 +101,7 @@ R2 buckets are referenced by **name** — stable, no UUID needed.
 |---------|-------------|---------|
 | `IMAGES` | `madagascar-images` | cf-admin, cf-astro |
 | `ARCO_DOCS` | `arco-documents` | cf-astro |
-| `STAFF_STORAGE` | `madagascar-staff-storage` | cf-admin (created 2026-08-05) — **private, no CDN custom domain** (unlike `IMAGES`). Staff Managed Storage file drive; access only via Worker-issued presigned PUT (aws4fetch, `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets scoped to this bucket only) and Worker-proxied GET. See [`features/STAFF-MANAGED-STORAGE.md`](../features/STAFF-MANAGED-STORAGE.md). |
+| `STAFF_STORAGE` | `madagascar-staff-storage` | cf-admin (created 2026-08-05) — **private, no CDN custom domain** (unlike `IMAGES`). Staff Managed Storage file drive under `staff-storage/`; access only via Worker-issued presigned PUT (aws4fetch, `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets scoped to this bucket only) and Worker-proxied GET. See [`features/STAFF-MANAGED-STORAGE.md`](../features/STAFF-MANAGED-STORAGE.md). Since 2026-10-16 also the activity log's daily copies under `audit-log/`, written by the `audit-seal` job ([`architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6); a bucket lock on that prefix and how long the copies are kept are open owner steps ([`MAINTENANCE.md`](../MAINTENANCE.md) AL-1, AL-2). The weekly `staff-storage-reconcile` lists only `staff-storage/`, so it never touches them |
 
 ### Queues
 
@@ -198,18 +199,20 @@ and each one runs under `runJob` with a declared D1 budget:
 **Do not hand-count this list.** [`../../src/lib/jobs/registry.ts`](../../src/lib/jobs/registry.ts)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
-three times. As of 2026-10-07 it is **13 jobs — 11 on `*/5`, 2 on Sunday**
+four times. As of 2026-10-16 it is **16 jobs — 14 on `*/5`, 2 on Sunday**
 (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`; `redis-ttl-hygiene` left with Upstash on
-2026-10-04, `heartbeat-watchdog` joined on 2026-10-07).
+2026-10-04; `heartbeat-watchdog` joined on 2026-10-07, `email-api-sweep` on
+2026-10-10, `access-change-summary` on 2026-10-15 and `audit-seal` on 2026-10-16).
 Being on `*/5` no longer means running every five minutes: most of these jobs
 have an interval in Cron Control (15 or 60 minutes), and `backup-tick`,
-`blog-scheduled-publish` and `heartbeat-watchdog` sleep until the time they
-report they next have work, never longer than an hour. [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
+`blog-scheduled-publish`, `heartbeat-watchdog`, `email-api-sweep`,
+`access-change-summary` and `audit-seal` sleep until the time they report they
+next have work, never longer than an hour. [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 owns how that is decided.
 
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
-| `*/5 * * * *` (11) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)); and `heartbeat-watchdog`, which runs cf-astro's consent & booking heartbeat and drains both outboxes only when the VPS job and GitHub have both missed it ([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a) |
+| `*/5 * * * *` (14) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)); and `heartbeat-watchdog`, which runs cf-astro's consent & booking heartbeat and drains both outboxes only when the VPS job and GitHub have both missed it ([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a); `email-api-sweep`, the email API's safety net (§3b); `access-change-summary`, the daily access summary and the daily account checks (§3c); and `audit-seal`, which seals the activity log each morning and copies each day to `STAFF_STORAGE` under `audit-log/` (§3d) |
 | `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile`. (`redis-ttl-hygiene`, the weekly Redis expiry census, was removed on 2026-10-04 when cf-admin stopped using Upstash; its `admin_portal_settings` row `redis-hygiene-mode` is now read by nothing and is left for the owner to delete — [`../MAINTENANCE.md`](../MAINTENANCE.md)) |
 
 > **One invocation per job (2026-09-27).** The scheduled handler no longer runs

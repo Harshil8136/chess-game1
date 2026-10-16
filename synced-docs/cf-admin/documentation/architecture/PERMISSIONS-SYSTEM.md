@@ -804,7 +804,7 @@ Email API Console now ask the same before the actions below
 | Sign everyone out | `POST /api/sessions/flush-sessions` | scope `all`; clearing orphaned sessions does not ask |
 | Give an Owner-level page or action | the Access Center save, an approved access request | a grant of a page whose default role is Owner or Vendor support (`isOwnerLevelPage`), when the approval writes one |
 | Page Registry changes that reach more than one person | `POST /api/system/page-access`; `PATCH /api/system/pages`; `PATCH /api/system/console-features` | page access for more than one person, or an Owner-level grant; a page's default role or switch (not its name or description); every console permission default |
-| Delete activity, sign-in, consent or email records | `DELETE` on `/api/audit/logs`, `/api/audit/consent`, `/api/audit/emails`, `/api/audit/delete-targeted`; `/api/audit/delete`; `/api/audit/prune`; `/api/retention/purge` | always (the targeted delete's preview does not ask) |
+| Delete sign-in, consent or email records, or activity entries past 180 days | `DELETE` on `/api/audit/consent`, `/api/audit/emails`, `/api/audit/delete-targeted`; `/api/audit/delete`; `/api/retention/purge` | always (the targeted delete's preview does not ask). Since 2026-10-16 no route deletes a younger activity entry ([`plac-and-audit.md`](plac-and-audit.md) §3.2) |
 | Create or rotate an Email API token; rotate a webhook secret | `POST`/`PATCH` `/api/emails/api-tokens`, `/api/emails/api-clients` | always; checked in the portal before the Console is called |
 
 The time is the session's `signedInAt`, the Cloudflare Access assertion's issue time taken at
@@ -894,10 +894,9 @@ method before calling it.* Sign-in attempts, authorised or not, go to
 TLS version, HTTP protocol, client RTT, Ray ID, Access method, identity provider,
 JWT tail and bot score.
 
-**Measured live 2026-09-19:** `admin_audit_log` holds **2** rows — a bulk
-`delete` on 2026-09-18 and the `api_mutation_attempt` recording that same call.
-`admin_login_logs` holds 349. *(It was 232 / 293 on 2026-08-24; the audit table
-has since been cleared twice. See the paragraph below.)*
+**Measured live 2026-10-16:** `admin_audit_log` holds **95** rows, the oldest from
+2026-09-20, and `admin_login_logs` **442**. *(On 2026-09-19 it held 2: the table was
+emptied through `DELETE /api/audit/logs` on 2026-09-18, a route removed on 2026-10-16.)*
 
 IPs are stored as an HMAC-SHA256 hash keyed directly by `IP_HASH_SECRET` and
 truncated to 16 hex characters (`src/lib/audit-helpers.ts`), computed once per
@@ -905,16 +904,16 @@ session creation, so the audit trail carries no raw IP. *Corrected 2026-09-19:
 this attributed the hash to `src/lib/crypto/hkdf.ts`; HKDF subkey derivation is
 used by the unsubscribe and share-token paths, not by IP hashing.*
 
-The log is **neither complete nor tamper-evident** — no hash chain, no sequence
-number, no WORM storage; the table is a retention-purge target; page reads are not
-recorded at all (§8); and owner and vendor can bulk-delete rows through
-`DELETE /api/audit/logs`, which is what emptied the live table on 2026-09-18. The
-snapshot that route takes before deleting is written into the same deletable table.
-Tracked as C-9; the agreed remedy — append-only with one gated erasure path — is
-designed in
-[`../specs/2026-09-06-audit-log-remediation-design.md`](../specs/2026-09-06-audit-log-remediation-design.md)
-and is **not shipped** (ROADMAP chunk 19). [`plac-and-audit.md`](plac-and-audit.md)
-owns the engine and the deletion paths.
+**Integrity (since 2026-10-16, permissions item #21).** Nothing in the portal edits an
+entry or deletes one younger than 180 days: `DELETE /api/audit/logs` and `/api/audit/prune`
+are gone, the targeted delete refuses the activity log, and Data Retention keeps 180 days.
+Each day is sealed the next morning: a fingerprint over its entries, chained to the day
+before, kept in the log, in R2 and in an email, and checked again each morning and under
+*Check seals* on the Audit Log page. Today's entries are unsealed until then, and someone
+with database access can still change the table; the seals show it, they do not prevent it.
+Page reads are not recorded (§8), except the sensitive reads that write a `view` row
+([`../security/SECURITY.md`](../security/SECURITY.md) §0). [`plac-and-audit.md`](plac-and-audit.md)
+owns the engine, what the log guarantees (§3.2) and the seal (§3.6). C-9 is closed.
 
 ---
 
@@ -1134,7 +1133,7 @@ re-checked against the 2022 edition, which restructured Annex A.*
 | # | Gap | Impact |
 |---|---|---|
 | C-11 | Role vocabulary migration outstanding; `viewer` cannot be persisted (§4.1). | The read-only tier is enforced in code but unassignable. |
-| C-9 | Audit log is neither complete nor tamper-evident (§12). | Page reads are never recorded, and owner/vendor can bulk-delete rows. Append-only is designed, not shipped. |
+| ~~C-9~~ | ~~Audit log is neither complete nor tamper-evident (§12).~~ **Closed 2026-10-16:** each day is sealed the next morning and no route deletes an entry younger than 180 days ([`plac-and-audit.md`](plac-and-audit.md) §3.6). | What is left: today's entries are unsealed until the next morning, and page reads other than the sensitive ones are not recorded (§8). |
 | ~~D6~~ | ~~`DELETE /api/users/force-kick` refuses only **owner and vendor** targets, not peers or lower ranks.~~ **Fixed 2026-10-14:** below the owner, the caller must strictly outrank the target (`canManageUser`); `test/session-rank.test.ts`. **Key enforced 2026-10-15** (the owner's decision): the owner-only `/dashboard/users#force-kick` row is now checked exactly (`denyForceKick`, §5), so below the owner only a grant opens it. | Rank supremacy holds on this path, and Admins sign people out only with a grant. |
 | ~~D7~~ | ~~The Sessions console's `block_account` applies the same owner/vendor-only test, then deactivates the target in Supabase.~~ **Fixed 2026-10-14:** the same rank rule for ending sessions and for blocking; blocking your own account is refused (400); a failed account update answers 502 instead of reporting success. | — |
 | D8 | `revokeSingleSession` calls the organisation-wide `revoke_user` with `devices: true` (§11). | Revoking one session signs the user out on every device. |
@@ -1186,6 +1185,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.5's delete row, §12's measurement and integrity paragraph, and §16's C-9 row (#21).** Read `src/pages/api/audit/logs.ts` (no `DELETE`), `delete-targeted.ts` (`targetTabOf`, the fresh sign-in on `DELETE`), `src/pages/api/retention/purge.ts` (the 180-day floor), `src/lib/audit-seal/` and `src/workers/scheduled-audit-seal.ts`; searched `src/` for any other delete from `admin_audit_log` (none); counted `admin_audit_log` and `admin_login_logs` through the D1 connector | §10.5 now lists the delete routes that exist; §12 says what the log guarantees and links §3.6 of plac-and-audit.md; C-9 closed. The rest of the document was not re-read, and §8 still does not describe the sensitive reads recorded since #20 (the docs pass after the build) |
 | 2026-10-16 | claude | **Scope-limited to §5's `#force-kick` sentence after the Users page rebuild (#29).** Read `PersonDrawer.tsx` (`forceKickRefusal` from `people.ts`, the `canForceKick` prop from `denyForceKick` in `src/pages/dashboard/users/index.astro`); `test/session-rank.test.ts` passes | The sentence matches the code. The rest not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.2's See it as paragraph (#26) and its §17 row.** Read `src/lib/access-center/see-as.ts`, `src/lib/auth/nav-pages.ts`, `computeNavItems` in `plac.ts` and `SeeAsPanel.tsx`; `test/see-as.test.ts` and `test/page-registry.test.ts` pass | The paragraph and the row match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.6, new, and §15.1's A.9.2 row.** Read `src/lib/access-review/` (`rules.ts` `reviewLines`, `removalPlan`; `handlers.ts`; `store.ts`), `AccessReviewPanel.tsx` and `src/workers/scheduled-access-review.ts`; `test/access-review.test.ts` passes | §10.6 matches the code. The rest of the document not re-read |

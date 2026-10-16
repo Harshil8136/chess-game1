@@ -272,6 +272,11 @@ The **Alert policy** tab, opened by `#alert-policy`, every choice a row of chips
   never suspended. The rule and what a suspension does:
   [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.5. Choosing a lighter setting counts as
   turning alerts down.
+- **Audit log seal** (2026-10-16): the morning email of the activity log's daily seal, sent
+  every morning with the day's fingerprint (the default) or only when a sealed day changed.
+  A sealed day that changed is always emailed, and the seal runs either way. What a seal is
+  and what the check compares: [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md)
+  §3.6. Choosing *only when something changed* counts as turning alerts down.
 - **Save policy** saves the lot. A save that turns alerts down, or changes the
   recipients, emails the recipients before and after the change.
 - **People:** everyone active, with what their successful sign-ins send. A holder
@@ -315,6 +320,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-16 | claude | **Scope-limited to the alert policy's new "Audit log seal" row.** Read `AlertPolicyPanel.tsx` (`AUDIT_SEAL_TEXT`), `src/lib/login-alerts/policy.ts` (`AUDIT_SEAL_MODES`, `describePolicyChange`), `policy-handlers.ts` and `src/workers/scheduled-audit-seal.ts` (`checkAndEmail`); `test/audit-seal.test.ts` covers the quiet setting and the turn-down line. The rest of the page was not re-read |
 | 2026-10-16 | claude | **Scope-limited to the alert policy's new "Accounts nobody uses" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` (`UNUSED_MODES`, `describePolicyChange`) and `policy-handlers.ts`; `test/unused-accounts.test.ts` pins the default and the change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to the recent sign-in bullet.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `flush-sessions.ts`, `src/pages/api/users/force-kick.ts` and `src/lib/auth/fresh-sign-in.ts`; `test/session-rank.test.ts` and `test/fresh-sign-in.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-15 | claude | **Scope-limited to the alert policy's new "Access changes emailed" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` and `policy-handlers.ts`; `test/access-changes.test.ts` pins the setting's default and its change line. Not re-read: the rest of the page. Not rendered in a browser. |

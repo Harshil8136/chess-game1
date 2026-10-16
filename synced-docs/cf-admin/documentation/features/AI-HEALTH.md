@@ -22,13 +22,15 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
 
 `GET /api/ai/health` reports AI health, cost, and reliability without introducing any new database tables or schema migrations.
 
-> **Durability caveat — this history is only as deep as the last audit prune.**
-> The telemetry has no table of its own: it is `admin_audit_log` rows, and that
-> table is prunable and bulk-deletable from `/dashboard/logs`
-> (`src/pages/api/audit/prune.ts`, `src/pages/api/audit/logs.ts`). It was bulk
-> cleared on 2026-09-18 and held 2 rows the next day, so every window read
-> "no AI activity recorded" regardless of what had actually been spent. Treat a
-> quiet panel as "no surviving rows", not as "no AI ran". *Corrected 2026-09-19.*
+> **Durability caveat — this history starts on 2026-09-20.**
+> The telemetry has no table of its own: it is `admin_audit_log` rows. That
+> table was bulk cleared on 2026-09-18 through a delete route on `/dashboard/logs`
+> and held 2 rows the next day, so every window read "no AI activity recorded"
+> regardless of what had actually been spent. Since 2026-10-16 no route deletes
+> an entry younger than 180 days, and each day is sealed the next morning
+> ([`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.2);
+> Data Retention can still remove older ones. Treat a quiet panel as "no surviving
+> rows", not as "no AI ran". *Corrected 2026-09-19, updated 2026-10-16.*
 >
 > **Since 2026-10-04 the daily budget is these rows too.** `budget.used` is the
 > sum of today's `ai_inference` rows (`sumAiNeuronsToday` in
@@ -309,5 +311,6 @@ The primary consumer of `/api/ai/health` is `src/components/admin/logs/AiHealthP
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | The durability caveat only, for the daily seal (#21): `src/pages/api/audit/logs.ts` (no `DELETE`), the deleted `prune.ts`, `src/lib/retention-tables.ts` (`minDays: 180`) | The rest of the page; `last_verified` left at 2026-10-04 |
 | 2026-10-04 | The budget source (`src/lib/ratelimit.ts` `checkNeuronBudget` / `getGlobalAiNeurons`, `src/lib/dal/RateLimitRepository.ts` `sumAiNeuronsToday`, pinned by `test/hot-query-plans.test.ts`), the crossing inputs in the AI routes (the budget read before the call plus this call's neurons), and the `critical` channels in `src/lib/alert-gate.ts`. Live D1, read-only: 2 `ai_inference` rows in the whole log on 2026-10-04 | A live generation end to end; Cloudflare's current neuron price and allocation |
 | 2026-09-19 | `src/pages/api/ai/health.ts` (auth order, `days` clamp, catch behaviour); `src/lib/ai/telemetry.ts` (the D1 aggregate, `successRate` arithmetic, `alertOnNeuronThreshold` crossing logic and fingerprint); `src/lib/alert-gate.ts` channel routing per severity; `src/lib/ratelimit.ts` (`cf-admin-neurons:global:<date>`, UTC day); `src/lib/ai-pricing.ts` cap and its account-wide note; `src/lib/audit-helpers.ts` (`v: 2`); `src/components/admin/logs/AiHealthPanel.tsx` (the ×100 defect); `src/pages/dashboard/logs/index.astro` (`#ai`); live `admin_pages` — no `/dashboard/logs#ai` row, `/dashboard/logs` floor `super_admin` | Cloudflare's currently published neuron price and free allocation (not re-fetched — `$0.011 / 1,000` and `10,000/day` are carried forward); a live generation end to end |

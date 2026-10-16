@@ -119,7 +119,7 @@ The routes check all of this again; the screens only hide what the routes would 
 | ~~**Should Page Registry be Vendor support only?** Today the Owner opens it too, because the Owner and Vendor support pass every page check (ADR-0002)~~ | **Decided 2026-10-15: Vendor support only.** A floor in `src/lib/auth/page-floors.ts` that binds the owner too, checked by `canUsePageRegistry` in the page, its hub card and every `/api/system/` route it calls; a grant of the key no longer opens it ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §5) |
 | ~~**Should `/dashboard/users#force-kick` be enforced?** Its default is Owner, but nothing checks it~~ | **Decided 2026-10-15: enforced.** The owner chose to enforce it. `denyForceKick` checks it in the route and the Users page, so below the owner and vendor support only a grant opens it ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md) §5) |
 | Revoking one session signs the person out on every device (D8 in PERMISSIONS-SYSTEM) | A change to the Cloudflare Access call, outside these screens |
-| The Audit Log is not tamper-evident (C-9) | Designed, not built; ROADMAP chunk 19 |
+| ~~The Audit Log is not tamper-evident (C-9)~~ | **Closed 2026-10-16:** each day is sealed the next morning and no route deletes an entry younger than 180 days ([plac-and-audit](../architecture/plac-and-audit.md) §3.6) |
 | Viewer cannot be stored as a role (C-11) | The role-name migration, its own piece of work |
 
 ## 8. Tests

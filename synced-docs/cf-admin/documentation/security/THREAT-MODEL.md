@@ -153,13 +153,13 @@ mitigated, not merely mitigatable.
 | Reflected XSS via public storage link (`?passcode=`) | **Closed 2026-08.** No-passcode `GET` no longer reads or echoes query-string data; the upload gateway's passcode value now flows through an escaped `data-passcode` HTML attribute, never a `JSON.stringify()`'d inline `<script>` | Low |
 | Storage upload/passcode bypass | **Closed 2026-08.** `presign`/`confirm` on File Request Links now independently re-verify any configured passcode server-side, and comparisons use `timingSafeEqualStrings()` instead of `!==` | Low |
 | CSRF | Origin/Referer validation on every mutation, fail-closed (`test/csrf.test.ts`) | Low |
-| Audit-log tampering | Insert-only *application* path — no update endpoint exists, and every write goes through `auditLog()`. That is the whole of it: **do not call this log immutable, append-only or tamper-evident** (terminology rule, [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.2). Three delete paths exist and are PLAC-gated but not prevented: `DELETE /api/audit/logs` (bulk, snapshot written into the same deletable table), `DELETE /api/audit/prune` (by age, **no snapshot**) and `POST /api/audit/delete-targeted` (keeps a 10-row sample). Cloudflare API access bypasses all three. Since 2026-10-16 each also needs a sign-in from the last 10 minutes ([`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §10.5), which slows a stolen session and changes nothing else | **High** — demonstrated, not theoretical: the table was bulk-cleared on 2026-09-18 and held 2 rows afterwards. No hash chain, sequence number or WORM copy. Remediation designed in [`../specs/2026-09-06-audit-log-remediation-design.md`](../specs/2026-09-06-audit-log-remediation-design.md), unstarted |
+| Audit-log tampering | Insert-only application path: no route edits an entry, and since 2026-10-16 none deletes one younger than 180 days (`DELETE /api/audit/logs` and `/api/audit/prune` removed, the targeted delete refuses the activity log, Data Retention holds a 180-day floor). Each day is sealed the next morning: a fingerprint chained to the day before, kept in the log, as an R2 copy and in an email, and checked again each morning and under *Check seals* ([`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.2 and §3.6). Cloudflare API access can still change the table; the seals make that visible | **Medium** — today's entries are unsealed until 14:00 UTC the next day, and until the owner locks `audit-log/` in R2 (MAINTENANCE AL-1) someone with R2 write access can rewrite the copies as well as the seals; the emails already sent then remain. The table was bulk-cleared on 2026-09-18, before any of this |
 
 ### R — Repudiation
 
 | Threat | Mitigation | Residual |
 |---|---|---|
-| Denying an action | Every mutation audited with actor, role, path, CF-Ray, hashed IP | **Medium** — the record can be deleted afterwards; see Audit-log tampering |
+| Denying an action | Every mutation audited with actor, role, path, CF-Ray, hashed IP, and each day sealed the next morning | **Low to Medium** — an entry of a sealed day cannot be removed without the morning check showing it; see Audit-log tampering |
 | Audit silencing abuse | **Removed.** `is_audit_silenced` was taken out of the code on 2026-07-26 and the Supabase column dropped on 2026-07-27 (`supabase/migrations/20260727000000_drop_audit_silence.sql`). There is no way to mute the audit trail for an account | Closed |
 | Log gaps | `waitUntil` writes; a V1-schema fallback covers a column mismatch, but there is **no retry** — a failed write is reported to Sentry and the event is lost (`src/lib/audit.ts`) | **Medium** |
 
@@ -198,15 +198,20 @@ mitigated, not merely mitigatable.
 
 Ranked by exploitability × impact:
 
-1. **Audit log has no tamper-evidence, and deletion has happened.** The table
-   was bulk-cleared on 2026-09-18 and held 2 rows afterwards. Whether that was
-   an operator clearing noise or something else is precisely what the log
-   cannot answer — that is the risk. A hash chain or an export to a store the
-   application cannot delete would fix it
-   ([`../specs/2026-09-06-audit-log-remediation-design.md`](../specs/2026-09-06-audit-log-remediation-design.md)).
-2. **No working backup.** The workflow shipped 2026-09-15 and has never had a
-   green run; its repository secrets are unset. Combined with item 1, a
-   destructive action is currently both unprovable and unrecoverable.
+1. **The audit log's newest day, and its copies until they are locked.** Since
+   2026-10-16 each day is sealed the next morning and the portal cannot delete
+   recent entries ([`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md)
+   §3.6). What is left: the current day is unsealed until 14:00 UTC the next day,
+   and the R2 copies are not locked yet (`../MAINTENANCE.md` AL-1, an owner step),
+   so someone with Cloudflare access could rewrite both the seals and the copies;
+   the morning emails already sent would still show the change. The bulk clear of
+   2026-09-18 happened before any of this and cannot be explained from the log.
+2. **Restores are not proven yet.** Backups run: `backup_runs` records 19
+   succeeded backups between 2026-09-26 and 2026-10-14 (D1 connector,
+   2026-10-16). The restore tests on the server ran end to end on 2026-10-08 and
+   both ended FAIL on a false finding, fixed the same day; no passing test is
+   recorded since ([`../records/reports/2026-10-08-restore-tests.md`](../records/reports/2026-10-08-restore-tests.md),
+   `../MAINTENANCE.md` RT-1 and RT-6).
 3. **`'unsafe-inline'` in `script-src`** — materially weakens XSS defence. The
    Report-Only canary is live; the flip is blocked on operator verification of
    Cloudflare Rocket Loader (`../MAINTENANCE.md` C-3). The `style-src` half is a
@@ -216,7 +221,7 @@ Ranked by exploitability × impact:
    secret is the whole control on a session-less, publicly reachable route.
 5. **Single-operator concentration** — no separation of duties; the same person
    holds every role in the incident runbook, and is also the only person who can
-   delete the audit log.
+   remove audit entries past 180 days or a bucket lock.
 6. **Role-revocation timing** — portal changes now land on the user's next
    request, but an edit made directly in Supabase still waits up to 30 minutes,
    and a Supabase outage at re-check time extends that to 60.
@@ -241,6 +246,7 @@ If any of these stops being true, re-run this model:
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | "Audit-log tampering", "Denying an action" and §3 items 1, 2 and 5, for the daily seal (#21): `src/lib/audit-seal/`, `src/workers/scheduled-audit-seal.ts`, `src/pages/api/audit/logs.ts`, `delete-targeted.ts`, `src/pages/api/retention/purge.ts`, a search of `src/` for any other delete from `admin_audit_log` (none) and `test/audit-seal.test.ts`; item 2's figures from `backup_runs` through the D1 connector, and `../MAINTENANCE.md` RT-1, RT-3 and RT-6 | The other rows; cf-backup's own records of restore tests after 2026-10-08 (not read); the first live seal run |
 | 2026-10-16 | The new "Stolen session used for a dangerous action" row and the recent sign-in sentence in "Audit-log tampering", against `src/lib/auth/fresh-sign-in.ts`, the routes that call it (pinned by `test/fresh-sign-in.test.ts`) and `src/lib/auth/stages/bootstrap.ts` (`signedInAtFromAssertion`) | Every other STRIDE row |
 | 2026-10-07 | The "Raw IPs at rest" and "Brute force / flooding" rows, for the move of cf-admin's rate limits off Upstash on 2026-10-04: `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `wrangler.toml` `[[ratelimits]]`, `RoPA.md` §2.1 | Every other STRIDE row; how long Cloudflare keeps a limiter counter after its period |
 | 2026-09-20 | Every STRIDE row re-derived from code at HEAD. Corrected: the audit-log "append-only" claim (the table was bulk-cleared 2026-09-18; `prune` keeps no snapshot), the webhook "HMAC" claim (`src/pages/api/emails/webhook.ts` — shared secret, constant-time), raw IP storage (per-store table now in `RoPA.md` §2.1), ARCO identity documents (R2 via cf-astro, not Supabase RLS), the revocation window (`authz-changed` mark, 2026-09-16), audit silencing (removed 2026-07-26/27), the public allowlist, the route count (147), `hashPasscodeKeyed`, the SEC-03 grandfather list, the `waitUntil` retry claim, the `X-Robots-Tag` date, the AI model pattern, and the 2026-08-12 enforcement date. §3 re-ranked | Cloudflare edge WAF and rate-limit rule configuration (dashboard-side, not in this repo); the "no user-controlled URLs" outbound claim; live Supabase policy state; the cf-astro side of the ARCO document trust boundary |

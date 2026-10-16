@@ -272,6 +272,15 @@ Options, none yet implemented:
 **Owner decision D-13 (opened 2026-09-15), not yet taken.** The recommended row
 needs a backup bucket and a scoped R2 token that only the owner can create.
 
+**The activity log's copies (2026-10-16).** The same bucket holds, under
+`audit-log/`, one copy a day of the activity log's rows, written by the `audit-seal`
+job ([`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6).
+Each copy holds the rows exactly as stored, so a lost or rewritten day of
+`admin_audit_log` older than Time Travel's 7 days can be read back from it. The lock
+proposed for them (`../MAINTENANCE.md` AL-1) covers only that prefix, so it blocks
+neither the Trash hard-delete nor the weekly reconciliation, which lists
+`staff-storage/` only.
+
 ## 6. Worker / application
 
 Code recovery is `git`; the deployment is reproducible.
@@ -343,4 +352,5 @@ Record the quarterly results in `../security/reviews/` as a dated snapshot.
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-16 | `src/lib/audit-seal/seal.ts` (`copyKey`, `copyBody`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/`) | §5's new paragraph on the activity log's copies only. The rest of the runbook was not re-checked; its backup status (§0, §2) predates the backups that have run since 2026-09-26 |
 | 2026-09-19 | `npx wrangler d1 time-travel restore --help` and `info --help` (wrangler 4.128.0); Supabase MCP `get_organization`; `.github/workflows/backups.yml` read; repository Actions secrets/variables/environments listed; `scripts/backup_drill.mjs` read | `--dry-run` does not exist on `restore`; org plan is `free`; the workflow needs four secrets and the repository has only `PERSONAL_PAT`; one workflow run ever, failed. §0 added; §1, §2, §3, §4, §7 and §8 rewritten. `scripts/backup_drill.mjs` and the §2.1 `wrangler d1 create/execute` flags re-checked and correct |

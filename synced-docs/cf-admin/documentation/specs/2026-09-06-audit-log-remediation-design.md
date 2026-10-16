@@ -25,7 +25,7 @@ tags: [audit, logging, security, design]
 > | --- | --- | --- |
 > | 1 — harden and land the detail-panel work | **Shipped 2026-09-07** (`94380eb`..`df866dd`, 14 commits, on `origin/main` and deployed) | redaction is at one chokepoint in `src/lib/audit-helpers.ts`; deep search requires a date bound in `src/pages/api/audit/logs.ts` |
 > | Findings 1–2 (export audit row, CSV formula injection) | **Shipped 2026-09-08** (`d7d3dc6`) | `src/lib/csv.ts`; the export route writes an `export` audit row |
-> | 2 — security and correctness pass | **Not started; unscheduled** | `DELETE /api/audit/logs` is still exported and still PLAC/role-gated only; SEC-12 is absent from `scripts/rules_check.py`; the hand-rolled `accessMap` resolvers, the cookie-name protocol sniff, the v1 INSERT fallback and the `'login'`/`'api_read'` union members all remain; `src/pages/api/seo/settings.ts` still writes no audit row |
+> | 2 — security and correctness pass | **Not started; unscheduled**, except the deletion half of findings 3–4 (below) | SEC-12 is absent from `scripts/rules_check.py`; the hand-rolled `accessMap` resolvers, the cookie-name protocol sniff, the v1 INSERT fallback and the `'login'`/`'api_read'` union members all remain; `src/pages/api/seo/settings.ts` still writes no audit row |
 > | 3 — per-route migration | **Not started**, deferred to chunk 13.2 as written | — |
 >
 > The premise of §4 is now demonstrated rather than argued: the production log
@@ -37,6 +37,15 @@ tags: [audit, logging, security, design]
 > manual and owner/vendor-only, and no gated erasure path is planned. §4's
 > `legal_requests`-linked erasure endpoint is therefore not agreed scope, and
 > Stage 2 has no ROADMAP row.
+>
+> **Update 2026-10-16.** The append-only half of findings 3–4 shipped with the
+> activity log's daily seal (permissions item #21): `DELETE /api/audit/logs` and
+> `/api/audit/prune` are removed, the targeted delete refuses the activity log, and
+> Data Retention keeps every row for 180 days. Tamper-evidence shipped as a seal
+> per day, not chunk 19's chain on each row
+> ([`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.2,
+> §3.6). No erasure endpoint was built, as D-9 decided. The rest of Stage 2 is
+> unchanged.
 
 > **TL;DR (non-technical):** The portal keeps a log of who changed what. A review
 > on 2026-09-06 found fourteen problems with it: some actions are never recorded,
@@ -275,7 +284,7 @@ description does not justify a new `any` under `reference/coding-standards.md`.
 |---|---|---|
 | 1, 10 | Export and `seo/settings.ts` unaudited | 2 — **export half shipped early, 2026-09-08 (`d7d3dc6`)**; `seo/settings.ts` still open |
 | 2 | CSV formula injection (three export routes) | 2 — **shipped early, 2026-09-08 (`d7d3dc6`)** |
-| 3, 4 | Deletion paths → append-only + erasure | 2 |
+| 3, 4 | Deletion paths → append-only + erasure | 2 — **the append-only half shipped 2026-10-16** with the daily seal; no erasure endpoint (D-9) |
 | 5 | Twelve hand-rolled PLAC resolvers | 2 |
 | 6 | Cookie-name split, 31 % null `session_id` | 2 |
 | 7 | Dead audit vocabulary | 2 |
@@ -284,7 +293,7 @@ description does not justify a new `any` under `reference/coding-standards.md`.
 | 11, 12, 14b | Redaction chokepoint and `computeDiff` API | 1 |
 | 13 | Search scan strategy | 1 |
 | 14 | Ratchet debt paid down | 1 |
-| — | Unified feed, structured logger, tamper-evidence | Deferred: 13.2, 17, 19 |
+| — | Unified feed, structured logger, tamper-evidence | Deferred: 13.2, 17; tamper-evidence **shipped 2026-10-16** as the daily seal, in place of 19 |
 
 ## Non-goals
 

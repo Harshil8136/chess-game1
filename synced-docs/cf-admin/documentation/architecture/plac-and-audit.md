@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/audit.ts, src/lib/audit-helpers.ts, src/lib/auth/stages/record.ts, src/lib/auth/stages/decide.ts, src/lib/auth/guard.ts, src/lib/retention-tables.ts, src/pages/api/audit/logs.ts]
+related_code: [src/lib/audit.ts, src/lib/audit-helpers.ts, src/lib/audit-seal/seal.ts, src/lib/audit-seal/check.ts, src/workers/scheduled-audit-seal.ts, src/pages/api/audit/seals.ts, src/lib/auth/stages/record.ts, src/lib/auth/stages/decide.ts, src/lib/auth/guard.ts, src/lib/retention-tables.ts, src/pages/api/audit/logs.ts]
 related_docs: [PERMISSIONS-SYSTEM.md, ARCHITECTURE.md, ../security/THREAT-MODEL.md, ../MAINTENANCE.md]
 tags: [architecture, audit, logging, security, plac]
 ---
@@ -25,7 +25,8 @@ tags: [architecture, audit, logging, security, plac]
 > two overlap, the permissions document wins.
 
 > **TL;DR (non-technical):** How the portal records sensitive actions for
-> accountability, what that record does and does not prove, and who can erase it.
+> accountability, what that record does and does not prove, who can erase it, and how each
+> day of it is sealed the next morning so a later change shows.
 
 This document covers the implementation, execution lifecycle and operational rules
 of the Audit Engine. The Cloudflare Workers Free plan allows **10 ms of CPU per
@@ -303,76 +304,56 @@ The context is resolved through `getCfContext()` (`src/lib/env.ts`) and its
 `waitUntil` is **bound** before use — workerd's `waitUntil` is a native method and
 throws "Illegal invocation" when called detached from its receiver.
 
-### 3.2 Write-path restriction at the edge — not immutability
+### 3.2 What the log guarantees, and what it does not
 
-> [!WARNING]
-> The `auditLog()` write path exposes **inserts only**: there is no update
-> endpoint, and no interface lets anyone edit an existing entry. Deletion is a
-> different matter — see the table below.
+*Rewritten 2026-10-16 (permissions item #21, [`../MAINTENANCE.md`](../MAINTENANCE.md) C-9).*
 
-**What this does give you.** No actor can *alter* history through the application.
-The logger factory validates table names against an internal allowlist (D1 cannot
-parameterise a table name), and every write goes through `auditLog()`.
+**Inserts only.** `auditLog()` and `auditLogOnce()` (`src/lib/audit.ts`) insert; no route
+edits an entry. Since 2026-10-16 no route deletes an entry younger than 180 days either. One
+path deletes from `admin_audit_log` at all:
 
-**What it does not give you — and do not claim otherwise.** The log is **not
-immutable, not append-only and not tamper-evident**:
+| Path | Who | What it deletes |
+|---|---|---|
+| `DELETE /api/retention/purge` (the Data Retention page) | Owner or Vendor support, with `#purge` and a sign-in from the last 10 minutes ([`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §10.5) | entries older than the threshold chosen, which for this table is never under 180 days: `minDays` in `src/lib/retention-tables.ts`, and the route answers 400 below it |
 
-- There is **no hash chain, no sequence number, no digital signature and no WORM
-  storage**, so a modification leaves no detectable trace.
-- `admin_audit_log` is a retention-purge target (`src/lib/retention-tables.ts`,
-  180-day target), and four application paths delete from it:
+Removed on 2026-10-16: `DELETE /api/audit/logs` (*Delete selected* on the activity tab, which
+emptied the live table on 2026-09-18), `DELETE /api/audit/prune` (*Prune*, which deleted every
+entry older than 30 days) and the activity tab of `/api/audit/delete-targeted`, which now
+refuses any tab but emails, consent, security, requests and seo. `test/audit-seal.test.ts`
+covers all three, and the 180-day floor.
 
-| Path | Who | What it deletes | Snapshot? |
-|---|---|---|---|
-| `DELETE /api/audit/logs` | owner or vendor support, plus PLAC on `/dashboard/logs` | the `admin_audit_log` rows whose ids are posted | Yes — the deleted rows are embedded in a `delete` audit row written afterwards, **into the same deletable table** |
-| `DELETE /api/audit/prune` | vendor support only, plus the same PLAC gate | every `admin_audit_log` row older than N days (default 30, capped at 3,650), and stale pending access requests | No |
-| `/api/audit/delete-targeted` | owner or vendor support | rows from the tab's table — `admin_audit_log`, `admin_login_logs`, `access_requests` or `gsc_index_log` | Writes a master record after the fact |
-| Retention review | owner or vendor support | whatever the retention sweep selects | Per that surface |
+**Sealed each morning (§3.6).** An entry of a sealed day edited, added or removed, or a seal
+edited or removed, shows in the next morning's check, in its email, and under *Check seals*
+on the Audit Log page.
 
-  *Since 2026-10-16* every one of these paths (and `DELETE /api/audit/consent`,
-  `/api/audit/emails`, `/api/audit/delete` and `/api/retention/purge`) also needs a
-  sign-in from the last 10 minutes ([`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md)
-  §10.5). That slows a stolen session; it does not make the log tamper-evident.
+**What it does not guarantee:**
 
-  *Corrected 2026-09-19: this list previously named `/api/audit/delete`, which
-  deletes Supabase `consent_records` and not audit rows at all, and omitted
-  `DELETE /api/audit/logs` — the bulk path that actually emptied the live table on
-  2026-09-18.*
+- Today's entries are sealed at 08:00 tomorrow in Aguascalientes. Until then, someone with
+  database access can change them without a trace.
+- Anyone with Cloudflare dashboard or API access can still run any SQL against the table. The
+  seals make a change visible, not impossible. Someone who rewrites a day's entries and every
+  seal after it leaves a database that checks out, so each seal also leaves the database
+  twice: as a copy in R2 saved with its fingerprint, which the check compares, and in the
+  morning email. A bucket lock on `audit-log/` (an owner step, MAINTENANCE AL-1) keeps the
+  copies from being deleted or overwritten. An account administrator can remove a lock; the
+  emails already sent are then the last record.
+- An insert that fails is lost (the table in §3).
+- Entries older than 180 days can be removed on Data Retention. Their seals then read *Past
+  retention*, not *Changed*.
 
-- Anyone with Cloudflare dashboard or API access can run arbitrary D1 SQL against
-  the table. For a single-operator deployment that is the same person who owns the
-  audit trail, so no separation of duties protects it.
-- The snapshot defence is weaker than it reads. The bulk-delete row is written
-  through `auditLog()` **without** `requestPath` or `ipHash`, so the row recording
-  the erasure carries less context than the rows it replaced — the live row from
-  2026-09-18 has `request_path` NULL. And it lands in the same table, so a second
-  delete removes it.
+[`../security/THREAT-MODEL.md`](../security/THREAT-MODEL.md) scores what is left.
 
-[`../security/THREAT-MODEL.md`](../security/THREAT-MODEL.md) scores this correctly
-as a Medium residual risk — "an Owner could delete evidence" — and
-[`../MAINTENANCE.md`](../MAINTENANCE.md) C-9 tracks building real tamper-evidence.
-The decided design is
-[`../specs/2026-09-06-audit-log-remediation-design.md`](../specs/2026-09-06-audit-log-remediation-design.md):
-append-only with one gated erasure path, three stages, **none started**, scheduled
-as ROADMAP chunk 19.
-
-> **Terminology rule (2026-07-29, still binding).** Do not describe this log as
-> *immutable*, *append-only*, *tamper-evident*, *tamper-proof*, or *a ledger*, in
-> engineering docs or in customer-facing copy. Velox's `copy-lint.test.ts` already
-> fails the marketing build on those words.
+> **Terminology rule (2026-07-29, amended 2026-10-16).** Do not describe this log as
+> *immutable*, *append-only*, *tamper-proof* or *a ledger*, in engineering docs or in
+> customer-facing copy: entries older than 180 days can still be removed, and today's are not
+> sealed yet. *Tamper-evident* is allowed only for the sealed days, with that limit in the same
+> sentence: "each day of the log is sealed the next morning, and a later change to a sealed day
+> shows in the daily check". Velox's `copy-lint.test.ts`, outside this repository, still fails
+> the marketing build on the word; changing that is a separate decision.
 >
-> *Amended 2026-09-19.* The replacement phrasing this rule used to prescribe —
-> "every privileged action is audit-logged with actor, role, path and hashed IP,
-> through an **insert-only application path**" — is **withdrawn**. Four routes
-> delete from the table, so the *application path* is not insert-only, and reads
-> are not logged at all, so "every privileged action" overstates it. Until the
-> append-only design ships, the accurate claim is narrower: **"every privileged
-> mutation is audit-logged with actor, role, path and hashed IP; deletion of the
-> log is restricted to the account holder and to supplier support, and is itself
-> logged."**
->
-> The file header of `src/lib/audit.ts` still says "Append-only audit trail". That
-> comment is in scope for this rule. Flagged 2026-09-19.
+> The accurate claim: **"every privileged mutation is audit-logged with actor, role, path and
+> hashed IP; nothing in the portal edits an entry or deletes one younger than 180 days, and
+> each day is sealed the next morning, with its fingerprint emailed and a copy kept in R2."**
 
 **Defence in depth:** the audit logger factory validates table-name configuration
 against an internal allowlist. Since D1 does not support parameterised table names,
@@ -460,12 +441,98 @@ Restoring read-level telemetry would mean one D1 write per navigation against a
 100,000 rows/day free-tier budget; if it is wanted, it should be designed with
 sampling or an aggregate, not reinstated as it was.
 
+### 3.6 The daily seal
+
+*Added 2026-10-16 (permissions item #21). Code: `src/lib/audit-seal/` (the rules, pure),
+`src/workers/scheduled-audit-seal.ts` (the job), `src/pages/api/audit/seals.ts` (the check on
+the page). Tests: `test/audit-seal.test.ts`.*
+
+```mermaid
+flowchart LR
+  A[14:00 UTC tick] --> B{Day already sealed?}
+  B -- yes --> Z[Stop: one indexed read]
+  B -- no --> C[Read the window's entries]
+  C --> D[Digest and fingerprint]
+  D --> E[Copy to R2 audit-log/]
+  E --> F[Seal row in admin_audit_log]
+  F --> G{More ended days?}
+  G -- yes --> C
+  G -- no --> H[Read the past week back]
+  H --> I[Email the security contacts]
+```
+
+**When.** The `audit-seal` job runs in the five-minute tick. It reports the next 14:00 UTC
+(08:00 in Aguascalientes) as its due time, so the dispatcher wakes it hourly at most
+([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)), and an hour that finds the day
+sealed costs one indexed read. A run that misses a day seals it the next time.
+
+**What a seal covers.** A hotel day runs from midnight to midnight in Aguascalientes (UTC-6
+all year), 06:00 to 06:00 UTC. A day with more than 500 entries or about 64 KB is split into
+windows, at a whole second. For each window:
+
+1. Every entry, ordered by `created_at` then `id`, becomes one line: the JSON array of its 17
+   columns (`SEAL_COLUMNS` in `src/lib/audit-seal/seal.ts`, every column of the table).
+2. The **digest** is the SHA-256 of those lines joined by a newline.
+3. The **fingerprint** is the SHA-256 of
+   `madagascar-audit-seal|v1|<from>|<until>|<count>|<digest>|<prev>`, where `<prev>` is the
+   fingerprint of the window before (`start` for the first seal).
+
+The same entries always give the same seal, so two runs at once write it once
+(`auditLogOnce`), and the chain never forks.
+
+**Where it is kept.**
+
+| Copy | Where | What protects it |
+|---|---|---|
+| The seal row | `admin_audit_log` itself: action `audit_seal`, `target_type` `audit_seal`, `target_id` the window's start, the seal in `details.context.seal`. No new table | The next day's seal covers it, as it covers every entry |
+| The copy | R2, the `STAFF_STORAGE` bucket, `audit-log/<year>/<month>/<start>.json`: the entries' lines exactly as hashed, and the seal, with the fingerprint in the object's metadata. It is written before the seal row, so a seal never names a copy that does not exist | A bucket lock on `audit-log/` (MAINTENANCE AL-1) |
+| The fingerprint | The morning email to the sign-in alert list | The recipients' mailboxes |
+
+A copy can be checked with any SHA-256 tool: write each entry of `rows` as JSON, join them
+with newlines, and hash; the result is `digest`. The copy's `check` field says the same.
+
+**The morning check.** After sealing, the job reads back the seals of the week before
+(`src/lib/audit-seal/check.ts`); *Check seals* on the activity tab reads them a page at a
+time, for the Owner and Vendor support (`GET /api/audit/seals`). For each seal:
+
+| Shows | Means |
+|---|---|
+| *Matches* | The entries give the seal's digest |
+| *Changed* | An entry was edited, added or removed after sealing (the email gives the count then and now) |
+| *Seal edited* | The seal no longer gives its own fingerprint |
+| *Unreadable* | The seal row is not a seal any more |
+| *Past retention* | Fewer entries, in a day older than 180 days: removed on Data Retention, not a problem |
+| Not linked, or the seal before is missing | A seal before it was edited or removed |
+| Its copy has another fingerprint | The seal, and perhaps its entries, were rewritten after the copy was saved |
+| Its copy is missing | The morning check saves it again while the entries still match |
+
+The two cases a check of old seals cannot see are caught by the job itself. When the newest
+seals are removed, the job seals those days again; their first copies are still in R2, so a
+day sealed again with other entries differs from its copy, and the email says so at once.
+When the newest seal is edited until it is not a seal, nothing more is sealed until someone
+restores it from its copy; Sentry hears of it each hour (`cron.audit_seal.unreadable`), and the
+morning check still runs and emails.
+
+**The email.** To the sign-in alert list, from the access mail sender. The alert policy
+(*Sessions → Alert policy → Audit log seal*) sends it every morning with the fingerprint (the
+default), or only when something changed. A warning always goes.
+
+**Why windows and not a chain on each row.** The first design (C-9) chained each row to the
+one before. Rows are written after the response (`waitUntil`), many at once, so a row reading
+its predecessor would fork the chain under load. Sealing day-old rows, which nothing writes to
+any more, from one job needs no lock and no Durable Object.
+
+**CPU.** Hashing costs about 20 µs a KB (parsing the rows, writing their lines and the copy,
+SHA-256; measured 2026-10-16). A run hashes at most 256 KB (about 5 ms), a page of the check
+128 KB, and both stop at their budget and say where to go on; a usual day is a few KB.
+
 ---
 
 ## Verification log
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | Read `src/lib/audit-seal/` (`seal.ts`, `check.ts`, `mail.ts`), `src/workers/scheduled-audit-seal.ts`, `src/pages/api/audit/seals.ts`, `src/lib/audit.ts` (`auditLogOnce`), `src/lib/retention-tables.ts` (`minDays`), `src/pages/api/retention/purge.ts`, `delete-targeted.ts` (tab allow-list) and `logs.ts` (no DELETE); `prune.ts` deleted. `test/audit-seal.test.ts` (26 tests) passes. Live D1 `pragma_table_info('admin_audit_log')` read through the Cloudflare connector: 17 columns, the same as `SEAL_COLUMNS` | §3.2 rewritten, §3.6 added, the terminology rule amended. §3, §3.1, §3.3 to §3.5 not re-checked |
 | 2026-10-16 | claude | Read the recent sign-in check in `src/pages/api/audit/logs.ts`, `prune.ts`, `delete-targeted.ts` (DELETE only), `consent.ts`, `emails.ts`, `delete.ts` and `src/pages/api/retention/purge.ts`; `test/fresh-sign-in.test.ts` pins the list | §3.2's new sentence under the deletion table. Nothing else re-checked |
 | 2026-10-11 | claude | Read `src/lib/audit.ts` (`withSessionHandle`) and `src/lib/auth/session-ref.ts`; `test/pipeline-session.test.ts` asserts the handle in the column | §3.4's `session_id` paragraph. Nothing else re-checked |
 | 2026-10-07 | claude | Read `src/lib/ratelimit.ts` and `src/lib/dal/RateLimitRepository.ts` | The rate-limiting step (changed 2026-10-04): one-minute limits on the `RL_PER_MIN_<n>` bindings, hour and day limits as D1 counter rows, no Upstash client left. Nothing else re-checked |
@@ -477,4 +544,4 @@ sampling or an aggregate, not reinstated as it was.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — the wider system overview
 - [`../security/THREAT-MODEL.md`](../security/THREAT-MODEL.md) — the residual-risk scoring for audit erasure
 - [`../security/login-forensics.md`](../security/login-forensics.md) — `admin_login_logs`, the sign-in telemetry subsystem
-- [`../MAINTENANCE.md`](../MAINTENANCE.md) — C-9, tamper-evidence
+- [`../MAINTENANCE.md`](../MAINTENANCE.md) — C-9 (resolved by the daily seal) and AL-1 (the bucket lock)

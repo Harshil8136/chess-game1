@@ -166,7 +166,7 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **15 registered jobs** (`src/lib/jobs/registry.ts`): 13 on the
+There are **16 registered jobs** (`src/lib/jobs/registry.ts`): 14 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
@@ -174,7 +174,7 @@ job, was removed on 2026-10-04 when cf-admin stopped using Upstash
 ([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §3.6).
 `heartbeat-watchdog`, the eleventh five-minute job, was added on 2026-10-07 (§3a);
 `email-api-sweep`, the twelfth, on 2026-10-10 (§3b); `access-change-summary`, the
-thirteenth, on 2026-10-15 (§3c).
+thirteenth, on 2026-10-15 (§3c); `audit-seal`, the fourteenth, on 2026-10-16 (§3d).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
@@ -182,7 +182,7 @@ a corrupt or hand-edited row cannot mark a security job as sheddable.
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
 | `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog`, `email-api-sweep` | never |
-| `deferrable` | `storage-notifications`, `access-change-summary`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
+| `deferrable` | `storage-notifications`, `access-change-summary`, `audit-seal`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
 > **A missing tier is not a compile error.** `JobDefinition.id` is typed `string`,
@@ -216,6 +216,10 @@ message the email API accepted waiting in its database. §3b describes it.
 `access-change-summary` (added 2026-10-15) is deferrable: a summary that arrives
 an hour late says everything it would have said, every change it lists is already
 in the activity log, and a shed run is caught up by the next one. §3c describes it.
+
+`audit-seal` (added 2026-10-16) is deferrable: a day sealed an hour late gets the
+same seal, since nothing writes to a day that has ended, and a shed run is caught up
+by the next one, which seals every day it missed. §3d describes it.
 
 **A human pause can stop anything, including an essential job.** That is a
 deliberate, audited act. Automatic shedding is not, so it never touches them.
@@ -365,6 +369,32 @@ last seven days for it, it emails the alert list and writes one `notify` row (ta
 hour, or a manual one, from sending again. A failed send leaves no row and is tried
 the next day. What the review is: [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §6.2.
 
+## 3d. The audit log seal (2026-10-16)
+
+`audit-seal` (`src/workers/scheduled-audit-seal.ts`, permissions item #21) seals the
+activity log once a day. What a seal is, where its copies go and what the check
+compares are owned by
+[`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6; this
+section says how the job runs.
+
+At 14:00 UTC, 08:00 in Aguascalientes, it seals every hotel day that has ended since
+the newest seal, a window at a time, writing each window's copy to R2 before its seal
+row. It then reads the past week's seals back, saves again a copy missing from R2,
+and emails the alert list as the alert policy's *Audit log seal* setting says. It
+reports the next 14:00 as its due time, so it runs at most hourly (`MAX_SLEEP_MS`);
+the other hours find the day sealed after one indexed read and stop.
+
+A run stops at 256 KB of rows hashed or 40 windows, and seals no more once it has
+hashed 128 KB. When a run stops before it has caught up, it reports no due time, so
+the next tick seals on, and the email goes when it has caught up. A window whose R2
+copy differs from the new seal also stops the run, and the email goes at once.
+
+Two runs at once (a manual run during a scheduled one) compute the same seals and
+write each once (`auditLogOnce`); the run that finds its window already sealed stops.
+The job takes no lease (§7). It never throws on a problem it finds: a changed day, a
+copy that differs, an unreadable newest seal or a failed email is logged and reported
+to Sentry (`cron.audit_seal.*`). Pinned by `test/audit-seal.test.ts`.
+
 ## 4. How shedding decides
 
 `cron-usage-probe` reads Cloudflare's own account-wide D1 analytics once an hour
@@ -404,7 +434,7 @@ job back for two more reasons, and the page shows each:
 | `interval` | The throttle (§1): at most every N minutes, measured from `lastRunAt` | **Throttled** (**Standby** until 2026-10-09) |
 | `sleeping` | The job itself said when it next has work (`nextDueAt`), and that time has not come | **Sleeping until HH:MM** |
 
-**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; five do.
+**Which jobs sleep.** A job's handler may return `{ nextDueAt }`; six do.
 `backup-tick` passes on cf-backup's `nextTickAt` (Contract A in
 [`../program/cf-backup/02-admin-integration-contract.md`](../program/cf-backup/02-admin-integration-contract.md)):
 every five minutes while a backup is running, otherwise the next slot, chore or
@@ -412,7 +442,8 @@ hour. `blog-scheduled-publish` reports the earliest scheduled post, or an hour
 from now when none is scheduled. `heartbeat-watchdog` (2026-10-07) reports its
 threshold from the start of a run, so it sleeps an hour after each run (§3a).
 `email-api-sweep` (2026-10-10) sleeps 15 minutes after a sweep that found nothing (§3b).
-`access-change-summary` (2026-10-15) reports the next 14:00 UTC, so it sleeps the hour cap (§3c). The page shows a
+`access-change-summary` (2026-10-15) reports the next 14:00 UTC, so it sleeps the hour cap (§3c).
+`audit-seal` (2026-10-16) does the same once it has caught up (§3d). The page shows a
 sleeping job as **Sleeping until HH:MM**, and gives the time it wakes as its next run (§7).
 Until 2026-10-09 a seeded catalog row (`scripts/lib/cron-catalog.mjs`, now deleted) said this
 in prose, which had to be re-seeded whenever it changed.
@@ -593,6 +624,17 @@ access review reminder (2026-10-16) adds, in that hour, two indexed reads, and o
 day it sends, the policy row and one activity-log row; outside that hour it adds
 nothing.
 
+*Added 2026-10-16.* `audit-seal` adds about **24 invocations a day** (its sleep is
+capped at an hour). An hour that finds the day sealed reads the newest seal through
+the `(target_type, target_id, created_at)` index and stops: measured at 2 queries and
+1 row read on an idle run against an empty log (`budgets.ts`). The morning run reads
+each new window's rows twice (where the window ends, then its rows), writes one R2
+object and one activity-log row per window, reads the past week back (a count and
+the rows for each seal, and a `head` of each R2 copy), and queues one email: for a
+usual day a few dozen rows read and one row written. Its CPU is bounded by bytes
+hashed, about 20 µs a KB, at most 256 KB a run (about 5 ms). These are counts from
+the code, not a measurement of a live run.
+
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
 ended every run at the limit — see
@@ -761,10 +803,10 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   a manual run bypasses the control document by design — two deleters walking the
   same bucket is the one overlap worth a D1 write. (`redis-ttl-hygiene`, which
   took none, was removed on 2026-10-04: [`../MAINTENANCE.md`](../MAINTENANCE.md)
-  R-1, RU-2, RU-8.) The thirteen five-minute jobs
+  R-1, RU-2, RU-8.) The fourteen five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
-  trigger *can* still overlap a scheduled tick for those thirteen. The Run-now route
+  trigger *can* still overlap a scheduled tick for those fourteen. The Run-now route
   is an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
   there is no 409 path. *Corrected 2026-09-19: this section previously promised
   that Run now "still honours the lease … you get a 409 rather than a duplicate
@@ -796,6 +838,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-16 | claude | `audit-seal` added: `src/workers/scheduled-audit-seal.ts`, `src/lib/audit-seal/`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/audit-seal.test.ts` and `test/jobs-budget.test.ts` pass; jobs counted in `registry.ts` (16) | §3's count, tier table and reason, §3d (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The access review reminder added to `access-change-summary`: `src/workers/scheduled-access-review.ts`, `src/lib/access-review/store.ts`, `AuditLogRepository.getLatestTargetRow`, `src/lib/jobs/registry.ts` (its about), `budgets.ts`; `test/access-review.test.ts` (the window, a week later, after a sign-off) and `test/jobs-budget.test.ts` pass | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The check of accounts nobody uses added to `access-change-summary`: `src/workers/scheduled-unused-accounts.ts`, `src/lib/unused-accounts.ts`, `src/lib/jobs/registry.ts` (its about), `budgets.ts`; `test/unused-accounts.test.ts` (the window, off, a repeat run, a failed send) and `test/jobs-budget.test.ts` pass; the live `admin_login_logs` row count and each account's last sign-in read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The monthly clean-up added to `access-change-summary`: `src/workers/scheduled-access-summary.ts` (`clearEndedSettings`), `PageRegistryRepository.deleteEndedBefore`, `src/lib/jobs/registry.ts` (its about now says it deletes), `budgets.ts`; `test/ended-settings-cleanup.test.ts` and `test/jobs-budget.test.ts` pass; a first-week run measured with a fixed date; the live row count read through the D1 connector | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |
