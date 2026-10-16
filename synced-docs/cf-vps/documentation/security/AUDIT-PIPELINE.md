@@ -86,7 +86,7 @@ only if it passes this rule:
 | `audit_change` | A logged-in person changed the audit rules | error |
 | `security` | A person loaded a kernel module or set the clock; root mounted or ptraced (routine container and systemd mounts are not alerted) | warning |
 | `auth_failure` | A real account ran out of SSH attempts (root and scanners are recorded only) | warning |
-| `terminal_admin` | A certificate was issued for the sudo-capable terminal account | warning |
+| `terminal_admin` | A certificate was issued for the sudo-capable terminal account, keyed by that opening, so a second one within 10 minutes alerts too (since 2026-10-16, once `25-logship` is applied again on the server; until then all openings share one key) | warning |
 | `integrity` | AIDE or debsums found files changed outside a package or deploy | warning |
 | `probe_down` | A public site is down twice in a row | error |
 | `job_failed` | A server job's run failed (after its retries), keyed by job | error |
