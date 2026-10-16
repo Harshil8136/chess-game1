@@ -126,6 +126,17 @@ than the 25 capabilities first proposed: the owner wanted fewer switches to mana
   writes to KV.
 - The page hides the buttons the person cannot use; the routes and the Console are
   what actually enforce it.
+- **A token ends with the person who made it** (since 2026-10-16, permissions item
+  #39). Removing a person on Users asks the Console's
+  `POST /admin/tokens/block-by-creator` to block every active token they created,
+  as the person removing them and with that person's own keys (`#respond` or
+  `#manage`), so the Console still decides. Each blocked token gets a
+  `token.blocked` event; an app that should keep its token is unblocked here
+  (`#manage`). A refusal never stops the removal: the answer carries a warning to
+  block them here, and the activity row records `emailTokensBlocked` (a count,
+  `failed`, or `not connected` without the binding). Code:
+  `src/lib/users/manage-apply.ts` (`blockEmailTokens`); test:
+  `test/two-person-rule.test.ts`.
 
 ## 4. Routes
 
@@ -276,3 +287,4 @@ new one is sent, and cf-admin sends both.
 - 2026-10-16: §3's recent sign-in bullet checked against `src/pages/api/emails/api-tokens.ts` (POST, PATCH rotate), `api-clients.ts` (webhook secret), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and `test/fresh-sign-in.test.ts`, and against cf-email-consumer's Console (`api/src/console.ts`, `requireFreshSignIn`, its tests pass). Not checked: the dialog in a browser; the rest of the page.
 - 2026-10-16: the `api-messages` row's recorded read checked against `src/pages/api/emails/api-messages.ts`, `src/lib/audit-views.ts` and `test/sensitive-views.test.ts` (a masked read writes nothing). The rest not re-checked.
 - 2026-10-16: §2's binding-trust bullet (the signature, permissions item #33) checked against `src/lib/console-signature.ts`, `emailConsoleBinding` in `src/lib/email-console.ts` and `test/console-signature.test.ts`, and against `cf-email-consumer/api/src/signature.ts` and `cf-email-consumer/test/api-signature.test.ts` (both pass). Not checked: a signed request in production (the key is not set yet); the rest of the page.
+- 2026-10-16: the token-ends-with-its-maker bullet in §3 checked against `src/lib/users/manage-apply.ts`, `src/lib/email-console.ts` (`blockTokensByCreator`) and `test/two-person-rule.test.ts`, and against cf-email-consumer's `api/src/console.ts` (`tokens.block_by_creator`, `RESPOND`) and its test. Not checked: against the live email service, or in a browser. Not re-checked: the rest of the page.

@@ -901,6 +901,9 @@ as of now as the person who asked (still active, their current role may still ma
 it is about unchanged), then makes it as the approver, and the activity log names both.
 
 Suspending anyone but the last Owner stays immediate, so access can always be cut off at once.
+**Lock out** on Security → Sessions is a suspension too, and follows the same rule (*2026-10-16*):
+locking out the last Owner waits, and nobody is signed out until it is approved
+([`../features/SESSION-MANAGEMENT.md`](../features/SESSION-MANAGEMENT.md)).
 Inviting someone straight in as Owner or Vendor support is refused while someone else could
 approve. When nobody else could, as when Vendor support makes a new portal's first Owner, the
 change goes ahead alone and its activity row says `secondPerson: 'none available'`. Code:
@@ -1264,6 +1267,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.7's Lock out sentence.** Read `src/pages/api/sessions/active-sessions.ts` (`block_account`) and `src/lib/approvals/ask.ts` (`personChangeGate`); `test/two-person-rule.test.ts` passes | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's signature sentence (#33).** Read `src/lib/console-signature.ts` and the three binding accessors that wrap with it; `cf-backup/src/gateway/signature.ts`, `cf-vps/src/gateway/signature.ts` and their routers, `cf-email-consumer/api/src/signature.ts` and `handleConsole`; `test/console-signature.test.ts` and each console's signature test pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.7, new, the two §10.5 rows, D14 in §16 and the §17 row (#36).** Read `src/lib/approvals/` (`rules.ts`, `store.ts`, `ask.ts`, `handlers.ts`, `retention.ts`, `mail.ts`), `src/lib/users/manage-apply.ts`, `src/pages/api/users/manage.ts` (POST, PATCH, DELETE), `src/pages/api/users/approvals.ts` and the gateway `src/pages/dashboard/vps/app/[...path].ts`; in cf-vps the Log storage screen's answer to `second_person`; `test/two-person-rule.test.ts` (22 tests), `test/fresh-sign-in.test.ts`, `test/vps-gateway.test.ts` and `test/vps-chain.test.ts` pass | §10.7 and the rows match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's target-header sentence and §11's console paragraph (#35).** Read `consoleTarget` (`src/lib/access-center/profile.ts`) and its callers in `handlers.ts`, `role-preview.ts` and `profile.ts`; the bootstrap stage (`src/lib/auth/stages/bootstrap.ts`, session `userId` = the `admin_authorized_users` row id); in cf-backup `grantFor`, `readsFresh` and the router, in cf-vps `grantFor` and `FRESH_POLICY_ROUTES`; `admin_authorized_users.id` is `uuid` (Supabase connector); `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | Both match the code. The rest of the document not re-read |

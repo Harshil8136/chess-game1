@@ -195,6 +195,15 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   what to do: the sessions are already ended, but the account would let them sign in again.
   The owner's and vendor support's sign-in blocks can be lifted only by the owner or vendor
   support.
+- **Locking out the last Owner waits for a second person** (*2026-10-16*, permissions item
+  #36). A lock-out is a suspension, so both ways in follow the
+  [two-person rule](../architecture/PERMISSIONS-SYSTEM.md): locking out the only active Owner
+  answers 202, nobody is signed out, and the change waits on Users until another Owner or
+  Vendor support approves it there, where it is made as a suspension. The page shows a notice
+  instead of an error. Every lock-out that goes ahead is emailed to the sign-in alert list as
+  "Person suspended" (permissions item #18), from Sessions as from Users. A person the user
+  directory does not have answers 404, and a directory that cannot be read answers 502 with
+  nobody signed out. Tests: `test/two-person-rule.test.ts`.
 - **A recent sign-in first** (*2026-10-16*, permissions item #14). Ending someone else's
   session, **Lock out**, a force sign-out from Users and **Sign everyone else out** need a
   sign-in from the last 10 minutes. Otherwise the route answers 403, nothing is ended, and the
@@ -320,6 +329,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-16 | claude | **Scope-limited to Lock out and the two-person rule.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE, `block_account`), `src/lib/approvals/ask.ts` (`personChangeGate`), `SessionsConsole.tsx` and `LockOutDialog.tsx`; `test/two-person-rule.test.ts` and `test/session-rank.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to the alert policy's new "Audit log seal" row.** Read `AlertPolicyPanel.tsx` (`AUDIT_SEAL_TEXT`), `src/lib/login-alerts/policy.ts` (`AUDIT_SEAL_MODES`, `describePolicyChange`), `policy-handlers.ts` and `src/workers/scheduled-audit-seal.ts` (`checkAndEmail`); `test/audit-seal.test.ts` covers the quiet setting and the turn-down line. The rest of the page was not re-read |
 | 2026-10-16 | claude | **Scope-limited to the alert policy's new "Accounts nobody uses" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` (`UNUSED_MODES`, `describePolicyChange`) and `policy-handlers.ts`; `test/unused-accounts.test.ts` pins the default and the change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to the recent sign-in bullet.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `flush-sessions.ts`, `src/pages/api/users/force-kick.ts` and `src/lib/auth/fresh-sign-in.ts`; `test/session-rank.test.ts` and `test/fresh-sign-in.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
