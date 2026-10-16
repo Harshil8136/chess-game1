@@ -417,8 +417,10 @@ redraw it (`memo`), and the terminal fits its size at most once per animation fr
   browser falls more than 4 MiB behind, and the page reconnects from where it stopped.
 - **Logs and recordings** read the system journal; the audit record behind Timeline is a
   separate store (see [AUDIT-PIPELINE](../security/AUDIT-PIPELINE.md)).
-- **Access.** Role defaults, per-person grants with an optional end date and a note. The
-  rules are in [PERMISSIONS](../security/PERMISSIONS.md).
+- **Access.** Role defaults, per-person grants with an optional end date and a note, and the
+  powers given for a while from cf-admin, each with its own end (shown on the person's row and
+  in a capability's sheet as "Given for a while to"). The rules are in
+  [PERMISSIONS](../security/PERMISSIONS.md).
 
 ## Metrics history
 

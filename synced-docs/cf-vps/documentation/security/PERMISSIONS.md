@@ -2,7 +2,7 @@
 title: "cf-vps Permissions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
@@ -14,8 +14,9 @@ tags: [security, permissions, capabilities, rbac]
 
 > **TL;DR (non-technical):** What a person can do on the server console is a list of
 > small permissions called capabilities. Each role gets a default list, the owner can add or
-> remove capabilities for one person, and the most dangerous ones can never be given to
-> anyone except the owner and the vendor. The check is made three times: in the portal's
+> remove capabilities for one person, someone can ask in the portal for one capability for a
+> while and have it end by itself, and the most dangerous ones can never be given to anyone
+> except the owner and the vendor. The check is made three times: in the portal's
 > private service, on the server's agent, and again by the root script that makes a change.
 > The riskiest changes also need a sign-in from the last 10 minutes, and the server itself
 > keeps the root terminal and reboots for the owner and the vendor, a few times an hour.
@@ -74,8 +75,10 @@ floor capability can never be added to a role outside `FLOOR_ROLES`.
 1. An unknown capability id is refused. A system actor holds nothing.
 2. A floor capability is refused unless the role is owner or vendor support.
 3. A per-person **deny** wins over everything.
-4. A per-person **allow** grants the capability unless it has expired.
-5. Otherwise the role's list decides (the stored policy, or the code default for any
+4. A power **given for a while** (the grant's `temporary`) grants the capability until its own
+   end, whatever the grant's `expiresAt` says.
+5. A per-person **allow** grants the capability unless it has expired.
+6. Otherwise the role's list decides (the stored policy, or the code default for any
    capability the stored policy predates).
 
 ## Stored policy and per-person grants
@@ -86,9 +89,10 @@ rather than fall back. The Worker caches the row for 30 seconds; a save reads fr
 
 | Rule | Value |
 |---|---|
-| A person's grant | `allow` list, `deny` list, optional `expiresAt` and `note` |
+| A person's grant | `allow` list, `deny` list, optional `expiresAt`, `note` and `temporary` |
 | Most people with a grant | 50 |
 | Longest grant | 366 days ahead; a past date is refused |
+| Powers given for a while | `temporary`, by capability: an `until` at most 90 days ahead and an optional `note`. One whose end has passed is dropped on the next save without an issue; never a floor |
 | Note length | 200 characters |
 | Floor capabilities in `allow` | Refused: a floor follows the role |
 | Floor capabilities in `deny` | Allowed: it can switch one person off |
@@ -98,6 +102,16 @@ rather than fall back. The Worker caches the row for 30 seconds; a save reads fr
 People are edited on the console's Access page (`access.view` to read, `access.manage` to
 save) and from cf-admin's Access Center on a person's Users page, which calls the same API for
 one person. Each save returns an `x-vps-audit` line that becomes a cf-admin activity-log row.
+
+Powers given for a while come from cf-admin (permissions item #22, 2026-10-16): a person asks
+for one in Settings → Your access, with how long and why, and someone who may give it approves
+it there. The portal then saves the person's grant with the power in `temporary`, through the
+same person route and rules as any other change. The Access page lists them on the person's row
+and keeps them when the grant is edited there; a deny ends one early. A save carries over what
+still counts of everyone else's grant: a grant whose end has passed keeps only its denies and
+its running powers, or is dropped when it has none. A build that does not know the field drops
+it on its next save, so a power ends early, never late. In the activity line, `~cap until …` is
+a power given for a while and `-~cap` one taken away.
 
 ### One capability's default role
 
@@ -109,7 +123,7 @@ the capability and every role below it does not. Nothing else changes:
 | Part | After the save |
 |---|---|
 | Every other capability | Each role keeps what it resolves to now: its stored list, or the code default for a capability the stored policy predates |
-| Personal grants | Carried over unchanged, including one that names the same capability; a grant that has already run out is dropped, as on the person route |
+| Personal grants | Carried over unchanged, including one that names the same capability; a grant that has already run out keeps only its denies and running powers given for a while, or is dropped, as on the person route |
 | Floor capabilities | Refused with 400: a floor follows the Owner and Vendor support roles and cannot be moved |
 | Unknown capability or role, missing or non-integer `rev` | 400 |
 
@@ -130,7 +144,7 @@ someone without `access.manage` is accepted only when all of these hold:
 | T1 trusted target | cf-admin names the person, with the role from its own user table, in `x-vps-target` (base64url JSON `{ v: 1, email, role }`). cf-admin's gateway never forwards that header from a browser. Missing, malformed or naming someone else: `need: trusted_target` |
 | T2 not yourself | `need: self` |
 | T3 outrank | The actor's role sits strictly above the person's; owner and vendor can never be changed by delegation (`need: outranked`) |
-| T4 hold it | Every capability added to or removed from the allow or deny list is one the actor holds now (`need: not-held:<cap>`) |
+| T4 hold it | Every capability added to or removed from the allow or deny list, or given, ended or given another end for a while, is one the actor holds now (`need: not-held:<cap>`) |
 | T5 not locked | No floor capability changes (`need: locked:<cap>`) |
 
 The save then runs through the same validation, limits and compare-and-swap as any other, and
