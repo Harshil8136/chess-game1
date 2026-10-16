@@ -3,11 +3,11 @@
 | Field | Value |
 |-------|-------|
 | source_repo | mascotasmadagascar-cmd/cf-backup |
-| source_commit | 0ebc83028782a406b43537af8391af0216f6f275 |
+| source_commit | 1ec07df59656693806081a4ece82c88ae72481ee |
 | source_ref | main |
 | triggered_by | push |
-| synced_at | 2026-10-16T12:22:48.946Z |
-| files | 19 |
+| synced_at | 2026-10-16T23:58:14.890Z |
+| files | 20 |
 
 Published by `.github/workflows/sync-docs.yml`. The list of published files is
 `PUBLISHED_DOCS` in `scripts/backup/lib/docs-mirror.ts`; every other file in the
@@ -18,6 +18,7 @@ repository is private. Links to files outside this folder do not resolve here.
 - `main.md`
 - `docs/RESTORE.md`
 - `docs/DIAGNOSTICS-PREFLIGHT-STORAGE.md`
+- `docs/reference/PERMISSIONS.md`
 - `docs/remediation/README.md`
 - `docs/remediation/01-post-incident-review.md`
 - `docs/remediation/02-root-cause-analysis.md`

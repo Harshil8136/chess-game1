@@ -108,8 +108,9 @@ cf-admin beside it. Edit the canonical file in cf-admin, then run
 the copies ([`docs/reference/SYNC.md`](./docs/reference/SYNC.md)).
 
 On the public docs mirror the plan of record is under
-`synced-docs/cf-admin/documentation/program/cf-backup/`; the links here into `docs/reference/`,
-`docs/specs/`, `docs/HANDOFF.md` and `docs/README.md` open only in the private repository.
+`synced-docs/cf-admin/documentation/program/cf-backup/`; the links here into `docs/reference/`
+(except the generated `PERMISSIONS.md`, published since 2026-10-16), `docs/specs/`,
+`docs/HANDOFF.md` and `docs/README.md` open only in the private repository.
 
 > A workspace-level GITHUB_RULES file sits one directory above this repo. It is deliberately
 > **not linked** here: cf-backup is standalone, so that path does not resolve in CI or in a

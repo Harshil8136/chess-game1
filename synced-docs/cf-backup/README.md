@@ -31,8 +31,8 @@ them one. The floors (the backup key, downloading backup data, deleting old runs
 access, running or configuring restore tests) can never be given to anyone else (`RULES.md`
 rule 12). The full model is the plan of record's `13-access-control.md`; on the docs mirror it
 is under `synced-docs/cf-admin/documentation/program/cf-backup/`. Every capability, its role
-defaults and the routes that need it are listed in `docs/reference/PERMISSIONS.md` (private),
-which is generated from the code.
+defaults and the routes that need it are listed in `docs/reference/PERMISSIONS.md`, which is
+generated from the code.
 
 ## Design
 
