@@ -17,6 +17,10 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
      `bad_actor` and an unknown version 409; cf-backup never answers 401.
    - `/internal/*` — accepts only cf-admin's `backup-tick` system actor.
 
+   Once the owner sets `CONSOLE_SIGNING_KEY` on this Worker (rule 3), an actor header on
+   either path counts only with cf-admin's `x-backup-signature` over it, made within 60
+   seconds; anything else is 400 `bad_signature` (`src/gateway/signature.ts`, plan doc 02 §4).
+
    The address bar shows `/dashboard/backup/<section>`; cf-admin frames
    `/dashboard/backup/app/<section>`, and the `/app` path is never shown. The local dev
    Owner exists only in `vite dev` on `localhost`.
@@ -45,6 +49,11 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
      (the owner's decision of 2026-10-07): each run warns, and the GitHub copy is deleted
      once no other project needs backing up. A project that holds the backup key schema is
      still refused.
+
+   One optional Worker secret, `CONSOLE_SIGNING_KEY` (the owner's yes of 2026-10-15, cf-admin
+   permissions item #33; plan doc 12 §7b), holds the same value as cf-admin's and lets this
+   Worker check that a request was signed by cf-admin (rule 2). It is not a backup key, and it
+   is not in `secrets.required`: without it the Worker trusts the binding, as before.
 4. **Dependencies are a whitelist.** `package.json` is the approved list, with exact pins.
    A new package needs the owner's approval first (plan doc 01 §6).
 5. **`npm run verify` before every push.** Workers Builds runs the same command as its
