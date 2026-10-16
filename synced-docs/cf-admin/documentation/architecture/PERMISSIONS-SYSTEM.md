@@ -722,6 +722,14 @@ which the Access Center's save shares. What the registry shows comes from one re
 accounts stay hidden below the owner and vendor support, and an owner's or vendor support's
 overrides are vendor support's alone.
 
+*Since 2026-10-16 (#26)* the registry's **See it as** tab shows, read-only, the sidebar a role or
+one person gets, what each page holds for them and their console powers. It changes nothing and
+signs in as nobody: the sidebar part is worked out on the screen from that same overview by
+`personOpens`, over the pages the sidebar lists (`isNavPage` in `src/lib/auth/nav-pages.ts`,
+which `computeNavItems` now reads too), and a person's console powers come from their Access
+Center profile (`GET /api/users/access-center`). `test/see-as.test.ts` checks its answers
+against `computeAccessMap`, `computeNavItems` and the page gate over the real D1.
+
 ### 10.3 Access requests
 
 *Added 2026-10-15.* A person shut out of a page can ask for it from the Access denied card,
@@ -1164,6 +1172,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 | `test/access-center-rules.test.ts`, `test/access-center-profile.test.ts`, `test/access-center-api.test.ts` | The Access Center (§10.1): the sources and edit rules as case tables, the profile against a real registry and a faked console (answering, unavailable, refusing), and the API reading the person's role from the database whatever the body claims (added 2026-10-02) |
 | `test/access-center-end-dates.test.ts`, `test/plac.test.ts` | End dates (added 2026-10-14): an ended override counts as none, `refreshAt` is the earliest end ahead and the stage recomputes when it passes, and a save refuses an end in the past, more than a year ahead or on a reset |
 | `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): vendor support only, the owner and a granted Admin refused (2026-10-15), the visibility rules for a viewer below vendor support (`buildOverview`), the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
+| `test/see-as.test.ts` | Page Registry's See it as (added 2026-10-16, §10.2): the pages the sidebar lists, grouped like it; each answer, personal settings and floors included, equal to `computeAccessMap`, `computeNavItems` and the page gate over the real D1; console powers count capabilities only |
 | `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
 | `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
 | `test/fresh-sign-in.test.ts` | The recent sign-in (added 2026-10-16, §10.5): the 10-minute and skew rule, an unknown time failing closed, the return path after signing in again, each guarded route refusing a stale session with the header and allowing the parts that do not ask, and the exact list of files that call `freshSignInRefusal`. `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` cover the sign-outs, Page Registry and the Access Center |
@@ -1176,6 +1185,7 @@ pass. Full history in [`../MAINTENANCE.md`](../MAINTENANCE.md).
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-16 | claude | **Scope-limited to §10.2's See it as paragraph (#26) and its §17 row.** Read `src/lib/access-center/see-as.ts`, `src/lib/auth/nav-pages.ts`, `computeNavItems` in `plac.ts` and `SeeAsPanel.tsx`; `test/see-as.test.ts` and `test/page-registry.test.ts` pass | The paragraph and the row match the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.6, new, and §15.1's A.9.2 row.** Read `src/lib/access-review/` (`rules.ts` `reviewLines`, `removalPlan`; `handlers.ts`; `store.ts`), `AccessReviewPanel.tsx` and `src/workers/scheduled-access-review.ts`; `test/access-review.test.ts` passes | §10.6 matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §11's automatic deactivation (#17).** Read `src/workers/scheduled-unused-accounts.ts` (`checkUnusedAccounts`: `suspendIfActive`, `forceLogoutUser`, `markAuthzChanged`) and `src/lib/unused-accounts.ts` (`neverSuspended`); `test/unused-accounts.test.ts` passes | §11's new paragraph. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.5, new.** Read `src/lib/auth/fresh-sign-in.ts`, `src/lib/fresh-sign-in-client.ts`, `GlobalDialogProvider.tsx`, `stages/bootstrap.ts` (`signedInAtFromAssertion`), `pipeline.ts`, every route that calls `freshSignInRefusal` (18 files), `src/lib/email-console.ts` (`userActor`, `consoleErrorResponse`) and cf-email-consumer's `api/src/console.ts` (`requireFreshSignIn`); `test/fresh-sign-in.test.ts`, `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` pass | §10.5 and the §17 row. The rest of the document not re-read |

@@ -5,7 +5,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts]
+related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts, test/see-as.test.ts]
 related_docs: [../specs/2026-10-14-access-control-room.md, ../specs/2026-10-03-access-center-v2-design.md, ../specs/2026-10-02-access-center-design.md, ../architecture/PERMISSIONS-SYSTEM.md, VPS-CONSOLE.md, BACKUP-CONSOLE.md, USER-MANAGEMENT.md, ../reference/DESIGN-SYSTEM.md]
 tags: [permissions, access-center, plac, vps, backup, registry, ui]
 ---
@@ -147,7 +147,7 @@ anything else in the body is ignored. The browser builds this with `toSave` in `
 ## 4. Page Registry and its Consoles tab
 
 Page Registry (`/dashboard/debug/pages`) is the control room for everyone's access: tiles, then
-six tabs (Pages, Who opens what, Personal settings, Consoles, Checks, History). The tabs, the
+seven tabs (Pages, Who opens what, See it as, Personal settings, Consoles, Checks, History). The tabs, the
 page pop-up and who may do what are in
 [the control-room spec](../specs/2026-10-14-access-control-room.md) §4 and §6; the routes are
 in [`DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2. Personal settings made there go through the
@@ -156,6 +156,14 @@ Since 2026-10-16 (open item AC-9) Page Registry reads a page's role floor first 
 what* shows a floored page as closed to the roles it keeps out ("Not for the role"), a stored
 grant the floor ignores is flagged *No effect: page floor* on Personal settings and counted on
 Checks, and a new grant the floor would ignore is refused, as it is here and at an invitation.
+
+*Since 2026-10-16 (#26)* **See it as** previews, read-only, what a role or one person gets: pick
+*A role* or *A person* from the chips, and see their sidebar as the sidebar draws it (each page
+open or locked, grouped and ordered the same way), each page opening onto its actions and
+sub-pages with why each opens or not, and their Server and Backups powers with the number held,
+whether the console's page opens for them, and which powers were given personally. A person's
+console powers are this screen's own profile read (§3); a role's are the Consoles tab's defaults.
+Nothing is saved from it; *Change on their Access page* leads here.
 
 The **Consoles** tab shows one block per console (Server, then Backup) with one row per
 capability: label, key, class, default role and the live personal grants that mention it, and a
@@ -204,6 +212,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §4's See it as paragraph (#26) against `SeeAsPanel.tsx`, `RegistryConsole.tsx`, `src/lib/access-center/see-as.ts` and `src/lib/auth/nav-pages.ts`; `test/see-as.test.ts` passes; the live registry's sub-pages and their sidebar pages read through the D1 connector (every sub-page's sidebar page is switched on today, so "Only by address" is empty) | The tab in a phone browser (the owner's test) |
 | 2026-10-16 | §4's console warning (#28) against `ConsoleFeatures.tsx`, `RegistryConsole.tsx`, `logic.ts` (`consoleGap`), `registry.ts` (`viewKey`), `vps.ts` and `backup.ts` (`viewCapability`); `test/registry-ui-logic.test.ts` passes; the two console pages' default roles read live through the D1 connector | The warning in a phone browser; it shows only when a console page's role is lowered |
 | 2026-10-16 | §2.1's floor state and §4's floor paragraph (AC-9) against `pages.ts` (`pageItem`), `rules.ts` (`pageEditability`), `overview.ts` (`personOpens`, `roleOpensPage`, `switchFlags`, `changeRefusal`), `labels.ts`, `AccessRow.tsx` and the registry panels; `test/access-why.test.ts` and the AC-9 case in `test/access-center-api.test.ts` pass | The rest of the page; the screens in a phone browser (the owner's test) |
 | 2026-10-15 | §2 steps 4 and 6, the default end of item #23, against `draft.ts` (`withDefaultEnd`, `defaultPageUntil`), `limits.ts`, `UserAccessEditor.tsx`, `AccessSections.tsx`, `AccessReviewDialog.tsx`, `PageSheet.tsx`; `test/access-center-draft.test.ts` | Everything else |

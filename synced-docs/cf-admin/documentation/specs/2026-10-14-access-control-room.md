@@ -5,7 +5,7 @@ audience: [owner, ai, technical, operator]
 last_verified: 2026-10-15
 verified_against: [code, infra]
 owner: harshil
-related_code: [migrations/0070_page_override_end_dates.sql, src/lib/auth/plac.ts, src/lib/auth/stages/access-map.ts, src/lib/access-center/overview.ts, src/lib/access-center/registry-access.ts, src/lib/access-center/history.ts, src/lib/access-center/draft.ts, src/lib/access-center/rules.ts, src/pages/api/system/access-overview.ts, src/pages/api/system/page-access.ts, src/pages/api/system/access-history.ts, src/pages/api/users/access-history.ts, src/pages/api/system/pages.ts, src/pages/api/users/force-kick.ts, src/pages/api/sessions/active-sessions.ts, src/components/admin/debug/registry/, src/components/admin/users/access-editor/, src/styles/pages/page-registry.css, test/registry-access.test.ts, test/access-history.test.ts, test/session-rank.test.ts, test/access-center-end-dates.test.ts, test/registry-ui-logic.test.ts]
+related_code: [migrations/0070_page_override_end_dates.sql, src/lib/auth/plac.ts, src/lib/auth/stages/access-map.ts, src/lib/access-center/overview.ts, src/lib/access-center/registry-access.ts, src/lib/access-center/history.ts, src/lib/access-center/draft.ts, src/lib/access-center/rules.ts, src/pages/api/system/access-overview.ts, src/pages/api/system/page-access.ts, src/pages/api/system/access-history.ts, src/pages/api/users/access-history.ts, src/pages/api/system/pages.ts, src/pages/api/users/force-kick.ts, src/pages/api/sessions/active-sessions.ts, src/components/admin/debug/registry/, src/components/admin/users/access-editor/, src/styles/pages/page-registry.css, test/registry-access.test.ts, test/access-history.test.ts, test/session-rank.test.ts, test/access-center-end-dates.test.ts, test/registry-ui-logic.test.ts, test/see-as.test.ts]
 related_docs: [../features/ACCESS-CENTER.md, ../architecture/PERMISSIONS-SYSTEM.md, ../operations/DEV-TOOLS.md, ../security/SECURITY.md, 2026-10-03-access-center-v2-design.md, 2026-10-02-access-center-design.md]
 tags: [permissions, access-center, plac, registry, design, security]
 ---
@@ -71,13 +71,14 @@ listed in the private backlog with where it lives.
 ## 4. Page Registry, the control room
 
 Five tiles at the top, each a shortcut: pages switched on, people, personal settings, checks,
-and console permissions. Under them, six tabs in one sideways row. The tab follows the address
+and console permissions. Under them, seven tabs in one sideways row (See it as added 2026-10-16, item #26). The tab follows the address
 (`#who`, `#personal`…), so a link opens the right one.
 
 | Tab | What it does |
 |---|---|
 | **Pages** | Every page and its actions, grouped by sidebar group, with search and chips (everything, pages, actions, switched off, with personal settings, and each group). Each row shows its default role, how many active people open it and how many personal settings it has. Tapping a page opens its pop-up |
 | **Who opens what** | *By role*: a table of pages against the six roles, from the defaults alone. *By person*: pick a person and see every page they open and why (role, personal setting, ended setting, full access) |
+| **See it as** | *Added 2026-10-16 (#26).* Pick a role or a person and see, read-only, the sidebar they get (each page open or locked, grouped like the sidebar), each page's actions and sub-pages with why each opens, and their Server and Backups powers. Sub-pages whose sidebar page is switched off show under "Only by address" |
 | **Personal settings** | Every personal setting in the portal, with its person, who set it, why, when it ends, and flags: account removed or off, ended, on an Owner or Vendor support account, on a switched-off page, the same as the role. Tick several and remove them together |
 | **Consoles** | The Backup and Server consoles' permissions, one block per console, each with its default role and a Change button (moved here from inside the page list) |
 | **Checks** | Problems worth a look: an unrecognised default role, actions given to more roles than their page, actions without a page, actions on a switched-off page, pages only Vendor support can hand out, pages without a description, and personal settings carrying any of the flags above. Each opens the pages or settings it names |
@@ -131,3 +132,4 @@ The routes check all of this again; the screens only hide what the routes would 
 | `test/access-history.test.ts` | Which activity rows count as access changes, the cursor across rows of the same second, the Page Registry key, and the hidden answer for top-tier people |
 | `test/session-rank.test.ts` | Force sign-out and block account refuse peers and seniors, nobody blocks themselves, ending your own session still works, and the 502 on a failed account update; since 2026-10-15, force sign-out without a grant of `#force-kick` is refused and the Users page's button follows the same check |
 | `test/registry-ui-logic.test.ts` | Which page fields a form sends, which personal-setting changes a set of choices makes, the open counts, and the "set by" line |
+| `test/see-as.test.ts` | See it as (2026-10-16): the sidebar's pages and grouping, and each answer equal to what the sidebar and the page gate decide for that role or person over the real D1 |

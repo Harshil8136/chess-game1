@@ -3,7 +3,7 @@
 title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 tags: []
@@ -166,7 +166,7 @@ answer 5).
 |------|---------|
 | `pages/dashboard/debug/index.astro` | Landing hub with DEV guard |
 | `pages/dashboard/debug/diagnostics.astro`, `debug/diagnostics/history.astro` | Diagnostics run and its history (`SystemDiagnosticsHistory.tsx`) |
-| `pages/dashboard/debug/pages.astro` + `components/admin/debug/registry/` (`RegistryConsole.tsx` and one file per tab and pop-up), `ConsoleFeatures.tsx`, `styles/pages/page-registry.css` | Page Registry, the access control room (rebuilt 2026-10-14; the old `PageRegistryManager.tsx` was deleted): tiles, then Pages, Who opens what, Personal settings, Consoles, Checks and History, and a pop-up per page with its settings, its people and its actions ([spec](../specs/2026-10-14-access-control-room.md) §4) |
+| `pages/dashboard/debug/pages.astro` + `components/admin/debug/registry/` (`RegistryConsole.tsx` and one file per tab and pop-up), `ConsoleFeatures.tsx`, `styles/pages/page-registry.css` | Page Registry, the access control room (rebuilt 2026-10-14; the old `PageRegistryManager.tsx` was deleted): tiles, then Pages, Who opens what, See it as (2026-10-16), Personal settings, Consoles, Checks and History, and a pop-up per page with its settings, its people and its actions ([spec](../specs/2026-10-14-access-control-room.md) §4) |
 | `components/admin/debug/SystemDiagnostics.tsx` (+ `DiagnosticsInfraBar.tsx`, `DiagnosticsTestList.tsx`) | Preact island: runs the suite once on load (every 30 s until 2026-10-04) and on the button, renders the infra bar and the per-probe list |
 | `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | API: run the probe suite / read persisted results / infra snapshot; results persist to `system_test_results` |
 | `lib/diagnostics/runner.ts`, `benchmarks.ts`, `types.ts`, `tests/` | The probe suite (tiers, latency grades, remediation text) |
@@ -306,6 +306,7 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-16 | §2.2's Page Registry row after the See it as tab (#26): `RegistryConsole.tsx`, `SeeAsPanel.tsx`; it calls no new route (`/api/system/access-overview`, `/api/system/console-features` and `/api/users/access-center`) | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-15 | §2.1 and §2.2 after Page Registry became vendor support only: `page-floors.ts`, `canUsePageRegistry`, the four pages under `src/pages/dashboard/debug/` and the `api/system/` gates; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-14 | §2.2 and §3.3 after the Page Registry rebuild: the page, `src/components/admin/debug/registry/`, the four `api/system/` routes and `registry-access.ts`; `git grep` finds no `PageRegistryManager`, `/api/system/preview` (removed that day) or `rolePreviewSchema` in `src/`; the screens server-rendered with edge-case data; `test/registry-access.test.ts`, `test/registry-ui-logic.test.ts` | §1, §3.1, §3.2 and §4 onward; the page in a browser (the owner's phone test) |
 | 2026-10-10 | §2.1 to §2.3 after the Developer Tools pages and routes moved to their page keys: `canUseDebug` and `canUsePageRegistry` in `src/lib/auth/surface-guards.ts`, the four pages under `src/pages/dashboard/debug/`, the three diagnostics routes, `api/system/pages.ts`, `preview.ts` and `access-center/registry.ts`; the live rows (`/dashboard/debug` and `/dashboard/debug/pages`, both `dev`, active) and their grants read through the D1 connector; `test/debug-access.test.ts`, `test/registry-impact.test.ts`, `test/registry-console-features.test.ts` | §3 onward; the pages in a browser |
