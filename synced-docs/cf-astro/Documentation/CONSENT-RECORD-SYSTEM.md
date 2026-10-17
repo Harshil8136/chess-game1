@@ -143,6 +143,15 @@ answers `heartbeat.verdict` (`ok`, `warn` or `fail`) with the problems as
 `admin_portal_settings` row `heartbeat-last-run` (when, which runner, which
 verdict). Whoever runs it then drains both outboxes.
 
+**It also watches the portal's checks (since 2026-10-17).** The admin portal's
+System health checks run every five minutes on the portal's scheduler and stamp
+each run in their state row (`health-state`, `$.tick`). The heartbeat reads that
+stamp and answers it as `heartbeat.portal`; when the checks last ran more than
+30 minutes ago, the answer's verdict is `fail` with a line saying so, so the
+server's job fails and reports it. The recorded run keeps the heartbeat's own
+verdict (consents and bookings only). A missing row or stamp is only a notice
+(`readPortalWatch`, `withPortalWatch` in `src/lib/heartbeat.ts`).
+
 The 2026-08-07 lesson ("losing one credential must never blind the whole
 check") used to be met by two legs with two credentials in one GitHub job. It is
 now met by independent **runners** sharing one narrow credential:

@@ -1,7 +1,7 @@
 {% raw %}
 # cf-astro Operations Reference
 
-**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4; §6 and §7 added 2026-10-07 (the 2026-10-04 resource-usage plan) from `wrangler.toml` (not re-checked against the live Worker, which has not been deployed with them yet)
+**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4; §6 and §7 added 2026-10-07 (the 2026-10-04 resource-usage plan) from `wrangler.toml` (not re-checked against the live Worker, which has not been deployed with them yet); §8 added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, with the six `platform_alerts` columns read on the live table through the Cloudflare D1 connector
 
 This document outlines the core infrastructure bindings and the CLI commands used to manage and verify the Cloudflare resources attached to `cf-astro`.
 
@@ -110,6 +110,32 @@ BetterStack first: errors a route captures reach Sentry unsampled, and
 `log.warn`/`log.error` also go to BetterStack. To see every request again for an
 investigation, set `head_sampling_rate = 1` in `[observability.logs]` and deploy;
 put it back afterwards (the free plan allows 200,000 log events a day).
+
+## 8. Alerts (since 2026-10-17)
+
+When something goes wrong (a Brevo webhook that fails its check, a database
+error a route reports), the Worker raises an alert through `src/lib/alert-gate.ts`.
+Every alert goes to the Worker log and to a row in the shared D1 table
+`platform_alerts`, which the admin portal lists on its System health page.
+Urgent and Soon alerts (`critical`, `warning`) also go to Sentry, and an urgent
+one emails the hotel's alert inbox through the email queue.
+
+The row is written first, and what it finds decides the rest:
+
+- **A repeat.** When the same problem (source and event) is already open at the
+  same level, the alert adds a repeat to that row (`repeats`, `last_seen_at`)
+  instead of a row of its own, keeps the first message, and sends no email: the
+  first one did. Sentry still counts it. Until 2026-10-17 each repeat was a row
+  and an email, so one Brevo webhook problem left 19 rows.
+- **A snooze.** When someone snoozed the problem on System health, it goes only
+  to the log and its row until the snooze ends: no Sentry event, no email.
+- **Compliance records** (`arco_get_document`, each identity document served)
+  are never folded: each is a row of its own.
+- **Nothing lost.** If D1 cannot be written, or the table does not have the new
+  columns, every channel fires as before.
+
+A problem closes only on System health, by a person or, for the portal's own
+checks, by itself. The next alert after a close opens a new row and emails again.
 
 ---
 
