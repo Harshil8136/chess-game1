@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-17 | `src/lib/jobs/registry.ts` (17 jobs: 15 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-health-checks.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **17 jobs (15+2)**, `health-checks` added to the table. No binding, secret, variable or cron trigger added. Nothing else re-checked |
 | 2026-10-17 | `grep -rn RESEND_API_KEY src/` after Diagnostics was replaced by System health | §5's `RESEND_API_KEY` row: its one reader is System health's Resend check. No binding, secret or variable added. Nothing else re-checked |
 | 2026-10-16 | `src/env.d.ts`, `src/lib/console-signature.ts` (the only reader of `CONSOLE_SIGNING_KEY`), `wrangler.toml` (`[secrets] required` unchanged) | §5.3 lists `CONSOLE_SIGNING_KEY`, optional. Not checked: the secret on the four Workers (the owner sets it) |
 | 2026-10-16 | `src/lib/jobs/registry.ts` (16 jobs: 14 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/` only), `wrangler.toml` (`[triggers]` and `STAFF_STORAGE` unchanged); the bucket read through the Cloudflare connector (exists, Standard class) | §1 Scheduled triggers: **16 jobs (14+2)**, the three jobs missing since 2026-10-10 added to the table and to the sleeping list; the `STAFF_STORAGE` row names the `audit-log/` copies. No binding, secret or variable added |
@@ -201,10 +202,11 @@ and each one runs under `runJob` with a declared D1 budget:
 **Do not hand-count this list.** `../../src/lib/jobs/registry.ts` (private)
 is the list, and [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
 is its documentation home; the table below is a pointer that has been wrong
-four times. As of 2026-10-16 it is **16 jobs — 14 on `*/5`, 2 on Sunday**
+four times. As of 2026-10-17 it is **17 jobs — 15 on `*/5`, 2 on Sunday**
 (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`; `redis-ttl-hygiene` left with Upstash on
 2026-10-04; `heartbeat-watchdog` joined on 2026-10-07, `email-api-sweep` on
-2026-10-10, `access-change-summary` on 2026-10-15 and `audit-seal` on 2026-10-16).
+2026-10-10, `access-change-summary` on 2026-10-15, `audit-seal` on 2026-10-16 and
+`health-checks` on 2026-10-17).
 Being on `*/5` no longer means running every five minutes: most of these jobs
 have an interval in Cron Control (15 or 60 minutes), and `backup-tick`,
 `blog-scheduled-publish`, `heartbeat-watchdog`, `email-api-sweep`,
@@ -214,7 +216,7 @@ owns how that is decided.
 
 | Cron | Jobs dispatched (`src/lib/jobs/registry.ts`) |
 |------|---------|
-| `*/5 * * * *` (14) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)); and `heartbeat-watchdog`, which runs cf-astro's consent & booking heartbeat and drains both outboxes only when the VPS job and GitHub have both missed it ([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a); `email-api-sweep`, the email API's safety net (§3b); `access-change-summary`, the daily access summary and the daily account checks (§3c); and `audit-seal`, which seals the activity log each morning and copies each day to `STAFF_STORAGE` under `audit-log/` (§3d) |
+| `*/5 * * * *` (15) | `cf-access-audit-poll`, `booking-email-retry`, `booking-outbox-poke`, `cf-access-reconcile`, `storage-notifications`; the three folded in from the retired 15-minute trigger — `blog-scheduled-publish`, `gsc-sync`, `pagespeed-sync` (the last two self-gate on their own interval settings); and `cron-usage-probe`, which caches Cloudflare's account-wide D1 usage figure and is what the automatic-shedding decision reads; and `backup-tick`, which lends cf-backup this tick (its schedule, reconciliation and failure alerts — [`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)); and `heartbeat-watchdog`, which runs cf-astro's consent & booking heartbeat and drains both outboxes only when the VPS job and GitHub have both missed it ([`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §3a); `email-api-sweep`, the email API's safety net (§3b); `access-change-summary`, the daily access summary and the daily account checks (§3c); `audit-seal`, which seals the activity log each morning and copies each day to `STAFF_STORAGE` under `audit-log/` (§3d); and `health-checks`, which runs System health's checks on their own, each at its own interval, and opens and closes their problems (§3e) |
 | `0 2 * * SUN` (2) | `asset-cleanup`, `staff-storage-reconcile`. (`redis-ttl-hygiene`, the weekly Redis expiry census, was removed on 2026-10-04 when cf-admin stopped using Upstash; its `admin_portal_settings` row `redis-hygiene-mode` is now read by nothing and is left for the owner to delete — `../MAINTENANCE.md` (private)) |
 
 > **One invocation per job (2026-09-27).** The scheduled handler no longer runs
