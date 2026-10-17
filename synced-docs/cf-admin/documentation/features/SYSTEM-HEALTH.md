@@ -5,8 +5,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/dashboard/health.astro, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, test/system-health.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
-related_docs: [CRON-CONTROL.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
+related_code: [src/pages/dashboard/health.astro, src/pages/dashboard/index.astro, src/components/dashboard/widgets/ServiceStatusStrip.tsx, src/components/dashboard/DashboardController.tsx, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, test/system-health.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
+related_docs: [CRON-CONTROL.md, ../records/reports/2026-10-17-health-snooze-repeats-watcher.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
 tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 ---
 
@@ -79,6 +79,16 @@ state row the checks job keeps (§6), so it is never older than the check's inte
 strips come from the same row. When that re-read finds the open counts
 changed, Problems reads its first page again. Until 2026-10-17 opening Diagnostics ran every
 test, and three of them wrote test data.
+
+**On the home page.** For anyone who may open this page, the home page's status strip leads with
+a System health card: urgent problems first, then open ones, then failing checks and checks that
+need a look, or "All clear", with when the checks last ran and how many problems are snoozed. It
+opens this page, and its tooltip is the page's own sentence. The strip's Queues and Brevo cards
+take their state word from the *Email queue* and *Brevo, the main email sender* checks rather
+than judging the queue for themselves. They read `GET /api/system-health?summary=1` (the state row
+and the open counts, two reads, `healthGlance` in `src/lib/health/view.ts`) each time the home page
+reads its numbers: every 5 minutes while it is on screen. Someone without this page sees the strip
+as before (`src/pages/dashboard/index.astro` asks `denyHealth`, and the route asks again).
 
 ## 3. The checks
 
@@ -204,8 +214,9 @@ is. While it lasts, the problem waits in the Snoozed lane and is counted apart, 
 check that opens the problem again files it quietly: its row and the Worker log, with no Sentry
 event and no alert email, the snooze's end in its context (`fireAlert` with `quiet` in
 `src/lib/alert-gate.ts`, `src/lib/health/run.ts`). "End the snooze" stops it at once. When it
-ends, the problem is counted and alerted as before. The website does not read snoozes yet: an
-open problem it files again still emails (§7).
+ends, the problem is counted and alerted as before. The website reads the snooze too before it
+alerts: while one lasts, a problem it files again goes only to its row and its own log
+(`cf-astro/src/lib/alert-gate.ts`).
 
 Saying "I'm on it", snoozing and ending a snooze share a limit of ten a minute per person, refuse
 compliance records and test alerts, answer 409 when nothing is open (or nothing is snoozed), and
@@ -214,8 +225,11 @@ are recorded as `health_ack`, `health_snooze` (with the reason and the end) and
 
 **Repeats on one row.** A row can stand for several times a problem came (`repeats`, and
 `last_seen_at` for the last time, migration `0074`): a problem's count adds its rows' repeats up,
-its last time is the latest of them, and its chart counts each time on the day it last came. No
-writer adds repeats yet; the website will (§7).
+its last time is the latest of them, and its chart counts each time on the day it last came. The
+website adds them (`cf-astro/src/lib/alert-gate.ts`, since 2026-10-17): a problem it files again
+while a row at the same level is still open adds one to that row and sends no second email.
+Sentry still gets each time, the ARCO records below are never folded, and without the columns or
+without D1 the website files and emails every time, as before.
 
 **What is never a problem.** The website's ARCO records (`arco_get_document`, each identity
 document from a privacy request handed out, and to whom) are compliance records: they are listed
@@ -258,15 +272,18 @@ not list them.
 
 ## 7. Not built yet
 
-The rest of parts 2 and 3 of the plan of 2026-10-17, which the owner approved: other services'
-problems fed in, the website adding repeats to its open row and reading snoozes before it emails,
-settings (`#configure`), heavier tests (`#run-heavy`), the test alert sent only to the person who
-pressed it, and a strip on the home page.
+The rest of part 3 of the plan of 2026-10-17, which the owner approved: settings (`#configure`),
+heavier tests (`#run-heavy`), the test alert sent only to the person who pressed it, and the two
+extras, the outside providers' status pages and the server's own site checks. Other services'
+problems reach the list through the checks that watch them: *Scheduled jobs on time*, *Backup is
+fresh*, *Server is alive*, the email service's stuck emails and the booking and consent
+heartbeat (§3).
 
 ## 8. Verification log
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | The home page's card (§2 "On the home page") against `src/pages/api/system-health/index.ts`, `healthGlance` in `src/lib/health/view.ts`, `glanceWords` in `src/components/admin/health/health-model.ts`, `src/components/dashboard/widgets/ServiceStatusStrip.tsx`, `DashboardController.tsx` and `src/pages/dashboard/index.astro`; pinned by `test/system-health.test.ts` and `test/system-health-board.test.ts`. The website's side of §4, live in cf-astro `5d3b5ee`, against `cf-astro/src/lib/alert-gate.ts`. The run stamp read live through the Cloudflare D1 connector: `tick` written at 07:55:42 UTC, the first run after cf-admin `950b899`; *Scheduled jobs on time* passed twice and no health problem is open. §7 re-read against the plan | The card on a phone, which the owner tests after the push; a live repeat and a stale stamp, which wait for the website to file one and for a stopped scheduler |
 | 2026-10-17 | Acknowledge and snooze, and repeats on one row (migration `0074`, applied live first and read back through the Cloudflare D1 connector: the six columns and the `#ack` registry row): §1's row, §2, §4's new paragraphs, §6 and §7 against `src/pages/api/system-health/problems.ts`, `src/lib/dal/PlatformAlertsRepository.ts`, `src/lib/health/run.ts`, `src/lib/alert-gate.ts`, `src/lib/health/view.ts` and `src/components/admin/health/`; pinned by `test/system-health-ack.test.ts`, `test/system-health-board.test.ts` and `test/action-keys-enforced.test.ts`; §3's last paragraph and §6's `tick` against `applyResults` and `parseState` in `src/lib/health/state.ts`, pinned by `test/system-health-state.test.ts`. The fix of the row below, read live: *Email queue* passed at 07:15 UTC and its problem closed itself at 07:20; *Scheduled jobs on time* passed at 07:25 ("All 17 scheduled jobs are running") | The buttons on a phone, which the owner tests after the push; the website's side of repeats and snoozes, not built yet |
 | 2026-10-17 | The first live results of part 2B, read through the Cloudflare D1 connector (`system_test_results`, `platform_alerts`): 21 checks passed; *Email queue* failed with "Illegal invocation" (Sentry's queue wrapper, `@sentry/cloudflare` 10.73.0 `instrumentQueueProducer.js`) and *Scheduled jobs on time* could not read Analytics Engine. §3's queue row and §6 against the fix (`askQueue` in `src/lib/health/probes.ts`; the failures question keeps the column name `timestamp`, as `src/lib/jobs/history.ts` does), pinned by `test/system-health-checks.test.ts` | Why Analytics Engine refused the aliased question: the check now shows its answer, read from the next live result |
 | 2026-10-17 | The 27 checks of part 2B: §3's table, the placing and keeping of places, the limits, §6 and §7 against `src/lib/health/catalog.ts`, `src/lib/health/readings.ts`, `src/lib/health/probes.ts`, `src/lib/dal/HealthReadsRepository.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts` and `src/workers/scheduled-health-checks.ts`; the rules pinned by `test/system-health-readings.test.ts`, the checks against stand-in services by `test/system-health-checks.test.ts`, the placing by `test/system-health-state.test.ts` (from the live state's last runs, and after pauses), the cost by `test/jobs-budget.test.ts`; the domain's mail records, the Brevo and Resend answers, the live tables' sizes and the website's pages read before writing | A live run of the new checks: written before the push; whether the queue binding reports its size, whether Cloudflare's analytics take the list of our Workers and whether the booking pages open through the binding are read from the first live results |

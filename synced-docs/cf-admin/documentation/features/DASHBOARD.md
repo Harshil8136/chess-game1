@@ -44,15 +44,16 @@ tags: [feature, dashboard, analytics, cloudflare, supabase, telemetry]
 ## 0. What the dashboard renders today
 
 `src/pages/dashboard/index.astro` mounts one island,
-`DashboardController.tsx`, `client:only="preact"` and **props-free** — the page
-performs no database query of its own.
+`DashboardController.tsx`, `client:only="preact"`, with two props: the page's
+title and `seesHealth`, whether the viewer may open System health (`denyHealth`
+on the session's access map). The page performs no database query of its own.
 
 | Layer | What is rendered | Source |
 |---|---|---|
 | Command bar | Title, live sync indicator ("Live Stream Active" / "Syncing…" + last sync time), Refresh Telemetry button | `DashboardController.tsx` |
 | KPI deck | 4 `MetricCard`s: Global Edge Network (requests, bandwidth, uptime, sparkline), Data Layer & Cache (pool + buffer-cache ratio bar), Edge Worker Scripts (count, P50, errors, isolate-health bar), Transactional SMTP (sent / 9,000 bar) | `DashboardController.tsx`, `src/components/ui/MetricCard.tsx` |
 | Tabs (segmented control) | Overview · Search Console · Edge Workers · Database Pool · Quotas & Storage | `DashboardController.tsx` |
-| Overview tab | "Service Health Matrix" = `ServiceStatusStrip` (**8** mini-cards: Network, D1 DB, Google SEO, Security, Brevo, Sentry, Observability, Queues) → `GscValidationWidget` (fetches its own report) → 7/12 `WidgetEdgeCompute` + 5/12 `EventLedgerWidget` | `widgets/*.tsx` |
+| Overview tab | "Service Health Matrix" = `ServiceStatusStrip` (a System health card first for anyone who may open that page, then **8** mini-cards: Network, D1 DB, Google SEO, Security, Brevo, Sentry, Observability, Queues; the Brevo and Queues cards take their state word from System health's checks, [`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §2) → `GscValidationWidget` (fetches its own report) → 7/12 `WidgetEdgeCompute` + 5/12 `EventLedgerWidget` | `widgets/*.tsx` |
 | Edge Workers tab | `WidgetEdgeCompute` (`CloudflareWidgets.tsx`) — searchable fleet console: full script names, role tags, humanised durations | |
 | Database Pool tab | `WidgetPostgresCluster` (`SupabaseWidgets.tsx`) with 4 tabs: Vitals, Engine I/O, Capacity, Auth | |
 | Quotas & Storage tab | 2 cards: Brevo `{sent} / 9,000` and R2 objects / volume | |
@@ -255,6 +256,7 @@ animations and native `fetch` for all API calls. No third-party chart library �
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §0's opening paragraph and Overview row for the System health card, against `src/pages/dashboard/index.astro`, `DashboardController.tsx` and `ServiceStatusStrip.tsx`, with `test/system-health.test.ts` and `test/system-health-board.test.ts`; §0.1's claim that its values are logged in `MAINTENANCE.md`, which was not true (now SH-8) | Everything else on the page; §0.1's values were not re-read |
 | 2026-10-10 | The KV-cache steps and the provider-failure paragraph, against `src/lib/analytics/providers/index.ts`, `src/pages/api/dashboard/metrics.ts` and `DashboardController.tsx`, with `test/analytics-cache.test.ts` (three stale-while-revalidate tests) | Everything else on the page; the live timing after deploy |
 | 2026-10-04 | The polling and KV-cache paragraphs, against `DashboardController.tsx`, `src/lib/visible-poll.ts` and `src/lib/analytics/providers/index.ts`, with `test/visible-poll.test.ts` and `test/analytics-cache.test.ts` | Everything else on the page |
 | 2026-09-19 | `DashboardController.tsx` (KPI fallbacks, 60 s poll, tab ids), `ServiceStatusStrip.tsx` (the static `seo` card), `GscValidationWidget.tsx` (the static badge), `src/pages/api/dashboard/metrics.ts`, `src/lib/analytics/providers/index.ts` (KV cache + stale copy + timestamp rewrite), `external.ts` (Sentry top-5 lifetime sum, Brevo 100-event window), `cloudflare.ts` (queue backlog/DLQ). §0.1 and §0.2 added; the v4.5 historical sections removed; provider, token-scope and `_unconfigured` claims corrected. | The exact Cloudflare token-scope name the GraphQL D1 query needs; the D1 analytics lag figure; the Supabase Prometheus endpoint's stability |
