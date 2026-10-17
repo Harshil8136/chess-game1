@@ -5,8 +5,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/dashboard/health.astro, src/pages/dashboard/index.astro, src/components/dashboard/widgets/ServiceStatusStrip.tsx, src/components/dashboard/DashboardController.tsx, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/health/heavy.ts, src/lib/dal/EmailAuditLogRepository.ts, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/email-console.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, migrations/0075_health_run_heavy.sql, migrations/0076_health_configure.sql, test/system-health.test.ts, test/system-health-settings.test.ts, test/system-health-heavy.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
-related_docs: [CRON-CONTROL.md, ../records/reports/2026-10-17-health-snooze-repeats-watcher.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
+related_code: [src/pages/dashboard/health.astro, src/pages/dashboard/index.astro, src/components/dashboard/widgets/ServiceStatusStrip.tsx, src/components/dashboard/DashboardController.tsx, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/lib/vps-proxy.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/health/heavy.ts, src/lib/dal/EmailAuditLogRepository.ts, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/email-console.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, migrations/0075_health_run_heavy.sql, migrations/0076_health_configure.sql, test/system-health.test.ts, test/system-health-settings.test.ts, test/system-health-heavy.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/vps-proxy.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
+related_docs: [CRON-CONTROL.md, VPS-CONSOLE.md, ../records/reports/2026-10-17-health-part-3.md, ../records/reports/2026-10-17-health-snooze-repeats-watcher.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
 tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 ---
 
@@ -14,10 +14,10 @@ tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 
 > **TL;DR (non-technical):** One page answers "is everything working?". It checks the website,
 > email, the data and backups, security, the server and scheduled jobs, and the portal itself on
-> its own, day and night, 27 checks each as often as it needs, opens a problem after two failures in a row and closes it after two passes, lists every
+> its own, day and night, 29 checks each as often as it needs, opens a problem after two failures in a row and closes it after two passes, lists every
 > problem those checks and the
 > website have filed, says in plain words what each check proves and how to fix it when it
-> fails, and lets you send a test alert to prove an alert would reach someone, and the Owner run
+> fails, and, when the service it depends on reports a problem on its own status page, says so. It lets you send a test alert to prove an alert would reach someone, and the Owner run
 > two heavier tests: a write to the portal's storage, and a real test email to themselves. It replaced two
 > older pages, Diagnostics and Alerts, on 2026-10-17. Someone can say "I'm on it" on a problem, or
 > quiet it for a few hours with a reason. The Owner can pause a check while something is known to
@@ -64,7 +64,7 @@ button to the list behind it. The six tabs are one row, all visible on a phone.
 |---|---|
 | Overview | The band in full: a state word (All working, Needs a look, Something is failing, Not checked yet), one sentence, and a pulse line of the last 30 days, a beat per day at its worst state across the six areas, a dashed line on a day nothing ran. Then what needs someone now (failing checks and the top open problems) and each area with a tick per day |
 | Problems | A triage board: lanes by level (Urgent "Look now", Soon "Look today", FYI "When there is time"), open before closed, each problem a ticket that says who filed it, how many times it came, first and last seen, who is on it, and once closed who closed it and why. Open problems someone snoozed wait in a Snoozed lane between the open and the closed ones. Open, Closed or All, and a level. Opening one shows its chart: who is on it and its snooze with the buttons that set them, its check's latest result, last 24 results and how to fix it, Test again, each time it came and each close, by day, and the form that closes it |
-| Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again. A paused check says until when and why |
+| Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again. A paused check says until when and why; a failing check whose provider reports a problem says what its status page reports, with a link to it |
 | Tests | Check everything now, Send a test alert with the path its channels take, and the heavy tests (§5) |
 | History | Every run of the checks that is kept, by day, each with its state words and a bar of how it went; one run's results; the way to closed problems; the compliance records |
 | Settings | The paused checks, the quiet windows under way and planned, and when a problem opens and closes (§3, "Settings"). Everyone with the page sees them; changing them needs Change settings |
@@ -98,12 +98,13 @@ as before (`src/pages/dashboard/index.astro` asks `denyHealth`, and the route as
 
 ## 3. The checks
 
-Twenty-seven checks, defined in `src/lib/health/catalog.ts`, each beside the code that runs it
+Twenty-nine checks, defined in `src/lib/health/catalog.ts`, each beside the code that runs it
 with what it proves, how to fix it, how urgent a failure is and how often it runs on its own. The
 rules that turn what a check read into Working, Needs a look or Failing live apart, in
 `src/lib/health/readings.ts`; how a check asks a page, DNS or Cloudflare's analytics is in
 `src/lib/health/probes.ts`, and what it reads from other features' tables in
-`src/lib/dal/HealthReadsRepository.ts`. Every check only reads.
+`src/lib/dal/HealthReadsRepository.ts`. Every check only reads. The last two were added on
+2026-10-17 (part 3D): the server's site checks and the providers' status pages.
 
 | Check | Area | Level | Runs on its own | What it proves |
 |---|---|---|---|---|
@@ -130,24 +131,27 @@ rules that turn what a check read into Working, Needs a look or Failing live apa
 | Activity log seal | Security | Urgent | daily | The newest sealed day of the activity log still matches its seal, follows on from the seal before it, and has its copy in storage; and the day's seal, due at 14:00 UTC, was written |
 | Server is alive | Server and jobs | Soon | every 15 minutes | The server ran its hourly job recently. When the portal had to run it instead, the server missed it |
 | Scheduled jobs on time | Server and jobs | Soon | every 15 minutes | No portal job failed twice in a row since it last ran, and every five-minute job reported within the last 70 minutes (from Analytics Engine, as the Scheduled jobs page reads it) |
+| Server's site checks | Server and jobs | Soon | every 15 minutes | The server's own checks of the website's and the portal's public addresses and certificates, run every 5 minutes from outside Cloudflare, all pass. A check the server calls down (failing twice in a row) fails here; a first failure, results over 15 minutes old or a server console that does not answer are warnings (*Server is alive* says whether the server is up) |
 | Errors and CPU limits | Server and jobs | Soon | hourly | Cloudflare's own count of our seven Workers' last hour: none stopped at a limit (CPU time, memory or requests), and none with 10 errors or more that are also 5% of its requests (fewer errors are a warning). Other Workers in the account are not asked about |
 | Request limits | Portal | Soon | hourly | Every one-minute request limit is connected |
 | Analytics recording | Portal | FYI | hourly | The analytics store is connected (checked without writing) |
 | Sentry, the error tracker | Portal | Soon | hourly | Sentry accepts the portal's key |
+| Providers' status pages | Portal | FYI | hourly | Cloudflare, Supabase, Brevo, Resend and Sentry report no outage on their public status pages. Only a major or critical report is a warning; a minor one is named in a pass, as Cloudflare's page names a minor issue somewhere in its network most days |
 
 **Running on their own.** The `health-checks` job in the five-minute scheduler
 (`src/workers/scheduled-health-checks.ts`; [`CRON-CONTROL.md`](CRON-CONTROL.md) §3e) runs each
-check at its interval, at most eight in one run. The checks average just under eight a run (four
-every five minutes, nine every 15, eleven hourly, three daily), so where each one first runs
-matters: its first run after release places every check on the run that keeps the busiest run of
-the day at eight (`placeNew` in `src/lib/health/state.ts`), and a check a later release adds is
+check at its interval, at most nine in one run. The checks average just over eight a run (four
+every five minutes, ten every 15, twelve hourly, three daily: 2,403 a day over 288 runs), so where
+each one first runs matters: its first run after release places every check on the run that keeps
+the busiest run of the day at nine (`placeNew` in `src/lib/health/state.ts`), and a check a later release adds is
 placed the same way around the checks already running. Each check then keeps its place: a run
 moves its next due time on by whole intervals, so a check that had to wait a run, or the checks
-after a pause, go back to their places instead of drifting. When a run has more due than eight,
+after a pause, go back to their places instead of drifting. When a run has more due than nine,
 the five-minute checks go first, then the most overdue; after a pause of two hours, every check has
 run again within five runs. It can be paused on the Scheduled jobs page like any job; while it is
 paused, checks run only when someone presses Test again. Until 2026-10-17 that was the only way a
-check ran.
+check ran. The most was eight until part 3D: eight a run hold 2,304 checks a day, fewer than the
+2,403 the two new checks bring, and ten 15-minute checks fill some runs to eight on their own.
 
 A result is one of four: Working, Needs a look, Failing, or Not set up (a key or binding the check
 needs is missing here, so it says nothing either way). The portal's own security headers are not
@@ -198,10 +202,33 @@ changing them at once never overwrite each other (compare-and-swap).
 **Limits.** Test again runs one check at most once a minute, and Check everything now at most once
 every two minutes; the stored results are the clock, so a check the job just kept counts too. At
 most six checks run at a time, each stops waiting after ten seconds, and in the job and Test again
-a failure is tried once more before it counts. Check everything now tries each check once: 27
-checks each tried twice could pass the 50 outside requests a Worker may make on the free plan. A
+a failure is tried once more before it counts. Check everything now tries each check once: 29
+checks each tried twice could pass the 50 requests a Worker invocation may make on the free plan,
+a limit calls to our other Workers count towards as well. Tried once, they made 24 outside requests
+and 8 calls to our other Workers in the test that pins it (`test/system-health-checks.test.ts`). A
 person's run leaves the checks' places in the schedule as they were. The waiting does not count
 towards the Worker's CPU time.
+
+**Providers' status pages.** The *Providers' status pages* check reads each provider's public
+status page at its `api/v2/status.json` address (the Statuspage format all five answer, under a kilobyte; an answer far larger
+is not parsed): five requests an hour, with no key. Sixteen checks name the provider they depend on
+(`provider` in the catalog): Cloudflare for the website's pages and systems, the email queue and
+email service, the database, its allowance and tables, storage, the portal's Cloudflare sign-in,
+the scheduled jobs and the Workers' errors; Brevo, Resend, Supabase (two checks) and Sentry for
+their own. When one of them fails or needs a look and the newest providers result, at most two
+hours old, says its provider reports anything but "none", the Checks tab says what that status
+page reports, with a link to the page from the portal's own list, never one the page sent
+(`providerTrouble` in `src/lib/health/view.ts`). The note is on the page only (§7).
+
+**The server's site checks.** The server checks the website's and the portal's public addresses
+and certificates every 5 minutes from outside Cloudflare, and reports a check that goes down or a
+certificate close to running out to Sentry itself (`cf-vps/host/72-probes/apply.sh`). The
+*Server's site checks* check reads that report through the server console as the `health-checks`
+job: a GET of the console's diagnostics with a `system` actor (`vpsSystemRead` in
+`src/lib/vps-proxy.ts`), which cf-vps answers with that one read and refuses every other
+([VPS-CONSOLE](VPS-CONSOLE.md) §3). Which addresses are checked, and how many days a certificate
+must have left, are the server's settings. The words name what failed ("the Spanish website",
+"the portal's certificate"); the addresses are in the technical part only.
 
 **Who watches the checks.** If the portal's scheduler stops, the checks stop with it and nothing on this page can say so. So
 each run of the checks job stamps the state row with when it ran (`tick`; a person's Test again
@@ -307,18 +334,19 @@ test is recorded as `health_heavy_test`, with how each store did or the email's 
 
 | Where | What | Kept |
 |---|---|---|
-| D1 `system_test_results` | A check's result: the run, the check, its level, status, time taken, the plain summary, the technical part as JSON, and the id of the person who ran it (`system` for the job, whose runs are `auto-…`). Kept: every result someone ran, and from the job every change of state plus one an hour per check, about 600 rows a day with 27 checks | 30 days; the job deletes older results on its first run after 03:00 UTC |
+| D1 `system_test_results` | A check's result: the run, the check, its level, status, time taken, the plain summary, the technical part as JSON, and the id of the person who ran it (`system` for the job, whose runs are `auto-…`). Kept: every result someone ran, and from the job every change of state plus one an hour per check, about 630 rows a day with 29 checks | 30 days; the job deletes older results on its first run after 03:00 UTC |
 | D1 `admin_portal_settings` row `health-config` | System health's settings (§3, "Settings"): each paused check's end, reason and the email address of the person who paused it; each quiet window's start, end, reason and the address of the person who added it; and the two thresholds. Read by the checks job with the state in one query, by Test again, and by the website's alert gate | A pause or window is dropped from the row by the next change after it ends |
-| D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days; and when the job last ran on its own (`tick`), which the website's hourly heartbeat reads (§3). About 25 KB with 27 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
+| D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days; and when the job last ran on its own (`tick`), which the website's hourly heartbeat reads (§3). About 27 KB with 29 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
 | D1 `platform_alerts` | Problems, compliance records and test alerts; who closed a problem and why; since `0074` who is on it and since when, a snooze's end and reason, and a row's repeats and when it last came | No automatic clean-up yet |
 | D1 `admin_audit_log` | `health_run`, `health_resolve`, `health_test_alert`, `health_ack`, `health_snooze`, `health_unsnooze`, `health_heavy_test`, `health_configure` | The activity log's own rules |
 | Supabase `email_audit_logs` | The test email's ledger row: the presser's address, the subject and body, source `system-health`, and what the email service and Brevo record about it | The email ledger's own rules |
 
 No new table, binding, secret or cron trigger: the results table is the one Diagnostics wrote, the
 problems table the one Alerts read, and the state and the settings are two rows of the settings table. The checks
-use what the portal already had: `RESEND_API_KEY` and `BREVO_API_KEY`, the `ASTRO_SERVICE` and
-`EMAIL_CONSOLE` bindings, and the Cloudflare token and account the Scheduled jobs page and the
-dashboard already use. The email queue's size comes from Cloudflare's Queues API with that token,
+use what the portal already had: `RESEND_API_KEY` and `BREVO_API_KEY`, the `ASTRO_SERVICE`,
+`EMAIL_CONSOLE` and `VPS` bindings, and the Cloudflare token and account the Scheduled jobs page and the
+dashboard already use. The five public status pages need no key; reading them was approved with
+the plan (item 37). The email queue's size comes from Cloudflare's Queues API with that token,
 as the dashboard reads it, not from the `EMAIL_QUEUE` binding: Sentry's wrapper around a queue
 binding breaks its `metrics()` (MAINTENANCE SH-7). The email service answers its counts on a route of its
 own Console (cf-email-consumer `docs/features/EMAIL-API.md`). Results
@@ -327,8 +355,8 @@ not list them.
 
 ## 7. Not built yet
 
-The rest of part 3 of the plan of 2026-10-17, which the owner approved: the two extras, the
-outside providers' status pages and the server's own site checks. Other services'
+Nothing of the plan of 2026-10-17 is left to build. The providers' notes are on the Checks tab
+only: a problem and its alert email do not say what a provider's status page reported. Other services'
 problems reach the list through the checks that watch them: *Scheduled jobs on time*, *Backup is
 fresh*, *Server is alive*, the email service's stuck emails and the booking and consent
 heartbeat (§3).
@@ -337,6 +365,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | Part 3D: the TL;DR, §2's Checks row, §3's count, table, running on their own (nine a run), limits, providers' status pages and the server's site checks, §6 and §7 against `src/lib/health/catalog.ts`, `src/lib/health/probes.ts` (`STATUS_PAGES`, `askStatusPage`), `src/lib/health/readings.ts` (`readProviders`, `readServerProbes`), `src/lib/health/state.ts` (`MAX_PER_TICK`), `src/lib/health/view.ts` (`providerTrouble`), `src/pages/api/system-health/index.ts`, `src/lib/vps-proxy.ts` (`vpsSystemRead`) and `src/components/admin/health/ChecksPanel.tsx`; pinned by `test/system-health-readings.test.ts`, `test/system-health-checks.test.ts` (the 24 and 8 requests), `test/system-health.test.ts`, `test/system-health-state.test.ts`, `test/vps-proxy.test.ts` and `test/jobs-budget.test.ts`. The five status pages read before writing: each answered `status.indicator` and `status.description`. The cf-vps side live in cf-vps `3f52d9a`, against `cf-vps/contract/capabilities.ts` and `cf-vps/src/http/router.ts`. The state row's 27 KB is scaled from 25 KB for 27 checks, not measured | A live run of the two checks and the note on a phone: written before the push |
 | 2026-10-17 | Settings (migration `0076`, applied live first and read back through the Cloudflare D1 connector: the `#configure` row, owner): the TL;DR, §1's row, §2's band, Checks and Settings rows, §3's closing and "Settings", §6 and §7 against `src/lib/health/config.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/workers/scheduled-health-checks.ts`, `src/pages/api/system-health/settings.ts`, `src/pages/api/system-health/index.ts` and `src/components/admin/health/SettingsPanel.tsx`; pinned by `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts`. The website's side against `cf-astro/src/lib/alert-gate.ts` | The tab on a phone, which the owner tests after the push |
 | 2026-10-17 | The test alert's email to the presser (§5) against `src/pages/api/system-health/test-alert.ts`, `fireAlert` in `src/lib/alert-gate.ts` (`testEmailTo`), `emailServiceHealth` in `src/lib/email-console.ts` and `cf-email-consumer/src/handlers.ts` (`handlePlatformAlert`, live in cf-email-consumer `0cd6915`); pinned by `test/system-health.test.ts` | A live urgent test, which the owner sends on a phone after the push |
 | 2026-10-17 | The heavy tests (migration `0075`, applied live first and read back through the Cloudflare D1 connector: the `#run-heavy` row, owner): §1's row, §2's Tests row, §5's heavy tests, §6 and §7 against `src/pages/api/system-health/heavy.ts`, `src/lib/health/heavy.ts`, `src/components/admin/health/HeavyTests.tsx` and `src/lib/dal/EmailAuditLogRepository.ts`; the status words against `cf-email-consumer/src/handlers.ts`, `cf-email-consumer/src/index.ts` and `cf-email-consumer/src/dlq.ts` and the Brevo webhook (`src/pages/api/emails/webhook.ts`); pinned by `test/system-health-heavy.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` | A live test email and storage write, which the owner runs on a phone after the push |

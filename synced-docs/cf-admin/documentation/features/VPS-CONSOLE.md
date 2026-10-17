@@ -122,6 +122,14 @@ cf-vps may trust this header **only** because the `VPS` service binding is the
 only way to reach it. The gateway builds the outgoing headers from nothing, so
 a header of the same name sent by a browser is dropped, never forwarded.
 
+One caller is not a person (since 2026-10-17): System health's job reads the
+server's own site checks with `{ v: 1, kind: "system", job: "health-checks", requestId }`
+as the actor, a GET of `/dashboard/vps/app/api/diagnostics` and nothing else
+(`vpsSystemRead` in `src/lib/vps-proxy.ts`; [SYSTEM-HEALTH](SYSTEM-HEALTH.md) §3).
+cf-vps grants a job only the reads its contract lists for it, here `host.view`
+on that one route (`SYSTEM_JOB_READS` in `cf-vps/contract/capabilities.ts`), and
+refuses it every other route.
+
 ## 4. Permissions and the page row
 
 Migration `migrations/0059_vps_console_page.sql` adds the registry row:
@@ -379,6 +387,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | §3's system caller against `vpsSystemRead` in `src/lib/vps-proxy.ts` and cf-vps `3f52d9a` (`SYSTEM_JOB_READS` in `cf-vps/contract/capabilities.ts`, `systemCapabilities` in `cf-vps/src/access/policy.ts`, the router's `held`); `test/vps-proxy.test.ts`, `test/system-health-checks.test.ts` and `cf-vps/test/worker.test.ts` pass | The paragraph. The rest of the document not re-read; a live read waits for the push |
 | 2026-10-17 | claude | §2's `signedInAt` row against `userActor` in `src/lib/vps-proxy.ts`, `confirmedAt` in `src/lib/auth/fresh-sign-in.ts` and `noticeAuditContext` in `src/lib/vps-notice-record.ts`; `test/testing-pass.test.ts` passes | The row. The rest of the document not re-read; nothing in cf-vps or the agent changed |
 | 2026-10-16 | claude | §2's Identity, Read-only and Audit rows against the gateway (`src/pages/dashboard/vps/app/[...path].ts`: `isReadOnly`, `UNAUDITED`, the `access.save` email); §4 against `cf-vps/contract/capabilities.ts` (`CAPABILITIES`, `FLOOR_CAPABILITIES`), `cf-vps/src/access/policy.ts` (`temporary`, `grantFor`, `can`), `cf-vps/src/access/save.ts` (the one-year and 90-day limits, the two lock-out rules), `src/lib/access-changes/notify.ts` (`consoleScreenChange`), `src/lib/users/manage-apply.ts` and `src/lib/dal/VpsAccessRepository.ts`; §6's opening and reads paragraph against the gateway and cf-vps's Files screen (a download is a GET link) | The floors were five and are eight; §4 now says a grant is bound to an account, what a power given for a while is, that an Access page save is emailed and that removing a person also removes the backup grant and blocks their Email API tokens. Not re-checked: §1, §3, §5, §7 to §9; no test run (shared checkout) |
 | 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `vpsBinding` (`src/lib/vps-proxy.ts`), and `cf-vps/src/gateway/signature.ts` (checked before the actor, so before a terminal upgrade); `test/console-signature.test.ts` and `cf-vps/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |
