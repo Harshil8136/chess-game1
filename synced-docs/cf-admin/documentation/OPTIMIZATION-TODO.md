@@ -5,7 +5,7 @@ audience: [ai, technical, owner]
 last_verified: 2026-09-23
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/api.ts, src/lib/supabase.ts, src/lib/observability.ts, src/lib/jobs/runJob.ts, src/lib/jobs/registry.ts, src/lib/diagnostics/runner.ts, src/lib/gsc/client.ts, src/lib/formatters.ts, src/stores/dialogStore.ts, scripts/ratchet.py, wrangler.toml]
+related_code: [src/lib/api.ts, src/lib/supabase.ts, src/lib/observability.ts, src/lib/jobs/runJob.ts, src/lib/jobs/registry.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/gsc/client.ts, src/lib/formatters.ts, src/stores/dialogStore.ts, scripts/ratchet.py, wrangler.toml]
 related_docs: [EFFICIENCY-TODO.md, MAINTENANCE.md, program/ROADMAP.md, program/DEBT-REGISTRY.md, reference/coding-standards.md, ../AI_CODE_MAINTENANCE.md, ../RULESAd.md]
 tags: [performance, efficiency, duplication, refactoring, repo-size, dead-code, todo]
 ---
@@ -189,6 +189,11 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 ## Part A — Runtime and reliability (`OPT-R`)
 
 ### OPT-R1 (P0). The diagnostics prune scans the whole results table on every run
+
+> **Done 2026-10-17** with EF-1: System health replaced Diagnostics. Its clean-up finds the
+> first row young enough to keep from the oldest end of the primary key and deletes by key
+> range, so it reads the old rows and one more (`src/lib/dal/HealthResultsRepository.ts`
+> `prune`); a run writes at most fifteen rows and only when someone asks for it.
 
 - **Addendum to EF-1** (which covers the 30-second auto-run and its KV cost; EF-1
   was corrected on 2026-09-23).
@@ -440,8 +445,9 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 #### OPT-D3 (P1, owner sign-off). Page-access keys have drifted
 
 - **Split keys (8 files).** The pipeline checks one page and the handler another, so
-  a user needs both grants: the 6 `alerts` routes (pipeline `/dashboard/logs`,
-  handler `/dashboard/alerts`); `audit/delete` and `audit/enrich` (pipeline
+  a user needs both grants: ~~the 6 `alerts` routes (pipeline `/dashboard/logs`,
+  handler `/dashboard/alerts`)~~ (removed 2026-10-17; System health's routes map to and check
+  `/dashboard/health`); `audit/delete` and `audit/enrich` (pipeline
   `/dashboard/logs`, handler `/dashboard/privacy`, and their caller is the privacy
   page).
 - **Stale mapping keys (4).** `API_PAGE_MAPPING` in `src/lib/auth/routes.ts` has
@@ -451,8 +457,10 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
   API.
 - **Registry keys the code checks (verified live 2026-09-23 against the active
   `admin_pages` rows):**
-  - `/dashboard/alerts#resolve` — **present and active live, but in no migration or
-    seed file.** It works today and would vanish on a rebuild from migrations.
+  - ~~`/dashboard/alerts#resolve` — **present and active live, but in no migration or
+    seed file.** It works today and would vanish on a rebuild from migrations.~~ No longer
+    checked since 2026-10-17; migration `0073` switches the row off. System health's keys
+    are in migration `0072`.
   - `/dashboard/inquiries#view` (`inquiries/export`), `/dashboard/bookings#delete`
     (`bookings/batch`), `/dashboard/media` (`media/gallery`) — **absent** from the
     active rows and from every migration. `placDenyResponse` refuses only an
@@ -636,9 +644,9 @@ re-export (a test seam), the documented `NavIcon` switch and
 | OPT-D37 | Small repeated pieces | clipboard ×33 in 30 files (12 show "Copied" even when the copy failed); debounce ×3; 19 search inputs (5 without an accessible name); tab state in 11 files, ≥3 without `role="tab"` although `src/components/ui/Tabs.tsx` exists; pagers ×6 | `useCopy`, `useDebouncedValue`, `ui/SearchInput`, `ui/Pager` (proposed) | −250 | P2 |
 | OPT-D38 | CSS rule bodies and keyframes duplicated | 39 declaration bodies in 2+ files (84 redundant copies); the 4 CMS editors carry 922 lines of CSS in JS strings with the same rules under 4 prefixes (292 redundant); `spin`, `pulse`, `fadeIn`, `revealDown`, `dotPulse` each defined twice; two stylesheets imported twice | a proposed `src/styles/components/cms-editor.css`; one keyframe home | −490 CSS | P2 |
 | OPT-D39 | Dead CSS classes — **per class, not per file** | 82 classes with no code reference own ~760 lines (e.g. most of the blog-studio stylesheet; `cron-row__*`; diagnostics; chatbot hub). Spot-check 2026-09-23: of the 18 `ios-*` classes in `src/styles/bookings.css`, **7 are used and 11 are not** — remove class by class | delete per class | −760 CSS (medium confidence) | P2 |
-| OPT-D40 | Types declared in several files | diagnostics types re-declared in 2 components although `src/lib/diagnostics/types.ts` exports them; partial copies of `AdminPage` ×3, `EmailLog` ×3, `ConsentRecord` ×3, `LoginLog` ×2; 26 inline `{ success?: boolean; error?: string }` literals | `import type` / `Pick<>` from one module per entity; `ApiEnvelope` | −100 | P2 |
+| OPT-D40 | Types declared in several files | ~~diagnostics types re-declared in 2 components although `src/lib/diagnostics/types.ts` exports them~~ (all three removed 2026-10-17); partial copies of `AdminPage` ×3, `EmailLog` ×3, `ConsentRecord` ×3, `LoginLog` ×2; 26 inline `{ success?: boolean; error?: string }` literals | `import type` / `Pick<>` from one module per entity; `ApiEnvelope` | −100 | P2 |
 | OPT-D41 | Unused exports and imports | 8 exports referenced nowhere (incl. a hard-coded `HOTEL_UNITS` room list in `bookings/types.ts` — RULE #0.5 forbids that data), 33 exports used only in their own file, 4 unused imports | delete / drop `export` | −60 | P2 |
-| OPT-D42 | Oversized components | 120 of 269 UI files over 200 lines, 19 over 600. Worst: `BlogManager` 1,557 lines / 23 `useState` / 12 fetches / ~10 jobs; `SeoDashboard` 29 `useState`; `PlatformAlertsManager` 29 `useState` + native `alert()` | split per coding-standards §3 **after** OPT-D28–D30 land | ~0; A14 falls | P3 |
+| OPT-D42 | Oversized components | 120 of 269 UI files over 200 lines, 19 over 600. Worst: `BlogManager` 1,557 lines / 23 `useState` / 12 fetches / ~10 jobs; `SeoDashboard` 29 `useState`; ~~`PlatformAlertsManager` 29 `useState` + native `alert()`~~ (removed 2026-10-17) | split per coding-standards §3 **after** OPT-D28–D30 land | ~0; A14 falls | P3 |
 | OPT-D43 | Styles that bypass the design tokens | 922 `style={` lines (A6); 105 inline `color: 'var(--theme-text-*)'` although the `text-text-*` utilities exist (used 458 times); 122 hard-coded status hex colours in 37 files | mechanical swap; §7.8 dialog styles move into `ModalShell` | 0 lines; A6 −105, A7 −122 | P3 |
 
 **Verify (every UI item).** `npm run verify` (typecheck, a11y_check); new workerd
@@ -706,6 +714,7 @@ the unused images and templates (OPT-S1–S4); the sitemap pings (OPT-R18).
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | `src/lib/dal/HealthResultsRepository.ts` (`prune`), `src/lib/auth/routes.ts` (`/api/system-health` → `/dashboard/health`), `git status` (the `alerts` routes, `src/lib/diagnostics/` and `PlatformAlertsManager.tsx` removed) | OPT-R1 marked done; OPT-D3's alerts rows, OPT-D40's diagnostics types and OPT-D42's `PlatformAlertsManager` struck through. No other row re-checked |
 | 2026-10-15 | claude | Read `src/lib/auth/routes.ts` (`/api/access-requests` → `/dashboard`) and `test/access-requests.test.ts` (`resolveApiAuthz`) | OPT-D3's aside on `/api/access-requests` struck through as fixed; the rest of OPT-D3 not re-checked |
 | 2026-10-10 | claude | `grep -rln "<dialog\b" src` and `grep -rln "showModal()" src` (only `Dialog.tsx` and the three Email API modals; `Menu.tsx` names it in a comment); read `SessionForensicsDrawer.tsx` | OPT-D29 and OPT-D34 marked done. No other row re-checked |
 | 2026-10-07 | claude | `grep -rni "upstash\|getRedisClient" src/` (historical comments only, no import or client); read `src/lib/alert-gate.ts` | The two Upstash items marked done on 2026-10-04 (analytics off; OPT-D18 done another way, the Redis channel removed from the alert gate) hold. No other row re-checked |

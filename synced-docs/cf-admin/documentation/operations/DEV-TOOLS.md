@@ -3,7 +3,7 @@
 title: "Developer Debug Portal (Edge Command Center) — Architecture & Security Reference"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 tags: []
@@ -11,7 +11,7 @@ tags: []
 
 # Developer Debug Portal (Edge Command Center) — Architecture & Security Reference
 
-> **TL;DR (non-technical):** The built-in developer and debug tools inside the admin portal — diagnostics, health checks, and the page-registry manager.
+> **TL;DR (non-technical):** The built-in developer tools inside the admin portal: the Developer Tools hub and the page-registry manager. Health checks and problems moved to [System health](../features/SYSTEM-HEALTH.md) on 2026-10-17.
 
 > **Scope**: `cf-admin` — Covers System Debugging, Feature Configuration, and the Audit Engine.
 >
@@ -28,9 +28,11 @@ tags: []
 
 The Developer Debug Portal is the developer-exclusive administrative module within `cf-admin`. It provides DEV-role users with:
 
-- **System Debugging** — the probe suite in `lib/diagnostics/` (tiers, latency
-  grades and remediation text) run against the live production bindings, plus
-  its history and the page-registry manager (§3)
+- **System Debugging** — the hub and the page-registry manager (§3)
+
+*(Until 2026-10-17 it also held Diagnostics, the probe suite in `lib/diagnostics/` and its
+history. It merged with the Alerts page into System health, which has its own page key and five
+action switches: [`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md).)*
 
 *(A second bullet, "Feature Configuration", was removed on 2026-10-10 with the feature: its
 flags table had no reader anywhere, so a switch changed nothing (§4).)*
@@ -47,8 +49,9 @@ All modules are protected by **Server-Side Rendering (SSR) authorization guards*
 ### 2.1 SSR-First Security
 
 Every Developer Tools page checks its **page key on the server** in the Astro frontmatter
-(2026-10-10). The hub, Diagnostics and its history ask for `/dashboard/debug`
-(`canUseDebug`); Page Registry asks for its own key, `/dashboard/debug/pages`
+(2026-10-10). The hub asks for `/dashboard/debug` (`canUseDebug`); the old Diagnostics address,
+which now forwards to System health, sits in the same folder, so the middleware still asks
+for that key before it forwards; Page Registry asks for its own key, `/dashboard/debug/pages`
 (`canUsePageRegistry`). Both are in `src/lib/auth/surface-guards.ts` and check the exact key
 in the person's access map (`placRequireGrant`): vendor support by default (the rows' stored
 role is `dev`), anyone an access grant names, and the owner and vendor support, who bypass
@@ -103,11 +106,14 @@ if (!isVendorSupport(sessionUser.role as Role)) {
 }
 ```
 
-Since 2026-10-10 the routes ask for the same key as their page:
+Since 2026-10-10 the routes ask for the same key as their page. The three diagnostics routes
+(`pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts`, guarded by `canUseDebug`)
+were removed on 2026-10-17; System health's routes are in
+[`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) and the route table of
+[`SECURITY.md`](../security/SECURITY.md).
 
 | Route(s) | Guard | Notes |
 |---|---|---|
-| `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | `canUseDebug` | Until 2026-10-10 a local `checkPerm('/dashboard/debug', isDev(...))`, which honoured a grant while the pages did not, and refused the owner, whose stored map holds `false` for a vendor-only row. The 403 body is unchanged: `Insufficient permissions or access denied by PLAC policy` |
 | `pages/api/system/pages.ts` (GET, PATCH) | `canUsePageRegistry` | PATCH below vendor support: `registryEditRefusal` (`src/lib/auth/registry-impact.ts`). Since 2026-10-14 a new default role or switch reaches everyone on their next click, and Viewer is refused as a default. Its dry-run partner `preview.ts` was removed on 2026-10-14 with the old screen |
 | `pages/api/system/access-overview.ts` (GET), `page-access.ts` (POST), `access-history.ts` (GET) | `canUsePageRegistry` (`src/lib/access-center/registry-access.ts`, `history.ts`) | Added 2026-10-14 for the control room: one read of every page, person, personal setting and check; personal settings for many people at once, each through the Access Center's page gates; and the history of every access change |
 | `pages/api/system/console-features.ts` | `canUsePageRegistry` (`gate()` in `src/lib/access-center/registry.ts`) | Each console checks the person's own `access.manage` again; a move below vendor support stays within the editor's rank |
@@ -133,7 +139,7 @@ Authorization is enforced at **three layers**:
 |-------|-----------|------|
 | **Page-Level** (PLAC) | The **middleware authorization gate** for both pages and API routes, resolved from D1 `admin_pages`. It **default-denies**: an unmapped `/api/*` path is refused outright, and a refused page is rewritten to `/dashboard/access-denied`. Sidebar visibility is a consequence of the same map, not its purpose | `lib/auth/stages/decide.ts`, `lib/auth/guard.ts`, `lib/auth/plac.ts` |
 | **SSR Guard** | Astro frontmatter rewrites a person without the page's key to the access-denied view | `pages/dashboard/debug/index.astro` |
-| **API Guard** | The handler's own role/PLAC check (§2.2) | `pages/api/diagnostics/run.ts` |
+| **API Guard** | The handler's own role/PLAC check (§2.2) | `pages/api/system/pages.ts` |
 
 All three layers must independently agree. *Corrected 2026-09-19:* this section
 described PLAC as restricting "sidebar visibility" and offered "an attacker
@@ -147,33 +153,23 @@ route runs. The defence-in-depth argument stands; the example did not.
 
 ### 3.1 Purpose
 
-`/dashboard/debug` is a landing hub (`<h1>` "Developer Debug Portal") linking to the diagnostics run, its history and the page-registry manager. The diagnostics page provides real-time health verification of the production infrastructure, enabling DEV users to verify binding availability without SSH or Cloudflare dashboard access.
+`/dashboard/debug` is a landing hub (`<h1>` "Developer Debug Portal") linking to System health (for someone it opens for, `denyHealth`) and the page-registry manager (for someone Page Registry opens for).
 
-### 3.2 Diagnostics run
+### 3.2 Diagnostics (moved)
 
-`/dashboard/debug/diagnostics` mounts `SystemDiagnostics.tsx` (`client:idle`), which calls `POST /api/diagnostics/run`
-once on load and otherwise only when "Force Sync" is pressed (*changed 2026-10-04:* it re-ran every 30 seconds, hidden tabs included). The route checks
-the vendor-support role, runs the probe suite in `src/lib/diagnostics/runner.ts`
-against the live bindings and returns the run; one row per probe is written to
-`system_test_results`.
-
-Two things that used to be on this page are gone (2026-09-02, viability
-program chunk 9): the "Run Diagnostic Ping" tool and its route
-`GET /api/diagnostics/ping`, which nothing had called since the page was
-rebuilt around the runner, and the "Trigger Production Tests" button, whose
-route only ever simulated a dispatch in production (owner decision, ADR-0002
-answer 5).
+Diagnostics merged with the Alerts page into System health on 2026-10-17
+([`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md)). `/dashboard/debug/diagnostics` now forwards
+to System health's Checks tab, and its history page was removed. Until then, opening it ran the
+whole probe suite in `src/lib/diagnostics/runner.ts` and wrote one row per probe to
+`system_test_results`, the table System health still uses.
 
 ### 3.3 File Map
 
 | File | Purpose |
 |------|---------|
 | `pages/dashboard/debug/index.astro` | Landing hub with DEV guard |
-| `pages/dashboard/debug/diagnostics.astro`, `debug/diagnostics/history.astro` | Diagnostics run and its history (`SystemDiagnosticsHistory.tsx`) |
+| `pages/dashboard/debug/diagnostics.astro` | Forwards to `/dashboard/health?tab=checks` (2026-10-17) |
 | `pages/dashboard/debug/pages.astro` + `components/admin/debug/registry/` (`RegistryConsole.tsx` and one file per tab and pop-up), `ConsoleFeatures.tsx`, `styles/pages/page-registry.css` | Page Registry, the access control room (rebuilt 2026-10-14; the old `PageRegistryManager.tsx` was deleted): tiles, then Pages, Who opens what, See it as (2026-10-16), Personal settings, Consoles, Checks and History, and a pop-up per page with its settings, its people and its actions ([spec](../specs/2026-10-14-access-control-room.md) §4) |
-| `components/admin/debug/SystemDiagnostics.tsx` (+ `DiagnosticsInfraBar.tsx`, `DiagnosticsTestList.tsx`) | Preact island: runs the suite once on load (every 30 s until 2026-10-04) and on the button, renders the infra bar and the per-probe list |
-| `pages/api/diagnostics/run.ts`, `results.ts`, `infrastructure.ts` | API: run the probe suite / read persisted results / infra snapshot; results persist to `system_test_results` |
-| `lib/diagnostics/runner.ts`, `benchmarks.ts`, `types.ts`, `tests/` | The probe suite (tiers, latency grades, remediation text) |
 
 ---
 
@@ -304,12 +300,13 @@ No part of the audit log is immutable — see
 
 ### 8.3 DEV-Only Restriction
 
-System Debugging is **DEV-exclusive** (Feature Configuration was too, until it was removed on 2026-10-10). SuperAdmin users who previously had access are **rewritten to `/dashboard/access-denied`** — the URL does not change, so this is not a redirect (corrected 2026-09-19; §2.1 already said so). This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators. Note the exception in §2.2: a PLAC grant reaches the diagnostics API.
+System Debugging is **DEV-exclusive** (Feature Configuration was too, until it was removed on 2026-10-10). SuperAdmin users who previously had access are **rewritten to `/dashboard/access-denied`** — the URL does not change, so this is not a redirect (corrected 2026-09-19; §2.1 already said so). This is intentional — these are infrastructure-level controls that should not be accessible to business-level administrators. A grant opens the hub to a named person (§2.1); System health has its own key, Manager and above by default.
 
 ## 9. Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §1, §2.1 to §2.3, §3 and §8.3 after Diagnostics merged into System health: `src/pages/dashboard/debug/` (`diagnostics.astro` forwards, `diagnostics/history.astro` removed, `index.astro` shows the System health card through `denyHealth`), `src/lib/diagnostics/`, `src/pages/api/diagnostics/` and the three `components/admin/debug/` Diagnostics files removed (`git status`) | §4 onward; the pages in a browser (the owner's phone test) |
 | 2026-10-17 | §2.1 and §2.2's rank rule after Page Registry became a grant-only page: `page-floors.ts`, `canUsePageRegistry`, `computeNavItems`, `page-gates.ts`, `api/system/pages.ts` (its role stays `dev`); `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-16 | §2.2's Page Registry row after the See it as tab (#26): `RegistryConsole.tsx`, `SeeAsPanel.tsx`; it calls no new route (`/api/system/access-overview`, `/api/system/console-features` and `/api/users/access-center`) | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-15 | §2.1 and §2.2 after Page Registry became vendor support only: `page-floors.ts`, `canUsePageRegistry`, the four pages under `src/pages/dashboard/debug/` and the `api/system/` gates; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |

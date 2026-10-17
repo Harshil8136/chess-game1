@@ -394,6 +394,17 @@ before 2026-10-15. The Owner's grant of 2026-09-15 was removed on 2026-10-17 at 
 choice, an hour before this change went live, so it does not reopen the page (an activity-log
 `reset_access` row records it). Settings → Your access still tells the owner "every page"
 (`MAINTENANCE.md` (private)).
+*Added 2026-10-17 (the owner's request to merge Diagnostics and Alerts):* System health
+(`/dashboard/health`, migration `0072`, default `admin`, the stored name of the Manager tier) and
+its five keys, all fail-closed through `placRequireGrant` on the exact key, the action after the
+page (`denyHealth` and `healthCan`, `surface-guards.ts`), in the page and in every
+`/api/system-health/` route: `#details` (See technical details, `super_admin`), `#run` (Test
+again, `admin`), `#resolve` (Resolve problems, `admin`), `#resolve-anyway` (Resolve while still
+failing, `owner`) and `#simulate` (Send a test alert, `dev`). The page shows each action exactly
+when its route will allow it. It replaced two gates: Diagnostics asked for Developer Tools, and
+Alerts for its own page, whose Scan ran the same tests past the Developer Tools key, and whose
+`#resolve` is switched off by `0073` once this code is live
+([`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §1).
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1291,6 +1302,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-17 | claude | **Scope-limited to the System health keys.** Read `surface-guards.ts` (`denyHealth`, `healthCan`), the five routes under `src/pages/api/system-health/`, `src/pages/dashboard/health.astro` and `migrations/0072_system_health.sql`; `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph matches the code. The live rows are read back once 0072 is applied (schema change ledger) |
 | 2026-10-17 | claude | **Scope-limited to Page Registry as a grant-only page.** Read `page-floors.ts` (`isGrantOnlyPage`, `roleOnPage`, `pageFloorOpens`, `grantOnlyDoor`), `plac.ts` (`computeAccessMap`, `computeNavItems`), `surface-guards.ts` (`canUsePageRegistry`), `page-gates.ts`, `access-center/rules.ts`, `pages.ts`, `overview.ts`, `see-as.ts`, `access-requests/rules.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one stored grant (2026-09-15) through the D1 connector, then removed that grant at the owner's choice with one `reset_access` activity-log row and read both back; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts`, `test/access-why.test.ts`, `test/access-requests.test.ts` and `test/see-as.test.ts` pass | §1's floor sentence, §5's two Page Registry notes and the new paragraph, §10.2, the §17 rows. Not re-derived: every other section |
 | 2026-10-16 | claude | **Docs pass after the 41 permission items, scope-limited to §4.1, §4.2, §5's Viewer note, §6 to §9, §11, §12, §13.1, §14, §16 and §17.** Read `src/lib/auth/stages/assertion.ts`, `bootstrap.ts`, `decide.ts`, `decision.ts` and `access-map.ts` (each refusal's status, body and audit reason; a page refusal is a rewrite; the access-map refusal redirects an API call too), `src/lib/auth/rbac.ts` (`ROLE_VOCABULARY`, `canBePageDefault`), `src/lib/access-center/limits.ts`, `src/lib/auth/page-registry.ts` and `src/layouts/AdminLayout.astro` (one read a minute per isolate, no retry, the sidebar's fallback), `src/lib/audit-seal/seal.ts` (`admin_audit_log` only); counted the `it(` cases in the three pipeline tests (53); through the D1 connector: `admin_pages` (117 rows, all legacy names, the CHECK) and `admin_page_overrides` (4, 1 deny, none with an end date) | §8's refusal table, §9's count, §11's stage 2, §12's unsealed sign-in log, §13.1's registry read, §14's registry row and §17's count corrected; §16 rewritten as the design's known limits, with the closed defects in one line. **Not re-derived:** §13.2 and §13.3's figures (2026-08-23 and 2026-09-19), §15's comparison and §15.1's control ids |
 | 2026-10-16 | claude | **Scope-limited to §10.7's Lock out sentence.** Read `src/pages/api/sessions/active-sessions.ts` (`block_account`) and `src/lib/approvals/ask.ts` (`personChangeGate`); `test/two-person-rule.test.ts` passes | The sentence matches the code. The rest of the document not re-read |

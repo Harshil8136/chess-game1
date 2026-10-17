@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-17 | `grep -rn RESEND_API_KEY src/` after Diagnostics was replaced by System health | §5's `RESEND_API_KEY` row: its one reader is System health's Resend check. No binding, secret or variable added. Nothing else re-checked |
 | 2026-10-16 | `src/env.d.ts`, `src/lib/console-signature.ts` (the only reader of `CONSOLE_SIGNING_KEY`), `wrangler.toml` (`[secrets] required` unchanged) | §5.3 lists `CONSOLE_SIGNING_KEY`, optional. Not checked: the secret on the four Workers (the owner sets it) |
 | 2026-10-16 | `src/lib/jobs/registry.ts` (16 jobs: 14 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/` only), `wrangler.toml` (`[triggers]` and `STAFF_STORAGE` unchanged); the bucket read through the Cloudflare connector (exists, Standard class) | §1 Scheduled triggers: **16 jobs (14+2)**, the three jobs missing since 2026-10-10 added to the table and to the sleeping list; the `STAFF_STORAGE` row names the `audit-log/` copies. No binding, secret or variable added |
 | 2026-10-10 | `grep -rn "api.brevo.com\|api.resend.com\|BREVO_API_KEY\|RESEND_API_KEY" src/` after moving the storage, share, purge, Search Console and re-invite emails onto `src/lib/email/queue-mail.ts` | §1's `EMAIL_QUEUE` paragraph and §5's `RESEND_API_KEY` row: no email is sent through Resend directly any more; the key's one reader is the diagnostics ping. Not checked: anything else in §1 and §5 |
@@ -571,7 +572,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | S3-compatible credential scoped to `madagascar-staff-storage`; `aws4fetch` presigned uploads (SigV4 needs this shape, no substitute) |
 | `BREVO_API_KEY` | Brevo transactional email (primary provider) |
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
-| `RESEND_API_KEY` | Resend — the diagnostics ping only (`resend_ping`). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
+| `RESEND_API_KEY` | Resend — System health's *Resend* check only (`resend` in `src/lib/health/catalog.ts`, since 2026-10-17; the diagnostics ping `resend_ping` before it was removed). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics and the control plane (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads |

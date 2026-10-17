@@ -2,7 +2,7 @@
 title: "AI Health & Telemetry Subsystem (/api/ai/health)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-04
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/pages/api/ai/health.ts, src/lib/ai/telemetry.ts, src/lib/ratelimit.ts, src/lib/dal/RateLimitRepository.ts, src/lib/ai-pricing.ts, src/components/admin/logs/AiHealthPanel.tsx, src/components/admin/logs/ActivityCenter.tsx, src/lib/auth/routes.ts, test/api-authz-mapping.test.ts]
@@ -132,7 +132,7 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
   "budget": {
     "used": 4120,
     "cap": 10000,
-    "softLimit": 9000,
+    "softLimit": 8100,
     "warn": false,
     "degraded": null
   }
@@ -172,7 +172,7 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
 |-------|------|-------------|
 | `used` | `number \| null` | Neurons **cf-admin** spent this UTC day across all its users and routes (the sum of `context.neurons` over today's `ai_inference` rows), or `null` if D1 cannot be read. |
 | `cap` | `number` | `10,000` — Cloudflare's free daily allocation. The allocation is **account-wide**; this counter is not. |
-| `softLimit` | `number` | Cutoff where cf-admin refuses new inferences (`9,000` neurons, reserving 1,000 headroom). |
+| `softLimit` | `number` | Cutoff where cf-admin refuses new inferences: `8,100` neurons, the allocation less a 1,900 reserve (`AI_NEURON_RESERVE` in `src/lib/ai-pricing.ts`, which explains the figure). |
 | `warn` | `boolean` | `true` when `used >= 8,000` (80% warning threshold). |
 | `degraded` | `'unconfigured' \| 'error' \| null` | Set when `used` is `null`. `'unconfigured'` when no D1 is bound; `'error'` if the query failed. |
 
@@ -213,13 +213,14 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
 ```mermaid
 flowchart TD
     A[AI Route Call e.g. /api/content/ai-generate-stream] --> B[checkNeuronBudget]
-    B -- Exceeded >= 9000 --> C[429 GLOBAL_QUOTA]
+    B -- at or above 8100 --> C[429 GLOBAL_QUOTA]
     B -- Allowed --> D[Execute Workers AI Call]
     D --> E[resolveUsage & calculateNeurons]
     E --> G[recordAiGeneration via ctx.waitUntil]
     G --> H[(admin_audit_log in D1)]
     E --> I[alertOnNeuronThreshold]
-    I -- crosses 8000 --> J["alert-gate (console + D1 platform_alerts + Sentry)"]
+    I -- crosses 8000 --> J["alert-gate warning (console + D1 platform_alerts + Sentry)"]
+    I -- crosses 8100 --> J2["alert-gate critical (the same, plus the alert email)"]
 
     K[GET /api/ai/health] --> L[getAiHealthSummary from D1]
     K --> M[checkNeuronBudget: sum of today's rows in D1]
@@ -232,20 +233,24 @@ flowchart TD
 Alert". There is no Slack channel anywhere in this codebase, and there is no
 separate 100% alert.*
 
-`alertOnNeuronThreshold()` (`src/lib/ai/telemetry.ts`) fires **only on the
-crossing** of 8,000 neurons — `previousUsed < 8000 <= used` — so at most one
-alert per UTC day, deduplicated by the fingerprint `neuron-budget:<date>`.
+`alertOnNeuronThreshold()` (`src/lib/ai/telemetry.ts`) fires **only on a crossing**: each line
+fires when `previousUsed` is below it and `used` is at or above it, so at most two alerts per UTC
+day, each with its own fingerprint (`neuron-budget:<date>:warn` and `neuron-budget:<date>:stop`).
+The lines are constants in `src/lib/ai-pricing.ts`.
 
 | Condition | Severity | Channels (`src/lib/alert-gate.ts`) |
 |---|---|---|
-| `used` crosses 8,000 (80%) | `warning` | console, D1 `platform_alerts`, Sentry |
-| the same call also lands at or above 10,000 | `critical` | console, D1 `platform_alerts`, Sentry, email (the Upstash list left on 2026-10-04) |
+| `used` crosses the warning line, 8,000 (80%) | `warning` | console, D1 `platform_alerts`, Sentry |
+| `used` crosses the soft limit, 8,100 (the allocation less the 1,900 reserve), where new cf-admin inference is refused | `critical` | console, D1 `platform_alerts`, Sentry, email |
 
-The `critical` row is reachable only if a *single* generation takes the counter
-from below 8,000 to 10,000 or more; a gradual climb past the cap emits nothing
-further, because the crossing already fired at 8,000. Separately, and
-independently of alerting, `checkNeuronBudget()` refuses new cf-admin inferences
-with `429 GLOBAL_QUOTA` at the 9,000 soft limit.
+One generation that takes the counter past both lines sends only the `critical` alert.
+Separately, and independently of alerting, `checkNeuronBudget()` refuses new cf-admin
+inferences with `429 GLOBAL_QUOTA` at or above the soft limit. Both alerts appear as problems
+on [System health](SYSTEM-HEALTH.md) §4.
+
+*Changed 2026-10-17:* until then the `critical` alert waited for the full 10,000, which the
+reserve keeps this portal from reaching, so a day that ran out raised a warning only; and both
+alerts shared the fingerprint `neuron-budget:<date>`.
 
 ### Audit Log Storage Structure
 
@@ -311,6 +316,7 @@ The primary consumer of `/api/ai/health` is `src/components/admin/logs/AiHealthP
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | The flow diagram, the `softLimit` example and field, and "Budget alerting" after the alert fix: `alertOnNeuronThreshold` in `src/lib/ai/telemetry.ts`, the constants in `src/lib/ai-pricing.ts` (soft limit 8,100, warning 8,000), `checkNeuronBudget` in `src/lib/ratelimit.ts`, the severity channels in `src/lib/alert-gate.ts`; `test/ai-telemetry.test.ts` | The rest of the page; a live generation end to end |
 | 2026-10-16 | The durability caveat only, for the daily seal (#21): `src/pages/api/audit/logs.ts` (no `DELETE`), the deleted `prune.ts`, `src/lib/retention-tables.ts` (`minDays: 180`) | The rest of the page; `last_verified` left at 2026-10-04 |
 | 2026-10-04 | The budget source (`src/lib/ratelimit.ts` `checkNeuronBudget` / `getGlobalAiNeurons`, `src/lib/dal/RateLimitRepository.ts` `sumAiNeuronsToday`, pinned by `test/hot-query-plans.test.ts`), the crossing inputs in the AI routes (the budget read before the call plus this call's neurons), and the `critical` channels in `src/lib/alert-gate.ts`. Live D1, read-only: 2 `ai_inference` rows in the whole log on 2026-10-04 | A live generation end to end; Cloudflare's current neuron price and allocation |
 | 2026-09-19 | `src/pages/api/ai/health.ts` (auth order, `days` clamp, catch behaviour); `src/lib/ai/telemetry.ts` (the D1 aggregate, `successRate` arithmetic, `alertOnNeuronThreshold` crossing logic and fingerprint); `src/lib/alert-gate.ts` channel routing per severity; `src/lib/ratelimit.ts` (`cf-admin-neurons:global:<date>`, UTC day); `src/lib/ai-pricing.ts` cap and its account-wide note; `src/lib/audit-helpers.ts` (`v: 2`); `src/components/admin/logs/AiHealthPanel.tsx` (the ×100 defect); `src/pages/dashboard/logs/index.astro` (`#ai`); live `admin_pages` — no `/dashboard/logs#ai` row, `/dashboard/logs` floor `super_admin` | Cloudflare's currently published neuron price and free allocation (not re-fetched — `$0.011 / 1,000` and `10,000/day` are carried forward); a live generation end to end |

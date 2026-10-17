@@ -74,7 +74,8 @@ All file names must be unique and descriptive:
   exceptions (`pipeline.ts` left the list on 2026-09-02). Measured 2026-09-20:
   **105 of 196 `.tsx` files under `src/components/` are over 200 lines (54%)**,
   the largest being `BlogManager.tsx`, `PlatformAlertsManager.tsx` and
-  `BrevoTelemetryView.tsx`, all over 1,200. The only count anything holds is
+  `BrevoTelemetryView.tsx`, all over 1,200 (`PlatformAlertsManager.tsx` was removed on
+  2026-10-17 with the Alerts page). The only count anything holds is
   `.ratchet.json` `A14` — `src/` files over **600** lines — which may fall but
   not rise. So 200 is the design target you justify departing from, 600 is the
   line the build defends, and the majority of the tree is already between them.

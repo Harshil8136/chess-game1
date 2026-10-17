@@ -5,7 +5,7 @@ audience: [ai, technical, owner]
 last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/auth/pipeline.ts, src/lib/auth/stages/session-stage.ts, src/lib/auth/stages/access-map.ts, src/lib/auth/stages/refresh-role.ts, src/lib/auth/session.ts, src/lib/auth/plac.ts, src/layouts/AdminLayout.astro, src/components/dashboard/DashboardController.tsx, src/lib/analytics/providers/index.ts, src/components/admin/debug/SystemDiagnostics.tsx, src/lib/diagnostics/tests/functional.ts, src/lib/diagnostics/runner.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts]
+related_code: [src/lib/auth/pipeline.ts, src/lib/auth/stages/session-stage.ts, src/lib/auth/stages/access-map.ts, src/lib/auth/stages/refresh-role.ts, src/lib/auth/session.ts, src/lib/auth/plac.ts, src/layouts/AdminLayout.astro, src/components/dashboard/DashboardController.tsx, src/lib/analytics/providers/index.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts, src/lib/dal/HealthResultsRepository.ts]
 related_docs: [MAINTENANCE.md, architecture/PERMISSIONS-SYSTEM.md, architecture/KV-RESILIENCE.md, reference/DYNAMIC-ROLES-PBAC-DESIGN.md, specs/2026-09-16-access-revocation-remediation-design.md]
 tags: [performance, efficiency, kv, d1, sessions, sidebar, polling, todo]
 ---
@@ -92,7 +92,14 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 ### P0 — can exhaust the account's KV quota
 
-#### EF-1. The diagnostics page re-runs its full test suite every 30 seconds
+#### EF-1. The diagnostics page re-runs its full test suite every 30 seconds — ✅ done 2026-10-17
+
+> **Done 2026-10-17** (record (private)): the page is gone.
+> System health replaced it and runs nothing when it opens: a check runs only on *Test again*
+> or *Check everything now*, at most once a minute per check and every two minutes for all,
+> and no check writes test data (the KV and R2 checks only read). The 30-day clean-up walks the
+> primary key from the oldest end instead of scanning the table
+> (`src/lib/dal/HealthResultsRepository.ts` `prune`). The notes below are the history.
 
 > **Partly done 2026-10-04** (record (private)):
 > the 30-second re-run is gone. The suite runs once when the page opens and
@@ -110,7 +117,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
   no index serves, so it scans the whole results table on every run.
   *Corrected 2026-09-23: this said 13 rows and omitted the prune; see
   [`OPTIMIZATION-TODO.md`](OPTIMIZATION-TODO.md) OPT-R1.*
-- **Evidence.** `src/components/admin/debug/SystemDiagnostics.tsx` (`runSuite(true)`
+- **Evidence (all three removed 2026-10-17).** `src/components/admin/debug/SystemDiagnostics.tsx` (`runSuite(true)`
   on mount, then `setInterval(…, 30000)`); `src/lib/diagnostics/tests/functional.ts`;
   `src/lib/diagnostics/runner.ts`.
 - **Cost (arithmetic).** 120 runs an hour → 120 KV writes **and** 120 KV deletes
@@ -350,7 +357,7 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 | Screen | Interval | On by default | Pauses when hidden | Action |
 |---|---|---|---|---|
 | Dashboard home | 5 min (60 s until 2026-10-04) | yes | **yes** since 2026-10-04 | EF-2, done |
-| Diagnostics | none since 2026-10-04: once on open, then the button (was 30 s) | — | — | EF-1, partly done |
+| System health (Diagnostics until 2026-10-17) | 60 s, reading stored results only: no check runs on open or on the timer | yes | **yes** (`startVisiblePolling`) | EF-1, done |
 | Email portal queue | 15 s | only while queued or scheduled items are shown | **no** | add a hidden-tab pause |
 | Sessions | 30 s | no — opt-in "Live" mode, which switches itself off after 5 minutes (`SessionsConsole.tsx`, rebuilt 2026-10-10; the list is read once on open, not on every tab change); *corrected 2026-09-23, this said "yes"* | yes | none |
 | Cron control | 60 s | no (opt-in) | **no** — once switched on it keeps polling a hidden tab (`CronDashboard.tsx`); `/api/cron` was the most-requested app endpoint in the week to 2026-09-22 (253 real requests, 157 of them on 2026-09-21) | add a hidden-tab pause; *corrected 2026-09-23, this said "none"* |
@@ -405,7 +412,8 @@ never who *decides*.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | `src/lib/health/run.ts`, `src/lib/health/catalog.ts`, `src/lib/dal/HealthResultsRepository.ts`, the five `src/pages/api/system-health/` routes; `test/system-health.test.ts` | EF-1 marked done: Diagnostics replaced by System health. No other item re-checked |
 | 2026-10-10 | claude | `src/layouts/AdminLayout.astro`, `src/lib/shell-state.ts`, `NativeNavigationState.astro`, `astro.config.ts`, the built router script after `npm run build`; `test/client-navigation.test.ts` | §1's opening and EF-9: the router is mounted. §1's step costs not re-derived (unchanged: every click is still one server render) |
 | 2026-10-10 | claude | `src/lib/auth/page-registry.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`; `test/page-registry.test.ts` | Step 3 and EF-4: the sidebar's KV copy is gone, replaced by a D1 read at most once a minute per isolate. The rest of §1 and §3 not re-derived |
-| 2026-10-04 | claude | `src/components/dashboard/DashboardController.tsx`, `src/lib/visible-poll.ts`, `src/lib/analytics/providers/index.ts`, `src/components/admin/debug/SystemDiagnostics.tsx`, `src/lib/diagnostics/tests/security.ts`; read-only D1 query of the live `cron-control` row | EF-2 fixes 1-3 and EF-11 done, EF-1 partly; §EF-12's first two rows updated. Not re-checked: §1's per-click costs, EF-3 to EF-10, the other EF-12 rows |
+| 2026-10-04 | claude | `src/components/dashboard/DashboardController.tsx`, `src/lib/visible-poll.ts`, `src/lib/analytics/providers/index.ts`, `src/components/admin/debug/SystemDiagnostics.tsx`, `src/lib/diagnostics/tests/security.ts` (both removed 2026-10-17); read-only D1 query of the live `cron-control` row | EF-2 fixes 1-3 and EF-11 done, EF-1 partly; §EF-12's first two rows updated. Not re-checked: §1's per-click costs, EF-3 to EF-10, the other EF-12 rows |
 | 2026-09-23 | claude | Read the auth pipeline, `src/lib/auth/session.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`, every `setInterval` under `src/components/`, the metrics provider and the diagnostics runner. Cloudflare GraphQL Analytics for KV, D1 and Worker usage (16–22 Sep 2026); Supabase edge logs (24 h); Sentry spans (30 days); live D1 queries on `admin_access_requests`, `admin_pages` and `system_test_results`. Cloudflare docs for the KV limits and for Cache API availability behind Access. | List created. EF-1 and EF-2 are latent — neither has been triggered in the measured window. |

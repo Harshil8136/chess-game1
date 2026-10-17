@@ -334,8 +334,9 @@ src/styles/
 │       ├── stats.css            ← .ad-* analytics dashboard classes (extracted from AnalyticsDashboard.tsx)
 │       └── cards, forms, layout, messages, modal-toast, tables, utilities .css
 └── pages/                  ← Page-level overrides
-    ├── audit.css, cron.css, diagnostics.css
+    ├── audit.css, cron.css  (diagnostics.css was removed 2026-10-17 with Diagnostics)
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
+    ├── health.css  ← System health's own rules on the console kit: rows, day strips, the close form (2026-10-17)
     ├── page-registry.css  ← Page Registry's own rules on the console kit: page rows, role matrix, person choices (2026-10-14)
     └── privacy-dashboard.css  (session-registry.css was removed 2026-10-10 with the old Sessions screens)
 ```
@@ -739,7 +740,7 @@ palette; layers that are not pop-ups, such as the page background and the phone 
 ### 9.9 Console kit *(implemented 2026-10-10)*
 
 `src/styles/components/console.css`, the page frame Sessions, Settings, GitHub, Page
-Registry and Users (since 2026-10-16) share (and, through `ck-scope`, a person's Access page
+Registry, Users (since 2026-10-16) and System health (since 2026-10-17) share (and, through `ck-scope`, a person's Access page
 since 2026-10-14), on the look
 of the cf-backup and cf-vps consoles. A page opts in with
 `<div class="ck-page" data-hue="rose|violet|blue">` and imports the file from its `.astro`
@@ -784,6 +785,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §3's `pages/` lines and §9.9's list of pages on the kit, against `src/styles/pages/health.css` (theme tokens only), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="violet"`) and the removal of `diagnostics.css` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-16 | §9's `.data-table` notes and §9.9's list of pages on the kit, against `global.css` (the `.data-table`, `.toolbar-search`, `.toolbar-tab` and `.btn-cta` rules removed with the old Users table, none used elsewhere) and `src/pages/dashboard/users/index.astro` (`ck-page`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-14 | §3's `pages/page-registry.css` line and §9.9's list of pages on the kit, against `src/pages/dashboard/debug/pages.astro`, `src/styles/pages/page-registry.css` (theme tokens only) and `UserAccessEditor.tsx` (`ck-scope`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-10 | §5 Sidebar States (the closed rail's scrollbar) against `SidebarMenu.tsx`, `Sidebar/utils.ts` `ROW`, `Sidebar/index.tsx` (66px, 1px border) and `global.css` `.sidebar-scroll` | Every other section; the look in a browser, which Harshil checks |
