@@ -71,7 +71,7 @@ Each service checks its own capabilities; a person needs both sides to start a t
 |---|---|---|---|---|
 | cf-backup | `restoretests.view` | See Restore tests: copies, history, reports, the reminder, Settings read-only; file a finished test's report | read | Admin, Owner, Vendor |
 | cf-backup | `restoretests.run` | Start a test and carry it on (its files, the unlock, the live sample) | secret, **floor** | Owner, Vendor |
-| cf-backup | `restoretests.configure` | Change Settings → Restore tests, and pin the server's lab key | secret, **floor** | Owner, Vendor |
+| cf-backup | `restoretests.configure` | Change Restore tests → Settings, and pin the server's lab key | secret, **floor** | Owner, Vendor |
 | cf-vps | `restore.test` | Stage a copy's files on the server, start or cancel the `restore_test` job | admin, **floor** | Owner, Vendor |
 | cf-vps | `host.view` | Watch a test's live steps and read its report and the server's ceilings | read | as today |
 
@@ -138,7 +138,10 @@ On cf-vps: the capability `restore.test`; the actions `restore.start` (target
 `restore/stage` (`restore.test`, fresh sign-in). cf-admin records them as `vps_restore_test`
 ([VPS-CONSOLE.md](../../features/VPS-CONSOLE.md) §6).
 
-## 4. Settings → Restore tests
+## 4. Restore tests → Settings
+
+The Settings tab of cf-backup's Restore tests page (until the 2026-10-09 redesign it was a
+section of the console's Settings page).
 
 One row in `admin_portal_settings`, key **`backup:restore-tests`** (no new table), compare-and-swap
 on `rev`. It holds the settings, the pinned lab key (its public half, who pinned it and when) and
@@ -342,7 +345,8 @@ runner withholds any output line shaped like an email address or phone number an
 
 The owner's server steps, in cf-vps's ship order: install the job runner's additions and the
 `restore_test` job, build its image on the server, deploy the agent, make the lab key, then pin
-its public half in cf-backup → Settings → Restore tests. Done on 2026-10-08 from the owner's IDE
+its public half in cf-backup's restore test settings (Restore tests → Settings since 2026-10-09).
+Done on 2026-10-08 from the owner's IDE
 session.
 
 **First real tests, 2026-10-08** (`rt-20261008T043435Z-e5626109`, larger live comparison, and
@@ -367,6 +371,7 @@ image rebuilt.
 |---|---|---|
 | 2026-10-16 | The TL;DR's status line against §13 (the first real tests of 2026-10-08) and cf-backup's `docs/HANDOFF.md` ("Rolled out and first run on 2026-10-08") | Whether §13's "not verified yet" items have since been met |
 | 2026-10-16 | The `restore-tests/:testId/file` row and §13's "Who did what" row against cf-backup's `getRestoreTestFile` (`src/api/restore-tests.ts`) and cf-admin's gateway (`RECORDED_READS`); `test/restore-tests.test.ts` and `test/backup-gateway.test.ts` pass | The rest of the document |
+| 2026-10-16 | Where the settings are: §2's `restoretests.configure` row, §4's heading and §13's pin step against cf-backup's `src/ui/screens/RestoreTestsScreen.tsx` (a Settings tab since `af2ce85`, 2026-10-09) and `src/access/catalog.ts` ("Restore tests → Settings") | The rest of §4 |
 | 2026-10-08 | §1, §6, §7 and §13 against the first real report and its cause: through the Supabase connector (counts only, no values), all 5 `admin_authorized_users` rows had a sign-in or sync time after 2026-10-07 while `updated_at` was older, and no `public` table has a trigger; the new sample query ran on the live project (counts only). The boundary and classification proven on a local PostgreSQL 16 against the server's own classifier: a row changed without any time stamp read as changed, a row damaged in the copy as a finding, others same or new. The old project's failed backup (2026-10-08 04:15 UTC) read from its job log and Supabase's pooler log | No backup has yet carried the boundary or PostgreSQL fingerprints; the lab update is not on the server; the phone was not used |
 | 2026-10-08 | §10 re-read against cf-backup's redesigned page (`src/ui/screens/RestoreTestsScreen.tsx`, `src/ui/screens/restore/`, `src/ui/restore-tests.ts` `setupSteps` and `headline`) and its tests (`test/ui-restore-screen.test.ts`) | The page has not been opened on a phone; the server side is not rolled out, so only the set-up list's not-yet-set-up state can show today |
 | 2026-10-08 | Read against the uncommitted code: cf-backup's restore-tests API, routes and capability catalog, its restore-tests settings, unlock, header, live and fingerprint modules, the daily chore, the ops kinds and audit actions, the engine's fingerprint and manifest steps and the workflow; cf-vps's contract (capabilities, actions, jobs, restore report), `restore_test.toml`, the job image, the lab, the runner's staging, cleanup and log guard, and the lab key setup script; cf-admin's audit words (`src/lib/backup-audit.ts`, `src/lib/vps-audit.ts`). The R2 bucket `madagascar-backups` exists (Cloudflare connector) | Nothing has run in production. The bucket's lock rules are not returned by the Cloudflare connector, so the lock on `ops/` is taken from cf-backup's records, not read live. The lab, its image and the PostgreSQL fingerprints were not run here |
