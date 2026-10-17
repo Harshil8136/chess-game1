@@ -1,6 +1,6 @@
 ---
 title: "cf-backup — 08 The existing backup workflow (as-is, 2026-09-21)"
-status: draft
+status: historical
 audience: [owner, ai, technical, operator]
 owner: harshil
 related_docs: [README.md, 03-backup-pipeline.md, 06-roadmap.md, 07-factor-register.md, ../chunks/2026-09-15-06-backups-and-dr-truth.md, ../../runbooks/disaster-recovery.md]
@@ -8,6 +8,12 @@ tags: [program, cf-backup, backups, as-is, github-actions]
 ---
 
 # 08 — The existing backup workflow, as it is today
+
+> **Historical since 2026-10-17.** This is the as-is analysis of 2026-09-21. The workflow it
+> describes, cf-admin's `.github/workflows/backups.yml`, never produced a backup and was deleted
+> on 2026-09-27 (cf-backup decision RD-8); the backups now come from cf-backup's
+> `secondary-pipeline.yml` ([README](README.md)). Read "today" below as 2026-09-21. What runs now,
+> and how to restore: the [disaster-recovery runbook](../../runbooks/disaster-recovery.md).
 
 > **TL;DR.** cf-admin has had an automated backup workflow since 2026-09-15:
 > `.github/workflows/backups.yml`, built as viability chunk 6. It is well designed,

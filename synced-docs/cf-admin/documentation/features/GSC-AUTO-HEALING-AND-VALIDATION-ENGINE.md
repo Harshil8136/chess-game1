@@ -2,7 +2,7 @@
 title: "GSC Validation Readiness Engine"
 status: active
 audience: [ai, technical, operator, owner]
-last_verified: 2026-09-19
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/seo/validation-readiness.ts, src/lib/seo/discovery-inspector.ts, src/pages/api/seo/validation-readiness.ts, src/pages/api/seo/discovery-health.ts, src/components/admin/seo/DiscoveryCoveragePanel.tsx, src/components/dashboard/widgets/GscValidationWidget.tsx, src/components/dashboard/widgets/ServiceStatusStrip.tsx]
@@ -59,8 +59,8 @@ callers, both in `src/pages/api/seo/validation-readiness.ts`:
 | `POST /api/seo/validation-readiness` | Same full crawl, Admin+ only, 15/hour | crawl + 2 D1 writes |
 
 The cache is a single `admin_portal_settings` row,
-`seo-validation-readiness-latest`. **Live today it was written on 2026-08-26 at
-17:22 UTC** and reads:
+`seo-validation-readiness-latest`. **Its report was made on 2026-08-26 at 17:22 UTC**
+(read live 2026-09-19 and again 2026-10-17) and reads:
 
 ```json
 {"overallReadinessScore":76,"cleanUrlsCount":45,"totalUrls":87,
@@ -68,7 +68,7 @@ The cache is a single `admin_portal_settings` row,
 ```
 
 So the honest current state is **76%, with 60 of 87 URLs thin or missing schema**,
-from a report nearly a month old. Any screen showing "100%" is showing a literal
+from a report made on 2026-08-26 that nothing has refreshed since. Any screen showing "100%" is showing a literal
 string, not this number — see [§5](#5-what-the-dashboard-actually-shows).
 
 ```text
@@ -201,5 +201,6 @@ route map.*
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | Re-read against `src/lib/seo/validation-readiness.ts` (weights, 180-word line, the literals at the two placeholder categories), `validation-readiness.ts` route (`fresh`, no rate limit), `GscValidationWidget.tsx` and `ServiceStatusStrip.tsx` (the literal strings), `DashboardController.tsx` (KPI cards, tab labels); live `seo-validation-readiness-latest` row (D1 connector) | Matches; every defect in §3 and §5 is still in the code. Wording on the report's age updated |
 | 2026-09-19 | claude | Re-derived the whole document against the code and live D1 | Cron heartbeat, KPI card, `gsc` tab and §6 Vite guidance all found false and removed; two of five categories confirmed hard-coded; live cached readiness 76% (60/87 URLs thin), last written 2026-08-26 17:22 UTC |
 | 2026-08-24 | claude | code + infra + tests | Original pass. Its architecture, dashboard-integration and Vite claims did not hold and are corrected above. |

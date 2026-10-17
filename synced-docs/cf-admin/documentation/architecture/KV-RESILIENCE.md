@@ -3,7 +3,7 @@
 title: "KV Resilience & Fallback Chain"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-19
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/cms/revalidate.ts, src/lib/cms-status.ts, src/lib/sync-outbox.ts, src/workers/sync-revalidate-consumer.ts]
@@ -40,7 +40,7 @@ The `ISR_CACHE` KV namespace serves two distinct purposes:
 | Key pattern | Purpose | Written by | Read by | TTL |
 |-------------|---------|-----------|---------|-----|
 | `isr:<path>#<buildId>` | Full rendered HTML page cache | cf-astro middleware (on render) | cf-astro middleware | Set per-page, typically 24h |
-| `cms:<key>` | Fresh CMS data injected at publish time | `cf-astro/api/revalidate` (called by cf-admin) | Each `.astro` section component | 3600s (1 hour) |
+| `cms:<key>` | Fresh CMS data injected at publish time | `cf-astro/api/revalidate` (called by cf-admin) | Each `.astro` section component | 86,400 s (24 hours; 1 hour until 2026-10-04) |
 
 These are separate concerns. A `cms:*` write failure does not affect ISR page cache behaviour, and vice versa.
 
@@ -65,18 +65,22 @@ cf-admin's `SESSION`.
 ### Operations per CMS publish
 
 One admin content publish calls `revalidateAstro()` → `POST /api/revalidate` on
-cf-astro. That endpoint:
+cf-astro. cf-admin first expands each base path with its locales
+(`expandPathsWithLocales`), so `['/']` becomes `['/', '/en', '/es']`. That endpoint
+then:
 
-1. **Lists** ISR keys with prefix `isr:<path>#` for each expanded path — one *list*
-   operation per path. Base paths like `['/']` expand to `['/', '/en', '/es']`.
-2. **Deletes** each key it found — one *delete* operation each, three or more.
+1. **Deletes** each path's page key for the current build by name
+   (`isr:<path>#<buildId>`) — one *delete* per expanded path. It **lists** only for
+   the paginated blog index, whose `isr:<path>?page=<n>#…` keys it cannot name.
+   *Changed in cf-astro:* it used to list every path, one after another.
+2. **Lists** the sitemap and feed cache keys once and deletes each (at most five).
 3. **Writes** one `cms:<key>` entry per CMS data payload — one *put* each.
 
 *Corrected 2026-09-19: the old summary, "approximately 4 KV write operations per
 publish … the quota is effectively unlimited for this use case", conflated three
 separately-metered operation types into one and then budgeted against the write
 quota alone.* Stated per quota, a publish costs roughly: **1 write** per CMS key,
-**3+ deletes**, **1 list** per path.
+**3+ deletes** (plus the feed keys), and **1 list** (2 when the blog index is purged).
 
 The write quota is therefore not what a publish burns through first — but it is the
 one shared with session creation, and it is the one that fails sign-in when it runs
@@ -115,7 +119,7 @@ Admin clicks "Save" (e.g. reviews, faqs, stats, hero upload)
    │  → If all put/delete fail: endpoint returns HTTP 500
    │
    │  Attempt 2 (300ms later): same, fails again
-   │  Attempt 3 (600ms later): same, fails again
+   │  Attempt 3 (600ms after that): same, fails again
    │
    └─ revalidateAstroOnce() returns { success: false, message: "Failed after 3 attempts..." }
       │
@@ -212,14 +216,15 @@ HTTP 200 returned — site does NOT crash
 If a CMS publish fails to update KV (writes exhausted, network error, etc.):
 
 - The **old** `cms:*` KV value remains until its TTL expires
-- `cms:*` keys have `expirationTtl: 3600` (1 hour)
+- `cms:*` keys have `expirationTtl: 86400` (24 hours, cf-astro's `CMS_KV_TTL_SECONDS`;
+  it was 3600 until 2026-10-04)
 - After expiry, the next render misses KV → reads D1 → serves correct content
-- **Upper bound on the `cms:*` stale window: 1 hour**
+- **Upper bound on the `cms:*` stale window: 24 hours**
 
 *Qualified 2026-09-19: TTL is the **ceiling**, not the expected case. Since the
 durable outbox shipped, an exhausted publish is retried by the `SYNC_QUEUE`
 consumer, so the realistic stale window is bounded by the redrive — typically far
-shorter than an hour — and the TTL is the backstop for a redrive that also fails.*
+shorter than the TTL — and the TTL is the backstop for a redrive that also fails.*
 
 ISR page cache (`isr:*` keys) may also be stale if the delete operations failed:
 
@@ -316,5 +321,6 @@ To check current KV namespace status: Cloudflare Dashboard → Workers & Pages �
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | `src/lib/cms/revalidate.ts` (`expandPathsWithLocales`, 3 attempts, 5 s, 300 ms × attempt backoff, outbox fallback); in the cf-astro sibling, `src/pages/api/revalidate.ts` (deletes the current build's key by name, lists only paginated paths and the feed keys, `Promise.allSettled`, `CMS_KV_TTL_SECONDS` = 24 h), `CMS_KEY_ALLOWLIST` in `sync-contract.ts` (18 keys, unchanged), `@logtail/edge` in `logger.ts`, `s-maxage=86400` in `middleware.ts` | The `cms:*` TTL (24 h, not 1 h) and the per-publish KV operations corrected. Not checked: live KV state; §3b's section resolvers |
 | 2026-09-19 | Re-derived the quota table against `../operations/OPERATIONS.md` §3.2 and the Cloudflare pricing page (free reads are 100,000/day, and deletes and lists are separately metered); re-read `src/lib/cms/revalidate.ts` end to end, including `revalidateAstro`'s outbox + `SYNC_QUEUE` fallback and the `verifyCmsLive` read-back; confirmed cf-admin has no `ISR_CACHE` binding in `wrangler.toml`; checked the `CMS.md` anchor. §2, §3a, §4, §7 and §8 corrected; scope note added for cf-admin's own `SESSION` KV | Live KV key state (the connector has no key-level read); §3b's cf-astro resolvers were corrected from the 2026-09-14 reading, not re-read today |
 | 2026-09-14 | `cf-astro/src/pages/api/revalidate.ts`: `Promise.allSettled` batch with per-promise `.catch()` (§5), `expirationTtl: 3600` on `cms:*` writes (§4), `log.warn('Rejected disallowed CMS key')` (§6/§7), BetterStack logger is `@logtail/edge` in `cf-astro/src/lib/logger.ts`; the 18-key allowlist plus the `blog_draft_*` regex against `sync-contract.ts`; `s-maxage=86400` set in `cf-astro/src/middleware.ts`; `cf-admin/src/lib/cms/revalidate.ts`: 3 attempts, 5 s timeout, `Sentry.captureMessage` on exhausted retries (§7 — the message is now "Edge purge failed — queued for redrive", because exhausted retries hand off to the queue consumer rather than giving up). | Live KV key state (the connector has no key-level read); the failure walk-through in §3 was not re-induced |

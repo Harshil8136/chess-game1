@@ -22,6 +22,13 @@ tags: [program, cf-backup, logs, evidence, usage, free-tier, observability]
 > **bucket-locked**. **None of it goes into D1.** The same data feeds a viability view that
 > shows how long each free allowance will last at the current growth.
 
+> **Since 2026-09-27** the runner-side half of this policy (the step logger and meter, `logs/`,
+> `usage/` and `env/` in each run folder) belongs to the retired Primary Pipeline. The Secondary
+> Pipeline's folder holds the encrypted files, a `manifest.json` with each store's counts and a
+> `SHA256SUMS` list, and cf-backup's tick still files GitHub's run, jobs and logs into it
+> afterwards (`postrun`); its `backup_runs` row and `ops/` records follow RE-4 and RE-5. See the
+> [README](README.md) and cf-backup's `docs/remediation/13-engine-consolidation-plan.md` B1.
+
 ## 1. Why this exists, and why not in D1
 
 - **Nothing else keeps it.** GitHub keeps run logs only for the repo's log retention (14 days, factor D5). Workers Logs keeps **3 days** on Workers Free (*confirmed*, Workers Logs pricing). After that, a failed run would be a red dot with no explanation.

@@ -2,7 +2,7 @@
 title: "Backup Console (cf-backup, embedded)"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/backup-proxy.ts, src/lib/backup-audit.ts, src/pages/dashboard/backup/app/[...path].ts, src/lib/access-changes/notify.ts, src/lib/dal/VpsAccessRepository.ts, src/pages/dashboard/backup/[...section].astro, src/lib/backup-section.ts, src/workers/scheduled-backup-tick.ts, src/lib/security/csp.ts, src/lib/jobs/registry.ts, src/lib/jobs/tiers.ts, src/lib/jobs/budgets.ts, src/lib/audit.ts, src/lib/auth/stages/bootstrap.ts, migrations/0057_backup_runs.sql]
@@ -200,9 +200,10 @@ delivered change records `true`. The auth pipeline also writes its usual
 ## 5. Framing
 
 The portal refuses to be framed everywhere else (`X-Frame-Options: DENY`,
-`frame-ancestors 'none'`). Responses under `/dashboard/backup/app/` — and only
-those — carry `SAMEORIGIN` and `frame-ancestors 'self'`
-(`FRAMEABLE_PREFIX` in `src/lib/security/csp.ts`). cf-backup's own security
+`frame-ancestors 'none'`). Responses under `/dashboard/backup/app/`, and the
+server console's `/dashboard/vps/app/` ([VPS Console](VPS-CONSOLE.md)), and only
+those, carry `SAMEORIGIN` and `frame-ancestors 'self'` (`FRAMEABLE_PREFIXES` in
+`src/lib/security/csp.ts`). cf-backup's own security
 policy is kept alongside the portal's, so it can only narrow what is allowed.
 `test/csp.test.ts` fails if any other path loses `DENY`.
 
@@ -294,6 +295,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | §1 and §5 to §9 against `src/lib/backup-section.ts`, `FRAMEABLE_PREFIXES` in `src/lib/security/csp.ts`, `src/workers/scheduled-backup-tick.ts` (`TICK_TIMEOUT_MS` 25 s, the one-hour `nextTickAt` ceiling, the report cooldown), `src/lib/jobs/tiers.ts` (`essential`), `MAX_REQUEST_BYTES` and `API_TIMEOUT_MS` in `src/lib/backup-proxy.ts`, `scripts/d1_schema_snapshot.mjs`; cf-backup's `tick-deadman.yml` present | §5 named only the backup prefix: the server console's frame is the other one, now said. With the 2026-10-16 rows, the whole page has been re-read against the code. Not checked: the account's trigger count (§6), the console in a phone browser |
 | 2026-10-17 | claude | §3's testing pass sentence against `userActor` in `src/lib/backup-proxy.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/testing-pass.test.ts` passes | The sentence. The rest of the document not re-read |
 | 2026-10-16 | claude | §2 against the gateway `src/pages/dashboard/backup/app/[...path].ts` and `src/lib/backup-proxy.ts` (`isConsolePath`, `isReadOnly`, `MAX_REQUEST_BYTES`); §3 against `cf-backup/src/lib/fresh.ts` and its callers, `cf-backup/src/access/policy.ts` (`temporary`, `grantFor`, `can`), `src/lib/access-center/registry.ts` and `src/lib/users/manage-apply.ts` with `src/lib/dal/VpsAccessRepository.ts`; §4 against `src/lib/backup-audit.ts`, `src/lib/access-changes/notify.ts` and cf-backup's `access.edit` stamps (`cf-backup/src/api/access.ts`, `access-person.ts`) | Added the Path, Read-only (403 `read_only`) and Body rows; §3 now names every fresh-sign-in step, asking for a permission (#22) and what removing a person removes; §4 says an `access.edit` is emailed (#18). The TL;DR names the recorded reads. The Page access row names the Access Center's door check, which used the inherited page decision until this pass (`src/lib/access-center/consoles.ts`; `test/console-doors.test.ts` passes). Not re-checked: §1, §5 to §9; a signed request in production |
 | 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `backupBinding` (`src/lib/backup-proxy.ts`), and `cf-backup/src/gateway/signature.ts`; `test/console-signature.test.ts` and `cf-backup/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |

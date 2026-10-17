@@ -3,7 +3,7 @@
 title: "Sync System — Architecture Review & Improvement Plan"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-10-17
 verified_against: [code, live-d1, live-supabase]
 owner: harshil
 related_code: [src/lib/cms/revalidate.ts, src/lib/sync-outbox.ts, src/workers/sync-revalidate-consumer.ts, src/lib/sync-contract.ts, src/workers/scheduled-log-sync.ts]
@@ -48,7 +48,7 @@ lag** — they do not move the data; D1 already shares it.
 
 | Plane | Write side (cf-admin) | Transport | Read side (cf-astro) | Cache layers |
 |---|---|---|---|---|
-| **CMS content** | `updateCmsBlock()` → D1 `cms_content` (`cf-admin/src/lib/cms/storage.ts`) | `revalidateAstro()` → `POST /api/revalidate` (Bearer) | section `.astro` resolvers | edge cache-tag → `cms:*` KV (1h TTL) → D1 → i18n defaults |
+| **CMS content** | `updateCmsBlock()` → D1 `cms_content` (`cf-admin/src/lib/cms/storage.ts`) | `revalidateAstro()` → `POST /api/revalidate` (Bearer) | section `.astro` resolvers | edge cache-tag → `cms:*` KV (24 h TTL since 2026-10-04; 1 h before) → D1 → i18n defaults |
 | **Service config** | `ServiceConfigRepository` → D1 `service_config` | `flushAstroConfigCache()` → `/api/revalidate {kind:'config'}` | `getServiceConfig()` + `route-policy.ts` resolver | mem 10s → Cache-API 60s → D1 → hardcoded `DEFAULTS` |
 | **Login / log sync** | `handleScheduled()` → D1 `admin_login_logs` (**cf-admin**, `src/workers/scheduled-log-sync.ts`, run as the `cf-access-audit-poll` job in the `*/5` batch) | 5-min cron polls CF Access audit-log API | — (cf-astro is not involved) | **D1** watermark: `admin_portal_settings` row `cf-audit-last-synced` |
 
@@ -73,8 +73,8 @@ Admin saves  ──►  D1 cms_content (authoritative, written FIRST)
                   POST /api/revalidate  (Bearer REVALIDATION_SECRET, 3× backoff, 5s timeout)
                        │
    cf-astro /api/revalidate:
-     1. delete isr:<path># keys (per locale-expanded path)
-     2. write cms:<key> KV  (allowlisted + sanitizeHtml, expirationTtl 3600)
+     1. delete isr:<path>#<build> keys (per locale-expanded path)
+     2. write cms:<key> KV  (allowlisted + sanitizeHtml, expirationTtl 86400)
      3. pingIndexNow(paths)            (waitUntil)
      4. CF API purge_cache by tag page-<path>   (waitUntil)
                        │
@@ -154,7 +154,14 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
   three months, so rollback is untested against real data. For contrast,
   `service_config_history` is now **30** rows (3 at review time). A history
   **UI** in the Content Studio is still unbuilt.
-- **C2 — `service_config` has no `version` column** (verified live), yet
+  *Re-checked 2026-10-17:* still 0 history rows, because nothing has been saved:
+  the newest live `cms_content` row is from 2026-04-29. Two gaps remain in the
+  code: the FAQ, reviews and stats routes (`src/pages/api/content/faqs.ts`,
+  `reviews.ts`, `stats.ts`) write `cms_content` with their own SQL instead of
+  `updateCmsBlock()`, so their saves would record **no** history; only gallery,
+  services, blocks and a rollback do (`../MAINTENANCE.md` (private)
+  DOC-3).
+- **C2 — `service_config` has no `version` column** *(closed — item 1.4, §6)* (verified live), yet
   `TECHNICAL_OVERVIEW.md` claims "version bumped / version-tracked for change
   detection." Cache invalidation is therefore purely time/flush-based, and
   concurrent edits are silent last-write-wins (no optimistic concurrency).
@@ -178,12 +185,12 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
 
 ### 🟡 Smaller but real
 
-- **S1** — `cms.ts` posts to cf-astro's `http://internal/api/revalidate`; `config-publisher.ts`
+- **S1** *(closed — item 0.3, §6; both now use `https://internal`)* — `cms.ts` posts to cf-astro's `http://internal/api/revalidate`; `config-publisher.ts`
   posts to `https://internal/…` — inconsistent service-binding URL.
-- **S2** — cf-astro's `/api/runtime-config` is CDN-cached `max-age=60` **independently** of the
+- **S2** *(closed — item 0.5, §6; the response carries `Cache-Tag: runtime-config`, re-checked in cf-astro 2026-10-17)* — cf-astro's `/api/runtime-config` is CDN-cached `max-age=60` **independently** of the
   Cache-API flush, so a config purge still serves stale client config up to 60s
   (no tag to purge it).
-- **S3** — Cron watermark advances to `now`, not the last processed `created_at`,
+- **S3** *(closed — item 2.2, §6)* — Cron watermark advances to `now`, not the last processed `created_at`,
   and `BATCH_LIMIT=100` has **no pagination** → a burst >100 failed logins in one
   5-min window silently drops the overflow.
 - **S4** — Webhook auth is a single static Bearer secret — no body HMAC, no
@@ -395,5 +402,6 @@ Tracking which roadmap items have shipped to the review branch
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §0 against `src/lib/cms/revalidate.ts`, `config-publisher.ts` (both `https://internal`) and, in the cf-astro sibling, `src/pages/api/revalidate.ts` (`CMS_KV_TTL_SECONDS` 24 h, deletes by build key) and `runtime-config.ts` (`Cache-Tag`); the CMS writers under `src/pages/api/content/` and `media/` and `recordCmsHistory` in `src/lib/cms/storage.ts`; live D1 (connector): `cms_content_history` 0, `service_config_history` 30, `sync_outbox` 0, newest `cms_content` row 2026-04-29 | §0's `cms:*` TTL corrected (24 h); C2, S1, S2 and S3 marked closed where §6 already said so; C1 gained the three routes that bypass history (MAINTENANCE DOC-3). Not checked: S4 (no signature on the revalidate body seen in cf-astro, so treat it as open) |
 | 2026-08-23 | Original 2026-06-09 review re-stamped; cross-references updated for the control-plane archive move. §2's R1/R2 were already closed by §6's item 1.1 at that date and were not corrected — that is the drift this 2026-09-20 pass repaired. | — |
 | 2026-09-20 | **cf-admin code:** `src/lib/cms/revalidate.ts` (outbox fallback on `attempts > 0`, "queued for redrive"), `src/lib/sync-outbox.ts` and `src/workers/sync-revalidate-consumer.ts` both present; `src/workers/scheduled-log-sync.ts` header (**D1** `admin_portal_settings` watermark, not KV) and `src/lib/jobs/registry.ts` (`handleScheduled` runs in **cf-admin** as `cf-access-audit-poll`). **Live D1:** `cms_content_history` **0** rows, `service_config_history` **30** rows (was 3), `sync_outbox` 0. **Result:** R1–R4 restated as closed; the §0 login-sync row corrected on both counts; C1 restated as wired-but-unexercised; bare migration numbers `0026`/`0033`/`0034` replaced with full `database/legacy_migrations/` paths (those numbers now name the blog tables in `migrations/`); S5 split into its three parts; item 0.2 marked unsettled and deferred to the runbook; the partial D1 database id removed from the two places the mirror's redactor does not catch; §6/§7 renumbered so the document runs 0–8. | The **cf-astro** side throughout: S1 (`http://` vs `https://internal`), S2 (`/api/runtime-config` cache tag), S3 pagination, and whether Phase 4.1 (HMAC on the revalidate body, S4) landed there. That repo is out of scope for a cf-admin pass — treat every cf-astro claim in this doc as dated 2026-06-09. |

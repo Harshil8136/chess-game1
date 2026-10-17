@@ -36,6 +36,11 @@ tags: [program, cf-backup, secrets, api-keys, setup, runbook]
 > `CONSOLE_SIGNING_KEY`, a cf-backup Worker secret holding the same value as cf-admin's, which
 > lets cf-backup check that a request was signed by cf-admin. Not a backup key, and the one
 > exception to "cf-admin gets none"; §7b.
+>
+> **Optional, since 2026-09-27 (remediation decision RD-9):** `HEARTBEAT_PING_URL`, a GitHub
+> secret the Secondary Pipeline pings after a passing run so an outside monitor notices a missed
+> day; the step does nothing while the secret is unset. A URL, not a key; specified in cf-backup's
+> `docs/remediation/09-secondary-pipeline-specification.md`.
 
 ## 1. Why four, and not fewer or more
 
@@ -177,7 +182,7 @@ it; the Connectors board shows the last run that reached D1 and R2 and the last 
   - revoke the token in the dashboard (one click);
   - restore any damaged D1 database with Time Travel to the minute before the misuse (7 days);
   - review `v1/` for objects the runner did not write (every legitimate object is listed in a manifest).
-- **Where it lives limits exposure:** only the cf-backup repo's secrets; referenced only by `db-backup.yml` and `tick-deadman.yml`, which run only on `schedule` and `workflow_dispatch`; owner-only write access with 2FA (doc 05 §3).
+- **Where it lives limits exposure:** only the cf-backup repo's secrets; referenced only by `db-backup.yml` (disabled since 2026-09-27), `secondary-pipeline.yml` (the engine since then) and `tick-deadman.yml`, which run only on `schedule` and `workflow_dispatch`; owner-only write access with 2FA (doc 05 §3).
 
 ## 5. Key 2 — `SUPABASE_DB_URL`
 

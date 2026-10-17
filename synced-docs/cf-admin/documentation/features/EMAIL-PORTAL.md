@@ -2,7 +2,7 @@
 title: "Email Portal"
 status: active
 audience: [non-technical, ai, technical, operator, owner]
-last_verified: 2026-10-01
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -53,10 +53,10 @@ tags: [feature, email, queue, brevo, plac, rbac, suppression, deliverability]
 > suppression list, DNS deliverability diagnostics, and an AI HTML generator.
 > Every send is role-gated, rate-limited, sanitised, suppression-filtered and audited.
 
-> **Status:** Production Active. The §0 defect is fixed in code (2026-10-01) and closes when migration 0061 is applied
+> **Status:** Production Active. The §0 defect is closed: fixed in code on 2026-10-01, and migration `0061` was applied the same day (live `d1_migrations` and the `email_sender_identities` row, read 2026-10-17).
 > **Surface:** `/dashboard/emails` (cf-admin)
 > **Role floor:** canonical **Manager or above** (stored `admin`/`super_admin`/`owner`/`dev`) for the page and the compose path; the Brevo Engine, Suppressions, DNS and sender-management routes require canonical **Admin** — see §4
-> **Last verified against live code + D1 + Supabase:** 2026-09-19
+> **Last verified against live code + D1:** 2026-10-17 (Supabase last on 2026-09-19)
 
 ---
 
@@ -124,8 +124,8 @@ and the coverage gap is its mirror image.
 3. **Both**, plus a regression test asserting a Manager can send with the setting
    absent. This is what closes it permanently.
 
-Tracked in `../MAINTENANCE.md` (private). Until fixed, treat the sender
-dropdown as showing addresses that only the owner can actually use.
+*Closed 2026-10-01:* fixes 2 and 3 shipped, and `0061` stored the row (fix 1).
+The sender dropdown and the send route now read the same list.
 
 ---
 
@@ -167,7 +167,7 @@ Brevo. It sanitises, filters, writes a ledger row, enqueues, and returns.
  cf-admin API
         ├─① sanitize HTML            (HTMLRewriter — stored-XSS backstop)
         ├─② role floor · PLAC · rate limit · recipient cap
-        ├─③ SENDER CLEARANCE         (per-address minRole)   ◄── §0 defect here
+        ├─③ SENDER CLEARANCE         (per-address minRole)   ◄── §0, fixed 2026-10-01
         ├─④ SUPPRESSION PARTITION    (drop unsubscribed, audit the drop)
         ├─⑤ INSERT email_audit_logs  (Supabase — queued|scheduled)
         └─⑥ EMAIL_QUEUE.send(job)    (Cloudflare Queue "madagascar-emails")
@@ -234,7 +234,9 @@ The five defaults (`DEFAULT_SENDER_IDENTITIES`, `senders.ts:18`):
 | `team@` | Guest Care | staff |
 | `billing@` | Accounts & Billing | **manager** |
 
-> These exist **only in code**. See §0 — they are not in D1, which is the defect.
+> Until 2026-10-01 these existed **only in code** (§0). Migration `0061` stored them in D1
+> as the `email_sender_identities` row, and `src/lib/email/sender-identities.ts` falls back to
+> them only if that row is ever missing.
 
 ### 3.3 Suppressions — `suppressions.ts` + `ContactsSuppressionsView.tsx`
 
@@ -243,7 +245,9 @@ splits the recipient list **before the ledger write and before the enqueue**. If
 every `to` recipient is suppressed the send is refused with a clear error. Drops
 are written to the audit log with the suppressed addresses in `context`.
 
-> **Only the `to` list is partitioned — `cc` and `bcc` are not.** *Corrected
+> **Fixed 2026-10-01: To, Cc and Bcc are all partitioned now**, in one query
+> (`src/pages/api/emails/send.ts`), and the queue payload carries only the allowed
+> addresses. What follows is the record of the gap. *Corrected
 > 2026-09-19: this section claimed "a suppressed address never reaches the queue
 > at all".* `src/pages/api/emails/send.ts` partitions `to` and then puts `cc` and
 > `bcc` into the queue payload unfiltered; the ledger's `payload.to` also keeps
@@ -363,10 +367,10 @@ Engine, Suppressions and DNS tabs and gets a 403 from each. *Added 2026-09-19.*
 | 9 | Recipient cap (`custom_email_max_recipients`, live value **10**) | 400 |
 | 10 | `#bulk-send` if >1 recipient | 403 |
 | 11 | Domain must be `@madagascarhotelags.com` | 400 |
-| 12 | **Sender clearance** by `minRole`, else owner/vendor + `#custom-sender` | 403 ← §0 |
+| 12 | **Sender clearance** by `minRole`, else owner/vendor + `#custom-sender` | 403 |
 | 13 | `#attachments`; cumulative size ≤ **25 MB** | 403 / 400 |
 | 14 | Schedule window: future, ≤30 days | 400 |
-| 15 | **Suppression partition** of `to` only (see §3.3); all-suppressed → refuse | 400 |
+| 15 | **Suppression partition** of To, Cc and Bcc (§3.3); all To suppressed → refuse | 400 |
 | 16 | Ledger insert → enqueue with Sentry trace headers → Ghost Audit | — |
 
 **Why sanitisation matters.** Templates and drafts are shared across operators of
@@ -379,16 +383,16 @@ Workers-native `HTMLRewriter`.
 ## 6. Engine settings — what is real and what is not
 
 `engine.ts` reads `brevo_api_key` plus **ten** engine settings. Of those ten, only
-**one** exists in D1 (verified 2026-09-11, re-verified 2026-09-19); the other nine
+**one** exists in D1 (verified 2026-09-11, re-verified 2026-09-19 and 2026-10-17); the other nine
 fall back to hardcoded defaults on every request. `email_sender_identities` is
-listed below because it is the §0 defect, but note that **`engine.ts` never reads
+listed below because it was the §0 defect, but note that **`engine.ts` never reads
 it** — only `senders.ts` and `send.ts` do. *Corrected 2026-09-19: this said
 `engine.ts` reads eleven settings including that one.*
 
 | Setting | In D1? | Default in code | Consumed by the send path? |
 |---|---|---|---|
 | `custom_email_max_recipients` | ✅ `10` | 10 in both, from `src/lib/configuration.ts` (since 2026-10-10) | **yes** — changed on the Configuration page, not here |
-| `email_sender_identities` *(not read by `engine.ts`)* | ❌ | none (`[]`) | **yes** — §0 defect |
+| `email_sender_identities` *(not read by `engine.ts`)* | ✅ since `0061` (2026-10-01) | the five defaults (`src/lib/email/sender-identities.ts`) | **yes** |
 | `brevo_daily_limit` | ❌ | 300 | no — display only |
 | `brevo_monthly_limit` | ❌ | 9000 | no — display only |
 | `brevo_track_opens` | ❌ | true | no |
@@ -524,8 +528,8 @@ That is integration value, and it only exists **inside** a larger admin platform
   either aren't stored or aren't read.
 - **Weak:** test coverage. One test file for four new routes; the §0 defect shipped
   green because the untested route is the one that enforces.
-- **Blocking:** the §0 defect. A product that four of six roles cannot use is not
-  shippable to a third party as-is.
+- **Blocking (as assessed 2026-09-11; fixed 2026-10-01):** the §0 defect. A product
+  that four of six roles cannot use is not shippable to a third party as-is.
 
 **Verdict.** Keep it as a platform module. Fix §0 and wire §6 before it is ever
 demonstrated to a paying client.
@@ -586,6 +590,7 @@ RULE #0.9 working as intended. Two standing items, both predating it:
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-17 | claude | Re-read against `send.ts` (suppression of To, Cc and Bcc; pipeline order), `engine.ts` (five actions), `src/lib/email/sender-identities.ts`, the `brevo_api_key` reads; live D1 (connector): `0061` applied 2026-10-01 02:53 UTC, `email_sender_identities` stored, the nine branding and limit keys still absent, `admin_email_templates` still read by nothing | Closed §0 and §3.3, which still read as open; §5 step 15 and §6 updated. Not re-checked: Supabase, Brevo plan prices, §7 to §9's figures |
 | 2026-10-15 | claude | §3.5 and §4 only, against `src/pages/api/emails/ai-generate.ts`, `templates.ts` and `test/action-keys-enforced.test.ts` | `#ai-generate` and `#templates` are now checked on the server; `#preview` stays screen-only by design; nothing else re-checked |
 | 2026-10-10 | claude | §6 only, against `src/pages/api/emails/engine.ts`, `send.ts`, `src/lib/configuration.ts` and `test/api-configuration.test.ts` | The recipient limit reads one default (10) in both routes and is changed on the Configuration page; `save_settings` takes nine keys; the placeholder phone is gone from `engine.ts`; nothing else re-checked |
 | 2026-10-07 | claude | The send pipeline's step 4 only, against `src/pages/api/emails/send.ts` (`getRateLimiter({ requests: 10, window: '1 h' }, 'custom-emails')`) and `src/lib/ratelimit.ts` | 10 an hour per user, now a D1 counter row (since 2026-10-04); nothing else re-checked |

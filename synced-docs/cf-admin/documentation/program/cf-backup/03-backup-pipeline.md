@@ -8,7 +8,7 @@ tags: [program, cf-backup, backups, r2, disaster-recovery]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan: nothing in it is built yet. It names routes, files and folders that do not exist yet, in cf-admin and in the future cf-backup repo. -->
+<!-- Built 2026-09-23/24 and retired as the engine on 2026-09-27 (see the banner). It names routes, files and folders in cf-backup's repository, not cf-admin's. -->
 
 # 03 — The backup pipeline
 
@@ -18,6 +18,21 @@ tags: [program, cf-backup, backups, r2, disaster-recovery]
 > (`usage/`), its environment (`env/`) and what cf-backup adds after the run
 > (`postrun/`). Run keys carry the attempt number, so a GitHub re-run cannot collide
 > with a locked folder.
+
+> **Retired as the engine, 2026-09-27 (owner decision RD-15).** §3 to §5 describe the Primary
+> Pipeline, `db-backup.yml`: it was built as designed here but never produced a recovery point,
+> and it is disabled on GitHub. The backups come from `secondary-pipeline.yml` instead: one
+> daily job exports every store in §2 (Supabase's `public` schema, its migration history and,
+> since 2026-09-26, its sign-in records; the three D1 databases), restores each export in the
+> same run and checks every table's row count against the source, encrypts the files and
+> uploads them to `madagascar-backups` under `secondary/pipeline/<day>/<run>-<attempt>/` with a
+> `manifest.json` and `SHA256SUMS`, and keeps a 14-day copy in GitHub. Its folder is not the
+> `v1/runs/` layout of §4, and its own bucket rules (a lock on `secondary/`) are an owner step.
+> The specification is in cf-backup's repository:
+> `docs/remediation/09-secondary-pipeline-specification.md`; the decision and what changed in
+> the console: `docs/remediation/13-engine-consolidation-plan.md`. §2 (scope), §7 (retention
+> by hand), §8 (restore) and §10 (principles) still describe the intent; the restore
+> procedure in use is cf-admin's [disaster-recovery runbook](../../runbooks/disaster-recovery.md).
 
 ## 1. Starting point (measured 2026-09-21)
 
@@ -60,7 +75,7 @@ bridge that gets a real backup running before cf-backup exists) is in
 
 ```mermaid
 flowchart TB
-  T{{workflow_dispatch: scope, mode, request_id, trigger<br/>· or the D-5 weekly schedule fallback}} --> P[plan: resolve scope, run key,<br/>pinned tool versions, start the logger, meter and live heartbeat;<br/>write the backup_runs row to 'running' (D-6)]
+  T{{workflow_dispatch: scope, mode, request_id, trigger<br/>· or the D-5 weekly schedule fallback}} --> P[plan: resolve scope, run key,<br/>pinned tool versions, start the logger, meter and live heartbeat;<br/>write the backup_runs row to 'running', D-6]
   P --> DOC[doctor: every secret present,<br/>every credential proves itself]
   DOC --> D1S[d1 steps<br/>wrangler export ×2 + query export for chatbot-kb<br/>→ node:sqlite drill → integrity_check → compare]
   DOC --> PGS[supabase steps<br/>supabase db dump roles/schema/data<br/>→ drill in supabase/postgres:17.6.1.104 → compare]

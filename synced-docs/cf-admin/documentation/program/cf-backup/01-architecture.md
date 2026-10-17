@@ -8,13 +8,17 @@ tags: [program, cf-backup, architecture]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan: nothing in it is built yet. It names routes, files and folders that do not exist yet, in cf-admin and in the future cf-backup repo. -->
+<!-- Built and deployed 2026-09-23/24; the "As built" notes record where the build differs from the plan. It names routes, files and folders in cf-backup's repository, not cf-admin's. -->
 
 # 01 — Architecture
 
 > **Revised 2026-09-22.** One private Worker instead of two; no public surface; the
 > console is an embedded app served through cf-admin's gateway. The first draft's
 > storage move and `cf-backend-edge` Worker are parked ([04](04-staff-storage-move.md)).
+>
+> **Since 2026-09-27** the backups come from `secondary-pipeline.yml`, not the `db-backup.yml`
+> named below, which is disabled ([README](README.md), RD-15). Everything else on this page
+> stands.
 
 ## 1. The picture
 
@@ -35,14 +39,14 @@ flowchart LR
   GH[GitHub Actions<br/>cf-backup repo, private]
 
   S -->|SSO + session| A
-  A -->|service binding<br/>fetch: console pages and API<br/>backup-tick: /internal/tick, /internal/alerts/ack| B
+  A -->|service binding<br/>fetch: console pages and API<br/>backup-tick: /internal/tick, /internal/alerts/ack, /internal/alerts/delivery| B
   B -->|dispatch · enable/disable<br/>read runs, jobs, log archives<br/>GitHub App token| GH
   GH -->|encrypted data + evidence<br/>bucket-scoped token| R2B[(R2 madagascar-backups)]
   B -->|read runs · write postrun, ops, indexes<br/>stream downloads · prune| R2B
   GH -->|read-only role, session pooler| PG[(Supabase Postgres 17)]
   GH -->|D1 export + queries<br/>D1 Edit token| D1[(D1 databases)]
   B -->|settings rows + backup_runs| D1
-  B -->|read-only analytics token| CFAPI[Cloudflare GraphQL + REST<br/>account usage]
+  GH -->|account usage snapshot, key 1| CFAPI[Cloudflare GraphQL + REST<br/>account usage]
   A -->|alerts returned by the tick, queued here — cf-backup holds no queue binding| Q[[madagascar-emails queue]]
   B -->|backup keys: Owner / Vendor only| VAULT[(Supabase Vault)]
 ```
@@ -66,7 +70,7 @@ Internet … only … via an explicit Service binding" (*confirmed*, service bin
 | Console API (`/dashboard/backup/app/api/*`) | **cf-backup** | Same Worker, same origin as the UI |
 | Identity, sessions, page permission (PLAC), `admin_audit_log` | **cf-admin**, unchanged | cf-backup has no login code |
 | Gateway: `/dashboard/backup/app/*` → binding | **cf-admin**, one route | Knows nothing about backup features, so it never changes when they do |
-| Backup pipeline | cf-backup repo, `.github/workflows/db-backup.yml` | Doc 03 |
+| Backup pipeline | cf-backup repo: `.github/workflows/secondary-pipeline.yml` since 2026-09-27; `.github/workflows/db-backup.yml` (doc 03) before, now disabled | [README](README.md), RD-15 |
 | Scheduling | **As built (D-4):** cf-admin's existing `*/5` tick, one job `backup-tick`, calling cf-backup `POST /internal/tick` (schedule-slot dispatch, reconcile and chores, all budget-limited per tick). `db-backup.yml` keeps one weekly `schedule:` line only as the D-5 fallback | **No** Cloudflare cron triggers |
 | Run evidence (logs, errors, sizes, usage) | R2 `madagascar-backups` | Doc 11. Nothing in D1 |
 | Current status | `admin_portal_settings` key `backup:status` | One row |
@@ -91,14 +95,15 @@ Internet … only … via an explicit Service binding" (*confirmed*, service bin
 | `ASSETS` | Static assets | The built console, fetched explicitly with `env.ASSETS.fetch()` (*confirmed* to work from a binding-only Worker) |
 | `STAFF_STORAGE` | R2, **read-only**, Phase 4 only | Source for the staff-files mirror (added when that phase starts) |
 | `VAULT_DB` | Hyperdrive config `cf-backup-vault` | **As built (2026-09-24):** key 4, the Vault login for the key screens, reached with `pg`; it replaced the Worker secret `SUPABASE_KEYS_URL` (doc 12 §7). Added once the owner creates the config |
-| Secrets | — | **One:** `GITHUB_APP_PRIVATE_KEY` (the one GitHub key). Key 4 is the `VAULT_DB` binding above; the other two keys live in GitHub. The full list, and how to set each: [12](12-keys-and-secrets.md). **Never** a backup private key at rest |
+| Secrets | — | **One:** `GITHUB_APP_PRIVATE_KEY` (the one GitHub key). Key 4 is the `VAULT_DB` binding above; the other two keys live in GitHub. Two optional Worker secrets were approved later and are not backup keys: `SUPABASE_ACCESS_TOKEN` (2026-10-07, [12](12-keys-and-secrets.md) §7a) and `CONSOLE_SIGNING_KEY` (2026-10-16, §7b). The full list, and how to set each: [12](12-keys-and-secrets.md). **Never** a backup private key at rest |
 
 **As built (full build, 2026-09-23): no `EMAIL_QUEUE` binding in cf-backup (Ruling R-5).**
 Under D-11, cf-backup never sends mail itself: `POST /internal/tick` returns `alerts[]`,
 and cf-admin's `backup-tick` job puts each one on **cf-admin's own** `EMAIL_QUEUE` and acks
-the ids that sent. **Two internal-only endpoints**, reachable solely by the `backup-tick`
+the ids that sent. **Internal-only endpoints**, reachable solely by the `backup-tick`
 system actor over the binding, never under `/dashboard/backup/app/`: `POST /internal/tick`
-and `POST /internal/alerts/ack` (C3, C4).
+and `POST /internal/alerts/ack` (C3, C4), and, as built, `POST /internal/alerts/delivery`, where
+the job reports what the email service did with each alert ([13](13-access-control.md)).
 
 There is no Analytics Engine binding: run history and usage series live in R2 ([11](11-run-evidence-and-usage.md) §6), which is their one home.
 
@@ -121,7 +126,7 @@ service = "cf-backup"
 | Page row `/dashboard/backup` in `admin_pages`, **plus the new `backup_runs` table (D-1/C1)** | one migration — **as built: `migrations/0057_backup_runs.sql`**, cf-admin's own next free number |
 | **One** job on the existing tick, **`backup-tick`** (D-4; supersedes the two-job `backup-reconcile`/`backup-meter` design of §5/§7) | job registry entry, tier `essential`, 0 D1 rows read/written in cf-admin on success (measured budget) |
 | One read-only "Backups" row on `/dashboard/cron`, linking to the console | reads `backup:status` |
-| Retire `.github/workflows/backups.yml` | Phase 1 exit |
+| Retire `.github/workflows/backups.yml` | Phase 1 exit; **done 2026-09-27**, without it ever producing a backup (RD-8) |
 
 Env count unchanged (42). **One** new table (`backup_runs`, the RULE #0.9 exception the owner
 accepted 2026-09-23), no new KV namespaces or cron triggers.
@@ -160,6 +165,13 @@ cf-backup/
 ├── test/                        # vitest + workers pool; public-surface test (no route exists)
 └── RULES.md  main.md  README.md
 ```
+
+**As built since:** `src/` also holds `diagnostics/` (the Health page), `files/` (the Files
+section), `http/` (responses and the router), `notify/`, `report/`, `restore-tests/` ([15](15-restore-tests.md)),
+`secondary/` (reading the Secondary Pipeline's runs), `targets/` (which databases are backed up)
+and `types/`; `scripts/` holds `secondary-pipeline/`, `full-export/` and `setup/` beside
+`backup/`; and `.github/workflows/` holds `secondary-pipeline.yml` (the engine since 2026-09-27),
+`tick-deadman.yml` (the daily dead-man's check) and `sync-docs.yml` (the public docs mirror).
 
 **As built (full build, 2026-09-23):** there is **no `evidence/` directory and no queue
 client in `lib/`** — evidence writing is the runner's job (`scripts/backup/lib/`, Track R),
@@ -202,14 +214,16 @@ summary.
 five-minute tick (since 2026-10-04 only when cf-backup's last answer said it has work, and at
 least once an hour: Contract A in [02](02-admin-integration-contract.md)); when a slot in `backup:config.schedule` is due, cf-backup inserts the
 `backup_runs` row (`schedule_slot` unique) and dispatches the same way as Run now → GitHub
-starts `db-backup.yml` → the runner itself writes the row's `running`/`sealing`/final
+starts `db-backup.yml` (since 2026-09-27 `secondary-pipeline.yml`, whose runs the tick reads from
+GitHub and the run folder instead of runner-written transitions; [README](README.md)) → the runner itself writes the row's `running`/`sealing`/final
 transitions (D-6) → the run folder lands in R2, manifest last (doc 03) → the **next tick**
 (no longer once a day) adds `postrun/` (GitHub's log archive, job timings, billed minutes,
 the account usage snapshot) if the row's manifest is not yet enriched, updates the indexes
 and `backup:status`, and returns any alerts for cf-admin to queue (doc 11, D-11).
 
 **Watching live:** the console polls `/dashboard/backup/app/api/live` through the gateway,
-every 2 s while something runs. cf-backup answers from the runner's latest heartbeat in
+every 5 s by default while something runs (Settings → Live view; the plan's 2 s was raised on
+2026-09-24, [14](14-live-operations-view.md)). cf-backup answers from the runner's latest heartbeat in
 R2, and asks GitHub only when there is no fresh heartbeat (doc 14 §4); `backup_runs` is the
 source of truth for whether a lane is active (Ruling R-7), so this no longer depends on
 asking GitHub before a dispatch.

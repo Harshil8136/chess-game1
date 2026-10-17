@@ -2,7 +2,7 @@
 title: "GitHub page"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-10
+last_verified: 2026-10-17
 verified_against: [code, local-test]
 owner: harshil
 related_code: [src/pages/dashboard/github.astro, src/components/admin/github/RepoCard.astro, src/components/admin/github/Icon.astro, src/lib/github/display.ts, src/styles/pages/github.css, src/styles/components/console.css, src/lib/github/config.ts, src/lib/github/client.ts, src/lib/github/snapshot.ts, src/lib/github/cache.ts, src/lib/github/view.ts, src/lib/auth/surface-guards.ts, src/lib/auth/page-floors.ts, migrations/0066_github_page.sql]
@@ -105,6 +105,7 @@ MAINTENANCE.md (private) GH-1.
 
 | Date | Who | Checked | Not checked |
 |---|---|---|---|
+| 2026-10-17 | claude | "Who can open it", "How it reads GitHub" and the limits against `canViewGitHub`, `src/lib/github/config.ts` (`MAX_REPOS` 12, five defaults), `cache.ts` (`github:snapshot:v1`, 10 minutes fresh, kept 7 days), `snapshot.ts` (100 commits, 2,000-character notes) | No changes needed. The live token and page not checked |
 | 2026-10-10 | claude | **Scope-limited to "What it shows".** The page after its rebuild on the console kit: `github.astro`, `RepoCard.astro`, `ActivityBars.astro`, `LanguageBar.astro`, `Icon.astro` and `display.ts` read against this section; `test/github-display.test.ts` (every badge, the tiles, a card's facts, the links) and the existing `test/github-*.test.ts` pass | "How it reads GitHub" and "When something is wrong", unchanged and not re-read; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-07 | claude | Unit and source-contract tests (`test/github-*.test.ts`, 99 cases), `astro check`, `npm run build` | Production render with the real token, CPU per view (recorded here once the token is set) |
 | 2026-10-07 | claude | v2 (overview, health, deploy chip, activity, languages, pull requests, tags, Dependabot alerts, durations): the GraphQL query run against GitHub's live schema with a collaborator's classic token (no errors, cost 1 point, all five repositories); unit and source-contract tests (124 cases); `astro check`; `npm run build`; the live snapshot in KV after the token was set (five repositories, no errors) | Which optional parts the fine-grained token may read (confirmed on the first live refresh); CPU per view |

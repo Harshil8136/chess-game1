@@ -82,6 +82,12 @@ plus the weekly audit, instead of the majority of today's 936.
 | **cf-backup CI** | **~20–60** | one job per push, like cf-admin's `quality.yml`; high while building, low at steady state |
 | **Total** | **~1,184–1,244 without L1 · ~744–804 with L1** | **L1 is required** to meet the under-1,000 target |
 
+> **Since 2026-09-27** two lines above no longer apply: cf-admin's `backups.yml` was deleted,
+> and `db-backup.yml` is disabled. The engine, `secondary-pipeline.yml`, runs one job of about two
+> to three minutes per backup, and its fallback schedule stands down in under a minute when a run
+> has already succeeded that day. cf-backup's `docs/remediation/13-engine-consolidation-plan.md` §6
+> budgets it at about 90 to 120 minutes a month. That estimate was not re-measured here.
+
 ### 2.2 Design rules that keep cf-backup inside the budget
 
 1. **One job per backup run.** GitHub bills per job, rounded up (consolidation report §2), so each extra job costs at least a minute plus its own setup. `doctor` → per-store steps → `seal` run as **steps in one job**. Each store step uses `continue-on-error`, and `seal` uses `if: always()`, so a store's failure never costs the other its backup.

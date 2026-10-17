@@ -74,8 +74,8 @@ request reviewers, enforced code owners, or deployment protection rules. So we *
 not** design on them. Instead:
 
 - Write access is the owner only; 2FA is required on the account.
-- Nothing is triggered by `push` except `ci.yml` (verify), which holds **no secrets**.
-- Backup secrets are referenced only by `db-backup.yml`, which runs only on `schedule` / `workflow_dispatch`.
+- Nothing is triggered by `push` except `ci.yml` (verify), which holds **no secrets**, and, as built, `sync-docs.yml` (the public docs mirror), which holds only the mirror's own token, `PERSONAL_PAT`.
+- Backup secrets are referenced only by `db-backup.yml` (disabled since 2026-09-27), `secondary-pipeline.yml` (the engine since then) and `tick-deadman.yml`, which run only on `schedule` / `workflow_dispatch` (re-read 2026-10-17).
 - A `CODEOWNERS` file documents intent, but is not an enforcement mechanism on this plan.
 - Scheduled workflows auto-disable after 60 days of inactivity only in **public** repositories (*to verify*). The dead-man's switch covers it either way.
 - **GitHub App permissions are app-wide.** An installation gets all of the App's permissions on every repo it is installed on. The one App is therefore limited to Actions, Variables and secret *names* (no code), and every token it mints is narrowed per call (doc 12 §6).

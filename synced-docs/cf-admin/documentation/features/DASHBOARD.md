@@ -3,7 +3,7 @@
 title: "Dashboard — Real-Data Command Center"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-10
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code:
@@ -256,6 +256,7 @@ animations and native `fetch` for all API calls. No third-party chart library �
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §0.1's values re-read in `DashboardController.tsx` (the `'100.0'` and `'1.2'` fallbacks, the `99.8% Delivery` literal), `ServiceStatusStrip.tsx` and `GscValidationWidget.tsx` (the literal SEO strings), the tab labels, `WORKER_SCRIPTS` (two scripts) in `cloudflare.ts`, the Sentry and Brevo windows in `external.ts`. All still as described | Token scopes; the D1 analytics lag; the screen in a phone browser |
 | 2026-10-17 | §0's opening paragraph and Overview row for the System health card, against `src/pages/dashboard/index.astro`, `DashboardController.tsx` and `ServiceStatusStrip.tsx`, with `test/system-health.test.ts` and `test/system-health-board.test.ts`; §0.1's claim that its values are logged in `MAINTENANCE.md`, which was not true (now SH-8) | Everything else on the page; §0.1's values were not re-read |
 | 2026-10-10 | The KV-cache steps and the provider-failure paragraph, against `src/lib/analytics/providers/index.ts`, `src/pages/api/dashboard/metrics.ts` and `DashboardController.tsx`, with `test/analytics-cache.test.ts` (three stale-while-revalidate tests) | Everything else on the page; the live timing after deploy |
 | 2026-10-04 | The polling and KV-cache paragraphs, against `DashboardController.tsx`, `src/lib/visible-poll.ts` and `src/lib/analytics/providers/index.ts`, with `test/visible-poll.test.ts` and `test/analytics-cache.test.ts` | Everything else on the page |

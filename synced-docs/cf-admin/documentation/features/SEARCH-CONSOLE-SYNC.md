@@ -3,7 +3,7 @@
 title: "Search Console Sync"
 status: active
 audience: [non-technical, ai, technical, operator, owner]
-last_verified: 2026-09-19
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -29,7 +29,7 @@ tags: [feature, seo, search-console, pagespeed, core-web-vitals, cron, plac, rba
 
 > ## ⚠️ Both syncs are switched OFF and have been since August
 >
-> *Verified live 2026-09-19.* Nothing described below is running. This is a
+> *Verified live 2026-09-19, and again on 2026-10-17 (D1 connector).* Nothing described below is running. This is a
 > deliberate state, not a fault — but the page and this document used to read as
 > though the syncs were active, so read this first.
 >
@@ -67,7 +67,7 @@ tags: [feature, seo, search-console, pagespeed, core-web-vitals, cron, plac, rba
 Google finds and ranks pages by crawling the web on its own schedule, which can mean new or changed content sits invisible in search results for days. Two things speed that up, and this system automates both, using only the exact mechanisms Google's own documentation describes for doing so:
 
 1. **Telling Google what changed.** Every time a blog post publishes, and twice a day regardless, the system re-submits the site's sitemap and checks whether specific pages are actually indexed — using Google's real Search Console API, the same data you'd see logging into search.google.com yourself.
-2. **Measuring page speed the way Google measures it.** Once a week, the system runs the exact same Core Web Vitals check Google uses as a ranking signal (Largest Contentful Paint, Cumulative Layout Shift, Interaction to Next Paint), via Google's own PageSpeed Insights service — the same tool at pagespeed.web.dev.
+2. **Measuring page speed the way Google measures it.** On its own schedule (weekly by default; the live setting is daily, §4), the system runs the exact same Core Web Vitals check Google uses as a ranking signal (Largest Contentful Paint, Cumulative Layout Shift, Interaction to Next Paint), via Google's own PageSpeed Insights service — the same tool at pagespeed.web.dev.
 
 Before this existed, both of these were manual: someone had to remember to open Search Console, click "Inspect URL," and separately run a PageSpeed test by hand — with no record of when it was last done or what the result was. Now it happens on a schedule, and every result is permanently logged.
 
@@ -192,7 +192,7 @@ Researched against current freelance/agency rate data rather than estimated: API
 - **Data:** single table `gsc_index_log` (migration `0047`, widened by `0050` to add `mobile_usability_verdict`/`rich_results_verdict`/a `service` discriminator column) — deliberately reused for both Google services rather than standing up a second table; see the RULE #0.9 reasoning written directly into migration `0050`'s own comments. Settings live in the existing `admin_portal_settings` table, `category = 'seo'`.
 - **Permissions note:** `src/pages/api/seo/settings.ts` exists as a *dedicated* endpoint, not a reuse of the portal's generic `POST /api/settings/portal` (deleted 2026-10-10) — that endpoint's PLAC check was hardcoded to `/dashboard/settings`, a different page than the one these controls actually live on, found and fixed 2026-08-13 during a permissions review. Every route under `src/pages/api/seo/` PLAC-gates on `/dashboard/seo` specifically. The RBAC floor is `admin` on every trigger, write, export and delete, **with two deliberate exceptions**: `GET /api/seo/validation-readiness` and `GET /api/seo/discovery-health` take `requireAuth(context, 'viewer')`, so a read-only Viewer with page access can see the readiness report. *Corrected 2026-09-19: this said every route gates on `'admin'`.* Note also that `GET …/validation-readiness?fresh=true` re-runs the same live crawl the Admin-only POST does, without the POST's 15-per-hour rate limit — logged for triage in `../MAINTENANCE.md` (private).
 - **Discovery & Validation Readiness Subsystem:** `src/lib/seo/validation-readiness.ts`, `src/lib/seo/discovery-inspector.ts`, and APIs `/api/seo/validation-readiness`, `/api/seo/discovery-health` compute a validation readiness score (0-100%) and edge diagnosis for the 5 GSC indexing error categories. It is **request-driven, not scheduled** — nothing on any cron path calls it, and a plain GET serves the last cached summary. See [`GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md) for how the score is built and which parts of it are placeholders. *Corrected 2026-09-19: "real-time" overstated it.*
-- **Interactive UI & Section 7.8 Compliance:** `DiscoveryCoveragePanel.tsx` and `GscValidationWidget.tsx` implement the in-place collapsible drawer pattern and Top-Layer native `<dialog>` modals adhering to `RULESAd.md` §7.8.
+- **Interactive UI & Section 7.8 Compliance:** `DiscoveryCoveragePanel.tsx` (on `/dashboard/seo`) and `GscValidationWidget.tsx` (on the home dashboard, `src/components/dashboard/widgets/`) implement the in-place collapsible drawer pattern and Top-Layer native `<dialog>` modals adhering to `RULESAd.md` §7.8.
 - **Secrets:** `GSC_SERVICE_ACCOUNT_JSON` and `PAGESPEED_API_KEY` — **both are in `wrangler.toml`'s `[secrets] required` list** (RULE #0.8 documented exception — see `../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`). *Corrected 2026-09-19: `PAGESPEED_API_KEY` was described as "optional". The code degrades gracefully without it — that is what caused the 2026-08-12 quota incident in §10 — but it is a required secret, not an optional one.* (`PAGESPEED_API_KEY` is in the same exception category — deliberately a Worker secret and *not* a D1 setting, since D1 settings flow to the browser via the dashboard's initial page data and an API credential shouldn't).
 
 ## 12. Related
@@ -203,3 +203,9 @@ Researched against current freelance/agency rate data rather than estimated: API
 - `../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md` (private) — the RULE #0.6/#0.8/#0.9 reuse policy this feature was built to follow (one shared table for two services, no new cron trigger, minimal new secrets)
 - [`reference/schema-change-ledger.md`](../reference/schema-change-ledger.md) — applied-migration record for `0047`/`0049`/`0050`
 - [`STAFF-MANAGED-STORAGE.md`](STAFF-MANAGED-STORAGE.md) — the other feature this documentation pass covers; built on the same RBAC+PLAC foundation
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-10-17 | The nine routes under `src/pages/api/seo/` and their floors (`viewer` on the two readiness GETs), the components under `src/components/admin/seo/`, `GscValidationWidget.tsx`'s place, the setting keys and code defaults in `src/lib/gsc/sync.ts` (12 h) and `src/lib/pagespeed/sync.ts` (168 h), `src/lib/gsc/ops-alert.ts` (email queue), migrations `0047`, `0049`, `0050`; live through the D1 connector: `gsc-sync-enabled` and `pagespeed-check-enabled` still `false`, `pagespeed-check-interval-hours` 24, both jobs `off` in the `cron-control` row. §1 said PageSpeed runs once a week; corrected | Google's quotas and the vendor prices in §9 (not re-fetched); a live sync (both are off) |

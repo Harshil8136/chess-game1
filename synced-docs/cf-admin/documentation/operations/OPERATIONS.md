@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-17 | `ls migrations/*.sql` (54 files, `0002` twice, highest `0076`), `ls database/legacy_migrations/*.sql` (44, `0021` twice), `d1_migrations` newest rows through the Cloudflare D1 connector (`0076` at 2026-10-17 08:54:02) | §7: the state comment and the numbering note still said 33 files to `0055`. Corrected. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/probes.ts` (`askQueue`) after the queue binding's `metrics()` failed in production | §1's `EMAIL_QUEUE` paragraph: the queue's size is read from Cloudflare's Queues API with the existing token; the binding is still only sent to. No binding, secret, variable or cron trigger added. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/catalog.ts` after System health's checks were rebuilt: what it reads through `EMAIL_QUEUE`, `ASTRO_SERVICE` and `EMAIL_CONSOLE` | §1 Queues and Service Bindings: those three readers added. No binding, secret, variable or cron trigger added; the DNS check asks Cloudflare's public resolver, as `src/pages/api/emails/dns-check.ts` already did. Nothing else re-checked |
 | 2026-10-17 | `src/lib/jobs/registry.ts` (17 jobs: 15 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-health-checks.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **17 jobs (15+2)**, `health-checks` added to the table. No binding, secret, variable or cron trigger added. Nothing else re-checked |
@@ -718,8 +719,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-09-19: migrations/ holds 33 files, highest
-# 0055_cron_control_plane_subpages.sql (applied 2026-09-16 13:06:50 UTC).
+# State as of 2026-10-17: migrations/ holds 54 files, highest
+# 0076_health_configure.sql (applied 2026-10-17 08:54:02 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/
@@ -739,7 +740,7 @@ wrangler kv namespace list
 
 ### ⚠️ Migration numbering has two colliding series
 
-`migrations/` (0000–0055, **33** `.sql` files — `0002` appears twice and
+`migrations/` (0000–0076, **54** `.sql` files as of 2026-10-17 — `0002` appears twice and
 0009–0032 are unused) and `database/legacy_migrations/` (0001–0043, 44 `.sql` files plus a
 README — `0021` appears twice) are **independent numbering series that overlap on 19
 numbers** — 0001–0008 and 0033–0043. `migrations/0033_create_blog_and_taxonomy_tables.sql`

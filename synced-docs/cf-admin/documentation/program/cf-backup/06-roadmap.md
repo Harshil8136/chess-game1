@@ -8,7 +8,7 @@ tags: [program, cf-backup, roadmap]
 ---
 
 <!-- docs-check: proposed-paths -->
-<!-- This is a plan: nothing in it is built yet. It names routes, files and folders that do not exist yet, in cf-admin and in the future cf-backup repo. -->
+<!-- A plan, built and deployed 2026-09-23/24 (see the update banner). It names routes, files and folders in cf-backup's repository, not cf-admin's. -->
 
 # 06 — Roadmap
 
@@ -28,6 +28,15 @@ tags: [program, cf-backup, roadmap]
 > the P1/P2 exits — even though the code that those steps light up already exists. Track the
 > owner's actual sequence in `docs/OWNER-SETUP.md` (cf-backup-build) once it is written; until
 > then, the P0 table below and doc 06 §"Definition of done" are the checklist.
+>
+> **Update 2026-10-17: that paragraph describes the day of the build.** cf-backup was deployed on
+> 2026-09-23/24 and has been in use since; the owner's account steps are tracked in cf-backup's
+> `docs/OWNER-SETUP.md` and `docs/HANDOFF.md`. Stage 1c's pipeline (`db-backup.yml`) ran but never
+> produced a recovery point, and on 2026-09-27 the owner made the Secondary Pipeline the only
+> engine (RD-15, [README](README.md)); its own steps, acceptance criteria and retirement of the
+> old runner are cf-backup's `docs/remediation/13-engine-consolidation-plan.md`, which replaces
+> 1c, 1d and the monthly drill here. Stage 1e is done: cf-admin's `backups.yml` was deleted on
+> 2026-09-27. The phase tables below are kept as the plan was written.
 
 **Ordering principle: value and safety first.** Today there is **no working backup at
 all**, so the bridge comes first and real backups to R2 come before any console. Each phase
@@ -93,7 +102,7 @@ behaviour proven; measurements recorded in this folder.
 | 2b Console v1 **(code written 2026-09-23, not yet run for real)** | In cf-backup: the **live operations view** (doc 14: the "Now" bar, the live panel and log, the duplicate-run guard, now driven by `backup_runs` per Ruling R-7); status, readiness panel (OD-14) with the System map; history, run detail (files, drill, steps, log viewer); Run now, Cancel, Drill, Prune, Enable/Disable. **The capability catalog is enforced from the first endpoint** (doc 13), now with per-person grants/denies, not just role defaults | The owner watches a manual backup live from Queued to finished; a second Run now is refused while it runs; deliberately deleting a test secret turns its readiness row red (proven, then restored) |
 | 2c Reconcile and evidence **(code written 2026-09-23, superseded by D-4/D-11)** | Folded into `/internal/tick`'s budget-limited chores (no separate `backup-reconcile` job): `postrun/` enrichment (GitHub run, jobs, **log archive**); `ops/days` and `ops/events`; indexes; `backup:status`; the dead-man's switch (now reading `backup_runs`); alerts returned to cf-admin's `backup-tick` job, which queues them on its **own** `EMAIL_QUEUE` (no `cf-email-consumer` change needed — `projectSource` stays `cf-admin`, factor C7 moot) | A forced stale status produces exactly one alert email; a run killed mid-way still ends with GitHub's archive in `postrun/` |
 | 2d Usage **(code written 2026-09-23, not yet run for real)** | The allowance catalog with sources; the runner's account snapshot (OD-21); the minutes meter folded into the tick's chores (no separate `backup-meter` job); the Usage screen; the resource receipt on run detail | Every tracked allowance shows a figure or an explicit `unavailable` with its reason (doc 11 §5.4) |
-| 2e Keys **(code written 2026-09-23, not yet run for real)** | Doc 09's screens (status, rotate, reveal, confirm kit) and the weekly key check, using the OD-24 credential (**as built, 2026-09-24:** `pg` through the `VAULT_DB` Hyperdrive binding, over the Supavisor transaction pooler; the binding waits for the owner's `owner-secrets.mjs --only=vault` run) | Rotate → the next run encrypts to the new key → the key check is green |
+| 2e Keys **(code written 2026-09-23, not yet run for real)** | Doc 09's screens (status, rotate, reveal, confirm kit) and the weekly key check, using the OD-24 credential (**as built, 2026-09-24:** `pg` through the `VAULT_DB` Hyperdrive binding, over the Supavisor session pooler, after the transaction pooler hung Vault calls on 2026-09-24 (doc 12 §7)) | Rotate → the next run encrypts to the new key → the key check is green |
 | 2f Cron page **(built, CB-2)** | One read-only **Backups** row on `/dashboard/cron`, linking to the console | Owner browser check — pending |
 | 2g Access, activity, config **(code written 2026-09-23, not yet run for real)** | The Access screen (per-person grants with expiry, history, reset), the activity timeline and export, the global config screen (doc 13), **plus the per-person daily Run-now limit (default 6) and the `PRUNE` typed confirmation (Rulings R-4, R-6)** | A time-boxed grant stops working at its expiry; the last-holder guard refuses a lockout; an activity export downloads and is itself audited |
 
@@ -118,7 +127,7 @@ cannot. **Rollback:** hide the screen; nothing else depends on it.
 | 4.3 | Move cf-chatbot's admin integration to the service-binding pattern | Retires the published trust literal (critical finding, 2026-09-19 / 2026-09-21) |
 | 4.4 | Optional Workers AI summary of the PII-free evidence on the run view | "Executive summary" without shipping logs to a third party |
 | 4.5 | Client "Platform Trust Report" for Velox deployments | Commercial, single-tenant only (doc 05 §5) |
-| 4.6 | **Restore tests** ([15](15-restore-tests.md), the owner's plan approved 2026-10-08) **(built 2026-10-08, not yet live)**: a copy unlocked with the Vault key inside the Worker, rebuilt and checked in a sealed container on the cf-vps server, then deleted; the report kept in R2 | Proves, by hand with a reminder every 35 days (not on a schedule), that a stored copy opens with the key on record and rebuilds elsewhere. Live once the owner's server steps are done and a first test passes (doc 15 §13) |
+| 4.6 | **Restore tests** ([15](15-restore-tests.md), the owner's plan approved 2026-10-08) **(built and first run 2026-10-08, doc 15 §13)**: a copy unlocked with the Vault key inside the Worker, rebuilt and checked in a sealed container on the cf-vps server, then deleted; the report kept in R2 | Proves, by hand with a reminder every 35 days (not on a schedule), that a stored copy opens with the key on record and rebuilds elsewhere. The owner rolled the server's side out and the first test ran on 2026-10-08 (doc 15 §13) |
 
 ## Parked
 
@@ -139,3 +148,4 @@ cannot. **Rollback:** hide the screen; nothing else depends on it.
 | Date | Checked | Not checked |
 |---|---|---|
 | 2026-10-08 | Row 4.6 against cf-backup's and cf-vps's uncommitted Restore tests code (doc 15 §14 lists what was read) | The rest of the roadmap |
+| 2026-10-17 | The update banner against cf-backup's `docs/HANDOFF.md` and `docs/remediation/13-engine-consolidation-plan.md`, `.github/workflows/` in both repositories, and cf-admin's schema change ledger (`0057` applied 2026-09-24); 2e's pooler against doc 12 §7; row 4.6 against doc 15 | The P0 owner rows one by one, and the phase exits |
