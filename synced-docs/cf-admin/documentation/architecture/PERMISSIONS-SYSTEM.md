@@ -7,7 +7,7 @@ last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
-related_code: [src/lib/approvals/, src/lib/users/manage-apply.ts, src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/settings/testing-pass.ts, src/lib/auth/fresh-sign-in.ts, src/lib/approvals/, src/lib/users/manage-apply.ts, src/lib/access-center/profile.ts, src/lib/access-center/templates.ts, src/lib/auth/stages/decide.ts, src/lib/auth/decide-access.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/lib/access-changes/notify.ts, src/lib/access-requests/keys.ts, src/lib/access-center/temporary.ts, src/lib/auth/rbac.ts, src/lib/auth/plac.ts, src/lib/access-center/registry-access.ts, src/lib/auth/pipeline.ts, src/lib/auth/stages/, src/lib/auth/session.ts, src/lib/auth/guard.ts, src/lib/auth/routes.ts]
 tags: [architecture, security, rbac, plac, authorization, performance]
 ---
 
@@ -403,7 +403,7 @@ again, `admin`), `#resolve` (Resolve problems, `admin`), `#resolve-anyway` (Reso
 failing, `owner`) and `#simulate` (Send a test alert, `dev`). The page shows each action exactly
 when its route will allow it. It replaced two gates: Diagnostics asked for Developer Tools, and
 Alerts for its own page, whose Scan ran the same tests past the Developer Tools key, and whose
-`#resolve` is switched off by `0073` once this code is live
+`#resolve` were switched off by `0073` in the next push, once this code was live
 ([`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §1).
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
@@ -912,6 +912,25 @@ On its own the rule proves only that someone could sign in again in this browser
 person once Cloudflare Access asks for its own second step at every sign-in (item #13, an owner
 step in the Cloudflare dashboard).
 
+**Testing pass** (*added 2026-10-17, the owner's choice*). Vendor support tests all day, so on
+Settings they may switch on a pass for 1, 4 or 8 hours (`POST /api/settings/testing-pass`;
+`DELETE` ends it). While it lasts, `confirmedAt` (`src/lib/auth/fresh-sign-in.ts`) is the
+current time instead of `signedInAt`: `freshSignInRefusal` lets every action above through, and
+the actor headers sent to the Backups, Server and Email API consoles carry that time as
+`signedInAt`, so their own 10-minute checks pass too, with no change in those repositories. The
+limits:
+
+- **Vendor support only**, read from the session's role on every request: another role holding
+  the field is ignored, and a role change ends the pass.
+- **Started only from a real fresh sign-in**: `POST` reads `signedInAt` itself, never a pass, so a
+  pass cannot renew itself. Its refusal opens **Confirm it's you** like any other.
+- **Kept in the session** (`AdminSession.testingPassUntil`): bound to that browser, gone after a
+  sign-out, a forced sign-out or the session's 24-hour end, and never past that end.
+- **Only this rule.** Permissions, the two-person rule (§10.7) and every console check other than
+  the sign-in time still apply. The server access notice's record keeps the real sign-in time.
+- **Recorded**: `testing_pass_start` (hours, end time, the real sign-in) and `testing_pass_end`,
+  module `auth`, in the Audit Log.
+
 ### 10.6 The quarterly access review
 
 *Since 2026-10-16 (permissions item #24).* Every 90 days the Owner or Vendor support walks
@@ -1302,6 +1321,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-17 | claude | **Scope-limited to §10.5's testing pass paragraph.** Read `src/lib/auth/fresh-sign-in.ts` (`testingPassActive`, `confirmedAt`, `freshSignInRefusal`), `src/pages/api/settings/testing-pass.ts`, `session.ts` (`testingPassUntil`, `patchSession`), `pipeline.ts`, the three actor builders (`backup-proxy.ts`, `vps-proxy.ts`, `email-console.ts`) and `vps-notice-record.ts`; `test/testing-pass.test.ts` and `test/fresh-sign-in.test.ts` pass | The paragraph. The rest of §10.5 and the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the System health keys.** Read `surface-guards.ts` (`denyHealth`, `healthCan`), the five routes under `src/pages/api/system-health/`, `src/pages/dashboard/health.astro` and `migrations/0072_system_health.sql`; `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph matches the code. The live rows are read back once 0072 is applied (schema change ledger) |
 | 2026-10-17 | claude | **Scope-limited to Page Registry as a grant-only page.** Read `page-floors.ts` (`isGrantOnlyPage`, `roleOnPage`, `pageFloorOpens`, `grantOnlyDoor`), `plac.ts` (`computeAccessMap`, `computeNavItems`), `surface-guards.ts` (`canUsePageRegistry`), `page-gates.ts`, `access-center/rules.ts`, `pages.ts`, `overview.ts`, `see-as.ts`, `access-requests/rules.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one stored grant (2026-09-15) through the D1 connector, then removed that grant at the owner's choice with one `reset_access` activity-log row and read both back; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts`, `test/access-why.test.ts`, `test/access-requests.test.ts` and `test/see-as.test.ts` pass | §1's floor sentence, §5's two Page Registry notes and the new paragraph, §10.2, the §17 rows. Not re-derived: every other section |
 | 2026-10-16 | claude | **Docs pass after the 41 permission items, scope-limited to §4.1, §4.2, §5's Viewer note, §6 to §9, §11, §12, §13.1, §14, §16 and §17.** Read `src/lib/auth/stages/assertion.ts`, `bootstrap.ts`, `decide.ts`, `decision.ts` and `access-map.ts` (each refusal's status, body and audit reason; a page refusal is a rewrite; the access-map refusal redirects an API call too), `src/lib/auth/rbac.ts` (`ROLE_VOCABULARY`, `canBePageDefault`), `src/lib/access-center/limits.ts`, `src/lib/auth/page-registry.ts` and `src/layouts/AdminLayout.astro` (one read a minute per isolate, no retry, the sidebar's fallback), `src/lib/audit-seal/seal.ts` (`admin_audit_log` only); counted the `it(` cases in the three pipeline tests (53); through the D1 connector: `admin_pages` (117 rows, all legacy names, the CHECK) and `admin_page_overrides` (4, 1 deny, none with an end date) | §8's refusal table, §9's count, §11's stage 2, §12's unsealed sign-in log, §13.1's registry read, §14's registry row and §17's count corrected; §16 rewritten as the design's known limits, with the closed defects in one line. **Not re-derived:** §13.2 and §13.3's figures (2026-08-23 and 2026-09-19), §15's comparison and §15.1's control ids |

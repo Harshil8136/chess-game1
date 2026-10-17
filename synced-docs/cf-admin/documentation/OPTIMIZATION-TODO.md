@@ -459,7 +459,7 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
   `admin_pages` rows):**
   - ~~`/dashboard/alerts#resolve` — **present and active live, but in no migration or
     seed file.** It works today and would vanish on a rebuild from migrations.~~ No longer
-    checked since 2026-10-17; migration `0073` switches the row off. System health's keys
+    checked since 2026-10-17; migration `0073` switched the row off. System health's keys
     are in migration `0072`.
   - `/dashboard/inquiries#view` (`inquiries/export`), `/dashboard/bookings#delete`
     (`bookings/batch`), `/dashboard/media` (`media/gallery`) — **absent** from the

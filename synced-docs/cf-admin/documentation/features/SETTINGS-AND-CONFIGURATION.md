@@ -2,10 +2,10 @@
 title: "Settings and Configuration"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code, local-test]
 owner: harshil
-related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/AskForPermission.tsx, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
+related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/AskForPermission.tsx, src/components/admin/settings/TestingPassPanel.tsx, src/pages/api/settings/testing-pass.ts, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql]
 related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, EMAIL-PORTAL.md, USER-MANAGEMENT.md, ../architecture/GLOBAL-CONFIG.md, ../MAINTENANCE.md]
 tags: [settings, configuration, plac, theme, profile]
 ---
@@ -36,7 +36,7 @@ each a link to the section it counts: **Pages you can open**, **Extra actions** 
 count that could not be read shows a dash and "Could not be read just now", never a zero. The
 sections follow one under another on a phone, and in two columns from 1024 px wide, with Your
 access on the right. The header and Your access render on the server with no script; only Your
-profile, Other people and Your access's **Ask for a permission** button are islands.
+profile, Testing pass, Other people and Your access's **Ask for a permission** button are islands.
 
 - **Your profile.** Who you are (initials, name, email, role), your name with its own **Save
   name** button, and your theme as three choices side by side: Light, Dark and System. A name
@@ -46,6 +46,17 @@ profile, Other people and Your access's **Ask for a permission** button are isla
   there is no flash. Your theme is a row in D1 `admin_user_settings`, copied to the
   `cf_admin_theme` cookie; your name is `display_name` in Supabase `admin_authorized_users`, and
   your session shows the new name at once.
+- **Testing pass**, Vendor support only (since 2026-10-17, the owner's choice). Dangerous
+  changes ask for a sign-in from the last 10 minutes ("Confirm it's you",
+  [PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)), which stops someone testing
+  all day every few minutes. In the first 10 minutes after signing in, three choices side by side
+  start a pass for **1 hour**, **4 hours** or **8 hours**; later, a **Sign in again** button
+  signs out and comes back to Settings. While a pass is on, the panel shows "On until" a time of
+  day and the time left, with **End pass**. It covers that browser only, in the portal and the
+  Backups, Server and Email API consoles, and ends with a sign-out or the session's end. The page
+  sends times left rather than clock times, so a phone whose clock is off still counts down
+  correctly (`TestingPassPanel.tsx`, `testingPassState` in `settingsView.ts`). Both go to
+  `POST` and `DELETE /api/settings/testing-pass`, and each is in the Audit Log.
 - **Your access.** The pages and actions your role and your grants allow, grouped as the
   sidebar groups them and in the sidebar's colours (`src/lib/access-center/your-access.ts`, from
   the page registry and your access map). Each page is a link chip; the extra actions are listed
@@ -76,7 +87,7 @@ profile, Other people and Your access's **Ask for a permission** button are isla
   their theme stays theirs. Their sessions show the new name on their next click, because the
   change writes an `authz-changed` mark ([PERMISSIONS-SYSTEM §11](../architecture/PERMISSIONS-SYSTEM.md)).
 
-Both writes go to `POST /api/settings/user`. A change to someone else is checked twice: the
+Your name, your theme and other people's names go to `POST /api/settings/user`. A change to someone else is checked twice: the
 `#others` key by exact match (`placRequireGrant`), and the target's role below the caller's. It
 is audited with the old and new name.
 
@@ -139,6 +150,7 @@ it, and use its permission where one is named.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | **Scope-limited to the Testing pass bullet.** Against `TestingPassPanel.tsx`, `settingsView.ts` (`testingPassState`, `durationWords`), `index.astro`, `src/pages/api/settings/testing-pass.ts` and `src/lib/auth/fresh-sign-in.ts` (`testingPassInfo`); `test/testing-pass.test.ts` passes | The other bullets and the Configuration section; the panel on a phone, which Harshil tests after the deploy |
 | 2026-10-16 | **Scope-limited to Ask for a permission (#22).** The new paragraph of the Your access bullet against `AskForPermission.tsx`, `AccessPanel.tsx` (its children), `your-consoles.ts` (`readCatalogFor`, `askable`, `labels`) and `index.astro`; `test/access-console-requests.test.ts` and `test/access-why.test.ts` pass | The pop-up in a phone browser, which Harshil tests after the deploy |
 | 2026-10-16 | The Your access bullet against `AccessPanel.tsx`, `your-access.ts`, `your-consoles.ts` and `index.astro`; `test/access-why.test.ts` (given and closed pages, a floored page never listed, the console powers read from a catalog answer) and `test/settings-page.test.ts` pass | The rest of the page; the console parts against live consoles, and the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-10 | The Settings section against the rebuilt page (`index.astro`, `SettingsHeader.tsx`, `AccessPanel.tsx`, `UserSettingsPanel.tsx`, `OtherProfilesPanel.tsx`, `settingsView.ts`); `test/settings-page.test.ts` (who may be renamed, the tile counts, the name limits, the theme shown) and `test/api-settings-user.test.ts` pass | The Configuration section; the page in a phone browser, which Harshil tests after the deploy |

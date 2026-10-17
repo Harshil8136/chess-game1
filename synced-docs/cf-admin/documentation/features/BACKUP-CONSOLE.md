@@ -96,7 +96,10 @@ backup data, and preparing, unlocking or configuring a restore test unless that
 sign-in is at most 10 minutes old (`reauth_required`), and asks the person to
 sign out and back in — signing out also ends the Access session, so the next
 sign-in is a real one. A session without that time falls back to its creation
-time.
+time. Since 2026-10-17, while Vendor support holds a testing pass, cf-admin sends
+the current time instead, so these checks pass for that session until the pass
+ends; nothing changed in cf-backup
+([PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)).
 
 **Per-person access from the Users page (2026-10-03).** A person's backup
 capabilities are also shown and changed in the Access Center on their Access
@@ -291,6 +294,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | §3's testing pass sentence against `userActor` in `src/lib/backup-proxy.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/testing-pass.test.ts` passes | The sentence. The rest of the document not re-read |
 | 2026-10-16 | claude | §2 against the gateway `src/pages/dashboard/backup/app/[...path].ts` and `src/lib/backup-proxy.ts` (`isConsolePath`, `isReadOnly`, `MAX_REQUEST_BYTES`); §3 against `cf-backup/src/lib/fresh.ts` and its callers, `cf-backup/src/access/policy.ts` (`temporary`, `grantFor`, `can`), `src/lib/access-center/registry.ts` and `src/lib/users/manage-apply.ts` with `src/lib/dal/VpsAccessRepository.ts`; §4 against `src/lib/backup-audit.ts`, `src/lib/access-changes/notify.ts` and cf-backup's `access.edit` stamps (`cf-backup/src/api/access.ts`, `access-person.ts`) | Added the Path, Read-only (403 `read_only`) and Body rows; §3 now names every fresh-sign-in step, asking for a permission (#22) and what removing a person removes; §4 says an `access.edit` is emailed (#18). The TL;DR names the recorded reads. The Page access row names the Access Center's door check, which used the inherited page decision until this pass (`src/lib/access-center/consoles.ts`; `test/console-doors.test.ts` passes). Not re-checked: §1, §5 to §9; a signed request in production |
 | 2026-10-16 | claude | §2's Identity row and the paragraph after the table against `src/lib/console-signature.ts` and `backupBinding` (`src/lib/backup-proxy.ts`), and `cf-backup/src/gateway/signature.ts`; `test/console-signature.test.ts` and `cf-backup/test/signature.test.ts` pass | Not re-checked: every other section; a signed request in production (the key is not set yet) |
 | 2026-10-16 | claude | §3's `x-backup-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-backup/src/gateway/target.ts` and `cf-backup/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |

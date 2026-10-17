@@ -22,6 +22,8 @@ tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 The page is at `/dashboard/health`, in the sidebar's System group. The two old addresses forward
 to it: `/dashboard/alerts` opens the Problems tab and `/dashboard/debug/diagnostics` the Checks tab
 (that one only for someone who holds Developer Tools, which its folder still asks for first).
+The Alerts page's two registry rows were switched off by migration `0073` the same day, so the
+sidebar no longer lists Alerts.
 
 ## 1. Who may do what
 
@@ -156,4 +158,5 @@ summary instead.
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | The `0073` sentence: the two Alerts rows read back switched off through the Cloudflare D1 connector after it was applied | The rest of the page, unchanged since the row below |
 | 2026-10-17 | Written with the code: every claim above against `src/lib/health/`, `src/pages/api/system-health/`, `src/components/admin/health/`, the two repositories and `migrations/0072_system_health.sql`; the live tables read through the Cloudflare D1 connector before the migration (`platform_alerts`: 35 rows from the website, none open; `system_test_results`: 68 rows from four Diagnostics runs; the one Developer Tools grant belongs to an Owner, who passes the new key anyway); `test/system-health.test.ts` and the updated tests | The page on a phone, which the owner tests after the push |
