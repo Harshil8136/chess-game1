@@ -24,11 +24,12 @@ tags: [feature, console, ui, pages]
   open the page at all; the console decides what each person may do inside it.
 - A bar under the portal header (`src/ui/shell/`) holds the launcher (the current page;
   opens every page as tiles in their groups, with a search box, Enter opening the first match,
-  and the last five pages visited in this browser); from 1024 px the pages as icons in their
-  groups, each with a tooltip (groups that do not fit are left to the launcher); a count of
-  things that need a person, which opens their list (Needs attention); and the live status as
-  a dot and its words. Under 1024 px the current group's pages are one tap each (group tabs)
-  instead of the icons. The look and the building blocks are the
+  and the last five pages visited in this browser); from 768 px every page as an icon in its
+  group, named on hover, in a strip that scrolls sideways when it is narrower than the icons
+  (none is ever dropped); a count of things that need a person, which opens their list (Needs
+  attention); and the live status as a dot and its words. Under 768 px every page is named in
+  one row under the bar, by group, that scrolls sideways and keeps the current page in view
+  (`test/ui-shell-nav.test.ts`). The look and the building blocks are the
   design system (`documentation/reference/DESIGN-SYSTEM.md`, private).
 - **The console follows the portal's theme.** It is framed same-origin by the portal, so it
   reads the portal's `data-theme` (dark or light, set by the portal's theme toggle) when it
@@ -272,11 +273,13 @@ Every page has the same three layers (see the design system, `documentation/refe
   open, and the server four in all; a session ends after 10 minutes without typing or 30 minutes
   in all, and taking the capability away does not end one already open
   ([Stored policy](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)).
-- The bar above the terminal: the state badge, the account, the link in use (Fast link or Basic
-  link, see [How the terminal connects](#how-the-terminal-connects)), and one row of tools that
-  scrolls sideways on a narrow screen: Copy (the selection), Paste, Select text (the newest
-  2,000 lines as plain text, to select with a phone's own handles or Copy all), smaller and
-  larger text (9 to 24 px, kept on this device), and Full screen.
+- The bar above the terminal: on the left the state badge, the account and the link in use (a
+  green dot and Fast link, or an amber dot and Basic link, see
+  [How the terminal connects](#how-the-terminal-connects)); on the right the tools in three
+  groups, which wrap under the status on a narrow screen so none is ever hidden: Copy (the
+  selection), Paste and Select text (the newest 2,000 lines as plain text, to select with a
+  phone's own handles or Copy all); smaller and larger text with the size between them (9 to
+  24 px, kept on this device); and Full screen. Each tool shows its word from 768 px.
 - Keyboard: copy with Ctrl+C while text is selected (Ctrl+C with nothing selected stops the
   command, as in a shell), Ctrl+Shift+C or Ctrl+Insert; paste with Ctrl+V, Ctrl+Shift+V or
   Shift+Insert. On a Mac, Cmd+C and Cmd+V, and Ctrl+C and Ctrl+V stay the shell's. Every other
@@ -309,6 +312,14 @@ reconnects by itself after 1, 2 and then every 5 seconds, resuming from the last
 received, and gives up after 12 failures (about a minute). The session itself stays on the
 server until its own limits end it, and Open sessions lists it to reattach. The rules are in
 `src/ui/terminal-link.ts`.
+
+**Typing shows at once.** When the server's echo takes longer than 30 ms, what is typed is
+drawn over the terminal at the cursor straight away, and the server's echo replaces it
+(`src/ui/terminal-predict.ts`, the way mosh predicts its echo). Nothing is written into the
+terminal, so a wrong guess just disappears. A guess is shown on a line only after the server
+has echoed a typed letter on it, and Enter, a control key, an arrow, a paste or a full-screen
+program starts over; a password prompt never echoes, so a password is never drawn. Output that
+does not start with what was typed, or no answer within a second, drops the guess.
 
 The page draws only when its own state changes: the console's once-a-second clock does not
 redraw it (`memo`), and the terminal fits its size at most once per animation frame.
