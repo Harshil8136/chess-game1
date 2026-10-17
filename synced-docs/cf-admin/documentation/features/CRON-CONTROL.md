@@ -410,8 +410,10 @@ checks since part 2B, 2026-10-17). What the checks are, and what a problem does,
 by [`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §3; this section says how the job runs.
 
 What System health remembers between runs is one JSON row, `health-state` in
-`admin_portal_settings`, and it is the job's one gate key, so the dispatcher's gate-key
-query hands it over. The first run writes the row, with each check's first run placed so
+`admin_portal_settings`, and its settings another, `health-config` (paused checks, quiet
+windows, thresholds; since 2026-10-17). Both are the job's gate keys, so the dispatcher's
+gate-key query hands them over in its one query. A paused check is left out of the run
+until its pause ends, and the job wakes for that end. The first run writes the row, with each check's first run placed so
 that no run makes more than eight (`placeNew` in `src/lib/health/state.ts`), and runs
 nothing. A run that finds a check the row does not know, one a release added, places it
 the same way around the checks already running and writes that first, compare-and-swap.
@@ -896,6 +898,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | Part 3 settings: `HEALTH_CHECKS_KEYS` and `nextAt` in `src/workers/scheduled-health-checks.ts`, `isPaused` in `src/lib/health/config.ts`; `test/system-health-settings.test.ts` passes | §3e's gate-key paragraph matches the code; the rest of the document not re-read |
 | 2026-10-17 | claude | Part 2B: `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts` (`placeNew`, `advanceDue`, the run order), `src/lib/health/catalog.ts`, `src/lib/jobs/budgets.ts`; `test/system-health-state.test.ts` (placing from the live state's last runs, pauses), `test/health-checks-job.test.ts` and `test/jobs-budget.test.ts` pass (first run 28 queries, 56 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest 23 queries, 408 read, 38 written); `backup_runs` (48 rows) and `sync_outbox` (empty) counted in production through the D1 connector | §3e and §5's `health-checks` note. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-17 | claude | `health-checks` added: `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/health-checks-job.test.ts`, `test/system-health-state.test.ts` and `test/jobs-budget.test.ts` pass (first run 16 queries, 32 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest 13 queries, 249 read, 30 written); the two heavy queries run read-only in production through the D1 connector (135 and 101 rows read); jobs counted in `registry.ts` (17) | §3's count, tier table and reason, §3e (new), §4a's note, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | `audit-seal` added: `src/workers/scheduled-audit-seal.ts`, `src/lib/audit-seal/`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/audit-seal.test.ts` and `test/jobs-budget.test.ts` pass; jobs counted in `registry.ts` (16) | §3's count, tier table and reason, §3d (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written) |

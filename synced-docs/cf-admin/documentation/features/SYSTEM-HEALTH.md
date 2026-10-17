@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/dashboard/health.astro, src/pages/dashboard/index.astro, src/components/dashboard/widgets/ServiceStatusStrip.tsx, src/components/dashboard/DashboardController.tsx, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/health/heavy.ts, src/lib/dal/EmailAuditLogRepository.ts, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/email-console.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, migrations/0075_health_run_heavy.sql, test/system-health.test.ts, test/system-health-heavy.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
+related_code: [src/pages/dashboard/health.astro, src/pages/dashboard/index.astro, src/components/dashboard/widgets/ServiceStatusStrip.tsx, src/components/dashboard/DashboardController.tsx, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/health/heavy.ts, src/lib/dal/EmailAuditLogRepository.ts, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/email-console.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, migrations/0075_health_run_heavy.sql, migrations/0076_health_configure.sql, test/system-health.test.ts, test/system-health-settings.test.ts, test/system-health-heavy.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
 related_docs: [CRON-CONTROL.md, ../records/reports/2026-10-17-health-snooze-repeats-watcher.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
 tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 ---
@@ -20,9 +20,10 @@ tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 > fails, and lets you send a test alert to prove an alert would reach someone, and the Owner run
 > two heavier tests: a write to the portal's storage, and a real test email to themselves. It replaced two
 > older pages, Diagnostics and Alerts, on 2026-10-17. Someone can say "I'm on it" on a problem, or
-> quiet it for a few hours with a reason. Who may see the technical details, run the checks, take
-> or quiet a problem, close problems, send a test alert or run the heavy tests is set per person on
-> the Access page.
+> quiet it for a few hours with a reason. The Owner can pause a check while something is known to
+> be down, set quiet hours for planned work, and choose after how many failures a problem opens.
+> Who may see the technical details, run the checks, take or quiet a problem, close problems, send a
+> test alert, run the heavy tests or change the settings is set per person on the Access page.
 
 The page is at `/dashboard/health`, in the sidebar's System group. The two old addresses forward
 to it: `/dashboard/alerts` opens the Problems tab and `/dashboard/debug/diagnostics` the Checks tab
@@ -32,7 +33,7 @@ sidebar no longer lists Alerts.
 
 ## 1. Who may do what
 
-The page and each action are rows in the page registry (migrations `0072`, `0074` and `0075`), so each can be given to
+The page and each action are rows in the page registry (migrations `0072`, `0074`, `0075` and `0076`), so each can be given to
 or taken from one person on their Access page. The server checks every one of them; the page only
 hides what the server would refuse (`denyHealth` and `healthCan` in `src/lib/auth/surface-guards.ts`).
 
@@ -46,25 +47,27 @@ hides what the server would refuse (`denyHealth` and `healthCan` in `src/lib/aut
 | Resolve while still failing | `/dashboard/health#resolve-anyway` | Owner and above | Close a health check's problem while its check still fails |
 | Send a test alert | `/dashboard/health#simulate` | Vendor support | Send a marked test through the real alert channels |
 | Run heavy tests | `/dashboard/health#run-heavy` | Owner and above | Run the storage write test, and send a test email to yourself (migration `0075`) |
+| Change settings | `/dashboard/health#configure` | Owner and above | Pause a check, add or end a quiet window, and set when a problem opens and closes (migration `0076`) |
 
 A switch opens nothing without the page key. The Owner and Vendor support pass every switch, as
 everywhere in the portal. Until 2026-10-17 Diagnostics asked for Developer Tools (Vendor support)
 and Alerts for its own page (Manager), whose "Scan" ran the same tests past the Developer Tools key.
 
-## 2. The five tabs
+## 2. The six tabs
 
 The page has a look of its own, a patient monitor (the [design](../specs/2026-10-17-system-health-look.md)).
-A monitor band sits above the tabs on every tab: the page's name, when it last checked, and three
-readouts (Failing, Needs a look, Open), each a button to the list behind it. The five tabs are one
-row, all visible on a phone.
+A monitor band sits above the tabs on every tab: the page's name, when it last checked (and, during
+a quiet window, until when it is quiet), and three readouts (Failing, Needs a look, Open), each a
+button to the list behind it. The six tabs are one row, all visible on a phone.
 
 | Tab | What it shows |
 |---|---|
 | Overview | The band in full: a state word (All working, Needs a look, Something is failing, Not checked yet), one sentence, and a pulse line of the last 30 days, a beat per day at its worst state across the six areas, a dashed line on a day nothing ran. Then what needs someone now (failing checks and the top open problems) and each area with a tick per day |
 | Problems | A triage board: lanes by level (Urgent "Look now", Soon "Look today", FYI "When there is time"), open before closed, each problem a ticket that says who filed it, how many times it came, first and last seen, who is on it, and once closed who closed it and why. Open problems someone snoozed wait in a Snoozed lane between the open and the closed ones. Open, Closed or All, and a level. Opening one shows its chart: who is on it and its snooze with the buttons that set them, its check's latest result, last 24 results and how to fix it, Test again, each time it came and each close, by day, and the form that closes it |
-| Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again |
+| Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again. A paused check says until when and why |
 | Tests | Check everything now, Send a test alert with the path its channels take, and the heavy tests (§5) |
 | History | Every run of the checks that is kept, by day, each with its state words and a bar of how it went; one run's results; the way to closed problems; the compliance records |
+| Settings | The paused checks, the quiet windows under way and planned, and when a problem opens and closes (§3, "Settings"). Everyone with the page sees them; changing them needs Change settings |
 
 **Counts are per problem.** The open counts on the band, the Problems tab and the level buttons
 count each open problem once, however many times it came, at its level. A snoozed problem is not
@@ -164,6 +167,8 @@ again counts the same way as the job: a failure right after the job's failure op
 **Closing by itself.** The problem closes itself after the check passes twice in a row, signed
 "System health" with the reason "Fixed itself: the check passed twice in a row." When it comes back
 the same day, the new problem says how many times it opened today, and the ticket shows each time.
+A recovery asks to close once, on the run whose passes in a row reach the number, so a threshold
+lowered in Settings during a recovery still closes it on the next pass.
 
 **Unstable checks.** A check that keeps failing and recovering files one problem that says so,
 instead of one per failure (the Nagios rule: the share of changes between failing and not in its
@@ -171,6 +176,24 @@ last 21 results, newer ones weighing more, reaches 30%). While it is unstable th
 closes nothing; the problem closes itself when the share falls to 15% or below ("Steady again"). A
 check that moves between Working and Needs a look is not unstable, as a warning never opens a
 problem. FYI checks never open a problem.
+
+**Settings.** Three things on the Settings tab change these rules, kept in one row
+(`health-config`, `src/lib/health/config.ts`) and changed through `POST /api/system-health/settings`,
+ten changes a minute per person, each recorded as `health_configure` with what changed. Two people
+changing them at once never overwrite each other (compare-and-swap).
+
+- **Pause a check** for 1 hour, 4 hours, 1 day, 3 days or 7 days, with a reason. A paused check
+  does not run on its own and files no problem until the pause ends, then runs on the job's next
+  run; Test again still runs it and shows the result. It is for something known to be down or
+  being changed, so its failures are not reported over and over. Resume ends a pause early.
+- **Quiet windows** for planned work: from now or a time up to 30 days ahead, for 1, 2, 4, 8 or
+  24 hours, with a reason, at most ten at once. During one, problems are still filed and listed,
+  but quietly: their row and the Worker log, no Sentry event and no alert email, from the portal's
+  checks and from the website, whose alert gate reads the same row
+  (`cf-astro/src/lib/alert-gate.ts`). A problem filed quietly keeps the window's end in what it said.
+  End now or Remove ends one.
+- **When a problem opens and closes:** after how many failures in a row a problem opens, and after
+  how many passes it closes by itself, each from 1 to 5. Both start at 2.
 
 **Limits.** Test again runs one check at most once a minute, and Check everything now at most once
 every two minutes; the stored results are the clock, so a check the job just kept counts too. At
@@ -285,13 +308,14 @@ test is recorded as `health_heavy_test`, with how each store did or the email's 
 | Where | What | Kept |
 |---|---|---|
 | D1 `system_test_results` | A check's result: the run, the check, its level, status, time taken, the plain summary, the technical part as JSON, and the id of the person who ran it (`system` for the job, whose runs are `auto-…`). Kept: every result someone ran, and from the job every change of state plus one an hour per check, about 600 rows a day with 27 checks | 30 days; the job deletes older results on its first run after 03:00 UTC |
+| D1 `admin_portal_settings` row `health-config` | System health's settings (§3, "Settings"): each paused check's end, reason and the email address of the person who paused it; each quiet window's start, end, reason and the address of the person who added it; and the two thresholds. Read by the checks job with the state in one query, by Test again, and by the website's alert gate | A pause or window is dropped from the row by the next change after it ends |
 | D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days; and when the job last ran on its own (`tick`), which the website's hourly heartbeat reads (§3). About 25 KB with 27 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
 | D1 `platform_alerts` | Problems, compliance records and test alerts; who closed a problem and why; since `0074` who is on it and since when, a snooze's end and reason, and a row's repeats and when it last came | No automatic clean-up yet |
-| D1 `admin_audit_log` | `health_run`, `health_resolve`, `health_test_alert`, `health_ack`, `health_snooze`, `health_unsnooze`, `health_heavy_test` | The activity log's own rules |
+| D1 `admin_audit_log` | `health_run`, `health_resolve`, `health_test_alert`, `health_ack`, `health_snooze`, `health_unsnooze`, `health_heavy_test`, `health_configure` | The activity log's own rules |
 | Supabase `email_audit_logs` | The test email's ledger row: the presser's address, the subject and body, source `system-health`, and what the email service and Brevo record about it | The email ledger's own rules |
 
 No new table, binding, secret or cron trigger: the results table is the one Diagnostics wrote, the
-problems table the one Alerts read, and the state is one row of the settings table. The checks
+problems table the one Alerts read, and the state and the settings are two rows of the settings table. The checks
 use what the portal already had: `RESEND_API_KEY` and `BREVO_API_KEY`, the `ASTRO_SERVICE` and
 `EMAIL_CONSOLE` bindings, and the Cloudflare token and account the Scheduled jobs page and the
 dashboard already use. The email queue's size comes from Cloudflare's Queues API with that token,
@@ -303,8 +327,8 @@ not list them.
 
 ## 7. Not built yet
 
-The rest of part 3 of the plan of 2026-10-17, which the owner approved: settings (`#configure`)
-and the two extras, the outside providers' status pages and the server's own site checks. Other services'
+The rest of part 3 of the plan of 2026-10-17, which the owner approved: the two extras, the
+outside providers' status pages and the server's own site checks. Other services'
 problems reach the list through the checks that watch them: *Scheduled jobs on time*, *Backup is
 fresh*, *Server is alive*, the email service's stuck emails and the booking and consent
 heartbeat (§3).
@@ -313,6 +337,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | Settings (migration `0076`, applied live first and read back through the Cloudflare D1 connector: the `#configure` row, owner): the TL;DR, §1's row, §2's band, Checks and Settings rows, §3's closing and "Settings", §6 and §7 against `src/lib/health/config.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/workers/scheduled-health-checks.ts`, `src/pages/api/system-health/settings.ts`, `src/pages/api/system-health/index.ts` and `src/components/admin/health/SettingsPanel.tsx`; pinned by `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts`. The website's side against `cf-astro/src/lib/alert-gate.ts` | The tab on a phone, which the owner tests after the push |
 | 2026-10-17 | The test alert's email to the presser (§5) against `src/pages/api/system-health/test-alert.ts`, `fireAlert` in `src/lib/alert-gate.ts` (`testEmailTo`), `emailServiceHealth` in `src/lib/email-console.ts` and `cf-email-consumer/src/handlers.ts` (`handlePlatformAlert`, live in cf-email-consumer `0cd6915`); pinned by `test/system-health.test.ts` | A live urgent test, which the owner sends on a phone after the push |
 | 2026-10-17 | The heavy tests (migration `0075`, applied live first and read back through the Cloudflare D1 connector: the `#run-heavy` row, owner): §1's row, §2's Tests row, §5's heavy tests, §6 and §7 against `src/pages/api/system-health/heavy.ts`, `src/lib/health/heavy.ts`, `src/components/admin/health/HeavyTests.tsx` and `src/lib/dal/EmailAuditLogRepository.ts`; the status words against `cf-email-consumer/src/handlers.ts`, `cf-email-consumer/src/index.ts` and `cf-email-consumer/src/dlq.ts` and the Brevo webhook (`src/pages/api/emails/webhook.ts`); pinned by `test/system-health-heavy.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` | A live test email and storage write, which the owner runs on a phone after the push |
 | 2026-10-17 | The home page's card (§2 "On the home page") against `src/pages/api/system-health/index.ts`, `healthGlance` in `src/lib/health/view.ts`, `glanceWords` in `src/components/admin/health/health-model.ts`, `src/components/dashboard/widgets/ServiceStatusStrip.tsx`, `DashboardController.tsx` and `src/pages/dashboard/index.astro`; pinned by `test/system-health.test.ts` and `test/system-health-board.test.ts`. The website's side of §4, live in cf-astro `5d3b5ee`, against `cf-astro/src/lib/alert-gate.ts`. The run stamp read live through the Cloudflare D1 connector: `tick` written at 07:55:42 UTC, the first run after cf-admin `950b899`; *Scheduled jobs on time* passed twice and no health problem is open. §7 re-read against the plan | The card on a phone, which the owner tests after the push; a live repeat and a stale stamp, which wait for the website to file one and for a stopped scheduler |

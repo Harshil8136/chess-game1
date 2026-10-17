@@ -412,6 +412,10 @@ and snooze, `admin`), checked the same way (`denyHealth(user, 'ack')`) on PATCH
 heavy tests, `owner`), checked the same way (`denyHealth(user, 'run-heavy')`) on POST and GET
 `/api/system-health/heavy`: the storage write test, and a test email that goes only to the
 presser's own address and is followed only by them.
+*Added 2026-10-17 (System health part 3, migration `0076`):* an eighth key, `#configure` (Change
+settings, `owner`), checked the same way (`denyHealth(user, 'configure')`) on POST
+`/api/system-health/settings`: pausing a check, quiet windows and the two thresholds. Reading the
+settings needs only the page.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1328,6 +1332,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-17 | claude | **Scope-limited to the `#configure` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/settings.ts` and `migrations/0076_health_configure.sql`; read the live `/dashboard/health#configure` row back through the D1 connector after 0076 was applied (`owner`, active); `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#run-heavy` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/heavy.ts` and `migrations/0075_health_run_heavy.sql`; read the live `/dashboard/health#run-heavy` row back through the D1 connector after 0075 was applied (`owner`, active); `test/system-health-heavy.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#ack` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), the PATCH handler in `src/pages/api/system-health/problems.ts` and `migrations/0074_health_ack_snooze.sql`; read the live `/dashboard/health#ack` row back through the D1 connector after 0074 was applied (`admin`, active); `test/system-health-ack.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to §10.5's testing pass paragraph.** Read `src/lib/auth/fresh-sign-in.ts` (`testingPassActive`, `confirmedAt`, `freshSignInRefusal`), `src/pages/api/settings/testing-pass.ts`, `session.ts` (`testingPassUntil`, `patchSession`), `pipeline.ts`, the three actor builders (`backup-proxy.ts`, `vps-proxy.ts`, `email-console.ts`) and `vps-notice-record.ts`; `test/testing-pass.test.ts` and `test/fresh-sign-in.test.ts` pass | The paragraph. The rest of §10.5 and the document not re-read |
