@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-09
 verified_against: [code]
 owner: harshil
-related_code: [src/ui/pages.ts, src/ui/screens, src/ui/shell, src/ui/theme.ts, src/ui/restore.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
+related_code: [src/ui/pages.ts, src/ui/terminal-keys.ts, src/ui/terminal-link.ts, src/ui/terminal-predict.ts, src/ui/screens, src/ui/shell, src/ui/theme.ts, src/ui/restore.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
 related_docs: [../security/PERMISSIONS.md, ACTIONS.md, JOBS.md, RESTORE-TESTS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
 tags: [feature, console, ui, pages]
 ---
@@ -535,7 +535,8 @@ screen shows. Access edits save to the local test database on the PC, never the 
   a matching `test/ui-*.test.ts`; the screen only draws what it returns. Alerts and Timeline
   share `audit-view.ts`; Restore tests use `restore.ts`.
 - The Terminal: `src/ui/screens/Terminal.tsx`; its keys, swipes and text size in
-  `src/ui/terminal-keys.ts`; its connection in `src/ui/terminal-link.ts`; the socket in
+  `src/ui/terminal-keys.ts`; its connection in `src/ui/terminal-link.ts`; the typed letters it
+  draws before the echo in `src/ui/terminal-predict.ts`; the socket in
   `agent/src/websocket.ts` and `terminalSocket` in `agent/src/server.ts`
 - The shell (top bar, group tabs, launcher, Needs attention): `src/ui/shell/`,
   `src/ui/attention.ts`; the theme: `src/ui/theme.ts`

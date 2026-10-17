@@ -2,7 +2,7 @@
 title: "Deploying cf-vps"
 status: active
 audience: [operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: [package.json, scripts/deploy-agent.mjs, host/push.sh, host/60-agent/apply.sh, host/66-jobs/apply.sh, wrangler.json, scripts/setup]
@@ -139,7 +139,9 @@ file, so a re-run raises no audit alert. Run one step, read the output, then the
 steps run alone. A first-time build follows the numbering of [HOST-MODULES](HOST-MODULES.md):
 baseline, firewall, audit, log shipping, Node, tunnel, Podman, nginx, PostgreSQL, agent,
 actions, jobs, integrity, probes, terminal. The firewall step skips rules for a user that does not
-exist yet (the tunnel and agent users) and says so; apply it again after those modules.
+exist yet (the tunnel and agent users) and says so; apply it again after those modules. The
+terminal goes last because its `sshd` step moves sshd to loopback: by then SSH must already
+reach the server through the tunnel.
 
 After the audit rules are locked, new rules load only at boot; follow the runbook for that
 (private: `runbooks/audit-rule-change.md`).
@@ -176,6 +178,7 @@ the restart.
 | Tunnel connector token | The server only | `scripts/setup/tunnel-token.mjs` |
 | R2 upload key pair | The server only, as systemd credentials | `scripts/setup/r2-audit-creds.mjs` |
 | A job's own secrets | The server only, as the systemd credential `job-<job>.<ENV_NAME>` | `scripts/setup/job-secret.mjs <job> <NAME>` (typed at a prompt, never echoed) |
+| The restore test's lab key | The server only, as the systemd credential `job-restore_test.LAB_KEY`; its public half in `/etc/vps/jobs/` | `scripts/setup/lab-key.mjs`, which makes the pair on the server so no person sees the private half ([RESTORE-TESTS](../features/RESTORE-TESTS.md#the-lab-key)) |
 
 These scripts print no secret. Rotation steps are in the private runbook `key-rotation.md`.
 

@@ -2,7 +2,7 @@
 title: "Documentation Conventions"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: [scripts/docs-mirror.mjs, .github/workflows/sync-docs.yml, test/docs-mirror.test.ts]
@@ -44,6 +44,7 @@ and never edited to match today; their status is `historical`.
 | `program/` | Current status and what to resume (`HANDOFF.md`) | living | no |
 | `specs/` | Dated design specs; `active` while it is the plan of record | spec | no |
 | `records/` | Dated, frozen records, with executed plans in `records/plans/`, incident reports in `records/incidents/`, and a change record for every big change (`main.md` §4, from 2026-10-04) | record | no |
+| `minecraft/` | A proposal, uploaded 2026-10-06, to host a game server; nothing of it is built, and it waits on the owner's decision | draft | no |
 | `_templates/` | The doc template and the change-record template | meta | no |
 
 The rule behind "published": publish how the system works, not the state of it. Runbooks,

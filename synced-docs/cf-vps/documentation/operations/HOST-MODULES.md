@@ -2,7 +2,7 @@
 title: "Host Modules"
 status: active
 audience: [operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: [host, host/push.sh, host/lib/install.sh]
@@ -57,11 +57,12 @@ Other items under `host/`:
 
 ## Order of a first build
 
-Baseline, audit and log shipping first (so everything after is recorded), then the tunnel and
-firewall, then the agent, then Podman, nginx, PostgreSQL, actions, jobs, integrity, probes and
-the terminal; run each module's `test` step after it. The detailed order and its reasons are in
-[DEPLOY](DEPLOY.md). The audit rules are locked once the pipeline is proven, and a later
-change then needs a reboot.
+Follow the numbers: the baseline, then the firewall, audit and log shipping (so everything after
+is recorded), then Node, the tunnel, the app platform, the agent, actions, jobs, integrity and
+probes, with the terminal last; run each module's `test` step after it. The firewall is applied
+again once the tunnel's and the agent's users exist. The order and its reasons are in
+[DEPLOY](DEPLOY.md#host-modules). The audit rules are locked once the pipeline is proven, and a
+later change then needs a reboot.
 
 ## Where to look
 

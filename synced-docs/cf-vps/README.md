@@ -16,7 +16,7 @@ The Madagascar platform's VPS layer: the server (Oracle Cloud A1, Ubuntu 26.04 a
 | Command | What it does |
 |---|---|
 | `npm run dev` | Live console on your PC, reading the server through SSH (needs Node 22.13 or newer and a working SSH alias for the server, which `dev.local.json` can name; open <http://localhost:5173/dashboard/vps/app/>) |
-| `npm run verify` | Typecheck, tests, build, build-output test, audit. Run before every commit; Workers Builds runs it on push to `main` |
+| `npm run verify` | Typecheck, the Worker types check, tests, build, build-output test, audit. Run before every push; Workers Builds runs it on a push to `main` and deploys only if it passes |
 | `npm run agent:deploy` | Build the agent and install it on the server as a new release (health-checked; rolls back on failure) |
 | `node scripts/docs-mirror.mjs check` | Check that every published doc is free of identifiers and credentials |
 

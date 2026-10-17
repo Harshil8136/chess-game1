@@ -2,7 +2,7 @@
 title: "Forensic Audit Pipeline"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-08
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: [host/20-audit/files/etc/audit/rules.d/50-vps.rules, host/25-logship/files/etc/vector/conf.d/10-sources.yaml, host/25-logship/files/etc/vector/conf.d/20-transforms.yaml, host/25-logship/files/etc/vector/conf.d/30-sinks.yaml, host/25-logship/files/opt/vps/bin/vps-r2-upload, host/25-logship/files/opt/vps/bin/vps-heartbeat, host/20-audit/files/opt/vps/bin/vps-audit-maintain]
@@ -39,7 +39,7 @@ Vector (`25-logship`) normalises everything to one schema (`ts`, `host`, `source
 | `command` | Commands run by a logged-in person | yes |
 | `privilege` | sudo | yes |
 | `config` | Changes to watched config paths (SSH, sudoers, PAM, accounts, cron, boot, polkit, units, firewall, platform files) | yes |
-| `security` | Failed logins, kernel module, clock, mount and ptrace events, audit-rule changes, terminal certificates, integrity findings, log deletion and retention changes | yes |
+| `security` | Failed logins, kernel module, clock, mount and ptrace events, audit-rule changes, terminal certificates, integrity findings, log deletion and retention changes, and each database dump's off-server copy, sent or failed | yes |
 | `probe` | External site checks (down, back up, certificate expiry), every server job run, every job control from the console (cancelled, paused, resumed, blocked, unblocked, limits and schedule changes, none of them alerted) and a job going quiet ([JOBS](../features/JOBS.md)) | yes |
 | `service_command` | Commands run by services, daemons and containers | no |
 | `recording` | Terminal session recordings | no |
@@ -89,6 +89,7 @@ only if it passes this rule:
 | `terminal_admin` | A certificate was issued for the sudo-capable terminal account, keyed by that opening, so a second one within 10 minutes alerts too (since 2026-10-16, once `25-logship` is applied again on the server; until then all openings share one key) | warning |
 | `integrity` | AIDE or debsums found files changed outside a package or deploy | warning |
 | `probe_down` | A public site is down twice in a row | error |
+| `offbox_failed` | A nightly database dump could not be encrypted and sent to R2 (`57-postgres`), keyed by database; it is sent again on the next night's run while the dump is on disk | error |
 | `job_failed` | A server job's run failed (after its retries), keyed by job | error |
 | `job_missed` | A server job waited longer than its own limit and did not run, keyed by job | warning |
 | `job_quiet` | A scheduled server job has not succeeded for longer than its `quiet_after`, or its schedule is off though nobody paused or blocked it (the agent's 5-minute check, one line when it turns quiet), keyed by job | warning |
