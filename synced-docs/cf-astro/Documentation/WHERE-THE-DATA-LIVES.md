@@ -136,9 +136,8 @@ shows rows, the dashboard is broken — not the data. Check Sentry project
 plus CSP blocking the panel scripts).
 
 Both apps share ONE D1 database (`madagascar-db`) and one `d1_migrations`
-ledger. cf-admin migrations are hand-applied (`wrangler d1 execute`); cf-astro
-migrations go through `wrangler d1 migrations apply`. Never give two migration
-files the same number prefix — a duplicate `0005` is how the forensics PLAC
-rows went missing.
+ledger. Each repo owns its own range of migration numbers (`RULES.md` RULE
+#0.7b). Never give two migration files the same number prefix — a duplicate
+`0005` is how the forensics PLAC rows went missing.
 
 {% endraw %}

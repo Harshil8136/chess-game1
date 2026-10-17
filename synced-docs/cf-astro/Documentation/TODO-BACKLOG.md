@@ -1,8 +1,38 @@
 {% raw %}
 # 📋 Madagascar Pet Hotel — ToDo
 
-> Last updated: 2026-05-29 — moved from the repository root to `Documentation/` on 2026-09-15 (one docs root). The open items below have not been re-verified since 2026-05-29; treat each as a lead, not a fact.
-> All security layers (Rate Limiting, Turnstile, Drizzle ORM), email queue, and observability are complete and deployed.
+> The living backlog (`main.md` §4: something left undone, or a problem found). Newest
+> sections first; each section says when and how it was checked. Sections 0 to 3 date from
+> 2026-05-29 (moved here from the repository root on 2026-09-15); their open items are leads,
+> not facts, except where a 2026-10-17 note says otherwise.
+
+## 0d. 📚 Found in the documentation pass (2026-10-17)
+
+> Checked against the code, the live D1 and Supabase databases (connectors, read-only) on
+> 2026-10-17. Code was not changed in that pass; each item needs a code change or the owner.
+
+- [ ] 🟡 **`www` and `pet` redirect loop: re-check.** `SYSTEM-ARCHITECTURE.md` §8 records that
+      on 2026-08-10 both hosts redirected to themselves, which the Worker's code cannot do. Not
+      re-checked since: the documentation session's network could not reach the site. On a
+      phone, open `https://www.madagascarhotelags.com/`: it should land on
+      `https://madagascarhotelags.com/es/`. If it loops, remove `www`/`pet` from any old Pages
+      project in the dashboard and attach them to the `cf-astro` Worker or keep only the
+      Redirect Rules.
+- [ ] 🟢 **The MCP and WebMCP service lists disagree with the published skill.** `/api/mcp`
+      `get_services` and the WebMCP `get_services` tool (`BaseLayout.astro`) say medication is
+      "Included"; `llms-full.txt` and `/.well-known/agent-skills/services/SKILL.md` say
+      "Priced by treatment". The tools also list fewer services than the skill. One source
+      for the catalog would stop this.
+- [ ] 🟢 **`privacy_requests` is still declared in `src/lib/db/schema.ts`**, but the live table
+      was renamed `zz_dead_privacy_requests_20260916` on 2026-09-16. Drop the declaration (a
+      schema change: `npm run db:generate` and `npm run db:check`) when the table is dropped.
+- [ ] 🟢 **The `arco` rate-limit key has no route.** `RATE_LIMIT_MAX.arco` in
+      `src/lib/sync-contract.ts` is unused since `/api/privacy/arco` was removed; cf-admin's
+      mirror of the contract would have to drop it too.
+- [ ] 🟢 **Three hardening indexes are gone** from the live database
+      (`idx_booking_quality_metadata_booking_id`, `idx_bookings_owner_email`,
+      `idx_privacy_requests_email`; `SECURITY.md` §11). Probably harmless at this size;
+      re-create them only if a query needs them.
 
 ---
 
@@ -150,9 +180,9 @@
       `cmsData` snapshot; one that lands after a newer publish writes the older
       value, now for up to 24 h instead of 1 h. A version or timestamp check would
       close it.
-- [ ] 🟢 **Skip the ISR KV read for paths with a file extension.** Scanner probes
-      such as `/wp-login.php` still cost one KV read before the 404; a dotted path
-      is never an ISR page.
+- [x] ~~🟢 **Skip the ISR KV read for paths with a file extension.**~~ Done 2026-10-10:
+      `isIsrEligiblePath` (`src/lib/isr-response.ts`) skips any dotted path before the
+      middleware reads KV.
 - [ ] 🟢 **A free WAF rule for scanner paths** (`.env`, `.git`, `wp-`,
       `phpmyadmin`) would stop them before the Worker runs. A dashboard change, so
       it needs the owner.
@@ -178,8 +208,7 @@
 
 - [x] 🟢 **Legal pages professionalized (2026-05-29)** — Privacy & Terms moved to a
       plain, non-animated `LegalLayout` with `.legal-doc` typography; casual/marketing
-      copy, ALL-CAPS, emoji, and the redundant version banner removed (see CHANGELOG
-      Pass 3). Optional follow-up: apply the same to the ARCO legal page
+      copy, ALL-CAPS, emoji, and the redundant version banner removed. Optional follow-up: apply the same to the ARCO legal page
       (`/legal/arco`, currently still on `MarketingLayout` because of its upload form).
 
 - [x] 🟡 **Privacy notice rewrite** — DONE (branch `claude/security-compliance-fixes-cqa4S`):
@@ -191,8 +220,9 @@
 - [x] 🟢 **ARCO `Content-Disposition` filename hardening** — done.
 - [x] 🟢 **CI: Dependabot** — `.github/dependabot.yml` added.
 - [x] 🟢 **Rotate `BETTERSTACK_SOURCE_TOKEN`** — ✅ Rotated 2026-06-13 (see AGENTS.md / wrangler.toml); prior 401 log-shipping failures resolved.
-- [ ] 🟡 **Burst-guard before D1 audit write** in `booking.ts`/`consent.ts` —
-      deferred (booking path is critical; needs approval + load testing).
+- [x] ~~🟡 **Burst-guard before D1 audit write** in `booking.ts`/`consent.ts`~~ — done:
+      `burstAllowed` (`src/lib/rate-limit.ts`) runs before the audit write in both routes
+      (checked in the code 2026-10-17).
 - [ ] 🟡 **Nonce/hash CSP** — remove `'unsafe-inline'`/`'unsafe-eval'` from `script-src` (needs staged testing).
 - [ ] 🟡 **Email-retry cron** — scan `booking_attempts WHERE status='queue_error'` and re-enqueue.
 - [ ] 🟢 **Enable Supabase leaked-password protection** (dashboard).
@@ -203,7 +233,7 @@
 ## 1. ✅ Cloudflare Queues — Async Email Delivery
 
 **Completed:** April 2026
-**Implementation:** `cf-email-consumer` sidecar worker deployed. All transactional emails (booking confirmation × 2, ARCO admin notification) are delivered asynchronously via `madagascar-emails` queue with 3 retries + DLQ (`madagascar-emails-dlq`). See `../cf-email-consumer/` and `RULES.md §6.13` for full architecture.
+**Implementation:** `cf-email-consumer` sidecar worker deployed. All transactional emails (booking confirmation × 2, ARCO admin notification) are delivered asynchronously via `madagascar-emails` queue with 3 retries + DLQ (`madagascar-emails-dlq`). The consumer is its own repository, `cf-email-consumer`; the April design is in [`archive/2026-04-12-async-email-logging-design.md`](./archive/2026-04-12-async-email-logging-design.md).
 
 ---
 
@@ -280,13 +310,17 @@
 #### Structured Data (Bonus)
 
 - [ ] Verify `LocalBusiness` schema includes both Aguascalientes locations
-- [ ] Add `FAQPage` schema to the services page
+- [x] ~~Add `FAQPage` schema to the services page~~ — dropped: Google retired FAQ rich results (`SEO-OPERATIONS.md` §9); FAQ content stays in the HTML
 - [ ] Add `BreadcrumbList` schema to all inner pages
 - [ ] Test all structured data with Google's Rich Results Test
 
 ---
 
 ## ✅ Completed Tasks (For Reference)
+
+_Historical (March 2026). Since then Hyperdrive was removed, Upstash was replaced by the Workers
+Rate Limiting binding (2026-10-04), Turnstile was taken off booking for good (AGENTS.md
+invariant #1), and secrets are set with `wrangler secret put` on the Worker._
 
 | Task                         | Date     | Details                                       |
 | ---------------------------- | -------- | --------------------------------------------- |

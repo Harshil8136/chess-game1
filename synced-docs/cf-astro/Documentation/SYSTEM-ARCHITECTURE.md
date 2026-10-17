@@ -3,6 +3,9 @@
 
 This document provides a comprehensive, production-grade technical reference for the **cf-astro** application (Hotel para Mascotas Madagascar). It covers high-level business context, system architecture, database design, API routing, edge feature flags, asynchronous email pipelines, deployment configurations, and runtime resource limits.
 
+> **Last checked against the code:** 2026-10-17 (§2–§8 and §10). The usage figures in §9 were
+> not re-measured that day.
+
 ---
 
 ## 1. Business Context & Migration Rationale
@@ -49,7 +52,7 @@ graph TD
 
 ### Technical Stack Mapping
 
-- **Framework**: Astro 7.1+ configured with the official `@astrojs/cloudflare` adapter.
+- **Framework**: Astro 7 configured with the official `@astrojs/cloudflare` adapter.
 - **Rendering Strategy**: Static-first Hybrid model (`output: 'static'`). Pages are precompiled to pure HTML unless explicitly marked with `export const prerender = false` (which triggers edge SSR).
 - **Styling**: Tailwind CSS v4 utilizing the high-performance `@tailwindcss/vite` compiler plugin for lightning-fast builds.
 - **Hydration Core**: Preact 10+ islands (`@astrojs/preact` configured with Vite `compat: true` for React ecosystem interoperability).
@@ -72,7 +75,7 @@ Establishes the core compilation rules, [SUPABASE_PROJECT_REF] routing, and buil
 
 ### 3.2 `wrangler.toml`
 
-Defines the Cloudflare Workers environment, build directory (`./dist`), compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
+Defines the Cloudflare Workers environment, compatibility flags (`compatibility_flags = ["nodejs_compat"]`), and system bindings:
 
 - **`main = "./src/worker.ts"` (since 2026-10-14)**: the Worker entry. It hands every request to the Astro adapter's handler (`@astrojs/cloudflare/entrypoints/server`) except one whose path has broken percent-encoding (`/%c0`), which gets a `400 Bad Request: Malformed URI` there (`src/lib/malformed-path.ts`, §9.1). Before, Astro logged each such scanner request as `[ERROR] Error: Invalid URL encoding` in Workers Logs before any middleware ran. Keep anything that must run before Astro in this file, and keep the guard using `decodeURI`'s result: the bundler drops a bare `decodeURI(x);` as free of side effects.
 
@@ -89,8 +92,10 @@ Defines the Cloudflare Workers environment, build directory (`./dist`), compatib
 
 - **`RL_PER_MIN_<n>` (Workers Rate Limiting bindings, since 2026-10-04)**: ten bindings, one per step of the ladder 3, 5, 10, 20, 30, 60, 100, 200, 500, 1000 requests a minute. A rate limit uses the smallest binding at or above it; the KV counters above are the fallback, and the request is allowed when both fail (`SECURITY.md` §4, AGENTS.md invariant #3). They replaced Upstash Redis and need no secret.
 - **`[observability]`**: Workers Logs persisted at a 20% head-sampling rate and traces persisted at 5%, since 2026-10-04 (both were 100%). A sampled-out request keeps no console line in Cloudflare; errors a route captures still reach Sentry in full and `log.warn`/`log.error` still reach BetterStack. The server-side Sentry tracer samples 10% of page and API requests and none for probe paths (`/.env`, `/wp-…`), bots (by user agent) or 404s (`src/lib/server-trace-sampling.ts`).
-- **`SESSION` (KV Namespace)**: Stores transient session ids and validation state.
+- **`SESSION` (KV Namespace)**: Astro's session store, and the booking idempotency keys (`booking-idem:<key>`, 24 h): a retried submission gets the first answer back instead of a second booking.
 - **`EMAIL_QUEUE` (Queue)**: Handles async email payloads to protect the user from booking timeouts.
+- **`ANALYTICS` (Analytics Engine)**: zero-cost edge counters (conversions, failures) in the `madagascar_analytics` dataset.
+- **`IMAGES` / `ARCO_DOCS` (R2)**: CMS images (shared with cf-admin) and ARCO identity documents (private).
 
 ---
 
@@ -98,42 +103,57 @@ Defines the Cloudflare Workers environment, build directory (`./dist`), compatib
 
 ### 4.1 System API Reference
 
-| Endpoint                | Method | Prerender | Security                                                                                       | Purpose                                                                                                  |
-| ----------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `/api/booking`          | `POST` | `false`   | CSRF + Rate Limit binding (fail-open) + D1 dead-letter audit                                   | Processes atomic booking transaction across D1 and Supabase.                                             |
-| `/api/booking/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth` constant-time candidate array)                                | Drains booking outbox records from D1 into Supabase. Poked by `cf-admin` 5-min cron via `ASTRO_SERVICE`. |
-| `/api/consent`          | `POST` | `false`   | Zod + Rate Limit                                                                               | Hashes and logs GDPR/LFPDPPP privacy agreements.                                                         |
-| `/api/consent/replay`   | `POST` | `false`   | Bearer Token (`verifyBearerAuth`); cf-admin's secret only through its binding (SECURITY.md §7) | Drains consent outbox records from D1 into Supabase.                                                     |
-| `/api/health`           | `GET`  | `false`   | Bearer Token (`verifyBearerAuth`); cf-admin's secret only through its binding (SECURITY.md §7) | Health check diagnostics verifying D1, KV, and external dependencies.                                    |
-| `/api/revalidate`       | `POST` | `false`   | Bearer Token (Constant-Time comparison), cf-admin's service binding only since 2026-10-15      | Purges KV Cache and updates CMS data blocks.                                                             |
-| `/api/ingest/[...path]` | `ALL`  | `false`   | Transparent Proxy                                                                              | Obfuscates PostHog analytical calls to prevent ad-blocker drops.                                         |
-| `/api/arco/submit`      | `POST` | `false`   | CSRF + Turnstile + Rate Limit                                                                  | Handles Mexican LFPDPPP ARCO identity-document + rights requests.                                        |
+| Endpoint                 | Method       | Security                                                                               | Purpose                                                                                  |
+| ------------------------ | ------------ | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `/api/booking`           | `POST`       | D1 audit first, then Origin, rate limit, Zod                                           | Booking: D1 outbox, then the Supabase transaction, then the email queue (§4.2).          |
+| `/api/booking/replay`    | `POST`       | Bearer (`verifyBearerAuth`): `HEALTH_CHECK_SECRET`, or cf-admin's secret from anywhere | Drains the booking outbox from D1 into Supabase. Poked by cf-admin's 5-minute job.       |
+| `/api/contact`           | `POST`       | Origin, rate limit, Zod                                                                | Contact form: Supabase `contact_messages` + consent row, email queued.                   |
+| `/api/consent`           | `POST`       | D1 audit first, then Origin, rate limit, Zod                                           | Consent banner clicks ([`CONSENT-RECORD-SYSTEM.md`](CONSENT-RECORD-SYSTEM.md)).          |
+| `/api/consent/replay`    | `POST`       | Bearer; cf-admin's secret only through its binding (`SECURITY.md` §7)                  | Drains the consent outbox from D1 into Supabase.                                         |
+| `/api/arco/submit`       | `POST`       | Origin, Turnstile, rate limit, 6-layer file validation                                 | ARCO rights request with identity document (R2 `arco-documents`).                        |
+| `/api/arco/get-document` | `GET`        | `X-Admin-Secret` (`ARCO_ADMIN_SECRET`), rate limit, access recorded first              | Serves one identity document by ticket ([`ARCO-DSR-RUNBOOK.md`](ARCO-DSR-RUNBOOK.md)).   |
+| `/api/health`            | `GET`        | Bearer; cf-admin's secret only through its binding                                     | Health check, the consent probe and the hourly heartbeat (`?probe=`).                    |
+| `/api/health-analytics`  | `GET`        | Bearer `HEALTH_CHECK_SECRET` (or cf-admin's, binding only)                             | Writes and checks a test Analytics Engine point.                                         |
+| `/api/revalidate`        | `POST`       | Bearer, cf-admin's service binding only                                                | Purges the page cache and writes allowlisted CMS blocks to KV.                           |
+| `/api/cms-status`        | `GET`        | Bearer, cf-admin's service binding only                                                | Read-back: lets cf-admin verify a publish is live.                                       |
+| `/api/analytics/summary` | `GET`        | Rate limit, then bearer, cf-admin's service binding only                               | Weekly analytics digest for cf-admin.                                                    |
+| `/api/analytics/track`   | `POST`       | Origin, rate limit, Zod                                                                | First-party funnel events into Analytics Engine.                                         |
+| `/api/runtime-config`    | `GET`        | Public, no secrets in the answer                                                       | PostHog and Sentry rates for browser scripts (§5).                                       |
+| `/api/mcp`               | `POST`       | Public, read-only, rate limit                                                          | MCP JSON-RPC: services, locations, booking URL, FAQ.                                     |
+| `/api/ingest/[...path]`  | `GET`/`POST` | Path allowlist, header stripping                                                       | PostHog reverse proxy, so ad blockers do not drop consented analytics.                   |
+| `/api/webhooks/brevo`    | `POST`       | Shared secret (`BREVO_WEBHOOK_SECRET`)                                                 | Brevo delivery events (§6.3).                                                            |
+| `/api/media/[...path]`   | `GET`        | Public                                                                                 | Streams an R2 image; a local-development fallback (production images come from the CDN). |
+
+Every route is on demand (`prerender = false`). `SECURITY.md` §4 lists the rate limits and §7
+the secrets.
 
 ### 4.2 The Atomic Booking Transaction
 
-The booking submission flow is designed with extreme resilience to avoid losing customer data under high-load conditions or database outages:
+The booking submission flow is designed so that a customer's booking is never lost, even when
+Supabase is down (`src/pages/api/booking.ts`, `src/lib/booking-service.ts`):
 
 ```
-[BookingWizard (Preact Island)]
+[BookingWizard (Preact island)]
                │
-               ▼  (POST JSON Payload)
-   [/api/booking (Worker SSR)]
+               ▼  POST JSON
+   [/api/booking (Worker)]
                │
-               ├─► [1. CSRF Validate] (Fails closed)
+               ├─► 0. Size bound + per-IP burst guard
+               ├─► 1. D1 `booking_attempts` row (audit-first, PII redacted in the raw body)
+               ├─► 2. Origin check → rate limit → JSON parse → Zod
+               ├─► 3. Idempotency key in SESSION KV (a retry gets the first answer)
+               ├─► 4. D1 replay outbox: the whole transaction + email payload, before Postgres
+               ├─► 5. Supabase transaction: bookings, consent_records, booking_pets,
+               │        booking_quality_metadata, email_audit_logs
+               │        success → outbox entry retired · failure → kept, critical alert,
+               │        drained later by /api/booking/replay
+               ├─► 6. Two messages to EMAIL_QUEUE (customer confirmation, staff notification)
                │
-               ├─► [2. Write Attempt to D1 `booking_attempts`] (Dead-Letter Logger)
-               │
-               ├─► [3. Execute Supabase PG Transaction]
-               │         ├─► Insert into `bookings` (Generates PK)
-               │         ├─► Insert into `consent_records` (Foreign Key linked)
-               │         ├─► Insert into `booking_pets` (Multi-relations mapped)
-               │         └─► Log email audit queue record
-               │
-               ├─► [4. Push JSON paylods to `env.EMAIL_QUEUE`]
-               │
-               ▼  (Return 200 OK + bookingRef)
+               ▼  200 + { success, bookingRef, consentId, emailsQueued, whatsappUrl }
         [Confirmation UI]
 ```
+
+The answer is the same whether the Postgres write succeeded or was deferred to the outbox.
 
 ### 4.3 3-Tier CMS Content Fallback Strategy
 
@@ -164,11 +184,10 @@ Marketing page texts, service pricing tables, and blog posts are loaded via a ro
 
 What actually exists at the edge today:
 
-1. **Service configuration**, read from D1 `service_config` by
-   [`src/lib/service-config.ts`](../src/lib/service-config.ts) — currently a full
-   table scan on every call (~279 calls/day, ~6,420 rows read/day as of
-   2026-09-10). Moving it behind KV is Stage 4 of
-   `cf-admin/documentation/specs/2026-09-10-d1-and-worker-resource-optimization-design.md`.
+1. **Service configuration**, read from D1 `service_config` (active rows for `cf-astro`
+   and `global`) by `src/lib/service-config.ts`, cached in isolate memory for 10 seconds and in
+   the Cloudflare Cache API for 300 seconds; cf-admin's config purge clears the cached copy.
+   Every read falls back to coded defaults, so a missing row never breaks a page.
 2. **ISR HTML caching**, in `src/middleware.ts`, keyed by `__BUILD_ID__` with a
    24-hour TTL — one KV write per unique path per deploy.
 3. **CMS content blocks**, injected into `ISR_CACHE` under `cms:<key>` by
@@ -196,13 +215,13 @@ The booking API route constructs two email payloads (one for customer confirmati
 An isolated, lightweight worker sidecar consumes the queue on behalf of **both** cf-astro and cf-admin (one shared worker, one shared queue — `madagascar-emails`):
 
 - **Absolute Code Isolation**: The consumer worker is completely decoupled from `cf-astro`. It must never import Drizzle ORM schemas or Astro layouts to prevent cyclic compilation failures.
-- **Email Assembly**: Uses the high-performance **Eta** template engine to format elegant HTML layouts.
+- **Email Assembly**: HTML is built in the consumer's own TypeScript templates; the consumer has zero runtime dependencies (cf-email-consumer `package.json`).
 - **Hybrid-SMTP Provider, not project-routed**: The consumer calls **Brevo's API first for every send**, regardless of `projectSource` (cf-astro or cf-admin). **Resend is wired in only as an automatic same-request failover** if the Brevo call throws — there is no per-project routing split; `RESEND_API_KEY` lives in this worker's own secrets.
 
 ### 6.3 Delivery Webhooks & Observability
 
 - **Webhook Endpoint**: `POST /api/webhooks/brevo` (cf-astro) captures delivery, bounces, and complaints from the primary provider. This lives in cf-astro itself, not the consumer worker — `cf-astro-email-consumer` is queue-only (no `fetch()` handler), so it cannot receive inbound HTTP webhooks at all.
-- **Security**: Brevo does not sign webhook payloads by default, so this is **not** signature/HMAC verification — it's a constant-time shared-secret comparison (`timingSafeEq`, `src/lib/security.ts`) against `BREVO_WEBHOOK_SECRET` (a cf-astro secret), checked from either the `Authorization` header or a `?secret=`/`?token=` query param. Never log the raw query string unredacted.
+- **Security**: Brevo does not sign webhook payloads by default, so this is **not** signature/HMAC verification — it's a constant-time shared-secret comparison (`timingSafeEq`, `src/lib/security.ts`) against `BREVO_WEBHOOK_SECRET` (a cf-astro secret), checked from the `Authorization` header, the `x-brevo-secret` header, or a `?secret=`/`?token=` query param. Never log the raw query string unredacted.
 - **Audit Log**: Verified webhook events are pushed into the `email_audit_logs` Supabase table inside a JSONB `delivery_events` array for auditing.
 - **Email API messages** (2026-10-10): an event whose tags carry `api_msg_<message id>` belongs to the email API, whose messages live in the email service's own D1 database. The webhook forwards it to `EMAIL_QUEUE` as purpose `api_delivery`, and `cf-astro-email-consumer` records the verdict, feeds the do-not-mail list and calls the client's webhook. A failed queue send answers `500` so Brevo retries.
 
@@ -247,8 +266,13 @@ npx wrangler d1 create madagascar-db
 npx wrangler d1 migrations apply madagascar-db --remote
 
 # 3. Create the KV cache namespaces
-npx wrangler kv:namespace create ISR_CACHE
-npx wrangler kv:namespace create SESSION
+npx wrangler kv namespace create ISR_CACHE
+npx wrangler kv namespace create SESSION
+
+# 3b. R2 buckets and the email queue
+npx wrangler r2 bucket create arco-documents
+npx wrangler r2 bucket create madagascar-images
+npx wrangler queues create madagascar-emails
 
 # 4. Bind Secrets to the Worker
 npx wrangler secret put DATABASE_URL        # Supabase postgres:// URL
@@ -262,8 +286,12 @@ npx wrangler secret put BREVO_WEBHOOK_SECRET # Verifies inbound Brevo delivery-s
                                               # configured in the Brevo dashboard's
                                               # webhook settings exactly.
 npx wrangler secret put REVALIDATION_SECRET  # Webhook bearer key
-npx wrangler secret put SENTRY_AUTH_TOKEN    # Sentry source map uploader token
+# The full secret list is SECURITY.md §13. SENTRY_AUTH_TOKEN is a build-time
+# variable in Workers Builds, not a Worker secret.
 ```
+
+The rate-limit bindings and the Analytics Engine dataset need no provisioning step: they are
+created from `wrangler.toml` on deploy.
 
 ---
 
@@ -275,11 +303,12 @@ be handled via the static `public/_redirects` file — Workers `_redirects`
 only supports relative URLs (see the comment block at the top of that file).
 Two layers exist:
 
-1. **Primary, code-level (`src/middleware.ts`, lines 20-46):** on every
+1. **Primary, code-level (`src/middleware.ts`, step 1):** on every
    on-demand request, a `LEGACY_HOSTS` check (`www.*`, `pet.*`) plus an
-   `isHttp` check issue a single-hop 301 straight to
-   `https://madagascarhotelags.com`, normalizing root path and trailing
-   slash in the same response. This is the code's own defense — it does not
+   `isHttp` check issue a single-hop **308** straight to
+   `https://madagascarhotelags.com` (cached for an hour), normalizing the root
+   path to `/es/` and adding the trailing slash in the same response. A call
+   through cf-admin's service binding (host `internal`) is never redirected. This is the code's own defense — it does not
    depend on any Cloudflare dashboard configuration.
 2. **Secondary, dashboard-level (defense-in-depth):** zone-level **Redirect
    Rules** (Domain Zone → **Rules** → **Redirect Rules**) for the same three
@@ -294,9 +323,11 @@ Two layers exist:
 > most likely `www`/`pet` are still bound as Custom Domains on a stale,
 > no-longer-deployed Cloudflare Pages project from before the July 2026
 > migration to a plain Worker, rather than on the current `cf-astro` Worker
-> alongside the apex domain. See the fix plan for the full live diagnosis
-> and dashboard remediation steps; this note should be removed once the
-> live curl checks there come back clean.
+> alongside the apex domain. Not re-checked since 2026-08-10 (on 2026-10-17
+> the documentation session could not reach the site through its network
+> proxy); the check is in [`TODO-BACKLOG.md`](TODO-BACKLOG.md). Remove this
+> note once `curl -sI https://www.madagascarhotelags.com/` answers one
+> redirect to the apex.
 
 ---
 
@@ -340,8 +371,8 @@ To ensure this codebase remains perfectly editable, maintainable, and robust for
 > [!WARNING]
 > **System Architectural Invariants**
 >
-> 1. **Do Not Introduce Local Image Processors**: Never replace `passthroughImageService()` with `@astrojs/image` or standard Sharp compilation. Doing so will break static SSR execution limits on Cloudflare Workers (1MB container limit).
-> 2. **Never Import Database Schemas in Email Consumer**: The `cf-astro-email-consumer` worker must remain 100% decoupled from `cf-astro/src/db` and Drizzle schemas. Any imports between them will break build cycles and cause module resolution crashes during bundle packaging.
+> 1. **Do Not Introduce Local Image Processors**: Never replace `passthroughImageService()` with `@astrojs/image` or standard Sharp compilation. Sharp cannot run in a Worker, and a bundled image pipeline pushes the Worker towards its script-size limit.
+> 2. **Never Import Database Schemas in Email Consumer**: The `cf-astro-email-consumer` worker must remain 100% decoupled from `cf-astro/src/lib/db` and Drizzle schemas. Any imports between them will break build cycles and cause module resolution crashes during bundle packaging.
 > 3. **Preserve `trailingSlash: 'always'`**: All page-level generation logic, routing hooks, and canonical calculations rely on trailing slashes. Changing this parameter will immediately throw 404/301 loops in production.
 
 {% endraw %}

@@ -10,8 +10,8 @@ Requests arrive via the ARCO form (`/es/legal/arco/`), which notifies
 > identity-verification endpoint with zero frontend callers and zero rows
 > ever written) was removed. The `privacy_requests` table it wrote to is
 > deprecated — the ARCO form (`/api/arco/submit`) is the only intake channel.
-> If `privacy_requests` still has historical rows, check it once during
-> cleanup, then it can be dropped in a future migration.
+> On 2026-09-16 it was renamed `zz_dead_privacy_requests_20260916` (checked
+> live 2026-10-17); dropping it is a later migration.
 
 ## Where requests land
 
@@ -33,7 +33,8 @@ Requests arrive via the ARCO form (`/es/legal/arco/`), which notifies
    "the holder of ARCO_ADMIN_SECRET, no person named" (SECURITY.md §7).
 3. **Locate the data** (by requester email):
    - Postgres: `bookings`, `booking_pets`, `consent_records`,
-     `email_audit_logs`, `contact_messages`, `legal_requests`, `privacy_requests`
+     `email_audit_logs`, `contact_messages`, `legal_requests` (and, for old
+     requests, `zz_dead_privacy_requests_20260916`)
    - D1: `booking_attempts` / `consent_attempts` (90-day retention target, deleted
      only via manual/admin action — see cf-admin `/dashboard/retention` or
      `db/retention-purge.sql` — never automatically, per 2026-07 policy)
@@ -53,7 +54,8 @@ Requests arrive via the ARCO form (`/es/legal/arco/`), which notifies
    evidence trail).
 6. **Document retention**: delete the identity document from R2 once identity
    verification is complete — it has no further purpose
-   (`wrangler r2 object delete arco-documents/<key>`).
+   (`npx wrangler r2 object delete arco-documents/<key> --remote`; without
+   `--remote`, wrangler 4 acts on the local bucket).
 
 ## Escalation
 

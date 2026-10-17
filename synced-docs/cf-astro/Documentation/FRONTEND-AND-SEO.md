@@ -11,20 +11,23 @@ The interface for **Hotel para Mascotas Madagascar** features a modern, premium,
 
 ### 1.1 Typography
 
-- **Primary Font**: Inter (loaded dynamically via Google Fonts with `display=swap`).
-- **Secondary Font**: Outfit (used on hero sections and large headers to establish a premium corporate voice).
-- **CSS Token**: `--font-sans: 'Inter', system-ui, -apple-system, sans-serif;`
+- **Body font**: DM Sans, a self-hosted variable font (`/fonts/dm-sans-variable-latin.woff2`, `font-display: swap`).
+- **Heading font**: Outfit, also self-hosted (`/fonts/outfit-variable-latin.woff2`).
+- **CSS tokens**: `--font-sans: 'DM Sans', sans-serif;` and `--font-heading: 'Outfit', sans-serif;`. No Google Fonts request is made.
 
 ### 1.2 Theme Palette & Tailwind CSS v4 Setup
 
 The styling system was upgraded to **Tailwind CSS v4** utilizing `@tailwindcss/vite`. Design tokens are defined natively as CSS custom properties inside `src/styles/global.css`:
 
-| Token               | HSL / Hex Value                  | Tailwind Class                    | Semantic Context                                             |
-| ------------------- | -------------------------------- | --------------------------------- | ------------------------------------------------------------ |
-| `--color-primary`   | `hsl(142, 71%, 29%)` / `#166534` | `bg-primary` / `text-primary`     | Main CTA buttons, premium brand markings (Emerald-800)       |
-| `--color-secondary` | `hsl(172, 66%, 50%)` / `#0d9488` | `bg-secondary` / `text-secondary` | Accent borders, interactive highlights, gradients (Teal-600) |
-| `--color-accent`    | `hsl(142, 69%, 58%)` / `#4ade80` | `bg-accent` / `text-accent`       | Subtle tag backgrounds, highlighted keywords (Green-400)     |
-| `--color-neutral`   | `hsl(210, 40%, 98%)` / `#f8fafc` | `bg-neutral` / `text-neutral`     | Background overlays, card containers                         |
+| Token               | Value     | Tailwind Class                    | Semantic Context                                            |
+| ------------------- | --------- | --------------------------------- | ----------------------------------------------------------- |
+| `--color-primary`   | `#4a8000` | `bg-primary` / `text-primary`     | Main CTA buttons and brand marks (4.73:1 on white, WCAG AA) |
+| `--color-secondary` | `#0ea5e9` | `bg-secondary` / `text-secondary` | Ocean blue accents                                          |
+| `--color-accent`    | `#0d9488` | `bg-accent` / `text-accent`       | Teal highlights                                             |
+| `--color-muted`     | `#f8fafc` | `bg-muted`                        | Light surfaces and card backgrounds                         |
+
+The full "Obsidian & Lime" palette, including the dark surface tokens, is the `@theme` block
+of `src/styles/global.css`.
 
 ### 1.3 Glassmorphism UI Patterns
 
@@ -44,27 +47,29 @@ Premium glass overlays are implemented using Tailwind's backdrop filters to prod
 The frontend follows Astro's **island architecture** model to deliver near-zero client JS. Dynamic Preact islands are loaded selectively where rich state manipulation is mandatory:
 
 ```
-┌────────────────────────────────────────────────────────┐
-│               MarketingLayout (Prerendered HTML)       │
-│                                                        │
-│  [Header Component]  (Static CSS/HTML, Scroll JS)      │
-│                                                        │
-│  [Hero Component]    (Zero JS, Preloaded High LCP)     │
-│                                                        │
-│  [AutoTabs Section]  (Zero JS, Vanilla CSS Tab Switch)  │
-│                                                        │
-│  [BookingWizard]     (Preact Island - hydrated client) │
-│                      (Activated on /booking pages only)│
-│                                                        │
-│  [ConsentBanner]     (Preact Island - idle hydrated)   │
-│                      (Blocks cookies until accepted)   │
-└────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  MarketingLayout (prerendered HTML)                          │
+│                                                              │
+│  [Header]           static HTML, small scroll script         │
+│  [Hero]             zero JS, preloaded LCP image             │
+│  [AutoTabs]         Preact island, client:idle               │
+│  [InfiniteGallery]  Preact island, client:visible            │
+│  [BookingWizard]    Preact island, client:load (/booking)    │
+│  [ConsentBanner]    Preact island, client:idle (BaseLayout)  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.1 Preact Island Inventory
 
-- **`BookingWizard.tsx`**: A multi-step form wizard using Preact hook states and Zod validators. Hydrated immediately on load (`client:load`) on all `/booking` routes.
-- **`ConsentBanner.tsx`**: A legally compliant banner managing tracking opt-in flags. Hydrates during browser idle cycles (`client:idle`) to protect performance scores.
+| Island                | Hydration        | Where                                                            |
+| --------------------- | ---------------- | ---------------------------------------------------------------- |
+| `BookingWizard`       | `client:load`    | `/es/booking/`, `/en/booking/`, inside `SentryErrorBoundary`     |
+| `SentryErrorBoundary` | `client:load`    | wraps the booking wizard                                         |
+| `ConsentBanner`       | `client:idle`    | every page (`BaseLayout.astro`); blocks analytics until accepted |
+| `AutoTabs`            | `client:idle`    | the services section                                             |
+| `InfiniteGallery`     | `client:visible` | the gallery section, when CMS images exist                       |
+| `ArcoForm`            | `client:load`    | `/es/legal/arco/`, `/en/legal/arco/` (Turnstile)                 |
+| `FranchiseClient`     | `client:load`    | `/es/franchise/`, `/en/franchise/`                               |
 
 ---
 
@@ -81,7 +86,7 @@ Animations are powered by a unified Intersection Observer engine defined in `src
 ### 3.2 Progressive Web App (PWA) Capabilities
 
 - **`public/manifest.webmanifest`**: Configures the app to run in `standalone` display mode, mapping corporate colors, splash vectors, and custom launch shortcuts.
-- **`public/sw.js`**: Custom Service Worker using a **Cache-First** strategy for media, stylesheets, and layouts to ensure ultra-fast load times. Integrates a **Network-Only** fallback for dynamic API endpoints (`/api/booking`).
+- **`public/sw.js`**: Custom Service Worker: **network-first** for HTML pages, **cache-first** for hashed `/_astro/*` assets, **stale-while-revalidate** for images and fonts, and **network-only** for `/api/*` and analytics. Non-GET requests are never touched.
 
 ---
 
@@ -91,7 +96,7 @@ The site is optimized to satisfy traditional crawler bots, local pack maps, and 
 
 ### 4.1 Linked JSON-LD Knowledge Graphs
 
-All structured schema graphs are generated using linked `@id` hashes so search engines understand the relationships between the entities:
+All structured schema graphs (`src/components/seo/`) are generated using linked `@id` hashes so search engines understand the relationships between the entities:
 
 ```
 [WebSite] ──► (@id: "#website")
@@ -100,9 +105,7 @@ All structured schema graphs are generated using linked `@id` hashes so search e
    │
    └─► [WebPage] ──► (@id: "#webpage")
           │
-          ├─► [Hotel / LodgingBusiness] ──► (@id: "#hotel")
-          │
-          ├─► [FAQPage] ──► (Dynamic Q&A markup)
+          ├─► [LocalBusiness] ──► (@id: "#business")
           │
           └─► [BreadcrumbList] ──► (Nav hierarchy)
 ```
@@ -110,6 +113,7 @@ All structured schema graphs are generated using linked `@id` hashes so search e
 > [!IMPORTANT]
 > **Technical SEO GSC Corrective Actions**
 >
+> 0. **No FAQPage markup**: Google retired FAQ rich results, so FAQ content stays in the HTML (AI engines quote it) but no component emits `FAQPage` JSON-LD (`SEO-OPERATIONS.md` §9).
 > 1. **Schema Sitelinks Searchbox Removal**: The literal Google SearchAction template containing `?q={search_term_string}` was completely removed from `SchemaMarkup.astro`. Since this local business site does not have a dynamic internal search bar, this prevents Googlebot from crawling syntax error placeholders, clearing GSC redirects/404 reports.
 > 2. **Legal Pages Re-indexation**: The `noIndex={true}` directive was removed from the frontmatter of all core Spanish and English terms, privacy, and ARCO pages. Indexing these documents signals corporate trust, improving the site's overall E-E-A-T domain validation score.
 > 3. **Non-HTML Asset Control**: Added strict `X-Robots-Tag: noindex` headers inside `public/_headers` for static system endpoints like `manifest.webmanifest` and `favicon.ico` to preserve crawl budget.
@@ -163,7 +167,7 @@ Client-side logging is implemented manually to guarantee performance isolation:
 - **DSN**: one public constant in `src/lib/sentry-shared.ts`, read by the browser and by the
   Worker (`src/middleware.ts`). The Worker also sends `console.warn` and `console.error` lines to
   Sentry Logs, with emails and phone numbers masked (`scrubLogText`).
-- **Quota Protection**: Session Replay and DOM profiling are fully disabled to stay safely within free-tier limits.
+- **Quota Protection**: Session Replay is off by default: its rates are `0` unless the `sentry.cf_astro.replay.*` rows turn it on, and only then is the replay integration loaded. Errors themselves are sampled by `sentry.cf_astro.error_sample_rate` (default `1.0`).
 
 ---
 
@@ -174,7 +178,7 @@ To safely maintain and scale the frontend and SEO layers without breaking critic
 > [!WARNING]
 > **SEO & Schema Invariants**
 >
-> 1. **No Duplicate `@id` Declarations**: When adding new schema blocks to blog templates or landing pages, never reuse existing `#website`, `#organization`, or `#hotel` anchors unless you are explicitly building a linked relation graph. Duplicate IDs invalidate the JSON-LD parser.
+> 1. **No Duplicate `@id` Declarations**: When adding new schema blocks to blog templates or landing pages, never reuse existing `#website`, `#organization`, or `#business` anchors unless you are explicitly building a linked relation graph. Duplicate IDs invalidate the JSON-LD parser.
 > 2. **Never Block AI Bots in wrangler or robots**: Keep AI crawlers allowed. Blocking GPT/Claude bots will immediately remove the pet hotel from ChatGPT Search and Perplexity Local pack results, reducing organic traffic.
 > 3. **Inline JSON-LD Scripts**: When rendering JSON-LD scripts inside Astro components, always declare the script tag with `type="application/ld+json"`. The script block will be treated by Astro as an static inline element, preserving compile-time schema rendering.
 

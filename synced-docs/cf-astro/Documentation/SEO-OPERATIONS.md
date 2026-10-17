@@ -47,7 +47,8 @@ what our robots.txt says.
    (free). Cloudflare auto-pings IndexNow when cached content changes —
    complements our deploy-time ping (`npm run indexnow`).
 6. **Redirect rules** (Rules → Redirect Rules) — confirm all three exist and
-   are 301: `www.madagascarhotelags.com/*` → apex,
+   are 301 (the Worker itself answers these hosts with a 308, `SYSTEM-ARCHITECTURE.md` §8):
+   `www.madagascarhotelags.com/*` → apex,
    `pet.madagascarhotelags.com/*` → apex, `cf-astro.pages.dev/*` → apex.
 
 ## 2. Google Search Console — search.google.com/search-console
@@ -102,7 +103,7 @@ Failed", because the URLs are _supposed_ to stay in that state:
 
 What WOULD be a real problem (act on these):
 
-- Sitemap URLs (the 32 in sitemap-es/en) showing anything other than
+- Sitemap URLs (everything listed in sitemap-es/en) showing anything other than
   **Indexed** — especially "Crawled — currently not indexed" for weeks,
   "Duplicate, Google chose different canonical", "Soft 404", or "Blocked by
   robots.txt".

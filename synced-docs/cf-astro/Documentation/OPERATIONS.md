@@ -1,7 +1,7 @@
 {% raw %}
 # cf-astro Operations Reference
 
-**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4; §6 and §7 added 2026-10-07 (the 2026-10-04 resource-usage plan) from `wrangler.toml` (not re-checked against the live Worker, which has not been deployed with them yet); §8 added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, with the six `platform_alerts` columns read on the live table through the Cloudflare D1 connector; §8's quiet windows added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, against cf-admin's `health-config` row (cf-admin migration 0076)
+**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4; §6 and §7 added 2026-10-07 (the 2026-10-04 resource-usage plan) from `wrangler.toml` (not re-checked against the live Worker, which has not been deployed with them yet); §8 added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, with the six `platform_alerts` columns read on the live table through the Cloudflare D1 connector; §8's quiet windows added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, against cf-admin's `health-config` row (cf-admin migration 0076); §3–§6 re-checked 2026-10-17 against `wrangler.toml` and the account's KV and R2 lists (Cloudflare connector), the queues against the consumer's and cf-admin's `wrangler.toml` (the connector cannot list queues)
 
 This document outlines the core infrastructure bindings and the CLI commands used to manage and verify the Cloudflare resources attached to `cf-astro`.
 
@@ -17,7 +17,9 @@ npx wrangler whoami
 
 ## 2. D1 Database (`madagascar-db`)
 
-Serves as the authoritative source for non-PII configurations and queues.
+Shared with cf-admin. This site reads CMS blocks, blog posts and service config from it,
+and writes the booking and consent attempt rows (with their replay outboxes) and
+`platform_alerts`.
 
 - **Binding ID:** `[D1_MADAGASCAR_DB_ID]`
 - **Region:** ENAM
@@ -29,10 +31,13 @@ npx wrangler d1 info madagascar-db
 
 ## 3. R2 Buckets
 
-Used for secure identity document storage and public CMS images.
+Used for secure identity document storage and public CMS images. The two this Worker binds:
 
-- `arco-documents` (ARCO legal documents)
-- `madagascar-images` (Public CMS gallery)
+- `arco-documents` (`ARCO_DOCS`: ARCO identity documents, private)
+- `madagascar-images` (`IMAGES`: CMS gallery and hero images, shared with cf-admin)
+
+The account holds other projects' buckets too (six in all on 2026-10-17).
+
 - **Verify status:**
 
 ```bash
@@ -45,12 +50,13 @@ Used for SSR rendering caches and session state. The key families inside
 `ISR_CACHE` (pages, CMS blocks, feeds, rate-limit fallback counters) and their
 expiries are listed in `SYSTEM-ARCHITECTURE.md` §3.2.
 
-- `SESSION`
+- `SESSION` (Astro sessions, booking idempotency keys)
 - `ISR_CACHE`
-- `CHATBOT_CACHE`
-- `CHATBOT_KV`
-- `ADMIN_SESSION`
-- `EMAIL_IDEMPOTENCY` (the email consumer's dedupe namespace; 6 namespaces on the account as of 2026-09-15)
+
+The account holds five namespaces on 2026-10-17; the other three (`CHATBOT_CACHE`,
+`CHATBOT_KV`, `ADMIN_SESSION`) belong to the chatbot and cf-admin. The email consumer's
+`EMAIL_IDEMPOTENCY` namespace listed here until 2026-09-15 no longer exists.
+
 - **Verify status:**
   _(Note: `npx wrangler kv:namespace list` is deprecated; use the exact syntax below)_
 
@@ -62,10 +68,9 @@ npx wrangler kv namespace list
 
 Decouples email delivery and syncing from user API requests.
 
-- `madagascar-emails` (email sending by the shared `cf-astro-email-consumer` Worker — Brevo primary, Resend as same-request failover; see `SYSTEM-ARCHITECTURE.md` §4)
-- `madagascar-emails-dlq` (Dead-letter queue)
-- `madagascar-sync-revalidate` (Sync events)
-- `madagascar-sync-revalidate-dlq` (Dead-letter queue)
+- `madagascar-emails` (this Worker's `EMAIL_QUEUE` producer; sent by the shared `cf-astro-email-consumer` Worker — Brevo primary, Resend as same-request failover; see `SYSTEM-ARCHITECTURE.md` §6)
+- `madagascar-emails-dlq` (its dead-letter queue)
+- `madagascar-sync-revalidate` and its `-dlq` belong to cf-admin (its CMS sync events); this Worker does not bind them.
 - **Verify status:**
 
 ```bash

@@ -1,7 +1,7 @@
 {% raw %}
 ---
 title: 'System Review & ISO-5055 Benchmark 2026'
-status: active
+status: historical
 audience: [ai, technical]
 last_verified: 2026-06-18
 verified_against: [code, cli]

@@ -705,7 +705,7 @@ The following frameworks have official or community Cloudflare deployment suppor
 ### 6.13 Cloudflare Queues & Webhook Email Architecture (Active)
 
 > **Status:** ✅ Implemented and deployed (April 2026)
-> 📖 **Full documentation:** [`../cf-email-consumer/README.md`](../cf-email-consumer/README.md)
+> 📖 **Full documentation:** `cf-email-consumer/README.md` (in the cf-email-consumer repository)
 
 #### Overview
 
@@ -915,7 +915,7 @@ All file names must be unique and descriptive across the project:
 
 ## 9. SECURITY RULES
 
-> **Full audit details:** [`Documentation/18-SECURITY-HARDENING.md`](./Documentation/18-SECURITY-HARDENING.md)
+> **Full audit details:** `Documentation/18-SECURITY-HARDENING.md` (not in this repository)
 > **Last hardened:** 2026-05-04
 
 ### 9.1 Secrets Management
@@ -963,7 +963,7 @@ Defined in `public/_headers` for all origins:
 - `connect-src 'self' *.posthog.com *.ingest.us.sentry.io in.logs.betterstack.com ...`
 - `img-src 'self' blob: data: *.r2.dev cdn.madagascarhotelags.com`
 
-**Critical**: `cdn.madagascarhotelags.com` (custom R2 CDN domain) MUST stay in `img-src`. Removing it silently blocks all R2-served images in the browser. See Issue #12 in [10-TROUBLESHOOTING-LOG.md](./Documentation/10-TROUBLESHOOTING-LOG.md).
+**Critical**: `cdn.madagascarhotelags.com` (custom R2 CDN domain) MUST stay in `img-src`. Removing it silently blocks all R2-served images in the browser. See Issue #12 in `10-TROUBLESHOOTING-LOG.md` (not in this repository).
 
 **Cross-origin headers** (added 2026-04-13):
 
@@ -999,7 +999,7 @@ Defined in `public/_headers` for all origins:
 - **Zero access** to cross-project tables (admin_sessions, conversations, etc.)
 - **No BYPASSRLS** — RLS is enforced as an additional layer on top of GRANTs
 
-Full rationale and role setup: [`Documentation/18-SECURITY-HARDENING.md §4.1`](./Documentation/18-SECURITY-HARDENING.md).
+Full rationale and role setup: `Documentation/18-SECURITY-HARDENING.md` §4.1 (not in this repository).
 
 ### 9.7 PII Minimization Rules
 

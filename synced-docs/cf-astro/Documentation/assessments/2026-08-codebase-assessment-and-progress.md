@@ -1,7 +1,7 @@
 {% raw %}
 ---
 title: 'Codebase Assessment, Progress Tracking & Edge Architecture'
-status: active
+status: historical
 audience: [technical, ai, operator]
 last_verified: 2026-08-29
 verified_against: [code, tests, checklist, live-infrastructure]
