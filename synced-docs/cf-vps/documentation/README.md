@@ -54,8 +54,8 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 |---|---|
 | [`features/CONSOLE.md`](features/CONSOLE.md) **P** | Every console page and the capability it needs |
 | [`features/ACTIONS.md`](features/ACTIONS.md) **P** | The controlled actions, the enforcement chain from the console to the root script, and the Worker's action tickets |
-| [`features/JOBS.md`](features/JOBS.md) | Server jobs: the busy gate every job waits on, the queue, a job's manifest and secrets, jobs with staged input, the Jobs page |
-| [`features/RESTORE-TESTS.md`](features/RESTORE-TESTS.md) | Backup restore tests: a cf-backup copy staged, unlocked, rebuilt and checked in a sealed container; who may run one, the checks and score, resources, the lab key, testing PostgreSQL by hand |
+| [`features/JOBS.md`](features/JOBS.md) **P** | Server jobs: the busy gate every job waits on, the queue, a job's manifest and secrets, jobs with staged input, the Jobs page |
+| [`features/RESTORE-TESTS.md`](features/RESTORE-TESTS.md) **P** | Backup restore tests: a cf-backup copy staged, unlocked, rebuilt and checked in a sealed container; who may run one, the checks and score, resources, the lab key, testing PostgreSQL by hand |
 | [`features/MAILROOM.md`](features/MAILROOM.md) | **Retired 2026-10-14**, kept as history: Mailroom, the app that held the email service's attachments while ClamAV scanned them. The email service now checks files itself and keeps them on Cloudflare |
 | [`features/LOG-STORAGE.md`](features/LOG-STORAGE.md) **P** | Retention per kind, preview and delete, compression |
 

@@ -37,7 +37,7 @@ and never edited to match today; their status is `historical`.
 |---|---|---|---|
 | `architecture/` | How the parts fit and where trust changes | living | yes |
 | `security/` | Permissions and the audit pipeline | living | yes |
-| `features/` | One document per feature (console, actions, log storage, jobs, restore tests) | living | partly: console, actions and log storage |
+| `features/` | One document per feature (console, actions, log storage, jobs, restore tests) | living | partly: console, actions, jobs, restore tests and log storage (Mailroom's retired doc stays private) |
 | `operations/` | Deploy and host modules (public); owner setup (private) | living | partly |
 | `reference/` | Lookup tables: the agent route table (public); the server's layout and the console's design system (private) | living | partly |
 | `runbooks/` | What to do when something breaks | living | no |
