@@ -69,12 +69,14 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    migration `0057` (design D-1). Its settings are `admin_portal_settings` rows with the
    `backup:` prefix (cf-admin RULESAd RULE #0.6–#0.9). The schedule rides cf-admin's
    `backup-tick` job (since 2026-10-04 it calls only when the last tick's `nextTickAt` says
-   there is work, at least hourly: design C3, Contract A): from `docs/remediation/13` B3 it dispatches the backup engine,
-   `secondary-pipeline.yml`, daily at 09:17 UTC. The workflow's own `schedule:` line
-   (11:41 UTC) is the fallback, and stands down once a run has succeeded that UTC day
-   (RD-12, permanent). `db-backup.yml` keeps its fallback line until B5 deletes it, and is
-   disabled on GitHub (D-4, D-5, RD-5). A
-   daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
+   there is work, at least hourly: design C3, Contract A): from `docs/remediation/13` B3 it
+   dispatches the backup engine, `secondary-pipeline.yml`, on the days and at the time
+   Settings → Schedule names (09:17 UTC unless changed there). The workflow's own `schedule:`
+   line (11:41 UTC, daily) is the fallback. It stands down once a run has succeeded that UTC
+   day (RD-12, permanent), and on a day the schedule names no backup for or whose run was
+   skipped (the schedule guard, `scripts/secondary-pipeline/schedule-guard.ts`; any doubt backs
+   up). `db-backup.yml` keeps its fallback line until B5 deletes it, and is disabled on GitHub
+   (D-4, D-5, RD-5). A daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
    failed-workflow email warns through a path the tick does not own. cf-backup sends no mail
    itself: its alerts leave through that job and cf-admin's `EMAIL_QUEUE` (D-11).
 8. **Standalone repo.** Do not add cf-backup to the workspace root's npm `workspaces`;

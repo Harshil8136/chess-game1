@@ -105,7 +105,7 @@ where the quarter-hour looks took about 15 minutes.
 |---|---|
 | `kind`, `scope`, `lane` | `backup`, `full`, `actions` |
 | `trigger`, `requested_by` | GitHub's schedule: `fallback`, `fallback` (as the Primary Pipeline's own cron runs were). Started by hand on GitHub: `manual`, `github:<login>` |
-| `status`, `verdict` | `succeeded`, `ok` **only** when GitHub's conclusion is `success`, every file `SHA256SUMS` names is in the folder, and `manifest.json` reports all five stores verified. Otherwise `failed` (or `cancelled`), `failed`, with each reason in `verdict_reasons` and an `error_code` of `run_failed`, `archive_incomplete`, `nothing_archived` or `cancelled` |
+| `status`, `verdict` | `succeeded`, `ok` **only** when GitHub's conclusion is `success`, every file `SHA256SUMS` names is in the folder, and `manifest.json` reports every store verified: the five fixed stores until 2026-10-07, since then every store the run's plan named (Settings → Databases, or Run now's picker). Otherwise `failed` (or `cancelled`), `failed`, with each reason in `verdict_reasons` and an `error_code` of `run_failed`, `archive_incomplete`, `nothing_archived` or `cancelled` |
 | `run_key`, `r2_prefix` | `<start day>_full_gh<run>a<attempt>`, and the folder `secondary/pipeline/<upload day>/<run>-<attempt>/`. A run that archived nothing records the folder it would have written, so every row of this engine is found by its `secondary/` prefix |
 | sizes | `data_bytes` from the `.age` files, `evidence_bytes` from `manifest.json` and `SHA256SUMS`, and the file counts |
 
@@ -266,8 +266,9 @@ day, against 5 million.
 | B0.2 to B0.5 | not started | Owner tasks, [README](README.md) §7 |
 | B1 Run records | **built and live** 2026-09-27 | `src/tick/secondary-runs.ts`, `src/secondary/pipeline.ts`; `test/secondary-runs.test.ts`. Production, 13:15 UTC: run `2026-09-26_full_gh36277447136a1` recorded as `succeeded`, 8 of 8 files, 908,022 bytes of data; postrun filed in the same tick (2 billed minutes) |
 | B2 | **built** 2026-09-27: run detail, restore proof, Files, Diagnostics | Tests in `test/reads-runs.test.ts`, `test/restore-proof.test.ts`, `test/files-layout.test.ts`, `test/diagnostics-records.test.ts` |
-| B3 Dispatch | **built and live** 2026-09-27: C1 `41c219d`, C2 `c15b190`, C3 `690f7ba`, Live view `4f9cda8`; schedule rev 6, full daily 09:17 UTC | "Run now" run 36332666181 and Scheduler run 36333172477 both `succeeded` (§3 B3). RD-8 done: cf-admin `backups.yml` deleted (cf-admin `cb331e5`). Next proofs: the 2026-09-28 09:17 dispatch, and the 11:41 fallback recorded as `skipped` |
-| B4, B5 | not started | |
+| B3 Dispatch | **built and live** 2026-09-27: C1 `41c219d`, C2 `c15b190`, C3 `690f7ba`, Live view `4f9cda8`; schedule rev 6, full daily 09:17 UTC | "Run now" run 36332666181 and Scheduler run 36333172477 both `succeeded` (§3 B3). RD-8 done: cf-admin `backups.yml` deleted (cf-admin `cb331e5`). A fallback recorded as `skipped` (`fallback_not_needed`): first on 2026-09-28, and on most days since (`backup_runs`, read 2026-10-17) |
+| B4 Acceptance | **not met** (read 2026-10-17) | `backup_runs`: 19 verified recovery points of this engine, the newest of 2026-10-14; failed scheduled or fallback runs on 2026-09-28, 09-29, 10-01 and 10-05 restart §4's count. Settings → Schedule now names Sundays and Wednesdays only, so §4 criterion 1 (every store under 26 hours old) cannot be met as written: the Owner's decision (`docs/HANDOFF.md`, open decisions). The key registry records no recovery kit confirmation and no restore proof (criteria 3 and 4) |
+| B5 | not started | Gated on §4 and B0.2 |
 
 ## 9. Verification log
 
@@ -278,6 +279,7 @@ day, against 5 million.
 | 2026-09-27 | claude | GitHub's record of runs 36325294293 and 36327225356; `backup_runs` in production; `npm run verify` for C1 and C2 | §1 update, §3 B0, B3; §8 |
 | 2026-10-04 | claude | B1's "When it asks" against `src/tick/secondary-runs.ts`, `test/next-tick.test.ts` (the 11:41 cron read from `secondary-pipeline.yml`) and `test/tick-contract-a.test.ts` (a quiet day: 16 looks with hourly calls, 52 with five-minute calls); 96 before, from the same fixture run against the parent commit in a scratch copy, since that test cannot run on the old code; the engine's scheduled runs of 2026-09-27 to 10-03 through the GitHub connector, read-only (2 h 35 min to 7 h 2 min after the cron). The rest of the document was not re-checked, so `last_verified` stays | §3 B1 |
 | 2026-10-06 | claude | Review of the unpushed Contract A commits: when a fallback run is recorded once cf-admin calls hourly, read from `secondaryScanNextAt` and `secondaryWakeAt` (no wake in the fallback's window once a look is recorded) and the whole-day test, now calling some seconds after each mark as cf-admin does (still 16 and 52 looks). The rest of the document was not re-checked, so `last_verified` stays | §3 B1 |
+| 2026-10-17 | claude | Docs pass: `backup_runs` grouped by day, trigger and outcome, `backup:config`'s schedule and `backup:key-registry`, through the Cloudflare D1 connector (read-only); B1's verdict rule against `judgeSecondaryRun` (`src/secondary/pipeline.ts`). The rest of the document was not re-checked, so `last_verified` stays | §3 B1 table, §8 |
 
 ## 10. Related
 

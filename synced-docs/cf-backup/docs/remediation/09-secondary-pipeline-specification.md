@@ -56,10 +56,12 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
   console **reads** this pipeline's runs and files and records them, and (B3) the Scheduler and
   "Run now" **start** it, passing only a request id that names the run. The workflow itself still
   never calls the Worker and never writes a console row.
-- **Small and reviewable:** the workflow stays within 320 lines including comments (300 until
-  2026-09-27; raised for the fallback guard and the heartbeat, [07](07-decision-log.md) §0.1), and
-  the helper under 400. The guard enforces the workflow's limit. If either needs more, the design
-  is wrong.
+- **Small and reviewable:** the workflow stays within 360 lines including comments
+  (`SECONDARY_MAX_LINES`; 300 until 2026-09-27, raised for the fallback guard and the heartbeat,
+  [07](07-decision-log.md) §0.1, then for the schedule guard, and to 360 on 2026-10-07 for the
+  plan step and the other projects' step), and the helper under 400. The guard enforces the
+  workflow's limit only: on 2026-10-17 the helper, `verify.ts`, is 438 lines. If either needs
+  more, the design is wrong.
 - **No new secret**, except RD-9's ping URL, `HEARTBEAT_PING_URL`, which is optional: its step does
   nothing while it is unset.
 - Authentication records only through the two functions of `sql/supabase/04_auth_export.sql`
@@ -72,7 +74,7 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
 | Item | Value |
 |---|---|
 | File | `.github/workflows/secondary-pipeline.yml` |
-| Triggers | The Worker's Scheduler dispatches it daily at 09:17 UTC (03:17 in Aguascalientes), and "Run now" on demand ([13](13-engine-consolidation-plan.md) B3). Its own `schedule: '41 11 * * *'` (11:41 UTC, 2 h 24 min later, away from the hour) is the fallback: step 0 stands it down when a run has already succeeded that UTC day. Until 2026-09-27 the schedule was `'41 8 * * *'` and the only trigger |
+| Triggers | The Worker's Scheduler dispatches it on the days and at the time Settings → Schedule names (daily at 09:17 UTC, 03:17 in Aguascalientes, when it was set up on 2026-09-27), and "Run now" on demand ([13](13-engine-consolidation-plan.md) B3). Its own `schedule: '41 11 * * *'` (11:41 UTC, away from the hour) is the fallback: step 0 stands it down when a run has already succeeded that UTC day, and the schedule guard (step 0a) on a day the schedule names no backup for or whose run was skipped. Until 2026-09-27 the schedule was `'41 8 * * *'` and the only trigger |
 | Input and run name | One optional input, `request_id` (a string; the Worker sets it). It is used only in `run-name: secondary-pipeline ${{ inputs.request_id \|\| github.event_name }}`, so the Worker finds the run it dispatched; no step reads it |
 | Runner | `ubuntu-24.04`; one job, `timeout-minutes: 30`; a timeout on every step |
 | Permissions | `permissions: {}` at the top level; the job receives `contents: read` and `actions: read` (step 0 lists the day's runs) |
@@ -106,6 +108,13 @@ run already succeeded today (UTC)", and the run is green in about 30 seconds (on
 If GitHub cannot be asked, the step warns and the run backs up anyway: the guard fails open. A
 dispatched run (the Scheduler, "Run now", or a person on GitHub) never checks. The console records
 a stood-down run as `skipped` (`fallback_not_needed`), which never alerts.
+
+**Step 0a — Schedule guard (from 2026-10-03; on GitHub's schedule only).**
+`scripts/secondary-pipeline/schedule-guard.ts` (Node built-ins only) reads `backup:config` from
+D1 with the job's Cloudflare token, the row the Worker's Scheduler reads, and stands the fallback
+down, as step 0 does, on a day Settings → Schedule names no backup for, or whose run someone
+skipped. Whenever it cannot tell (no token, an error, no row, a row it cannot read) the run backs
+up anyway.
 
 **Step 0b — Plan (from 2026-10-07).** `scripts/secondary-pipeline/plan.ts` decides which
 databases this run backs up, and never fails the run:
@@ -308,8 +317,8 @@ Secret and variable **names only**:
 - **A failed run:** GitHub notifies the person who started it; for a scheduled run, the person who
   last changed its cron line. The step summary identifies the store and the step.
 - **A missed run:** GitHub may delay or drop scheduled runs under load (the first one started
-  5 h 35 min late). The Scheduler's dispatch at 09:17 UTC is the primary trigger and GitHub's
-  schedule the fallback; the staleness alert and the external heartbeat monitor (RD-9) report a
+  5 h 35 min late). The Scheduler's dispatch on the scheduled days is the primary trigger and
+  GitHub's schedule the fallback; the staleness alert and the external heartbeat monitor (RD-9) report a
   day without a passing run.
 - **Restoring from a Secondary Pipeline recovery point:**
   1. `npx wrangler r2 object get madagascar-backups/secondary/pipeline/<date>/<run>/<file> --remote --file <file>`
@@ -427,6 +436,7 @@ recomputes.
 | 2026-10-07 | claude | Code read: `scripts/secondary-pipeline/plan.ts`, `other-projects.ts`, the workflow and its guard; the live D1 list through the Cloudflare connector (4 databases). Not yet proven by a run; the rest of the document was not re-checked, so `last_verified` stays | Steps 0b and 5b |
 | 2026-10-08 | claude | Code read and tests: `scripts/secondary-pipeline/fingerprint.ts`, `verify.ts` and the workflow's two new lines (`test/runner/fingerprint.test.ts`). Not yet proven by a run; nothing else re-checked | §7.3 |
 | 2026-10-08 | claude | The export boundary: proven on a local PostgreSQL 16 (a restore test's classification of changed, damaged and added rows), unit tests in `test/runner/fingerprint.test.ts` and `test/runner/workflows.test.ts`. The login retry: run 2026-10-08_full_gh37726622973a1's job log and the old project's pooler log (Supabase connector), unit tests in `test/runner/secondary-plan.test.ts`. Neither proven by a run yet; nothing else re-checked | Step 5b, §7.3 |
+| 2026-10-17 | claude | Docs pass: §2's line limit against `SECONDARY_MAX_LINES` in `scripts/backup/lib/workflow-guards.ts` and the files' line counts; §3.1's triggers and step 0a against the workflow and `scripts/secondary-pipeline/schedule-guard.ts`. The rest was not re-checked, so `last_verified` stays | §2, §3.1, step 0a, §5 |
 
 ## 9. Related
 

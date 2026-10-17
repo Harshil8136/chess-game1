@@ -30,6 +30,15 @@ tags: [cf-backup, remediation, data-protection, index]
 > [13](13-engine-consolidation-plan.md), which replaces [06](06-remediation-plan.md) Stages 2 to 5.
 > The Owner's remaining tasks are in §7. Terms follow [11](11-terminology-standard.md).
 
+> **Status update (2026-10-17, read from `backup_runs`, `backup:config` and `backup:key-registry`
+> through the Cloudflare D1 connector): open.** 19 verified recovery points of the Secondary
+> Pipeline, the newest of 2026-10-14; the Primary Pipeline has run no backup since 2026-09-27.
+> Settings → Schedule now names Sundays and Wednesdays at 09:17 UTC, so backups are twice a week,
+> not daily, and the fallback stands down on the other days (its schedule guard, from 2026-10-03).
+> B4's acceptance is not met ([13](13-engine-consolidation-plan.md) §8). The Owner's tasks 5 and 6
+> in §7 are still open (no recovery kit confirmation and no restore proof are recorded); tasks 2
+> to 4 leave no record this check can read.
+
 ## 1. Summary
 
 Between 2026-09-24 and 2026-09-26, the Primary Pipeline (`db-backup.yml`) ran seven times: five
@@ -103,8 +112,9 @@ replaced by the steps of [13](13-engine-consolidation-plan.md) (RD-15, option B)
 | Authentication record coverage | **done** in the Secondary Pipeline | RD-1 applied on 2026-09-26; 6 users and 12 identities restored in every run since |
 | Decisions | **all settled** 2026-09-27 | [07](07-decision-log.md) §0 |
 | B1 Run records, B2 reading | **built and live** 2026-09-27: the console records every Secondary Pipeline run, shows its per-store verification, accepts a restore proof for it, and Diagnostics reports on it | [13](13-engine-consolidation-plan.md) §3 B1, B2 |
-| B3 Dispatch | **built and live** 2026-09-27: the Scheduler starts the engine daily at 09:17 UTC, "Run now" starts it on demand, GitHub's schedule (11:41 UTC) is the fallback; cf-admin's `backups.yml` deleted (RD-8) | [13](13-engine-consolidation-plan.md) §3 B3, §8 |
-| B4, B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
+| B3 Dispatch | **built and live** 2026-09-27: the Scheduler starts the engine on the days Settings → Schedule names (daily at 09:17 UTC when set up), "Run now" starts it on demand, GitHub's schedule (11:41 UTC) is the fallback; cf-admin's `backups.yml` deleted (RD-8) | [13](13-engine-consolidation-plan.md) §3 B3, §8 |
+| B4 Acceptance | **not met** (2026-10-17) | [13](13-engine-consolidation-plan.md) §8 |
+| B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
 
 Per-step detail: [13](13-engine-consolidation-plan.md) §8.
 
@@ -140,6 +150,7 @@ file (3.2, applied through the Supabase connector).
 | 2026-09-26 | claude | Secondary Pipeline commissioning runs 36269275118 and 36269595781; live re-check of `backup_runs`, the schedule, the key registry and workflow states at 20:35 UTC | §4, §6 |
 | 2026-09-26 | claude | Authentication records added (run 36277447136); the pipeline's recipient compared with the key registry's active key; the weekly key check's last result read from `backup:status` | §4, §6, §7 |
 | 2026-09-27 | claude | Every open decision settled at the Owner's request; live re-check at 09:30 UTC of both repositories' workflow states, `backup:config`, `backup_runs`, the key registry, Supabase Storage, and the start times of this repository's scheduled runs | §5, §6, §7; [07](07-decision-log.md) §0; [13](13-engine-consolidation-plan.md) |
+| 2026-10-17 | claude | Docs pass: `backup_runs` (Secondary Pipeline rows by day, trigger and outcome; Primary Pipeline rows since 2026-09-27), the schedule in `backup:config` and `backup:key-registry`, read-only through the Cloudflare D1 connector. The task list in §7 was not re-checked with the Owner (tasks 2 to 4 leave no trace in D1), so `last_verified` stays | Status update; §6 B3, B4 |
 
 ## 9. Related
 

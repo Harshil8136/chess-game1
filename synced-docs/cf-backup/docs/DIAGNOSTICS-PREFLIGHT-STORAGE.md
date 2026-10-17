@@ -1,6 +1,6 @@
 # Diagnostics, pre-flight checks and a simpler storage layout
 
-- **Status:** Approved 2026-09-24 and built in four stages, in the order of B8; the Build log at the end says when each shipped. Since 2026-10-10 the Diagnostics page is part of the Health page. "How it works today" describes the live system; the Build log's entries describe the page as it shipped on their date, and B4 is current.
+- **Status:** Approved 2026-09-24 and built in four stages, in the order of B8; the Build log at the end says when each shipped. Since 2026-10-10 the Diagnostics page is part of the Health page. Parts A and B are the design as approved; the Build log's entries describe the page as it shipped on their date, and its last entry, "The Health page" (2026-10-10), and B4 are current. Since 2026-09-27 the backup engine is the Secondary Pipeline ([docs/remediation/13](remediation/13-engine-consolidation-plan.md)), so the runner steps of A2 and B6 (doctor, the D1 and Supabase exports, seal, the runner test) describe the retired first engine.
 - **Who it is for:** Part A is for everyone, including staff who do not write code. Part B is for engineers and gives the exact technical design.
 - **Where it came from:** the owner asked for three things:
   1. a way to test every step of the backup flow and see each part's health, response time and result;

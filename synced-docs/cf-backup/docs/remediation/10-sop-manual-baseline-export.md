@@ -19,7 +19,7 @@ tags: [cf-backup, remediation, sop, manual-baseline-export, supabase, d1]
 > the automated pipelines.
 
 > **Status (2026-09-26): no longer a routine task.** The Secondary Pipeline produces a verified
-> recovery point every day, authentication records included ([09](09-secondary-pipeline-specification.md)
+> recovery point on every scheduled day, authentication records included ([09](09-secondary-pipeline-specification.md)
 > §7). Keep this procedure as a fallback for when GitHub Actions or the pipeline cannot run.
 
 ## 0. Scope

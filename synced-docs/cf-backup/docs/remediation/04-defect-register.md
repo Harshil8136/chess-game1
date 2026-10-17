@@ -18,6 +18,10 @@ tags: [cf-backup, remediation, defects, register]
 > others make the results unreliable; and some parts of the pipeline have never executed for real,
 > so they should be expected to contain defects not yet observed.
 
+> **Superseded in part, 2026-09-27.** The Primary Pipeline is retired instead of repaired (RD-15,
+> [13](13-engine-consolidation-plan.md)), so its defects below will not be fixed; the register is
+> kept as the record.
+
 The review covered the runner (`scripts/backup/**`, `.github/workflows/db-backup.yml`) at
 `da38ddf`, the unit tests' test doubles, the Supabase CLI and restore-image sources at the pinned
 versions, and read-only live checks. Two independent code audits cross-checked it. Code stage names

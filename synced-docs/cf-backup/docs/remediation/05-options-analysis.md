@@ -18,6 +18,10 @@ tags: [cf-backup, remediation, options, decision]
 > The business is protected every day while the larger system is repaired, at no cost, and the
 > "one new defect per production run" pattern ends.
 
+> **Superseded in part, 2026-09-27.** The Owner chose to retire the main (Primary) pipeline
+> instead of repairing it (RD-15, [07](07-decision-log.md) §0); the plan of record is
+> [13](13-engine-consolidation-plan.md). This analysis is kept as written.
+
 ## 1. Constraints
 
 - **$0**: Workers Free, Supabase Free, and GitHub Actions' 2,000 free Linux minutes a month.

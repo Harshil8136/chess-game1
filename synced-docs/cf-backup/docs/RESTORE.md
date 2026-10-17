@@ -5,9 +5,14 @@
 > them. The design is the plan of record's doc 03 §8 and doc 09 §5; this page is the procedure.
 > Measured restore times live on the console's Runs screen, never here (P-18).
 
-> **Secondary Pipeline recovery points** (`secondary/pipeline/<date>/<run>/` in the same bucket,
-> from 2026-09-26) are not cf-backup runs and do not appear in the console: see
-> [Recovery points from the Secondary Pipeline](#recovery-points-from-the-secondary-pipeline).
+> **Which procedure.** Since 2026-09-27 the backup engine is the Secondary Pipeline
+> (remediation [13](remediation/13-engine-consolidation-plan.md)), and every recovery point taken
+> since is one of its runs: on the console's Runs page its folder starts with
+> `secondary/pipeline/`. Restore those as
+> [Recovery points from the Secondary Pipeline](#recovery-points-from-the-secondary-pipeline)
+> says. Steps 1 to 9 below are for a run in the first engine's format (a folder under `backups/`
+> or `v1/`), which the break-glass local run still writes; that engine is retired and recorded no
+> recovery point.
 
 ## Before you start
 
@@ -375,13 +380,17 @@ delete anything left there by hand.
 
 ## Recovery points from the Secondary Pipeline
 
-`.github/workflows/secondary-pipeline.yml` exports PostgreSQL (`public` and `supabase_migrations`)
-and the three D1 databases every day, independently of the runs above. Each run writes one folder,
-`secondary/pipeline/<YYYY-MM-DD>/<GitHub run id>-<attempt>/`, holding `postgres-schema.sql.gz.age`,
-`postgres-data.sql.gz.age`, `postgres-auth.sql.gz.age` (the authentication records, from
-2026-09-26), one `d1-<database>.sql.gz.age` per database, `manifest.json` (the restore
-verification's row counts) and `SHA256SUMS`. The same files are kept for 14 days as the run's
-artifact on GitHub.
+`.github/workflows/secondary-pipeline.yml`, the backup engine, runs on the days Settings →
+Schedule names, and when someone presses Run now. It backs up the databases Settings → Databases
+chooses (or Run now's picker): by default the live project's PostgreSQL (`public` and
+`supabase_migrations`) and its authentication records, and the D1 databases. Each run writes one
+folder, `secondary/pipeline/<YYYY-MM-DD>/<GitHub run id>-<attempt>/`, holding
+`postgres-schema.sql.gz.age`, `postgres-data.sql.gz.age`, `postgres-auth.sql.gz.age` (the
+authentication records, from 2026-09-26), one `d1-<database>.sql.gz.age` per database, for
+another Supabase project chosen in Settings (from 2026-10-07)
+`supabase-<project>-schema.sql.gz.age`, `supabase-<project>-data.sql.gz.age` and
+`supabase-<project>-auth.sql.gz.age`, then `manifest.json` (the restore verification's row
+counts) and `SHA256SUMS`. The same files are kept for 14 days as the run's artifact on GitHub.
 
 The procedure (fetch, `sha256sum -c SHA256SUMS`, decrypt with the same private key, then restore
 PostgreSQL before D1) is in
