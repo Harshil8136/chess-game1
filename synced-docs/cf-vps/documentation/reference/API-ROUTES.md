@@ -70,7 +70,7 @@ and the console. A route is reached in two forms:
 | `storage` | GET | `host.view` | 15 s |
 | `network` | GET | `host.view` | 15 s |
 | `history` | GET | `host.view` | 60 s |
-| `diagnostics` | GET | `host.view` | 15 s |
+| `diagnostics` | GET | `host.view` (also cf-admin's `health-checks` job, the only route a system job may read: `SYSTEM_JOB_READS`) | 15 s |
 
 `jobs` is the Jobs page's whole answer (`JobsView` in `contract/jobs.ts`): the gate settings and
 any problem with them, every installed job with its standing (scheduled, Run now only, paused,

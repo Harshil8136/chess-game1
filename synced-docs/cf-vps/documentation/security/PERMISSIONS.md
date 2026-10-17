@@ -72,7 +72,10 @@ floor capability can never be added to a role outside `FLOOR_ROLES`.
 
 `can()` in `src/access/policy.ts`, in order:
 
-1. An unknown capability id is refused. A system actor holds nothing.
+1. An unknown capability id is refused. A system actor holds nothing, apart from the one read
+   `SYSTEM_JOB_READS` (`contract/capabilities.ts`) names for its job and route: since 2026-10-17
+   cf-admin's System health job (`health-checks`) may read `diagnostics` with `host.view`, for its
+   "Server's site checks" check (`systemCapabilities`, used by the router).
 2. A floor capability is refused unless the role is owner or vendor support.
 3. A per-person **deny** wins over everything.
 4. A power **given for a while** (the grant's `temporary`) grants the capability until its own
