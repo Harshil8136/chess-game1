@@ -404,18 +404,22 @@ to Sentry (`cron.audit_seal.*`). Pinned by `test/audit-seal.test.ts`.
 ## 3e. System health's checks (2026-10-17)
 
 `health-checks` (`src/workers/scheduled-health-checks.ts`) runs System health's checks
-on their own, each at its own interval: the website, the database and Supabase every
-five minutes, the rest every 15 minutes, hourly or daily. What the checks are, and
-what a problem does, are owned by [`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §3; this
-section says how the job runs.
+on their own, each at its own interval: the website's pages, the email queue, the
+database and Supabase every five minutes, the rest every 15 minutes, hourly or daily (27
+checks since part 2B, 2026-10-17). What the checks are, and what a problem does, are owned
+by [`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §3; this section says how the job runs.
 
 What System health remembers between runs is one JSON row, `health-state` in
 `admin_portal_settings`, and it is the job's one gate key, so the dispatcher's gate-key
-query hands it over. The first run writes the row (each check's first run staggered
-over its interval) and runs nothing. Every run after that runs the checks that are
-due, at most six, the most overdue first, and writes the row back by
-compare-and-swap, so a Test again pressed during the run keeps its results too. On
-its first run after 03:00 UTC it also deletes check results older than 30 days.
+query hands it over. The first run writes the row, with each check's first run placed so
+that no run makes more than eight (`placeNew` in `src/lib/health/state.ts`), and runs
+nothing. A run that finds a check the row does not know, one a release added, places it
+the same way around the checks already running and writes that first, compare-and-swap.
+Every run then runs the checks that are due, at most eight (the five-minute checks
+first, then the most overdue), and writes the row back by compare-and-swap, so a Test
+again pressed during the run keeps its results too. Each run moves a check's next due
+time on by whole intervals, so a check that waited a run keeps its place. On its first
+run after 03:00 UTC it also deletes check results older than 30 days.
 
 It reports when the next check is due. With the five-minute checks that is always the
 next tick, which the dispatcher treats as "every tick" (§4a), so it never sleeps. It
@@ -667,23 +671,27 @@ hashed, about 20 µs a KB, at most 256 KB a run (about 5 ms). These are counts f
 the code, not a measurement of a live run.
 
 *Added 2026-10-17.* `health-checks` adds **288 invocations a day**, through the
-`JobRunner` binding, which is not billed as a request. A usual run (the three
+`JobRunner` binding, which is not billed as a request. A usual run (the four
 five-minute checks, nothing changed) makes 2 queries and reads and writes the state
 row: measured at 1 row read and 1 written (`budgets.ts`). A result is kept only when a
-check's state changes, when someone ran it, or as its first result of the hour: about
-340 result rows a day, each about 4 rows written with its indexes, so with the state
-row about 1,700 rows written a day, and the daily clean-up deletes about as many. That
-is about 3% of the free plan's 100,000. The two checks that read most run hourly: the
-table check reads the database schema (135 rows on 2026-10-17, through the D1
-connector) and the activity-log check reads up to 101 rows; its costliest run, six
-checks due at once with every result kept and a problem filed, measured 249 rows read
-and 30 written. Its checks call the website (whose health answer reads its own D1, one KV key and
-the booking outbox), Supabase, the chat assistant, the portal's own address through
-Cloudflare Access, Brevo, Resend and Sentry: about 870 calls a day, more when a
-failure is tried again. The CPU is the answers' JSON and
-the state row's (about 15 KB) inside its own invocation's 10 ms; the time is spent
-waiting on the network, which is not CPU. The written and outbound figures are counts
-from the code, not a measurement of a live day.
+check's state changes, when someone ran it, or as its first result of the hour: with
+the 27 checks of part 2B about 600 result rows a day, each about 4 rows written with
+its indexes, so with the state row about 2,700 rows written a day, and the daily
+clean-up deletes about as many. That is about 5% of the free plan's 100,000. The checks
+that read most run hourly or daily: the table check reads the database schema (135 rows
+on 2026-10-17, through the D1 connector), the activity-log check up to 101 rows, and the
+seal check, once a day, the newest sealed window twice (at most 500 rows each); the
+costliest run, the eight that touch D1 most due at once with every result kept and a
+problem filed, measured 408 rows read and 38 written. Its checks call the website (four
+pages, and its health answer, which reads its own D1, one KV key and the booking
+outbox), Supabase, the chat assistant, the email service, the portal's own address
+through Cloudflare Access, Brevo, Resend, Sentry, Analytics Engine, Cloudflare's
+analytics and, once a day, Cloudflare's DNS resolver: about 2,200 calls a day, more when
+a failure is tried again, at most 18 in one run (36 with second tries), under the 50 a
+Worker invocation may make. The CPU is the answers' JSON, the pages read until their
+markers are found, and the state row's (about 25 KB) inside its own invocation's 10 ms;
+the time is spent waiting on the network, which is not CPU. The written and outbound
+figures are counts from the code, not a measurement of a live day.
 
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
@@ -888,6 +896,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | Part 2B: `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts` (`placeNew`, `advanceDue`, the run order), `src/lib/health/catalog.ts`, `src/lib/jobs/budgets.ts`; `test/system-health-state.test.ts` (placing from the live state's last runs, pauses), `test/health-checks-job.test.ts` and `test/jobs-budget.test.ts` pass (first run 28 queries, 56 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest 23 queries, 408 read, 38 written); `backup_runs` (48 rows) and `sync_outbox` (empty) counted in production through the D1 connector | §3e and §5's `health-checks` note. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-17 | claude | `health-checks` added: `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/health-checks-job.test.ts`, `test/system-health-state.test.ts` and `test/jobs-budget.test.ts` pass (first run 16 queries, 32 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest 13 queries, 249 read, 30 written); the two heavy queries run read-only in production through the D1 connector (135 and 101 rows read); jobs counted in `registry.ts` (17) | §3's count, tier table and reason, §3e (new), §4a's note, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | `audit-seal` added: `src/workers/scheduled-audit-seal.ts`, `src/lib/audit-seal/`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/audit-seal.test.ts` and `test/jobs-budget.test.ts` pass; jobs counted in `registry.ts` (16) | §3's count, tier table and reason, §3d (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written) |
 | 2026-10-16 | claude | The access review reminder added to `access-change-summary`: `src/workers/scheduled-access-review.ts`, `src/lib/access-review/store.ts`, `AuditLogRepository.getLatestTargetRow`, `src/lib/jobs/registry.ts` (its about), `budgets.ts`; `test/access-review.test.ts` (the window, a week later, after a sign-off) and `test/jobs-budget.test.ts` pass | §3c's new paragraph and §5's line. Not re-checked: the rest of the document; not checked live (not deployed when written) |

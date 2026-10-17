@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-17 | `src/lib/health/catalog.ts` after System health's checks were rebuilt: what it reads through `EMAIL_QUEUE`, `ASTRO_SERVICE` and `EMAIL_CONSOLE` | §1 Queues and Service Bindings: those three readers added. No binding, secret, variable or cron trigger added; the DNS check asks Cloudflare's public resolver, as `src/pages/api/emails/dns-check.ts` already did. Nothing else re-checked |
 | 2026-10-17 | `src/lib/jobs/registry.ts` (17 jobs: 15 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-health-checks.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **17 jobs (15+2)**, `health-checks` added to the table. No binding, secret, variable or cron trigger added. Nothing else re-checked |
 | 2026-10-17 | `grep -rn RESEND_API_KEY src/` after Diagnostics was replaced by System health | §5's `RESEND_API_KEY` row: its one reader is System health's Resend check. No binding, secret or variable added. Nothing else re-checked |
 | 2026-10-16 | `src/env.d.ts`, `src/lib/console-signature.ts` (the only reader of `CONSOLE_SIGNING_KEY`), `wrangler.toml` (`[secrets] required` unchanged) | §5.3 lists `CONSOLE_SIGNING_KEY`, optional. Not checked: the secret on the four Workers (the owner sets it) |
@@ -120,7 +121,8 @@ and, since 2026-10-03, every security email (`src/lib/auth/security-logging.ts`,
 Brevo directly as the fallback), and, since 2026-10-10, the portal's other system emails
 (storage notices and share links, the purge alert, the Search Console alert and re-sent
 invitations, through `src/lib/email/queue-mail.ts`), and the external `cf-astro-email-consumer` worker drains
-it. See
+it. Since 2026-10-17 System health's *Email queue* check also reads its size through the binding's
+`metrics()` (how many wait, and the oldest one's age), without sending anything. See
 [`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md).
 
 `SYNC_QUEUE` carries ISR revalidation redrive jobs. This Worker is both its
@@ -139,10 +141,10 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 | Binding | Target Worker | Purpose |
 |---------|---------------|---------|
 | `CHATBOT_SERVICE` | `cf-chatbot` | Worker-to-Worker calls to the chatbot admin surface, without a public round trip |
-| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes, and since 2026-10-07 the `heartbeat-watchdog` job's fallback heartbeat run and outbox drains) |
+| `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes, and since 2026-10-07 the `heartbeat-watchdog` job's fallback heartbeat run and outbox drains; System health's website checks: its health report, and since 2026-10-17 the home and booking pages in both languages) |
 | `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
 | `VPS` | `cf-vps` | The private server-console Worker (no route, no `workers.dev`): the `/dashboard/vps/app/` gateway, including the browser terminal's WebSocket ([VPS Console](../features/VPS-CONSOLE.md)). **Deploy cf-vps first** — a deploy that binds a Worker that does not exist fails |
-| `EMAIL_CONSOLE` | `cf-email-api` (entrypoint `Console`) | The email service's API Worker, admin door only (it has no route from here; its public API is for clients): the `/api/emails/api-*` routes behind the Email API page ([Email API page](../features/EMAIL-API-ACCESS.md)). **Deploy cf-email-api first** — a deploy that binds a Worker that does not exist fails |
+| `EMAIL_CONSOLE` | `cf-email-api` (entrypoint `Console`) | The email service's API Worker, admin door only (it has no route from here; its public API is for clients): the `/api/emails/api-*` routes behind the Email API page ([Email API page](../features/EMAIL-API-ACCESS.md)), and since 2026-10-17 System health's *Email service* check (`GET /admin/health`, as the `health-checks` system actor). **Deploy cf-email-api first** — a deploy that binds a Worker that does not exist fails |
 
 ### Workers AI
 
