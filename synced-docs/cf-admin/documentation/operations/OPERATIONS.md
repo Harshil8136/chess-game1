@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-17 | `src/lib/health/probes.ts` (`askQueue`) after the queue binding's `metrics()` failed in production | §1's `EMAIL_QUEUE` paragraph: the queue's size is read from Cloudflare's Queues API with the existing token; the binding is still only sent to. No binding, secret, variable or cron trigger added. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/catalog.ts` after System health's checks were rebuilt: what it reads through `EMAIL_QUEUE`, `ASTRO_SERVICE` and `EMAIL_CONSOLE` | §1 Queues and Service Bindings: those three readers added. No binding, secret, variable or cron trigger added; the DNS check asks Cloudflare's public resolver, as `src/pages/api/emails/dns-check.ts` already did. Nothing else re-checked |
 | 2026-10-17 | `src/lib/jobs/registry.ts` (17 jobs: 15 in `FIVE_MIN_JOBS`, 2 in `SUNDAY_JOBS`), `src/workers/scheduled-health-checks.ts`, `wrangler.toml` (`[triggers]` unchanged) | §1 Scheduled triggers: **17 jobs (15+2)**, `health-checks` added to the table. No binding, secret, variable or cron trigger added. Nothing else re-checked |
 | 2026-10-17 | `grep -rn RESEND_API_KEY src/` after Diagnostics was replaced by System health | §5's `RESEND_API_KEY` row: its one reader is System health's Resend check. No binding, secret or variable added. Nothing else re-checked |
@@ -121,8 +122,9 @@ and, since 2026-10-03, every security email (`src/lib/auth/security-logging.ts`,
 Brevo directly as the fallback), and, since 2026-10-10, the portal's other system emails
 (storage notices and share links, the purge alert, the Search Console alert and re-sent
 invitations, through `src/lib/email/queue-mail.ts`), and the external `cf-astro-email-consumer` worker drains
-it. Since 2026-10-17 System health's *Email queue* check also reads its size through the binding's
-`metrics()` (how many wait, and the oldest one's age), without sending anything. See
+it. Since 2026-10-17 System health's *Email queue* check also reads its size (how many wait, and
+the oldest one's age) from Cloudflare's Queues API with `CLOUDFLARE_API_TOKEN`, not through the
+binding: Sentry's wrapper around the binding breaks its `metrics()` (MAINTENANCE SH-7). See
 [`../features/EMAIL-PORTAL.md`](../features/EMAIL-PORTAL.md).
 
 `SYNC_QUEUE` carries ISR revalidation redrive jobs. This Worker is both its

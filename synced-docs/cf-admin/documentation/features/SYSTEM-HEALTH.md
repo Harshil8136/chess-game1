@@ -93,7 +93,7 @@ rules that turn what a check read into Working, Needs a look or Failing live apa
 | Booking and consent heartbeat | Website and booking | Soon | every 15 minutes | The website's hourly heartbeat ran within its window and found nothing wrong |
 | Website updates | Website and booking | Soon | every 15 minutes | Changes made in the portal reach the website: none waiting over an hour, none given up in the last 24 hours |
 | Website chat assistant | Website and booking | Soon | every 15 minutes | The chat assistant answers its health question |
-| Email queue | Email | Urgent | every 5 minutes | Emails leave the queue: how many wait and how long the oldest has waited, a warning at 5 minutes and a failure at 15 |
+| Email queue | Email | Urgent | every 5 minutes | Emails leave the queue: how many wait and how long the oldest has waited (from Cloudflare's Queues API), a warning at 5 minutes and a failure at 15 |
 | Email service: stuck and failed mail | Email | Soon | every 15 minutes | The email service's own count: no email stuck over 10 minutes, none that failed every retry in the last 24 hours |
 | Brevo, the main email sender | Email | Soon | hourly | Brevo accepts the portal's key, and today's sends are not nearly used up (300 a day on the free plan, a warning at 80%) |
 | Resend, the backup email sender | Email | Soon | hourly | Resend accepts the portal's own key, and its daily and monthly allowance is not nearly used up |
@@ -210,9 +210,11 @@ person who sent it, and its pop-up called a queued email "delivered".
 
 No new table, binding, secret or cron trigger: the results table is the one Diagnostics wrote, the
 problems table the one Alerts read, and the state is one row of the settings table. The checks
-use what the portal already had: `RESEND_API_KEY` and `BREVO_API_KEY`, the `ASTRO_SERVICE`,
-`EMAIL_CONSOLE` and `EMAIL_QUEUE` bindings, and the Cloudflare token and account the Scheduled
-jobs page and the dashboard already use. The email service answers its counts on a route of its
+use what the portal already had: `RESEND_API_KEY` and `BREVO_API_KEY`, the `ASTRO_SERVICE` and
+`EMAIL_CONSOLE` bindings, and the Cloudflare token and account the Scheduled jobs page and the
+dashboard already use. The email queue's size comes from Cloudflare's Queues API with that token,
+as the dashboard reads it, not from the `EMAIL_QUEUE` binding: Sentry's wrapper around a queue
+binding breaks its `metrics()` (MAINTENANCE SH-7). The email service answers its counts on a route of its
 own Console (cf-email-consumer `docs/features/EMAIL-API.md`). Results
 written by Diagnostics before 2026-10-17 stay until the clean-up removes them, and History does
 not list them.
@@ -229,6 +231,7 @@ next run.
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | The first live results of part 2B, read through the Cloudflare D1 connector (`system_test_results`, `platform_alerts`): 21 checks passed; *Email queue* failed with "Illegal invocation" (Sentry's queue wrapper, `@sentry/cloudflare` 10.73.0 `instrumentQueueProducer.js`) and *Scheduled jobs on time* could not read Analytics Engine. §3's queue row and §6 against the fix (`askQueue` in `src/lib/health/probes.ts`; the failures question keeps the column name `timestamp`, as `src/lib/jobs/history.ts` does), pinned by `test/system-health-checks.test.ts` | Why Analytics Engine refused the aliased question: the check now shows its answer, read from the next live result |
 | 2026-10-17 | The 27 checks of part 2B: §3's table, the placing and keeping of places, the limits, §6 and §7 against `src/lib/health/catalog.ts`, `src/lib/health/readings.ts`, `src/lib/health/probes.ts`, `src/lib/dal/HealthReadsRepository.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts` and `src/workers/scheduled-health-checks.ts`; the rules pinned by `test/system-health-readings.test.ts`, the checks against stand-in services by `test/system-health-checks.test.ts`, the placing by `test/system-health-state.test.ts` (from the live state's last runs, and after pauses), the cost by `test/jobs-budget.test.ts`; the domain's mail records, the Brevo and Resend answers, the live tables' sizes and the website's pages read before writing | A live run of the new checks: written before the push; whether the queue binding reports its size, whether Cloudflare's analytics take the list of our Workers and whether the booking pages open through the binding are read from the first live results |
 | 2026-10-17 | The checks on their own: §3 (the intervals, running on their own, what a failure does, closing by itself, unstable checks, the limits), §4's closing, §6 and §7 against `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/lib/health/catalog.ts` and `src/pages/api/system-health/`; pinned by `test/system-health-state.test.ts`, `test/health-checks-job.test.ts` and `test/system-health.test.ts`; the result rows a day counted from the code | A live run: written before the push; the owner's phone test follows |
 | 2026-10-17 | §2 for the new look: the tabs, the band, the per-problem counts, the level filter and the address, against `src/components/admin/health/`, `src/styles/pages/health.css` and the two repositories; the counts and the filter by `test/system-health.test.ts`, the pieces by `test/system-health-board.test.ts` and `test/system-health-look.test.ts` | The rest of the page, unchanged since the rows below; the look on a phone, which the owner tests after the push |
