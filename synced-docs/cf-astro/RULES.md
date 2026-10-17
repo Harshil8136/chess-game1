@@ -1,7 +1,7 @@
 {% raw %}
 # CF-ASTRO PROJECT — OPERATIONAL RULES & ARCHITECTURE BIBLE
 
-> **Last Updated:** 2026-10-06
+> **Last Updated:** 2026-10-17
 
 ## 🏢 PROJECT MISSION — COMMERCIAL-GRADE, $0 INFRASTRUCTURE
 
@@ -77,7 +77,7 @@ A schema change is complete only when **all three** exist:
 
 **`madagascar-db` is one database with one `d1_migrations` ledger, written to by BOTH `cf-astro` and `cf-admin`.**
 
-The ledger keys on filename, not number, so duplicate numbers collide _silently_ — **26 numbers** (`0001`–`0015`, `0021`, `0033`–`0042`) already appear more than once in the live ledger (re-counted against `d1_migrations` on 2026-09-14: 87 rows). This said 25 and stopped at `0014` until then; `0015` joined the list when this repo's `0015_booking_replay_outbox.sql` was applied on 2026-09-03. Three series feed the one ledger, not two — this repo's `db/migrations/`, cf-admin's `migrations/`, and cf-admin's inert `database/legacy_migrations/` — so `0001`–`0008` each carry three entries and `0002` carries four. The number space is strictly partitioned:
+The ledger keys on filename, not number, so duplicate numbers collide _silently_ — **26 numbers** (`0001`–`0015`, `0021`, `0033`–`0042`) already appear more than once in the live ledger (re-counted against `d1_migrations` through the Cloudflare D1 connector on 2026-10-17: 112 rows, the same 26 numbers as on 2026-09-14, when it held 87). This said 25 and stopped at `0014` until then; `0015` joined the list when this repo's `0015_booking_replay_outbox.sql` was applied on 2026-09-03. Three series feed the one ledger, not two — this repo's `db/migrations/`, cf-admin's `migrations/`, and cf-admin's inert `database/legacy_migrations/` — so `0001`–`0008` each carry three entries and `0002` carries four. The number space is strictly partitioned:
 
 - **`cf-astro` owns `0001`–`0032`** (`db/migrations/`)
 - **`cf-admin` owns `0033`+** (`migrations/`)
@@ -89,7 +89,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 
 ## 🧮 RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
-**cf-astro's own Worker deployment carries ~19 env vars** (6 `[vars]` + ~13 secrets since 2026-10-04, when the Upstash Redis rate limiter was retired: `UPSTASH_REDIS_REST_URL` left `[vars]`, and `UPSTASH_REDIS_REST_TOKEN` is no longer read and is to be deleted from the Worker with `wrangler secret delete` — until it is, it is still set but counts for nothing. The Workers Rate Limiting bindings that replaced it are bindings, not env vars. Before that: 7 `[vars]` + ~14 secrets, recounted 2026-08-28 against `wrangler.toml` and `env.d.ts`, reconciling this with `main.md`, which had said ~21 while this file said ~22; the `[vars]` count of 7 is exact, but the secret count is approximate because `wrangler.toml`'s comment registry, `env.d.ts`, and the auto-generated `worker-configuration.d.ts` don't fully agree with each other — `worker-configuration.d.ts` in particular still lists `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, which were removed 2026-08-08; treat `env.d.ts` + `wrangler.toml`'s hand-maintained comment blocks as the live source, not that file). **This is a hard cap, not a soft target.**
+**cf-astro's own Worker carries 6 `[vars]` and the secrets the code reads** — the list, and what reads each one, is `SECURITY.md` §13 (counted against `wrangler.toml`, `env.d.ts` and the code on 2026-10-17: 9 Worker secrets read, plus the build-time `SENTRY_AUTH_TOKEN`). A few retired secrets (`UPSTASH_REDIS_REST_TOKEN`, `SENTRY_DSN`, `DATABASE_URL_ADMIN`) are read by nothing and wait for the owner to delete them ([`Documentation/TODO-BACKLOG.md`](./Documentation/TODO-BACKLOG.md)); whether each is still set cannot be read through the Cloudflare connector. The Workers Rate Limiting bindings are bindings, not env vars. **This is a hard cap, not a soft target.**
 
 - ❌ **FORBIDDEN:** Introducing new environment variables for feature toggles, limits, or operational settings.
 - ✅ **REQUIRED INSTEAD:** Use D1 (`admin_portal_settings`, owned by cf-admin but shared) or the site-settings pattern already in use.
@@ -99,7 +99,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 
 ## 🗂️ RULE #0.9 — MIGRATION-MINIMAL DATA DESIGN & SCHEMA REUSE (HARD STOP, WE ARE NOT ADDING MORE)
 
-**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the **50** tables shared with cf-admin (**30** D1 `madagascar-db` + 20 Supabase `public`, re-counted live 2026-09-14) (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb` (9) and `whatsapp-chatbot` (4) D1 databases across the full three-app estate. This read 51/31/64 until 2026-09-10; the D1 figure was one high, and cf-admin's `RULESAd.md` §0.9 had the correct total all along.
+**Do NOT create new D1/Supabase tables when an existing one can fulfill the requirement** — of the **50** tables shared with cf-admin (**30** D1 `madagascar-db` + 20 Supabase `public`, re-counted live 2026-09-14 and again on 2026-10-17 through the Cloudflare D1 and Supabase connectors) (see RULE #0.6 above), or **63** counting cf-chatbot's separate `chatbot-kb` (9) and `whatsapp-chatbot` (4) D1 databases across the full three-app estate. This read 51/31/64 until 2026-09-10; the D1 figure was one high, and cf-admin's `RULESAd.md` §0.9 had the correct total all along.
 
 - ❌ **FORBIDDEN:** Writing a new-table migration without first proving why existing infrastructure can't house the data model. A new table is the **last option on the table, not the first.**
 - See `cf-admin/main.md` RULE #0.9 and the `Shared Data Audit` (`cf-admin/documentation/records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md`) for the full breakdown — this is the same estate, not a separate one, since both apps write to the same `madagascar-db` and the same Supabase project.
@@ -115,7 +115,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 | **Hosting**        | Cloudflare Workers — static assets + SSR via `wrangler deploy`; left Cloudflare Pages in July 2026 (`Documentation/SYSTEM-ARCHITECTURE.md` §1)                                                                               |
 | **Database**       | Cloudflare D1 (SQLite) + Supabase PostgreSQL (Direct connection 5432)                                                                                                                                                        |
 | **Cache**          | Cloudflare KV (`ISR_CACHE`: pages, CMS blocks, feeds, rate-limit fallback); rate limits on the Workers Rate Limiting binding (Upstash Redis until 2026-10-04)                                                                |
-| **Storage**        | Cloudflare R2 (images/assets) + Supabase Storage (private/auth-gated)                                                                                                                                                        |
+| **Storage**        | Cloudflare R2 (`madagascar-images` for CMS images, `arco-documents` for ARCO identity documents); this Worker uses no Supabase Storage                                                                                       |
 | **Email**          | Async via Cloudflare Queue → shared `cf-astro-email-consumer` worker. Brevo is primary for every send (cf-astro and cf-admin alike); Resend is an automatic same-request failover if Brevo throws — not a per-project split. |
 | **Bot Protection** | Cloudflare Turnstile (free, unlimited challenges)                                                                                                                                                                            |
 | **Analytics**      | PostHog (reverse-proxied) + Cloudflare Web Analytics + Analytics Engine                                                                                                                                                      |
@@ -129,7 +129,7 @@ The ledger keys on filename, not number, so duplicate numbers collide _silently_
 ## 2. ARCHITECTURAL PATTERNS
 
 - **Edge-First**: The application is designed to execute as close to the user as possible using Cloudflare Workers.
-- **Failover / Resiliency**: We use D1 as a dead-letter/audit queue for bookings. If Supabase fails, data is retained in D1 for delayed execution.
+- **Failover / Resiliency**: D1 holds an audit row for every booking and consent attempt, written first, and a replay outbox: if Supabase fails, the record waits in D1 and is replayed into Postgres later (`Documentation/CONSENT-RECORD-SYSTEM.md`, ADR-0003).
 - **Islands Architecture**: We limit client-side JS by utilizing Astro islands with Preact only where interactivity is required.
 - **Hybrid-SMTP Async Email**: All email dispatch (from both cf-astro and cf-admin) is non-blocking via one shared Cloudflare Queue (`madagascar-emails`) consumed by one shared worker, `cf-astro-email-consumer`. **Brevo is the primary provider for every send regardless of `projectSource`**; **Resend is wired in only as an automatic same-request failover** if the Brevo call throws — there is no per-project routing split.
 
