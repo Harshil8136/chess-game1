@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/dashboard/health.astro, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, test/system-health.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
+related_code: [src/pages/dashboard/health.astro, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/workers/scheduled-health-checks.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, test/system-health.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
 related_docs: [CRON-CONTROL.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
 tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 ---
@@ -18,8 +18,9 @@ tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 > problem those checks and the
 > website have filed, says in plain words what each check proves and how to fix it when it
 > fails, and lets you send a test alert to prove an alert would reach someone. It replaced two
-> older pages, Diagnostics and Alerts, on 2026-10-17. Who may see the technical details, run the
-> checks, close problems or send a test alert is set per person on the Access page.
+> older pages, Diagnostics and Alerts, on 2026-10-17. Someone can say "I'm on it" on a problem, or
+> quiet it for a few hours with a reason. Who may see the technical details, run the checks, take
+> or quiet a problem, close problems or send a test alert is set per person on the Access page.
 
 The page is at `/dashboard/health`, in the sidebar's System group. The two old addresses forward
 to it: `/dashboard/alerts` opens the Problems tab and `/dashboard/debug/diagnostics` the Checks tab
@@ -38,6 +39,7 @@ hides what the server would refuse (`denyHealth` and `healthCan` in `src/lib/aut
 | System health | `/dashboard/health` | Manager and above | Open the page: every check's state, the problems, the history |
 | See technical details | `/dashboard/health#details` | Admin and above | Error text, response times, raw check output, what each problem said, and the compliance records |
 | Test again | `/dashboard/health#run` | Manager and above | Run one check, or every check, now |
+| Acknowledge and snooze | `/dashboard/health#ack` | Manager and above | Say "I'm on it" on a problem, or snooze it for 1, 4 or 24 hours with a reason (migration `0074`) |
 | Resolve problems | `/dashboard/health#resolve` | Manager and above | Close a problem, with a reason |
 | Resolve while still failing | `/dashboard/health#resolve-anyway` | Owner and above | Close a health check's problem while its check still fails |
 | Send a test alert | `/dashboard/health#simulate` | Vendor support | Send a marked test through the real alert channels |
@@ -56,13 +58,14 @@ row, all visible on a phone.
 | Tab | What it shows |
 |---|---|
 | Overview | The band in full: a state word (All working, Needs a look, Something is failing, Not checked yet), one sentence, and a pulse line of the last 30 days, a beat per day at its worst state across the six areas, a dashed line on a day nothing ran. Then what needs someone now (failing checks and the top open problems) and each area with a tick per day |
-| Problems | A triage board: lanes by level (Urgent "Look now", Soon "Look today", FYI "When there is time"), open before closed, each problem a ticket that says who filed it, how many times it came, first and last seen, and once closed who closed it and why. Open, Closed or All, and a level. Opening one shows its chart: its check's latest result, last 24 results and how to fix it, Test again, each time it came and each close, by day, and the form that closes it |
+| Problems | A triage board: lanes by level (Urgent "Look now", Soon "Look today", FYI "When there is time"), open before closed, each problem a ticket that says who filed it, how many times it came, first and last seen, who is on it, and once closed who closed it and why. Open problems someone snoozed wait in a Snoozed lane between the open and the closed ones. Open, Closed or All, and a level. Opening one shows its chart: who is on it and its snooze with the buttons that set them, its check's latest result, last 24 results and how to fix it, Test again, each time it came and each close, by day, and the form that closes it |
 | Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again |
 | Tests | Check everything now, and Send a test alert with the path its channels take |
 | History | Every run of the checks that is kept, by day, each with its state words and a bar of how it went; one run's results; the way to closed problems; the compliance records |
 
 **Counts are per problem.** The open counts on the band, the Problems tab and the level buttons
-count each open problem once, however many times it came, at its level. A problem's level is the
+count each open problem once, however many times it came, at its level. A snoozed problem is not
+counted at its level: the band's Open readout and the page's sentence name how many are snoozed. A problem's level is the
 worst level it was filed at, and the level filter picks problems by that level, so a problem shows
 under one level only. Until 2026-10-17 the counts added up every report and the filter picked
 reports, so one problem filed 12 times counted 12 and could show under two levels.
@@ -164,6 +167,15 @@ checks each tried twice could pass the 50 outside requests a Worker may make on 
 person's run leaves the checks' places in the schedule as they were. The waiting does not count
 towards the Worker's CPU time.
 
+**Who watches the checks.** If the portal's scheduler stops, the checks stop with it and nothing on this page can say so. So
+each run of the checks job stamps the state row with when it ran (`tick`; a person's Test again
+leaves it alone), and the website's hourly heartbeat, which the server runs, reads it
+(`cf-astro/src/lib/heartbeat.ts`). When the job last ran more than 30 minutes ago, the heartbeat's
+answer fails with a line saying so: the server's heartbeat job fails, and the server reports a
+failed job to Sentry. The heartbeat's own record (`heartbeat-last-run`) keeps only its booking and
+consent verdict, so the *Booking and consent heartbeat* check does not blame the website once the
+portal is back. A state row without a stamp (before 2026-10-17) is only a notice.
+
 ## 4. Problems
 
 Problems are rows in `platform_alerts`. They come from three places: the health checks (source
@@ -179,6 +191,31 @@ stays open. A health check's problem closes only once its check passes, unless t
 "Resolve while still failing"; closed while its check still fails, it opens again on the check's
 next run. It also closes by itself after two passes in a row (§3). Closing is limited to ten a minute per person and recorded in the
 activity log as `health_resolve`, with the reason.
+
+**Who is on it.** "I'm on it" puts the person's email address on the problem's open rows (`acked_by`,
+`acked_at`, migration `0074`), so everyone sees on the ticket and in its chart who has taken it.
+It ends when those rows close; a problem that opens again starts with nobody on it. Pressing it
+again moves it to whoever pressed last.
+
+**Snoozing.** A snooze quiets a problem for 1, 4 or 24 hours and needs a reason (3 to 200
+characters). It is written on the open rows (`snoozed_until`, `snooze_reason`) and belongs to the
+problem: the latest end among its rows counts. The snoozer is also on it, unless someone already
+is. While it lasts, the problem waits in the Snoozed lane and is counted apart, and a health
+check that opens the problem again files it quietly: its row and the Worker log, with no Sentry
+event and no alert email, the snooze's end in its context (`fireAlert` with `quiet` in
+`src/lib/alert-gate.ts`, `src/lib/health/run.ts`). "End the snooze" stops it at once. When it
+ends, the problem is counted and alerted as before. The website does not read snoozes yet: an
+open problem it files again still emails (§7).
+
+Saying "I'm on it", snoozing and ending a snooze share a limit of ten a minute per person, refuse
+compliance records and test alerts, answer 409 when nothing is open (or nothing is snoozed), and
+are recorded as `health_ack`, `health_snooze` (with the reason and the end) and
+`health_unsnooze` (PATCH `/api/system-health/problems`).
+
+**Repeats on one row.** A row can stand for several times a problem came (`repeats`, and
+`last_seen_at` for the last time, migration `0074`): a problem's count adds its rows' repeats up,
+its last time is the latest of them, and its chart counts each time on the day it last came. No
+writer adds repeats yet; the website will (§7).
 
 **What is never a problem.** The website's ARCO records (`arco_get_document`, each identity
 document from a privacy request handed out, and to whom) are compliance records: they are listed
@@ -204,9 +241,9 @@ person who sent it, and its pop-up called a queued email "delivered".
 | Where | What | Kept |
 |---|---|---|
 | D1 `system_test_results` | A check's result: the run, the check, its level, status, time taken, the plain summary, the technical part as JSON, and the id of the person who ran it (`system` for the job, whose runs are `auto-…`). Kept: every result someone ran, and from the job every change of state plus one an hour per check, about 600 rows a day with 27 checks | 30 days; the job deletes older results on its first run after 03:00 UTC |
-| D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days. About 25 KB with 27 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
-| D1 `platform_alerts` | Problems, compliance records and test alerts; who closed a problem and why | No automatic clean-up yet |
-| D1 `admin_audit_log` | `health_run`, `health_resolve`, `health_test_alert` | The activity log's own rules |
+| D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days; and when the job last ran on its own (`tick`), which the website's hourly heartbeat reads (§3). About 25 KB with 27 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
+| D1 `platform_alerts` | Problems, compliance records and test alerts; who closed a problem and why; since `0074` who is on it and since when, a snooze's end and reason, and a row's repeats and when it last came | No automatic clean-up yet |
+| D1 `admin_audit_log` | `health_run`, `health_resolve`, `health_test_alert`, `health_ack`, `health_snooze`, `health_unsnooze` | The activity log's own rules |
 
 No new table, binding, secret or cron trigger: the results table is the one Diagnostics wrote, the
 problems table the one Alerts read, and the state is one row of the settings table. The checks
@@ -222,15 +259,15 @@ not list them.
 ## 7. Not built yet
 
 The rest of parts 2 and 3 of the plan of 2026-10-17, which the owner approved: other services'
-problems fed in, the website's repeated problems grouped, a check that the checks themselves ran, acknowledging and snoozing (`#ack`), settings (`#configure`), heavier
-tests (`#run-heavy`), the test alert sent only to the person who pressed it, and a strip on the
-home page. Until snoozing exists, closing a problem whose check still fails opens it again on the
-next run.
+problems fed in, the website adding repeats to its open row and reading snoozes before it emails,
+settings (`#configure`), heavier tests (`#run-heavy`), the test alert sent only to the person who
+pressed it, and a strip on the home page.
 
 ## 8. Verification log
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | Acknowledge and snooze, and repeats on one row (migration `0074`, applied live first and read back through the Cloudflare D1 connector: the six columns and the `#ack` registry row): §1's row, §2, §4's new paragraphs, §6 and §7 against `src/pages/api/system-health/problems.ts`, `src/lib/dal/PlatformAlertsRepository.ts`, `src/lib/health/run.ts`, `src/lib/alert-gate.ts`, `src/lib/health/view.ts` and `src/components/admin/health/`; pinned by `test/system-health-ack.test.ts`, `test/system-health-board.test.ts` and `test/action-keys-enforced.test.ts`; §3's last paragraph and §6's `tick` against `applyResults` and `parseState` in `src/lib/health/state.ts`, pinned by `test/system-health-state.test.ts`. The fix of the row below, read live: *Email queue* passed at 07:15 UTC and its problem closed itself at 07:20; *Scheduled jobs on time* passed at 07:25 ("All 17 scheduled jobs are running") | The buttons on a phone, which the owner tests after the push; the website's side of repeats and snoozes, not built yet |
 | 2026-10-17 | The first live results of part 2B, read through the Cloudflare D1 connector (`system_test_results`, `platform_alerts`): 21 checks passed; *Email queue* failed with "Illegal invocation" (Sentry's queue wrapper, `@sentry/cloudflare` 10.73.0 `instrumentQueueProducer.js`) and *Scheduled jobs on time* could not read Analytics Engine. §3's queue row and §6 against the fix (`askQueue` in `src/lib/health/probes.ts`; the failures question keeps the column name `timestamp`, as `src/lib/jobs/history.ts` does), pinned by `test/system-health-checks.test.ts` | Why Analytics Engine refused the aliased question: the check now shows its answer, read from the next live result |
 | 2026-10-17 | The 27 checks of part 2B: §3's table, the placing and keeping of places, the limits, §6 and §7 against `src/lib/health/catalog.ts`, `src/lib/health/readings.ts`, `src/lib/health/probes.ts`, `src/lib/dal/HealthReadsRepository.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts` and `src/workers/scheduled-health-checks.ts`; the rules pinned by `test/system-health-readings.test.ts`, the checks against stand-in services by `test/system-health-checks.test.ts`, the placing by `test/system-health-state.test.ts` (from the live state's last runs, and after pauses), the cost by `test/jobs-budget.test.ts`; the domain's mail records, the Brevo and Resend answers, the live tables' sizes and the website's pages read before writing | A live run of the new checks: written before the push; whether the queue binding reports its size, whether Cloudflare's analytics take the list of our Workers and whether the booking pages open through the binding are read from the first live results |
 | 2026-10-17 | The checks on their own: §3 (the intervals, running on their own, what a failure does, closing by itself, unstable checks, the limits), §4's closing, §6 and §7 against `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/lib/health/catalog.ts` and `src/pages/api/system-health/`; pinned by `test/system-health-state.test.ts`, `test/health-checks-job.test.ts` and `test/system-health.test.ts`; the result rows a day counted from the code | A live run: written before the push; the owner's phone test follows |
