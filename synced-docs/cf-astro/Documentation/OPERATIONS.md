@@ -1,7 +1,7 @@
 {% raw %}
 # cf-astro Operations Reference
 
-**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4; §6 and §7 added 2026-10-07 (the 2026-10-04 resource-usage plan) from `wrangler.toml` (not re-checked against the live Worker, which has not been deployed with them yet); §8 added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, with the six `platform_alerts` columns read on the live table through the Cloudflare D1 connector
+**Date:** 2026-06-18 — §4 and §5 corrected 2026-09-15 against `wrangler.toml`, the account KV list (Cloudflare API) and `SYSTEM-ARCHITECTURE.md` §4; §6 and §7 added 2026-10-07 (the 2026-10-04 resource-usage plan) from `wrangler.toml` (not re-checked against the live Worker, which has not been deployed with them yet); §8 added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, with the six `platform_alerts` columns read on the live table through the Cloudflare D1 connector; §8's quiet windows added 2026-10-17 from `src/lib/alert-gate.ts` and `test/alert-gate-repeats.test.ts`, against cf-admin's `health-config` row (cf-admin migration 0076)
 
 This document outlines the core infrastructure bindings and the CLI commands used to manage and verify the Cloudflare resources attached to `cf-astro`.
 
@@ -129,6 +129,11 @@ The row is written first, and what it finds decides the rest:
   and an email, so one Brevo webhook problem left 19 rows.
 - **A snooze.** When someone snoozed the problem on System health, it goes only
   to the log and its row until the snooze ends: no Sentry event, no email.
+- **A quiet window.** While a quiet window set on System health's Settings tab
+  is under way (planned work, cf-admin's `health-config` row in the shared
+  `admin_portal_settings`), every problem goes only to the log and its row, as
+  a snoozed one does. A row that cannot be read counts as no window, so alerts
+  fire as before.
 - **Compliance records** (`arco_get_document`, each identity document served)
   are never folded: each is a row of its own.
 - **Nothing lost.** If D1 cannot be written, or the table does not have the new
