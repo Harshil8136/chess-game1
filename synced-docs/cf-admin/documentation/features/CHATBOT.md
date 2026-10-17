@@ -3,7 +3,7 @@
 title: "Chatbot Integration & AI Infrastructure — CF-Admin"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-14
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: ["src/pages/api/chatbot/[...path].ts", src/lib/chatbot-proxy.ts, src/components/admin/chatbot/hooks/useChatbotApi.ts, src/lib/auth/routes.ts]
@@ -360,7 +360,7 @@ exists — `cf-chatbot/src/channels/web/chat.ts` calls the `feedback_events`
 insert in `cf-chatbot/src/storage/supabase.ts`, and the live table holds rows.
 The 2026-09-14 verification log claimed to have found "no writer of
 `cluster_topic` / `feedback_events` in either checkout" while also listing
-cf-chatbot as not on disk; the checkout is at `E:\1\Madagascar Project\cf-chatbot`.
+cf-chatbot as not on disk; the 2026-09-19 pass read a local cf-chatbot checkout.
 Global CSAT on the dashboard is therefore a real, if thin, measurement — treat
 a low sample count as low confidence, not as absence.*
 
@@ -379,6 +379,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | cf-admin's side again: `src/pages/api/chatbot/[...path].ts` (RBAC rules per path and method), `src/lib/chatbot-proxy.ts` (binding first, HTTP fallback, `X-Admin-Key` only when set, 8 s timeout, and the constant trust header on the binding call is still sent, so the §1 issue stands), the `mutate(path, method, body)` signature in `useChatbotApi.ts`, every component in §2 and the nine pages under `src/pages/dashboard/chatbot/`. Removed a local Windows path from §9 | Everything inside `cf-chatbot` (§3 to §9: live `bot_config`, `model_registry`, its migrations, RPCs and routes): no cf-chatbot checkout in this session, so those stand as read on 2026-09-19 |
 | 2026-10-07 | The neuron-budget note (changed 2026-10-04): cf-admin's budget is the sum of today's `ai_inference` audit rows (`src/lib/dal/RateLimitRepository.ts` `sumAiNeuronsToday`, `src/lib/ratelimit.ts`), no longer an Upstash counter | The chatbot Worker's own counter; everything else in this document |
 | 2026-09-19 | Live `chatbot-kb` D1 via `wrangler … --remote`: `bot_config` (primary / fallback / classifier), the full `model_registry` (ids, providers, context windows, prices, deprecation flags), the `model_registry` column list; `cf-chatbot/migrations/` (22 files, to `0022`); `cf-chatbot/src/admin/api.ts` (key-based auth **and** the static trust-header bypass); `cf-chatbot/src/core/pipeline.ts` (classifier from config), `cf-chatbot/src/core/rag.ts` (BGE-Small), `cf-chatbot/src/storage/supabase.ts` + `cf-chatbot/src/channels/web/chat.ts` (`feedback_events` writer); cf-admin `src/lib/chatbot-proxy.ts`; `src/lib/ai-pricing.ts` on the shared account allocation | Workers AI neuron prices in §4 (carried forward, not re-fetched from Cloudflare); RLS **policy content** (only that RLS is enabled); the §9 Supabase RPCs and `/admin/analytics/*` handlers; live conversation volume or cost |
 | 2026-09-14 | Proxy route `src/pages/api/chatbot/[...path].ts` (session check, per-pattern RBAC floor, path-traversal rejection, ghost audit); `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` in `wrangler.toml` and `worker-configuration.d.ts`; the `CHATBOT_SERVICE` binding; every component file in §3 on disk (three were missing from the table and are now listed); the hook signatures in `useChatbotApi.ts`; the analytics endpoints each island calls; `POST models/switch` payload; `content_en` / `content_es` in `KnowledgeBase.tsx`; the knowledge-gaps empty state; no clustering cron in `wrangler.toml` (two triggers) and no writer of `cluster_topic` / `feedback_events` in either checkout. Seven corrections above. | Everything inside `cf-chatbot` (not on disk here): pipeline files, `thinking_param`, `model_registry` / `bot_config` tables, migration history, Supabase RPCs, `/admin/analytics/*` routes; Workers AI neuron pricing (§4–6, §10); live RLS state |

@@ -45,8 +45,8 @@ tags: []
 
 ## 🔵 Low / Info — 12 items still open (was 14)
 
-| # | Area | Where | Note |
-|---|---|---|---|
+| # | Area | Where | Note | Fix |
+|---|---|---|---|---|
 | L-1 | Robustness | `src/pages/api/auth/logout.ts:35` | `siteUrl.includes('localhost')` would treat `app.localhost.com` as dev; not exploitable, fragile. Parse via `new URL(...).hostname` |
 | L-2 | Defense-in-depth | `src/lib/auth/cloudflare-access.ts:140–146` | No `nbf` (not-before) check. CF Access tokens don't include `nbf` in practice but add `if (claims.nbf && claims.nbf > nowSec + 60) return null;` |
 | L-3 | Load shedding | `src/pages/api/dashboard/metrics.ts` | No rate limit; aggregates heavy upstream queries | Add `getRateLimiter({ requests: 30, window: '1 m' }, 'dash-metrics')` |

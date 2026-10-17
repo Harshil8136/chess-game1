@@ -3,7 +3,7 @@
 title: "CMS, Image, Blog & Bookings Management"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-14
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
@@ -15,7 +15,7 @@ tags: [cms, blog, ai, rag, d1]
 
 > **TL;DR (non-technical):** How staff edit the public website's content (hero, gallery, reviews, services, dynamic blog articles) from the admin portal, generate ground-truth AI articles via Workers AI, and how those edits appear on the live site within seconds.
 
-> **Last Updated:** 2026-09-19 — §1 propagation, §2 access floor and §4 AI output corrected (see §7). The 2026-08-03 entry ("Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via the `cf-chatbot` service binding") is when the feature set described here landed.  
+> **Last Updated:** 2026-10-17 — the KV TTL, the quality-gate count and the cf-astro call sites corrected (see §7). The 2026-08-03 entry ("Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via the `cf-chatbot` service binding") is when the feature set described here landed.  
 > **Projects:** `cf-admin` (writes & AI authoring), `cf-astro` (edge SSR reads & AIO/GEO citation)
 
 ---
@@ -46,7 +46,8 @@ cf-admin wrote it. It does not: `ISR_CACHE` is a **cf-astro** binding and
    `PUBLIC_ASTRO_URL` when the binding is absent. Either way the call carries a
    Bearer `REVALIDATION_SECRET`. Three attempts, 5 s timeout each.
 3. cf-astro's `/api/revalidate` purges the listed ISR paths and writes each
-   entry as `cms:<key>` into `ISR_CACHE` with a **1-hour TTL**.
+   entry as `cms:<key>` into `ISR_CACHE` with a **24-hour TTL** (cf-astro's
+   `CMS_KV_TTL_SECONDS`; it was one hour until 2026-10-04).
 4. cf-admin then reads the published bytes back (`verifyCmsLive`) to confirm
    they are actually live, not merely that the webhook returned 200. A failed
    read-back never flips a successful publish to failed; it is reported.
@@ -66,7 +67,7 @@ cf-admin wrote it. It does not: `ISR_CACHE` is a **cf-astro** binding and
 | Reviews | `happy_clients` (`global`) | `cms:happy_clients` | `POST /api/content/reviews` | `Testimonials.astro` |
 | FAQ | `faq_items` (`global`) | `cms:faqs` | `POST /api/content/faqs` | `FAQ.astro` |
 | About / Stats | `about_stats` (`global`) | `cms:about` | `POST /api/content/stats` | `About.astro` |
-| **Dynamic Blog Posts** | `blog_posts` table | Purged via ISR path | `POST /api/content/blog` | the blog post page via `getBlogPostBySlug()` — four call sites, two each in `src/pages/en/blog/[slug].astro` and `src/pages/es/blog/[slug].astro` (the post itself, then the translation check). *Corrected 2026-09-19: this said three.* |
+| **Dynamic Blog Posts** | `blog_posts` table | Purged via ISR path | `POST /api/content/blog` | the blog post page via `getBlogPostBySlug()` — one call site in each of `src/pages/en/blog/[slug].astro` and `src/pages/es/blog/[slug].astro`; the translation check there uses `getPublishedSlugs()`. *Corrected 2026-10-17: this said four call sites, two per page.* |
 
 KV keys in the table are the `cms:` names cf-astro writes; they were read from
 the writer and reader source, not from a live KV listing (the connector exposes
@@ -127,7 +128,7 @@ staff see.
 | **Blog Studio** | `/dashboard/content/blog` | Dynamic D1 Blog Manager & Workers AI Copilot |
 
 ### 3.1 Publish Quality Gate & PLAC Bypass Capability
-- **Quality Gate**: Server-side 10-check SEO/content audit (`evaluateSeoGate`).
+- **Quality Gate**: Server-side 11-check SEO/content audit (`evaluateSeoGate`, `src/lib/blog/seo-gate.ts`; the eleventh, `body-not-json`, was added on 2026-10-10).
 - **PLAC Capability**: `/dashboard/content/blog#bypass-quality-audit` (registered in D1 `admin_pages` with `required_role = 'admin'`; live and active on 2026-09-14, alongside `#edit-ai-prompts` and `#review-suggestions`, both `admin`).
 - **Enforcement**: Users with this PLAC permission (or Owner / Vendor Support) can override failing quality gate checks and publish articles. Every bypass is audited with `qualityGateBypassed: true`.
 
@@ -196,7 +197,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 ## 5. Storage & CDN Flow
 
 - **CDN URL:** `https://cdn.madagascarhotelags.com` (R2 Custom Domain)
-- **Key strategy:** UUID-based R2 keys per upload (`hero/hero-{uuid}.jpg`, `gallery/{uuid}.ext`)
+- **Key strategy:** UUID-based R2 keys per upload (`hero/hero-{uuid}.{ext}`, `gallery/{uuid}.{ext}`, `blog/covers/blog-{uuid}.{ext}`), the extension taken from the upload's MIME type (`src/lib/cms/storage.ts`)
 - **Cache-Control:** `public, max-age=31536000`
 
 ---
@@ -213,6 +214,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | The whole page against the code: the nine pages under `src/pages/dashboard/content/`; each writer endpoint's D1 id and `cmsData` key (`services.ts`, `reviews.ts`, `faqs.ts`, `stats.ts`, `media/upload.ts`, `media/gallery.ts`); `src/lib/cms/revalidate.ts` (3 attempts, 5 s, service binding, read-back, outbox); `evaluateSeoGate` (11 checks, corrected from 10); `src/lib/cms/storage.ts` key shapes and `Cache-Control`; `AI_NEURON_RESERVE` and `timeoutForTokens`; the bookings guards; in the cf-astro sibling, `CMS_KV_TTL_SECONDS` (24 h, corrected from 1 h) and the `getBlogPostBySlug` call sites (two, corrected from four) | Live KV, D1 and a live AI generation (no connector used in this pass) |
 | 2026-10-11 | The redirect-rows paragraph in §1 against `src/lib/dal/BlogRepository.ts` (`updatePost`, `createPost`, `clearOwnRedirect`) with `test/blog-locale-and-redirects.test.ts`; the live `blog_redirects` rows (Cloudflare D1 connector, 1 row left: `welcome`/es) | The rest of the page |
 | 2026-10-10 | §4.1, §4.3, §4.4 and §4.5 against `src/lib/blog/body-envelope.ts`, `direct-answers.ts`, `pub-date.ts`, `ai-prompt-template.ts`, `src/lib/ai/inference.ts`, `src/pages/api/content/blog.ts`, `ai-generate-stream.ts`, `ai-visibility.ts` and `blog/suggest.ts`, with `test/blog-body-envelope.test.ts`, `test/blog-direct-answers.test.ts` and `test/ai-inference.test.ts` | The live D1 row of why-chose-us and a live Workers AI call (no Cloudflare connector in the session) |
 | 2026-10-10 | The blog purge and announce paragraph in §1 against `src/pages/api/content/blog.ts`, `src/lib/blog/publish-scheduled.ts` and `src/lib/blog/revalidation-paths.ts`, with `test/blog-publish-effects.test.ts` | The rest of the page; the purge against a live cf-astro (no Cloudflare connector in the session) |

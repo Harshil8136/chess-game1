@@ -3,7 +3,7 @@
 title: "Service Control Plane — Connectors (Layer B)"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-14
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/control-plane/provider-result.ts, src/lib/control-plane/cloudflare-admin.ts, src/lib/control-plane/sentry-admin.ts, src/lib/control-plane/posthog-admin.ts, src/lib/control-plane/supabase-admin.ts, src/lib/control-plane/config-publisher.ts, src/lib/control-plane/preflight.ts]
@@ -277,5 +277,6 @@ audit) rather than wiring the UI to anything MCP-side.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | The 11 files under `src/lib/control-plane/`: every exported function named in §2 and §3 and its API base; `errorStatus`, `httpError`, `networkError`; `resolveToken(env)` still called 8 times in `cloudflare-admin.ts` (the §3.1 warning stands); `resolveProjectId()` still falls back to the first listed project (the §3.3 warning stands); `tokenStatus()` (7 entries, label, purpose, presence); `flushAstroConfigCache` and its transport. No corrections needed | The live secret list and token scopes (no connector used in this pass); provider API behaviour; §6 |
 | 2026-09-19 | `cloudflare-admin.ts` — `resolveToken(env)` and its **8** call sites (the seven inventory reads plus the security-level write), so the override is not purge-scoped; `posthog-admin.ts` `resolveProjectId()` (env var, else first listed project) and its use by both the settings read and `setSessionRecording`; `supabase-admin.ts` unconfigured condition; `preflight.ts` `tokenStatus()` (label + purpose + presence); the audit targets of the three provider routes; live `wrangler secret list` — 25 names, no Supabase Management PAT and no PostHog org id. **`ls src/lib/control-plane` returns 11 files, not six**, as the 2026-09-14 row below claims | Which scopes the provisioned tokens actually carry; whether the PostHog personal key can see more than one project; provider API behaviour; the §6 MCP comparison |
 | 2026-09-14 | All six files under `src/lib/control-plane/`; the `ProviderResult` type and helpers in §2 line by line (status mapping, 401/403 hint, message extraction); every function named in §3 exists with the described API base, token and unconfigured conditions; the §4 token matrix against `tokenStatus()` (7 entries, presence-only); the §5 flush path in `config-publisher.ts` and its three call sites, and cf-astro's `kind === 'config'` handling; `#provider-write` + `requireAuth(ctx, 'owner')` on every Layer-B POST. Six corrections above (Cloudflare reads and security-level write, Sentry issue triage, panel shows token names). | Token scopes actually provisioned; provider API behaviour; the MCP comparison in §6 |
