@@ -53,9 +53,13 @@ Every Developer Tools page checks its **page key on the server** in the Astro fr
 in the person's access map (`placRequireGrant`): vendor support by default (the rows' stored
 role is `dev`), anyone an access grant names, and the owner and vendor support, who bypass
 page-level access everywhere (ADR-0002). A missing or switched-off row refuses. Page Registry
-is the exception since 2026-10-15 (the owner's decision): it is vendor support only, the owner
-included, through a floor in `src/lib/auth/page-floors.ts` that `canUsePageRegistry` checks
-before the key, so a grant no longer opens it and its hub card shows only to vendor support.
+is the exception: since 2026-10-17 (the owner's decision, "Vendor can grant") it is a grant-only
+page (`src/lib/auth/page-floors.ts`). It opens by default for vendor support alone, the owner
+included, and for anyone vendor support gives it to; only vendor support gives it, and its
+stored role stays `dev`. Its hub card shows to the same people. A person given it whose
+Developer Tools row is closed finds Page Registry in that sidebar row instead. From 2026-10-15
+to 2026-10-17 it was vendor support only and no grant opened it
+([`PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §5).
 
 ```astro
 ---
@@ -108,8 +112,8 @@ Since 2026-10-10 the routes ask for the same key as their page:
 | `pages/api/system/access-overview.ts` (GET), `page-access.ts` (POST), `access-history.ts` (GET) | `canUsePageRegistry` (`src/lib/access-center/registry-access.ts`, `history.ts`) | Added 2026-10-14 for the control room: one read of every page, person, personal setting and check; personal settings for many people at once, each through the Access Center's page gates; and the history of every access change |
 | `pages/api/system/console-features.ts` | `canUsePageRegistry` (`gate()` in `src/lib/access-center/registry.ts`) | Each console checks the person's own `access.manage` again; a move below vendor support stays within the editor's rank |
 
-**The rank rule.** *Since 2026-10-15 nobody below vendor support reaches Page Registry, so this
-rule no longer runs; it stays in the code behind the floor should the gate ever open wider.* A
+**The rank rule.** *It did not run from 2026-10-15 to 2026-10-17, when nobody below vendor
+support reached Page Registry; it applies again to the people vendor support gives it to.* A
 grant on Page Registry must not become a way up: an Admin who could lower
 an owner-only page to Admin would open it for themselves. So below vendor support a page's
 required role and its on/off switch change only when the editor's own role already opens the
@@ -306,6 +310,7 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §2.1 and §2.2's rank rule after Page Registry became a grant-only page: `page-floors.ts`, `canUsePageRegistry`, `computeNavItems`, `page-gates.ts`, `api/system/pages.ts` (its role stays `dev`); `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-16 | §2.2's Page Registry row after the See it as tab (#26): `RegistryConsole.tsx`, `SeeAsPanel.tsx`; it calls no new route (`/api/system/access-overview`, `/api/system/console-features` and `/api/users/access-center`) | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-15 | §2.1 and §2.2 after Page Registry became vendor support only: `page-floors.ts`, `canUsePageRegistry`, the four pages under `src/pages/dashboard/debug/` and the `api/system/` gates; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |
 | 2026-10-14 | §2.2 and §3.3 after the Page Registry rebuild: the page, `src/components/admin/debug/registry/`, the four `api/system/` routes and `registry-access.ts`; `git grep` finds no `PageRegistryManager`, `/api/system/preview` (removed that day) or `rolePreviewSchema` in `src/`; the screens server-rendered with edge-case data; `test/registry-access.test.ts`, `test/registry-ui-logic.test.ts` | §1, §3.1, §3.2 and §4 onward; the page in a browser (the owner's phone test) |

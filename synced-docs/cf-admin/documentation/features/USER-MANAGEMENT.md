@@ -3,7 +3,7 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/pages/api/users/manage.ts, src/pages/api/users/approvals.ts, src/lib/approvals/handlers.ts, src/lib/users/manage-apply.ts, src/components/admin/users/SecondPersonPanel.tsx, src/lib/auth/stages/decide.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
@@ -368,8 +368,9 @@ access-revocation design (private)).*
 (`src/components/ui/AccessDeniedView.astro`) with **Request access**
 (`src/components/ui/RequestAccess.tsx`). The card first asks the server whether the page can be
 asked for at all. It cannot when no request could open it, and the card says why instead of
-offering a button: a page with a floor (Page Registry, GitHub: only the roles the floor names
-can ever open it), a page switched off in Page Registry (named as such since 2026-10-16), an
+offering a button: a page with a floor (GitHub: only the roles the floor names can ever open
+it), Page Registry (only Vendor support gives it, since 2026-10-17, so the card says to ask
+Vendor support), a page switched off in Page Registry (named as such since 2026-10-16), an
 address that is no page, a page the person can already open, or an Owner or Vendor support (they
 open every page already). *Since 2026-10-16 (#25)* the card also says why the page is closed to
 them, from their own setting on it: closed for them personally (with the day), a grant whose end
@@ -786,6 +787,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | The Access denied card's list of pages that cannot be asked for, against `checkAsk` in `src/lib/access-requests/rules.ts` (Page Registry refused since that day); `test/access-requests.test.ts` passes | Everything else; the card in a phone browser |
 | 2026-10-16 | **Accuracy and GitHub pass (`claude`).** §2.1's table rebuilt so every row renders (its two notes moved below it, the duplicate Access Center row merged, `manage.ts`, `logs/index.astro` and `access.astro` helper names corrected against `src/lib/auth/rbac.ts` and each file); §2's Viewer row cut to what is true now; the top banners trimmed; §5.1's sync step (pushed before the answer, and a failed push skips the invitation email) against `manage.ts`; §5.2's hidden toggle and right panel against `InviteUserModal.tsx`, `HiddenAccountToggle.tsx`, `PageAccessMatrix.tsx` and `AccessPolicyGrid.tsx`; §5.4's delete against `applyUserDelete` and `blockEmailTokens` in `src/lib/users/manage-apply.ts`; §5.5's Access group (no inline push) against `src/workers/scheduled-unused-accounts.ts`; §6.1's panel place, Owner-level approval sign-in and emailed actions against `src/pages/dashboard/users/index.astro`, `src/lib/access-requests/handlers.ts` and `src/lib/access-changes/notify.ts`; §6.3's Lock out, `MAX_WAITING` and decision limit against `src/lib/approvals/` and `active-sessions.ts`; §8's editor; §11.1 and §11.3 against `cf-access-reconcile.ts`, `cf-resync.ts`, `UsersConsole.tsx` and the live `cron-control` row (D1 connector: `cf-access-reconcile` on, 60 minutes) | No test run (shared checkout); §3, §4, §7, §9 to §10 and §11.4 to §11.8 not re-derived; the screens in a phone browser |
 | 2026-10-16 | **Scope-limited to §5.4's delete step (email API tokens blocked, permissions item #39).** `src/lib/users/manage-apply.ts` (`applyUserDelete`, `blockEmailTokens`, `syncWarning`), `src/lib/email-console.ts` (`blockTokensByCreator`) and cf-email-consumer's `api/src/console.ts` (`tokens.block_by_creator`); `test/two-person-rule.test.ts` passes | The live email service; every other section |
 | 2026-10-16 | **Scope-limited to the second person (permissions item #36):** §5.4's delete step, §6's panel and event rows, §6.3, new, and the sentences in §9.1 and §9.2, against `src/pages/api/users/manage.ts`, `src/pages/api/users/approvals.ts`, `src/lib/approvals/` (`ask.ts`, `handlers.ts`, `mail.ts`, `rules.ts`), `SecondPersonPanel.tsx`, `PersonDrawer.tsx`, `RoleDialog.tsx` and `src/pages/dashboard/users/index.astro`; `test/two-person-rule.test.ts` (22 tests) passes | The panel in a phone browser (the owner's test); every other section |

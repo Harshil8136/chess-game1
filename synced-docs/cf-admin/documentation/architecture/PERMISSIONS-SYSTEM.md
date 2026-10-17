@@ -3,7 +3,7 @@
 title: "Permissions System — RBAC, PLAC and ACM End to End"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_docs: [plac-and-audit.md, ARCHITECTURE.md, ../features/USER-MANAGEMENT.md, ../features/SESSION-MANAGEMENT.md, ../security/SECURITY.md, ../reference/RBAC-AT-SCALE.md]
@@ -57,8 +57,9 @@ language, and no per-request database call on the happy path. *Corrected
    all (ADR-0002: a self-inflicted lockout of the customer's top tier is the
    worse failure). A deny row written against either tier is stored, shown in
    the access UI, and has no effect. *Since 2026-10-15 one page is the exception: Page
-   Registry is vendor support's alone, the owner included, through a floor in
-   `src/lib/auth/page-floors.ts` that the page and its routes check before the key (§5).*
+   Registry, a grant-only page since 2026-10-17 (`src/lib/auth/page-floors.ts`), opens for
+   the owner only when vendor support gives it, as for anyone else; the page and its routes
+   check that before the key (§5).*
 1. Explicit deny → 2. explicit grant → 3. role baseline.
 
 Steps 1–3 are what `computeAccessMap` folds into the map; step 0 is applied at
@@ -230,8 +231,9 @@ own key with `placRequireGrant`, which needs the exact key. The Email API page d
 (migration `0066`, stored role `owner`), whose `canViewGitHub` (`src/lib/auth/surface-guards.ts`)
 also keeps an admin floor that no grant can lower. The floor is a row in
 `src/lib/auth/page-floors.ts`, which `computeNavItems` applies too, so the sidebar never offers
-a link the page would refuse. Since 2026-10-15 the file holds a second floor, vendor support on
-`/dashboard/debug/pages`, the only floor that also binds the owner (below). It has no API route; the check runs in the page itself
+a link the page would refuse. Since 2026-10-17 the file also lists the grant-only pages:
+`/dashboard/debug/pages` opens by default for vendor support alone, the owner included, and
+otherwise only by a personal grant that vendor support gives (below). The GitHub page has no API route; the check runs in the page itself
 ([`features/GITHUB.md`](../features/GITHUB.md)).
 
 Hash fragments are the fine-grained layer. `/dashboard/sessions` is the page;
@@ -320,8 +322,8 @@ did not. Both rows keep their stored role `dev`, so without a grant nothing chan
 owner. Below vendor support, a registry editor changes a page's required role and switch only
 within their own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`): a grant on
 the registry cannot open a page above its holder. [`DEV-TOOLS.md`](../operations/DEV-TOOLS.md)
-§2 has the routes. *Since 2026-10-15 a grant no longer opens Page Registry (below); the
-Developer Tools grant is unchanged.*
+§2 has the routes. *From 2026-10-15 to 2026-10-17 no grant opened Page Registry; since then a
+grant from vendor support does (below). The Developer Tools grant is unchanged.*
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
 its route will allow it. Until then it decided from the role: any admin saw the block
 controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
@@ -354,7 +356,7 @@ when the check fails. Below the owner and vendor support a person now needs a gr
 and the rank rule still applies on top of it. Suspending an account (`PATCH /api/users/manage`)
 also ends its sessions and is not covered by this key: it follows the Users page and the rank
 rule, as before.
-*Changed 2026-10-15 (the owner's decision):* Page Registry (`/dashboard/debug/pages`) is
+*Changed 2026-10-15 (the owner's decision; replaced on 2026-10-17, next paragraph):* Page Registry (`/dashboard/debug/pages`) is
 vendor support's alone. It decides every page's default role and everyone's personal page
 settings, so neither the owner nor a grant of its key opens it any longer. The rule is a floor
 in `src/lib/auth/page-floors.ts` that `canUsePageRegistry` checks before the key, in the page,
@@ -372,6 +374,26 @@ those roles and flags such a grant *No effect: page floor*, Settings → Your ac
 it, and a new grant a floor would ignore is refused by `pageEditability`, `changeRefusal` and,
 at an invitation, `inviteSettingRefusals` (`MAINTENANCE.md` (private)). Until then
 the Access page offered this key, and the GitHub key to a Manager, as grantable.
+*Changed 2026-10-17 (the owner's decision, "Vendor can grant"):* Page Registry is a grant-only
+page (`isGrantOnlyPage`, `src/lib/auth/page-floors.ts`), no longer a floor. No role opens it by
+default except vendor support's, the owner's bypass included, and a personal grant opens it for
+anyone. Only vendor support gives it: Gate D refuses anyone else's grant of it by name, whatever
+role is stored, and `PATCH /api/system/pages` keeps its stored role at `dev`. Gate C reads the
+page's own rule, so a person who holds it may take it away from someone they outrank, and the
+owner without a grant may not. `computeAccessMap` gives no role an entry of true there except
+vendor support, so an entry of true is a grant in force; `pageFloorOpens` reads it for
+`canUsePageRegistry` (the page, its hub card and every `/api/system/` route it calls), the
+sidebar and the registry's tabs. On every access screen the owner is an ordinary role on this
+page (`roleOnPage`): the Access page, Page Registry and See it as show it opened by a grant or
+closed, never opened by full access. A person given it whose Developer Tools row is closed finds
+Page Registry in that sidebar row (`grantOnlyDoor`), and See it as shows the same. It cannot be
+asked for (`checkAsk`): a request the owner or an Admin decides could never open it, so the
+Access denied card says to ask vendor support. Below vendor support the rank rule
+(`registryEditRefusal`) and the visibility rules (`buildOverview`) apply again, as they did
+before 2026-10-15. The Owner's grant of 2026-09-15 was removed on 2026-10-17 at the owner's
+choice, an hour before this change went live, so it does not reopen the page (an activity-log
+`reset_access` row records it). Settings → Your access still tells the owner "every page"
+(`MAINTENANCE.md` (private)).
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -744,7 +766,7 @@ activity-log row (`access_template`).
 
 *Added 2026-10-14.* `POST /api/system/page-access` (`src/lib/access-center/registry-access.ts`)
 takes up to 100 changes `{ userId, path, action, expiresAt? }` from someone allowed into
-Page Registry, which since 2026-10-15 is vendor support only (§5). Each change passes the same gates as above, plus: a switched-off page takes no
+Page Registry: vendor support, and since 2026-10-17 the people vendor support gives it to (§5). Each change passes the same gates as above, plus: a switched-off page takes no
 new grant or revoke (a reset is allowed), and a setting left by an account no longer in the
 directory may only be removed, by vendor support. Every change is checked before any is
 written; one refusal refuses the whole request. Then one D1 batch, one activity-log row per
@@ -1248,13 +1270,13 @@ mismatches, closed on 2026-09-16.
 | `test/migrations-replay.test.ts` | The four cron registry rows exist, are active, have non-null icons and carry the expected `required_role` — the assertion `0054` needed and did not have (added 2026-09-20) |
 | `test/access-center-rules.test.ts`, `test/access-center-profile.test.ts`, `test/access-center-api.test.ts` | The Access Center (§10.1): the sources and edit rules as case tables, the profile against a real registry and a faked console (answering, unavailable, refusing), and the API reading the person's role from the database whatever the body claims (added 2026-10-02) |
 | `test/access-center-end-dates.test.ts`, `test/plac.test.ts` | End dates (added 2026-10-14): an ended override counts as none, `refreshAt` is the earliest end ahead and the stage recomputes when it passes, and a save refuses an end in the past, more than a year ahead or on a reset |
-| `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): vendor support only, the owner and a granted Admin refused (2026-10-15), the visibility rules for a viewer below vendor support (`buildOverview`), the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
+| `test/registry-access.test.ts` | Page Registry's overview and `POST /api/system/page-access` (added 2026-10-14): vendor support and, since 2026-10-17, a person given it; the owner without a grant refused; only vendor support grants it, and a holder may take it back (Gate C); the visibility rules for a viewer below vendor support (`buildOverview`), the page gates on every change, nothing written when one change is refused, switched-off pages and removed accounts |
 | `test/see-as.test.ts` | Page Registry's See it as (added 2026-10-16, §10.2): the pages the sidebar lists, grouped like it; each answer, personal settings and floors included, equal to `computeAccessMap`, `computeNavItems` and the page gate over the real D1; console powers count capabilities only |
 | `test/access-history.test.ts` | The access history (added 2026-10-14): which activity rows count, the cursor, the keys, an owner's history kept for vendor support |
 | `test/session-rank.test.ts` | D6 and D7 (added 2026-10-14): force sign-out, ending and blocking sessions need a strict outrank below the owner; no self-block; a failed account update answers 502. Since 2026-10-15 also `#force-kick`: refused without a grant or under a denied Users page, a grant does not lift the rank rule, and the Users page's button follows the same check |
 | `test/fresh-sign-in.test.ts` | The recent sign-in (added 2026-10-16, §10.5): the 10-minute and skew rule, an unknown time failing closed, the return path after signing in again, each guarded route refusing a stale session with the header and allowing the parts that do not ask, and the exact list of files that call `freshSignInRefusal`. `test/session-rank.test.ts`, `test/registry-access.test.ts` and `test/access-center-api.test.ts` cover the sign-outs, Page Registry and the Access Center |
 | `test/two-person-rule.test.ts` | The second person (added 2026-10-16, §10.7): which changes wait and which do not, the last Owner (D14) included; who may approve; the waiting list written only over the exact value read; a removal that waits removes nothing and emails the approvers; a change made alone when nobody else could approve; the invitation refused; a mixed edit refused; the asker unable to approve their own; a recent sign-in to approve; the checks made again at approval; decline and cancel; the server log hold at the gateway and the approval sent to cf-vps as the approver |
-| `test/access-requests.test.ts`, `test/access-console-requests.test.ts` | Access requests (added 2026-10-15 and 2026-10-16, §10.3): asking with a reason and a length, the refusals at once, who may decide, approving with an end date or declining with a note, the emails; a console permission asked for and given for a while, kept by the Access Center and removed by the review |
+| `test/access-requests.test.ts`, `test/access-console-requests.test.ts` | Access requests (added 2026-10-15 and 2026-10-16, §10.3): asking with a reason and a length, the refusals at once (Page Registry among them since 2026-10-17), who may decide, approving with an end date or declining with a note, the emails; a console permission asked for and given for a while, kept by the Access Center and removed by the review |
 | `test/access-changes.test.ts` | Access-change emails (added 2026-10-15, §10.4): each change, one summary a day or off; what each save point says; the daily summary job |
 | `test/role-preview.test.ts`, `test/access-why.test.ts`, `test/access-templates.test.ts` | The role change preview, "Why can't I?" and page floors, and access templates (added 2026-10-16) |
 | `test/unused-accounts.test.ts`, `test/ended-settings-cleanup.test.ts`, `test/access-review.test.ts` | Accounts nobody uses (flag at 45 days, suspend at 90, never the Owner or Vendor support), the monthly clean-up of ended settings, and the quarterly access review (added 2026-10-16, §10.6, §11) |
@@ -1269,6 +1291,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-17 | claude | **Scope-limited to Page Registry as a grant-only page.** Read `page-floors.ts` (`isGrantOnlyPage`, `roleOnPage`, `pageFloorOpens`, `grantOnlyDoor`), `plac.ts` (`computeAccessMap`, `computeNavItems`), `surface-guards.ts` (`canUsePageRegistry`), `page-gates.ts`, `access-center/rules.ts`, `pages.ts`, `overview.ts`, `see-as.ts`, `access-requests/rules.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one stored grant (2026-09-15) through the D1 connector, then removed that grant at the owner's choice with one `reset_access` activity-log row and read both back; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts`, `test/access-why.test.ts`, `test/access-requests.test.ts` and `test/see-as.test.ts` pass | §1's floor sentence, §5's two Page Registry notes and the new paragraph, §10.2, the §17 rows. Not re-derived: every other section |
 | 2026-10-16 | claude | **Docs pass after the 41 permission items, scope-limited to §4.1, §4.2, §5's Viewer note, §6 to §9, §11, §12, §13.1, §14, §16 and §17.** Read `src/lib/auth/stages/assertion.ts`, `bootstrap.ts`, `decide.ts`, `decision.ts` and `access-map.ts` (each refusal's status, body and audit reason; a page refusal is a rewrite; the access-map refusal redirects an API call too), `src/lib/auth/rbac.ts` (`ROLE_VOCABULARY`, `canBePageDefault`), `src/lib/access-center/limits.ts`, `src/lib/auth/page-registry.ts` and `src/layouts/AdminLayout.astro` (one read a minute per isolate, no retry, the sidebar's fallback), `src/lib/audit-seal/seal.ts` (`admin_audit_log` only); counted the `it(` cases in the three pipeline tests (53); through the D1 connector: `admin_pages` (117 rows, all legacy names, the CHECK) and `admin_page_overrides` (4, 1 deny, none with an end date) | §8's refusal table, §9's count, §11's stage 2, §12's unsealed sign-in log, §13.1's registry read, §14's registry row and §17's count corrected; §16 rewritten as the design's known limits, with the closed defects in one line. **Not re-derived:** §13.2 and §13.3's figures (2026-08-23 and 2026-09-19), §15's comparison and §15.1's control ids |
 | 2026-10-16 | claude | **Scope-limited to §10.7's Lock out sentence.** Read `src/pages/api/sessions/active-sessions.ts` (`block_account`) and `src/lib/approvals/ask.ts` (`personChangeGate`); `test/two-person-rule.test.ts` passes | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-16 | claude | **Scope-limited to §10.1's signature sentence (#33).** Read `src/lib/console-signature.ts` and the three binding accessors that wrap with it; `cf-backup/src/gateway/signature.ts`, `cf-vps/src/gateway/signature.ts` and their routers, `cf-email-consumer/api/src/signature.ts` and `handleConsole`; `test/console-signature.test.ts` and each console's signature test pass | The sentence matches the code. The rest of the document not re-read |

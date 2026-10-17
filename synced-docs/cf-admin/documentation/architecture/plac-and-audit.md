@@ -3,7 +3,7 @@
 title: "The Ghost Audit Engine (and where the permission model lives)"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/audit.ts, src/lib/audit-helpers.ts, src/lib/audit-views.ts, src/lib/audit-seal/seal.ts, src/lib/audit-seal/check.ts, src/workers/scheduled-audit-seal.ts, src/pages/api/audit/seals.ts, src/lib/auth/stages/record.ts, src/lib/auth/stages/decide.ts, src/lib/auth/guard.ts, src/lib/retention-tables.ts, src/pages/api/audit/logs.ts]
@@ -195,10 +195,12 @@ for 90 days. [`../security/SECURITY.md`](../security/SECURITY.md) §5 lists the 
 
 ### 2.8 Admin Pages Registry Manager
 
-`/dashboard/debug/pages` (Page Registry) edits the registry itself. Since 2026-10-15 it is for
-Vendor support only, the owner's decision: `canUsePageRegistry`
-(`src/lib/auth/surface-guards.ts`) applies a floor in `src/lib/auth/page-floors.ts` that binds
-the Owner too, then the page's own key. [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §5 and
+`/dashboard/debug/pages` (Page Registry) edits the registry itself. Since 2026-10-17 it opens
+for Vendor support and the people Vendor support gives it to, the owner's decision:
+`canUsePageRegistry` (`src/lib/auth/surface-guards.ts`) applies the page's own rule as a
+grant-only page (`src/lib/auth/page-floors.ts`: no role but Vendor support opens it by default,
+the Owner included), then the page's own key. Only Vendor support gives it; each gift or removal
+is an ordinary `grant_access` or `revoke_access` row. [`PERMISSIONS-SYSTEM.md`](PERMISSIONS-SYSTEM.md) §5 and
 §10.2 own the rules. What the audit log gets from it:
 
 - Every registry change (`PATCH /api/system/pages`) writes a `registry_update` row with the
@@ -493,6 +495,7 @@ SHA-256; measured 2026-10-16). A run hashes at most 256 KB (about 5 ms), a page 
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | **Scope-limited to §2.8's first paragraph.** Read `surface-guards.ts` (`canUsePageRegistry`), `page-floors.ts` (`isGrantOnlyPage`, `pageFloorOpens`), `page-gates.ts` (`grantRefusal`) and `registry-access.ts` (the audit actions); `test/debug-access.test.ts` and `test/registry-access.test.ts` pass | The paragraph matches the code. Not re-checked: every other section |
 | 2026-10-16 | claude | Read `src/lib/auth/rbac.ts` (`canBePageDefault`, `isReadOnly`, `canManageUser`), `src/lib/auth/stages/decide.ts` (`READ_ONLY_MAY_ASK`), `guard.ts` (`placRequireGrant`, the stale docblock), `surface-guards.ts` (`canUsePageRegistry`), `src/pages/api/system/pages.ts`, `src/lib/access-center/registry-access.ts`, `src/lib/users/manage-apply.ts`, `stages/bootstrap.ts`, the Sessions console (`SessionsConsole.tsx`), `src/lib/audit-views.ts` and its three callers, `src/lib/backup-proxy.ts`, `src/lib/backup-audit.ts` and the backup gateway (`RECORDED_READS`), `src/pages/api/retention/purge.ts`, `src/pages/api/audit/delete-targeted.ts`, `src/lib/audit-seal/seal.ts` and `AuditLogRepository.ts` (the seal reads `admin_audit_log` only), and `src/lib/audit.ts` (truncation, v1 fallback, table allowlist, the action union) | §1 and §2 trimmed to pointers to PERMISSIONS-SYSTEM.md, with what the audit log needs: Viewer is stored and given since #30, may only ask for access, `viewer_write_blocked`, not a page default; Page Registry is vendor support only (`canUsePageRegistry`), the lock-out recovery names *Sign-in blocks*. §3's table and §3.5 now record the sensitive reads (`view` rows, the backup gateway's two read actions). §3.2's purge row gives the real gates (the role, not `#purge`) and the targeted delete's. §3.6 says the sign-in log is not sealed; the flowchart's labels are quoted so it renders. No test run (shared checkout). Not re-checked: §3.6 beyond the new paragraph (row below) |
 | 2026-10-16 | claude | Read `src/lib/audit-seal/` (`seal.ts`, `check.ts`, `mail.ts`), `src/workers/scheduled-audit-seal.ts`, `src/pages/api/audit/seals.ts`, `src/lib/audit.ts` (`auditLogOnce`), `src/lib/retention-tables.ts` (`minDays`), `src/pages/api/retention/purge.ts`, `delete-targeted.ts` (tab allow-list) and `logs.ts` (no DELETE); `prune.ts` deleted. `test/audit-seal.test.ts` (26 tests) passes. Live D1 `pragma_table_info('admin_audit_log')` read through the Cloudflare connector: 17 columns, the same as `SEAL_COLUMNS` | §3.2 rewritten, §3.6 added, the terminology rule amended. §3, §3.1, §3.3 to §3.5 not re-checked |
 | 2026-10-16 | claude | Read the recent sign-in check in `src/pages/api/audit/logs.ts`, `prune.ts`, `delete-targeted.ts` (DELETE only), `consent.ts`, `emails.ts`, `delete.ts` and `src/pages/api/retention/purge.ts`; `test/fresh-sign-in.test.ts` pins the list | §3.2's new sentence under the deletion table. Nothing else re-checked |

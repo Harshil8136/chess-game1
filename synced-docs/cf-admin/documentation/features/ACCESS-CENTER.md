@@ -2,7 +2,7 @@
 title: "Access Center (the per-person access editor)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-16
+last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: [src/components/admin/users/access-editor/, src/lib/access-center/, src/pages/api/users/access-center.ts, src/pages/api/users/access-templates.ts, test/access-templates.test.ts, src/pages/api/users/access-history.ts, src/pages/dashboard/users/[id]/access.astro, src/styles/components/access-editor.css, src/components/admin/debug/ConsoleFeatures.tsx, src/components/admin/debug/registry/, src/pages/api/system/console-features.ts, test/access-center-end-dates.test.ts, test/access-history.test.ts, test/registry-ui-logic.test.ts, test/access-center-rules.test.ts, test/access-center-draft.test.ts, test/access-center-profile.test.ts, test/access-center-api.test.ts, test/access-page-gates.test.ts, test/access-why.test.ts, test/see-as.test.ts, test/access-console-requests.test.ts]
@@ -223,6 +223,9 @@ Since 2026-10-16 (open item AC-9) Page Registry reads a page's role floor first 
 what* shows a floored page as closed to the roles it keeps out ("Not for the role"), a stored
 grant the floor ignores is flagged *No effect: page floor* on Personal settings and counted on
 Checks, and a new grant the floor would ignore is refused, as it is here and at an invitation.
+Since 2026-10-17 Page Registry itself is a grant-only page: on the Access page its row opens for
+the Owner only by a personal grant, and only Vendor support may give it
+([`PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) §5).
 
 *Since 2026-10-16 (#14)* Page Registry asks for a sign-in from the last 10 minutes before a
 change that reaches more than one person or gives an Owner-level page: personal settings
@@ -247,9 +250,11 @@ capability: label, key, class, default role and the live personal grants that me
 *Change* button. Change opens a dialog: pick the new default from a row of chips ("Manager and
 above"), see who gains and who loses it among active people, give a reason, apply. Floors are
 locked. The save goes to the console's `POST access/role`, which keeps every personal grant,
-and writes one activity-log row under the console's module. Since 2026-10-15 Page Registry,
-this tab included, is vendor support only (the owner's decision); from 2026-10-10 until then
-anyone holding its key used the rows, moving a permission only within their own role. The
+and writes one activity-log row under the console's module. Page Registry, this tab included,
+opens for vendor support and, since 2026-10-17, the people vendor support gives it to (the
+owner's decision), who move a permission only within their own role. From 2026-10-15 to
+2026-10-17 it was vendor support only; from 2026-10-10 until then anyone holding its key used
+the rows. The
 console still checks the person's own `access.manage`
 ([`DEV-TOOLS.md`](../operations/DEV-TOOLS.md) §2.2).
 
@@ -292,6 +297,7 @@ correlation id.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | **Scope-limited to §2's Page Registry note and §4's Consoles paragraph.** `isGrantOnlyPage`, `roleOnPage` and `pageFloorOpens` (`page-floors.ts`), `pageItem` (`pages.ts`), `pageEditability` (`rules.ts`), `grantRefusal` (`page-gates.ts`) and `canUsePageRegistry`; `test/access-why.test.ts`, `test/registry-access.test.ts` and `test/registry-console-features.test.ts` pass | Everything else; the screens in a phone browser |
 | 2026-10-16 | **Scope-limited (`claude`): the TL;DR, §3.2's answers and emails, §3.3's statuses, §4's recent sign-in.** Who may save, against `gate`, `personWhyNot` and `pageEditability` (`src/lib/access-center/handlers.ts`, `rules.ts`, `page-gates.ts`) and `manager` in `templates.ts`; the `read_only` and `fresh_sign_in` refusals, the shared `plac` limit and the 502 on a directory failure in `postAccessSave`; what a save emails (`accessChanges`, `src/lib/access-changes/notify.ts`); Page Registry's sign-in rule in `postPageAccess` (`registry-access.ts`), `saveConsoleFeature` (`registry.ts`) and `PATCH /api/system/pages`; templates (#32) and permissions given for a while (#22) re-read against `templates.ts`, `limits.ts`, `toGrantInput`, `grantIssues` and `AccessSections.tsx` | No test run (shared checkout); §2 and §5 not re-derived; the screens in a phone browser |
 | 2026-10-16 | **Scope-limited to §6's target header (#35).** `consoleTarget` in `profile.ts` and its callers (`handlers.ts`, `role-preview.ts`); `grantFor` and the person route in cf-backup and cf-vps; `test/access-center-api.test.ts`, `access-center-profile.test.ts` and `role-preview.test.ts` pass | The screen itself: nothing on it changed |
 | 2026-10-16 | **Scope-limited to templates (#32).** The TL;DR, §1's rows, §2 step 2's *Templates* paragraph and the new §3.3 against `TemplatesDialog.tsx`, `AccessChrome.tsx` (`onTemplates`), `UserAccessEditor.tsx`, `draft.ts` (`templateItems`, `applyTemplate`), `limits.ts`, `templates.ts` and the route; `test/access-templates.test.ts` and `test/access-center-draft.test.ts` pass; every live `admin_pages.path` (117) matches the entry pattern, read through the D1 connector; the read's CPU measured with a 20-template, 200-item row | The dialog in a phone browser (the owner's test); it was not server-rendered |
