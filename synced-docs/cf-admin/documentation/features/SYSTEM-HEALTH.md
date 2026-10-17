@@ -5,8 +5,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/dashboard/health.astro, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, test/system-health.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
-related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md]
+related_code: [src/pages/dashboard/health.astro, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, test/system-health.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
+related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
 tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 ---
 
@@ -46,17 +46,32 @@ and Alerts for its own page (Manager), whose "Scan" ran the same tests past the 
 
 ## 2. The five tabs
 
+The page has a look of its own, a patient monitor (the [design](../specs/2026-10-17-system-health-look.md)).
+A monitor band sits above the tabs on every tab: the page's name, when it last checked, and three
+readouts (Failing, Needs a look, Open), each a button to the list behind it. The five tabs are one
+row, all visible on a phone.
+
 | Tab | What it shows |
 |---|---|
-| Overview | One sentence on the state of things, what needs someone now (failing checks and the top open problems), and one card per group with a bar for each of the last 30 days: red if a check failed that day, amber if one needed a look, green if all passed, grey if nothing ran |
-| Problems | Everything filed, a repeat shown once with how many times it came. Open, Closed or All, and Urgent, Soon or FYI. Opening one shows each time it came, its check's latest result and how to fix it, and the form that closes it |
-| Checks | Every check by group: what it proves, its latest result, its last 24 results, how to fix it when it fails, and Test again |
-| Tests | Check everything now, and Send a test alert |
-| History | Every run of the checks that is kept, one run's results, the way to closed problems, and the compliance records |
+| Overview | The band in full: a state word (All working, Needs a look, Something is failing, Not checked yet), one sentence, and a pulse line of the last 30 days, a beat per day at its worst state across the five areas, a dashed line on a day nothing ran. Then what needs someone now (failing checks and the top open problems) and each area with a tick per day |
+| Problems | A triage board: lanes by level (Urgent "Look now", Soon "Look today", FYI "When there is time"), open before closed, each problem a ticket that says who filed it, how many times it came, first and last seen, and once closed who closed it and why. Open, Closed or All, and a level. Opening one shows its chart: its check's latest result, last 24 results and how to fix it, Test again, each time it came and each close, by day, and the form that closes it |
+| Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again |
+| Tests | Check everything now, and Send a test alert with the path its channels take |
+| History | Every run of the checks that is kept, by day, each with its state words and a bar of how it went; one run's results; the way to closed problems; the compliance records |
+
+**Counts are per problem.** The open counts on the band, the Problems tab and the level buttons
+count each open problem once, however many times it came, at its level. A problem's level is the
+worst level it was filed at, and the level filter picks problems by that level, so a problem shows
+under one level only. Until 2026-10-17 the counts added up every report and the filter picked
+reports, so one problem filed 12 times counted 12 and could show under two levels.
+
+**The address keeps the view.** The tab, and on Problems the status and level, are kept in the
+address (`?tab=problems&status=closed&level=critical`), so a link opens that view.
 
 Opening the page runs nothing: it reads the stored results, and reads them again every minute
-while the page is on screen (never in a hidden tab). Until 2026-10-17 opening Diagnostics ran
-every test, and three of them wrote test data.
+while the page is on screen (never in a hidden tab). When that re-read finds the open counts
+changed, Problems reads its first page again. Until 2026-10-17 opening Diagnostics ran every
+test, and three of them wrote test data.
 
 ## 3. The checks
 
@@ -158,5 +173,6 @@ summary instead.
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-17 | §2 for the new look: the tabs, the band, the per-problem counts, the level filter and the address, against `src/components/admin/health/`, `src/styles/pages/health.css` and the two repositories; the counts and the filter by `test/system-health.test.ts`, the pieces by `test/system-health-board.test.ts` and `test/system-health-look.test.ts` | The rest of the page, unchanged since the rows below; the look on a phone, which the owner tests after the push |
 | 2026-10-17 | The `0073` sentence: the two Alerts rows read back switched off through the Cloudflare D1 connector after it was applied | The rest of the page, unchanged since the row below |
 | 2026-10-17 | Written with the code: every claim above against `src/lib/health/`, `src/pages/api/system-health/`, `src/components/admin/health/`, the two repositories and `migrations/0072_system_health.sql`; the live tables read through the Cloudflare D1 connector before the migration (`platform_alerts`: 35 rows from the website, none open; `system_test_results`: 68 rows from four Diagnostics runs; the one Developer Tools grant belongs to an Owner, who passes the new key anyway); `test/system-health.test.ts` and the updated tests | The page on a phone, which the owner tests after the push |

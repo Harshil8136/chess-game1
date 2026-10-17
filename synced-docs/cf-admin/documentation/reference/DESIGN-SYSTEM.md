@@ -336,7 +336,7 @@ src/styles/
 └── pages/                  ← Page-level overrides
     ├── audit.css, cron.css  (diagnostics.css was removed 2026-10-17 with Diagnostics)
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
-    ├── health.css  ← System health's own rules on the console kit: rows, day strips, the close form (2026-10-17)
+    ├── health.css  ← System health's own look on the kit's frame: hue `pulse`, monitor band, pulse line, triage board (2026-10-17)
     ├── page-registry.css  ← Page Registry's own rules on the console kit: page rows, role matrix, person choices (2026-10-14)
     └── privacy-dashboard.css  (session-registry.css was removed 2026-10-10 with the old Sessions screens)
 ```
@@ -765,6 +765,15 @@ The hues are mid-tones that read on the light and the dark theme alike.
 A dialog opened on a page outside the kit takes its tokens with `class="ck-scope"` (a person's
 Access page and its copy dialog do).
 
+**A page with its own look.** System health (since 2026-10-17) keeps the kit's frame, buttons,
+fields, notices and `Dialog`, and replaces what made every page look alike (`ck-head`, `ck-tiles`,
+`ck-tabs`, the card grid) with pieces of its own in `src/styles/pages/health.css`: a page hue
+`data-hue="pulse"` defined there (cyan), a monitor band with a pulse line, readouts, channel tabs,
+a priority mark of one to three bars, a triage board of tickets, and tick strips. Its light theme
+mixes each state colour 72% toward the text colour, as the raw ones fall under 3:1 on white. The
+design is [its spec](../specs/2026-10-17-system-health-look.md);
+`test/system-health-look.test.ts` pins its colour, motion and touch-size rules.
+
 `ck-search` and `ck-rename` work in a row and in a column alike: their 16rem flex basis
 applies only inside `ck-toolbar` and `ck-item`, because in a column (`ck-group`, a pop-up's
 body) a basis is a height, and it made a tall empty box around the field
@@ -785,6 +794,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §3's `health.css` line and §9.9's note on a page with its own look, against `src/styles/pages/health.css` (theme tokens only, `data-hue='pulse'` defined there), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="pulse"`) and `test/system-health-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-17 | §3's `pages/` lines and §9.9's list of pages on the kit, against `src/styles/pages/health.css` (theme tokens only), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="violet"`) and the removal of `diagnostics.css` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-16 | §9's `.data-table` notes and §9.9's list of pages on the kit, against `global.css` (the `.data-table`, `.toolbar-search`, `.toolbar-tab` and `.btn-cta` rules removed with the old Users table, none used elsewhere) and `src/pages/dashboard/users/index.astro` (`ck-page`) | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-14 | §3's `pages/page-registry.css` line and §9.9's list of pages on the kit, against `src/pages/dashboard/debug/pages.astro`, `src/styles/pages/page-registry.css` (theme tokens only) and `UserAccessEditor.tsx` (`ck-scope`) | Every other section; the look in a browser, which Harshil checks on his phone |
