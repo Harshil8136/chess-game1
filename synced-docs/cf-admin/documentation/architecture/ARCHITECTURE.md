@@ -3,7 +3,7 @@
 title: "CF-Admin Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-01
+last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/workers/cf-entry.ts, src/lib/auth/pipeline.ts, src/lib/dal, src/lib/jobs, src/lib/signalsCore.ts, wrangler.toml, eslint.config.js]
@@ -102,7 +102,7 @@ stage, the store it touches, and each rejection's status code, redirect and audi
 row. The diagram that used to sit here described the pre-chunk-10 middleware and
 was wrong in five places by the time it was read.
 
-The shape, from `src/lib/auth/pipeline.ts` — a 77-line orchestrator over the stage
+The shape, from `src/lib/auth/pipeline.ts` — a short orchestrator over the stage
 modules in `src/lib/auth/stages/`:
 
 ```
@@ -166,11 +166,14 @@ Removing one reverses all four.
 
 ### Live module set
 
-Verified against `src/pages/dashboard/` on 2026-09-19. Nineteen dashboard modules:
+Verified against `src/pages/dashboard/` on 2026-10-17. Twenty-one module folders:
 
-`alerts` · `arco` · `bookings` · `chatbot` · `content` · `control-plane` · `cron` ·
-`debug` · `emails` · `inquiries` · `logs` · `privacy` · `retention` · `seo` ·
-`sessions` · `settings` · `storage` · `users`, plus the dashboard home.
+`alerts` · `arco` · `backup` · `bookings` · `chatbot` · `content` · `control-plane` ·
+`cron` · `debug` · `email-api` · `emails` · `inquiries` · `logs` · `privacy` ·
+`retention` · `seo` · `sessions` · `settings` · `storage` · `users` · `vps`, plus
+four single pages (`configuration`, `github`, `health` and the dashboard home).
+`backup`, `email-api` and `vps` embed consoles served by other Workers through
+service bindings (§10).
 
 `content` has sub-pages `about`, `blog`, `faq`, `gallery`, `hero`, `media`,
 `reviews`, `services`. `customers`, `pets`, `analytics` and `reports` exist only as
@@ -184,7 +187,7 @@ kind of detail that cannot be kept true by hand. `ls` is authoritative; the modu
 names above are the part worth writing down.*
 
 Shared library surfaces worth knowing (`src/lib/`): `auth/` (RBAC, PLAC, sessions,
-guards and the pipeline), `dal/` (19 repositories), `jobs/` (the scheduled-job
+guards and the pipeline), `dal/` (the repositories), `jobs/` (the scheduled-job
 registry, tiers and budgets), `cms/`, `email/`, `storage/`, `control-plane/`,
 `ai/`, `schemas/`, `security/`, plus `env.ts` (the single source of truth for
 bindings), `audit.ts` and `supabase.ts`.
@@ -252,16 +255,16 @@ two-paradigm CSS (Tailwind utilities + component CSS).
 
 ### Data Access Layer (DAL)
 
-Repository pattern in `src/lib/dal/` (19 repositories). Controllers — `.astro`
+Repository pattern in `src/lib/dal/` (24 repositories on 2026-10-17). Controllers — `.astro`
 pages and API routes — handle HTTP and auth; repositories hold the D1 SQL;
 parameterized queries throughout.
 
 **These are ratchet targets, not achieved states** *(corrected 2026-09-19; the
 previous text claimed "zero inline styles" and "zero SQL in UI layers")*. The
-baselines in `.ratchet.json` today: **A6** 922 inline `style={`, **A2** 104 raw
-`.prepare(` outside the DAL, **A3** 48 of those inside `src/pages/api`. The ratchet
-lets these numbers fall and fails the build if they rise; ROADMAP chunks 13.x and 18
-are what drives them down.
+counters are **A6** (inline `style={`), **A2** (raw `.prepare(` outside the DAL) and
+**A3** (those inside `src/pages/api`); their current values live in `.ratchet.json`,
+which is the only place to read them. The ratchet lets these numbers fall and fails
+the build if they rise; ROADMAP chunks 13.x and 18 are what drives them down.
 
 → [`../reference/coding-standards.md`](../reference/coding-standards.md)
 
@@ -286,7 +289,7 @@ nothing about the other two entry points.*
 |---|---|---|
 | `fetch` | HTTP | Delegates to Astro's handler |
 | `scheduled` | the cron triggers in `wrangler.toml` | Runs the due jobs through the D1 job runner |
-| `queue` | `EMAIL_QUEUE` and `SYNC_QUEUE` | Email delivery, and the CMS revalidation redrive |
+| `queue` | `SYNC_QUEUE` and its dead-letter queue | The CMS revalidation redrive (`src/workers/sync-revalidate-consumer.ts`). `EMAIL_QUEUE` is send-only here: cf-email-consumer delivers the email |
 
 All three are wrapped by `withSentry`, which is what makes server-side
 `Sentry.captureException` work at all. A missing `queue` export fails every deploy
@@ -296,16 +299,18 @@ passes — regressed once in 2026-08 and now guarded by
 
 **Two cron expressions** are declared (`*/5 * * * *` and `0 2 * * SUN`) against an
 account-wide cap of five, which is why jobs are multiplexed inside the 5-minute
-tick rather than given triggers of their own. **Thirteen jobs** are registered in
-`src/lib/jobs/`, each carrying a criticality tier in `src/lib/jobs/tiers.ts`:
+tick rather than given triggers of their own. **Seventeen jobs** are registered in
+`src/lib/jobs/registry.ts` (15 on the five-minute tick, 2 on Sunday's; read
+2026-10-17), each carrying a criticality tier in `src/lib/jobs/tiers.ts`:
 
 - **essential** — never shed automatically: `cf-access-audit-poll`,
   `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`,
-  `cron-usage-probe`, `backup-tick`, and `heartbeat-watchdog` (2026-10-07), the
-  fallback runner for cf-astro's consent & booking heartbeat.
+  `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog` (the fallback runner for
+  cf-astro's consent & booking heartbeat), `email-api-sweep` and `health-checks`.
 - **deferrable** — shed under D1 pressure: `storage-notifications`,
-  `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile`
-  (`redis-ttl-hygiene` was removed on 2026-10-04 with cf-admin's Upstash code).
+  `access-change-summary`, `audit-seal`, `blog-scheduled-publish`, `asset-cleanup`,
+  `staff-storage-reconcile` (`redis-ttl-hygiene` was removed on 2026-10-04 with
+  cf-admin's Upstash code).
 - **idle** — shed under pressure and already off at source: `gsc-sync`,
   `pagespeed-sync`.
 
@@ -318,9 +323,9 @@ The **cron control plane** at `/dashboard/cron` (shipped 2026-09-16, extended
 2026-09-17 with a query-trace console and D1 usage reporting, and again
 2026-09-20 with per-job throttling, an expiring halt, honest run counts and
 failure surfacing) is the operator surface for pausing, resuming, throttling and
-triggering jobs. Two of the thirteen — the weekly `asset-cleanup` and
+triggering jobs. Two of the seventeen — the weekly `asset-cleanup` and
 `staff-storage-reconcile`, both of which delete — hold a 900 s lease, so a manual
-run cannot overlap their scheduled tick; the eleven five-minute jobs hold none,
+run cannot overlap their scheduled tick; the fifteen five-minute jobs hold none,
 because a lease is a D1 write and writes are the scarcer resource.
 
 → [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md)
@@ -368,9 +373,10 @@ Architecturally sound, not needed until the trigger fires.
 [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §1**, with the live
 IDs. The table that used to sit here listed five bindings and omitted six:
 `STAFF_STORAGE`, `SYNC_QUEUE` (and its consumer and dead-letter queue),
-`CHATBOT_SERVICE`, `ASTRO_SERVICE`, `AI` and `ASSETS`. In outline: one D1, one KV,
-two R2, two Queues, two service bindings, Workers AI, Analytics Engine and the
-static-assets binding.
+`CHATBOT_SERVICE`, `ASTRO_SERVICE`, `AI` and `ASSETS`. In outline (`wrangler.toml`,
+read 2026-10-17): one D1, one KV, two R2, two Queues, five service bindings
+(`CHATBOT_SERVICE`, `ASTRO_SERVICE`, `BACKUP`, `VPS`, `EMAIL_CONSOLE`), seven Rate
+Limiting bindings, Workers AI, Analytics Engine and the static-assets binding.
 
 **Observability** — enabled in `wrangler.toml`: invocation logs and traces, both at
 head sampling rate 1. Cloudflare dashboard → Workers → Logs.
@@ -396,6 +402,7 @@ tier limits, the environment registry, Sentry integration and deploy commands.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | Read `src/pages/dashboard/`, `src/lib/dal/`, `src/lib/jobs/registry.ts` and `tiers.ts`, `src/workers/cf-entry.ts` (`queue` handler), `src/lib/auth/pipeline.ts`, `src/middleware.ts`, `src/lib/auth/stages/bootstrap.ts`, `eslint.config.js`, `.ratchet.json`, `wrangler.toml` | §5 module list (21 folders, was 19 on 2026-09-19); DAL count 24, not 19; ratchet values removed (they had drifted; `.ratchet.json` owns them); §7 **seventeen** jobs (9 essential, 6 deferrable, 2 idle) and the `queue` row, which named `EMAIL_QUEUE` as consumed here (it is only produced to); §10 outline now counts five service and seven Rate Limiting bindings. Not checked: §1, §2, §4, §8, §9 beyond reading |
 | 2026-10-07 | claude | Read `src/lib/jobs/tiers.ts` and `src/lib/jobs/registry.ts` after adding `heartbeat-watchdog` | The cron paragraph: **thirteen** jobs (7 essential, 4 deferrable, 2 idle), eleven on the five-minute tick; "Two of the thirteen" now true again. Nothing else re-checked |
 | 2026-10-07 | claude | Read `src/lib/jobs/tiers.ts` and `src/lib/jobs/registry.ts` (`FIVE_MIN_JOBS`, `SUNDAY_JOBS`) | The cron paragraph: `redis-ttl-hygiene` removed on 2026-10-04, so **twelve** jobs (6 essential, 4 deferrable, 2 idle); "Thirteen" corrected. Nothing else re-checked |
 | 2026-09-19 | claude | Refreshed against `06f8ab7`. Read `src/lib/auth/pipeline.ts`, `src/workers/cf-entry.ts`, `src/lib/jobs/tiers.ts`, `eslint.config.js`, `wrangler.toml` `[triggers]`, `package.json`; listed `src/pages/dashboard/`, `src/pages/dashboard/content/`, `src/lib/` and `src/components/admin/`; took ratchet baselines from `.ratchet.json` | Rewritten as an overview that links rather than restates. Removed: the pre-chunk-10 lifecycle diagram, the directory tree, the CPU budget, the daily budget table, the bindings table and the package table. Added §7 on scheduled and queued work. Corrected: the stack banner, island state management, the ACM file name, the ESLint exception count, the add-a-module steps, the role-change behaviour, the "zero inline styles / zero SQL" claims and the bot-score property |

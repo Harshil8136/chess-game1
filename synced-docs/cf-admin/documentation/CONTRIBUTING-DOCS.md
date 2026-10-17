@@ -172,9 +172,14 @@ between documents that were all `status: active` and all passing CI.
 | Check | Level | What it means for you |
 |---|---|---|
 | Front-matter, links, index drift | blocking | Unchanged. |
+| **Index status** | blocking | The Status column in [`README.md`](README.md) must match each doc's front-matter `status`. |
 | **Staleness** | blocking | An `active` doc older than **45 days** fails. `active` is a promise that the claims were re-checked — if you cannot re-check them, set `status: historical` instead. |
 | **Code paths** | blocking | Backticked `src/…`, `migrations/…`, `scripts/…` references must resolve. This is where dead references actually hide; the link check never saw them. |
+| **Routes** | blocking | A backticked `/api/…` or `/dashboard/…` route must be mounted under `src/pages/`, unless the line attributes it to a sibling repository. |
+| **Doc names, `related_code`, `file:///` links** | blocking | A backticked `*.md` name must match a real file; front-matter `related_code` entries must resolve; a `file:///` link (one person's disk) fails. |
+| **Root docs** | blocking | Only `README.md`, `RULESAd.md`, `main.md`, `AI_CODE_MAINTENANCE.md` and `CLAUDE.md` may sit at the repository root. |
 | **Mojibake** | blocking | Double-encoded UTF-8. The sync workflow runs `ftfy` on the *published copy* only, so the source could stay corrupt indefinitely. |
+| **Due soon** | warning | An `active` doc that crosses the 45-day gate within 14 days is named on every run; `python3 scripts/docs_check.py --upcoming 14` lists them. |
 | **Batch stamps** | warning | Many docs sharing one `last_verified` — the signature of a date applied rather than earned. |
 
 Three escape hatches exist. Each is visible in the source so it can be reviewed:

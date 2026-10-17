@@ -15,9 +15,11 @@ tags: [disaster-recovery, backup, rto, rpo, soc2, iso22301, runbook]
 > **TL;DR (non-technical):** How to get the platform back if data is lost or a
 > service fails — which button restores what, and how much data you would lose
 > in each case. Read the honest caveat first: **the restore procedures below
-> have never been executed, and there is no backup file to restore from yet.**
-> The recovery targets are estimates derived from vendor documentation, not
-> measurements from a real drill.
+> have never been executed against the production services.** Backup files do
+> exist since 2026-09-26 (cf-backup, see the next note), and each one was
+> restore-checked in a scratch database when it was made. The recovery targets
+> are still estimates derived from vendor documentation, not measurements from
+> a real recovery.
 
 > **Superseded for backups, 2026-09-27.** `.github/workflows/backups.yml` was
 > deleted (cf-backup remediation decision RD-8): it never produced a backup.
@@ -367,6 +369,7 @@ Record the quarterly results in `../security/reviews/` as a dated snapshot.
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-17 | claude: `backup_runs` grouped by kind and status (D1 connector: 19 successful backups, 2026-09-26 to 2026-10-14) | The TL;DR still said there was no backup file to restore from. Corrected. Not checked: anything in §1–§8 |
 | 2026-10-16 | claude: `backup:config`'s schedule read live (D1 connector: full backups on weekdays 0 and 3 at 09:17 UTC, the daily Supabase-only backup off); cf-backup `.github/workflows/secondary-pipeline.yml` (its daily fallback and when it stands down) | The superseded banner said backups ran daily at 09:17 UTC; it now names the schedule's days and the fallback. Not re-checked: the rest of the banner |
 | 2026-10-16 | claude: `src/lib/auth/plac.ts` (`forceLogoutUser`, `revokeSingleSession`), `src/lib/auth/stages/session-stage.ts` and `bootstrap.ts` (where the marks are read), `src/lib/auth/authz-signal.ts`, `src/lib/auth/session.ts`, `src/lib/github/cache.ts`, `src/lib/analytics/providers/index.ts`, `src/pages/api/sessions/active-revocations.ts`, `src/components/admin/users/sessions/BlocksPanel.tsx`; every `SESSION` key prefix in `src/` listed; the links in this runbook resolved | §4 rewritten as a table of what the namespace holds and what losing each part means: the sign-out marks are the one loss that matters, and the step after it; §1's KV row says so. The §0–§3 backup status, §5 and §8 not re-checked |
 | 2026-10-16 | `src/lib/audit-seal/seal.ts` (`copyKey`, `copyBody`), `src/workers/scheduled-audit-seal.ts`, `src/workers/scheduled-asset-cleanup.ts` (`reconcileStaffStorage` lists `staff-storage/`) | §5's new paragraph on the activity log's copies only. The rest of the runbook was not re-checked; its backup status (§0, §2) predates the backups that have run since 2026-09-26 |

@@ -100,6 +100,14 @@ see the note under artifact 3):
    > only as the documented break-glass step (the runbook's rollback path), and
    > say in the commit why the pipeline was bypassed.
    >
+   > *Superseded in part, 2026-10-10 (noted here 2026-10-17):* a push now applies
+   > pending migrations through Workers Builds' deploy command, so
+   > `main.md` (private) §2 and §12 below say to apply an **additive**
+   > migration by hand (`--remote`, or the D1 connector) **before** the push of the
+   > code that needs it, and to ship a destructive one in a later push. The hand
+   > run is routine for additive files; the break-glass caveat above still holds
+   > for anything carrying `-- contract:`.
+   >
    > **Corrected 2026-09-02.** This rule previously said "do NOT use
    > `wrangler d1 migrations apply` on `madagascar-db`" because the database's
    > `d1_migrations` table "tracks cf-astro's history". A live query of that
@@ -737,7 +745,7 @@ rule.
 | Scope | Rule | Effect |
 |---|---|---|
 | All `.ts`/`.tsx`/`.astro` | `'max-lines': 'off'` in `eslint.config.js` | Nothing is enforced by ESLint itself. Marked `TEMP` pending the god-file split pass (chunks 10 and 13.x). |
-| 3 named files (`auth/session.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only. `auth/pipeline.ts` left the list on 2026-09-02 when chunk 10 split it into `src/lib/auth/stages/` (77-line orchestrator; largest stage today is `bootstrap.ts` at 128 lines). |
+| 3 named files (`auth/session.ts`, `users/sessions/*.tsx`, `InquiriesDashboard.tsx`) | `['warn', { max: 600 }]` | Warning only. `auth/pipeline.ts` left the list on 2026-09-02 when chunk 10 split it into `src/lib/auth/stages/` (a short orchestrator; the largest stage is `bootstrap.ts`, 150 lines on 2026-10-17). |
 | `src/pages/dashboard/**/*.astro` | `no-restricted-syntax` on `export const prerender = true` | **Hard error** — this one is real |
 | Whole repository | **`scripts/ratchet.py` against `.ratchet.json`** — blocking in `npm run verify` and in the `quality` workflow | **20 counts are pinned** (A1, A1b, A1c, A2–A10, A12–A15, A17–A19, E1): `no-explicit-any`, the two type-aware promise rules, raw `.prepare(` outside the DAL and in API routes, `console.*`, inline `style={`, raw hex, hand-written `try` in routes, Supabase `.from(` outside the DAL, `createAdminClient(` sites, `getRateLimiter(` sites, hand-rolled backoffs, files over 600 lines, lines under `src/`, dead files (A17), uncalled API routes (A18), unreported catches on job paths (A19), deprecated role-alias call sites (E1). **Any change fails, in either direction** — a rise needs `python scripts/ratchet.py --update --reason "…"` committed with it; a fall needs `--update` to lock the new floor. `.ratchet.json` holds the current numbers; do not quote them here. |
 

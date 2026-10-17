@@ -49,7 +49,7 @@ flowchart TB
     subgraph worker["cf-admin Worker — TRUST BOUNDARY 2"]
         csp["securityHeaders<br/>CSP, COOP/CORP, GPC"]
         pipeline["authMiddleware<br/>JWT verify, session,<br/>role recheck, PLAC,<br/>FAIL-CLOSED /api/*"]
-        routes["147 API route files<br/>zod validation"]
+        routes["API route files<br/>zod validation"]
     end
 
     subgraph data["Data stores — TRUST BOUNDARY 3"]
@@ -246,6 +246,7 @@ If any of these stops being true, re-run this model:
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | The diagram's route count against `find src/pages/api -name '*.ts'` (168 files, not 147): the number is dropped, since the code owns it | Every STRIDE row |
 | 2026-10-16 | "Audit-log tampering", "Denying an action" and §3 items 1, 2 and 5, for the daily seal (#21): `src/lib/audit-seal/`, `src/workers/scheduled-audit-seal.ts`, `src/pages/api/audit/logs.ts`, `delete-targeted.ts`, `src/pages/api/retention/purge.ts`, a search of `src/` for any other delete from `admin_audit_log` (none) and `test/audit-seal.test.ts`; item 2's figures from `backup_runs` through the D1 connector, and `../MAINTENANCE.md` RT-1, RT-3 and RT-6 | The other rows; cf-backup's own records of restore tests after 2026-10-08 (not read); the first live seal run |
 | 2026-10-16 | The new "Stolen session used for a dangerous action" row and the recent sign-in sentence in "Audit-log tampering", against `src/lib/auth/fresh-sign-in.ts`, the routes that call it (pinned by `test/fresh-sign-in.test.ts`) and `src/lib/auth/stages/bootstrap.ts` (`signedInAtFromAssertion`) | Every other STRIDE row |
 | 2026-10-07 | The "Raw IPs at rest" and "Brute force / flooding" rows, for the move of cf-admin's rate limits off Upstash on 2026-10-04: `src/lib/ratelimit.ts`, `src/lib/dal/RateLimitRepository.ts`, `wrangler.toml` `[[ratelimits]]`, `RoPA.md` §2.1 | Every other STRIDE row; how long Cloudflare keeps a limiter counter after its period |

@@ -191,7 +191,8 @@ Described as a shape, not code — consistent with keeping this a planning docum
    `updateSessionAccessMap()`'s role in the PLAC flow. This is what makes changes
    feel close to instant rather than "instant, up to an hour."
 
-4. **A TTL on the KV entry regardless** (mirroring `cms:*`'s 3600s), purely as a
+4. **A TTL on the KV entry regardless** (as `cms:*` has: 3600 s when this was written,
+   86,400 s since 2026-10-04, see [KV-RESILIENCE](KV-RESILIENCE.md)), purely as a
    safety net — if the write-through step is ever skipped or fails, the system
    self-heals within the TTL window instead of staying wrong indefinitely.
 
@@ -437,6 +438,7 @@ discovering by accident later:
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-17 | claude | The `cms:*` TTL in the proposal's point 4 against cf-astro's `CMS_KV_TTL_SECONDS` (86,400 s since 2026-10-04) | Point 4 now gives both values. Nothing else re-checked; `last_verified` not moved |
 | 2026-10-10 | claude | The TL;DR update and §1's rows only, against `src/lib/configuration.ts`, `src/pages/api/configuration.ts`, `migrations/0069_settings_cleanup.sql` and a `git grep` of `src/` (no `KNOWN_SETTING_KEYS`, no feature-flag repository) | Those rows now read as removed; the cost and latency sections were not re-checked |
 | 2026-08-06 | claude | Read `PortalSettingsRepository.ts`, `FeatureFlagRepository.ts`, `src/pages/api/settings/portal.ts`, `PortalSettingsPanel.tsx` in full; grepped `src/` for `maintenance_mode`, `session_recheck_interval`, `session_max_lifetime`, `default_theme`, and `PortalSettingsRepository` usage; cross-checked against `session.ts`/`pipeline.ts`'s actual timing source (`SESSION_REFRESH_INTERVAL_MS` env var) | **Confirmed**: `admin_portal_settings` + UI already exist for these exact settings, and are disconnected from the runtime code that would need to read them. `default_theme` confirmed dead (superseded, commented out of the UI). `maintenance_mode` confirmed unenforced anywhere. |
 | 2026-08-06 | claude | Re-read `KV-RESILIENCE.md` and `plac.ts`'s `computeNavItems()`/`computeAccessMap()` for the existing KV+D1 cache precedent and TTL/fallback conventions | Confirmed the proposed pattern already exists twice in this codebase (page registry cache, CMS `cms:*`/`isr:*` keys) — this document generalizes an established pattern, not a new one |

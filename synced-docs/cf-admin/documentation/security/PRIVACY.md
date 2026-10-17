@@ -203,7 +203,8 @@ Each card:
 Expandable consent record row. State flags (`data-revoked`, `data-bot-risk`, `data-safe`) drive the CSS; computed values (bars, widths, colours) use inline `style` objects, which pass because `style-src` still carries `'unsafe-inline'` — there is no nonce on `style-src`. *(2026-09-14: this said "zero inline styles"; 2026-09-20: it then credited the nonce.)*
 
 **Destructive action — `Delete`.** Each record carries a Delete button, gated on
-`canDelete` in the UI and on PLAC `/dashboard/privacy#delete` (Owner) at the API.
+`canDelete` in the UI and on PLAC `/dashboard/privacy#delete` (Owner) at the API,
+which also refuses a stale sign-in (`freshSignInRefusal`).
 It calls `DELETE /api/audit/delete?id=<id>` behind a type-of-confirmation dialog
 and **permanently removes a `consent_records` row** — the store the retention
 registry calls the primary legal-defense record, and the evidence GDPR Art. 7(1)
@@ -273,6 +274,7 @@ count in prose goes stale on the next commit.)*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §3's Delete paragraph against `src/pages/api/audit/delete.ts` (Owner, PLAC `#delete`, fresh sign-in, still no `auditLog()` naming the record) and `receipts.ts` (`requireAuth(context)` with no role, `METRICS_TTL_MS` 60 s) | The rest of §2–§4 |
 | 2026-10-16 | §1's new "Who opened them" bullet, against `src/pages/api/audit/enrich.ts`, `src/lib/audit-views.ts` and `test/sensitive-views.test.ts` | Everything else in this document |
 | 2026-10-15 | §1 "Consent details" and the `records` shape in §3, against `src/lib/consent-details.ts`, `src/lib/auth/surface-guards.ts`, `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and `test/action-keys-enforced.test.ts` | Everything else in this document; live `admin_pages` rows other than `#forensics` (read live: stored `admin`, active) |
 | 2026-09-20 | Scope: what this document is and is not, added at the top because two compliance documents were citing it as evidence of a data-classification scheme it does not contain. The per-record Delete path (`FeedItem.tsx` → `src/pages/api/audit/delete.ts`) and its audit gap, previously undocumented. The `receipts.ts` gate (bare `requireAuth` + PLAC, no role argument) and the removal of the hidden-accounts line, which belonged to the logs surface. The `style-src` reason. The `rgba` count dropped | Live RLS state and live `admin_pages` rows (unchanged since the 2026-09-14 pass); the 10K+/month pagination claim |

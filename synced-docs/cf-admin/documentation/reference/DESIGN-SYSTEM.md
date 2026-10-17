@@ -639,9 +639,9 @@ No BEM `__` double underscore. Single hyphen for children, double hyphen for mod
 ⚠️ **The "never adopted" note above applies to the *unprefixed* vocabulary
 only.** The `base--modifier` half of this convention is shipped and widespread,
 under per-module prefixes: `.role-badge--vendor_support|owner|admin|manager|staff|viewer|suspended`
-(`global.css`, documented in §2.8), `.sr-btn--sm/--ghost/--danger`,
-`.hero-badge--warning/--success/--amber`, plus diff badges in `pages/audit.css`
-and query-kind badges in `pages/cron.css`. And `__` does appear: the console kit's
+(`global.css`, documented in §2.8), `.hero-badge--warning/--success/--amber`
+(scoped in `src/pages/dashboard/content/hero.astro`), plus diff badges in
+`pages/audit.css` and query-kind badges (`.cron-op-badge--*`) in `pages/cron.css`. And `__` does appear: the console kit's
 `ck-head__title`, `ck-tile__value` and the rest (§9.9). Read §9 as: *the generic `.btn` /
 `.badge` vocabulary was never adopted; the shipped convention is a per-module
 prefix with `--modifier`.*
@@ -794,6 +794,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-17 | §9.1's list of shipped `--modifier` classes, by grepping `src/` (no `sr-btn` anywhere; `.hero-badge--*` scoped in `content/hero.astro`; `.cron-op-badge--*` in `pages/cron.css`) | Everything else |
 | 2026-10-17 | §3's `health.css` line and §9.9's note on a page with its own look, against `src/styles/pages/health.css` (theme tokens only, `data-hue='pulse'` defined there), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="pulse"`) and `test/system-health-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-17 | §3's `pages/` lines and §9.9's list of pages on the kit, against `src/styles/pages/health.css` (theme tokens only), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="violet"`) and the removal of `diagnostics.css` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-16 | §9's `.data-table` notes and §9.9's list of pages on the kit, against `global.css` (the `.data-table`, `.toolbar-search`, `.toolbar-tab` and `.btn-cta` rules removed with the old Users table, none used elsewhere) and `src/pages/dashboard/users/index.astro` (`ck-page`) | Every other section; the look in a browser, which Harshil checks on his phone |
