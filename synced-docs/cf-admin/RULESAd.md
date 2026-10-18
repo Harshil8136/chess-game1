@@ -952,8 +952,9 @@ now standalone, so a pointer outside it can never resolve.
 - 🔴 **Your local `npm run verify` is the only check before the code is live
   (2026-10-10).** Workers Builds runs `npm run build:ci`, which since
   2026-10-10 builds without repeating `verify`: the workstation runs it before
-  the push and GitHub's `quality` job runs it again after, so a third run only
-  delayed every deploy by 4-6 minutes. Neither GitHub nor Cloudflare stops a red
+  the push, and GitHub's `quality` job repeated it after every push until
+  2026-10-18 (now weekly, on pull requests and by hand, to save Actions
+  minutes), so a third run only delayed every deploy by 4-6 minutes. Neither GitHub nor Cloudflare stops a red
   push from deploying. *Until 2026-09-19 this section claimed the build command
   gated the deploy while the dashboard still ran its default command; the
   owner has since switched the commands on.* Evidence and the deploy stage:

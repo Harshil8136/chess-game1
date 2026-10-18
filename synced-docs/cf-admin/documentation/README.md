@@ -286,12 +286,14 @@ published to the public mirror.
 | `records/reports/2026-10-17-health-snooze-repeats-watcher.md` (private) | Change record: System health part 2C (plan Harshil approved on 2026-10-17) — "I'm on it" and snoozes (`#ack`, migration `0074`), a website problem that repeats counted on one row with one email (cf-astro), the portal's checks watched by the website's heartbeat, and a System health card on the home page; before/after flows and the phone steps | owner, non-technical, technical, ai, operator | historical |
 | `records/reports/2026-10-17-health-checks-rebuilt.md` (private) | Change record: System health's checks rebuilt (part 2B of the plan Harshil approved on 2026-10-17) — 27 checks in six areas, 12 of them new (the website's pages as a guest sees them, the email queue and email service, backups, the activity log seal, the server, scheduled jobs, Cloudflare's error and limit counts, the mail domain's records, the database's allowance), placed so no run does more than eight and each keeps its place after a pause; cost measured, before/after flows and the phone steps | owner, non-technical, technical, ai, operator | historical |
 | `records/reports/2026-10-17-health-part-3.md` (private) | Change record: System health part 3 (plan Harshil approved on 2026-10-17, "Build all") — two heavy tests on request (a storage write, and a test email followed to delivery), an urgent test alert emailed only to the person who pressed it, a Settings tab (pause a check, quiet hours, after how many failures a problem opens), the server's site checks from outside Cloudflare, and the providers' status pages with a note on a failing check whose provider reports a problem; 29 checks, nine at most a run; cost measured, before/after flows and the phone steps | owner, non-technical, technical, ai, operator | historical |
+| `records/reports/2026-10-18-ci-on-schedule.md` (private) | Change record: the `quality` workflow no longer runs on every push to `main` (6 to 9 billed minutes a time, 13 full runs in two days); it runs weekly, on pull requests and by hand, and the local `npm run verify` stays the only gate before a deploy | owner, non-technical, technical, ai, operator | historical |
 
 ## Viability Program
 
 The chunk-by-chunk long-term viability program started 2026-09-02. Evergreen
 roadmap and registry, one record per chunk, decision records. Excluded from
-the public docs mirror (ADR-0001).
+the public docs mirror (ADR-0001), except two carve-outs: `program/cf-backup/`
+(2026-09-22) and `program/platform-kit/` (2026-10-18).
 
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
@@ -349,22 +351,23 @@ the public docs mirror (ADR-0001).
 The owner's 2026-10-18 ask: a plan to rebuild the platform from scratch as a
 reusable kit, one blank repository per client, built only in new repositories.
 The kit is named Oltrem (oltrem.com, chosen 2026-10-18). Plan, decisions and
-dated research snapshots. Documentation only; excluded from the public docs
-mirror with the rest of `program/`.
+dated research snapshots. Documentation only; published to the public docs
+mirror since 2026-10-18 (the owner's decision, the second `program/` carve-out,
+ADR-0001).
 
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
-| `program/platform-kit/README.md` (private) | Folder guide: what the kit is in plain words, where the plan stands, the owner's standing instructions for the work, how to read the folder on a phone, the file list | owner, non-technical, ai, technical | draft |
-| `program/platform-kit/01-plan.md` (private) | The platform kit plan: why rebuild, non-negotiables, the shape of the kit (repositories, runtime, module model), identity and sign-in, permissions, providers as data, data and migrations, performance within 10 ms, security, documentation, Madagascar, build order, risks, open questions | owner, non-technical, ai, technical | draft |
-| `program/platform-kit/02-decisions-log.md` (private) | Every choice card posted to the owner with its options, recommendation and answer; his instructions of 2026-10-18 quoted verbatim | owner, non-technical, ai, technical | draft |
-| `program/platform-kit/10-research-estate-inventory.md` (private) | Research snapshot: what the six repositories do today, measured (sizes, duplicated systems, provider coupling, the migration collision, open security items) and the designs worth carrying forward as ideas | owner, ai, technical | historical |
-| `program/platform-kit/11-research-cloudflare-platform.md` (private) | Research snapshot: Cloudflare limits and tooling for the kit with a URL for every figure (free-plan budgets, Access for Workers, Workers Builds, auto-provisioning, Secrets Store, Queues, Workflows, Durable Objects) | owner, ai, technical | historical |
-| `program/platform-kit/12-research-permissions-model.md` (private) | Research snapshot: permission models compared (fixed tiers, RBAC with groups, cloud-IAM bindings, Zanzibar, policy languages, Kubernetes, Discord bitfields, embeddable engines) and the recommended shape | owner, ai, technical | historical |
-| `program/platform-kit/13-research-providers-as-data.md` (private) | Research snapshot: providers as data (auth schemes, webhook verifiers, transport engines), DNS fingerprinting for detection, envelope encryption for credentials, security posture scanners | owner, ai, technical | historical |
-| `program/platform-kit/14-research-config-layers.md` (private) | Research snapshot: configuration layers and the fastest safe read path on Workers, every store compared with numbers, validation libraries, per-client identity and page names as data | owner, ai, technical | historical |
-| `program/platform-kit/15-research-visual-stack.md` (private) | Research snapshot: Astro 7 facts, Tailwind v4 against the alternatives, the component approach, icons, fonts, images, tables, charts, forms, email HTML, quality gates, phone-first UX rules | owner, ai, technical | historical |
-| `program/platform-kit/16-research-resources-and-release.md` (private) | Research snapshot: one of each resource per client with a manifest and gate, one Worker versus several, the minimum token set, the test-before-production pipeline costed in minutes, upgrades, backups | owner, ai, technical | historical |
-| `program/platform-kit/17-research-ai-native-repo.md` (private) | Research snapshot: agent instruction files, Skills, hooks and MCP, docs that cannot drift, the setup and doctor commands, fallbacks and error design, guardrails for AI-written code, monorepo and distribution, open scope | owner, ai, technical | historical |
+| [`program/platform-kit/README.md`](program/platform-kit/README.md) | Folder guide: what the kit is in plain words, where the plan stands, the owner's standing instructions for the work, how to read the folder on a phone, the file list | owner, non-technical, ai, technical | draft |
+| [`program/platform-kit/01-plan.md`](program/platform-kit/01-plan.md) | The platform kit plan: why rebuild, non-negotiables, the shape of the kit (repositories, runtime, module model), identity and sign-in, permissions, providers as data, data and migrations, performance within 10 ms, security, documentation, Madagascar, build order, risks, open questions | owner, non-technical, ai, technical | draft |
+| [`program/platform-kit/02-decisions-log.md`](program/platform-kit/02-decisions-log.md) | Every choice card posted to the owner with its options, recommendation and answer; his instructions of 2026-10-18 quoted verbatim | owner, non-technical, ai, technical | draft |
+| [`program/platform-kit/10-research-estate-inventory.md`](program/platform-kit/10-research-estate-inventory.md) | Research snapshot: what the six repositories do today, measured (sizes, duplicated systems, provider coupling, the migration collision, open security items) and the designs worth carrying forward as ideas | owner, ai, technical | historical |
+| [`program/platform-kit/11-research-cloudflare-platform.md`](program/platform-kit/11-research-cloudflare-platform.md) | Research snapshot: Cloudflare limits and tooling for the kit with a URL for every figure (free-plan budgets, Access for Workers, Workers Builds, auto-provisioning, Secrets Store, Queues, Workflows, Durable Objects) | owner, ai, technical | historical |
+| [`program/platform-kit/12-research-permissions-model.md`](program/platform-kit/12-research-permissions-model.md) | Research snapshot: permission models compared (fixed tiers, RBAC with groups, cloud-IAM bindings, Zanzibar, policy languages, Kubernetes, Discord bitfields, embeddable engines) and the recommended shape | owner, ai, technical | historical |
+| [`program/platform-kit/13-research-providers-as-data.md`](program/platform-kit/13-research-providers-as-data.md) | Research snapshot: providers as data (auth schemes, webhook verifiers, transport engines), DNS fingerprinting for detection, envelope encryption for credentials, security posture scanners | owner, ai, technical | historical |
+| [`program/platform-kit/14-research-config-layers.md`](program/platform-kit/14-research-config-layers.md) | Research snapshot: configuration layers and the fastest safe read path on Workers, every store compared with numbers, validation libraries, per-client identity and page names as data | owner, ai, technical | historical |
+| [`program/platform-kit/15-research-visual-stack.md`](program/platform-kit/15-research-visual-stack.md) | Research snapshot: Astro 7 facts, Tailwind v4 against the alternatives, the component approach, icons, fonts, images, tables, charts, forms, email HTML, quality gates, phone-first UX rules | owner, ai, technical | historical |
+| [`program/platform-kit/16-research-resources-and-release.md`](program/platform-kit/16-research-resources-and-release.md) | Research snapshot: one of each resource per client with a manifest and gate, one Worker versus several, the minimum token set, the test-before-production pipeline costed in minutes, upgrades, backups | owner, ai, technical | historical |
+| [`program/platform-kit/17-research-ai-native-repo.md`](program/platform-kit/17-research-ai-native-repo.md) | Research snapshot: agent instruction files, Skills, hooks and MCP, docs that cannot drift, the setup and doctor commands, fallbacks and error design, guardrails for AI-written code, monorepo and distribution, open scope | owner, ai, technical | historical |
 
 
 ## Meta

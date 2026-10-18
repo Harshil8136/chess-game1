@@ -56,6 +56,7 @@ tags: [operations, bindings, cloudflare]
 | 2026-06-06 | Cloudflare MCP `d1_databases_list` | `madagascar-db` `[D1_MADAGASCAR_DB_ID]` — match ✅ |
 | 2026-06-06 | Supabase MCP `list_projects` | project `[SUPABASE_PROJECT_REF]` ACTIVE_HEALTHY — match ✅ |
 | 2026-06-06 | Cloudflare MCP `r2_buckets_list` | not verified — analytics token lacks R2:List scope (R2 referenced by name, no UUID needed) |
+| 2026-10-18 | claude | Where each check runs: `.github/workflows/quality.yml` no longer has a push trigger (weekly, pull requests, by hand); Actions API run lengths read the same day |
 
 ---
 
@@ -695,8 +696,9 @@ organization. The `Access: Organizations — Revoke` permission below is what au
 > Owner of the release path: [`../runbooks/release-and-rollback.md`](../runbooks/release-and-rollback.md)
 > (viability program chunk 3). This section is the command reference only.
 >
-> **Where each check runs (2026-10-10):** `npm run verify` on the workstation before
-> every push, and GitHub's `quality` job after it. Workers Builds runs `build:ci`,
+> **Where each check runs (2026-10-18):** `npm run verify` on the workstation before
+> every push; GitHub's `quality` job repeats it weekly, on pull requests and by hand
+> (not after every push since 2026-10-18, to save Actions minutes). Workers Builds runs `build:ci`,
 > which only builds since 2026-10-10. Evidence and the deploy stage:
 > `release-and-rollback.md` §1. The deploy command (`deploy:ci`) applies any pending migration
 > before the new code (observed 2026-10-10). **Apply an additive migration by hand before
@@ -705,7 +707,7 @@ organization. The `Access: Organizations — Revoke` permission below is what au
 ```bash
 # cf-admin
 npm run dev            # Local dev server (Astro on workerd)
-npm run verify         # the full gate: run before every push; GitHub `quality` runs it again after
+npm run verify         # the full gate: run before every push; GitHub `quality` repeats it weekly
 npm run build          # Production build (astro build; offline-safe via .env.build)
 npm run release        # preflight → verify → build → drift check (blocking) → migrate → deploy → smoke → tag
 npm run build:ci       # Workers Builds build command: astro build only (verify is not repeated there)

@@ -142,6 +142,8 @@ enforced on those.
   `records/`, `commercial/`, `MAINTENANCE.md`, the access-revocation design and
   plan, `runbooks/supabase-account-advisor-sweep.md`,
   `reference/commercial-readiness-checklist.md` and `reference/RBAC-AT-SCALE.md`.
+  Two `program/` folders publish anyway, by owner decision (`SYNC_INCLUDE_PREFIXES`):
+  `program/cf-backup/` since 2026-09-22 and `program/platform-kit/` since 2026-10-18.
   The rule behind the list: publish how the system works, not the list of what is
   wrong with it, and not what it costs to run or sell.
 - **Links into private files.** A published doc may link a private doc or a source

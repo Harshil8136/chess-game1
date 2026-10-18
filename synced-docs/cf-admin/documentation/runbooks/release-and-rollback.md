@@ -14,9 +14,10 @@ tags: [release, deploy, rollback, workers-builds, migrations, runbook]
 # Release & Rollback Runbook
 
 > **TL;DR (non-technical):** A push to `main` goes live automatically through
-> Cloudflare. The checks run twice: on the computer that pushes (`npm run
-> verify`, required before every push) and in GitHub's `quality` job after the
-> push. Cloudflare only builds and deploys; since 2026-10-10 it no longer runs
+> Cloudflare. The checks run on the computer that pushes (`npm run verify`,
+> required before every push); GitHub's `quality` job repeats them weekly, on
+> pull requests and by hand, no longer after every push (since 2026-10-18, to
+> save Actions minutes). Cloudflare only builds and deploys; since 2026-10-10 it no longer runs
 > the checks a third time, which had made every deploy wait 4-6 extra minutes.
 > Database changes are applied first, by hand, because rolling back code does
 > not roll back the database. This page says what happens on a push and what
@@ -52,8 +53,8 @@ git push origin main
   │           migrations           wrangler d1 migrations list/apply madagascar-db --remote   ← BEFORE the code
   │           deploy               wrangler deploy   (refuses if a [secrets] required name is missing)
   │           smoke                GET /api/health through an Access service token; expects status ok and release == commit
-  └─ GitHub Actions `quality` (after the push; does not stop the deploy)
-         the verify chain, types:check, build, SBOM; documentation-only pushes skip the code steps
+  └─ GitHub Actions `quality` (weekly, on pull requests and by hand since 2026-10-18; does not stop the deploy)
+         the verify chain, types:check, build, SBOM; documentation-only pull requests skip the code steps
 ```
 
 `npm run verify` (`scripts/verify.mjs`, since 2026-10-11) runs the quick gates
@@ -167,6 +168,7 @@ and somebody has to actually run them.
 | 2026-10-10 | claude | Workers Builds check-run completion vs push time on `4b166d6` (6 m 44 s), `42e421f` (8 m 04 s, docs only) and `ab6b0c7` (10 m 10 s); GitHub `quality` run durations on the same pushes (4-6.5 min, 25-35 s docs only); `scripts/release.mjs` build stage; `test/release-guards.test.ts` (14) | Build command is `build:ci` (inferred from durations and the owner's report of tests in the build log; the dashboard is not readable from here); `build --ci` made build-only; §1 banner and diagram rewritten. Not re-checked: the deploy command, the build token's D1 grant, the smoke token |
 | 2026-10-10 | claude | `d1_migrations` read through the Cloudflare D1 connector after pushing `2979706`: `0069_settings_cleanup.sql` id 105, applied 04:21:03 UTC; the commit's Workers Builds check completed 04:21:18 UTC; no session or person had applied it (the thread that wrote it meant to apply it after the deploy). `scripts/release.mjs` `deploy` stage read (drift check, migrate, deploy, smoke) | The deploy command is `deploy:ci` and its token can write D1 (inferred from that timing; the dashboard is not readable from here). §1's banner now says so and how to order a destructive migration. Not checked: the smoke token |
 | 2026-10-11 | claude | Each gate timed alone in a 4-CPU session: `typecheck` 42 s, `ratchet` 42 s, `test:run` 142 s, the six quick gates 11 s together; then `scripts/verify.mjs` end to end, 167 s, every gate green; `test/verify-runner.test.ts` (7) | §1's `verify` paragraph rewritten for the new runner. Tried and not kept: more test workers (142 s to 129 s at 6) and pre-bundling `lucide-preact` and `zod` (135 s); per-file module loading in workerd, not the tests (42 s), is most of the suite's time. Not re-checked: the rest of the runbook |
+| 2026-10-18 | claude | `.github/workflows/quality.yml` triggers after the push trigger was removed; `quality` run lengths 2026-10-17/18 from the Actions API (13 full runs of 5.9 to 9.3 min, 8 documentation-only runs under a minute) | The deploy stage was not re-run |
 
 ## 7. Related
 
