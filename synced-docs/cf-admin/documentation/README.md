@@ -348,8 +348,9 @@ the public docs mirror (ADR-0001).
 
 The owner's 2026-10-18 ask: a plan to rebuild the platform from scratch as a
 reusable kit, one blank repository per client, built only in new repositories.
-Plan, decisions and dated research snapshots. Documentation only; excluded from
-the public docs mirror with the rest of `program/`.
+The kit is named Oltrem (oltrem.com, chosen 2026-10-18). Plan, decisions and
+dated research snapshots. Documentation only; excluded from the public docs
+mirror with the rest of `program/`.
 
 | Doc | Purpose | Audience | Status |
 |-----|---------|----------|--------|
