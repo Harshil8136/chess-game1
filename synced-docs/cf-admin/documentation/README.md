@@ -344,6 +344,28 @@ the public docs mirror (ADR-0001).
 | `program/chunks/2026-09-23-cb1-cf-backup-foundations.md` (private) | Chunk CB-1 record (opened 2026-09-23, cf-backup's own numbering, not the roadmap's): cf-backup's Phase 0 (owner decisions and accounts) plus Phase 1a (a private, unrouted console-shell Worker) — record written before any of it is built; records the owner's 2026-09-23 acceptance of OD-10 and OD-25 and the Task A7 dependency list | ai, technical, owner | historical |
 | `program/chunks/2026-09-23-cb2-cf-backup-integration.md` (private) | Chunk CB-2 record (cf-backup's numbering): cf-admin's half of the cf-backup full build — migration `0057` (`backup_runs` + the page row), the `BACKUP` binding and proxy, the `/dashboard/backup` gateway with its audit verbs, the one framing exception, the page, and the `backup-tick` job; built in a worktree, not deployed | ai, technical, owner | historical |
 
+### Platform kit (2026-10-18)
+
+The owner's 2026-10-18 ask: a plan to rebuild the platform from scratch as a
+reusable kit, one blank repository per client, built only in new repositories.
+Plan, decisions and dated research snapshots. Documentation only; excluded from
+the public docs mirror with the rest of `program/`.
+
+| Doc | Purpose | Audience | Status |
+|-----|---------|----------|--------|
+| `program/platform-kit/README.md` (private) | Folder guide: what the kit is in plain words, where the plan stands, the owner's standing instructions for the work, how to read the folder on a phone, the file list | owner, non-technical, ai, technical | draft |
+| `program/platform-kit/01-plan.md` (private) | The platform kit plan: why rebuild, non-negotiables, the shape of the kit (repositories, runtime, module model), identity and sign-in, permissions, providers as data, data and migrations, performance within 10 ms, security, documentation, Madagascar, build order, risks, open questions | owner, non-technical, ai, technical | draft |
+| `program/platform-kit/02-decisions-log.md` (private) | Every choice card posted to the owner with its options, recommendation and answer; his instructions of 2026-10-18 quoted verbatim | owner, non-technical, ai, technical | draft |
+| `program/platform-kit/10-research-estate-inventory.md` (private) | Research snapshot: what the six repositories do today, measured (sizes, duplicated systems, provider coupling, the migration collision, open security items) and the designs worth carrying forward as ideas | owner, ai, technical | historical |
+| `program/platform-kit/11-research-cloudflare-platform.md` (private) | Research snapshot: Cloudflare limits and tooling for the kit with a URL for every figure (free-plan budgets, Access for Workers, Workers Builds, auto-provisioning, Secrets Store, Queues, Workflows, Durable Objects) | owner, ai, technical | historical |
+| `program/platform-kit/12-research-permissions-model.md` (private) | Research snapshot: permission models compared (fixed tiers, RBAC with groups, cloud-IAM bindings, Zanzibar, policy languages, Kubernetes, Discord bitfields, embeddable engines) and the recommended shape | owner, ai, technical | historical |
+| `program/platform-kit/13-research-providers-as-data.md` (private) | Research snapshot: providers as data (auth schemes, webhook verifiers, transport engines), DNS fingerprinting for detection, envelope encryption for credentials, security posture scanners | owner, ai, technical | historical |
+| `program/platform-kit/14-research-config-layers.md` (private) | Research snapshot: configuration layers and the fastest safe read path on Workers, every store compared with numbers, validation libraries, per-client identity and page names as data | owner, ai, technical | historical |
+| `program/platform-kit/15-research-visual-stack.md` (private) | Research snapshot: Astro 7 facts, Tailwind v4 against the alternatives, the component approach, icons, fonts, images, tables, charts, forms, email HTML, quality gates, phone-first UX rules | owner, ai, technical | historical |
+| `program/platform-kit/16-research-resources-and-release.md` (private) | Research snapshot: one of each resource per client with a manifest and gate, one Worker versus several, the minimum token set, the test-before-production pipeline costed in minutes, upgrades, backups | owner, ai, technical | historical |
+| `program/platform-kit/17-research-ai-native-repo.md` (private) | Research snapshot: agent instruction files, Skills, hooks and MCP, docs that cannot drift, the setup and doctor commands, fallbacks and error design, guardrails for AI-written code, monorepo and distribution, open scope | owner, ai, technical | historical |
+
+
 ## Meta
 
 | Doc | Purpose | Status |
