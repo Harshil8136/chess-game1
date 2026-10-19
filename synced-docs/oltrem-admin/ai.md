@@ -19,7 +19,8 @@ linked from docs/README.md.
 2. Acknowledge: begin your first reply with the words "ai.md loaded", then the twelve rules of
    section 2 in one short line each, in your own words. The owner checks this.
 3. Check git: `git remote -v`, `git switch main`, `git pull origin main`, `git status`. Confirm
-   that `node --version` and `pnpm --version` satisfy package.json.
+   that `node --version` and `pnpm --version` satisfy package.json; in a fresh clone, run
+   `pnpm install --frozen-lockfile`.
 4. Read only what section 4 sends you to. Start with docs/README.md for where things
    stand.
 
@@ -36,7 +37,7 @@ are checked against it by `pnpm check:agents`.
 - **R-06** Generated files are never edited by hand; change the source and run `pnpm docs:build`.
 - **R-07** Documentation changes in the same commit, in the one document that owns the fact; every document is indexed.
 - **R-08** ai.md stays the one entry file: under budget, every rule line naming a rule in rules.md, pointer files generated.
-- **R-09** One of each resource per client and zero growth of variables; settings are data in the database, not configuration.
+- **R-09** One of each resource per client, zero growth of variables, no dependency without a registered reason; settings are data in the database.
 - **R-10** Real data only, and fail closed: no mock data, no placeholder screens, no guessed numbers; the unknown is refused.
 - **R-11** Ask instead of guessing: a request with two readings, or a destructive step, stops for the owner's yes.
 - **R-12** Phone first: every screen is designed for a phone, and every option is visible in a sideways-scrolling row.
@@ -46,16 +47,21 @@ are checked against it by `pnpm check:agents`.
 | Command | What it does |
 |---|---|
 | `pnpm verify` | the one gate: every check below in order, one line each; the failing one prints in full |
-| `pnpm test` | the test suite, on Node's built-in runner |
+| `pnpm test` | the tests of the verify chain itself, on Node's built-in runner (`scripts/*.test.mjs`) |
+| `pnpm test:workers` | the package and module tests, inside the Workers runtime |
+| `pnpm typecheck` | the type check of every package and module |
+| `pnpm lint` | ESLint, with the module-boundary rules |
+| `pnpm format` | Prettier over every code file; `pnpm format:check` only reports |
 | `pnpm docs:build` | regenerates every document marked generated from its source |
 | `pnpm docs:check` | refuses a generated document edited by hand, an unindexed document, a broken link |
 | `pnpm check:agents` | the budgets, rule numbers and pointer files of this contract (R-08) |
 | `pnpm check:tokens` | every secret name has a row in the token registry (R-05) |
 | `pnpm check:identifiers` | the scan for copied names and identifier shapes (R-03, R-04) |
+| `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-`pnpm setup`, `pnpm doctor` and `pnpm dev` arrive with the command-line tool in phase 1; they do
-not exist yet, so do not invent them.
+`pnpm setup`, `pnpm doctor` and `pnpm dev` arrive with the command-line tool, later in phase 1;
+they do not exist yet, so do not invent them.
 
 ## 4. What to read for your task
 
@@ -65,6 +71,8 @@ not exist yet, so do not invent them.
 | A rule, its reason or its enforcement | rules.md |
 | A token, key, secret or account | docs/reference/tokens.md, then R-05 in rules.md |
 | What `pnpm verify` runs and why | docs/reference/verify.md, then `scripts/verify.mjs` |
+| A dependency | docs/reference/dependencies.md, then R-09 in rules.md |
+| A setting, the configuration layers, the read path | `packages/core-config/README.md`, then the plan's section on configuration |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
 | What was done and when | the dated records under `docs/records/` |
 
@@ -75,6 +83,7 @@ not exist yet, so do not invent them.
 | A rule | rules.md, and its line in section 2 of this file |
 | A credential, by name | `tokens.registry.json`, then `pnpm docs:build` |
 | A gate | `scripts/lib/gates.mjs`, a test, then `pnpm docs:build` |
+| A dependency | the catalog in `pnpm-workspace.yaml` and `dependencies.registry.json`, then `pnpm docs:build` |
 | Where things stand | docs/README.md |
 | A big change | a dated record in `docs/records/`, linked from docs/README.md |
 | A pointer file | its template in `scripts/lib/agents.mjs`, then `pnpm agents:write` |

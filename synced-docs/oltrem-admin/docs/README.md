@@ -15,21 +15,32 @@ sources: [this repository]
 
 ## Where things stand
 
-The kit is in **phase 0, set up and measure**. The plan's phase 0 has these parts:
+The kit is in **phase 1, the core runtime**, since 2026-10-19, when the owner said to continue.
+The plan's open decisions still wait on him (they are listed in the plan). Phase 0, set up and
+measure, has these parts:
 
 | Part | State |
 |---|---|
 | This repository, with the contract every agent reads first (ai.md, rules.md, the generated pointer files) | **done** 2026-10-19 |
 | The token registry with reuse before create, and the gate that enforces it | **done** 2026-10-19: nine names from the plan, none created yet |
-| The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates, run locally and on every push |
+| The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates then, ten today ([what verify runs](reference/verify.md)), run locally and on every push |
 | The public docs mirror: this folder, the root `.md` files and LICENSE copied to the mirror after every green verify on `main` | **done** 2026-10-19 |
 | A client template repository and a sandbox client repository | not started |
 | A fresh Cloudflare account for the sandbox client | not started: the owner creates it |
 | The CPU measurement of three sample screens in the sandbox | not started: needs the sandbox |
 | The first week's open questions (the configuration layers, encryption in the Worker, the test runner on GitHub, the secrets cap) | not started |
 
-Phase 1 (the core runtime, the configuration layers, the command-line tool) begins when the
-owner accepts the plan.
+Phase 1, the core runtime, has these parts so far:
+
+| Part | State |
+|---|---|
+| The toolchain: TypeScript, tests inside the Workers runtime, the linter with the module-boundary rules, the formatter, and the dependency registry with its gate | **done** 2026-10-19: [the phase 1 record](records/2026-10-19-phase-1-toolchain-and-core-config.md) |
+| `@oltrem/core-config`: the settings registry, the four configuration layers and the fast read path (memory, one KV snapshot, D1 as the truth) | **done** 2026-10-19: its tests pass inside the Workers runtime; it runs in no Worker yet |
+| The command-line tool (`setup`, `doctor`, `dev`, `manifest check`) | not started |
+| The other core packages the plan names for phase 1 | not started |
+
+Anything deployed, measured or connected to an account is still to come: the sandbox client needs
+the fresh Cloudflare account, the owner's step.
 
 ## The plan
 
@@ -58,7 +69,10 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
+| [Dependencies](reference/dependencies.md) | every third-party package, its one pinned version, who uses it and why | generated from `dependencies.registry.json` and the catalog |
+| [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
+| [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -78,3 +92,4 @@ token page gives each credential its own small table instead of one wide one.
 |---|---|---|
 | 2026-10-19 | Every document listed exists and is indexed; `pnpm verify` passes on the first commit with its five gates; the plan link opens on the public mirror | Nothing has been deployed or measured; every state above is the state of this repository, not of a live system |
 | 2026-10-19 | The mirror job added to the verify workflow, gated on a green verify and a push to `main`; its token registered; a test asserts both gates | Whether the first mirror run succeeds is known only after the push; the result is in the thread and in the provenance file on the mirror |
+| 2026-10-19 | The ten gates pass locally, the package tests inside the Workers runtime included; every dependency has a row and a pin; the new pages are indexed and their links resolve | Nothing runs in a deployed Worker yet, so the read path's timings are from the local test runtime only; the GitHub run of the same gates is known after the push |

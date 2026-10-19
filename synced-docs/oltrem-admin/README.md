@@ -11,7 +11,7 @@ repositories an AI agent can work in safely. This repository is the kit itself.
 - **Checking a change?** `pnpm verify` is the one gate; [what it runs](./docs/reference/verify.md)
   is generated from the gate list.
 
-The kit is in **phase 0**: the repository basics (the contract, the token registry, the verify
-chain) are in place, and nothing is deployed anywhere yet.
+The kit is in **phase 1**: the repository basics, the toolchain and the first core package (the
+configuration layers) are in place, and nothing is deployed anywhere yet.
 
 Licensed under the [Apache License 2.0](./LICENSE).

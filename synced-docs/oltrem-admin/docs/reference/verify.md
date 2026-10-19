@@ -10,14 +10,19 @@ sources: [scripts/lib/gates.mjs]
 
 # What `pnpm verify` runs
 
-> **In plain words.** One command checks everything before a push. It runs the gates below in order and prints one line per gate; the first gate that fails prints its whole output and stops the run. The same command runs in GitHub Actions on every push to `main`, so a red run is visible on the repository page.
+> **In plain words.** One command checks everything before a push. It runs the gates below in order and prints one line per gate; the first gate that fails prints its whole output and stops the run. The quick gates come first (they need no dependencies and take a second); then the formatter, the linter, the type check and the two test suites. The same command runs in GitHub Actions on every push to `main`, so a red run is visible on the repository page.
 
 | Order | Gate | Command | What it refuses |
 |---|---|---|---|
 | 1 | agents | `node scripts/check-agents.mjs` | ai.md or rules.md over budget; a rule line in ai.md with no rule in rules.md, or the reverse; a pointer file that differs from its template; a copied fact (a count next to table, migration, route or binding, a UUID shape, a hostname) in an instruction file |
 | 2 | tokens | `node scripts/check-tokens.mjs` | a secret name used in a workflow or a `wrangler secret put` command without a row in the token registry; a row with a missing field, an unknown status or a duplicate name |
 | 3 | identifiers | `node scripts/check-identifiers.mjs` | a name of the first client's existing platform or repositories anywhere in the repository; a UUID shape, a long hex identifier or an email address |
-| 4 | docs | `node scripts/check-docs.mjs` | a generated document that differs from its source; a document under docs/ missing from the index or without front matter; a document over its size budget; a relative link that points nowhere |
-| 5 | tests | `node --test` | a failing test (Node's built-in runner, every *.test.mjs file) |
+| 4 | deps | `node scripts/check-deps.mjs` | a dependency without a row in the dependency registry, one not pinned once in the catalog, a package.json carrying its own version, a registered row nothing uses |
+| 5 | docs | `node scripts/check-docs.mjs` | a generated document that differs from its source; a document under docs/ missing from the index or without front matter; a document over its size budget; a relative link that points nowhere |
+| 6 | format | `pnpm exec prettier --check .` | a code file not formatted by Prettier (run pnpm format) |
+| 7 | lint | `pnpm exec eslint .` | an ESLint finding, including a module-boundary violation |
+| 8 | typecheck | `pnpm exec tsc -p tsconfig.json` | a type error in any package or module |
+| 9 | tests | `node --test scripts/**/*.test.mjs` | a failing test of the verify chain itself (Node's built-in runner, every *.test.mjs file under scripts/) |
+| 10 | workers | `pnpm exec vitest run` | a failing package or module test; these run inside the Workers runtime with the bindings their wrangler configuration declares |
 
 A gate is never skipped, weakened or bypassed to get green (R-02): the cause is fixed. A new gate is a new entry in `scripts/lib/gates.mjs`, a test, and this page regenerated with `pnpm docs:build`.

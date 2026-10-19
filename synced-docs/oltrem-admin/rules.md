@@ -38,8 +38,9 @@ same workflow. A gate that can be weakened protects nothing.
 **Scope.** Every repository of the kit and every client.
 
 **Enforced by.** The verify workflow after the push, today. A pre-push hook that runs the same
-command locally arrives with the tooling of phase 1. The gate list lives in
-`scripts/lib/gates.mjs` and is documented in docs/reference/verify.md, generated from it.
+command locally arrives with the command-line tool (`pnpm setup` installs it in every clone).
+The gate list lives in `scripts/lib/gates.mjs` and is documented in docs/reference/verify.md,
+generated from it.
 
 ## R-03 Design, not code
 
@@ -155,16 +156,21 @@ workflow, one cron trigger, one access application. A new kind of data is a new 
 type in an existing resource, not a new resource. Settings, toggles, limits and thresholds are
 rows in the database, read through the configuration layers, never environment variables; the
 few true secrets are declared by name so a deploy fails when one is missing. Adding a resource
-or a variable needs a written reason in the resource manifest and the owner's yes.
+or a variable needs a written reason in the resource manifest and the owner's yes. The same
+holds for third-party packages: each is pinned once, in the catalog of `pnpm-workspace.yaml`,
+with a row that says why in `dependencies.registry.json`; a package.json never carries a version
+of its own, and a row nothing uses is removed.
 
 **Why.** The owner's instruction: free-plan budgets are per account and small, and every extra
 resource is one more thing to create, name, back up and clean up for every client.
 
 **Scope.** Every client repository and every kit module.
 
-**Enforced by.** Not yet. The manifest check (`oltrem manifest check`) that counts bindings
-and scans for undeclared ones arrives with the command-line tool in phase 1. Until then, the
-owner's review.
+**Enforced by.** For dependencies, `pnpm check:deps`, a gate of `pnpm verify`: it refuses a
+dependency without a row, a row nothing uses, a version outside the catalog and a catalog entry
+nobody uses, and generates docs/reference/dependencies.md. For resources and variables, not
+yet: the manifest check (`oltrem manifest check`) that counts bindings and scans for undeclared
+ones arrives with the command-line tool, later in phase 1. Until then, the owner's review.
 
 ## R-10 Real data, fail closed
 
