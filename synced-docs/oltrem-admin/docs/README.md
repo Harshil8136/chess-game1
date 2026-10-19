@@ -53,8 +53,8 @@ what was built.
 ## Where these documents are published
 
 After every push to `main`, once `pnpm verify` is green on GitHub, the `mirror-docs` job of
-the verify workflow copies this folder, every `.md` file at the repository root and LICENSE to
-the public docs mirror, under
+the verify workflow copies this folder, every `.md` file at the repository root, each package's
+and module's README and LICENSE to the public docs mirror, under
 [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
 and writes a provenance file there with the source commit. The folder on the mirror is rebuilt
 from the commit each time. Nothing is redacted on the way: the identifiers gate is the scanner,
@@ -92,4 +92,5 @@ token page gives each credential its own small table instead of one wide one.
 |---|---|---|
 | 2026-10-19 | Every document listed exists and is indexed; `pnpm verify` passes on the first commit with its five gates; the plan link opens on the public mirror | Nothing has been deployed or measured; every state above is the state of this repository, not of a live system |
 | 2026-10-19 | The mirror job added to the verify workflow, gated on a green verify and a push to `main`; its token registered; a test asserts both gates | Whether the first mirror run succeeds is known only after the push; the result is in the thread and in the provenance file on the mirror |
-| 2026-10-19 | The ten gates pass locally, the package tests inside the Workers runtime included; every dependency has a row and a pin; the new pages are indexed and their links resolve | Nothing runs in a deployed Worker yet, so the read path's timings are from the local test runtime only; the GitHub run of the same gates is known after the push |
+| 2026-10-19 | The ten gates pass locally, the package tests inside the Workers runtime included; every dependency has a row and a pin; the new pages are indexed and their links resolve; the GitHub run of the same gates and the mirror job passed on the phase 1 commit | Nothing runs in a deployed Worker yet, so the read path's timings are from the local test runtime only |
+| 2026-10-19 | The mirror job now copies each package's README too, so the index's link to `@oltrem/core-config` resolves on the mirror; a test asserts the copy | Whether the link opens on the mirror is known after this push |
