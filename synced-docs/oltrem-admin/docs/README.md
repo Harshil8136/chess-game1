@@ -1,0 +1,80 @@
+---
+title: "Documentation index, and where things stand"
+status: living
+owner: vendor
+last_verified: 2026-10-19
+sources: [this repository]
+---
+
+# Documentation: index and where things stand
+
+> **In plain words.** This folder is the written side of the kit, kept so the owner can follow
+> the work on a phone as it happens. This page says where the work stands, lists every
+> document and says which fact each one owns. The plan the work follows lives elsewhere and is
+> linked below.
+
+## Where things stand
+
+The kit is in **phase 0, set up and measure**. The plan's phase 0 has these parts:
+
+| Part | State |
+|---|---|
+| This repository, with the contract every agent reads first (ai.md, rules.md, the generated pointer files) | **done** 2026-10-19 |
+| The token registry with reuse before create, and the gate that enforces it | **done** 2026-10-19: nine names from the plan, none created yet |
+| The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates, run locally and on every push |
+| The public docs mirror: this folder, the root `.md` files and LICENSE copied to the mirror after every green verify on `main` | **done** 2026-10-19 |
+| A client template repository and a sandbox client repository | not started |
+| A fresh Cloudflare account for the sandbox client | not started: the owner creates it |
+| The CPU measurement of three sample screens in the sandbox | not started: needs the sandbox |
+| The first week's open questions (the configuration layers, encryption in the Worker, the test runner on GitHub, the secrets cap) | not started |
+
+Phase 1 (the core runtime, the configuration layers, the command-line tool) begins when the
+owner accepts the plan.
+
+## The plan
+
+The plan, its research and the owner's decisions are kept in the first client's documentation
+and published on the public docs mirror:
+[the platform-kit folder on the mirror](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/cf-admin/documentation/program/platform-kit).
+Its plan document is the authority on the design; this repository follows it and records here
+what was built.
+
+## Where these documents are published
+
+After every push to `main`, once `pnpm verify` is green on GitHub, the `mirror-docs` job of
+the verify workflow copies this folder, every `.md` file at the repository root and LICENSE to
+the public docs mirror, under
+[synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
+and writes a provenance file there with the source commit. The folder on the mirror is rebuilt
+from the commit each time. Nothing is redacted on the way: the identifiers gate is the scanner,
+and everything in this repository is written as if public (R-04). The job signs in with the
+`PERSONAL_PAT` secret, whose row is in the [token registry](reference/tokens.md).
+
+## Index
+
+| Document | Owns | Kind |
+|---|---|---|
+| [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
+| [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
+| [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
+| [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
+| [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
+
+## How this folder is checked
+
+`pnpm docs:check`, one of the gates of `pnpm verify`, refuses a document without front matter,
+a document missing from the table above, a document over its size budget, a relative link that
+points nowhere, and a generated document that differs from its source. Records are frozen: a
+later change is a new record, not an edit.
+
+## How to read this on a phone
+
+Every document opens with a short summary in plain words. Tables are kept narrow; the generated
+token page gives each credential its own small table instead of one wide one.
+
+## Verification log
+
+| Date | What was checked | What was not |
+|---|---|---|
+| 2026-10-19 | Every document listed exists and is indexed; `pnpm verify` passes on the first commit with its five gates; the plan link opens on the public mirror | Nothing has been deployed or measured; every state above is the state of this repository, not of a live system |
+| 2026-10-19 | The mirror job added to the verify workflow, gated on a green verify and a push to `main`; its token registered; a test asserts both gates | Whether the first mirror run succeeds is known only after the push; the result is in the thread and in the provenance file on the mirror |
