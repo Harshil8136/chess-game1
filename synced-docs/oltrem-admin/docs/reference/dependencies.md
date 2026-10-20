@@ -12,19 +12,24 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 10 tools (used only to build, check or test) and 2 runtime packages (shipped inside a Worker).
+**Where things stand:** 13 tools (used only to build, check or test) and 4 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
 | @cloudflare/vitest-plugin | 1.4.5 | tool | @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, oltrem | Runs the test suite inside the Workers runtime, so code that passes in Node and fails in a Worker is caught; it also applies the D1 migrations to the test database. | 15.6 |
 | @cloudflare/workers-types | 5.20261019.1 | tool | @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, oltrem | The types of the Workers runtime bindings (D1, KV, queues) for the type check. | 4.2 |
 | @eslint/js | 10.0.1 | tool | oltrem | ESLint's own recommended rules for the plain JavaScript scripts of the verify chain. | 15.6 |
-| @types/node | 22.20.5 | tool | @oltrem/cli | The types of Node's own modules (fs, path, child_process) for the command-line tool, which runs on Node rather than in a Worker. | 15.3 |
+| @tailwindcss/node | 4.3.3 | tool | @oltrem/core-ui | Compiles the kit's theme stylesheet in a test, so a broken token list or a palette that was not reset fails verify, not a client's build. | 12.2 |
+| @types/node | 22.20.5 | tool | @oltrem/cli, @oltrem/core-ui | The types of Node's own modules (fs, path, child_process) for the command-line tool, which runs on Node rather than in a Worker. | 15.3 |
 | eslint | 10.13.0 | tool | oltrem | The linter; the module-boundary rules run inside it while editing. | 15.6 |
 | eslint-plugin-boundaries | 7.2.0 | tool | oltrem | Refuses a module importing another module's internals, or a core package importing a module; its rule file is the architecture diagram. | 15.6 |
 | hono | 4.13.13 | runtime | @oltrem/core-http | The one request pipeline of a client Worker (plan 4.2): routing, request ids, security headers and the CSRF check; Astro's pages mount into the same app through astro/hono. Pinned to the 4.x line; 5.0 is a release candidate. | 4.2 |
+| lucide-preact | 1.60.0 | runtime | @oltrem/core-ui | The one icon set of the primitives (status pills, empty states, buttons): one icon is under 2 KB, and islands import only the icons they use. | 12.4 |
+| preact | 11.0.1 | runtime | @oltrem/core-ui | The island renderer of every screen (the owner's choice, card 9); the primitives are Preact components. The 11.x line, which every library the kit uses declares support for. | 12.1 |
+| preact-render-to-string | 6.8.1 | tool | @oltrem/core-ui | Renders the primitives to HTML in the tests, so their markup, attributes and the no-inline-style rule are checked without a browser. | 12.6 |
 | prettier | 3.9.10 | tool | oltrem | One formatting for every code file, so agents never argue about style and diffs show only meaning. | 15.6 |
-| typescript | 5.9.3 | tool | @oltrem/cli, @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, oltrem | The type check. Pinned to the 5.x line until the linter's TypeScript support covers the next major version. | 15.6 |
+| tailwindcss | 4.3.3 | tool | @oltrem/core-ui | The styling (the owner's choice, card 24): utilities built from the kit's short token list; the default palette is reset so only the semantic colours exist. Version 4 line. | 12.2 |
+| typescript | 5.9.3 | tool | @oltrem/cli, @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, @oltrem/core-ui, oltrem | The type check. Pinned to the 5.x line until the linter's TypeScript support covers the next major version. | 15.6 |
 | typescript-eslint | 8.72.0 | tool | oltrem | ESLint's TypeScript parser and recommended rules. | 15.6 |
-| vitest | 4.1.12 | tool | @oltrem/cli, @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, oltrem | The test runner for packages and modules; the Workers pool plugs into it. | 15.6 |
+| vitest | 4.1.12 | tool | @oltrem/cli, @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, @oltrem/core-ui, oltrem | The test runner for packages and modules; the Workers pool plugs into it. | 15.6 |
 | zod | 4.6.7 | runtime | @oltrem/core-config, @oltrem/core-http | Validates every setting's value and exports each setting's JSON Schema from one definition (the Mini build, a few kilobytes). | 5.3 |

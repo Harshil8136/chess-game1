@@ -78,6 +78,7 @@ them. The tool's other commands and flags are in `packages/cli/README.md`.
 | A setting, the configuration layers, the read path | `packages/core-config/README.md`, then the plan's section on configuration |
 | A Worker's bindings, vars or secrets, the resource manifest | `packages/cli/README.md`, then R-09 in rules.md |
 | An error code, a route, an event, the outbox or the audit log | the README of the core package that owns it, under `packages/` |
+| A screen, a colour, a size, a primitive | `packages/core-ui/README.md`, then the plan's section 12 |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
 | What was done and when | the dated records under `docs/records/` |
 | The licence: what someone may do with the kit | `LICENSE`, then docs/licence.md |
