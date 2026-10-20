@@ -1,10 +1,11 @@
 # @oltrem/cli
 
-The kit's command-line tool, `oltrem`. It has five commands: the **resource manifest check**
+The kit's command-line tool, `oltrem`. It has six commands: the **resource manifest check**
 that keeps a client's Worker at one of each resource (plan 9.1, R-09), **`migrations sync`**
 and **`migrations apply`** for the kit's migrations in a client repository (plan 10), **`setup`**
-for the steps a new client repository needs (plan 15.3), and the **doctor** with its six checks.
-`dev` and `docs` come later in phase 1. The tool runs on Node and has no runtime dependency.
+for the steps a new client repository needs (plan 15.3), **`docs`** for the generated reference
+of a client repository (plan 15.5), and the **doctor** with its seven checks. `dev` comes later
+in phase 1. The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
 
@@ -143,11 +144,34 @@ declares anything but exactly one D1 database.
 The steps a new client repository needs that need no account, in one idempotent command: copy
 the kit's migrations (as `migrations sync` does), confirm the deploy workflow
 `.github/workflows/deploy.yml` is in place, print the template for the one Cloudflare API token
-and the two `gh secret set` commands that store it and the account id as repository secrets, and
-run the doctor. The token itself is created by hand in the client's dashboard, since a token
+and the two `gh secret set` commands that store it and the account id as repository secrets,
+write the generated reference (as `docs` does), and run the doctor. The token itself is created by hand in the client's dashboard, since a token
 cannot create itself; its scopes are the five the deploy needs, on that account only. Exit
 codes are the doctor's, or `1` when the migrations folder has a problem and `3` when the kit
 packages are not installed.
+
+## `oltrem docs [dir] [--check]`
+
+Writes the generated reference of the client repository in `dir` (the current directory by
+default) to `docs/_generated/`, from the repository's own files and never by hand (R-06): an
+index, **Resources** from `oltrem.manifest.json` and the wrangler file (every binding, queue,
+class, cron, var and secret name, and any exception to the caps), **Migrations** from
+`migrations/` and its `kit.json` (the kit's files with their checksums, the client's own, the
+ledger table), **Tokens** from `tokens.registry.json` (one small table per credential, by name
+only, sorted) and a **Repository map** of the files that exist. Routes, capabilities, settings
+keys, error codes and key recipes join the list once a client has modules.
+
+`--check` renders in memory and compares: a page whose committed copy is missing or differs, or
+a stray `.md` file in the folder, is reported with the command to run, and nothing is written.
+Without `--check`, the stale pages are written and a stray file is removed. The registry is
+validated first, by the kit's own rules (every field present, the name in upper snake case, a
+known status, no duplicate): a bad row is refused with its row number and nothing is written.
+`--json` prints `{ ok, exitCode, ran, written, stale, problems }`.
+
+Exit `0` when the pages are current (or were just written), `1` when `--check` found a stale or
+stray page or the registry is missing or invalid, `3` when there is no manifest or no wrangler
+file to generate from. The client template's `verify` runs `oltrem docs --check`, and the kit's
+own tests hold the template's committed copy to what the command renders.
 
 ## `oltrem doctor`
 
@@ -163,6 +187,7 @@ failure the exact command that fixes it. No check prints a secret value.
 | `MIG-01` | every kit migration is copied into `migrations/`, unchanged, with a current `kit.json`; skipped where there is no manifest or no installed kit package | `oltrem migrations sync` |
 | `WF-01` | the deploy workflow `.github/workflows/deploy.yml` is in place | copy it from the client template |
 | `TOKEN-01` | every secret name the Worker (`secrets.required`) or a workflow (`secrets.NAME`) uses has a row in `tokens.registry.json`; skipped where there is no registry | add the row, with the reason it cannot be an existing token |
+| `DOCS-01` | the generated reference in `docs/_generated/` is what `oltrem docs` renders now, with no stray file; skipped where there is no manifest | `oltrem docs`, or the registry file to fix |
 
 Flags: `--json` prints `{ ok, exitCode, checks, problem }`; `--only ID` runs one check;
 `--list-checks` names them. Exit codes, as the plan sets them: `0` every check passed or was

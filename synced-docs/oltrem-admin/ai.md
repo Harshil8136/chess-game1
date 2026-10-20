@@ -63,9 +63,9 @@ are checked against it by `pnpm check:agents`.
 | `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-`oltrem dev` and `oltrem docs` arrive later in phase 1; they do not exist yet, so do not invent
-them. The tool's other commands (`setup`, `migrations sync`, `migrations apply`) and flags are
-in `packages/cli/README.md`.
+`oltrem dev` arrives later in phase 1; it does not exist yet, so do not invent it. The tool's
+other commands (`setup`, `migrations sync`, `migrations apply`, `docs`) and flags are in
+`packages/cli/README.md`.
 
 ## 4. What to read for your task
 
