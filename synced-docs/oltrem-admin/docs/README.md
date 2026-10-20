@@ -67,12 +67,14 @@ and everything in this repository is written as if public (R-04). The job signs 
 |---|---|---|
 | [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
 | [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
+| [The licence in plain words](licence.md) | what the Oltrem Licence allows, what needs permission, and how to ask | written |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
 | [Dependencies](reference/dependencies.md) | every third-party package, its one pinned version, who uses it and why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
 | [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified | record, frozen |
+| [The licence change](records/2026-10-20-licence-change.md) | why Apache-2.0 was replaced by the Oltrem Licence, the terms chosen, and what still needs a lawyer | record, frozen |
 
 ## How this folder is checked
 
@@ -94,3 +96,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-19 | The mirror job added to the verify workflow, gated on a green verify and a push to `main`; its token registered; a test asserts both gates | Whether the first mirror run succeeds is known only after the push; the result is in the thread and in the provenance file on the mirror |
 | 2026-10-19 | The ten gates pass locally, the package tests inside the Workers runtime included; every dependency has a row and a pin; the new pages are indexed and their links resolve; the GitHub run of the same gates and the mirror job passed on the phase 1 commit | Nothing runs in a deployed Worker yet, so the read path's timings are from the local test runtime only |
 | 2026-10-19 | The mirror job now copies each package's README too, so the index's link to `@oltrem/core-config` resolves on the mirror; a test asserts the copy | Whether the link opens on the mirror is known after this push |
+| 2026-10-20 | The licence replaced in `LICENSE`, both package files and the README; a test asserts all three agree; the plain-words page and the record indexed | The licence text has not been read by a lawyer |

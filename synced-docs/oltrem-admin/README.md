@@ -14,4 +14,7 @@ repositories an AI agent can work in safely. This repository is the kit itself.
 The kit is in **phase 1**: the repository basics, the toolchain and the first core package (the
 configuration layers) are in place, and nothing is deployed anywhere yet.
 
-Licensed under the [Apache License 2.0](./LICENSE).
+Licensed under the [Oltrem Licence 1.0](./LICENSE), a source-available licence: free for personal
+use and for organisations under one million US dollars a year, a commercial licence above that,
+and no change to the code without the licensor's permission. [docs/licence.md](./docs/licence.md)
+says what that means in plain words. The kit is not open source.

@@ -75,6 +75,7 @@ they do not exist yet, so do not invent them.
 | A setting, the configuration layers, the read path | `packages/core-config/README.md`, then the plan's section on configuration |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
 | What was done and when | the dated records under `docs/records/` |
+| The licence: what someone may do with the kit | `LICENSE`, then docs/licence.md |
 
 ## 5. What to update, in the same commit
 
