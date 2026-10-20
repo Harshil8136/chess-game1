@@ -2,7 +2,7 @@
 title: "Oltrem, the platform kit: the plan"
 status: draft
 audience: [owner, non-technical, ai, technical]
-last_verified: 2026-10-18
+last_verified: 2026-10-20
 verified_against: [research]
 owner: harshil
 related_docs: [README.md, 02-decisions-log.md]
@@ -74,7 +74,7 @@ Version 2 folds in the owner's instructions of 04:34 and the four research passe
 | 16 | Where the automatic tests run before anything goes live | **GitHub Actions, then deploy** (12:58), against the recommendation | §14.1 rewritten: one workflow per client repository runs verify, then applies migrations and deploys with wrangler-action; one Cloudflare deploy token per client in GitHub (§9.2); Workers Builds is not connected |
 | 17 | How you push | **Straight to `main`** (12:58) | §14.2: `main` stays the daily habit, the workflow is the gate; a short branch gets a preview link for database and sign-in changes |
 | 18 | Where the kit's packages live | **GitHub Packages** (13:04), against the recommendation | §15.7 rewritten: private packages under your GitHub scope; client workflows install with their own `GITHUB_TOKEN` once each repository is granted read access in the package settings; one read-only classic token per machine that installs (your PC, each AI tool's cloud environment); the release workflow publishes with its own token; Dependabot instead of Renovate in client repositories (§9.2) |
-| 19 | The licence on the kit | **Apache-2.0** (13:05) | §15.7: every package carries the Apache-2.0 licence; who can install is controlled by the private registry, not the licence |
+| 19 | The licence on the kit | **Apache-2.0** (13:05), **overridden 2026-10-20 by the Oltrem Licence 1.0**: personal use free, free under a revenue ceiling of one million US dollars a year, a paid Commercial Licence above it, and no change to the code without permission (decisions log, "The licence") | §15.7: every package carries the Oltrem Licence; who can install is controlled by the private registry, the licence says what they may do once they can |
 | 20 | Where the backup copy lives | **The client's own account only** (13:05) | §9.3: no cross-account key; the onboarding checklist states that a lost client account loses its copies |
 | 21 | How fast a saved setting must reach everyone | **The admin at once, everyone within a minute** (13:05) | §5.2 as designed |
 | 22 | Page names | **Client-chosen addresses set at onboarding** (13:06) | §5.4: slugs and menu labels recorded at onboarding, shipped with the deploy; a later change is a vendor task with a redirect row |
@@ -870,7 +870,7 @@ Skipped for now: mutation testing (slow and noisy for a small team; revisit for 
 - Client repositories stay private: GitHub warns that a public repository granted access to a private package can leak it through forks.
 - If GitHub is down, nothing installs from the registry; `oltrem vendor <version>` copies the packages into the repository as the emergency path, and Turborepo's cache covers the rest of a build.
 
-- **Licence (your choice, card 19, 13:05): Apache-2.0** on every package: permissive, with a patent grant, accepted by clients' lawyers without discussion. The registry decides who can install; the licence decides what they may do with it once they can.
+- **Licence (your choice, card 19, 13:05, overridden by your instruction of 2026-10-20): the Oltrem Licence 1.0** on every package, a source-available licence written in plain words: personal use free; free for an organisation under one million US dollars of yearly revenue; a separate, paid Commercial Licence above that; no change to the kit's code without your prior written permission and review, even locally, while configuring and building a client repository on the documented interfaces stay allowed. The kit is therefore not open source. The registry decides who can install; the licence decides what they may do with it once they can. A lawyer's review of the text is still owed before the kit reaches anyone outside your own clients.
 
 ### 15.8 Open scope: keeping "website" out of the core
 
@@ -943,7 +943,7 @@ Within each phase the work follows your rules: smallest change, tests first, ver
 | Vendor as a hidden superuser | handover rules, loud Vendor actions, tenant-controlled Vendor access |
 | Provider detection wrong | suggestion only, evidence shown, canary before activation, old instance kept as failover |
 | Version drift between clients | Dependabot pull requests, `oltrem upgrade` with a doctor and release notes, the GitHub module showing each client's version; the Vendor checks client repos by hand (no central view, by choice) |
-| The kit copied by a competitor | the packages are private on GitHub Packages (card 18) and carry Apache-2.0 (card 19) for whoever is granted access; the Vendor's value is composition, operation and the client relationship |
+| The kit copied by a competitor | the packages are private on GitHub Packages (card 18) and carry the Oltrem Licence (card 19, overridden 2026-10-20) for whoever is granted access: no change without permission, a paid Commercial Licence above the revenue ceiling; the Vendor's value is composition, operation and the client relationship |
 | Free seat limit of Zero Trust unverified | checked live in `oltrem setup` and shown in System health; confirm with Cloudflare's plans page before promising it |
 | AI-written code drifting from the rules | AGENTS.md under budget, generated references, boundaries, knip, generated-file and identifier gates, hooks, one `verify` (§15.6) |
 | Two sessions pushing to one repo | fetch and rebase before every commit; the workflow's concurrency group serialises deploys |
@@ -959,7 +959,7 @@ Posted as cards in the thread, in this order, and all answered the same day (the
 1. Where the automatic tests run before anything goes live: inside Cloudflare's builder in the client's account (recommended), on GitHub, or GitHub for everything (§14.1). **Answered 12:58: GitHub Actions, then deploy.**
 2. How you push: straight to `main` with the workflow blocking a bad push, plus a preview link for database and sign-in changes (recommended); or every change on a short branch first (§14.2; replaces card 14). **Answered 12:58: straight to `main`.**
 3. Where the kit's packages live: public npm under your scope (recommended), GitHub Packages, or a copy in every client repo (§15.7; replaces card 13). **Answered 13:04: GitHub Packages.**
-4. The licence on the kit: Apache-2.0 (recommended), PolyForm Shield, or Business Source 1.1. **Answered 13:05: Apache-2.0.**
+4. The licence on the kit: Apache-2.0 (recommended), PolyForm Shield, or Business Source 1.1. **Answered 13:05: Apache-2.0. Overridden 2026-10-20: the Oltrem Licence 1.0 (decisions log).**
 5. Where the backup copy lives: the client's own account only (recommended), also your archive account, or a GitHub nightly job (§9.3). **Answered 13:05: the client's own account only.**
 6. How fast a saved setting must reach everyone: the admin at once and everyone within a minute (recommended), everyone within a second, or at the next deploy (§5.2). **Answered 13:05: within a minute.**
 7. Page names: fixed addresses with client menu names; client-chosen addresses set at onboarding (recommended); or admins renaming pages themselves (§5.4). **Answered 13:06: set at onboarding.**
