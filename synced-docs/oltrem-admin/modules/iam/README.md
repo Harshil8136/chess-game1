@@ -4,8 +4,9 @@ Permissions for a client Worker (plan sections 6, 7 and 10): who may do what, wh
 client's Owners manage themselves. So far: the tables, the capability registry modules fill at
 deploy, the compiler that turns a person's grants into one small map, the check that reads it,
 the sessions that carry the map from one request to the next with the pipeline's hook and
-authorizer, and the governance: every write that changes who may do what, each refused unless the
-actor could stand behind it. The Vendor handover and the phone screens follow in the next steps.
+authorizer, the governance: every write that changes who may do what, each refused unless the
+actor could stand behind it, and the handover: the Vendor creates the one company and invites its
+first Owner, who takes it over. The phone screens and the routes follow in the next step.
 
 ## The model in one paragraph
 
@@ -71,7 +72,7 @@ so a decision can be replayed. A map is a few hundred bytes to a few kilobytes.
 1. An unknown or inactive capability: `unknown_capability`, `inactive_capability`.
 2. A scope that is not in the tree: `unknown_scope`, whoever asks.
 3. The Vendor: `vendor` (allow), unless the tenant set its access to `approval` or
-   `incident_only`.
+   `incident_only` and no window is open (below, the handover).
 4. A capability on the vendor floor, for anyone else: `vendor_floor`.
 5. An Owner (the Owner role at the root, in force): `owner` (allow).
 6. Otherwise walk from the scope up to the root: a deny bit on any node is `deny`; an allow bit on
@@ -182,6 +183,53 @@ The rules, each refused with its own code:
   its history is never deleted; its grants are ended instead. Anything else that does not fit
   (an unknown role, scope or person, a date out of range, a thing still in use) is `KIT-E-2010`.
 
+## The Vendor and the handover
+
+```ts
+import { createHandover } from '@oltrem/iam';
+
+const handover = createHandover<Env>({
+  bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
+  sessions,
+  audience: env.ACCESS_AUD,
+});
+// at setup, as the Vendor
+const { invitation } = await handover.createTenant(env, actor, { name, ownerEmail });
+// the invited person, signed in at the door, with the token from the link; no account yet
+await handover.acceptInvitation(env, ctx.identity, token, ctx.requestId);
+```
+
+The **Vendor** is the one account that exists before the company does: tenant-less, with every
+capability and every floor, its address set at setup. It alone creates the company (plan 7.4):
+one per portal (`KIT-E-2014` for a second), with its root scope, its **Owner role** at position
+`0` holding every capability but the Vendor's, and one **invitation** to the first Owner. The
+Vendor holds no role, group or override of the company's, before or after: its access is its
+kind, and the company sets how it may enter.
+
+An **invitation** gives one role at one scope to one email address: single use, a week, under
+the grant rules of the governance (`invite`, `revokeInvitation`), and the token travels once in
+the link while the row keeps its hash. `acceptInvitation` runs on the identity alone, since the
+person has no account yet: the address must be the invited one (`KIT-E-2016`), the invitation
+pending and in date (`KIT-E-2015`); it creates the account (or finds the one with that address),
+makes the grant in the inviter's name and records the acceptance. The first Owner's acceptance is
+the **handover**, stamped on the tenant: before it the Vendor alone invites Owners, since nobody
+else could approve, and the record says so; from then on an Owner is made, invited or unmade
+only with a second person, and the last one stays.
+
+The company decides **how the Vendor may enter** (`setVendorAccess`, an Owner's with
+`iam.tenant.manage`, never the Vendor's own): `always`; `approval`, where the Vendor is refused
+everything until an Owner opens a **window** of one to twelve hours with a reason
+(`openVendorWindow`), closed early with `closeVendorWindow`; or `incident_only`, where the Vendor
+itself declares the incident and opens the window, out loud, as an audit row under its own kind.
+The compiler reads the window, so the Vendor's map says `always` while it lasts and is rebuilt
+when it ends. The emails to the Owners on every Vendor action come with the notifications of
+phase 4; the seal with the audit module of phase 5.
+
+The Owner role keeps a **minimum** whatever the Vendor takes out of it (`OWNER_MINIMUM`: the
+module's own capabilities below the Vendor's floor), and every capability new to the registry
+joins every Owner role at deploy, so a new module's screens open to the Owners by themselves;
+what the Vendor removed on purpose stays out.
+
 ## Tables
 
 Migration `0004_iam.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
@@ -190,7 +238,9 @@ the migration), `iam_modules`, `iam_capabilities`, `iam_scopes`, `iam_groups`,
 `iam_group_members`, `iam_roles` (position `0` is the Owner role), `iam_role_caps`,
 `iam_bindings`, `iam_overrides`, `iam_policy_compiles`. Migration `0005_iam_governance.sql` adds
 `activated_from` to `iam_bindings` (the eligible grant an activation came from) and the tables
-`iam_access_requests`, `iam_approvals`, `iam_reviews` and `iam_review_items`. Ids are text.
+`iam_access_requests`, `iam_approvals`, `iam_reviews` and `iam_review_items`. Migration
+`0006_iam_handover.sql` adds `handed_over_at`, `vendor_window_until` and `vendor_window_reason`
+to `iam_tenants` and the table `iam_invitations`. Ids are text.
 
 ## Errors
 
@@ -201,9 +251,11 @@ email the door let in that has no active account here, `KIT-E-2006` a sign-in th
 from the devices list, `KIT-E-2007` a change beyond the actor's standing, `KIT-E-2008` a change
 to one's own access, `KIT-E-2009` the last Owner, `KIT-E-2010` a grant that does not fit the
 rules, `KIT-E-2011` a second person's approval missing, `KIT-E-2012` an approval that does not
-fit, `KIT-E-2013` a review closed with grants undecided. A token for another Access application
-answers with the core's `KIT-E-0401`; a grant, request, approval or review that does not exist
-with the core's `KIT-E-0404`.
+fit, `KIT-E-2013` a review closed with grants undecided, `KIT-E-2014` a second company,
+`KIT-E-2015` an invitation that cannot be used (unknown, used, withdrawn, a week old),
+`KIT-E-2016` an invitation taken with another address. A token for another Access application
+answers with the core's `KIT-E-0401`; a grant, request, approval, review or invitation that does
+not exist with the core's `KIT-E-0404`.
 
 ## Tests
 
@@ -222,5 +274,10 @@ once, an eligible grant activated and lapsed, roles edited only with what is hel
 granted, members placed by the standing over the group's grants, the tree's depth, a deny
 override beating the role, a request decided in the decider's name, a review closed only when
 decided, the audit rows with the policy hash and the deferred write, and the last Owner. The
-plan's `can()` timing budget is measured on the sandbox, not here: the test runtime does not
-advance its clock during a check.
+handover is tested from an empty portal: the Vendor creates the company and nobody else can, the
+first Owner accepts with the invited address and the tenant is stamped, a second Owner invited
+before the handover and a third only with a second person after it, an ordinary invitation under
+the grant rules, the Vendor refused every role, the Owner role's minimum and a new module's
+capability joining it at deploy, and the three ways the Vendor may enter, with a window that runs
+out by itself. The plan's `can()` timing budget is measured on the sandbox, not here: the test
+runtime does not advance its clock during a check.
