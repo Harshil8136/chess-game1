@@ -15,9 +15,10 @@ sources: [this repository]
 
 ## Where things stand
 
-The kit is in **phase 1, the core runtime**, since 2026-10-19, when the owner said to continue.
-The plan's open decisions still wait on him (they are listed in the plan). Phase 0, set up and
-measure, has these parts:
+The kit is in **phase 2, permissions and users**, since 2026-10-20, when phase 1's list of
+parts was built; phase 1's acceptance (the first deploy) still waits on the sandbox repository.
+The plan's open decisions still wait on the owner (they are listed in the plan). Phase 0, set up
+and measure, has these parts:
 
 | Part | State |
 |---|---|
@@ -43,6 +44,16 @@ Phase 1, the core runtime, has these parts so far:
 | `oltrem docs`: the generated reference of a client repository, checked current on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-docs-command.md); the client template carries its five pages |
 | `oltrem check agents` and `check tokens`: the instruction files and the token registry of a client repository, checked on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-check-commands.md) |
 | The phase's acceptance: a blank client repository deploys from GitHub with no hand-pasted id and one stored token, the doctor green, a red push not deployed | not started: needs the sandbox repository and the fresh account, the owner's steps |
+
+Phase 2, permissions and users, has these parts so far:
+
+| Part | State |
+|---|---|
+| `@oltrem/iam`, the model and the check: the tables, the capability registry, the compiler and `can()` | **done** 2026-10-20: [the record](records/2026-10-20-iam-model-and-check.md); it runs in no Worker yet |
+| Sessions and the authorizer: the map inside a session, a revoke visible on the next request | not started |
+| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | not started |
+| The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | not started |
+| The phone screens | not started: needs the portal's rendering, which no Worker has yet |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
@@ -84,6 +95,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/core-outbox](../packages/core-outbox/README.md) | the outbox: how a row moves, the backoff ladder, replay, and the table it owns | written, beside the code |
 | [@oltrem/core-audit](../packages/core-audit/README.md) | the audit log: the fields and their rules, what is refused, hashing and verify, and the table it owns | written, beside the code |
 | [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, every primitive with the rule it keeps, and the three widgets | written, beside the code |
+| [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities and their bits, roles, scopes, groups, bindings, overrides, the compiled map, the check's order and reasons, the tables and the error codes | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
 | [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified | record, frozen |
@@ -95,6 +107,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 1: the three widgets](records/2026-10-20-core-ui-widgets.md) | what the combobox, the menu and the date range are, the decisions taken, and how it was verified | record, frozen |
 | [Phase 1: the generated reference](records/2026-10-20-cli-docs-command.md) | what `oltrem docs` writes in a client repository, the decisions taken, and how it was verified | record, frozen |
 | [Phase 1: the two check commands](records/2026-10-20-cli-check-commands.md) | what `oltrem check agents` and `check tokens` refuse in a client repository, the decisions taken, and how it was verified | record, frozen |
+| [Phase 2: the permission model and the check](records/2026-10-20-iam-model-and-check.md) | what the IAM module's tables, registry, compiler and check are, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -124,3 +137,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-20 | The twelve gates pass locally; the design kit's tests on Node cover the three widgets rendered closed (no inline style, the roles, the hidden values, the locale); the five new dependencies have rows and pins; the record is indexed and its links resolve | No widget has been opened in a browser or on a phone: the machines' behaviour once hydrated is unseen until the sandbox client exists |
 | 2026-10-20 | The twelve gates pass locally; the tool's tests on Node cover `oltrem docs` (the five pages, a stale page, a stray file, a bad registry row, the exit codes, the doctor's `DOCS-01`) and hold the client template's committed reference to what the command renders; the tool's README, the template's and the record are indexed and their links resolve | Nothing has run in a real client repository: the pages exist for the template and the test fixture only, until the sandbox repository exists |
 | 2026-10-20 | The twelve gates pass locally; the tool's tests on Node cover the two `check` commands (budgets, pointer files, the rules cross-check, copied facts, names used without a row, a bad or missing registry, the exit codes) and the doctor's `AGENTS-01`; both commands pass on the client template and the fixture; the tool's README, the template's files and the record are indexed and their links resolve | The checks have run on the template and the fixture only; the kit repository keeps its own script versions of the same two gates until a later clean-up folds them onto the tool |
+| 2026-10-20 | The twelve gates pass locally, the manifest gate now on the IAM module's test Worker too; the module's eleven tests pass inside the Workers runtime against migration 0004, the 320-case table among them; the module's README and the record are indexed and their links resolve | No Worker runs the module: nothing is measured on a request, and the check's timing budget waits for the sandbox |
