@@ -80,7 +80,7 @@ this repository's own checks are the `pnpm check:*` scripts above.
 | A Worker's bindings, vars or secrets, the resource manifest | `packages/cli/README.md`, then R-09 in rules.md |
 | An error code, a route, an event, the outbox or the audit log | the README of the core package that owns it, under `packages/` |
 | A screen, a colour, a size, a primitive | `packages/core-ui/README.md`, then the plan's section 12 |
-| Who may do what: capabilities, roles, scopes, the check | `modules/iam/README.md`, then the plan's section 7 |
+| Who may do what: capabilities, roles, scopes, sessions, the check | `modules/iam/README.md`, then the plan's sections 6 and 7 |
 | A client repository: its template, its deploy, its first deploy | `templates/client/README.md`, then `packages/cli/README.md` |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
 | What was done and when | the dated records under `docs/records/` |

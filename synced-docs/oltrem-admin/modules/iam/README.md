@@ -1,10 +1,11 @@
 # @oltrem/iam
 
 Permissions for a client Worker (plan sections 6, 7 and 10): who may do what, where, as data a
-client's Owners manage themselves. This is the first step of phase 2: the tables, the capability
-registry modules fill at deploy, the compiler that turns a person's grants into one small map,
-and the check that reads it. Sessions, the writes with their governance rules (who may grant
-what), the Vendor handover and the phone screens follow in the next steps.
+client's Owners manage themselves. So far: the tables, the capability registry modules fill at
+deploy, the compiler that turns a person's grants into one small map, the check that reads it,
+and the sessions that carry the map from one request to the next with the pipeline's hook and
+authorizer. The writes with their governance rules (who may grant what), the Vendor handover and
+the phone screens follow in the next steps.
 
 ## The model in one paragraph
 
@@ -81,6 +82,50 @@ the Owner role (position `0`), never from another role or an override; a vendor-
 never enters a map. An *eligible* binding, an expired one and one not yet started grant nothing;
 `refreshAt` says when to compile again.
 
+## Sessions and the authorizer
+
+```ts
+import { createApp } from '@oltrem/core-http';
+import { asSession, createSessions } from '@oltrem/iam';
+
+const sessions = createSessions<Env>({
+  bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
+  audience: env.ACCESS_AUD, // the client's Access application; a token for another is refused
+});
+const app = createApp<Env>({ modules, session: sessions.hook, authorize: sessions.authorize });
+
+// in a handler
+const { access } = asSession(ctx.session);
+can(access, index, 'rooms.cancel', input.scopeId); // the scope at hand
+allowedScopes(access, index, 'rooms.read'); // for WHERE scope_id IN (...)
+```
+
+The door (Cloudflare Access) signs the person in and keeps its own cookie; the kit sets none. On
+each request the **hook** reads one KV record, `sess:<email>`, carrying the compiled map, its hard
+expiry (a day after the compile) and the person's sign-ins. It compiles afresh, and writes once,
+when the record is missing, a day old, past the map's `refreshAt` (a grant started or ended), or
+when the tenant's policy version has moved, which an isolate checks against the database at most
+every `recheckSeconds` (five minutes) per person. An email with no active account is refused
+(`KIT-E-2005`). Nothing writes per request: KV allows 1,000 writes a day on the free plan.
+
+A **device** is one sign-in at the door, keyed by the token's issue time, which stays the same
+for the whole of that sign-in and differs between browsers. The first request of a sign-in adds
+it to the record (one write; the ten most recent are kept); `revokeDevice` ends one, and that
+sign-in is refused from then on (`KIT-E-2006`) until the person signs in again.
+
+The **authorizer** refuses when the hook did not run (no session: fail closed), then asks
+`holdsAnywhere`: the capability at the root or at any scope with a grant, since a route is the
+widest question and the handler narrows to the scope at hand. On a route whose capability is
+flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
+recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. An
+allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes` (ten), else
+`KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs.
+
+Two calls make a change visible: `invalidate(env, principalId)` compiles the person's access again
+into their record (or removes the record when the account was switched off), so their next
+request sees it; `invalidateTenant(env, tenantId)` moves the policy version, which a dangerous
+route sees at once and every other within the recheck window. The governance step calls them.
+
 ## Tables
 
 Migration `0004_iam.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
@@ -94,7 +139,10 @@ and reviews come with the governance step.
 
 The module owns the `2000` to `2099` block: `KIT-E-2001` a bad capability list, `KIT-E-2002` an
 unknown or inactive account, `KIT-E-2003` a bad scope tree (deeper than four levels, a loop, or
-more than one root).
+more than one root), `KIT-E-2004` a dangerous action without a fresh sign-in, `KIT-E-2005` an
+email the door let in that has no active account here, `KIT-E-2006` a sign-in that was ended
+from the devices list. A token for another Access application answers with the core's
+`KIT-E-0401`.
 
 ## Tests
 
@@ -103,5 +151,8 @@ the tree's limits; a small tenant decided case by case (owner, vendor, floors, d
 inheritance, siblings, groups, time, eligibility, overrides, the hash and the compile record);
 and a synthetic tenant of three locations, four departments, twelve roles and forty people on
 which 320 generated decisions of the compiled check are compared with a plain evaluator that
-reads the rows one question at a time (`test/reference.ts`). The plan's `can()` timing budget is
+reads the rows one question at a time (`test/reference.ts`). The sessions are tested with the KV
+writes counted (one on the first request, none on the next), a grant ending and the day passing,
+the dangerous route's re-read, a revoke seen on the next request, an ended sign-in, and the whole
+pipeline from the Access headers to the problem codes. The plan's `can()` timing budget is
 measured on the sandbox, not here: the test runtime does not advance its clock during a check.

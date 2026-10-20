@@ -42,8 +42,9 @@ export const notes = defineModule({
 | An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
 
 The manifest is frozen once defined. `RouteContext` gives a handler the request, the bindings,
-the identity the door asserted, the validated input, the path parameters, the request id and
-`waitUntil`.
+the identity the door asserted (email, subject, when the person signed in, the token's audience),
+the session the app's hook returned (the IAM session, or nothing in own-account mode), the
+validated input, the path parameters, the request id and `waitUntil`.
 
 ## Schemas
 
