@@ -10,7 +10,7 @@ sources: [scripts/lib/gates.mjs]
 
 # What `pnpm verify` runs
 
-> **In plain words.** One command checks everything before a push. It runs the gates below in order and prints one line per gate; the first gate that fails prints its whole output and stops the run. The quick gates come first (they need no dependencies and take a second); then the formatter, the linter, the type check, the build of the command-line tool, that tool's own manifest check on the kit's test Worker configurations, and the two test suites. The same command runs in GitHub Actions on every push to `main`, so a red run is visible on the repository page.
+> **In plain words.** One command checks everything before a push. It runs the gates below in order and prints one line per gate; the first gate that fails prints its whole output and stops the run. The quick gates come first (they need no dependencies and take a second); then the formatter, the linter, the type check, the build of the command-line tool, that tool's own manifest check on the client template and the kit's test Worker configurations, and the two test suites. The same command runs in GitHub Actions on every push to `main`, so a red run is visible on the repository page.
 
 | Order | Gate | Command | What it refuses |
 |---|---|---|---|
@@ -23,7 +23,7 @@ sources: [scripts/lib/gates.mjs]
 | 7 | lint | `pnpm exec eslint .` | an ESLint finding, including a module-boundary violation |
 | 8 | typecheck | `pnpm -r run typecheck` | a type error in any package or module; each one is checked against the runtime it is typed for (the Workers runtime, or Node for the command-line tool) |
 | 9 | build | `pnpm --filter @oltrem/cli run build` | a command-line tool that does not build; the next two gates run the built tool |
-| 10 | manifest | `node packages/cli/dist/bin.js manifest check packages/core-config packages/core-outbox packages/core-audit` | a binding, queue, class, cron, var or secret in one of the kit's own test Worker configurations that its oltrem.manifest.json does not list, one over its cap, or an env.NAME use the manifest does not list (R-09) |
+| 10 | manifest | `node packages/cli/dist/bin.js manifest check packages/core-config packages/core-outbox packages/core-audit templates/client` | a binding, queue, class, cron, var or secret in the client template or one of the kit's own test Worker configurations that its oltrem.manifest.json does not list, one over its cap, or an env.NAME use the manifest does not list (R-09) |
 | 11 | tests | `node --test scripts/**/*.test.mjs` | a failing test of the verify chain itself (Node's built-in runner, every *.test.mjs file under scripts/) |
 | 12 | packages | `pnpm exec vitest run` | a failing package or module test; Worker code is tested inside the Workers runtime with the bindings its wrangler configuration declares, the command-line tool on Node |
 

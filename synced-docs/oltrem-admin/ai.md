@@ -63,8 +63,9 @@ are checked against it by `pnpm check:agents`.
 | `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-`oltrem setup` and `oltrem dev` arrive later in phase 1; they do not exist yet, so do not invent
-them. The tool's other commands and flags are in `packages/cli/README.md`.
+`oltrem dev` and `oltrem docs` arrive later in phase 1; they do not exist yet, so do not invent
+them. The tool's other commands (`setup`, `migrations sync`, `migrations apply`) and flags are
+in `packages/cli/README.md`.
 
 ## 4. What to read for your task
 
@@ -79,6 +80,7 @@ them. The tool's other commands and flags are in `packages/cli/README.md`.
 | A Worker's bindings, vars or secrets, the resource manifest | `packages/cli/README.md`, then R-09 in rules.md |
 | An error code, a route, an event, the outbox or the audit log | the README of the core package that owns it, under `packages/` |
 | A screen, a colour, a size, a primitive | `packages/core-ui/README.md`, then the plan's section 12 |
+| A client repository: its template, its deploy, its first deploy | `templates/client/README.md`, then `packages/cli/README.md` |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
 | What was done and when | the dated records under `docs/records/` |
 | The licence: what someone may do with the kit | `LICENSE`, then docs/licence.md |

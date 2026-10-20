@@ -25,7 +25,7 @@ measure, has these parts:
 | The token registry with reuse before create, and the gate that enforces it | **done** 2026-10-19: nine names from the plan, none created yet |
 | The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates then, ten today ([what verify runs](reference/verify.md)), run locally and on every push |
 | The public docs mirror: this folder, the root `.md` files and LICENSE copied to the mirror after every green verify on `main` | **done** 2026-10-19 |
-| A client template repository and a sandbox client repository | not started |
+| A client template repository and a sandbox client repository | **template done** 2026-10-20, as `templates/client` in this repository ([the record](records/2026-10-20-client-template-and-setup.md)); the sandbox repository waits on the owner |
 | A fresh Cloudflare account for the sandbox client | not started: the owner creates it |
 | The CPU measurement of three sample screens in the sandbox | not started: needs the sandbox |
 | The first week's open questions (the configuration layers, encryption in the Worker, the test runner on GitHub, the secrets cap) | not started |
@@ -36,10 +36,11 @@ Phase 1, the core runtime, has these parts so far:
 |---|---|
 | The toolchain: TypeScript, tests inside the Workers runtime, the linter with the module-boundary rules, the formatter, and the dependency registry with its gate | **done** 2026-10-19: [the phase 1 record](records/2026-10-19-phase-1-toolchain-and-core-config.md) |
 | `@oltrem/core-config`: the settings registry, the four configuration layers and the fast read path (memory, one KV snapshot, D1 as the truth) | **done** 2026-10-19: its tests pass inside the Workers runtime; it runs in no Worker yet |
-| `@oltrem/cli`, the command-line tool: `oltrem manifest check` (the resource manifest gate) and `oltrem doctor` with its first three checks | **started** 2026-10-20: [the record](records/2026-10-20-cli-manifest-check-and-doctor.md); the check runs in `pnpm verify` on the kit's own test Workers; `setup`, `dev` and the doctor's other checks wait on a client repository |
+| `@oltrem/cli`, the command-line tool: `oltrem manifest check` (the resource manifest gate), `migrations sync` and `migrations apply`, `setup`, and `oltrem doctor` with six checks | **done for this phase** 2026-10-20: [the first record](records/2026-10-20-cli-manifest-check-and-doctor.md) and [the second](records/2026-10-20-client-template-and-setup.md); `dev` and `docs` follow |
 | The core runtime: `@oltrem/core-errors`, `core-module`, `core-http`, `core-outbox` and `core-audit` (errors as data, the module contract, the one pipeline and the three Worker handlers, the outbox with replay, the hashed audit log) | **done** 2026-10-20: [the record](records/2026-10-20-core-runtime-packages.md); every package's tests pass inside the Workers runtime; no Worker is built from them yet |
 | `@oltrem/core-ui`: the token list as a Tailwind theme and the phone-first primitives on native elements | **started** 2026-10-20: [the record](records/2026-10-20-core-ui-tokens-and-primitives.md); the three Zag.js widgets and the gallery page follow |
-| The client template, `oltrem setup` and `oltrem docs` | not started |
+| The client template and `oltrem setup`: the model of a client repository, resources by name, the kit's migrations copied with checksums, the one deploy workflow | **done** 2026-10-20: [the record](records/2026-10-20-client-template-and-setup.md); the first deploy waits on the sandbox repository and the fresh account |
+| `oltrem docs` and the three Zag.js widgets | not started |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
@@ -55,8 +56,8 @@ what was built.
 ## Where these documents are published
 
 After every push to `main`, once `pnpm verify` is green on GitHub, the `mirror-docs` job of
-the verify workflow copies this folder, every `.md` file at the repository root, each package's
-and module's README and LICENSE to the public docs mirror, under
+the verify workflow copies this folder, every `.md` file at the repository root, each package's,
+module's and template's README and LICENSE to the public docs mirror, under
 [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
 and writes a provenance file there with the source commit. The folder on the mirror is rebuilt
 from the commit each time. Nothing is redacted on the way: the identifiers gate is the scanner,
@@ -81,12 +82,14 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/core-outbox](../packages/core-outbox/README.md) | the outbox: how a row moves, the backoff ladder, replay, and the table it owns | written, beside the code |
 | [@oltrem/core-audit](../packages/core-audit/README.md) | the audit log: the fields and their rules, what is refused, hashing and verify, and the table it owns | written, beside the code |
 | [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, and every primitive with the rule it keeps | written, beside the code |
+| [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
 | [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified | record, frozen |
 | [The licence change](records/2026-10-20-licence-change.md) | why Apache-2.0 was replaced by the Oltrem Licence, the terms chosen, and what still needs a lawyer | record, frozen |
 | [Phase 1: the command-line tool](records/2026-10-20-cli-manifest-check-and-doctor.md) | what the manifest check and the doctor are, the decisions taken, and how it was verified | record, frozen |
 | [Phase 1: the core runtime](records/2026-10-20-core-runtime-packages.md) | what the five runtime packages are, the decisions taken, and how it was verified | record, frozen |
 | [Phase 1: the design kit](records/2026-10-20-core-ui-tokens-and-primitives.md) | what the theme and the primitives are, the decisions taken, and how it was verified | record, frozen |
+| [Phase 1: the client template and the setup command](records/2026-10-20-client-template-and-setup.md) | what the template and the migration and setup commands are, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -112,3 +115,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-20 | The twelve gates pass locally, the new `build` and `manifest` gates included; the tool's tests pass on Node and the configuration package's inside the Workers runtime; the new dependency has its row and pin; the tool's README and the record are indexed and their links resolve | Nothing has run in a client repository yet: the manifest check has only the kit's own test Worker to check, and the doctor's other checks wait on one |
 | 2026-10-20 | The twelve gates pass locally with the `manifest` gate on three test Workers; the five new packages' tests pass inside the Workers runtime; hono has its row and pin; the five READMEs and the record are indexed and their links resolve | No Worker is built from the packages yet, so the pipeline's CPU cost and the outbox's behaviour against a real queue are unmeasured; the audit seal is still to come |
 | 2026-10-20 | The twelve gates pass locally; the design kit's tests pass on Node (every primitive's markup, no inline style, the theme compiled, the contrast ratios); the five new dependencies have rows and pins; the README and the record are indexed and their links resolve | No screen has been rendered in a browser or on a phone: the look is unseen until the sandbox client exists, and the screen gates of plan 12.6 wait on it |
+| 2026-10-20 | The twelve gates pass locally, the manifest gate now on the client template too; the tool's tests on Node (fake kit packages, a fake wrangler) and the template's inside the Workers runtime; the dry-run deploy bundles the template with no id anywhere; `oltrem migrations apply` run by hand reached wrangler and was refused for lack of a token, as designed; wrangler has its row and pin; the template README and the record are indexed and their links resolve | Nothing has deployed: the first real deploy, the creation of the resources by name and the workflow itself are untested until the sandbox repository and the fresh account exist |
