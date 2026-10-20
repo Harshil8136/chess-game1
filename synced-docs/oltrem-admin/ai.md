@@ -48,8 +48,11 @@ are checked against it by `pnpm check:agents`.
 |---|---|
 | `pnpm verify` | the one gate: every check below in order, one line each; the failing one prints in full |
 | `pnpm test` | the tests of the verify chain itself, on Node's built-in runner (`scripts/*.test.mjs`) |
-| `pnpm test:workers` | the package and module tests, inside the Workers runtime |
-| `pnpm typecheck` | the type check of every package and module |
+| `pnpm test:packages` | the package and module tests: Worker code inside the Workers runtime, the tool on Node |
+| `pnpm typecheck` | the type check of every package and module, each against its own runtime |
+| `pnpm build` | compiles the command-line tool to `packages/cli/dist/` |
+| `pnpm oltrem manifest check <dir>` | the Worker in `<dir>` against its `oltrem.manifest.json` and the caps (R-09) |
+| `pnpm oltrem doctor` | the setup checks of this repository, one line each |
 | `pnpm lint` | ESLint, with the module-boundary rules |
 | `pnpm format` | Prettier over every code file; `pnpm format:check` only reports |
 | `pnpm docs:build` | regenerates every document marked generated from its source |
@@ -60,8 +63,8 @@ are checked against it by `pnpm check:agents`.
 | `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-`pnpm setup`, `pnpm doctor` and `pnpm dev` arrive with the command-line tool, later in phase 1;
-they do not exist yet, so do not invent them.
+`oltrem setup` and `oltrem dev` arrive later in phase 1; they do not exist yet, so do not invent
+them. The tool's other commands and flags are in `packages/cli/README.md`.
 
 ## 4. What to read for your task
 
@@ -73,6 +76,7 @@ they do not exist yet, so do not invent them.
 | What `pnpm verify` runs and why | docs/reference/verify.md, then `scripts/verify.mjs` |
 | A dependency | docs/reference/dependencies.md, then R-09 in rules.md |
 | A setting, the configuration layers, the read path | `packages/core-config/README.md`, then the plan's section on configuration |
+| A Worker's bindings, vars or secrets, the resource manifest | `packages/cli/README.md`, then R-09 in rules.md |
 | The design, the build order, the owner's decisions | the plan, linked from docs/README.md |
 | What was done and when | the dated records under `docs/records/` |
 | The licence: what someone may do with the kit | `LICENSE`, then docs/licence.md |
@@ -85,6 +89,7 @@ they do not exist yet, so do not invent them.
 | A credential, by name | `tokens.registry.json`, then `pnpm docs:build` |
 | A gate | `scripts/lib/gates.mjs`, a test, then `pnpm docs:build` |
 | A dependency | the catalog in `pnpm-workspace.yaml` and `dependencies.registry.json`, then `pnpm docs:build` |
+| A binding, var or secret of a Worker | its `oltrem.manifest.json`; one more than the cap needs an exception row with the reason and the owner's yes |
 | Where things stand | docs/README.md |
 | A big change | a dated record in `docs/records/`, linked from docs/README.md |
 | A pointer file | its template in `scripts/lib/agents.mjs`, then `pnpm agents:write` |

@@ -168,9 +168,15 @@ resource is one more thing to create, name, back up and clean up for every clien
 
 **Enforced by.** For dependencies, `pnpm check:deps`, a gate of `pnpm verify`: it refuses a
 dependency without a row, a row nothing uses, a version outside the catalog and a catalog entry
-nobody uses, and generates docs/reference/dependencies.md. For resources and variables, not
-yet: the manifest check (`oltrem manifest check`) that counts bindings and scans for undeclared
-ones arrives with the command-line tool, later in phase 1. Until then, the owner's review.
+nobody uses, and generates docs/reference/dependencies.md. For resources, variables and secrets,
+`oltrem manifest check` (the `manifest` gate of `pnpm verify`, and the first step of a client
+repository's verify and deploy): it reads the Worker's wrangler configuration and its
+`oltrem.manifest.json`, refuses anything the manifest does not list, anything over its cap, a
+binding kind the kit does not use, a named environment, and an `env.NAME` in the code that the
+manifest does not list, with the sentence "adding a resource needs a manifest entry and the
+owner's yes". One more of a kind is an exception row in the manifest: the kind, the written
+reason and the date of the owner's yes. The caps and the manifest format are in
+`packages/cli/README.md`.
 
 ## R-10 Real data, fail closed
 

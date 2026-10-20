@@ -77,7 +77,7 @@ id), `oltrem_settings` and `oltrem_settings_history`. Additive and idempotent; t
 
 ## Tests
 
-`pnpm test:workers` runs the suite inside the Workers runtime with the bindings of
+`pnpm test:packages` runs the suite inside the Workers runtime with the bindings of
 `wrangler.jsonc` (local, in-memory) and the migration applied first. The tests prove the
 precedence and the locks, the refusals, the no-I/O hot path, the stale-then-refresh behaviour,
 the fallbacks when KV or D1 fail, and read-your-writes.
