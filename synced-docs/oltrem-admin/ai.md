@@ -63,9 +63,9 @@ are checked against it by `pnpm check:agents`.
 | `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-`oltrem dev` arrives later in phase 1; it does not exist yet, so do not invent it. The tool's
-other commands (`setup`, `migrations sync`, `migrations apply`, `docs`) and flags are in
-`packages/cli/README.md`.
+The tool's other commands (`setup`, `migrations sync`, `migrations apply`, `docs`, `check agents`,
+`check tokens`) and flags are in `packages/cli/README.md`; they serve a client repository, while
+this repository's own checks are the `pnpm check:*` scripts above.
 
 ## 4. What to read for your task
 

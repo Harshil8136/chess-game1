@@ -1,11 +1,12 @@
 # @oltrem/cli
 
-The kit's command-line tool, `oltrem`. It has six commands: the **resource manifest check**
-that keeps a client's Worker at one of each resource (plan 9.1, R-09), **`migrations sync`**
-and **`migrations apply`** for the kit's migrations in a client repository (plan 10), **`setup`**
+The kit's command-line tool, `oltrem`, for a client repository. Its commands: the **resource
+manifest check** that keeps a client's Worker at one of each resource (plan 9.1, R-09),
+**`migrations sync`** and **`migrations apply`** for the kit's migrations (plan 10), **`setup`**
 for the steps a new client repository needs (plan 15.3), **`docs`** for the generated reference
-of a client repository (plan 15.5), and the **doctor** with its seven checks. `dev` comes later
-in phase 1. The tool runs on Node and has no runtime dependency.
+(plan 15.5), **`check agents`** and **`check tokens`** for the instruction files and the token
+registry (plan 15.1, 9.4), and the **doctor** with its eight checks. This completes the tool's
+list for phase 1. The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
 
@@ -145,7 +146,8 @@ The steps a new client repository needs that need no account, in one idempotent 
 the kit's migrations (as `migrations sync` does), confirm the deploy workflow
 `.github/workflows/deploy.yml` is in place, print the template for the one Cloudflare API token
 and the two `gh secret set` commands that store it and the account id as repository secrets,
-write the generated reference (as `docs` does), and run the doctor. The token itself is created by hand in the client's dashboard, since a token
+write the pointer files `AGENTS.md` and `CLAUDE.md` where they are missing or differ, write the
+generated reference (as `docs` does), and run the doctor. The token itself is created by hand in the client's dashboard, since a token
 cannot create itself; its scopes are the five the deploy needs, on that account only. Exit
 codes are the doctor's, or `1` when the migrations folder has a problem and `3` when the kit
 packages are not installed.
@@ -173,6 +175,28 @@ stray page or the registry is missing or invalid, `3` when there is no manifest 
 file to generate from. The client template's `verify` runs `oltrem docs --check`, and the kit's
 own tests hold the template's committed copy to what the command renders.
 
+## `oltrem check agents [dir]`
+
+The instruction files of a client repository (plan 15.1, R-08): `ai.md` exists and is under
+8 KB; the pointer files `AGENTS.md` and `CLAUDE.md` match the tool's template byte for byte
+(`setup` writes them); the always-loaded files together stay under 24 KB so no tool truncates;
+and no instruction file carries a copied fact (a count next to table, migration, route or
+binding, a UUID shape, a hostname), which belongs in the generated reference. When the
+repository has a `rules.md` (under 32 KB), every `R-NN` named in ai.md has a heading there and
+every heading is summarised in ai.md; without one, the rule lines refer to the kit's rules and
+the check says so. Exit `0`, `1` on a problem, `3` when there is no ai.md.
+
+## `oltrem check tokens [dir]`
+
+The token registry of a client repository (plan 9.4, R-05): every row of `tokens.registry.json`
+is complete (the fields, the name in upper snake case, a known status, no duplicate), and every
+secret name the repository uses has a row: the Worker's `secrets.required`, a workflow's
+`secrets.NAME`, and a `wrangler secret put` command naming it in any text file (`node_modules`,
+`dist`, `.wrangler` and `docs/_generated` excepted). A missing row is reported with where the
+name is used and the rule: read the registry, reuse or widen a row, or add one with its reason.
+Exit `0`, `1` on a problem, `3` when there is no registry. `--json` prints the outcome as data
+for both `check` commands.
+
 ## `oltrem doctor`
 
 Runs the check registry against the repository in the current directory and prints one line
@@ -186,7 +210,8 @@ failure the exact command that fixes it. No check prints a secret value.
 | `MANIFEST-01` | the Worker here matches its manifest (the check above); skipped where there is no manifest | the rule, or the file to fix |
 | `MIG-01` | every kit migration is copied into `migrations/`, unchanged, with a current `kit.json`; skipped where there is no manifest or no installed kit package | `oltrem migrations sync` |
 | `WF-01` | the deploy workflow `.github/workflows/deploy.yml` is in place | copy it from the client template |
-| `TOKEN-01` | every secret name the Worker (`secrets.required`) or a workflow (`secrets.NAME`) uses has a row in `tokens.registry.json`; skipped where there is no registry | add the row, with the reason it cannot be an existing token |
+| `TOKEN-01` | every secret name the repository uses (as `check tokens` finds them) has a row in `tokens.registry.json`; skipped where there is no registry | add the row, with the reason it cannot be an existing token |
+| `AGENTS-01` | the instruction files pass `check agents`; skipped where there is no ai.md | `oltrem setup` for a pointer file, or move the fact to the generated reference |
 | `DOCS-01` | the generated reference in `docs/_generated/` is what `oltrem docs` renders now, with no stray file; skipped where there is no manifest | `oltrem docs`, or the registry file to fix |
 
 Flags: `--json` prints `{ ok, exitCode, checks, problem }`; `--only ID` runs one check;
