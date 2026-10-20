@@ -12,15 +12,20 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 14 tools (used only to build, check or test) and 4 runtime packages (shipped inside a Worker).
+**Where things stand:** 14 tools (used only to build, check or test) and 9 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
 | @cloudflare/vitest-plugin | 1.4.5 | tool | @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, oltrem, oltrem-client | Runs the test suite inside the Workers runtime, so code that passes in Node and fails in a Worker is caught; it also applies the D1 migrations to the test database. | 15.6 |
 | @cloudflare/workers-types | 5.20261019.1 | tool | @oltrem/core-audit, @oltrem/core-config, @oltrem/core-errors, @oltrem/core-http, @oltrem/core-module, @oltrem/core-outbox, oltrem, oltrem-client | The types of the Workers runtime bindings (D1, KV, queues) for the type check. | 4.2 |
 | @eslint/js | 10.0.1 | tool | oltrem | ESLint's own recommended rules for the plain JavaScript scripts of the verify chain. | 15.6 |
+| @internationalized/date | 3.12.4 | runtime | @oltrem/core-ui | The calendar arithmetic the date picker machine requires as its peer dependency; time zones and locales done right instead of by hand. | 12.3 |
 | @tailwindcss/node | 4.3.3 | tool | @oltrem/core-ui | Compiles the kit's theme stylesheet in a test, so a broken token list or a palette that was not reset fails verify, not a client's build. | 12.2 |
 | @types/node | 22.20.5 | tool | @oltrem/cli, @oltrem/core-ui | The types of Node's own modules (fs, path, child_process) for the command-line tool, which runs on Node rather than in a Worker. | 15.3 |
+| @zag-js/combobox | 1.46.0 | runtime | @oltrem/core-ui | The combobox state machine: a filtered list with keyboard navigation and a live region, the first of the three widgets the kit does not build itself. | 12.3 |
+| @zag-js/date-picker | 1.46.0 | runtime | @oltrem/core-ui | The date picker state machine in range mode, the third of the three widgets. | 12.3 |
+| @zag-js/menu | 1.46.0 | runtime | @oltrem/core-ui | The menu state machine with submenus and typeahead, the second of the three widgets. | 12.3 |
+| @zag-js/preact | 1.46.0 | runtime | @oltrem/core-ui | Zag.js's official Preact adapter: useMachine and normalizeProps, so the three hard widgets run as state machines inside Preact islands (the owner's choice, card 25). | 12.3 |
 | eslint | 10.13.0 | tool | oltrem | The linter; the module-boundary rules run inside it while editing. | 15.6 |
 | eslint-plugin-boundaries | 7.2.0 | tool | oltrem | Refuses a module importing another module's internals, or a core package importing a module; its rule file is the architecture diagram. | 15.6 |
 | hono | 4.13.13 | runtime | @oltrem/core-http | The one request pipeline of a client Worker (plan 4.2): routing, request ids, security headers and the CSRF check; Astro's pages mount into the same app through astro/hono. Pinned to the 4.x line; 5.0 is a release candidate. | 4.2 |

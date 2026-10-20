@@ -46,10 +46,30 @@ holds (plan 12.1); a test renders every one and checks.
 | `ToastRegion`, `Toast` | a polite live region; each toast a manual popover its own button hides | one live region in the layout |
 | `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds |
 
-Still to come from the plan's list: the combobox, the menu with submenus and the date range,
-on Zag.js state machines through its Preact adapter; the primitives gallery page; the quality
-gates of plan 12.6 (axe, screenshots at 390 px, the sideways-scroll and target-size check, the
-CSP smoke test) once there is an Astro app to run them against.
+## The three widgets
+
+Three controls are too hard to build well on native elements alone: a filtered list, a menu with
+submenus, and a date range on one calendar. The plan (12.3, the owner's choice) puts them on
+Zag.js state machines through Zag's Preact adapter; the kit owns the markup and the look, the
+machine owns the keyboard, the focus and the screen-reader announcements. Each is a Preact
+island: the server renders it closed, so the HTML carries no inline style (the machine positions
+the popup in the browser, through the style object, which the content security policy allows),
+and the popup is mounted only while open.
+
+| Widget | What it is | The rules it keeps |
+|---|---|---|
+| `Combobox` | an input with a filtered list; `multiple` for several values | the label is wired to the input; the form receives one hidden input per selected value, never the typed text; the list filters by label, case-insensitively; a disabled item is not selectable; the clear button is absent on a required field; the empty sentence is the caller's |
+| `Menu` | a button that opens a list of commands, with submenus one level or more deep; a command is a link when it has an `href` | destructive commands last (rule 5); typeahead and arrow keys from the machine; the trigger names the menu |
+| `DateRange` | two typed dates and one calendar in range mode, with optional quick ranges as a chip row, day, month and year views | the inputs show the client's locale; the form receives `<name>_start` and `<name>_end` as ISO dates; cells are 44 px; the week starts and the day names follow the locale; `min` and `max` bound the pick |
+
+Words are the caller's, as everywhere in the kit: the combobox takes `triggerLabel`,
+`clearLabel` and `emptyLabel`; the date range takes a `words` object (`open`, `previous`, `next`,
+`clear`, `chooseMonth`, `chooseYear`); the menu's `label` is both the trigger's text and the
+menu's accessible name. The day cells are announced with the date in the locale.
+
+Still to come from the plan's list: the primitives gallery page and the quality gates of plan
+12.6 (axe, screenshots at 390 px, the sideways-scroll and target-size check, the CSP smoke test)
+once there is an Astro app to run them against.
 
 ## Using it
 
@@ -76,4 +96,5 @@ text of their own.
 On Node: every primitive rendered to HTML with `preact-render-to-string` and its markup read
 back (roles, ids, the command attributes, the order of buttons, the card list and the table);
 the theme compiled with Tailwind's Node API (the semantic utilities exist, the defaults do
-not); and the contrast of every text-on-colour pair in light and in dark.
+not); the contrast of every text-on-colour pair in light and in dark; and the three widgets
+rendered closed (no inline style, the roles, the hidden values, the locale's date format).
