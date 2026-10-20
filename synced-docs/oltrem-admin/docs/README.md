@@ -51,7 +51,7 @@ Phase 2, permissions and users, has these parts so far:
 |---|---|
 | `@oltrem/iam`, the model and the check: the tables, the capability registry, the compiler and `can()` | **done** 2026-10-20: [the record](records/2026-10-20-iam-model-and-check.md); it runs in no Worker yet |
 | Sessions and the authorizer: the map inside a session, a revoke visible on the next request | **done** 2026-10-20: [the record](records/2026-10-20-iam-sessions-and-authorizer.md); it runs in no Worker yet |
-| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | not started |
+| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | **done** 2026-10-20: [the record](records/2026-10-20-iam-governance.md); it runs in no Worker yet |
 | The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | not started |
 | The phone screens | not started: needs the portal's rendering, which no Worker has yet |
 
@@ -95,7 +95,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/core-outbox](../packages/core-outbox/README.md) | the outbox: how a row moves, the backoff ladder, replay, and the table it owns | written, beside the code |
 | [@oltrem/core-audit](../packages/core-audit/README.md) | the audit log: the fields and their rules, what is refused, hashing and verify, and the table it owns | written, beside the code |
 | [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, every primitive with the rule it keeps, and the three widgets | written, beside the code |
-| [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities and their bits, roles, scopes, groups, bindings, overrides, the compiled map, the check's order and reasons, the session record and when it is written, the authorizer, the tables and the error codes | written, beside the code |
+| [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities and their bits, roles, scopes, groups, bindings, overrides, the compiled map, the check's order and reasons, the session record and when it is written, the authorizer, the governance rules and the approvals, the tables and the error codes | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
 | [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified | record, frozen |
@@ -109,6 +109,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 1: the two check commands](records/2026-10-20-cli-check-commands.md) | what `oltrem check agents` and `check tokens` refuse in a client repository, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: the permission model and the check](records/2026-10-20-iam-model-and-check.md) | what the IAM module's tables, registry, compiler and check are, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: sessions and the authorizer](records/2026-10-20-iam-sessions-and-authorizer.md) | how the compiled map travels in one KV record per person, the pipeline's session hook and authorizer, the decisions taken, and how it was verified | record, frozen |
+| [Phase 2: governance](records/2026-10-20-iam-governance.md) | the writes that change who may do what and the rules each is refused by, the second person, requests and reviews, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -140,3 +141,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-20 | The twelve gates pass locally; the tool's tests on Node cover the two `check` commands (budgets, pointer files, the rules cross-check, copied facts, names used without a row, a bad or missing registry, the exit codes) and the doctor's `AGENTS-01`; both commands pass on the client template and the fixture; the tool's README, the template's files and the record are indexed and their links resolve | The checks have run on the template and the fixture only; the kit repository keeps its own script versions of the same two gates until a later clean-up folds them onto the tool |
 | 2026-10-20 | The twelve gates pass locally, the manifest gate now on the IAM module's test Worker too; the module's eleven tests pass inside the Workers runtime against migration 0004, the 320-case table among them; the module's README and the record are indexed and their links resolve | No Worker runs the module: nothing is measured on a request, and the check's timing budget waits for the sandbox |
 | 2026-10-20 | The twelve gates pass locally, the manifest gate on the IAM module's test Worker with its KV binding; the pipeline's twenty tests and the module's twenty pass inside the Workers runtime, the KV writes counted; the two READMEs and the record are indexed and their links resolve | No Worker runs the sessions: the KV read's latency on a request and the write count over a real day are unmeasured until the sandbox |
+| 2026-10-20 | The twelve gates pass locally; the IAM module's thirty-eight tests pass inside the Workers runtime against migrations 0003 to 0005, the eighteen governance tests among them, each rule refused and then obeyed; the module's README and the record are indexed and their links resolve | No Worker runs the governance: no route calls it yet, the emailed notices of plan 7.3 wait for phase 4, and the quarterly review's schedule waits for the module manifest |

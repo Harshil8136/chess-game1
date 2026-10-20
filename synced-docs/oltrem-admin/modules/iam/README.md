@@ -3,9 +3,9 @@
 Permissions for a client Worker (plan sections 6, 7 and 10): who may do what, where, as data a
 client's Owners manage themselves. So far: the tables, the capability registry modules fill at
 deploy, the compiler that turns a person's grants into one small map, the check that reads it,
-and the sessions that carry the map from one request to the next with the pipeline's hook and
-authorizer. The writes with their governance rules (who may grant what), the Vendor handover and
-the phone screens follow in the next steps.
+the sessions that carry the map from one request to the next with the pipeline's hook and
+authorizer, and the governance: every write that changes who may do what, each refused unless the
+actor could stand behind it. The Vendor handover and the phone screens follow in the next steps.
 
 ## The model in one paragraph
 
@@ -126,14 +126,71 @@ into their record (or removes the record when the account was switched off), so 
 request sees it; `invalidateTenant(env, tenantId)` moves the policy version, which a dangerous
 route sees at once and every other within the recheck window. The governance step calls them.
 
+## Governance
+
+```ts
+import { createGovernance } from '@oltrem/iam';
+
+const governance = createGovernance<Env>({
+  bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
+  sessions,
+});
+
+// in a handler, with the session the pipeline loaded
+const actor = { session: asSession(ctx.session), requestId: ctx.requestId, waitUntil: ctx.waitUntil };
+await governance.grant(env, actor, { subjectKind: 'principal', subjectId, roleId, scopeId, reason });
+```
+
+`createGovernance` holds every write that changes who may do what (plan 7.3): grants and their
+end, eligible grants and their activation, roles, groups and members, scopes, overrides, access
+requests, approvals and reviews. Each one reads the actor's standing from the compiled map in
+their session, writes the rows, refreshes the sessions that carry the old answer (`invalidate`
+for one person; `invalidateTenant` after a change to a group, a role or the tree) and records
+itself in the audit log, refusals included, with the policy hash the actor was decided under.
+The rules, each refused with its own code:
+
+- **You grant only what you hold.** A role goes to a person or group at a scope only if the actor
+  holds `iam.bindings.manage` there (`iam.owners.manage` for the Owner role) and the role's
+  position is below the actor's own standing at that scope: the best position they hold there or
+  above it (`rankAt`). A capability enters a role only if the actor holds it at every scope where
+  the role is granted (anywhere, for a role not granted yet); a role is made or edited below the
+  actor's best position; the Owner role is edited by the Vendor alone and never deleted.
+  Otherwise `KIT-E-2007`.
+- **Never for yourself.** Nobody changes their own grants, overrides or group membership, nor the
+  grants of a group they belong to (`KIT-E-2008`); they request access instead.
+- **Every grant but the Owner's expires**: ninety days unless an expiry is given, a year at most,
+  and it may start later; an override has the same window. An *eligible* grant is held but not in
+  force until its holder activates it, for one to twelve hours (four unless said) with a reason;
+  the activation is a grant of its own, linked back to the eligible one.
+- **An Owner is made or unmade only with a second person.** The actor asks for an approval that
+  names the capability, the scope, the action and the exact change (hashed); another holder of
+  the capability approves within the hour; the change spends the approval, once, and refuses one
+  that is pending, someone else's, expired, spent or for another change (`KIT-E-2011` when none
+  is given, `KIT-E-2012` otherwise). Modules use the same approvals for their own `secondPerson`
+  capabilities through `requestApproval`, `decideApproval` and `useApproval`. The last Owner at
+  the root is never ended (`KIT-E-2009`).
+- **Access requests.** A person asks for a role at a scope with a reason; the request waits a
+  week; whoever could have made the grant decides it, and an approval makes the grant in the
+  decider's name. The requester may withdraw it.
+- **Access reviews.** `openReview` lists every grant in force under a scope, due in two weeks;
+  each is marked keep or remove by someone with the standing over it; `closeReview` refuses while
+  one is undecided (`KIT-E-2013`) and ends the removed. An Owner is never removed in a review.
+  Opening the quarterly review on a schedule is the module manifest's, in a later step.
+- **Groups and scopes.** A member joins a group only by the hand of someone who could have made
+  each of the group's grants to that person. The tree is the Owners' (`iam.scopes.manage` has the
+  owner floor): four levels at most, the root stays, and a scope, role or group with any grant in
+  its history is never deleted; its grants are ended instead. Anything else that does not fit
+  (an unknown role, scope or person, a date out of range, a thing still in use) is `KIT-E-2010`.
+
 ## Tables
 
 Migration `0004_iam.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
 `iam_tenants`, `iam_principals` (kinds `person`, `service`, `vendor`; the Vendor row exists from
 the migration), `iam_modules`, `iam_capabilities`, `iam_scopes`, `iam_groups`,
 `iam_group_members`, `iam_roles` (position `0` is the Owner role), `iam_role_caps`,
-`iam_bindings`, `iam_overrides`, `iam_policy_compiles`. Ids are text. Access requests, approvals
-and reviews come with the governance step.
+`iam_bindings`, `iam_overrides`, `iam_policy_compiles`. Migration `0005_iam_governance.sql` adds
+`activated_from` to `iam_bindings` (the eligible grant an activation came from) and the tables
+`iam_access_requests`, `iam_approvals`, `iam_reviews` and `iam_review_items`. Ids are text.
 
 ## Errors
 
@@ -141,8 +198,12 @@ The module owns the `2000` to `2099` block: `KIT-E-2001` a bad capability list, 
 unknown or inactive account, `KIT-E-2003` a bad scope tree (deeper than four levels, a loop, or
 more than one root), `KIT-E-2004` a dangerous action without a fresh sign-in, `KIT-E-2005` an
 email the door let in that has no active account here, `KIT-E-2006` a sign-in that was ended
-from the devices list. A token for another Access application answers with the core's
-`KIT-E-0401`.
+from the devices list, `KIT-E-2007` a change beyond the actor's standing, `KIT-E-2008` a change
+to one's own access, `KIT-E-2009` the last Owner, `KIT-E-2010` a grant that does not fit the
+rules, `KIT-E-2011` a second person's approval missing, `KIT-E-2012` an approval that does not
+fit, `KIT-E-2013` a review closed with grants undecided. A token for another Access application
+answers with the core's `KIT-E-0401`; a grant, request, approval or review that does not exist
+with the core's `KIT-E-0404`.
 
 ## Tests
 
@@ -154,5 +215,12 @@ which 320 generated decisions of the compiled check are compared with a plain ev
 reads the rows one question at a time (`test/reference.ts`). The sessions are tested with the KV
 writes counted (one on the first request, none on the next), a grant ending and the day passing,
 the dangerous route's re-read, a revoke seen on the next request, an ended sign-in, and the whole
-pipeline from the Access headers to the problem codes. The plan's `can()` timing budget is
-measured on the sandbox, not here: the test runtime does not advance its clock during a check.
+pipeline from the Access headers to the problem codes. The governance is tested on a tenant of
+four scopes, four roles and twelve people, every rule refused and then obeyed: the standing at a
+scope, the self-edit, the dates, the Owner made and unmade with approvals that fit one change
+once, an eligible grant activated and lapsed, roles edited only with what is held where they are
+granted, members placed by the standing over the group's grants, the tree's depth, a deny
+override beating the role, a request decided in the decider's name, a review closed only when
+decided, the audit rows with the policy hash and the deferred write, and the last Owner. The
+plan's `can()` timing budget is measured on the sandbox, not here: the test runtime does not
+advance its clock during a check.
