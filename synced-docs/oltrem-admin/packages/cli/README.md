@@ -5,14 +5,15 @@ check** that keeps a client's Worker at one of each resource (plan 9.1, R-09), a
 **doctor** with its first checks (plan 15.3). `setup`, `dev` and the rest of the doctor's
 checks come later in phase 1. The tool runs on Node and has no runtime dependency.
 
-## `oltrem manifest check [dir]`
+## `oltrem manifest check [dir...]`
 
 Reads the Worker's `wrangler.jsonc` (or `wrangler.json`) and its `oltrem.manifest.json` in
 `dir` (the current directory by default), scans the code there for `env.NAME` uses, and fails
 when the three disagree or a cap is exceeded, with the plan's sentence: **adding a resource
-needs a manifest entry and the owner's yes.** It runs as the `manifest` gate of
-`pnpm verify` on the kit's own Worker configuration, and will be the first step of a client
-repository's verify and deploy workflows.
+needs a manifest entry and the owner's yes.** Several directories run one after the other,
+each line then names its directory, and the worst exit code wins. It runs as the `manifest`
+gate of `pnpm verify` on the kit's own test Worker configurations, and will be the first step
+of a client repository's verify and deploy workflows.
 
 What it refuses:
 
@@ -121,7 +122,7 @@ the docs can render the same checks later; the ids are stable from here on.
 ## In the kit repository
 
 `pnpm build` compiles the tool to `packages/cli/dist/`; `pnpm oltrem …` runs it from there.
-`pnpm verify` builds it and runs `oltrem manifest check packages/core-config` as its `manifest`
-gate. The tool is typed against Node (`tsconfig.json` here extends the shared
+`pnpm verify` builds it and runs `oltrem manifest check` on the three packages that declare a
+test Worker with a binding (`core-config`, `core-outbox`, `core-audit`) as its `manifest` gate. The tool is typed against Node (`tsconfig.json` here extends the shared
 `tsconfig.base.json`) and its tests run on Node with Vitest, against a sample client Worker in
 `test/fixtures/client-ok/` that has exactly one of each resource.
