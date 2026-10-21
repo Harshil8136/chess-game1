@@ -1,0 +1,107 @@
+# @oltrem/email
+
+Email as the kit sends it (plan sections 8.1 and 8.2). A message is asked for once, rendered
+from a typed template and checked at once, so a mistake is the caller's answer and never a
+failed send later. The outbox and the queue carry it to `deliver`, which sends it through the
+tenant's active email instance from `@oltrem/providers` and, when that one refuses, through each
+failover in order. The kit keeps its own lease per message key in D1, so a message the queue
+brings twice is sent once whatever the provider promises.
+
+## Using it
+
+```ts
+import { createOutbox } from '@oltrem/core-outbox';
+import { createEmail, defineTemplate, html } from '@oltrem/email';
+import * as z from 'zod/mini';
+
+const booked = defineTemplate({
+  id: 'bookings.confirmed',
+  summary: 'The booking is confirmed',
+  schema: z.object({ name: z.string() }),
+  subject: (d) => `Booked for ${d.name}`,
+  text: (d) => `Hello ${d.name}, the booking is confirmed.`,
+  html: (d) => html`<p>Hello ${d.name}</p>`,
+});
+
+const email = createEmail<Env>({
+  bindings: (env) => ({ db: env.DB }),
+  providers: providers.registry,
+  templates: [booked],
+  from: () => ({ email: 'portal@example.com', name: 'The portal' }),
+  outbox: (env) => createOutbox({ db: env.DB, send: (e) => env.EVENTS.send(e) }),
+});
+
+await email.send(env, {
+  tenantId,
+  template: 'bookings.confirmed',
+  to: [{ email: 'guest@example.com' }],
+  data: { name: 'Ann' },
+  messageKey: `booking-${id}-confirmed`,
+});
+```
+
+Mount `email.module` beside the IAM and providers modules; the queue handler of
+`@oltrem/core-http` calls its `onEvent` for `email.send`. `from` is the client's: it reads the
+sending address from its own settings.
+
+## Templates
+
+A template is code, compiled with the Worker: an id `<module>.<name>`, a line saying what it is
+for, the schema of its data, and a subject, a text body and an optional HTML body. The data is
+checked against the schema before anything is rendered (`KIT-E-1505`, with each field). The HTML
+is written with the `html` tag, which escapes every value it is given unless the value is itself
+`html`, so a name a guest typed never becomes markup. Prettier formats an `html` template as
+HTML, which changes only the whitespace between elements.
+
+The module adds one template of its own, `email.canary`, the test message the canary route sends.
+
+## Sending, the lease and failover
+
+| Step | What happens |
+|---|---|
+| `send` | The template is found and rendered, the message checked (addresses, header lines, one to fifty recipients) and queued through the outbox under its message key; the caller's own key makes a message asked for twice queued once |
+| No instance ready | The outbox row is held and the message's row says `waiting`; the job `email.release`, every five minutes, releases the held messages once a tenant that waits has an active or failover instance |
+| `deliver` takes the lease | One row per message key: a new key, or one that waits, retries or whose two-minute lease ran out, is taken; a `sent` or `failed` one is acknowledged without a send; one another delivery holds is `KIT-E-1502`, and the queue brings it back |
+| The instances in order | The active instance, then each failover by its order; the first that takes the message is kept on the row with the id the provider gave it |
+| A refusal | The next instance is tried; when every one refused, the row says `retrying` with what each said, and `KIT-E-1504` sends the message back to the queue |
+| A message that can never be sent | An unknown template, data that no longer matches, an address a provider refuses as such: the row says `failed` and the message is acknowledged |
+
+The subject and the body are never stored; the row keeps the addresses, for the screens and the
+delivery reports.
+
+## Routes
+
+Under `/api/email`, through the IAM module's sessions and check. `email.manage` asks for a fresh
+sign-in.
+
+| Route | Capability | What it does |
+|---|---|---|
+| `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
+| `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
+
+## Health
+
+`email.sending`, in the `email` lane: **fail** while a message of the last day waits for a retry
+after every provider refused it, **warn** while one waits for an email provider, **ok** otherwise.
+Two failures in a row open a problem (`@oltrem/core-health`).
+
+## Not here yet
+
+- The delivery reports' route, which writes `last_event` from the providers' webhooks, waits on
+  where its public address lives.
+- Suppression, a daily cap and the sending address as a setting come with the screens.
+- No Worker mounts the module yet; the client template mounts it with the IAM module.
+
+## The table and the error codes
+
+`email_messages` (migration `0011_email.sql`): the message key, the tenant, the template, the
+addresses, the status (`leased`, `sent`, `retrying`, `waiting`, `failed`), the attempts, the
+lease, the instance, the provider's id, the last error and the last delivery event.
+
+| Code | Name | Status | When |
+|---|---|---|---|
+| `KIT-E-1501` | `NO_PROVIDER` | 503 | the tenant has no active or failover email instance |
+| `KIT-E-1502` | `LEASED` | 409 | another delivery of the message holds its lease |
+| `KIT-E-1503` | `UNKNOWN_TEMPLATE` | 422 | no template the Worker was built with has that id |
+| `KIT-E-1504` | `ALL_FAILED` | 502 | the active instance and every failover refused the message |
+| `KIT-E-1505` | `BAD_TEMPLATE_DATA` | 422 | the data does not match the template's schema |
