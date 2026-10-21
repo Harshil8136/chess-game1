@@ -25,7 +25,10 @@ const app = createApp<Env>({
 screens.mount(app); // every page, behind the door
 ```
 
-A module the portal does not mount has no chip in the row, no card and no page.
+A module the portal does not mount has no chip in the row, no card and no page. `localVendor`,
+the Vendor's address that the client's dev script writes on the owner's computer, is named on
+the local sign-in page and filled in there, and named again to anyone signed in on that computer
+with no account: on a new portal it is the only account.
 
 ## The pages
 
