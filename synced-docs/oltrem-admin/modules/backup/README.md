@@ -66,6 +66,18 @@ Under `/api/backup`, through the IAM module's sessions and check.
 is no copy and the last run failed. A fresh copy after a failed run warns, with the failure, so it
 is looked at before the next night.
 
+`backup.drill`, in the same lane: **ok** while the last restore drill passed within 35 days,
+**warn** when there is none yet or the last one passed longer ago, **fail** when the last one
+failed.
+
+## The restore drill
+
+A copy is only proven by opening it. Once a month the vendor runs `oltrem backup drill --key
+<file>` (`@oltrem/cli`) from a signed-in wrangler: it downloads the newest copy, opens it with the
+age tool and the private key, loads it into a scratch database, finds every table and row of the
+copy there, deletes the scratch database and the opened copy, and records a `drill` row. The
+private key never leaves the vendor's machine, and the client's database is only read.
+
 ## Settings and secrets
 
 | Name | Kind | What it is |
@@ -85,8 +97,6 @@ age -d -i oltrem-backup-key.txt copy.sql.age > copy.sql
 
 ## Not here yet
 
-- The restore drill, which opens the newest copy into a scratch database once a month and
-  records a `drill` row, is the next slice.
 - The bucket lock on `backups/`, which keeps any copy from being deleted or overwritten for 35
   days, and the lifecycle rule that expires old copies are made by `oltrem setup` with the client
   template, as is the writer of the two settings.
@@ -96,8 +106,8 @@ age -d -i oltrem-backup-key.txt copy.sql.age > copy.sql
 
 ## The table and the error codes
 
-`backup_runs` (migration `0012_backup.sql`): the id (the Workflow instance), the kind (`export`,
-or `drill` later), who asked (none for the nightly run), the status (`running`, `ok`, `failed`,
+`backup_runs` (migration `0012_backup.sql`): the id (the Workflow instance, or the drill's own),
+the kind (`export` or `drill`), who asked (none for the nightly run), the status (`running`, `ok`, `failed`,
 `skipped`), when it started and ended, the object key, the sizes, the bookmark, the recipient and
 the error.
 
@@ -117,4 +127,4 @@ address as a scripted fetch and the Workflow as a stand-in: a backup asked for b
 exported, polled, encrypted and kept, the copy equal to the age format's own output and streamed;
 a dump without its length held in memory, to the same bytes; a replayed instance; the
 capabilities; one export at a time; each refusal on its run without the token or the signed
-address; the bookmark; and the check's thresholds.
+address; the bookmark; and both checks' thresholds.

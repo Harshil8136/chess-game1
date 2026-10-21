@@ -7,7 +7,8 @@ for the steps a new client repository needs (plan 15.3), **`docs`** for the gene
 (plan 15.5), **`check agents`** and **`check tokens`** for the instruction files and the token
 registry (plan 15.1, 9.4), the **doctor** with its eight checks, and, since phase 3,
 **`new module`**, which writes a complete module into a client repository from the kit's module
-template (plan 4.3 and 18). The tool runs on Node and has no runtime dependency.
+template (plan 4.3 and 18), and, since phase 5, **`backup drill`**, the monthly restore drill
+(plan 9.3). The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
 
@@ -245,6 +246,29 @@ name is used and the rule: read the registry, reuse or widen a row, or add one w
 Exit `0`, `1` on a problem, `3` when there is no registry. `--json` prints the outcome as data
 for both `check` commands.
 
+## `oltrem backup drill [dir] --key <file>`
+
+The restore drill (plan 9.3), run by the vendor once a month from a signed-in wrangler, with the
+private age key the backups are encrypted to (`--key`, the file `age-keygen` wrote) and the
+`age` tool installed. It proves the newest backup copy can be restored, without touching the
+client's database:
+
+| Step | What happens |
+|---|---|
+| The newest copy | read from `backup_runs` in the database `wrangler.jsonc` declares: the newest export that finished ok |
+| Download and open | `wrangler r2 object get` from the one bucket into a private temporary folder, then `age -d` with the key; each size must be the one the run recorded |
+| Read the copy | its tables and the rows it inserts into each; the migrations table and `backup_runs` must be there, or it is not this client's database |
+| Load | a scratch database, `<database>-drill-<date>-<time>`, made with `wrangler d1 create` and loaded with `wrangler d1 execute --file` |
+| Check | every table of the copy has exactly its rows in the scratch database |
+| Clean up | the scratch database is deleted and the temporary folder with the opened copy removed, whatever happened; a scratch database that could not be deleted is named with the command to delete it |
+| Record | one `drill` row in `backup_runs`, `ok` or `failed` with the reason, which the backup page lists and the `backup.drill` health check reads |
+
+Exit `0` when the drill passed and was recorded, `1` when it failed or something could not be
+cleaned up or recorded, `3` when it could not start: no key, no `age` tool, or a configuration
+without exactly one D1 database and one R2 bucket. `--json` prints the steps and problems as
+data, with `ok` true when the copy opened and loaded. The scratch database counts against the
+account's databases for the minutes it exists.
+
 ## `oltrem doctor`
 
 Runs the check registry against the repository in the current directory and prints one line
@@ -277,4 +301,6 @@ packages that declare a test Worker with a binding (`core-config`, `core-outbox`
 as its `manifest` gate. The tool is typed against Node (`tsconfig.json` here extends the shared
 `tsconfig.base.json`) and its tests run on Node with Vitest, against a sample client Worker in
 `test/fixtures/client-ok/` that has exactly one of each resource, with fake installed kit
-packages for the migration commands and a fake wrangler for `migrations apply`.
+packages for the migration commands and a fake wrangler for `migrations apply`. The drill's
+tests run wrangler's D1 commands against SQLite databases in memory (Node's own `node:sqlite`)
+and a copy written in the format `wrangler d1 export` writes.

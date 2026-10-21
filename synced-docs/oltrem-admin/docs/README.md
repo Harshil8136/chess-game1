@@ -94,7 +94,7 @@ Phase 5, backup, GitHub, home and health, has these parts so far:
 |---|---|
 | The age format a backup copy is written in (`@oltrem/core-crypto/age`): standard age to one X25519 recipient, streamed in 64 KiB chunks, its size known in advance | **done** 2026-10-21: [the record](records/2026-10-21-age-format.md); nothing is backed up yet |
 | The backup module: the nightly export as a flow in the one Workflow, encrypted on its way into the bucket, the run records, a run by hand, the Time Travel bookmark, the freshness check | **done** 2026-10-21: [the record](records/2026-10-21-backup-module.md); the bucket lock, the settings writer and the Workflow class come with the client template |
-| The restore drill | not started |
+| The restore drill (`oltrem backup drill`): the newest copy opened with the private key on the vendor's computer, loaded into a scratch database, every row found, everything deleted, the outcome recorded; the drill check on System health | **done** 2026-10-21: [the record](records/2026-10-21-restore-drill.md); no drill has run against a real account |
 | The GitHub module, the home module and the free-plan budgets on System health | not started |
 | The phase's acceptance: a nightly export of the sandbox under the bucket lock, a restore drill, the kit version, every budget on System health | not started: needs the sandbox |
 
@@ -132,7 +132,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
 | [Dependencies](reference/dependencies.md) | every third-party package, its one pinned version, who uses it and why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
-| [@oltrem/cli](../packages/cli/README.md) | the `oltrem` tool: the manifest check, its caps and the manifest format, `new module`, the doctor's checks and exit codes | written, beside the code |
+| [@oltrem/cli](../packages/cli/README.md) | the `oltrem` tool: the manifest check, its caps and the manifest format, `new module`, the restore drill, the doctor's checks and exit codes | written, beside the code |
 | [@oltrem/core-errors](../packages/core-errors/README.md) | how an error is defined, the code blocks, and the problem document every failure answers with | written, beside the code |
 | [@oltrem/core-module](../packages/core-module/README.md) | the module contract: routes, capabilities, schemas, event types, jobs, flows, health checks, migrations, settings, errors, what it refuses | written, beside the code |
 | [@oltrem/core-http](../packages/core-http/README.md) | the request pipeline, the same-origin rule, the identity headers and the token's claims, the startup hook, the session hook, the three Worker handlers | written, beside the code |
@@ -146,7 +146,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/users](../modules/users/README.md) | the people: the directory and the profile, the rules of switching an account off and on, the routes, the table and the error codes | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract and the kit's seven email definitions, instances with their sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
 | [@oltrem/email](../modules/email/README.md) | email as the kit sends it: typed templates and the escaping `html` tag, sending through the outbox, the lease per message key, failover, the held messages, the canary and messages routes, the health check, the table and the error codes | written, beside the code |
-| [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow step by step, one export at a time, the routes, the freshness check, the settings and secrets, how to open a copy, the table and the error codes | written, beside the code |
+| [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow step by step, one export at a time, the routes, the freshness and drill checks, the restore drill, the settings and secrets, how to open a copy, the table and the error codes | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies into a client repository, written as the how-to the client keeps: its parts, what to change, what is not there yet | written, beside the code; copied by the generator |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
@@ -181,6 +181,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs with their instructions, the KEK's recipe, the generated Key recipes page, the check that the required secrets match, the decisions taken, and how it was verified | record, frozen |
 | [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with the runtime's own cipher and no package, why the private key never reaches the Worker, and how the real age tool checked it | record, frozen |
 | [Phase 5: the backup module](records/2026-10-21-backup-module.md) | how the nightly copy is asked of Cloudflare, encrypted on its way into the bucket and recorded, the one Workflow that runs it step by step, the decisions taken, and how it was verified | record, frozen |
+| [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
