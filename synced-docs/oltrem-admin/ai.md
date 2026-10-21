@@ -48,7 +48,7 @@ are checked against it by `pnpm check:agents`.
 |---|---|
 | `pnpm verify` | the one gate: every check below in order, one line each; the failing one prints in full |
 | `pnpm dev` | the client template's Worker on this computer, on local resources: `/healthz` answers, the rest needs Access |
-| `pnpm test` | the tests of the verify chain itself, on Node's built-in runner (`scripts/*.test.mjs`) |
+| `pnpm test` | the tests of the verify chain itself (`scripts/*.test.mjs`) |
 | `pnpm test:packages` | the package and module tests: Worker code inside the Workers runtime, the tool on Node |
 | `pnpm typecheck` | the type check of every package and module, each against its own runtime |
 | `pnpm build` | compiles the command-line tool to `packages/cli/dist/` |
@@ -64,8 +64,7 @@ are checked against it by `pnpm check:agents`.
 | `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-The tool's other commands and their flags are in `packages/cli/README.md`; they serve a client
-repository, while this repository's own checks are the `pnpm check:*` scripts above.
+The tool's other commands, which serve a client repository, are in `packages/cli/README.md`.
 
 ## 4. What to read for your task
 
@@ -98,6 +97,7 @@ repository, while this repository's own checks are the `pnpm check:*` scripts ab
 | Where things stand | docs/README.md |
 | A big change | a dated record in `docs/records/`, linked from docs/README.md |
 | A pointer file | its template in `scripts/lib/agents.mjs`, then `pnpm agents:write` |
+| What a package does for its users | a note from `pnpm changeset` (docs/release.md) |
 
 ## 6. How to work
 

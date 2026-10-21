@@ -2,7 +2,7 @@
 title: "Dependencies: every third-party package and why"
 status: generated
 owner: vendor
-last_verified: 2026-10-20
+last_verified: 2026-10-21
 sources: [dependencies.registry.json, pnpm-workspace.yaml]
 ---
 
@@ -12,10 +12,11 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 14 tools (used only to build, check or test) and 9 runtime packages (shipped inside a Worker).
+**Where things stand:** 15 tools (used only to build, check or test) and 9 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
+| @changesets/cli | 3.0.3 | tool | oltrem | Versions the kit's packages from a note written with each change: one version for the core packages, one per module, and each package's CHANGELOG.md, which oltrem upgrade reads to show a client the notes that apply to it. | 14.3 |
 | @cloudflare/vitest-plugin | 1.4.5 | tool | @oltrem/backup, @oltrem/core-audit, @oltrem/core-config, @oltrem/core-crypto, @oltrem/core-errors, @oltrem/core-health, @oltrem/core-http, @oltrem/core-jobs, @oltrem/core-module, @oltrem/core-outbox, @oltrem/email, @oltrem/github, @oltrem/iam, @oltrem/providers, @oltrem/users, oltrem, oltrem-client, oltrem-module-template | Runs the test suite inside the Workers runtime, so code that passes in Node and fails in a Worker is caught; it also applies the D1 migrations to the test database. | 15.6 |
 | @cloudflare/workers-types | 5.20261019.1 | tool | @oltrem/backup, @oltrem/core-audit, @oltrem/core-config, @oltrem/core-crypto, @oltrem/core-errors, @oltrem/core-health, @oltrem/core-http, @oltrem/core-jobs, @oltrem/core-module, @oltrem/core-outbox, @oltrem/email, @oltrem/github, @oltrem/iam, @oltrem/providers, @oltrem/users, oltrem, oltrem-client, oltrem-module-template | The types of the Workers runtime bindings (D1, KV, queues) for the type check. | 4.2 |
 | @eslint/js | 10.0.1 | tool | oltrem | ESLint's own recommended rules for the plain JavaScript scripts of the verify chain. | 15.6 |

@@ -15,7 +15,7 @@ sources: [this repository]
 
 ## Where things stand
 
-The kit is in **phase 5, backup, GitHub, home and health**, since 2026-10-21; phases 3 and 4
+The kit is in **phase 6, release pipeline and upgrade**, since 2026-10-21; phases 3 to 5
 were built the same day but for the parts their tables name as waiting. The screens wait on the
 sandbox measurement (the owner's decision of 2026-10-21); every phase's acceptance waits on the
 sandbox repository.
@@ -40,8 +40,8 @@ Phase 1, the core runtime, has these parts so far:
 | Part | State |
 |---|---|
 | The toolchain: TypeScript, tests inside the Workers runtime, the linter with the module-boundary rules, the formatter, and the dependency registry with its gate | **done** 2026-10-19: [the phase 1 record](records/2026-10-19-phase-1-toolchain-and-core-config.md) |
-| `@oltrem/core-config`: the settings registry, the four configuration layers and the fast read path (memory, one KV snapshot, D1 as the truth) | **done** 2026-10-19: its tests pass inside the Workers runtime; it runs in no Worker yet |
-| `@oltrem/cli`, the command-line tool: `oltrem manifest check` (the resource manifest gate), `migrations sync` and `migrations apply`, `setup`, `docs`, `check agents`, `check tokens` and `oltrem doctor` with eight checks | **done** 2026-10-20: [the first record](records/2026-10-20-cli-manifest-check-and-doctor.md), [the second](records/2026-10-20-client-template-and-setup.md), [the third](records/2026-10-20-cli-docs-command.md) and [the fourth](records/2026-10-20-cli-check-commands.md); the plan's list for phase 1 is complete |
+| `@oltrem/core-config`: the settings registry, the four configuration layers and the fast read path (memory, one KV snapshot, D1 as the truth) | **done** 2026-10-19: the client template's Worker reads its settings through it |
+| `@oltrem/cli`, the command-line tool: `oltrem manifest check` (the resource manifest gate), `migrations sync` and `migrations apply`, `setup`, `docs`, `check agents`, `check tokens` and `oltrem doctor` | **done** 2026-10-20: [the first record](records/2026-10-20-cli-manifest-check-and-doctor.md), [the second](records/2026-10-20-client-template-and-setup.md), [the third](records/2026-10-20-cli-docs-command.md) and [the fourth](records/2026-10-20-cli-check-commands.md); the plan's list for phase 1 is complete |
 | The core runtime: `@oltrem/core-errors`, `core-module`, `core-http`, `core-outbox` and `core-audit` (errors as data, the module contract, the one pipeline and the three Worker handlers, the outbox with replay, the hashed audit log) | **done** 2026-10-20: [the record](records/2026-10-20-core-runtime-packages.md); the client template's Worker is built from them |
 | `@oltrem/core-ui`: the token list as a Tailwind theme, the phone-first primitives on native elements, and the three widgets on Zag.js | **done** 2026-10-20: [the primitives record](records/2026-10-20-core-ui-tokens-and-primitives.md) and [the widgets record](records/2026-10-20-core-ui-widgets.md); the gallery page and the screen gates wait on an Astro app |
 | The client template and `oltrem setup`: the model of a client repository, resources by name, the kit's migrations copied with checksums, the one deploy workflow | **done** 2026-10-20: [the record](records/2026-10-20-client-template-and-setup.md); the first deploy waits on the sandbox repository and the fresh account |
@@ -106,6 +106,14 @@ Phase 5, backup, GitHub, home and health, has these parts so far:
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
 
+Phase 6 has these parts so far:
+
+| Part | State |
+|---|---|
+| Versions and release notes (Changesets) | **done** 2026-10-21: [the record](records/2026-10-21-changesets.md), [how it works](release.md) |
+| `oltrem upgrade` | not started |
+| Publishing to GitHub Packages, Dependabot on the sandbox, previews on a branch | waits on the `oltrem` organisation and the sandbox |
+
 ## The plan
 
 The plan, its research and the owner's decisions are kept in the first client's documentation
@@ -132,6 +140,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
 | [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
 | [The licence in plain words](licence.md) | what the Oltrem Licence allows, what needs permission, and how to ask | written |
+| [Versions and release notes](release.md) | how packages are versioned and how a change's note is written | living |
 | [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
@@ -155,54 +164,60 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies into a client repository, written as the how-to the client keeps: its parts, what to change, what is not there yet | written, beside the code; copied by the generator |
-| [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
-| [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified | record, frozen |
-| [The licence change](records/2026-10-20-licence-change.md) | why Apache-2.0 was replaced by the Oltrem Licence, the terms chosen, and what still needs a lawyer | record, frozen |
-| [Phase 1: the command-line tool](records/2026-10-20-cli-manifest-check-and-doctor.md) | what the manifest check and the doctor are, the decisions taken, and how it was verified | record, frozen |
-| [Phase 1: the core runtime](records/2026-10-20-core-runtime-packages.md) | what the five runtime packages are, the decisions taken, and how it was verified | record, frozen |
-| [Phase 1: the design kit](records/2026-10-20-core-ui-tokens-and-primitives.md) | what the theme and the primitives are, the decisions taken, and how it was verified | record, frozen |
-| [Phase 1: the client template and the setup command](records/2026-10-20-client-template-and-setup.md) | what the template and the migration and setup commands are, the decisions taken, and how it was verified | record, frozen |
-| [Phase 1: the three widgets](records/2026-10-20-core-ui-widgets.md) | what the combobox, the menu and the date range are, the decisions taken, and how it was verified | record, frozen |
-| [Phase 1: the generated reference](records/2026-10-20-cli-docs-command.md) | what `oltrem docs` writes in a client repository, the decisions taken, and how it was verified | record, frozen |
-| [Phase 1: the two check commands](records/2026-10-20-cli-check-commands.md) | what `oltrem check agents` and `check tokens` refuse in a client repository, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2: the permission model and the check](records/2026-10-20-iam-model-and-check.md) | what the IAM module's tables, registry, compiler and check are, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2: sessions and the authorizer](records/2026-10-20-iam-sessions-and-authorizer.md) | how the compiled map travels in one KV record per person, the pipeline's session hook and authorizer, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2: governance](records/2026-10-20-iam-governance.md) | the writes that change who may do what and the rules each is refused by, the second person, requests and reviews, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2: the users module](records/2026-10-21-users-module.md) | the second module: the directory and the profile, the switch and its rules, how a module stands on the IAM module, the decisions taken, and how it was verified | record, frozen |
-| [Phase 2 in the client template](records/2026-10-21-template-mounts-iam.md) | how the template's Worker came to run IAM and users, the Access audience secret, what is still owed, and how it was verified | record, frozen |
-| [The Vendor's address](records/2026-10-21-vendor-address.md) | the command that writes the Vendor's address after the first deploy, why it is in no file, and how it was verified | record, frozen |
-| [Phase 3: capabilities on the manifest](records/2026-10-21-module-capabilities.md) | how a module declares what its routes check, how the Worker registers it at its start and keeps the check current, the decisions taken, and how it was verified | record, frozen |
-| [Phase 3: jobs and the tick](records/2026-10-21-jobs-and-the-tick.md) | how a module declares its periodic work, how the one tick runs it under a lease and records it, the decisions taken, and how it was verified | record, frozen |
-| [Phase 3: health and the manifest's last data fields](records/2026-10-21-health-and-manifest-fields.md) | how a module declares its health checks, migrations, settings and errors, how the health job runs the checks and opens a problem, the decisions taken, and how it was verified | record, frozen |
-| [Phase 3: the module generator](records/2026-10-21-the-module-generator.md) | how `oltrem new module` writes a complete module from the proven template, how the client Worker finds it, the decisions taken, and how it was verified | record, frozen |
-| [Phase 3: the generated references](records/2026-10-21-generated-references.md) | how a client's reference reads its modules by importing them in Node, what the Modules page shows, the decisions taken, and how it was verified | record, frozen |
-| [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version, the decisions taken, and how it was verified | record, frozen |
-| [Phase 4: envelope encryption](records/2026-10-21-envelope-encryption.md) | how a stored credential is sealed to its row under a data key wrapped by the one key-encryption key, how the key rotates under one secret name, the decisions taken, and how it was verified | record, frozen |
-| [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the kit's seven email definitions carry, how an instance holds its sealed credential and its place in the failover order, the decisions taken, and how it was verified | record, frozen |
-| [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes with AWS SigV4, the probe route, what keeps a credential out of the clear and out of an error, and how it was verified | record, frozen |
-| [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme, which key each reads, how a report becomes the kit's delivery events, and how it was verified against signatures made outside the kit | record, frozen |
-| [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, strong and weak evidence, why a suggestion never sends by itself, the daily re-check and its drift warning, and how it was verified | record, frozen |
-| [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked when it is asked for, held while no provider is ready, sent once under the kit's own lease through the active instance or a failover, the canary, the health check, the decisions taken, and how it was verified | record, frozen |
-| [Phase 4: the delivery reports' address](records/2026-10-21-delivery-reports.md) | why one public path skips the sign-in door, how a report is checked by a secret token and the provider's signature, how each event is kept on its message, the decisions taken, and how it was verified | record, frozen |
-| [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs with their instructions, the KEK's recipe, the generated Key recipes page, the check that the required secrets match, the decisions taken, and how it was verified | record, frozen |
-| [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with the runtime's own cipher and no package, why the private key never reaches the Worker, and how the real age tool checked it | record, frozen |
-| [Phase 5: the backup module](records/2026-10-21-backup-module.md) | how the nightly copy is asked of Cloudflare, encrypted on its way into the bucket and recorded, the one Workflow that runs it step by step, the decisions taken, and how it was verified | record, frozen |
-| [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted, the decisions taken, and how it was verified | record, frozen |
-| [Phase 5: the GitHub module](records/2026-10-21-github-module.md) | how the portal learns its kit version, a newer release and its last deploy without a GitHub token, the decisions taken, and how it was verified | record, frozen |
-| [Phase 5: the free plan's budgets](records/2026-10-21-free-plan-budgets.md) | what System health measures against the free plan, how the jobs pause, the token widened, the decisions taken, and how it was verified | record, frozen |
-| [Phase 4 in the client template](records/2026-10-21-template-mounts-email.md) | the template's providers and email, the sending address, the rule that keeps kit code loadable in Node, and how it was verified | record, frozen |
-| [Phase 5 in the client template](records/2026-10-21-template-mounts-backup.md) | the template's backup, deploy report and budgets, the Workflow and its schedules, the runtime stand-in for Node, and how it was verified | record, frozen |
-| [Phase 5: the backup's setup](records/2026-10-21-backup-setup.md) | the backup's settings and bucket rules, set once after the first deploy, and how it was verified | record, frozen |
-| [Phase 5: the Actions minutes](records/2026-10-21-actions-minutes.md) | how `oltrem doctor` reads the month's GitHub Actions minutes, and how it was verified | record, frozen |
-| [Working on Windows](records/2026-10-21-windows.md) | why `npm install` cannot install the kit, why `pnpm verify` failed on Windows and how it was fixed, the line endings, and how it was verified | record, frozen |
-| [Working on Windows: the second run and pnpm dev](records/2026-10-21-windows-second-run.md) | the two tests and two install warnings of the second Windows run, what `pnpm dev` runs and shows, and how it was verified | record, frozen |
+
+The records, each dated and frozen once written:
+
+| Record | What it tells |
+|---|---|
+| [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified |
+| [Phase 1: the toolchain and the configuration layers](records/2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are, the decisions taken, and how it was verified |
+| [The licence change](records/2026-10-20-licence-change.md) | why Apache-2.0 was replaced by the Oltrem Licence, the terms chosen, and what still needs a lawyer |
+| [Phase 1: the command-line tool](records/2026-10-20-cli-manifest-check-and-doctor.md) | what the manifest check and the doctor are, the decisions taken, and how it was verified |
+| [Phase 1: the core runtime](records/2026-10-20-core-runtime-packages.md) | what the five runtime packages are, the decisions taken, and how it was verified |
+| [Phase 1: the design kit](records/2026-10-20-core-ui-tokens-and-primitives.md) | what the theme and the primitives are, the decisions taken, and how it was verified |
+| [Phase 1: the client template and the setup command](records/2026-10-20-client-template-and-setup.md) | what the template and the migration and setup commands are, the decisions taken, and how it was verified |
+| [Phase 1: the three widgets](records/2026-10-20-core-ui-widgets.md) | what the combobox, the menu and the date range are, the decisions taken, and how it was verified |
+| [Phase 1: the generated reference](records/2026-10-20-cli-docs-command.md) | what `oltrem docs` writes in a client repository, the decisions taken, and how it was verified |
+| [Phase 1: the two check commands](records/2026-10-20-cli-check-commands.md) | what `oltrem check agents` and `check tokens` refuse in a client repository, the decisions taken, and how it was verified |
+| [Phase 2: the permission model and the check](records/2026-10-20-iam-model-and-check.md) | what the IAM module's tables, registry, compiler and check are, the decisions taken, and how it was verified |
+| [Phase 2: sessions and the authorizer](records/2026-10-20-iam-sessions-and-authorizer.md) | how the compiled map travels in one KV record per person, the pipeline's session hook and authorizer, the decisions taken, and how it was verified |
+| [Phase 2: governance](records/2026-10-20-iam-governance.md) | the writes that change who may do what and the rules each is refused by, the second person, requests and reviews, the decisions taken, and how it was verified |
+| [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in, the decisions taken, and how it was verified |
+| [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds, the decisions taken, and how it was verified |
+| [Phase 2: the users module](records/2026-10-21-users-module.md) | the second module: the directory and the profile, the switch and its rules, how a module stands on the IAM module, the decisions taken, and how it was verified |
+| [Phase 2 in the client template](records/2026-10-21-template-mounts-iam.md) | how the template's Worker came to run IAM and users, the Access audience secret, what is still owed, and how it was verified |
+| [The Vendor's address](records/2026-10-21-vendor-address.md) | the command that writes the Vendor's address after the first deploy, why it is in no file, and how it was verified |
+| [Phase 3: capabilities on the manifest](records/2026-10-21-module-capabilities.md) | how a module declares what its routes check, how the Worker registers it at its start and keeps the check current, the decisions taken, and how it was verified |
+| [Phase 3: jobs and the tick](records/2026-10-21-jobs-and-the-tick.md) | how a module declares its periodic work, how the one tick runs it under a lease and records it, the decisions taken, and how it was verified |
+| [Phase 3: health and the manifest's last data fields](records/2026-10-21-health-and-manifest-fields.md) | how a module declares its health checks, migrations, settings and errors, how the health job runs the checks and opens a problem, the decisions taken, and how it was verified |
+| [Phase 3: the module generator](records/2026-10-21-the-module-generator.md) | how `oltrem new module` writes a complete module from the proven template, how the client Worker finds it, the decisions taken, and how it was verified |
+| [Phase 3: the generated references](records/2026-10-21-generated-references.md) | how a client's reference reads its modules by importing them in Node, what the Modules page shows, the decisions taken, and how it was verified |
+| [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version, the decisions taken, and how it was verified |
+| [Phase 4: envelope encryption](records/2026-10-21-envelope-encryption.md) | how a stored credential is sealed to its row under a data key wrapped by the one key-encryption key, how the key rotates under one secret name, the decisions taken, and how it was verified |
+| [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the kit's seven email definitions carry, how an instance holds its sealed credential and its place in the failover order, the decisions taken, and how it was verified |
+| [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes with AWS SigV4, the probe route, what keeps a credential out of the clear and out of an error, and how it was verified |
+| [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme, which key each reads, how a report becomes the kit's delivery events, and how it was verified against signatures made outside the kit |
+| [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, strong and weak evidence, why a suggestion never sends by itself, the daily re-check and its drift warning, and how it was verified |
+| [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked when it is asked for, held while no provider is ready, sent once under the kit's own lease through the active instance or a failover, the canary, the health check, the decisions taken, and how it was verified |
+| [Phase 4: the delivery reports' address](records/2026-10-21-delivery-reports.md) | why one public path skips the sign-in door, how a report is checked by a secret token and the provider's signature, how each event is kept on its message, the decisions taken, and how it was verified |
+| [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs with their instructions, the KEK's recipe, the generated Key recipes page, the check that the required secrets match, the decisions taken, and how it was verified |
+| [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with the runtime's own cipher and no package, why the private key never reaches the Worker, and how the real age tool checked it |
+| [Phase 5: the backup module](records/2026-10-21-backup-module.md) | how the nightly copy is asked of Cloudflare, encrypted on its way into the bucket and recorded, the one Workflow that runs it step by step, the decisions taken, and how it was verified |
+| [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted, the decisions taken, and how it was verified |
+| [Phase 5: the GitHub module](records/2026-10-21-github-module.md) | how the portal learns its kit version, a newer release and its last deploy without a GitHub token, the decisions taken, and how it was verified |
+| [Phase 5: the free plan's budgets](records/2026-10-21-free-plan-budgets.md) | what System health measures against the free plan, how the jobs pause, the token widened, the decisions taken, and how it was verified |
+| [Phase 4 in the client template](records/2026-10-21-template-mounts-email.md) | the template's providers and email, the sending address, the rule that keeps kit code loadable in Node, and how it was verified |
+| [Phase 5 in the client template](records/2026-10-21-template-mounts-backup.md) | the template's backup, deploy report and budgets, the Workflow and its schedules, the runtime stand-in for Node, and how it was verified |
+| [Phase 5: the backup's setup](records/2026-10-21-backup-setup.md) | the backup's settings and bucket rules, set once after the first deploy, and how it was verified |
+| [Phase 5: the Actions minutes](records/2026-10-21-actions-minutes.md) | how `oltrem doctor` reads the month's GitHub Actions minutes, and how it was verified |
+| [Working on Windows](records/2026-10-21-windows.md) | why `npm install` cannot install the kit, why `pnpm verify` failed on Windows and how it was fixed, the line endings, and how it was verified |
+| [Working on Windows: the second run and pnpm dev](records/2026-10-21-windows-second-run.md) | the two tests and two install warnings of the second Windows run, what `pnpm dev` runs and shows, and how it was verified |
+| [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs, and how it was verified |
 
 ## How this folder is checked
 
 `pnpm docs:check`, one of the gates of `pnpm verify`, refuses a document without front matter,
-a document missing from the table above, a document over its size budget, a relative link that
+a document missing from the tables above, a document over its size budget, a relative link that
 points nowhere, and a generated document that differs from its source. Records are frozen: a
 later change is a new record, not an edit.
 
