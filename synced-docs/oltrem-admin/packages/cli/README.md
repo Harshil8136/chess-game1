@@ -202,7 +202,9 @@ The Modules and Key recipes pages are read from the code: the command imports `s
 and `src/index.ts` (its `modules` export is every module the Worker mounts) in a child Node
 process with type stripping and takes each manifest as data; no handler, job or check runs. A
 module and the Worker file must therefore load in Node, which means no Workers-only global or
-import at module scope; the kit's own packages respect this. A file Node cannot load is reported
+import at module scope; the kit's own packages respect this. Two imports are stood in for while
+the files load: `cloudflare:workers`, whose classes a Worker file extends, and `@oltrem/screens`,
+whose pages are JSX, which Node does not strip; neither is ever run there. A file Node cannot load is reported
 as a problem that names it and its first error, and nothing is written. A client without
 `src/modules.ts` has no module yet; a `src/index.ts` with no `modules` export leaves the Key
 recipes page saying so.

@@ -90,6 +90,29 @@ the edge, so the Worker does no crypto in the request (plan 11): the claims are 
 verified, and a token that does not parse or lacks a subject or a sign-in time is no identity at
 all. The IAM module checks the audience.
 
+## The local door
+
+On the owner's computer there is no Cloudflare Access in front of the Worker, so `createApp`
+takes a stand-in: `localDoor: { enabled(env), page? }`. It opens only when both locks hold:
+`enabled(env)` is true (the client template passes `!env.ACCESS_AUD`, which is unset on a
+computer and a required secret once deployed) and the request's host is `localhost`, `127.0.0.1`
+or `[::1]`. A tunnel or a deployed address is never loopback, so there it answers 404 and its
+cookie is no identity.
+
+| Route | What it does |
+|---|---|
+| `GET /local/sign-in?next=` | the sign-in page: `page(state)` when given, a plain one otherwise |
+| `POST /local/sign-in` | takes `email` (and `next`), sets the `oltrem_local` cookie (HttpOnly, SameSite=Strict, the email and when) and answers 303 to `next` |
+| `POST /local/sign-out` | clears the cookie, then 303 to the sign-in page |
+
+The identity read from the cookie carries `door: 'local'` and no audience, which the IAM
+module's audience check accepts only for this door. A page request with no identity is sent to
+the sign-in page; an API request still gets the 401 problem. Both forms carry the same-origin
+check. Access's own headers, when present, always win.
+
+`publicRoutes(app)`, when given, is called before anything else is mounted: routes that answer
+before the door, such as the screens' stylesheet.
+
 ## The three handlers
 
 | Handler | What it does |

@@ -19,8 +19,8 @@ linked from docs/README.md.
 2. Acknowledge: begin your first reply with the words "ai.md loaded", then the twelve rules of
    section 2 in one short line each, in your own words. The owner checks this.
 3. Check git: `git remote -v`, `git switch main`, `git pull origin main`, `git status`. Confirm
-   that `node --version` and `pnpm --version` satisfy package.json; in a fresh clone, run
-   `pnpm install --frozen-lockfile`.
+   that `node --version` satisfies package.json; in a fresh clone, run `npm install` (it uses
+   the pinned pnpm).
 4. Read only what section 4 sends you to. Start with docs/README.md for where things
    stand.
 
@@ -47,7 +47,8 @@ are checked against it by `pnpm check:agents`.
 | Command | What it does |
 |---|---|
 | `pnpm verify` | the one gate: every check below in order, one line each; the failing one prints in full |
-| `pnpm dev` | the client template's Worker on this computer, on local resources: `/healthz` answers, the rest needs Access |
+| `pnpm dev` | the client template's portal on this computer, its screens behind a sign-in only `localhost` has |
+| `pnpm ui:build` | rebuilds the screens' stylesheet |
 | `pnpm test` | the tests of the verify chain itself (`scripts/*.test.mjs`) |
 | `pnpm test:packages` | the package and module tests: Worker code inside the Workers runtime, the tool on Node |
 | `pnpm typecheck` | the type check of every package and module, each against its own runtime |

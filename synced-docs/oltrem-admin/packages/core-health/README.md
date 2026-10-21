@@ -43,15 +43,17 @@ modules.push(health.module);
 const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), modules, report });
 ```
 
-`createHealth` returns the runner and the `health` module, which declares no route yet and one
-job, `health.run`, every five minutes: the tick runs it like any other job, so a client gets
-system health by mounting the module, with no cron of its own. On each run, every declared check
-is run in manifest order, with the time it took, and its row written: the status, the message
-(its first 400 characters), when, how many failures in a row, and since when the problem is open.
-The count of failures in a row resets on any pass or warning. From the second failure in a row
-the problem is open: `onOpen(row, env)` is called once, when it opens, and `onClose(row, env)`
-once, when the check passes again; a failure of either hook is reported through
-`report(error, checkId)` and the run goes on.
+`createHealth` returns the runner and the `health` module, with one job, `health.run`, every
+five minutes, and two routes for System health, each checked against `health.read` (bit plane 6,
+a read): `GET /api/health/checks` (every row `list` returns) and `GET /api/health/budgets` (each
+budget's reading, an empty list when the budgets are not measured). The tick runs the job like
+any other job, so a client gets system health by mounting the module, with no cron of its own.
+On each run, every declared check is run in manifest order, with the time it took, and its row
+written: the status, the message (its first 400 characters), when, how many failures in a row,
+and since when the problem is open. The count of failures in a row resets on any pass or
+warning. From the second failure in a row the problem is open: `onOpen(row, env)` is called
+once, when it opens, and `onClose(row, env)` once, when the check passes again; a failure of
+either hook is reported through `report(error, checkId)` and the run goes on.
 
 `run(env, ctx)` returns the ids by status and the ids opened and closed on that run. `list(env)`
 returns every row by lane then id, with `declared` false for the row of a check no mounted module

@@ -19,6 +19,7 @@ sources: [the plan, sections 4.1, 14.3 and 15.7; .changeset/config.json]
 | `@oltrem/core-*` | together, one version for all of them: the kit's version, which the GitHub module reads from `@oltrem/core-http` |
 | each module under `modules/` | on its own |
 | `@oltrem/cli` | on its own |
+| `@oltrem/screens` | on its own |
 | the client and module templates | never released; `oltrem setup` and `oltrem new module` copy them |
 
 What each kind of change is (plan 14.3):
