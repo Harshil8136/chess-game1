@@ -54,3 +54,13 @@ audience accepts only the mark, and a hostname door refuses the mark); `@oltrem/
 twelve gates pass. Not verified, and first seen on the owner's run: that "Protect all Workers"
 gives the Worker `ctx.access` on `workers.dev` with the email, subject and sign-in time described
 in Cloudflare's documentation.
+
+## Later the same evening: the door after the deploy
+
+On the owner's run Cloudflare's dashboard said the account had no Workers to protect: the account
+was empty until the deploy. So `npm run deploy` now sets `ACCESS_AUD` to `worker` with nothing
+asked, deploys, and only then shows the door (step 5 of 6): the Worker's Access tab, Protect this
+Worker behind Access, All traffic, the allowed emails, then Enter. Between the deploy and the
+door the portal refuses everyone, since no request carries the runtime's word that Access ran.
+`@oltrem/cli`'s deploy test checks the door comes after the deploy and names the Worker; the
+twelve gates pass.

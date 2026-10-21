@@ -92,7 +92,8 @@ the edge, so the Worker does no crypto in the request (plan 11): the claims are 
 verified, and a token that does not parse or lacks a subject or a sign-in time is no identity at
 all. The IAM module checks the audience.
 
-When Access stands on the Worker itself (the dashboard's "Protect all Workers"), the runtime hands
+When Access stands on the Worker itself (its Access tab, or the account's "Protect all Workers"),
+the runtime hands
 the Worker `ctx.access`, with the application's `aud` and `getIdentity()`. The identity is then read
 by `readWorkerAccessIdentity`: a token naming that `aud`, or, with no token, a `getIdentity()` that
 gives an email, a subject and a sign-in time, carries `door: 'worker'`, which the audience `worker`

@@ -165,16 +165,19 @@ as they happen, each question after what it is and why it is needed (the door, t
    which the Vendor moves into a password manager: the KEK because a rotation needs it again and
    Cloudflare never shows a secret back, the private key because no copy opens without it. The
    file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
-   stopped before the deploy uses the keys it kept. The door needs nothing copied: after the
-   steps that put Access in front of every Worker of the account (the dashboard's Protect all
-   Workers, which works before the Worker exists and on either address) the person presses Enter,
-   and `ACCESS_AUD` becomes `worker`, so the portal trusts the sign-in the runtime vouches for
-   (`ctx.access`); a hostname application's tag typed there is still taken. The ops token comes
-   after the steps that make it, and without echo. When the Worker exists but its secrets cannot be listed, the command stops
-   rather than send a new KEK, which would leave every stored provider key unreadable.
-4. **The database and the migrations**, as `migrations apply` does.
-5. **`wrangler deploy`**, carrying the new secrets in a file (`--secrets-file`) that is removed
-   right after; wrangler may ask which account when the sign-in reaches several.
+   stopped before the deploy uses the keys it kept. `ACCESS_AUD` is set to `worker` with nothing
+   asked (step 5 says why). The ops token comes after the steps that make it, and without echo.
+   When the Worker exists but its secrets cannot be listed, the command stops rather than send a
+   new KEK, which would leave every stored provider key unreadable.
+4. **The database, the migrations** (as `migrations apply` does) **and `wrangler deploy`**,
+   carrying the new secrets in a file (`--secrets-file`) that is removed right after; wrangler may
+   ask which account when the sign-in reaches several.
+5. **The door**, once the deploy has made the Worker (an empty account has nothing to protect):
+   the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
+   Access, All traffic, the allowed emails), then Enter. Nothing is copied back: `ACCESS_AUD`
+   `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
+   the door is on no request carries it, so the portal refuses everyone. A client with a hostname
+   Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
 6. **The Vendor's address**, asked while the database has none, written as `vendor set` does;
    then `backup setup`; last, the one door step left for later: a self-hosted Access application
    on the address's `hooks` path with a Bypass policy, needed only for an email provider's
