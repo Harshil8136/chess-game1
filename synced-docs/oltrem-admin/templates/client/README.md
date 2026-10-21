@@ -10,7 +10,7 @@ client's own configuration. Everything an agent or a person needs to know is in
 | Who this client is | `oltrem.config.ts` |
 | What the Worker may have | `oltrem.manifest.json`, checked against `wrangler.jsonc` and the code on every verify |
 | Who may sign in | the IAM module: the Vendor, then the people the company invites; `ACCESS_AUD` names the client's Access application |
-| Who its messages come from | `email.from_address` and `email.from_name` in the `settings` of `oltrem.config.ts`, set at onboarding; the email providers are listed on the Providers page and added through `/api/providers` until its form exists |
+| Who its messages come from | `email.from_address` and `email.from_name` in the `settings` of `oltrem.config.ts`, set at onboarding; the email providers are connected, checked and switched on the Providers page |
 | What runs on its own | the five-minute tick (jobs and System health, with the free plan's budgets) and the one Workflow, `KitJobs` on the `JOBS` binding, whose schedules start the nightly backup |
 | This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts |
 | How it deploys | a push to `main` runs `pnpm verify`, then applies the migrations and deploys (`.github/workflows/deploy.yml`) |
@@ -24,8 +24,10 @@ client's own configuration. Everything an agent or a person needs to know is in
 `npm run dev` (`scripts/dev.mjs`) starts this Worker on your computer with local stand-ins for
 the database, the key-value namespace and the bucket, and no Cloudflare account. It applies the
 migrations to the local database and gives the Vendor the address `vendor@example.com` there,
-both without asking anything, then serves the portal at <http://localhost:8787>. In the kit's
-own repository, run `npm install` once, then `npm run dev` from its root.
+both without asking anything, then serves the portal at <http://localhost:8787>. A provider's
+key pasted there is sealed with a key of this computer's own, which the first `npm run dev` makes
+into `.dev.vars` (git ignores it; delete it and the keys pasted before no longer open). In the
+kit's own repository, run `npm install` once, then `npm run dev` from its root.
 
 `ACCESS_AUD` is not set on your computer, so the portal shows its own sign-in page instead of
 Cloudflare Access, and only on `localhost`: type an address and you are signed in as that

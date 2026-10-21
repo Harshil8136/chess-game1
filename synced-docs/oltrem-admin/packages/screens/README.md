@@ -42,7 +42,9 @@ with no account: on a new portal it is the only account.
 | `/people/:id` | one person: the roles they hold, the form to give one, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes` |
 | `/access` | the company, its roles, groups and places, and the form to add a place | `/api/iam/tenant`, `roles`, `groups`, `scopes` |
 | `/access/roles/new`, `/access/roles/:id` | a role's name and its capabilities as a checklist grouped by module | `/api/iam/roles/:id`, `/api/iam/capabilities` |
-| `/providers` | the connected providers in failover order, and the definitions on offer | `/api/providers/instances`, `definitions` |
+| `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
+| `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
+| `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
 | `/email` | the latest messages and their state | `/api/email/messages` |
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
@@ -58,11 +60,18 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Switch the account off, with a reason, or on | `POST /api/users/people/:id/deactivate`, `reactivate` | `?done=off`, `on` |
 | Make a role, save one | `POST /api/iam/roles` (placed below every existing role), `PATCH /api/iam/roles/:id` | `?done=role-made`, `role-saved` |
 | Add a place (`/access/places`) | `POST /api/iam/scopes` | `?done=place-added` |
+| Look up a domain (`/providers/detect`) | `POST /api/providers/detect` | what was found, on the page |
+| Connect a provider (`/providers/add/:definition`): a name and its fields | `POST /api/providers/instances` | `?done=connected` |
+| Check the key, send me a test message | `POST /api/providers/instances/:id/probe`, `POST /api/email/canary` | `?done=checked`, `tested`; the answer under Last check |
+| Make it the one that sends, take it out of use, remove it | `POST .../activate`, `.../disable`, `DELETE /api/providers/instances/:id` | `?done=sends`, `taken-out`, `removed` |
+| Paste the key again | `POST /api/providers/instances/:id/credential` | `?done=key-saved` |
 
 A change that worked redirects to its page with a `done` key, which the page turns into a fixed
 sentence: no address or name travels in the address bar. A change the API refused shows the page
 again with the API's reason and its status. Choices of one (a role, a place, a kind) are
-`ChoiceChips` from `@oltrem/core-ui`: every option visible in a sideways row.
+`ChoiceChips` from `@oltrem/core-ui`: every option visible in a sideways row. A provider's secret
+fields are password fields; an optional field left empty is left out, and a secret is never put
+back into a page.
 
 Every page sits in the same frame: the portal's name and who is signed in, then the sideways row
 of every section with the current one marked (no dropdown), then the page. A form posted from
@@ -79,7 +88,8 @@ writes. The file is generated: never edit it by hand (R-06).
 ## Not here yet
 
 - **The other forms.** Groups, overrides with their three states, reviews, requests, approvals,
-  the Vendor's access, profiles, providers, settings: still the API until their forms come.
+  the Vendor's access, profiles, settings, a provider's delivery-report address and the client's
+  own provider definitions: still the API until their forms come.
 - **Pages from the manifest.** The row and the pages are a fixed list in `src/layout.tsx`. The
   plan's page fields on the module manifest (pages, i18n) come with the renderer.
 - **Astro.** The plan names Astro for the screens. These are Preact components rendered by the
@@ -94,4 +104,7 @@ writes. The file is generated: never edit it by hand (R-06).
 this computer, creates the company, the Owner accepts, and every page answers with its words; a
 stranger is told there is no account; behind Access the local door does not exist. A second test
 makes a role and a place, invites someone who accepts, ends and gives their role, switches the
-account off and on, withdraws an invitation, and sees a refusal and a cross-site form refused.
+account off and on, withdraws an invitation, and sees a refusal and a cross-site form refused. A
+third connects Resend, with the provider's answers stood in for: a missing key refused, the key
+checked, a test message refused for want of a sending address, the provider made the one that
+sends, refused removal while it sends, taken out of use, its key pasted again, and removed.
