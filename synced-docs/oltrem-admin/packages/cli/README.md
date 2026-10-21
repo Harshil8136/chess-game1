@@ -151,20 +151,24 @@ declares anything but exactly one D1 database.
 
 The first deploy and every later one from a person's computer, as one command (`npm run deploy`
 in a client repository), for someone who has never used Cloudflare. Each step looks first and
-only adds, so a run that stopped carries on the next time:
+only adds, so a run that stopped carries on the next time. Each step prints as it happens, so
+the steps that make an answer come before its question:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
-2. **The address.** Asked once when `vars.PUBLIC_HOST` is empty, then written into
-   `wrangler.jsonc` with a `routes` entry making it the Worker's custom domain; the person
-   commits it. The domain must be on the same Cloudflare account.
+2. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. An
+   empty answer serves the portal on its free `workers.dev` address (`workers_dev` turned on);
+   an address on a domain of the same Cloudflare account becomes `PUBLIC_HOST` and a `routes`
+   entry making it the Worker's custom domain. `wrangler.jsonc` is written only once every answer
+   is good, just before the database and the deploy; the person commits it.
 3. **The secrets** `secrets.required` names, only those `wrangler secret list` does not show. The
    KEK and the backup's age key pair are made here and kept in `oltrem-keys.txt` (git ignores it),
    which the Vendor moves into a password manager: the KEK because a rotation needs it again and
    Cloudflare never shows a secret back, the private key because no copy opens without it. The
    file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
    stopped before the deploy uses the keys it kept. The Access tag is asked for after the steps
-   that make the Access application for the address; the ops token after the steps that make it,
-   and without echo. When the Worker exists but its secrets cannot be listed, the command stops
+   that put Access in front of every Worker of the account (the dashboard's Protect all Workers,
+   which works before the Worker exists and on either address); the ops token after the steps
+   that make it, and without echo. When the Worker exists but its secrets cannot be listed, the command stops
    rather than send a new KEK, which would leave every stored provider key unreadable.
 4. **The database and the migrations**, as `migrations apply` does.
 5. **`wrangler deploy`**, carrying the new secrets in a file (`--secrets-file`) that is removed

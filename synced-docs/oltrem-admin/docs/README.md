@@ -46,19 +46,19 @@ Phase 1, the core runtime, has these parts so far:
 | The core runtime: `@oltrem/core-errors`, `core-module`, `core-http`, `core-outbox` and `core-audit` (errors as data, the module contract, the one pipeline and the three Worker handlers, the outbox with replay, the hashed audit log) | **done** 2026-10-20: [the record](records/2026-10-20-core-runtime-packages.md); the client template's Worker is built from them |
 | `@oltrem/core-ui`: the token list as a Tailwind theme, the phone-first primitives on native elements, and the three widgets on Zag.js | **done** 2026-10-20: [the primitives record](records/2026-10-20-core-ui-tokens-and-primitives.md) and [the widgets record](records/2026-10-20-core-ui-widgets.md); the gallery page and the screen gates wait on an Astro app |
 | The client template and `oltrem setup`: the model of a client repository, resources by name, the kit's migrations copied with checksums, the one deploy workflow | **done** 2026-10-20: [the record](records/2026-10-20-client-template-and-setup.md); `npm run deploy` [built](records/2026-10-21-one-command-deploy.md), first run on the sandbox |
-| `oltrem docs`: the generated reference of a client repository, checked current on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-docs-command.md); the client template carries its five pages |
-| `oltrem check agents` and `check tokens`: the instruction files and the token registry of a client repository, checked on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-check-commands.md) |
+| `oltrem docs`: a client repository's generated reference, checked on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-docs-command.md); the template carries its five pages |
+| `oltrem check agents` and `check tokens`: a client repository's instruction files and token registry, checked on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-check-commands.md) |
 | The phase's acceptance: a blank client repository deploys from GitHub with no hand-pasted id and one stored token, the doctor green, a red push not deployed | not started: needs the sandbox repository and the fresh account, the owner's steps |
 
 Phase 2, permissions and users, has these parts so far:
 
 | Part | State |
 |---|---|
-| `@oltrem/iam`, the model and the check: the tables, the capability registry, the compiler and `can()` | **done** 2026-10-20: [the record](records/2026-10-20-iam-model-and-check.md); the client template runs it |
-| Sessions and the authorizer: the map inside a session, a revoke visible on the next request | **done** 2026-10-20: [the record](records/2026-10-20-iam-sessions-and-authorizer.md); the client template runs it |
-| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | **done** 2026-10-20: [the record](records/2026-10-20-iam-governance.md); the client template runs it |
-| The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | **done** 2026-10-20: [the record](records/2026-10-20-iam-vendor-and-handover.md); the client template runs it |
-| The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); the client template runs it |
+| `@oltrem/iam`, the model and the check: the tables, the capability registry, the compiler and `can()` | **done** 2026-10-20: [the record](records/2026-10-20-iam-model-and-check.md); the template runs it |
+| Sessions and the authorizer: the map inside a session, a revoke visible on the next request | **done** 2026-10-20: [the record](records/2026-10-20-iam-sessions-and-authorizer.md); the template runs it |
+| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | **done** 2026-10-20: [the record](records/2026-10-20-iam-governance.md); the template runs it |
+| The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | **done** 2026-10-20: [the record](records/2026-10-20-iam-vendor-and-handover.md); the template runs it |
+| The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); the template runs it |
 | `@oltrem/users`: the directory with profiles, switching accounts off and on under the standing rules, its routes | **done** 2026-10-21: [the record](records/2026-10-21-users-module.md); service accounts and the door's group sync come later |
 | The client template mounts IAM and users: `ACCESS_AUD` as a required Worker secret read on each request, the Vendor let in, no account refused | **done** 2026-10-21: [the record](records/2026-10-21-template-mounts-iam.md); [the Vendor's address](records/2026-10-21-vendor-address.md) after the first deploy |
 | The phone screens | **first screens done** 2026-10-21: [the record](records/2026-10-21-screens-and-npm.md); [forms that change things](records/2026-10-21-people-and-access-screens.md); [Home widgets](records/2026-10-21-home-widgets.md); cost measured in the sandbox |
@@ -67,8 +67,8 @@ Phase 3, the module system, has these parts so far:
 
 | Part | State |
 |---|---|
-| The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); the client template runs it |
-| Jobs on the manifest and the one tick (`@oltrem/core-jobs`): each run leased, recorded, and tried again at its next time | **done** 2026-10-21: [the record](records/2026-10-21-jobs-and-the-tick.md); the client template runs it on its five-minute cron; no module declares a job yet |
+| The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); the template runs it |
+| Jobs on the manifest and the one tick (`@oltrem/core-jobs`): each run leased, recorded, and tried again at its next time | **done** 2026-10-21: [the record](records/2026-10-21-jobs-and-the-tick.md); the template runs it on its five-minute cron; no module declares a job yet |
 | Health on the manifest and its runner (`@oltrem/core-health`): the checks run as a job on the tick, the last result kept per check, a problem opened after two failures in a row; migrations, settings and errors declared on the manifest and checked against their owner | **done** 2026-10-21: [the record](records/2026-10-21-health-and-manifest-fields.md); the client template mounts it |
 | The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module (route, job, check, migration, setting, error, test, how-to) that a client's verify passes with no edits, with its own contract test | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); no page, no capabilities and the setting read as its default until the kit has them |
 | The generated reference of a client reads its modules: `oltrem docs` imports `src/modules.ts` in a child Node process and writes a Modules page (capabilities, routes, jobs, checks, migrations, settings, errors) that a client's verify holds current | **done** 2026-10-21: [the record](records/2026-10-21-generated-references.md); the kit's own modules are documented in the kit |
@@ -96,9 +96,9 @@ Phase 5, backup, GitHub, home and health, has these parts so far:
 | Part | State |
 |---|---|
 | The age format a backup copy is written in (`@oltrem/core-crypto/age`): standard age to one X25519 recipient, streamed in 64 KiB chunks, its size known in advance | **done** 2026-10-21: [the record](records/2026-10-21-age-format.md); nothing is backed up yet |
-| The backup module: the nightly export as a flow in the one Workflow, encrypted on its way into the bucket, the run records, a run by hand, the Time Travel bookmark, the freshness check | **done** 2026-10-21: [the record](records/2026-10-21-backup-module.md); the client template runs it; `oltrem backup setup` sets it up: [the record](records/2026-10-21-backup-setup.md) |
+| The backup module: the nightly export as a flow in the one Workflow, encrypted on its way into the bucket, the run records, a run by hand, the Time Travel bookmark, the freshness check | **done** 2026-10-21: [the record](records/2026-10-21-backup-module.md); the template runs it; `oltrem backup setup` sets it up: [the record](records/2026-10-21-backup-setup.md) |
 | The restore drill (`oltrem backup drill`): the newest copy opened with the private key on the vendor's computer, loaded into a scratch database, every row found, everything deleted, the outcome recorded; the drill check on System health | **done** 2026-10-21: [the record](records/2026-10-21-restore-drill.md); no drill has run against a real account |
-| The GitHub module: each deploy run reported into the database by the workflow with no GitHub token, the kit version production runs, whether a newer one is published, the deploy check | **done** 2026-10-21: [the record](records/2026-10-21-github-module.md); the client template runs it, and its workflow reports every run on main |
+| The GitHub module: each deploy run reported into the database by the workflow with no GitHub token, the kit version production runs, whether a newer one is published, the deploy check | **done** 2026-10-21: [the record](records/2026-10-21-github-module.md); the template runs it, and its workflow reports every run on main |
 | The free-plan budgets on System health: measured every fifteen minutes, warned and failed on their lines, the other jobs paused while one they spend is nearly gone | **done** 2026-10-21: [the record](records/2026-10-21-free-plan-budgets.md); the client template measures them; the Actions minutes are in `oltrem doctor`: [the record](records/2026-10-21-actions-minutes.md) |
 | The client template mounts backup, GitHub and the budgets, with the one Workflow and the deploy's report step | **done** 2026-10-21: [the record](records/2026-10-21-template-mounts-backup.md) |
 | The home module | a home screen with a card per module **done** 2026-10-21 ([the record](records/2026-10-21-screens-and-npm.md)); the module itself is not built |
@@ -225,6 +225,7 @@ was verified:
 | [Audit page and seal](records/2026-10-21-audit-seal-and-export.md) | the log read, exported, sealed nightly |
 | [See it as](records/2026-10-21-see-it-as.md) | one person's access shown, read only |
 | [One command deploy](records/2026-10-21-one-command-deploy.md) | `npm run deploy` |
+| [Deploy, first run](records/2026-10-21-deploy-first-run.md) | fixes |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
 
 ## How this folder is checked
