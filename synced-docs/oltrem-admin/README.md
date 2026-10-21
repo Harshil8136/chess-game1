@@ -10,9 +10,14 @@ repositories an AI agent can work in safely. This repository is the kit itself.
   every document; the plan behind the work is linked from there.
 - **Checking a change?** `pnpm verify` is the one gate; [what it runs](./docs/reference/verify.md)
   is generated from the gate list.
+- **On your own computer?** The kit is a pnpm workspace, so `npm install` stops at the first
+  `catalog:` version, which only pnpm reads. With Node 22 or newer, install pnpm once with
+  `npm install -g pnpm` (it switches itself to the version `package.json` names), then run
+  `pnpm install --frozen-lockfile` and `pnpm verify`. It works the same on Windows, macOS and
+  Linux.
 
-The kit is in **phase 1**: the repository basics, the toolchain and the first core package (the
-configuration layers) are in place, and nothing is deployed anywhere yet.
+Where the kit stands, phase by phase, is in [docs/README.md](./docs/README.md). Nothing is
+deployed anywhere yet.
 
 Licensed under the [Oltrem Licence 1.0](./LICENSE), a source-available licence: free for personal
 use and for organisations under one million US dollars a year, a commercial licence above that,
