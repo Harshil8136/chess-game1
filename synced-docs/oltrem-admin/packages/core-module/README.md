@@ -3,8 +3,9 @@
 The module contract of the kit (plan section 4.3): one manifest per feature, checked when it is
 defined so a bad one fails the build. So far: the id and the version, the capabilities on their
 bit plane, the API routes with their capability and schema, the event types a module handles, its
-jobs, and the scheduled hook. Pages, migrations, settings, health and docs join the manifest with
-the rest of the module system (phase 3).
+jobs, its health checks, the migrations it ships, the settings and errors it owns, and the
+scheduled hook. Pages, i18n and docs join the manifest with the rest of the module system
+(phase 3).
 
 ## Defining a module
 
@@ -32,6 +33,10 @@ export const notes = defineModule({
   eventTypes: ['notes.created'],
   onEvent: async (event, env) => { /* fan out */ },
   jobs: [{ id: 'notes.digest', every: '1h', summary: 'Send the hourly digest', run: async (env) => { /* ... */ } }],
+  health: [{ id: 'notes.store', lane: 'storage', summary: 'The notes table answers', run: async (env) => ({ status: 'ok' }) }],
+  migrations: ['0012_notes.sql'], // shipped in the module's migrations/ folder
+  settings: [notesPerPage], // defined with defineSetting, under the key prefix `notes.`
+  errors: NOTES_ERRORS, // defined with defineErrors('notes', ...)
   scheduled: async (controller, env) => { /* the raw tick, rarely needed */ },
 });
 ```
@@ -51,6 +56,9 @@ export const notes = defineModule({
 | No two routes share a method and a path | `KIT-E-1005` |
 | An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
 | A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`) | `KIT-E-1006` |
+| A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run` | `KIT-E-1006` |
+| A migration is named `NNNN_name.sql` and declared once | `KIT-E-1006` |
+| A setting's key starts with the module's id and its definition names the module; an error's definition names the module | `KIT-E-1006` |
 
 The manifest is frozen once defined. `RouteContext` gives a handler the request, the bindings,
 the identity the door asserted (email, subject, when the person signed in, the token's audience),
@@ -84,6 +92,22 @@ A module's periodic work is declared as `jobs`, each with a stable id, an interv
 the one tick (`@oltrem/core-jobs`) runs them when due under a lease and records each outcome.
 `everySeconds(every)` is the parser both share. The `scheduled` hook stays for a module that
 needs the raw tick; work that should be seen, counted and retried is a job.
+
+## Health
+
+A module's checks are declared as `health`, each with a stable id, a lane the page groups it
+under, a summary and a `run` that answers `ok`, `warn` or `fail` with a few words. The health job
+(`@oltrem/core-health`) runs every mounted module's checks on the tick, keeps the last result per
+check and opens a problem after two failures in a row.
+
+## Migrations, settings and errors
+
+The manifest also names what the module owns elsewhere, so one file says everything a reviewer
+or a generator needs: `migrations`, the SQL files it ships, named `NNNN_name.sql`; `settings`,
+the definitions it made with `defineSetting` (`@oltrem/core-config`), whose keys start with the
+module's id; `errors`, the codes it made with `defineErrors` (`@oltrem/core-errors`). The contract
+checks that each belongs to this module and refuses one defined for another, so a module cannot
+claim another's setting or code; the generator and the references of phase 3 read these lists.
 
 ## Schemas
 
