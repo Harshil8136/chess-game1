@@ -16,7 +16,7 @@ import { createIam } from '@oltrem/iam';
 import { createProviders } from '@oltrem/providers';
 
 const bindings = (env: Env) => ({ kv: env.CACHE, db: env.DB });
-const iam = createIam<Env>({ bindings, audience: env.ACCESS_AUD });
+const iam = createIam<Env>({ bindings, audience: (env) => env.ACCESS_AUD });
 const providers = createProviders<Env>({ bindings, sessions: iam.sessions, kek: (env) => env.KEK });
 const app = createApp<Env>({
   modules: [iam.module, providers.module],

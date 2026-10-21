@@ -55,19 +55,20 @@ Phase 2, permissions and users, has these parts so far:
 
 | Part | State |
 |---|---|
-| `@oltrem/iam`, the model and the check: the tables, the capability registry, the compiler and `can()` | **done** 2026-10-20: [the record](records/2026-10-20-iam-model-and-check.md); it runs in no Worker yet |
-| Sessions and the authorizer: the map inside a session, a revoke visible on the next request | **done** 2026-10-20: [the record](records/2026-10-20-iam-sessions-and-authorizer.md); it runs in no Worker yet |
-| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | **done** 2026-10-20: [the record](records/2026-10-20-iam-governance.md); it runs in no Worker yet |
-| The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | **done** 2026-10-20: [the record](records/2026-10-20-iam-vendor-and-handover.md); it runs in no Worker yet |
-| The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); it runs in no Worker yet |
+| `@oltrem/iam`, the model and the check: the tables, the capability registry, the compiler and `can()` | **done** 2026-10-20: [the record](records/2026-10-20-iam-model-and-check.md); the client template runs it since 2026-10-21 |
+| Sessions and the authorizer: the map inside a session, a revoke visible on the next request | **done** 2026-10-20: [the record](records/2026-10-20-iam-sessions-and-authorizer.md); the client template runs it since 2026-10-21 |
+| Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | **done** 2026-10-20: [the record](records/2026-10-20-iam-governance.md); the client template runs it since 2026-10-21 |
+| The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | **done** 2026-10-20: [the record](records/2026-10-20-iam-vendor-and-handover.md); the client template runs it since 2026-10-21 |
+| The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); the client template runs it since 2026-10-21 |
 | `@oltrem/users`: the directory with profiles, switching accounts off and on under the standing rules, its routes | **done** 2026-10-21: [the record](records/2026-10-21-users-module.md); service accounts and the door's group sync come later |
+| The client template mounts IAM and users: `ACCESS_AUD` as a required Worker secret read on each request, the Vendor let in, no account refused | **done** 2026-10-21: [the record](records/2026-10-21-template-mounts-iam.md); `oltrem setup` writing the Vendor's address is owed |
 | The phone screens | not started: the owner's call of 2026-10-21 is to build them after the sandbox measures a screen's cost |
 
 Phase 3, the module system, has these parts so far:
 
 | Part | State |
 |---|---|
-| The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); it runs in no Worker yet |
+| The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); the client template runs it since 2026-10-21 |
 | Jobs on the manifest and the one tick (`@oltrem/core-jobs`): each run leased, recorded, and tried again at its next time | **done** 2026-10-21: [the record](records/2026-10-21-jobs-and-the-tick.md); the client template runs it on its five-minute cron; no module declares a job yet |
 | Health on the manifest and its runner (`@oltrem/core-health`): the checks run as a job on the tick, the last result kept per check, a problem opened after two failures in a row; migrations, settings and errors declared on the manifest and checked against their owner | **done** 2026-10-21: [the record](records/2026-10-21-health-and-manifest-fields.md); the client template mounts the health module; no module declares a check yet |
 | The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module (route, job, check, migration, setting, error, test, how-to) that a client's verify passes with no edits, with its own contract test | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); no page, no capabilities and the setting read as its default until the kit has them |
@@ -170,6 +171,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: the users module](records/2026-10-21-users-module.md) | the second module: the directory and the profile, the switch and its rules, how a module stands on the IAM module, the decisions taken, and how it was verified | record, frozen |
+| [Phase 2 in the client template](records/2026-10-21-template-mounts-iam.md) | how the template's Worker came to run IAM and users, the Access audience secret, what is still owed, and how it was verified | record, frozen |
 | [Phase 3: capabilities on the manifest](records/2026-10-21-module-capabilities.md) | how a module declares what its routes check, how the Worker registers it at its start and keeps the check current, the decisions taken, and how it was verified | record, frozen |
 | [Phase 3: jobs and the tick](records/2026-10-21-jobs-and-the-tick.md) | how a module declares its periodic work, how the one tick runs it under a lease and records it, the decisions taken, and how it was verified | record, frozen |
 | [Phase 3: health and the manifest's last data fields](records/2026-10-21-health-and-manifest-fields.md) | how a module declares its health checks, migrations, settings and errors, how the health job runs the checks and opens a problem, the decisions taken, and how it was verified | record, frozen |

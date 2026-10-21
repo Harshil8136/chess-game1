@@ -15,7 +15,7 @@ import { createIam } from '@oltrem/iam';
 import { createUsers } from '@oltrem/users';
 
 const bindings = (env: Env) => ({ kv: env.CACHE, db: env.DB });
-const iam = createIam<Env>({ bindings, audience: env.ACCESS_AUD });
+const iam = createIam<Env>({ bindings, audience: (env) => env.ACCESS_AUD });
 const users = createUsers<Env>({ bindings, sessions: iam.sessions });
 const app = createApp<Env>({
   modules: [iam.module, users.module],

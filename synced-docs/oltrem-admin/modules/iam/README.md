@@ -100,7 +100,7 @@ import { asSession, createSessions } from '@oltrem/iam';
 
 const sessions = createSessions<Env>({
   bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
-  audience: env.ACCESS_AUD, // the client's Access application; a token for another is refused
+  audience: (env) => env.ACCESS_AUD, // read on each request; a token for another application is refused
 });
 const app = createApp<Env>({ modules, session: sessions.hook, authorize: sessions.authorize });
 
@@ -109,6 +109,12 @@ const { access } = asSession(ctx.session);
 can(access, index, 'rooms.cancel', input.scopeId); // the scope at hand
 allowedScopes(access, index, 'rooms.read'); // for WHERE scope_id IN (...)
 ```
+
+The **audience** is the tag of the client's Access application, the Worker secret `ACCESS_AUD`,
+whose key recipe (`ACCESS_AUD_RECIPE`) the module declares. Given as a function it is read from the
+env on each request, so the Worker file needs no Workers-only import at module scope and the tool
+can still load it; an empty tag is one no token names, so a Worker without the secret refuses
+everyone (`KIT-E-0401`).
 
 The door (Cloudflare Access) signs the person in and keeps its own cookie; the kit sets none. On
 each request the **hook** reads one KV record, `sess:<email>`, carrying the compiled map, its hard
@@ -203,7 +209,7 @@ import { createHandover } from '@oltrem/iam';
 const handover = createHandover<Env>({
   bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
   sessions,
-  audience: env.ACCESS_AUD,
+  audience: (env) => env.ACCESS_AUD,
 });
 // at setup, as the Vendor
 const { invitation } = await handover.createTenant(env, actor, { name, ownerEmail });
@@ -250,7 +256,7 @@ import { createIam } from '@oltrem/iam';
 
 const iam = createIam<Env>({
   bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
-  audience: env.ACCESS_AUD,
+  audience: (env) => env.ACCESS_AUD,
 });
 const app = createApp<Env>({
   modules: [iam.module, ...others],
@@ -340,8 +346,9 @@ and a synthetic tenant of three locations, four departments, twelve roles and fo
 which 320 generated decisions of the compiled check are compared with a plain evaluator that
 reads the rows one question at a time (`test/reference.ts`). The sessions are tested with the KV
 writes counted (one on the first request, none on the next), a grant ending and the day passing,
-the dangerous route's re-read, a revoke seen on the next request, an ended sign-in, and the whole
-pipeline from the Access headers to the problem codes. The governance is tested on a tenant of
+the dangerous route's re-read, a revoke seen on the next request, an ended sign-in, the audience
+read from the env with an empty one refusing everyone, and the whole pipeline from the Access
+headers to the problem codes. The governance is tested on a tenant of
 four scopes, four roles and twelve people, every rule refused and then obeyed: the standing at a
 scope, the self-edit, the dates, the Owner made and unmade with approvals that fit one change
 once, an eligible grant activated and lapsed, roles edited only with what is held where they are
