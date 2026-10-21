@@ -39,6 +39,7 @@ export const notes = defineModule({
   settings: [notesPerPage], // defined with defineSetting, under the key prefix `notes.`
   errors: NOTES_ERRORS, // defined with defineErrors('notes', ...)
   secrets: [{ name: 'NOTES_KEY', purpose: '...', create: '...', scopes: [], test: '...', rotate: '...', without: '...' }],
+  home: { title: 'Notes', capability: 'notes.read', read: async (env) => ({ value: '12', note: '3 today', state: 'ok' }) },
   scheduled: async (controller, env) => { /* the raw tick, rarely needed */ },
 });
 ```
@@ -124,6 +125,15 @@ A module's checks are declared as `health`, each with a stable id, a lane the pa
 under, a summary and a `run` that answers `ok`, `warn` or `fail` with a few words. The health job
 (`@oltrem/core-health`) runs every mounted module's checks on the tick, keeps the last result per
 check and opens a problem after two failures in a row.
+
+## Home
+
+A module's card on Home is declared as `home`: a title, one of the module's own capabilities,
+and a `read` that answers one short figure (`value`), an optional line under it (`note`) and a
+state, `ok`, `attention`, `failing` or `unknown`. `defineModule` adds the route
+`GET /api/<module>/home` under that capability, so the card is checked like any other read; the
+screens ask every mounted module that has one and leave out the cards a person may not read. A
+module whose routes already include `GET /home` is refused (`KIT-E-1005`).
 
 ## Migrations, settings and errors
 

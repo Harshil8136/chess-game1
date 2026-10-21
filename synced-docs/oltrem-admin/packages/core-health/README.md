@@ -46,7 +46,8 @@ const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), mo
 `createHealth` returns the runner and the `health` module, with one job, `health.run`, every
 five minutes, and two routes for System health, each checked against `health.read` (bit plane 6,
 a read): `GET /api/health/checks` (every row `list` returns) and `GET /api/health/budgets` (each
-budget's reading, an empty list when the budgets are not measured). The tick runs the job like
+budget's reading, an empty list when the budgets are not measured), and the Home card's
+`GET /api/health/home` (how many checks fail or need a look). The tick runs the job like
 any other job, so a client gets system health by mounting the module, with no cron of its own.
 On each run, every declared check is run in manifest order, with the time it took, and its row
 written: the status, the message (its first 400 characters), when, how many failures in a row,

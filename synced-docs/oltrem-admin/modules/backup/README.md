@@ -58,6 +58,7 @@ Under `/api/backup`, through the IAM module's sessions and check.
 | `GET /runs` | `backup.read` | The newest thirty runs: when, who, the outcome, the copy and its size |
 | `POST /runs` | `backup.run` | Makes a backup now: refused with `KIT-E-1601` when something is missing and with `KIT-E-1603` while an export runs; otherwise the flow starts and the answer is `202 { id }`. Audited as `backup.run` |
 | `GET /time-travel` | `backup.read` | The database's Time Travel bookmark now, to note before a risky step and restore to with `wrangler d1 time-travel restore` |
+| `GET /home` | `backup.read` | The Home card: how long ago the newest copy started, and how it ended |
 
 ## Health
 

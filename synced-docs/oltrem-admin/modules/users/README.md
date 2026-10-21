@@ -64,6 +64,7 @@ above everyone but an Owner. Every switch and every profile change is audited (`
 | `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
+| `GET /home` | `users.read` | the Home card: people with an account that is on, and how many are switched off |
 
 ## Later
 

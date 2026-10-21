@@ -26,7 +26,9 @@ const app = createApp<Env>({
 screens.mount(app); // every page, behind the door
 ```
 
-A module the portal does not mount has no chip in the row, no card and no page. `localVendor`,
+A module the portal does not mount has no chip in the row, no card and no page. A module with a
+`home` widget on its manifest (`@oltrem/core-module`) has a card on Home, a client's own module
+too; a card links to its page when the module has one. `localVendor`,
 the Vendor's address that the client's dev script writes on the owner's computer, is named on
 the local sign-in page and filled in there, and named again to anyone signed in on that computer
 with no account: on a new portal it is the only account.
@@ -35,7 +37,7 @@ with no account: on a new portal it is the only account.
 
 | Path | Shows | Reads |
 |---|---|---|
-| `/` | a Vendor with no company yet: the company form; anyone else: a card per module with one line of its state | `/api/iam/me`, then each card's own read |
+| `/` | a Vendor with no company yet: the company form; anyone else: the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/home` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
 | `/people` | everyone in the directory, the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
@@ -108,11 +110,12 @@ writes. The file is generated: never edit it by hand (R-06).
 
 `test/css.test.ts` holds the committed stylesheet to its build. The client template's
 `test/screens.test.ts` runs the whole first run inside the Workers runtime: the Vendor signs in on
-this computer, creates the company, the Owner accepts, and every page answers with its words; a
+this computer, creates the company, the Owner accepts, every page answers with its words and
+Home shows every module's card; a
 stranger is told there is no account; behind Access the local door does not exist. A second test
 makes a role and a place, invites someone who accepts, ends and gives their role, switches the
 account off and on, allows one thing and denies another as exceptions (the person is then refused
-the denied page and shown the allowed one), puts one back to their roles and ends the other,
+the denied page and shown the allowed one, and Home shows them only the cards they may read), puts one back to their roles and ends the other,
 withdraws an invitation, and sees a refusal and a cross-site form refused. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed

@@ -46,6 +46,7 @@ Under `/api/github`, through the IAM module's sessions and check.
 |---|---|---|
 | `GET /status` | `github.read` | What production runs (the newest run that deployed: its kit version, commit and link), the newest run whatever its outcome, the newest published kit version, and whether it is newer |
 | `GET /runs` | `github.read` | The newest thirty runs, with their outcome and link |
+| `GET /home` | `github.read` | The Home card: the kit version production runs, and whether the last deploy went live or a newer kit is out |
 
 ## Health
 

@@ -60,6 +60,7 @@ Under `/api/alerts`, through the IAM module's sessions and check. Capabilities a
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /items` | `alerts.read` | the open alerts, newest first, and the thirty latest resolved ones |
+| `GET /home` | `alerts.read` | the Home card: how many are open, and how many of those are critical |
 | `POST /items/:id/acknowledge` | `alerts.manage` | keeps the caller's address and the time on an open alert not yet acknowledged; audited as `alerts.acknowledge`; another alert is 404 |
 
 ## The table

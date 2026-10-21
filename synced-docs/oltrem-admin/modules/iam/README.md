@@ -276,7 +276,8 @@ one read. A change to the capabilities under the same version is not seen: a cha
 version. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
-The manifest: fifty-four JSON routes under `/api/iam`, each naming the
+The manifest: fifty-five JSON routes under `/api/iam` (the Home card's `GET /home`, under
+`iam.read`, counts the roles and the places), each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
 is flagged). Bodies and queries are validated by schema (`KIT-E-0422` names the field); a list
