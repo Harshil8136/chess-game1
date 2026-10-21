@@ -47,6 +47,7 @@ are checked against it by `pnpm check:agents`.
 | Command | What it does |
 |---|---|
 | `pnpm verify` | the one gate: every check below in order, one line each; the failing one prints in full |
+| `pnpm dev` | the client template's Worker on this computer, on local resources: `/healthz` answers, the rest needs Access |
 | `pnpm test` | the tests of the verify chain itself, on Node's built-in runner (`scripts/*.test.mjs`) |
 | `pnpm test:packages` | the package and module tests: Worker code inside the Workers runtime, the tool on Node |
 | `pnpm typecheck` | the type check of every package and module, each against its own runtime |

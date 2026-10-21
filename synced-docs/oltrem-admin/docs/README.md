@@ -35,6 +35,7 @@ and measure, has these parts:
 | The CPU measurement of three sample screens in the sandbox | not started: needs the sandbox |
 | The first week's open questions (the configuration layers, encryption in the Worker, the test runner on GitHub, the secrets cap) | not started |
 | Working on Windows: LF line endings on every checkout, and `pnpm verify` and the tool starting pnpm and wrangler without a shell | **done** 2026-10-21, from the owner's run on a Windows computer: [the record](records/2026-10-21-windows.md) |
+| `pnpm dev`, and the second Windows run: paths written with `/`, the `oltrem` command linked before the first build, no install-script prompt | **done** 2026-10-21: [the record](records/2026-10-21-windows-second-run.md) |
 
 Phase 1, the core runtime, has these parts so far:
 
@@ -187,6 +188,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted, the decisions taken, and how it was verified | record, frozen |
 | [Phase 5: the GitHub module](records/2026-10-21-github-module.md) | how the portal learns its kit version, a newer release and its last deploy without a GitHub token, the decisions taken, and how it was verified | record, frozen |
 | [Working on Windows](records/2026-10-21-windows.md) | why `npm install` cannot install the kit, why `pnpm verify` failed on Windows and how it was fixed, the line endings, and how it was verified | record, frozen |
+| [Working on Windows: the second run and pnpm dev](records/2026-10-21-windows-second-run.md) | the two tests and two install warnings of the second Windows run, what `pnpm dev` runs and shows, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
