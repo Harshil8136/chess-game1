@@ -63,6 +63,14 @@ and the capability check: the door's identity is enough, for a person who has no
 Its body is still validated and the same-origin check still applies; the handler sees
 `ctx.session` as `undefined`.
 
+A module's public hooks (`hooks` in `@oltrem/core-module`) are mounted at
+`POST /hooks/<module><path>` before the identity is read, so an outside service such as an email
+provider can post its reports with no sign-in. The body is read once, as text, at most
+`HOOK_BODY_MAX` (512 KiB), and handed to the handler with the path's parameters; the answer is
+`no-store`, and a `KitError` the handler throws is a problem response like any other. No session,
+capability or same-origin check runs, so the handler checks the caller itself. The client's Access
+door must let `/hooks/` through: a Bypass policy on that path in the Access application.
+
 `startup` runs once per isolate, on the first request that passed the door and before its session
 hook, with the mounted modules: the IAM module's `startup` registers the capabilities they declare.
 Requests that arrive while it runs wait on the same run; when it fails, that request is answered

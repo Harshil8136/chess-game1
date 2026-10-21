@@ -54,6 +54,7 @@ export const notes = defineModule({
 | A capability is `<module>.<name>`, declared once, with a class, a label in English and a known floor | `KIT-E-1006` |
 | A module that declares capabilities names every route's capability among them, `<module>.self` apart | `KIT-E-1006` |
 | No two routes share a method and a path | `KIT-E-1005` |
+| A public hook's path is `/` and segments of letters, digits, `_` and `-`, or `:params`; it has a summary and a handler, and is declared once | `KIT-E-1006`, `KIT-E-1005` |
 | An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
 | A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`) | `KIT-E-1006` |
 | A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run` | `KIT-E-1006` |
@@ -87,6 +88,14 @@ that runs the own-account rule, where the owner holds every capability by name; 
 any names every route's capability among them, so no route checks what nobody can hold.
 `<module>.self` is the one exception: every account holds it, for the routes about one's own
 things.
+
+## Public hooks
+
+A module's `hooks` are addresses an outside service posts to, such as a provider's delivery
+reports: POST only, mounted by `@oltrem/core-http` at `/hooks/<module><path>` before the Access
+identity is read. The handler gets the body exactly as it arrived (`HookContext.body`), the path's
+parameters and no session; it is the only check, so it verifies the caller by a signature or a
+secret in the address.
 
 ## Jobs
 

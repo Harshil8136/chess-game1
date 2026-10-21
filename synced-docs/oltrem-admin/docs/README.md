@@ -83,7 +83,7 @@ Phase 4, providers and email, has these parts so far:
 | The HTTP template engine, the SMTP client and the auth schemes behind the two email adapters | **done** 2026-10-21: [the record](records/2026-10-21-email-adapters.md); no request has reached a real provider yet |
 | The five webhook signature verifiers and the field map to the nine event kinds | **done** 2026-10-21: [the record](records/2026-10-21-webhook-verifiers.md); the public address the reports arrive at waits on the owner's answer |
 | Detection of a domain's provider by DNS over HTTPS, with evidence, and the daily re-fingerprint | **done** 2026-10-21: [the record](records/2026-10-21-provider-detection.md); the fingerprints are confirmed on the sandbox domain |
-| The email module: the outbox consumer, the idempotency lease, failover, templates compiled at build time, the canary send, alerts | **done** 2026-10-21: [the record](records/2026-10-21-email-module.md); the delivery reports' address comes next |
+| The email module: the outbox consumer, the idempotency lease, failover, templates compiled at build time, the canary send, alerts | **done** 2026-10-21: [the record](records/2026-10-21-email-module.md); the delivery reports' public address, on the owner's yes: [the record](records/2026-10-21-delivery-reports.md) |
 | Key recipes, the generated `secrets.required` block and the doctor checks; the Setup page waits with the screens | not started |
 | The phase's acceptance: two providers as rows with test accounts, detection on the sandbox domain, a canary and a delivery webhook round trip, failover by disabling the active row | not started: needs the sandbox and the owner's test accounts |
 
@@ -165,6 +165,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme, which key each reads, how a report becomes the kit's delivery events, and how it was verified against signatures made outside the kit | record, frozen |
 | [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, strong and weak evidence, why a suggestion never sends by itself, the daily re-check and its drift warning, and how it was verified | record, frozen |
 | [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked when it is asked for, held while no provider is ready, sent once under the kit's own lease through the active instance or a failover, the canary, the health check, the decisions taken, and how it was verified | record, frozen |
+| [Phase 4: the delivery reports' address](records/2026-10-21-delivery-reports.md) | why one public path skips the sign-in door, how a report is checked by a secret token and the provider's signature, how each event is kept on its message, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 

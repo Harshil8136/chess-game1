@@ -124,10 +124,11 @@ name as `ignored`. The body is the raw text: a signature covers the bytes as the
 | `shared-secret` | Postmark | the password of the basic auth on the webhook's address, compared in constant time | secret `webhookSecret` |
 | `none` | Brevo | nothing: the token in the hook's address is the only guard | none |
 
-A signed timestamp more than five minutes from the clock is refused; the delivery id lets the
-email module drop a report it has seen. An SNS subscription is answered with its confirmation
-address only when that address is an AWS one. A refusal is `KIT-E-1409` naming the check. The
-public address the reports arrive at waits on the owner's answer and comes with the email module.
+A signed timestamp more than five minutes from the clock is refused. An SNS subscription is
+answered with its confirmation address only when that address is an AWS one. A refusal is
+`KIT-E-1409` naming the check. The public address the reports arrive at,
+`/hooks/email/<instance>/<token>`, is the email module's; its token is the one sealed with the
+instance's credential (below).
 
 ## Detection
 
@@ -161,7 +162,10 @@ The secret fields are sealed together under the tenant's data key to the instanc
 sealed value copied to another row refuses to open; the other fields are config in the clear.
 `registry.open(env, tenant, id)` returns the fields to an adapter inside the request that uses
 them, and a credential that did not open is written to the audit log as `providers.open`,
-`failed`, with the error code and never the value. Every write is audited under the person who
+`failed`, with the error code and never the value. Beside the pasted fields the seal holds one
+the kit makes, `HOOK_FIELD`: the secret token of the instance's address for delivery reports,
+made when a key is first pasted and kept when one is pasted again. `registry.instance(db, id)`
+finds an instance by its id alone, for that public address. Every write is audited under the person who
 made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
 `remove` and `rewrap`, with the field names and never a value.
 
@@ -177,9 +181,7 @@ cannot do, and a delivery report that failed its check.
 
 ## Not here yet
 
-The public address for delivery reports, the email module
-that calls `pick`, `send`, `verify` and `deliveryEvents`, the recipe pages and the screens: the
-next slices of phase 4. No adapter has spoken
+The recipe pages and the screens: the next slices of phase 4. No adapter has spoken
 to a real provider yet: the request shapes stand on the public references until the sandbox
 sends through two of them.
 

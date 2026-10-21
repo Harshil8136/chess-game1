@@ -77,7 +77,28 @@ sign-in.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
+| `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
+
+## Delivery reports
+
+Each email instance has a public address, `POST /hooks/email/<instance>/<token>`, which the
+client's Access door lets through. The token is made when the instance's key is first pasted,
+sealed with it, and kept when a key is pasted again, so the address the provider was given stays
+valid. A report is checked twice: the token against the instance's, in constant time, then the
+provider's own signature (`@oltrem/providers`); Brevo signs nothing, so its token is its only
+guard. An SNS subscription is confirmed at the AWS address the verified message names. Each event
+is then kept on its message, sent through that instance, as `last_event` with its time, unless a
+later event is already there; SendGrid's ids, which add a suffix after a dot, are matched by
+prefix. A repeated report changes nothing, and an event the provider's map does not name is
+counted as ignored.
+
+| Answer | When |
+|---|---|
+| 200 `{ recorded, ignored }` | the report was checked; `recorded` events were kept |
+| 200 `{ subscribed: true }` | an SNS subscription was confirmed |
+| 401 `KIT-E-1409` | the token or the signature does not match, or the instance's signing field is not set |
+| 404 `KIT-E-0404` | no email instance has that id |
 
 ## Health
 
@@ -87,8 +108,9 @@ Two failures in a row open a problem (`@oltrem/core-health`).
 
 ## Not here yet
 
-- The delivery reports' route, which writes `last_event` from the providers' webhooks, waits on
-  where its public address lives.
+- Suppression of an address that bounced or complained comes with the screens; the reports are
+  kept on the messages until then.
+- The generated Modules page of a client lists routes, not public hooks.
 - Suppression, a daily cap and the sending address as a setting come with the screens.
 - No Worker mounts the module yet; the client template mounts it with the IAM module.
 
