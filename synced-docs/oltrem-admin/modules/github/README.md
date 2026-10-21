@@ -56,7 +56,6 @@ version and the commit.
 
 ## Not here yet
 
-- The client template's workflow gets the report step when the template mounts the module.
 - The docs mirror's status, for a client that keeps a mirror.
 - The page comes with the screens.
 - The newest published version needs the packages on GitHub Packages (phase 6); until then a

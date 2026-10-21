@@ -101,7 +101,6 @@ age -d -i oltrem-backup-key.txt copy.sql.age > copy.sql
   days, and the lifecycle rule that expires old copies are made by `oltrem setup` with the client
   template, as is the writer of the two settings.
 - The backup page comes with the screens.
-- No Worker mounts the module yet; the client template mounts it with the Workflow binding.
 - How much CPU encrypting a large dump takes is measured on the sandbox.
 
 ## The table and the error codes
