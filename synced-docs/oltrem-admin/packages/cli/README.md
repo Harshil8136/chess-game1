@@ -185,8 +185,16 @@ index, **Resources** from `oltrem.manifest.json` and the wrangler file (every bi
 class, cron, var and secret name, and any exception to the caps), **Migrations** from
 `migrations/` and its `kit.json` (the kit's files with their checksums, the client's own, the
 ledger table), **Tokens** from `tokens.registry.json` (one small table per credential, by name
-only, sorted) and a **Repository map** of the files that exist. Routes, capabilities, settings
-keys, error codes and key recipes join the list once a client has modules.
+only, sorted), **Modules** from `src/modules.ts` (for each of the client's own modules: its
+capabilities, routes with their capability, jobs, checks, migrations, settings with their
+defaults and errors with their text) and a **Repository map** of the files that exist. The key
+recipes join the list with the providers module.
+
+The Modules page is read from the code: the command imports `src/modules.ts` in a child Node
+process with type stripping and takes each manifest as data; no handler, job or check runs. A
+module must therefore load in Node, which means no Workers-only global at module scope; the kit's
+own packages respect this. A `src/modules.ts` Node cannot load is reported as a problem that
+names the first error, and nothing is written. A client without the file has no module yet.
 
 `--check` renders in memory and compares: a page whose committed copy is missing or differs, or
 a stray `.md` file in the folder, is reported with the command to run, and nothing is written.
