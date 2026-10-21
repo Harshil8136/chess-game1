@@ -79,7 +79,7 @@ Phase 4, providers and email, has these parts so far:
 | Part | State |
 |---|---|
 | Envelope encryption (`@oltrem/core-crypto`): one key-encryption key as the Worker secret, a data key per tenant wrapped by it, each credential sealed to its tenant and row, rotation under the one secret name | **done** 2026-10-21: [the record](records/2026-10-21-envelope-encryption.md); no credential is stored yet |
-| The providers module: provider definitions as data, per-tenant instances with their sealed credential, status and failover order | not started |
+| The providers module (`@oltrem/providers`): the definition contract, seven email providers as data, per-tenant instances with their sealed credential, the failover order, the routes | **done** 2026-10-21: [the record](records/2026-10-21-providers-as-data.md); nothing speaks to a provider yet |
 | The HTTP template engine, the SMTP client and the auth schemes behind the two email adapters | not started |
 | The five webhook signature verifiers and the field map to the nine event kinds | not started |
 | Detection of a domain's provider by DNS over HTTPS, with evidence, and the daily re-fingerprint | not started |
@@ -133,6 +133,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, every primitive with the rule it keeps, and the three widgets | written, beside the code |
 | [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities and their bits, roles, scopes, groups, bindings, overrides, the compiled map, the check's order and reasons, the session record and when it is written, the authorizer, the governance rules and the approvals, the Vendor, invitations and the handover, the tables and the error codes | written, beside the code |
 | [@oltrem/users](../modules/users/README.md) | the people: the directory and the profile, the rules of switching an account off and on, the routes, the table and the error codes | written, beside the code |
+| [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract and the kit's seven email definitions, instances with their sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies into a client repository, written as the how-to the client keeps: its parts, what to change, what is not there yet | written, beside the code; copied by the generator |
 | [Phase 0: the repository basics](records/2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why, and how it was verified | record, frozen |
@@ -158,6 +159,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 3: the generated references](records/2026-10-21-generated-references.md) | how a client's reference reads its modules by importing them in Node, what the Modules page shows, the decisions taken, and how it was verified | record, frozen |
 | [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version, the decisions taken, and how it was verified | record, frozen |
 | [Phase 4: envelope encryption](records/2026-10-21-envelope-encryption.md) | how a stored credential is sealed to its row under a data key wrapped by the one key-encryption key, how the key rotates under one secret name, the decisions taken, and how it was verified | record, frozen |
+| [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the kit's seven email definitions carry, how an instance holds its sealed credential and its place in the failover order, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
