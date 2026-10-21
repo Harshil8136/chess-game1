@@ -8,8 +8,9 @@ for the steps a new client repository needs (plan 15.3), **`docs`** for the gene
 registry (plan 15.1, 9.4), the **doctor** with its eight checks, and, since phase 3,
 **`new module`**, which writes a complete module into a client repository from the kit's module
 template (plan 4.3 and 18), and, since phase 5, **`backup drill`**, the monthly restore drill
-(plan 9.3), and **`github report`**, the deploy workflow's report for the GitHub module (plan
-4.4). The tool runs on Node and has no runtime dependency.
+(plan 9.3), **`github report`**, the deploy workflow's report for the GitHub module (plan
+4.4), and **`vendor set`**, which writes the Vendor's address after the first deploy (plan 7.4).
+The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
 
@@ -285,6 +286,20 @@ recorded as unknown.
 Exit `0` when the row is written, `1` when the write failed, `3` when it could not start: an
 outcome it does not know, a run outside GitHub Actions, or a configuration without exactly one
 D1 database. The workflow step carries `continue-on-error`, so a report never fails a deploy.
+
+## `oltrem vendor set <email> [dir]`
+
+Run once, from a computer with wrangler signed in to the client's account, after the first deploy
+has applied the IAM migrations (plan 7.4). Migration `0004` makes the Vendor's row with no
+address, so nobody can sign in until this runs; the address goes into that row and into no file
+(R-04). It reads the row with `wrangler d1 execute <binding> --remote --json`, then writes the
+address only when the row has none. The same address again changes nothing; another one is
+refused, since changing the Vendor's address is not this command's to do.
+
+Exit `0` when the address is written or already the same, `1` when another one is set or the
+write failed, `3` when it could not start: no address, an address with a quote or a space, a
+configuration without exactly one D1 database, a database wrangler cannot read, or one with no
+Vendor row yet.
 
 ## `oltrem doctor`
 
