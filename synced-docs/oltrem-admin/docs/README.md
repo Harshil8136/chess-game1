@@ -82,7 +82,7 @@ Phase 4, providers and email, has these parts so far:
 | The providers module (`@oltrem/providers`): the definition contract, seven email providers as data, per-tenant instances with their sealed credential, the failover order, the routes | **done** 2026-10-21: [the record](records/2026-10-21-providers-as-data.md); nothing speaks to a provider yet |
 | The HTTP template engine, the SMTP client and the auth schemes behind the two email adapters | **done** 2026-10-21: [the record](records/2026-10-21-email-adapters.md); no request has reached a real provider yet |
 | The five webhook signature verifiers and the field map to the nine event kinds | **done** 2026-10-21: [the record](records/2026-10-21-webhook-verifiers.md); the public address the reports arrive at waits on the owner's answer |
-| Detection of a domain's provider by DNS over HTTPS, with evidence, and the daily re-fingerprint | not started |
+| Detection of a domain's provider by DNS over HTTPS, with evidence, and the daily re-fingerprint | **done** 2026-10-21: [the record](records/2026-10-21-provider-detection.md); the fingerprints are confirmed on the sandbox domain |
 | The email module: the outbox consumer, the idempotency lease, failover, templates compiled at build time, the canary send, alerts | not started |
 | Key recipes, the generated `secrets.required` block and the doctor checks; the Setup page waits with the screens | not started |
 | The phase's acceptance: two providers as rows with test accounts, detection on the sandbox domain, a canary and a delivery webhook round trip, failover by disabling the active row | not started: needs the sandbox and the owner's test accounts |
@@ -162,6 +162,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the kit's seven email definitions carry, how an instance holds its sealed credential and its place in the failover order, the decisions taken, and how it was verified | record, frozen |
 | [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes with AWS SigV4, the probe route, what keeps a credential out of the clear and out of an error, and how it was verified | record, frozen |
 | [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme, which key each reads, how a report becomes the kit's delivery events, and how it was verified against signatures made outside the kit | record, frozen |
+| [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, strong and weak evidence, why a suggestion never sends by itself, the daily re-check and its drift warning, and how it was verified | record, frozen |
 
 ## How this folder is checked
 

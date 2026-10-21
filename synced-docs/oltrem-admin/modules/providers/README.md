@@ -72,6 +72,7 @@ fresh sign-in), on bit plane 2:
 | `POST /instances/:id/activate` | manage | this instance sends; the one that was active becomes the first failover |
 | `POST /instances/:id/disable` | manage | out of the failover order |
 | `POST /instances/:id/probe` | manage | reaches the provider with the sealed credential; the result (ok, when, how long, the provider's words) is kept on the row and audited as `providers.probe` |
+| `POST /detect` | manage | reads a domain's public DNS for the providers it already uses; each new one becomes a `suggested` instance with its evidence, audited as `providers.detect` |
 | `DELETE /instances/:id` | manage | removes it with its credential; the active one is refused (`KIT-E-1405`) |
 | `POST /keys/rewrap` | manage | after the KEK secret changed: every tenant's data key wrapped again under the current key |
 
@@ -128,9 +129,27 @@ email module drop a report it has seen. An SNS subscription is answered with its
 address only when that address is an AWS one. A refusal is `KIT-E-1409` naming the check. The
 public address the reports arrive at waits on the owner's answer and comes with the email module.
 
+## Detection
+
+`detect(domain, definitions, resolve)` asks DNS over HTTPS (Cloudflare's resolver, JSON form) for
+the domain's TXT and MX records and one TXT question per DKIM selector the definitions name, so a
+CNAME on the way is seen too, then matches each definition's fingerprint. Evidence is **strong**
+when a record names the provider (an SPF include of its domain or under it, a DKIM CNAME to its
+suffix, an MX host, its verification record) and **weak** when it only shows a DKIM key at a
+common selector; a provider with only weak evidence is a weak suggestion. A look-alike include
+(`notmailgun.org`) is not a match, and an IP address or a bare name is not a domain.
+
+`POST /detect` writes one `suggested` instance per provider found that the tenant has no
+instance of, labelled "(found in DNS)", with no credential and its evidence in `detectedBy`; a
+second run adds nothing. A suggestion never sends: it becomes `confirmed` when a person pastes its
+key and is activated by a person. The job `providers.refingerprint` reads every detected domain
+again once a day and keeps what it saw (`now`, `evidence`, `checkedAt`); `drift` is true when it
+saw less than the first time. The health check `providers.dns` (lane `email`) warns while any
+instance that is not disabled has drifted.
+
 ## Status and the failover order
 
-`suggested` is what the detection will write (a later slice); `confirmed` is an instance a person
+`suggested` is what the detection writes; `confirmed` is an instance a person
 set up or a suggestion whose credential was pasted; `active` sends; `failover` stands in, in
 order; `disabled` is out. `registry.pick(db, tenant, kind)` is what the email module will ask:
 the active instance, else the first failover. Activating an instance needs its credential, and a
@@ -158,7 +177,7 @@ cannot do, and a delivery report that failed its check.
 
 ## Not here yet
 
-The public address for delivery reports, the detection that writes suggestions, the email module
+The public address for delivery reports, the email module
 that calls `pick`, `send`, `verify` and `deliveryEvents`, the recipe pages and the screens: the
 next slices of phase 4. No adapter has spoken
 to a real provider yet: the request shapes stand on the public references until the sandbox
@@ -182,4 +201,8 @@ refusing to sign in without TLS. The webhooks against reports signed outside the
 Webhooks published vector, a Mailgun HMAC made in Python, SendGrid and SNS signatures made with
 openssl (SNS with SHA-256 and SHA-1); a changed body, an old timestamp, another key or topic, a
 certificate address that is not AWS's and a missing key field refused; every provider's events
-read by its field map; an unmapped or inherited event name ignored.
+read by its field map; an unmapped or inherited event name ignored. The detection against small
+zones: strong and weak evidence, a look-alike include refused, the resolver's TXT chunks, CNAMEs,
+missing names and failures; through the route, the suggestions written once, refused to activate,
+audited, and the daily re-check marking the one whose records went, with the health check
+warning.
