@@ -152,8 +152,7 @@ declares anything but exactly one D1 database.
 The first deploy and every later one from a person's computer, as one command (`npm run deploy`
 in a client repository), for someone who has never used Cloudflare. Each step looks first and
 only adds, so a run that stopped carries on the next time. The terminal shows six titled steps
-as they happen, each question after what it is and why it is needed (the door's AUD tag, the
-ops token), in colour where the terminal shows it and never with `NO_COLOR`:
+as they happen, each question after what it is and why it is needed (the door, the ops token), in colour where the terminal shows it and never with `NO_COLOR`:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
 2. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. An
@@ -166,10 +165,12 @@ ops token), in colour where the terminal shows it and never with `NO_COLOR`:
    which the Vendor moves into a password manager: the KEK because a rotation needs it again and
    Cloudflare never shows a secret back, the private key because no copy opens without it. The
    file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
-   stopped before the deploy uses the keys it kept. The Access tag is asked for after the steps
-   that put Access in front of every Worker of the account (the dashboard's Protect all Workers,
-   which works before the Worker exists and on either address); the ops token after the steps
-   that make it, and without echo. When the Worker exists but its secrets cannot be listed, the command stops
+   stopped before the deploy uses the keys it kept. The door needs nothing copied: after the
+   steps that put Access in front of every Worker of the account (the dashboard's Protect all
+   Workers, which works before the Worker exists and on either address) the person presses Enter,
+   and `ACCESS_AUD` becomes `worker`, so the portal trusts the sign-in the runtime vouches for
+   (`ctx.access`); a hostname application's tag typed there is still taken. The ops token comes
+   after the steps that make it, and without echo. When the Worker exists but its secrets cannot be listed, the command stops
    rather than send a new KEK, which would leave every stored provider key unreadable.
 4. **The database and the migrations**, as `migrations apply` does.
 5. **`wrangler deploy`**, carrying the new secrets in a file (`--secrets-file`) that is removed

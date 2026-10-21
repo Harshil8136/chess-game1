@@ -92,6 +92,13 @@ the edge, so the Worker does no crypto in the request (plan 11): the claims are 
 verified, and a token that does not parse or lacks a subject or a sign-in time is no identity at
 all. The IAM module checks the audience.
 
+When Access stands on the Worker itself (the dashboard's "Protect all Workers"), the runtime hands
+the Worker `ctx.access`, with the application's `aud` and `getIdentity()`. The identity is then read
+by `readWorkerAccessIdentity`: a token naming that `aud`, or, with no token, a `getIdentity()` that
+gives an email, a subject and a sign-in time, carries `door: 'worker'`, which the audience `worker`
+requires, so nothing is copied from the dashboard into a secret. A token for another application
+(a hostname application in front) stays unmarked, for that application's own tag.
+
 ## The local door
 
 On the owner's computer there is no Cloudflare Access in front of the Worker, so `createApp`

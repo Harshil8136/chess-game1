@@ -33,7 +33,7 @@ sources: [tokens.registry.json]
 |---|---|
 | Status | planned |
 | Provider and account | Cloudflare; the client's Cloudflare Access application |
-| What it may do | none: the audience tag of the Access application; an identifier, stored as a secret so it never appears in a file |
+| What it may do | none: `worker` when Access stands on the Worker itself, or a hostname application's audience tag, an identifier stored as a secret so it never appears in a file |
 | Used by | the identity core package, when it verifies the Access token on each request |
 | Stored in | a Worker secret, set with wrangler secret put |
 | Owner | vendor |

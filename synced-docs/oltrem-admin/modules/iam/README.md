@@ -110,8 +110,10 @@ can(access, index, 'rooms.cancel', input.scopeId); // the scope at hand
 allowedScopes(access, index, 'rooms.read'); // for WHERE scope_id IN (...)
 ```
 
-The **audience** is the tag of the client's Access application, the Worker secret `ACCESS_AUD`,
-whose key recipe (`ACCESS_AUD_RECIPE`) the module declares. Given as a function it is read from the
+The **audience** is the Worker secret `ACCESS_AUD`, whose key recipe (`ACCESS_AUD_RECIPE`) the
+module declares: `worker` (`WORKER_AUDIENCE`) when Access stands on the Worker itself, which
+`npm run deploy` sets and which lets in only an identity marked `door: 'worker'`, or the tag of a
+hostname Access application. Given as a function it is read from the
 env on each request, so the Worker file needs no Workers-only import at module scope and the tool
 can still load it; an empty tag is one no token names, so a Worker without the secret refuses
 everyone (`KIT-E-0401`).
