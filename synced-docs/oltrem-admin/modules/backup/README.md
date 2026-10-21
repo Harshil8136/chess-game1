@@ -87,8 +87,11 @@ private key never leaves the vendor's machine, and the client's database is only
 | `KIT_OPS_TOKEN` | Worker secret | an account token with two permissions, Account, D1, Edit for the export and Account, Account Analytics, Read for System health's budgets: the only Cloudflare token inside the Worker; its recipe is `@oltrem/core-health`'s |
 | `BACKUP_PUBLIC_KEY` | Worker secret | the age public key every copy is encrypted to; its private half stays offline with the vendor |
 
-The two secrets' key recipes are on the module's manifest, so they appear on the client's
-generated Key recipes page. Opening a copy needs the free `age` tool and the private key:
+The two settings exist only once the account and the database do: `oltrem backup setup`, run
+once after the first deploy, writes them, puts a bucket lock on `backups/` (no copy can be
+deleted or overwritten for 35 days) and a lifecycle rule that deletes a copy 90 days after it
+was written (`@oltrem/cli`'s README). The two secrets' key recipes are on the module's
+manifest, so they appear on the client's generated Key recipes page. Opening a copy needs the free `age` tool and the private key:
 
 ```sh
 npx wrangler r2 object get <bucket>/backups/d1/<copy>.sql.age --remote --file copy.sql.age
@@ -97,9 +100,6 @@ age -d -i oltrem-backup-key.txt copy.sql.age > copy.sql
 
 ## Not here yet
 
-- The bucket lock on `backups/`, which keeps any copy from being deleted or overwritten for 35
-  days, and the lifecycle rule that expires old copies are made by `oltrem setup` with the client
-  template, as is the writer of the two settings.
 - The backup page comes with the screens.
 - How much CPU encrypting a large dump takes is measured on the sandbox.
 

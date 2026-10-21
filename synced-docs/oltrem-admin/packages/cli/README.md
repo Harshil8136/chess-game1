@@ -7,7 +7,8 @@ for the steps a new client repository needs (plan 15.3), **`docs`** for the gene
 (plan 15.5), **`check agents`** and **`check tokens`** for the instruction files and the token
 registry (plan 15.1, 9.4), the **doctor** with its eight checks, and, since phase 3,
 **`new module`**, which writes a complete module into a client repository from the kit's module
-template (plan 4.3 and 18), and, since phase 5, **`backup drill`**, the monthly restore drill
+template (plan 4.3 and 18), and, since phase 5, **`backup setup`**, what the nightly backup
+needs on the account after the first deploy, **`backup drill`**, the monthly restore drill
 (plan 9.3), **`github report`**, the deploy workflow's report for the GitHub module (plan
 4.4), and **`vendor set`**, which writes the Vendor's address after the first deploy (plan 7.4).
 The tool runs on Node and has no runtime dependency.
@@ -247,6 +248,27 @@ secret name the repository uses has a row: the Worker's `secrets.required`, a wo
 name is used and the rule: read the registry, reuse or widen a row, or add one with its reason.
 Exit `0`, `1` on a problem, `3` when there is no registry. `--json` prints the outcome as data
 for both `check` commands.
+
+## `oltrem backup setup [dir]`
+
+Run once, from a computer with wrangler signed in to the client's account, after the first deploy
+has made the database and the bucket (plan 9.3, 11). Each step looks first and only adds, so
+running it again changes nothing:
+
+| Step | What happens |
+|---|---|
+| The account | `CLOUDFLARE_ACCOUNT_ID`, or the one account `wrangler whoami --json` reaches; with several and no variable it stops |
+| The database id | `wrangler d1 info <database_name> --json`, for the name `wrangler.jsonc` declares |
+| The two settings | `backup.account_id` and `backup.database_id` are written into the settings store, each only while it is empty, the way the Worker's own save writes one: a new configuration version, the row and its history row, by `vendor`. A setting that holds another value is left as it is and reported |
+| The cached copy | after a write, `wrangler kv key delete cfg:snapshot --binding <kv> --remote`, so the Worker rereads its settings from D1 within a minute |
+| The bucket lock | the rule `oltrem-backups-lock` on `backups/`: no copy can be deleted or overwritten for 35 days |
+| The expiry | the lifecycle rule `oltrem-backups-expire` on `backups/`: a copy is deleted 90 days after it was written |
+
+A rule is looked for by its name in `wrangler r2 bucket lock|lifecycle list` and added with
+`add ... --force` when missing; a rule already there, and any rule of another name, is left as
+it is. Exit `0` when everything is in place, `1` when a setting holds another value or a step
+failed, `3` when it could not start: no account, a configuration without one D1 database, one KV
+namespace and one R2 bucket, or a database wrangler cannot find or read.
 
 ## `oltrem backup drill [dir] --key <file>`
 
