@@ -39,6 +39,7 @@ import { createApp, createWorker } from '@oltrem/core-http';
 
 const iam = createIam({ bindings: (env) => ({ kv: env.CACHE, db: env.DB }) }); // @oltrem/iam
 const modules = [iam.module, notes, settings];
+const scheduler = createScheduler({ bindings: (env) => ({ db: env.DB }), modules }); // @oltrem/core-jobs
 
 const app = createApp({
   modules,
@@ -51,6 +52,7 @@ const app = createApp({
 export default createWorker({
   app,
   modules,
+  tick: scheduler.tick,
   onHandled: (event, env) => outbox(env).complete(event.idempotencyKey),
   report: (error, context) => sentry(error, context),
 });
@@ -85,7 +87,7 @@ all. The IAM module checks the audience.
 | Handler | What it does |
 |---|---|
 | `fetch` | the pipeline above |
-| `scheduled` | runs every module's `scheduled` hook on the one cron; an error in one is reported and the others still run |
+| `scheduled` | runs the `tick` it was given (the jobs' scheduler of `@oltrem/core-jobs`), then every module's `scheduled` hook, on the one cron; an error in one is reported and the others still run |
 | `queue` | reads each message as an envelope, dispatches on `type` to the module that declares it, calls `onHandled` (the outbox marks its row done), acknowledges; a handler that throws retries the message; an unknown type is reported and retried, so it reaches the dead-letter queue |
 
 Tests run inside the Workers runtime with a sample module that has one route of each shape, and

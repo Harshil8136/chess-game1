@@ -2,9 +2,9 @@
 
 The module contract of the kit (plan section 4.3): one manifest per feature, checked when it is
 defined so a bad one fails the build. So far: the id and the version, the capabilities on their
-bit plane, the API routes with their capability and schema, the event types a module handles, and
-the scheduled hook. Pages, migrations, settings, jobs, health and docs join the manifest with the
-rest of the module system (phase 3).
+bit plane, the API routes with their capability and schema, the event types a module handles, its
+jobs, and the scheduled hook. Pages, migrations, settings, health and docs join the manifest with
+the rest of the module system (phase 3).
 
 ## Defining a module
 
@@ -31,7 +31,8 @@ export const notes = defineModule({
   ],
   eventTypes: ['notes.created'],
   onEvent: async (event, env) => { /* fan out */ },
-  scheduled: async (controller, env) => { /* the daily tick */ },
+  jobs: [{ id: 'notes.digest', every: '1h', summary: 'Send the hourly digest', run: async (env) => { /* ... */ } }],
+  scheduled: async (controller, env) => { /* the raw tick, rarely needed */ },
 });
 ```
 
@@ -49,6 +50,7 @@ export const notes = defineModule({
 | A module that declares capabilities names every route's capability among them, `<module>.self` apart | `KIT-E-1006` |
 | No two routes share a method and a path | `KIT-E-1005` |
 | An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
+| A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`) | `KIT-E-1006` |
 
 The manifest is frozen once defined. `RouteContext` gives a handler the request, the bindings,
 the identity the door asserted (email, subject, when the person signed in, the token's audience),
@@ -75,6 +77,13 @@ that runs the own-account rule, where the owner holds every capability by name; 
 any names every route's capability among them, so no route checks what nobody can hold.
 `<module>.self` is the one exception: every account holds it, for the routes about one's own
 things.
+
+## Jobs
+
+A module's periodic work is declared as `jobs`, each with a stable id, an interval and a summary;
+the one tick (`@oltrem/core-jobs`) runs them when due under a lease and records each outcome.
+`everySeconds(every)` is the parser both share. The `scheduled` hook stays for a module that
+needs the raw tick; work that should be seen, counted and retried is a job.
 
 ## Schemas
 
