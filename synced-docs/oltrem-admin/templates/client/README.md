@@ -21,11 +21,11 @@ client's own configuration. Everything an agent or a person needs to know is in
 
 ## On your own computer
 
-`npm run dev` starts this Worker on your computer with local stand-ins for the database, the
-key-value namespace and the bucket, and no Cloudflare account. It applies the migrations to the
-local database, gives the Vendor the address `vendor@example.com` there, and serves the portal
-at <http://localhost:8787>. In the kit's own repository, run `npm install` once, then
-`npm run dev` from its root.
+`npm run dev` (`scripts/dev.mjs`) starts this Worker on your computer with local stand-ins for
+the database, the key-value namespace and the bucket, and no Cloudflare account. It applies the
+migrations to the local database and gives the Vendor the address `vendor@example.com` there,
+both without asking anything, then serves the portal at <http://localhost:8787>. In the kit's
+own repository, run `npm install` once, then `npm run dev` from its root.
 
 `ACCESS_AUD` is not set on your computer, so the portal shows its own sign-in page instead of
 Cloudflare Access, and only on `localhost`: type an address and you are signed in as that
