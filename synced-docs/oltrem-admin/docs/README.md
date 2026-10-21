@@ -71,7 +71,7 @@ Phase 3, the module system, has these parts so far:
 | The generated reference of a client reads its modules: `oltrem docs` imports `src/modules.ts` in a child Node process and writes a Modules page (capabilities, routes, jobs, checks, migrations, settings, errors) that a client's verify holds current | **done** 2026-10-21: [the record](records/2026-10-21-generated-references.md); the kit's own modules are documented in the kit |
 | The capability version gate: a client's `oltrem docs` keeps `capabilities.json`, each module's capabilities under its version, and refuses a change made under the same version, since the Worker registers them once per version | **done** 2026-10-21: [the record](records/2026-10-21-capability-version-gate.md) |
 | The page fields of the manifest (pages, i18n, docs) and the contract tests generated from manifests | wait on the renderer, after the sandbox measurement |
-| Alerts and the key recipes on the reference | come with the providers of phase 4 |
+| Alerts and the key recipes on the reference | the key recipes **done** 2026-10-21 in phase 4: [the record](records/2026-10-21-key-recipes.md); alerts come with the providers of phase 4 |
 | The migration ledger check at the Worker's start | not started |
 
 Phase 4, providers and email, has these parts so far:
@@ -86,6 +86,16 @@ Phase 4, providers and email, has these parts so far:
 | The email module: the outbox consumer, the idempotency lease, failover, templates compiled at build time, the canary send, alerts | **done** 2026-10-21: [the record](records/2026-10-21-email-module.md); the delivery reports' public address, on the owner's yes: [the record](records/2026-10-21-delivery-reports.md) |
 | Key recipes, the generated `secrets.required` block and the doctor checks; the Setup page waits with the screens | **done** 2026-10-21: [the record](records/2026-10-21-key-recipes.md); the live secret check and the provider probes come with the sandbox and the Setup page |
 | The phase's acceptance: two providers as rows with test accounts, detection on the sandbox domain, a canary and a delivery webhook round trip, failover by disabling the active row | not started: needs the sandbox and the owner's test accounts |
+
+Phase 5, backup, GitHub, home and health, has these parts so far:
+
+| Part | State |
+|---|---|
+| The age format a backup copy is written in (`@oltrem/core-crypto/age`): standard age to one X25519 recipient, streamed in 64 KiB chunks, its size known in advance | **done** 2026-10-21: [the record](records/2026-10-21-age-format.md); nothing is backed up yet |
+| The backup module: the nightly export, the run records, the Time Travel bookmark, the bucket lock | not started |
+| The restore drill | not started |
+| The GitHub module, the home module and the free-plan budgets on System health | not started |
+| The phase's acceptance: a nightly export of the sandbox under the bucket lock, a restore drill, the kit version, every budget on System health | not started: needs the sandbox |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
@@ -167,6 +177,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked when it is asked for, held while no provider is ready, sent once under the kit's own lease through the active instance or a failover, the canary, the health check, the decisions taken, and how it was verified | record, frozen |
 | [Phase 4: the delivery reports' address](records/2026-10-21-delivery-reports.md) | why one public path skips the sign-in door, how a report is checked by a secret token and the provider's signature, how each event is kept on its message, the decisions taken, and how it was verified | record, frozen |
 | [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs with their instructions, the KEK's recipe, the generated Key recipes page, the check that the required secrets match, the decisions taken, and how it was verified | record, frozen |
+| [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with the runtime's own cipher and no package, why the private key never reaches the Worker, and how the real age tool checked it | record, frozen |
 
 ## How this folder is checked
 
