@@ -8,7 +8,8 @@ for the steps a new client repository needs (plan 15.3), **`docs`** for the gene
 registry (plan 15.1, 9.4), the **doctor** with its eight checks, and, since phase 3,
 **`new module`**, which writes a complete module into a client repository from the kit's module
 template (plan 4.3 and 18), and, since phase 5, **`backup drill`**, the monthly restore drill
-(plan 9.3). The tool runs on Node and has no runtime dependency.
+(plan 9.3), and **`github report`**, the deploy workflow's report for the GitHub module (plan
+4.4). The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
 
@@ -269,6 +270,22 @@ without exactly one D1 database and one R2 bucket. `--json` prints the steps and
 data, with `ok` true when the copy opened and loaded. The scratch database counts against the
 account's databases for the minutes it exists.
 
+## `oltrem github report [dir] --outcome <success|failure|cancelled>`
+
+The last step of a client's deploy workflow on main (plan 4.4), run whatever happened before it
+with `job.status` as the outcome. It writes one row about the run into `github_runs` with
+`wrangler d1 execute <binding> --remote`, using the deploy token the workflow already holds, so
+the GitHub module needs no GitHub token (plan 9.2). The row holds the repository, the commit,
+the branch, the outcome and the link to the run, read from GitHub's own variables
+(`GITHUB_REPOSITORY`, `GITHUB_SHA`, `GITHUB_REF_NAME`, `GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`,
+`GITHUB_SERVER_URL`); the kit version installed in `node_modules` (`@oltrem/core-http`); and the
+newest published one, from `pnpm view @oltrem/core-http version`. A version it cannot learn is
+recorded as unknown.
+
+Exit `0` when the row is written, `1` when the write failed, `3` when it could not start: an
+outcome it does not know, a run outside GitHub Actions, or a configuration without exactly one
+D1 database. The workflow step carries `continue-on-error`, so a report never fails a deploy.
+
 ## `oltrem doctor`
 
 Runs the check registry against the repository in the current directory and prints one line
@@ -303,4 +320,5 @@ as its `manifest` gate. The tool is typed against Node (`tsconfig.json` here ext
 `test/fixtures/client-ok/` that has exactly one of each resource, with fake installed kit
 packages for the migration commands and a fake wrangler for `migrations apply`. The drill's
 tests run wrangler's D1 commands against SQLite databases in memory (Node's own `node:sqlite`)
-and a copy written in the format `wrangler d1 export` writes.
+and a copy written in the format `wrangler d1 export` writes; the run report's tests run its D1
+command against the GitHub module's real migration the same way.
