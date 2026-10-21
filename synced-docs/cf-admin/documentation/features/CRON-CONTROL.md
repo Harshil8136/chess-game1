@@ -613,6 +613,15 @@ are unchanged. Two costs moved:
   ticks, 9 once an hour, and 3 on Sunday. Service Binding calls are not billed
   as requests, and one invocation may make up to 32 of them.
 
+**A job may run last (2026-10-21).** A job marked `runLast` in the registry is
+called only once every other due job of the tick has finished; today that is
+`health-checks` alone. Cloudflare counts the six requests that may wait for an
+answer at once from the top-level request, and every Worker reached through a
+service binding shares them, so the whole tick shares six. Alongside the other
+jobs, System health's checks of our own Workers queued past their timeouts at
+the top of most hours and filed false "keeps failing and recovering" problems
+([SYSTEM-HEALTH.md](./SYSTEM-HEALTH.md) §3, the limits).
+
 *Updated 2026-10-04.* With the live intervals and the two sleeping jobs, a
 quiet day costs about 410 job invocations instead of about 2,040 (seven jobs
 on all 288 ticks plus the hourly probe): 96 each for the three 15-minute jobs,
@@ -899,6 +908,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-21 | claude | §5's `runLast` paragraph against `src/lib/jobs/dispatch.ts` and `src/lib/jobs/registry.ts`; `test/jobs-cron-dispatch.test.ts` passes (a `runLast` job starts after the others finish; only `health-checks` carries it) | The paragraph. The rest of the document not re-read; the live tick after the push read from System health's results |
 | 2026-10-17 | claude | Part 3D: §5's `health-checks` note against `src/lib/health/catalog.ts` (29 checks, two of them new), `src/lib/health/state.ts` (`MAX_PER_TICK` nine) and `src/lib/jobs/budgets.ts`; `test/jobs-budget.test.ts` passes (first run 30 queries, 60 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest, nine checks, 31 queries, 422 read, 42 written, inside the budget of 612 and 57, kept); the calls a run and a day counted from the code | The note. The rest of the document not re-read; not checked live (not deployed when written) |
 | 2026-10-17 | claude | Part 3 settings: `HEALTH_CHECKS_KEYS` and `nextAt` in `src/workers/scheduled-health-checks.ts`, `isPaused` in `src/lib/health/config.ts`; `test/system-health-settings.test.ts` passes | §3e's gate-key paragraph matches the code; the rest of the document not re-read |
 | 2026-10-17 | claude | Part 2B: `src/workers/scheduled-health-checks.ts`, `src/lib/health/state.ts` (`placeNew`, `advanceDue`, the run order), `src/lib/health/catalog.ts`, `src/lib/jobs/budgets.ts`; `test/system-health-state.test.ts` (placing from the live state's last runs, pauses), `test/health-checks-job.test.ts` and `test/jobs-budget.test.ts` pass (first run 28 queries, 56 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest 23 queries, 408 read, 38 written); `backup_runs` (48 rows) and `sync_outbox` (empty) counted in production through the D1 connector | §3e and §5's `health-checks` note. Not re-checked: the rest of the document; not checked live (not deployed when written) |

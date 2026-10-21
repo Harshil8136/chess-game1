@@ -202,7 +202,15 @@ changing them at once never overwrite each other (compare-and-swap).
 **Limits.** Test again runs one check at most once a minute, and Check everything now at most once
 every two minutes; the stored results are the clock, so a check the job just kept counts too. At
 most six checks run at a time, each stops waiting after ten seconds, and in the job and Test again
-a failure is tried once more before it counts. Check everything now tries each check once: 29
+a failure is tried once more before it counts, one at a time once every check has run. The job
+itself starts only once the five-minute tick's other jobs have finished (`runLast`,
+[CRON-CONTROL.md](./CRON-CONTROL.md) §5). Both since 2026-10-21: the tick, every job it calls and
+every Worker those reach share six requests that may wait for an answer at once (Cloudflare's
+simultaneous connections limit), so at the top of most hours, with the hourly jobs running too,
+the checks of the website, its pages, the chat assistant and the server console waited in that
+queue past their eight seconds, and their second try, made at once, waited the same way. The
+"keeps failing and recovering" problems this filed for the website were false alarms: the
+server's own checks of the website from outside passed throughout. Check everything now tries each check once: 29
 checks each tried twice could pass the 50 requests a Worker invocation may make on the free plan,
 a limit calls to our other Workers count towards as well. Tried once, they made 24 outside requests
 and 8 calls to our other Workers in the test that pins it (`test/system-health-checks.test.ts`). A
@@ -365,6 +373,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-21 | §3's limits: the retry after the run in `src/lib/health/run.ts` and `runLast` in `src/lib/jobs/dispatch.ts`, pinned by `test/system-health-checks.test.ts` and `test/jobs-cron-dispatch.test.ts`; the cause read in production through the Cloudflare D1 connector (`system_test_results` of the last 8 hours: every timeout of `website`, `website_pages`, `chatbot` and `server_probes` fell on a tick that ran 5 to 9 checks, and the same checks passed 5 minutes later; `platform_alerts`: the critical problems of 2026-10-19 to 21 were `website` and `website_pages`, each "The operation was aborted due to timeout" or "keeps failing and recovering") and Cloudflare's limits page (connections are counted from the top-level request, Workers reached through service bindings share them) | Whether the alerts stop: read from the results of the hours after the push. The rest of the document not re-read |
 | 2026-10-17 | Part 3D live, read back through the Cloudflare D1 connector after the push: the job placed both new checks; *Providers' status pages* ran at 10:20 UTC and read all five pages (Cloudflare's reported a major incident, so it needed a look); *Server's site checks* ran at 10:30 UTC and passed, all 7 of the server's checks, the soonest certificate 76 days away | The blue note on a phone |
 | 2026-10-17 | Part 3D: the TL;DR, §2's Checks row, §3's count, table, running on their own (nine a run), limits, providers' status pages and the server's site checks, §6 and §7 against `src/lib/health/catalog.ts`, `src/lib/health/probes.ts` (`STATUS_PAGES`, `askStatusPage`), `src/lib/health/readings.ts` (`readProviders`, `readServerProbes`), `src/lib/health/state.ts` (`MAX_PER_TICK`), `src/lib/health/view.ts` (`providerTrouble`), `src/pages/api/system-health/index.ts`, `src/lib/vps-proxy.ts` (`vpsSystemRead`) and `src/components/admin/health/ChecksPanel.tsx`; pinned by `test/system-health-readings.test.ts`, `test/system-health-checks.test.ts` (the 24 and 8 requests), `test/system-health.test.ts`, `test/system-health-state.test.ts`, `test/vps-proxy.test.ts` and `test/jobs-budget.test.ts`. The five status pages read before writing: each answered `status.indicator` and `status.description`. The cf-vps side live in cf-vps `3f52d9a`, against `cf-vps/contract/capabilities.ts` and `cf-vps/src/http/router.ts`. The state row's 27 KB is scaled from 25 KB for 27 checks, not measured | A live run of the two checks and the note on a phone: written before the push |
 | 2026-10-17 | Settings (migration `0076`, applied live first and read back through the Cloudflare D1 connector: the `#configure` row, owner): the TL;DR, §1's row, §2's band, Checks and Settings rows, §3's closing and "Settings", §6 and §7 against `src/lib/health/config.ts`, `src/lib/health/state.ts`, `src/lib/health/run.ts`, `src/workers/scheduled-health-checks.ts`, `src/pages/api/system-health/settings.ts`, `src/pages/api/system-health/index.ts` and `src/components/admin/health/SettingsPanel.tsx`; pinned by `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts`. The website's side against `cf-astro/src/lib/alert-gate.ts` | The tab on a phone, which the owner tests after the push |
