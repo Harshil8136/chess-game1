@@ -6,7 +6,9 @@ deploy, the compiler that turns a person's grants into one small map, the check 
 the sessions that carry the map from one request to the next with the pipeline's hook and
 authorizer, the governance: every write that changes who may do what, each refused unless the
 actor could stand behind it, and the handover: the Vendor creates the one company and invites its
-first Owner, who takes it over. The phone screens and the routes follow in the next step.
+first Owner, who takes it over, and the routes: the JSON side of all of it under `/api/iam`, with
+one call, `createIam`, that builds the sessions, the governance, the handover and the module the
+pipeline mounts. The phone screens follow.
 
 ## The model in one paragraph
 
@@ -120,7 +122,10 @@ widest question and the handler narrows to the scope at hand. On a route whose c
 flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
 recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. An
 allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes` (ten), else
-`KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs.
+`KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs. One
+capability is the authorizer's alone: `iam.self` (`SELF`), which every account holds by having a
+session and no role carries; the routes about one's own things name it, and the function behind
+each decides the rest.
 
 Two calls make a change visible: `invalidate(env, principalId)` compiles the person's access again
 into their record (or removes the record when the account was switched off), so their next
@@ -230,6 +235,58 @@ module's own capabilities below the Vendor's floor), and every capability new to
 joins every Owner role at deploy, so a new module's screens open to the Owners by themselves;
 what the Vendor removed on purpose stays out.
 
+## The routes
+
+```ts
+import { createApp, createWorker } from '@oltrem/core-http';
+import { createIam } from '@oltrem/iam';
+
+const iam = createIam<Env>({
+  bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
+  audience: env.ACCESS_AUD,
+});
+const app = createApp<Env>({
+  modules: [iam.module, ...others],
+  session: iam.sessions.hook,
+  authorize: iam.sessions.authorize,
+});
+```
+
+`createIam` builds the sessions, the governance and the handover on one set of bindings and
+returns them with the module manifest: fifty-four JSON routes under `/api/iam`, each naming the
+capability the pipeline checks before the handler runs, with the function behind it enforcing
+the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
+is flagged). Bodies and queries are validated by schema (`KIT-E-0422` names the field); a list
+takes `limit` (fifty, two hundred at most) and `offset`; rows come out in camel case, flags as
+booleans, never a hash. A create answers `201` with the ids, a change or an end `204`, a read
+`200`.
+
+| Routes | Capability | What they do |
+|---|---|---|
+| `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map; my sign-ins; end one of them (`iam.device-end` in the audit log) |
+| `GET /me/grants`, `POST /me/grants/:id/activate` | `iam.self` | the grants that reach me; bring an eligible one into force for a few hours |
+| `GET`, `POST /me/requests`, `DELETE /me/requests/:id` | `iam.self` | my access requests: ask for a role at a scope, withdraw |
+| `GET`, `POST /me/approvals`, `POST /approvals/:id/decision` | `iam.self` | the approvals I asked for; ask a second person; decide one (you must hold the same power and not be the one who asked) |
+| `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |
+| `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
+| `POST /invitations`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), withdraw |
+| `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
+| `POST /roles`, `PATCH /roles/:id`, `DELETE /roles/:id` | `iam.roles.manage` | roles below your standing, with capabilities you hold |
+| `POST /groups`, `PATCH /groups/:id`, `DELETE /groups/:id`, `POST /groups/:id/members`, `DELETE /groups/:id/members/:principalId` | `iam.groups.manage` | groups and their members, never yourself |
+| `POST /scopes`, `PATCH /scopes/:id`, `DELETE /scopes/:id` | `iam.scopes.manage` | the tree, four levels at most |
+| `PUT /tenant/vendor-access`, `POST /tenant/vendor-window` | `iam.tenant.manage` | how the Vendor may enter; the window an Owner opens |
+| `POST /tenant/incident`, `DELETE /tenant/vendor-window` | `iam.self` | the Vendor declares an incident (the handler lets only the Vendor through); the Vendor or an Owner closes a window early |
+| `POST /tenant` | `iam.vendor.manage` | the Vendor creates the one company and invites its first Owner |
+| `POST /invitations/accept` | open to any identity | the invited person, signed in at the door with no account yet, takes the grant with the token from the link |
+
+The last route is the pipeline's one exception (`access: 'identity'` in `@oltrem/core-module`):
+no session is loaded and no capability checked, since the person has no account; the body is
+still validated and the same-origin check still applies. The incident and window routes name
+`iam.self` because under `incident_only` and `approval` the check refuses the Vendor everything,
+the very reason it needs a way to declare the incident; the handover functions decide who may
+open and close by the mode. Reads are not audited; every write goes through the governance or the
+handover and is.
+
 ## Tables
 
 Migration `0004_iam.sql`, additive and idempotent, in the one ledger `oltrem_migrations`:
@@ -280,4 +337,11 @@ before the handover and a third only with a second person after it, an ordinary 
 the grant rules, the Vendor refused every role, the Owner role's minimum and a new module's
 capability joining it at deploy, and the three ways the Vendor may enter, with a window that runs
 out by itself. The plan's `can()` timing budget is measured on the sandbox, not here: the test
-runtime does not advance its clock during a check.
+runtime does not advance its clock during a check. The routes are tested end to end through the
+pipeline, from an empty portal: the Vendor creates the company over its route, the first Owner
+with no account accepts through the open route and is refused with a wrong token or another
+address, the lists answer with their shapes and refuse a bad page, the Owner shapes the company
+and invites a clerk who reads but cannot shape, grants are made, activated, ended and overridden,
+a request is decided and another withdrawn, an approval asked and refused to the wrong person, a
+review decided and closed, the three Vendor modes with the incident and the window, and a sign-in
+ended from the devices list and refused from then on.

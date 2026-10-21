@@ -53,7 +53,8 @@ Phase 2, permissions and users, has these parts so far:
 | Sessions and the authorizer: the map inside a session, a revoke visible on the next request | **done** 2026-10-20: [the record](records/2026-10-20-iam-sessions-and-authorizer.md); it runs in no Worker yet |
 | Governance: the writes and their rules (grant only what you hold, below your position), expiring grants, access requests, reviews | **done** 2026-10-20: [the record](records/2026-10-20-iam-governance.md); it runs in no Worker yet |
 | The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | **done** 2026-10-20: [the record](records/2026-10-20-iam-vendor-and-handover.md); it runs in no Worker yet |
-| The phone screens | not started: needs the portal's rendering, which no Worker has yet |
+| The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); it runs in no Worker yet |
+| The phone screens | not started: waits on the owner's call, build them in Astro now or after the sandbox measures a screen's cost |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
@@ -111,6 +112,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 2: sessions and the authorizer](records/2026-10-20-iam-sessions-and-authorizer.md) | how the compiled map travels in one KV record per person, the pipeline's session hook and authorizer, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: governance](records/2026-10-20-iam-governance.md) | the writes that change who may do what and the rules each is refused by, the second person, requests and reviews, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in, the decisions taken, and how it was verified | record, frozen |
+| [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -144,3 +146,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-20 | The twelve gates pass locally, the manifest gate on the IAM module's test Worker with its KV binding; the pipeline's twenty tests and the module's twenty pass inside the Workers runtime, the KV writes counted; the two READMEs and the record are indexed and their links resolve | No Worker runs the sessions: the KV read's latency on a request and the write count over a real day are unmeasured until the sandbox |
 | 2026-10-20 | The twelve gates pass locally; the IAM module's thirty-eight tests pass inside the Workers runtime against migrations 0003 to 0005, the eighteen governance tests among them, each rule refused and then obeyed; the module's README and the record are indexed and their links resolve | No Worker runs the governance: no route calls it yet, the emailed notices of plan 7.3 wait for phase 4, and the quarterly review's schedule waits for the module manifest |
 | 2026-10-20 | The twelve gates pass locally; the IAM module's forty-seven tests pass inside the Workers runtime against migrations 0003 to 0006, the nine handover tests among them, from an empty portal to the three Vendor access modes; the module's README and the record are indexed and their links resolve | No Worker runs the handover: the invitation link is not sent (phase 4) and no route accepts it yet (the screens step); the Owners are not yet emailed on a Vendor action |
+| 2026-10-20 | The twelve gates pass locally; the IAM module's fifty-five tests pass inside the Workers runtime, the eight route tests among them, end to end through the pipeline from an empty portal; the pipeline's and the contract's tests cover the route open to any identity; the three READMEs and the record are indexed and their links resolve | No Worker serves the routes: the problem shapes and the capability refusals are seen in tests only, and the time a route costs on a request is unmeasured until the sandbox |

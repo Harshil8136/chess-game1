@@ -38,6 +38,7 @@ export const notes = defineModule({
 | A route path starts with `/` and has a summary | `KIT-E-1006` |
 | Every route names a capability, `<module>.<name>`, with the module's own id | `KIT-E-1001`, `KIT-E-1006` |
 | A POST, PUT or PATCH route has a schema for its body | `KIT-E-1002` |
+| A route open to any identity (`access: 'identity'`) is POST and names no capability | `KIT-E-1006` |
 | No two routes share a method and a path | `KIT-E-1005` |
 | An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
 
@@ -45,6 +46,13 @@ The manifest is frozen once defined. `RouteContext` gives a handler the request,
 the identity the door asserted (email, subject, when the person signed in, the token's audience),
 the session the app's hook returned (the IAM session, or nothing in own-account mode), the
 validated input, the path parameters, the request id and `waitUntil`.
+
+A route's `access` is `session` unless said otherwise: the app's session hook runs and the
+capability is checked. `access: 'identity'` opens the route to any identity the door asserted,
+for a person who has no account yet (the IAM module's acceptance of an invitation): the pipeline
+loads no session and checks no capability, so the route names none, and it is POST only, so its
+body is validated and the same-origin check applies. It is the one way past the capability check,
+and it is written in the manifest where a reviewer reads it.
 
 ## Schemas
 

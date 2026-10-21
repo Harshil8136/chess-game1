@@ -13,7 +13,9 @@ flowchart LR
   Z -- "yes" --> OK["200, the module ids"]
   Z -- "no, /api/*" --> N["no-store, same-origin check (CSRF)"] --> D["identity from the Access headers"]
   D -- "missing or unreadable" --> P401["problem 401"]
-  D --> SE["session hook, when one is given"]
+  D --> A{"route open to any identity?"}
+  A -- "yes" --> S
+  A -- "no" --> SE["session hook, when one is given"]
   SE -- "throws" --> PS["problem with its code"]
   SE --> C{"authorize(identity, capability, env, session)"}
   C -- "no" --> P403["problem 403"]
@@ -50,6 +52,11 @@ export default createWorker({
   report: (error, context) => sentry(error, context),
 });
 ```
+
+A route the module marked `access: 'identity'` (`@oltrem/core-module`) skips the session hook
+and the capability check: the door's identity is enough, for a person who has no account yet.
+Its body is still validated and the same-origin check still applies; the handler sees
+`ctx.session` as `undefined`.
 
 `session` and `authorize` are the two places the permission model plugs in. The session hook
 runs once per request after the identity is read and before the capability check; whatever it
