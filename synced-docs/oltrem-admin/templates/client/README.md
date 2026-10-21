@@ -11,7 +11,7 @@ client's own configuration. Everything an agent or a person needs to know is in
 | What the Worker may have | `oltrem.manifest.json`, checked against `wrangler.jsonc` and the code on every verify |
 | Who may sign in | the IAM module: the Vendor, then the people the company invites; `ACCESS_AUD` names the client's Access application |
 | Who its messages come from | `email.from_address` and `email.from_name` in the `settings` of `oltrem.config.ts`, set at onboarding, or by an Owner on the Settings page; the email providers are connected, checked and switched on the Providers page |
-| What runs on its own | the five-minute tick (jobs and System health, with the free plan's budgets) and the one Workflow, `KitJobs` on the `JOBS` binding, whose schedules start the nightly backup |
+| What runs on its own | the five-minute tick (jobs and System health, with the free plan's budgets) and the one Workflow, `KitJobs` on the `JOBS` binding, which the tick starts for the nightly backup |
 | Who hears of a problem | a System health problem that lasts is an alert, emailed to the people `alerts.recipients` names, held in `alerts.quiet_hours`; an Owner sets both on the Settings page |
 | This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts |
 | How it deploys | a push to `main` runs `pnpm verify`, then applies the migrations and deploys (`.github/workflows/deploy.yml`) |

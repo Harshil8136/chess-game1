@@ -113,8 +113,8 @@ needs the raw tick; work that should be seen, counted and retried is a job.
 
 Work too long or too many-stepped for the tick is a flow: a stable id, a summary, a `run` and,
 when it runs on its own, a `schedule` of five cron fields in UTC. The client's one Workflow
-(`@oltrem/core-jobs`, `createFlows`) runs it, either when a schedule on the Workflow binding fires
-or when `startFlow` starts it by hand with its params. `run` gets a `step`: each `step.do(name,
+(`@oltrem/core-jobs`, `createFlows`) runs it, either when the tick finds its schedule due
+(`flows.startDue`) or when `startFlow` starts it by hand with its params. `run` gets a `step`: each `step.do(name,
 callback)` is retried on its own and its result kept, so a callback is the unit of work and code
 outside one runs again whenever the instance resumes; `step.sleep` pauses without spending CPU.
 `isCron(text)` is the check the contract applies to a schedule.

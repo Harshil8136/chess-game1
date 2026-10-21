@@ -31,9 +31,9 @@ const backup = createBackup<Env>({
 const flows = createFlows({ modules: [iam.module, backup.module] });
 ```
 
-Mount `backup.module` beside the IAM module. The Workflow binding (`JOBS`) names the schedules
-`flows.schedules` lists, `0 3 * * *` unless `schedule` says otherwise, so the export starts with
-no cron trigger spent. The Worker needs the `nodejs_compat` flag for the age format
+Mount `backup.module` beside the IAM module. The tick starts the flows whose schedule fell due
+(`flows.startDue` of `@oltrem/core-jobs`), `0 3 * * *` unless `schedule` says otherwise, on the
+tick's own cron trigger. The Worker needs the `nodejs_compat` flag for the age format
 (`@oltrem/core-crypto/age`).
 
 ## What a run does

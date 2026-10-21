@@ -76,7 +76,7 @@ export class KitJobs extends WorkflowEntrypoint<Env> {
 
 | Start | What runs |
 |---|---|
-| A schedule on the Workflow binding fires | every flow whose `schedule` is that cron, in module order; `flows.schedules` is the list the binding names, and none of them spends a cron trigger |
+| The tick finds a schedule due (`flows.startDue(env.JOBS, now)`, in the five minutes up to now, UTC) | one instance per schedule and minute, named after both, so a second tick finds it and starts none; it runs every flow whose `schedule` is that cron, in module order. The free plan refuses `schedules` on a Workflow binding, so none is set there |
 | `startFlow(env.JOBS, kind, params)` | the one flow with that id, with the params; it returns the instance id |
 | Neither matches a mounted flow | nothing; it is reported with the schedule or the kind |
 

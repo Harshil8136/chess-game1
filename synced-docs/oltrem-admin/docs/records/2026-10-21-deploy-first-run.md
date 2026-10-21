@@ -50,3 +50,26 @@ same as the result's, the `workers.dev` run and a second run that asks nothing, 
 address typed by hand refused, and `wrangler.jsonc` unchanged after a refused answer; the twelve
 gates pass. Not verified: the run on the owner's account and the dashboard's wording of Protect
 all Workers, read from Cloudflare's documentation of 2026-10-12.
+
+## Later the same night: the nightly copy without a scheduled Workflow
+
+The owner's run deployed the Worker, then wrangler stopped: "scheduled Workflows require a paid
+Workers plan". The `JOBS` binding no longer names a schedule. The five-minute tick starts each
+flow whose schedule fell due in its five minutes (`flows.startDue` in `@oltrem/core-jobs`), one
+instance per schedule and minute, named after both, so a second tick starts none. A run that
+deployed but stopped before the Vendor's address shows the door step again.
+
+```mermaid
+flowchart LR
+  T[Cron tick, every 5 minutes] --> D{A flow's schedule due in those 5 minutes}
+  D -- no --> J[The jobs' tick]
+  D -- yes --> I{Instance for that schedule and minute exists}
+  I -- yes --> J
+  I -- no --> W[Start it on the JOBS Workflow] --> J
+```
+
+Verified: core-jobs' tests of the cron fields and of `startDue` (late by two minutes, twice on
+one tick, an unreadable schedule reported); the template's test on the real `JOBS` binding (the
+binding names no schedule, the 03:00 copy started once); `@oltrem/cli`'s deploy test of a run that
+stopped after the deploy; the twelve gates pass. Not verified: a nightly copy on the owner's
+account.
