@@ -45,6 +45,12 @@ and the next run at the tick's time plus the interval. A failure is reported thr
 a tight loop. A lease that lapses without a write (a job that died with its isolate) is taken by
 the next tick.
 
+With `pause` (System health's, from `@oltrem/core-health`), a tick that has a due job asks it once
+why jobs should wait. While it gives a reason, every due job but the `exempt` ones (System
+health's own, which measure and judge the budgets) is `paused`: it is not run and stays due, so it
+runs on the first tick after the reason is gone. A pause that cannot be read is reported through
+`report(error, 'pause')` and the jobs run, as if nothing were spent.
+
 `list(env)` returns every row, with `declared` false for the row of a job no mounted module
 declares any more; the row and its history are kept.
 
@@ -84,7 +90,8 @@ state is kept three days.
 
 Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,
 `lease_until`, `last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an
-index on `next_run_at`. Pausing and tiers (plan 4.3) come with the jobs page.
+index on `next_run_at`. Pausing a job by hand and tiers (plan 4.3) come with the jobs page; the
+budgets' pause above needs no column.
 
 ## Tests
 
@@ -92,6 +99,8 @@ Inside the Workers runtime against the real migration: rows made for the declare
 run when due and not before, the outcome and the next run written; a failure recorded and reported
 while the other job runs; a lease another tick holds respected and taken over once it lapses; a
 changed interval written and the next run brought forward; a removed job's row kept as
-undeclared; and the contract's refusals. With a stand-in step: a schedule running its flows in
+undeclared; due jobs held by a pause while an exempt one runs, then run once it lifts, the pause
+not asked when nothing is due; a pause that cannot be read reported once and the jobs run; and
+the contract's refusals. With a stand-in step: a schedule running its flows in
 module order with their steps named after them, a start by hand with its params, a failed flow
 reported while the other runs, and an instance no flow matches.

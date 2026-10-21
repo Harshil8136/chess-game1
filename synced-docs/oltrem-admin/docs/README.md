@@ -98,7 +98,8 @@ Phase 5, backup, GitHub, home and health, has these parts so far:
 | The backup module: the nightly export as a flow in the one Workflow, encrypted on its way into the bucket, the run records, a run by hand, the Time Travel bookmark, the freshness check | **done** 2026-10-21: [the record](records/2026-10-21-backup-module.md); the bucket lock, the settings writer and the Workflow class come with the client template |
 | The restore drill (`oltrem backup drill`): the newest copy opened with the private key on the vendor's computer, loaded into a scratch database, every row found, everything deleted, the outcome recorded; the drill check on System health | **done** 2026-10-21: [the record](records/2026-10-21-restore-drill.md); no drill has run against a real account |
 | The GitHub module: each deploy run reported into the database by the workflow with no GitHub token, the kit version production runs, whether a newer one is published, the deploy check | **done** 2026-10-21: [the record](records/2026-10-21-github-module.md); the template's workflow gets the report step when it mounts the module |
-| The home module and the free-plan budgets on System health | not started |
+| The free-plan budgets on System health: measured every fifteen minutes, warned and failed on their lines, the other jobs paused while one they spend is nearly gone | **done** 2026-10-21: [the record](records/2026-10-21-free-plan-budgets.md); the template passes the option with its next change; GitHub Actions minutes in `oltrem doctor` are owed |
+| The home module | not started |
 | The phase's acceptance: a nightly export of the sandbox under the bucket lock, a restore drill, the kit version, every budget on System health | not started: needs the sandbox |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
@@ -187,6 +188,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 5: the backup module](records/2026-10-21-backup-module.md) | how the nightly copy is asked of Cloudflare, encrypted on its way into the bucket and recorded, the one Workflow that runs it step by step, the decisions taken, and how it was verified | record, frozen |
 | [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted, the decisions taken, and how it was verified | record, frozen |
 | [Phase 5: the GitHub module](records/2026-10-21-github-module.md) | how the portal learns its kit version, a newer release and its last deploy without a GitHub token, the decisions taken, and how it was verified | record, frozen |
+| [Phase 5: the free plan's budgets](records/2026-10-21-free-plan-budgets.md) | what System health measures against the free plan, how the jobs pause, the token widened, the decisions taken, and how it was verified | record, frozen |
 | [Working on Windows](records/2026-10-21-windows.md) | why `npm install` cannot install the kit, why `pnpm verify` failed on Windows and how it was fixed, the line endings, and how it was verified | record, frozen |
 | [Working on Windows: the second run and pnpm dev](records/2026-10-21-windows-second-run.md) | the two tests and two install warnings of the second Windows run, what `pnpm dev` runs and shows, and how it was verified | record, frozen |
 

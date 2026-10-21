@@ -57,10 +57,60 @@ once, when the check passes again; a failure of either hook is reported through
 returns every row by lane then id, with `declared` false for the row of a check no mounted module
 declares any more; the row is kept.
 
+## The free plan's budgets
+
+```ts
+const health = createHealth<Env>({
+  bindings: (env) => ({ db: env.DB }),
+  modules,
+  // `accountId` is the client's own reader of the account setting the backup module keeps too.
+  budgets: { account: (env) => accountId(env), token: (env) => env.KIT_OPS_TOKEN },
+});
+const scheduler = createScheduler<Env>({ bindings, modules, pause: health.pause });
+```
+
+Given `budgets`, the module adds a job, a check and a key recipe (plan 10):
+
+| Budget | Free plan limit | Warns from | Pauses the jobs |
+|---|---|---|---|
+| D1 rows read today | 5,000,000 | 70% | from 90% |
+| D1 rows written today | 100,000 | 70% | from 90% |
+| Database size | 500 MB | 60% (the plan's 300 MB alarm) | from 90% |
+| KV writes today | 1,000 | 70% | from 90% |
+| Queue operations today | 10,000 | 70% | from 90% |
+| Worker requests today | 100,000 | 70% | from 90% |
+| Worker CPU time per request, 95th percentile today | 10 ms | 70% | never: no job spends it |
+
+- **`health.measure`**, every fifteen minutes, runs before `health.run`. The size is the one D1
+  reports after any query. Everything else comes from one call to Cloudflare's GraphQL Analytics
+  API with `KIT_OPS_TOKEN`: the account's totals since midnight UTC, which are the client's, since
+  each client has its own account. One batch writes a row per budget; a budget it cannot measure
+  keeps its last figure and records why (the token or the account not set, the call's error,
+  never the token).
+- **`health.budgets`**, lane `budget`, fails when a budget is at or past 90% of its limit and
+  warns from its warning line, or when a figure is missing or could not be refreshed. A daily
+  figure counts only on the UTC day it was taken, since the limits reset at midnight UTC. The
+  message names each budget past its line with its figure, then each problem once with the
+  budgets it left unmeasured.
+- **`pause`**, for the scheduler: while a budget the jobs spend is at or past 90%, every job but
+  `health.run` and `health.measure` waits. Nightly flows run as Workflows, not jobs, so the backup
+  still runs.
+- **`budgets(env)`** gives each budget's figure, share, status, when it was measured and its
+  problem, for the page.
+- **`OPS_TOKEN_RECIPE`** lives here and the backup module declares the same one: the token needs
+  Account, D1, Edit for the backup and Account, Account Analytics, Read for the budgets.
+
+Not measured here yet: GitHub Actions minutes, which `oltrem doctor` is to show (plan 10). Owed to
+the sandbox: the `actionType` value of a KV write and the unit of the CPU quantile, taken from
+Cloudflare's documentation.
+
 ## Table
 
 Migration `0009`, `oltrem_health`: `id`, `module_id`, `lane`, `status`, `message`, `checked_at`,
 `ms`, `failures`, `open_since`. One row per check, written by the job; nothing else writes it.
+
+Migration `0014`, `oltrem_budgets`: `id`, `used`, `day`, `measured_at`, `tried_at`, `problem`. One
+row per budget, written by `health.measure`; nothing else writes it.
 
 ## Tests
 
@@ -70,4 +120,9 @@ closed on the next pass with `onClose`, the failure count reset by a warning; a 
 one that does not answer in time and one that answers nonsense recorded as failures with the
 reason; the rows listed by lane with an undeclared one kept; the tick running the checks through
 the health job beside the scheduler; and the contract's refusals of a bad check, migration,
-setting or error.
+setting or error. The budgets, with a stand-in for Cloudflare's API: nothing added without the
+option; one call with the token and the UTC day, every figure read, only KV writes counted, the
+CPU time in milliseconds and the size from D1; the check warning at 75% and failing at 95%; the
+other jobs paused through the scheduler while the health jobs run, and running again after
+midnight UTC; a 403 keeping the last figure with the reason; a missing token named once for the
+budgets it leaves unmeasured; the token in no reading; and the analytics errors named.

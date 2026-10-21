@@ -145,14 +145,14 @@ sources: [tokens.registry.json]
 |---|---|
 | Status | planned |
 | Provider and account | Cloudflare; the client's own Cloudflare account; account-owned, not tied to a person |
-| What it may do | Account, D1: Edit (for the database export API) |
-| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route |
+| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for System health's budgets: the day's use of the free plan) |
+| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; System health's measure job: the day's use of the free plan, from the GraphQL Analytics API |
 | Stored in | a Worker secret, set with wrangler secret put |
 | Owner | vendor |
 | Created | not yet |
 | Expires | not set |
-| Rotation | make a new token with the same scope, set it with wrangler secret put, delete the old one; yearly |
-| Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. |
+| Rotation | make a new token with the same two scopes, set it with wrangler secret put, delete the old one; yearly |
+| Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. Widened on 2026-10-21 with Account Analytics Read for System health's budgets, rather than a second token inside the Worker (R-05). |
 | Plan section | 9.3 |
 
 ## PERSONAL_PAT

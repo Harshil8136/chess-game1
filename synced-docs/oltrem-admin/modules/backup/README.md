@@ -84,7 +84,7 @@ private key never leaves the vendor's machine, and the client's database is only
 |---|---|---|
 | `backup.account_id` | setting, system layer, vendor only, sensitive | the Cloudflare account the database lives in |
 | `backup.database_id` | setting, system layer, vendor only, sensitive | the client's one D1 database |
-| `KIT_OPS_TOKEN` | Worker secret | an account token with one permission, Account, D1, Edit: the only Cloudflare token inside the Worker |
+| `KIT_OPS_TOKEN` | Worker secret | an account token with two permissions, Account, D1, Edit for the export and Account, Account Analytics, Read for System health's budgets: the only Cloudflare token inside the Worker; its recipe is `@oltrem/core-health`'s |
 | `BACKUP_PUBLIC_KEY` | Worker secret | the age public key every copy is encrypted to; its private half stays offline with the vendor |
 
 The two secrets' key recipes are on the module's manifest, so they appear on the client's
