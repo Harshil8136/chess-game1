@@ -175,7 +175,9 @@ ops token), in colour where the terminal shows it and never with `NO_COLOR`:
 5. **`wrangler deploy`**, carrying the new secrets in a file (`--secrets-file`) that is removed
    right after; wrangler may ask which account when the sign-in reaches several.
 6. **The Vendor's address**, asked while the database has none, written as `vendor set` does;
-   then `backup setup`.
+   then `backup setup`; last, the one door step left for later: a self-hosted Access application
+   on the address's `hooks` path with a Bypass policy, needed only for an email provider's
+   delivery reports, on a custom domain and on `workers.dev` alike.
 
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
