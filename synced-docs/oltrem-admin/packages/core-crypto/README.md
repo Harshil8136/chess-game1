@@ -39,7 +39,9 @@ the old one, separated by a space, for as long as the rotation takes. The first 
 key in the list unwraps. The procedure: set `KEK` to `<new> <old>`, rewrap every stored data key
 (`needsRewrap` finds them), then set `KEK` to `<new>`. A data key wrapped by a key the Worker no
 longer has is refused with `KIT-E-1303`, which names the key's id; putting the old key back
-beside the current one recovers it.
+beside the current one recovers it. The steps a person follows, with the command that makes a
+key, are the `KEK` key recipe of `@oltrem/providers`; it says to keep the key, since Cloudflare
+never shows a secret back and a rotation needs the old one.
 
 ## What the caller owes
 

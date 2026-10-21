@@ -30,6 +30,10 @@ const app = createApp<Env>({
 the same sessions and authorizer, the same audit wrapper. `kek` reads the `KEK` secret from the
 request's env; the envelope is built from it once per isolate, on the first request that needs
 it, so a Worker without the secret answers `KIT-E-1301` only when a credential is stored or read.
+The manifest carries the secret's key recipe, `KEK_RECIPE`: how to make the key with one Node
+command and keep it, how to test it, the rotation through `POST /keys/rewrap`, and what stops
+without it. A Worker that mounts the module therefore lists `KEK` in `secrets.required`
+(`oltrem doctor`, CF-SEC-02), and its generated Key recipes page shows the recipe.
 
 ## The definitions
 
@@ -181,7 +185,7 @@ cannot do, and a delivery report that failed its check.
 
 ## Not here yet
 
-The recipe pages and the screens: the next slices of phase 4. No adapter has spoken
+The screens, with the Setup page that tests a provider's key from its recipe. No adapter has spoken
 to a real provider yet: the request shapes stand on the public references until the sandbox
 sends through two of them.
 

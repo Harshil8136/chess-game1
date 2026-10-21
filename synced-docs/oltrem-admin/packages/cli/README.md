@@ -188,14 +188,18 @@ ledger table), **Tokens** from `tokens.registry.json` (one small table per crede
 only, sorted), **Modules** from `src/modules.ts` (for each of the client's own modules: its
 capabilities, routes with their capability, jobs, checks, migrations, settings with their
 defaults and errors with their text), **`capabilities.json`**, the same modules' bit plane and
-capabilities as data under their version, and a **Repository map** of the files that exist. The
-key recipes join the list with the providers module.
+capabilities as data under their version, **Key recipes** from `src/index.ts` (every Worker secret
+the mounted modules need, the kit's included: its purpose, how to make, test and rotate it, and
+what the portal does without it), and a **Repository map** of the files that exist.
 
-The Modules page is read from the code: the command imports `src/modules.ts` in a child Node
+The Modules and Key recipes pages are read from the code: the command imports `src/modules.ts`
+and `src/index.ts` (its `modules` export is every module the Worker mounts) in a child Node
 process with type stripping and takes each manifest as data; no handler, job or check runs. A
-module must therefore load in Node, which means no Workers-only global at module scope; the kit's
-own packages respect this. A `src/modules.ts` Node cannot load is reported as a problem that
-names the first error, and nothing is written. A client without the file has no module yet.
+module and the Worker file must therefore load in Node, which means no Workers-only global or
+import at module scope; the kit's own packages respect this. A file Node cannot load is reported
+as a problem that names it and its first error, and nothing is written. A client without
+`src/modules.ts` has no module yet; a `src/index.ts` with no `modules` export leaves the Key
+recipes page saying so.
 
 `capabilities.json` is also a gate. The Worker registers a module's capabilities once per version
 (`@oltrem/iam`), so a capability added, removed or changed under the same version would never
@@ -254,6 +258,7 @@ failure the exact command that fixes it. No check prints a secret value.
 | `MANIFEST-01` | the Worker here matches its manifest (the check above); skipped where there is no manifest | the rule, or the file to fix |
 | `MIG-01` | every kit migration is copied into `migrations/`, unchanged, with a current `kit.json`; skipped where there is no manifest or no installed kit package | `oltrem migrations sync` |
 | `WF-01` | the deploy workflow `.github/workflows/deploy.yml` is in place | copy it from the client template |
+| `CF-SEC-02` | the Worker's `secrets.required` names exactly the key recipes of the modules `src/index.ts` mounts, so wrangler refuses a deploy with one missing; skipped where there is no manifest or no `modules` export | the two blocks to write, for the wrangler file and the manifest, with the names |
 | `TOKEN-01` | every secret name the repository uses (as `check tokens` finds them) has a row in `tokens.registry.json`; skipped where there is no registry | add the row, with the reason it cannot be an existing token |
 | `AGENTS-01` | the instruction files pass `check agents`; skipped where there is no ai.md | `oltrem setup` for a pointer file, or move the fact to the generated reference |
 | `DOCS-01` | the generated reference in `docs/_generated/` is what `oltrem docs` renders now, with no stray file; skipped where there is no manifest | `oltrem docs`, or the registry file to fix |

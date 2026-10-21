@@ -37,6 +37,7 @@ export const notes = defineModule({
   migrations: ['0012_notes.sql'], // shipped in the module's migrations/ folder
   settings: [notesPerPage], // defined with defineSetting, under the key prefix `notes.`
   errors: NOTES_ERRORS, // defined with defineErrors('notes', ...)
+  secrets: [{ name: 'NOTES_KEY', purpose: '...', create: '...', scopes: [], test: '...', rotate: '...', without: '...' }],
   scheduled: async (controller, env) => { /* the raw tick, rarely needed */ },
 });
 ```
@@ -60,6 +61,7 @@ export const notes = defineModule({
 | A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run` | `KIT-E-1006` |
 | A migration is named `NNNN_name.sql` and declared once | `KIT-E-1006` |
 | A setting's key starts with the module's id and its definition names the module; an error's definition names the module | `KIT-E-1006` |
+| A key recipe names its secret once, in upper case letters, digits and `_`, with a purpose and how to create, test and rotate it and live without it; `createAt` is an https address; `scopes` is a list | `KIT-E-1006` |
 
 The manifest is frozen once defined. `RouteContext` gives a handler the request, the bindings,
 the identity the door asserted (email, subject, when the person signed in, the token's audience),
@@ -119,6 +121,17 @@ the definitions it made with `defineSetting` (`@oltrem/core-config`), whose keys
 module's id; `errors`, the codes it made with `defineErrors` (`@oltrem/core-errors`). The contract
 checks that each belongs to this module and refuses one defined for another, so a module cannot
 claim another's setting or code; the generator and the references of phase 3 read these lists.
+
+## Key recipes
+
+`secrets` lists the Worker secrets the module needs, one key recipe each (plan 15.3): the name
+`wrangler secret put` takes, what it is for, how to make and set it (`create`, with `createAt`
+when an outside service issues it, and its `scopes`), how to see that it works, how and how
+often to rotate it, and what the portal does without it. The recipes of every module the Worker
+mounts are its generated Key recipes page (`oltrem docs`), and its `secrets.required` must name
+exactly them (`oltrem doctor`, CF-SEC-02), so wrangler refuses a deploy with one missing. A
+provider's own key is not a Worker secret: it is pasted on the portal, stored sealed, and its
+recipe is on the provider's definition.
 
 ## Schemas
 
