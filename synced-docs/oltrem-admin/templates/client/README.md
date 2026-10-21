@@ -16,7 +16,7 @@ client's own configuration. Everything an agent or a person needs to know is in
 | This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts |
 | How it deploys | a push to `main` runs `pnpm verify`, then applies the migrations and deploys (`.github/workflows/deploy.yml`) |
 | Trying it on your computer | `npm run dev`, with no Cloudflare account: [below](#on-your-own-computer) |
-| Setting it up | `pnpm setup`, then `pnpm doctor` until green; the Worker secrets `docs/_generated/secrets.md` names, which wrangler requires before it deploys; after the first deploy, once, `pnpm exec oltrem vendor set <the Vendor's address>` and `pnpm exec oltrem backup setup` |
+| Setting it up | `npm run deploy` from this computer: it signs in to Cloudflare in the browser, asks the portal's address, makes the KEK and the backup key (kept in `oltrem-keys.txt` for the Vendor to move offline), asks for the Access tag and the ops token with the steps to make them, creates the database, applies the migrations, deploys, then writes the Vendor's address and the backup's settings; run it again any time, it only adds what is missing. `pnpm setup` and `pnpm doctor` check the repository |
 | Taking a new kit version | `pnpm install`, then `pnpm exec oltrem upgrade`: it checks first, then copies the kit's new migrations and prints the release notes; then `pnpm verify` and push |
 | The reference, never written by hand | `docs/_generated/`, written by `oltrem docs` from the files above and checked on every verify |
 

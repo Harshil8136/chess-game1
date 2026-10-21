@@ -140,12 +140,40 @@ exist yet, the very first deploy, the command creates it with `wrangler d1 creat
 `wrangler d1 migrations apply <binding> --remote` either way. It runs the repository's own
 wrangler, which reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment:
 the deploy workflow passes the two repository secrets, and a person runs it from a signed-in
-wrangler through `pnpm deploy`. The Worker's other resources (the KV namespace, the bucket, the
+wrangler through `npm run deploy` (`oltrem deploy`). The Worker's other resources (the KV namespace, the bucket, the
 queues) are created by `wrangler deploy` itself from their names.
 
 Exit `0` when the migrations are applied, `1` when the database could not be created or the
 apply failed (wrangler's own message is printed above), `3` when `wrangler.jsonc` is missing or
 declares anything but exactly one D1 database.
+
+## `oltrem deploy [dir]`
+
+The first deploy and every later one from a person's computer, as one command (`npm run deploy`
+in a client repository), for someone who has never used Cloudflare. Each step looks first and
+only adds, so a run that stopped carries on the next time:
+
+1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
+2. **The address.** Asked once when `vars.PUBLIC_HOST` is empty, then written into
+   `wrangler.jsonc` with a `routes` entry making it the Worker's custom domain; the person
+   commits it. The domain must be on the same Cloudflare account.
+3. **The secrets** `secrets.required` names, only those `wrangler secret list` does not show. The
+   KEK and the backup's age key pair are made here and kept in `oltrem-keys.txt` (git ignores it),
+   which the Vendor moves into a password manager: the KEK because a rotation needs it again and
+   Cloudflare never shows a secret back, the private key because no copy opens without it. The
+   file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
+   stopped before the deploy uses the keys it kept. The Access tag is asked for after the steps
+   that make the Access application for the address; the ops token after the steps that make it,
+   and without echo. When the Worker exists but its secrets cannot be listed, the command stops
+   rather than send a new KEK, which would leave every stored provider key unreadable.
+4. **The database and the migrations**, as `migrations apply` does.
+5. **`wrangler deploy`**, carrying the new secrets in a file (`--secrets-file`) that is removed
+   right after; wrangler may ask which account when the sign-in reaches several.
+6. **The Vendor's address**, asked while the database has none, written as `vendor set` does;
+   then `backup setup`.
+
+Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
+when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
 
 ## `oltrem setup [dir]`
 
