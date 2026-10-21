@@ -5,7 +5,7 @@ manifest check** that keeps a client's Worker at one of each resource (plan 9.1,
 **`migrations sync`** and **`migrations apply`** for the kit's migrations (plan 10), **`setup`**
 for the steps a new client repository needs (plan 15.3), **`docs`** for the generated reference
 (plan 15.5), **`check agents`** and **`check tokens`** for the instruction files and the token
-registry (plan 15.1, 9.4), the **doctor** with its eight checks, and, since phase 3,
+registry (plan 15.1, 9.4), the **doctor** with its ten checks, and, since phase 3,
 **`new module`**, which writes a complete module into a client repository from the kit's module
 template (plan 4.3 and 18), and, since phase 5, **`backup setup`**, what the nightly backup
 needs on the account after the first deploy, **`backup drill`**, the monthly restore drill
@@ -340,6 +340,7 @@ failure the exact command that fixes it. No check prints a secret value.
 | `TOKEN-01` | every secret name the repository uses (as `check tokens` finds them) has a row in `tokens.registry.json`; skipped where there is no registry | add the row, with the reason it cannot be an existing token |
 | `AGENTS-01` | the instruction files pass `check agents`; skipped where there is no ai.md | `oltrem setup` for a pointer file, or move the fact to the generated reference |
 | `DOCS-01` | the generated reference in `docs/_generated/` is what `oltrem docs` renders now, with no stray file; skipped where there is no manifest | `oltrem docs`, or the registry file to fix |
+| `GH-MIN-01` | the month's GitHub Actions minutes of the account that owns the `origin` repository, from GitHub's usage summary through the GitHub CLI, against the 2,000 free minutes: a warning from 70 %, a failure from 90 %; skipped where there is no GitHub remote, no signed-in `gh`, or no billing access | before the minutes run out: a self-hosted runner, public client repositories, or paid minutes (plan 14.1); for a skip, `gh auth login` or `gh auth refresh -h github.com -s user` |
 
 Flags: `--json` prints `{ ok, exitCode, checks, problem }`; `--only ID` runs one check;
 `--list-checks` names them. Exit codes, as the plan sets them: `0` every check passed or was
