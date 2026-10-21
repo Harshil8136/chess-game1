@@ -49,6 +49,7 @@ with no account: on a new portal it is the only account.
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets | `/api/health/checks`, `budgets` |
+| `/settings` | every setting grouped by module: its value, where it comes from, and a form when the person may change it | `/api/settings/values` |
 
 The forms, each posting to the screen's own route, which calls the API as the signed-in person:
 
@@ -65,6 +66,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Check the key, send me a test message | `POST /api/providers/instances/:id/probe`, `POST /api/email/canary` | `?done=checked`, `tested`; the answer under Last check |
 | Make it the one that sends, take it out of use, remove it | `POST .../activate`, `.../disable`, `DELETE /api/providers/instances/:id` | `?done=sends`, `taken-out`, `removed` |
 | Paste the key again | `POST /api/providers/instances/:id/credential` | `?done=key-saved` |
+| Save a setting (`/settings/:key`): text, a number or a switch, turned into the setting's type | `PUT /api/settings/values/:key` | `?done=setting-saved` |
 
 A change that worked redirects to its page with a `done` key, which the page turns into a fixed
 sentence: no address or name travels in the address bar. A change the API refused shows the page
@@ -88,8 +90,9 @@ writes. The file is generated: never edit it by hand (R-06).
 ## Not here yet
 
 - **The other forms.** Groups, overrides with their three states, reviews, requests, approvals,
-  the Vendor's access, profiles, settings, a provider's delivery-report address and the client's
-  own provider definitions: still the API until their forms come.
+  the Vendor's access, profiles, a setting whose value is not text, a number or a switch, a
+  provider's delivery-report address and the client's own provider definitions: still the API
+  until their forms come.
 - **Pages from the manifest.** The row and the pages are a fixed list in `src/layout.tsx`. The
   plan's page fields on the module manifest (pages, i18n) come with the renderer.
 - **Astro.** The plan names Astro for the screens. These are Preact components rendered by the
@@ -106,5 +109,6 @@ stranger is told there is no account; behind Access the local door does not exis
 makes a role and a place, invites someone who accepts, ends and gives their role, switches the
 account off and on, withdraws an invitation, and sees a refusal and a cross-site form refused. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
-checked, a test message refused for want of a sending address, the provider made the one that
-sends, refused removal while it sends, taken out of use, its key pasted again, and removed.
+checked, a test message refused for want of a sending address, the address refused when malformed
+and saved on the Settings page, the test message then sent, the provider made the one that sends,
+refused removal while it sends, taken out of use, its key pasted again, and removed.

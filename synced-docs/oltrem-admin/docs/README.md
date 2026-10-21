@@ -61,7 +61,7 @@ Phase 2, permissions and users, has these parts so far:
 | The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); the client template runs it |
 | `@oltrem/users`: the directory with profiles, switching accounts off and on under the standing rules, its routes | **done** 2026-10-21: [the record](records/2026-10-21-users-module.md); service accounts and the door's group sync come later |
 | The client template mounts IAM and users: `ACCESS_AUD` as a required Worker secret read on each request, the Vendor let in, no account refused | **done** 2026-10-21: [the record](records/2026-10-21-template-mounts-iam.md); the Vendor's address is written after the first deploy by `oltrem vendor set`: [the record](records/2026-10-21-vendor-address.md) |
-| The phone screens | **first screens done** 2026-10-21: [the record](records/2026-10-21-screens-and-npm.md); people, access and provider forms: [the record](records/2026-10-21-people-and-access-screens.md); their cost is measured in the sandbox |
+| The phone screens | **first screens done** 2026-10-21: [the record](records/2026-10-21-screens-and-npm.md); the forms that change things: [the record](records/2026-10-21-people-and-access-screens.md); their cost is measured in the sandbox |
 
 Phase 3, the module system, has these parts so far:
 
@@ -218,7 +218,7 @@ was verified:
 | [Phase 6: oltrem upgrade](records/2026-10-21-oltrem-upgrade.md) | what an upgrade checks before it writes |
 | [Verification log, 19 and 20 October](records/2026-10-19-to-20-verification-log.md) | the log's first rows, moved there unchanged |
 | [The screens and two commands](records/2026-10-21-screens-and-npm.md) | how `npm install` and `npm run dev` bring up the portal and its screens, the local sign-in and its two locks, why the screens render in the Worker for now |
-| [The people, access and provider screens](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places and email providers, and how a form travels through the API |
+| [The screens that change things](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places, email providers and settings, and how a form travels |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
 
 ## How this folder is checked

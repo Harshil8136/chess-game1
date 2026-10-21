@@ -1,12 +1,12 @@
 ---
-title: "The people, access and provider screens (2026-10-21)"
+title: "The screens that change things (2026-10-21)"
 status: record
 owner: vendor
 last_verified: 2026-10-21
 sources: [the owner's request of 2026-10-21 15:32; this repository]
 ---
 
-# The people, access and provider screens
+# The screens that change things
 
 > **In plain words.** The portal's screens can now change things, not only show them. An Owner
 > can invite someone with a role at a place, withdraw an invitation, give a person a role or end
@@ -14,7 +14,9 @@ sources: [the owner's request of 2026-10-21 15:32; this repository]
 > may do, and add a place such as a site or a team. Every change goes through the same checks as
 > the API, so a screen can never do more than the person may. In a second push the same day, an
 > email provider is connected from a screen too: where to make its key, the key pasted and
-> sealed, checked, a test message sent, and the provider made the one that sends.
+> sealed, checked, a test message sent, and the provider made the one that sends. In a third,
+> a Settings page lists every setting with its value and where it comes from, and lets the
+> person who may change one save it, such as the address the portal's email comes from.
 
 The owner asked on 2026-10-21 at 15:32 to start the next phases; the thread put the core parts
 of version 1 that were still missing first, starting with the screens that change things.
@@ -26,7 +28,9 @@ of version 1 that were still missing first, starting with the screens that chang
 | `@oltrem/core-ui` | `ChoiceChips`: a choice of one as native radios inside chips in the sideways row, so a role or a place is never picked from a dropdown alone (R-12) |
 | `@oltrem/screens` | `src/forms.tsx`: the invitation form and the invitations waiting, the person page (roles held, give a role, the account switch), the role form with its capabilities grouped by module, the place form; `screens.tsx` registers the pages and the form routes; the people and role tables link to their records |
 | `@oltrem/screens`, second push | the provider forms: the domain look-up, the page that connects one provider with its key recipe, the page of one connected provider with its actions in a sideways row and its key pasted again; the instance states in plain words (Sends, Standby, Ready) |
-| The client template | its screens test runs the whole set of changes as the Owner; `npm run dev` makes a KEK of the computer's own into `.dev.vars` once, so a key pasted on the computer can be sealed |
+| `@oltrem/core-config`, third push | the `settings` module on bit plane 7: `GET /api/settings/values` reads every setting from D1 with its source and whether the caller may change it; `PUT /api/settings/values/:key` checks the schema and `editableBy`, saves through `Config.save` and audits; [its README](../../packages/core-config/README.md) |
+| `@oltrem/screens`, third push | the Settings page and chip: every setting grouped by module, a text, number or switch control when the person may change it, the next-deploy badge |
+| The client template | mounts the settings module, with the session's standing (Vendor, Owner, or anyone holding `settings.manage`); its screens test runs the whole set of changes as the Owner; `npm run dev` makes a KEK of the computer's own into `.dev.vars` once, so a key pasted on the computer can be sealed |
 
 How a form travels:
 
@@ -55,7 +59,12 @@ flowchart LR
   it still open on the next run. It never leaves the computer.
 - **The test message is honest.** The template's client file sets no sending address, so a test
   message is refused before it reaches the provider and the page says why
-  (`from: not an email address`). The Settings page, next, is where the address is set.
+  (`from: not an email address`). The Settings page is where the address is set, and the test
+  then goes through.
+- **Who may change a setting is the setting's.** Each definition names `vendor`, `owner` or
+  `admin`; the route reads it against the caller's standing, which IAM knows and the client hands
+  in, so `@oltrem/core-config` stays free of the IAM module. A client-file setting is shown, never
+  editable: it changes with a deploy.
 - **Invitations live with the people.** The waiting ones and the form are on the People page; the
   Access page keeps the company, roles, groups and places.
 
@@ -64,6 +73,8 @@ flowchart LR
 - Groups, overrides with their three states (inherit, allow, deny), reviews, requests,
   approvals, the Vendor's access, profiles.
 - A provider's delivery-report address and the client's own provider definitions: still the API.
+- A setting whose value is a list or an object: shown, changed through the API; the plan's
+  `/api/config/schema` for tools and agents.
 - A real provider's answer: the tests stand in for it; the first real key is the owner's test.
 - Seen in a browser or on a phone: the owner's test.
 
@@ -80,5 +91,8 @@ flowchart LR
   (Worked), a test message refused for want of a sending address, the provider made the one that
   sends, its removal refused with 409 while it sends, taken out of use, its key pasted again, and
   removed. `scripts/template-dev.test.mjs` holds the local KEK to being made once and kept.
+- Third push: the settings module's own test (`packages/core-config/test/module.test.ts`) and,
+  in the template's screens test, a malformed sending address refused with 422, a good one saved
+  and shown as set by the Owner, and the test message then sent (Worked).
 - `@oltrem/core-ui`'s test of `ChoiceChips`: the fieldset and legend, one radio per option, the
   given one chosen, `required` on each.
