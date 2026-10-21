@@ -51,6 +51,7 @@ with no account: on a new portal it is the only account.
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets | `/api/health/checks`, `budgets` |
 | `/settings` | every setting grouped by module: its value, where it comes from, and a form when the person may change it | `/api/settings/values` |
+| `/alerts` | the open alerts with what became of their email and who is on each, then the ones resolved lately | `/api/alerts/items` |
 
 The forms, each posting to the screen's own route, which calls the API as the signed-in person:
 
@@ -69,6 +70,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Make it the one that sends, take it out of use, remove it | `POST .../activate`, `.../disable`, `DELETE /api/providers/instances/:id` | `?done=sends`, `taken-out`, `removed` |
 | Paste the key again | `POST /api/providers/instances/:id/credential` | `?done=key-saved` |
 | Save a setting (`/settings/:key`): text, a number or a switch, turned into the setting's type | `PUT /api/settings/values/:key` | `?done=setting-saved` |
+| I am on it (`/alerts/:id/acknowledge`) | `POST /api/alerts/items/:id/acknowledge` | `?done=acknowledged` |
 
 A change that worked redirects to its page with a `done` key, which the page turns into a fixed
 sentence: no address or name travels in the address bar. A change the API refused shows the page
@@ -115,4 +117,7 @@ withdraws an invitation, and sees a refusal and a cross-site form refused. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed
 and saved on the Settings page, the test message then sent, the provider made the one that sends,
-refused removal while it sends, taken out of use, its key pasted again, and removed.
+refused removal while it sends, taken out of use, its key pasted again, and removed. A fourth
+names an alert recipient on the Settings page, lets a failed deploy report fail its check twice
+on the tick, and sees the alert emailed, on the Alerts page and on Home, acknowledges it, and
+sees it resolved once the check passes.

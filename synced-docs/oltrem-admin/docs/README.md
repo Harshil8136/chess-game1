@@ -74,7 +74,7 @@ Phase 3, the module system, has these parts so far:
 | The generated reference of a client reads its modules: `oltrem docs` imports `src/modules.ts` in a child Node process and writes a Modules page (capabilities, routes, jobs, checks, migrations, settings, errors) that a client's verify holds current | **done** 2026-10-21: [the record](records/2026-10-21-generated-references.md); the kit's own modules are documented in the kit |
 | The capability version gate: a client's `oltrem docs` keeps `capabilities.json`, each module's capabilities under its version, and refuses a change made under the same version, since the Worker registers them once per version | **done** 2026-10-21: [the record](records/2026-10-21-capability-version-gate.md) |
 | The page fields of the manifest (pages, i18n, docs) and the contract tests generated from manifests | wait on the renderer, after the sandbox measurement |
-| Alerts and the key recipes on the reference | the key recipes **done** 2026-10-21 in phase 4: [the record](records/2026-10-21-key-recipes.md); alerts come with the providers of phase 4 |
+| Alerts and the key recipes on the reference | **done** 2026-10-21: [the key recipes](records/2026-10-21-key-recipes.md), [alerts](records/2026-10-21-alerts.md) |
 | The migration ledger check at the Worker's start | not started |
 
 Phase 4, providers and email, has these parts so far:
@@ -163,6 +163,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/email](../modules/email/README.md) | email as the kit sends it: typed templates and the escaping `html` tag, sending through the outbox, the lease per message key, failover, the held messages, the canary and messages routes, the health check, the table and the error codes | written, beside the code |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow step by step, one export at a time, the routes, the freshness and drill checks, the restore drill, the settings and secrets, how to open a copy, the table and the error codes | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
+| [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
 | [@oltrem/screens](../packages/screens/README.md) | the portal's screens: the frame and its row, each page and the API it reads, the first run, the stylesheet | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies into a client repository, written as the how-to the client keeps: its parts, what to change, what is not there yet | written, beside the code; copied by the generator |
@@ -198,13 +199,13 @@ was verified:
 | [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version |
 | [Phase 4: envelope encryption](records/2026-10-21-envelope-encryption.md) | how a stored credential is sealed to its row under a data key wrapped by the one key-encryption key, how the key rotates under one secret name |
 | [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the kit's seven email definitions carry, how an instance holds its sealed credential and its place in the failover order |
-| [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes with AWS SigV4, the probe route, what keeps a credential out of the clear and out of an error |
-| [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme, which key each reads, how a report becomes the kit's delivery events, checked against signatures made outside the kit |
-| [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, strong and weak evidence, why a suggestion never sends by itself, the daily re-check and its drift warning |
-| [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked when it is asked for, held while no provider is ready, sent once under the kit's own lease through the active instance or a failover, the canary, the health check |
+| [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes, the probe route |
+| [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme and becomes the kit's delivery events |
+| [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, why a suggestion never sends by itself |
+| [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked, held while no provider is ready, and sent once through the active instance or a failover |
 | [Phase 4: the delivery reports' address](records/2026-10-21-delivery-reports.md) | why one public path skips the sign-in door, how a report is checked by a secret token and the provider's signature, how each event is kept on its message |
 | [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs with their instructions, the KEK's recipe, the generated Key recipes page, the check that the required secrets match |
-| [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with the runtime's own cipher and no package, why the private key never reaches the Worker, checked by the real age tool |
+| [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with no package, why the private key never reaches the Worker |
 | [Phase 5: the backup module](records/2026-10-21-backup-module.md) | how the nightly copy is asked of Cloudflare, encrypted on its way into the bucket and recorded, the one Workflow that runs it step by step |
 | [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted |
 | [Phase 5: the GitHub module](records/2026-10-21-github-module.md) | how the portal learns its kit version, a newer release and its last deploy without a GitHub token |
@@ -219,6 +220,7 @@ was verified:
 | [Verification log, 19 and 20 October](records/2026-10-19-to-20-verification-log.md) | the log's first rows, moved there unchanged |
 | [The screens and two commands](records/2026-10-21-screens-and-npm.md) | how `npm install` and `npm run dev` bring up the portal and its screens, the local sign-in and its two locks, why the screens render in the Worker for now |
 | [The screens that change things](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places, email providers and settings, and how a form travels |
+| [Phase 3: alerts](records/2026-10-21-alerts.md) | how a lasting problem is emailed once, held in the quiet hours, acknowledged and resolved |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
 
 ## How this folder is checked
