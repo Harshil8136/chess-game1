@@ -276,7 +276,7 @@ one read. A change to the capabilities under the same version is not seen: a cha
 version. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
-The manifest: fifty-five JSON routes under `/api/iam` (the Home card's `GET /home`, under
+The manifest: fifty-six JSON routes under `/api/iam` (the Home card's `GET /home`, under
 `iam.read`, counts the roles and the places), each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
@@ -292,6 +292,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `GET`, `POST /me/requests`, `DELETE /me/requests/:id` | `iam.self` | my access requests: ask for a role at a scope, withdraw |
 | `GET`, `POST /me/approvals`, `POST /approvals/:id/decision` | `iam.self` | the approvals I asked for; ask a second person; decide one (you must hold the same power and not be the one who asked) |
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |
+| `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be; `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
 | `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
 | `POST /invitations`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), withdraw |
 | `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
