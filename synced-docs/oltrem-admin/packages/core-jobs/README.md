@@ -52,12 +52,39 @@ A module may still have a `scheduled` hook, which the Worker calls on every tick
 for the rare module that needs the raw tick. Work that should be seen, counted and tried again is
 a job.
 
+## Flows: the one Workflow
+
+Work that takes longer than a tick, or many steps, is a flow on a module's manifest
+(`@oltrem/core-module`), run by the client's one Workflow (`JOBS`, plan 9.1) instead of the
+tick. The Worker exports one Workflow class, and its `run` hands every instance to the flows:
+
+```ts
+const flows = createFlows<Env>({ modules, report });
+
+export class KitJobs extends WorkflowEntrypoint<Env> {
+  run(event: WorkflowEvent<unknown>, step: WorkflowStep) {
+    return flows.run(event, step, this.env);
+  }
+}
+```
+
+| Start | What runs |
+|---|---|
+| A schedule on the Workflow binding fires | every flow whose `schedule` is that cron, in module order; `flows.schedules` is the list the binding names, and none of them spends a cron trigger |
+| `startFlow(env.JOBS, kind, params)` | the one flow with that id, with the params; it returns the instance id |
+| Neither matches a mounted flow | nothing; it is reported with the schedule or the kind |
+
+Each step a flow takes is named after it (`backup.export: claim`), so two flows on one schedule
+never share a cached step. A flow that throws is reported with its id and the others still run;
+the instance then fails, so the Workflow's own record shows it. Each step has its own retries,
+timeout and CPU budget (ten milliseconds of CPU per step on the free plan), and the instance's
+state is kept three days.
+
 ## Table
 
 Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,
 `lease_until`, `last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an
-index on `next_run_at`. Pausing, tiers and the queue or Workflow path for heavy jobs (plan 4.3)
-come with the jobs page.
+index on `next_run_at`. Pausing and tiers (plan 4.3) come with the jobs page.
 
 ## Tests
 
@@ -65,4 +92,6 @@ Inside the Workers runtime against the real migration: rows made for the declare
 run when due and not before, the outcome and the next run written; a failure recorded and reported
 while the other job runs; a lease another tick holds respected and taken over once it lapses; a
 changed interval written and the next run brought forward; a removed job's row kept as
-undeclared; and the contract's refusals.
+undeclared; and the contract's refusals. With a stand-in step: a schedule running its flows in
+module order with their steps named after them, a start by hand with its params, a failed flow
+reported while the other runs, and an instance no flow matches.

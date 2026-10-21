@@ -3,8 +3,8 @@
 The module contract of the kit (plan section 4.3): one manifest per feature, checked when it is
 defined so a bad one fails the build. So far: the id and the version, the capabilities on their
 bit plane, the API routes with their capability and schema, the event types a module handles, its
-jobs, its health checks, the migrations it ships, the settings and errors it owns, and the
-scheduled hook. Pages, i18n and docs join the manifest with the rest of the module system
+jobs, its flows, its health checks, the migrations it ships, the settings and errors it owns, and
+the scheduled hook. Pages, i18n and docs join the manifest with the rest of the module system
 (phase 3).
 
 ## Defining a module
@@ -33,6 +33,7 @@ export const notes = defineModule({
   eventTypes: ['notes.created'],
   onEvent: async (event, env) => { /* fan out */ },
   jobs: [{ id: 'notes.digest', every: '1h', summary: 'Send the hourly digest', run: async (env) => { /* ... */ } }],
+  flows: [{ id: 'notes.export', summary: 'Export every note', schedule: '0 4 * * *', run: async ({ step, env }) => { /* ... */ } }],
   health: [{ id: 'notes.store', lane: 'storage', summary: 'The notes table answers', run: async (env) => ({ status: 'ok' }) }],
   migrations: ['0012_notes.sql'], // shipped in the module's migrations/ folder
   settings: [notesPerPage], // defined with defineSetting, under the key prefix `notes.`
@@ -58,6 +59,7 @@ export const notes = defineModule({
 | A public hook's path is `/` and segments of letters, digits, `_` and `-`, or `:params`; it has a summary and a handler, and is declared once | `KIT-E-1006`, `KIT-E-1005` |
 | An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
 | A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`) | `KIT-E-1006` |
+| A flow is `<module>.<name>`, declared once, with a summary, a `run` and, when scheduled, five cron fields | `KIT-E-1006` |
 | A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run` | `KIT-E-1006` |
 | A migration is named `NNNN_name.sql` and declared once | `KIT-E-1006` |
 | A setting's key starts with the module's id and its definition names the module; an error's definition names the module | `KIT-E-1006` |
@@ -105,6 +107,16 @@ A module's periodic work is declared as `jobs`, each with a stable id, an interv
 the one tick (`@oltrem/core-jobs`) runs them when due under a lease and records each outcome.
 `everySeconds(every)` is the parser both share. The `scheduled` hook stays for a module that
 needs the raw tick; work that should be seen, counted and retried is a job.
+
+## Flows
+
+Work too long or too many-stepped for the tick is a flow: a stable id, a summary, a `run` and,
+when it runs on its own, a `schedule` of five cron fields in UTC. The client's one Workflow
+(`@oltrem/core-jobs`, `createFlows`) runs it, either when a schedule on the Workflow binding fires
+or when `startFlow` starts it by hand with its params. `run` gets a `step`: each `step.do(name,
+callback)` is retried on its own and its result kept, so a callback is the unit of work and code
+outside one runs again whenever the instance resumes; `step.sleep` pauses without spending CPU.
+`isCron(text)` is the check the contract applies to a schedule.
 
 ## Health
 
