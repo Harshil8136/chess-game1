@@ -41,8 +41,18 @@ await email.send(env, {
 ```
 
 Mount `email.module` beside the IAM and providers modules; the queue handler of
-`@oltrem/core-http` calls its `onEvent` for `email.send`. `from` is the client's: it reads the
-sending address from its own settings.
+`@oltrem/core-http` calls its `onEvent` for `email.send`. `from` is the client's; the client
+template reads the two settings below.
+
+## Settings
+
+| Name | Layer, editor | What it is |
+|---|---|---|
+| `email.from_address` | system, an Owner; empty by default | the address the portal's messages come from, one the active provider may send from; a message composed while it is empty fails as `from: not an email address` and is never sent |
+| `email.from_name` | system, an Owner; empty by default | the name they come from; the client template uses the client's name while it is empty |
+
+The client file sets both at onboarding (`settings` in `oltrem.config.ts`); an Owner may change
+them live once the Settings page exists.
 
 ## Templates
 
@@ -111,8 +121,7 @@ Two failures in a row open a problem (`@oltrem/core-health`).
 - Suppression of an address that bounced or complained comes with the screens; the reports are
   kept on the messages until then.
 - The generated Modules page of a client lists routes, not public hooks.
-- Suppression, a daily cap and the sending address as a setting come with the screens.
-- No Worker mounts the module yet; the client template mounts it with the IAM module.
+- Suppression and a daily cap come with the screens.
 
 ## The table and the error codes
 
