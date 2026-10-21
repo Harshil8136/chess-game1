@@ -54,6 +54,7 @@ with no account: on a new portal it is the only account.
 | `/health` | each health check with its state, and the free plan's budgets | `/api/health/checks`, `budgets` |
 | `/settings` | every setting grouped by module: its value, where it comes from, and a form when the person may change it | `/api/settings/values` |
 | `/alerts` | the open alerts with what became of their email and who is on each, then the ones resolved lately | `/api/alerts/items` |
+| `/audit?outcome=&before=` | the audit log, newest first, filtered from a row (everything, refused, failed) and paged by Older; the daily seals and whether each holds; the export form | `/api/audit/entries`, `seals` |
 
 The forms, each posting to the screen's own route, which calls the API as the signed-in person:
 
@@ -73,6 +74,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Paste the key again | `POST /api/providers/instances/:id/credential` | `?done=key-saved` |
 | Save a setting (`/settings/:key`): text, a number or a switch, turned into the setting's type | `PUT /api/settings/values/:key` | `?done=setting-saved` |
 | I am on it (`/alerts/:id/acknowledge`) | `POST /api/alerts/items/:id/acknowledge` | `?done=acknowledged` |
+| Download as CSV: two dates, the last 7 days by default; the browser asks the API itself, so the file downloads | `GET /api/audit/export?since=&until=` | the CSV file |
 
 A change that worked redirects to its page with a `done` key, which the page turns into a fixed
 sentence: no address or name travels in the address bar. A change the API refused shows the page
