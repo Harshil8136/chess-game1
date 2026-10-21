@@ -189,7 +189,7 @@ was verified:
 | [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in |
 | [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds |
 | [Phase 2: the users module](records/2026-10-21-users-module.md) | the second module: the directory and the profile, the switch and its rules, how a module stands on the IAM module |
-| [Phase 2 in the client template](records/2026-10-21-template-mounts-iam.md) | how the template's Worker came to run IAM and users, the Access audience secret, what is still owed |
+| [Phase 2 in the client template](records/2026-10-21-template-mounts-iam.md) | the template's Worker runs IAM and users; the Access audience secret |
 | [The Vendor's address](records/2026-10-21-vendor-address.md) | the command that writes the Vendor's address after the first deploy, why it is in no file |
 | [Phase 3: capabilities on the manifest](records/2026-10-21-module-capabilities.md) | how a module declares what its routes check, how the Worker registers it at its start and keeps the check current |
 | [Phase 3: jobs and the tick](records/2026-10-21-jobs-and-the-tick.md) | how a module declares its periodic work, how the one tick runs it under a lease and records it |
@@ -210,7 +210,7 @@ was verified:
 | [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup copy is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted |
 | [Phase 5: the GitHub module](records/2026-10-21-github-module.md) | how the portal learns its kit version, a newer release and its last deploy without a GitHub token |
 | [Phase 5: the free plan's budgets](records/2026-10-21-free-plan-budgets.md) | what System health measures against the free plan, how the jobs pause, the token widened |
-| [Phase 4 in the client template](records/2026-10-21-template-mounts-email.md) | the template's providers and email, the sending address, the rule that keeps kit code loadable in Node |
+| [Phase 4 in the client template](records/2026-10-21-template-mounts-email.md) | the template's providers and email, the sending address |
 | [Phase 5 in the client template](records/2026-10-21-template-mounts-backup.md) | the template's backup, deploy report and budgets, the Workflow and its schedules, the runtime stand-in for Node |
 | [Phase 5: the backup's setup](records/2026-10-21-backup-setup.md) | the backup's settings and bucket rules, set once after the first deploy |
 | [Phase 5: the Actions minutes](records/2026-10-21-actions-minutes.md) | how `oltrem doctor` reads the month's GitHub Actions minutes |
@@ -226,6 +226,7 @@ was verified:
 | [See it as](records/2026-10-21-see-it-as.md) | one person's access shown, read only |
 | [One command deploy](records/2026-10-21-one-command-deploy.md) | `npm run deploy` |
 | [Deploy, first run](records/2026-10-21-deploy-first-run.md) | fixes |
+| [Deploy screen](records/2026-10-21-deploy-screen.md) | questions explained |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
 
 ## How this folder is checked

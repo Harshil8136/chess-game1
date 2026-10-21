@@ -151,8 +151,9 @@ declares anything but exactly one D1 database.
 
 The first deploy and every later one from a person's computer, as one command (`npm run deploy`
 in a client repository), for someone who has never used Cloudflare. Each step looks first and
-only adds, so a run that stopped carries on the next time. Each step prints as it happens, so
-the steps that make an answer come before its question:
+only adds, so a run that stopped carries on the next time. The terminal shows six titled steps
+as they happen, each question after what it is and why it is needed (the door's AUD tag, the
+ops token), in colour where the terminal shows it and never with `NO_COLOR`:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
 2. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. An
