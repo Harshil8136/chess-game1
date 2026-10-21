@@ -39,7 +39,8 @@ with no account: on a new portal it is the only account.
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
 | `/people` | everyone in the directory, the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
-| `/people/:id` | one person: the roles they hold, the form to give one, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes` |
+| `/people/:id` | one person: the roles they hold, the form to give one, their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
+| `/people/:id/exceptions?place=` | one person's exceptions at one place, picked from a row: every capability that may be given one person at a time, with three chips (as their roles say, allow, deny) | `/api/iam/overrides`, `capabilities`, `scopes` |
 | `/access` | the company, its roles, groups and places, and the form to add a place | `/api/iam/tenant`, `roles`, `groups`, `scopes` |
 | `/access/roles/new`, `/access/roles/:id` | a role's name and its capabilities as a checklist grouped by module | `/api/iam/roles/:id`, `/api/iam/capabilities` |
 | `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
@@ -58,6 +59,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Invite someone (`/people/invite`): an address, a role, a place | `POST /api/iam/invitations` | the link to send, shown once |
 | Withdraw an invitation | `DELETE /api/iam/invitations/:id` | `?done=withdrawn` |
 | Give a role (`/people/:id/grant`), end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
+| Save the exceptions (`/people/:id/exceptions`): only what changed is written; end one from the person page | `POST /api/iam/overrides`, `DELETE /api/iam/overrides/:id` | `?done=exceptions-saved`, `exception-ended` |
 | Switch the account off, with a reason, or on | `POST /api/users/people/:id/deactivate`, `reactivate` | `?done=off`, `on` |
 | Make a role, save one | `POST /api/iam/roles` (placed below every existing role), `PATCH /api/iam/roles/:id` | `?done=role-made`, `role-saved` |
 | Add a place (`/access/places`) | `POST /api/iam/scopes` | `?done=place-added` |
@@ -89,7 +91,7 @@ writes. The file is generated: never edit it by hand (R-06).
 
 ## Not here yet
 
-- **The other forms.** Groups, overrides with their three states, reviews, requests, approvals,
+- **The other forms.** Groups, reviews, requests, approvals,
   the Vendor's access, profiles, a setting whose value is not text, a number or a switch, a
   provider's delivery-report address and the client's own provider definitions: still the API
   until their forms come.
@@ -107,7 +109,9 @@ writes. The file is generated: never edit it by hand (R-06).
 this computer, creates the company, the Owner accepts, and every page answers with its words; a
 stranger is told there is no account; behind Access the local door does not exist. A second test
 makes a role and a place, invites someone who accepts, ends and gives their role, switches the
-account off and on, withdraws an invitation, and sees a refusal and a cross-site form refused. A
+account off and on, allows one thing and denies another as exceptions (the person is then refused
+the denied page and shown the allowed one), puts one back to their roles and ends the other,
+withdraws an invitation, and sees a refusal and a cross-site form refused. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed
 and saved on the Settings page, the test message then sent, the provider made the one that sends,

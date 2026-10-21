@@ -16,7 +16,9 @@ sources: [the owner's request of 2026-10-21 15:32; this repository]
 > email provider is connected from a screen too: where to make its key, the key pasted and
 > sealed, checked, a test message sent, and the provider made the one that sends. In a third,
 > a Settings page lists every setting with its value and where it comes from, and lets the
-> person who may change one save it, such as the address the portal's email comes from.
+> person who may change one save it, such as the address the portal's email comes from. In a
+> fourth, a person's exceptions: one thing allowed or denied to one person at one place, with
+> three chips per capability (as their roles say, allow, deny).
 
 The owner asked on 2026-10-21 at 15:32 to start the next phases; the thread put the core parts
 of version 1 that were still missing first, starting with the screens that change things.
@@ -30,6 +32,7 @@ of version 1 that were still missing first, starting with the screens that chang
 | `@oltrem/screens`, second push | the provider forms: the domain look-up, the page that connects one provider with its key recipe, the page of one connected provider with its actions in a sideways row and its key pasted again; the instance states in plain words (Sends, Standby, Ready) |
 | `@oltrem/core-config`, third push | the `settings` module on bit plane 7: `GET /api/settings/values` reads every setting from D1 with its source and whether the caller may change it; `PUT /api/settings/values/:key` checks the schema and `editableBy`, saves through `Config.save` and audits; [its README](../../packages/core-config/README.md) |
 | `@oltrem/screens`, third push | the Settings page and chip: every setting grouped by module, a text, number or switch control when the person may change it, the next-deploy badge |
+| `@oltrem/screens`, fourth push | the exceptions page of a person (a row of places, three chips per capability that may be given one person at a time) and their exceptions in force on the person page, each with End |
 | The client template | mounts the settings module, with the session's standing (Vendor, Owner, or anyone holding `settings.manage`); its screens test runs the whole set of changes as the Owner; `npm run dev` makes a KEK of the computer's own into `.dev.vars` once, so a key pasted on the computer can be sealed |
 
 How a form travels:
@@ -65,13 +68,16 @@ flowchart LR
   `admin`; the route reads it against the caller's standing, which IAM knows and the client hands
   in, so `@oltrem/core-config` stays free of the IAM module. A client-file setting is shown, never
   editable: it changes with a deploy.
+- **Exceptions write only what changed.** Saving the three chips of a place compares them with the
+  exceptions in force there: one back to "as their roles say" is ended, a new one is made, one
+  turned round is ended and made again. Each is the API's own override, with its default end.
 - **Invitations live with the people.** The waiting ones and the form are on the People page; the
   Access page keeps the company, roles, groups and places.
 
 ## Not done here
 
-- Groups, overrides with their three states (inherit, allow, deny), reviews, requests,
-  approvals, the Vendor's access, profiles.
+- Groups, reviews, requests, approvals, the Vendor's access, profiles; an exception's own end
+  date and reason from the screen (the API's default end applies).
 - A provider's delivery-report address and the client's own provider definitions: still the API.
 - A setting whose value is a list or an object: shown, changed through the API; the plan's
   `/api/config/schema` for tools and agents.
@@ -91,6 +97,10 @@ flowchart LR
   (Worked), a test message refused for want of a sending address, the provider made the one that
   sends, its removal refused with 409 while it sends, taken out of use, its key pasted again, and
   removed. `scripts/template-dev.test.mjs` holds the local KEK to being made once and kept.
+- Fourth push: in the template's screens test, the Owner allows `health.read` and denies
+  `users.read` to the new person at the company; that person is then refused the People page and
+  shown System health; the deny is put back to their roles and the allow ended from the person
+  page.
 - Third push: the settings module's own test (`packages/core-config/test/module.test.ts`) and,
   in the template's screens test, a malformed sending address refused with 422, a good one saved
   and shown as set by the Owner, and the test message then sent (Worked).
