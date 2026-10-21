@@ -15,8 +15,9 @@ sources: [this repository]
 
 ## Where things stand
 
-The kit is in **phase 2, permissions and users**, since 2026-10-20, when phase 1's list of
-parts was built; phase 1's acceptance (the first deploy) still waits on the sandbox repository.
+The kit is in **phase 3, the module system**, since 2026-10-21, when phase 2's list of parts
+was built but for the phone screens, which the owner put after the sandbox measurement; phase 1's
+acceptance (the first deploy) and phase 2's still wait on the sandbox repository.
 The plan's open decisions still wait on the owner (they are listed in the plan). Phase 0, set up
 and measure, has these parts:
 
@@ -55,7 +56,14 @@ Phase 2, permissions and users, has these parts so far:
 | The Vendor and the handover: tenant creation, the first Owner's invitation, Vendor access settings | **done** 2026-10-20: [the record](records/2026-10-20-iam-vendor-and-handover.md); it runs in no Worker yet |
 | The routes: the JSON side of the model under `/api/iam`, the acceptance of an invitation open to any identity | **done** 2026-10-20: [the record](records/2026-10-20-iam-routes.md); it runs in no Worker yet |
 | `@oltrem/users`: the directory with profiles, switching accounts off and on under the standing rules, its routes | **done** 2026-10-21: [the record](records/2026-10-21-users-module.md); service accounts and the door's group sync come later |
-| The phone screens | not started: waits on the owner's call, build them in Astro now or after the sandbox measures a screen's cost |
+| The phone screens | not started: the owner's call of 2026-10-21 is to build them after the sandbox measures a screen's cost |
+
+Phase 3, the module system, has these parts so far:
+
+| Part | State |
+|---|---|
+| The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); it runs in no Worker yet |
+| The rest of the manifest (pages, migrations, settings, jobs, health, i18n, docs), the generator `oltrem new module`, the migration ledger, the tick, health, alerts, the generated references, the contract tests | not started |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
@@ -93,7 +101,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [@oltrem/cli](../packages/cli/README.md) | the `oltrem` tool: the manifest check, its caps and the manifest format, the doctor's checks and exit codes | written, beside the code |
 | [@oltrem/core-errors](../packages/core-errors/README.md) | how an error is defined, the code blocks, and the problem document every failure answers with | written, beside the code |
 | [@oltrem/core-module](../packages/core-module/README.md) | the module contract: routes, capabilities, schemas, event types, what it refuses | written, beside the code |
-| [@oltrem/core-http](../packages/core-http/README.md) | the request pipeline, the same-origin rule, the identity headers and the token's claims, the session hook, the three Worker handlers | written, beside the code |
+| [@oltrem/core-http](../packages/core-http/README.md) | the request pipeline, the same-origin rule, the identity headers and the token's claims, the startup hook, the session hook, the three Worker handlers | written, beside the code |
 | [@oltrem/core-outbox](../packages/core-outbox/README.md) | the outbox: how a row moves, the backoff ladder, replay, and the table it owns | written, beside the code |
 | [@oltrem/core-audit](../packages/core-audit/README.md) | the audit log: the fields and their rules, what is refused, hashing and verify, and the table it owns | written, beside the code |
 | [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, every primitive with the rule it keeps, and the three widgets | written, beside the code |
@@ -116,6 +124,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds, the decisions taken, and how it was verified | record, frozen |
 | [Phase 2: the users module](records/2026-10-21-users-module.md) | the second module: the directory and the profile, the switch and its rules, how a module stands on the IAM module, the decisions taken, and how it was verified | record, frozen |
+| [Phase 3: capabilities on the manifest](records/2026-10-21-module-capabilities.md) | how a module declares what its routes check, how the Worker registers it at its start and keeps the check current, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -151,3 +160,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-20 | The twelve gates pass locally; the IAM module's forty-seven tests pass inside the Workers runtime against migrations 0003 to 0006, the nine handover tests among them, from an empty portal to the three Vendor access modes; the module's README and the record are indexed and their links resolve | No Worker runs the handover: the invitation link is not sent (phase 4) and no route accepts it yet (the screens step); the Owners are not yet emailed on a Vendor action |
 | 2026-10-20 | The twelve gates pass locally; the IAM module's fifty-five tests pass inside the Workers runtime, the eight route tests among them, end to end through the pipeline from an empty portal; the pipeline's and the contract's tests cover the route open to any identity; the three READMEs and the record are indexed and their links resolve | No Worker serves the routes: the problem shapes and the capability refusals are seen in tests only, and the time a route costs on a request is unmeasured until the sandbox |
 | 2026-10-21 | The twelve gates pass locally, the manifest gate on the users module's test Worker too; the users module's four tests pass inside the Workers runtime against migrations 0003 to 0007, through the pipeline beside the IAM module; the lint's boundary rule was shown to allow a module's import of the IAM module and to refuse one of any other module; the module's README and the record are indexed and their links resolve | No Worker serves the module; service accounts and the group sync are not built; the invitations and the directory are not yet one screen |
+| 2026-10-21 | The twelve gates pass locally; the contract's seven tests, the pipeline's twenty-two and the IAM module's fifty-seven pass inside the Workers runtime, the startup hook among them through three apps on one IAM instance; the users module's four pass with its manifest declaring its plane; the four READMEs and the record are indexed and their links resolve | No Worker starts with the hook: what the registry read costs an isolate's first request is unmeasured until the sandbox; a capability changed under an unchanged version is not seen, by design, and no gate refuses that commit yet |

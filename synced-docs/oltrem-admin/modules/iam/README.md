@@ -1,8 +1,8 @@
 # @oltrem/iam
 
 Permissions for a client Worker (plan sections 6, 7 and 10): who may do what, where, as data a
-client's Owners manage themselves. So far: the tables, the capability registry modules fill at
-deploy, the compiler that turns a person's grants into one small map, the check that reads it,
+client's Owners manage themselves. So far: the tables, the capability registry the modules fill
+when the Worker starts, the compiler that turns a person's grants into one small map, the check that reads it,
 the sessions that carry the map from one request to the next with the pipeline's hook and
 authorizer, the governance: every write that changes who may do what, each refused unless the
 actor could stand behind it, and the handover: the Vendor creates the one company and invites its
@@ -45,12 +45,19 @@ export const ROOMS = defineCapabilities({
 | `floor` | `owner`: granted only through the Owner role or by the Vendor; `vendor`: the Vendor's alone |
 | `freshSignIn`, `secondPerson` | the route runs those gates after an allow (plan 7.2, step 5) |
 
-`defineCapabilities` refuses a bad declaration when the module loads (`KIT-E-2001`).
-`registerCapabilities(db, sets)` runs at deploy: the module row with its plane, a bit for each
-new capability (the next free one, never one already given), labels and flags refreshed, and a
-capability no longer declared marked inactive while it keeps its bit. Two modules claiming one
-plane, in one deploy or across deploys, fail the deploy. `loadCapabilityIndex(db)` reads the
-rows once per isolate; the compiler and the check share that index.
+`defineCapabilities` refuses a bad declaration when the module loads (`KIT-E-2001`). A module
+declares the same thing on its manifest, as `bitPlane` and `capabilities` in `defineModule`
+(`@oltrem/core-module`), which checks the shape when the module loads and that every route checks
+a declared capability. `registerCapabilities(db, sets)` writes a set into the registry: the module
+row with its plane and version, a bit for each new capability (the next free one, never one
+already given), labels and flags refreshed, a capability no longer declared marked inactive while
+it keeps its bit, and a new one joined to every Owner role. Two modules claiming one plane, in one
+run or across runs, fail it. The pipeline's startup hook (`createIam(...).startup`, under The
+routes) runs it when the Worker starts, for the mounted modules whose version the registry has
+not seen; `capabilitySets(modules)` is the step from manifests to sets. `loadCapabilityIndex(db)`
+reads the rows; a `capabilityIndexSource` reads them once per isolate and replaces them after a
+registration, and the sessions, the governance and the handover share one, so the compiler and
+the check read the same index.
 
 ## Compiling and checking
 
@@ -247,13 +254,23 @@ const iam = createIam<Env>({
 });
 const app = createApp<Env>({
   modules: [iam.module, ...others],
+  startup: iam.startup,
   session: iam.sessions.hook,
   authorize: iam.sessions.authorize,
 });
 ```
 
 `createIam` builds the sessions, the governance and the handover on one set of bindings and
-returns them with the module manifest: fifty-four JSON routes under `/api/iam`, each naming the
+returns them with the startup hook and the module manifest. `iam.startup` runs once per isolate,
+on the first request past the door: it reads the registry's module versions and registers the
+capabilities of every mounted module whose version it has not seen (a new module, an upgrade):
+the new ones join every Owner role, each tenant's policy version moves so the sessions recompile
+on their next request, and the index the check reads is replaced. A version already seen costs
+one read. A change to the capabilities under the same version is not seen: a change bumps the
+version. The IAM module declares its own eight on plane `0` the same way, so the registry fills
+itself on the first request of a new client.
+
+The manifest: fifty-four JSON routes under `/api/iam`, each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
 is flagged). Bodies and queries are validated by schema (`KIT-E-0422` names the field); a list
@@ -344,4 +361,8 @@ address, the lists answer with their shapes and refuse a bad page, the Owner sha
 and invites a clerk who reads but cannot shape, grants are made, activated, ended and overridden,
 a request is decided and another withdrawn, an approval asked and refused to the wrong person, a
 review decided and closed, the three Vendor modes with the incident and the window, and a sign-in
-ended from the devices list and refused from then on.
+ended from the devices list and refused from then on. The startup hook is tested through three
+apps on one IAM instance: the door's refusal runs nothing, the first request past it registers
+both mounted modules, the Owner holds a new module's capability at once, a declaration grown
+under the same version is not seen, and a bumped version is, with the index replaced and the
+Owner's session recompiled without a new sign-in.

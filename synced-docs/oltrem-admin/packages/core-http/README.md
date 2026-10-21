@@ -1,9 +1,9 @@
 # @oltrem/core-http
 
 The one request pipeline of a client Worker (plan section 4.2 and 11), built on Hono: request
-ids, security headers, the identity the Access door asserted, the session hook, the module routes
-with their capability and schema checks, one problem shape for every error, and the three Worker
-handlers (`fetch`, `scheduled`, `queue`) from one place.
+ids, security headers, the identity the Access door asserted, the startup hook once per isolate,
+the session hook, the module routes with their capability and schema checks, one problem shape for
+every error, and the three Worker handlers (`fetch`, `scheduled`, `queue`) from one place.
 
 ## The pipeline
 
@@ -13,7 +13,8 @@ flowchart LR
   Z -- "yes" --> OK["200, the module ids"]
   Z -- "no, /api/*" --> N["no-store, same-origin check (CSRF)"] --> D["identity from the Access headers"]
   D -- "missing or unreadable" --> P401["problem 401"]
-  D --> A{"route open to any identity?"}
+  D --> U["startup hook, once per isolate"] --> A{"route open to any identity?"}
+  U -- "throws" --> PB
   A -- "yes" --> S
   A -- "no" --> SE["session hook, when one is given"]
   SE -- "throws" --> PS["problem with its code"]
@@ -36,18 +37,20 @@ that allows framing by the same origin only. Routes mount at `/api/<module id><p
 ```ts
 import { createApp, createWorker } from '@oltrem/core-http';
 
-const sessions = createSessions({ bindings: (env) => ({ kv: env.CACHE, db: env.DB }) }); // @oltrem/iam
+const iam = createIam({ bindings: (env) => ({ kv: env.CACHE, db: env.DB }) }); // @oltrem/iam
+const modules = [iam.module, notes, settings];
 
 const app = createApp({
-  modules: [notes, settings],
-  session: sessions.hook,
-  authorize: sessions.authorize,
+  modules,
+  startup: iam.startup,
+  session: iam.sessions.hook,
+  authorize: iam.sessions.authorize,
   report: (error, requestId) => sentry(error, requestId),
 });
 
 export default createWorker({
   app,
-  modules: [notes, settings],
+  modules,
   onHandled: (event, env) => outbox(env).complete(event.idempotencyKey),
   report: (error, context) => sentry(error, context),
 });
@@ -58,11 +61,17 @@ and the capability check: the door's identity is enough, for a person who has no
 Its body is still validated and the same-origin check still applies; the handler sees
 `ctx.session` as `undefined`.
 
+`startup` runs once per isolate, on the first request that passed the door and before its session
+hook, with the mounted modules: the IAM module's `startup` registers the capabilities they declare.
+Requests that arrive while it runs wait on the same run; when it fails, that request is answered
+with the error, reported as every 5xx is, and the next request runs it again. `/healthz` and a
+request without an identity never start it.
+
 `session` and `authorize` are the two places the permission model plugs in. The session hook
 runs once per request after the identity is read and before the capability check; whatever it
 returns reaches the authorizer as its fourth argument and the handler as `ctx.session`. Either may
-throw a `KitError` to answer with a reason of its own. The IAM module provides both
-(`createSessions` in `@oltrem/iam`); without the module a client uses the own-account authorizer
+throw a `KitError` to answer with a reason of its own. The IAM module provides both, with the
+startup hook (`createIam` in `@oltrem/iam`); without the module a client uses the own-account authorizer
 and no hook: the one owner email holds every capability and `ctx.session` is `undefined`.
 
 The identity comes from the headers Cloudflare Access adds: the email, and the token whose claims

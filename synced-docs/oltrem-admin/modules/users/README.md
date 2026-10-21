@@ -19,6 +19,7 @@ const iam = createIam<Env>({ bindings, audience: env.ACCESS_AUD });
 const users = createUsers<Env>({ bindings, sessions: iam.sessions });
 const app = createApp<Env>({
   modules: [iam.module, users.module],
+  startup: iam.startup,
   session: iam.sessions.hook,
   authorize: iam.sessions.authorize,
 });
@@ -30,8 +31,9 @@ account holds, here `users.self` (any `<module>.self` is read that way by the au
 
 ## Capabilities
 
-Two, on bit plane `1`: `users.read`, the directory; `users.manage`, switching accounts off and
-on and editing profiles, with a fresh sign-in. Both join every Owner role at deploy.
+Two, declared on the manifest on bit plane `1`: `users.read`, the directory; `users.manage`,
+switching accounts off and on and editing profiles, with a fresh sign-in. The IAM module's
+startup hook registers them when the Worker starts, and both join every Owner role.
 
 ## The directory and the profile
 
