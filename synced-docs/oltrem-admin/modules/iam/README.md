@@ -125,7 +125,7 @@ allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes` (
 `KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs. One
 capability is the authorizer's alone: `iam.self` (`SELF`), which every account holds by having a
 session and no role carries; the routes about one's own things name it, and the function behind
-each decides the rest.
+each decides the rest. Any module's `<module>.self` is read the same way (`SELF_SUFFIX`).
 
 Two calls make a change visible: `invalidate(env, principalId)` compiles the person's access again
 into their record (or removes the record when the account was switched off), so their next
