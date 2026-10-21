@@ -51,7 +51,9 @@ pattern; the rest is left for the sandbox to confirm, never guessed.
 submitted through the route is checked the same way. The contract refuses an id or field name in
 the wrong shape, a base URL that is not `https`, a port other than 465 or 587, an SMTP transport
 with an HTTP auth scheme, `api-key-header` without its header, `sigv4` without its service, a
-repeated field name, an event mapped to an unknown kind.
+repeated field name, an event mapped to an unknown kind, a webhook signature without the field it
+reads its key from. A field marked `optional` may be left out of an instance: the webhook keys
+are, so a provider sends before its delivery reports are set up.
 
 ## Routes
 
@@ -104,6 +106,28 @@ email module never names a provider.
   secret value of the instance blanked. A probe never throws: it answers `{ ok, checkedAt,
   latencyMs, detail }`.
 
+## Delivery reports
+
+`createWebhookVerifier({ now?, fetchCertificate? }).verify(opened, { headers, body })` checks a
+report against the instance's definition and returns `{ deliveryId, payload, subscribeUrl? }`;
+`deliveryEvents(definition, payload)` turns it into the kit's events (`kind`, the provider's
+event name, message id, recipient, ISO time, reason) and lists the event names the map does not
+name as `ignored`. The body is the raw text: a signature covers the bytes as they came.
+
+| Scheme | Provider | What is checked | Key field |
+|---|---|---|---|
+| `standard-webhooks` | Resend | HMAC-SHA256 of `id.timestamp.body`, any listed `v1` signature, `svix-` or `webhook-` headers | secret `webhookSecret` |
+| `hmac-timestamp-token` | Mailgun | HMAC-SHA256 of timestamp and token, hex, in the body | secret `webhookSigningKey` |
+| `ecdsa-public-key` | SendGrid | ECDSA P-256 over timestamp and body, a DER signature | config `webhookPublicKey` |
+| `sns` | Amazon SES | RSA (SHA-1 or SHA-256) over the documented fields, the certificate fetched from an `sns.*.amazonaws.com` address and cached, the topic equal to the instance's | config `topicArn` |
+| `shared-secret` | Postmark | the password of the basic auth on the webhook's address, compared in constant time | secret `webhookSecret` |
+| `none` | Brevo | nothing: the token in the hook's address is the only guard | none |
+
+A signed timestamp more than five minutes from the clock is refused; the delivery id lets the
+email module drop a report it has seen. An SNS subscription is answered with its confirmation
+address only when that address is an AWS one. A refusal is `KIT-E-1409` naming the check. The
+public address the reports arrive at waits on the owner's answer and comes with the email module.
+
 ## Status and the failover order
 
 `suggested` is what the detection will write (a later slice); `confirmed` is an instance a person
@@ -127,15 +151,16 @@ made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activ
 Migration `0010`: `providers_definitions` (the client's rows), `providers_keys` (one wrapped data
 key per tenant, with the id of the key that wrapped it and when it was rotated) and
 `providers_instances` (indexed by tenant, kind, status and failover order). Error codes
-`KIT-E-1401` to `1408`: a bad definition, an unknown one, a missing field, an instance not ready
+`KIT-E-1401` to `1409`: a bad definition, an unknown one, a missing field, an instance not ready
 to activate, the active instance in use, the kit's definition that has no row to remove, a
-provider that did not take the message, and what the definition asks for that this kit version
-cannot do.
+provider that did not take the message, what the definition asks for that this kit version
+cannot do, and a delivery report that failed its check.
 
 ## Not here yet
 
-The webhook verifiers, the detection that writes suggestions, the email module that calls `pick`
-and `send`, the recipe pages and the screens: the next slices of phase 4. No adapter has spoken
+The public address for delivery reports, the detection that writes suggestions, the email module
+that calls `pick`, `send`, `verify` and `deliveryEvents`, the recipe pages and the screens: the
+next slices of phase 4. No adapter has spoken
 to a real provider yet: the request shapes stand on the public references until the sandbox
 sends through two of them.
 
@@ -153,4 +178,8 @@ template engine against every kit definition (nothing left unrendered, no field 
 does not list); one request shape per HTTP provider against a scripted fetch; a refusal with the
 key blanked; a bad message refused before any request; SigV4 against AWS's published vector and
 one computed apart; the SMTP client against a scripted server on a fake socket, on 587 and 465,
-refusing to sign in without TLS.
+refusing to sign in without TLS. The webhooks against reports signed outside the kit: the Standard
+Webhooks published vector, a Mailgun HMAC made in Python, SendGrid and SNS signatures made with
+openssl (SNS with SHA-256 and SHA-1); a changed body, an old timestamp, another key or topic, a
+certificate address that is not AWS's and a missing key field refused; every provider's events
+read by its field map; an unmapped or inherited event name ignored.
