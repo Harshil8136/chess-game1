@@ -69,11 +69,40 @@ fresh sign-in), on bit plane 2:
 | `POST /instances/:id/credential` | manage | the fields again (a new key, a changed domain); a suggestion becomes confirmed |
 | `POST /instances/:id/activate` | manage | this instance sends; the one that was active becomes the first failover |
 | `POST /instances/:id/disable` | manage | out of the failover order |
+| `POST /instances/:id/probe` | manage | reaches the provider with the sealed credential; the result (ok, when, how long, the provider's words) is kept on the row and audited as `providers.probe` |
 | `DELETE /instances/:id` | manage | removes it with its credential; the active one is refused (`KIT-E-1405`) |
 | `POST /keys/rewrap` | manage | after the KEK secret changed: every tenant's data key wrapped again under the current key |
 
 Instances belong to a tenant; the Vendor, who has none, is refused. A field the definition does
 not list, or an empty one, is `422`; a listed field that is missing is `KIT-E-1403` naming it.
+
+## The adapters
+
+Two adapters speak to every email definition, by its transport; `createEmailAdapter({ fetch?,
+connect?, now? })` returns one `send(opened, message)` and one `probe(opened)` for both, so the
+email module never names a provider.
+
+- **The HTTP template engine** renders the definition's URL, headers and body against three
+  scopes, `secret`, `config` and `message`, signs the request with the auth scheme and reads the
+  provider's message id from the answer (`messageIdPath`, a JSONPath, or `messageIdHeader`). A
+  placeholder alone takes its value as it is; one with no value removes its key, and an object
+  or a list entry left empty goes with it, so a message without HTML sends no empty HTML part. A
+  URL or a header with a missing value is refused, naming the field (`KIT-E-1403`).
+- **The auth schemes**: `bearer`, `basic` (the definition's user, else the `user` field),
+  `api-key-header` and `none`, a line each; `sigv4`, the AWS signature, computed with WebCrypto
+  over every header sent and checked against AWS's published vector. `oauth2-client-credentials`
+  has no code yet and is refused by name (`KIT-E-1408`), never sent half-signed.
+- **The SMTP client**, over the Workers TCP socket: port 465 is TLS from the first byte, 587
+  upgrades with STARTTLS before any credential is sent, and refuses a server that does not offer
+  it or sends bytes before the handshake; AUTH PLAIN or LOGIN; the message written as MIME here,
+  base64 bodies, encoded words for text outside ASCII, a `Message-ID` made from the kit's message
+  key. Port 25 is refused: Cloudflare blocks it.
+- **The message** (`EmailMessage`) is checked once before any request: addresses well formed, no
+  line break where a header goes, at most fifty recipients, no header a message may not set
+  (`From`, `Bcc` and the like).
+- **A refusal** is `KIT-E-1407` with the provider's status and its answer cut to one line, every
+  secret value of the instance blanked. A probe never throws: it answers `{ ok, checkedAt,
+  latencyMs, detail }`.
 
 ## Status and the failover order
 
@@ -90,22 +119,25 @@ sealed value copied to another row refuses to open; the other fields are config 
 `registry.open(env, tenant, id)` returns the fields to an adapter inside the request that uses
 them, and a credential that did not open is written to the audit log as `providers.open`,
 `failed`, with the error code and never the value. Every write is audited under the person who
-made it: `providers.define`, `undefine`, `create`, `credential`, `activate`, `disable`, `remove`
-and `rewrap`, with the field names and never a value.
+made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
+`remove` and `rewrap`, with the field names and never a value.
 
 ## Tables and errors
 
 Migration `0010`: `providers_definitions` (the client's rows), `providers_keys` (one wrapped data
 key per tenant, with the id of the key that wrapped it and when it was rotated) and
 `providers_instances` (indexed by tenant, kind, status and failover order). Error codes
-`KIT-E-1401` to `1406`: a bad definition, an unknown one, a missing field, an instance not ready
-to activate, the active instance in use, the kit's definition that has no row to remove.
+`KIT-E-1401` to `1408`: a bad definition, an unknown one, a missing field, an instance not ready
+to activate, the active instance in use, the kit's definition that has no row to remove, a
+provider that did not take the message, and what the definition asks for that this kit version
+cannot do.
 
 ## Not here yet
 
-The adapters that speak to a provider (the HTTP template engine, the SMTP client, the probe), the
-webhook verifiers, the detection that writes suggestions, the email module that calls `pick`, the
-recipe pages and the screens: the next slices of phase 4.
+The webhook verifiers, the detection that writes suggestions, the email module that calls `pick`
+and `send`, the recipe pages and the screens: the next slices of phase 4. No adapter has spoken
+to a real provider yet: the request shapes stand on the public references until the sandbox
+sends through two of them.
 
 ## Tests
 
@@ -115,4 +147,10 @@ sealed to its row and the key nowhere in a response or the table; a missing, unk
 field refused; activation and the failover order, `pick`, the active instance not removable, a
 suggestion not activatable; a client's definition added, replacing the kit's and removed; the
 audit rows with field names and no value; a credential moved to another row refused and recorded;
-the data keys wrapped again after the KEK changed, and opened under the new key alone.
+the data keys wrapped again after the KEK changed, and opened under the new key alone; the probe
+route with the sealed key, its result kept and audited. The adapters without the network: the
+template engine against every kit definition (nothing left unrendered, no field the definition
+does not list); one request shape per HTTP provider against a scripted fetch; a refusal with the
+key blanked; a bad message refused before any request; SigV4 against AWS's published vector and
+one computed apart; the SMTP client against a scripted server on a fake socket, on 587 and 465,
+refusing to sign in without TLS.

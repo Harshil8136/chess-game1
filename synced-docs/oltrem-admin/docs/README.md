@@ -80,7 +80,7 @@ Phase 4, providers and email, has these parts so far:
 |---|---|
 | Envelope encryption (`@oltrem/core-crypto`): one key-encryption key as the Worker secret, a data key per tenant wrapped by it, each credential sealed to its tenant and row, rotation under the one secret name | **done** 2026-10-21: [the record](records/2026-10-21-envelope-encryption.md); no credential is stored yet |
 | The providers module (`@oltrem/providers`): the definition contract, seven email providers as data, per-tenant instances with their sealed credential, the failover order, the routes | **done** 2026-10-21: [the record](records/2026-10-21-providers-as-data.md); nothing speaks to a provider yet |
-| The HTTP template engine, the SMTP client and the auth schemes behind the two email adapters | not started |
+| The HTTP template engine, the SMTP client and the auth schemes behind the two email adapters | **done** 2026-10-21: [the record](records/2026-10-21-email-adapters.md); no request has reached a real provider yet |
 | The five webhook signature verifiers and the field map to the nine event kinds | not started |
 | Detection of a domain's provider by DNS over HTTPS, with evidence, and the daily re-fingerprint | not started |
 | The email module: the outbox consumer, the idempotency lease, failover, templates compiled at build time, the canary send, alerts | not started |
@@ -160,6 +160,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version, the decisions taken, and how it was verified | record, frozen |
 | [Phase 4: envelope encryption](records/2026-10-21-envelope-encryption.md) | how a stored credential is sealed to its row under a data key wrapped by the one key-encryption key, how the key rotates under one secret name, the decisions taken, and how it was verified | record, frozen |
 | [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the kit's seven email definitions carry, how an instance holds its sealed credential and its place in the failover order, the decisions taken, and how it was verified | record, frozen |
+| [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes with AWS SigV4, the probe route, what keeps a credential out of the clear and out of an error, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
