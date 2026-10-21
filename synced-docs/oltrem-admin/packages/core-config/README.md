@@ -66,8 +66,9 @@ await config.ensure(ctx.waitUntil.bind(ctx));
 const limit = config.get<number>('email.daily_limit');
 ```
 
-A definition is refused at once when its key is not `module.name`, when its module does not
-match the key, when its default fails its own schema, or when the key already exists.
+A definition is refused at once when its key is not `module.name` (the module segment as a
+module id, dashes allowed; the name in lower snake case), when its module does not match the key,
+when its default fails its own schema, or when the key already exists.
 
 ## Storage this package owns
 

@@ -63,7 +63,7 @@ are checked against it by `pnpm check:agents`.
 | `pnpm check:deps` | every dependency has a registered reason and one pin in the catalog (R-09) |
 | `pnpm agents:write` | rewrites AGENTS.md and CLAUDE.md from their template |
 
-The tool's other commands (`setup`, `migrations sync`, `migrations apply`, `docs`, `check agents`,
+The tool's other commands (`setup`, `new module`, `migrations sync`, `migrations apply`, `docs`, `check agents`,
 `check tokens`) and flags are in `packages/cli/README.md`; they serve a client repository, while
 this repository's own checks are the `pnpm check:*` scripts above.
 

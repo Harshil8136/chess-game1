@@ -9,6 +9,7 @@ client's own configuration. Everything an agent or a person needs to know is in
 |---|---|
 | Who this client is | `oltrem.config.ts` |
 | What the Worker may have | `oltrem.manifest.json`, checked against `wrangler.jsonc` and the code on every verify |
+| This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts |
 | How it deploys | a push to `main` runs `pnpm verify`, then applies the migrations and deploys (`.github/workflows/deploy.yml`) |
 | Setting it up | `pnpm setup`, then `pnpm doctor` until green |
 | The reference, never written by hand | `docs/_generated/`, written by `oltrem docs` from the files above and checked on every verify |

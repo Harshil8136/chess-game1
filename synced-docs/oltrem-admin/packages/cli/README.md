@@ -5,8 +5,9 @@ manifest check** that keeps a client's Worker at one of each resource (plan 9.1,
 **`migrations sync`** and **`migrations apply`** for the kit's migrations (plan 10), **`setup`**
 for the steps a new client repository needs (plan 15.3), **`docs`** for the generated reference
 (plan 15.5), **`check agents`** and **`check tokens`** for the instruction files and the token
-registry (plan 15.1, 9.4), and the **doctor** with its eight checks. This completes the tool's
-list for phase 1. The tool runs on Node and has no runtime dependency.
+registry (plan 15.1, 9.4), the **doctor** with its eight checks, and, since phase 3,
+**`new module`**, which writes a complete module into a client repository from the kit's module
+template (plan 4.3 and 18). The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
 
@@ -151,6 +152,30 @@ generated reference (as `docs` does), and run the doctor. The token itself is cr
 cannot create itself; its scopes are the five the deploy needs, on that account only. Exit
 codes are the doctor's, or `1` when the migrations folder has a problem and `3` when the kit
 packages are not installed.
+
+## `oltrem new module <name> [dir]`
+
+Writes a complete module into the client repository in `dir` (the current directory by default),
+copied from the kit's module template (`templates/module` in the kit; beside the tool once it is
+published) with the name written in wherever it goes: as the id (`pet-food`), as a table prefix
+(`pet_food`) and as a title (`Pet food`). The module gets one of each part the manifest knows: a
+route, a daily job, a health check, a migration, a setting and an error code, plus its own test
+and its how-to (`modules/<name>/README.md`). The migration is written into the client's
+`migrations/` folder at the next free number of the client's own series (5000 and up), and the
+module's error codes take the next free hundred from 5000 (`KIT-E-5001`, then `KIT-E-5101` for
+the second module), read from the modules already there. Then `src/modules.ts` is rewritten to
+list every module under `modules/` in name order (the client template's Worker mounts that list
+beside the kit's modules, so the file is never edited by hand) and the generated reference is
+refreshed, as `docs` does. The new module deploys with no edits: `pnpm verify` type-checks it,
+runs its test inside the Workers runtime and finds the reference current.
+
+A name is lower-case letters and digits, words joined by single dashes; the kit's own module ids
+(`iam`, `users`, `health`, `email` and the rest of plan 4.4) are refused, as is a name whose
+folder exists. The generator is deterministic, and the kit's own test holds the template to it:
+generating `sample-notes` reproduces `templates/module` byte for byte, so what the generator
+writes is the code the kit type-checks and tests on every verify. `--json` prints
+`{ ok, exitCode, ran, written, problems }`. Exit `0` when written, `1` when the name is refused,
+`3` when `dir` is not a client repository or the template is not installed.
 
 ## `oltrem docs [dir] [--check]`
 
