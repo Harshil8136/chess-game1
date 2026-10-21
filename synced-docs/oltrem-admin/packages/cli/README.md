@@ -10,7 +10,8 @@ registry (plan 15.1, 9.4), the **doctor** with its ten checks, and, since phase 
 template (plan 4.3 and 18), and, since phase 5, **`backup setup`**, what the nightly backup
 needs on the account after the first deploy, **`backup drill`**, the monthly restore drill
 (plan 9.3), **`github report`**, the deploy workflow's report for the GitHub module (plan
-4.4), and **`vendor set`**, which writes the Vendor's address after the first deploy (plan 7.4).
+4.4), and **`vendor set`**, which writes the Vendor's address after the first deploy (plan 7.4),
+and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3).
 The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
@@ -115,7 +116,8 @@ A client repository runs the kit's migrations from its own `migrations/` folder,
 deploy workflow needs nothing but the repository. This command copies every `migrations/*.sql`
 of every installed `@oltrem/*` package into `migrations/` and writes `migrations/kit.json`, the
 list of those files with a checksum each (`sha256-` then base64, the notation browsers use for
-integrity). It is idempotent: a second run copies nothing. With `--check` it writes nothing and
+integrity), and, once `oltrem upgrade` has run, the kit versions it took, which this command
+keeps. It is idempotent: a second run copies nothing. With `--check` it writes nothing and
 fails when a copy is missing or `kit.json` is stale; a client's `pnpm verify` runs it that way.
 
 What it refuses, in either mode:
@@ -322,6 +324,27 @@ Exit `0` when the address is written or already the same, `1` when another one i
 write failed, `3` when it could not start: no address, an address with a quote or a space, a
 configuration without exactly one D1 database, a database wrangler cannot read, or one with no
 Vendor row yet.
+
+## `oltrem upgrade [dir]`
+
+Run after the client repository installs a new kit version, before its verify (plan 14.3). It is
+a doctor first, and it writes nothing until every check passes:
+
+| Id | Check |
+|---|---|
+| the doctor's | `NODE-01`, `PM-01`, `MANIFEST-01`, `WF-01`, `CF-SEC-02`, `TOKEN-01` and `AGENTS-01`, as `oltrem doctor` runs them |
+| `UP-KIT-01` | the kit's floor, from the `engines` and `oltrem` fields of the installed `@oltrem/core-http`: this Node, the installed wrangler, and the `compatibility_date` of `wrangler.jsonc` |
+| `UP-MIG-01` | the kit migrations can be copied: no edited copy, no shared number, no kit number in a client file |
+| `UP-SEC-01` | every name in `secrets.required` is set on the deployed Worker (`wrangler secret list`); a warning when wrangler cannot list them |
+| `UP-SIZE-01` | the bundle `wrangler deploy --dry-run` builds, against 64 MiB, and the startup `wrangler check startup` measures on this computer, against 1 s; a warning from 70 % |
+
+When none fails, it copies the new kit migrations, writes the generated reference, and records
+the installed kit versions in `migrations/kit.json`. It prints each installed `@oltrem/*`
+package's release notes, from its `CHANGELOG.md`, since the version recorded last; on the first
+run, the installed version's own. Then run `pnpm verify`, commit and push.
+
+Exit `0` when it wrote, `2` when it wrote with warnings, `1` when a check failed and nothing was
+written, `3` when it could not start: no wrangler configuration, or no kit package installed.
 
 ## `oltrem doctor`
 

@@ -43,16 +43,28 @@ A module that depends on a core package that moves is bumped by a patch with it.
 A change that no package's user can see, such as a test, a document or a gate of this
 repository, needs no note.
 
+## The kit's floor
+
+`@oltrem/core-http`, the package whose version is the kit's, says what a client needs to run
+it: `engines.node`, and in its `oltrem` field the lowest wrangler and the earliest
+`compatibility_date`. A test holds these equal to the workspace's Node, the catalog's wrangler
+and the client template's date, so they move together. `oltrem upgrade` checks a client against
+them.
+
 ## Releasing
 
 `pnpm changeset version` turns the waiting notes into version bumps and each package's
 `CHANGELOG.md`, and deletes the notes. Then `pnpm changeset status` shows no package to bump.
 
-Not yet built:
+What is built and what is not yet:
 
 - **Publishing.** It waits on the `oltrem` GitHub organisation. Its release workflow will publish
   to GitHub Packages with its own token (plan 15.7). Until then every package stays `private`
   and at `0.0.0`.
+- **Taking a release in a client.** `oltrem upgrade` is built: after the client installs the new
+  version, it checks first, then copies the new kit migrations, writes the reference and prints
+  the notes since the last upgrade (`packages/cli/README.md`). Dependabot opening that change is
+  set up with the sandbox.
 - **Built JavaScript in the published packages.** Node does not strip types from files under
   `node_modules`, so a published package cannot ship only `.ts` source. `oltrem docs` and the
   doctor load a client's modules in Node. This is part of the publishing step.

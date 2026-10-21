@@ -15,4 +15,5 @@ client's own configuration. Everything an agent or a person needs to know is in
 | This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts |
 | How it deploys | a push to `main` runs `pnpm verify`, then applies the migrations and deploys (`.github/workflows/deploy.yml`) |
 | Setting it up | `pnpm setup`, then `pnpm doctor` until green; the Worker secrets `docs/_generated/secrets.md` names, which wrangler requires before it deploys; after the first deploy, once, `pnpm exec oltrem vendor set <the Vendor's address>` and `pnpm exec oltrem backup setup` |
+| Taking a new kit version | `pnpm install`, then `pnpm exec oltrem upgrade`: it checks first, then copies the kit's new migrations and prints the release notes; then `pnpm verify` and push |
 | The reference, never written by hand | `docs/_generated/`, written by `oltrem docs` from the files above and checked on every verify |
