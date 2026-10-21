@@ -80,7 +80,9 @@ plane the registry gave it once and for ever, and `capabilities`, each with its 
 the permission model acts on (`floor`, `freshSignIn`, `secondPerson`). The contract checks the
 shape; the permission module (`@oltrem/iam`) registers the declarations when the Worker starts,
 through the pipeline's startup hook, and only under a version the registry has not seen, so a
-change to the capabilities bumps the module's version. A module may declare none, in a client
+change to the capabilities bumps the module's version; a client's `oltrem docs --check` refuses a
+change made under the same version, against the committed `capabilities.json`. A module may
+declare none, in a client
 that runs the own-account rule, where the owner holds every capability by name; one that declares
 any names every route's capability among them, so no route checks what nobody can hold.
 `<module>.self` is the one exception: every account holds it, for the routes about one's own

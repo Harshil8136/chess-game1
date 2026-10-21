@@ -15,9 +15,11 @@ sources: [this repository]
 
 ## Where things stand
 
-The kit is in **phase 3, the module system**, since 2026-10-21, when phase 2's list of parts
-was built but for the phone screens, which the owner put after the sandbox measurement; phase 1's
-acceptance (the first deploy) and phase 2's still wait on the sandbox repository.
+The kit is between **phase 3, the module system**, whose parts were built on 2026-10-21 but for
+the ones its table names as waiting on later work, and **phase 4, providers and email**, which
+starts next. Phase 2's phone screens wait on the sandbox measurement, by the owner's decision of
+2026-10-21; phase 1's acceptance (the first deploy) and phase 2's still wait on the sandbox
+repository.
 The plan's open decisions still wait on the owner (they are listed in the plan). Phase 0, set up
 and measure, has these parts:
 
@@ -67,7 +69,10 @@ Phase 3, the module system, has these parts so far:
 | Health on the manifest and its runner (`@oltrem/core-health`): the checks run as a job on the tick, the last result kept per check, a problem opened after two failures in a row; migrations, settings and errors declared on the manifest and checked against their owner | **done** 2026-10-21: [the record](records/2026-10-21-health-and-manifest-fields.md); the client template mounts the health module; no module declares a check yet |
 | The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module (route, job, check, migration, setting, error, test, how-to) that a client's verify passes with no edits, with its own contract test | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); no page, no capabilities and the setting read as its default until the kit has them |
 | The generated reference of a client reads its modules: `oltrem docs` imports `src/modules.ts` in a child Node process and writes a Modules page (capabilities, routes, jobs, checks, migrations, settings, errors) that a client's verify holds current | **done** 2026-10-21: [the record](records/2026-10-21-generated-references.md); the kit's own modules are documented in the kit |
-| The rest of the manifest (pages, i18n, docs), the migration ledger check at startup, alerts, the contract tests generated from manifests, the key recipes on the reference | not started |
+| The capability version gate: a client's `oltrem docs` keeps `capabilities.json`, each module's capabilities under its version, and refuses a change made under the same version, since the Worker registers them once per version | **done** 2026-10-21: [the record](records/2026-10-21-capability-version-gate.md) |
+| The page fields of the manifest (pages, i18n, docs) and the contract tests generated from manifests | wait on the renderer, after the sandbox measurement |
+| Alerts and the key recipes on the reference | come with the providers of phase 4 |
+| The migration ledger check at the Worker's start | not started |
 
 Anything deployed, measured or connected to an account is still to come: the sandbox client needs
 the fresh Cloudflare account, the owner's step.
@@ -136,6 +141,7 @@ and everything in this repository is written as if public (R-04). The job signs 
 | [Phase 3: health and the manifest's last data fields](records/2026-10-21-health-and-manifest-fields.md) | how a module declares its health checks, migrations, settings and errors, how the health job runs the checks and opens a problem, the decisions taken, and how it was verified | record, frozen |
 | [Phase 3: the module generator](records/2026-10-21-the-module-generator.md) | how `oltrem new module` writes a complete module from the proven template, how the client Worker finds it, the decisions taken, and how it was verified | record, frozen |
 | [Phase 3: the generated references](records/2026-10-21-generated-references.md) | how a client's reference reads its modules by importing them in Node, what the Modules page shows, the decisions taken, and how it was verified | record, frozen |
+| [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version, the decisions taken, and how it was verified | record, frozen |
 
 ## How this folder is checked
 
@@ -176,3 +182,4 @@ token page gives each credential its own small table instead of one wide one.
 | 2026-10-21 | The twelve gates pass locally, the manifest gate on the health package's test Worker too; the health package's four tests pass inside the Workers runtime against migrations 0008 and 0009, the two-fails-open flow and its hooks among them, and the tick running the checks through the health job; the contract's seven, the jobs package's four and the client template's five pass, the template with the health module mounted, the new table and a tick that runs the health job; the template's migrations folder and generated reference re-synced; the two READMEs and the record are indexed and their links resolve | No Worker runs a check: what a run costs and a check's real timeout are unmeasured until the sandbox; no module declares a check yet; no alert leaves `onOpen`, and the health page, acknowledging and snoozing wait for phase 5 |
 | 2026-10-21 | The twelve gates pass locally, the manifest gate on the module template's test Worker too; the module template's three tests pass inside the Workers runtime against its own migration through the pipeline; the generator's five tests and the template check pass on Node, `sample-notes` reproducing the template byte for byte; the client template's five pass with `clientModules` mounted and its reference re-rendered; the settings registry accepts a dashed module segment; the three READMEs and the record are indexed and their links resolve | No client has run the command against a real deploy: "deploys with no edits" rests on the template's verify and the byte-for-byte test; the module's page, capabilities and live setting are not built |
 | 2026-10-21 | The twelve gates pass locally; the command-line tool's sixty-two tests pass on Node, among them the Modules page rendered from a copy of the client template with a generated module (Node importing its `src/modules.ts`), a file Node cannot load reported and nothing written, and the generator writing the Modules page too; the fixture's and the template's generated references re-rendered; the client template's five tests pass with zod among its dependencies; the config package's imports name their files and its tests pass | No published package has been imported this way: in the kit the packages resolve through workspace links to their sources, and the release of phase 6 must ship code Node can import; the kit's own modules are not on a client's Modules page |
+| 2026-10-21 | The twelve gates pass locally; the command-line tool's sixty-three tests pass on Node, among them a module's capabilities changed under the same version refused by `oltrem docs` with nothing written, the same change accepted under a bumped version with `capabilities.json` rewritten and the Modules page showing the capability, the generator writing the file for a new module, and the fixture's and the template's seven files held current; the client template's five tests pass | No Worker has registered a capability from a client's module: the gate stands in for the registry's once-per-version rule until the sandbox runs one; a snapshot edited by hand is caught only by the reference check, not by the gate |

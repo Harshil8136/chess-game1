@@ -187,8 +187,9 @@ class, cron, var and secret name, and any exception to the caps), **Migrations**
 ledger table), **Tokens** from `tokens.registry.json` (one small table per credential, by name
 only, sorted), **Modules** from `src/modules.ts` (for each of the client's own modules: its
 capabilities, routes with their capability, jobs, checks, migrations, settings with their
-defaults and errors with their text) and a **Repository map** of the files that exist. The key
-recipes join the list with the providers module.
+defaults and errors with their text), **`capabilities.json`**, the same modules' bit plane and
+capabilities as data under their version, and a **Repository map** of the files that exist. The
+key recipes join the list with the providers module.
 
 The Modules page is read from the code: the command imports `src/modules.ts` in a child Node
 process with type stripping and takes each manifest as data; no handler, job or check runs. A
@@ -196,15 +197,25 @@ module must therefore load in Node, which means no Workers-only global at module
 own packages respect this. A `src/modules.ts` Node cannot load is reported as a problem that
 names the first error, and nothing is written. A client without the file has no module yet.
 
-`--check` renders in memory and compares: a page whose committed copy is missing or differs, or
-a stray `.md` file in the folder, is reported with the command to run, and nothing is written.
+`capabilities.json` is also a gate. The Worker registers a module's capabilities once per version
+(`@oltrem/iam`), so a capability added, removed or changed under the same version would never
+reach the permission model. On every run the command compares each module's bit plane and
+capabilities with the committed file and refuses a change under an unchanged version, naming the
+module and the bump to make; nothing is written until the version moves. A module the file does
+not know is new and needs no bump. A file that is not the list the command writes is reported with
+the repair: delete it and run `oltrem docs`.
+
+`--check` renders in memory and compares: a file whose committed copy is missing or differs, or
+a stray `.md` or `.json` file in the folder, is reported with the command to run, and nothing is
+written.
 Without `--check`, the stale pages are written and a stray file is removed. The registry is
 validated first, by the kit's own rules (every field present, the name in upper snake case, a
 known status, no duplicate): a bad row is refused with its row number and nothing is written.
 `--json` prints `{ ok, exitCode, ran, written, stale, problems }`.
 
-Exit `0` when the pages are current (or were just written), `1` when `--check` found a stale or
-stray page or the registry is missing or invalid, `3` when there is no manifest or no wrangler
+Exit `0` when the files are current (or were just written), `1` when `--check` found a stale or
+stray file, a module changed its capabilities under the same version, or the registry is missing
+or invalid, `3` when there is no manifest or no wrangler
 file to generate from. The client template's `verify` runs `oltrem docs --check`, and the kit's
 own tests hold the template's committed copy to what the command renders.
 
