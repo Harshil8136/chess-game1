@@ -198,7 +198,7 @@ was verified:
 | [Phase 3: the generated references](records/2026-10-21-generated-references.md) | how a client's reference reads its modules by importing them in Node, what the Modules page shows |
 | [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version |
 | [Phase 4: envelope encryption](records/2026-10-21-envelope-encryption.md) | how a stored credential is sealed to its row under a data key wrapped by the one key-encryption key, how the key rotates under one secret name |
-| [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | how a provider is a definition and never an adapter, what the seven email definitions carry, how an instance holds its sealed credential and failover place |
+| [Phase 4: providers as data](records/2026-10-21-providers-as-data.md) | a provider as a definition, never an adapter; the seven email definitions; an instance's sealed key and failover place |
 | [Phase 4: the email adapters](records/2026-10-21-email-adapters.md) | how one HTTP adapter and one SMTP client send through every email definition, the auth schemes, the probe route |
 | [Phase 4: the webhook verifiers](records/2026-10-21-webhook-verifiers.md) | how a provider's delivery report is checked by its own signature scheme and becomes the kit's delivery events |
 | [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, why a suggestion never sends by itself |
@@ -219,7 +219,7 @@ was verified:
 | [Phase 6: oltrem upgrade](records/2026-10-21-oltrem-upgrade.md) | what an upgrade checks before it writes |
 | [Verification log, 19 and 20 October](records/2026-10-19-to-20-verification-log.md) | the log's first rows, moved there unchanged |
 | [Verification log, 21 October](records/2026-10-21-verification-log.md) | its first rows, moved |
-| [The screens and two commands](records/2026-10-21-screens-and-npm.md) | how `npm install` and `npm run dev` bring up the portal and its screens, the local sign-in and its two locks, why the screens render in the Worker for now |
+| [The screens and two commands](records/2026-10-21-screens-and-npm.md) | `npm install`, `npm run dev`, the local sign-in, why the Worker renders the screens |
 | [The screens that change things](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places, email providers and settings, and how a form travels |
 | [Phase 3: alerts](records/2026-10-21-alerts.md) | how a lasting problem is emailed once, held in the quiet hours, acknowledged and resolved |
 | [Phase 3: Home widgets](records/2026-10-21-home-widgets.md) | how each module gives Home one card, and who sees it |
@@ -230,6 +230,7 @@ was verified:
 | [Deploy screen](records/2026-10-21-deploy-screen.md) | questions explained |
 | [Door, nothing copied](records/2026-10-21-door-without-copying.md) | Access on the Worker |
 | [Portal frame](records/2026-10-22-portal-frame.md) | sidebar, theme, sign-in email |
+| [Every page, phone menu](records/2026-10-22-every-page-and-phone-menu.md) | tiles, filters, drawer |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
 
 ## How this folder is checked

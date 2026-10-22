@@ -40,7 +40,7 @@ with no account: on a new portal it is the only account.
 | `/` | a Vendor with no company yet: the company form; anyone else: the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/home` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
-| `/people` | everyone in the directory, the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
+| `/people?show=` | everyone in the directory, or only those switched on (`on`) or off (`off`), picked from a row; the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
 | `/people/:id` | one person: the roles they hold, the form to give one, their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
 | `/people/:id/exceptions?place=` | one person's exceptions at one place, picked from a row: every capability that may be given one person at a time, with three chips (as their roles say, allow, deny) | `/api/iam/overrides`, `capabilities`, `scopes` |
 | `/people/:id/see?place=` | "See it as": what the person can do at one place, picked from a row, each capability with yes or no and why, grouped by module; an account switched off says so. Read only, never their session | `/api/users/people/:id`, `/api/iam/scopes`, `/api/iam/people/:id/access` |
@@ -49,7 +49,7 @@ with no account: on a new portal it is the only account.
 | `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
 | `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
 | `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
-| `/email` | the latest messages and their state | `/api/email/messages` |
+| `/email?state=` | the latest messages and their state, or only those sent, waiting or failed, picked from a row | `/api/email/messages` |
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets | `/api/health/checks`, `budgets` |
@@ -87,9 +87,13 @@ back into a page.
 Every page sits in the same frame (`src/layout.tsx`). From 1024 px wide, a sidebar: the portal's
 mark, every mounted section under its group (People, Messages, Operations, Administration) with
 the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
-Member), the colour theme and, on this computer, Sign out. On a phone, a top bar with the mark and
-an account menu (a `details` element, no script) holding the same, and the sideways row of every
-section under it (no dropdown). Each section's page says in one line what it is for. The theme
+Member), the colour theme and, on this computer, Sign out. On a phone, a top bar with a Menu
+button that opens the same sidebar as a drawer from the left (a `dialog` opened by the browser's
+`commandfor`, no script; a tap outside closes it), and the sideways row of every section under it
+(no dropdown). Each section's page says in one line what it is for, then a row of its actions
+(`ActionRow`, links to the page's own forms), a row of summary tiles counted from the same API
+answers the page already reads (`Stats`; no extra request), and its sections, a form in a panel.
+Empty lists say so in a dashed box, and a list picked down to nothing says nothing matches. The theme
 switch posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, which keeps the choice
 in the `oltrem_theme` cookie (cleared for system) and returns to `back` when it is a path on the
 portal, Home otherwise; the frame then sets `data-theme` on the page. A form posted from another
@@ -98,7 +102,7 @@ site is refused.
 ## The stylesheet
 
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
-theme and the classes the pages and primitives use, about 30 KiB. It is served at `/ui/app.css`,
+theme and the classes the pages and primitives use, about 33 KiB. It is served at `/ui/app.css`,
 cached for good under its version and `no-cache` without it. After changing a class in a page or a
 primitive, run `pnpm ui:build`; a test fails while the committed file differs from what the build
 writes. The file is generated: never edit it by hand (R-06).
