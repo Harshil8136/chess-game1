@@ -40,7 +40,7 @@ are checked against it by `pnpm check:agents`.
 - **R-09** One of each resource per client, zero growth of variables, no dependency without a registered reason; settings are data in the database.
 - **R-10** Real data only, and fail closed: no mock data, no placeholder screens, no guessed numbers; the unknown is refused.
 - **R-11** Ask instead of guessing: a request with two readings, or a destructive step, stops for the owner's yes.
-- **R-12** Phone first: every screen is designed for a phone, and every option is visible in a sideways-scrolling row.
+- **R-12** Phone first: every screen is built for a phone; a page's options in a sideways row, its sections in the sidebar.
 
 ## 3. The commands
 

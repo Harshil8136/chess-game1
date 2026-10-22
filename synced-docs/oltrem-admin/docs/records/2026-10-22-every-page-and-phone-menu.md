@@ -59,3 +59,15 @@ with its empty sentence; the Email filter of failed messages with its own; the A
 core-ui tests (31) and the screens' stylesheet test; headless screenshots of People and Access at
 1280 px, People, Email and the open drawer at 390 px, light and dark; the twelve gates pass. Not
 verified: the look on the owner's phone and computer, and a real deploy.
+
+## Later the same day: the sidebar only, and a smaller account area
+
+The owner chose "Sidebar only" (03:34): with the sidebar on a phone, the row of sections under
+the top bar is not needed. The row is gone; the phone's top bar holds the Menu button and the
+portal's mark, and the avatar button that opened the same drawer is gone with it. R-12 now says
+that a page's options sit in a sideways row and the portal's sections in its sidebar (`rules.md`,
+`ai.md`). The account area at the foot of the sidebar was a large block (a big avatar, a bordered
+box of three labelled theme buttons, a full-width Sign out row); it is now two lines: the avatar,
+the email and role with Sign out as an icon beside them, then "Theme" with three icons. Verified
+by the template's screen test (two section lists only, the sidebar's and the drawer's; the chosen
+theme still marked as pressed) and screenshots of People at 1280 px and the drawer at 390 px.

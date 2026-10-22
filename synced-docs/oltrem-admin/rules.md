@@ -211,10 +211,11 @@ the owner's call.
 
 ## R-12 Phone first
 
-**Rule.** Every screen is designed for a phone first: every option visible in a
-sideways-scrolling row rather than hidden in a dropdown, every dialog through the one dialog
-system, every tap target comfortably large, nothing that needs a mouse. Documentation reads
-well on a phone too: a ten-line summary first, short tables, no wide tables.
+**Rule.** Every screen is designed for a phone first: every option in a page visible in a
+sideways-scrolling row rather than hidden in a dropdown, the portal's sections in its sidebar (on
+a phone a menu button opens it; the owner's choice of 2026-10-22), every dialog through the one
+dialog system, every tap target comfortably large, nothing that needs a mouse. Documentation
+reads well on a phone too: a ten-line summary first, short tables, no wide tables.
 
 **Why.** The owner tests only on a phone, and the clients' staff work from one.
 

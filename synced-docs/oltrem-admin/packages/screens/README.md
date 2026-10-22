@@ -87,10 +87,10 @@ back into a page.
 Every page sits in the same frame (`src/layout.tsx`). From 1024 px wide, a sidebar: the portal's
 mark, every mounted section under its group (People, Messages, Operations, Administration) with
 the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
-Member), the colour theme and, on this computer, Sign out. On a phone, a top bar with a Menu
-button that opens the same sidebar as a drawer from the left (a `dialog` opened by the browser's
-`commandfor`, no script; a tap outside closes it), and the sideways row of every section under it
-(no dropdown). Each section's page says in one line what it is for, then a row of its actions
+Member) with, on this computer, a Sign out button, and the colour theme as three icons. On a
+phone, a top bar with a Menu button that opens the same sidebar as a drawer from the left (a
+`dialog` opened by the browser's `commandfor`, no script; a tap outside closes it); the sections
+are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page says in one line what it is for, then a row of its actions
 (`ActionRow`, links to the page's own forms), a row of summary tiles counted from the same API
 answers the page already reads (`Stats`; no extra request), and its sections, a form in a panel.
 Empty lists say so in a dashed box, and a list picked down to nothing says nothing matches. The theme
