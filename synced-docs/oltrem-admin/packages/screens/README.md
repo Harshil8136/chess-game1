@@ -52,7 +52,7 @@ with no account: on a new portal it is the only account.
 | `/email?state=` | the latest messages and their state, or only those sent, waiting or failed, picked from a row | `/api/email/messages` |
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
-| `/health` | each health check with its state, and the free plan's budgets | `/api/health/checks`, `budgets` |
+| `/health` | each health check with its state, and the free plan's budgets; how many measured ones are close to their line (one not measured yet is not counted) | `/api/health/checks`, `budgets` |
 | `/settings` | every setting grouped by module: its value, where it comes from, and a form when the person may change it | `/api/settings/values` |
 | `/alerts` | the open alerts with what became of their email and who is on each, then the ones resolved lately | `/api/alerts/items` |
 | `/audit?outcome=&before=` | the audit log, newest first, filtered from a row (everything, refused, failed) and paged by Older; the daily seals and whether each holds; the export form | `/api/audit/entries`, `seals` |
