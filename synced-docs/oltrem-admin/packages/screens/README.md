@@ -84,14 +84,21 @@ again with the API's reason and its status. Choices of one (a role, a place, a k
 fields are password fields; an optional field left empty is left out, and a secret is never put
 back into a page.
 
-Every page sits in the same frame: the portal's name and who is signed in, then the sideways row
-of every section with the current one marked (no dropdown), then the page. A form posted from
-another site is refused.
+Every page sits in the same frame (`src/layout.tsx`). From 1024 px wide, a sidebar: the portal's
+mark, every mounted section under its group (People, Messages, Operations, Administration) with
+the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
+Member), the colour theme and, on this computer, Sign out. On a phone, a top bar with the mark and
+an account menu (a `details` element, no script) holding the same, and the sideways row of every
+section under it (no dropdown). Each section's page says in one line what it is for. The theme
+switch posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, which keeps the choice
+in the `oltrem_theme` cookie (cleared for system) and returns to `back` when it is a path on the
+portal, Home otherwise; the frame then sets `data-theme` on the page. A form posted from another
+site is refused.
 
 ## The stylesheet
 
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
-theme and the classes the pages and primitives use, about 22 KiB. It is served at `/ui/app.css`,
+theme and the classes the pages and primitives use, about 30 KiB. It is served at `/ui/app.css`,
 cached for good under its version and `no-cache` without it. After changing a class in a page or a
 primitive, run `pnpm ui:build`; a test fails while the committed file differs from what the build
 writes. The file is generated: never edit it by hand (R-06).

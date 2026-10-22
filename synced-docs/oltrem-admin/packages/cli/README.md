@@ -151,34 +151,37 @@ declares anything but exactly one D1 database.
 
 The first deploy and every later one from a person's computer, as one command (`npm run deploy`
 in a client repository), for someone who has never used Cloudflare. Each step looks first and
-only adds, so a run that stopped carries on the next time. The terminal shows six titled steps
+only adds, so a run that stopped carries on the next time. The terminal shows seven titled steps
 as they happen, each question after what it is and why it is needed (the door, the ops token), in colour where the terminal shows it and never with `NO_COLOR`:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
-2. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. An
+2. **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
+   in as …"), asked first while it has none or before the first deploy has made it. It is written
+   in step 7, and step 6 names it among the addresses the door lets in, so the two cannot differ.
+3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. An
    empty answer serves the portal on its free `workers.dev` address (`workers_dev` turned on);
    an address on a domain of the same Cloudflare account becomes `PUBLIC_HOST` and a `routes`
    entry making it the Worker's custom domain. `wrangler.jsonc` is written only once every answer
    is good, just before the database and the deploy; the person commits it.
-3. **The secrets** `secrets.required` names, only those `wrangler secret list` does not show. The
+4. **The secrets** `secrets.required` names, only those `wrangler secret list` does not show. The
    KEK and the backup's age key pair are made here and kept in `oltrem-keys.txt` (git ignores it),
    which the Vendor moves into a password manager: the KEK because a rotation needs it again and
    Cloudflare never shows a secret back, the private key because no copy opens without it. The
    file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
    stopped before the deploy uses the keys it kept. `ACCESS_AUD` is set to `worker` with nothing
-   asked (step 5 says why). The ops token comes after the steps that make it, and without echo.
+   asked (step 6 says why). The ops token comes after the steps that make it, and without echo.
    When the Worker exists but its secrets cannot be listed, the command stops rather than send a
    new KEK, which would leave every stored provider key unreadable.
-4. **The database, the migrations** (as `migrations apply` does) **and `wrangler deploy`**,
+5. **The database, the migrations** (as `migrations apply` does) **and `wrangler deploy`**,
    carrying the new secrets in a file (`--secrets-file`) that is removed right after; wrangler may
    ask which account when the sign-in reaches several.
-5. **The door**, once the deploy has made the Worker (an empty account has nothing to protect):
+6. **The door**, once the deploy has made the Worker (an empty account has nothing to protect):
    the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
-   Access, All traffic, the allowed emails), then Enter. Nothing is copied back: `ACCESS_AUD`
+   Access, All traffic, the allowed emails, the sign-in email first), then Enter. Nothing is copied back: `ACCESS_AUD`
    `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
    the door is on no request carries it, so the portal refuses everyone. A client with a hostname
    Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
-6. **The Vendor's address**, asked while the database has none, written as `vendor set` does;
+7. **The Vendor's address** from step 2, written while the database has none, as `vendor set` does;
    then `backup setup`; last, the one door step left for later: a self-hosted Access application
    on the address's `hooks` path with a Bypass policy, needed only for an email provider's
    delivery reports, on a custom domain and on `workers.dev` alike.

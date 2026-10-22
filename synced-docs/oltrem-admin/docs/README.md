@@ -187,7 +187,7 @@ was verified:
 | [Phase 2: sessions and the authorizer](records/2026-10-20-iam-sessions-and-authorizer.md) | how the compiled map travels in one KV record per person, the pipeline's session hook and authorizer |
 | [Phase 2: governance](records/2026-10-20-iam-governance.md) | the writes that change who may do what and the rules each is refused by, the second person, requests and reviews |
 | [Phase 2: the Vendor and the handover](records/2026-10-20-iam-vendor-and-handover.md) | how the Vendor creates the one company and invites its first Owner, what the handover changes, how the company lets the Vendor in |
-| [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the fifty-four JSON routes of the IAM module, the one route open to any identity and the pipeline change behind it, the capability every account holds |
+| [Phase 2: the routes](records/2026-10-20-iam-routes.md) | the IAM module's fifty-four JSON routes, the one open to any identity, the capability every account holds |
 | [Phase 2: the users module](records/2026-10-21-users-module.md) | the second module: the directory and the profile, the switch and its rules, how a module stands on the IAM module |
 | [Phase 2 in the client template](records/2026-10-21-template-mounts-iam.md) | the template's Worker runs IAM and users; the Access audience secret |
 | [The Vendor's address](records/2026-10-21-vendor-address.md) | the command that writes the Vendor's address after the first deploy, why it is in no file |
@@ -204,7 +204,7 @@ was verified:
 | [Phase 4: provider detection](records/2026-10-21-provider-detection.md) | how a domain's public DNS suggests the providers it already uses, why a suggestion never sends by itself |
 | [Phase 4: the email module](records/2026-10-21-email-module.md) | how a message is checked, held while no provider is ready, and sent once through the active instance or a failover |
 | [Phase 4: the delivery reports' address](records/2026-10-21-delivery-reports.md) | why one public path skips the door, how a report is checked by a secret token and the provider's signature, how each event is kept |
-| [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs with their instructions, the KEK's recipe, the Key recipes page, the check that required secrets match |
+| [Phase 4: key recipes](records/2026-10-21-key-recipes.md) | how a module declares the Worker secrets it needs, the KEK's recipe, the Key recipes page, the check |
 | [Phase 5: the age format](records/2026-10-21-age-format.md) | how a backup copy is locked in the standard age format with no package, why the private key never reaches the Worker |
 | [Phase 5: the backup module](records/2026-10-21-backup-module.md) | how the nightly copy is asked of Cloudflare, encrypted on its way into the bucket and recorded, the one Workflow that runs it step by step |
 | [Phase 5: the restore drill](records/2026-10-21-restore-drill.md) | how the newest backup is proven to open and load on the vendor's computer, why the key never reaches the Worker, what is checked and what is deleted |
@@ -214,10 +214,11 @@ was verified:
 | [Phase 5 in the client template](records/2026-10-21-template-mounts-backup.md) | the template's backup, deploy report and budgets, the Workflow and its schedules, the runtime stand-in for Node |
 | [Phase 5: the backup's setup](records/2026-10-21-backup-setup.md) | the backup's settings and bucket rules, set once after the first deploy |
 | [Phase 5: the Actions minutes](records/2026-10-21-actions-minutes.md) | how `oltrem doctor` reads the month's GitHub Actions minutes |
-| [Working on Windows](records/2026-10-21-windows.md) | why `npm install` cannot install the kit, why `pnpm verify` failed on Windows and how it was fixed, the line endings |
-| [Working on Windows: the second run and pnpm dev](records/2026-10-21-windows-second-run.md) | the two tests and two install warnings of the second Windows run, what `pnpm dev` runs and shows |
+| [Working on Windows](records/2026-10-21-windows.md) | why `npm install` cannot install the kit, the Windows fixes, the line endings |
+| [Working on Windows: the second run and pnpm dev](records/2026-10-21-windows-second-run.md) | the second Windows run's fixes, what `pnpm dev` shows |
 | [Phase 6: oltrem upgrade](records/2026-10-21-oltrem-upgrade.md) | what an upgrade checks before it writes |
 | [Verification log, 19 and 20 October](records/2026-10-19-to-20-verification-log.md) | the log's first rows, moved there unchanged |
+| [Verification log, 21 October](records/2026-10-21-verification-log.md) | its first rows, moved |
 | [The screens and two commands](records/2026-10-21-screens-and-npm.md) | how `npm install` and `npm run dev` bring up the portal and its screens, the local sign-in and its two locks, why the screens render in the Worker for now |
 | [The screens that change things](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places, email providers and settings, and how a form travels |
 | [Phase 3: alerts](records/2026-10-21-alerts.md) | how a lasting problem is emailed once, held in the quiet hours, acknowledged and resolved |
@@ -228,6 +229,7 @@ was verified:
 | [Deploy, first run](records/2026-10-21-deploy-first-run.md) | fixes |
 | [Deploy screen](records/2026-10-21-deploy-screen.md) | questions explained |
 | [Door, nothing copied](records/2026-10-21-door-without-copying.md) | Access on the Worker |
+| [Portal frame](records/2026-10-22-portal-frame.md) | sidebar, theme, sign-in email |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
 
 ## How this folder is checked
