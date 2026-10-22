@@ -216,9 +216,11 @@ pass. Each time, *Website and booking pages* and *Website's booking and consent 
 out, filed a critical problem and emailed. The cause is inside Cloudflare and is not found yet
 (MAINTENANCE.md (private) SH-10). Now, in the job, a failure of either of those two
 checks that is only a timeout becomes a warning, with no problem and no email, when the
-server's own site checks from outside (*Server's site checks*) passed within the last 35
-minutes; a latest reading that is only a warning (the server console did not answer either)
-defers to the reading before it (`crossCheck` in `src/lib/health/run.ts`). Failing from outside
+server's own site checks from outside (*Server's site checks*) passed within the last hour;
+warnings at the end of its readings (the server console, behind the same kind of connection,
+did not answer either: three runs in a row on 2026-10-22) are read past to the pass before them
+(`crossCheck` in `src/lib/health/run.ts`). A timeout is recognised by its error's name or, as it
+arrives in production, by its message. Failing from outside
 too, or not read recently, it stays a failure. A wrong answer (an error status, a missing part of
 a page, a report that names a problem) is never softened, and Test again and Check everything now
 show the raw result. Check everything now tries each check once: 29
@@ -384,6 +386,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-22 | The cross-check after its first live morning (D1 connector): 4 critical problems still filed from 09:02 UTC, because the timeouts reached `attempt` without the `TimeoutError` name and the server console went unread for three runs in a row; now matched on the message, and the outside reading may be an hour old with trailing warnings read past; pinned by `test/system-health-checks.test.ts` | Whether it holds through the next busy hours |
 | 2026-10-22 | §3's cross-check paragraph against `crossCheck` and `outsidePassAt` in `src/lib/health/run.ts` and its call in `src/workers/scheduled-health-checks.ts`, pinned by `test/system-health-checks.test.ts`; the 2026-10-21 row below corrected: the 21:00 UTC run after `runLast` timed out the same way, and so did a 20:45 run with one check alone (read through the Cloudflare D1 connector), so the queue was not the cause | Whether the false emails stop: read from the results after the push. The rest of the document not re-read |
 | 2026-10-21 | §3's limits: the retry after the run in `src/lib/health/run.ts` and `runLast` in `src/lib/jobs/dispatch.ts`, pinned by `test/system-health-checks.test.ts` and `test/jobs-cron-dispatch.test.ts`; the cause read in production through the Cloudflare D1 connector (`system_test_results` of the last 8 hours: every timeout of `website`, `website_pages`, `chatbot` and `server_probes` fell on a tick that ran 5 to 9 checks, and the same checks passed 5 minutes later; `platform_alerts`: the critical problems of 2026-10-19 to 21 were `website` and `website_pages`, each "The operation was aborted due to timeout" or "keeps failing and recovering") and Cloudflare's limits page (connections are counted from the top-level request, Workers reached through service bindings share them) | Whether the alerts stop: read from the results of the hours after the push. The rest of the document not re-read |
 | 2026-10-17 | Part 3D live, read back through the Cloudflare D1 connector after the push: the job placed both new checks; *Providers' status pages* ran at 10:20 UTC and read all five pages (Cloudflare's reported a major incident, so it needed a look); *Server's site checks* ran at 10:30 UTC and passed, all 7 of the server's checks, the soonest certificate 76 days away | The blue note on a phone |
