@@ -40,6 +40,11 @@ with no account: on a new portal it is the only account.
 | `/` | a Vendor with no company yet: the company form; anyone else: the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/home` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
+| `/records` | the lists the person may see, with their records and place; Make a list when a role allows it somewhere | `/api/records/lists` |
+| `/records/new` | a new list: its name, its place picked from a row, and a starting shape (blank, contacts, tasks, stock, orders, equipment) | `/api/records/lists` |
+| `/records/:id?q=&field=&value=&sort=&dir=&page=` | a list's records: searched, narrowed by a row of chips per choice or yes or no field, sorted from a row, paged; the add form when the person may add | `/api/records/lists/:id`, `items` |
+| `/records/:id/items/:item` | one record with who added and changed it; the form to change it and Remove, as the person may | `/api/records/lists/:id`, `items/:item` |
+| `/records/:id/fields` | the designer: the fields in order with up, down and Remove; Add a field; the name and place; Remove the list once empty | `/api/records/lists/:id`, `/api/records/lists` |
 | `/people?show=` | everyone in the directory, or only those switched on (`on`) or off (`off`), picked from a row; the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
 | `/people/:id` | one person: the roles they hold, the form to give one, their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
 | `/people/:id/exceptions?place=` | one person's exceptions at one place, picked from a row: every capability that may be given one person at a time, with three chips (as their roles say, allow, deny) | `/api/iam/overrides`, `capabilities`, `scopes` |
@@ -62,6 +67,10 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Form | Calls | Comes back with |
 |---|---|---|
 | Invite someone (`/people/invite`): an address, a role, a place | `POST /api/iam/invitations` | the link to send, shown once |
+| Make a list (`/records/new`), save its name and place, remove it once empty (a dialog first) | `POST /api/records/lists`, `PATCH`, `DELETE /api/records/lists/:id` | the list with `?done=list-made`; `list-saved`, `list-removed` |
+| Add a record, save one, remove one (a dialog first) | `POST /api/records/lists/:id/items`, `PATCH`, `DELETE .../items/:item` | `?done=record-added`, `record-saved`, `record-removed`; a refused value keeps what was typed |
+| Add a field, move it up or down, remove it with its values (a dialog first) | `POST /api/records/lists/:id/fields`, `POST .../move`, `DELETE .../fields/:field` | `?done=field-added`, `field-moved`, `field-removed` |
+| Download for a spreadsheet; the browser asks the API itself | `GET /api/records/lists/:id/export` | the CSV file |
 | Withdraw an invitation | `DELETE /api/iam/invitations/:id` | `?done=withdrawn` |
 | Give a role (`/people/:id/grant`), end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
 | Save the exceptions (`/people/:id/exceptions`): only what changed is written; end one from the person page | `POST /api/iam/overrides`, `DELETE /api/iam/overrides/:id` | `?done=exceptions-saved`, `exception-ended` |
@@ -85,8 +94,8 @@ fields are password fields; an optional field left empty is left out, and a secr
 back into a page.
 
 Every page sits in the same frame (`src/layout.tsx`). From 1024 px wide, a sidebar: the portal's
-mark, every mounted section under its group (People, Messages, Operations, Administration) with
-the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
+mark, every mounted section under its group (Work, People, Messages, Operations,
+Administration) with the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
 Member) with, on this computer, a Sign out button, and the colour theme as three icons. On a
 phone, a top bar with a Menu button that opens the same sidebar as a drawer from the left (a
 `dialog` opened by the browser's `commandfor`, no script; a tap outside closes it); the sections
