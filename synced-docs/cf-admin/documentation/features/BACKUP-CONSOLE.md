@@ -245,7 +245,10 @@ recipients.
 
 It is tier `essential` (never shed automatically) and costs this Worker no
 database rows when it succeeds. It never throws: failures are logged and
-reported to Sentry at most once an hour. It appears on `/dashboard/cron` like
+reported to Sentry at most once an hour. A tick call that fails is reported only
+once it has failed for half an hour on end (`reportIfPersistent`, 2026-10-23): the
+next tick retries it, and the calls through the binding time out for a few minutes
+at a time (`MAINTENANCE.md` (private) SH-10). It appears on `/dashboard/cron` like
 every job — it can be paused, throttled or run by hand. If it stops, a weekly
 safety net in GitHub still runs a full backup on Mondays when none has
 succeeded for eight days (never while no backup key exists), and a daily
@@ -271,7 +274,7 @@ cf-admin's own code never reads or writes it; cf-backup and its runner do.
 | cf-backup slow (> 10 s to answer) | "Backup console unavailable" (504) inside the frame | Observability every time, Sentry once per isolate |
 | cf-backup unreachable | Same, 502 | Same |
 | cf-backup refuses (e.g. already running) | cf-backup's own message | cf-backup; the audit row carries the status |
-| Tick fails | Nothing in the page; the next tick retries | Job log; Sentry once an hour |
+| Tick fails | Nothing in the page; the next tick retries | Job log; Sentry once it has failed for 30 minutes, then once an hour |
 | Email queue missing or refusing | Alerts held; offered again next tick | Job log; Sentry once an hour |
 | An alert email bounces or fails at the provider | The console's Alerts section shows it failed, after the next delivery report | `email_audit_logs` (the Email Portal) |
 
@@ -295,6 +298,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-23 | claude | §6's failure reporting and §8's "Tick fails" row against `src/workers/scheduled-backup-tick.ts` (`CALL_REPORT_AFTER_MS`) and `reportIfPersistent` in `src/lib/observability.ts`; `test/backup-tick.test.ts` passes | Those two places. The rest not re-read; not checked live (not deployed when written) |
 | 2026-10-17 | claude | §1 and §5 to §9 against `src/lib/backup-section.ts`, `FRAMEABLE_PREFIXES` in `src/lib/security/csp.ts`, `src/workers/scheduled-backup-tick.ts` (`TICK_TIMEOUT_MS` 25 s, the one-hour `nextTickAt` ceiling, the report cooldown), `src/lib/jobs/tiers.ts` (`essential`), `MAX_REQUEST_BYTES` and `API_TIMEOUT_MS` in `src/lib/backup-proxy.ts`, `scripts/d1_schema_snapshot.mjs`; cf-backup's `tick-deadman.yml` present | §5 named only the backup prefix: the server console's frame is the other one, now said. With the 2026-10-16 rows, the whole page has been re-read against the code. Not checked: the account's trigger count (§6), the console in a phone browser |
 | 2026-10-17 | claude | §3's testing pass sentence against `userActor` in `src/lib/backup-proxy.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/testing-pass.test.ts` passes | The sentence. The rest of the document not re-read |
 | 2026-10-16 | claude | §2 against the gateway `src/pages/dashboard/backup/app/[...path].ts` and `src/lib/backup-proxy.ts` (`isConsolePath`, `isReadOnly`, `MAX_REQUEST_BYTES`); §3 against `cf-backup/src/lib/fresh.ts` and its callers, `cf-backup/src/access/policy.ts` (`temporary`, `grantFor`, `can`), `src/lib/access-center/registry.ts` and `src/lib/users/manage-apply.ts` with `src/lib/dal/VpsAccessRepository.ts`; §4 against `src/lib/backup-audit.ts`, `src/lib/access-changes/notify.ts` and cf-backup's `access.edit` stamps (`cf-backup/src/api/access.ts`, `access-person.ts`) | Added the Path, Read-only (403 `read_only`) and Body rows; §3 now names every fresh-sign-in step, asking for a permission (#22) and what removing a person removes; §4 says an `access.edit` is emailed (#18). The TL;DR names the recorded reads. The Page access row names the Access Center's door check, which used the inherited page decision until this pass (`src/lib/access-center/consoles.ts`; `test/console-doors.test.ts` passes). Not re-checked: §1, §5 to §9; a signed request in production |

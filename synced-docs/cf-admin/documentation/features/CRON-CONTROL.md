@@ -314,8 +314,13 @@ A sweep that finds nothing returns a next due time 15 minutes away
 (`QUIET_SLEEP_MS`), so a quiet day costs about 96 calls; after a sweep that
 handed messages over, or one that failed, it runs on the next tick. It never
 throws: an unbound binding and a Console older than the sweep (`404`) are logged
-and skipped, and any other failure is logged and reported once an hour
-(`email-api-sweep:failure`, the job's only D1 statement).
+and skipped, and any other failure is logged every time and reported to Sentry
+only once the sweep has failed for half an hour on end, then at most once an hour
+(`reportIfPersistent` in `src/lib/observability.ts`, 2026-10-23). One failed run is
+not worth a person's attention: the next tick sweeps again, and its calls time out
+for a few minutes at a time (`MAINTENANCE.md` (private) SH-10). A failure
+costs one statement, the streak row `job-alert:email-api-sweep:failure:since`, and
+the cooldown claim once it is reported; a success costs nothing.
 
 ## 3c. The daily access summary (2026-10-15)
 
@@ -355,8 +360,10 @@ uses (`checkUnusedAccounts` in `src/workers/scheduled-unused-accounts.ts`, run b
 the summary), only in the hour after 14:00 UTC: in any other hour, and with the alert
 policy's "Accounts nobody uses" set to off, it makes no query. Since the job sleeps
 until the next 14:00, capped at an hour, one run a day lands in that hour. It reads
-the active accounts (one Supabase read) and each one's last successful sign-in (the
-grouped read of `admin_login_logs` the Users page also makes), suspends the accounts
+the active accounts (one Supabase read) and each one's last successful sign-in (one
+probe of `idx_login_logs_email_created` per account,
+`LoginLogRepository.getLastSuccessForEmails`, since 2026-10-23; the grouped read of
+the whole log, which the Users page still makes, read 912 rows a run), suspends the accounts
 due at 90 days and emails the alert list once about the rest; the rule and what a
 suspension does are in [`USER-MANAGEMENT.md`](USER-MANAGEMENT.md) §5.5. A `notify` row
 per account (target `unused_account`, labelled with the date its count starts) keeps
@@ -909,6 +916,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-23 | claude | §3b's failure reporting against `src/workers/scheduled-email-api-sweep.ts` and `reportIfPersistent` in `src/lib/observability.ts`; §3c's last sign-in read against `src/workers/scheduled-unused-accounts.ts` and `src/lib/dal/LoginLogRepository.ts`; `test/email-api-sweep.test.ts`, `test/observability-cooldown.test.ts` and `test/hot-query-plans.test.ts` pass; the query plan and its 7 rows for 7 accounts read through the D1 connector | The two paragraphs. The rest of the document not re-read; not checked live (not deployed when written) |
 | 2026-10-22 | claude | §5's `runLast` paragraph corrected: the 21:00 UTC run of 2026-10-21 after it still timed out (system_test_results, D1 connector) | The paragraph only |
 | 2026-10-21 | claude | §5's `runLast` paragraph against `src/lib/jobs/dispatch.ts` and `src/lib/jobs/registry.ts`; `test/jobs-cron-dispatch.test.ts` passes (a `runLast` job starts after the others finish; only `health-checks` carries it) | The paragraph. The rest of the document not re-read; the live tick after the push read from System health's results |
 | 2026-10-17 | claude | Part 3D: §5's `health-checks` note against `src/lib/health/catalog.ts` (29 checks, two of them new), `src/lib/health/state.ts` (`MAX_PER_TICK` nine) and `src/lib/jobs/budgets.ts`; `test/jobs-budget.test.ts` passes (first run 30 queries, 60 read, 3 written; usual run 2 queries, 1 read, 1 written; costliest, nine checks, 31 queries, 422 read, 42 written, inside the budget of 612 and 57, kept); the calls a run and a day counted from the code | The note. The rest of the document not re-read; not checked live (not deployed when written) |
