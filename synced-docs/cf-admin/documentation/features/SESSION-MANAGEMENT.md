@@ -254,6 +254,11 @@ of them show at once (2026-10-10; it was a card above the page with dropdowns). 
 of `/dashboard/sessions#alerts` (owner and vendor support by default; grantable on
 the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
 
+- **Emailed in the last 30 days** (2026-10-23): your own sign-in alerts that went out,
+  grouped by why (made the emergency way in, moved, the alert mode, failed sign-ins), each
+  with its count, the newest, and the setting that would have kept it quiet. Read from the
+  outcome each sign-in stored (`admin_login_logs.alert`), so it shows what happened, not what
+  today's settings would do (`src/lib/login-alerts/emailed.ts`).
 - **Your successful sign-ins emailed:** as the alert policy says for your role,
   every sign-in, or only unusual ones (a new place or a new device in 90 days).
   Never is not offered here; only an alert-policy holder can set it for someone
@@ -264,7 +269,7 @@ the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
 - **Trusted areas**, up to 3: **Trust this area** saves where Cloudflare places
   this connection; **Trust** next to a place you signed in from in the last 90 days
   saves that one (the browser sends the sign-in's reference, never coordinates).
-  Each area has a 25, 50 or 100 km radius, can be renamed or resized, and
+  Each area has a 25, 50 or 100 km radius (shown in miles too: 16, 31, 62), can be renamed or resized, and
   **Remove** forgets it. Sign-ins inside an area are logged but not emailed.
 - **Also email me about my own sign-ins** sends you a copy of each alert.
 - Turning alerts down (a pause, a new or wider area, a lower mode) sends one email
@@ -275,9 +280,10 @@ Whatever the card says, a sign-in is emailed once, not once per tab or portal
 session it opens, and two kinds are always emailed as urgent: a sign-in that turns
 up in another country or on another device
 ([sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md)), and, since
-2026-10-16 (permissions item #37), a sign-in made without Google, the emergency way
-in, titled **SIGN-IN WITHOUT GOOGLE**. A pause, a trusted area or a quieter mode
-does not hold either back. The rules:
+2026-10-16 (permissions item #37), a sign-in made the emergency way in, titled
+**SIGN-IN WITHOUT GOOGLE**: any way in but Google that the alert policy's **Ways in** row
+does not call normal (2026-10-23). A pause, a trusted area or a quieter mode does not hold
+either back; the card's notice says so beside the trusted areas. The rules:
 [`../security/login-forensics.md`](../security/login-forensics.md) §7.
 
 ## Sign-in alert policy (2026-10-03)
@@ -286,6 +292,15 @@ The **Alert policy** tab, opened by `#alert-policy`, every choice a row of chips
 `/dashboard/sessions#alert-policy` (owner and vendor support by default);
 `GET`/`POST /api/sessions/alert-policy` checks the same key.
 
+- **Emailed in the last 30 days** (2026-10-23): every account's sign-in alerts that went
+  out, grouped by why, each with its count, the accounts, the newest, and the setting that
+  would have kept it quiet (the same list as Your alerts, for everyone).
+- **Ways in** (2026-10-23): which ways in besides Google are normal, GitHub and a one-time
+  PIN, none to start. A sign-in made a normal way follows trusted areas, pauses and the mode
+  like a Google one; any other way in stays the emergency way in, emailed as urgent every
+  time. Making a way normal counts as turning alerts down. Added after the owner's GitHub
+  sign-ins inside the Toronto trusted area were each emailed as urgent:
+  `../records/reports/2026-10-23-sign-in-alerts-ways-in.md` (private).
 - **Alerts go to:** up to 5 addresses; none means the built-in inbox. **Send a test
   email** sends one to the current list.
 - **Successful sign-ins emailed, by role:** every sign-in, only unusual ones, or
@@ -351,6 +366,7 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-23 | claude | **Scope-limited to Ways in, Emailed in the last 30 days and the trusted-area wording.** Read `src/lib/login-alerts/decide.ts`, `policy.ts`, `emailed.ts`, `handlers.ts`, `policy-handlers.ts`, `AlertPolicyPanel.tsx`, `SignInAlertsCard.tsx`, `EmailedSummary.tsx`; `test/login-alert-ways-in.test.ts` and the other sign-in alert tests pass. Live D1 (read only): the owner's Toronto area (50 km) quieted 11 Google sign-ins; 10 of the 12 alerts emailed since 2026-10-09 were GitHub sign-ins. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to Lock out, the force sign-out key, the alert lines and the method and bot-score notes.** Read `src/pages/api/sessions/active-sessions.ts` (GET and DELETE), `src/lib/approvals/ask.ts` (`personChangeGate`, `askForSecondPerson`) and `rules.ts` (`kindForPersonChange`, `approversFor`, the 3-day wait), `src/lib/api.ts` (`jsonPending`), `src/pages/api/users/manage.ts` and `src/lib/users/manage-apply.ts` (the by-name rule), `src/pages/api/users/force-kick.ts` and `denyForceKick` in `src/lib/auth/surface-guards.ts`, `SessionsConsole.tsx`, `LockOutDialog.tsx`, `SessionDrawer.tsx`, `parts.tsx`, `sessionFormat.ts`, `sessionRisk.ts`, `src/lib/login-alerts/decide.ts` and `outcomes.ts`; the Sessions cases in `test/two-person-rule.test.ts` read. Live D1 (read only): every sign-in since 2026-10-10 carries a bot score. Corrected: the session card's method reads Unknown in production; the bot-score note; the by-name lock-out's own rule; the 202 body, the 3-day wait and who may approve; the access-change email follows the alert policy; a sign-in without Google is always urgent. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to Lock out and the two-person rule.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE, `block_account`), `src/lib/approvals/ask.ts` (`personChangeGate`), `SessionsConsole.tsx` and `LockOutDialog.tsx`; `test/two-person-rule.test.ts` and `test/session-rank.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to the alert policy's new "Audit log seal" row.** Read `AlertPolicyPanel.tsx` (`AUDIT_SEAL_TEXT`), `src/lib/login-alerts/policy.ts` (`AUDIT_SEAL_MODES`, `describePolicyChange`), `policy-handlers.ts` and `src/workers/scheduled-audit-seal.ts` (`checkAndEmail`); `test/audit-seal.test.ts` covers the quiet setting and the turn-down line. The rest of the page was not re-read |
