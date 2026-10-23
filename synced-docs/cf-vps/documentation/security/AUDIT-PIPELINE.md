@@ -117,7 +117,10 @@ unpacking a release or pruning an old one is recorded and not alerted.
 
 `vps-heartbeat` runs every 5 minutes. It checks that auditd is enabled, Laurel and Vector are
 running, the audit disk is not filling and the clock is in sync. It then proves delivery end
-to end: the canary it emitted last time must be in R2 and under 15 minutes old. It reports to a
+to end: the canary it emitted last time must be in R2 and under 15 minutes old. A listing that
+R2 refuses with a passing server error (`InternalError`, `ServiceUnavailable`, `SlowDown`), or
+that never answers, is tried once more 3 seconds later before it counts as a problem
+(`heartbeat_list_retryable`, 2026-10-23). It reports to a
 Sentry cron monitor, and sends a Sentry event only when the set of problems changes, with a
 reminder every 6 hours while it lasts.
 
