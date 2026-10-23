@@ -229,7 +229,10 @@ from outside, or with the console answering but no recent pass, it stays a failu
 applies to *Email queue*, which reads Cloudflare's own Queues API over the internet: a reading
 that only timed out is a warning while the queue last read fine within the hour (2026-10-22, 15:36
 to 16:01 UTC, during a Cloudflare outage, it could not be read three times while it held nothing
-before and after, and filed a critical problem). A wrong answer (an error status, a missing part of
+before and after, and filed a critical problem). So does *Website chat assistant* and *Email
+service: stuck and failed mail*, read through the portal's private connections to them, which
+stall for minutes at a time (MAINTENANCE SH-10): on 2026-10-23 both timed out in the same runs and
+passed the run after, and each filed a problem for failing and recovering. A wrong answer (an error status, a missing part of
 a page, a report that names a problem) is never softened, and Test again and Check everything now
 show the raw result. Check everything now tries each check once: 29
 checks each tried twice could pass the 50 requests a Worker invocation may make on the free plan,
@@ -394,6 +397,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-23 | §3's hour of grace for *Website chat assistant* and *Email service: stuck and failed mail* against `READ_TIMEOUT_GRACE` and `crossCheck` in `src/lib/health/run.ts`, `isTimeout` in `src/lib/health/readings.ts` and the email service check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; both checks' readings read live through the Cloudflare D1 connector (`health-state`) and Sentry CF-ADMIN-2C, 2H and 2J (timeouts) | Why the connections stall (SH-10). The rest of the document not re-read |
 | 2026-10-22 | §3's hour of grace for *Email queue* against `READ_TIMEOUT_GRACE` and `crossCheck` in `src/lib/health/run.ts` and the check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; the case read live through the Cloudflare D1 connector (`system_test_results` and `platform_alerts`, 15:36 to 16:30 UTC) | Whether Cloudflare's Queues API slowed for the outage or for another reason. The rest of the document not re-read |
 | 2026-10-22 | §3's cross-check when the server console did not answer either, against `crossCheck`, `lastPassAt` and `SERVER_UNANSWERED` in `src/lib/health/run.ts` and `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; the case read live through the Cloudflare D1 connector (`health-state` and `system_test_results`, 2026-10-22 14:17 UTC) | Whether it holds through the next stalled hours. The rest of the document not re-read |
 | 2026-10-22 | The cross-check after its first live morning (D1 connector): 4 critical problems still filed from 09:02 UTC, because the timeouts reached `attempt` without the `TimeoutError` name and the server console went unread for three runs in a row; now matched on the message, and the outside reading may be an hour old with trailing warnings read past; pinned by `test/system-health-checks.test.ts` | Whether it holds through the next busy hours |
