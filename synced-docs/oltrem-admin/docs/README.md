@@ -19,7 +19,7 @@ The kit is in **phase 6, release pipeline and upgrade**, since 2026-10-21; phase
 were built the same day but for the parts their tables name as waiting. The first screens run on
 the owner's computer since 2026-10-21, with two commands; their cost on Cloudflare is measured
 with the sandbox, and every phase's acceptance waits on the sandbox repository.
-The plan's open decisions still wait on the owner (they are listed in the plan). Phase 0, set up
+The plan's open decisions still wait on the owner. Phase 0, set up
 and measure, has these parts:
 
 | Part | State |
@@ -70,7 +70,7 @@ Phase 3, the module system, has these parts so far:
 | The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); the template runs it |
 | Jobs on the manifest and the one tick (`@oltrem/core-jobs`): each run leased, recorded, and tried again at its next time | **done** 2026-10-21: [the record](records/2026-10-21-jobs-and-the-tick.md); the template runs it on its five-minute cron; no module declares a job yet |
 | Health on the manifest and its runner (`@oltrem/core-health`): the checks run as a job on the tick, the last result kept per check, a problem opened after two failures in a row; migrations, settings and errors declared on the manifest and checked against their owner | **done** 2026-10-21: [the record](records/2026-10-21-health-and-manifest-fields.md); the client template mounts it |
-| The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module (route, job, check, migration, setting, error, test, how-to) that a client's verify passes with no edits, with its own contract test | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); no page, no capabilities and the setting read as its default until the kit has them |
+| The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module (route, job, check, migration, setting, error, test, how-to) that a client's verify passes unedited | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); no page, no capabilities and the setting read as its default until the kit has them |
 | The generated reference of a client reads its modules: `oltrem docs` imports `src/modules.ts` in a child Node process and writes a Modules page (capabilities, routes, jobs, checks, migrations, settings, errors) that a client's verify holds current | **done** 2026-10-21: [the record](records/2026-10-21-generated-references.md); the kit's own modules are documented in the kit |
 | The capability version gate: a client's `oltrem docs` keeps `capabilities.json`, each module's capabilities under its version, and refuses a change made under the same version, since the Worker registers them once per version | **done** 2026-10-21: [the record](records/2026-10-21-capability-version-gate.md) |
 | The page fields of the manifest (pages, i18n, docs) and the contract tests generated from manifests | wait on the renderer, after the sandbox measurement |
@@ -113,9 +113,10 @@ Phase 6 has these parts so far:
 |---|---|
 | Versions and release notes (Changesets) | **done** 2026-10-21: [the record](records/2026-10-21-changesets.md), [how it works](release.md) |
 | `oltrem upgrade` | **done** 2026-10-21: [the record](records/2026-10-21-oltrem-upgrade.md) |
+| Checks on a client's code | **done** 2026-10-24: [the record](records/2026-10-24-client-code-checks.md) |
 | Publishing to GitHub Packages, Dependabot on the sandbox, previews on a branch | waits on the `oltrem` organisation and the sandbox |
 
-The first feature for any business, the owner's pick: [your own records](records/2026-10-22-your-own-records.md), **done** 2026-10-22.
+Features for any business, the owner's picks, **done** 2026-10-22: [your own records](records/2026-10-22-your-own-records.md), [forms and inbox](records/2026-10-22-forms-and-inbox.md).
 
 ## The plan
 
@@ -131,9 +132,8 @@ After every push to `main`, once `pnpm verify` is green on GitHub, the `mirror-d
 the verify workflow copies this folder, every `.md` file at the repository root, each package's,
 module's and template's README and LICENSE to the public docs mirror, under
 [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
-and writes a provenance file there with the source commit. The folder on the mirror is rebuilt
-from the commit each time. Nothing is redacted on the way: the identifiers gate is the scanner,
-and everything in this repository is written as if public (R-04). The job signs in with the
+and writes a provenance file there with the source commit. Nothing is redacted on the way: the identifiers gate is the
+scanner, and everything here is written as if public (R-04). The job signs in with the
 `PERSONAL_PAT` secret, whose row is in the [token registry](reference/tokens.md).
 
 ## Index
@@ -235,7 +235,9 @@ was verified:
 | [Portal frame](records/2026-10-22-portal-frame.md) | sidebar, theme, sign-in email |
 | [Every page, phone menu](records/2026-10-22-every-page-and-phone-menu.md) | tiles, filters, drawer |
 | [Your own records](records/2026-10-22-your-own-records.md) | lists, fields, permissions by place |
+| [Forms and inbox](records/2026-10-22-forms-and-inbox.md) | website forms, inbox, replies |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
+| [Client code checks](records/2026-10-24-client-code-checks.md) | kit files, module walls |
 
 ## How this folder is checked
 
@@ -246,8 +248,7 @@ later change is a new record, not an edit.
 
 ## How to read this on a phone
 
-Every document opens with a short summary in plain words. Tables are kept narrow; the generated
-token page gives each credential its own small table instead of one wide one.
+Every document opens with a short summary in plain words. Tables are kept narrow.
 
 ## Verification log
 

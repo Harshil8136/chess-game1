@@ -2,7 +2,7 @@
 title: "Verification log"
 status: living
 owner: vendor
-last_verified: 2026-10-22
+last_verified: 2026-10-24
 sources: [the commits of this repository and their verify runs]
 ---
 
@@ -52,3 +52,5 @@ sources: [the commits of this repository and their verify runs]
 | 2026-10-22 | Every page reworked and the phone drawer: the template's screen test (drawer and its button, People tiles, the switched-off and failed filters with their empty sentences, Alerts), core-ui's 31 tests, the stylesheet test; screenshots at 390 and 1280 px, light and dark, the drawer opened as a modal; twelve gates | The owner's phone and computer; a real deploy |
 | 2026-10-22 | Sidebar only on a phone and the compact account area: the template's screen test (two section lists, the theme still pressed, Sign out), `check:agents` on the new R-12 line; screenshots of People at 1280 px and the open drawer at 390 px; twelve gates | The owner's phone; a real deploy |
 | 2026-10-22 | Your own records: the records module's eight tests (places, kinds of field, search, chips, sort, CSV formula guard, audit without values), the template's screen test (Records on first run, the Work group, a list from Contacts through add, refuse, search, change, design and remove); screenshots at 390 and 1280 px; twelve gates | The owner's phone; a real deploy |
+| 2026-10-22 | Forms and inbox: the forms module's seven tests (places, field ids, the public address with refusals, robot field and limit per sender, JSON for a script, the notice once without the answer, the inbox's views, taking, notes, email reply, CSV formula guard, new address, audit without what was sent), the template's screen test (Forms on first run, a Contact form through its website code, a visitor's try, the inbox, take, note, reply, done, fields, settings, a new address and removal); twelve gates | The owner's phone; a real deploy; a real website posting through the door's bypass |
+| 2026-10-24 | Checks on a client's code: the tool's new tests (`check files` on the template and on copies with an edited and a missing kit file, the Claude Code settings covering every kit file; `check modules` on two generated modules, names, the module list, imports, error codes, migrations named and listed, adding steps accepted, six other steps refused and accepted once marked `-- contract:`), the template's tests with the health list taking client modules; the forms tests five runs in a row after the notes' order fix; twelve gates | A real client repository running the workflow's new step; Claude Code honouring the deny rules |

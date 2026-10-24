@@ -11,7 +11,9 @@ template (plan 4.3 and 18), and, since phase 5, **`backup setup`**, what the nig
 needs on the account after the first deploy, **`backup drill`**, the monthly restore drill
 (plan 9.3), **`github report`**, the deploy workflow's report for the GitHub module (plan
 4.4), and **`vendor set`**, which writes the Vendor's address after the first deploy (plan 7.4),
-and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3).
+and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3), and
+**`check files`** and **`check modules`**, which keep a client's code out of the kit's files and
+inside its own modules (research 18).
 The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
@@ -183,8 +185,9 @@ as they happen, each question after what it is and why it is needed (the door, t
    Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
 7. **The Vendor's address** from step 2, written while the database has none, as `vendor set` does;
    then `backup setup`; last, the one door step left for later: a self-hosted Access application
-   on the address's `hooks` path with a Bypass policy, needed only for an email provider's
-   delivery reports, on a custom domain and on `workers.dev` alike.
+   on the address's `hooks` path with a Bypass policy, needed only once a website's form posts to
+   the portal or an email provider sends delivery reports, on a custom domain and on
+   `workers.dev` alike.
 
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
@@ -293,7 +296,37 @@ secret name the repository uses has a row: the Worker's `secrets.required`, a wo
 `dist`, `.wrangler` and `docs/_generated` excepted). A missing row is reported with where the
 name is used and the rule: read the registry, reuse or widen a row, or add one with its reason.
 Exit `0`, `1` on a problem, `3` when there is no registry. `--json` prints the outcome as data
-for both `check` commands.
+for every `check` command.
+
+## `oltrem check files [dir]`
+
+The kit's own files in a client repository (research 18, check 1): the deploy workflow,
+`src/index.ts`, the kit's tests and configuration, `ai.md`, the pointer files and the Claude Code
+settings, each equal by checksum to the copy of the kit version installed. The list travels with
+the tool as `kit-files.json`, which the kit's `pnpm docs:build` generates from its client
+template. A missing or changed kit file is refused: the change belongs in a module under
+`modules/` or in `oltrem.config.ts`, and an upgrade rewrites the kit's files whole. The
+template's `.claude/settings.json` denies Claude Code an edit of the same files. Exit `0`, `1` on
+a problem, `3` when there is no `oltrem.manifest.json`.
+
+## `oltrem check modules [dir]`
+
+A client's own modules, each within its walls (research 18, checks 3 and 4):
+
+- each folder under `modules/` has a module name that is not a kit module's, and its
+  `src/module.ts` declares that id; `src/modules.ts` is exactly what `new module` writes for them;
+- a module's files import nothing outside its folder, only packages `package.json` lists, and a
+  kit package only through an entry point its `exports` names;
+- its error codes sit in one hundred of its own, from `KIT-E-5000`;
+- each client migration (`5000` and up) is named for a module (`<number>_<module>.sql`, or with
+  more after a dash), is in that module's manifest, and only adds to tables named for the module:
+  `CREATE TABLE IF NOT EXISTS`, `CREATE [UNIQUE] INDEX IF NOT EXISTS`, `ALTER TABLE … ADD
+  COLUMN` that is nullable or has a default (never a key or unique), and `INSERT OR IGNORE`.
+
+Any other statement is refused unless its file carries a `-- contract: <why>` line; such a file
+is reported as a removal step, which waits for the owner and ships in a later release than the
+code that stops using what it removes, so the previous code still runs on the new database. Exit
+`0`, `1` on a problem, `3` when there is no `oltrem.manifest.json`.
 
 ## `oltrem backup setup [dir]`
 

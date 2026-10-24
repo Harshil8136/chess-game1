@@ -45,6 +45,12 @@ with no account: on a new portal it is the only account.
 | `/records/:id?q=&field=&value=&sort=&dir=&page=` | a list's records: searched, narrowed by a row of chips per choice or yes or no field, sorted from a row, paged; the add form when the person may add | `/api/records/lists/:id`, `items` |
 | `/records/:id/items/:item` | one record with who added and changed it; the form to change it and Remove, as the person may | `/api/records/lists/:id`, `items/:item` |
 | `/records/:id/fields` | the designer: the fields in order with up, down and Remove; Add a field; the name and place; Remove the list once empty | `/api/records/lists/:id`, `/api/records/lists` |
+| `/forms` | the forms the person may see, with their new answers and whether each takes answers; Make a form when a role allows it somewhere | `/api/forms/forms` |
+| `/forms/new` | a new form: its name, its place picked from a row, and a starting shape (contact us, quote request, feedback, sign-up, blank) | `/api/forms/forms` |
+| `/forms/:id?view=&mine=&q=&page=` | the inbox: a row of statuses with their counts (to do, new, open, done, all), a row for the answers the person took, a search box, paged; Try the form, the designer, the download | `/api/forms/forms/:id`, `entries` |
+| `/forms/:id/entries/:entry` | one answer as it was sent; Take it or Let it go, Mark new, open or done; its notes and email replies, and the form that adds one; Remove, as the person may | `/api/forms/forms/:id`, `entries/:entry` |
+| `/forms/:id/design` | the designer: the code for a website, a new address, the fields with up, down and Remove, Add a field, the settings (name, line, taking answers, the page after sending, who is told, place), Remove | `/api/forms/forms/:id`, `/api/forms/forms` |
+| `/forms/:id/try` | the form as a website shows it, posting to its public address | `/api/forms/forms/:id`, `/hooks/forms/:key` |
 | `/people?show=` | everyone in the directory, or only those switched on (`on`) or off (`off`), picked from a row; the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
 | `/people/:id` | one person: the roles they hold, the form to give one, their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
 | `/people/:id/exceptions?place=` | one person's exceptions at one place, picked from a row: every capability that may be given one person at a time, with three chips (as their roles say, allow, deny) | `/api/iam/overrides`, `capabilities`, `scopes` |
@@ -70,6 +76,9 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Make a list (`/records/new`), save its name and place, remove it once empty (a dialog first) | `POST /api/records/lists`, `PATCH`, `DELETE /api/records/lists/:id` | the list with `?done=list-made`; `list-saved`, `list-removed` |
 | Add a record, save one, remove one (a dialog first) | `POST /api/records/lists/:id/items`, `PATCH`, `DELETE .../items/:item` | `?done=record-added`, `record-saved`, `record-removed`; a refused value keeps what was typed |
 | Add a field, move it up or down, remove it with its values (a dialog first) | `POST /api/records/lists/:id/fields`, `POST .../move`, `DELETE .../fields/:field` | `?done=field-added`, `field-moved`, `field-removed` |
+| Make a form, save its settings, give it a new address, remove it with its answers (a dialog first) | `POST /api/forms/forms`, `PATCH`, `POST .../key`, `DELETE /api/forms/forms/:id` | the designer with `?done=form-made`; `form-saved`, `form-new-address`, `form-removed` |
+| Add, move and remove a form's field (a dialog first) | `POST /api/forms/forms/:id/fields`, `POST .../move`, `DELETE .../fields/:field` | `?done=form-field-added`, `form-field-moved`, `form-field-removed` |
+| Take an answer or let it go, mark it, add a note or an email reply, remove it (a dialog first) | `PATCH /api/forms/forms/:id/entries/:entry`, `POST .../notes`, `DELETE` | `?done=answer-taken`, `answer-released`, `answer-marked`, `answer-noted`, `answer-replied`, `answer-removed`; a refused note keeps what was typed |
 | Download for a spreadsheet; the browser asks the API itself | `GET /api/records/lists/:id/export` | the CSV file |
 | Withdraw an invitation | `DELETE /api/iam/invitations/:id` | `?done=withdrawn` |
 | Give a role (`/people/:id/grant`), end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
