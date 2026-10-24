@@ -318,7 +318,9 @@ and skipped, and any other failure is logged every time and reported to Sentry
 only once the sweep has failed for half an hour on end, then at most once an hour
 (`reportIfPersistent` in `src/lib/observability.ts`, 2026-10-23). One failed run is
 not worth a person's attention: the next tick sweeps again, and its calls time out
-for a few minutes at a time (`MAINTENANCE.md` (private) SH-10). A failure
+for a few minutes at a time (`MAINTENANCE.md` (private) SH-10). So the
+job's log line is a warning, and an error only on the run that reports it (since
+2026-10-24: Cloudflare's logs counted each passing timeout as an error). A failure
 costs one statement, the streak row `job-alert:email-api-sweep:failure:since`, and
 the cooldown claim once it is reported; a success costs nothing.
 
@@ -916,6 +918,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-24 | claude | §3b's log level against `src/workers/scheduled-email-api-sweep.ts`; `test/email-api-sweep.test.ts` passes (a passing failure logs a warning, the reporting run an error) | The one sentence. Not checked live (not deployed when written) |
 | 2026-10-23 | claude | §3b's failure reporting against `src/workers/scheduled-email-api-sweep.ts` and `reportIfPersistent` in `src/lib/observability.ts`; §3c's last sign-in read against `src/workers/scheduled-unused-accounts.ts` and `src/lib/dal/LoginLogRepository.ts`; `test/email-api-sweep.test.ts`, `test/observability-cooldown.test.ts` and `test/hot-query-plans.test.ts` pass; the query plan and its 7 rows for 7 accounts read through the D1 connector | The two paragraphs. The rest of the document not re-read; not checked live (not deployed when written) |
 | 2026-10-22 | claude | §5's `runLast` paragraph corrected: the 21:00 UTC run of 2026-10-21 after it still timed out (system_test_results, D1 connector) | The paragraph only |
 | 2026-10-21 | claude | §5's `runLast` paragraph against `src/lib/jobs/dispatch.ts` and `src/lib/jobs/registry.ts`; `test/jobs-cron-dispatch.test.ts` passes (a `runLast` job starts after the others finish; only `health-checks` carries it) | The paragraph. The rest of the document not re-read; the live tick after the push read from System health's results |
