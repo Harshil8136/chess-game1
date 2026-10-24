@@ -67,7 +67,7 @@ button to the list behind it. The seven tabs are one row that scrolls sideways o
 | Overview | The band in full: a state word (All working, Needs a look, Something is failing, Not checked yet), one sentence, and a pulse line of the last 30 days, a beat per day at its worst state across the six areas, a dashed line on a day nothing ran. Then what needs someone now (failing checks and the top open problems) and each area with a tick per day |
 | Problems | A triage board: lanes by level (Urgent "Look now", Soon "Look today", FYI "When there is time"), open before closed, each problem a ticket that says who filed it, how many times it came, first and last seen, who is on it, and once closed who closed it and why. Open problems someone snoozed wait in a Snoozed lane between the open and the closed ones. Open, Closed or All, and a level. Opening one shows its chart: who is on it and its snooze with the buttons that set them, its check's latest result, last 24 results and how to fix it, Test again, each time it came and each close, by day, and the form that closes it |
 | Checks | Every check by area: its state, its last 24 results as ticks, and, opened, what it proves, how to fix it when it fails, and Test again. A paused check says until when and why; a failing check whose provider reports a problem says what its status page reports, with a link to it |
-| Logs | The Cloudflare log scan (§3a): where it stands, Scan now, Errors or Warnings and one Worker on a sideways row, and one card per message with its counts today and in seven days, its likely cause and Copy for AI |
+| Logs | The Cloudflare log scan (§3a): where it stands, Scan now, how often it runs, the owner's steps when Cloudflare refuses the token, Errors or Warnings and one Worker on a sideways row, and one card per message with its counts today and in seven days, its likely cause and Copy for AI; below, Sentry's unresolved issues, each with Copy for AI and its link |
 | Tests | Check everything now, Send a test alert with the path its channels take, and the heavy tests (§5) |
 | History | Every run of the checks that is kept, by day, each with its state words and a bar of how it went; one run's results; the way to closed problems; the compliance records |
 | Settings | The paused checks, the quiet windows under way and planned, when a problem opens and closes (§3, "Settings"), and how often the logs are scanned (§3a). Everyone with the page sees them; changing them needs Change settings |
@@ -309,8 +309,21 @@ matches one this platform has met (CPU or memory limit, too many outside calls, 
 D1 fault, a timeout, a network fault, text that is not JSON, refused credentials, a rate limit), and
 **Copy for AI**: a plain-text brief with the Worker, its repository, the counts per day, the
 likely cause and four steps for an assistant to start on it. Copy all for AI copies the briefs of
-the cards shown. How often it scans is on Settings: every 15 minutes, hourly (the default), every 4
+the cards shown, and Sentry's below. How often it scans is on the Logs tab and on Settings (the
+same setting, changing it needs Change settings): every 15 minutes, hourly (the default), every 4
 or 6 hours, or off; each scan starts where the last ended, so scanning less often skips nothing.
+When Cloudflare refused the token, the tab shows the owner's five steps to add the permission to
+that same token (`MAINTENANCE.md` LS-1).
+
+**Sentry issues.** Below the groups, the tab lists Sentry's unresolved issues of every project
+(the portal, the website, the server), the ten most frequent of the last 14 days, read with one
+call to Sentry's organisation issues API each time the tab opens and never stored
+(`getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`, the dashboard's existing Sentry
+token). Each card shows the level, the issue's short id, its events, the people it reached and
+when it was last seen; with Details also its title, where it happened, **Copy for AI** (a brief
+with the project, its repository, the counts and the link, built by `sentryBrief` in
+`src/lib/health/logscan.ts`) and Open in Sentry. Without a Sentry token the list says it is not
+set up; when Sentry refuses or does not answer, it says so and the log scan still shows.
 
 ## 4. Problems
 
@@ -430,8 +443,8 @@ not list them.
 ## 7. Not built yet
 
 Nothing of the plan of 2026-10-17 is left to build. Of the log scan plan of 2026-10-24 (§3a), the
-scanner, the Logs tab and Copy for AI are built; still to build: a problem filed for a new error
-that repeats or a fault across several Workers at once, Sentry's issues beside Cloudflare's, and
+scanner, the Logs tab, Copy for AI and Sentry's issues beside Cloudflare's are built; still to
+build: a problem filed for a new error that repeats or a fault across several Workers at once, and
 Cloudflare's own grouping of errors (Workers Issues) in each repository. The providers' notes are on the Checks tab
 only: a problem and its alert email do not say what a provider's status page reported. Other services'
 problems reach the list through the checks that watch them: *Scheduled jobs on time*, *Backup is
@@ -443,6 +456,7 @@ heartbeat (§3).
 | Date | What was checked | What was not |
 |---|---|---|
 | 2026-10-24 | §3a (new), §1's three rows, §2's tab table, §6's two rows and §7 against `src/lib/health/logscan.ts`, `src/workers/scheduled-log-scan.ts`, `src/pages/api/system-health/logs.ts`, `src/lib/health/config.ts` (`logScanMinutes`), `LogsPanel.tsx` and `SettingsPanel.tsx`; `test/log-scan.test.ts` (masking, causes, the answer's shape, windows, the job, the route's access and limit, the setting, the brief) passes; Cloudflare's request and answer shapes from its API SDK (cloudflare 7.3.0, `workers/observability/telemetry`) | A live scan: the token lacks the permission when written, so the answer's shape is checked by the code at run time, not against a real answer. The rest of the document not re-read |
+| 2026-10-24 | §3a's Sentry issues, the interval row and the token steps on the Logs tab, §2's Logs row and §7, against `getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`, `sentryBrief` in `src/lib/health/logscan.ts`, `src/pages/api/system-health/logs.ts` and `LogsPanel.tsx`; `test/log-scan.test.ts` (23, two new for the Sentry list) passes; the live issue list read through the Sentry connector (three projects, one unresolved issue) | The portal's own call to Sentry's organisation issues API live: the same token reads project issues for the Cloud Services page, but this endpoint was not called with it. The rest of the document not re-read |
 | 2026-10-23 | §3's hour of grace for *Website chat assistant* and *Email service: stuck and failed mail* against `READ_TIMEOUT_GRACE` and `crossCheck` in `src/lib/health/run.ts`, `isTimeout` in `src/lib/health/readings.ts` and the email service check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; both checks' readings read live through the Cloudflare D1 connector (`health-state`) and Sentry CF-ADMIN-2C, 2H and 2J (timeouts) | Why the connections stall (SH-10). The rest of the document not re-read |
 | 2026-10-22 | §3's hour of grace for *Email queue* against `READ_TIMEOUT_GRACE` and `crossCheck` in `src/lib/health/run.ts` and the check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; the case read live through the Cloudflare D1 connector (`system_test_results` and `platform_alerts`, 15:36 to 16:30 UTC) | Whether Cloudflare's Queues API slowed for the outage or for another reason. The rest of the document not re-read |
 | 2026-10-22 | §3's cross-check when the server console did not answer either, against `crossCheck`, `lastPassAt` and `SERVER_UNANSWERED` in `src/lib/health/run.ts` and `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; the case read live through the Cloudflare D1 connector (`health-state` and `system_test_results`, 2026-10-22 14:17 UTC) | Whether it holds through the next stalled hours. The rest of the document not re-read |

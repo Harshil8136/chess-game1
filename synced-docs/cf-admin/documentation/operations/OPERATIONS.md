@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-24 | `grep -rn SENTRY_AUTH_TOKEN src/` after the Logs tab began listing Sentry's issues (`getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`) | §5's Sentry row names the Logs tab as a reader. No binding, secret or variable added. Nothing else re-checked |
 | 2026-10-17 | `ls migrations/*.sql` (54 files, `0002` twice, highest `0076`), `ls database/legacy_migrations/*.sql` (44, `0021` twice), `d1_migrations` newest rows through the Cloudflare D1 connector (`0076` at 2026-10-17 08:54:02) | §7: the state comment and the numbering note still said 33 files to `0055`. Corrected. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/probes.ts` (`askQueue`) after the queue binding's `metrics()` failed in production | §1's `EMAIL_QUEUE` paragraph: the queue's size is read from Cloudflare's Queues API with the existing token; the binding is still only sent to. No binding, secret, variable or cron trigger added. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/catalog.ts` after System health's checks were rebuilt: what it reads through `EMAIL_QUEUE`, `ASTRO_SERVICE` and `EMAIL_CONSOLE` | §1 Queues and Service Bindings: those three readers added. No binding, secret, variable or cron trigger added; the DNS check asks Cloudflare's public resolver, as `src/pages/api/emails/dns-check.ts` already did. Nothing else re-checked |
@@ -582,7 +583,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
 | `RESEND_API_KEY` | Resend — System health's *Resend* check only (`resend` in `src/lib/health/catalog.ts`, since 2026-10-17; the diagnostics ping `resend_ping` before it was removed). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
-| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics and the control plane (build-time source-map upload uses the same token) |
+| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane and the unresolved issues on System health → Logs (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads |
 | `GSC_SERVICE_ACCOUNT_JSON` | Google Search Console service-account key (documented RULE #0.8 exception) |
 | `PAGESPEED_API_KEY` | PageSpeed Insights API key (documented RULE #0.8 exception) |
