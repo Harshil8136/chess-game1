@@ -6,7 +6,7 @@ audience: [ai, technical, operator]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [src/pages/dashboard/sessions/index.astro, src/components/admin/users/sessions/SessionsConsole.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts, src/lib/approvals/ask.ts, src/pages/api/users/force-kick.ts]
+related_code: [src/pages/dashboard/sessions/[...section].astro, src/lib/sessions-section.ts, src/lib/login-log-filters.ts, src/styles/pages/sessions.css, src/components/admin/users/sessions/SessionsConsole.tsx, src/components/admin/users/sessions/SessionsBar.tsx, src/lib/auth/session-ref.ts, src/components/admin/users/sessions/SignInAlertsCard.tsx, src/components/admin/users/sessions/AlertPolicyPanel.tsx, src/pages/api/sessions/sign-in-alerts.ts, src/pages/api/sessions/alert-policy.ts, src/pages/api/sessions/active-sessions.ts, src/pages/api/sessions/active-revocations.ts, src/pages/api/sessions/flush-sessions.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts, src/lib/approvals/ask.ts, src/pages/api/users/force-kick.ts]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/login-forensics.md, ../architecture/plac-and-audit.md, ../specs/2026-10-03-sign-in-alerts-v2-design.md]
 tags: [sessions, security, plac, rbac, kv, forensics]
 ---
@@ -20,17 +20,24 @@ tags: [sessions, security, plac, rbac, kv, forensics]
 
 > **TL;DR:** The **Security → Sessions** page (`/dashboard/sessions`) shows who is
 > signed in, every sign-in, who is barred from signing in, your own sign-in alert
-> emails and the alert policy, one tab each. Gated to canonical **Admin** and above
+> emails and the alert policy, one tab each, each at its own address
+> (`/dashboard/sessions/history`, `/blocks`, `/alerts`, `/alert-policy`). Gated to canonical **Admin** and above
 > (stored `super_admin`+) via a dedicated PLAC page row; what each person may do on it
 > comes from the page's permission keys, and a control they lack shows switched off
 > with the reason. Rebuilt from scratch on 2026-10-10 on the console kit
+> (change record (private)),
+> and redesigned on 2026-10-24: a slim bar of figures instead of the tall header and five tiles,
+> real addresses instead of `#` fragments, dense rows, and server-side history filters
 > (change record (private)).
 > Built KV-budget-aware: the list is read once, Live is opt-in and self-limiting.
 
 ## Location & access
 
-- **Route:** `src/pages/dashboard/sessions/index.astro` → `/dashboard/sessions`
-  (top-level, depth-2 so it renders as a sidebar nav item). The old
+- **Route:** `src/pages/dashboard/sessions/[...section].astro` → `/dashboard/sessions` and
+  `/dashboard/sessions/<part>` (top-level, depth-2 so it renders as a sidebar nav item; it was
+  `index.astro` → `[...section].astro` on 2026-10-24). Any other path under it answers 404, and
+  `/alerts` or `/alert-policy` without its key answers 403 with a line saying so. PLAC resolves
+  every nested path to the `/dashboard/sessions` row (`pageFor`, `src/lib/auth/page-registry.ts`). The old
   `/dashboard/users/sessions` path was **deactivated**, not deleted: migration
   `migrations/0002_promote_sessions_page.sql` re-pointed its PLAC overrides here
   and set `is_active = 0` on the old `admin_pages` rows (verified against live D1
@@ -61,7 +68,7 @@ gap **D-5**, closed 2026-09-16.
 | `#alert-policy` | yes, fail closed | `GET`/`POST /api/sessions/alert-policy` and the page's policy panel (`denyAlertPolicy`, an explicit grant required) |
 
 The page asks the same keys the routes ask (since 2026-10-10;
-`src/pages/dashboard/sessions/index.astro` passes them to the console as `access`), so a
+`src/pages/dashboard/sessions/[...section].astro` passes them to the console as `access`), so a
 fragment deny switches the control off, with its reason, instead of leaving a button the
 server refuses. Locking a person out by name uses the Users page's route, so it follows
 `/dashboard/users`; the sign-in history follows the Security part of Logs
@@ -84,21 +91,33 @@ One honest caveat:
 
 `src/components/admin/users/sessions/`, rebuilt 2026-10-10 on the console kit
 (`src/styles/components/console.css`, [`DESIGN-SYSTEM.md`](../reference/DESIGN-SYSTEM.md)
-§9.9) and the shared Dialog (§9.8):
+§9.9) and the shared Dialog (§9.8), with pieces of its own since 2026-10-24 in
+`src/styles/pages/sessions.css` (the bar, the figures, dense rows, setting blocks, the save bar):
 
-- `SessionsConsole.tsx`: the shell. Header with Refresh, the time of the last read and
-  Live; five tiles; the tabs on one sideways row; the drawers and the lock-out dialog;
-  every action and its confirm; the downloads.
-- `SignedInPanel.tsx`: the **Signed in** tab, one card per session, a search, three filters
-  (Everyone, Unusual, Yours) and the two actions a session has; `EveryoneAtOnce.tsx`, the
-  panel under it (lock out a person, clear stale sessions, sign everyone else out).
-- `sessionTabs.tsx`: which tabs a person's access shows, their names, and the tab a link's
-  hash opens.
-- `HistoryPanel.tsx`: the **Sign-in history** tab, a table on a wide screen and a stack of
-  cards on a phone, with outcome and method chips and pages of 25, 50 or 100.
-- `BlocksPanel.tsx`: the **Sign-in blocks** tab.
-- `SignInAlertsCard.tsx`: the **Your alerts** tab, for holders of `#alerts` only.
+- `SessionsConsole.tsx`: the shell. The bar; the tabs on one sideways row, each a link to its
+  address; the drawers and the lock-out dialog; every action and its confirm; the downloads; the
+  address bar, the browser tab's title and the top bar's crumbs as tabs and filters change.
+- `SessionsBar.tsx` (2026-10-24): the page's name, the time of the last read, Refresh and Live,
+  and one sideways row of five figures (signed in, unusual, sign-ins and failed or refused in
+  the last 24 hours, blocks), each opening its list. It replaced a heading, a subtitle and five
+  tiles that took about a quarter of a phone's screen.
+- `SignedInPanel.tsx`: the **Signed in** tab, one dense row per session, **By person** (the
+  default: one heading per person with their sessions under it) or **Each session**, a search,
+  four filters (Everyone, Unusual, Yours, Inactive 1 h+), three orders (Recently active, Newest
+  sign-in, Name) and the actions a session has; `EveryoneAtOnce.tsx`, folded under it (lock out a
+  person, clear stale sessions, sign everyone else out).
+- `sessionTabs.tsx`: which tabs a person's access shows, and their icons. The names and
+  addresses are `src/lib/sessions-section.ts`.
+- `HistoryPanel.tsx`: the **Sign-in history** tab, a table with a heading for each day on a wide
+  screen and a stack of cards on a phone, with four rows of filter chips, the count of matching
+  sign-ins and pages of 25, 50 or 100.
+- `BlocksPanel.tsx`: the **Sign-in blocks** tab, with **Check again** and **Lock out a person**.
+- `SignInAlertsCard.tsx`: the **Your alerts** tab, for holders of `#alerts` only;
+  `SignInWays.tsx` (the one-tap fix, the rule for each way in, what the next sign-in gets) and
+  `EmailedSummary.tsx` are its parts.
 - `AlertPolicyPanel.tsx`: the **Alert policy** tab, for holders of `#alert-policy` only.
+- `SettingBlocks.tsx` (2026-10-24): the block that holds each kind of setting on those two
+  tabs, and the row of chips that jumps to each block.
 - `SessionDrawer.tsx`, `SignInDrawer.tsx`: one session, one sign-in, in full (the Dialog's
   drawer: from the right on a wide screen, from the bottom on a phone). The full address
   shows only here.
@@ -106,8 +125,8 @@ One honest caveat:
   would accept.
 - `SessionForensicsDrawer.tsx`: one person's sessions, opened from their row on the Users
   page, on the same Dialog and kit pieces (`ck-scope`).
-- `parts.tsx`: the small shared pieces (the header tile, method and device icons, badges, copy
-  button, the empty, error and loading states).
+- `parts.tsx`: the small shared pieces (method and device icons, badges, copy button, the
+  empty, error and loading states; the stat tile, which only the Page Registry still uses).
 - `sessionRisk.ts` (risk signals), `exportSessions.ts` (CSV and JSON), `sessionTypes.ts`
   (`maskIp`), `sessionFormat.ts` (device, times, sign-in method), `sessionBadges.ts` (tones):
   pure helpers, unit-tested.
@@ -119,24 +138,31 @@ Removed on 2026-10-10: `SessionCommandCenter.tsx`, `ActiveSessionsPanel.tsx`,
 
 ## Tabs & data sources
 
-| Tab or tile | Source | KV cost |
+| Tab or figure | Source | KV cost |
 |-----|--------|---------|
-| Signed in, and the **Signed in now** and **Unusual** tiles | `GET /api/sessions/active-sessions` (`kv.list` + gets), once when the page opens and on Refresh | 1 list/call |
-| Sign-in history | `GET /api/audit/login-logs?limit=100` (D1), the first time the tab opens; **Read the 100 sign-ins before these** pages back with `offset` | none |
-| **Signed in, last 24 hours** and **Failed or refused, last 24 hours** tiles | two counts from the same route (`limit=1&success=true\|false&dateFrom=`, reading `total`), only for holders of the history | none |
-| Sign-in blocks, and its tile | `GET /api/sessions/active-revocations` (KV `revoked:*`), only when the tab or the tile is opened | 1 list/call |
+| Signed in, and the **signed in** and **unusual** figures | `GET /api/sessions/active-sessions` (`kv.list` + gets), once when the page opens and on Refresh | 1 list/call |
+| Sign-in history | `GET /api/audit/login-logs?limit=100` (D1) with the filters as parameters, when the tab opens and on each filter change; **Read the 100 sign-ins before these** pages back with `offset` | none |
+| The **sign-ins in 24 h** and **failed or refused in 24 h** figures | two counts from the same route (`limit=1&success=true\|false&dateFrom=`, reading `total`), only for holders of the history | none |
+| Sign-in blocks, and its figure | `GET /api/sessions/active-revocations` (KV `revoked:*`), only when the tab or the figure is opened, or on **Check again** | 1 list/call |
 | Your alerts | `GET /api/sessions/sign-in-alerts` (D1) | none |
 | Alert policy | `GET /api/sessions/alert-policy` (D1, one Supabase read) | none |
 
-The blocks tile reads **—** with "Not checked yet: tap to check" until the blocks are
-read, then the real count. Until 2026-10-10 it showed a green **0** and "No active
-blocks" before anything was read, a false all-clear on the one screen an operator uses to
-find a person stranded behind a 24-hour block; the old "Logins today" tile, which counted
-something else, is gone with `GET /api/audit/stats` on this page.
+The blocks figure reads **—** with "blocks: tap to check" until the blocks are read, then the
+real count. Until 2026-10-10 it showed a green **0** and "No active blocks" before anything was
+read, a false all-clear on the one screen an operator uses to find a person stranded behind a
+24-hour block; the old "Logins today" tile, which counted something else, is gone with
+`GET /api/audit/stats` on this page.
 
-A link to `/dashboard/sessions#signed-in`, `#history`, `#blocks`, `#alerts` or
-`#alert-policy` opens that tab (the alert emails' "Manage sign-in alerts" link is
-`#alerts`), and choosing a tab writes its hash, so a tab can be shared.
+**Addresses** (2026-10-24, `src/lib/sessions-section.ts`): `/dashboard/sessions` (Signed in),
+`/dashboard/sessions/history`, `/blocks`, `/alerts` and `/alert-policy`. The history's filters
+ride in its query (`?period=7d&outcome=fail&method=github&emailed=quiet&person=…`), so a
+filtered list can be bookmarked or sent. Choosing a tab or a filter replaces the address in
+place, as the Backups and Server pages do, so Back leaves the page; the browser tab's title and
+the top bar's crumb follow (`showSection` in `src/lib/shell-state.ts`). An old link with a
+fragment (`#alerts`, `#history`, `#alert-policy`, and the older `#active`, `#sessions`,
+`#blocked`) opens its tab and is moved to its address. The alert emails' **Manage sign-in
+alerts** link is `/dashboard/sessions/alerts`. The permission keys keep their `#` names: they
+name permissions, not addresses.
 
 ## KV budget discipline (important)
 
@@ -155,8 +181,9 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
 
 ## Features
 
-- **Per-session drawer**: tap a card for the full address, place, device, sign-in method,
-  Ray ID and times, with **End this session** and **Lock out**. The session you are using
+- **Per-session drawer**: tap a session's name (or its device, grouped by person) for the full
+  address, place, device, sign-in method, Ray ID and times, with **End this session**, **Lock
+  out** and, for holders of the history, **Their sign-ins** (the history filtered to them). The session you are using
   now cannot be ended from here (sign out instead), and you cannot lock yourself out. A
   session's method is the one its Cloudflare Access token named when it was created, and the
   token names none in production, so session cards read **Unknown**; since 2026-10-16 the
@@ -169,18 +196,29 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
   certainly a person; until 2026-10-10 this read scores above 50 as the risk, which flagged
   people and passed bots. A sign-in with no score (every row before 2026-10-10, and the
   Cloudflare log sync's rows) is treated as no signal.
-- **History filters**: outcome (Everything, Signed in, Failed, Refused), method (Google,
-  GitHub, Email code, Unknown) and a search over email, place, address and Ray ID, over what
-  has been read; **CSV and JSON** downloads of what the filters leave, for holders of
-  `#export`. The method chip and the method label now agree: until 2026-10-10 the filter
-  said "OTP" and matched the text, while the label said "Email code".
+- **History filters** (applied by the server since 2026-10-24, so they cover the whole log and
+  the count is exact): **When** (24 hours, 7 days, 30 days, all time), **Outcome**
+  (Everything, Signed in, Not signed in, Failed, Refused), **Way in** (Google, GitHub, Email
+  code, Unknown), **Alert** (emailed or not) and one person (from a sign-in's **Only this
+  person** or a session's **Their sign-ins**), with **Clear** for all of them. The search looks
+  only inside what has been read (email, place, address, Ray ID). The route reads them in
+  `src/lib/login-log-filters.ts`: `method` takes several values and `alert=emailed|quiet` is new.
+  Until 2026-10-24 every filter ran in the browser over the 100 rows read, so "Failed" showed
+  only the failures among the newest 100. **CSV and JSON** download what is shown, for holders
+  of `#export`. The method chip and the method label agree: until 2026-10-10 the filter said
+  "OTP" and matched the text, while the label said "Email code".
 - **Alert email per row** (2026-10-03): an envelope icon when the sign-in was emailed (with
   why it was urgent: it moved, or it was made without Google), a muted bell with the reason
   when it was not (the same sign-in as before, paused, trusted area, alert policy, usual place
   and device, a repeat of a recent failure); the sign-in drawer shows it too. Read from
   `admin_login_logs.alert` (migration `0064`); rows from before read "Not recorded". Labels:
   `src/lib/login-alerts/outcomes.ts`.
-- **Everyone at once** (under the Signed in list): **Lock out a person**, **Clear stale
+- **By person** (2026-10-24): the Signed in tab groups each person's sessions under them, and
+  **End all sessions** (or **End 2 sessions**, when some are out of reach) ends every one you may
+  end, one route call each, after one confirm. **Inactive 1 h+** keeps the sessions with no
+  activity for an hour (a session's last activity moves every 5 minutes,
+  `src/lib/auth/pipeline.ts`).
+- **Everyone at once** (folded under the Signed in list since 2026-10-24): **Lock out a person**, **Clear stale
   sessions** (sessions whose account is off or gone, and entries that cannot be read) and
   **Sign everyone else out** (type SIGN OUT to confirm; keeps your own session). The last
   two are the owner's and vendor support's (`flush-sessions.ts`). Each shows switched off,
@@ -248,9 +286,11 @@ Export and suspicious-flagging run entirely client-side on already-fetched data.
 
 ## Your sign-in alerts (2026-10-03)
 
-The **Your alerts** tab, opened by `#alerts` (every alert email links to it), for the
-signed-in person's **own** sign-in alert emails. Every choice is a row of chips, so all
-of them show at once (2026-10-10; it was a card above the page with dropdowns). Rendered only for holders
+The **Your alerts** tab, at `/dashboard/sessions/alerts` (every alert email links to it), for
+the signed-in person's **own** sign-in alert emails. Every choice is a row of chips, so all
+of them show at once (2026-10-10; it was a card above the page with dropdowns). Since
+2026-10-24 each kind of setting is a block (Right now, Recent emails, Ways in, Next sign-in,
+What is emailed, Trusted areas, A copy to you), and a row of chips at the top jumps to each. Rendered only for holders
 of `/dashboard/sessions#alerts` (owner and vendor support by default; grantable on
 the Access page); `GET`/`POST /api/sessions/sign-in-alerts` checks the same key.
 
@@ -304,7 +344,9 @@ trusted areas. The rules:
 
 ## Sign-in alert policy (2026-10-03)
 
-The **Alert policy** tab, opened by `#alert-policy`, every choice a row of chips, for holders of
+The **Alert policy** tab, at `/dashboard/sessions/alert-policy`, every choice a row of chips,
+each kind in a block with a row of chips at the top that jumps to it and marks a block that is
+not saved yet (2026-10-24), for holders of
 `/dashboard/sessions#alert-policy` (owner and vendor support by default);
 `GET`/`POST /api/sessions/alert-policy` checks the same key.
 
@@ -339,9 +381,12 @@ The **Alert policy** tab, opened by `#alert-policy`, every choice a row of chips
   A sealed day that changed is always emailed, and the seal runs either way. What a seal is
   and what the check compares: [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md)
   §3.6. Choosing *only when something changed* counts as turning alerts down.
-- **Save policy** saves the lot. A save that turns alerts down, or changes the
-  recipients, emails the recipients before and after the change.
-- **People:** everyone active, with what their successful sign-ins send. A holder
+- **Save policy** saves the lot. While there are changes, a bar with **Undo changes** and
+  **Save policy** stays at the bottom of the screen (2026-10-24), and each changed block says
+  **Not saved**. A save that turns alerts down, or changes the recipients, emails the recipients
+  before and after the change.
+- **People:** everyone active, with what their successful sign-ins send, and a search when
+  there are more than six (2026-10-24). A holder
   can set another person to follow the policy, every, unusual or never, or clear
   their settings; lowering someone emails the recipients. A holder's own row points
   to "Your alerts".
@@ -377,12 +422,15 @@ test/sessions-permissions.test.ts test/pipeline-session.test.ts test/sessionRisk
 test/exportSessions.test.ts test/login-method.test.ts test/session-rank.test.ts
 test/two-person-rule.test.ts` (the page's decisions, the session handle, fragment denies, the
 session pipeline, the risk signals, the downloads, the method labels, who may end sessions and
-lock people out, and the lock-out of the last Owner). On a phone: open `/dashboard/sessions` as canonical Admin, check the five
-tiles, open each tab, open a session and a sign-in, and confirm a `manager`/`staff` user
-is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
+lock people out, and the lock-out of the last Owner), and `test/sessions-section.test.ts` (the
+addresses, the history filters and their SQL). On a phone: open `/dashboard/sessions` as
+canonical Admin, check the row of figures, open each tab and see the address change, open a
+session and a sign-in, and confirm a `manager`/`staff` user is access-denied; turn Live on and
+confirm it stops by itself after 5 minutes.
 
 | Date | Checked by | Result |
 |---|---|---|
+| 2026-10-24 | claude | **Scope-limited to the redesign: the bar, the addresses, the tabs, the Signed in, history and blocks tabs, and the layout of Your alerts and Alert policy.** Read every file in `src/components/admin/users/sessions/`, `src/pages/dashboard/sessions/[...section].astro`, `src/lib/sessions-section.ts`, `src/lib/login-log-filters.ts`, `src/pages/api/audit/login-logs.ts`, `src/lib/shell-state.ts` and `src/lib/auth/page-registry.ts` (`pageFor`); `test/sessions-section.test.ts` and `test/sessions-console.test.ts` pass. Live D1 (read only): the stored `login_method` values (google, github, unknown and the April `magic_link`; no `otp` row yet) and the three event types the filters map to. Not re-read: the alert rules and the authorization sections. Not rendered in a browser; `last_verified` left as it was. |
 | 2026-10-23 | claude | **Scope-limited to Ways you sign in, the one-tap fix, What gets emailed and the policy's per-way rules (evening).** Read `src/lib/login-alerts/decide.ts` (`expectations`, the way rule), `policy.ts` (`WAY_RULES`, `wayRule`, `withWay`), `emailed.ts`, `handlers.ts` (`set-way`, `table`), `policy-handlers.ts`, `SignInWays.tsx`, `SignInAlertsCard.tsx`, `AlertPolicyPanel.tsx`; `test/login-alert-ways-in.test.ts` and the other sign-in alert tests pass. Live D1 (read only): the 18:52 UTC GitHub sign-in from Toronto was `queued-method` with no rule saved. Not rendered in a browser. |
 | 2026-10-23 | claude | **Scope-limited to Ways in, Emailed in the last 30 days and the trusted-area wording.** Read `src/lib/login-alerts/decide.ts`, `policy.ts`, `emailed.ts`, `handlers.ts`, `policy-handlers.ts`, `AlertPolicyPanel.tsx`, `SignInAlertsCard.tsx`, `EmailedSummary.tsx`; `test/login-alert-ways-in.test.ts` and the other sign-in alert tests pass. Live D1 (read only): the owner's Toronto area (50 km) quieted 11 Google sign-ins; 10 of the 12 alerts emailed since 2026-10-09 were GitHub sign-ins. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-16 | claude | **Scope-limited to Lock out, the force sign-out key, the alert lines and the method and bot-score notes.** Read `src/pages/api/sessions/active-sessions.ts` (GET and DELETE), `src/lib/approvals/ask.ts` (`personChangeGate`, `askForSecondPerson`) and `rules.ts` (`kindForPersonChange`, `approversFor`, the 3-day wait), `src/lib/api.ts` (`jsonPending`), `src/pages/api/users/manage.ts` and `src/lib/users/manage-apply.ts` (the by-name rule), `src/pages/api/users/force-kick.ts` and `denyForceKick` in `src/lib/auth/surface-guards.ts`, `SessionsConsole.tsx`, `LockOutDialog.tsx`, `SessionDrawer.tsx`, `parts.tsx`, `sessionFormat.ts`, `sessionRisk.ts`, `src/lib/login-alerts/decide.ts` and `outcomes.ts`; the Sessions cases in `test/two-person-rule.test.ts` read. Live D1 (read only): every sign-in since 2026-10-10 carries a bot score. Corrected: the session card's method reads Unknown in production; the bot-score note; the by-name lock-out's own rule; the 202 body, the 3-day wait and who may approve; the access-change email follows the alert policy; a sign-in without Google is always urgent. Not re-read: the rest of the page. Not rendered in a browser. |
@@ -392,8 +440,8 @@ is access-denied; turn Live on and confirm it stops by itself after 5 minutes.
 | 2026-10-16 | claude | **Scope-limited to the recent sign-in bullet.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `flush-sessions.ts`, `src/pages/api/users/force-kick.ts` and `src/lib/auth/fresh-sign-in.ts`; `test/session-rank.test.ts` and `test/fresh-sign-in.test.ts` pass. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-15 | claude | **Scope-limited to the alert policy's new "Access changes emailed" row.** Read `AlertPolicyPanel.tsx`, `src/lib/login-alerts/policy.ts` and `policy-handlers.ts`; `test/access-changes.test.ts` pins the setting's default and its change line. Not re-read: the rest of the page. Not rendered in a browser. |
 | 2026-10-14 | claude | **Scope-limited to who may end sessions and lock people out.** Read `src/pages/api/sessions/active-sessions.ts` (DELETE), `active-revocations.ts` (unblock rule unchanged) and `SessionDrawer.tsx`; `test/session-rank.test.ts` pins the route and `test/sessions-console.test.ts` the buttons. Not re-read: the rest of the page. Not rendered in a browser. |
-| 2026-10-10 | claude | The whole page after the rebuild, against `src/pages/dashboard/sessions/index.astro`, every file in `src/components/admin/users/sessions/`, `src/pages/api/sessions/active-sessions.ts`, `active-revocations.ts`, `flush-sessions.ts`, `src/pages/api/users/[id]/session-status.ts`, `src/pages/api/audit/login-logs.ts`, `src/lib/auth/surface-guards.ts` and `src/lib/auth/session-ref.ts`; `test/sessions-console.test.ts` and `test/session-ref.test.ts` added. Not rendered in a browser (the owner checks on his phone); the live KV and D1 were not read. |
-| 2026-10-03 | claude | The `#alert-policy` fragment, both card sections and the components list, against `src/pages/dashboard/sessions/index.astro`, `SignInAlertsCard.tsx`, `AlertPolicyPanel.tsx`, `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts`, with migration `0065` read back from production. Not rendered in a browser. |
+| 2026-10-10 | claude | The whole page after the rebuild, against `src/pages/dashboard/sessions/index.astro` (→ `[...section].astro` since 2026-10-24), every file in `src/components/admin/users/sessions/`, `src/pages/api/sessions/active-sessions.ts`, `active-revocations.ts`, `flush-sessions.ts`, `src/pages/api/users/[id]/session-status.ts`, `src/pages/api/audit/login-logs.ts`, `src/lib/auth/surface-guards.ts` and `src/lib/auth/session-ref.ts`; `test/sessions-console.test.ts` and `test/session-ref.test.ts` added. Not rendered in a browser (the owner checks on his phone); the live KV and D1 were not read. |
+| 2026-10-03 | claude | The `#alert-policy` fragment, both card sections and the components list, against `src/pages/dashboard/sessions/index.astro` (→ `[...section].astro` since 2026-10-24), `SignInAlertsCard.tsx`, `AlertPolicyPanel.tsx`, `src/lib/login-alerts/handlers.ts`, `policy-handlers.ts`, `test/login-alert-settings.test.ts` and `test/login-alert-policy.test.ts`, with migration `0065` read back from production. Not rendered in a browser. |
 | 2026-10-03 | claude | The alert-email line in the history rows and the drawer, and the two lines added to "Your sign-in alerts", against `AuthHistoryPanel.tsx`, `AuthLogDetailDrawer.tsx`, `src/lib/login-alerts/outcomes.ts`, `src/pages/api/audit/login-logs.ts` and `test/login-alerts.test.ts`, with migration `0064` read back from production. Not rendered in a browser; the rest of the page was not re-read. |
-| 2026-10-03 | claude | The `#alerts` fragment, its row in the fragment table, the card and its section, against `src/pages/dashboard/sessions/index.astro`, `src/components/admin/users/sessions/SignInAlertsCard.tsx`, `src/lib/login-alerts/handlers.ts` and `test/login-alert-settings.test.ts`. The rest of the page was not re-read. |
+| 2026-10-03 | claude | The `#alerts` fragment, its row in the fragment table, the card and its section, against `src/pages/dashboard/sessions/index.astro` (→ `[...section].astro` since 2026-10-24), `src/components/admin/users/sessions/SignInAlertsCard.tsx`, `src/lib/login-alerts/handlers.ts` and `test/login-alert-settings.test.ts`. The rest of the page was not re-read. |
 | 2026-09-19 | claude | Re-verified against code. Corrections: `API_PAGE_MAPPING` lives in `src/lib/auth/routes.ts`, not `src/middleware.ts`; IP masking is client-side only; the Edge Blocks tile shows a green zero until its tab is opened; `#export` has no route and `#flush` is inert; seven components and the Lock Out action were missing. |

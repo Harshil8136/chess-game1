@@ -338,7 +338,8 @@ src/styles/
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
     ├── health.css  ← System health's own look on the kit's frame: hue `pulse`, monitor band, pulse line, triage board (2026-10-17)
     ├── page-registry.css  ← Page Registry's own rules on the console kit: page rows, role matrix, person choices (2026-10-14)
-    └── privacy-dashboard.css  (session-registry.css was removed 2026-10-10 with the old Sessions screens)
+    ├── privacy-dashboard.css  (session-registry.css was removed 2026-10-10 with the old Sessions screens)
+    └── sessions.css  ← the Sessions page's `ss-` pieces on the kit: its bar and figures row, record rows, filter rows, setting blocks with a jump row, the save bar (2026-10-24)
 ```
 
 *(Listing re-checked 2026-09-20 — 23 files; `pages/cron.css` landed with the
@@ -774,6 +775,13 @@ mixes each state colour 72% toward the text colour, as the raw ones fall under 3
 design is [its spec](../specs/2026-10-17-system-health-look.md);
 `test/system-health-look.test.ts` pins its colour, motion and touch-size rules.
 
+Sessions (since 2026-10-24) keeps the kit's frame and `ck-tabs`, and replaces `ck-head` and
+`ck-tiles` with one bar and a sideways row of figures that are buttons (`ss-bar`, `ss-stats`).
+Its lists are dense rows (`ss-row`, a tone bar inset on the left), its alert tabs are blocks
+(`ss-block`) under a jump row of chips, and an unsaved policy shows a sticky save bar
+(`ss-savebar`); all in `src/styles/pages/sessions.css`, on theme tokens only. The change record
+is `2026-10-24-sessions-page-redesign.md` (private).
+
 `ck-search` and `ck-rename` work in a row and in a column alike: their 16rem flex basis
 applies only inside `ck-toolbar` and `ck-item`, because in a column (`ck-group`, a pop-up's
 body) a basis is a height, and it made a tall empty box around the field
@@ -794,6 +802,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-24 | §3's `sessions.css` line and §9.9's note on Sessions, against `src/styles/pages/sessions.css` (theme tokens only), `src/components/admin/users/sessions/SessionsBar.tsx`, `SettingBlocks.tsx` and `src/pages/dashboard/sessions/[...section].astro` | Every other section; the look in a browser, which the owner checks on a phone |
 | 2026-10-17 | §9.1's list of shipped `--modifier` classes, by grepping `src/` (no `sr-btn` anywhere; `.hero-badge--*` scoped in `content/hero.astro`; `.cron-op-badge--*` in `pages/cron.css`) | Everything else |
 | 2026-10-17 | §3's `health.css` line and §9.9's note on a page with its own look, against `src/styles/pages/health.css` (theme tokens only, `data-hue='pulse'` defined there), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="pulse"`) and `test/system-health-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-17 | §3's `pages/` lines and §9.9's list of pages on the kit, against `src/styles/pages/health.css` (theme tokens only), `src/pages/dashboard/health.astro` (`ck-page`, `data-hue="violet"`) and the removal of `diagnostics.css` | Every other section; the look in a browser, which Harshil checks on his phone |
