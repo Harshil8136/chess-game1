@@ -132,9 +132,10 @@ At 18:00 the owner asked whether an all-access Cloudflare key in GitHub would le
 migrations and commands, and for a researched design for automatic, strictly checked delivery.
 The answer (no all-access key) and the design are in
 [`18-research-automated-delivery.md`](18-research-automated-delivery.md); its two cards were
-answered at 18:54.
+answered at 18:54, and a third at 21:28.
 
 | # | Question | Options (recommended in bold) | Where | Answer |
 |---|---|---|---|---|
 | 30 | The GitHub plan for the client repositories | **Team, US$4 a month per person with access, which locks `main`, the key, the workflows and the kit's files**; Free with only the vendor and Claude writing; Free as today | research 18 §9.1, plan §14.4 | **Free, with only the vendor and Claude writing** (18:54), against the recommendation. At 18:56 he added: "See clients dont get access to main repo. I will almost always take over devlopment work so create a fork or something from main branch and I will own mostly all code": clients get no access to their repository; a client's own team, when it builds something, works in a separate copy made from `main` with no key, and Claude brings its work in. A daily drift watch in the kit repository stands in for GitHub's locks |
 | 31 | Whether a change that touches only a client's own module merges by itself once every check passes | **Merges by itself**; one person other than the author approves it too | research 18 §9.2, plan §14.4 | **Merges by itself** (18:54). A change to a kit file, a workflow or a removal step still waits for the owner's yes |
+| 32 | How the owner's and Claude's own changes reach a client repository | **Straight to `main`: checked once there and deployed only if green, about half the minutes**; a proposal first, checked on the proposal and again on `main` | research 18 §3.2 and §9.3, plan §14.4 | **Straight to `main`** (21:28), as in all his repositories. Claude runs every check before it pushes. A client team's work, from its separate copy, still arrives as a proposal |

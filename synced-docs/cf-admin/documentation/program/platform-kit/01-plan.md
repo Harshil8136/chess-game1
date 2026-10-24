@@ -764,7 +764,7 @@ Your words: "compatible with big changes, improvements, upgraded package, test b
 
 Your question of 2026-10-24 (an all-access key so an AI can run migrations and commands) and the
 research behind this section are in [`18-research-automated-delivery.md`](18-research-automated-delivery.md);
-your answers are cards 30 and 31 in the decisions log. In short:
+your answers are cards 30 to 32 in the decisions log. In short:
 
 - **No all-access key, ever.** One key per job and per client, each made from a link that ticks
   its permissions and each with an end date: a setup key that lasts a day, a release key that
@@ -772,12 +772,14 @@ your answers are cards 30 and 31 in the decisions log. In short:
 - **Three kinds of change:** settings in the portal (no deploy), a client's own modules (checked
   code, numbers from 5000), and the kit (you only, reaching every client as a version). No client
   ever gets an edited core.
-- **One door for code, on GitHub's free plan (your card 30):** only you and Claude write to a
+- **One gate for code, on GitHub's free plan (your card 30):** only you and Claude write to a
   client repository, and clients get no access to it: you do almost all development, with
-  Claude, and own the code. A client's own team, when it builds something, works in a separate
-  copy made from `main` with no key, and Claude brings its work in as a proposal. Every proposal
-  runs the checks with no key. One that touches only client-owned files merges by itself when
-  green (your card 31); one that touches a kit file, a workflow or a removal step waits for you.
+  Claude, and own the code. Your and Claude's changes go straight to `main` (your card 32);
+  Claude runs every check first, and `main` runs them again before any deploy. A client's own
+  team, when it builds something, works in a separate copy made from `main` with no key, and
+  Claude brings its work in as a proposal. Every proposal runs the checks with no key. One that
+  touches only client-owned files merges by itself when green (your card 31); one that touches a
+  kit file, a workflow or a removal step waits for you.
   A daily drift watch in the kit repository reports any edited kit file in a client repository.
 - **The release (§14.1's workflow, extended):** the checks again, a database restore point, a
   rehearsal for a major or a removal step, the migrations, the deploy, a health check, and an

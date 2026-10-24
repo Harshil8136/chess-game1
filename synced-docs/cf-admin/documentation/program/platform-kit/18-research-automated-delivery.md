@@ -16,7 +16,7 @@ tags: [platform-kit, research, delivery, security]
 > ([`01-plan.md`](01-plan.md)). Every outside fact carries a numbered source; the list is at the
 > end. The pages were read on 2026-10-24, most of them through a search service's copy of the
 > page because the documentation sites did not load directly, so a page changed that day may
-> differ. Anything not confirmed is marked **GAP**. The owner answered both
+> differ. Anything not confirmed is marked **GAP**. The owner answered the three
 > choices on 2026-10-24 (section 9), and sections 3.2, 3.5, 3.6, 4 and 6 follow his answers.
 > Nothing in it is built yet.
 
@@ -35,12 +35,13 @@ customization kept in bounds so every client can still be upgraded.
   to that repository could use it for anything in every Cloudflare account it reaches, and a key
   that can make keys survives its own removal. No professional setup works this way.
 - **The design in one line:** three kinds of change (settings in the portal, a client's own
-  modules, the kit itself); one door for every code change (a proposal that automatic checks must
-  pass); an automatic release with a restore point and an automatic step back; a fixed menu of
+  modules, the kit itself); one gate for every code change (the automatic checks, on `main` before
+  any deploy and on a client team's proposal); an automatic release with a restore point and an automatic step back; a fixed menu of
   operations instead of a command line; and kit upgrades that reach clients in waves.
-- **The owner's answers (2026-10-24 18:54, section 9):** the client repositories stay on
-  GitHub's free plan, with only the vendor and Claude writing to them; and a change to a client's
-  own features merges by itself once every check passes.
+- **The owner's answers (2026-10-24, section 9):** the client repositories stay on GitHub's free
+  plan, with only the vendor and Claude writing to them; a client team's change to its own
+  features merges by itself once every check passes; and the owner's and Claude's own changes go
+  straight to `main`, checked there before any deploy.
 
 ## 1. The question: an all-access Cloudflare key in GitHub
 
@@ -109,15 +110,18 @@ manifest caps bindings and variables.
 
 ```mermaid
 flowchart LR
-  A[A person or an AI writes a change on a branch] --> B[A proposal: a pull request]
+  V[The owner or Claude: every check run before the push, choice 9.3] --> G[main]
+  A[A client team's change, from its separate copy] --> B[A proposal: a pull request]
   B --> C{Automatic checks, with no key}
   C -- red --> A
   C -- green --> D{Only client-owned files?}
   D -- yes --> E[Merges by itself, choice 9.2]
-  D -- no --> F[Waits for the vendor]
-  E --> G[main]
+  D -- no --> F[Waits for the owner]
+  E --> G
   F --> G
-  G --> H[The automatic release, 3.4]
+  G --> H{Every check again, on main}
+  H -- red --> X[Nothing deploys]
+  H -- green --> I[The automatic release, 3.4]
 ```
 
 GitHub can lock a private repository (a protected `main`, a key only `main` may use, locked
@@ -131,13 +135,16 @@ repository:
   take over devlopment work"). When a client's own team does build something, it gets a separate
   repository made from a snapshot of `main`: it holds no key and deploys nothing. Claude brings
   its work into the real repository as a proposal, through the same checks.
+- **The owner's and Claude's own changes (9.3):** pushed straight to `main`, as in every one of
+  the owner's repositories. Claude runs every check before it pushes; on `main` the workflow runs
+  them again and deploys only when they pass. One run per change instead of two.
 - **Merging (9.2):** a merge step in the kit's workflows runs from `main` after the checks pass.
   It merges a proposal whose files are all client-owned, reading only the list of changed files
   and never running the proposal's code. A proposal that touches a kit file, a workflow or a
   removal step waits for the owner's yes in the thread; then Claude merges it. (GitHub's own
   required approvals and code owners [29] would need the paid plan too.)
-- **The release checks again:** the release runs every check on the merged code before it uses
-  the key, so a red change never reaches production.
+- **The release checks again:** the release runs every check on `main` before it uses the key,
+  so a red change never reaches production, whichever way it arrived.
 - **A watch from outside:** nothing on the free plan stops an edit to the checks themselves. So a
   daily drift watch in the kit repository compares every client repository's kit-owned files with
   their released copies, and tells the owner of any difference. Claude Code's deny rules keep
@@ -312,11 +319,13 @@ flowchart LR
 
 ### 3.9 AI agents in this system
 
-- **Same door as people:** a branch, a proposal, the checks, and no key on a branch.
+- **Same gate as the owner:** Claude runs every check before it pushes to `main`, and the
+  workflow runs them again before any deploy (9.3). A client team's AI works through the team's
+  proposal.
 - **Claude can:**
   - write client modules;
-  - run the checks before proposing;
-  - open the proposal and fix a red check;
+  - run every check before it pushes;
+  - push to `main` and fix a red check;
   - start operations from the menu and read their logs.
 - **Claude cannot:**
   - see any key;
@@ -336,8 +345,9 @@ flowchart LR
   - Free gives 2,000 a month for all the organisation's private repositories (Team gives 3,000)
     [27].
   - An extra Linux minute costs US$0.006 [27].
-  - At about 3 minutes for a proposal's checks and about 4 for a release, that is roughly 280
-    changes a month across every client. 1,000 extra minutes cost US$6.
+  - A change pushed straight to `main` (9.3) takes one run of about 4 minutes, checks and
+    release together: roughly 500 changes a month across every client. A client team's proposal
+    adds about 3 minutes. 1,000 extra minutes cost US$6.
   - **GAP:** to be measured on the first real client.
 - **Cloudflare stays on the Free plan:**
   - 7 days of Time Travel [12];
@@ -376,8 +386,8 @@ Each step comes with its tests, the kit's twelve checks and a dated record, as u
 The owner's answers are in the decisions log, and the plan carries the design in §14.4
 (2026-10-24). Two earlier answers change in part:
 
-- Client repositories take changes through the proposal door instead of straight to `main`. The
-  kit repository keeps straight to `main`.
+- The owner's and Claude's changes still go straight to `main`, in client repositories too
+  (9.3); only a client team's work takes the proposal door.
 - Kit upgrades reach clients through the fleet step instead of Dependabot.
 
 GitHub Actions stays the gate (card 16).
@@ -391,12 +401,13 @@ GitHub Actions stays the gate (card 16).
 
 ## 9. Choices for the owner
 
-Posted on 2026-10-24 as two cards in the work thread; both answered at 18:54.
+Posted on 2026-10-24 as cards in the work thread: two answered at 18:54, a third at 21:28.
 
 | # | Choice | Options | Recommendation | Answer |
 |---|---|---|---|---|
 | 9.1 | The GitHub plan for the client repositories | **Team** (US$4 a month per person with access: locks `main`, the release key, the workflows and the kit's files); stay on **Free with only the vendor writing** (no locks; client developers' work is brought in by the vendor); stay on **Free as today** (anyone given access pushes to `main`) | Team: it is the only option where the checks cannot be edited away | **Free, with only the vendor writing** (18:54), against the recommendation; 3.2 rewritten for it |
 | 9.2 | A change that touches only a client's own module, with every check green | **Merges by itself**; **one person approves it too**, other than its author (the client's lead developer, or the owner for Claude's work) | Merges by itself. The checks guard the kit, the release steps back on its own, and the owner tests results on his phone; changes to locked files always wait for him. | **Merges by itself** (18:54) |
+| 9.3 | How the owner's and Claude's own changes reach a client repository | **Straight to `main`**: checked once there, deployed only if green; **a proposal first**: checked on the proposal and again on `main` | Straight to `main`: it is how all his repositories work, a deploy still refuses anything red, and it uses about half the minutes | **Straight to `main`** (21:28) |
 
 ## Sources
 
