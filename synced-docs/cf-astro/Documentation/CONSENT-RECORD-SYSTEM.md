@@ -143,6 +143,12 @@ answers `heartbeat.verdict` (`ok`, `warn` or `fail`) with the problems as
 `admin_portal_settings` row `heartbeat-last-run` (when, which runner, which
 verdict). Whoever runs it then drains both outboxes.
 
+Booking rows from before 2026-08-28 that still carry `booking_ref='PENDING'`
+are only a notice since 2026-10-24: they can never be reconciled and never
+change, so warning on them kept every run at `warn` (23 such rows, D1 read
+through the Cloudflare connector on 2026-10-24). A `PENDING` row written since
+then is still a warning, because `/api/booking` mints the real reference first.
+
 **It also watches the portal's checks (since 2026-10-17).** The admin portal's
 System health checks run every five minutes on the portal's scheduler and stamp
 each run in their state row (`health-state`, `$.tick`). The heartbeat reads that
