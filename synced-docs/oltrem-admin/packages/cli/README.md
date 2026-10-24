@@ -14,7 +14,8 @@ needs on the account after the first deploy, **`backup drill`**, the monthly res
 and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3), and
 **`check files`**, **`check modules`**, **`check packages`**, **`check secrets`** and
 **`check budgets`**, which keep a client's code out of the kit's files, inside its own modules,
-on the kit's packages, free of keys and within the Worker's limits (research 18).
+on the kit's packages, free of keys and within the Worker's limits (research 18), and
+**`release`**, the deploy workflow's release on `main` with its health check and step back.
 The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
@@ -353,6 +354,31 @@ dry-run build, its size without source maps, and its startup time from `wrangler
 against the limits the upgrade uses. Past 70 % of either it warns; past either it refuses. The
 client template's `verify` runs it in place of a plain dry-run build. Exit `0` (warnings
 included), `1` past a limit, `3` when there is no `oltrem.manifest.json`.
+
+## `oltrem release [dir]`
+
+The client template's deploy workflow runs it on `main` after its checks and `verify` (research
+18 §3.4); no person types it. In order:
+
+1. **A restore point:** the database's Time Travel bookmark, printed in the run's log. A restore
+   to it is never automatic: it waits for the owner's yes.
+2. **The version running now**, from `wrangler deployments status`: the one carrying most traffic.
+3. **The migrations**, as `migrations apply` runs them (the database created on the first deploy).
+   A failed migration stops the release: no new code deploys.
+4. **The deploy.**
+5. **The health check:** `/healthz` on the portal's address (`PUBLIC_HOST`, or the workers.dev
+   address wrangler printed), up to six reads five seconds apart. The Worker answers it before its
+   own sign-in check; the door must let the path through, as it does `/hooks` (`oltrem deploy`
+   prints the step).
+6. **The step back:** when the new version never answers `ok`, `wrangler rollback` returns to the
+   version noted in step 2, at once. The database is left as it is, which is safe because a
+   client's migrations only add (`check modules`).
+
+When the door or a bot challenge answers in the Worker's place (a redirect to the door's sign-in,
+or a `cf-mitigated` header), the release cannot see the Worker: it keeps the new version and says
+how to let `/healthz` through. The token is the workflow's `CLOUDFLARE_API_TOKEN`, whose Workers
+Scripts and D1 permissions cover every step. Exit `0` when the release is live (or could not be
+seen), `1` when it stopped or stepped back, `3` when there is no wrangler configuration.
 
 ## `oltrem backup setup [dir]`
 
