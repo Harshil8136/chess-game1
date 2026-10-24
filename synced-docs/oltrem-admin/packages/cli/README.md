@@ -15,7 +15,8 @@ and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3),
 **`check files`**, **`check modules`**, **`check packages`**, **`check secrets`** and
 **`check budgets`**, which keep a client's code out of the kit's files, inside its own modules,
 on the kit's packages, free of keys and within the Worker's limits (research 18), and
-**`release`**, the deploy workflow's release on `main` with its health check and step back.
+**`release`**, the deploy workflow's release on `main` with its health check and step back, and
+**`operate`**, the jobs of the operations menu (research 18 §3.5).
 The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
@@ -361,7 +362,8 @@ The client template's deploy workflow runs it on `main` after its checks and `ve
 18 §3.4); no person types it. In order:
 
 1. **A restore point:** the database's Time Travel bookmark, printed in the run's log. A restore
-   to it is never automatic: it waits for the owner's yes.
+   to it is never automatic: it waits for the owner's yes, then runs from the operations menu
+   (`operate`).
 2. **The version running now**, from `wrangler deployments status`: the one carrying most traffic.
 3. **The migrations**, as `migrations apply` runs them (the database created on the first deploy).
    A failed migration stops the release: no new code deploys.
@@ -379,6 +381,26 @@ or a `cf-mitigated` header), the release cannot see the Worker: it keeps the new
 how to let `/healthz` through. The token is the workflow's `CLOUDFLARE_API_TOKEN`, whose Workers
 Scripts and D1 permissions cover every step. Exit `0` when the release is live (or could not be
 seen), `1` when it stopped or stepped back, `3` when there is no wrangler configuration.
+
+## `oltrem operate <operation> [dir] [--target X] [--confirm X]`
+
+One job of the operations menu (research 18 §3.5). The client template's operations workflow runs
+it with the release key, from `main` only, and offers exactly these five as its choices; no person
+types it. Each operation is fixed: there is no free command against production.
+
+| Operation | What it does | Target |
+|---|---|---|
+| `check the setup` | Only reads: the version running, the five latest versions (the ids a step back takes), the database's restore point now, any migration waiting, the required secrets set, `/healthz` on `PUBLIC_HOST` | none |
+| `apply waiting migrations` | Runs the migrations not yet applied, as `migrations apply` does, without a deploy | none |
+| `replace a Worker secret` | Sets one of the Worker's `secrets.required` to a new value, handed to wrangler on standard input, never as an argument. The workflow reads the value from a repository secret of the same name, which the owner adds first and deletes after | the secret's name |
+| `step back the code` | `wrangler rollback` to the version given, or the one before; the database is left as it is | a version id, or none |
+| `restore the database` | Time Travel restore to a bookmark (from a release's log) or a time (RFC 3339, or seconds since 1970); prints the bookmark that undoes it | the restore point |
+
+The last two replace what runs. They start only after the owner's yes in the thread, and refuse to
+run unless `--confirm` repeats the operation's name, which the workflow asks for in its
+confirmation box. A failed step says what still runs. Exit `0` when the job is done, `1` on a
+problem, `3` when it was refused before it ran (an unknown operation, a missing target or
+confirmation, no wrangler configuration).
 
 ## `oltrem backup setup [dir]`
 

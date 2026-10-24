@@ -66,7 +66,7 @@ sources: [tokens.registry.json]
 | Status | planned |
 | Provider and account | Cloudflare; the client's own Cloudflare account |
 | What it may do | none: an account identifier, not a credential; stored as a secret so it never appears in a public file |
-| Used by | the client repository's deploy workflow: oltrem release on main, wrangler-action on a branch |
+| Used by | the client repository's deploy workflow: oltrem release on main, wrangler-action on a branch; the client repository's operations menu: oltrem operate, from main |
 | Stored in | a GitHub repository secret in the client repository |
 | Owner | vendor |
 | Created | not yet |
@@ -82,7 +82,7 @@ sources: [tokens.registry.json]
 | Status | planned |
 | Provider and account | Cloudflare; the client's own Cloudflare account; one token per client, made by hand in that account's dashboard |
 | What it may do | Account, Workers Scripts: Edit; Account, D1: Edit; Account, Workers KV Storage: Edit; Account, Workers R2 Storage: Edit; Account, Queues: Edit |
-| Used by | the client repository's deploy workflow: oltrem release on main, wrangler-action on a branch |
+| Used by | the client repository's deploy workflow: oltrem release on main, wrangler-action on a branch; the client repository's operations menu: oltrem operate, from main |
 | Stored in | a GitHub repository secret in the client repository |
 | Owner | vendor |
 | Created | not yet |
