@@ -573,7 +573,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `REVALIDATION_SECRET` | ISR webhook auth (cf-admin → cf-astro) |
 | `IP_HASH_SECRET` | Privacy-safe IP hashing in login forensics and audit |
 | `HEALTH_CHECK_SECRET` | Authenticates external health probes |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare GraphQL analytics + control-plane reads (and cache purge unless `CONTROL_PLANE_CF_TOKEN` overrides) |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare GraphQL analytics + control-plane reads (and cache purge unless `CONTROL_PLANE_CF_TOKEN` overrides); since 2026-10-24 also the Workers Logs counts of System health → Logs, which need its "Workers Observability: Read" permission ([`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §3a) |
 | `CLOUDFLARE_ZONE_ID` | Zone id for HTTP metrics and purge |
 | `CF_API_TOKEN_READ_LOGS` | Zero Trust audit-log read — 5-minute cron polling (token `cf-admin: Zero Trust Audit Read`) |
 | `CF_API_TOKEN_ZT_WRITE` | Zero Trust session revoke — Layer 3 force-kick (token `cf-admin: Zero Trust Session Revoke`) |

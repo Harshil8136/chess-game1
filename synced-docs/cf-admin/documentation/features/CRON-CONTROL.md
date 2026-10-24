@@ -6,7 +6,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/lib/blog/publish-scheduled.ts]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/lib/blog/publish-scheduled.ts]
 related_docs: [../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
@@ -166,7 +166,7 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **17 registered jobs** (`src/lib/jobs/registry.ts`): 15 on the
+There are **18 registered jobs** (`src/lib/jobs/registry.ts`): 16 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
@@ -175,7 +175,8 @@ job, was removed on 2026-10-04 when cf-admin stopped using Upstash
 `heartbeat-watchdog`, the eleventh five-minute job, was added on 2026-10-07 (§3a);
 `email-api-sweep`, the twelfth, on 2026-10-10 (§3b); `access-change-summary`, the
 thirteenth, on 2026-10-15 (§3c); `audit-seal`, the fourteenth, on 2026-10-16 (§3d);
-`health-checks`, the fifteenth, on 2026-10-17 (§3e).
+`health-checks`, the fifteenth, on 2026-10-17 (§3e); `log-scan`, the sixteenth, on
+2026-10-24 (§3f).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
@@ -183,7 +184,7 @@ a corrupt or hand-edited row cannot mark a security job as sheddable.
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
 | `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog`, `email-api-sweep`, `health-checks` | never |
-| `deferrable` | `storage-notifications`, `access-change-summary`, `audit-seal`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
+| `deferrable` | `storage-notifications`, `access-change-summary`, `audit-seal`, `log-scan`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
 > **A missing tier is not a compile error.** `JobDefinition.id` is typed `string`,
@@ -467,6 +468,25 @@ so per-job rows-read history recorded **before 2026-09-17 undercounts** every
 0.18% of writes. The 70% default thresholds have never been approached; treat
 shedding as insurance, not as something that fires routinely.
 
+## 3f. The Cloudflare log scan (2026-10-24)
+
+`log-scan` (`src/workers/scheduled-log-scan.ts`) counts our Workers' errors and warnings
+in Cloudflare's Workers Logs for System health → Logs. What it reads and keeps is owned by
+[`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §3a; this section says how the job runs.
+
+Its gate keys are its state row, `log-scan-state` in `admin_portal_settings`, and System
+health's settings row `health-config`, whose `logScanMinutes` says how often (15, 60, 240
+or 360 minutes, or never; hourly by default, changed on System health → Settings). A run
+whose scan is not due returns the next scan as its due time, so the dispatcher lets it
+sleep until then. A due run asks Cloudflare at most six questions, from where the last
+scan ended to two minutes ago, and writes the row once, compare-and-swap. With the scan off
+or no Cloudflare token it writes nothing. While a scan is still more than six hours
+behind (the first scans after a pause) it asks to run again at the next tick.
+
+It is deferrable: a scan an hour late reads the same logs, since it starts where the last
+one ended, and Cloudflare keeps them three days. It takes no lease: two scans at once ask
+the same questions and the second write of the row loses its compare-and-swap.
+
 ## 4a. When a job runs: intervals, next due times and wakes (2026-10-04)
 
 Being on the five-minute tick does not mean running every five minutes. After
@@ -489,7 +509,8 @@ threshold from the start of a run, so it sleeps an hour after each run (§3a).
 `access-change-summary` (2026-10-15) reports the next 14:00 UTC, so it sleeps the hour cap (§3c).
 `audit-seal` (2026-10-16) does the same once it has caught up (§3d). `health-checks`
 (2026-10-17) also reports a due time, but with its five-minute checks it is always the
-next tick, so it runs on every tick (§3e). The page shows a
+next tick, so it runs on every tick (§3e). `log-scan` (2026-10-24) reports its next scan,
+an hour after the last by default (§3f). The page shows a
 sleeping job as **Sleeping until HH:MM**, and gives the time it wakes as its next run (§7).
 Until 2026-10-09 a seeded catalog row (`scripts/lib/cron-catalog.mjs`, now deleted) said this
 in prose, which had to be re-seeded whenever it changed.
@@ -715,6 +736,14 @@ markers are found, and the state row's (about 27 KB) inside its own invocation's
 the time is spent waiting on the network, which is not CPU. The written and outbound
 figures are counts from the code, not a measurement of a live day.
 
+*Added 2026-10-24.* `log-scan` adds **24 invocations a day** at its hourly default (96
+at every 15 minutes), each one question to Cloudflare's Workers Observability API (at
+most six while it catches up) and one write of its state row: measured at 2 rows read
+and 3 written with the row's indexes (`budgets.ts`), so about 72 rows written a day.
+Cloudflare's API allows 1,200 requests every five minutes per token. The CPU is
+Cloudflare's grouped answer (at most 200 rows) and the state row (at most 60 groups),
+inside its own invocation's 10 ms. Counts from the code and the test, not a live day.
+
 Why: until 2026-09-26 all ten jobs shared the scheduled invocation's 10 ms. The
 tick measured 22 ms on 2026-09-16, and from 22:45 UTC on 2026-09-26 Cloudflare
 ended every run at the limit — see
@@ -883,10 +912,10 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   a manual run bypasses the control document by design — two deleters walking the
   same bucket is the one overlap worth a D1 write. (`redis-ttl-hygiene`, which
   took none, was removed on 2026-10-04: `../MAINTENANCE.md` (private)
-  R-1, RU-2, RU-8.) The fifteen five-minute jobs
+  R-1, RU-2, RU-8.) The sixteen five-minute jobs
   declare none: a lease is a write, writes are the scarcer resource, and 288
   writes a day each to protect idempotent work is the wrong trade. So a manual
-  trigger *can* still overlap a scheduled tick for those fifteen. The Run-now route
+  trigger *can* still overlap a scheduled tick for those sixteen. The Run-now route
   is an SSE stream: it returns 200 and reports `leaseHeld` in its `done` event —
   there is no 409 path. *Corrected 2026-09-19: this section previously promised
   that Run now "still honours the lease … you get a 409 rather than a duplicate
@@ -918,6 +947,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-24 | claude | `log-scan` added: `src/workers/scheduled-log-scan.ts`, `src/lib/health/logscan.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/log-scan.test.ts` and `test/jobs-budget.test.ts` pass (idle 0 queries; a scan 1 query, 2 read, 3 written); jobs counted in `registry.ts` (18) | §3's count and tier table, §3f (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written, and Cloudflare refuses the scan until the token has its permission) |
 | 2026-10-24 | claude | §3b's log level against `src/workers/scheduled-email-api-sweep.ts`; `test/email-api-sweep.test.ts` passes (a passing failure logs a warning, the reporting run an error) | The one sentence. Not checked live (not deployed when written) |
 | 2026-10-23 | claude | §3b's failure reporting against `src/workers/scheduled-email-api-sweep.ts` and `reportIfPersistent` in `src/lib/observability.ts`; §3c's last sign-in read against `src/workers/scheduled-unused-accounts.ts` and `src/lib/dal/LoginLogRepository.ts`; `test/email-api-sweep.test.ts`, `test/observability-cooldown.test.ts` and `test/hot-query-plans.test.ts` pass; the query plan and its 7 rows for 7 accounts read through the D1 connector | The two paragraphs. The rest of the document not re-read; not checked live (not deployed when written) |
 | 2026-10-22 | claude | §5's `runLast` paragraph corrected: the 21:00 UTC run of 2026-10-21 after it still timed out (system_test_results, D1 connector) | The paragraph only |
