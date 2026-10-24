@@ -16,8 +16,9 @@ tags: [platform-kit, research, delivery, security]
 > ([`01-plan.md`](01-plan.md)). Every outside fact carries a numbered source; the list is at the
 > end. The pages were read on 2026-10-24, most of them through a search service's copy of the
 > page because the documentation sites did not load directly, so a page changed that day may
-> differ. Anything not confirmed is marked **GAP**. The proposal waits on the owner's two
-> answers (section 9); nothing in it is built yet.
+> differ. Anything not confirmed is marked **GAP**. The owner answered both
+> choices on 2026-10-24 (section 9), and sections 3.2, 3.5, 3.6, 4 and 6 follow his answers.
+> Nothing in it is built yet.
 
 # Automated delivery, strict checks and limits on customization
 
@@ -37,10 +38,9 @@ customization kept in bounds so every client can still be upgraded.
   modules, the kit itself); one door for every code change (a proposal that automatic checks must
   pass); an automatic release with a restore point and an automatic step back; a fixed menu of
   operations instead of a command line; and kit upgrades that reach clients in waves.
-- **What it needs from the owner:** two choices (section 9). The first is GitHub's Team plan for
-  the organisation that holds the client repositories, about US$4 a month per person with access.
-  The second is whether a change to a client's own features merges by itself once every check
-  passes.
+- **The owner's answers (2026-10-24 18:54, section 9):** the client repositories stay on
+  GitHub's free plan, with only the vendor and Claude writing to them; and a change to a client's
+  own features merges by itself once every check passes.
 
 ## 1. The question: an all-access Cloudflare key in GitHub
 
@@ -88,7 +88,7 @@ Section 3.6 applies this to Oltrem.
 | Kind | What it is | Who makes it | How it reaches production | What it may never do |
 |---|---|---|---|---|
 | **Settings** | Lists, forms, roles and places, branding, email templates, providers, switches: rows in the portal's database | The client's own admins, on a phone | At once, with no deploy | Nothing to forbid: it is data the kit understands |
-| **A client module** | Code in the client repository's `modules/` folder, made with `oltrem new module`: its own tables, routes, screens and capabilities, its numbers from 5000 | The client's developers, the vendor, or an AI | Through the door (3.2) | Edit or import the kit's internals, change a table it does not own, or add a dependency, binding or variable that is not on the lists |
+| **A client module** | Code in the client repository's `modules/` folder, made with `oltrem new module`: its own tables, routes, screens and capabilities, its numbers from 5000 | The vendor with Claude; now and then a client's own team, in a separate copy (3.2) | Through the door (3.2) | Edit or import the kit's internals, change a table it does not own, or add a dependency, binding or variable that is not on the lists |
 | **The kit** | The packages every client shares | The vendor only, in the kit repository | As a new version, in waves (3.8) | Be changed for one client |
 
 **The rule that keeps every client upgradeable:** when a client needs something a module cannot
@@ -113,23 +113,38 @@ flowchart LR
   B --> C{Automatic checks, with no key}
   C -- red --> A
   C -- green --> D{Only client-owned files?}
-  D -- yes --> E[Merges: by itself or after one approval, choice 9.2]
+  D -- yes --> E[Merges by itself, choice 9.2]
   D -- no --> F[Waits for the vendor]
   E --> G[main]
   F --> G
   G --> H[The automatic release, 3.4]
 ```
 
-Nothing else reaches `main`:
+GitHub can lock a private repository (a protected `main`, a key only `main` may use, locked
+paths) only on a paid plan [21, 22, 23, 24]. The owner chose the free plan with only the vendor
+writing (9.1), so the door is kept by who may write and by checks that do not live in the client
+repository:
 
-- no direct push and no force push;
-- no edit to a workflow or a kit file without the vendor's approval;
-- the release key sits in a GitHub environment that only `main` may use, so a branch never sees
-  it, however its workflow is changed [24, 28].
+- **Who writes:** only the vendor and Claude have any access to a client repository, so only
+  they can read its key [28]. The owner does almost all development himself, with Claude, and
+  owns the code (his words, 18:56: "clients dont get access to main repo. I will almost always
+  take over devlopment work"). When a client's own team does build something, it gets a separate
+  repository made from a snapshot of `main`: it holds no key and deploys nothing. Claude brings
+  its work into the real repository as a proposal, through the same checks.
+- **Merging (9.2):** a merge step in the kit's workflows runs from `main` after the checks pass.
+  It merges a proposal whose files are all client-owned, reading only the list of changed files
+  and never running the proposal's code. A proposal that touches a kit file, a workflow or a
+  removal step waits for the owner's yes in the thread; then Claude merges it. (GitHub's own
+  required approvals and code owners [29] would need the paid plan too.)
+- **The release checks again:** the release runs every check on the merged code before it uses
+  the key, so a red change never reaches production.
+- **A watch from outside:** nothing on the free plan stops an edit to the checks themselves. So a
+  daily drift watch in the kit repository compares every client repository's kit-owned files with
+  their released copies, and tells the owner of any difference. Claude Code's deny rules keep
+  Claude out of those files [32].
 
-These locks exist for private repositories only on a paid GitHub plan. They are protected
-branches, rulesets, rules on file paths, organisation-wide rules and environments [21, 22, 23, 24].
-That is choice 9.1.
+The paid plan's locks stay the way up if a client's team ever needs to work in the real
+repository.
 
 The kit repository keeps the owner's own rule: he and his AI push straight to `main`.
 
@@ -160,7 +175,7 @@ The new checks:
 | 6 | **Dependencies only from the allowed list**, each with its recorded reason | Invented or unvetted packages [63] |
 | 7 | **Budgets:** bundle size and startup time (today only in `oltrem upgrade`), on every proposal; D1's 50 queries per request [20] counted in tests | A feature that breaks the 10 ms or 50-query limits in production |
 | 8 | **Secrets and identifiers:** the kit's scanner | A key or an account id pasted into code or docs |
-| 9 | **Locked paths:** repository rules on the workflows and kit files, on top of check 1 [22, 29] | An edit to the checks themselves |
+| 9 | **Locked paths:** the daily drift watch and Claude's deny rules (3.2), on top of check 1 [32] | An edit to the checks themselves |
 
 ### 3.4 The automatic release
 
@@ -210,8 +225,8 @@ with a production key.
 | Apply waiting migrations, re-check the setup, replace a Worker secret, run the doctor | The vendor, or Claude | The operations menu |
 
 **The operations menu** is one workflow in each client repository with a fixed list of choices
-(GitHub allows up to 25 typed inputs, including lists [33]). Each choice runs one kit command,
-using the release key, so it runs only from `main`.
+(GitHub allows up to 25 typed inputs, including lists [33]). Each choice runs one kit command
+with the release key, and the workflow refuses to run from any branch but `main`.
 
 Claude starts an operation by name through the GitHub connector and reads its log. An operation
 that overwrites data (a restore or a step back) runs only after the owner says yes in the thread.
@@ -225,7 +240,7 @@ never an arbitrary command.
 | Key | Where it lives | What it may do | Lifetime |
 |---|---|---|---|
 | **Setup key**, one per client | Handed to the first-setup run only | Create the Worker and its database, storage and queue; make the door (an Access application, with the paths let through); attach a custom domain. Creating a Worker needs the Workers Admin role [2]; the door needs Access apps and policies write [16]. | Ends by itself the next day [3] |
-| **Release key**, one per client | The `production` environment of the client repository, usable by `main` only | Editor of that one Worker (deploy, step back, secrets) [2] and D1 edit for migrations | One year; a new one is made from the same link |
+| **Release key**, one per client | A secret of the client repository, which only the vendor and Claude can write to (an environment that only `main` may use needs a paid plan for a private repository [24]) | Editor of that one Worker (deploy, step back, secrets) [2] and D1 edit for migrations | One year; a new one is made from the same link |
 | **Operations key** (`KIT_OPS_TOKEN`, exists) | The Worker's own secret | D1 export and Time Travel, for backups and restores | One year |
 | **The vendor's GitHub app** | The kit repository | Open upgrade proposals in client repositories and read their results; its tokens last an hour and it takes no paid seat [34] | Short-lived |
 | **The emergency way in** | No stored key: the owner's own Cloudflare sign-in with two-step verification | Everything | Not applicable |
@@ -315,17 +330,13 @@ flowchart LR
 
 ## 4. What it costs, and the limits
 
-- **GitHub Team: US$4 per person per month** [25].
-  - Every member, and every outside collaborator on a private repository, takes a seat. A person
-    counts once across all the organisation's repositories [26].
-  - Apps take no seat [34].
-  - With only the owner: about US$4 a month. Each client developer adds US$4 a month, billed to
-    that client.
+- **GitHub stays on the free plan (9.1).** Team would have been US$4 per person per month [25],
+  with every member and every outside collaborator on a private repository taking a seat [26].
 - **GitHub Actions minutes.**
-  - Team gives 3,000 a month for all the organisation's private repositories; Free gives 2,000
+  - Free gives 2,000 a month for all the organisation's private repositories (Team gives 3,000)
     [27].
   - An extra Linux minute costs US$0.006 [27].
-  - At about 3 minutes for a proposal's checks and about 4 for a release, that is roughly 400
+  - At about 3 minutes for a proposal's checks and about 4 for a release, that is roughly 280
     changes a month across every client. 1,000 extra minutes cost US$6.
   - **GAP:** to be measured on the first real client.
 - **Cloudflare stays on the Free plan:**
@@ -356,15 +367,14 @@ flowchart LR
 3. The operations menu.
 4. Automatic first setup.
 5. The fleet step and the waves.
-6. A script that applies the organisation's rules, so every new client repository is locked the
-   same way.
+6. The daily drift watch in the kit repository (3.2).
 
 Each step comes with its tests, the kit's twelve checks and a dated record, as usual.
 
 ## 7. What changes in the plan
 
-Once the owner answers, this folds into the plan's keys (§9), release (§14) and guardrails (§15),
-and into the decisions log. Two earlier answers change in part:
+The owner's answers are in the decisions log, and the plan carries the design in §14.4
+(2026-10-24). Two earlier answers change in part:
 
 - Client repositories take changes through the proposal door instead of straight to `main`. The
   kit repository keeps straight to `main`.
@@ -375,21 +385,18 @@ GitHub Actions stays the gate (card 16).
 ## 8. Gaps
 
 - The exact Cloudflare permission names for the setup and release keys (3.6).
-- Whether Claude's commits and proposals in a client repository appear as the owner or as an
-  app. A person cannot approve their own proposal [29], so this decides how the owner approves
-  Claude's changes to locked files.
 - The minutes a real client uses (section 4).
 - GitHub's pages were read through a copy, and its pricing page may have been cached.
 - Whether the five extra free Cloudflare accounts can also be created by API.
 
 ## 9. Choices for the owner
 
-Posted on 2026-10-24 as two cards in the work thread; open.
+Posted on 2026-10-24 as two cards in the work thread; both answered at 18:54.
 
-| # | Choice | Options | Recommendation |
-|---|---|---|---|
-| 9.1 | The GitHub plan for the client repositories | **Team** (US$4 a month per person with access: locks `main`, the release key, the workflows and the kit's files); stay on **Free with only the vendor writing** (no locks; client developers' work is brought in by the vendor); stay on **Free as today** (anyone given access pushes to `main`) | Team: it is the only option where the checks cannot be edited away |
-| 9.2 | A change that touches only a client's own module, with every check green | **Merges by itself**; **one person approves it too**, other than its author (the client's lead developer, or the owner for Claude's work) | Merges by itself. The checks guard the kit, the release steps back on its own, and the owner tests results on his phone; changes to locked files always wait for him. |
+| # | Choice | Options | Recommendation | Answer |
+|---|---|---|---|---|
+| 9.1 | The GitHub plan for the client repositories | **Team** (US$4 a month per person with access: locks `main`, the release key, the workflows and the kit's files); stay on **Free with only the vendor writing** (no locks; client developers' work is brought in by the vendor); stay on **Free as today** (anyone given access pushes to `main`) | Team: it is the only option where the checks cannot be edited away | **Free, with only the vendor writing** (18:54), against the recommendation; 3.2 rewritten for it |
+| 9.2 | A change that touches only a client's own module, with every check green | **Merges by itself**; **one person approves it too**, other than its author (the client's lead developer, or the owner for Claude's work) | Merges by itself. The checks guard the kit, the release steps back on its own, and the owner tests results on his phone; changes to locked files always wait for him. | **Merges by itself** (18:54) |
 
 ## Sources
 

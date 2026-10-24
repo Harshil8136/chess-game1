@@ -2,7 +2,7 @@
 title: "Oltrem, the platform kit: the plan"
 status: draft
 audience: [owner, non-technical, ai, technical]
-last_verified: 2026-10-20
+last_verified: 2026-10-24
 verified_against: [research]
 owner: harshil
 related_docs: [README.md, 02-decisions-log.md]
@@ -575,7 +575,7 @@ Your words: "I dont want 10+ API tokens for such basic operations, I dont like h
 | Machines calling the portal (VPS agent) | signed headers and a console signing key between Workers | one Access **service token** per agent, Service Auth policy | client id and secret on the server only |
 | Error tracking, analytics | DSNs and tokens per repo | a DSN is a public identifier, kept as a `oltrem_settings` row | not a token |
 
-**Net effect:** two stored Cloudflare tokens per client, the deploy token in that client's GitHub repository and the export token inside that client's account; zero or one service token per machine; one read-only GitHub token on each machine that installs the kit, and none in any client repository or workflow. The count no longer grows with modules or Workers, only with clients and with the machines you develop from. Phase 0 checks whether Cloudflare can accept GitHub's own short-lived identity (OIDC) in place of the stored deploy token; if it can, the GitHub-side token goes away.
+**Net effect:** two stored Cloudflare tokens per client, the deploy token in that client's GitHub repository and the export token inside that client's account; zero or one service token per machine; one read-only GitHub token on each machine that installs the kit, and none in any client repository or workflow. The count no longer grows with modules or Workers, only with clients and with the machines you develop from. Phase 0 checks whether Cloudflare can accept GitHub's own short-lived identity (OIDC) in place of the stored deploy token; if it can, the GitHub-side token goes away. (2026-10-24: it cannot; the request is still open with Cloudflare, research 18 §1.)
 
 ### 9.3 Backups without a token zoo
 
@@ -753,12 +753,43 @@ Your words: "compatible with big changes, improvements, upgraded package, test b
 ### 14.3 Versions, upgrades and big changes
 
 - **Semantic versions through Changesets**: a change carries a human-written note; the "Version Packages" pull request is the release; merging it publishes. Major = a migration that is not purely additive or a config change the client must make; minor = a new module or feature; patch = fixes. One fixed version for `@oltrem/core-*`, independent for modules.
-- **A client takes a new version through Dependabot**: one grouped pull request per kit release, with a cooldown of a few days so a bad release can be pulled before it reaches anyone; patch releases may automerge once the workflow is green on the branch; majors never automerge and arrive with `oltrem upgrade` notes. Dependabot rather than Renovate because a repository granted access to the packages gives Dependabot the same access with no token (§9.2).
+- **A client takes a new version through Dependabot** (replaced on 2026-10-24 for the kit's own packages by the fleet step of §14.4, which also rewrites the kit's files and copies its migrations): one grouped pull request per kit release, with a cooldown of a few days so a bad release can be pulled before it reaches anyone; patch releases may automerge once the workflow is green on the branch; majors never automerge and arrive with `oltrem upgrade` notes. Dependabot rather than Renovate because a repository granted access to the packages gives Dependabot the same access with no token (§9.2).
 - **`oltrem upgrade` is a doctor first**: it checks wrangler and Node against the kit's `engines`, the compatibility date against the kit's policy, pending kit migrations and duplicate numbers, every `secrets.required` entry present, the manifest against the wrangler config, bundle size and startup time, then prints the release notes that apply to this client's enabled modules; it writes nothing until green.
 - **Compatibility date policy**: set in each kit release, inherited on upgrade, bumped at most monthly through a minor release, always tested on the sandbox first.
 - **Feature flags are `oltrem_settings` rows**, so a module can ship dark and be switched on per client from the portal without a deploy.
 - **Major upgrades of Node, Vite or Astro** happen in the monorepo against the sandbox, with the rehearsal path of §10 for data.
 - **Testing the kit itself**: Vitest inside workerd through Cloudflare's Vitest plugin with per-file storage isolation; each module package tests against the kit's migrations, so a module cannot ship a query the schema does not support; contract tests are generated from the manifests (§15.6).
+
+### 14.4 Automated delivery and strict checks (2026-10-24)
+
+Your question of 2026-10-24 (an all-access key so an AI can run migrations and commands) and the
+research behind this section are in [`18-research-automated-delivery.md`](18-research-automated-delivery.md);
+your answers are cards 30 and 31 in the decisions log. In short:
+
+- **No all-access key, ever.** One key per job and per client, each made from a link that ticks
+  its permissions and each with an end date: a setup key that lasts a day, a release key that
+  lasts a year, and the existing `KIT_OPS_TOKEN`. No key can make keys.
+- **Three kinds of change:** settings in the portal (no deploy), a client's own modules (checked
+  code, numbers from 5000), and the kit (you only, reaching every client as a version). No client
+  ever gets an edited core.
+- **One door for code, on GitHub's free plan (your card 30):** only you and Claude write to a
+  client repository, and clients get no access to it: you do almost all development, with
+  Claude, and own the code. A client's own team, when it builds something, works in a separate
+  copy made from `main` with no key, and Claude brings its work in as a proposal. Every proposal
+  runs the checks with no key. One that touches only client-owned files merges by itself when
+  green (your card 31); one that touches a kit file, a workflow or a removal step waits for you.
+  A daily drift watch in the kit repository reports any edited kit file in a client repository.
+- **The release (§14.1's workflow, extended):** the checks again, a database restore point, a
+  rehearsal for a major or a removal step, the migrations, the deploy, a health check, and an
+  automatic step back to the previous version if the portal does not answer.
+- **An operations menu instead of a command line:** backup, restore, step back, re-check the
+  setup and the doctor as fixed choices; Claude starts them by name and reads their logs, and a
+  restore or step back runs only after your yes.
+- **Upgrades in waves:** your demo portal, then early clients, then everyone, each wave's
+  proposals already upgraded and merging by themselves when green; majors wait for you.
+
+Build order: the new checks, the template's workflows, the operations menu, automatic first
+setup, the fleet step, the drift watch.
 
 ---
 

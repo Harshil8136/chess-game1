@@ -2,7 +2,7 @@
 title: "Oltrem, the platform kit: decisions log"
 status: draft
 audience: [owner, non-technical, ai, technical]
-last_verified: 2026-10-20
+last_verified: 2026-10-24
 verified_against: [thread]
 owner: harshil
 related_docs: [README.md, 01-plan.md]
@@ -125,3 +125,16 @@ The round-2 cards were answered 13:33 to 13:34 (11 flat groups first, 12 one tre
 |---|---|---|
 | 04:07 | "we need to completely change licencing feature. what type of licence we have that means that for any commercial usage or alteration on code you do it even on your local machine. you need my permission, paid licence fee etc. basically if anyone download and use it for personal use its 100% fine, for commercial there is a celing that a business making more then 1 million need to pay a fee or usage charge to me/us, ANY type of alteration need permission and review first even if local, commercial etc" | No published licence says all three (PolyForm Small Business has the revenue ceiling but allows changes; PolyForm Noncommercial and Elastic 2.0 allow changes too), so a custom licence was drafted in plain words, with six decisions for the owner: the ceiling's currency, the licensor's name, the governing law, whether a client's own code on top of the kit counts as use, where to ask, and whether to apply it before or after a lawyer's review |
 | 16:31 | "Select all best choices and continue" | The recommended option on every point. The kit repository now carries the **Oltrem Licence, version 1.0**: personal use free; free for an organisation under one million US dollars of gross revenue in the previous twelve months (parents, subsidiaries and sister companies counted together; a non-profit's income counts); a separate, paid Commercial Licence at or above that, with ninety days to arrange one after crossing it; no change to the kit's code, files or documentation without the licensor's prior written permission and review, even on one's own machine, and a permitted change may be folded into the kit; configuring, creating a client repository from the template and writing modules against the documented interfaces are use, not change; the licensor is the copyright holder named in the notice; no governing-law clause (as in PolyForm and Elastic); requests go to the contact address published on oltrem.com or in the README. Card 19 is overridden; §15.7 and the risk table updated. The kit's own record of the change, with what still needs a lawyer, is on the mirror under <https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin/docs/records> |
+
+## Automated delivery (2026-10-24)
+
+At 18:00 the owner asked whether an all-access Cloudflare key in GitHub would let an AI run
+migrations and commands, and for a researched design for automatic, strictly checked delivery.
+The answer (no all-access key) and the design are in
+[`18-research-automated-delivery.md`](18-research-automated-delivery.md); its two cards were
+answered at 18:54.
+
+| # | Question | Options (recommended in bold) | Where | Answer |
+|---|---|---|---|---|
+| 30 | The GitHub plan for the client repositories | **Team, US$4 a month per person with access, which locks `main`, the key, the workflows and the kit's files**; Free with only the vendor and Claude writing; Free as today | research 18 §9.1, plan §14.4 | **Free, with only the vendor and Claude writing** (18:54), against the recommendation. At 18:56 he added: "See clients dont get access to main repo. I will almost always take over devlopment work so create a fork or something from main branch and I will own mostly all code": clients get no access to their repository; a client's own team, when it builds something, works in a separate copy made from `main` with no key, and Claude brings its work in. A daily drift watch in the kit repository stands in for GitHub's locks |
+| 31 | Whether a change that touches only a client's own module merges by itself once every check passes | **Merges by itself**; one person other than the author approves it too | research 18 §9.2, plan §14.4 | **Merges by itself** (18:54). A change to a kit file, a workflow or a removal step still waits for the owner's yes |
