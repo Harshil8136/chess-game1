@@ -12,8 +12,9 @@ needs on the account after the first deploy, **`backup drill`**, the monthly res
 (plan 9.3), **`github report`**, the deploy workflow's report for the GitHub module (plan
 4.4), and **`vendor set`**, which writes the Vendor's address after the first deploy (plan 7.4),
 and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3), and
-**`check files`** and **`check modules`**, which keep a client's code out of the kit's files and
-inside its own modules (research 18).
+**`check files`**, **`check modules`**, **`check packages`**, **`check secrets`** and
+**`check budgets`**, which keep a client's code out of the kit's files, inside its own modules,
+on the kit's packages, free of keys and within the Worker's limits (research 18).
 The tool runs on Node and has no runtime dependency.
 
 ## `oltrem manifest check [dir...]`
@@ -327,6 +328,31 @@ Any other statement is refused unless its file carries a `-- contract: <why>` li
 is reported as a removal step, which waits for the owner and ships in a later release than the
 code that stops using what it removes, so the previous code still runs on the new database. Exit
 `0`, `1` on a problem, `3` when there is no `oltrem.manifest.json`.
+
+## `oltrem check packages [dir]`
+
+Every package `package.json` names (dependencies of every kind) is a kit package (`@oltrem/…`) or
+one the kit registered with its reason in its dependency registry (research 18, check 6). The list
+travels with the tool in `kit-files.json`. Any other package is refused: the owner adds it to the
+kit's registry, with its reason, in a kit release. Exit `0`, `1` on a problem, `3` when there is
+no `oltrem.manifest.json`.
+
+## `oltrem check secrets [dir]`
+
+No key or id is written into a file Git would commit (research 18, check 8): a UUID, 32 or more
+hex characters, a Cloudflare account token, a GitHub, AWS, Slack or Stripe key, an age or other
+private key. A Worker's resources are found by their names and its keys are secrets, so each of
+these is a mistake. Files Git ignores (the keys file, `.dev.vars`) are left alone; outside a Git
+repository the plain names `.gitignore` lists are. Lockfiles and files over 1 MiB or holding a
+null byte are not read. Exit `0`, `1` on a problem, `3` when there is no `oltrem.manifest.json`.
+
+## `oltrem check budgets [dir]`
+
+The upgrade's size and startup measure on every change (research 18, check 7): wrangler's
+dry-run build, its size without source maps, and its startup time from `wrangler check startup`,
+against the limits the upgrade uses. Past 70 % of either it warns; past either it refuses. The
+client template's `verify` runs it in place of a plain dry-run build. Exit `0` (warnings
+included), `1` past a limit, `3` when there is no `oltrem.manifest.json`.
 
 ## `oltrem backup setup [dir]`
 

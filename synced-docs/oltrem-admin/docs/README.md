@@ -27,7 +27,7 @@ and measure, has these parts:
 | This repository, with the contract every agent reads first (ai.md, rules.md, the generated pointer files) | **done** 2026-10-19 |
 | The token registry with reuse before create, and the gate that enforces it | **done** 2026-10-19: nine names from the plan, none created yet |
 | The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates then ([what verify runs](reference/verify.md)), run locally and on every push |
-| The public docs mirror: this folder, the root `.md` files and LICENSE copied to the mirror after every green verify on `main` | **done** 2026-10-19 |
+| The public docs mirror, described below | **done** 2026-10-19 |
 | A client template repository and a sandbox client repository | **template done** 2026-10-20, as `templates/client` in this repository ([the record](records/2026-10-20-client-template-and-setup.md)); the sandbox repository waits on the owner |
 | A fresh Cloudflare account for the sandbox client | not started: the owner creates it |
 | The CPU measurement of three sample screens in the sandbox | not started: needs the sandbox |
@@ -113,8 +113,8 @@ Phase 6 has these parts so far:
 |---|---|
 | Versions and release notes (Changesets) | **done** 2026-10-21: [the record](records/2026-10-21-changesets.md), [how it works](release.md) |
 | `oltrem upgrade` | **done** 2026-10-21: [the record](records/2026-10-21-oltrem-upgrade.md) |
-| Checks on a client's code | **done** 2026-10-24: [the record](records/2026-10-24-client-code-checks.md) |
-| Publishing to GitHub Packages, Dependabot on the sandbox, previews on a branch | waits on the `oltrem` organisation and the sandbox |
+| Checks on a client's code | **done** 2026-10-24: records [one](records/2026-10-24-client-code-checks.md), [two](records/2026-10-24-client-code-checks-part-two.md) |
+| Publishing to GitHub Packages, previews on a branch | waits on the `oltrem` organisation and the sandbox |
 
 Features for any business, the owner's picks, **done** 2026-10-22: [your own records](records/2026-10-22-your-own-records.md), [forms and inbox](records/2026-10-22-forms-and-inbox.md).
 
@@ -133,8 +133,8 @@ the verify workflow copies this folder, every `.md` file at the repository root,
 module's and template's README and LICENSE to the public docs mirror, under
 [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
 and writes a provenance file there with the source commit. Nothing is redacted on the way: the identifiers gate is the
-scanner, and everything here is written as if public (R-04). The job signs in with the
-`PERSONAL_PAT` secret, whose row is in the [token registry](reference/tokens.md).
+scanner, and everything here is written as if public (R-04). It signs in with `PERSONAL_PAT`
+([registry](reference/tokens.md)).
 
 ## Index
 
@@ -171,8 +171,7 @@ scanner, and everything here is written as if public (R-04). The job signs in wi
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies into a client repository, written as the how-to the client keeps: its parts, what to change, what is not there yet | written, beside the code; copied by the generator |
 
-The records, each dated and frozen once written; each also gives the decisions it took and how it
-was verified:
+The records, each dated and frozen once written, with its decisions and how it was verified:
 
 | Record | What it tells |
 |---|---|
@@ -237,7 +236,7 @@ was verified:
 | [Your own records](records/2026-10-22-your-own-records.md) | lists, fields, permissions by place |
 | [Forms and inbox](records/2026-10-22-forms-and-inbox.md) | website forms, inbox, replies |
 | [Phase 6: versions and release notes](records/2026-10-21-changesets.md) | why Changesets, the version groups, what publishing still needs |
-| [Client code checks](records/2026-10-24-client-code-checks.md) | kit files, module walls |
+| [Client code checks](records/2026-10-24-client-code-checks.md), [two](records/2026-10-24-client-code-checks-part-two.md) | kit files, modules, packages, keys, size |
 
 ## How this folder is checked
 
