@@ -211,6 +211,13 @@ own clock. The agent refuses such a request when the signed actor carries no sig
 Worker older than this rule cannot pass a sign-in check on an agent that has it (see
 [DEPLOY](../operations/DEPLOY.md#order-for-a-change-that-spans-parts)).
 
+Since 2026-10-25 cf-admin's sign-in time is the later of the sign-in and a 6-digit code the
+portal emailed the person and they entered (cf-admin's "Confirm it's you" pop-up), so a stale
+sign-in no longer needs a sign-out. Nothing here changed to allow it: the time arrives signed,
+as before. When the console hears `fresh_sign_in`, it asks the portal to open that pop-up
+(`src/ui/portal-confirm.ts`) and shows "Confirm it's you first: the portal emails you a code
+(or sign in to cf-admin again), then try once more." in place of the agent's wording.
+
 Most of these also ask for a typed word: `reboot`, `upgrade`, `delete` for logs, `restore`, or
 the service's name for a stop, checked again by the Worker and the agent (`checkAction` in
 `contract/actions.ts`). Deleting a folder asks for its name, which the agent checks; deleting a

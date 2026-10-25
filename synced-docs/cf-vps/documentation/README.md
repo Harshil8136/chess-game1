@@ -141,6 +141,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-10-16-signed-actor-header.md`](records/2026-10-16-signed-actor-header.md) | Change record: once the owner sets `CONSOLE_SIGNING_KEY` on cf-admin and this Worker, the identity headers count only with cf-admin's signature (cf-admin permissions item 33); off until then |
 | [`records/2026-10-16-ssh-loopback-and-recorded-typing.md`](records/2026-10-16-ssh-loopback-and-recorded-typing.md) | Change record: sshd on loopback only, and `vps-admin`'s typing under sudo recorded with secret prompts starred (cf-admin permissions item 38); the server steps wait on the owner |
 | [`records/2026-10-17-instant-typing-and-navigation.md`](records/2026-10-17-instant-typing-and-navigation.md) | Change record: typing in the Terminal shows at once and the server's echo replaces it (never for passwords); the Terminal's tools wrap; the top bar scrolls instead of hiding page buttons |
+| [`records/2026-10-25-confirm-with-email-code.md`](records/2026-10-25-confirm-with-email-code.md) | Change record: an action that needs a fresh sign-in opens cf-admin's "Confirm it's you" pop-up, which emails a code, instead of sending you to sign in again; the agent is unchanged |
 
 ### Incidents
 
