@@ -130,12 +130,12 @@ what was built.
 
 ## Where these documents are published
 
-After every push to `main`, once `pnpm verify` is green on GitHub, the `mirror-docs` job of
-the verify workflow copies this folder, every `.md` file at the repository root, each package's,
-module's and template's README and LICENSE to the public docs mirror, under
+On every push to `main` the verify workflow's `mirror-docs` job runs the identifiers gate, then
+copies this folder, the root `.md` files, every package, module and template README and
+LICENSE to the public docs mirror, under
 [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
-and writes a provenance file there with the source commit. Nothing is redacted on the way: the identifiers gate is the
-scanner, and everything here is written as if public (R-04). It signs in with `PERSONAL_PAT`
+with a provenance file. Nothing is redacted: the gate is the scanner,
+and everything here is written as if public (R-04). It signs in with `PERSONAL_PAT`
 ([registry](reference/tokens.md)).
 
 ## Index
@@ -241,6 +241,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Client code checks](records/2026-10-24-client-code-checks.md), [two](records/2026-10-24-client-code-checks-part-two.md) | kit files, modules, packages, keys, size |
 | [Automatic release](records/2026-10-24-automatic-release.md) | restore point, health, step back |
 | [Operations menu](records/2026-10-24-operations-menu.md) | five jobs, no command line |
+| [Actions minutes](records/2026-10-25-actions-minutes.md) | verify off push |
 
 ## How this folder is checked
 

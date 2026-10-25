@@ -10,7 +10,7 @@ sources: [scripts/lib/gates.mjs]
 
 # What `pnpm verify` runs
 
-> **In plain words.** One command checks everything before a push. It runs the gates below in order and prints one line per gate; the first gate that fails prints its whole output and stops the run. The quick gates come first (they need no dependencies and take a second); then the formatter, the linter, the type check, the build of the command-line tool, that tool's own manifest check on the client template and the kit's test Worker configurations, and the two test suites. The same command runs in GitHub Actions on every push to `main`, so a red run is visible on the repository page.
+> **In plain words.** One command checks everything before a push. It runs the gates below in order and prints one line per gate; the first gate that fails prints its whole output and stops the run. The quick gates come first (they need no dependencies and take a second); then the formatter, the linter, the type check, the build of the command-line tool, that tool's own manifest check on the client template and the kit's test Worker configurations, and the two test suites. The same command runs in GitHub Actions on every pull request, weekly and by hand, so a red run is visible on the repository page; not on a push to `main`, where it already ran on the machine that pushed (R-02).
 
 | Order | Gate | Command | What it refuses |
 |---|---|---|---|

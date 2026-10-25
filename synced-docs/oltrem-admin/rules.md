@@ -22,9 +22,11 @@ protects is simpler and safer than a review process nobody runs.
 
 **Scope.** This repository and every client repository the kit creates.
 
-**Enforced by.** The verify workflow runs on every push to `main` and on every pull request; a
-red run is visible on the repository page. A client's deploy workflow (phase 1) deploys only
-from `main` and only after a green verify. The choice of branch itself is the owner's.
+**Enforced by.** `pnpm verify` on the machine that pushes (R-02). The verify workflow runs on
+every pull request, weekly and by hand, and a red run is visible on the repository page; since
+2026-10-25 it does not repeat on a push to `main`, to save GitHub Actions minutes. A client's
+deploy workflow (phase 1) deploys only from `main` and only after a green verify. The choice of
+branch itself is the owner's.
 
 ## R-02 Verify before every push
 
@@ -37,8 +39,13 @@ same workflow. A gate that can be weakened protects nothing.
 
 **Scope.** Every repository of the kit and every client.
 
-**Enforced by.** The verify workflow after the push, today. A pre-push hook that runs the same
-command locally arrives with the command-line tool (`pnpm setup` installs it in every clone).
+**Enforced by.** The agent contract: ai.md section 7 asks for verify's summary line before
+"done". In this repository the verify workflow runs on every pull request, weekly and by hand,
+so a push that skipped it shows within a week; it no longer repeats `pnpm verify` after each
+push to `main` (2026-10-25: about three billed minutes a push, 291 minutes in the kit's first
+six days, against a 2,000-minute monthly allowance). In a client repository the deploy workflow
+runs it before every deploy. A pre-push hook that runs the same command locally arrives with
+the command-line tool (`pnpm setup` installs it in every clone).
 The gate list lives in `scripts/lib/gates.mjs` and is documented in docs/reference/verify.md,
 generated from it.
 

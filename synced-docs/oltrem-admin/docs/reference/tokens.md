@@ -162,7 +162,7 @@ sources: [tokens.registry.json]
 | Status | active |
 | Provider and account | GitHub; the vendor's own GitHub account; the personal access token that already publishes the other repositories' documentation to the mirror, reused under the same name rather than a new one created |
 | What it may do | write to the contents of the public docs mirror repository, which is all the job needs; the token's exact scopes were set by the vendor and are not visible from here, so the vendor confirms they are no wider than that |
-| Used by | the mirror-docs job of .github/workflows/verify.yml, after a green verify on a push to main |
+| Used by | the mirror-docs job of .github/workflows/verify.yml, after the identifiers gate on a push to main |
 | Stored in | an Actions secret of this repository (Settings, Secrets and variables, Actions) |
 | Owner | vendor |
 | Created | 2026-10-19 |
