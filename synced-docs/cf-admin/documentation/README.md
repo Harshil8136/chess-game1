@@ -35,7 +35,9 @@ is active" while listing four historical reports.*
 | **New to the project** | root `README.md` (private) | — |
 | **Operating rules & policy** | root [`RULESAd.md`](../RULESAd.md) | stack versions, policy limits, gate status |
 | **System architecture** | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | request lifecycle, module pattern |
-| **Who can do what** | [`architecture/PERMISSIONS-SYSTEM.md`](architecture/PERMISSIONS-SYSTEM.md) | **the permission model — authoritative** (role ladder, PLAC, API authz, revocation, measured cost) |
+| **Who can do what** | [`architecture/FLOWS-SERVICES-AND-JOBS.md`](architecture/FLOWS-SERVICES-AND-JOBS.md) | Mermaid flows: the portal and its neighbouring services, the Backups and Server console gateways, the signed actor header, the five-minute job timer, the backup tick, email and the revalidation queue, and a table of every switch and flag and where it lives | owner, ai, technical, operator | active |
+| [`architecture/FLOWS-SIGN-IN-AND-CHECKS.md`](architecture/FLOWS-SIGN-IN-AND-CHECKS.md) | Mermaid flows: the whole request, every auth pipeline stage and refusal, the cold sign-in, the role re-check, how the page map is built and read, the decision, the checks inside a handler, permission changes, the recent sign-in with the email code, and the two-person rule | owner, ai, technical, operator | active |
+| [`architecture/PERMISSIONS-SYSTEM.md`](architecture/PERMISSIONS-SYSTEM.md) | **the permission model — authoritative** (role ladder, PLAC, API authz, revocation, measured cost) |
 | **Audit engine internals** | [`architecture/plac-and-audit.md`](architecture/plac-and-audit.md) | **the Ghost Audit engine — authoritative** (what the activity log guarantees, its daily seal) |
 | **Security posture** | [`security/SECURITY.md`](security/SECURITY.md) | CSP, auth, RLS, current posture |
 | **Infrastructure, bindings & deploy** | [`operations/OPERATIONS.md`](operations/OPERATIONS.md) | **binding registry — authoritative** (`../RULESAd.md` §12) |
