@@ -56,10 +56,11 @@ tags: [cf-backup, remediation, secondary-pipeline, github-actions, specification
   console **reads** this pipeline's runs and files and records them, and (B3) the Scheduler and
   "Run now" **start** it, passing only a request id that names the run. The workflow itself still
   never calls the Worker and never writes a console row.
-- **Small and reviewable:** the workflow stays within 360 lines including comments
+- **Small and reviewable:** the workflow stays within 370 lines including comments
   (`SECONDARY_MAX_LINES`; 300 until 2026-09-27, raised for the fallback guard and the heartbeat,
-  [07](07-decision-log.md) §0.1, then for the schedule guard, and to 360 on 2026-10-07 for the
-  plan step and the other projects' step), and the helper under 400. The guard enforces the
+  [07](07-decision-log.md) §0.1, then for the schedule guard, to 360 on 2026-10-07 for the
+  plan step and the other projects' step, and to 370 on 2026-10-25 for the image step and the D1
+  export's second tries), and the helper under 400. The guard enforces the
   workflow's limit only: on 2026-10-17 the helper, `verify.ts`, is 438 lines. If either needs
   more, the design is wrong.
 - **No new secret**, except RD-9's ping URL, `HEARTBEAT_PING_URL`, which is optional: its step does
@@ -156,6 +157,19 @@ a database backup.
 variable is empty. Run `mkdir -p out/plain out/encrypted out/check` once, **before any tool writes**
 (the lesson of T1: `wrangler` and `age` do not create directories).
 
+**Step 1a — The PostgreSQL image (2026-10-25).** `scripts/secondary-pipeline/pg-image.ts` pulls
+the pinned image from the first registry that serves it, in the order of `PG_SOURCES`: GitHub's
+container registry, Amazon ECR Public, Docker Hub. All three are pinned by the same index digest,
+so Docker accepts only the exact image from any of them. A round in which every registry refuses
+is tried again after 20 s and after 60 s; a pull that hangs is stopped after 240 s. The image is
+tagged locally as `PG_IMAGE` (`secondary-postgres:17.6.1.104`), the name every later step runs.
+The step has `continue-on-error`: if no registry serves the image, the PostgreSQL stores fail
+with their own error and the D1 databases are still exported, verified and archived. Before
+this, pre-flight pulled from ECR Public alone, and ECR's anonymous data limit ("toomanyrequests:
+Data limit exceeded", counted per address, which GitHub's runners share) failed the runs of
+2026-09-28, 09-29 and 10-25 before any export. Record:
+`docs/records/2026-10-25-backups-survive-a-refused-download.md`.
+
 **Step 2 — PostgreSQL export, in the two files Supabase's restore procedure expects.** Inside the
 pinned image; **never the runner's `/usr/bin/pg_dump`**, which is version 16 and refuses a 17 server
 (N7).
@@ -226,6 +240,9 @@ npx wrangler d1 export whatsapp-chatbot --remote --skip-confirmation --output ou
     from `sqlite_master`. A short inline Node script writes one SQL file: the tables, the rows,
     `kb_search` with its three triggers, and `INSERT INTO kb_search(kb_search) VALUES('rebuild')`.
   - The commissioning runs determine the method; §7 records it.
+- **A failed database is tried twice more (2026-10-25)**, after 15 s and 45 s, and each wrangler
+  call is stopped after 180 s (`timeout 180`). An export only reads, so a second try is safe. Before
+  this, one refused call failed the store (`d1-madagascar-db`, fallback run of 2026-10-01).
 - **Source counts: one query per database, with no compound `SELECT`:**
   `SELECT (SELECT count(*) FROM "t1") AS "t1", (SELECT count(*) FROM "t2") AS "t2", …`. D1 rejects a
   compound `SELECT` of more than 5 terms (T2); this form has none. The table list comes from
@@ -437,6 +454,7 @@ recomputes.
 | 2026-10-08 | claude | Code read and tests: `scripts/secondary-pipeline/fingerprint.ts`, `verify.ts` and the workflow's two new lines (`test/runner/fingerprint.test.ts`). Not yet proven by a run; nothing else re-checked | §7.3 |
 | 2026-10-08 | claude | The export boundary: proven on a local PostgreSQL 16 (a restore test's classification of changed, damaged and added rows), unit tests in `test/runner/fingerprint.test.ts` and `test/runner/workflows.test.ts`. The login retry: run 2026-10-08_full_gh37726622973a1's job log and the old project's pooler log (Supabase connector), unit tests in `test/runner/secondary-plan.test.ts`. Neither proven by a run yet; nothing else re-checked | Step 5b, §7.3 |
 | 2026-10-17 | claude | Docs pass: §2's line limit against `SECONDARY_MAX_LINES` in `scripts/backup/lib/workflow-guards.ts` and the files' line counts; §3.1's triggers and step 0a against the workflow and `scripts/secondary-pipeline/schedule-guard.ts`. The rest was not re-checked, so `last_verified` stays | §2, §3.1, step 0a, §5 |
+| 2026-10-25 | claude | The failed runs in `backup_runs` (Cloudflare D1 connector) and their GitHub job logs and step timings; registry `HEAD` requests showing ghcr.io, public.ecr.aws and Docker Hub serve the pinned digest; `pg-image.ts` against a real Docker 29 daemon; unit tests in `test/runner/pg-image.test.ts` and `test/runner/workflows.test.ts`. Not yet proven by an engine run; nothing else re-checked, so `last_verified` stays | §2, steps 1a and 4 |
 
 ## 9. Related
 
