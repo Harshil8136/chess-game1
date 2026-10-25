@@ -219,7 +219,11 @@ GitHub and the run folder instead of runner-written transitions; [README](README
 transitions (D-6) → the run folder lands in R2, manifest last (doc 03) → the **next tick**
 (no longer once a day) adds `postrun/` (GitHub's log archive, job timings, billed minutes,
 the account usage snapshot) if the row's manifest is not yet enriched, updates the indexes
-and `backup:status`, and returns any alerts for cf-admin to queue (doc 11, D-11).
+and `backup:status`, and returns any alerts for cf-admin to queue (doc 11, D-11). A scheduled
+run that fails, is lost or cannot start gets one automatic second try 30 minutes after it
+ended, a row of its own whose `schedule_slot` is the slot's plus `/retry`; the first try's
+alert waits for it, so only a second try that also fails, or one that could not start within
+6 hours, alerts (the owner's decision of 2026-10-25; cf-backup `src/tick/retry.ts`).
 
 **Watching live:** the console polls `/dashboard/backup/app/api/live` through the gateway,
 every 5 s by default while something runs (Settings → Live view; the plan's 2 s was raised on

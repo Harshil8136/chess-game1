@@ -31,7 +31,7 @@ tags: [backups, cf-backup, cf-vps, github-actions, decision, comparison]
 | **Date** | 2026-10-25 |
 | **Asked for by** | Harshil: "cant we have whole thing in cf-vps running this backup process inside it? … see if its more beneficial … currently in this setup we fix this pretty much every week cuz something gets broken! And in long run we cant afford this" |
 | **Written by** | Claude, in the "Stop backup runs from failing" thread |
-| **Status** | A comparison for the owner's review. Nothing here is built yet |
+| **Status** | Decided: the owner chose option A on 2026-10-25. Its automatic second try is built in `cf-backup/src/tick/retry.ts`, with a change record of the same date in cf-backup; the eight weeks of watching (§10) start then |
 | **Where the backup engine lives** | the `cf-backup` repository: `.github/workflows/secondary-pipeline.yml` |
 | **Where the server's jobs live** | the `cf-vps` repository: the job runner (`agent/src/jobs`, `contract/jobs.ts`, `host/66-jobs`) |
 
