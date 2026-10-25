@@ -942,6 +942,31 @@ limits:
 - **Recorded**: `testing_pass_start` (hours, end time, the real sign-in) and `testing_pass_end`,
   module `auth`, in the Audit Log.
 
+**Email code** (*added 2026-10-25, the owner's choice: signing out and in again to confirm was the
+pain*). **Confirm it's you** now offers *Email me a code* first: `POST /api/settings/confirm-code
+{ action: 'send' }` emails a 6-digit code to the person's own address through the email queue, and
+`{ action: 'check', code }` with the right code writes `codeConfirmedAt` into the session. Until 10
+minutes after that, `confirmedAt` reads the code time (`provenAt`, the later of `signedInAt` and
+`codeConfirmedAt`): every action above goes through, and the Backups, Server and Email API
+consoles receive it as `signedInAt` in their actor headers, so their own checks pass with no
+change in their rules. The limits:
+
+- **Only in this browser.** The code is kept as a SHA-256 hash in this session
+  (`AdminSession.confirmCode`), never as the code itself, so it is useless in another browser,
+  even to someone who reads the email or its Email Log row.
+- **10 minutes, 5 tries, used once**; a new code needs a minute's wait. A code time ahead of the
+  clock is ignored.
+- **The person's own address**, the one they signed in with; any role.
+- **Recorded**: `confirm_code_sent`, `confirm_code_ok`, `confirm_code_failed`, module `auth`.
+- *Sign in again* stays the way out when no code can be sent. The Backups and Server consoles run
+  in a frame on this origin: on their own refusal (cf-backup `reauth_required`, cf-vps
+  `need: fresh_sign_in`) or their *Confirm it's you* button they post
+  `cf-admin:confirm-it-is-you` to this page, which opens the dialog, and it answers
+  `cf-admin:confirmed` once a code is entered (`isConfirmAsk`, from this origin only).
+
+A code proves the person as far as their mailbox does; the testing pass still starts only from a
+real sign-in.
+
 ### 10.6 The quarterly access review
 
 *Since 2026-10-16 (permissions item #24).* Every 90 days the Owner or Vendor support walks
@@ -1335,6 +1360,7 @@ mismatches, closed on 2026-09-16.
 | 2026-10-17 | claude | **Scope-limited to the `#configure` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/settings.ts` and `migrations/0076_health_configure.sql`; read the live `/dashboard/health#configure` row back through the D1 connector after 0076 was applied (`owner`, active); `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#run-heavy` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/heavy.ts` and `migrations/0075_health_run_heavy.sql`; read the live `/dashboard/health#run-heavy` row back through the D1 connector after 0075 was applied (`owner`, active); `test/system-health-heavy.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#ack` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), the PATCH handler in `src/pages/api/system-health/problems.ts` and `migrations/0074_health_ack_snooze.sql`; read the live `/dashboard/health#ack` row back through the D1 connector after 0074 was applied (`admin`, active); `test/system-health-ack.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
+| 2026-10-25 | claude | **Scope-limited to §10.5's new Email code paragraph.** Read `src/lib/auth/fresh-sign-in.ts` (`provenAt`, `confirmedAt`), `src/pages/api/settings/confirm-code.ts`, `src/lib/fresh-sign-in-client.ts`, `session.ts` and `pipeline.ts` (`codeConfirmedAt`), the three actor builders, and in cf-backup and cf-vps the consoles' frame messages; `test/confirm-code.test.ts`, `test/testing-pass.test.ts` and `test/fresh-sign-in.test.ts` pass | The paragraph. The rest of §10.5 and the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to §10.5's testing pass paragraph.** Read `src/lib/auth/fresh-sign-in.ts` (`testingPassActive`, `confirmedAt`, `freshSignInRefusal`), `src/pages/api/settings/testing-pass.ts`, `session.ts` (`testingPassUntil`, `patchSession`), `pipeline.ts`, the three actor builders (`backup-proxy.ts`, `vps-proxy.ts`, `email-console.ts`) and `vps-notice-record.ts`; `test/testing-pass.test.ts` and `test/fresh-sign-in.test.ts` pass | The paragraph. The rest of §10.5 and the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the System health keys.** Read `surface-guards.ts` (`denyHealth`, `healthCan`), the five routes under `src/pages/api/system-health/`, `src/pages/dashboard/health.astro` and `migrations/0072_system_health.sql`; `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph matches the code. The live rows are read back once 0072 is applied (schema change ledger) |
 | 2026-10-17 | claude | **Scope-limited to Page Registry as a grant-only page.** Read `page-floors.ts` (`isGrantOnlyPage`, `roleOnPage`, `pageFloorOpens`, `grantOnlyDoor`), `plac.ts` (`computeAccessMap`, `computeNavItems`), `surface-guards.ts` (`canUsePageRegistry`), `page-gates.ts`, `access-center/rules.ts`, `pages.ts`, `overview.ts`, `see-as.ts`, `access-requests/rules.ts` and `api/system/pages.ts`; read the live `/dashboard/debug/pages` row (`dev`, active) and its one stored grant (2026-09-15) through the D1 connector, then removed that grant at the owner's choice with one `reset_access` activity-log row and read both back; `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts`, `test/access-why.test.ts`, `test/access-requests.test.ts` and `test/see-as.test.ts` pass | §1's floor sentence, §5's two Page Registry notes and the new paragraph, §10.2, the §17 rows. Not re-derived: every other section |

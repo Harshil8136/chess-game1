@@ -86,6 +86,10 @@ and puts it on `EMAIL_QUEUE`; the email consumer updates that row as the provide
 on a later tick cf-admin reads the row and reports the delivery back
 (`POST /internal/alerts/delivery`), and the Alerts screen shows delivered, bounced or
 failed. "Fresh sign-in" comes from the gateway's `signedInAt` (doc 02 §4).
+Since 2026-10-25 that time is the later of the person's sign-in and a code the portal
+emailed them and they entered (cf-admin's `provenAt`): a stale sign-in no longer needs a sign-out,
+and the console's Keys and Restore tests screens offer a "Confirm it's you" button that opens the
+portal's pop-up.
 
 **`files.download` and GitHub's log archive** (as built, 2026-09-24): `files.download` is
 grantable per person, and it reaches every non-data evidence file, including the stored
@@ -266,6 +270,7 @@ console cannot change.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-25 | §2's "Fresh sign-in" sentence, for the email code, against cf-admin's `src/lib/auth/fresh-sign-in.ts` (`provenAt`, `confirmedAt`), `src/lib/backup-proxy.ts` (`userActor`) and cf-backup's `src/ui/portal-confirm.ts`, `src/ui/screens/KeysScreen.tsx` and `src/ui/screens/restore/NewTest.tsx`; `test/confirm-code.test.ts` (cf-admin) and `test/ui-portal-confirm.test.ts` (cf-backup) pass | The rest of the document |
 | 2026-10-16 | The TL;DR; §1's door; the `schedule.toggle`, `access.delegate` and `restoretests.run` rows of §2; §2's Viewer line; §3 rules 6 and 7; §4's deletion paragraph; §8's new line. Read cf-backup `src/access/catalog.ts` (32 capabilities, nine floors, `readsFresh`, `refusalText`), `delegate.ts` (`changedCapabilities`, `delegationBase`, cf-backup `4aacbf9`), `policy.ts` (`grantFor`, `can()`), `src/api/access-person.ts` (`saveAccessPerson`, cf-backup `1e06c19`), `src/api/routes.ts`, `src/api/restore-tests.ts` (which handlers call `requireFreshSignIn`; `ownTest`, `TEST_WINDOW_MS`), `src/api/config.ts` (`saveScheduleSkip`), `src/gateway/target.ts`, `src/lib/fresh.ts`, the generated `docs/reference/PERMISSIONS.md` and cf-backup's HANDOFF on the restore tests' first run; cf-admin's `src/lib/backup-proxy.ts` (`mayUseBackupConsole`), `src/pages/dashboard/backup/app/[...path].ts` (`read_only`), `src/lib/dal/VpsAccessRepository.ts` (`removeBackupGrant`) and `src/lib/users/manage-apply.ts`. Tests read, not run: `test/access-temporary.test.ts` in cf-backup, `test/vps-access.test.ts` in cf-admin | The other rows of §2, §5 to §7 and the Phase 1a notes |
 | 2026-10-16 | §3 rule 7's fresh reads and §4's `userId` binding (#35), against cf-backup's `src/access/policy.ts` (`grantFor`, `can()`, `parseStoredPolicy`, `liveGrant`), `validate.ts` (`owner`), `diff.ts`, `catalog.ts` (`readsFresh`), `source.ts`, `src/http/router.ts`, `src/api/access-person.ts`, `src/api/files.ts` and `src/gateway/target.ts`; `test/access-binding.test.ts` passes | The rest of the document |
 | 2026-10-16 | §3 rule 6's powers given for a while, the §4 example's `temporary` and the §8 line, against cf-backup `9f0116c`: `src/access/policy.ts` (`temporaryUntil`, `liveTemporary`, `liveGrant`, `can()`), `validate.ts` (`MAX_TEMPORARY_DAYS`, `validateTemporary`), `delegate.ts` (`delegationBase`); `test/access-temporary.test.ts` passes | The rest of the document |
