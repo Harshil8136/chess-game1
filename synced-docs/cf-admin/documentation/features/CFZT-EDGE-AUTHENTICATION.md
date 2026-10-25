@@ -250,9 +250,20 @@ not explanations owed to a person. *Corrected 2026-09-19 — this paragraph said
 | `session_revoked` | `stages/session-stage.ts` | A revocation flag (`revoked-session:{sessionId}` or `revoked:{userId}`) ended this warm session |
 | `recheck_failed` | `stages/refresh-role.ts` | The directory was unreachable past the grace window, or D1 failed while recomputing the map, so the session closed rather than assume |
 | `system_error` | `stages/access-map.ts` | The PLAC map could not be computed and there was no cached copy |
-| `session_expired` | `src/components/auth/SessionWatchdog.tsx` | The 24-hour lifetime elapsed in an open tab |
+| `session_expired` | nothing since 2026-10-25 | Old tabs and history entries may still carry it. It has no card: the landing treats it as "sign in again" and sends the visitor on (`RENEW_CODES` in `src/lib/auth/landing.ts`) |
 
 Stage files are under `src/lib/auth/stages/`.
+
+> **When the 24-hour session ends in an open tab** *(changed 2026-10-25)*.
+> `SessionWatchdog` counts down from the time the server says is left, then
+> goes to `/?returnTo=<the page it was on>` (`renewSignInPath()`). The landing
+> finds no session and sends the visitor on to that page, where the pipeline
+> opens a new session from the Cloudflare Access sign-in, or Access asks for a
+> sign-in first and then returns there. Before, the watchdog went to
+> `/?error=session_expired`; Access returns a visitor to the URL they asked
+> for, so the owner signed in again and still met a "Session Expired" card
+> until **Check Access Again** took him on. A fast phone clock could also fire
+> the watchdog while the server still held the session.
 
 > **`access_revoked` no longer comes from the re-check.** *Corrected 2026-09-19
 > — this table said it was emitted by `refresh-role.ts` too, "or the 30-minute
@@ -464,6 +475,7 @@ re-fetched once on rotation, and `exp`, `iat` skew, `iss` and `aud` all checked.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-25 | claude, scope-limited to §4.1's `session_expired` row and the note under it, against `src/components/auth/SessionWatchdog.tsx`, `src/lib/auth/landing.ts`, `src/layouts/AdminLayout.astro`, `src/pages/index.astro`, `src/lib/auth/session.ts` (`getSession` hard expiry) and `test/landing.test.ts` | The rest of the document; the Access app session duration in the dashboard; a real expiry on a phone |
 | 2026-10-23 | claude, scope-limited to §3's emergency-way-in paragraph again, for the per-way rules (evening), against `src/lib/login-alerts/decide.ts` and `policy.ts` (`wayRule`) | The rest of the document; the dashboard's identity providers |
 | 2026-10-23 | claude, scope-limited to §3's emergency-way-in paragraph, against `src/lib/login-alerts/decide.ts` and `policy.ts` (`normalWaysIn`) | The rest of the document; the dashboard's identity providers |
 | 2026-10-16 | claude, the whole document after permissions items #13, #14 and #37: `src/lib/auth/pipeline.ts`, `stages/classify.ts`, `assertion.ts`, `bootstrap.ts`, `refresh-role.ts`, `session-stage.ts`, `access-map.ts`, `decision.ts`, `src/lib/auth/cloudflare-access.ts` (`accessIdentityProvider`, `loginMethodFromIdp`), `login-event.ts`, `fresh-sign-in.ts`, `session.ts`, `routes.ts`, `landing.ts`, `src/lib/auth/plac.ts` (`forceLogoutUser` callers), `src/pages/index.astro`, `src/pages/api/auth/logout.ts` and `dev-login.ts`, `src/pages/api/emails/webhook.ts`, `src/pages/api/sessions/active-revocations.ts`, `wrangler.toml`; `grep -rn "error=" src` against `ERROR_DESCRIPTIONS`; the four checks in `test/error-code-contract.test.ts` and the access-map case in `test/pipeline-session.test.ts` read; the owner's dashboard steps for items #13 and #37. Corrected: the session KV binding is `SESSION`; the access-map refusal does not fork (§4.2); listing sign-in blocks needs the Sessions page, not owner+; no permission change writes a sign-in block; the webhook also takes `?token=`; §1, §3 and §6 now describe get-identity, the sign-in time and the second sign-in step | Everything in the Cloudflare dashboard: the identity providers, the Access app session duration, the second sign-in step (item #13), whether the Policy includes the Group, whether `/api/emails/webhook` has an edge bypass; `CF-ACCESS-SYNC.md`'s figures; a real get-identity answer (no sign-in since the deploy) |

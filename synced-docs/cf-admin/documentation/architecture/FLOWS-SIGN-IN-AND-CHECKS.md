@@ -92,7 +92,9 @@ its own test (`test/pipeline-*.test.ts`).
 The session lookup reads the session record plus three flags in one KV call: the session's
 own revocation, the person's revocation, and the person's `authz-changed:` mark (section 8).
 A session older than its maximum lifetime (`SESSION_MAX_LIFETIME_MS`, 24 hours) is gone, so the
-request starts again from Cloudflare Access.
+request starts again from Cloudflare Access. An open tab watches the same limit
+(`SessionWatchdog`, counting down from the server's figure) and then goes back through the
+landing to the page it was on, which starts that new session; the landing shows no card for it.
 
 ## 3. The first request after signing in (cold sign-in)
 
@@ -364,4 +366,5 @@ compare-and-swap, checks it again as the asker, then makes it as the approver
 
 | Date | Who | What was checked | Result |
 |---|---|---|---|
+| 2026-10-25 | claude | Section 2's lifetime paragraph, after the 24-hour re-sign-in fix, against `SessionWatchdog.tsx` and `landing.ts` (`RENEW_CODES`, `renewSignInPath`). Not checked: the diagrams again | pass |
 | 2026-10-25 | claude | Every diagram against the code named in it: `src/middleware.ts`; `src/lib/auth/pipeline.ts` and all nine stage files (each branch, status, redirect code and audit action); `decide-access.ts`, `plac.ts` `computeAccessMap`, `guard.ts`, `surface-guards.ts`, `routes.ts`, `session.ts` (lifetime), `fresh-sign-in.ts`, `confirm-code.ts`, `fresh-sign-in-client.ts`, `src/lib/approvals/`; the two-person and revocation rules against PERMISSIONS-SYSTEM §10.7 and §11. Every mermaid block parsed with mermaid 11.4.1. Not checked: GitHub's own renderer, and live traffic | pass |
