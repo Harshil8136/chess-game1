@@ -40,6 +40,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | Doc | What it is |
 |---|---|
 | [`architecture/OVERVIEW.md`](architecture/OVERVIEW.md) **P** | Components, request path, trust boundaries, data stores |
+| [`architecture/FLOWS.md`](architecture/FLOWS.md) | Mermaid flows: the four guards end to end, the Worker's checks, its signed call to the agent, the agent's checks, a change with its action ticket, the browser terminal, the Access page, a job and the busy gate, the audit record, and every switch and where it lives |
 
 ## Security
 
