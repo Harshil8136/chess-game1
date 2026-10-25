@@ -75,8 +75,11 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    line (11:41 UTC, daily) is the fallback. It stands down once a run has succeeded that UTC
    day (RD-12, permanent), and on a day the schedule names no backup for or whose run was
    skipped (the schedule guard, `scripts/secondary-pipeline/schedule-guard.ts`; any doubt backs
-   up). `db-backup.yml` keeps its fallback line until B5 deletes it, and is disabled on GitHub
-   (D-4, D-5, RD-5). A daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
+   up). A scheduled backup that fails, is lost or cannot start gets one automatic second try
+   30 minutes after it ended, and its alert waits for that try: only a second try that fails
+   too, or one that could not start within 6 hours, alerts (`src/tick/retry.ts`, the owner's
+   decision of 2026-10-25). `db-backup.yml` keeps its fallback line until B5 deletes it, and
+   is disabled on GitHub (D-4, D-5, RD-5). A daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
    failed-workflow email warns through a path the tick does not own. cf-backup sends no mail
    itself: its alerts leave through that job and cf-admin's `EMAIL_QUEUE` (D-11).
 8. **Standalone repo.** Do not add cf-backup to the workspace root's npm `workspaces`;
