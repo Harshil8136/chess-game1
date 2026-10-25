@@ -161,7 +161,7 @@ cf-backup/
 ├── sql/supabase/                # C10: 01_backup_reader.sql, 02_backup_keys.sql, 03_backup_keyholder.sql (owner-run)
 ├── .github/workflows/
 │   ├── db-backup.yml            # the backup pipeline (doc 03); workflow_dispatch + one weekly fallback schedule (D-5)
-│   └── ci.yml                   # verify on push (holds no secrets, does not deploy)
+│   └── ci.yml                   # verify on pull requests, weekly and by hand (holds no secrets, does not deploy)
 ├── test/                        # vitest + workers pool; public-surface test (no route exists)
 └── RULES.md  main.md  README.md
 ```

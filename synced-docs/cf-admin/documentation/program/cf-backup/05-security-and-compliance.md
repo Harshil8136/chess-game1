@@ -74,7 +74,7 @@ request reviewers, enforced code owners, or deployment protection rules. So we *
 not** design on them. Instead:
 
 - Write access is the owner only; 2FA is required on the account.
-- Nothing is triggered by `push` except `ci.yml` (verify), which holds **no secrets**, and, as built, `sync-docs.yml` (the public docs mirror), which holds only the mirror's own token, `PERSONAL_PAT`.
+- Nothing is triggered by `push` except, as built, `sync-docs.yml` (the public docs mirror), which holds only the mirror's own token, `PERSONAL_PAT`. `ci.yml` (verify) holds **no secrets** and, since 2026-10-25, runs on pull requests, weekly and by hand, not on push: Workers Builds already runs `npm run verify` before every deploy ([where the Actions minutes go](../../operations/github-actions-minutes.md)).
 - Backup secrets are referenced only by `db-backup.yml` (disabled since 2026-09-27), `secondary-pipeline.yml` (the engine since then) and `tick-deadman.yml`, which run only on `schedule` / `workflow_dispatch` (re-read 2026-10-17).
 - A `CODEOWNERS` file documents intent, but is not an enforcement mechanism on this plan.
 - Scheduled workflows auto-disable after 60 days of inactivity only in **public** repositories (*to verify*). The dead-man's switch covers it either way.

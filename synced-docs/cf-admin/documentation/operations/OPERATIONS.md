@@ -699,7 +699,8 @@ organization. The `Access: Organizations — Revoke` permission below is what au
 >
 > **Where each check runs (2026-10-18):** `npm run verify` on the workstation before
 > every push; GitHub's `quality` job repeats it weekly, on pull requests and by hand
-> (not after every push since 2026-10-18, to save Actions minutes). Workers Builds runs `build:ci`,
+> (not after every push since 2026-10-18, to save Actions minutes; where the minutes go and the
+> rules for every repository: [`github-actions-minutes.md`](github-actions-minutes.md)). Workers Builds runs `build:ci`,
 > which only builds since 2026-10-10. Evidence and the deploy stage:
 > `release-and-rollback.md` §1. The deploy command (`deploy:ci`) applies any pending migration
 > before the new code (observed 2026-10-10). **Apply an additive migration by hand before

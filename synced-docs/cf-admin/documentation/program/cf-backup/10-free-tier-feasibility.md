@@ -79,7 +79,7 @@ plus the weekly audit, instead of the majority of today's 936.
 | cf-admin `backups.yml` (bridge, until P1 retires it) | ~30 | one job weekly, ~6–8 min with its drills |
 | cf-astro (all workflows) | **~570**, or **~130 with L1** | Measured 30 days: heartbeat ~436, CI ~86, security ~32, sync ~12 |
 | **cf-backup `db-backup.yml`** | **~110–130**, **+~4 for the D-5 fallback** | one job per run: Mon–Sat Supabase-only ~4 min × 26, Sunday full ~6 min × 4, monthly real-path drill +2; the evidence steps add seconds, not minutes. **As built:** the fallback's own weekly `schedule:` run costs one job that exits in seconds on almost every Monday (a good full backup already ran) and a full run's worth of minutes on the rare Monday it does not — averaged, about 4 billed minutes a month (D-5) |
-| **cf-backup CI** | **~20–60** | one job per push, like cf-admin's `quality.yml`; high while building, low at steady state |
+| **cf-backup CI** | **~20–60**; **~13 since 2026-10-25** | one job per push, like cf-admin's `quality.yml`; high while building, low at steady state. **Since 2026-10-25** not on push (Workers Builds already runs `npm run verify` before each deploy): pull requests, weekly and by hand, one run of about 3 minutes a week. October's push runs had cost 133 minutes in 59 runs ([where the Actions minutes go](../../operations/github-actions-minutes.md)) |
 | **Total** | **~1,184–1,244 without L1 · ~744–804 with L1** | **L1 is required** to meet the under-1,000 target |
 
 > **Since 2026-09-27** two lines above no longer apply: cf-admin's `backups.yml` was deleted,
@@ -94,7 +94,7 @@ plus the weekly audit, instead of the majority of today's 936.
 2. **Pull the Supabase Postgres Docker image once per run** and use it for both `supabase db dump` and the drill.
 3. **No setup that isn't needed:** install `wrangler` and the Supabase CLI alone, not a full `npm ci`.
 4. **Anything a Worker can do costs 0 minutes.** GitHub's log archive, job timings and the account usage snapshot are fetched by cf-backup after the run (doc 11 §3), not by the runner.
-5. **CI is one job with `concurrency: cancel-in-progress`**; docs-only changes skip the build and test steps.
+5. **CI is one job with `concurrency: cancel-in-progress`**; docs-only changes skip the build and test steps. Since 2026-10-25 it no longer runs on push, since Workers Builds runs the same `npm run verify` before every deploy; it runs on pull requests, weekly and by hand.
 6. **Daily Supabase dumps are the biggest line (~100 min).** If the budget ever tightens, OD-3's alternative (weekly only) halves cf-backup's cost, at the price of Supabase's recovery point going from 24 h to 7 days.
 
 ### 2.3 Levers outside cf-backup (ranked by minutes saved)
