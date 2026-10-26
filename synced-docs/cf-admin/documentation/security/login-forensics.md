@@ -442,8 +442,8 @@ Every login attempt is logged (§2). Whether it is also emailed is decided by
 event's `waitUntil`) and recorded in the row's `alert` column (§2.2). Two kinds of sign-in are
 emailed as urgent whatever the settings say: one whose assertion turns up on another country or
 device, and, since 2026-10-16, one made without Google (the table below). The full rules and why are in
-[sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §3. An email (light
-template) goes onto `EMAIL_QUEUE` as a `custom_email` from `Madagascar Security
+[sign-in alerts v2](../specs/2026-10-03-sign-in-alerts-v2-design.md) §3. An email (the portal's
+shared email layout since 2026-10-26, [design](../specs/2026-10-26-portal-emails-look.md)) goes onto `EMAIL_QUEUE` as a `custom_email` from `Madagascar Security
 <security@madagascarhotelags.com>`, after its `email_audit_logs` row is written;
 `cf-astro-email-consumer` sends it through Brevo, then Resend, with retries (v2 spec §9).
 Only without the queue, or when it refuses the message, does it go to the Brevo
@@ -465,8 +465,13 @@ transactional API directly (`api.brevo.com/v3/smtp/email`, `BREVO_API_KEY`):
   in UTC when there is none, as on the cron path (`alertTime()`). Until
   2026-10-03 it was hardcoded to `America/Chicago`, an hour off Toronto all year
   and off Mexico, which has no daylight saving time, every summer
-- All user-controlled fields are HTML-escaped (`escHtml`, 2026-05-24 fix) —
-  the `User-Agent` header reaches this template
+- All user-controlled fields are HTML-escaped (`escHtml` from the 2026-05-24 fix; since
+  2026-10-26 the shared layout's `escapeHtml`, `src/lib/email/layout.ts`, which escapes every
+  value it is given) — the `User-Agent` header reaches this template
+- Since 2026-10-26 the rows read Account, When, Signed in with (Tried with on a refused one),
+  Device, Where, Network address (shortened) and Why it was refused; the method is named Google,
+  GitHub or One-time PIN by email. The button goes to Sessions, red on an urgent alert, and the
+  footer links to **Manage sign-in alerts**. The subjects are unchanged
 - Recipients: the alert policy's, up to 5, else `SECURITY_ALERT_EMAIL`. That name is
   neither a `[vars]` entry nor a declared secret, so in production the hardcoded
   business-address fallback (`DEFAULT_ALERT_RECIPIENT`) receives every alert until the
@@ -516,7 +521,7 @@ and [`../specs/2026-10-03-sign-in-alerts-v2-design.md`](../specs/2026-10-03-sign
 fields are still client-supplied — `user_agent` always, and `email` on the cron
 path. See §1.2.
 
-**XSS:** All fields rendered via Preact JSX (auto-escaped). No `innerHTML` or `dangerouslySetInnerHTML`. The alert email escapes with `escHtml`.
+**XSS:** All fields rendered via Preact JSX (auto-escaped). No `innerHTML` or `dangerouslySetInnerHTML`. The alert email escapes every value through the shared email layout (`escapeHtml` in `src/lib/email/layout.ts`, since 2026-10-26).
 
 **SQL injection:** All fields use D1 parameterized binds. No string concatenation.
 
@@ -646,6 +651,7 @@ of the applied history.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | claude, scope-limited to §7's template sentences and §8's XSS line, for the shared email layout: `renderAlertEmail`, `buildSecurityAlertHtml`, `sendAlertSettingsEmail` and `sendAlertTestEmail` in `src/lib/auth/security-logging.ts` against `src/lib/email/layout.ts`; `test/login-alerts.test.ts` and the other alert tests pass | The rest of §7; the rest of the document; how each mail app draws the email |
 | 2026-10-23 | claude, scope-limited to §7's without-Google row, for the per-way rules (evening): `src/lib/login-alerts/decide.ts` and `policy.ts` (`WAY_RULES`, `wayRule`); `test/login-alert-ways-in.test.ts` | The rest of the document |
 | 2026-10-23 | claude, scope-limited to §7's emergency-way-in row, for the alert policy's `normalWaysIn`: `src/lib/login-alerts/decide.ts` (`otherWayIn`) and `policy.ts`; `test/login-alert-ways-in.test.ts`. Live D1 (read only): 10 of the 12 alerts emailed since 2026-10-09 were GitHub sign-ins (`queued-method`) | The rest of the document |
 | 2026-10-16 | claude, the whole document after permissions items #14, #21, #36 and #37: `src/lib/auth/stages/assertion.ts`, `bootstrap.ts`, `src/lib/auth/login-event.ts`, `cloudflare-access.ts`, `security-logging.ts`, `src/lib/login-alerts/` (`dispatch.ts`, `decide.ts`, `store.ts`, `throttle.ts`, `policy.ts`, `outcomes.ts`), `src/lib/dal/LoginLogRepository.ts`, `src/workers/scheduled-log-sync.ts`, `src/pages/api/audit/login-logs.ts`, `stats.ts`, `delete-targeted.ts`, `src/pages/api/users/probes.ts`, `src/pages/api/retention/purge.ts`, `src/lib/retention-tables.ts`, `LoginForensicsTab.tsx`, `ActivityFilterBar.tsx` and `shared.tsx`, and `migrations/0000_baseline.sql`; the targeted-delete case in `test/fresh-sign-in.test.ts` read. Live D1 through the connector (read only): no sign-in since the get-identity deploy; 14 `LOGIN_FAILED` rows (13 `revocation_block_active`); every sign-in since 2026-10-10 carries a bot score. Corrected: the flow in §1.1 (get-identity, `logAndAlert`, the queue, the repeat window), §1.2's sources, `geo_location` and `cf_bot_score` (it said the score was always null), §3.1's excerpt, §4's interface, §5's gates, §6.2–§6.4 against the shipped component, §8 (the probe dismiss is a `DELETE`, the targeted delete is `DELETE` with `targetTab` and asks for a recent sign-in, the alert update, the table is not sealed) and §10 | A real get-identity answer (no sign-in yet since the deploy); the Access application's providers; whether Brevo or the queue delivered any alert; not rendered in a browser |
