@@ -229,7 +229,7 @@ Treat rotation as a breaking change, not a privacy hygiene step.
 | Resend | Email delivery — queued email when Brevo fails (security alerts, staff invitations and system emails included) and a diagnostics ping | Staff and recipient addresses, email content | US |
 | Upstash | Rate-limit counters for cf-astro (until cf-astro's own change under the same plan ships), and cf-chatbot's conversation state. **cf-admin sends it nothing since 2026-10-04** (its limits moved to Cloudflare and D1, §2.1; its alert dedupe and alert lists are gone) | **Raw client IPs** on cf-astro's public routes; every key expires (2 × the window + 1 s for rate-limit keys) | US |
 | Sentry | Error tracking | Scrubbed traces — `sendDefaultPii: false` + PII scrubber | US |
-| PostHog | Product analytics | Usage events; read back through the admin API for the control-plane surface | US |
+| PostHog | Product analytics | Usage events; read back through the admin API for the control-plane surface, and since 2026-10-26 as aggregate counts (no person-level rows) for the Analytics page ([`ANALYTICS.md`](../features/ANALYTICS.md)) | US |
 | Google | Search Console API (`GSC_SERVICE_ACCOUNT_JSON`) and PageSpeed Insights (`PAGESPEED_API_KEY`) | Public site and page URLs, sitemap and index-coverage data — no personal data. Google is also an IdP option in front of Cloudflare Access, where it sees staff sign-in identity | US |
 | OpenRouter | AI inference (optional) | Prompt text | Varies by model |
 
