@@ -90,6 +90,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`runbooks/break-glass.md`](runbooks/break-glass.md) | SSH does not work |
 | [`runbooks/disk-full.md`](runbooks/disk-full.md) | The audit disk or system disk is full and sudo refuses |
 | [`runbooks/tunnel-down.md`](runbooks/tunnel-down.md) | The console says the agent did not answer |
+| [`runbooks/cloudflared-upgrade.md`](runbooks/cloudflared-upgrade.md) | Upgrade cloudflared by hand (it never updates itself) |
 | [`runbooks/restore-app-database.md`](runbooks/restore-app-database.md) | Restore an app database from the local or the encrypted off-box dump |
 | [`runbooks/agent-rollback.md`](runbooks/agent-rollback.md) | A new agent release misbehaves |
 | [`runbooks/audit-rule-change.md`](runbooks/audit-rule-change.md) | Changing audit rules after the lock |
