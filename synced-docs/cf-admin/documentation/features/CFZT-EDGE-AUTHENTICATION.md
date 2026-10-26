@@ -167,6 +167,12 @@ unsubscribe — a CAN-SPAM obligation and a Gmail/Yahoo bulk-sender requirement.
 There are **two** Access applications on `secure.madagascarhotelags.com`:
 
 **1. Admin Portal** — domain `secure.madagascarhotelags.com`, path `/*`.
+Access opens that literal address, `https://secure.madagascarhotelags.com/*`, from its App
+Launcher and after a sign-in begun there. No page has that name, so until 2026-10-26 the gate
+refused it: a Manager who had just signed in saw Access Restricted, the Owner Not found. The
+pipeline's first stage now sends `/*` (and `/%2A`) to the Overview before any session work
+(`ACCESS_APP_PATHS` in `src/lib/auth/stages/classify.ts`, pinned by
+`test/middleware-public-paths.test.ts`).
 
 - Policy: `Allow`, Include: Access Group `"Admin Portal Authorized Users"`.
 - The group's membership is synchronized from Supabase `admin_authorized_users`
@@ -475,6 +481,7 @@ re-fetched once on rotation, and `exp`, `iat` skew, `iss` and `aud` all checked.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | claude, scope-limited to the Admin Portal application's `/*` path note in §3, against `src/lib/auth/stages/classify.ts` and `test/middleware-public-paths.test.ts`; the address itself from Sentry's CSP report for 14:46:39 UTC (document address `/*`) | The rest of the document; the App Launcher's own URL setting (dashboard-only) |
 | 2026-10-25 | claude, scope-limited to §4.1's `session_expired` row and the note under it, against `src/components/auth/SessionWatchdog.tsx`, `src/lib/auth/landing.ts`, `src/layouts/AdminLayout.astro`, `src/pages/index.astro`, `src/lib/auth/session.ts` (`getSession` hard expiry) and `test/landing.test.ts` | The rest of the document; the Access app session duration in the dashboard; a real expiry on a phone |
 | 2026-10-23 | claude, scope-limited to §3's emergency-way-in paragraph again, for the per-way rules (evening), against `src/lib/login-alerts/decide.ts` and `policy.ts` (`wayRule`) | The rest of the document; the dashboard's identity providers |
 | 2026-10-23 | claude, scope-limited to §3's emergency-way-in paragraph, against `src/lib/login-alerts/decide.ts` and `policy.ts` (`normalWaysIn`) | The rest of the document; the dashboard's identity providers |
