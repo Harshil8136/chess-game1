@@ -424,6 +424,10 @@ switched on (`admin`, daily group) with five sub-pages, one per part (`/visitors
 the pages and on `GET /api/analytics/{part}` (where `?format=csv` needs `#export` and `?fresh=1`
 needs `#refresh`); the Summary shows only the parts `analyticsCan` allows
 ([`ANALYTICS.md`](../features/ANALYTICS.md) §3).
+*Added 2026-10-26 (Analytics round 2, migration `0078`):* two more sub-pages, `/email` and
+`/reliability`, both `admin`, checked the same way (`ANALYTICS_PARTS` now holds seven). The page's
+own `?retry=1` (a read again after a source did not answer) needs no key of its own: it can only
+re-read a part the person may already open.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1365,6 +1369,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-26 | claude | **Scope-limited to the Analytics round-2 sentence.** Read `ANALYTICS_PARTS` in `surface-guards.ts`, `src/pages/api/analytics/[part].ts` (`retry`) and `migrations/0078_analytics_email_reliability.sql`; read the two new live rows back through the D1 connector after 0078 was applied; `test/analytics-round2.test.ts` passes (403 for a person without the part, 200 for the Owner) | The sentence. The rest of the document not re-read |
 | 2026-10-26 | claude | **Scope-limited to the Analytics sentence.** Read `surface-guards.ts` (`ANALYTICS_PARTS`, `denyAnalytics`, `analyticsCan`), `src/pages/api/analytics/[part].ts`, the two pages and `migrations/0077_analytics_page.sql`; read the eight live `/dashboard/analytics` rows back through the D1 connector after 0077 was applied (`admin`, active, parent and group); `test/analytics.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#configure` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/settings.ts` and `migrations/0076_health_configure.sql`; read the live `/dashboard/health#configure` row back through the D1 connector after 0076 was applied (`owner`, active); `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#run-heavy` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/heavy.ts` and `migrations/0075_health_run_heavy.sql`; read the live `/dashboard/health#run-heavy` row back through the D1 connector after 0075 was applied (`owner`, active); `test/system-health-heavy.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |

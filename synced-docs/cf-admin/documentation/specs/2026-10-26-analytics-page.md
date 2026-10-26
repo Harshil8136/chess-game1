@@ -35,12 +35,11 @@ Overview has no piece for. What each part reads is in the
 | Piece | Class | What it is |
 |---|---|---|
 | Parts row | `.an-tabs` | The registry's sideways row (`RegistryTabs`), restyled on glass; the open part is in the ink colour with an accent icon. A person sees only the parts they may open |
-| Heading | `.ov-hero` | An icon badge, the part's name, when it was read, Refresh (only with `#refresh`), one sentence from the figures (`summaryLine`) or the part's description |
-| Period and Download | `.an-controls` | 7, 30 or 90 days as the Overview's sideways pill, and Download (only with `#export`) |
+| Heading | `.an-hero` | *Since round 2:* one compact glass row with an icon badge, the part's name and one sentence from the figures (`summaryLine`) or the part's description, and the period pill (7, 30 or 90 days), Download (only with `#export`) and Refresh (only with `#refresh`) on the right; when it was read is in the sources card ([round 2](2026-10-26-analytics-colours-and-layout.md) §3). Before it, the Overview's `.ov-hero` with a separate `.an-controls` card |
 | Figures | `.an-kpis` | Glass figure cards that wrap (smallest 9.5 rem): the value counting up, a pill with the change against the period before (▲ / ▼ and the percent, "pts" for a share, "new" when there was none before). A pill is green or red only when the figure has a better direction; on the Summary each card links to its part with a sparkline |
 | Day by day | the Overview's `LineChart` | One line at a time, switched with a pill; the line draws itself |
-| What stands out | `.an-says` | The part's sentences (six at most on the Summary), each with the Overview's glyph for its tone (● good, ▲ needs a look, ✕ bad, ◆ information, ○ nothing to say); on the Summary each carries a chip to its part |
-| Cards | `.an-grid` | One column on a phone, two from 48 rem, three from 80 rem; the booking journey, the busiest-times grid, tables and speed readings take a whole row |
+| What stands out | `.an-says` | The part's sentences, each with the Overview's glyph for its tone (● good, ▲ needs a look, ✕ bad, ◆ information, ○ nothing to say); on the Summary each carries a chip to its part, and since round 2 they are a full-width wall of tiles, two from every part ([round 2](2026-10-26-analytics-colours-and-layout.md) §3) |
+| Cards | `.an-grid` | *Since round 2:* a packed wall, one to three columns by the board's own width, each card as wide as what it holds ([round 2](2026-10-26-analytics-colours-and-layout.md) §3) |
 | Sources | `.an-srcs` | Each source with "Answered" or the sentence it gave, so a missing card is explained in one place |
 
 ## 3. The cards
@@ -60,7 +59,9 @@ axis, no 3D.
 | Ring (`.an-split`) | cookie choices, booking sends | the Overview's ring with a key of label and count |
 | Not read (`.an-unread`) | a card whose source failed | the card's title and the source's sentence, never an empty chart |
 
-Colour: the accent marks quantity (bars, cells, lines), never a state. The state colours
+Colour: the accent marks quantity (bars, cells, lines), never a state. Since round 2 each part
+has its own accent and backdrop, and kinds side by side take the categorical slots
+([round 2](2026-10-26-analytics-colours-and-layout.md) §2). The state colours
 (`--g-good`, `--g-warn`, `--g-bad`) appear only beside a word or a glyph: the change pills, the
 sentence glyphs, the vitals' strips and the funnel's drop. Labels and
 values are in the text tokens; the tokens' contrast is the Overview's (spec §3).

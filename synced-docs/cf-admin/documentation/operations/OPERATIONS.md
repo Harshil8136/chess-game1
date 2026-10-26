@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-26 | `ls migrations/*.sql` (56 files, highest `0078`), `d1_migrations` newest row through the Cloudflare D1 connector after `0078` was applied; §5's `CLOUDFLARE_API_TOKEN` and `SENTRY_AUTH_TOKEN` rows against `src/lib/analytics/report/sources.ts` and `load.ts` (Analytics round 2) | §7's state comment and count; §5 names the Analytics page's Reliability part as a reader of the two keys. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-26 | `ls migrations/*.sql` (55 files, highest `0077`), `d1_migrations` newest row through the Cloudflare D1 connector (`0077` at 2026-10-26 03:01:04); §5's `CLOUDFLARE_API_TOKEN`, `POSTHOG_PERSONAL_API_KEY` and `GSC_SERVICE_ACCOUNT_JSON` rows against `src/lib/analytics/report/sources.ts` | §7's state comment and count; §5 names the Analytics page as a reader of the three keys. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-24 | `grep -rn SENTRY_AUTH_TOKEN src/` after the Logs tab began listing Sentry's issues (`getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`) | §5's Sentry row names the Logs tab as a reader. No binding, secret or variable added. Nothing else re-checked |
 | 2026-10-17 | `ls migrations/*.sql` (54 files, `0002` twice, highest `0076`), `ls database/legacy_migrations/*.sql` (44, `0021` twice), `d1_migrations` newest rows through the Cloudflare D1 connector (`0076` at 2026-10-17 08:54:02) | §7: the state comment and the numbering note still said 33 files to `0055`. Corrected. Nothing else re-checked |
@@ -575,7 +576,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `REVALIDATION_SECRET` | ISR webhook auth (cf-admin → cf-astro) |
 | `IP_HASH_SECRET` | Privacy-safe IP hashing in login forensics and audit |
 | `HEALTH_CHECK_SECRET` | Authenticates external health probes |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare GraphQL analytics (the Overview and, since 2026-10-26, the Analytics page's Website traffic, "Zone Analytics: Read") + control-plane reads (and cache purge unless `CONTROL_PLANE_CF_TOKEN` overrides); since 2026-10-24 also the Workers Logs counts of System health → Logs, which need its "Workers Observability: Read" permission ([`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §3a) |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare GraphQL analytics (the Overview and, since 2026-10-26, the Analytics page's Website traffic, "Zone Analytics: Read", and its Reliability part's counts of the platform's own Workers for `CF_ACCOUNT_ID`, "Account Analytics: Read") + control-plane reads (and cache purge unless `CONTROL_PLANE_CF_TOKEN` overrides); since 2026-10-24 also the Workers Logs counts of System health → Logs, which need its "Workers Observability: Read" permission ([`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §3a) |
 | `CLOUDFLARE_ZONE_ID` | Zone id for HTTP metrics and purge |
 | `CF_API_TOKEN_READ_LOGS` | Zero Trust audit-log read — 5-minute cron polling (token `cf-admin: Zero Trust Audit Read`) |
 | `CF_API_TOKEN_ZT_WRITE` | Zero Trust session revoke — Layer 3 force-kick (token `cf-admin: Zero Trust Session Revoke`) |
@@ -584,7 +585,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
 | `RESEND_API_KEY` | Resend — System health's *Resend* check only (`resend` in `src/lib/health/catalog.ts`, since 2026-10-17; the diagnostics ping `resend_ping` before it was removed). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
-| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane and the unresolved issues on System health → Logs (build-time source-map upload uses the same token) |
+| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane, the unresolved issues on System health → Logs and, since 2026-10-26, the Analytics page's Reliability part (errors per day and open issues, [`ANALYTICS.md`](../features/ANALYTICS.md) §4) (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads, and since 2026-10-26 the Analytics page's queries, which need the key's "Query: Read" scope ([`ANALYTICS.md`](../features/ANALYTICS.md) §4) |
 | `GSC_SERVICE_ACCOUNT_JSON` | Google Search Console service-account key (documented RULE #0.8 exception); since 2026-10-26 also the Analytics page's search analytics, which needs the account as a user of the property |
 | `PAGESPEED_API_KEY` | PageSpeed Insights API key (documented RULE #0.8 exception) |
@@ -724,8 +725,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-26: migrations/ holds 55 files, highest
-# 0077_analytics_page.sql (applied 2026-10-26 03:01:04 UTC).
+# State as of 2026-10-26: migrations/ holds 56 files, highest
+# 0078_analytics_email_reliability.sql (applied 2026-10-26 10:23:48 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/
