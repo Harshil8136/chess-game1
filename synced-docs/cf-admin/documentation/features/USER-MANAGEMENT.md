@@ -225,7 +225,10 @@ server ignored (MAINTENANCE PD-5).
 probe with the email filled in), on the shared Dialog (`size="xl"`, the console kit's
 `ck-scope` and `iv-glass`; styles `src/styles/components/invite.css`). It is a pane of frosted
 glass like the Overview ([the look](../specs/2026-10-26-overview-glass-look.md) §6). Three steps
-on one screen, phone first, side by side from 64rem wide:
+on one screen, phone first. From 64rem wide, Who and Role sit on the left and Pages beside them for
+the whole height (*since the same day's second pass*, [change
+record](../records/reports/2026-10-26-invite-pages-screen.md); first the three steps were three
+columns, and the page list in the third stretched the pop-up while the first two ended):
 
 1. **Who are you inviting?** Email address (checked with the server's own pattern when the field
    is left) and the name the portal shows (required, 120 characters at most).
@@ -234,13 +237,26 @@ on one screen, phone first, side by side from 64rem wide:
    `ROLE_META` and, once the page list is read, how many pages it opens
    (`invite/InviteRoles.tsx`). Picking Owner or Vendor support says that it needs a second person
    (§6.3), which an invitation can give only when nobody else could approve.
-3. **Which pages?** One line: how many pages the role opens and how many changes the inviter
-   made, with a bar. **Choose pages** opens the list (`invite/InvitePages.tsx`): a sideways row
-   of the sidebar's groups with their open counts, a search, and one switch per page with its
-   `#` features under it. Each row says where its state comes from ("Comes with Staff", "Added by
-   you", "Taken away by you") or why its switch is fixed: the Overview opens to everyone, a page
-   floor, the Owner or Vendor support opening every page, a page the inviter cannot give, or one
-   they do not open themselves. **Undo all** clears the changes. Changing the role keeps only the
+3. **Which pages?** A short overview, never the list (`InvitePagesSummary` in
+   `invite/InvitePages.tsx`): how many pages the role opens and how many changes the inviter made,
+   with a bar; one tile per sidebar group with its own count and a bar in the group's colour; and
+   the inviter's changes as chips (a plus for a page given, a minus for one taken away, a part or
+   action named with its page, "Blog: Review suggested edits"), each of which undoes itself, with
+   **Undo all**. Six chips show; the rest are counted.
+
+   A tile opens the **pages screen** (`InvitePagePicker`), which takes the invitation's place in the
+   same pop-up at a fixed height (46rem at most), so only its list scrolls. The groups stay in view:
+   a sideways row on a phone, a list beside the pages from 48rem, each with "open/of" and a dot when
+   it holds a change. A group shows its pages in the sidebar's order (`pageGroups` in
+   `src/lib/access-center/invite-pages.ts`); a page's sub-pages, then its actions, fold under it
+   ("7 parts and 2 actions"), and a sub-page's own actions follow it, indented (Blog's under
+   Website Content). A fold opens by itself when it holds a change. One search covers every group,
+   by name or address; a match keeps what is inside it and the rows it sits under. Each row says
+   where its state comes from ("Comes with Staff", "Added by you", "Taken away by you") or why its
+   switch is fixed: the Overview opens to everyone, a page floor, the Owner or Vendor support
+   opening every page, a page the inviter cannot give, or one they do not open themselves.
+   **Done**, Escape, the close button and a press outside all go back to the invitation, so nothing
+   typed is lost; **Undo all** clears the changes there too. Changing the role keeps only the
    changes that still differ from it and that the inviter could still make.
 
 What a row says opens is `personOpens` (`src/lib/access-center/overview.ts`) through
@@ -357,7 +373,7 @@ The interface is composed of multiple Preact islands:
 | **Page Access Manager** | `src/components/admin/users/access-editor/UserAccessEditor.tsx` | A person's Access page (`/dashboard/users/[id]/access`): their pages, actions and console powers ([ACCESS-CENTER](ACCESS-CENTER.md)) |
 | **Invite someone** | `src/components/admin/users/InviteUserModal.tsx` | The invitation pop-up's three steps and its finished view (§5.2) |
 | **Invite roles** | `src/components/admin/users/invite/InviteRoles.tsx` | One card per role the viewer may give, with its description and page count |
-| **Invite pages** | `src/components/admin/users/invite/InvitePages.tsx` | The page summary and list, on `src/lib/access-center/invite-pages.ts`. Replaced `RolePillSelector.tsx`, `HiddenAccountToggle.tsx`, `PageAccessMatrix.tsx`, `PageChipGrid.tsx` and `shared/AccessPolicyGrid.tsx` (removed 2026-10-26) |
+| **Invite pages** | `src/components/admin/users/invite/InvitePages.tsx` | Step 3's overview (`InvitePagesSummary`) and the pages screen (`InvitePagePicker`), on `src/lib/access-center/invite-pages.ts`. Replaced `RolePillSelector.tsx`, `HiddenAccountToggle.tsx`, `PageAccessMatrix.tsx`, `PageChipGrid.tsx` and `shared/AccessPolicyGrid.tsx` (removed 2026-10-26) |
 | **Session drawer** | `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | One person's sessions on the shared Dialog's drawer (2026-10-10): device, place, sign-in method, times, when each ends by itself, address and Ray ID, and **End session** for every session but the one you are using. It reads session handles, never session IDs ([SESSION-MANAGEMENT.md](SESSION-MANAGEMENT.md)) |
 
 ### Event Bus (Cross-Island Communication)
@@ -812,6 +828,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | **§5.2's third step and the pages screen**, against `InviteUserModal.tsx`, `invite/InvitePages.tsx`, `invite-pages.ts` and `invite.css`, with `test/invite-pages.test.ts` (the arrangement on paths shaped like the live registry's) and `test/invite-look.test.ts`; the arrangement rendered with the 117 active `admin_pages` rows (D1 connector, read that day): 7 groups of 1 to 8 pages | The pop-up in a phone browser (the owner's test) |
 | 2026-10-26 | §5.2's dialog size, classes and glass look, against `InviteUserModal.tsx` and `invite.css` | The look in a phone browser (the owner's test) |
 | 2026-10-26 | **§5.2 rewritten for the new Invite someone pop-up**, against `InviteUserModal.tsx`, `invite/InviteRoles.tsx`, `invite/InvitePages.tsx`, `src/lib/access-center/invite-pages.ts`, `src/pages/api/users/pages.ts` and the POST in `manage.ts` (the 50-setting refusal), with `test/invite-pages.test.ts` (12 tests, the page list checked against `computeAccessMap` over D1); §2.1's pages row, §5.1's first step, the component and event tables | The rest of the document; the pop-up in a phone browser (the owner's test) |
 | 2026-10-17 | The Access denied card's list of pages that cannot be asked for, against `checkAsk` in `src/lib/access-requests/rules.ts` (Page Registry refused since that day); `test/access-requests.test.ts` passes | Everything else; the card in a phone browser |

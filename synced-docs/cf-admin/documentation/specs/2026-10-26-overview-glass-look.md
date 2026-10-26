@@ -101,11 +101,13 @@ screen reader.
 
 Invite someone uses the same idea on the shared Dialog (`class="ck-scope iv-glass"`,
 `src/styles/components/invite.css`): the pane is translucent with two faint glows of the theme's
-colours and blurs the page, the backdrop is dimmed and blurred, the role cards and the page summary
-are lighter glass tiles, the chosen role and the step numbers are in the accent (orange in the
-dark theme, the ink in the light), and the buttons are pills. From 64rem wide the three steps sit
-side by side; on a phone they stay one under the other. The steps rise in one after another when
-it opens.
+colours and blurs the page, the backdrop is dimmed and blurred, the role cards, the page count and
+the group tiles are lighter glass tiles (a tile also carries a wash of its group's colour), the
+chosen role and the step numbers are in the accent (orange in the dark theme, the ink in the
+light), and the buttons are pills. From 64rem wide Who and Role sit on the left and Pages beside
+them (until the same day's second pass the three steps were three columns:
+[USER-MANAGEMENT](../features/USER-MANAGEMENT.md) §5.2 owns the arrangement); on a phone they stay
+one under the other. The steps rise in one after another when it opens.
 
 ## 7. What was decided against
 
@@ -121,4 +123,5 @@ it opens.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | §6 only, after Invite someone's second pass: the glass tiles and the wide arrangement, against `src/styles/components/invite.css` | The rest of the spec; the look on a phone |
 | 2026-10-26 | Written from the code as built: `src/styles/pages/overview.css` (tokens, pieces, motion), `Overview.tsx`, `OverviewCharts.tsx`, `motion.ts`, `src/styles/components/invite.css`; the contrast figures computed from the token values | The look on a phone, in both themes, and the motion (the owner's test) |
