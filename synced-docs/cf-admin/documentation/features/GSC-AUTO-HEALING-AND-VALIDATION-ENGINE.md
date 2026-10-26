@@ -5,7 +5,7 @@ audience: [ai, technical, operator, owner]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/seo/validation-readiness.ts, src/lib/seo/discovery-inspector.ts, src/pages/api/seo/validation-readiness.ts, src/pages/api/seo/discovery-health.ts, src/components/admin/seo/DiscoveryCoveragePanel.tsx, src/components/dashboard/widgets/GscValidationWidget.tsx, src/components/dashboard/widgets/ServiceStatusStrip.tsx]
+related_code: [src/lib/seo/validation-readiness.ts, src/lib/seo/discovery-inspector.ts, src/pages/api/seo/validation-readiness.ts, src/pages/api/seo/discovery-health.ts, src/components/admin/seo/DiscoveryCoveragePanel.tsx, src/components/dashboard/widgets/GscValidationWidget.tsx, src/pages/dashboard/seo/index.astro]
 related_docs: [SEARCH-CONSOLE-SYNC.md, DASHBOARD.md, CRON-CONTROL.md, ../runbooks/dev-server-optimize-deps-missing.md, ../architecture/plac-and-audit.md]
 tags: [feature, seo, search-console, indexing, validation, preact, dialog]
 ---
@@ -69,7 +69,7 @@ The cache is a single `admin_portal_settings` row,
 
 So the honest current state is **76%, with 60 of 87 URLs thin or missing schema**,
 from a report made on 2026-08-26 that nothing has refreshed since. Any screen showing "100%" is showing a literal
-string, not this number — see [§5](#5-what-the-dashboard-actually-shows).
+string, not this number — see [§5](#5-where-the-report-is-shown).
 
 ```text
 Operator opens /dashboard/seo (or the main dashboard widget)
@@ -137,28 +137,19 @@ measure the two categories or to render them as "not measured".
   `.admin-main-content`'s `overflow-y: auto` entirely. Its backdrop is styled
   through `::backdrop`.
 
-## 5. What the dashboard actually shows
+## 5. Where the report is shown
 
-*Corrected 2026-09-19 — the previous §5 described a KPI card, a tab and a chip
-that do not exist as written.*
+*Rewritten 2026-10-26, when the Overview was redesigned ([`DASHBOARD.md`](DASHBOARD.md)).* The
+readiness report (`GscValidationWidget.tsx`, which fetches `GET /api/seo/validation-readiness`
+itself) sat on the old Overview's Search Console tab and its Overview tab. On the owner's choice
+it moved to the bottom of the SEO page (`src/pages/dashboard/seo/index.astro`), whose key its route
+already needed (`/api/seo` maps to `/dashboard/seo`), so it no longer appears for someone who could
+open the Overview but not SEO. The Overview's KPI deck and its literal `seo` chip are gone.
 
-- **There is no GSC KPI card.** The main dashboard's KPI deck is four cards:
-  Global Edge Network, Data Layer & Cache, Edge Worker Scripts, Transactional
-  SMTP.
-- **The tab id is `seo`, labelled "Search Console"** — not `gsc`, and not
-  "Google Search Console & Indexing". Its siblings are Overview, Edge Workers,
-  Database Pool and Quotas & Storage. There is no System Health tab and no Audit
-  Log tab.
 - **`GscValidationWidget` carries a "12h Auto-Cron Active" badge that is a
   hard-coded string.** It is not derived from `gsc-run-interval-hours`, and the
-  job it names has been off since 2026-08-26.
-- **The `seo` chip in `ServiceStatusStrip` is entirely literal text** — "100%
-  Pass", "12h Active", "3 Failed Errors Healed" — while the live readiness score
-  is 76%. It passes no `isUnconfigured` flag.
-
-All four of those are code defects, not documentation gaps. They are listed in
-[`DASHBOARD.md`](DASHBOARD.md) §0 and logged in
-`../MAINTENANCE.md` (private).
+  job it names has been off since 2026-08-26. A code defect, logged as SH-8 in
+  `../MAINTENANCE.md` (private).
 
 ## 6. Vite / dev-server stability
 
@@ -201,6 +192,7 @@ route map.*
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-10-26 | claude | §5 against `src/pages/dashboard/seo/index.astro` (the report mounted there) and `GscValidationWidget.tsx` (the badge still a literal), after the old Overview's files were removed | §5 rewritten; nothing else re-checked, `last_verified` left as it was |
 | 2026-10-17 | claude | Re-read against `src/lib/seo/validation-readiness.ts` (weights, 180-word line, the literals at the two placeholder categories), `validation-readiness.ts` route (`fresh`, no rate limit), `GscValidationWidget.tsx` and `ServiceStatusStrip.tsx` (the literal strings), `DashboardController.tsx` (KPI cards, tab labels); live `seo-validation-readiness-latest` row (D1 connector) | Matches; every defect in §3 and §5 is still in the code. Wording on the report's age updated |
 | 2026-09-19 | claude | Re-derived the whole document against the code and live D1 | Cron heartbeat, KPI card, `gsc` tab and §6 Vite guidance all found false and removed; two of five categories confirmed hard-coded; live cached readiness 76% (60/87 URLs thin), last written 2026-08-26 17:22 UTC |
 | 2026-08-24 | claude | code + infra + tests | Original pass. Its architecture, dashboard-integration and Vite claims did not hold and are corrected above. |

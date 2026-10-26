@@ -181,7 +181,7 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 
 - **Traffic, real visitors only** (`requestSource = eyeball`, admin host): the most
   requested app endpoint is `/api/cron` (253 GETs; 157 on 2026-09-21 alone — the
-  cron page left open with auto-refresh on, EF-12), then `/api/dashboard/metrics`
+  cron page left open with auto-refresh on, EF-12), then `/api/dashboard/metrics` (removed 2026-10-26)
   (82).
 
 ---

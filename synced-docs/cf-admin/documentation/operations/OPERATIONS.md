@@ -532,9 +532,9 @@ one-shot `location.reload()` on a chunk-404.
 ### 4.3 ErrorBoundary
 
 High-risk Preact components are wrapped in a generic `ErrorBoundary`
-(`src/components/ui/ErrorBoundary.tsx`), mounted from **two** files:
-`src/components/dashboard/DashboardController.tsx` and
-`src/pages/dashboard/bookings/index.astro`. On a rendering exception it logs
+(`src/components/ui/ErrorBoundary.tsx`), mounted from one file,
+`src/pages/dashboard/bookings/index.astro` (the old Overview's `DashboardController.tsx`, the
+other until it was removed on 2026-10-26). On a rendering exception it logs
 `[Preact Island ErrorBoundary Caught …]` to the console and renders a Spanish
 fallback — heading `Error en <sectionName>`, the message in a `<pre>`, and a
 **`Reintentar componente`** button. There is no "Widget Failure" string

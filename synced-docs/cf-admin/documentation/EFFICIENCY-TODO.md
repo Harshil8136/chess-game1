@@ -5,7 +5,7 @@ audience: [ai, technical, owner]
 last_verified: 2026-10-04
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/auth/pipeline.ts, src/lib/auth/stages/session-stage.ts, src/lib/auth/stages/access-map.ts, src/lib/auth/stages/refresh-role.ts, src/lib/auth/session.ts, src/lib/auth/plac.ts, src/layouts/AdminLayout.astro, src/components/dashboard/DashboardController.tsx, src/lib/analytics/providers/index.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts, src/lib/dal/HealthResultsRepository.ts]
+related_code: [src/lib/auth/pipeline.ts, src/lib/auth/stages/session-stage.ts, src/lib/auth/stages/access-map.ts, src/lib/auth/stages/refresh-role.ts, src/lib/auth/session.ts, src/lib/auth/plac.ts, src/layouts/AdminLayout.astro, src/components/dashboard/overview/Overview.tsx, src/lib/analytics/providers/index.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts, src/lib/dal/HealthResultsRepository.ts]
 related_docs: [MAINTENANCE.md, architecture/PERMISSIONS-SYSTEM.md, architecture/KV-RESILIENCE.md, reference/DYNAMIC-ROLES-PBAC-DESIGN.md, specs/2026-09-16-access-revocation-remediation-design.md]
 tags: [performance, efficiency, kv, d1, sessions, sidebar, polling, todo]
 ---
@@ -147,12 +147,12 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 > tab now costs at most 12 KV writes an hour, and none while hidden. Fix 4
 > (move the snapshot to D1) is not done.
 
-- **Issue.** The dashboard home fetches `/api/dashboard/metrics` every 60 s and
+- **Issue.** The dashboard home fetches `/api/dashboard/metrics` every 60 s and (removed 2026-10-26 with the old Overview)
   never pauses when the tab is hidden. The metrics are cached in KV for 5 minutes,
   and every refill writes **two** keys (an active copy with a 5-minute TTL and a
   stale copy with none). Each refill also runs 8 provider fetches (Cloudflare,
   Supabase, Sentry, Brevo), each one or more outbound API calls.
-- **Evidence.** `src/components/dashboard/DashboardController.tsx`;
+- **Evidence.** `src/components/dashboard/DashboardController.tsx` (removed 2026-10-26);
   `src/lib/analytics/providers/index.ts` (`telemetry_metrics_cache_v2`,
   `telemetry_metrics_cache_stale_v2`).
 - **Cost (arithmetic).** One open dashboard → 12 refills an hour → **24 KV writes

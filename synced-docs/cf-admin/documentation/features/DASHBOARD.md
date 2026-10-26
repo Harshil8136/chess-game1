@@ -1,127 +1,117 @@
 ---
 
-title: "Dashboard — Real-Data Command Center"
+title: "Overview — the portal's home page"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-10-17
+last_verified: 2026-10-26
 verified_against: [code]
 owner: harshil
 related_code:
 - src/pages/dashboard/index.astro
-- src/components/dashboard/DashboardController.tsx
-- src/components/dashboard/widgets/ServiceStatusStrip.tsx
-- src/components/dashboard/widgets/GscValidationWidget.tsx
-- src/components/dashboard/widgets/EventLedgerWidget.tsx
-- src/components/ui/MetricCard.tsx
-- src/pages/api/dashboard/metrics.ts
+- src/components/dashboard/overview/Overview.tsx
+- src/components/dashboard/overview/OverviewCharts.tsx
+- src/components/dashboard/overview/format.ts
+- src/styles/pages/overview.css
+- src/pages/api/dashboard/overview.ts
+- src/lib/overview/sections.ts
+- src/lib/dal/OverviewRepository.ts
 - src/lib/analytics/providers/index.ts
 - src/lib/visible-poll.ts
 - src/lib/analytics/providers/cloudflare.ts
 - src/lib/analytics/providers/external.ts
 related_docs:
-- EMAIL-PORTAL.md
+- SYSTEM-HEALTH.md
 - GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md
-- SEARCH-CONSOLE-SYNC.md
+- ../records/reports/2026-10-26-overview-redesign.md
 - ../operations/OPERATIONS.md
-tags: [feature, dashboard, analytics, cloudflare, supabase, telemetry]
+tags: [feature, dashboard, overview, analytics, cloudflare, supabase]
 ---
 
-# Dashboard — Real-Data Command Center
+# Overview — the portal's home page
 
-> **TL;DR (non-technical):** The admin home screen: the live metrics and widgets it shows, where those numbers come from, and which of them are not real.
+> **TL;DR (non-technical):** The first page after signing in. It says what needs you, who is at
+> the hotel, whether the platform is working, and what changed, each part only for people who may
+> open the page it comes from. Every number is read from the hotel's own records; nothing is made
+> up.
 
-> **Rewritten 2026-09-19.** This document carried ~200 lines describing the v4.5
-> layout of 2026-05-02 — a setup banner, a bento grid, a dual-axis chart, a quota
-> monitor, an audit-log feed — inside an `active` doc, with a "historical" label
-> that was easy to read past. Those widgets no longer exist and git holds their
-> history, so they have been removed rather than re-labelled. What remains
-> describes the page as it is today.
+> **Rewritten 2026-10-26** for the redesign (change record (private)).
+> The page it replaced (a deck of four cards, some with invented values, and five tabs of raw
+> server numbers) is described in that record and in git.
 
-**Scope:** the `/dashboard` home page and the analytics provider layer behind it.
+**Scope:** the `/dashboard` home page, its one data route, and the analytics provider layer whose
+snapshot its Website card and the Cloud Services pages read.
 
 ---
 
-## 0. What the dashboard renders today
+## 0. What the page shows
 
-`src/pages/dashboard/index.astro` mounts one island,
-`DashboardController.tsx`, `client:only="preact"`, with two props: the page's
-title and `seesHealth`, whether the viewer may open System health (`denyHealth`
-on the session's access map). The page performs no database query of its own.
+`src/pages/dashboard/index.astro` mounts one island, `Overview` (`client:load`), inside the console
+kit's frame with its own look (`src/styles/pages/overview.css`, hue indigo, both themes). The
+island makes one call, `GET /api/dashboard/overview?day=<the viewer's date>`, on opening, every 5
+minutes while the tab is on screen (`src/lib/visible-poll.ts`) and on the refresh button.
 
-| Layer | What is rendered | Source |
-|---|---|---|
-| Command bar | Title, live sync indicator ("Live Stream Active" / "Syncing…" + last sync time), Refresh Telemetry button | `DashboardController.tsx` |
-| KPI deck | 4 `MetricCard`s: Global Edge Network (requests, bandwidth, uptime, sparkline), Data Layer & Cache (pool + buffer-cache ratio bar), Edge Worker Scripts (count, P50, errors, isolate-health bar), Transactional SMTP (sent / 9,000 bar) | `DashboardController.tsx`, `src/components/ui/MetricCard.tsx` |
-| Tabs (segmented control) | Overview · Search Console · Edge Workers · Database Pool · Quotas & Storage | `DashboardController.tsx` |
-| Overview tab | "Service Health Matrix" = `ServiceStatusStrip` (a System health card first for anyone who may open that page, then **8** mini-cards: Network, D1 DB, Google SEO, Security, Brevo, Sentry, Observability, Queues; the Brevo and Queues cards take their state word from System health's checks, [`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §2) → `GscValidationWidget` (fetches its own report) → 7/12 `WidgetEdgeCompute` + 5/12 `EventLedgerWidget` | `widgets/*.tsx` |
-| Edge Workers tab | `WidgetEdgeCompute` (`CloudflareWidgets.tsx`) — searchable fleet console: full script names, role tags, humanised durations | |
-| Database Pool tab | `WidgetPostgresCluster` (`SupabaseWidgets.tsx`) with 4 tabs: Vitals, Engine I/O, Capacity, Auth | |
-| Quotas & Storage tab | 2 cards: Brevo `{sent} / 9,000` and R2 objects / volume | |
-| Event ledger | Section A: telemetry events (routing, pool & cache, email engine, isolates); Section B "Edge Ingress & D1 Engine": cache-hit ratio, D1 read / write queries, cached bandwidth | `widgets/EventLedgerWidget.tsx` |
+From the top, and in this order on a phone (on a wide screen, work on the left and the platform on
+the right):
 
-Tab ids are `overview`, `seo`, `edge`, `postgres`, `quotas`. There is no System
-Health tab and no Audit Log tab.
+| Part | What it shows | Shown to someone who may open | Read from |
+|---|---|---|---|
+| Greeting | Good morning / afternoon / evening and the first name, today's date, one sentence ("2 things need you. 1 pet is staying tonight, the next arrival is Wednesday 29 Oct and the last backup finished 9 h ago."), when it was read, a refresh button, and a sideways row of jump chips | everyone | the sections below |
+| Needs you | One line per source that holds something, most urgent first: open System health problems and checks failing or to look at; a failed latest backup; website bookings of the last 7 days that did not go through; open privacy (ARCO) requests and their deadlines; changes waiting for the viewer's approval; access requests the viewer decides; new inquiries. "All clear" when there is nothing | each line: the page it opens (System health, Backups, Bookings, ARCO, Users, Users, Inquiries) | health-state row and `platform_alerts`; `backup_runs`; `booking_attempts`; Supabase `legal_requests` (`computeSla`); `approvals:pending`; `admin_access_requests`; Supabase `contact_messages` |
+| At the hotel | Arriving today, leaving today, pets staying tonight, arrivals in the next 7 days; pets staying each night for 14 nights (touch a bar to read it); the next 4 arrivals as "Ana L. · 2 pets", service, nights, leaving day | Bookings | Supabase `bookings` and `booking_pets`, minus those deleted or cancelled in `admin_booking_state` |
+| Platform | System health's six groups, each with its worst check's state word and sentence and one mark per day for 14 days | System health | the health-state row ([`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §6) |
+| Recent activity | The last 6 things people did in the portal, in plain words, a run of the same thing as one line with a count | Audit Log | `admin_audit_log`, without the log's own evidence entries (`*_mutation_attempt`, `audit_seal`, `view`) |
+| Website | Requests, the share served from cache, threats blocked and the top countries in the last 24 hours; requests each hour (touch to read) | Cloud Services → Cloudflare | the analytics snapshot (below) |
+| Backups | When the last good backup finished, its size, and the last 14 runs as marks | Backups | `backup_runs` (kind `backup`, the console's check runs left out) |
+| Email | Delivered, on the way and not delivered in 30 days, and System health's own sentences on the queue and Brevo | Email | Supabase `email_audit_logs`; the health-state row |
+| Latest changes | The newest commit in each of the six repositories, with its Workers Builds state | GitHub | the GitHub snapshot in KV ([`GITHUB.md`](GITHUB.md)) |
 
-### 0.1 Values on this page that are not measurements
+"May open" is decided as the sidebar decides: `decideAccess` on the person's access map and the
+page's floor (`pageFloorOpens`), plus `denyHealth` for Platform and `canViewGitHub` for Latest
+changes. A section the person may not open is left out of the answer, not sent empty.
 
-*Added 2026-09-19. These are **code** defects against RULE #0.5, not wording
-problems, and they are logged in `../MAINTENANCE.md` (private). They
-are recorded here because anyone reading a number off this page needs to know
-which ones mean nothing.*
+"Today" is the viewer's own date, sent by the browser, because the hotel has no time-zone setting;
+a date that is not within a day of UTC is ignored and the UTC date is used. A night counts a pet
+from its check-in date up to the night before its check-out date.
 
-| Where | What is shown | What it actually is |
-|---|---|---|
-| KPI deck — Transactional SMTP | `99.8% Delivery · TLS Verified` | A literal string. No provider computes a delivery rate. |
-| KPI deck — Edge Worker Scripts | P50 `1.2 ms` | The fallback when no worker script has data; not a measurement. |
-| KPI deck — Global Edge Network | `100.0%` uptime | The fallback when the status-code series is empty. |
-| KPI deck — Data Layer & Cache | `100.0%` cache-hit ratio | Same: the fallback when Supabase reports nothing. |
-| KPI deck — Edge Worker Scripts | "Isolate Health" bar | `100 − errors × 10`, an invented index rather than a reported metric. |
-| Service Health Matrix — Google SEO | `100% Pass`, `12h Active`, `3 Failed Errors Healed` | All three are literal text. The live readiness score is **76%**, with 60 of 87 URLs thin — see [`GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md`](GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md). The card passes no `isUnconfigured` flag. |
-| `GscValidationWidget` header | `12h Auto-Cron Active` badge | A hard-coded string. *Corrected 2026-09-19: this document said the badge was "a label derived from the `gsc-run-interval-hours` setting".* It is not, and the job it names has been off at source since 2026-08-26 and paused in the cron control plane since 2026-09-16 — see [`SEARCH-CONSOLE-SYNC.md`](SEARCH-CONSOLE-SYNC.md). |
+### 0.1 Every value is read
 
-Most remaining deck fields fall back to `|| 0`, and **nothing in the KPI deck
-reads `_unconfigured`** — so the "never show a fake zero" guarantee described in
-[§Architecture Decisions](#_unconfigured-flag-pattern) holds for the provider
-layer and some widgets, but not for this deck.
+The old page showed values that were not measurements (a literal `99.8% Delivery`, `100.0%` and
+`1.2 ms` fallbacks, an invented "Isolate Health" index, a literal SEO card; SH-8). None of them
+exist on this page. A source that cannot be read shows its own sentence ("The bookings could not
+be read just now. Refresh in a minute.") in place of its numbers, and the other sections still
+show; "Needs you" names any source it could not check. A guest's full name never reaches the page:
+the route cuts it to a first name and an initial.
 
 ### 0.2 How the data gets there
 
-*Corrected 2026-09-19: this document said "all data (analytics, audit log, user
-info) is fetched client-side after mount via the analytics API". There is no audit
-log and no user info on this page.*
+`GET /api/dashboard/overview` (`src/pages/api/dashboard/overview.ts`) reads everything side by
+side (`Promise.allSettled`), each Supabase call with a 4-second limit
+(`src/lib/dal/OverviewRepository.ts`), and turns it into words and numbers with the pure
+functions in `src/lib/overview/sections.ts`. It writes nothing. For an Owner it costs about six
+D1 reads, five Supabase reads and two KV reads; the analytics and GitHub snapshots are refreshed
+after the response when they are old, as before.
 
-`DashboardController` calls `GET /api/dashboard/metrics` on mount and then every
-**5 minutes, only while the tab is on screen** (`src/lib/visible-poll.ts`): a
-hidden tab asks for nothing, and a tab that comes back with data older than 5
-minutes asks at once. A manual refresh pushes the next automatic one back. That
-route calls `fetchAllAnalytics()`, which:
+The Website card reads the analytics snapshot through `fetchAllAnalytics()`, which:
 
 1. reads **one** KV key (`telemetry_metrics_cache_stale_v2`) from the `SESSION`
    namespace, the last good snapshot, and returns it when its own `timestamp`
    is less than 5 minutes old (`METRICS_CACHE_TTL_MS`);
 2. when the snapshot is older, returns it **at once**, marked `refreshing`, and
    fans out to the eight providers in the request's `waitUntil`, writing that one
-   key back on success (one background refresh per isolate per 30 seconds). The
-   dashboard sees `refreshing` and asks once more 5 seconds later, which gets the
-   fresh snapshot;
+   key back on success (one background refresh per isolate per 30 seconds);
 3. only when there is no snapshot at all does the request wait for the providers.
 
-*Changed 2026-10-10:* step 2 used to make the page wait for the providers, up to
-2.6 s in Sentry (`GET /api/dashboard/metrics`), on every first visit of the day.
-The Service Control pages (`/dashboard/control-plane`) read the same snapshot the
-same way and show its own time.
+The Service Control pages (`/dashboard/control-plane`) read the same snapshot the same way. Since
+2026-10-26 the old Overview's detailed views live there, on the owner's choice: the Workers list
+(`WidgetEdgeCompute`) on Cloud Services → Cloudflare, the database details
+(`WidgetPostgresCluster`) on Cloud Services → Supabase, both drawn from the snapshot the page
+already reads; and Google's readiness report (`GscValidationWidget`) on the SEO page.
 
-*Changed 2026-10-04:* the poll was every 60 seconds, hidden tabs included, and
-each refill wrote two keys (a 5-minute copy, `telemetry_metrics_cache_v2`, and
-the permanent stale copy). The free allowance is about 1,000 KV writes a day for
-the whole account, shared with sessions, and a dashboard left open all day cost
-up to 576 of them. Now it is at most 288 (12 an hour) while visible, and none
-while hidden. The old 5-minute key simply expires.
-
-On a Cloudflare-provider failure the last snapshot is kept and served with its
-own `timestamp`, so the "last sync" clock says how old the numbers are. *Changed
-2026-10-10:* the timestamp used to be reset to now, which made stale numbers read
-as fresh.
+*History:* until 2026-10-26 the island was `DashboardController.tsx` and it called
+`GET /api/dashboard/metrics` (both removed 2026-10-26). The poll went from every 60 seconds,
+hidden tabs included, to every 5 minutes while visible on 2026-10-04, and a stale snapshot stopped
+making the page wait on 2026-10-10. On a Cloudflare-provider failure the last snapshot is kept and
+served with its own `timestamp`.
 
 ---
 
@@ -204,12 +194,9 @@ field. When the API token is missing or a fetch fails, this flag is set instead 
 throwing, keeping the distinction between **zero** (real data, no activity) and
 **unknown** (no credentials or unreachable endpoint) explicit in the type system.
 
-**The flag is not consistently consumed.** `ServiceStatusStrip` passes
-`isUnconfigured` for most of its cards and renders a placeholder; the KPI deck
-does not read the flag at all and falls back to invented values instead — see
-[§0.1](#01-values-on-this-page-that-are-not-measurements). *Corrected 2026-09-19:
-this section previously claimed the UI shows `—` / "Setup Required" rather than
-zeros, without qualification.*
+The Overview's Website card reads it: an unconfigured zone shows a sentence, never zeros
+(`websiteView` in `src/lib/overview/sections.ts`). *Until 2026-10-26* the old KPI deck did not
+read the flag and fell back to invented values.
 
 ### Parallel provider settlement
 
@@ -224,17 +211,16 @@ data. Cloudflare returns HTTP 200 with an errors array when a query is malformed
 or a filter field name is wrong — not a non-200 status. Skipping this check causes
 silent data loss.
 
-### Component isolation
+### One call, sections as data
 
-Each widget is a standalone Preact component receiving analytics data and loading
-state as props, so state stays in one place and skeleton states are trivial. One
-exception: `GscValidationWidget` fetches its own validation report.
+The Overview asks one route, which answers each section as `{ ok: true, data }` or
+`{ ok: false, message }`, so the island only draws and one slow source costs one card.
 
 ### No new dependencies
 
-The overhaul used only existing approved dependencies: CSS for progress
-animations and native `fetch` for all API calls. No third-party chart library —
-`uplot` is **not** in `package.json` and is not used.
+The 2026-10-26 redesign added none: its three charts are hand-drawn SVG
+(`OverviewCharts.tsx`), its icons are `lucide-preact`, and native `fetch` makes its one call. No
+third-party chart library — `uplot` is **not** in `package.json` and is not used.
 
 ---
 
@@ -250,15 +236,16 @@ animations and native `fetch` for all API calls. No third-party chart library �
 
 5. **Supabase Prometheus endpoint** — the privileged metrics endpoint is a non-public API in early/internal use. Supabase could change or restrict it without notice, so the string-parsing logic must fail safely.
 
-6. **Brevo usage bar and the SMTP KPI are not trustworthy** — see [§0.1](#01-values-on-this-page-that-are-not-measurements).
+6. **Website visitors are not shown.** The zone query sums requests per hour and has no unique-visitor count; a sum of hourly uniques would count a visitor once per hour, so the card shows requests instead.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | §0 to §0.2 rewritten for the redesign, against `src/pages/dashboard/index.astro`, `src/components/dashboard/overview/`, `src/pages/api/dashboard/overview.ts`, `src/lib/overview/sections.ts` and `src/lib/dal/OverviewRepository.ts`, with `test/overview.test.ts`; the live tables it reads (`bookings`, `booking_pets`, `contact_messages`, `legal_requests`, `email_audit_logs` in Supabase; `booking_attempts`, `backup_runs`, `admin_audit_log`, `admin_booking_state` in D1) through the Supabase and Cloudflare connectors, read only; the Architecture Decisions and Known Limitations edits | The provider sections and token scopes (unchanged); the page in a phone browser (the owner's test) |
 | 2026-10-17 | §0.1's values re-read in `DashboardController.tsx` (the `'100.0'` and `'1.2'` fallbacks, the `99.8% Delivery` literal), `ServiceStatusStrip.tsx` and `GscValidationWidget.tsx` (the literal SEO strings), the tab labels, `WORKER_SCRIPTS` (two scripts) in `cloudflare.ts`, the Sentry and Brevo windows in `external.ts`. All still as described | Token scopes; the D1 analytics lag; the screen in a phone browser |
 | 2026-10-17 | §0's opening paragraph and Overview row for the System health card, against `src/pages/dashboard/index.astro`, `DashboardController.tsx` and `ServiceStatusStrip.tsx`, with `test/system-health.test.ts` and `test/system-health-board.test.ts`; §0.1's claim that its values are logged in `MAINTENANCE.md`, which was not true (now SH-8) | Everything else on the page; §0.1's values were not re-read |
-| 2026-10-10 | The KV-cache steps and the provider-failure paragraph, against `src/lib/analytics/providers/index.ts`, `src/pages/api/dashboard/metrics.ts` and `DashboardController.tsx`, with `test/analytics-cache.test.ts` (three stale-while-revalidate tests) | Everything else on the page; the live timing after deploy |
+| 2026-10-10 | The KV-cache steps and the provider-failure paragraph, against `src/lib/analytics/providers/index.ts`, `src/pages/api/dashboard/metrics.ts` and `DashboardController.tsx` (both removed 2026-10-26), with `test/analytics-cache.test.ts` (three stale-while-revalidate tests) | Everything else on the page; the live timing after deploy |
 | 2026-10-04 | The polling and KV-cache paragraphs, against `DashboardController.tsx`, `src/lib/visible-poll.ts` and `src/lib/analytics/providers/index.ts`, with `test/visible-poll.test.ts` and `test/analytics-cache.test.ts` | Everything else on the page |
 | 2026-09-19 | `DashboardController.tsx` (KPI fallbacks, 60 s poll, tab ids), `ServiceStatusStrip.tsx` (the static `seo` card), `GscValidationWidget.tsx` (the static badge), `src/pages/api/dashboard/metrics.ts`, `src/lib/analytics/providers/index.ts` (KV cache + stale copy + timestamp rewrite), `external.ts` (Sentry top-5 lifetime sum, Brevo 100-event window), `cloudflare.ts` (queue backlog/DLQ). §0.1 and §0.2 added; the v4.5 historical sections removed; provider, token-scope and `_unconfigured` claims corrected. | The exact Cloudflare token-scope name the GraphQL D1 query needs; the D1 analytics lag figure; the Supabase Prometheus endpoint's stability |
 | 2026-09-14 | `DashboardController.tsx`, every file under `src/components/dashboard/widgets/`, `src/pages/dashboard/index.astro`, the provider layer (8 providers, `Promise.allSettled`, `_unconfigured`, snake-case GraphQL filters, `WORKER_SCRIPTS`), `wrangler.toml` crons, `package.json` (no `uplot`) | API-token permission scopes; D1 Analytics lag; Supabase Prometheus endpoint stability |

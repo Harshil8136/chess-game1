@@ -92,7 +92,7 @@ const ramUsedPct = fmtPct((pg.ramTotal ?? 0) - (pg.ramAvailable ?? 0), pg.ramTot
 **Resolution applied:**
 
 - Changed to `export default function DashboardController`
-- Fixed API URL to `/api/dashboard/metrics`
+- Fixed API URL to `/api/dashboard/metrics` (removed 2026-10-26 with the old Overview)
 - Wired `initialStats` props into component state
 - Added null-safety guard in TopBar.tsx for `userName`
 
@@ -102,7 +102,7 @@ const ramUsedPct = fmtPct((pg.ramTotal ?? 0) - (pg.ramAvailable ?? 0), pg.ramTot
 
 Dashboard widgets are wrapped in `<ErrorBoundary sectionName="...">`
 (`src/components/ui/ErrorBoundary.tsx`). **Two** mounting files as of
-2026-09-19 — `src/components/dashboard/DashboardController.tsx` and
+2026-09-19 — `src/components/dashboard/DashboardController.tsx` (removed 2026-10-26) and
 `src/pages/dashboard/bookings/index.astro` (`src/middleware.ts` only mentions
 the name in a comment). When a widget crashes:
 
