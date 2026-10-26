@@ -367,6 +367,17 @@ upgrade-insecure-requests
 Every first-party inline `<script>` is rewritten to carry the per-request nonce
 by the middleware itself (the `finalBody` replace at the end of `csp.ts`).
 
+**One nonce per request, rewrites included (since 2026-10-26).** A rewrite
+(`context.rewrite` or `Astro.rewrite`, which is how every refused page becomes the
+access-denied card) runs the whole middleware chain again inside the first run,
+with the same `locals`. Until 2026-10-26 the inner run made a second nonce and
+stamped the page's scripts with it, while the outer run sent the first in the
+header. A policy that carries a nonce makes browsers ignore `'unsafe-inline'`, so
+every inline script on the card was refused: no island started, the sidebar and
+the top bar's buttons did nothing and the request-access form never appeared, on
+a page opened directly. The middleware now keeps the nonce already in
+`locals.cspNonce`; `test/csp.test.ts` runs it nested as a rewrite does.
+
 **Page swaps (since 2026-10-10).** A click inside the portal no longer reloads the
 tab: Astro's `<ClientRouter />` fetches the next page and swaps it in, so the tab
 keeps the policy, and the nonce, of the page it first loaded. The new page's
@@ -1309,6 +1320,7 @@ This pass re-verified every deferred item from the 2026-05-25 review and closed 
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | §4's "One nonce per request" paragraph against `securityHeaders` in `src/lib/security/csp.ts` and Astro 7.3.2's `executeRewrite` (`node_modules/astro/dist/core/rewrites/handler.js`, which calls `handleMiddleware` again with the same state and locals); the new test in `test/csp.test.ts` fails without the fix and passes with it | The live card on a phone (the owner's test); whether Astro's error pages (404, 500) go through the same path. The rest of the document not re-read |
 | 2026-10-26 | §6a's `GET /api/users/pages` row (the `mayGive` and `mayTake` fields, 401 for a refused sign-in) against `src/pages/api/users/pages.ts` and `test/invite-pages.test.ts`; `AccessPolicyGrid.tsx` marked removed in the CSP row | The rest of the document |
 | 2026-10-26 | §6a's `GET /api/analytics/{part}` row after round 2 (seven parts, `retry=1`, the email ledger read) against `src/pages/api/analytics/[part].ts`, `src/lib/analytics/report/load.ts` and `emailLogs` in `src/lib/dal/AnalyticsRepository.ts`; `test/analytics-round2.test.ts` passes; §0's PLAC row unchanged (no route file added: 171 files under `src/pages/api/`) | The rest of the document |
 | 2026-10-26 | §6a's new `GET /api/analytics/{part}` row against `src/pages/api/analytics/[part].ts`, `denyAnalytics` in `src/lib/auth/surface-guards.ts`, `safeTimeZone` in `src/lib/analytics/report/range.ts` and `csv.ts`; `test/analytics.test.ts` passes (401, 404, 403 per part, Download and Refresh keys); §0's PLAC row re-counted (55 prefixes; 171 route files, 162 mapped and 9 session-less) against `API_PAGE_MAPPING` and the files under `src/pages/api/` | The rest of the document |
