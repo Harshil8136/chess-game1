@@ -6,7 +6,7 @@ last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/pages/dashboard/health.astro, src/pages/dashboard/index.astro, src/lib/overview/sections.ts, src/components/admin/health/, src/styles/pages/health.css, src/lib/health/, src/lib/health/readings.ts, src/lib/health/probes.ts, src/lib/dal/HealthReadsRepository.ts, src/lib/vps-proxy.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/lib/email-console.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/dal/PlatformAlertsRepository.ts, src/lib/schemas/health.ts, src/pages/api/system-health/, src/lib/health/heavy.ts, src/lib/dal/EmailAuditLogRepository.ts, src/lib/auth/surface-guards.ts, src/lib/alert-gate.ts, src/lib/email-console.ts, src/lib/ai/telemetry.ts, migrations/0072_system_health.sql, migrations/0074_health_ack_snooze.sql, migrations/0075_health_run_heavy.sql, migrations/0076_health_configure.sql, test/system-health.test.ts, test/system-health-settings.test.ts, test/system-health-heavy.test.ts, test/system-health-ack.test.ts, test/system-health-state.test.ts, test/system-health-readings.test.ts, test/system-health-checks.test.ts, test/vps-proxy.test.ts, test/health-checks-job.test.ts, test/jobs-budget.test.ts, test/system-health-board.test.ts, test/system-health-look.test.ts, test/debug-access.test.ts, test/action-keys-enforced.test.ts, test/hot-query-plans.test.ts, test/ai-telemetry.test.ts]
-related_docs: [CRON-CONTROL.md, VPS-CONSOLE.md, ../records/reports/2026-10-17-health-part-3.md, ../records/reports/2026-10-17-health-snooze-repeats-watcher.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
+related_docs: [CRON-CONTROL.md, ../records/reports/2026-10-26-health-false-alarms.md, VPS-CONSOLE.md, ../records/reports/2026-10-17-health-part-3.md, ../records/reports/2026-10-17-health-snooze-repeats-watcher.md, ../records/reports/2026-10-17-health-checks-on-their-own.md, ../records/reports/2026-10-17-health-checks-rebuilt.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../operations/DEV-TOOLS.md, ../reference/schema-change-ledger.md, ../records/reports/2026-10-17-system-health.md, ../specs/2026-10-17-system-health-look.md, ../records/reports/2026-10-17-system-health-look.md]
 tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 ---
 
@@ -120,7 +120,7 @@ rules that turn what a check read into Working, Needs a look or Failing live apa
 | Brevo, the main email sender | Email | Soon | hourly | Brevo accepts the portal's key, and today's sends are not nearly used up (300 a day on the free plan, a warning at 80%) |
 | Resend, the backup email sender | Email | Soon | hourly | Resend accepts the portal's own key, and its daily and monthly allowance is not nearly used up |
 | Email domain records | Email | Soon | daily | The records that keep hotel mail out of spam: one SPF record, Brevo's ownership and signing records, DMARC, and Resend's signing and return-address records |
-| Shared database | Data | Urgent | every 5 minutes | The shared Cloudflare D1 database answers, how fast, and how full it is of its 500 MB |
+| Shared database | Data | Urgent | every 5 minutes | The shared Cloudflare D1 database answers, how fast, and how full it is of its 500 MB. An answer slower than 1.5 seconds is asked once more and the second counts, so one slow moment is not called a slow database (since 2026-10-26) |
 | Database's daily allowance | Data | Soon | hourly | Today's rows read and written against the free plan, as the hourly usage check last measured: a warning where jobs that can wait are held back, a failure at 90% |
 | Database tables | Data | Urgent | hourly | The tables the portal cannot work without exist |
 | Supabase | Data | Urgent | every 5 minutes | Supabase answers |
@@ -138,7 +138,7 @@ rules that turn what a check read into Working, Needs a look or Failing live apa
 | Request limits | Portal | Soon | hourly | Every one-minute request limit is connected |
 | Analytics recording | Portal | FYI | hourly | The analytics store is connected (checked without writing) |
 | Sentry, the error tracker | Portal | Soon | hourly | Sentry accepts the portal's key |
-| Providers' status pages | Portal | FYI | hourly | Cloudflare, Supabase, Brevo, Resend and Sentry report no outage on their public status pages. Only a major or critical report is a warning; a minor one is named in a pass, as Cloudflare's page names a minor issue somewhere in its network most days |
+| Providers' status pages | Portal | FYI | hourly | Cloudflare, Supabase, Brevo, Resend and Sentry report no outage on their public status pages. Only a major or critical report is a warning; a minor one is named in a pass. Cloudflare is read from its open incidents, not its overall word (since 2026-10-26, below) |
 
 **Running on their own.** The `health-checks` job in the five-minute scheduler
 (`src/workers/scheduled-health-checks.ts`; [`CRON-CONTROL.md`](CRON-CONTROL.md) §3e) runs each
@@ -203,7 +203,8 @@ changing them at once never overwrite each other (compare-and-swap).
 
 **Limits.** Test again runs one check at most once a minute, and Check everything now at most once
 every two minutes; the stored results are the clock, so a check the job just kept counts too. At
-most six checks run at a time, each stops waiting after ten seconds, and in the job and Test again
+most six checks run at a time, each stops waiting after ten seconds (thirty for the five that
+reach our other Workers through a private connection, below), and in the job and Test again
 a failure is tried once more before it counts, one at a time once every check has run. The job
 itself starts only once the five-minute tick's other jobs have finished (`runLast`,
 [CRON-CONTROL.md](./CRON-CONTROL.md) §5). Both since 2026-10-21, so the checks do not queue
@@ -215,8 +216,8 @@ time, several times a day, the portal's private connections to our other Workers
 the chat assistant, the server console, the email service) stop answering the portal's
 scheduled runs, all together, while guests are served and the server's checks from outside
 pass. Each time, *Website and booking pages* and *Website's booking and consent systems* timed
-out, filed a critical problem and emailed. The cause is inside Cloudflare and is not found yet
-(MAINTENANCE.md (private) SH-10). Now, in the job, a failure of either of those two
+out, filed a critical problem and emailed (MAINTENANCE.md (private) SH-10, the
+cause in the next paragraph). Now, in the job, a failure of either of those two
 checks that is only a timeout becomes a warning, with no problem and no email, when the
 server's own site checks from outside (*Server's site checks*) passed within the last hour;
 warnings at the end of its readings (the server console, behind the same kind of connection,
@@ -243,9 +244,30 @@ and 8 calls to our other Workers in the test that pins it (`test/system-health-c
 person's run leaves the checks' places in the schedule as they were. The waiting does not count
 towards the Worker's CPU time.
 
+**Private connections are given time to start (2026-10-26).** The week of results from
+2026-10-19 to 2026-10-26 showed why those connections "stall": on the portal's scheduled runs, a
+call to one of our other Workers often waits 10 to 25 seconds for that Worker to start, while the
+same call from a page (Test again) answers in under half a second and the run's outside requests,
+the public website's included, answer at once. Cloudflare runs scheduled work on machines of its
+own, where our other Workers are often not running yet. The checks used to give up after eight
+seconds, twice, so every slow start was a timeout and the day's bar turned orange or red. Now the
+five checks that reach our other Workers (*Website and booking pages*, *Website's booking and
+consent systems*, *Website chat assistant*, *Email service: stuck and failed mail* and *Server's
+site checks*) wait up to 25 seconds for the answer (`PRIVATE_WAIT_MS` in
+`src/lib/health/probes.ts`) within a 30-second limit for the check (`PRIVATE_CHECK_MS` in
+`src/lib/health/catalog.ts`); the backup tick has waited 25 seconds for cf-backup since
+2026-10-01 and timed out three times in 25 days. Waiting costs no CPU. A start slower than that
+is still a timeout, and the cross-check above still applies to it.
+
 **Providers' status pages.** The *Providers' status pages* check reads each provider's public
 status page at its `api/v2/status.json` address (the Statuspage format all five answer, under a kilobyte; an answer far larger
-is not parsed): five requests an hour, with no key. Sixteen checks name the provider they depend on
+is not parsed): five requests an hour, with no key. Cloudflare's is read from its open incidents
+instead (`api/v2/incidents/unresolved.json`, `readIncidents` in `src/lib/health/probes.ts`): its
+page lists each of its hundreds of data centres as a part of its own, and one re-routed for
+planned work turns its overall word to "Partial System Outage" with no incident open. All 216
+readings from 2026-10-17 to 2026-10-26 said so, so the check needed a look every hour and the
+Portal bar was orange every day. The worst open incident's impact is the reading now, and its
+name the words; planned maintenance counts as none. Sixteen checks name the provider they depend on
 (`provider` in the catalog): Cloudflare for the website's pages and systems, the email queue and
 email service, the database, its allowance and tables, storage, the portal's Cloudflare sign-in,
 the scheduled jobs and the Workers' errors; Brevo, Resend, Supabase (two checks) and Sentry for
@@ -454,6 +476,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-26 | Why the bars were orange and red most days, read live through the Cloudflare D1 connector (`system_test_results` 2026-10-19 to 26: the timeouts at exactly 8 and 16 seconds, the outside requests of the same runs, Test again runs at 130 to 370 ms, the 216 providers readings, the 11 slow database readings) and Sentry (CF-ADMIN-2A, 1W); Cloudflare's status page read through the Exa fetch (status, components, open incidents). Then §3's table rows for *Shared database* and *Providers' status pages*, the limits, the private connections and the providers' paragraphs against `PRIVATE_WAIT_MS`, `privateSignal`, `STATUS_PAGES` and `readIncidents` in `src/lib/health/probes.ts`, `PRIVATE_CHECK_MS` and the checks in `src/lib/health/catalog.ts` and `runChecks` in `src/lib/health/run.ts`, pinned by `test/system-health-checks.test.ts` | Whether 25 seconds covers every slow start: read from the results of the days after the push. That our other Workers have to start on the machine a scheduled run lands on is the reading of the timings; Cloudflare's documentation says only that scheduled runs go to machines with spare capacity. The rest of the document not re-read |
 | 2026-10-24 | §3a (new), §1's three rows, §2's tab table, §6's two rows and §7 against `src/lib/health/logscan.ts`, `src/workers/scheduled-log-scan.ts`, `src/pages/api/system-health/logs.ts`, `src/lib/health/config.ts` (`logScanMinutes`), `LogsPanel.tsx` and `SettingsPanel.tsx`; `test/log-scan.test.ts` (masking, causes, the answer's shape, windows, the job, the route's access and limit, the setting, the brief) passes; Cloudflare's request and answer shapes from its API SDK (cloudflare 7.3.0, `workers/observability/telemetry`) | A live scan: the token lacks the permission when written, so the answer's shape is checked by the code at run time, not against a real answer. The rest of the document not re-read |
 | 2026-10-24 | §3a's Sentry issues, the interval row and the token steps on the Logs tab, §2's Logs row and §7, against `getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`, `sentryBrief` in `src/lib/health/logscan.ts`, `src/pages/api/system-health/logs.ts` and `LogsPanel.tsx`; `test/log-scan.test.ts` (23, two new for the Sentry list) passes; the live issue list read through the Sentry connector (three projects, one unresolved issue) | The portal's own call to Sentry's organisation issues API live: the same token reads project issues for the Cloud Services page, but this endpoint was not called with it. The rest of the document not re-read |
 | 2026-10-23 | §3's hour of grace for *Website chat assistant* and *Email service: stuck and failed mail* against `READ_TIMEOUT_GRACE` and `crossCheck` in `src/lib/health/run.ts`, `isTimeout` in `src/lib/health/readings.ts` and the email service check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts`; both checks' readings read live through the Cloudflare D1 connector (`health-state`) and Sentry CF-ADMIN-2C, 2H and 2J (timeouts) | Why the connections stall (SH-10). The rest of the document not re-read |
