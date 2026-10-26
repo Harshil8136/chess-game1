@@ -71,7 +71,7 @@ attempt — whose rejection was then also swallowed by the primary bug.
 ### Why no warning appeared, even though a warning path existed
 
 `manage.ts` already had a `warning` field in its response, and the frontend
-(`InviteUserModal.tsx`, and the Users table that `PersonDrawer.tsx` and `RoleDialog.tsx` replaced on 2026-10-16) already checked for it and called
+(`InviteUserModal.tsx`, which since its 2026-10-26 rebuild shows the warning in its finished view instead of a toast, and the Users table that `PersonDrawer.tsx` and `RoleDialog.tsx` replaced on 2026-10-16) already checked for it and called
 `pushToast('warning', ...)`. That plumbing was correct — it simply never
 fired, because `syncCfAccessGroup()` never told it there was a failure to
 report. Fixing the detection bug alone makes this pre-existing warning path

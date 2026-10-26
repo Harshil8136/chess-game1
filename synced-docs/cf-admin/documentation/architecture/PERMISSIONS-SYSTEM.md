@@ -210,7 +210,7 @@ Services) read `label`, `description`, `icon` and `category` through
 `src/lib/auth/page-registry.ts`, and nothing in the code repeats a page's name. Renaming a page,
 or moving it to another sidebar group, is one edit in Page Registry (`/dashboard/debug/pages`,
 `PATCH /api/system/pages`, which now accepts `label` and `category`). Until then the sidebar
-derived its groups from path rules in three places (`plac.ts`, `AccessPolicyGrid.tsx`,
+derived its groups from path rules in three places (`plac.ts`, `AccessPolicyGrid.tsx` (removed 2026-10-26),
 `Sidebar/config.ts`), and pages, tabs and titles each carried their own copy of the name, so a
 rename reached only the sidebar. A part of a page with no row of its own (one email section,
 one person's access) names itself as a section beside its page's name; only the access-denied

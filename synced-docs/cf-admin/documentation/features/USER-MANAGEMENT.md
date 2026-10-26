@@ -3,10 +3,10 @@
 title: "Manage Users & RBAC Architecture"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-17
+last_verified: 2026-10-26
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/pages/api/users/manage.ts, src/pages/api/users/approvals.ts, src/lib/approvals/handlers.ts, src/lib/users/manage-apply.ts, src/components/admin/users/SecondPersonPanel.tsx, src/lib/auth/stages/decide.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
+related_code: [src/pages/api/users/manage.ts, src/components/admin/users/InviteUserModal.tsx, src/components/admin/users/invite/InviteRoles.tsx, src/components/admin/users/invite/InvitePages.tsx, src/lib/access-center/invite-pages.ts, src/pages/api/users/pages.ts, src/styles/components/invite.css, src/pages/api/users/approvals.ts, src/lib/approvals/handlers.ts, src/lib/users/manage-apply.ts, src/components/admin/users/SecondPersonPanel.tsx, src/lib/auth/stages/decide.ts, supabase/migrations/20261016000000_role_check_add_viewer.sql, src/components/admin/users/UsersConsole.tsx, src/components/admin/users/PersonDrawer.tsx, src/components/admin/users/people.ts, src/pages/api/users/access-data.ts, src/lib/access-center/counts.ts, src/lib/access-review/handlers.ts, src/components/admin/users/AccessReviewPanel.tsx, src/lib/unused-accounts.ts, src/workers/scheduled-unused-accounts.ts, src/pages/api/settings/user.ts, src/pages/api/users/force-kick.ts, src/pages/api/users/resend-invite.ts, src/lib/access-requests/handlers.ts, src/lib/access-requests/keys.ts, src/components/admin/settings/AskForPermission.tsx, src/lib/auth/plac.ts, src/lib/auth/rbac.ts, src/lib/auth/authz-signal.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/auth/routes.ts]
 related_docs: [CF-ACCESS-SYNC.md, SESSION-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [users, rbac, plac, cloudflare-access, sessions, lifecycle]
 ---
@@ -119,7 +119,7 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/api/users/access-center.ts` (`src/lib/access-center/handlers.ts`) | `isVendorSupport`, `isOwnerOrVendor` (in `page-gates.ts`), `canManageUser`, `isReadOnly` (in `src/lib/access-center/`) | The Access Center: one person's access in every system, pages and both consoles in one save ([ACCESS-CENTER](ACCESS-CENTER.md); `/api/users/access` was retired 2026-10-03) | ✅ `/dashboard/users`; a console change also needs that console's page (`/dashboard/vps`, `/dashboard/backup`); 5/min RL shared with access-request decisions and Page Registry's personal settings |
 | `src/pages/api/users/force-kick.ts` | `denyForceKick`, `isOwnerOrVendor`, `canManageUser` | Session termination: below the owner and vendor support, only with a grant of `#force-kick` (*changed 2026-10-15*) and a strict outrank (*changed 2026-10-14*; until then target protection only) | ✅ `/dashboard/users`, **plus an explicit grant of `#force-kick`** |
 | `src/pages/api/users/index.ts` | `requireAuth()` + PLAC (no role floor) | User registry list — every account returned, including hidden/Vendor Support (2026-07-26, see §4) | ✅ `/dashboard/users` (2026-05-26) |
-| `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for InviteModal | ✅ `/dashboard/users` (2026-05-26) |
+| `src/pages/api/users/pages.ts` | `requireAuth()` + PLAC (no role floor) | Page registry for Invite someone, with `mayGive` and `mayTake` for the viewer (2026-10-26) | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/probes.ts` | `requireAuth(context, 'owner')` | Unauthorized-access probe roll-up | ✅ `/dashboard/users` (2026-05-26) |
 | `src/pages/api/users/cf-access-audit.ts` | `requireAuth(context, 'owner')` | CF Access ↔ Supabase whitelist diff | ✅ `/dashboard/users` (2026-05-26) + 10/min RL |
 | `src/pages/api/sessions/active-sessions.ts` | `denySessions`, `canManageUser` | KV active session list + revoke and block; below the owner and vendor support, another person's sessions only with a strict outrank, and never your own account's block (*changed 2026-10-14*) | ✅ `/dashboard/sessions`, **plus `#revoke` on DELETE**; 30/min RL |
@@ -201,7 +201,7 @@ The user management API endpoint securely bridges Supabase GoTrue logic. All mut
 
 When an authorized admin adds a new member from the dashboard:
 
-1. **Frontend Request:** UI validates inputs (Email, Role, Display Name) via the Invite Modal (Preact island).
+1. **Frontend Request:** the Invite someone pop-up (§5.2) checks the email, name and role before sending.
 2. **Page Access Fetch:** Modal lazy-fetches the page registry on the **first modal open** (not on component mount) — live page list from D1, zero hardcoding. Cached after first load; full error state and retry button shown on failure.
 3. **CSRF Validation:** Middleware verifies Origin/Referer headers match the site URL.
 4. **Endpoint Validation:** Endpoint verifies the requesting user has sufficient rank and prevents privilege elevation.
@@ -214,29 +214,55 @@ When an authorized admin adds a new member from the dashboard:
 > **No GoTrue:** There is no call to `auth.admin.createUser()`.
 > **The Worker does send an invitation email.** *Corrected 2026-09-19: this said "The user receives no invitation email from the Worker. CF Access sends its own authentication email/redirect when the user first tries to access `admin.madagascarhotelags.com`."* `POST /api/users/manage` enqueues an invite onto `EMAIL_QUEUE` with `purpose: 'custom_email'` and the tag `admin_invite`, and `src/pages/api/users/resend-invite.ts` exists to send it again. *Since 2026-10-10 the re-send goes onto the same queue (`src/lib/email/queue-mail.ts`), with the role's label, and answers 503 when it could not be queued; until then it called Resend directly, sent the stored role id, and logged the email as `sent` before anything had been sent.* CF Access does also send its own OTP/redirect on first access, but that is in addition. The portal host is **`secure.madagascarhotelags.com`**, not `admin.…`.
 
-### 5.2 Role Selection UI (Invite Modal)
+### 5.2 The invitation pop-up (Invite someone)
 
-The Invite Modal renders a "Command Console" two-panel dialog, on the shared Dialog
-(`src/components/ui/Dialog.tsx`, `size="xl"`) since 2026-10-10: the panels sit side by side
-on a wide screen and stack on a phone, and only the dialog's body scrolls.
+*Rebuilt 2026-10-26* (change record (private)); until
+then a two-panel "Command Console" dialog whose role descriptions showed only on hover, whose
+page grid offered changes the server then refused, and whose hidden switch the Owner saw but the
+server ignored (MAINTENANCE PD-5).
 
-**Left panel — Identity:**
+`src/components/admin/users/InviteUserModal.tsx` opens on **Invite someone** (and from the access
+probe with the email filled in), on the shared Dialog (`size="xl"`, the console kit's
+`ck-scope` and `iv-glass`; styles `src/styles/components/invite.css`). It is a pane of frosted
+glass like the Overview ([the look](../specs/2026-10-26-overview-glass-look.md) §6). Three steps
+on one screen, phone first, side by side from 64rem wide:
 
-- **Role Pill Selector**: a two-column pill grid (`grid-cols-2`) over the five pickable roles (`PICKABLE_ROLES`: Owner, Admin, Manager, Staff and, since 2026-10-16, Viewer), with role-specific colours. Roles at or above the actor's level are greyed-out/disabled (the server enforces this too); Vendor Support may pick any of them.
-- **Hidden Account Toggle**: Ghost-mode toggle only rendered for Vendor Support and Owner actors. The server honours it only for Vendor Support (`manage.ts`, §4): an Owner who switches it on invites an ordinary, visible account.
-- Email + Display Name inputs. Grant Access and Cancel sit in the dialog's footer, under both panels (2026-10-10).
+1. **Who are you inviting?** Email address (checked with the server's own pattern when the field
+   is left) and the name the portal shows (required, 120 characters at most).
+2. **What will they do?** One card per role this person may give (`rolesToOffer`: below their
+   own role; Vendor support may give any pickable role), each with its description from
+   `ROLE_META` and, once the page list is read, how many pages it opens
+   (`invite/InviteRoles.tsx`). Picking Owner or Vendor support says that it needs a second person
+   (§6.3), which an invitation can give only when nobody else could approve.
+3. **Which pages?** One line: how many pages the role opens and how many changes the inviter
+   made, with a bar. **Choose pages** opens the list (`invite/InvitePages.tsx`): a sideways row
+   of the sidebar's groups with their open counts, a search, and one switch per page with its
+   `#` features under it. Each row says where its state comes from ("Comes with Staff", "Added by
+   you", "Taken away by you") or why its switch is fixed: the Overview opens to everyone, a page
+   floor, the Owner or Vendor support opening every page, a page the inviter cannot give, or one
+   they do not open themselves. **Undo all** clears the changes. Changing the role keeps only the
+   changes that still differ from it and that the inviter could still make.
 
-**Right panel — Page Access:**
+What a row says opens is `personOpens` (`src/lib/access-center/overview.ts`) through
+`src/lib/access-center/invite-pages.ts`; `test/invite-pages.test.ts` checks it against
+`computeAccessMap`, `decideAccess` and the page floors over D1 for every role. Whether the inviter
+may give or take a page comes from `GET /api/users/pages`, which since 2026-10-26 adds `mayGive`
+(gates C and D) and `mayTake` (gate C) to each page, from the same functions
+`inviteSettingRefusals` uses. The server still checks every setting (`inviteSettingRefusals` in
+`src/lib/access-center/page-gates.ts`, since 2026-10-16): one refused setting refuses the whole
+invitation (403, nobody is invited). An invitation carries at most 50 settings (one D1 batch);
+since 2026-10-26 more are refused with 400 before anyone is added, where until then the rest were
+dropped unsaid.
 
-- **Access Policy** (`invite/PageAccessMatrix.tsx` on the shared `AccessPolicyGrid.tsx`): the live page list (`GET /api/users/pages`), fetched lazily on first modal open, with an error state and **Retry** if the fetch fails. One switch per page, grouped by registry category as the sidebar groups them, each page's `#` features under it; each row says **Active** or **Restricted** for the chosen role.
-- A switch starts at the role's answer. Flipping it writes a personal setting the other way (a grant above the role, or a close the role would open), marked **Override**; flipping it back removes the setting.
-- The header counts the pages that open and, when there are any, the overrides.
-- *Since 2026-10-16* the server checks each setting with the gates a later change on the
-  person's Access page meets: you hold the page, you may give it, and a grant clears the page's
-  floor for the new role (`inviteSettingRefusals` in `src/lib/access-center/page-gates.ts`). One
-  refused setting refuses the whole invitation (403, nobody is invited) and the message names up
-  to three of them. The grid still offers every page; until then such settings were written
-  unchecked (MAINTENANCE AC-10).
+The **Hidden account** switch is drawn for Vendor support only, the one role the server honours
+it for (§4; PD-5's display half).
+
+**Send invitation** is `POST /api/users/manage`. A refusal stays in the pop-up, in the server's
+words (an address already on the list says so). On success the pop-up says what happened: the
+invitation is on its way to the address, or, when Cloudflare's sign-in list was not updated, that
+the person was added but no email went yet (the server's warning, §5.1), with what to do. **Invite
+someone else** starts again; **Done** closes. Either way the list reads itself again
+(`user:invited`).
 
 ### 5.3 Restoring / Enabling Access
 
@@ -329,10 +355,9 @@ The interface is composed of multiple Preact islands:
 | **Waiting for a second person** | `src/components/admin/users/SecondPersonPanel.tsx` | The changes waiting for a second person (§6.3), with Approve and Decline, or Cancel for your own; hidden when nothing waits |
 | **Users rules** | `src/components/admin/users/people.ts` | Pure: the filters and counts, why a control is switched off (in the routes' words), the roles to offer. `test/users-console.test.ts` |
 | **Page Access Manager** | `src/components/admin/users/access-editor/UserAccessEditor.tsx` | A person's Access page (`/dashboard/users/[id]/access`): their pages, actions and console powers ([ACCESS-CENTER](ACCESS-CENTER.md)) |
-| **Invite User Modal** | `src/components/admin/users/InviteUserModal.tsx` | Two-panel "Command Console" Preact island (§5.2) |
-| **Role Pill Selector** | `src/components/admin/users/invite/RolePillSelector.tsx` | Atomic: two-column role pill grid with RBAC-gated availability |
-| **Hidden Account Toggle** | `src/components/admin/users/invite/HiddenAccountToggle.tsx` | Atomic: ghost-mode toggle (shown to Vendor Support and the Owner; honoured for Vendor Support only) |
-| **Access Policy** | `src/components/admin/users/invite/PageAccessMatrix.tsx` | The invitation's page switches, grouped by category, on `src/components/admin/users/shared/AccessPolicyGrid.tsx` |
+| **Invite someone** | `src/components/admin/users/InviteUserModal.tsx` | The invitation pop-up's three steps and its finished view (§5.2) |
+| **Invite roles** | `src/components/admin/users/invite/InviteRoles.tsx` | One card per role the viewer may give, with its description and page count |
+| **Invite pages** | `src/components/admin/users/invite/InvitePages.tsx` | The page summary and list, on `src/lib/access-center/invite-pages.ts`. Replaced `RolePillSelector.tsx`, `HiddenAccountToggle.tsx`, `PageAccessMatrix.tsx`, `PageChipGrid.tsx` and `shared/AccessPolicyGrid.tsx` (removed 2026-10-26) |
 | **Session drawer** | `src/components/admin/users/sessions/SessionForensicsDrawer.tsx` | One person's sessions on the shared Dialog's drawer (2026-10-10): device, place, sign-in method, times, when each ends by itself, address and Ray ID, and **End session** for every session but the one you are using. It reads session handles, never session IDs ([SESSION-MANAGEMENT.md](SESSION-MANAGEMENT.md)) |
 
 ### Event Bus (Cross-Island Communication)
@@ -341,8 +366,8 @@ The modal uses CustomEvents for decoupled island-to-island messaging:
 
 | Event | Direction | Purpose |
 |-------|-----------|---------|
-| Modal open (`modal:open-invite`) | Users console → Invite Modal | Opens the creation dialog |
-| User invited (`user:invited`) | Invite Modal → Users console | Reads the list again |
+| Modal open (`modal:open-invite`) | Users console, access probe → Invite someone | Opens the invitation pop-up |
+| User invited (`user:invited`) | Invite someone → Users console | Reads the list again |
 | Cloudflare check (`cf-audit:open`) | Users console → CF Access audit drawer | Opens the cross-reference (§11.6), Owner and Vendor support |
 | A change waits (`second-person:changed`) | Person drawer, role dialog → the second-person panel | Reads the waiting list again (§6.3) |
 
@@ -787,6 +812,8 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | §5.2's dialog size, classes and glass look, against `InviteUserModal.tsx` and `invite.css` | The look in a phone browser (the owner's test) |
+| 2026-10-26 | **§5.2 rewritten for the new Invite someone pop-up**, against `InviteUserModal.tsx`, `invite/InviteRoles.tsx`, `invite/InvitePages.tsx`, `src/lib/access-center/invite-pages.ts`, `src/pages/api/users/pages.ts` and the POST in `manage.ts` (the 50-setting refusal), with `test/invite-pages.test.ts` (12 tests, the page list checked against `computeAccessMap` over D1); §2.1's pages row, §5.1's first step, the component and event tables | The rest of the document; the pop-up in a phone browser (the owner's test) |
 | 2026-10-17 | The Access denied card's list of pages that cannot be asked for, against `checkAsk` in `src/lib/access-requests/rules.ts` (Page Registry refused since that day); `test/access-requests.test.ts` passes | Everything else; the card in a phone browser |
 | 2026-10-16 | **Accuracy and GitHub pass (`claude`).** §2.1's table rebuilt so every row renders (its two notes moved below it, the duplicate Access Center row merged, `manage.ts`, `logs/index.astro` and `access.astro` helper names corrected against `src/lib/auth/rbac.ts` and each file); §2's Viewer row cut to what is true now; the top banners trimmed; §5.1's sync step (pushed before the answer, and a failed push skips the invitation email) against `manage.ts`; §5.2's hidden toggle and right panel against `InviteUserModal.tsx`, `HiddenAccountToggle.tsx`, `PageAccessMatrix.tsx` and `AccessPolicyGrid.tsx`; §5.4's delete against `applyUserDelete` and `blockEmailTokens` in `src/lib/users/manage-apply.ts`; §5.5's Access group (no inline push) against `src/workers/scheduled-unused-accounts.ts`; §6.1's panel place, Owner-level approval sign-in and emailed actions against `src/pages/dashboard/users/index.astro`, `src/lib/access-requests/handlers.ts` and `src/lib/access-changes/notify.ts`; §6.3's Lock out, `MAX_WAITING` and decision limit against `src/lib/approvals/` and `active-sessions.ts`; §8's editor; §11.1 and §11.3 against `cf-access-reconcile.ts`, `cf-resync.ts`, `UsersConsole.tsx` and the live `cron-control` row (D1 connector: `cf-access-reconcile` on, 60 minutes) | No test run (shared checkout); §3, §4, §7, §9 to §10 and §11.4 to §11.8 not re-derived; the screens in a phone browser |
 | 2026-10-16 | **Scope-limited to §5.4's delete step (email API tokens blocked, permissions item #39).** `src/lib/users/manage-apply.ts` (`applyUserDelete`, `blockEmailTokens`, `syncWarning`), `src/lib/email-console.ts` (`blockTokensByCreator`) and cf-email-consumer's `api/src/console.ts` (`tokens.block_by_creator`); `test/two-person-rule.test.ts` passes | The live email service; every other section |

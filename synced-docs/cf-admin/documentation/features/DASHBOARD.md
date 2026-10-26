@@ -11,6 +11,7 @@ related_code:
 - src/components/dashboard/overview/Overview.tsx
 - src/components/dashboard/overview/OverviewCharts.tsx
 - src/components/dashboard/overview/format.ts
+- src/components/dashboard/overview/motion.ts
 - src/styles/pages/overview.css
 - src/pages/api/dashboard/overview.ts
 - src/lib/overview/sections.ts
@@ -23,6 +24,8 @@ related_docs:
 - SYSTEM-HEALTH.md
 - GSC-AUTO-HEALING-AND-VALIDATION-ENGINE.md
 - ../records/reports/2026-10-26-overview-redesign.md
+- ../records/reports/2026-10-26-overview-glass.md
+- ../specs/2026-10-26-overview-glass-look.md
 - ../operations/OPERATIONS.md
 tags: [feature, dashboard, overview, analytics, cloudflare, supabase]
 ---
@@ -34,36 +37,46 @@ tags: [feature, dashboard, overview, analytics, cloudflare, supabase]
 > open the page it comes from. Every number is read from the hotel's own records; nothing is made
 > up.
 
-> **Rewritten 2026-10-26** for the redesign (change record (private)).
-> The page it replaced (a deck of four cards, some with invented values, and five tabs of raw
-> server numbers) is described in that record and in git.
+> **Rewritten 2026-10-26** for the redesign (change record (private)),
+> and the same day again in frosted glass, with figures that count up and a chart to switch
+> (change record (private), the look in
+> [the spec](../specs/2026-10-26-overview-glass-look.md)). The page it replaced (a deck of four
+> cards, some with invented values, and five tabs of raw server numbers) is described in the first
+> record and in git.
 
 **Scope:** the `/dashboard` home page, its one data route, and the analytics provider layer whose
-snapshot its Website card and the Cloud Services pages read.
+snapshot its website figure and chart and the Cloud Services pages read.
 
 ---
 
 ## 0. What the page shows
 
-`src/pages/dashboard/index.astro` mounts one island, `Overview` (`client:load`), inside the console
-kit's frame with its own look (`src/styles/pages/overview.css`, hue indigo, both themes). The
-island makes one call, `GET /api/dashboard/overview?day=<the viewer's date>`, on opening, every 5
-minutes while the tab is on screen (`src/lib/visible-poll.ts`) and on the refresh button.
+`src/pages/dashboard/index.astro` mounts one island, `Overview` (`client:load`), on a soft
+backdrop of its own (`.ov-scene`, four blurred colour blobs) with translucent "frosted glass"
+panels over it (`src/styles/pages/overview.css`, warm in the light theme, violet and blue in the
+dark; [the look](../specs/2026-10-26-overview-glass-look.md)). The island makes one call,
+`GET /api/dashboard/overview?day=<the viewer's date>`, on opening, every 5 minutes while the tab
+is on screen (`src/lib/visible-poll.ts`) and on the refresh button. While it waits, glass outlines
+of the cards shimmer in their places; then the cards rise in one after another, the figures count
+up from 0, the chart's line draws itself, the health ring sweeps round and the backup strip fills
+from the left. On a refresh the figures run from the old value to the new one. A device set to
+reduce motion gets none of this movement.
 
-From the top, and in this order on a phone (on a wide screen, work on the left and the platform on
-the right):
+From the top, in this order on a phone. On a wide screen the chart row moves up to second place,
+under the figures:
 
 | Part | What it shows | Shown to someone who may open | Read from |
 |---|---|---|---|
-| Greeting | Good morning / afternoon / evening and the first name, today's date, one sentence ("2 things need you. 1 pet is staying tonight, the next arrival is Wednesday 29 Oct and the last backup finished 9 h ago."), when it was read, a refresh button, and a sideways row of jump chips | everyone | the sections below |
+| Greeting | The first name's initial, today's date, Good morning / afternoon / evening and the first name; one sentence ("2 things need you. 1 pet is staying tonight, the next arrival is Wednesday 29 Oct and the last backup finished 9 h ago."); a "2 need you" button that jumps to the list; when it was read and a refresh button; on a wide screen a "Find a page" box that opens the sidebar's page search (Ctrl K) | everyone | the sections below |
+| Figures | Up to six cards: pets staying tonight (how many leave tomorrow, pets in and out today); arrivals in the next 7 days (the first day); bookings made on the website in the last 30 days against the 30 before (▲ or ▼ and by how many); emails delivered in 30 days (how many failed, the share delivered); health checks passing out of all (failing or to look at, how many are not set up or not run); website requests in 24 hours (the share served from cache, threats blocked). Each opens its page | Bookings (the first three), Email, System health, Cloud Services → Cloudflare | as the sections below; the bookings made are two counts on Supabase `bookings.created_at`, cancelled ones included |
 | Needs you | One line per source that holds something, most urgent first: open System health problems and checks failing or to look at; a failed latest backup; website bookings of the last 7 days that did not go through; open privacy (ARCO) requests and their deadlines; changes waiting for the viewer's approval; access requests the viewer decides; new inquiries. "All clear" when there is nothing | each line: the page it opens (System health, Backups, Bookings, ARCO, Users, Users, Inquiries) | health-state row and `platform_alerts`; `backup_runs`; `booking_attempts`; Supabase `legal_requests` (`computeSla`); `approvals:pending`; `admin_access_requests`; Supabase `contact_messages` |
-| At the hotel | Arriving today, leaving today, pets staying tonight, arrivals in the next 7 days; pets staying each night for 14 nights (touch a bar to read it); the next 4 arrivals as "Ana L. · 2 pets", service, nights, leaving day | Bookings | Supabase `bookings` and `booking_pets`, minus those deleted or cancelled in `admin_booking_state` |
-| Platform | System health's six groups, each with its worst check's state word and sentence and one mark per day for 14 days | System health | the health-state row ([`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §6) |
+| Next arrivals | The next 4 arrivals as "Ana L. · 2 pets", service, nights, leaving day and how soon | Bookings | Supabase `bookings` and `booking_pets`, minus those deleted or cancelled in `admin_booking_state` |
+| Backups | A tile that stands out of the glass: how long ago the last good backup finished, its kind and size, whether the latest run failed, the last 14 runs as a strip, and how many of the runs that had work backed up | Backups | `backup_runs` (kind `backup`, the console's check runs left out) |
+| The chart | A sideways row to switch between emails delivered each day for 30 days (with the ones not delivered as a second line, and System health's own sentences on the queue and Brevo under it), pets staying each night for the next 14 nights, and website requests each hour for 24 hours (with the top countries). Touch or hover to read a point on the chart | Email, Bookings, Cloud Services → Cloudflare (each choice) | Supabase `email_audit_logs` by the UTC day it was logged; the stays above; the analytics snapshot (below) |
+| Platform health | A ring of all System health checks (passing, to look at, failing, not set up or not run) with the number passing in the middle, then the six groups, each with its state word and one small bar per day for 14 days | System health | the health-state row ([`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §6) |
 | Recent activity | The last 6 things people did in the portal, in plain words, a run of the same thing as one line with a count | Audit Log | `admin_audit_log`, without the log's own evidence entries (`*_mutation_attempt`, `audit_seal`, `view`) |
-| Website | Requests, the share served from cache, threats blocked and the top countries in the last 24 hours; requests each hour (touch to read) | Cloud Services → Cloudflare | the analytics snapshot (below) |
-| Backups | When the last good backup finished, its size, and the last 14 runs as marks | Backups | `backup_runs` (kind `backup`, the console's check runs left out) |
-| Email | Delivered, on the way and not delivered in 30 days, and System health's own sentences on the queue and Brevo | Email | Supabase `email_audit_logs`; the health-state row |
 | Latest changes | The newest commit in each of the six repositories, with its Workers Builds state | GitHub | the GitHub snapshot in KV ([`GITHUB.md`](GITHUB.md)) |
+| Jump bar | A bar that floats at the bottom of the screen with the page's own parts (Today, Needs you, Arrivals, Backups, Trends, Health, Activity, Changes, as the viewer has them); the part on screen is marked, and it scrolls sideways when it does not fit. It is part of the page, not a second menu: the sidebar stays the way to other pages | everyone with three parts or more | — |
 
 "May open" is decided as the sidebar decides: `decideAccess` on the person's access map and the
 page's floor (`pageFloorOpens`), plus `denyHealth` for Platform and `canViewGitHub` for Latest
@@ -87,11 +100,13 @@ the route cuts it to a first name and an initial.
 `GET /api/dashboard/overview` (`src/pages/api/dashboard/overview.ts`) reads everything side by
 side (`Promise.allSettled`), each Supabase call with a 4-second limit
 (`src/lib/dal/OverviewRepository.ts`), and turns it into words and numbers with the pure
-functions in `src/lib/overview/sections.ts`. It writes nothing. For an Owner it costs about six
-D1 reads, five Supabase reads and two KV reads; the analytics and GitHub snapshots are refreshed
+functions in `src/lib/overview/sections.ts`; the figures' words are `kpiList` in
+`src/components/dashboard/overview/format.ts`. It writes nothing. For an Owner it costs about six
+D1 reads, seven Supabase reads (the two counts of bookings made are head requests that return no
+rows) and two KV reads; the analytics and GitHub snapshots are refreshed
 after the response when they are old, as before.
 
-The Website card reads the analytics snapshot through `fetchAllAnalytics()`, which:
+The website figure and chart read the analytics snapshot through `fetchAllAnalytics()`, which:
 
 1. reads **one** KV key (`telemetry_metrics_cache_stale_v2`) from the `SESSION`
    namespace, the last good snapshot, and returns it when its own `timestamp`
@@ -194,7 +209,7 @@ field. When the API token is missing or a fetch fails, this flag is set instead 
 throwing, keeping the distinction between **zero** (real data, no activity) and
 **unknown** (no credentials or unreachable endpoint) explicit in the type system.
 
-The Overview's Website card reads it: an unconfigured zone shows a sentence, never zeros
+The Overview's website figure and chart read it: an unconfigured zone shows a sentence, never zeros
 (`websiteView` in `src/lib/overview/sections.ts`). *Until 2026-10-26* the old KPI deck did not
 read the flag and fell back to invented values.
 
@@ -218,8 +233,10 @@ The Overview asks one route, which answers each section as `{ ok: true, data }` 
 
 ### No new dependencies
 
-The 2026-10-26 redesign added none: its three charts are hand-drawn SVG
-(`OverviewCharts.tsx`), its icons are `lucide-preact`, and native `fetch` makes its one call. No
+The 2026-10-26 redesign added none: its charts (a line, bars, a ring and day bars) are
+hand-drawn SVG (`OverviewCharts.tsx`), the glass is CSS `backdrop-filter`, the counting numbers
+are `requestAnimationFrame` (`motion.ts`), its icons are `lucide-preact`, and native `fetch` makes
+its one call. No
 third-party chart library — `uplot` is **not** in `package.json` and is not used.
 
 ---
@@ -242,6 +259,7 @@ third-party chart library — `uplot` is **not** in `package.json` and is not us
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-26 | §0 rewritten for the glass page, against `src/pages/dashboard/index.astro`, `src/components/dashboard/overview/` (`Overview.tsx`, `OverviewCharts.tsx`, `format.ts`, `motion.ts`), `src/styles/pages/overview.css`, `src/lib/overview/sections.ts` and `src/lib/dal/OverviewRepository.ts`, with `test/overview.test.ts`; `bookings.created_at` and `email_audit_logs.created_at` read live through the Supabase connector (1 booking made in the last 30 days and 5 in the 30 before; emails on 25 of the last 30 days) | The page in a phone browser, the motion and both themes (the owner's test) |
 | 2026-10-26 | §0 to §0.2 rewritten for the redesign, against `src/pages/dashboard/index.astro`, `src/components/dashboard/overview/`, `src/pages/api/dashboard/overview.ts`, `src/lib/overview/sections.ts` and `src/lib/dal/OverviewRepository.ts`, with `test/overview.test.ts`; the live tables it reads (`bookings`, `booking_pets`, `contact_messages`, `legal_requests`, `email_audit_logs` in Supabase; `booking_attempts`, `backup_runs`, `admin_audit_log`, `admin_booking_state` in D1) through the Supabase and Cloudflare connectors, read only; the Architecture Decisions and Known Limitations edits | The provider sections and token scopes (unchanged); the page in a phone browser (the owner's test) |
 | 2026-10-17 | §0.1's values re-read in `DashboardController.tsx` (the `'100.0'` and `'1.2'` fallbacks, the `99.8% Delivery` literal), `ServiceStatusStrip.tsx` and `GscValidationWidget.tsx` (the literal SEO strings), the tab labels, `WORKER_SCRIPTS` (two scripts) in `cloudflare.ts`, the Sentry and Brevo windows in `external.ts`. All still as described | Token scopes; the D1 analytics lag; the screen in a phone browser |
 | 2026-10-17 | §0's opening paragraph and Overview row for the System health card, against `src/pages/dashboard/index.astro`, `DashboardController.tsx` and `ServiceStatusStrip.tsx`, with `test/system-health.test.ts` and `test/system-health-board.test.ts`; §0.1's claim that its values are logged in `MAINTENANCE.md`, which was not true (now SH-8) | Everything else on the page; §0.1's values were not re-read |
