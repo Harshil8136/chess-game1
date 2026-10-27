@@ -76,6 +76,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
 | [@oltrem/bookings](../modules/bookings/README.md) | bookings: who books and who manages at a place, the company's clock, never twice at once, cancelling and removing, the routes and the tables | written, beside the code |
 | [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, never two requests on one day, the vacation days a year, who is off with why kept private, the routes and the table | written, beside the code |
+| [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the receipt in the bucket, the company's currency, the month's CSV, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks fed by the audit log with their signing, retries and delivery log, the API reference, the pages, routes, tables, errors | written, beside the code |
@@ -175,6 +176,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Bookings module](records/2026-10-27-bookings-module.md) | rooms, vehicles and equipment booked by the hour on the company's clock, never twice at once |
 | [The jobs within the queries of one tick](records/2026-10-27-jobs-query-budget.md) | the tick counts each job's database queries and leaves what does not fit to the next tick, under the Free plan's 50 an invocation |
 | [Time off module](records/2026-10-27-timeoff-module.md) | days off asked at a place, answered by whoever decides there, counted against the vacation days a year; who is off, never why |
+| [Expenses module](records/2026-10-27-expenses-module.md) | what people spent claimed back with the receipt, answered and marked paid at a place, a month as a spreadsheet for the accountant |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked

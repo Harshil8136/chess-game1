@@ -54,7 +54,7 @@ self-hosted tiers of the builders reserved for their enterprise plans. That is t
 | Edition | Modules | Who it is for |
 |---|---|---|
 | **Core**, in every portal | people and access (`iam`, `users`), privacy requests, settings, audit, alerts, health, backups, deploys | every client |
-| **Work** | records (your own lists), forms and inbox, files, tasks, approvals, announcements, bookings, time off, automations, analytics | a team that runs its day in the portal |
+| **Work** | records (your own lists), forms and inbox, files, tasks, approvals, announcements, bookings, time off, expenses, automations, analytics | a team that runs its day in the portal |
 | **Messages** | providers, email, campaigns (bulk sends), later SMS and WhatsApp | a business that writes to its customers |
 | **Developer** | API keys, outgoing webhooks, the API reference, the jobs page | a business that connects other systems |
 | **Website** (later) | the public site shell, its content, SEO, visitor analytics | a business whose website runs on the same account |
@@ -81,6 +81,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `announcements` | Work | **built** 2026-10-27: notices to the people at a place, on their Home until read; "I have read it" when one must be confirmed, and who has read it for whoever posts; shown until a day, then past. An email to everyone at the place and reminders later |
 | `bookings` | Work | **built** 2026-10-27: rooms, vehicles and equipment at a place, booked by the hour on the company's clock (a setting), never twice at once; the week's days in a row; cancelled by the person who booked or a manager. Opening hours, repeating bookings and a week view later |
 | `timeoff` | Work | **built** 2026-10-27: vacation, sick leave and personal time asked at a place; whoever decides there approves or declines, never their own, a no with its reason; never two requests on one day; the vacation days a year (a setting) with what each person took, asked and has left; who is off in the next two weeks, the kind kept for the people who decide; withdrawn until it begins; the answer emailed. Public holidays, half days and days carried over later |
+| `expenses` | Work | **built** 2026-10-27: what people spent claimed back at a place with a photo or PDF of the receipt, in the company's currency (a setting); whoever decides there approves or declines with a reason, then marks it paid, never their own; what the company owes each person; Needs you with the sum to pay; a month of approved and paid claims as a CSV file for the accountant; every step emailed and audited. Mileage, limits by amount and reading the receipt later |
 | customer sign-in | Work | next: the client's own customers see their records and files |
 | `privacy` | Core | **built** 2026-10-27: privacy requests (see, correct, delete, stop a use) with their due day from a setting, one search across every module that declares `personal` and the audit log, the identity checked before a copy is downloaded as one file, Needs you and a health check for the days. A public form for people to ask themselves later |
 | `site`, `cms`, `seo`, visitor analytics | Website | later, as plan section 4.4 lists them |
