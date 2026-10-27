@@ -231,6 +231,35 @@ printed:
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
 
+### `oltrem deploy [dir] --page`
+
+The same seven steps, with their questions and their progress in a page in the browser
+(`npm run setup` at the kit's root; `npm run deploy -- --page` in a client repository). The page
+is drawn in the portal's look, from `@oltrem/core-ui`'s theme tokens (a test fails when the two
+differ): a step is a card, a question a box with a button, an `https` address a link, an email
+address a chip with a copy button, a tool's run a spinner with the time it has taken, a stop a
+card with what the tool printed last and a **Try again** button. When wrangler's sign-in does not
+open the browser by itself, the page shows a button to its sign-in page. The terminal shows the
+same steps in the kit's look and says where the page is, in case the browser did not open.
+
+Two processes (`src/setup-page.ts`), because the deploy's tools hold their process while they
+run: this one serves the page on `127.0.0.1` and stays free to answer it, and a second one, the
+same command with `--from-page`, runs the deploy and sends each line, question and tool run as an
+event over Node's IPC channel. The page reads the events as a stream of JSON lines (a page opened
+again gets every event so far) and sends each answer back. Only this computer reaches it: the
+server refuses any other `Host`, every call but the page itself needs the key that follows the `#`
+in the address the terminal opens (so it is never in a request line or a `Referer`), and the page's
+policy allows only its own script and style. A pasted secret goes to the deploy and nowhere else:
+the page's record of the answer is empty. The run starts when the page first opens; the command
+ends when the deploy has ended well, after ten minutes without the page ever opening, or when the
+page has been closed for a minute while the deploy waits on it (never in the middle of a tool's
+run). The second process's own output is in `.oltrem/setup.log`, wrangler's in
+`.oltrem/deploy.log`.
+
+The second process has no keyboard, so wrangler asks nothing there: a sign-in that reaches
+several Cloudflare accounts stops with wrangler's message, and `npm run deploy` in the terminal,
+which lets wrangler ask which account, is the way through.
+
 ## `oltrem setup [dir]`
 
 The steps a new client repository needs that need no account, in one idempotent command: copy
