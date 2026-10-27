@@ -5,124 +5,156 @@ audience: [owner, ai, technical]
 last_verified: 2026-10-27
 verified_against: [code]
 owner: harshil
-related_code: [src/styles/components/shell.css, src/layouts/AdminLayout.astro, src/layouts/AdminLayout.css, src/components/navigation/Sidebar/index.tsx, src/components/navigation/Sidebar/SidebarHeader.tsx, src/components/navigation/Sidebar/SidebarMenu.tsx, src/components/navigation/Sidebar/SidebarProfile.tsx, src/components/navigation/TopBar.tsx, src/components/navigation/CommandPalette.tsx, src/components/navigation/ThemeToggle.tsx, src/lib/theme-client.ts, public/scripts/theme-init.js, src/components/ui/Dialog.css, test/shell-look.test.ts]
-related_docs: [../reference/DESIGN-SYSTEM.md, 2026-10-26-overview-glass-look.md, ../records/reports/2026-10-27-portal-frame.md]
+related_code: [src/styles/components/shell.css, src/layouts/AdminLayout.astro, src/layouts/AdminLayout.css, src/components/navigation/Sidebar/index.tsx, src/components/navigation/Sidebar/SidebarHeader.tsx, src/components/navigation/Sidebar/SidebarMenu.tsx, src/components/navigation/Sidebar/SidebarProfile.tsx, src/components/navigation/TopBar.tsx, src/components/navigation/CommandPalette.tsx, src/components/navigation/ThemeToggle.tsx, src/components/navigation/RegistryTabs.astro, src/lib/theme-client.ts, public/scripts/theme-init.js, src/components/ui/Dialog.css, test/shell-look.test.ts]
+related_docs: [../reference/DESIGN-SYSTEM.md, 2026-10-26-overview-glass-look.md, ../records/reports/2026-10-27-portal-frame.md, ../records/reports/2026-10-27-portal-frame-seamless.md]
 tags: [design, ui, navigation, sidebar, mobile, accessibility]
 ---
 
 # The portal's frame: sidebar, top bar and phone menu — design
 
-> **TL;DR (non-technical):** The part of the portal that stays on screen around every page was
-> redrawn in the Overview's frosted-glass style. On a computer the sidebar is a pane of glass over
-> a still blur of colour and the page sits beside it on its own panel. On a phone the top bar holds
-> four things (the menu, the page's name, search and reload) with buttons big enough for a thumb,
-> and the menu slides in from the left with the same glass. Your account has one place, at the
-> foot of the menu, where you also switch the theme, open Settings and sign out. The phone
-> browser's bar takes the portal's colour instead of staying white.
+> **TL;DR (non-technical):** The part of the portal that stays on screen around every page runs
+> edge to edge: the list of pages down the left edge, a bar along the top, the page in the rest,
+> and one thin line between them, with no gaps or rounded corners. All of its colours come from
+> one small set made for it, so the background, the words, the icons, the lines and the mark on
+> the page you are on always match each other, in both themes. Each icon is the colour of its
+> page's name. On a phone the top bar holds four things (the menu, the page's name, search and
+> reload) with buttons big enough for a thumb, and the menu is the same sidebar sliding in from
+> the left. Your account has one place, at the foot of the menu.
 
 ## 1. Why
 
 On 2026-10-27 Harshil asked to "do the core theme like sidebar, header options, mobile etc",
-after the Overview and Analytics had been redrawn in glass. The frame they sit in was older and
-had its own problems, found by reading every part of it:
+after the Overview and Analytics had been redrawn in glass. Reading every part of the frame
+turned up faults besides its look, fixed in the first version (commit `314cb55`, its
+record (private)):
 
-- **Two account menus.** The sidebar ended with your name and "Log out"; the top bar had an
-  avatar menu with your name, email, Settings and "Sign out".
-- **Pop-ups that were not real pop-ups.** The phone menu and the page search were hand-made
-  overlays: a keyboard's Tab walked out of them into the page behind, and their parts were
-  marked as buttons that were not buttons. The search was always dark, even in the light theme.
-- **A crowded phone bar:** menu, name, search, reload, theme and an avatar with an arrow, most
-  under 44 px.
-- **Mixed words:** ⌘K in the top bar and Ctrl K in the sidebar on the same screen; "Force Page
-  Revalidation" as the reload button's name.
-- **A moving background.** Three blurred circles drifted behind frosted panels for ever, and a
-  full-screen texture layer was blended over the whole page: both make a phone redraw the glass on
-  every frame, for an effect at 3 % to 15 % strength.
-- **A white phone browser bar** over the dark portal, and no room kept for a phone's notch or home
-  bar.
+- **Two account menus:** the sidebar ended with "Log out", the top bar had a menu with "Sign out".
+- **Pop-ups that were not real pop-ups:** the phone menu and the page search were hand-made
+  overlays a keyboard could leave, and the search stayed dark in the light theme.
+- **A crowded phone bar** of six things, most under 44 px; ⌘K and Ctrl K on the same screen;
+  "Force Page Revalidation" as a button's name.
+- **A moving background** of drifting circles and a full-screen texture, which a phone redraws
+  on every frame; a white phone browser bar; no room for a notch or a home bar.
 
-## 2. The pieces
+That first version drew the sidebar as a pane of frosted glass with a margin round it, beside
+the page on a rounded panel of its own, over a still blur of colour. Harshil turned it down the
+same morning: "I dont like that theres edges left on all sides and space in between, it should
+be seamless and also can we take a bit different approach compare to existing one thats more
+suitable for sidebar system design types! cuz we also have to sync bg color, icon/svg color and
+all!" This document describes the design that replaced it (its
+record (private)); the faults above stay fixed.
+
+## 2. How sidebar systems do it
+
+The approach follows what established design systems publish for their navigation:
+
+- **IBM Carbon's UI shell:** the left panel "spans the full height of the browser and is fixed to
+  the left edge of the window". A link's text is `$text-secondary` and its icon
+  `$icon-secondary`; on hover and when selected both turn primary together, and a selected link
+  adds `$background-selected` and a 4 px `$border-interactive` edge.
+- **shadcn/ui's Sidebar:** the default `sidebar` variant is flush (`floating` and `inset` are the
+  boxed variants), themed by its own tokens: `--sidebar`, `--sidebar-foreground`,
+  `--sidebar-primary`, `--sidebar-accent`, `--sidebar-border`, `--sidebar-ring`.
+- **Material 3's navigation drawer:** one token set for the container, the inactive icon and
+  label (both `on-surface-variant`) and the active indicator, with the active icon and label in
+  one colour.
+
+What they share, and this frame takes: the frame sits flush against the screen's edges; it has
+its own small set of colours; an icon is the colour of its words and changes with them; the
+page on screen is marked by a tint, a shape and stronger words, never by colour alone.
+
+## 3. The pieces
 
 | Piece | Where | What it is |
 |---|---|---|
-| Backdrop | `.sh-backdrop`, `--sh-scene` | Four soft circles of colour at the screen's corners over a base colour, wide screens only. It never moves |
-| Sidebar pane | `.sh-pane` | Frosted glass (`backdrop-filter: blur(24px) saturate(160%)`) with a light top edge, an 8 px margin and a 20 px radius; a solid colour where the browser has no blur |
-| Page panel | `.admin-content-area` (`AdminLayout.css`) | Beside the pane on a wide screen, with the same margin and radius, painted the theme's plain `--theme-bg`; the whole screen on a phone |
-| Rows | `.sh-row` | Page names in `--sh-text-2`; the page on screen a pill in the ink colour; group names a quiet neutral; a group's colour is its icons' |
-| Account | `.sh-account`, `SidebarProfile.tsx` | Initials with a dot in the role's colour, name, role; pressed, it opens above itself: email, the theme switch, Settings, Sign out |
-| Top bar | `.sh-topbar`, `TopBar.tsx` | 56 px. Wide: the breadcrumbs, "Search pages" with its shortcut, reload, theme. Phone: menu, the page's name, search, reload |
-| Phone menu | `.sh-drawer` on the shared Dialog, `layout="side"` | The sidebar's header, list and account from the left, up to 19rem and never more than 86 % of the screen, painted with the backdrop's colour under its glass |
-| Page search | `.sh-palette` on the shared Dialog | Near the top, so a phone's keyboard leaves it in view. A field over a list of pages; arrows move, Enter opens |
-| Sub-page row | `RegistryTabs.astro` | A pill row whose current tab is in the ink colour, matching the sidebar and the Overview's switches |
+| Sidebar | `.sh-pane` | 240 px open, 64 px closed, the full height, on `--nav-bg`. Its dividing line is a shadow (`inset -1px 0 0`), so it takes no width: 64 px less 12 px of padding each side leaves a 40 px row with its icon in the middle |
+| Name row | `.sh-brandrow`, `SidebarHeader.tsx` | 56 px, with a line under it: the same height as the top bar, so the two lines read as one across the screen. The hotel's round badge as it is drawn, with a faint ring, beside "Madagascar" over "Admin portal" |
+| Rows | `.sh-row` | 40 px. Words in `--nav-fg-2`, the icon in `--nav-icon`; touched, both turn `--nav-fg` on `--nav-hover` |
+| The page on screen | `.sh-row[aria-current='page']` | A `--nav-current` tint, a 3 px `--nav-marker` bar on its left, bold words in `--nav-current-fg` and the icon in `--nav-current-icon` |
+| Group names | `.sh-group` | Small capitals in `--nav-fg-3`. A group is told by its name: the colour each group's icons had until now (`SECTION_ACCENT`) is gone |
+| Account | `.sh-account`, `SidebarProfile.tsx` | Initials on `--nav-fg` with a dot in the role's colour (the frame's one colour of its own, because it names a role), name and role; pressed, it opens above itself: email, the theme, Settings, Sign out |
+| Top bar | `.sh-topbar`, `TopBar.tsx` | 56 px on `--nav-bar` with a `--nav-line` under it. Buttons have no box until touched. Wide: the breadcrumbs, a "Search pages" field with its shortcut, reload, theme. Phone: menu, the page's name, search, reload, each 44 px |
+| Phone menu | `.sh-drawer` on the shared Dialog, `layout="side"` | The same sidebar from the left edge, square, on `--nav-bg`, up to 19rem and never more than 86 % of the screen; its name row lines up with the top bar's line |
+| Page search | `.sh-palette` on the shared Dialog | A field over a list of pages, each drawn like a sidebar row: the chosen one has the same tint and marker |
+| Sub-page row | `RegistryTabs.astro` | A pill row whose current tab takes `--nav-current` and `--nav-current-fg` |
+| A name beside the closed sidebar | `.sh-tip` | The frame's colours turned round: `--nav-bg` words on `--nav-fg` |
 
-## 3. Colour
+## 4. Colour
 
-Every colour of the frame is a `--sh-*` token on `:root`, set once for the dark theme and once
-under `:root[data-theme='light']` (`src/styles/components/shell.css`). Pages keep the Midnight
-Slate tokens ([DESIGN-SYSTEM](../reference/DESIGN-SYSTEM.md) §2): only the sidebar sits on the
-backdrop's colour, so no page text has to be readable over it.
+Every colour of the frame is a `--nav-*` token in `src/styles/components/shell.css`, set on
+`:root` for the dark theme and under `:root[data-theme='light']` for the light one. No rule after
+the two token blocks writes a colour of its own, and the frame's components carry no Tailwind
+colour classes (`test/shell-look.test.ts` checks both).
 
 | Token | Dark | Light | Used for |
 |---|---|---|---|
-| `--sh-base` | `#070a13` | `#e6e9f2` | under the circles |
-| `--sh-blob-1..4` | violet, blue, deep violet, orange, 20 % to 55 % | indigo, sky, violet, peach, 80 % to 90 % | the four circles |
-| `--sh-glass` | white at 5.5 % | white at 55 % | the pane, and the phone menu over its own circles |
-| `--sh-text`, `-2`, `-3` | `#f5f3ff`, `#d4d0e6`, `#bab5d2` | `#14121c`, `#3f3b4d`, `#585369` | names from strongest to quietest |
-| `--sh-ink`, `--sh-ink-text` | `#f5f3ff`, `#0b0d17` | `#16131f`, white | the page on screen, the avatar, the chosen tab |
-| `--sh-danger` | `#fda4af` | `#be123c` | Sign out, a count badge |
+| `--nav-bg` | the theme's `--theme-bg`, `#080e1a` | the theme's `--theme-bg`, `#f8fafc` | the sidebar and the phone menu |
+| `--nav-bar` | `--nav-bg` | `--nav-bg` | the top bar, and the phone browser's bar |
+| `--nav-line` | slate at 14 % | slate-900 at 9 % | every line of the frame |
+| `--nav-fg`, `-2`, `-3` | `#f1f5f9`, `#cbd5e1`, `#94a3b8` | `#0f172a`, `#475569`, `#5b6475` | names, rows, group names and hints |
+| `--nav-icon` | `#94a3b8` | `#64748b` | every icon at rest |
+| `--nav-hover`, `--nav-control` | slate at 10 % and 6 % | slate-900 at 5 % and 3 % | a touched row; the search fields |
+| `--nav-current`, `-fg`, `-icon` | blue at 18 %, white, `#93c5fd` | blue at 10 %, `#1e3a8a`, `#1d4ed8` | the page on screen |
+| `--nav-marker` | `#60a5fa` | `#2563eb` | the bar beside the page on screen |
+| `--nav-danger` | `#fda4af` | `#be123c` | Sign out, a count badge |
+| `--nav-ring` | the theme's `--theme-accent` | the theme's `--theme-accent` | the keyboard's focus ring |
 
-**Contrast.** Each text colour is checked against the pane where it sits over the strongest point
-of each circle, and over a hovered row there, by `test/shell-look.test.ts`, which reads the
-tokens from the stylesheet. The lowest figures: dark `--sh-text` 8.7:1, `-2` 6.3:1, `-3` 4.8:1,
-danger 5.0:1; light 13.9:1, 8.1:1, 5.5:1 and 4.7:1; ink text on ink 17.7:1 and 18.3:1. The first
-quiet grey tried, `#aaa5c4`, fell to 4.0:1 over a hovered row on the blue circle and was lightened.
-The light theme's group names had been teal and cyan at about 3.7:1 on white; they are now the
-neutral `--sh-text-3`.
+The frame's surfaces are the theme's own `--theme-bg`, so the frame and the page are one colour
+and change with the theme together. The page on screen is marked in the portal's own blue, the
+blue of its buttons and focus rings, so the frame does not bring a second accent.
 
-The phone browser's bar is `--theme-bg` of the theme on screen (`THEME_COLOR` in
-`src/lib/theme-client.ts`): the server writes it from the cookie and `public/scripts/theme-init.js`
-follows every later change of theme, so the bar and the top bar read as one surface.
+**Contrast**, worked out by `test/shell-look.test.ts` from the token values, the lowest of each
+on the sidebar and on a touched row: dark `--nav-fg` 15.4:1, `-2` 11.4:1, `-3` 6.6:1, danger
+8.9:1; light 15.4:1, 6.6:1, 5.2:1 and 5.4:1. The page on screen's words: 15.7:1 dark and 8.6:1
+light on the sidebar, 14.2:1 and 9.0:1 on a pop-up or tab row. Shapes need 3:1 (WCAG 1.4.11):
+icons at rest 6.6:1 and 4.1:1, the current icon 8.7:1 and 5.6:1, the marker 7.6:1 and 4.9:1.
 
-## 4. Speed and motion
+**The phone browser's bar** is `--nav-bar` of the theme on screen (`THEME_COLOR` in
+`src/lib/theme-client.ts`): the server writes it from the cookie and
+`public/scripts/theme-init.js` follows every later change, so the browser's bar and the top bar
+read as one band.
 
-- The backdrop is still. A moving one makes every glass pane above it re-blur on every frame,
-  which a phone pays for in battery and smoothness; the Overview's own spec rejected moving
-  circles for the same reason. The texture layer, blended over the whole screen, went too.
-- The circles are plain gradients, not blurred shapes, so they cost one paint.
-- On a phone there is no backdrop at all: the page panel covers the screen, and the phone menu
-  paints its colour under a flat tint, with no `backdrop-filter`.
+## 5. Other looks, as token values
+
+Harshil was shown two more versions on 2026-10-27 beside this one: the sidebar and top bar in
+one shade with the page in another ("Frame and page"), and the frame near-black in both themes
+with the paw's green from the logo marking the page on screen ("Dark frame"). Either is a change
+of the `--nav-*` values and of `THEME_COLOR` only; no component would change.
+
+## 6. Speed and motion
+
+- No backdrop, no blur and no texture in the frame: nothing under it has to be redrawn.
 - The only motion: the menu slides in from the left, the search fades up, the sidebar's width
   when it opens or closes (200 ms), and the reload icon turning while the page loads. All of it
   stops for a phone set to reduce motion.
 
-## 5. Phones
+## 7. Phones
 
-- `viewport-fit=cover`, so the portal reaches the screen's edges, and every inset is kept clear:
-  the top bar's top, the panel's sides when the phone is turned, the main content's bottom, the
-  phone menu, the toasts and the Dialog's sheets. Before this, every `env(safe-area-inset-*)` in
-  the code read 0.
+- `viewport-fit=cover`, with every inset kept clear: the top bar starts under the clock and the
+  notch (`calc(3.5rem + env(safe-area-inset-top))`), the page's sides when the phone is turned,
+  the main content's bottom, the phone menu, the toasts and the Dialog's sheets.
 - Every button in the top bar is 44 px on a touch screen, as is every row in the phone menu.
 - The page's name in the top bar is 16 px; the parent pages show from 640 px wide.
-- No keyboard shortcut shows on a touch screen.
-- The search field is 16 px, so a phone does not zoom in when it is touched.
+- No keyboard shortcut shows on a touch screen. The search field is 16 px, so a phone does not
+  zoom in when it is touched.
 - The page scrolls inside the frame, so a phone has no pull to refresh: the reload button stays
   on the phone's top bar for that reason.
 
-## 6. What was decided against
+## 8. What was decided against
 
-- **The backdrop behind the pages.** Page text sits directly on the page colour in many places;
-  over coloured circles the light theme's quiet text (`#71717a`, 4.6:1 on its own background)
-  would drop below 4.5:1 almost at once. The page panel keeps every page exactly as readable as
-  it was.
-- **A second account menu in the phone's top bar.** One place for the account, in the menu, keeps
-  "Sign out" in one spot; the bar keeps its room for the page's name.
-- **Moving the theme switch out of the wide top bar.** It stays there as a shortcut, as well as
-  in the account menu; on a phone it is in the menu only.
-- **Rows as links inside the search's list.** The list is a `listbox` of options, the pattern a
-  screen reader announces as the arrows move; links inside options are read inconsistently.
+- **A pane and a panel with space around them** (the first version): turned down by Harshil for
+  its edges and gaps.
+- **A colour for each group's icons:** it made the frame's colours unrelated to each other and to
+  the theme. Every sidebar system above draws icons in their words' colour.
+- **A backdrop behind the frame:** with the frame on the theme's colour there is nothing for it
+  to show through, and page text never has to be read over it.
+- **A second account menu in the phone's top bar:** one place keeps "Sign out" in one spot.
+- **Rows as links inside the search's list:** the list is a `listbox` of options, the pattern a
+  screen reader announces as the arrows move.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-10-27 | Written from the code as built: `shell.css` (tokens, pieces, sizes), `AdminLayout.astro`/`.css`, the Sidebar files, `TopBar.tsx`, `CommandPalette.tsx`, `ThemeToggle.tsx`, `theme-client.ts`, `theme-init.js`, `Dialog.css` (`side`); the contrast figures computed from the token values by `test/shell-look.test.ts` and a one-off script over the same values | The look on a phone and on a computer in both themes (the owner's test) |
+| 2026-10-27 (second) | Rewritten for the edge-to-edge frame from the code as built: `shell.css` (the `--nav-*` tokens and every rule), `AdminLayout.astro`/`.css`, `Sidebar/index.tsx` (64 px), `SidebarHeader.tsx`, `SidebarMenu.tsx`, `CommandPalette.tsx`, `RegistryTabs.astro`, `theme-client.ts`; the contrast figures from the token values (`test/shell-look.test.ts` and a one-off script over the same values); Carbon's left-panel specification, shadcn's Sidebar theming and Material 3's navigation drawer specification, read on their sites | The look on a phone and on a computer in both themes (the owner's test) |
+| 2026-10-27 | Written from the first version as built (the glass pane) | The look on a phone |

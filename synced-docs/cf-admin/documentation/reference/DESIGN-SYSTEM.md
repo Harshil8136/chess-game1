@@ -329,7 +329,7 @@ src/styles/
 ├── components/             ← Component-scoped CSS (2026-09-14 listing)
 │   ├── blog-studio.css, cms-module-panel.css, seo-patterns.css
 │   ├── console.css      ← the console kit, `.ck-*` (§9.9, 2026-10-10)
-│   ├── shell.css        ← the frame, `.sh-*`: backdrop, sidebar pane, top bar, phone menu, page search, toasts (§5, 2026-10-27)
+│   ├── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
 │   └── chatbot/
 │       ├── buttons-badges.css   ← .chatbot-badge-* (mostly --color-badge-* vars; three raw-hex selectors remain)
 │       ├── stats.css            ← .ad-* analytics dashboard classes (extracted from AnalyticsDashboard.tsx)
@@ -380,7 +380,7 @@ Component and page CSS are **NOT** imported in `global.css` (one exception: `blo
 
 Lives in its own file `src/components/navigation/ThemeToggle.tsx` (the top bar's button, from 640px wide), and the account menu at the foot of the sidebar has the same switch (`SidebarProfile.tsx`). Both call `switchTheme` in `src/lib/theme-client.ts` (since 2026-10-27): it updates `document.documentElement.dataset.theme` immediately, sets the `cf_admin_theme` cookie (1 year, SameSite=Strict), POSTs the choice to `/api/settings/user` so it persists in D1, and dispatches `CustomEvent('theme-change')` for components that re-render on theme. Each switch watches `data-theme` (`onThemeShown`), so its icon follows a change made by the other or by Settings. The OS preference `matchMedia` listener was removed — the component no longer reacts to system-level theme changes.
 
-**The phone browser's bar** (2026-10-27) takes the page panel's colour, `--theme-bg`: `AdminLayout.astro` writes `<meta name="theme-color">` from the cookie (`THEME_COLOR` in `theme-client.ts`), and `theme-init.js` keeps it in step with every later change of `data-theme`, with the same two values (`test/shell-look.test.ts`). Until then the bar stayed white over the dark portal.
+**The phone browser's bar** (2026-10-27) takes the top bar's colour, `--nav-bar` (the theme's `--theme-bg`): `AdminLayout.astro` writes `<meta name="theme-color">` from the cookie (`THEME_COLOR` in `theme-client.ts`), and `theme-init.js` keeps it in step with every later change of `data-theme`, with the same two values (`test/shell-look.test.ts`). Until then the bar stayed white over the dark portal.
 
 ---
 
@@ -392,30 +392,29 @@ Lives in its own file `src/components/navigation/ThemeToggle.tsx` (the top bar's
 
 ```
 Wide (1024px and up), since 2026-10-27        Phone and narrow screens
-┌─ backdrop: still circles of colour ─────┐   ┌────────────────────────┐
-│ ┌──────┐ ┌───────────────────────────┐  │   │ ☰ Page name     🔍  ⟳ │ TopBar
-│ │ Side │ │ TopBar: crumbs · 🔍 ⟳ ☾   │  │   ├────────────────────────┤
-│ │ bar  │ ├───────────────────────────┤  │   │ <main id=             │
-│ │ pane │ │ <main id="main-content">  │  │   │   "main-content">     │
-│ │glass │ │   <slot />  (page panel,  │  │   │   <slot />            │
-│ │      │ │   the theme's plain bg)   │  │   │                       │
-│ │ you ▴│ └───────────────────────────┘  │   └────────────────────────┘
-│ └──────┘                                │   ☰ opens the same sidebar from
-└─────────────────────────────────────────┘   the left on the shared Dialog
+┌────────┬───────────────────────────────┐   ┌────────────────────────┐
+│ ◉ Name │ TopBar: crumbs · 🔍 ⟳ ☾       │   │ ☰ Page name     🔍  ⟳ │ TopBar
+├────────┼───────────────────────────────┤   ├────────────────────────┤
+│ Search │ <main id="main-content">      │   │ <main id=             │
+│ pages  │   <slot />                    │   │   "main-content">     │
+│ ▍page  │                               │   │   <slot />            │
+│        │                               │   │                       │
+│ you ▴  │                               │   └────────────────────────┘
+└────────┴───────────────────────────────┘   ☰ opens the same sidebar from
+ one colour, one line between the parts        the left on the shared Dialog
 ```
 
-The frame's look lives in `src/styles/components/shell.css` (`sh-*`, tokens `--sh-*` on
-`:root` for both themes); its design and contrast figures are in the
-[portal frame spec](../specs/2026-10-27-portal-frame-look.md). On a wide screen the
-sidebar is a pane of frosted glass with an 8px margin and a 20px radius, and
-`.admin-content-area` (`AdminLayout.css`) is a panel beside it with the same margin and
-radius, a 1px edge and a soft shadow, painted the theme's plain `--theme-bg`: only the
-sidebar sits on the backdrop's colour, so every page keeps the colour it was drawn on. The
-panel has no blur or transform, so a page's `position: fixed` parts still sit on the screen.
-Below 1024px the backdrop is not drawn and the panel fills the screen. There is no
-`--sidebar-width` token. *(Corrected 2026-09-14; redrawn 2026-10-27.)*
+The frame's look lives in `src/styles/components/shell.css` (`sh-*` classes on one set of
+`--nav-*` colours, set on `:root` for each theme); its design and contrast figures are in the
+[portal frame spec](../specs/2026-10-27-portal-frame-look.md). It is edge to edge: the sidebar
+runs down the screen's left edge, the top bar along the top of the page, and one `--nav-line`
+divides them, with no margin, panel, rounded corner or backdrop. The sidebar's name row is as
+tall as the top bar (56px), so the line under it carries straight on as the top bar's.
+`--nav-bg` and `--nav-bar` are the theme's own `--theme-bg`, so the frame and the page are one
+colour. There is no `--sidebar-width` token. *(Corrected 2026-09-14; redrawn 2026-10-27, first
+as a glass pane beside a page panel, then the same morning edge to edge on Harshil's ask.)*
 
-**The top bar** (`TopBar.tsx`, 56px, at the top of the panel): wide, the breadcrumbs (a
+**The top bar** (`TopBar.tsx`, 56px, along the top of the page): wide, the breadcrumbs (a
 `<nav aria-label="Breadcrumb">`), then a "Search pages" pill with the shortcut written as the
 computer writes it (⌘K on Apple devices, Ctrl K elsewhere, `navigation/shortcut.ts`), "Reload
 this page" and the theme. On a phone: the menu button, the page's own name, search and reload,
@@ -440,7 +439,7 @@ sidebar.
 | State | Width | Trigger |
 |-------|-------|---------|
 | Expanded (default when the cookie is absent) | 240px | Page load |
-| Collapsed | 66px | The arrow button at the top left (saved to the `cf_admin_sidebar_collapsed` cookie). Only the width moves (200 ms); every icon keeps its place and the names fade, so nothing jumps. Hovering shows a name beside each icon; it does not re-open the sidebar |
+| Collapsed | 64px | The arrow button at the top left (saved to the `cf_admin_sidebar_collapsed` cookie). Only the width moves (200 ms); every icon keeps its place and the names fade, so nothing jumps. Hovering shows a name beside each icon; it does not re-open the sidebar |
 | Hidden | 0 | < 1024px breakpoint; the top bar's menu button opens it from the left on the shared Dialog (`layout="side"`, up to 19rem and never more than 86% of the screen, rows 44px tall), which keeps the keyboard inside it and closes on Escape, the close button or a press beside it. A hand-made overlay until 2026-10-27 |
 
 Since 2026-10-10 the sidebar stays on screen from page to page (EF-9 in
@@ -457,21 +456,23 @@ group titles take their section colour at the 400 tint in the dark theme
 `scrollbar-width` or `scrollbar-color` on it, because Chrome and Edge then drop
 the slim bar for their own, with arrows and a grey track
 (`test/sidebar-look.test.ts`). Closed, the list scrolls with no bar at all
-(`.sidebar-scroll[data-closed]`): on the 66px rail the bar's 4px came off each
+(`.sidebar-scroll[data-closed]`): on the closed rail the bar's 4px came off each
 row, so the highlight behind an icon was narrower than tall and sat left of the
 icon (Harshil's report, 2026-10-10).
 
 **Its look since 2026-10-27** (the [portal frame spec](../specs/2026-10-27-portal-frame-look.md)):
-the pane is frosted glass (`.sh-pane`) with a 1px edge all round, so a closed row is 40px
-wide and as tall, and `ROW`'s 11px padding centres the icon. The brand reads "Madagascar"
-over "Admin portal". Page names are `--sh-text-2`; the page on screen is a pill in the ink
-colour (`--sh-ink`, near-white in the dark theme, near-black in the light), as the Overview's
-switches and the sub-page rows (`RegistryTabs.astro`) are; group names are a quiet neutral
-(`--sh-text-3`) and a group's colour is its icons' (`SECTION_ACCENT`, now icons only). A
-count badge is rose, `LIVE` green. These replace the slate-300 names, the blue highlight and
-the coloured group titles described above.
+a sidebar system on the `--nav-*` colours, the way IBM Carbon's UI shell and shadcn's
+`--sidebar-*` keep their own set. The sidebar (`.sh-pane`) draws its dividing line as a shadow,
+so the closed rail's 64px leave a 40px row and `ROW`'s 11px padding centres the icon. The
+hotel's round badge sits beside "Madagascar" over "Admin portal". Page names are `--nav-fg-2`
+and every icon takes its row's colour (`--nav-icon`, then `--nav-fg` when touched); the page on
+screen has a tint (`--nav-current`), a 3px marker on its left (`--nav-marker`) and bold words,
+and the page search and the sub-page rows (`RegistryTabs.astro`) mark their current option the
+same way. Group names are `--nav-fg-3`. A count badge is rose, `LIVE` green; the role dot on
+the avatar is the frame's one colour of its own. These replace the slate-300 names, the
+coloured icons (`SECTION_ACCENT`, removed) and the morning's ink pill.
 
-### Login Portal — "Midnight Slate" *(historical — there is no login page; Cloudflare Access hosts login and `src/pages/index.astro` is the access-denied / dev gate. The drifting orbs and the `feTurbulence` noise lived in `AdminLayout.css` until 2026-10-27, when the still backdrop of §5 replaced them)*
+### Login Portal — "Midnight Slate" *(historical — there is no login page; Cloudflare Access hosts login and `src/pages/index.astro` is the access-denied / dev gate. The drifting orbs and the `feTurbulence` noise lived in `AdminLayout.css` until 2026-10-27, when they were removed: the frame of §5 has no backdrop)*
 
 Single-column centered card on `#09090b` background with three ambient gradient orbs (Cyan, Slate, Deep Blue at 0.06–0.12 opacity) + SVG `feTurbulence` noise texture at `opacity-[0.015]`.
 
@@ -543,7 +544,7 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 }
 /* 2026-09-14: the shipped block in utilities.css ends here — it only zeroes durations.
    The view-transition rules are target, not implemented. The orbs it once meant to hide are gone
-   (2026-10-27): the frame's backdrop never moves. */
+   (2026-10-27), and so is the frame's backdrop. */
 ```
 
 **Performance rules:** Animate only `transform`/`opacity` — never layout properties. Nothing over 500ms. Never animate what sits under frosted glass: every pane above it re-blurs on every frame (why the drifting orbs and the full-screen `mix-blend-mode` noise layer were removed on 2026-10-27, `test/shell-look.test.ts`).
@@ -622,10 +623,10 @@ The sidebar has exactly **one** breakpoint — `lg` (1024px). Re-verified
 
 | Breakpoint | Sidebar | Grid | Tables |
 |------------|---------|------|--------|
-| ≥1024px (`lg`) | Always present; 240px expanded / 66px collapsed | 2-col bento | Full |
+| ≥1024px (`lg`) | Always present; 240px expanded / 64px collapsed | 2-col bento | Full |
 | <1024px | The phone menu: the shared Dialog from the left (`layout="side"`, up to 19rem), opened by the top bar's menu button | 1-col stack | Scroll |
 
-- **The 240px ↔ 66px collapse is a user preference, not a width rule** — it is
+- **The 240px ↔ 64px collapse is a user preference, not a width rule** — it is
   driven by the `cf_admin_sidebar_collapsed` cookie.
 - There is no 1280px tier and no separate `<768px` sidebar behaviour. The
   four-tier table this replaced described neither the code nor a plan.
@@ -843,6 +844,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-27 (second) | §3 tree, §4.3 (the browser bar), §5 (shell diagram and text, Sidebar States, its look, the breakpoint table), §6.4's comment and the Login Portal note, against the edge-to-edge frame: `shell.css` (`--nav-*`), `AdminLayout.astro`/`.css`, `Sidebar/index.tsx` (64px), `SidebarHeader.tsx`, `SidebarMenu.tsx`, `config.ts`, `CommandPalette.tsx`, `RegistryTabs.astro`, `categories.ts`, `theme-client.ts`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 | §4.3, §5 (shell, top bar, Sidebar States, its look), §6.4, §7.2, §7.3, §8.1, §8.3 and §9.8, against the frame as rebuilt: `AdminLayout.astro`, `AdminLayout.css`, `src/styles/components/shell.css`, `Sidebar/index.tsx`, `SidebarHeader.tsx`, `SidebarMenu.tsx`, `SidebarProfile.tsx`, `utils.ts`, `config.ts`, `TopBar.tsx`, `ThemeToggle.tsx`, `CommandPalette.tsx`, `RegistryTabs.astro`, `ToastProvider.tsx`, `Dialog.tsx`/`Dialog.css` (`side`), `src/lib/theme-client.ts` and `public/scripts/theme-init.js`; the frame's contrast computed from its tokens by `test/shell-look.test.ts` | Every other section, including §7.1's table (the page tokens were not re-measured); the look in a browser, which Harshil checks on his phone |
 | 2026-10-24 | §3's `sessions.css` line and §9.9's note on Sessions, against `src/styles/pages/sessions.css` (theme tokens only), `src/components/admin/users/sessions/SessionsBar.tsx`, `SettingBlocks.tsx` and `src/pages/dashboard/sessions/[...section].astro` | Every other section; the look in a browser, which the owner checks on a phone |
 | 2026-10-17 | §9.1's list of shipped `--modifier` classes, by grepping `src/` (no `sr-btn` anywhere; `.hero-badge--*` scoped in `content/hero.astro`; `.cron-op-badge--*` in `pages/cron.css`) | Everything else |
