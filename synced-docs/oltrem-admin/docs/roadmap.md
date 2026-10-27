@@ -54,10 +54,10 @@ self-hosted tiers of the builders reserved for their enterprise plans. That is t
 | Edition | Modules | Who it is for |
 |---|---|---|
 | **Core**, in every portal | people and access (`iam`, `users`), settings, audit, alerts, health, backups, deploys | every client |
-| **Work** | records (your own lists), forms and inbox, files, automations | a team that runs its day in the portal |
+| **Work** | records (your own lists), forms and inbox, files, automations, analytics | a team that runs its day in the portal |
 | **Messages** | providers, email, campaigns (bulk sends), later SMS and WhatsApp | a business that writes to its customers |
 | **Developer** | API keys, outgoing webhooks, the API reference, the jobs page | a business that connects other systems |
-| **Website** (later) | the public site shell, its content, SEO, privacy requests, analytics | a business whose website runs on the same account |
+| **Website** (later) | the public site shell, its content, SEO, privacy requests, visitor analytics | a business whose website runs on the same account |
 
 An edition is a list of modules mounted in the client's Worker; nothing else changes between them.
 
@@ -75,8 +75,9 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `developer` | Developer | **built** 2026-10-27: the jobs page (every job and flow, its last runs, run soon, pause), webhooks fed by the audit log and signed as Standard Webhooks sign them, with retries and a delivery log, the API reference read from the manifests |
 | API keys | Developer | later: a service calls the API through a Cloudflare Access service token today; making one from the Developer page comes later |
 | `automations` | Work | **built** 2026-10-27: when an audited action happens (a website form's answer among them) or on a schedule in UTC, send an email or raise an alert, or a client's own action; a log of every run. Actions on records, and chains of steps, later |
+| `analytics` | Work | **built** 2026-10-27: the portal's activity counted from the audit log by day, area and action, against the period before; two bar charts, a CSV of the days. A module's own series (emails delivered) later |
 | customer sign-in | Work | next: the client's own customers see their records and files |
-| `site`, `cms`, `seo`, `privacy`, `analytics` | Website | later, as plan section 4.4 lists them |
+| `site`, `cms`, `seo`, `privacy`, visitor analytics | Website | later, as plan section 4.4 lists them |
 | `sms`, WhatsApp | Messages | later (the owner's card 15) |
 | `vps`, `postgres` | Developer | later, optional |
 
