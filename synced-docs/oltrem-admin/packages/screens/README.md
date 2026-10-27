@@ -52,7 +52,7 @@ modules' own.
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
 | `/records` | the lists the person may see, with their records and place; Make a list when a role allows it somewhere | `/api/records/lists` |
 | `/records/new` | a new list: its name, its place picked from a row, and a starting shape (blank, contacts, tasks, stock, orders, equipment) | `/api/records/lists` |
-| `/records/:id?q=&field=&value=&sort=&dir=&page=` | a list's records: searched, narrowed by a row of chips per choice or yes or no field, sorted from a row, paged; the add form when the person may add | `/api/records/lists/:id`, `items` |
+| `/records/:id?q=&field=&value=&sort=&dir=&page=` | a list's records: searched, narrowed by a row of chips per choice or yes or no field, sorted from a row, paged; the add form and Add from a spreadsheet when the person may add | `/api/records/lists/:id`, `items` |
 | `/records/:id/items/:item` | one record with who added and changed it; the form to change it and Remove, as the person may | `/api/records/lists/:id`, `items/:item` |
 | `/records/:id/fields` | the designer: the fields in order with up, down and Remove; Add a field; the name and place; Remove the list once empty | `/api/records/lists/:id`, `/api/records/lists` |
 | `/forms` | the forms the person may see, with their new answers and whether each takes answers; Make a form when a role allows it somewhere | `/api/forms/forms` |
@@ -95,6 +95,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Make a form, save its settings, give it a new address, remove it with its answers (a dialog first) | `POST /api/forms/forms`, `PATCH`, `POST .../key`, `DELETE /api/forms/forms/:id` | the designer with `?done=form-made`; `form-saved`, `form-new-address`, `form-removed` |
 | Add, move and remove a form's field (a dialog first) | `POST /api/forms/forms/:id/fields`, `POST .../move`, `DELETE .../fields/:field` | `?done=form-field-added`, `form-field-moved`, `form-field-removed` |
 | Take an answer or let it go, mark it, add a note or an email reply, remove it (a dialog first) | `PATCH /api/forms/forms/:id/entries/:entry`, `POST .../notes`, `DELETE` | `?done=answer-taken`, `answer-released`, `answer-marked`, `answer-noted`, `answer-replied`, `answer-removed`; a refused note keeps what was typed |
+| Add from a spreadsheet (`/records/:id/import`): a CSV file whose first row names the fields | `POST /api/records/lists/:id/import` (the file as the body) | `?done=records-imported`; a refused file shows the list again with the rows named |
 | Download for a spreadsheet; the browser asks the API itself | `GET /api/records/lists/:id/export` | the CSV file |
 | Withdraw an invitation | `DELETE /api/iam/invitations/:id` | `?done=withdrawn` |
 | Give a role (`/people/:id/grant`): the role, the place, for how long (30 days, 90 or a year) and whether it is off until turned on; end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
@@ -189,7 +190,8 @@ role, the Owner approves it (the member is refused deciding it themselves), then
 review at the company, keeps every grant and closes it; then the Owner makes a group, adds the
 member (an unknown address refused), gives the group a role that is off until turned on, which the
 member turns on for an hour, ends it, is refused removing the group, and opens and closes a window
-for the Vendor. A
+for the Vendor; and the Owner adds two suppliers to a list from a CSV file after a file with a
+bad address is refused with its row. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed
 and saved on the Settings page, the test message then sent, the provider made the one that sends,

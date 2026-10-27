@@ -67,7 +67,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 |---|---|---|
 | `iam`, `users` | Core | **built**: places, roles, groups, exceptions, see it as, invitations (one or fifty at a time, each link emailed since 2026-10-27), switching off; since 2026-10-27 a grant ending within the week is emailed to its holder and an overdue access review shows on the health page; the phone screens for My access (hold, turn on, ask), the decisions waiting (requests and approvals) and access reviews (start, keep or remove, close), groups (members, roles) and the Vendor's access, and a role given for 30 days, 90 or a year, or off until turned on |
 | settings, audit, alerts, health, backup, github | Core | **built** |
-| `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export |
+| `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export; since 2026-10-27 CSV import (all rows or none) |
 | `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies |
 | `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports |
 | `files` | Work | **built** 2026-10-27: a drive per place in the client's bucket, opened by the roles held there, links that end, a trash |

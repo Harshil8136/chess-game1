@@ -178,6 +178,14 @@ checks the JSX, and two pragma lines at the top of `pages.tsx` tell any bundler 
 A route may take its body as the content itself (`body: 'bytes'`, POST or PUT only): an upload.
 Its schema then checks the query.
 
+## CSV files
+
+`parseCsv(text)` reads a CSV file as a spreadsheet saves it, row by row (RFC 4180: quoted fields,
+doubled quotes, line breaks inside quotes; a comma or a semicolon between fields, whichever the
+first line uses most; a byte order mark ignored; empty lines left out). `decodeText(bytes)` reads
+an upload as UTF-8 when it is, otherwise as Windows-1252. The campaigns' list and the records'
+import use both.
+
 ## Migrations, settings and errors
 
 The manifest also names what the module owns elsewhere, so one file says everything a reviewer

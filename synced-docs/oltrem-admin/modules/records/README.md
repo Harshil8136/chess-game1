@@ -64,6 +64,17 @@ The download (`GET /lists/:id/export`) is a CSV file of up to 5000 records, olde
 spreadsheet. Every cell is quoted, and a cell that starts with `=`, `+`, `-`, `@`, a tab or a
 carriage return gets a leading `'`, so a spreadsheet never runs a value as a formula.
 
+The upload (`POST /lists/:id/import`, `records.write`, the CSV file as the body of a `bytes`
+route, 128 KB and 1000 rows at most) adds a record for each row, all or none. The first row
+names the fields by their labels, in any order and any case; a column no field has (an export's
+Added and Changed among them) is left out and named back in `ignored`. A comma or a semicolon
+separates the fields, and a file not in UTF-8 is read as Windows-1252, as older spreadsheets save
+it (`parseCsv` and `decodeText` of `@oltrem/core-module`). Each row is checked as a record added
+by hand; one that does not fit refuses the whole file with its spreadsheet row number (the names
+are row 1), the first five named. The rows go in one statement, in the file's order, and a
+defused formula comes back as it was typed, so a download can be added back. One audit row
+(`records.item-import`) records the count, never the values.
+
 ## Search
 
 The portal's search (`GET /api/records/search?q=`, `records.read`) finds the lists the person may
@@ -78,11 +89,11 @@ by its first field.
 | `POST /lists`, `PATCH /lists/:id`, `DELETE /lists/:id` | `records.design` | make a list with its starting fields; rename or move it; remove it once empty |
 | `POST /lists/:id/fields`, `DELETE /lists/:id/fields/:field`, `POST /lists/:id/fields/:field/move` | `records.design` | add a field at the end; remove one with its values; move one up or down |
 | `GET /lists/:id`, `GET /lists/:id/items`, `GET /lists/:id/items/:item`, `GET /lists/:id/export` | `records.read` | a list with its fields and what the person may do; its records (`q`, `field` and `value`, `sort` and `dir`, `limit`, `offset`); one record; the CSV file |
-| `POST /lists/:id/items`, `PATCH /lists/:id/items/:item` | `records.write` | add a record; change one |
+| `POST /lists/:id/items`, `PATCH /lists/:id/items/:item`, `POST /lists/:id/import` | `records.write` | add a record; change one; add one for each row of a CSV file |
 | `DELETE /lists/:id/items/:item` | `records.remove` | remove a record |
 
 Every change is audited (`records.list-create`, `-update`, `-remove`; `records.field-add`,
-`-remove`, `-move`; `records.item-create`, `-update`, `-remove`), the refusals as much as the
+`-remove`, `-move`; `records.item-create`, `-update`, `-remove`, `-import`), the refusals as much as the
 successes, with ids and names only: never the values a record holds.
 
 The module has no card on Home: Home reads a card without the person, and a count of every list
@@ -110,7 +121,8 @@ a name taken in another case and a one-choice field refused; lists seen only whe
 their place, and a list at another place not found; values checked per kind, a clerk adding but
 not removing; search, a choice and a yes or no narrowing, sorting by a field, paging; a change
 replacing the values; fields added, moved and removed with their values; a list moved to another
-place; the CSV with a formula defused; a list with records kept; every change audited without a
-value.
+place; the CSV with a formula defused; a download added back whole with its defused formula restored, a
+file refused with its rows named and nothing added, a file naming no field, an empty one and a
+person without the place refused; a list with records kept; every change audited without a value.
 
 The search test finds lists and records only where a person's roles reach, and takes `%` as a letter.
