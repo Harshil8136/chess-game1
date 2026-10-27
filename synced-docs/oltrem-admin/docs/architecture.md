@@ -127,7 +127,7 @@ owning README in the same commit.
 
 | You want to | Open |
 |---|---|
-| Add a feature for every client | a new folder under `modules/`, copied from the shape of a small module such as `modules/github`; mount it in `templates/client/src/index.ts` |
+| Add a feature for every client | a new folder under `modules/`, step by step in [Adding a module to the kit](reference/kit-module.md) |
 | Add a feature for one client | `oltrem new module <name>` in that client's repository (`templates/module` is what it copies) |
 | Change who may do what | the module's capability list; the model is in [the IAM README](../modules/iam/README.md) |
 | Add or change a page | a module's own page: its `src/pages.tsx`, joined with `withPages` ([core-module](../packages/core-module/README.md)); a kit page: `packages/screens/src/`, the frame and its sidebar are `layout.tsx` |

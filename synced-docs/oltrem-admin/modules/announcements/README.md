@@ -66,6 +66,14 @@ Every step is audited: `announcements.post`, `announcements.read`, `announcement
 `announcements.remove`, refusals included. One that went through can set off an automation: an
 automation on `announcements.post` emails it to a list.
 
+## For automations
+
+`store.make(env, tenantId, { title, body, mustConfirm?, shownForDays?, key })` posts a notice at
+the company itself, once per `key`: the notice's id is made from the key, so a second call answers
+the first. It is posted by `system` and shown as posted by an automation. The automations module's
+`announceAction` calls it with the run's key, so a scheduled reminder is posted once each time it
+runs.
+
 ## Tables
 
 Migration `0028_announcements.sql`, additive and idempotent: `announcements_posts` (the place, the
@@ -81,6 +89,7 @@ without the capability at the place is `KIT-E-0403`; a notice that is not there 
 
 - An email to everyone at the place when a notice is posted: an automation on
   `announcements.post` sends one to a list today.
+- A notice an automation posts at a place other than the company itself.
 - How many of the people at the place have not read it yet, beside who has.
 - A reminder to those who have not confirmed by a day.
 - Files attached to a notice; a link in the text does it today.

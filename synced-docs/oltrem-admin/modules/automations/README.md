@@ -9,7 +9,14 @@ once its action has what it needs, and every time it acts is a run in its log.
 ## Using it
 
 ```ts
-import { alertAction, createAutomations, defineAction, emailAction, taskAction } from '@oltrem/automations';
+import {
+  alertAction,
+  announceAction,
+  createAutomations,
+  defineAction,
+  emailAction,
+  taskAction,
+} from '@oltrem/automations';
 import { pages as automationsPages } from '@oltrem/automations/pages';
 import { withPages } from '@oltrem/core-module';
 
@@ -19,6 +26,7 @@ const automations = createAutomations<Env>({
     emailAction(email, ALERT_NOTICE.id), // a template with a subject and a text
     alertAction(alerts),
     taskAction(tasks.store),
+    announceAction(announcements.store),
     // a client's own: defineAction({ id, title, summary, fields, run })
   ],
 });
@@ -27,7 +35,7 @@ const modules = [iam.module, /* ... */ withPages(automations.module, automations
 
 `createAutomations` returns the `store` (every function the routes and the job call) and the
 module manifest. It stands on the IAM module (sessions, the authorizer, the audit wrapper) and the
-audit log; it reaches the email, alerts and tasks modules only through the actions the client
+audit log; it reaches the email, alerts, tasks and announcements modules only through the actions the client
 hands in, so a portal without one of them simply offers the others. It adds no binding, secret or
 variable.
 
@@ -54,6 +62,7 @@ sign-in. Both are read at the company itself: an automation acts on what happens
 | `email`, Send an email | To (up to twenty addresses), Subject, Message (plain text) | through the email module, under the run's key, so a run never sends twice; the email module's failover and delivery reports apply |
 | `alert`, Raise an alert | Title, How serious (warning or critical), Detail | through the alerts module, under the key `automations.<automation>`, so a second run while it is open counts on the same alert; emailed to the alerts' recipients as any alert is |
 | `task`, Make a task | What is to be done, Given to (one address), Due in days (0 to 365), Notes | through the tasks module, at the company itself, given to someone who may see the tasks there and told by email; once per run, under the run's key |
+| `announce`, Post an announcement | Title, What it says, Each person confirms (no, or yes with "I have read it"), Shown for days (1 to 365) | through the announcements module, at the company itself, so everyone who may see the company's announcements finds it on Home; once per run, the run's key its id. On a schedule, it is a reminder that comes back: every Monday, the week's safety check |
 
 A client adds its own with `defineAction({ id, title, summary, fields, check?, run })`: the fields
 are `text`, `textarea`, `emails` or `choice` (with options), and `run` gets the env, the company,
