@@ -21,8 +21,7 @@ linked from docs/README.md.
 3. Check git: `git remote -v`, `git switch main`, `git pull origin main`, `git status`. Confirm
    that `node --version` satisfies package.json; in a fresh clone, run `npm install` (it uses
    the pinned pnpm).
-4. Read only what section 4 sends you to. Start with docs/README.md for where things
-   stand.
+4. Read only what section 4 sends you to.
 
 ## 2. The rules, one line each
 
@@ -71,7 +70,7 @@ The tool's other commands, which serve a client repository, are in `packages/cli
 
 | Your task touches | Read |
 |---|---|
-| Anything at all | docs/README.md: where things stand and the index of every document |
+| Anything at all | docs/README.md (the index), then docs/architecture.md (the parts, the numbers taken) |
 | A rule, its reason or its enforcement | rules.md |
 | A token, key, secret or account | docs/reference/tokens.md, then R-05 in rules.md |
 | What `pnpm verify` runs and why | docs/reference/verify.md, then `scripts/verify.mjs` |
