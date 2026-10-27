@@ -41,8 +41,8 @@ the authorizer), the audit log, and the customers module, whose account page sho
 invoices. `send` is optional: without it nobody is emailed, and a sent invoice waits on the account
 page all the same. With the quotes module mounted, the page that makes an invoice offers the
 accepted quotes the person sees, read through the quotes API, and fills the form from the one
-picked; without it, the form starts blank. It adds no binding, secret or variable; it adds two
-settings.
+picked; without it, the form starts blank. It adds no binding, secret or variable; it adds three
+settings and one daily job.
 
 ## Who may do what
 
@@ -82,7 +82,17 @@ page as cancelled.
 | Key | Default | What it is |
 |---|---|---|
 | `invoices.currency` | `USD` | the three-letter code of the currency new invoices are written in, set by the Owner |
+| `invoices.reminders` | off | emails the customer three days before a sent invoice is due, and the day after if it is not marked paid; set by the Owner |
 | `invoices.issuer` | empty | who issues the invoices, printed under the company name at the top of each: the legal name, the address and the tax number, 500 characters at most, set by the Owner |
+
+## Reminders
+
+The daily job `invoices.reminders` does nothing until the Owner turns `invoices.reminders` on. Then
+each run emails the customer of every sent invoice due in three days ("Invoice 3 is due on …") and
+of every one that was due yesterday and is not marked paid ("Invoice 3 is overdue"), with the total
+and how to pay, at most twenty of each a run. Each message is keyed by the invoice and its kind, so
+a customer gets each one once; an invoice paid before its day gets none. A day the tick misses is
+not made up: the reminders look at exact days.
 
 ## The pages
 
@@ -139,7 +149,8 @@ capability at the place is `KIT-E-0403`; an invoice that is not there is `KIT-E-
 - Taxes and discounts per line, part payments and credit notes.
 - A PDF file made by the portal: today the browser makes it from the printable page, and an
   electronic invoice in a country's format (CFDI in Mexico, for one) needs that country's provider.
-- Reminders to the customer before and after the day it is due.
+- More reminders: today one goes before the day and one the day after; after that the invoice waits
+  in Needs you.
 
 ## Tests
 
@@ -150,6 +161,7 @@ customer until sent, then emailed and shown on their account page for their addr
 paid once with how, the customer thanked, never voided after; overdue past its day, in its view and
 in Needs you, and settled when paid late; voided, a sent one shown as cancelled and a draft never
 shown; the printable page with the company's details, for whoever sees the place and its customer
-once sent, every text escaped; the search and the privacy answer; every step audited. The client template's screens journey
+once sent, every text escaped; the reminders, none while off, then three days before and the day
+after, each once; the search and the privacy answer; every step audited. The client template's screens journey
 makes an invoice from the quote the customer accepted, sends it, finds it on their account page
 and opens it to print, and marks it paid.
