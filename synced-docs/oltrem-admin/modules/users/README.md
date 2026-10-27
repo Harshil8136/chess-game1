@@ -61,6 +61,13 @@ above everyone but an Owner. Every switch and every profile change is audited (`
 The portal's search (`GET /api/users/search?q=`, `users.read`) finds people by address or display
 name, each with whether their account is on, linking to their page.
 
+## Personal data
+
+For a privacy request (`personal`, read by the privacy module) the module answers the account
+under the address (its address, display name, language, whether it is on, when it was made) and
+every role given to it, with the place, the effect and the days it starts and ends. The person's
+page is linked.
+
 ## The routes
 
 | Routes | Capability | What they do |

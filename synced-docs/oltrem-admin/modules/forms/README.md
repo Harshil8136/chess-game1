@@ -92,6 +92,12 @@ The portal's search (`GET /api/forms/search?q=`, `forms.read`) finds the forms t
 name or line, then their answers by any text in them, newest first, each titled by the sender's
 address.
 
+## Personal data
+
+For a privacy request (`personal`, read by the privacy module) the module answers every answer
+sent from the address or naming it in any field, newest first, with its form, its fields, its
+state and the notes on it. The Forms page is linked; an answer is removed from its own page.
+
 ## Needs you
 
 Home's Needs you (`GET /api/forms/todo`, `forms.read`) lists each form with answers nobody has

@@ -177,6 +177,26 @@ todo: {
 },
 ```
 
+## Personal data
+
+A module that keeps rows about people declares `personal`: a `title` and `find(env, tenantId,
+email)`, which answers the rows it holds under that address (lower case), at most `PERSONAL_ROWS`
+(200), with `more` when there are more and the `href` of the portal page that shows them. The
+privacy module calls it in-process when a privacy request is searched, and puts the rows in the
+copy the person is given, so a row should say what it is in plain field names, without internal
+ids. No route is added. `defineModule` refuses a `personal` without a title. Correcting and
+deleting stay in the module, where its own rules and audit apply.
+
+```ts
+personal: {
+  title: 'Notes about them',
+  find: async (env, tenantId, email) => {
+    const rows = await notesAbout(env, tenantId, email, PERSONAL_ROWS + 1);
+    return { rows: rows.slice(0, PERSONAL_ROWS), more: rows.length > PERSONAL_ROWS, href: '/notes' };
+  },
+},
+```
+
 ## Pages
 
 A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`

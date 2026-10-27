@@ -118,6 +118,12 @@ counted as ignored.
 after every provider refused it, **warn** while one waits for an email provider, **ok** otherwise.
 Two failures in a row open a problem (`@oltrem/core-health`).
 
+## Personal data
+
+For a privacy request (`personal`, read by the privacy module) the module answers each message
+sent to the address: its template, its state, the last delivery event and when it was sent. The
+text of a message is not kept, so it is not in the answer. The Email page is linked.
+
 ## Not here yet
 
 - Suppression of an address that bounced or complained comes with the screens; the reports are

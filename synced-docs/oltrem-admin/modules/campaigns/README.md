@@ -86,6 +86,12 @@ that was added by hand or bounced; an unsubscribe or a complaint stays for good
 The portal's search (`GET /api/campaigns/search?q=`, `campaigns.read`) finds campaigns by name, at
 the places the person may see, with their state.
 
+## Personal data
+
+For a privacy request (`personal`, read by the privacy module) the module answers whether the
+address is never mailed (and why), then each campaign it was on, with the name and merge fields it
+was sent with, its state and when it was sent. The Campaigns page is linked.
+
 ## The routes
 
 | Routes                                                                                                                     | Capability                      | What they do                                                                                                      |

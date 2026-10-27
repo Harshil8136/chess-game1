@@ -81,6 +81,12 @@ The portal's search (`GET /api/records/search?q=`, `records.read`) finds the lis
 see by name or description, then their records by any text value, newest change first, each titled
 by its first field.
 
+## Personal data
+
+For a privacy request (`personal`, read by the privacy module) the module answers every record
+whose text names the address, newest change first, with its list and its values by field label.
+The Records page is linked; a record is corrected or removed from its list.
+
 ## The routes
 
 | Routes | Capability | What they do |
