@@ -40,14 +40,14 @@ holds (plan 12.1); a test renders every one and checks.
 | Primitive | Built on | Rule it keeps |
 |---|---|---|
 | `Button`, `IconButton` | `<button>` | four looks, two heights (44, 56), never a fixed width; an icon button refuses an empty label |
-| `ChipRow`, `CommandRow` | `<nav>` with a list of links or buttons in the `.ui-chip-row` scroller | the sideways navigation: every option visible, the current one marked for the browser and the scroller; a destructive command last and red |
+| `ChipRow`, `CommandRow` | `<nav>` with a list of links or buttons in the `.ui-chip-row` scroller | the sideways navigation: every option visible, the current one marked for the browser and the scroller; a destructive command last and red. The scroller reaches into the gutter on both sides, so its first chip lines up with the text above and the fades sit in the gutter; it needs a parent with the gutter's padding (the page, a dialog, a card) |
 | `ChoiceChips` | `<fieldset>` of native radios inside chips, in the `.ui-chip-row` scroller | a choice of one with every option visible, never a dropdown alone; posts without a script; the chosen chip filled |
 | `Input`, `Textarea`, `Select`, `Switch`, `Checkbox`, `Radio` | the native controls; a switch is a checkbox with the switch role | one column, 56 px controls, 44 px choice rows, right `type` and `autocomplete` are the caller's |
 | `FormField`, `FormErrors` | `<label>`, the control, `<p>` hint and error; a `role="alert"` summary | the control carries `aria-describedby` and `aria-invalid`; the summary links to each field |
 | `Dialog`, `DialogButton`, `DialogClose`, `ConfirmDialog` | `<dialog>` with `closedby="any"`, opened and closed by the browser's `command` attributes | a bottom sheet on a phone, centred from 640 px; one system, never a dialog in a dialog; the confirm dialog names the object and the consequence, focuses cancel, puts the red button last, and can demand a typed word |
 | `Popover` | the popover API, anchored to its trigger | dismissed by a tap outside; no script |
 | `Tabs`, `Pagination` | `<nav>` with links | the current page marked; `rel="prev"` and `rel="next"`; the ends disabled |
-| `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows |
+| `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows; a data column with no header (a command) sits below the named ones on a card, full width |
 | `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word |
 | `ToastRegion`, `Toast` | a polite live region; each toast a manual popover its own button hides | one live region in the layout |
 | `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds |
