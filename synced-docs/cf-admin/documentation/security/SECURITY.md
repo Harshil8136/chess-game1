@@ -317,7 +317,9 @@ Applied **inside the Worker** by Astro's `sequence` middleware —
 mutable `new Headers(response.headers)` copy to avoid immutable-header
 exceptions on the Workers runtime. The distinction matters: anything Cloudflare
 injects after the response leaves the Worker (Rocket Loader, for one) is not
-covered by these headers and cannot receive the CSP nonce.
+covered by these headers and cannot receive the CSP nonce. Since 2026-10-27
+every page is sent with `no-transform`, so Cloudflare injects nothing into it
+(see "Cloudflare's own scripts" below).
 
 | Header | Value | Purpose |
 |--------|-------|---------|
@@ -330,7 +332,9 @@ covered by these headers and cannot receive the CSP nonce.
 | `Cross-Origin-Opener-Policy` | `same-origin-allow-popups` | Not the stricter `same-origin`: CF Access and Google sign-in use popups, and `same-origin` severs `window.opener` and breaks those flows |
 | `Cross-Origin-Resource-Policy` | `same-origin` | Blocks cross-origin embedding of this origin's resources |
 | `X-Robots-Tag` | `noindex, nofollow, noarchive, nosnippet, noimageindex` | Defence in depth over robots.txt — an authenticated portal with zero public content |
-| `Content-Security-Policy` | See enforced policy below | Resource restriction; `'unsafe-inline'` retained on `script-src`/`style-src`, `'unsafe-eval'` removed 2026-07-25 |
+| `Content-Security-Policy` | See enforced policy below | Resource restriction; `'unsafe-inline'` retained on `script-src`/`style-src`, `'unsafe-eval'` removed 2026-07-25. On `script-src` it allows nothing in a current browser, which ignores it beside a nonce |
+| `Cache-Control` (HTML only) | the page's own value plus `no-transform`, or `no-transform` alone | Keeps Cloudflare from rewriting a page: no bot-check snippet, no Rocket Loader, no edge compression (since 2026-10-27) |
+| `Content-Encoding` (HTML only) | `gzip`, with `Vary: Accept-Encoding`, when the visitor's browser accepts it | The Worker runtime compresses the page itself, since `no-transform` stops Cloudflare doing it (since 2026-10-27) |
 | `Content-Security-Policy-Report-Only` | **Live** — the hardened canary | Ships the target policy (no `'unsafe-inline'`) so violations surface in Sentry without breaking the portal |
 
 ### Enforced CSP
@@ -388,6 +392,27 @@ run; the policy itself is unchanged. That code runs only on documents this origi
 served through the auth pipeline, with each response's own nonce already checked
 by the middleware. The router script is an external file under `'self'`, and
 link prefetching is off. `test/client-navigation.test.ts` holds both in place.
+
+**Cloudflare's own scripts are kept out of pages (since 2026-10-27).** The zone runs
+Bot Fight Mode, which makes Cloudflare add its JavaScript Detections snippet to every
+HTML page; on the free plan it cannot be switched off. Cloudflare stamps this
+policy's nonce on the snippet's outer script, but that script writes a second,
+nonce-less inline script into a hidden frame, which inherits the policy and is
+refused. The owner saw it as a red CSP error in the browser console on every page
+and after every page change (the second copy came from the swapped-in page, run with
+the kept nonce). Its content changes with every request, so no hash can allow it,
+and `'strict-dynamic'` does not allow inline scripts a script creates. The portal
+sits behind Access, so the bot check guards nothing here. `markHtmlUntransformable`
+in `csp.ts` therefore adds `no-transform` to every HTML response's `Cache-Control`,
+which is Cloudflare's documented switch that stops the injection (it also keeps
+Rocket Loader, Email Obfuscation and other body rewrites off portal pages). The same
+switch stops Cloudflare compressing the page, so the function also sets
+`Content-Encoding: gzip` when the visitor's own `Accept-Encoding`
+(`request.cf.clientAcceptEncoding`, since Cloudflare rewrites the header the Worker
+sees) includes gzip, and the Workers runtime compresses the body as it sends it. A
+local `workerd` run on 2026-10-27 sent a 92 KB page as 313 bytes of gzip this way.
+Not on localhost, and never over a body that is already encoded. API responses are
+untouched. `test/csp.test.ts` holds it in place.
 
 ### Framing exception — the backup console (added 2026-09-23)
 
@@ -447,8 +472,10 @@ on every page load if it is present.
 Promote `SCRIPT_SRC_CANARY` to the enforcing directive and delete the Report-Only
 header once it reports zero `script-src` violations. Note that while both headers
 are live Sentry double-counts any violation that trips the enforcing policy too,
-so keep the canary window short. The flip is blocked on operator verification of
-Cloudflare Rocket Loader (zone → Speed → Optimization) — `MAINTENANCE.md` C-3.
+so keep the canary window short. The flip was blocked on operator verification of
+Cloudflare Rocket Loader (zone → Speed → Optimization) — `MAINTENANCE.md` C-3. Since
+2026-10-27 `no-transform` keeps Rocket Loader off portal pages whatever the zone
+setting, so that check no longer gates it.
 
 ### Data-Attribute Driven CSS
 
@@ -1320,6 +1347,7 @@ This pass re-verified every deferred item from the 2026-05-25 review and closed 
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-27 | §4's intro, the `Content-Security-Policy`, `Cache-Control` and `Content-Encoding` rows, the "Cloudflare's own scripts" paragraph and the Report-Only flip note, against `markHtmlUntransformable` and `securityHeaders` in `src/lib/security/csp.ts`, `test/csp.test.ts`, Cloudflare's documentation (Bot Fight Mode: JavaScript Detections always on, nonce added to its scripts; JavaScript Detections and Cache-Control: no injection and no compression under `no-transform`; Workers fetch: compression and `request.cf.clientAcceptEncoding`) and a local `workerd` serve of a string body with `Content-Encoding: gzip` (gzip on the wire). The blocked script's content and stack came from the owner's console log | The live headers (this session's network cannot reach the portal), whether runtime compression counts toward the free plan's CPU time (`MAINTENANCE.md` PC-1), every other section |
 | 2026-10-26 | §4's "One nonce per request" paragraph against `securityHeaders` in `src/lib/security/csp.ts` and Astro 7.3.2's `executeRewrite` (`node_modules/astro/dist/core/rewrites/handler.js`, which calls `handleMiddleware` again with the same state and locals); the new test in `test/csp.test.ts` fails without the fix and passes with it | The live card on a phone (the owner's test); whether Astro's error pages (404, 500) go through the same path. The rest of the document not re-read |
 | 2026-10-26 | §6a's `GET /api/users/pages` row (the `mayGive` and `mayTake` fields, 401 for a refused sign-in) against `src/pages/api/users/pages.ts` and `test/invite-pages.test.ts`; `AccessPolicyGrid.tsx` marked removed in the CSP row | The rest of the document |
 | 2026-10-26 | §6a's `GET /api/analytics/{part}` row after round 2 (seven parts, `retry=1`, the email ledger read) against `src/pages/api/analytics/[part].ts`, `src/lib/analytics/report/load.ts` and `emailLogs` in `src/lib/dal/AnalyticsRepository.ts`; `test/analytics-round2.test.ts` passes; §0's PLAC row unchanged (no route file added: 171 files under `src/pages/api/`) | The rest of the document |

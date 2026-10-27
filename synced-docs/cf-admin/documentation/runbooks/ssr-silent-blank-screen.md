@@ -121,18 +121,22 @@ the name in a comment). When a widget crashes:
   reached Sentry. The console line is the reliable one.
 - Other widgets continue working normally.
 
-### Layer 2: Global error-listener safety net
+### Layer 2: Chunk-404 reload
 
-`AdminLayout.astro` loads `public/scripts/error-capture.js` — a nonce-carrying `<script is:inline src>`, not an inline script body — which registers `window` `error` and `unhandledrejection` **listeners** (`addEventListener`, not the `window.onerror` property this heading claimed until 2026-09-19) **before** any Preact island hydrates. This catches hydration failures that no ErrorBoundary can catch.
+`AdminLayout.astro` loads `public/scripts/error-capture.js` — a nonce-carrying `<script is:inline src>`, not an inline script body — which registers `window` `error` and `unhandledrejection` **listeners** (`addEventListener`, not the `window.onerror` property this heading claimed until 2026-09-19) **before** any Preact island hydrates.
 
-What it actually does with what it catches: it returns early if `window.Sentry`
-already exists, otherwise buffers into `window.__earlyErrors`, logs
-`[Early Error Buffered]:` / `[Early Promise Rejection Buffered]:`, and drains
-the buffer to Sentry only if `window.Sentry` appears within ~5 s. **It does not
-report to Sentry by itself.** Its one piece of recovery UI is a single
-`location.reload()` on a chunk-404. *(Corrected 2026-09-14: this said "an
-inline script". Corrected 2026-09-19: the heading and the Sentry claim.
-`OPERATIONS.md` §4.2 links here — this runbook owns the description.)*
+What it does with what it catches: when the error says a page chunk could not be
+loaded (a redeploy removed the files an open tab's old page asks for), it reloads
+the tab, once per session. Every other error it leaves alone: the browser prints
+it in the console as `Uncaught …`, and Sentry's own handlers catch it once the SDK
+has started. Until 2026-10-27 it also queued every error in `window.__earlyErrors`
+and printed it again as `[Early Error Buffered]:` / `[Early Promise Rejection Buffered]:`,
+to drain the queue to a `window.Sentry` global; the bundled SDK never sets one, so
+the queue grew for the life of the tab and nothing reached Sentry. That part was
+removed; `test/error-capture.test.ts` runs the script against a stand-in window.
+*(Corrected 2026-09-14: this said "an inline script". Corrected 2026-09-19: the
+heading and the Sentry claim. `OPERATIONS.md` §4.2 links here — this runbook owns
+the description.)*
 
 ### Layer 3: Sentry (`@sentry/cloudflare` on the server, `@sentry/astro` in the browser)
 
@@ -145,7 +149,9 @@ If a blank screen recurs, follow this checklist in order:
 1. **Check the browser console first** — it is the only layer that always
    fires. The real prefixes are:
    - `[Preact Island ErrorBoundary Caught` … (Layer 1)
-   - `[Early Error Buffered]:` and `[Early Promise Rejection Buffered]:` (Layer 2)
+   - the browser's own `Uncaught …` lines for anything no boundary caught
+     (`[Early Error Buffered]:`, which this step named until 2026-10-27, is gone with
+     the queue that printed it)
 
    *(Until 2026-09-19 this step named `[GlobalErrorCapture]` and
    `[ErrorBoundary]`. Neither string exists anywhere in the repo.)*
@@ -172,6 +178,7 @@ If a blank screen recurs, follow this checklist in order:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-27 | `public/scripts/error-capture.js` read after the change; `test/error-capture.test.ts` run against it and against the previous version (the old one printed and kept all 50 test errors) | Layer 2 and playbook step 1 rewritten: the queue and its console prefixes are gone, the chunk-404 reload stays. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/catalog.ts` and `src/pages/dashboard/health.astro` read | Step 3 now points to System health, which replaced Diagnostics. Nothing else re-checked |
 | 2026-10-07 | `src/lib/diagnostics/tests/connectivity.ts` and `src/lib/diagnostics/runner.ts` read (both removed 2026-10-17) | The diagnostics step (changed 2026-10-04): the suite checks the rate-limit bindings (`ratelimit_bindings`) where it pinged Upstash. Nothing else re-checked |
 | 2026-09-19 | `src/components/ui/ErrorBoundary.tsx` and `public/scripts/error-capture.js` read line by line; `grep -rln ErrorBoundary src/`; `grep` for every string the Diagnostic Playbook names | **Every string in the playbook was wrong** — the Sentry tags, both console prefixes and the fallback wording — and that is the only part anyone uses under pressure. Playbook rewritten with the real tags (`preact.island_boundary`, `preact.section_name`), the real prefixes and the real Spanish UI text; mounting files corrected from three to **two**; Layer 1's Sentry call marked conditional on a `window.Sentry` global nothing sets; Layer 2's heading corrected from `window.onerror` to listeners; the diagnostics link pointed at `/dashboard/debug/diagnostics`. Not re-derived: the three crash patterns and the April 2026 post-mortem (history) |

@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-27 | §4.2 against `public/scripts/error-capture.js` after the change and `test/error-capture.test.ts` | The queue for `window.Sentry` is gone, the chunk-404 reload stays. Nothing else re-checked |
 | 2026-10-26 | `ls migrations/*.sql` (56 files, highest `0078`), `d1_migrations` newest row through the Cloudflare D1 connector after `0078` was applied; §5's `CLOUDFLARE_API_TOKEN` and `SENTRY_AUTH_TOKEN` rows against `src/lib/analytics/report/sources.ts` and `load.ts` (Analytics round 2) | §7's state comment and count; §5 names the Analytics page's Reliability part as a reader of the two keys. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-26 | `ls migrations/*.sql` (55 files, highest `0077`), `d1_migrations` newest row through the Cloudflare D1 connector (`0077` at 2026-10-26 03:01:04); §5's `CLOUDFLARE_API_TOKEN`, `POSTHOG_PERSONAL_API_KEY` and `GSC_SERVICE_ACCOUNT_JSON` rows against `src/lib/analytics/report/sources.ts` | §7's state comment and count; §5 names the Analytics page as a reader of the three keys. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-24 | `grep -rn SENTRY_AUTH_TOKEN src/` after the Logs tab began listing Sentry's issues (`getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`) | §5's Sentry row names the Logs tab as a reader. No binding, secret or variable added. Nothing else re-checked |
@@ -524,12 +525,9 @@ Owned by [`../runbooks/ssr-silent-blank-screen.md`](../runbooks/ssr-silent-blank
 `AdminLayout.astro` loads `../../public/scripts/error-capture.js` (private)
 (a nonce-carrying `<script is:inline src>`), which registers `error` and
 `unhandledrejection` **listeners** — not `window.onerror` handlers, which is
-what this section claimed until 2026-09-19. It does **not** itself report to
-Sentry: it returns early when `window.Sentry` already exists, otherwise buffers
-into `window.__earlyErrors` and drains only if `window.Sentry` appears within
-~5 s. **Nothing in this repo assigns `window.Sentry`** (the browser SDK is an
-ES-module import), so treat that drain as unproven. The only "recovery UI" is a
-one-shot `location.reload()` on a chunk-404.
+what this section claimed until 2026-09-19. It does **not** report to Sentry: its
+one job is a one-shot `location.reload()` on a chunk-404. The queue it kept for a
+`window.Sentry` global that nothing assigns was removed on 2026-10-27.
 
 ### 4.3 ErrorBoundary
 
