@@ -252,4 +252,5 @@ uncached, and another id, another module, a broken path or a failing module retu
 account, a visitor with no sign-in sent to sign in; an action posted by its customer done once and
 thanked, one the module refuses or a broken path returned with "no longer open". The client template's screens journey adds a customer on the page, signs them
 in at `/account` with the code from the outbox, and shows their account with "Your messages", the
-file shared with them and a quote, which they accept there.
+file shared with them and a quote, which they accept there, then the invoice made from it, owed and
+then paid.
