@@ -61,6 +61,7 @@ Under `/api/alerts`, through the IAM module's sessions and check. Capabilities a
 |---|---|---|
 | `GET /items` | `alerts.read` | the open alerts, newest first, and the thirty latest resolved ones |
 | `GET /home` | `alerts.read` | the Home card: how many are open, and how many of those are critical |
+| `GET /todo` | `alerts.manage` | Home's Needs you: how many open alerts nobody has acknowledged, and the worst of them |
 | `POST /items/:id/acknowledge` | `alerts.manage` | keeps the caller's address and the time on an open alert not yet acknowledged; audited as `alerts.acknowledge`; another alert is 404 |
 
 ## The table

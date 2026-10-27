@@ -270,6 +270,12 @@ The module keeps two rules without anyone having to remember them (`src/care.ts`
 Both only read the rows. The notice goes through the same `mail` as an invitation, and the
 health page shows the check's last result with the others.
 
+Home's "Needs you" (`todo`, `src/todo.ts`) asks the module for what waits for the person signed
+in, under `iam.self`: the access requests and second-person approvals they may decide, each
+access review with grants they may keep or remove, and their own grants ending within 7 days.
+`waitingFor` counts with the rules the decisions check (`standingAt`, `can`, never one's own
+request, approval or grant), so a person is never sent to a decision the API would refuse.
+
 ## The routes
 
 ```ts
@@ -312,6 +318,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map; my sign-ins; end one of them (`iam.device-end` in the audit log) |
 | `GET /me/grants`, `POST /me/grants/:id/activate` | `iam.self` | the grants that reach me; bring an eligible one into force for a few hours |
 | `GET /me/options` | `iam.self` | what I may ask for: every role but the Owner's and every place, by name, so a member who cannot read the Access page can still ask |
+| `GET /todo` | `iam.self` | Home's Needs you: what waits for me (`waitingFor`, above) |
 | `GET`, `POST /me/requests`, `DELETE /me/requests/:id` | `iam.self` | my access requests: ask for a role at a scope, withdraw |
 | `GET`, `POST /me/approvals`, `POST /approvals/:id/decision` | `iam.self` | the approvals I asked for; ask a second person; decide one (you must hold the same power and not be the one who asked) |
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |

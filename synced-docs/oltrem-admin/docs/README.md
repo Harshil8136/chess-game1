@@ -159,6 +159,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Automations module](records/2026-10-27-automations-module.md) | when something happens or on a schedule, an email or an alert; website answers audited |
 | [Analytics module](records/2026-10-27-analytics-module.md) | the portal's activity by day, area and action, from the audit log, in charts and a CSV |
 | [Access screens](records/2026-10-27-access-screens.md) | My access, requests and approvals, access reviews on the phone; expiry emails and the review check |
+| [Needs you](records/2026-10-27-needs-you.md) | Home opens with what waits for the person signed in, from each module |
 
 ## How this folder is checked
 

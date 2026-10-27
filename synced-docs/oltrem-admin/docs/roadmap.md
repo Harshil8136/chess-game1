@@ -83,7 +83,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 
 ## This round's foundation work
 
-Three changes under every module, done before the new modules so each one uses them:
+The changes under every module, done before the new modules or beside them, so each one uses them:
 
 - **The audit writes itself.** The pipeline records every change made through the API (a POST,
   PUT, PATCH or DELETE) with its outcome, the route, the status and how long it took, including
@@ -92,7 +92,12 @@ Three changes under every module, done before the new modules so each one uses t
 - **A module brings its own pages.** The manifest gains the pages and the sidebar entry of the
   module, so a new module is one package mounted in one line, with no edit to the screens package.
 - **A new look.** A calmer palette, a glass frame, smooth page transitions in the browsers that
-  have them, and pages fetched before the click. A search over every section comes later.
+  have them, and pages fetched before the click. A search over every section followed the same
+  day.
+- **What waits for you comes to you.** Home opens with Needs you: each module that has a
+  decision or a task for the person signed in says so (access requests, approvals and reviews
+  they may decide, their own access ending, alerts nobody took, new answers to the forms they
+  handle), each a row to the page that acts on it.
 
 ## How a round is chosen
 

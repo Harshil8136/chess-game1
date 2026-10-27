@@ -155,6 +155,28 @@ search: {
 },
 ```
 
+## Needs you
+
+What waits for the person signed in is declared as `todo`: one of the module's own capabilities
+and `list(ctx)`, which answers items, each a title, an optional note and the portal page to act on
+it. `defineModule` adds `GET /api/<module>/todo` under that capability; an item whose address is
+not a page of the portal is dropped, and at most `TODO_ITEMS` (five) are answered. Home asks every
+mounted module that has one, in the sidebar's order, and shows the items first, under "Needs you";
+a module that refuses the person adds nothing. `list` reads the session from `ctx`: it answers
+only what this person can act on, by the same rules the action itself checks, so nobody is sent
+to a decision the API would refuse them. Count what is many ("3 requests to decide") rather than
+listing each.
+
+```ts
+todo: {
+  capability: 'notes.manage',
+  list: async (ctx) => {
+    const n = await unansweredFor(ctx);
+    return n ? [{ title: `${n} notes to answer`, href: '/notes' }] : [];
+  },
+},
+```
+
 ## Pages
 
 A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`

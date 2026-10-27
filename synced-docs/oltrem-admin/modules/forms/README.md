@@ -92,6 +92,12 @@ The portal's search (`GET /api/forms/search?q=`, `forms.read`) finds the forms t
 name or line, then their answers by any text in them, newest first, each titled by the sender's
 address.
 
+## Needs you
+
+Home's Needs you (`GET /api/forms/todo`, `forms.read`) lists each form with answers nobody has
+taken yet, where the person holds `forms.handle` at the form's place: "8 new answers to Contact
+us", oldest waiting first, opening the form's inbox on its new answers.
+
 ## The routes
 
 | Routes | Capability | What they do |

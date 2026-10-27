@@ -46,7 +46,7 @@ modules' own.
 
 | Path | Shows | Reads |
 |---|---|---|
-| `/` | a Vendor with no company yet: the company form; anyone else: the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/home` |
+| `/` | a Vendor with no company yet: the company form; anyone else: Needs you first (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits), then the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/todo` and `/api/<module>/home`, together |
 | `/search?q=` | the search box, then what matches two letters or more: the sections by name and line, then each module that searches, as the person (a module that refuses them is left out); nothing found says so | each `/api/<module>/search` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
