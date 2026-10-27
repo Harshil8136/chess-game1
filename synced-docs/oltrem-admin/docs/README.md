@@ -147,6 +147,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Actions minutes](records/2026-10-25-actions-minutes.md) | verify off push |
 | [Automatic audit](records/2026-10-27-automatic-audit.md) | every change recorded by the pipeline, the audit page's filters |
 | [Module pages](records/2026-10-27-module-pages.md) | a module brings its own pages and sidebar sections |
+| [Portal makeover](records/2026-10-27-portal-makeover.md) | the new look, page-to-page motion, pages fetched ahead |
 
 ## How this folder is checked
 

@@ -15,16 +15,21 @@ does not exist here, and a test proves it.
 | Colours | `bg`, `surface`, `surface-raised`, `border`, `fg`, `fg-muted`, `primary`, `accent`, `ok`, `attention`, `danger`, `info`, `focus`; each colour text sits on has a `-fg` | `bg-primary`, `text-primary-fg`, `border-danger` |
 | Brand (from the client's generated `/theme.css`) | `--brand-primary`, `--brand-primary-dark`, `--brand-accent`, `--brand-radius`, `--brand-font` | fall back to the kit's values when unset |
 | Spacing | Tailwind's 4 px scale, plus `gutter` 16, `row-h` 44, `row-h-form` 56, `touch` 44 | `p-gutter`, `min-h-row-h`, `size-touch` |
-| Radius | `sm` 4, `md` the brand radius (8), `lg` 12, `full` | `rounded-md` |
+| Radius | `sm` 4, `md` the brand radius (10), `lg` 16, `full` | `rounded-md` |
 | Type | `xs` 12/16 to `2xl` 24/32; weights 400, 500, 600; `tabular-nums` for data | `text-sm`, `font-semibold` |
 | Shadows | `sm`, `md` | `shadow-md` |
-| Motion | `fast` 120 ms, `base` 200 ms, one `ease-out`; enter and exit through `@starting-style` | `duration-(--duration-fast)` |
+| Motion | `fast` 120 ms, `base` 200 ms, one `ease-out`; enter and exit through `@starting-style`; from page to page a view transition | `duration-(--duration-fast)` |
+| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves) | classes |
 
 Light and dark are the same names with different values; dark follows the system
 (`prefers-color-scheme`) unless `<html data-theme="light">` or `dark` says otherwise. Every
 text-on-colour pair reads at 4.5:1 or better in both, and a test computes the ratios from the
 OKLCH values rather than trusting the author's eye. There are no z-index layers: dialogs,
 popovers and toasts use the browser's top layer.
+
+From one page to the next the browser keeps the frame still and fades the page's content in
+(`@view-transition`, a cross-document view transition): no script, a plain load where the browser
+does not have it, and none under reduced motion. Buttons press in a little when tapped.
 
 ## The primitives
 

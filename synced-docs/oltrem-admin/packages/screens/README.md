@@ -124,6 +124,15 @@ in the `oltrem_theme` cookie (cleared for system) and returns to `back` when it 
 portal, Home otherwise; the frame then sets `data-theme` on the page. A form posted from another
 site is refused.
 
+## The frame
+
+Every page sits in one frame: the sidebar on a computer, a bar with the menu button and the same
+sidebar as a drawer on a phone, both in glass over the portal's canvas. The current section is
+marked with a bar at its edge. The document names the phone browser's bar colour (light, dark, or
+both for the device's own) and carries one block of speculation rules: the browser fetches a page
+while the pointer rests on its link, so the tap that follows opens it at once. The rules leave out
+the API, the hooks, the stylesheet, the local door and the invitation link.
+
 ## The stylesheet
 
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
