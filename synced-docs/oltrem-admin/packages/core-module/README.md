@@ -316,6 +316,16 @@ someone typed never runs on the computer of whoever opens the download. Every do
 writes through them: the audit log's, the forms' answers, the records' lists, the expenses' month
 and the time clock's hours.
 
+## Pages to print
+
+`paperHtml(paper)` writes a document a module hands someone as one plain page to print, or to save
+as a PDF from a phone's Share or Print: the company's name and the issuer's lines at the top, what
+it is and its number, label and value pairs, a table whose first column reads left, a total, a
+stamp (Paid, Void) and headed texts. It has no script and no image, and escapes everything it is
+given. `paperResponse(html)` answers it as `text/html` with its own `default-src 'none'` policy and
+`no-store`. The invoices and the quotes use them, on a staff route and as their customer part's
+`open`.
+
 ## Migrations, settings and errors
 
 The manifest also names what the module owns elsewhere, so one file says everything a reviewer

@@ -32,7 +32,9 @@ const modules = [iam.module, customers.module, /* ... */ withPages(quotes.module
 `createQuotes` returns the `store` and the module manifest. It stands on the IAM module (sessions,
 the authorizer), the audit log, and the customers module, whose account page shows the customer's
 quotes and carries their answer. `send` is optional: without it nobody is emailed, and a sent quote
-waits on the account page all the same. It adds no binding, secret or variable; it adds one setting.
+waits on the account page all the same. `issuer` is optional too: the lines printed under the
+company's name on the page to print; the client template passes the invoices' `invoices.issuer`
+setting, so both read the same. It adds no binding, secret or variable; it adds one setting.
 
 ## Who may do what
 
@@ -78,12 +80,14 @@ within its last day, so two answers, or an answer after a withdrawal, change not
 |---|---|
 | `/quotes` | a row of All, Drafts, Sent, Accepted, Declined and Withdrawn with their counts; "Make a quote" to whoever makes them somewhere; the quotes, the newest first, with their number, customer, total and state |
 | `/quotes/new` | the place as a row of choices, the customer's address, the title, six rows of lines, the last day (30 days ahead to start) and the note |
-| `/quotes/:id` | the quote with its state; a row with "Send to the customer", "Change" and "Withdraw" (after a confirmation) to whoever makes quotes there, and "All quotes"; the lines with the total; the note; when it was made, sent and answered |
+| `/quotes/:id` | the quote with its state; a row with "Send to the customer", "Change" and "Withdraw" (after a confirmation) to whoever makes quotes there, "Print or save as PDF" and "All quotes"; the lines with the total; the note; when it was made, sent and answered |
 | `/quotes/:id/change` | the same form as a new quote, for a draft |
 
 On the customer's account page, under "Your quotes": each quote sent to them with its number, title,
 total, lines and note, and while it is open "Accept the quote" and "Decline", each a button that
-posts to `/account/act/quotes/<id>/<accept|decline>`.
+posts to `/account/act/quotes/<id>/<accept|decline>`. Its title opens the quote as a page to print
+or save as a PDF, through `/account/open/quotes/<id>`, once it was sent to them and while it is not
+withdrawn.
 
 ## The routes
 
@@ -92,6 +96,7 @@ posts to `/account/act/quotes/<id>/<accept|decline>`.
 | `GET /quotes` (`view` all or a state) | `quotes.view` | the quotes at the places the person sees, at most 100, with the places, the counts and the company's currency |
 | `POST /quotes` | `quotes.make` at the place | makes a draft |
 | `GET /quotes/:id` | `quotes.view` at its place | one quote, with whether the reader makes quotes there |
+| `GET /quotes/:id/paper` | `quotes.view` at its place | the quote as one page to print or save as a PDF (`paperHtml` of `@oltrem/core-module`): the company and the issuer at the top, the lines, the total, the terms, and a stamp once answered, withdrawn, expired or while a draft |
 | `POST /quotes/:id` | `quotes.make` at its place | changes a draft |
 | `POST /quotes/:id/send` | `quotes.make` at its place | sends a draft; the customer is emailed, and `told` says whether it went |
 | `POST /quotes/:id/withdraw` | `quotes.make` at its place | withdraws a draft or a sent quote |
@@ -120,7 +125,8 @@ capability at the place is `KIT-E-0403`; a quote that is not there is `KIT-E-040
 
 ## Not here yet
 
-- A PDF of the quote, and a signature with the acceptance.
+- A signature with the acceptance, and a PDF file made by the portal: today the browser makes it
+  from the page to print.
 - Taxes and discounts per line, and options the customer picks from.
 - Turning an accepted quote into an invoice: invoices are a module of their own, later.
 - A reminder to the customer before the last day.
@@ -132,6 +138,7 @@ only where the person makes quotes, numbered within the company, with its total;
 bad address, line or day; what each person sees, with the counts; a draft changed, unseen by the
 customer until sent, then emailed; the account page part with its lines and two answers, for their
 address only; accepted once, any other address, action or second answer refused, the maker told;
-Needs you; an expired quote takes no answer and a withdrawn one leaves the page; the search and the
+Needs you; an expired quote takes no answer and a withdrawn one leaves the page; the page to print
+for whoever sees the place and for its customer once sent, every text escaped; the search and the
 privacy answer; every step audited, the customer's answer by the door. The client template's screens
 journey makes a quote as the Owner, sends it, and the customer accepts it on their account page.
