@@ -27,6 +27,9 @@ sources: [the owner's request of 2026-10-27; docs/roadmap.md; this repository]
 | `GET /api/iam/me/options`: the roles (not the Owner's) and places by name | A member without `iam.read` must still know what to ask for; names only, nothing else |
 | Waiting for a decision (`/access/decisions`): requests and approvals with Approve and Refuse | Requests and the second-person rule worked only through the API |
 | Access reviews (`/access/reviews`): start one, keep or remove each grant, close it with a dialog | Periodic review is what auditors ask for (SOC 2 CC6, ISO 27001 A.5.18); it had no page |
+| Groups (`/access/groups/:id`): members by address, the group's roles, rename, remove | A role for a team was given person by person; a group gives it once and follows its members |
+| Vendor access (`/access/vendor`): when the Vendor may enter, a window with a reason | The company's say over the Vendor's door had no page |
+| Giving a role: for 30 days, 90 or a year, and optionally off until turned on | Short and just-in-time access are the safer defaults; the form now offers them |
 | Job `iam.expiring`, daily: an email when one's own grant ends within 7 days | Nobody is surprised by a role ending; renewing is asked for in time |
 | Check `iam.reviews`: a warning when a review is past due or none was opened for 90 days | The review is remembered by the portal, not by a person |
 | One `mail` option for the IAM module's messages (invitations and notices) | One sender, one plain template (`iam.message`), instead of one option per kind |
@@ -71,7 +74,7 @@ with its reason.
 | Part | Impact |
 |---|---|
 | `@oltrem/iam` | one new route (58 in all), one job, one health check; the `sendInvitation` option is now `mail`; no migration, no error code |
-| `@oltrem/screens` | four pages and their forms in `src/access.tsx`, three links in the Access page's row, My access in the account area |
+| `@oltrem/screens` | seven pages and their forms in `src/access.tsx`, links in the Access page's row, My access in the account area, the grant form's length and eligible choice |
 | The client template | `mail` wired to the email module as the `iam.message` template; the tests extended |
 | Clients | the pages and the reminder from their next deploy; no new table, binding, secret or variable |
 
@@ -80,5 +83,6 @@ with its reason.
 `pnpm verify` passes. The IAM care tests run on the rows (which grants are noticed, a refused
 message, the review check's states); the routes test reads `GET /me/options`. The client template
 drives a member's request through the pages to the Owner's approval, refuses the member deciding
-it, opens a review, keeps every grant and closes it, and queues one expiry notice on the tick
+it, opens a review, keeps every grant and closes it, makes a group with a role that is off until
+turned on and has the member turn it on, opens and closes the Vendor's window, and queues one expiry notice on the tick
 twice without a second message. Not yet tried on a deployed portal or a phone.

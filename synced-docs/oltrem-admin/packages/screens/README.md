@@ -62,7 +62,7 @@ modules' own.
 | `/forms/:id/design` | the designer: the code for a website, a new address, the fields with up, down and Remove, Add a field, the settings (name, line, taking answers, the page after sending, who is told, place), Remove | `/api/forms/forms/:id`, `/api/forms/forms` |
 | `/forms/:id/try` | the form as a website shows it, posting to its public address | `/api/forms/forms/:id`, `/hooks/forms/:key` |
 | `/people?show=` | everyone in the directory, or only those switched on (`on`) or off (`off`), picked from a row; the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
-| `/people/:id` | one person: the roles they hold, the form to give one, their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
+| `/people/:id` | one person: the roles they hold, the form to give one (for 30 days, 90 or a year, and off until they turn it on if chosen), their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
 | `/people/:id/exceptions?place=` | one person's exceptions at one place, picked from a row: every capability that may be given one person at a time, with three chips (as their roles say, allow, deny) | `/api/iam/overrides`, `capabilities`, `scopes` |
 | `/people/:id/see?place=` | "See it as": what the person can do at one place, picked from a row, each capability with yes or no and why, grouped by module; an account switched off says so. Read only, never their session | `/api/users/people/:id`, `/api/iam/scopes`, `/api/iam/people/:id/access` |
 | `/access` | the company, its roles, groups and places, and the form to add a place | `/api/iam/tenant`, `roles`, `groups`, `scopes` |
@@ -71,6 +71,8 @@ modules' own.
 | `/access/decisions` | Waiting for a decision: the access requests still open (who, the role and place, why) and the approvals for a change that needs a second person, each with Approve and Refuse | `/api/iam/requests`, `approvals`, `people`, `roles`, `scopes` |
 | `/access/reviews` | the access reviews, each open, past due or closed, and the form to start one at a place | `/api/iam/reviews`, `people`, `roles`, `scopes` |
 | `/access/reviews/:id` | one review: its place and counts, every grant under review with Keep and Remove, and Close the review (a dialog first) once each is decided | `/api/iam/reviews/:id`, `groups`, `people`, `roles`, `scopes` |
+| `/access/groups/new`, `/access/groups/:id` | a new group's name; one group: its members with Take out, Add a member by address (the people offered as the browser types), the roles it holds with End, Give the group a role, Rename, and Remove the group (a dialog first) | `/api/iam/groups/:id`, `bindings`, `roles`, `scopes`, `people` |
+| `/access/vendor` | how the Vendor may enter (at any time, in a window an Owner opens, only in an incident it declares), picked from a row; the open window with its reason and Close it now, or the form to open one for 1 to 12 hours | `/api/iam/tenant` |
 | `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
 | `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
 | `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
@@ -95,7 +97,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Take an answer or let it go, mark it, add a note or an email reply, remove it (a dialog first) | `PATCH /api/forms/forms/:id/entries/:entry`, `POST .../notes`, `DELETE` | `?done=answer-taken`, `answer-released`, `answer-marked`, `answer-noted`, `answer-replied`, `answer-removed`; a refused note keeps what was typed |
 | Download for a spreadsheet; the browser asks the API itself | `GET /api/records/lists/:id/export` | the CSV file |
 | Withdraw an invitation | `DELETE /api/iam/invitations/:id` | `?done=withdrawn` |
-| Give a role (`/people/:id/grant`), end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
+| Give a role (`/people/:id/grant`): the role, the place, for how long (30 days, 90 or a year) and whether it is off until turned on; end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
 | Save the exceptions (`/people/:id/exceptions`): only what changed is written; end one from the person page | `POST /api/iam/overrides`, `DELETE /api/iam/overrides/:id` | `?done=exceptions-saved`, `exception-ended` |
 | Switch the account off, with a reason, or on | `POST /api/users/people/:id/deactivate`, `reactivate` | `?done=off`, `on` |
 | Make a role, save one | `POST /api/iam/roles` (placed below every existing role), `PATCH /api/iam/roles/:id` | `?done=role-made`, `role-saved` |
@@ -104,6 +106,10 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Ask for access (`/access/mine/ask`), withdraw a request | `POST /api/iam/me/requests`, `DELETE /api/iam/me/requests/:id` | `?done=asked`, `request-withdrawn` |
 | Approve or refuse a request or an approval (`/access/requests/:id/approve`, `/access/approvals/:id/refuse`) | `POST /api/iam/requests/:id/decision`, `POST /api/iam/approvals/:id/decision` | `?done=request-approved`, `request-refused`, `approval-given`, `approval-refused` |
 | Start a review (`/access/reviews`), keep or remove a grant, close it | `POST /api/iam/reviews`, `POST .../items/:binding`, `POST .../close` | the review with `?done=review-opened`; `review-decided`, `review-closed` |
+| Make a group (`/access/groups`), rename it, remove it | `POST /api/iam/groups`, `PATCH`, `DELETE /api/iam/groups/:id` | the group with `?done=group-made`; `group-renamed`, `group-removed` |
+| Add a member by address, take one out | `GET /api/iam/people?q=` then `POST /api/iam/groups/:id/members`, `DELETE .../members/:principalId` | `?done=member-added`, `member-removed`; an address with no account says so |
+| Give the group a role, end one | `POST /api/iam/bindings` (subject the group), `DELETE /api/iam/bindings/:id` | `?done=group-granted`, `group-grant-ended` |
+| The Vendor's access (`/access/vendor/mode`), open a window, close it | `PUT /api/iam/tenant/vendor-access`, `POST`, `DELETE /api/iam/tenant/vendor-window` | `?done=vendor-mode`, `window-opened`, `window-closed` |
 | Look up a domain (`/providers/detect`) | `POST /api/providers/detect` | what was found, on the page |
 | Connect a provider (`/providers/add/:definition`): a name and its fields | `POST /api/providers/instances` | `?done=connected` |
 | Check the key, send me a test message | `POST /api/providers/instances/:id/probe`, `POST /api/email/canary` | `?done=checked`, `tested`; the answer under Last check |
@@ -156,7 +162,7 @@ writes. The file is generated: never edit it by hand (R-06).
 
 ## Not here yet
 
-- **The other forms.** Groups, the Vendor's access, profiles, a setting whose value is not text, a number or a switch, a
+- **The other forms.** Profiles, a setting whose value is not text, a number or a switch, a
   provider's delivery-report address and the client's own provider definitions: still the API
   until their forms come.
 - **The kit's own pages from the manifest.** A module's own pages mount from its manifest; the
@@ -180,7 +186,10 @@ the denied page and shown the allowed one, and Home shows them only the cards th
 withdraws an invitation, and sees a refusal and a cross-site form refused; later the Owner invites
 two people at once with their links emailed, their own address refused, and a member asks for a
 role, the Owner approves it (the member is refused deciding it themselves), then opens an access
-review at the company, keeps every grant and closes it. A
+review at the company, keeps every grant and closes it; then the Owner makes a group, adds the
+member (an unknown address refused), gives the group a role that is off until turned on, which the
+member turns on for an hour, ends it, is refused removing the group, and opens and closes a window
+for the Vendor. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed
 and saved on the Settings page, the test message then sent, the provider made the one that sends,
