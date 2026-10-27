@@ -9,7 +9,9 @@ shows as overdue, to the customer and in Needs you for whoever makes invoices at
 step is in the audit log, so an automation can follow `invoices.pay`.
 
 The portal takes no payment itself: the note on an invoice says how to pay (bank details, a payment
-link from the company's own provider), and staff mark it paid.
+link from the company's own provider), and staff mark it paid. Each invoice also opens as one plain
+page, with the company's name and legal details at the top, to print or to save as a PDF from the
+phone's Share or Print.
 
 ## Using it
 
@@ -39,8 +41,8 @@ the authorizer), the audit log, and the customers module, whose account page sho
 invoices. `send` is optional: without it nobody is emailed, and a sent invoice waits on the account
 page all the same. With the quotes module mounted, the page that makes an invoice offers the
 accepted quotes the person sees, read through the quotes API, and fills the form from the one
-picked; without it, the form starts blank. It adds no binding, secret or variable; it adds one
-setting.
+picked; without it, the form starts blank. It adds no binding, secret or variable; it adds two
+settings.
 
 ## Who may do what
 
@@ -80,6 +82,7 @@ page as cancelled.
 | Key | Default | What it is |
 |---|---|---|
 | `invoices.currency` | `USD` | the three-letter code of the currency new invoices are written in, set by the Owner |
+| `invoices.issuer` | empty | who issues the invoices, printed under the company name at the top of each: the legal name, the address and the tax number, 500 characters at most, set by the Owner |
 
 ## The pages
 
@@ -87,12 +90,13 @@ page as cancelled.
 |---|---|
 | `/invoices` | a row of All, Overdue, Drafts, Sent, Paid and Void with their counts; "Make an invoice" to whoever makes them somewhere; the invoices, the newest first, with their number, customer, total and state |
 | `/invoices/new` | a row "From an accepted quote" (Blank and the newest twelve accepted quotes) when there are any; the place as a row of choices, the customer's address, the title, six rows of lines, the day it is due (30 days ahead to start) and how to pay |
-| `/invoices/:id` | the invoice with its state; a row with "Send to the customer", "Change", "Mark it paid" (how, in a dialog) and "Void it" (after a confirmation) to whoever makes invoices there, and "All invoices"; the lines with the total and the day it is due; how to pay; when it was made, sent and paid |
+| `/invoices/:id` | the invoice with its state; a row with "Send to the customer", "Change", "Mark it paid" (how, in a dialog) and "Void it" (after a confirmation) to whoever makes invoices there, "Print or save as PDF" and "All invoices"; the lines with the total and the day it is due; how to pay; when it was made, sent and paid |
 | `/invoices/:id/change` | the same form as a new invoice, for a draft |
 
 On the customer's account page, under "Your invoices": each invoice sent to them with its number,
 title and state (To pay, Overdue, Paid, Cancelled), its lines and total, the day it is due or the day
-it was paid, and how to pay while it is owed.
+it was paid, and how to pay while it is owed. Its title opens the invoice as a page to print or
+save as a PDF, through `/account/open/invoices/<id>`, only while it is theirs and was sent.
 
 ## The routes
 
@@ -101,6 +105,7 @@ it was paid, and how to pay while it is owed.
 | `GET /invoices` (`view` all, overdue or a state) | `invoices.view` | the invoices at the places the person sees, at most 100, with the places, the counts and the company's currency |
 | `POST /invoices` | `invoices.make` at the place | makes a draft |
 | `GET /invoices/:id` | `invoices.view` at its place | one invoice, with whether the reader makes invoices there |
+| `GET /invoices/:id/paper` | `invoices.view` at its place | the invoice as one page to print or save as a PDF: HTML with no script or image, every text escaped, its own `default-src 'none'` policy, not cached; a draft is marked "Draft: not sent" |
 | `POST /invoices/:id` | `invoices.make` at its place | changes a draft |
 | `POST /invoices/:id/send` | `invoices.make` at its place | sends a draft; the customer is emailed, and `told` says whether it went |
 | `POST /invoices/:id/pay` | `invoices.make` at its place | marks a sent invoice paid, with how; the customer is thanked, and `told` says whether it went |
@@ -132,7 +137,8 @@ capability at the place is `KIT-E-0403`; an invoice that is not there is `KIT-E-
 - Taking the payment online: a payment link per invoice needs a payment provider's secret, the
   owner's yes first (R-09).
 - Taxes and discounts per line, part payments and credit notes.
-- A PDF of the invoice, and the company's legal details on it, which some countries require.
+- A PDF file made by the portal: today the browser makes it from the printable page, and an
+  electronic invoice in a country's format (CFDI in Mexico, for one) needs that country's provider.
 - Reminders to the customer before and after the day it is due.
 
 ## Tests
@@ -143,6 +149,7 @@ a bad address, line or day; what each person sees, with the counts; a draft chan
 customer until sent, then emailed and shown on their account page for their address only; marked
 paid once with how, the customer thanked, never voided after; overdue past its day, in its view and
 in Needs you, and settled when paid late; voided, a sent one shown as cancelled and a draft never
-shown; the search and the privacy answer; every step audited. The client template's screens journey
-makes an invoice from the quote the customer accepted, sends it, finds it on their account page,
-and marks it paid.
+shown; the printable page with the company's details, for whoever sees the place and its customer
+once sent, every text escaped; the search and the privacy answer; every step audited. The client template's screens journey
+makes an invoice from the quote the customer accepted, sends it, finds it on their account page
+and opens it to print, and marks it paid.
