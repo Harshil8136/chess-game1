@@ -58,7 +58,8 @@ them live once the Settings page exists.
 
 A template is code, compiled with the Worker: an id `<module>.<name>`, a line saying what it is
 for, the schema of its data, and a subject, a text body and an optional HTML body. The data is
-checked against the schema before anything is rendered (`KIT-E-1505`, with each field). The HTML
+checked against the schema before anything is rendered (`KIT-E-1505`, with each field). A template may also add headers, such as a bulk message's
+`List-Unsubscribe` (`@oltrem/campaigns`); they are checked like the rest of the message. The HTML
 is written with the `html` tag, which escapes every value it is given unless the value is itself
 `html`, so a name a guest typed never becomes markup. Prettier formats an `html` template as
 HTML, which changes only the whitespace between elements.

@@ -71,7 +71,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies |
 | `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports |
 | `files` | Work | **built** 2026-10-27: a drive per place in the client's bucket, opened by the roles held there, links that end, a trash |
-| `campaigns` | Messages | **this round**: a list from a spreadsheet, a message, sent in chunks under the provider's daily limit, one-click unsubscribe |
+| `campaigns` | Messages | **built** 2026-10-27: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, a suppression list fed by bounces and complaints |
 | `developer` | Developer | **this round**: API keys, signed outgoing webhooks with a delivery log, the API reference from the manifests |
 | the jobs page | Developer | **this round**: every automatic job and flow, its last runs, run now |
 | `automations` | Work | next: when a record or form answer arrives, or on a schedule, do something (email, a record, a webhook) |
