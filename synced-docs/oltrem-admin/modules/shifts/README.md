@@ -4,7 +4,7 @@ Shifts: who works when at each place. Whoever plans at a place drafts the week's
 a person or left open, and publishes the week when it is ready: the people of the place see it,
 and everyone on it is emailed their shifts. A person sees their own shifts on their phone and
 takes an open shift at a place they see. A published shift that changes or is cancelled tells the
-people on it. Drafts nobody sees yet and open shifts nobody took wait in Needs you. Every step is
+people on it, and a planner copies the week before in one go. Drafts nobody sees yet and open shifts nobody took wait in Needs you. Every step is
 in the audit log.
 
 It plans the work; the time clock (`@oltrem/timeclock`) records the hours actually worked.
@@ -59,6 +59,7 @@ flowchart LR
 | A shift is given to a person of the company whose account is on, by their address, or left open | Nobody is put on a shift they cannot see |
 | An open, published shift that has not started is taken by someone who sees its place and is free then, once | The first to take it has it; nobody takes a shift that clashes with theirs |
 | Publishing emails each person their shifts of the week at that place; a change to a published shift emails whoever works it now and whoever no longer does; removing it emails whoever worked it | Nobody learns of a change by surprise |
+| "Copy the week before" makes drafts of the week before's shifts at the place, at the same times on the company's clock; one whose person works then, or that is there already, is left out, all in one statement | A regular week is planned in one tap, across a change of daylight saving too, and copying twice does nothing |
 | A failed email is reported and never undoes the change | The schedule stays right when the mail is down |
 
 ## Who may do what
@@ -76,7 +77,7 @@ Everyone sees their own published shifts, whatever else they hold.
 
 | Path | Shows |
 |---|---|
-| `/shifts` | in a sideways row, Mine or Schedule (to whoever sees a place); the week before, this week, the week after; to whoever plans, "Plan a shift" and "Publish the week (n)" in dialogs; Mine: the person's shifts of the week and the open shifts they can take, each with "Take it"; Schedule: every shift of the week at the places they see, drafts marked to whoever plans |
+| `/shifts` | in a sideways row, Mine or Schedule (to whoever sees a place); the week before, this week, the week after; to whoever plans, "Plan a shift", "Copy the week before" and "Publish the week (n)" in dialogs; Mine: the person's shifts of the week and the open shifts they can take, each with "Take it"; Schedule: every shift of the week at the places they see, drafts marked to whoever plans |
 | `/shifts/:id` | one shift: when, how long, where, who or open, a draft or not, the note; "Take it", "Change it" and "Remove it", each in a dialog |
 
 The places to plan at are a row of choices when there is more than one.
@@ -92,10 +93,12 @@ The places to plan at are a row of choices when there is more than one.
 | `POST /shifts/:id/remove` | `shifts.plan` at its place | removes it |
 | `POST /shifts/:id/take` | `shifts.view` at its place | takes an open shift |
 | `POST /publish` | `shifts.plan` at the place | publishes the week's drafts there and emails each person their shifts |
+| `POST /copy` | `shifts.plan` at the place | copies the week before's shifts there into the week as drafts, and says how many were copied and left out |
 | `GET /todo` | `shifts.plan` | Needs you: drafts and open shifts in the next 14 days at the places the person plans |
 
 Every change is audited: `shifts.plan`, `shifts.change`, `shifts.remove`, `shifts.publish` (with
-the week and how many) and `shifts.take`, refusals included.
+the week and how many), `shifts.copy` (with the week and how many) and `shifts.take`, refusals
+included.
 
 A privacy request (`@oltrem/privacy`) finds every shift the person was given: the place, the
 times, the label and note, when it was published and who planned it.
@@ -115,7 +118,6 @@ that is not there is `KIT-E-0404`; a place the person does not plan is `KIT-E-04
 
 ## Not here yet
 
-- Repeating a week, or copying last week's shifts.
 - Swapping a shift between two people, and asking to give one up.
 - Shifts beside time off: a person away that day is not yet warned about.
 - Breaks and the hours planned against the hours clocked.
@@ -130,6 +132,7 @@ publishing by the week, refused to someone who does not plan, emailing the perso
 the person's week and the open shift they may take, the schedule to someone who sees the company,
 nothing to someone who holds nothing; another week; an open shift refused to someone busy then,
 taken once, and no longer taken once started; a published shift changed and removed, the people on
-it emailed, a draft removed quietly; the privacy answer; each step audited. The client template's
+it emailed, a draft removed quietly; the week before copied, a busy person left out, twice copying
+nothing, and the times kept across New York's change of daylight saving; the privacy answer; each step audited. The client template's
 screens journey plans a shift on the page, is refused a second at the same time, publishes the
-week, and finds the shift and the email.
+week, finds the shift and the email, and copies the week into the next.
