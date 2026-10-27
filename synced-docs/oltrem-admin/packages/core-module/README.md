@@ -27,45 +27,89 @@ export const notes = defineModule({
       capability: 'notes.write',
       schema: NoteInput, // any Standard Schema: zod, valibot, arktype
       summary: 'Create a note',
-      handler: async ({ input, identity, env }) => Response.json(await create(env, identity, input), { status: 201 }),
+      handler: async ({ input, identity, env }) =>
+        Response.json(await create(env, identity, input), { status: 201 }),
     },
   ],
   eventTypes: ['notes.created'],
-  onEvent: async (event, env) => { /* fan out */ },
-  jobs: [{ id: 'notes.digest', every: '1h', summary: 'Send the hourly digest', run: async (env) => { /* ... */ } }],
-  flows: [{ id: 'notes.export', summary: 'Export every note', schedule: '0 4 * * *', run: async ({ step, env }) => { /* ... */ } }],
-  health: [{ id: 'notes.store', lane: 'storage', summary: 'The notes table answers', run: async (env) => ({ status: 'ok' }) }],
+  onEvent: async (event, env) => {
+    /* fan out */
+  },
+  jobs: [
+    {
+      id: 'notes.digest',
+      every: '1h',
+      summary: 'Send the hourly digest',
+      run: async (env) => {
+        /* ... */
+      },
+    },
+  ],
+  flows: [
+    {
+      id: 'notes.export',
+      summary: 'Export every note',
+      schedule: '0 4 * * *',
+      run: async ({ step, env }) => {
+        /* ... */
+      },
+    },
+  ],
+  health: [
+    {
+      id: 'notes.store',
+      lane: 'storage',
+      summary: 'The notes table answers',
+      run: async (env) => ({ status: 'ok' }),
+    },
+  ],
   migrations: ['0012_notes.sql'], // shipped in the module's migrations/ folder
   settings: [notesPerPage], // defined with defineSetting, under the key prefix `notes.`
   errors: NOTES_ERRORS, // defined with defineErrors('notes', ...)
-  secrets: [{ name: 'NOTES_KEY', purpose: '...', create: '...', scopes: [], test: '...', rotate: '...', without: '...' }],
-  home: { title: 'Notes', capability: 'notes.read', read: async (env) => ({ value: '12', note: '3 today', state: 'ok' }) },
-  scheduled: async (controller, env) => { /* the raw tick, rarely needed */ },
+  secrets: [
+    {
+      name: 'NOTES_KEY',
+      purpose: '...',
+      create: '...',
+      scopes: [],
+      test: '...',
+      rotate: '...',
+      without: '...',
+    },
+  ],
+  home: {
+    title: 'Notes',
+    capability: 'notes.read',
+    read: async (env) => ({ value: '12', note: '3 today', state: 'ok' }),
+  },
+  scheduled: async (controller, env) => {
+    /* the raw tick, rarely needed */
+  },
 });
 ```
 
 ## What the contract refuses
 
-| Rule | Code |
-|---|---|
-| The id is `[a-z][a-z0-9-]*`; the version is `x.y.z` | `KIT-E-1006` |
-| A route path starts with `/` and has a summary | `KIT-E-1006` |
-| A route's `action`, when given, is lower case letters, digits and dashes: the verb its automatic audit row names | `KIT-E-1006` |
-| Every route names a capability, `<module>.<name>`, with the module's own id | `KIT-E-1001`, `KIT-E-1006` |
-| A POST, PUT or PATCH route has a schema for its body | `KIT-E-1002` |
-| A route open to any identity (`access: 'identity'`) is POST and names no capability | `KIT-E-1006` |
-| Capabilities come with a bit plane, a whole number, and a bit plane with capabilities | `KIT-E-1006` |
-| A capability is `<module>.<name>`, declared once, with a class, a label in English and a known floor | `KIT-E-1006` |
-| A module that declares capabilities names every route's capability among them, `<module>.self` apart | `KIT-E-1006` |
-| No two routes share a method and a path | `KIT-E-1005` |
-| A public hook's path is `/` and segments of letters, digits, `_` and `-`, or `:params`; it has a summary and a handler, and is declared once | `KIT-E-1006`, `KIT-E-1005` |
-| An event type is prefixed with the module's id; event types and `onEvent` come together | `KIT-E-1006` |
-| A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`) | `KIT-E-1006` |
-| A flow is `<module>.<name>`, declared once, with a summary, a `run` and, when scheduled, five cron fields | `KIT-E-1006` |
-| A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run` | `KIT-E-1006` |
-| A migration is named `NNNN_name.sql` and declared once | `KIT-E-1006` |
-| A setting's key starts with the module's id and its definition names the module; an error's definition names the module | `KIT-E-1006` |
-| A key recipe names its secret once, in upper case letters, digits and `_`, with a purpose and how to create, test and rotate it and live without it; `createAt` is an https address; `scopes` is a list | `KIT-E-1006` |
+| Rule                                                                                                                                                                                                    | Code                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| The id is `[a-z][a-z0-9-]*`; the version is `x.y.z`                                                                                                                                                     | `KIT-E-1006`               |
+| A route path starts with `/` and has a summary                                                                                                                                                          | `KIT-E-1006`               |
+| A route's `action`, when given, is lower case letters, digits and dashes: the verb its automatic audit row names                                                                                        | `KIT-E-1006`               |
+| Every route names a capability, `<module>.<name>`, with the module's own id                                                                                                                             | `KIT-E-1001`, `KIT-E-1006` |
+| A POST, PUT or PATCH route has a schema for its body                                                                                                                                                    | `KIT-E-1002`               |
+| A route open to any identity (`access: 'identity'`) is POST and names no capability                                                                                                                     | `KIT-E-1006`               |
+| Capabilities come with a bit plane, a whole number, and a bit plane with capabilities                                                                                                                   | `KIT-E-1006`               |
+| A capability is `<module>.<name>`, declared once, with a class, a label in English and a known floor                                                                                                    | `KIT-E-1006`               |
+| A module that declares capabilities names every route's capability among them, `<module>.self` apart                                                                                                    | `KIT-E-1006`               |
+| No two routes share a method and a path                                                                                                                                                                 | `KIT-E-1005`               |
+| A public hook's path is `/` and segments of letters, digits, `_` and `-`, or `:params`; it has a summary and a handler, and is declared once                                                            | `KIT-E-1006`, `KIT-E-1005` |
+| An event type is prefixed with the module's id; event types and `onEvent` come together                                                                                                                 | `KIT-E-1006`               |
+| A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`)                                                                            | `KIT-E-1006`               |
+| A flow is `<module>.<name>`, declared once, with a summary, a `run` and, when scheduled, five cron fields                                                                                               | `KIT-E-1006`               |
+| A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run`                                                                         | `KIT-E-1006`               |
+| A migration is named `NNNN_name.sql` and declared once                                                                                                                                                  | `KIT-E-1006`               |
+| A setting's key starts with the module's id and its definition names the module; an error's definition names the module                                                                                 | `KIT-E-1006`               |
+| A key recipe names its secret once, in upper case letters, digits and `_`, with a purpose and how to create, test and rotate it and live without it; `createAt` is an https address; `scopes` is a list | `KIT-E-1006`               |
 
 The manifest is frozen once defined. `RouteContext` gives a handler the request, the bindings,
 the identity the door asserted (email, subject, when the person signed in, the token's audience),
@@ -226,7 +270,12 @@ Its schema then checks the query.
 doubled quotes, line breaks inside quotes; a comma or a semicolon between fields, whichever the
 first line uses most; a byte order mark ignored; empty lines left out). `decodeText(bytes)` reads
 an upload as UTF-8 when it is, otherwise as Windows-1252. The campaigns' list and the records'
-import use both.
+import use both. `csvFile(head, rows)` writes one, every cell through `csvCell`: quoted with
+its quotes doubled, a yes or no as `Yes` or `No`, and text a spreadsheet would run as a formula
+(starting with `=`, `+`, `-`, `@`, a tab or a carriage return) given a leading apostrophe, so what
+someone typed never runs on the computer of whoever opens the download. Every download of the kit
+writes through them: the audit log's, the forms' answers, the records' lists, the expenses' month
+and the time clock's hours.
 
 ## Migrations, settings and errors
 
