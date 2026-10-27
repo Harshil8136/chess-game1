@@ -83,6 +83,12 @@ that ended a month ago.
 | `/files` | a row of the places the person may see (when more than one), a row for Files and Trash, the folder's path, its folders and files, and for a writer the **Upload a file** and **New folder** sheets |
 | `/files/:id` | one item: download or open, its details, an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, trash, restore, and delete for good behind a confirmation |
 
+## Search
+
+The portal's search (`GET /api/files/search?q=`, `files.read`) finds files and folders by name,
+folders first, in the places the person's roles reach and never in the trash; it never reads what a
+file holds.
+
 ## The routes
 
 | Routes | Capability | What they do |
@@ -136,3 +142,5 @@ counted, ended at their limit, by hand, at their day and by the trash; the trash
 a delete for good of a folder with its content; the job; every change audited without content;
 the storage check. The client template's screens test runs the pages: an upload from the form, a
 folder, a move, a link opened and ended by the trash.
+
+The search test finds names only in the places a person's roles reach, folders first, and takes `_` as a letter.

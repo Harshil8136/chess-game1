@@ -84,6 +84,11 @@ state and what set it off. The job `automations.prune` removes runs older than t
 | `/automations` | a row of All, On, Off and Failing; the automations with their state, when, then and last run; for a manager **When something happens** and **On a schedule**, each a dialog with a name, the trigger and a row of actions |
 | `/automations/:id` | the state and the trigger in words; what is missing before it can be switched on; **Run now**, **Switch on** or **off**, **Delete**; the form of its name, trigger, condition and the action's own fields; the newest fifty runs |
 
+## Search
+
+The portal's search (`GET /api/automations/search?q=`, `automations.read`) finds automations by
+name, for someone who holds the capability at the company; anyone else finds none.
+
 ## The routes
 
 | Routes | Capability | What they do |

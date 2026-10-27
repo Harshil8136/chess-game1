@@ -81,6 +81,11 @@ that was added by hand or bounced; an unsubscribe or a complaint stays for good
 | `/campaigns?show=suppressed` | the suppression list, found by part of an address, with **Add addresses** and **Take off** |
 | `/campaigns/:id` | the stage; what keeps a draft from starting; the commands (send me a test, send it, pause, resume, cancel, delete the draft); the figures (people, sent, delivered, problems, left the list, today against the limit); the message form, the preview and the list upload for a draft; the first hundred people with a row of their states |
 
+## Search
+
+The portal's search (`GET /api/campaigns/search?q=`, `campaigns.read`) finds campaigns by name, at
+the places the person may see, with their state.
+
 ## The routes
 
 | Routes | Capability | What they do |

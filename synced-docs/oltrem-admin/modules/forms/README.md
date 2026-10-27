@@ -86,6 +86,12 @@ to 5000 answers, oldest first, with formulas defused as in `@oltrem/records`.
 The people a form names (up to five addresses) are told by email when an answer arrives: a link to
 the inbox, never what was sent, and at most one email per form in 15 minutes.
 
+## Search
+
+The portal's search (`GET /api/forms/search?q=`, `forms.read`) finds the forms the person may see by
+name or line, then their answers by any text in them, newest first, each titled by the sender's
+address.
+
 ## The routes
 
 | Routes | Capability | What they do |
@@ -140,3 +146,5 @@ person's address to answer to, a reply refused when the answer has no email, rem
 fields added, moved and removed while an old answer keeps its field; the CSV with a formula
 defused; a new address stopping the old one; a form removed with its answers and notes; every
 change and every website answer audited without what was sent.
+
+The search test finds forms and answers only where a person's roles reach.

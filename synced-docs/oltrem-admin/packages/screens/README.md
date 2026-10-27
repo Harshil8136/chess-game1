@@ -47,6 +47,7 @@ modules' own.
 | Path | Shows | Reads |
 |---|---|---|
 | `/` | a Vendor with no company yet: the company form; anyone else: the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/home` |
+| `/search?q=` | the search box, then what matches two letters or more: the sections by name and line, then each module that searches, as the person (a module that refuses them is left out); nothing found says so | each `/api/<module>/search` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
 | `/records` | the lists the person may see, with their records and place; Make a list when a role allows it somewhere | `/api/records/lists` |
@@ -129,7 +130,8 @@ site is refused.
 ## The frame
 
 Every page sits in one frame: the sidebar on a computer, a bar with the menu button and the same
-sidebar as a drawer on a phone, both in glass over the portal's canvas. The current section is
+sidebar as a drawer on a phone, both in glass over the portal's canvas. The sidebar starts with a
+search box (a plain form to `/search`); the phone's bar also has a search button. The current section is
 marked with a bar at its edge. The document names the phone browser's bar colour (light, dark, or
 both for the device's own) and carries one block of speculation rules: the browser fetches a page
 while the pointer rests on its link, so the tap that follows opens it at once. The rules leave out

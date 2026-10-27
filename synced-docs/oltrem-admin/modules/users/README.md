@@ -56,6 +56,11 @@ an account already in the state asked for is nothing to change (`KIT-E-2101`). T
 above everyone but an Owner. Every switch and every profile change is audited (`users.deactivate`,
 `users.reactivate`, `users.profile`), the refusals as much as the successes.
 
+## Search
+
+The portal's search (`GET /api/users/search?q=`, `users.read`) finds people by address or display
+name, each with whether their account is on, linking to their page.
+
 ## The routes
 
 | Routes | Capability | What they do |

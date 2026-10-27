@@ -136,6 +136,25 @@ state, `ok`, `attention`, `failing` or `unknown`. `defineModule` adds the route
 screens ask every mounted module that has one and leave out the cards a person may not read. A
 module whose routes already include `GET /home` is refused (`KIT-E-1005`).
 
+## Search
+
+A module's part of the portal's search is declared as `search`: a title (the heading of its
+results), one of the module's own capabilities, and `find(words, ctx)`, which gets the words and
+the route's context and answers hits, each a title, an optional note and the portal page that
+shows it. `defineModule` adds `GET /api/<module>/search?q=` under that capability: words shorter
+than two letters find nothing, a hit whose address is not a page of the portal is dropped, and at
+most `SEARCH_HITS` (eight) are answered. `find` reads the session from `ctx`, so it answers only
+what the person may see. `containing(words)` is the `LIKE` pattern for it, its wildcards escaped
+(`ESCAPE '\'`).
+
+```ts
+search: {
+  title: 'Notes',
+  capability: 'notes.read',
+  find: async (words, ctx) => (await notesFor(ctx, containing(words))).map((n) => ({ title: n.title, href: `/notes/${n.id}` })),
+},
+```
+
 ## Pages
 
 A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`

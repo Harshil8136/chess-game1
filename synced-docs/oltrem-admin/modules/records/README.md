@@ -64,6 +64,12 @@ The download (`GET /lists/:id/export`) is a CSV file of up to 5000 records, olde
 spreadsheet. Every cell is quoted, and a cell that starts with `=`, `+`, `-`, `@`, a tab or a
 carriage return gets a leading `'`, so a spreadsheet never runs a value as a formula.
 
+## Search
+
+The portal's search (`GET /api/records/search?q=`, `records.read`) finds the lists the person may
+see by name or description, then their records by any text value, newest change first, each titled
+by its first field.
+
 ## The routes
 
 | Routes | Capability | What they do |
@@ -106,3 +112,5 @@ not removing; search, a choice and a yes or no narrowing, sorting by a field, pa
 replacing the values; fields added, moved and removed with their values; a list moved to another
 place; the CSV with a formula defused; a list with records kept; every change audited without a
 value.
+
+The search test finds lists and records only where a person's roles reach, and takes `%` as a letter.
