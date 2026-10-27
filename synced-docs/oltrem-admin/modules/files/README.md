@@ -16,6 +16,16 @@ import { pages as filesPages } from '@oltrem/files/pages';
 const files = createFiles<Env>({
   bindings: (env) => ({ db: env.DB, bucket: env.FILES }),
   config: settingsFor, // where the two settings below are read
+  // Optional: tells a customer a file waits on their account page.
+  send: async (env, message) => {
+    await email.send(env, {
+      tenantId: message.tenantId,
+      template: 'customers.message',
+      to: [{ email: message.to }],
+      data: { subject: message.subject, text: message.text },
+      messageKey: message.key,
+    });
+  },
 });
 const modules = [iam.module, withPages(files.module, filesPages) /* , ... */];
 ```
@@ -75,8 +85,10 @@ customer finds the file under "Files shared with you" on their account page and 
 there, signed in, at `/account/open/files/<share>`. The page lists the newest 20 still good;
 each download is counted and audited as `files.share-download` by `customers.door`, without the
 address. It ends like a link: by hand ("Stop sharing"), at its day, or when the file or a folder
-above it goes to the trash (it is back if they are restored before the day). The customer is not
-emailed; tell them it is there.
+above it goes to the trash (it is back if they are restored before the day). "Email them that it
+is there", ticked at first, emails the customer the file's name, where to sign in and until when,
+through the `send` option (the client template sends it with email); without `send`, or when the
+email fails, the share stands and the page says nobody was emailed.
 
 ## The trash
 
@@ -108,7 +120,7 @@ file holds.
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there |
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links and the folders it may move to; the file itself |
 | `POST /folders`, `POST /uploads`, `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
-| `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`), or with `email` share it with that customer (`days` up to 365, no link); end one |
+| `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`), or with `email` share it with that customer (`days` up to 365, no link; `tell: true` emails them, and `told` says whether it went); end one |
 | `DELETE /items/:id` | `files.purge` | delete from the trash for good |
 
 The hook `GET /hooks/files/s/:token` opens a link. Every change is audited by the module
@@ -156,8 +168,10 @@ a delete for good of a folder with its content; the job; every change audited wi
 the storage check; a file shared with a customer for a year without a link, a link over 30 days
 and a bad address refused, listed and opened for that address only and in that company only, hidden
 while its folder is in the trash and back when restored, gone when ended by hand or at its day,
-the newest twenty with more, the download audited without the address. The client template's
+the newest twenty with more, the download audited without the address; the email only when asked,
+and the share kept when the email fails. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
-the trash, and a file shared with a customer who downloads it from their account page.
+the trash, and a file shared with a customer, who is emailed and downloads it from their account
+page.
 
 The search test finds names only in the places a person's roles reach, folders first, and takes `_` as a letter.

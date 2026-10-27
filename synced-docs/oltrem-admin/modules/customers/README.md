@@ -221,7 +221,6 @@ customer who is not there is `KIT-E-0404`. The door answers in pages, never with
 
 ## Not here yet
 
-- An email telling a customer something new is on their account page.
 - A setting to switch the emailed code off, for a company whose customers all use a service.
 - The ID token's signature checked against the service's keys (`jwks_uri`); today TLS to the
   token endpoint stands for it, as the standard allows.
