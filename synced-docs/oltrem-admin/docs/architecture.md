@@ -119,7 +119,7 @@ owning README in the same commit.
 
 | Series | Taken | Next free | Claimed in |
 |---|---|---|---|
-| Migrations (kit) | `0001` to `0029`, one series for the whole kit; client numbers start at `5000` | `0030` | the owning package's `migrations/` and its README |
+| Migrations (kit) | `0001` to `0030`, one series for the whole kit; client numbers start at `5000` | `0031` | the owning package's `migrations/` and its README |
 | Permission bit planes | `0` iam, `1` users, `2` providers, `3` email, `4` backup, `5` github, `6` health, `7` settings, `8` alerts, `9` audit, `10` records, `11` forms, `12` files, `13` campaigns, `14` developer, `15` automations, `16` analytics, `17` privacy, `18` tasks, `19` approvals, `20` announcements, `21` bookings; a client's own modules take theirs from `100` | `22` | the module's capability declaration |
 | Error codes | `0400`s and `1000`s core, `1100` audit, `1200` outbox, `1300` crypto, `1400` providers, `1500` email, `1600` backup, `2000` iam, `2100` users, `2200` records, `2300` forms, `2400` files, `2500` campaigns, `2600` developer, `2700` automations, `2800` privacy, `2900` tasks, `3000` approvals, `3100` bookings | the `3200` block | the module's `errors.ts` and README |
 
