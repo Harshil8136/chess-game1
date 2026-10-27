@@ -212,14 +212,18 @@ packages are not installed.
 Writes a complete module into the client repository in `dir` (the current directory by default),
 copied from the kit's module template (`templates/module` in the kit; beside the tool once it is
 published) with the name written in wherever it goes: as the id (`pet-food`), as a table prefix
-(`pet_food`) and as a title (`Pet food`). The module gets one of each part the manifest knows: a
-route, a daily job, a health check, a migration, a setting and an error code, plus its own test
-and its how-to (`modules/<name>/README.md`). The migration is written into the client's
+(`pet_food`) and as a title (`Pet food`). The module gets one of each part the manifest knows: two
+capabilities, two routes, a page in the sidebar, a daily job, a health check, a migration, a
+setting and an error code, plus its own test and its how-to (`modules/<name>/README.md`). Its
+capabilities sit on the next free bit plane from 100 (the kit's own modules take the planes
+below), so the permission model knows them and the Owner holds them from the next start. The migration is written into the client's
 `migrations/` folder at the next free number of the client's own series (5000 and up), and the
 module's error codes take the next free hundred from 5000 (`KIT-E-5001`, then `KIT-E-5101` for
 the second module), read from the modules already there. Then `src/modules.ts` is rewritten to
-list every module under `modules/` in name order (the client template's Worker mounts that list
-beside the kit's modules, so the file is never edited by hand) and the generated reference is
+list every module under `modules/` in name order, each joined to its pages (the client template's
+Worker mounts that list beside the kit's modules, so the file is never edited by hand), and
+`test/pages-types.ts` to hold each module's page types to its pages; the pages reach the Worker
+through the `#modules/*/pages` import in the client's `package.json`. The generated reference is
 refreshed, as `docs` does. The new module deploys with no edits: `pnpm verify` type-checks it,
 runs its test inside the Workers runtime and finds the reference current.
 
@@ -317,7 +321,8 @@ a problem, `3` when there is no `oltrem.manifest.json`.
 A client's own modules, each within its walls (research 18, checks 3 and 4):
 
 - each folder under `modules/` has a module name that is not a kit module's, and its
-  `src/module.ts` declares that id; `src/modules.ts` is exactly what `new module` writes for them;
+  `src/module.ts` declares that id; `src/modules.ts` and `test/pages-types.ts` are exactly what
+  `new module` writes for them; each module's bit plane is its own, from 100;
 - a module's files import nothing outside its folder, only packages `package.json` lists, and a
   kit package only through an entry point its `exports` names;
 - its error codes sit in one hundred of its own, from `KIT-E-5000`;

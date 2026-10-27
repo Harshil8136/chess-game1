@@ -164,6 +164,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Needs you](records/2026-10-27-needs-you.md) | Home opens with what waits for the person signed in, from each module |
 | [Privacy module](records/2026-10-27-privacy-module.md) | privacy requests answered on time: one search for a person's data across the portal, a copy once their identity is checked |
 | [Tasks module](records/2026-10-27-tasks-module.md) | work given to people at a place, by a day, on Home and by email; automations make them too |
+| [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
 
