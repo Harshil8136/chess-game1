@@ -110,7 +110,7 @@ rules that turn what a check read into Working, Needs a look or Failing live apa
 
 | Check | Area | Level | Runs on its own | What it proves |
 |---|---|---|---|---|
-| Website and booking pages | Website and booking | Urgent | every 5 minutes | The home page and the booking page open in Spanish and English through the website's private connection and show what guests see: the page in its language, its main content, the booking form's first step. A page is read only until those are found, and never past 1 MB |
+| Website and booking pages | Website and booking | Urgent | every 5 minutes | The home page and the booking page open in Spanish and English at the website's public address, as a guest opens them (since 2026-10-27; before, through the website's private connection), and show what guests see: the page in its language, its main content, the booking form's first step. A page is read only until those are found, and never past 1 MB |
 | Website's booking and consent systems | Website and booking | Urgent | every 15 minutes | The website's own health report, booking and consent queues included, says nothing is wrong. A report that names a problem, such as bookings that stopped retrying, is a failure |
 | Booking and consent heartbeat | Website and booking | Soon | every 15 minutes | The website's hourly heartbeat ran within its window and found nothing wrong |
 | Website updates | Website and booking | Soon | every 15 minutes | Changes made in the portal reach the website: none waiting over an hour, none given up in the last 24 hours |
@@ -203,7 +203,7 @@ changing them at once never overwrite each other (compare-and-swap).
 
 **Limits.** Test again runs one check at most once a minute, and Check everything now at most once
 every two minutes; the stored results are the clock, so a check the job just kept counts too. At
-most six checks run at a time, each stops waiting after ten seconds (thirty for the five that
+most six checks run at a time, each stops waiting after ten seconds (thirty for the four that
 reach our other Workers through a private connection, below), and in the job and Test again
 a failure is tried once more before it counts, one at a time once every check has run. The job
 itself starts only once the five-minute tick's other jobs have finished (`runLast`,
@@ -239,8 +239,8 @@ passed the run after, and each filed a problem for failing and recovering. A wro
 a page, a report that names a problem) is never softened, and Test again and Check everything now
 show the raw result. Check everything now tries each check once: 29
 checks each tried twice could pass the 50 requests a Worker invocation may make on the free plan,
-a limit calls to our other Workers count towards as well. Tried once, they made 24 outside requests
-and 8 calls to our other Workers in the test that pins it (`test/system-health-checks.test.ts`). A
+a limit calls to our other Workers count towards as well. Tried once, they make 28 outside requests
+and 4 calls to our other Workers in the test that pins it (24 and 8 until 2026-10-27) (`test/system-health-checks.test.ts`). A
 person's run leaves the checks' places in the schedule as they were. The waiting does not count
 towards the Worker's CPU time.
 
@@ -251,13 +251,25 @@ same call from a page (Test again) answers in under half a second and the run's 
 the public website's included, answer at once. Cloudflare runs scheduled work on machines of its
 own, where our other Workers are often not running yet. The checks used to give up after eight
 seconds, twice, so every slow start was a timeout and the day's bar turned orange or red. Now the
-five checks that reach our other Workers (*Website and booking pages*, *Website's booking and
+checks that reach our other Workers (*Website's booking and
 consent systems*, *Website chat assistant*, *Email service: stuck and failed mail* and *Server's
 site checks*) wait up to 25 seconds for the answer (`PRIVATE_WAIT_MS` in
 `src/lib/health/probes.ts`) within a 30-second limit for the check (`PRIVATE_CHECK_MS` in
 `src/lib/health/catalog.ts`); the backup tick has waited 25 seconds for cf-backup since
 2026-10-01 and timed out three times in 25 days. Waiting costs no CPU. A start slower than that
 is still a timeout, and the cross-check above still applies to it.
+
+**What a day showed, and the website's pages read as a guest (2026-10-27).** In the 24 hours
+after that change no check failed and no problem was opened, and the warnings fell from 90 to 140
+a day to about 20. What remained was not slow starts: about seven times a day every private
+connection from the portal stopped answering at once for minutes, even after 25 seconds and a
+second try (2026-10-26 19:20 to 20:03 UTC, for one), while *Website's protective headers*, which
+reads the public website, answered all 205 of its reads that week, in under 3 seconds. So, by the
+owner's choice, *Website and booking pages* opens the four pages at the website's public address
+(`openPage` in `src/lib/health/probes.ts`, the `PUBLIC_ASTRO_URL` variable), as a guest does, with
+the usual eight seconds. The other four still use the private connection, which their questions
+need (a secret the website accepts only that way, or a service with no public door); they may
+still turn amber a few times a day (MAINTENANCE.md (private) SH-10).
 
 **Providers' status pages.** The *Providers' status pages* check reads each provider's public
 status page at its `api/v2/status.json` address (the Statuspage format all five answer, under a kilobyte; an answer far larger
@@ -476,6 +488,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-10-27 | §3's table row for *Website and booking pages*, the limits, the private connections and the new paragraph on the day after, against `openPage` in `src/lib/health/probes.ts` and the check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts` (the public address asked, never the private connection; 28 outside requests and 4 calls to our other Workers for Check everything now); the day's results read through the Cloudflare D1 connector (`system_test_results` and `platform_alerts`, 2026-10-26 12:40 to 2026-10-27 12:40 UTC) | Whether the public reads stay clear of the stalls: read from the days after the push. The rest of the document not re-read |
 | 2026-10-26 | Why the bars were orange and red most days, read live through the Cloudflare D1 connector (`system_test_results` 2026-10-19 to 26: the timeouts at exactly 8 and 16 seconds, the outside requests of the same runs, Test again runs at 130 to 370 ms, the 216 providers readings, the 11 slow database readings) and Sentry (CF-ADMIN-2A, 1W); Cloudflare's status page read through the Exa fetch (status, components, open incidents). Then §3's table rows for *Shared database* and *Providers' status pages*, the limits, the private connections and the providers' paragraphs against `PRIVATE_WAIT_MS`, `privateSignal`, `STATUS_PAGES` and `readIncidents` in `src/lib/health/probes.ts`, `PRIVATE_CHECK_MS` and the checks in `src/lib/health/catalog.ts` and `runChecks` in `src/lib/health/run.ts`, pinned by `test/system-health-checks.test.ts` | Whether 25 seconds covers every slow start: read from the results of the days after the push. That our other Workers have to start on the machine a scheduled run lands on is the reading of the timings; Cloudflare's documentation says only that scheduled runs go to machines with spare capacity. The rest of the document not re-read |
 | 2026-10-24 | §3a (new), §1's three rows, §2's tab table, §6's two rows and §7 against `src/lib/health/logscan.ts`, `src/workers/scheduled-log-scan.ts`, `src/pages/api/system-health/logs.ts`, `src/lib/health/config.ts` (`logScanMinutes`), `LogsPanel.tsx` and `SettingsPanel.tsx`; `test/log-scan.test.ts` (masking, causes, the answer's shape, windows, the job, the route's access and limit, the setting, the brief) passes; Cloudflare's request and answer shapes from its API SDK (cloudflare 7.3.0, `workers/observability/telemetry`) | A live scan: the token lacks the permission when written, so the answer's shape is checked by the code at run time, not against a real answer. The rest of the document not re-read |
 | 2026-10-24 | §3a's Sentry issues, the interval row and the token steps on the Logs tab, §2's Logs row and §7, against `getOrgIssues` in `src/lib/control-plane/sentry-admin.ts`, `sentryBrief` in `src/lib/health/logscan.ts`, `src/pages/api/system-health/logs.ts` and `LogsPanel.tsx`; `test/log-scan.test.ts` (23, two new for the Sentry list) passes; the live issue list read through the Sentry connector (three projects, one unresolved issue) | The portal's own call to Sentry's organisation issues API live: the same token reads project issues for the Cloud Services page, but this endpoint was not called with it. The rest of the document not re-read |
