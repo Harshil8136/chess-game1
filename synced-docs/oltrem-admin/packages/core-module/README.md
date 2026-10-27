@@ -136,6 +136,21 @@ state, `ok`, `attention`, `failing` or `unknown`. `defineModule` adds the route
 screens ask every mounted module that has one and leave out the cards a person may not read. A
 module whose routes already include `GET /home` is refused (`KIT-E-1005`).
 
+## Pages
+
+A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`
+that answer a page (a title and a body), a redirect or a plain response, and an optional `nav`
+(a label, a group and a summary) that gives it a section in the sidebar. A page reads and writes
+only through `api`, the portal's own API called inside the same request, so it can never show
+or change more than its routes allow. A path under `/api`, `/hooks`, `/ui` or `/local`, a path
+taken twice, a page with no `get` and a sidebar entry missing a word are refused when the module
+is defined.
+
+Pages are JSX, which the Workers-typed manifest cannot compile, so a module keeps them in their
+own entry (`src/pages.tsx`, type-checked against the DOM) and the client joins them to the
+manifest with `withPages(module, pages)`, checked the same way. The module's own `module.ts`
+never imports its pages.
+
 ## Migrations, settings and errors
 
 The manifest also names what the module owns elsewhere, so one file says everything a reviewer

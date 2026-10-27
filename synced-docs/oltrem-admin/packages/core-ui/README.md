@@ -47,6 +47,11 @@ holds (plan 12.1); a test renders every one and checks.
 | `ToastRegion`, `Toast` | a polite live region; each toast a manual popover its own button hides | one live region in the layout |
 | `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds |
 
+The page building blocks (`Panel`, `Section`, `Notice`, `Stats`, `ActionRow`, `ProblemNotice`,
+`Loaded`, `Done` and `when`) are the ones every portal page is made of, here so a module's own
+pages look like the kit's: a page that read an API answer shows it with `Loaded`, its problem
+with `ProblemNotice`, a change's outcome with `Done`.
+
 ## The three widgets
 
 Three controls are too hard to build well on native elements alone: a filtered list, a menu with

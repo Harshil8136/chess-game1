@@ -107,6 +107,7 @@ build and never a deploy. Its fields:
 | `migrations` | its SQL files, numbered in the kit's one series | `oltrem migrations sync` and `apply` |
 | `settings`, `errors`, `secrets` | its typed settings, its error codes, its key recipes | the Settings page, the error reference, `oltrem doctor` |
 | `home` | its card on Home | the screens |
+| `pages` | its own screens and sidebar sections, joined from a separate JSX entry with `withPages` | the screens |
 
 A module's README is the authority on it: its routes, tables, settings and errors. The
 [index](README.md) links every one.
@@ -129,7 +130,7 @@ owning README in the same commit.
 | Add a feature for every client | a new folder under `modules/`, copied from the shape of a small module such as `modules/github`; mount it in `templates/client/src/index.ts` |
 | Add a feature for one client | `oltrem new module <name>` in that client's repository (`templates/module` is what it copies) |
 | Change who may do what | the module's capability list; the model is in [the IAM README](../modules/iam/README.md) |
-| Add or change a page | `packages/screens/src/`; the frame and its sidebar are `layout.tsx`, the page list is in its README |
+| Add or change a page | a module's own page: its `src/pages.tsx`, joined with `withPages` ([core-module](../packages/core-module/README.md)); a kit page: `packages/screens/src/`, the frame and its sidebar are `layout.tsx` |
 | Change the look | the tokens in `packages/core-ui/src/theme.css`, then `pnpm ui:build` |
 | Add a setting | `defineSetting` in the module, listed on its manifest; never an environment variable (R-09) |
 | Store a credential | a provider definition and instance (`modules/providers`), sealed by `@oltrem/core-crypto`; a Worker secret only with a key recipe and a token registry row (R-05) |

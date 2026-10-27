@@ -33,6 +33,13 @@ the Vendor's address that the client's dev script writes on the owner's computer
 the local sign-in page and filled in there, and named again to anyone signed in on that computer
 with no account: on a new portal it is the only account.
 
+A module that brings `pages` (`@oltrem/core-module`) has them mounted inside the same frame: a
+page with a `nav` gets a section in the sidebar after the last one of its group (or a new group
+before Administration), a page without one sits under its module's first section, a posted form
+must come from the portal itself, and the page answers only to someone with an account, like
+every other page. `navWith` is how the sidebar is built from the kit's sections and the
+modules' own.
+
 ## The pages
 
 | Path | Shows | Reads |
@@ -131,8 +138,9 @@ writes. The file is generated: never edit it by hand (R-06).
   the Vendor's access, profiles, a setting whose value is not text, a number or a switch, a
   provider's delivery-report address and the client's own provider definitions: still the API
   until their forms come.
-- **Pages from the manifest.** The row and the pages are a fixed list in `src/layout.tsx`. The
-  plan's page fields on the module manifest (pages, i18n) come with the renderer.
+- **The kit's own pages from the manifest.** A module's own pages mount from its manifest; the
+  kit's first pages are still the fixed list in `src/layout.tsx`, and move onto their modules'
+  manifests one at a time. The i18n fields come later.
 - **Astro.** The plan names Astro for the screens. These are Preact components rendered by the
   Worker itself, so the kit's two commands run them with no second build; the same components
   move under Astro when its renderer is built, if the sandbox measurement favours it.
@@ -140,7 +148,7 @@ writes. The file is generated: never edit it by hand (R-06).
 
 ## Tests
 
-`test/css.test.ts` holds the committed stylesheet to its build. The client template's
+`test/css.test.ts` holds the committed stylesheet to its build; `test/module-pages.test.ts` mounts a module's pages on Node: the sidebar entry in its group, the page in the frame, a form back by its redirect and another site's refused. The client template's
 `test/screens.test.ts` runs the whole first run inside the Workers runtime: the Vendor signs in on
 this computer, creates the company, the Owner accepts, every page answers with its words and
 Home shows every module's card; a
