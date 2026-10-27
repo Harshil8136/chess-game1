@@ -440,7 +440,7 @@ sidebar.
 |-------|-------|---------|
 | Expanded (default when the cookie is absent) | 240px | Page load |
 | Collapsed | 64px | The arrow button at the top left (saved to the `cf_admin_sidebar_collapsed` cookie). Only the width moves (200 ms); every icon keeps its place and the names fade, so nothing jumps. Hovering shows a name beside each icon; it does not re-open the sidebar |
-| Hidden | 0 | < 1024px breakpoint; the top bar's menu button opens it from the left on the shared Dialog (`layout="side"`, up to 19rem and never more than 86% of the screen, rows 44px tall), which keeps the keyboard inside it and closes on Escape, the close button or a press beside it. A hand-made overlay until 2026-10-27 |
+| Hidden | 0 | < 1024px breakpoint; the top bar's menu button opens it from the left on the shared Dialog (`layout="side"`, as wide as its widest row between 13rem and 19rem and never more than 86% of the screen, rows 44px tall), which keeps the keyboard inside it and closes on Escape, the close button or a press beside it. A hand-made overlay until 2026-10-27 |
 
 Since 2026-10-10 the sidebar stays on screen from page to page (EF-9 in
 [EFFICIENCY-TODO](../EFFICIENCY-TODO.md)): it is not redrawn on a click, so it
@@ -628,7 +628,7 @@ The sidebar has exactly **one** breakpoint — `lg` (1024px). Re-verified
 | Breakpoint | Sidebar | Grid | Tables |
 |------------|---------|------|--------|
 | ≥1024px (`lg`) | Always present; 240px expanded / 64px collapsed | 2-col bento | Full |
-| <1024px | The phone menu: the shared Dialog from the left (`layout="side"`, up to 19rem), opened by the top bar's menu button | 1-col stack | Scroll |
+| <1024px | The phone menu: the shared Dialog from the left (`layout="side"`, as wide as its widest row, 13rem to 19rem), opened by the top bar's menu button | 1-col stack | Scroll |
 
 - **The 240px ↔ 64px collapse is a user preference, not a width rule** — it is
   driven by the `cf_admin_sidebar_collapsed` cookie.
@@ -848,6 +848,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-27 (fourth) | §5 Sidebar States (Hidden) and §8.1's phone row, against the phone menu's width in `shell.css` (`.ui-dialog.sh-drawer[data-layout='side']`) and `test/sidebar-look.test.ts` | Every other section; the width on a phone, which Harshil checks |
 | 2026-10-27 (third) | §5 "Its look since 2026-10-27", against the group colours as built: `shell.css` (`--nav-hue-*`, `--nav-tint`, `[data-nav-hue]`), `categories.ts` (`hue`), `SidebarMenu.tsx`, `CommandPalette.tsx`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (second) | §3 tree, §4.3 (the browser bar), §5 (shell diagram and text, Sidebar States, its look, the breakpoint table), §6.4's comment and the Login Portal note, against the edge-to-edge frame: `shell.css` (`--nav-*`), `AdminLayout.astro`/`.css`, `Sidebar/index.tsx` (64px), `SidebarHeader.tsx`, `SidebarMenu.tsx`, `config.ts`, `CommandPalette.tsx`, `RegistryTabs.astro`, `categories.ts`, `theme-client.ts`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 | §4.3, §5 (shell, top bar, Sidebar States, its look), §6.4, §7.2, §7.3, §8.1, §8.3 and §9.8, against the frame as rebuilt: `AdminLayout.astro`, `AdminLayout.css`, `src/styles/components/shell.css`, `Sidebar/index.tsx`, `SidebarHeader.tsx`, `SidebarMenu.tsx`, `SidebarProfile.tsx`, `utils.ts`, `config.ts`, `TopBar.tsx`, `ThemeToggle.tsx`, `CommandPalette.tsx`, `RegistryTabs.astro`, `ToastProvider.tsx`, `Dialog.tsx`/`Dialog.css` (`side`), `src/lib/theme-client.ts` and `public/scripts/theme-init.js`; the frame's contrast computed from its tokens by `test/shell-look.test.ts` | Every other section, including §7.1's table (the page tokens were not re-measured); the look in a browser, which Harshil checks on his phone |
