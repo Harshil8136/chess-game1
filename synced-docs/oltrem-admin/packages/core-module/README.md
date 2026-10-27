@@ -241,6 +241,31 @@ personal: {
 },
 ```
 
+## Customer parts
+
+A module that keeps things a customer of the company should see declares `customer`: a `title`
+and `find(env, tenantId, email)`, which answers the items it holds for the address the customer
+proved when they signed in (lower case), the newest first, at most `CUSTOMER_ITEMS` (20), with
+`more` when there are more. Each item has a `title`, the time it is about (`at`, ISO), and may
+have a `state` in a few words and `replies`, each a time and a text. The customers module calls
+it in-process when a signed-in customer opens `/account` and shows one section a module, so an
+item should be something the company wrote or confirmed: never text that anyone could have sent
+in the customer's name. No route is added. `defineModule` refuses a `customer` without a title.
+A `find` that throws shows its section as not readable; the page still opens.
+
+```ts
+customer: {
+  title: 'Your orders',
+  find: async (env, tenantId, email) => {
+    const rows = await ordersOf(env, tenantId, email, CUSTOMER_ITEMS + 1);
+    return {
+      items: rows.slice(0, CUSTOMER_ITEMS).map((o) => ({ title: o.name, at: o.at, state: o.state })),
+      more: rows.length > CUSTOMER_ITEMS,
+    };
+  },
+},
+```
+
 ## Pages
 
 A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`

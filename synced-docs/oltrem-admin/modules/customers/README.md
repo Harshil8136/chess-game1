@@ -7,8 +7,9 @@ in, switch a customer off, end their sign-ins when a device is lost, and email t
 sign in. Beside the code, a company can offer "Continue with" a sign-in service it already uses,
 through OpenID Connect. Every step is in the audit log.
 
-This is the door and the account. What a customer sees once signed in, beyond their account and
-their sign-ins, comes next (below).
+Once signed in, a customer's account page shows their own things: each module of the portal that
+declares a customer part adds a section, read for the address the customer proved. The forms
+module is the first: the messages they sent and the replies staff sent them.
 
 ## Using it
 
@@ -31,6 +32,9 @@ const customers = createCustomers<Env>({
   },
   // Seals each sign-in service's client secret; without it, no service can be connected.
   kek: (env) => env.KEK,
+  // The portal's modules, made after this one: each that declares `customer` adds its section
+  // to the account page.
+  modules: () => modules,
 });
 const modules = [iam.module, /* ... */ withPages(customers.module, customersPages)];
 
@@ -164,7 +168,7 @@ A customer holds no capability: the door is the only place they reach.
 | `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; to whoever manages them a row with "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; the sign-ins, the newest first, with the browser, how and when |
 | `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
 | `/account/code` | the code from the email, with the phone's one-time-code keyboard, and a link to ask for a new one |
-| `/account` | the customer's account: their name and address, Sign out, where they are signed in (this device marked) and "Sign out on the other devices" |
+| `/account` | the customer's account: their name and address, Sign out; a section for each module that shows the customer their own things (the newest 20, each with its state, its date and any replies; "Nothing yet"; a section that could not be read says so and the rest still shows); where they are signed in (this device marked) and "Sign out on the other devices" |
 
 The door's pages use the portal's look, without the staff sidebar; the mark at the top leads to
 `/account`.
@@ -215,8 +219,8 @@ customer who is not there is `KIT-E-0404`. The door answers in pages, never with
 
 ## Not here yet
 
-- What a customer sees beyond their account: their bookings, the files shared with them, their
-  form answers. Each module adds its part.
+- More of what a customer sees: their bookings and the files shared with them, when those modules
+  add their parts. Forms adds the messages and replies today.
 - A setting to switch the emailed code off, for a company whose customers all use a service.
 - The ID token's signature checked against the service's keys (`jwks_uri`); today TLS to the
   token endpoint stands for it, as the standard allows.
@@ -240,5 +244,7 @@ without the capability, with an `http://` issuer or a service naming another iss
 kept only sealed and never listed; the trip with PKCE and the return signed in, marked with the
 service; the return refused for another state, after ten minutes, when cancelled, with another
 nonce, an unverified address or an address that is no customer; a service switched off gone from
-the door; removed with its secret; each step audited. The client template's screens journey adds a customer on the page, signs them
-in at `/account` with the code from the outbox, and shows their account.
+the door; removed with its secret; each step audited. The account page with two modules' parts: the items for the signed-in
+address only, at most twenty with "more", and a part that fails shown as not readable while the
+page opens and the error is reported. The client template's screens journey adds a customer on the page, signs them
+in at `/account` with the code from the outbox, and shows their account with "Your messages".

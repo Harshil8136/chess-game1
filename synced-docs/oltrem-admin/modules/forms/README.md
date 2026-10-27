@@ -98,6 +98,15 @@ For a privacy request (`personal`, read by the privacy module) the module answer
 sent from the address or naming it in any field, newest first, with its form, its fields, its
 state and the notes on it. The Forms page is linked; an answer is removed from its own page.
 
+## A customer's account
+
+When the portal has customers (`@oltrem/customers`), a signed-in customer's account page shows
+"Your messages": each answer sent with the address they proved, the newest 20, with the form's
+name, when it came, its state in plain words (Received, Being handled, Done) and the replies staff
+sent them by email. It never shows what the answer said nor the notes staff keep: the address in
+an answer is only what the sender typed, so anyone could have used it, and the page shows only
+what the company wrote.
+
 ## Needs you
 
 Home's Needs you (`GET /api/forms/todo`, `forms.read`) lists each form with answers nobody has
@@ -132,7 +141,8 @@ Migration `0018_forms.sql`, additive and idempotent, in the one ledger `oltrem_m
 takes answers, the page after sending, who is told and when they last were), `forms_entries`
 (each answer as the sender saw it, the address to reply to, its status, who took it, the
 sender's digest, its search text, when it came and changed) and `forms_notes` (each note or
-reply, who wrote it, when).
+reply, who wrote it, when). Migration `0039_forms_reply_to.sql` adds an index on the address to
+reply to, in lower case, which a customer's account page reads by.
 
 ## Errors
 
@@ -157,6 +167,7 @@ answer; the inbox's views, counts, search, taking, a note, an email reply to the
 person's address to answer to, a reply refused when the answer has no email, removal by role;
 fields added, moved and removed while an old answer keeps its field; the CSV with a formula
 defused; a new address stopping the old one; a form removed with its answers and notes; every
-change and every website answer audited without what was sent.
+change and every website answer audited without what was sent; a customer's messages with their
+states and the replies, never the notes, and nothing from another company.
 
 The search test finds forms and answers only where a person's roles reach.
