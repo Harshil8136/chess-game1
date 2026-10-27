@@ -54,6 +54,10 @@ Rules the gates hold the module to:
   by every account, for what a person sees of their own.
 - A store that writes its own audit row keeps the pipeline from writing a second.
 - Times are kept in UTC, and every list has a limit (100 rows in the kit's modules).
+- A page is one invocation, and the Free plan allows 50 database queries in one (a `batch` counts
+  as one). Home calls every module's `todo` and `home` on each view, so each answers in one query
+  or one batch; the client template's screens test fails when Home makes more than 40 or another
+  page more than 10, and names the page.
 - The Worker code never imports `src/pages.tsx`, and the pages never import `src/module.ts`.
 
 ## 3. Mounting it in the client template

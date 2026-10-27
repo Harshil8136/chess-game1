@@ -66,7 +66,8 @@ Every job of a tick runs in the cron's one invocation, and an invocation may mak
 on the Free plan (a `batch` counts as one); past that, every query fails with `Too many API
 requests by single Worker invocation`. A fresh client portal's first tick, with every job due at
 once, made 99 when it was measured on 2026-10-27, `health.run` 33 of them. So the tick hands the
-jobs an env whose databases count each query (`src/queries.ts`; nothing else about them changes),
+jobs an env whose databases count each query (`countQueries`, exported for a client's own tests;
+nothing else about them changes),
 keeps what each run made (`last_queries`), and starts a job only when the queries so far, its
 lease and outcome writes (two) and what its last run made (ten before its first) stay within
 `queryBudget`: 45 by default, the 50 less a few for the cron's other work. The first job of a tick

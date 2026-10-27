@@ -198,4 +198,6 @@ and saved on the Settings page, the test message then sent, the provider made th
 refused removal while it sends, taken out of use, its key pasted again, and removed. A fourth
 names an alert recipient on the Settings page, lets a failed deploy report fail its check twice
 on the tick, and sees the alert emailed, on the Alerts page and on Home, acknowledges it, and
-sees it resolved once the check passes.
+sees it resolved once the check passes. The last counts the database queries of Home and of every page in the
+sidebar once the journeys have filled the tables: Home within 40 and every other page within 10 of
+the Free plan's 50 an invocation, each page over its share named.
