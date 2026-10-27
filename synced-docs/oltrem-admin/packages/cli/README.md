@@ -188,9 +188,10 @@ as they happen, each question after what it is and why it is needed (the door, t
    Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
 7. **The Vendor's address** from step 2, written while the database has none, as `vendor set` does;
    then `backup setup`; last, the one door step left for later: a self-hosted Access application
-   on the address's `hooks` path with a Bypass policy, needed only once a website's form posts to
-   the portal or an email provider sends delivery reports, on a custom domain and on
-   `workers.dev` alike.
+   on the address's `hooks`, `healthz` and `account` paths with a Bypass policy, needed once a
+   website's form posts to the portal, an email provider sends delivery reports, the release
+   checks the portal's health, or customers sign in at `/account` (`@oltrem/customers`), on a
+   custom domain and on `workers.dev` alike.
 
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).

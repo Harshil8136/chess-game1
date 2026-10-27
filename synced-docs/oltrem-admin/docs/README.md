@@ -78,6 +78,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, never two requests on one day, the vacation days a year, who is off with why kept private, the routes and the table | written, beside the code |
 | [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the receipt in the bucket, the company's currency, the month's CSV, the routes and the table | written, beside the code |
 | [@oltrem/assets](../modules/assets/README.md) | equipment: who sees and who manages at a place, the holder always, one tag one item, handed over and taken back with every move kept, retired when nobody holds it, what people who left still hold, the routes and the tables | written, beside the code |
+| [@oltrem/customers](../modules/customers/README.md) | customers: the door at /account past Access, the one-time email code and its limits, the `__Host-` sign-in, who sees and manages customers, ending sign-ins, the routes and the tables | written, beside the code |
 | [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, one open stretch a person, the week on the company's clock, hours added and fixed with why and never one's own, the CSV for payroll, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
@@ -181,6 +182,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Expenses module](records/2026-10-27-expenses-module.md) | what people spent claimed back with the receipt, answered and marked paid at a place, a month as a spreadsheet for the accountant |
 | [Equipment module](records/2026-10-27-assets-module.md) | who holds which laptop, phone or key, every hand-over kept, and what people whose account is off still hold |
 | [Time clock module](records/2026-10-27-timeclock-module.md) | clocking in and out at a place, the week's hours, missed clock-outs fixed with why, the hours for payroll; the company's clock moved to the core |
+| [Customer sign-in](records/2026-10-27-customer-sign-in.md) | the company's customers sign in at /account with a code emailed to them, outside Cloudflare Access's 50 places; staff add them, switch them off and end their sign-ins |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
