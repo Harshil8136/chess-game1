@@ -50,6 +50,7 @@ export const notes = defineModule({
 |---|---|
 | The id is `[a-z][a-z0-9-]*`; the version is `x.y.z` | `KIT-E-1006` |
 | A route path starts with `/` and has a summary | `KIT-E-1006` |
+| A route's `action`, when given, is lower case letters, digits and dashes: the verb its automatic audit row names | `KIT-E-1006` |
 | Every route names a capability, `<module>.<name>`, with the module's own id | `KIT-E-1001`, `KIT-E-1006` |
 | A POST, PUT or PATCH route has a schema for its body | `KIT-E-1002` |
 | A route open to any identity (`access: 'identity'`) is POST and names no capability | `KIT-E-1006` |

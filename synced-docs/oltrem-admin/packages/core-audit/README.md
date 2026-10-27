@@ -35,9 +35,33 @@ audit.after(ctx.waitUntil, {
 A bad entry is refused with `KIT-E-1101` in the request, where the programming error is; only
 the write itself is deferred. `record(entry)` writes at once and returns the row, for jobs.
 
+## The automatic row
+
+A module does not have to remember the audit. The pipeline tells the app of every change made
+through a route (`onChange`, `@oltrem/core-http`), and `createChangeAudit` writes it as a row
+after the response:
+
+```ts
+const app = createApp({
+  // ...
+  onChange: createChangeAudit({ db: (env) => env.DB, actorKind: (session) => 'person' }),
+});
+```
+
+| Field | Value |
+|---|---|
+| `action` | `<module>.<verb>`: the route's `action`, or its method and fixed path segments |
+| `target` | the route's last parameter, the thing changed |
+| `outcome` | `ok` below status 400, `failed` from 500, `refused` between: the permission check's and the schema's refusals are recorded too |
+| `details` | `method`, `route`, `status`, `ms`, and when there are any the error `code`, the caller's `ip` and `country` |
+
+A module that writes its own row for the request (`record` or `after` with the request id) keeps
+its richer row, and the automatic one is not written beside it: the writer remembers, in the
+isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
+
 ## Reading and checking
 
-`list({ actor, action, outcome, since, until, before, limit })` pages newest first; the
+`list({ actor, action, module, outcome, since, until, before, limit })` pages newest first (`module` reads every action of one module); the
 `before` it returns is the cursor for the next page. `range(since, until, limit)` returns the
 rows of a time range oldest first, for the export. `verify({ from, to })` recomputes the hash
 of every row in the range and names the rows whose content no longer matches, so the seal job
@@ -61,7 +85,7 @@ const audit = createAuditModule<Env>({
 
 | Route | Capability | What it answers |
 |---|---|---|
-| `GET /entries?outcome=&before=` | `audit.read` | 50 rows, newest first, and the cursor for the next page |
+| `GET /entries?outcome=&module=&actor=&before=` | `audit.read` | 50 rows, newest first, narrowed by outcome, module or person, and the cursor for the next page |
 | `GET /seals` | `audit.read` | the newest 30 daily seals and whether each still holds |
 | `GET /export?since=&until=` | `audit.export` (admin class) | whole UTC days as a CSV file, at most 10,000 rows; the export is itself recorded as `audit.export` |
 | `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands |

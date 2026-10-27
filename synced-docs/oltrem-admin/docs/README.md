@@ -145,6 +145,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Automatic release](records/2026-10-24-automatic-release.md) | restore point, health, step back |
 | [Operations menu](records/2026-10-24-operations-menu.md) | five jobs, no command line |
 | [Actions minutes](records/2026-10-25-actions-minutes.md) | verify off push |
+| [Automatic audit](records/2026-10-27-automatic-audit.md) | every change recorded by the pipeline, the audit page's filters |
 
 ## How this folder is checked
 

@@ -66,7 +66,7 @@ with no account: on a new portal it is the only account.
 | `/health` | each health check with its state, and the free plan's budgets; how many measured ones are close to their line (one not measured yet is not counted) | `/api/health/checks`, `budgets` |
 | `/settings` | every setting grouped by module: its value, where it comes from, and a form when the person may change it | `/api/settings/values` |
 | `/alerts` | the open alerts with what became of their email and who is on each, then the ones resolved lately | `/api/alerts/items` |
-| `/audit?outcome=&before=` | the audit log, newest first, filtered from a row (everything, refused, failed) and paged by Older; the daily seals and whether each holds; the export form | `/api/audit/entries`, `seals` |
+| `/audit?outcome=&module=&actor=&before=` | the audit log, newest first, narrowed from two rows (everything, refused, failed; every section or one) and to one person by tapping their address, paged by Older; each change with how it arrived (method, route, status, code) and, on a computer, where from; the daily seals and whether each holds; the export form | `/api/audit/entries`, `seals` |
 
 The forms, each posting to the screen's own route, which calls the API as the signed-in person:
 
