@@ -4,7 +4,8 @@ Customers: the people outside the company who sign in to the portal to see what 
 add them by address and name; a customer signs in at `/account` with a six-digit code emailed to
 them, with no password, and never through the staff door. Staff see when each customer last signed
 in, switch a customer off, end their sign-ins when a device is lost, and email them the link to
-sign in. Every step is in the audit log.
+sign in. Beside the code, a company can offer "Continue with" a sign-in service it already uses,
+through OpenID Connect. Every step is in the audit log.
 
 This is the door and the account. What a customer sees once signed in, beyond their account and
 their sign-ins, comes next (below).
@@ -28,6 +29,8 @@ const customers = createCustomers<Env>({
       messageKey: message.key,
     });
   },
+  // Seals each sign-in service's client secret; without it, no service can be connected.
+  kek: (env) => env.KEK,
 });
 const modules = [iam.module, /* ... */ withPages(customers.module, customersPages)];
 
@@ -47,9 +50,9 @@ createApp<Env>({
 });
 ```
 
-`createCustomers` returns the `store`, the module manifest and `door`. It stands on the IAM module
-(sessions, the authorizer) and the audit log. It adds three tables and no binding, secret, variable
-or setting.
+`createCustomers` returns the `store`, the `services`, the module manifest and `door`. It stands on
+the IAM module (sessions, the authorizer) and the audit log. It adds four tables and no binding,
+variable or setting; it reuses the KEK secret the providers already seal their keys with.
 
 ### The door and Cloudflare Access
 
@@ -99,14 +102,56 @@ sequenceDiagram
 Every sign-in is in the audit log as `customers.sign-in` by `customers.door`, with the customer's
 id. Requests for a code are rows in `customers_codes`, deleted after a day.
 
+## Sign-in services
+
+A company whose customers already have an account somewhere (its own app on Auth0 or Supabase, a
+Google Workspace, Okta, Keycloak) can offer "Continue with" that service at the door, beside the
+emailed code, which always stays. Whoever holds `customers.services` connects one on
+`/customers/sign-in` with three things the service gives when an application is made there: the
+issuer address, a client id and a client secret. The application at the service is given the
+return address `https://<portal>/account/return`.
+
+```mermaid
+sequenceDiagram
+  participant C as Customer's browser
+  participant D as Door at /account
+  participant S as Sign-in service
+  C->>D: GET /account/with/<service>
+  D-->>C: 303 to the service, with state, nonce and a PKCE challenge; the three kept in a cookie
+  C->>S: signs in there
+  S-->>C: 303 to /account/return with a code and the state
+  C->>D: GET /account/return
+  D->>S: the code, the PKCE verifier, the client id and secret (server to server)
+  S-->>D: an ID token
+  D->>D: issuer, this client, the nonce, the time, a verified address; a customer who is on?
+  D-->>C: 303 to /account, with the sign-in's cookie
+```
+
+| Rule | Why |
+|---|---|
+| Connecting reads the service's `<issuer>/.well-known/openid-configuration` first; the issuer it names must be the one typed, and its addresses HTTPS | A typo or a look-alike service is refused before anything is kept |
+| The client secret is sealed under the KEK with its own data key, bound to its row; no page or route shows it again | A copy of the database shows no secret |
+| The trip carries `state`, `nonce` and a PKCE `S256` challenge, kept in a `__Host-` cookie for ten minutes | Nobody can finish another browser's sign-in, replay a token or use a stolen code |
+| The ID token comes straight from the service's token endpoint over HTTPS, as OpenID Connect Core 3.1.3.7 allows, and its issuer, audience (and `azp`), nonce and times (two minutes' skew) are checked | The token is the service's answer to this sign-in and no other |
+| The token must say the address was verified (`email_verified`), and the address must be a customer the company added who is on | A service proves an address; the company still decides who its customers are |
+| A sign-in made this way is the same `__Host-` sign-in as the code's, marked with the service's name, and audited as `customers.sign-in` | Ending sign-ins, switching off and signing out work the same |
+
+Services that fit: any OpenID Connect provider that publishes its details at the issuer and puts
+`email_verified` in its ID tokens, such as Auth0, Okta, Keycloak and Google. Supabase's OAuth 2.1
+server fits too: its issuer is the project's `/auth/v1` address, its project needs asymmetric
+signing keys, and the company's own app shows its consent page. Microsoft Entra ID's tokens carry no
+`email_verified`, so the door refuses their sign-ins. A company connects ten services at
+most; one that is switched off disappears from the door, and sign-ins made with it stay.
+
 ## Who may do what
 
-Two capabilities on bit plane `26`, held across the company:
+Three capabilities on bit plane `26`, held across the company:
 
 | Capability | Lets them |
 |---|---|
-| `customers.view` | see the customers, search them, and when each signed in |
+| `customers.view` | see the customers, search them, and when each signed in; see the sign-in services, never their secrets |
 | `customers.manage` | add a customer, change their name and note, switch them off and on, end their sign-ins, email them the link |
+| `customers.services` | connect, switch and remove the sign-in services (admin class, a fresh sign-in) |
 
 A customer holds no capability: the door is the only place they reach.
 
@@ -115,8 +160,9 @@ A customer holds no capability: the door is the only place they reach.
 | Path | Shows |
 |---|---|
 | `/customers` | where customers sign in (this portal's `/account`); how many customers there are and how many are on; to whoever manages them "Add a customer" in a dialog (address, name, a note only staff see, and "Email them the link to sign in", ticked); a search by name or address; the customers by name with their state, address and last sign-in |
+| `/customers/sign-in` | how customers sign in: the emailed code always; the sign-in services with their state, issuer and last use; to whoever may set them up "Connect a service" in a dialog (the name on the button, the issuer address, the client id, the client secret) and, in each row, "Stop offering" or "Offer again" and "Remove", confirmed in a dialog; the return address to give the service |
 | `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; to whoever manages them a row with "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; the sign-ins, the newest first, with the browser, how and when |
-| `/account/sign-in` | the customer's door: their address and "Email me a code" |
+| `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
 | `/account/code` | the code from the email, with the phone's one-time-code keyboard, and a link to ask for a new one |
 | `/account` | the customer's account: their name and address, Sign out, where they are signed in (this device marked) and "Sign out on the other devices" |
 
@@ -135,11 +181,17 @@ The door's pages use the portal's look, without the staff sidebar; the mark at t
 | `POST /people/:id/on` | `customers.manage` | switches them back on |
 | `POST /people/:id/end-sign-ins` | `customers.manage` | ends every sign-in, and says how many |
 | `POST /people/:id/invite` | `customers.manage` | emails a customer who is on the link to sign in |
+| `GET /services` | `customers.view` | the sign-in services, never their secrets, and whether the reader may set them up |
+| `POST /services` | `customers.services` | connects a service by its issuer address, client id and client secret, after reading its published details |
+| `POST /services/:id/on` | `customers.services` | offers it at the door again |
+| `POST /services/:id/off` | `customers.services` | stops offering it; sign-ins made with it stay |
+| `POST /services/:id/remove` | `customers.services` | removes it and its sealed secret |
 | `GET /search?q=` | `customers.view` | the portal's search: customers by name or address |
 
 Every change is audited: `customers.add` (with whether the link went), `customers.change`,
-`customers.off`, `customers.on`, `customers.end-sign-ins` (with how many) and `customers.invite`,
-refusals included.
+`customers.off`, `customers.on`, `customers.end-sign-ins` (with how many), `customers.invite`,
+`customers.service-add`, `customers.service-on`, `customers.service-off` and
+`customers.service-remove`, refusals included.
 
 A privacy request (`@oltrem/privacy`) finds the customer's row (name, address, note, state, who
 added them and when, the last sign-in) and their sign-ins (when, how, the browser, last used,
@@ -150,20 +202,24 @@ ended).
 Migration `0036_customers.sql`, additive and idempotent: `customers_people` (one row a customer,
 one address a portal), `customers_codes` (each request for a code, the code's hash when one was
 sent, its tries and when it was used) and `customers_sessions` (each sign-in, by the hash of its
-token: how, the browser, when it was made, last used, expires and ended).
+token: how, the browser, when it was made, last used, expires and ended). Migration
+`0037_customers_services.sql` adds `customers_services`: each sign-in service, its issuer and
+client id, its secret sealed with its own wrapped data key, on or off, and when it was last used.
 
 ## Errors
 
 The `36xx` block: `KIT-E-3601` the address is a customer already, `KIT-E-3602` the customer is
-off, so no link is sent. An address, a name or a note out of bounds is the core's `KIT-E-0422`; a
+off, so no link is sent, `KIT-E-3603` a sign-in service's published details could not be read or
+did not match, `KIT-E-3604` no KEK secret to seal a service's secret with. An address, a name or a note out of bounds is the core's `KIT-E-0422`; a
 customer who is not there is `KIT-E-0404`. The door answers in pages, never with a problem.
 
 ## Not here yet
 
 - What a customer sees beyond their account: their bookings, the files shared with them, their
   form answers. Each module adds its part.
-- "Sign in with" a service the client already uses (Auth0, Supabase, Microsoft, Google), through
-  OpenID Connect, as a choice beside the email code.
+- A setting to switch the emailed code off, for a company whose customers all use a service.
+- The ID token's signature checked against the service's keys (`jwks_uri`); today TLS to the
+  token endpoint stands for it, as the standard allows.
 - Customers who sign themselves up, when a client wants that.
 - The outbox keeps an email's text, the code included, until the email is sent: anyone who reads
   the database directly could read a code in its ten minutes.
@@ -179,5 +235,10 @@ Access's headers refused by the door; an address that is not a customer answered
 email; a form from elsewhere refused; five wrong tries ending a code, a new code ending the last, a
 code expiring after ten minutes; five codes an hour an address and thirty requests a network;
 signing out on the other devices and on this one; staff ending the sign-ins, switching off and on;
-the privacy answer. The client template's screens journey adds a customer on the page, signs them
+the privacy answer. Against a stand-in OpenID Connect service: connecting refused without the KEK,
+without the capability, with an `http://` issuer or a service naming another issuer; the secret
+kept only sealed and never listed; the trip with PKCE and the return signed in, marked with the
+service; the return refused for another state, after ten minutes, when cancelled, with another
+nonce, an unverified address or an address that is no customer; a service switched off gone from
+the door; removed with its secret; each step audited. The client template's screens journey adds a customer on the page, signs them
 in at `/account` with the code from the outbox, and shows their account.
