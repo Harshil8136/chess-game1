@@ -69,6 +69,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/records](../modules/records/README.md) | the company's own lists: places and the four capabilities, the kinds of field, search, the CSV, routes, tables, errors | written, beside the code |
 | [@oltrem/files](../modules/files/README.md) | the company's files: a drive per place opened by the roles held there, folders and names, uploads, links that end, the trash, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
+| [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks fed by the audit log with their signing, retries and delivery log, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract and the kit's seven email definitions, instances with their sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
 | [@oltrem/email](../modules/email/README.md) | email as the kit sends it: typed templates and the escaping `html` tag, sending through the outbox, the lease per message key, failover, the held messages, the canary and messages routes, the health check, the table and the error codes | written, beside the code |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow step by step, one export at a time, the routes, the freshness and drill checks, the restore drill, the settings and secrets, how to open a copy, the table and the error codes | written, beside the code |
@@ -152,6 +153,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Portal makeover](records/2026-10-27-portal-makeover.md) | the new look, page-to-page motion, pages fetched ahead |
 | [Files module](records/2026-10-27-files-module.md) | a drive per place opened by the roles there, links that end, the trash |
 | [Campaigns module](records/2026-10-27-campaigns-module.md) | bulk email from a CSV file in chunks, one-click unsubscribe, suppression |
+| [Developer module](records/2026-10-27-developer-module.md) | the jobs page, signed webhooks from the audit log, the API reference |
 
 ## How this folder is checked
 

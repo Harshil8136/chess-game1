@@ -27,7 +27,7 @@ const modules = [iam.module, email.module, withPages(campaigns.module, campaigns
 manifest. It stands on the IAM module (sessions, the authorizer, the audit wrapper) and sends
 through the email module: the client adds `CAMPAIGN_TEMPLATE` to the email module's templates.
 Its pages come from `@oltrem/campaigns/pages`, type-checked against the DOM like the files
-module's, and give it a **Campaigns** section in the sidebar's Work group.
+module's, and give it a **Campaigns** section in the sidebar's Messages group, beside Email.
 
 ## Who may do what
 

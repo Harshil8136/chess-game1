@@ -51,6 +51,12 @@ health's own, which measure and judge the budgets) is `paused`: it is not run an
 runs on the first tick after the reason is gone. A pause that cannot be read is reported through
 `report(error, 'pause')` and the jobs run, as if nothing were spent.
 
+A job paused by hand (`setPaused(env, id, by)`, from the jobs page of `@oltrem/developer`) is
+`stopped` instead: due, not run, and kept due until `setPaused(env, id, null)` resumes it, when
+the next tick runs it. `runSoon(env, id)` makes a job due now, so the next tick (within five
+minutes) runs it. Both write the rows of the declared jobs first, so they work before the first
+tick, and answer false for a job no mounted module declares.
+
 `list(env)` returns every row, with `declared` false for the row of a job no mounted module
 declares any more; the row and its history are kept.
 
@@ -90,8 +96,8 @@ state is kept three days.
 
 Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,
 `lease_until`, `last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an
-index on `next_run_at`. Pausing a job by hand and tiers (plan 4.3) come with the jobs page; the
-budgets' pause above needs no column.
+index on `next_run_at`. Migration `0021` adds `paused_at` and `paused_by`, a pause by hand. Tiers
+(plan 4.3) come later; the budgets' pause above needs no column.
 
 ## Tests
 
@@ -100,7 +106,8 @@ run when due and not before, the outcome and the next run written; a failure rec
 while the other job runs; a lease another tick holds respected and taken over once it lapses; a
 changed interval written and the next run brought forward; a removed job's row kept as
 undeclared; due jobs held by a pause while an exempt one runs, then run once it lifts, the pause
-not asked when nothing is due; a pause that cannot be read reported once and the jobs run; and
-the contract's refusals. With a stand-in step: a schedule running its flows in
+not asked when nothing is due; a pause that cannot be read reported once and the jobs run; a job
+paused by hand stopped until it is resumed, one made due now run on the next tick, and a pause
+before the first tick; and the contract's refusals. With a stand-in step: a schedule running its flows in
 module order with their steps named after them, a start by hand with its params, a failed flow
 reported while the other runs, and an instance no flow matches.

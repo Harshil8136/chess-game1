@@ -72,8 +72,8 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports |
 | `files` | Work | **built** 2026-10-27: a drive per place in the client's bucket, opened by the roles held there, links that end, a trash |
 | `campaigns` | Messages | **built** 2026-10-27: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, a suppression list fed by bounces and complaints |
-| `developer` | Developer | **this round**: API keys, signed outgoing webhooks with a delivery log, the API reference from the manifests |
-| the jobs page | Developer | **this round**: every automatic job and flow, its last runs, run now |
+| `developer` | Developer | **built** 2026-10-27: the jobs page (every job and flow, its last runs, run soon, pause), webhooks fed by the audit log and signed as Standard Webhooks sign them, with retries and a delivery log, the API reference read from the manifests |
+| API keys | Developer | later: a service calls the API through a Cloudflare Access service token today; making one from the Developer page comes later |
 | `automations` | Work | next: when a record or form answer arrives, or on a schedule, do something (email, a record, a webhook) |
 | customer sign-in | Work | next: the client's own customers see their records and files |
 | `site`, `cms`, `seo`, `privacy`, `analytics` | Website | later, as plan section 4.4 lists them |
