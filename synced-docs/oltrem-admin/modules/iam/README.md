@@ -196,7 +196,7 @@ The rules, each refused with its own code:
 - **Access reviews.** `openReview` lists every grant in force under a scope, due in two weeks;
   each is marked keep or remove by someone with the standing over it; `closeReview` refuses while
   one is undecided (`KIT-E-2013`) and ends the removed. An Owner is never removed in a review.
-  Opening the quarterly review on a schedule is the module manifest's, in a later step.
+  Opening one is a person's decision; the health check below says when one is due.
 - **Groups and scopes.** A member joins a group only by the hand of someone who could have made
   each of the group's grants to that person. The tree is the Owners' (`iam.scopes.manage` has the
   owner floor): four levels at most, the root stays, and a scope, role or group with any grant in
@@ -236,8 +236,8 @@ the **handover**, stamped on the tenant: before it the Vendor alone invites Owne
 else could approve, and the record says so; from then on an Owner is made, invited or unmade
 only with a second person, and the last one stays.
 
-An invitation can be **emailed**. The client hands `createIam` a `sendInvitation(env, message)`
-(the client template sends it through the email module, as the plain template `iam.invitation`);
+An invitation can be **emailed**. The client hands `createIam` a `mail(env, message)` (the client
+template sends it through the email module, as the plain template `iam.message`);
 when the inviter asks (`send: true`), the module writes the message, naming who invited, the
 company, the role, the place, the link and its last day, keyed `iam.invitation:<id>` so it goes
 once. The link is then held by the email module's outbox until it is delivered, as any message
@@ -257,6 +257,18 @@ The Owner role keeps a **minimum** whatever the Vendor takes out of it (`OWNER_M
 module's own capabilities below the Vendor's floor), and every capability new to the registry
 joins every Owner role at deploy, so a new module's screens open to the Owners by themselves;
 what the Vendor removed on purpose stays out.
+
+## Care on the tick
+
+The module keeps two rules without anyone having to remember them (`src/care.ts`):
+
+| Kind | Id | What it does |
+|---|---|---|
+| Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, and the next run sends what is missing. Without `mail`, it does nothing. |
+| Health check, lane `access` | `iam.reviews` | Warns when an open access review is past its due date, or when none was opened for 90 days (`REVIEW_EVERY_DAYS`), counted from the company's creation until the first one. |
+
+Both only read the rows. The notice goes through the same `mail` as an invitation, and the
+health page shows the check's last result with the others.
 
 ## The routes
 
@@ -386,4 +398,8 @@ ended from the devices list and refused from then on. The startup hook is tested
 apps on one IAM instance: the door's refusal runs nothing, the first request past it registers
 both mounted modules, the Owner holds a new module's capability at once, a declaration grown
 under the same version is not seen, and a bumped version is, with the index replaced and the
-Owner's session recompiled without a new sign-in.
+Owner's session recompiled without a new sign-in. The care is tested on the rows: only a
+person's own grant ending within the week is noticed (not one ended, later, eligible, a deny, an
+inactive person's, a group's or an activation), a renewed end is noticed again, a refused message
+fails the run after the others, and the review check moves from none due, to none yet, to on time,
+to past due, to none for a quarter.
