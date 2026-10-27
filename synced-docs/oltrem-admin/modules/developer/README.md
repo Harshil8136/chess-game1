@@ -6,7 +6,7 @@ happen, and the portal's API described from the code that runs it. Three parts b
 section of the sidebar, **Developer**:
 
 - **Jobs**: every job the mounted modules declare, with its schedule, its last run, how long it
-  took and what went wrong; **Run soon** makes one due now and **Pause** keeps it off its
+  took, how many database queries it made and what went wrong; **Run soon** makes one due now and **Pause** keeps it off its
   schedule until it is resumed. The flows of the client's one Workflow are listed beside them.
 - **Webhooks**: an https address of the company's is sent each change it asks for, signed as
   [Standard Webhooks](https://www.standardwebhooks.com/) sign them, tried again on a ladder when

@@ -36,11 +36,11 @@ export default createWorker({ app, modules, tick: scheduler.tick });
 
 On each tick: one read of `oltrem_jobs`; a row is made for every declared job without one (its
 first run is this tick), and a changed interval is written, the next run brought forward when the
-new interval makes it sooner. Then, for each declared job whose time has passed, in manifest
-order: the lease is taken with one conditional write (`lease_until`, ten minutes by default);
+new interval makes it sooner. Then, for each declared job whose time has passed, the longest
+waiting first (in manifest order when they wait as long): the lease is taken with one conditional write (`lease_until`, ten minutes by default);
 when another tick holds it the job is `held`; otherwise the job runs, and one write records the
-outcome (`ok`, or `failed` with the error's first 400 characters), the time it took, the counts,
-and the next run at the tick's time plus the interval. A failure is reported through
+outcome (`ok`, or `failed` with the error's first 400 characters), the time it took, the database
+queries it made, the counts, and the next run at the tick's time plus the interval. A failure is reported through
 `report(error, jobId)` and the other jobs still run; the job runs again at its next time, never in
 a tight loop. A lease that lapses without a write (a job that died with its isolate) is taken by
 the next tick.
@@ -59,6 +59,20 @@ tick, and answer false for a job no mounted module declares.
 
 `list(env)` returns every row, with `declared` false for the row of a job no mounted module
 declares any more; the row and its history are kept.
+
+### The queries of one tick
+
+Every job of a tick runs in the cron's one invocation, and an invocation may make 50 D1 queries
+on the Free plan (a `batch` counts as one); past that, every query fails with `Too many API
+requests by single Worker invocation`. A fresh client portal's first tick, with every job due at
+once, made 99 when it was measured on 2026-10-27, `health.run` 33 of them. So the tick hands the
+jobs an env whose databases count each query (`src/queries.ts`; nothing else about them changes),
+keeps what each run made (`last_queries`), and starts a job only when the queries so far, its
+lease and outcome writes (two) and what its last run made (ten before its first) stay within
+`queryBudget`: 45 by default, the 50 less a few for the cron's other work. The first job of a tick
+starts whatever it costs. A job that does not fit is `deferred`: it stays due, so it is the
+longest waiting on the next tick and goes first. On a paid plan (1,000 queries an invocation) the
+budget may be raised.
 
 A module may still have a `scheduled` hook, which the Worker calls on every tick after the jobs,
 for the rare module that needs the raw tick. Work that should be seen, counted and tried again is
@@ -96,7 +110,8 @@ state is kept three days.
 
 Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,
 `lease_until`, `last_run_at`, `last_ms`, `last_outcome`, `last_error`, `runs`, `failures`, and an
-index on `next_run_at`. Migration `0021` adds `paused_at` and `paused_by`, a pause by hand. Tiers
+index on `next_run_at`. Migration `0021` adds `paused_at` and `paused_by`, a pause by hand;
+`0031` adds `last_queries`, the database queries the last run made. Tiers
 (plan 4.3) come later; the budgets' pause above needs no column.
 
 ## Tests
@@ -108,6 +123,9 @@ changed interval written and the next run brought forward; a removed job's row k
 undeclared; due jobs held by a pause while an exempt one runs, then run once it lifts, the pause
 not asked when nothing is due; a pause that cannot be read reported once and the jobs run; a job
 paused by hand stopped until it is resumed, one made due now run on the next tick, and a pause
-before the first tick; and the contract's refusals. With a stand-in step: a schedule running its flows in
+before the first tick; the queries a run makes counted through a batch, a job that does not fit
+left for the next tick where it goes first, and more jobs fitting once their queries are known;
+and the contract's refusals. The client template's worker test ticks a fresh portal until every
+job has run, which takes more than one tick, each run's queries recorded. With a stand-in step: a schedule running its flows in
 module order with their steps named after them, a start by hand with its params, a failed flow
 reported while the other runs, and an instance no flow matches.

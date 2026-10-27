@@ -172,6 +172,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Approvals module](records/2026-10-27-approvals-module.md) | ask for a yes at a place; whoever decides there answers, never their own, a no with its reason |
 | [Announcements module](records/2026-10-27-announcements-module.md) | notices to the people at a place, on Home until read, confirmed when they must be, who has read them |
 | [Bookings module](records/2026-10-27-bookings-module.md) | rooms, vehicles and equipment booked by the hour on the company's clock, never twice at once |
+| [The jobs within the queries of one tick](records/2026-10-27-jobs-query-budget.md) | the tick counts each job's database queries and leaves what does not fit to the next tick, under the Free plan's 50 an invocation |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
