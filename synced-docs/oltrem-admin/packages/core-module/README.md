@@ -98,8 +98,8 @@ things.
 ## Public hooks
 
 A module's `hooks` are addresses an outside service posts to, such as a provider's delivery
-reports: POST only, mounted by `@oltrem/core-http` at `/hooks/<module><path>` before the Access
-identity is read. The handler gets the body exactly as it arrived (`HookContext.body`), the path's
+reports, or a link a person opens, such as a shared file (`method: 'GET'`; `POST` by default),
+mounted by `@oltrem/core-http` at `/hooks/<module><path>` before the Access identity is read. The handler gets the body exactly as it arrived (`HookContext.body`), the path's
 parameters and no session; it is the only check, so it verifies the caller by a signature or a
 secret in the address.
 
@@ -149,7 +149,15 @@ is defined.
 Pages are JSX, which the Workers-typed manifest cannot compile, so a module keeps them in their
 own entry (`src/pages.tsx`, type-checked against the DOM) and the client joins them to the
 manifest with `withPages(module, pages)`, checked the same way. The module's own `module.ts`
-never imports its pages.
+never imports its pages. The page types live in `@oltrem/core-module/pages`, which names no
+Workers type, so both sides import them; a `pages.public.d.ts` beside the pages is what a
+Worker-typed client sees, held to the implementation by a type test. `@oltrem/files` is the
+model: its `package.json` exports `./pages`, whose one export is named `pages` (the tool's
+loader stands it in by that name when it reads a Worker in Node), its `tsconfig.pages.json`
+checks the JSX, and two pragma lines at the top of `pages.tsx` tell any bundler how to compile it.
+
+A route may take its body as the content itself (`body: 'bytes'`, POST or PUT only): an upload.
+Its schema then checks the query.
 
 ## Migrations, settings and errors
 

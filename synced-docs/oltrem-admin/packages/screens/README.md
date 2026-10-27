@@ -37,7 +37,9 @@ A module that brings `pages` (`@oltrem/core-module`) has them mounted inside the
 page with a `nav` gets a section in the sidebar after the last one of its group (or a new group
 before Administration), a page without one sits under its module's first section, a posted form
 must come from the portal itself, and the page answers only to someone with an account, like
-every other page. `navWith` is how the sidebar is built from the kit's sections and the
+every other page. A page's `api.send` takes a `File` from a form as it is, with its own type,
+for an upload route. The stylesheet's build reads the kit modules' `src/pages.tsx` too, so
+their classes are in it. `navWith` is how the sidebar is built from the kit's sections and the
 modules' own.
 
 ## The pages

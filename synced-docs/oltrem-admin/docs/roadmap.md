@@ -70,7 +70,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export |
 | `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies |
 | `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports |
-| `files` | Work | **this round**: a drive in the client's bucket, folders at places, the same permissions, expiring share links |
+| `files` | Work | **built** 2026-10-27: a drive per place in the client's bucket, opened by the roles held there, links that end, a trash |
 | `campaigns` | Messages | **this round**: a list from a spreadsheet, a message, sent in chunks under the provider's daily limit, one-click unsubscribe |
 | `developer` | Developer | **this round**: API keys, signed outgoing webhooks with a delivery log, the API reference from the manifests |
 | the jobs page | Developer | **this round**: every automatic job and flow, its last runs, run now |
@@ -90,8 +90,8 @@ Three changes under every module, done before the new modules so each one uses t
   that writes its own richer row keeps doing so, and the pipeline does not write a second.
 - **A module brings its own pages.** The manifest gains the pages and the sidebar entry of the
   module, so a new module is one package mounted in one line, with no edit to the screens package.
-- **A new look.** A calmer palette, a lighter frame, smooth page transitions in the browsers that
-  have them, pages fetched before the click, and a search over every section.
+- **A new look.** A calmer palette, a glass frame, smooth page transitions in the browsers that
+  have them, and pages fetched before the click. A search over every section comes later.
 
 ## How a round is chosen
 
