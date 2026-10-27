@@ -464,13 +464,17 @@ icon (Harshil's report, 2026-10-10).
 a sidebar system on the `--nav-*` colours, the way IBM Carbon's UI shell and shadcn's
 `--sidebar-*` keep their own set. The sidebar (`.sh-pane`) draws its dividing line as a shadow,
 so the closed rail's 64px leave a 40px row and `ROW`'s 11px padding centres the icon. The
-hotel's round badge sits beside "Madagascar" over "Admin portal". Page names are `--nav-fg-2`
-and every icon takes its row's colour (`--nav-icon`, then `--nav-fg` when touched); the page on
-screen has a tint (`--nav-current`), a 3px marker on its left (`--nav-marker`) and bold words,
-and the page search and the sub-page rows (`RegistryTabs.astro`) mark their current option the
-same way. Group names are `--nav-fg-3`. A count badge is rose, `LIVE` green; the role dot on
-the avatar is the frame's one colour of its own. These replace the slate-300 names, the
-coloured icons (`SECTION_ACCENT`, removed) and the morning's ink pill.
+hotel's round badge sits beside "Madagascar" over "Admin portal". Page names are `--nav-fg-2`.
+Each group of pages has a colour of the frame's set (`hue` in
+`src/lib/access-center/categories.ts`, a `data-nav-hue` that picks a `--nav-hue-*` token, the
+400 step in the dark theme and the 600 in the light one, 700 for amber): its icons, a dot before
+its group name, and the tint and 3px left marker of its page on screen, whose words are bold.
+The page search marks its options the same way; the sub-page rows (`RegistryTabs.astro`) mark
+their current tab in the portal's blue (`--nav-current`). Group names are `--nav-fg-3`. A count
+badge is rose, `LIVE` green. These replace the slate-300 names, the group colours as Tailwind
+classes (`SECTION_ACCENT`, removed: faded to 80 %, most light ones fell under 3:1) and the
+morning's ink pill. For one evening the icons were all one colour; Harshil turned that down, so
+the group colours came back as tokens.
 
 ### Login Portal — "Midnight Slate" *(historical — there is no login page; Cloudflare Access hosts login and `src/pages/index.astro` is the access-denied / dev gate. The drifting orbs and the `feTurbulence` noise lived in `AdminLayout.css` until 2026-10-27, when they were removed: the frame of §5 has no backdrop)*
 
@@ -844,6 +848,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-27 (third) | §5 "Its look since 2026-10-27", against the group colours as built: `shell.css` (`--nav-hue-*`, `--nav-tint`, `[data-nav-hue]`), `categories.ts` (`hue`), `SidebarMenu.tsx`, `CommandPalette.tsx`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (second) | §3 tree, §4.3 (the browser bar), §5 (shell diagram and text, Sidebar States, its look, the breakpoint table), §6.4's comment and the Login Portal note, against the edge-to-edge frame: `shell.css` (`--nav-*`), `AdminLayout.astro`/`.css`, `Sidebar/index.tsx` (64px), `SidebarHeader.tsx`, `SidebarMenu.tsx`, `config.ts`, `CommandPalette.tsx`, `RegistryTabs.astro`, `categories.ts`, `theme-client.ts`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 | §4.3, §5 (shell, top bar, Sidebar States, its look), §6.4, §7.2, §7.3, §8.1, §8.3 and §9.8, against the frame as rebuilt: `AdminLayout.astro`, `AdminLayout.css`, `src/styles/components/shell.css`, `Sidebar/index.tsx`, `SidebarHeader.tsx`, `SidebarMenu.tsx`, `SidebarProfile.tsx`, `utils.ts`, `config.ts`, `TopBar.tsx`, `ThemeToggle.tsx`, `CommandPalette.tsx`, `RegistryTabs.astro`, `ToastProvider.tsx`, `Dialog.tsx`/`Dialog.css` (`side`), `src/lib/theme-client.ts` and `public/scripts/theme-init.js`; the frame's contrast computed from its tokens by `test/shell-look.test.ts` | Every other section, including §7.1's table (the page tokens were not re-measured); the look in a browser, which Harshil checks on his phone |
 | 2026-10-24 | §3's `sessions.css` line and §9.9's note on Sessions, against `src/styles/pages/sessions.css` (theme tokens only), `src/components/admin/users/sessions/SessionsBar.tsx`, `SettingBlocks.tsx` and `src/pages/dashboard/sessions/[...section].astro` | Every other section; the look in a browser, which the owner checks on a phone |
