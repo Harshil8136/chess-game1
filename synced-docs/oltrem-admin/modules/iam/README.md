@@ -298,7 +298,7 @@ one read. A change to the capabilities under the same version is not seen: a cha
 version. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
-The manifest: fifty-seven JSON routes under `/api/iam` (the Home card's `GET /home`, under
+The manifest: fifty-eight JSON routes under `/api/iam` (the Home card's `GET /home`, under
 `iam.read`, counts the roles and the places), each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
@@ -311,6 +311,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 |---|---|---|
 | `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map; my sign-ins; end one of them (`iam.device-end` in the audit log) |
 | `GET /me/grants`, `POST /me/grants/:id/activate` | `iam.self` | the grants that reach me; bring an eligible one into force for a few hours |
+| `GET /me/options` | `iam.self` | what I may ask for: every role but the Owner's and every place, by name, so a member who cannot read the Access page can still ask |
 | `GET`, `POST /me/requests`, `DELETE /me/requests/:id` | `iam.self` | my access requests: ask for a role at a scope, withdraw |
 | `GET`, `POST /me/approvals`, `POST /approvals/:id/decision` | `iam.self` | the approvals I asked for; ask a second person; decide one (you must hold the same power and not be the one who asked) |
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |

@@ -67,6 +67,10 @@ modules' own.
 | `/people/:id/see?place=` | "See it as": what the person can do at one place, picked from a row, each capability with yes or no and why, grouped by module; an account switched off says so. Read only, never their session | `/api/users/people/:id`, `/api/iam/scopes`, `/api/iam/people/:id/access` |
 | `/access` | the company, its roles, groups and places, and the form to add a place | `/api/iam/tenant`, `roles`, `groups`, `scopes` |
 | `/access/roles/new`, `/access/roles/:id` | a role's name and its capabilities as a checklist grouped by module | `/api/iam/roles/:id`, `/api/iam/capabilities` |
+| `/access/mine` | My access, for everyone (also linked under the account in the sidebar): the roles they hold, each at its place, through them or a group, until when, and in force, ended, not started or off until turned on; the form to turn on an eligible role for 1 to 12 hours with a reason; the form to ask for a role at a place with a reason (every role but the Owner's); their requests and what became of each | `/api/iam/me/options`, `me/grants`, `me/requests` |
+| `/access/decisions` | Waiting for a decision: the access requests still open (who, the role and place, why) and the approvals for a change that needs a second person, each with Approve and Refuse | `/api/iam/requests`, `approvals`, `people`, `roles`, `scopes` |
+| `/access/reviews` | the access reviews, each open, past due or closed, and the form to start one at a place | `/api/iam/reviews`, `people`, `roles`, `scopes` |
+| `/access/reviews/:id` | one review: its place and counts, every grant under review with Keep and Remove, and Close the review (a dialog first) once each is decided | `/api/iam/reviews/:id`, `groups`, `people`, `roles`, `scopes` |
 | `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
 | `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
 | `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
@@ -96,6 +100,10 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Switch the account off, with a reason, or on | `POST /api/users/people/:id/deactivate`, `reactivate` | `?done=off`, `on` |
 | Make a role, save one | `POST /api/iam/roles` (placed below every existing role), `PATCH /api/iam/roles/:id` | `?done=role-made`, `role-saved` |
 | Add a place (`/access/places`) | `POST /api/iam/scopes` | `?done=place-added` |
+| Turn on a role (`/access/mine/turn-on`): which, for how many hours, why | `POST /api/iam/me/grants/:id/activate` | `?done=turned-on` |
+| Ask for access (`/access/mine/ask`), withdraw a request | `POST /api/iam/me/requests`, `DELETE /api/iam/me/requests/:id` | `?done=asked`, `request-withdrawn` |
+| Approve or refuse a request or an approval (`/access/requests/:id/approve`, `/access/approvals/:id/refuse`) | `POST /api/iam/requests/:id/decision`, `POST /api/iam/approvals/:id/decision` | `?done=request-approved`, `request-refused`, `approval-given`, `approval-refused` |
+| Start a review (`/access/reviews`), keep or remove a grant, close it | `POST /api/iam/reviews`, `POST .../items/:binding`, `POST .../close` | the review with `?done=review-opened`; `review-decided`, `review-closed` |
 | Look up a domain (`/providers/detect`) | `POST /api/providers/detect` | what was found, on the page |
 | Connect a provider (`/providers/add/:definition`): a name and its fields | `POST /api/providers/instances` | `?done=connected` |
 | Check the key, send me a test message | `POST /api/providers/instances/:id/probe`, `POST /api/email/canary` | `?done=checked`, `tested`; the answer under Last check |
@@ -115,7 +123,8 @@ back into a page.
 Every page sits in the same frame (`src/layout.tsx`). From 1024 px wide, a sidebar: the portal's
 mark, every mounted section under its group (Work, People, Messages, Operations,
 Administration) with the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
-Member) with, on this computer, a Sign out button, and the colour theme as three icons. On a
+Member) with, on this computer, a Sign out button, a link to My access, and the colour theme as
+three icons. On a
 phone, a top bar with a Menu button that opens the same sidebar as a drawer from the left (a
 `dialog` opened by the browser's `commandfor`, no script; a tap outside closes it); the sections
 are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page says in one line what it is for, then a row of its actions
@@ -147,8 +156,7 @@ writes. The file is generated: never edit it by hand (R-06).
 
 ## Not here yet
 
-- **The other forms.** Groups, reviews, requests, approvals,
-  the Vendor's access, profiles, a setting whose value is not text, a number or a switch, a
+- **The other forms.** Groups, the Vendor's access, profiles, a setting whose value is not text, a number or a switch, a
   provider's delivery-report address and the client's own provider definitions: still the API
   until their forms come.
 - **The kit's own pages from the manifest.** A module's own pages mount from its manifest; the
@@ -170,7 +178,9 @@ makes a role and a place, invites someone who accepts, ends and gives their role
 account off and on, allows one thing and denies another as exceptions (the person is then refused
 the denied page and shown the allowed one, and Home shows them only the cards they may read), puts one back to their roles and ends the other,
 withdraws an invitation, and sees a refusal and a cross-site form refused; later the Owner invites
-two people at once with their links emailed, their own address refused. A
+two people at once with their links emailed, their own address refused, and a member asks for a
+role, the Owner approves it (the member is refused deciding it themselves), then opens an access
+review at the company, keeps every grant and closes it. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed
 and saved on the Settings page, the test message then sent, the provider made the one that sends,
