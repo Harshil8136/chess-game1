@@ -19,6 +19,38 @@ on the kit's packages, free of keys and within the Worker's limits (research 18)
 **`operate`**, the jobs of the operations menu (research 18 §3.5).
 The tool runs on Node and has no runtime dependency.
 
+## The look in a terminal
+
+Every command a person runs at a terminal shows itself the same way: `npm install`, `npm run dev`,
+`npm run update` and `npm run deploy` in the kit, `oltrem deploy` and `oltrem upgrade` in a client
+repository. The look is `look/index.js` here, plain JavaScript with its types beside it
+(`look/index.d.ts`), so the kit's scripts use it before anything is built and a client
+repository's through `@oltrem/cli/look`. It has no dependency.
+
+```text
+┌  Oltrem deploy
+│  Puts this portal on Cloudflare in seven steps.
+│
+◆  Step 5 of 7 · Put the portal on Cloudflare
+│  ✔ The database is up to date  12 s
+◒  Putting the portal on Cloudflare · 9.4 s
+│
+└  Done: open https://portal.example.workers.dev and sign in at the door
+```
+
+| Part | What it is for |
+|---|---|
+| The rail | `┌` a command's title, `◆` a step or a question, `│` what belongs to it, `└` how it ended |
+| Colour | one meaning each: cyan a step and a number to act on, green done, yellow a warning, red a stop, grey what may be skimmed. Off when the output is not a terminal or `NO_COLOR` is set; on with `FORCE_COLOR` |
+| Long work | a spinner with what it is doing, how far (pnpm's packages, wrangler's migrations) and for how long, then one line saying what was done and how long it took. Only in a terminal; elsewhere a line before and a line after |
+| A tool's own output | kept in `.oltrem/<command>.log` beside the code (git ignores the folder). When the tool fails, its last twelve lines are shown under the stop, with the log's path. When it asks something or names a link to open, its output is shown as it is from then on |
+| The old Windows console | the console PowerShell 5 opens by itself cannot draw every symbol, so it gets `●`, `√`, `×` and a `|/-\` spinner, which its fonts carry; Windows Terminal, VS Code's terminal and the others get the full set (the same test as `is-unicode-supported`) |
+
+`runTool` runs a tool this way; `runToolSync` does the same for a caller that cannot wait, through
+a Node process of its own (`look/run.js`) that draws while the caller waits. The `wranglerRunner`
+`oltrem deploy` uses shows wrangler's long steps this way when a label names them; in a workflow,
+where nobody watches, wrangler's output is printed as it is.
+
 ## `oltrem manifest check [dir...]`
 
 Reads the Worker's `wrangler.jsonc` (or `wrangler.json`) and its `oltrem.manifest.json` in
@@ -157,7 +189,10 @@ declares anything but exactly one D1 database.
 The first deploy and every later one from a person's computer, as one command (`npm run deploy`
 in a client repository), for someone who has never used Cloudflare. Each step looks first and
 only adds, so a run that stopped carries on the next time. The terminal shows seven titled steps
-as they happen, each question after what it is and why it is needed (the door, the ops token), in colour where the terminal shows it and never with `NO_COLOR`:
+in [the kit's look](#the-look-in-a-terminal) as they happen, each question after what it is and why
+it is needed (the door, the ops token); wrangler's sign-in, database and deploy run behind a spinner,
+their output in `.oltrem/deploy.log`, and the last line names the `workers.dev` address the deploy
+printed:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
 2. **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
@@ -498,7 +533,9 @@ a doctor first, and it writes nothing until every check passes:
 When none fails, it copies the new kit migrations, writes the generated reference, and records
 the installed kit versions in `migrations/kit.json`. It prints each installed `@oltrem/*`
 package's release notes, from its `CHANGELOG.md`, since the version recorded last; on the first
-run, the installed version's own. Then run `pnpm verify`, commit and push.
+run, the installed version's own. In [the kit's look](#the-look-in-a-terminal): the checks that
+did not pass, each with its id and fix, then how many passed; the notes of the packages that have
+some, and one line counting those without. Then run `pnpm verify`, commit and push.
 
 Exit `0` when it wrote, `2` when it wrote with warnings, `1` when a check failed and nothing was
 written, `3` when it could not start: no wrangler configuration, or no kit package installed.

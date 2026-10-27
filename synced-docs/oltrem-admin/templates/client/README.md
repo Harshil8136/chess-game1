@@ -28,10 +28,15 @@ client's own configuration. Everything an agent or a person needs to know is in
 `npm run dev` (`scripts/dev.mjs`) starts this Worker on your computer with local stand-ins for
 the database, the key-value namespace and the bucket, and no Cloudflare account. It applies the
 migrations to the local database and gives the Vendor the address `vendor@example.com` there,
-both without asking anything, then serves the portal at <http://localhost:8787>. A provider's
-key pasted there is sealed with a key of this computer's own, which the first `npm run dev` makes
-into `.dev.vars` (git ignores it; delete it and the keys pasted before no longer open). In the
-kit's own repository, run `npm install` once, then `npm run dev` from its root.
+both without asking anything, then serves the portal at <http://localhost:8787>. The migrations
+run in one database session (a few seconds for all of them, where wrangler's own command takes
+one session each), and wrangler's own commands run instead should that fail. It shows a line per
+step in [the kit's look](../../packages/cli/README.md#the-look-in-a-terminal), keeps wrangler's
+output in `.oltrem/dev.log` until the portal answers, then shows only wrangler's errors; Ctrl+C
+stops it. A provider's key pasted there is sealed with a key of this computer's own, which the
+first `npm run dev` makes into `.dev.vars` (git ignores it; delete it and the keys pasted before
+no longer open). In the kit's own repository, run `npm install` once, then `npm run dev` from its
+root; `npm run update` there gets the newest kit, installs what changed and says what is new.
 
 `ACCESS_AUD` is not set on your computer, so the portal shows its own sign-in page instead of
 Cloudflare Access, and only on `localhost`: type an address and you are signed in as that

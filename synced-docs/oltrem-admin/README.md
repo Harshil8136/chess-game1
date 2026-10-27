@@ -15,8 +15,9 @@ repositories an AI agent can work in safely. This repository is the kit itself.
   the pnpm version `package.json` names and installs the workspace with it. The portal opens on
   a sign-in page that exists only on your computer;
   [the client template's README](./templates/client/README.md#on-your-own-computer) walks
-  through the first run. `npm run verify` runs the gate. It works the same on Windows, macOS and
-  Linux.
+  through the first run. `npm run update` gets the newest kit and says what is new;
+  `npm run deploy` puts the portal on Cloudflare. `npm run verify` runs the gate. It works the
+  same on Windows, macOS and Linux.
 
 Where the kit stands, phase by phase, is in [docs/README.md](./docs/README.md). Nothing is
 deployed anywhere yet.

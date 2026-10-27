@@ -193,6 +193,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Files shared with customers](records/2026-10-27-files-shared-with-customers.md) | staff share a file with a customer, who downloads it from their account page, signed in, with no link to leak |
 | [Quotes module](records/2026-10-27-quotes-module.md) | staff send a customer a price, line by line; the customer accepts or declines it on their account page, and the maker is told |
 | [Invoices module](records/2026-10-27-invoices-module.md) | staff bill a customer, from scratch or from an accepted quote; the customer sees what they owe on their account page; staff mark it paid; overdue ones in Needs you |
+| [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one short look for install, `npm run dev`, update and deploy; tools' output in a log; the first local start about four times faster; `npm run update` |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
