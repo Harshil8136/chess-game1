@@ -259,6 +259,14 @@ door calls `open` for the signed-in customer and answers its `Response`, uncache
 again that the thing is theirs and answers null when it is not or no longer is; null, or an
 error, returns the customer to their account page.
 
+An item may also carry `details`, a few lines of text shown under it (a quote's lines and its
+total), and `actions`, each an `id` and a label: the customer's answers to it, accept or decline,
+say. A part with actions adds `act(env, tenantId, email, id, action)`: each action is a button that
+posts to `/account/act/<module>/<id>/<action>`, and the door calls `act` for the signed-in customer
+and returns them to their account page with "Thank you: we have your answer". `act` checks again
+that the item is theirs and still takes that answer, does it once, records it in the audit log,
+and answers false otherwise, which shows "That is no longer open to you"; so does an error.
+
 ```ts
 customer: {
   title: 'Your orders',

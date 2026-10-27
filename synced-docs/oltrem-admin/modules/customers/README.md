@@ -169,7 +169,8 @@ A customer holds no capability: the door is the only place they reach.
 | `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; to whoever manages them a row with "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; the sign-ins, the newest first, with the browser, how and when |
 | `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
 | `/account/code` | the code from the email, with the phone's one-time-code keyboard, and a link to ask for a new one |
-| `/account/open/<module>/<id>` | one thing a module showed the customer, a file to download, say; the module checks again that it is theirs; anything else returns to `/account` with "That is no longer shared with you" |
+| `/account/open/<module>/<id>` | one thing a module showed the customer, a file to download, say; the module checks again that it is theirs; anything else returns to `/account` with "That is no longer open to you" |
+| `/account/act/<module>/<id>/<action>` | a button on the account page, accept a quote, say: posted by the signed-in customer, the module checks again that the item is theirs and still takes that answer, then back to `/account` with "Thank you: we have your answer", or "That is no longer open to you" |
 | `/account` | the customer's account: their name and address, Sign out; a section for each module that shows the customer their own things (the newest 20, each with its state, its date and any replies; "Nothing yet"; a section that could not be read says so and the rest still shows); where they are signed in (this device marked) and "Sign out on the other devices" |
 
 The door's pages use the portal's look, without the staff sidebar; the mark at the top leads to
@@ -248,5 +249,7 @@ the door; removed with its secret; each step audited. The account page with two 
 address only, at most twenty with "more", and a part that fails shown as not readable while the
 page opens and the error is reported; an item opened under the door for its customer only and
 uncached, and another id, another module, a broken path or a failing module returning to the
-account, a visitor with no sign-in sent to sign in. The client template's screens journey adds a customer on the page, signs them
-in at `/account` with the code from the outbox, and shows their account with "Your messages".
+account, a visitor with no sign-in sent to sign in; an action posted by its customer done once and
+thanked, one the module refuses or a broken path returned with "no longer open". The client template's screens journey adds a customer on the page, signs them
+in at `/account` with the code from the outbox, and shows their account with "Your messages", the
+file shared with them and a quote, which they accept there.

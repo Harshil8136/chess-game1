@@ -36,7 +36,10 @@ flowchart LR
 
 Reads never leave memory while the snapshot is fresh (one minute by default). A stale snapshot
 is served as it is and refreshed after the response. A cold Worker reads KV once; a KV miss
-rebuilds the snapshot from D1 and fills KV. A failed read keeps the last good copy, or the kit
+rebuilds the snapshot from D1 and fills KV. So does a snapshot another deploy built: each snapshot
+carries a short hash of the settings its Worker defines, their defaults and the client file, so
+after a deploy that adds a module's setting, changes a default or the client file, the first read
+rebuilds from D1 and the new values show at once, not after the next save. A failed read keeps the last good copy, or the kit
 and client defaults when there is none, and reports one event; nothing throws on the hot path.
 A save writes D1 (the row, its history row, the version bump, in one transaction), rebuilds
 the snapshot, writes KV once and updates the saving instance, so the admin who saved sees the

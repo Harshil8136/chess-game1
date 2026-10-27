@@ -79,6 +79,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the receipt in the bucket, the company's currency, the month's CSV, the routes and the table | written, beside the code |
 | [@oltrem/assets](../modules/assets/README.md) | equipment: who sees and who manages at a place, the holder always, one tag one item, handed over and taken back with every move kept, retired when nobody holds it, what people who left still hold, the routes and the tables | written, beside the code |
 | [@oltrem/customers](../modules/customers/README.md) | customers: the door at /account past Access, the one-time email code and its limits, the `__Host-` sign-in, "Continue with" an OpenID Connect sign-in service, who sees and manages customers, ending sign-ins, the routes and the tables | written, beside the code |
+| [@oltrem/quotes](../modules/quotes/README.md) | quotes: who sees and who makes them at a place, drafts until sent, the lines and total in the company's currency, the customer's answer on their account page once, the routes and the table | written, beside the code |
 | [@oltrem/shifts](../modules/shifts/README.md) | shifts: who plans and who sees at a place, drafts until the week is published, the email to each person, open shifts taken once, one shift at a time a person, the routes and the table | written, beside the code |
 | [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, one open stretch a person, the week on the company's clock, hours added and fixed with why and never one's own, the CSV for payroll, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
@@ -188,6 +189,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Customer sign-in services](records/2026-10-27-customer-sign-in-services.md) | beside the code, "Continue with" a sign-in service the company already uses (any OpenID Connect provider), connected on the "How customers sign in" page |
 | [Customer account sections](records/2026-10-27-customer-account-sections.md) | each module adds the customer's own things to their account page; forms shows the messages they sent and the replies staff sent them |
 | [Files shared with customers](records/2026-10-27-files-shared-with-customers.md) | staff share a file with a customer, who downloads it from their account page, signed in, with no link to leak |
+| [Quotes module](records/2026-10-27-quotes-module.md) | staff send a customer a price, line by line; the customer accepts or declines it on their account page, and the maker is told |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
