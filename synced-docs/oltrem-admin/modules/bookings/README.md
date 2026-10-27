@@ -34,7 +34,7 @@ a place above it) decides:
 
 | Key | Default | What it is |
 |---|---|---|
-| `bookings.time_zone` | `UTC` | the clock bookings are made and shown on, as `America/Mexico_City`; the Owner changes it on the Settings page. A booking keeps its moment when it changes; only how it is shown moves |
+| `bookings.time_zone` | `UTC` | the clock bookings are made and shown on, as `America/Mexico_City` (the client template's time clock reads it too, one clock a portal); the Owner changes it on the Settings page. A booking keeps its moment when it changes; only how it is shown moves |
 
 ## A booking
 

@@ -70,6 +70,15 @@ A definition is refused at once when its key is not `module.name` (the module se
 module id, dashes allowed; the name in lower snake case), when its module does not match the key,
 when its default fails its own schema, or when the key already exists.
 
+## The company's clock
+
+A portal keeps every moment in UTC and shows it on the company's clock, the time zone a setting
+names. `wallClock(at, zone)` gives the day and time on that clock, `instant(day, time, zone)` the
+moment a day and time name (a time the clocks skip lands an hour later, one they repeat takes the
+first), `nextDay` the day after, and `isTimeZone` whether Intl knows a zone. Intl holds every
+zone's offsets, daylight saving included, so no table is kept. The bookings and time clock modules
+read them.
+
 ## The settings routes
 
 `createSettingsModule` is the `settings` module, on bit plane 7, with two capabilities and two
@@ -98,4 +107,5 @@ id), `oltrem_settings` and `oltrem_settings_history`. Additive and idempotent; t
 precedence and the locks, the refusals, the no-I/O hot path, the stale-then-refresh behaviour,
 the fallbacks when KV or D1 fail, and read-your-writes. `test/module.test.ts` calls the two
 routes as the pipeline does: the list with each value's source and who may change it, a save seen
-at once with its history and audit rows, and the four refusals.
+at once with its history and audit rows, and the four refusals. `test/clock.test.ts` holds the clock to the days it moves
+(New York), a time skipped and a time repeated, the day after across a year and a leap day.
