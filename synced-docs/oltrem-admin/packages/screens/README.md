@@ -81,7 +81,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 
 | Form | Calls | Comes back with |
 |---|---|---|
-| Invite someone (`/people/invite`): an address, a role, a place | `POST /api/iam/invitations` | the link to send, shown once |
+| Invite someone (`/people/invite`): one address or up to fifty (separated by commas, spaces or new lines), a role, a place, and whether to email each link | `POST /api/iam/invitations/many` | who was emailed, the links to pass on by hand (shown once), and who was refused with the reason |
 | Make a list (`/records/new`), save its name and place, remove it once empty (a dialog first) | `POST /api/records/lists`, `PATCH`, `DELETE /api/records/lists/:id` | the list with `?done=list-made`; `list-saved`, `list-removed` |
 | Add a record, save one, remove one (a dialog first) | `POST /api/records/lists/:id/items`, `PATCH`, `DELETE .../items/:item` | `?done=record-added`, `record-saved`, `record-removed`; a refused value keeps what was typed |
 | Add a field, move it up or down, remove it with its values (a dialog first) | `POST /api/records/lists/:id/fields`, `POST .../move`, `DELETE .../fields/:field` | `?done=field-added`, `field-moved`, `field-removed` |
@@ -167,7 +167,8 @@ stranger is told there is no account; behind Access the local door does not exis
 makes a role and a place, invites someone who accepts, ends and gives their role, switches the
 account off and on, allows one thing and denies another as exceptions (the person is then refused
 the denied page and shown the allowed one, and Home shows them only the cards they may read), puts one back to their roles and ends the other,
-withdraws an invitation, and sees a refusal and a cross-site form refused. A
+withdraws an invitation, and sees a refusal and a cross-site form refused; later the Owner invites
+two people at once with their links emailed, their own address refused. A
 third connects Resend, with the provider's answers stood in for: a missing key refused, the key
 checked, a test message refused for want of a sending address, the address refused when malformed
 and saved on the Settings page, the test message then sent, the provider made the one that sends,

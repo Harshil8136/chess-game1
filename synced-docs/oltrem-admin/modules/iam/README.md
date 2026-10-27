@@ -236,6 +236,14 @@ the **handover**, stamped on the tenant: before it the Vendor alone invites Owne
 else could approve, and the record says so; from then on an Owner is made, invited or unmade
 only with a second person, and the last one stays.
 
+An invitation can be **emailed**. The client hands `createIam` a `sendInvitation(env, message)`
+(the client template sends it through the email module, as the plain template `iam.invitation`);
+when the inviter asks (`send: true`), the module writes the message, naming who invited, the
+company, the role, the place, the link and its last day, keyed `iam.invitation:<id>` so it goes
+once. The link is then held by the email module's outbox until it is delivered, as any message
+is. Without a sender, or when it refuses (no sending address yet), the invitation stands, the
+answer says `sent: false`, and the screens show the link to pass on by hand.
+
 The company decides **how the Vendor may enter** (`setVendorAccess`, an Owner's with
 `iam.tenant.manage`, never the Vendor's own): `always`; `approval`, where the Vendor is refused
 everything until an Owner opens a **window** of one to twelve hours with a reason
@@ -278,7 +286,7 @@ one read. A change to the capabilities under the same version is not seen: a cha
 version. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
-The manifest: fifty-six JSON routes under `/api/iam` (the Home card's `GET /home`, under
+The manifest: fifty-seven JSON routes under `/api/iam` (the Home card's `GET /home`, under
 `iam.read`, counts the roles and the places), each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
@@ -296,7 +304,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |
 | `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be; `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
 | `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
-| `POST /invitations`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), withdraw |
+| `POST /invitations`, `POST /invitations/many`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), or up to fifty addresses at once, each under the same rules and a refusal stopping none (`made` and `refused`); with `send`, each link is emailed; withdraw |
 | `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
 | `POST /roles`, `PATCH /roles/:id`, `DELETE /roles/:id` | `iam.roles.manage` | roles below your standing, with capabilities you hold |
 | `POST /groups`, `PATCH /groups/:id`, `DELETE /groups/:id`, `POST /groups/:id/members`, `DELETE /groups/:id/members/:principalId` | `iam.groups.manage` | groups and their members, never yourself |
@@ -369,7 +377,9 @@ runtime does not advance its clock during a check. The routes are tested end to 
 pipeline, from an empty portal: the Vendor creates the company over its route, the first Owner
 with no account accepts through the open route and is refused with a wrong token or another
 address, the lists answer with their shapes and refuse a bad page, the Owner shapes the company
-and invites a clerk who reads but cannot shape, grants are made, activated, ended and overridden,
+and invites a clerk who reads but cannot shape, invites several at once (duplicates folded, their
+own address refused, the others made and emailed, a failing sender leaving the link to pass on,
+fifty at most), grants are made, activated, ended and overridden,
 a request is decided and another withdrawn, an approval asked and refused to the wrong person, a
 review decided and closed, the three Vendor modes with the incident and the window, and a sign-in
 ended from the devices list and refused from then on. The startup hook is tested through three

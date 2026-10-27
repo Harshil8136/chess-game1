@@ -65,7 +65,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 
 | Module | Edition | State |
 |---|---|---|
-| `iam`, `users` | Core | **built**: places, roles, groups, exceptions, see it as, invitations, switching off |
+| `iam`, `users` | Core | **built**: places, roles, groups, exceptions, see it as, invitations (one or fifty at a time, each link emailed since 2026-10-27), switching off |
 | settings, audit, alerts, health, backup, github | Core | **built** |
 | `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export |
 | `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies |
