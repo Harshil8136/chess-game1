@@ -54,7 +54,7 @@ self-hosted tiers of the builders reserved for their enterprise plans. That is t
 | Edition | Modules | Who it is for |
 |---|---|---|
 | **Core**, in every portal | people and access (`iam`, `users`), privacy requests, settings, audit, alerts, health, backups, deploys | every client |
-| **Work** | records (your own lists), forms and inbox, files, tasks, approvals, automations, analytics | a team that runs its day in the portal |
+| **Work** | records (your own lists), forms and inbox, files, tasks, approvals, announcements, automations, analytics | a team that runs its day in the portal |
 | **Messages** | providers, email, campaigns (bulk sends), later SMS and WhatsApp | a business that writes to its customers |
 | **Developer** | API keys, outgoing webhooks, the API reference, the jobs page | a business that connects other systems |
 | **Website** (later) | the public site shell, its content, SEO, visitor analytics | a business whose website runs on the same account |
@@ -78,6 +78,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `analytics` | Work | **built** 2026-10-27: the portal's activity counted from the audit log by day, area and action, against the period before; two bar charts, a CSV of the days. A module's own series (emails delivered) later |
 | `tasks` | Work | **built** 2026-10-27: work given to people at a place, by a day; the person's own first and on Home; done by them or by whoever manages the place's tasks; an email when given; "Make a task" for automations. Comments, repeating tasks and a board view later |
 | `approvals` | Work | **built** 2026-10-27: ask for a yes at a place (a purchase, days off, a payment); whoever decides there approves or declines, never their own, a no with its reason; what waits on Home; the answer emailed; every step audited, so an automation can follow it. Two answers in a row and limits by amount later |
+| `announcements` | Work | **built** 2026-10-27: notices to the people at a place, on their Home until read; "I have read it" when one must be confirmed, and who has read it for whoever posts; shown until a day, then past. An email to everyone at the place and reminders later |
 | customer sign-in | Work | next: the client's own customers see their records and files |
 | `privacy` | Core | **built** 2026-10-27: privacy requests (see, correct, delete, stop a use) with their due day from a setting, one search across every module that declares `personal` and the audit log, the identity checked before a copy is downloaded as one file, Needs you and a health check for the days. A public form for people to ask themselves later |
 | `site`, `cms`, `seo`, visitor analytics | Website | later, as plan section 4.4 lists them |

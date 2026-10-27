@@ -72,6 +72,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/analytics](../modules/analytics/README.md) | analytics: the audit log counted by day in SQL, the figures against the period before, the charts, the CSV, the route and the tables | written, beside the code |
 | [@oltrem/privacy](../modules/privacy/README.md) | privacy requests: the due day and its setting, the search through every module's `personal` and the audit log, the identity check, the copy, the routes and the table | written, beside the code |
 | [@oltrem/tasks](../modules/tasks/README.md) | tasks: who sees, gives and does them at a place, the email when given, the automations' task, the routes and the table | written, beside the code |
+| [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks fed by the audit log with their signing, retries and delivery log, the API reference, the pages, routes, tables, errors | written, beside the code |
@@ -167,6 +168,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Privacy module](records/2026-10-27-privacy-module.md) | privacy requests answered on time: one search for a person's data across the portal, a copy once their identity is checked |
 | [Tasks module](records/2026-10-27-tasks-module.md) | work given to people at a place, by a day, on Home and by email; automations make them too |
 | [Approvals module](records/2026-10-27-approvals-module.md) | ask for a yes at a place; whoever decides there answers, never their own, a no with its reason |
+| [Announcements module](records/2026-10-27-announcements-module.md) | notices to the people at a place, on Home until read, confirmed when they must be, who has read them |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
