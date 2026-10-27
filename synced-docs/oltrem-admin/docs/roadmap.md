@@ -74,7 +74,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | `campaigns` | Messages | **built** 2026-10-27: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, a suppression list fed by bounces and complaints |
 | `developer` | Developer | **built** 2026-10-27: the jobs page (every job and flow, its last runs, run soon, pause), webhooks fed by the audit log and signed as Standard Webhooks sign them, with retries and a delivery log, the API reference read from the manifests |
 | API keys | Developer | later: a service calls the API through a Cloudflare Access service token today; making one from the Developer page comes later |
-| `automations` | Work | next: when a record or form answer arrives, or on a schedule, do something (email, a record, a webhook) |
+| `automations` | Work | **built** 2026-10-27: when an audited action happens (a website form's answer among them) or on a schedule in UTC, send an email or raise an alert, or a client's own action; a log of every run. Actions on records, and chains of steps, later |
 | customer sign-in | Work | next: the client's own customers see their records and files |
 | `site`, `cms`, `seo`, `privacy`, `analytics` | Website | later, as plan section 4.4 lists them |
 | `sms`, WhatsApp | Messages | later (the owner's card 15) |

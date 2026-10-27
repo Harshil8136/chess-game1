@@ -68,6 +68,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/users](../modules/users/README.md) | the people: the directory and the profile, the rules of switching an account off and on, the routes, the table and the error codes | written, beside the code |
 | [@oltrem/records](../modules/records/README.md) | the company's own lists: places and the four capabilities, the kinds of field, search, the CSV, routes, tables, errors | written, beside the code |
 | [@oltrem/files](../modules/files/README.md) | the company's files: a drive per place opened by the roles held there, folders and names, uploads, links that end, the trash, the pages, routes, tables, settings, errors | written, beside the code |
+| [@oltrem/automations](../modules/automations/README.md) | automations: an event or a schedule, one action, how the tick runs them within its budget, the kit's two actions and how a client adds one, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks fed by the audit log with their signing, retries and delivery log, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract and the kit's seven email definitions, instances with their sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
@@ -154,6 +155,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Files module](records/2026-10-27-files-module.md) | a drive per place opened by the roles there, links that end, the trash |
 | [Campaigns module](records/2026-10-27-campaigns-module.md) | bulk email from a CSV file in chunks, one-click unsubscribe, suppression |
 | [Developer module](records/2026-10-27-developer-module.md) | the jobs page, signed webhooks from the audit log, the API reference |
+| [Automations module](records/2026-10-27-automations-module.md) | when something happens or on a schedule, an email or an alert; website answers audited |
 
 ## How this folder is checked
 

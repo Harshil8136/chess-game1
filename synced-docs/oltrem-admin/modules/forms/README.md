@@ -100,8 +100,9 @@ the inbox, never what was sent, and at most one email per form in 15 minutes.
 Every change people make is audited (`forms.form-create`, `-update`, `-remove`;
 `forms.key-renew`; `forms.field-add`, `-remove`, `-move`; `forms.entry-update`, `-note`,
 `-remove`), the refusals as much as the successes, with ids only: never what an answer or a note
-says. An answer arriving through the public address is not audited, since no person made it; it
-keeps when it came.
+says. An answer arriving through the public address is the system's `forms.answer`, naming the
+answer, the form and its place and nothing the person wrote, so webhooks and automations hear of
+it; the answer itself keeps when it came.
 
 The module has no card on Home: Home reads a card without the person, and a count of every form's
 answers would tell someone about forms their places do not show them.
@@ -138,4 +139,4 @@ answer; the inbox's views, counts, search, taking, a note, an email reply to the
 person's address to answer to, a reply refused when the answer has no email, removal by role;
 fields added, moved and removed while an old answer keeps its field; the CSV with a formula
 defused; a new address stopping the old one; a form removed with its answers and notes; every
-change audited without what was sent.
+change and every website answer audited without what was sent.
