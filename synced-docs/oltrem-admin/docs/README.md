@@ -72,6 +72,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/analytics](../modules/analytics/README.md) | analytics: the audit log counted by day in SQL, the figures against the period before, the charts, the CSV, the route and the tables | written, beside the code |
 | [@oltrem/privacy](../modules/privacy/README.md) | privacy requests: the due day and its setting, the search through every module's `personal` and the audit log, the identity check, the copy, the routes and the table | written, beside the code |
 | [@oltrem/tasks](../modules/tasks/README.md) | tasks: who sees, gives and does them at a place, the email when given, the automations' task, the routes and the table | written, beside the code |
+| [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks fed by the audit log with their signing, retries and delivery log, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract and the kit's seven email definitions, instances with their sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
@@ -133,6 +134,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Phase 6: oltrem upgrade](records/2026-10-21-oltrem-upgrade.md) | what an upgrade checks before it writes |
 | [Verification log, 19 and 20 October](records/2026-10-19-to-20-verification-log.md) | the log's first rows, moved there unchanged |
 | [Verification log, 21 October](records/2026-10-21-verification-log.md) | its first rows, moved |
+| [Verification log, 21 to 24 October](records/2026-10-21-to-24-verification-log.md) | the rest of 21 October and 22 to 24 October, moved |
 | [The screens and two commands](records/2026-10-21-screens-and-npm.md) | `npm install`, `npm run dev`, the local sign-in, why the Worker renders the screens |
 | [The screens that change things](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places, email providers and settings, and how a form travels |
 | [Phase 3: alerts](records/2026-10-21-alerts.md) | how a lasting problem is emailed once, held in the quiet hours, acknowledged and resolved |
@@ -164,6 +166,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Needs you](records/2026-10-27-needs-you.md) | Home opens with what waits for the person signed in, from each module |
 | [Privacy module](records/2026-10-27-privacy-module.md) | privacy requests answered on time: one search for a person's data across the portal, a copy once their identity is checked |
 | [Tasks module](records/2026-10-27-tasks-module.md) | work given to people at a place, by a day, on Home and by email; automations make them too |
+| [Approvals module](records/2026-10-27-approvals-module.md) | ask for a yes at a place; whoever decides there answers, never their own, a no with its reason |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
