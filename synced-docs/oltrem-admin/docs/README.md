@@ -146,6 +146,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Verification log, 19 and 20 October](records/2026-10-19-to-20-verification-log.md) | the log's first rows, moved there unchanged |
 | [Verification log, 21 October](records/2026-10-21-verification-log.md) | its first rows, moved |
 | [Verification log, 21 to 24 October](records/2026-10-21-to-24-verification-log.md) | the rest of 21 October and 22 to 24 October, moved |
+| [Verification log, 27 October, first part](records/2026-10-27-verification-log.md) | the first twenty-six rows of 27 October, moved |
 | [The screens and two commands](records/2026-10-21-screens-and-npm.md) | `npm install`, `npm run dev`, the local sign-in, why the Worker renders the screens |
 | [The screens that change things](records/2026-10-21-people-and-access-screens.md) | the forms for people, roles, places, email providers and settings, and how a form travels |
 | [Phase 3: alerts](records/2026-10-21-alerts.md) | how a lasting problem is emailed once, held in the quiet hours, acknowledged and resolved |

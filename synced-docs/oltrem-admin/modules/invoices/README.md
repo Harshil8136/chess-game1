@@ -98,7 +98,7 @@ not made up: the reminders look at exact days.
 
 | Path | Shows |
 |---|---|
-| `/invoices` | a row of All, Overdue, Drafts, Sent, Paid and Void with their counts; "Make an invoice" to whoever makes them somewhere; the invoices, the newest first, with their number, customer, total and state |
+| `/invoices` | three tiles in the company's currency at the places the person sees: "Owed to you" (sent, not paid), "Overdue" (sent, past its day) and "Paid this month" (since the first, UTC), each opening its view; a row of All, Overdue, Drafts, Sent, Paid and Void with their counts; "Make an invoice" to whoever makes them somewhere; the invoices, the newest first, with their number, customer, total and state |
 | `/invoices/new` | a row "From an accepted quote" (Blank and the newest twelve accepted quotes) when there are any; the place as a row of choices, the customer's address, the title, six rows of lines, the day it is due (30 days ahead to start) and how to pay |
 | `/invoices/:id` | the invoice with its state; a row with "Send to the customer", "Change", "Mark it paid" (how, in a dialog) and "Void it" (after a confirmation) to whoever makes invoices there, "Print or save as PDF" and "All invoices"; the lines with the total and the day it is due; how to pay; when it was made, sent and paid |
 | `/invoices/:id/change` | the same form as a new invoice, for a draft |
@@ -112,7 +112,7 @@ save as a PDF, through `/account/open/invoices/<id>`, only while it is theirs an
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /invoices` (`view` all, overdue or a state) | `invoices.view` | the invoices at the places the person sees, at most 100, with the places, the counts and the company's currency |
+| `GET /invoices` (`view` all, overdue or a state) | `invoices.view` | the invoices at the places the person sees, at most 100, with the places, the counts, the company's currency and the sums owed, overdue and paid this month (over every invoice at those places, in that currency) |
 | `POST /invoices` | `invoices.make` at the place | makes a draft |
 | `GET /invoices/:id` | `invoices.view` at its place | one invoice, with whether the reader makes invoices there |
 | `GET /invoices/:id/paper` | `invoices.view` at its place | the invoice as one page to print or save as a PDF: HTML with no script or image, every text escaped, its own `default-src 'none'` policy, not cached; a draft is marked "Draft: not sent" |
