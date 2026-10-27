@@ -253,6 +253,12 @@ item should be something the company wrote or confirmed: never text that anyone 
 in the customer's name. No route is added. `defineModule` refuses a `customer` without a title.
 A `find` that throws shows its section as not readable; the page still opens.
 
+A part that can hand the customer something, a file, adds `open(env, tenantId, email, id)` and
+gives each such item an `id`: the page links the item to `/account/open/<module>/<id>`, where the
+door calls `open` for the signed-in customer and answers its `Response`, uncached. `open` checks
+again that the thing is theirs and answers null when it is not or no longer is; null, or an
+error, returns the customer to their account page.
+
 ```ts
 customer: {
   title: 'Your orders',

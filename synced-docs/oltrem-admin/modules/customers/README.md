@@ -9,7 +9,8 @@ through OpenID Connect. Every step is in the audit log.
 
 Once signed in, a customer's account page shows their own things: each module of the portal that
 declares a customer part adds a section, read for the address the customer proved. The forms
-module is the first: the messages they sent and the replies staff sent them.
+module is the first: the messages they sent and the replies staff sent them. The files module
+adds the files shared with them, which they download there, signed in.
 
 ## Using it
 
@@ -168,6 +169,7 @@ A customer holds no capability: the door is the only place they reach.
 | `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; to whoever manages them a row with "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; the sign-ins, the newest first, with the browser, how and when |
 | `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
 | `/account/code` | the code from the email, with the phone's one-time-code keyboard, and a link to ask for a new one |
+| `/account/open/<module>/<id>` | one thing a module showed the customer, a file to download, say; the module checks again that it is theirs; anything else returns to `/account` with "That is no longer shared with you" |
 | `/account` | the customer's account: their name and address, Sign out; a section for each module that shows the customer their own things (the newest 20, each with its state, its date and any replies; "Nothing yet"; a section that could not be read says so and the rest still shows); where they are signed in (this device marked) and "Sign out on the other devices" |
 
 The door's pages use the portal's look, without the staff sidebar; the mark at the top leads to
@@ -219,8 +221,7 @@ customer who is not there is `KIT-E-0404`. The door answers in pages, never with
 
 ## Not here yet
 
-- More of what a customer sees: their bookings and the files shared with them, when those modules
-  add their parts. Forms adds the messages and replies today.
+- An email telling a customer something new is on their account page.
 - A setting to switch the emailed code off, for a company whose customers all use a service.
 - The ID token's signature checked against the service's keys (`jwks_uri`); today TLS to the
   token endpoint stands for it, as the standard allows.
@@ -246,5 +247,7 @@ service; the return refused for another state, after ten minutes, when cancelled
 nonce, an unverified address or an address that is no customer; a service switched off gone from
 the door; removed with its secret; each step audited. The account page with two modules' parts: the items for the signed-in
 address only, at most twenty with "more", and a part that fails shown as not readable while the
-page opens and the error is reported. The client template's screens journey adds a customer on the page, signs them
+page opens and the error is reported; an item opened under the door for its customer only and
+uncached, and another id, another module, a broken path or a failing module returning to the
+account, a visitor with no sign-in sent to sign in. The client template's screens journey adds a customer on the page, signs them
 in at `/account` with the code from the outbox, and shows their account with "Your messages".

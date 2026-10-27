@@ -67,6 +67,17 @@ of downloads; it is shown once, and the database keeps only its SHA-256. It open
 file goes to the trash. An ended link answers `410` with a line of text. Each download is
 audited as `files.share-download`.
 
+## Shared with a customer
+
+When the portal has customers (`@oltrem/customers`), a person who may share a file can also share
+it with a customer by their address, for 30 days, 90 days or a year. No link is made: the
+customer finds the file under "Files shared with you" on their account page and downloads it
+there, signed in, at `/account/open/files/<share>`. The page lists the newest 20 still good;
+each download is counted and audited as `files.share-download` by `customers.door`, without the
+address. It ends like a link: by hand ("Stop sharing"), at its day, or when the file or a folder
+above it goes to the trash (it is back if they are restored before the day). The customer is not
+emailed; tell them it is there.
+
 ## The trash
 
 Moving an item to the trash hides it and everything inside it, and ends its links. A restore
@@ -81,7 +92,7 @@ that ended a month ago.
 | Path | Shows |
 |---|---|
 | `/files` | a row of the places the person may see (when more than one), a row for Files and Trash, the folder's path, its folders and files, and for a writer the **Upload a file** and **New folder** sheets |
-| `/files/:id` | one item: download or open, its details, an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, trash, restore, and delete for good behind a confirmation |
+| `/files/:id` | one item: download or open, its details, an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
 ## Search
 
@@ -97,7 +108,7 @@ file holds.
 | `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there |
 | `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links and the folders it may move to; the file itself |
 | `POST /folders`, `POST /uploads`, `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
-| `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days`, `maxDownloads`); end one |
+| `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`), or with `email` share it with that customer (`days` up to 365, no link); end one |
 | `DELETE /items/:id` | `files.purge` | delete from the trash for good |
 
 The hook `GET /hooks/files/s/:token` opens a link. Every change is audited by the module
@@ -115,6 +126,8 @@ Migration `0019_files.sql`, additive and idempotent, in the one ledger `oltrem_m
 `files_items` (each file and folder: its tenant, place, folder, kind, name, size, type, who
 changed it and when, when it went to the trash) and `files_shares` (each link: its item, the
 hash of its token, who made it, when it ends, its download limit and count, when it was ended).
+Migration `0040_files_customers.sql` adds the address a share is for (`email`, empty for a link)
+and an index on it in lower case, which a customer's account page reads by.
 
 ## Settings
 
@@ -140,7 +153,11 @@ writable; a role given at the place opening its files at once; the download's he
 image in place; an upload over the limit refused; a rename and a move, never into itself; links
 counted, ended at their limit, by hand, at their day and by the trash; the trash, a restore, and
 a delete for good of a folder with its content; the job; every change audited without content;
-the storage check. The client template's screens test runs the pages: an upload from the form, a
-folder, a move, a link opened and ended by the trash.
+the storage check; a file shared with a customer for a year without a link, a link over 30 days
+and a bad address refused, listed and opened for that address only and in that company only, hidden
+while its folder is in the trash and back when restored, gone when ended by hand or at its day,
+the newest twenty with more, the download audited without the address. The client template's
+screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
+the trash, and a file shared with a customer who downloads it from their account page.
 
 The search test finds names only in the places a person's roles reach, folders first, and takes `_` as a letter.

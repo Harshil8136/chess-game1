@@ -187,6 +187,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Shifts module](records/2026-10-27-shifts-module.md) | who works when at each place: drafts, the week published and emailed, open shifts taken, changes told |
 | [Customer sign-in services](records/2026-10-27-customer-sign-in-services.md) | beside the code, "Continue with" a sign-in service the company already uses (any OpenID Connect provider), connected on the "How customers sign in" page |
 | [Customer account sections](records/2026-10-27-customer-account-sections.md) | each module adds the customer's own things to their account page; forms shows the messages they sent and the replies staff sent them |
+| [Files shared with customers](records/2026-10-27-files-shared-with-customers.md) | staff share a file with a customer, who downloads it from their account page, signed in, with no link to leak |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked
