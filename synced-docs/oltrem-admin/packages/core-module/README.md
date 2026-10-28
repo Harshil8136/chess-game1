@@ -300,8 +300,13 @@ model: its `package.json` exports `./pages`, whose one export is named `pages` (
 loader stands it in by that name when it reads a Worker in Node), its `tsconfig.pages.json`
 checks the JSX, and two pragma lines at the top of `pages.tsx` tell any bundler how to compile it.
 
+A page's post uses three helpers from `@oltrem/core-module/pages`, kept once (2026-10-28):
+`field(form, name)`, a form field's text trimmed (empty for a missing one or a file),
+`redirect(to)`, and `refused(title, detail?)`, the 422 `KIT-E-0422` a page shows above its form.
+
 A route may take its body as the content itself (`body: 'bytes'`, POST or PUT only): an upload.
-Its schema then checks the query.
+Its schema then checks the query. `route(def)` holds a route written with its own input type
+(from its schema) in the module's list of routes, which every module's list uses.
 
 ## CSV files
 
@@ -314,7 +319,9 @@ its quotes doubled, a yes or no as `Yes` or `No`, and text a spreadsheet would r
 (starting with `=`, `+`, `-`, `@`, a tab or a carriage return) given a leading apostrophe, so what
 someone typed never runs on the computer of whoever opens the download. Every download of the kit
 writes through them: the audit log's, the forms' answers, the records' lists, the expenses' month
-and the time clock's hours.
+and the time clock's hours. `csvResponse(csv, fileName)` sends one as a download that no cache
+keeps, and `fileNameOf(name, fallback, suffix?)` names it from what a person typed, kept to
+letters, digits, dashes and 60 characters.
 
 ## Pages to print
 

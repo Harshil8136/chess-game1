@@ -106,6 +106,11 @@ refused. `GET /room` and the **Room today** panel show what is left today: the m
 daily limit, the database writes and the messages they leave room for, the run size, and the
 events queue's backlog.
 
+A run never hands the provider more than it says is left (2026-10-28, `left` from the email
+module's `bulk.route`): past its allowance some providers drop the mail. When it says none are
+left, the campaign waits with words such as "Resend says no emails are left today; it goes on at
+2026-10-29 00:00 UTC", until the time the provider gave, or tomorrow when it gave none.
+
 ## Leaving the list
 
 Every message carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`

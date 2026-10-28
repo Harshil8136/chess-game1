@@ -157,9 +157,15 @@ const governance = createGovernance<Env>({
   sessions,
 });
 
-// in a handler, with the session the pipeline loaded
-const actor = { session: asSession(ctx.session), requestId: ctx.requestId, waitUntil: ctx.waitUntil };
-await governance.grant(env, actor, { subjectKind: 'principal', subjectId, roleId, scopeId, reason });
+// in a handler, with the session the pipeline loaded: actorOf(ctx) is the session, the
+// request's id and its waitUntil, so the audit row is written after the response
+await governance.grant(env, actorOf(ctx), {
+  subjectKind: 'principal',
+  subjectId,
+  roleId,
+  scopeId,
+  reason,
+});
 ```
 
 `createGovernance` holds every write that changes who may do what (plan 7.3): grants and their

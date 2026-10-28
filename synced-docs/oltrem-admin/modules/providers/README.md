@@ -137,6 +137,20 @@ email module never names a provider.
   which Resend honours for 24 hours: a repeated call is answered as the first); Brevo has neither,
   since its message versions carry no headers of their own and every bulk message has its own
   unsubscribe header.
+- **What is used and left** (2026-10-28): a definition's optional `usage` block names the
+  provider's own count, a `GET` (`path`) read by JSONPaths into three windows, `day`, `month`
+  and `plan` (a plan's credits that are neither), each with `used`, `limit`, `left` and `resets`,
+  and a `when` that reads a window only when a field says so (Brevo's credits are today's on the
+  free plan, the plan's on a paid one). `usage(opened)` answers `{ at, asked, day, month, plan,
+  problem }`, null for a definition without one; it never throws, and a key that may not read
+  the count (Resend's sending-only key answers 401) is the `problem`, in words. `left` is worked
+  out only from a used count and a limit the provider gave together, never guessed. The block's
+  `headers` name the counts used some providers put on every answer to a send (Resend's
+  `x-resend-daily-quota` and `x-resend-monthly-quota`): `send` and `sendBatch` return them as
+  `quota`, and `withQuota(kept, quota, at)` moves the kept figures on, the limit kept while the
+  window has not started again. `leftOf(usage, now)` is the tightest window that still says what
+  is left. The kit's definitions read Resend's `/usage`, Brevo's account, SendGrid's credits and
+  SES's 24-hour quota; Postmark, Mailgun and SMTP say nothing.
 - **The domain client**, `createDomainClient({ fetch?, now? })`, speaks the `domains` block:
   `supports`, `create`, `read` and `verify`, each answering the provider's id, whether it is
   verified, its status word and its records with full host names (`hostOf`; `@` is the domain
@@ -212,7 +226,9 @@ made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activ
 
 Migration `0010`: `providers_definitions` (the client's rows), `providers_keys` (one wrapped data
 key per tenant, with the id of the key that wrapped it and when it was rotated) and
-`providers_instances` (indexed by tenant, kind, status and failover order). Error codes
+`providers_instances` (indexed by tenant, kind, status and failover order). Migration `0051`
+adds `usage` to the instance: what its provider last said was used and left, as JSON, written by
+`registry.recordUsage(db, id, usage)`. Error codes
 `KIT-E-1401` to `1409`: a bad definition, an unknown one, a missing field, an instance not ready
 to activate, the active instance in use, the kit's definition that has no row to remove, a
 provider that did not take the message, what the definition asks for that this kit version
