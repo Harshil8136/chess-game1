@@ -33,7 +33,8 @@ port, said out loud, when another program already holds 8787). The migrations
 run in one database session (a few seconds for all of them, where wrangler's own command takes
 one session each), and wrangler's own commands run instead should that fail. It shows a line per
 step in [the kit's look](../../packages/cli/README.md#the-look-in-a-terminal), keeps wrangler's
-output in `.oltrem/dev.log` until the portal answers, then shows only wrangler's errors; Ctrl+C
+output in `.oltrem/dev.log` until the portal answers (on either loopback address; after two
+minutes without an answer it stops and shows wrangler's last lines), then shows only wrangler's errors; Ctrl+C
 stops it. A provider's key pasted there is sealed with a key of this computer's own, which the
 first `npm run dev` makes into `.dev.vars` (git ignores it; delete it and the keys pasted before
 no longer open). In the kit's own repository, run `npm install` once, then `npm run dev` from its
