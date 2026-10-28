@@ -37,11 +37,12 @@ without it. A Worker that mounts the module therefore lists `KEK` in `secrets.re
 
 ## The definitions
 
-The kit ships seven email definitions in `src/definitions/email.ts`, each written from the
-provider's public API reference: Resend, Brevo, Postmark, SendGrid, Mailgun, Amazon SES and any
-SMTP server. Six are the HTTP template engine's: a base URL, a send template with `{{secret.x}}`,
+The kit ships nine email definitions in `src/definitions/email.ts`, each written from the
+provider's public API reference: Resend, Brevo, Postmark, SendGrid, Mailgun, Amazon SES, Sender
+(its API and its SMTP relay) and any SMTP server. Seven are the HTTP template engine's: a base URL, a send template with `{{secret.x}}`,
 `{{config.x}}` and `{{message.x}}` placeholders (a `$each`/`$as` pair maps a list), a JSON or
-form body, where the message id is read from, a probe. One is the SMTP client's. Every one names
+form body, where the message id is read from, a probe. Two are the SMTP client's: Sender's
+relay (`smtp.sender.net`, 587) and any server. Every one names
 its auth scheme (`bearer`, `basic`, `api-key-header`, `sigv4`, `smtp-plain`), the fields a person
 pastes with which are secret, a recipe (where to create the key, its scopes, how to test and
 rotate it, what the kit does without it), and, where the provider signs its webhooks, the
@@ -54,6 +55,14 @@ as Brevo's Apple privacy proxy opens); where the provider says it in the report 
 A fingerprint (SPF includes, DKIM selectors or
 CNAME suffix, a verification TXT prefix) is written only where the research confirmed the
 pattern; the rest is left for the sandbox to confirm, never guessed.
+
+Sender (2026-10-28) takes one recipient a message: its send says `oneRecipient`, and a message
+to more is refused before any call (`KIT-E-1408`), so it goes through the failover, or through
+Sender's SMTP relay, which takes many. It has no reply-to field, so `{{message.headersWithReplyTo}}`
+sends Reply-To among the headers. Its webhooks carry only bounces, on its paid plans, signed with
+a header it does not publish; it publishes no count of emails used or left and no domain API. So
+a Sender instance sends, is probed and is counted by the portal, while its delivery reports, its
+allowance and its domain set-up wait for the sandbox: the domain is set up in Sender's dashboard.
 
 An HTTP definition may also carry a `domains` block: how the provider adds a sending domain
 (`create`), reads it back (`read`) and is asked to look again (`verify`), each a method, a path
