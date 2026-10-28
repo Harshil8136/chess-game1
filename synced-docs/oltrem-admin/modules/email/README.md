@@ -280,8 +280,8 @@ kept, so it is not in the answer. The Email page is linked.
 
 - A screen of the do-not-mail list in this module and a daily cap come with the later bulk
   sending stages (docs/records/2026-10-28-senders-and-domains.md); until then the list is seen
-  and changed on the Campaigns pages. A campaign is written with its own subject, text and file
-  until the sending engine of stage 5 lets it pick a saved template and a saved list.
+  and changed on the Campaigns pages. Since stage 5 a campaign picks a saved template and a saved
+  list, and the campaigns module's engine is what calls `bulk.route` and `bulk.send`.
 - A list is filled from a file or typed addresses; filling one from the customers module is
   not built yet.
 - The domain calls are written from Resend's and Brevo's API references and tested against

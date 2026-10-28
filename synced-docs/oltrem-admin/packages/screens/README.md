@@ -179,6 +179,13 @@ theme switch act at once and save behind the scenes. A button with `data-copy` c
 to the clipboard and says "Copied", aloud too, for two seconds. A thin line at the top shows a page that is
 still loading.
 
+**Live blocks.** A block marked `data-live="name"` with `data-refresh="seconds"` (at least five)
+is kept up to date: the script fetches the page again, or the lighter page `data-refresh-from`
+names, and swaps that block alone, so what the person is reading or typing elsewhere stays. It
+does not fetch while the tab is hidden, a dialog is open, a page is on its way or the person is in
+a form. A block whose new copy has no `data-refresh` stops refreshing; a fetch that fails dims the
+block (`data-stale`) until one works. A campaign's progress is the first such block.
+
 What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,
 `/ui/*`, the local door and the invitation link (`NATIVE` in the script), and an answer that is
 not a page. When the sidebar itself changed (a section given or taken away, another account: the
@@ -190,7 +197,7 @@ every link and form works as a plain load.
 
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
 theme and the classes the pages and primitives use, about 46 KiB. `src/generated/app-js.ts` holds
-the frame's script, copied from `src/client/frame.js`, about 17 KiB. They are served at
+the frame's script, copied from `src/client/frame.js`, about 20 KiB. They are served at
 `/ui/app.css` and `/ui/app.js`, cached for good under their version and `no-cache` without it.
 After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
 while a committed file differs from what the build writes. Both files are generated: never edit
