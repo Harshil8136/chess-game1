@@ -284,8 +284,21 @@ port, a refused socket), the same deploy runs in the terminal instead.
 card, runs as a second process whose lines come over IPC as the deploy's do (the kit's look sends
 them when `OLTREM_PAGE` is set and the process has an IPC channel), and ends with **Back to the
 start**. A choice marked stoppable (the portal on this computer) has a **Stop it** button, which
-asks the process over IPC to stop what it started, then ends it three seconds later. The kit's
-root runs it as `npm start` and from its one-click files; see the root README.
+asks the process over IPC to stop what it started, then ends it three seconds later, with every
+process it started (`stopTree` in the look: `taskkill /T` on Windows, where a plain kill would leave
+wrangler's runtime holding the port). The kit's root runs it as `npm start` and from its one-click
+files; see the root README.
+
+A running step shows what its tool says right now under its label: the look sends a task's
+progress as an event when it changes, a few times a second at most. When a run stops with a
+problem, the server writes its details to the `reportFile` it was given (`.oltrem/report.txt`),
+names that file in the page and the terminal, and serves the same text at `/report` (with the
+key) for the page's **Copy the details** button; when the browser refuses the clipboard, the text
+is shown selected for Ctrl+C. The details (`reportText`) carry what ran, the computer (system,
+version, Node), the `about` lines the caller gives (the kit's commit, the folder), every line the
+page showed with each task's last progress, and the last 80 lines of each of the run's logs, all
+passed through `redact`, which hides an age secret key, a sign-in address's query, a value named
+like a key and any long run of letters and digits that holds both.
 
 ## `oltrem setup [dir]`
 

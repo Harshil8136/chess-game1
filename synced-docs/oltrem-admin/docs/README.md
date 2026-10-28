@@ -196,6 +196,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one short look for install, `npm run dev`, update and deploy; tools' output in a log; the first local start about four times faster; `npm run update` |
 | [The setup page](records/2026-10-27-setup-page.md) | `npm run setup` puts a portal on Cloudflare with a page in the browser that asks each question and shows the progress, in the portal's look |
 | [One-click setup](records/2026-10-28-one-click-setup.md) | a file to double-click on each system opens a start page; the deploy picks the account and domain, checks the key on paste and notices the door |
+| [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows what its tool says, the packages and the local start repair themselves, and a stop offers its details to copy |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked

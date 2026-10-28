@@ -46,6 +46,14 @@ Keep the window the file opened while you use the page: closing it stops everyth
 does not open, the window shows its address, and if no browser opens it within two minutes, the
 window asks the same three choices by number. Each step keeps its full output in `.oltrem/`.
 
+Each step says what it is doing while it runs, including what the tool it waits on says right now.
+The start page repairs the kit's packages by itself when they are missing or older than the kit;
+the portal on this computer moves to a free port when its own is taken, and tries once more when
+it stops for a reason a second try can get past. When something still stops, the page says what
+and why, and a **Need a hand?** box has **Copy the details**: what ran, on what computer, every
+line the page showed and the last lines of each log, with keys hidden, ready to paste to Claude.
+The same details are saved in `.oltrem/report.txt`.
+
 ### The same in a terminal
 
 With Node 22 or newer, from this folder:

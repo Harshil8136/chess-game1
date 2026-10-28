@@ -33,9 +33,15 @@ port, said out loud, when another program already holds 8787). The migrations
 run in one database session (a few seconds for all of them, where wrangler's own command takes
 one session each), and wrangler's own commands run instead should that fail. It shows a line per
 step in [the kit's look](../../packages/cli/README.md#the-look-in-a-terminal), keeps wrangler's
-output in `.oltrem/dev.log` until the portal answers (on either loopback address; after two
-minutes without an answer it stops and shows wrangler's last lines), then shows only wrangler's errors; Ctrl+C
-stops it. A provider's key pasted there is sealed with a key of this computer's own, which the
+output in `.oltrem/dev.log` until the portal answers, then shows only wrangler's errors; Ctrl+C
+stops it. While the portal starts, the line under the spinner is wrangler's own latest line (its
+routine notices left out); the portal is found at the address wrangler says it is ready on, on
+either loopback address. wrangler gets no keyboard, so a question it would ask stops it instead
+of waiting unseen. When it stops, the start names the cause it recognises (the port taken, a
+sign-in asked for, the Visual C++ runtime missing on Windows, packages missing, an old Node, a
+full disk, a file held by another program) and tries once more on the next port when a second
+try can get past it; after two minutes without an answer it stops and shows wrangler's last
+lines. A provider's key pasted there is sealed with a key of this computer's own, which the
 first `npm run dev` makes into `.dev.vars` (git ignores it; delete it and the keys pasted before
 no longer open). In the kit's own repository, run `npm install` once, then `npm run dev` from its
 root; `npm run update` there gets the newest kit, installs what changed and says what is new.
