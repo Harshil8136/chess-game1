@@ -497,6 +497,11 @@ alert on or off (`POST /api/sentry/monitors`) asks `denySentry(user, 'monitors',
 `sentryCan` offers the switch as `switchMonitors` ([`SENTRY.md`](../features/SENTRY.md) §1 and
 §9).
 
+*Added 2026-10-28 (Sentry stage 3, migration `0086`):* one more Sentry sub-page,
+`/dashboard/sentry/releases`, Releases and updates (`super_admin`, sharing Logs' sort order). It
+only reads, so no action key: `GET /api/sentry/releases` asks `denySentry(user, 'releases')`, the
+page and the part, each exactly ([`SENTRY.md`](../features/SENTRY.md) §1 and §10).
+
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
 top-level page required a migration rather than a re-link
@@ -1437,6 +1442,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-28 | claude | **Scope-limited to the Sentry stage 3 paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts` and `migrations/0086_sentry_releases.sql`; read the live row back through the D1 connector after `0086`; `test/sentry-stage3.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | claude | **Scope-limited to the Sentry stage 2 paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts` (`switchOne`) and `migrations/0085_sentry_speed_trends_monitors.sql`; read the three live rows back through the D1 connector after `0085`; `test/sentry-stage2.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | claude | **Scope-limited to the two Control Plane paragraphs.** Read the five forwards in `src/pages/dashboard/control-plane/`, `API_PAGE_MAPPING` in `src/lib/auth/routes.ts` and `migrations/0084_retire_control_plane.sql`; read the eight live rows before (all active) and after `0084` through the D1 connector; `test/control-plane-retired.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraphs match the code and the live rows; `last_verified` left as it was |
 | 2026-10-28 | claude | **Scope-limited to the Configuration Cloudflare paragraph.** Read `src/pages/api/configuration/limits.ts` and `cloudflare.ts`, `src/pages/dashboard/configuration.astro` and `migrations/0083_configuration_cloudflare.sql`; read the live row back through the D1 connector after `0083` was applied; `test/configuration-limits-cloudflare.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |

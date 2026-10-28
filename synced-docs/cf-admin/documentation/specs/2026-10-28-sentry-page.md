@@ -206,6 +206,13 @@ who, what, before and after, and refused if the person lacks the permission.
    website tells Sentry (MAINTENANCE SE-9).
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
    (§10) start working, the releases each project has sent, and Sentry's update suggestions.
+   *As built so far (2026-10-28, migration `0086`):* the Releases and updates part
+   ([SENTRY.md](../features/SENTRY.md) §10): each project's newest releases with when each was
+   first and last seen and the issues first seen in it, and the changes Sentry suggests to the
+   library each project used in the last day (a newer version, an integration to turn on, another
+   library), as words with Sentry's page, since an update is a change made in that project's own
+   repository. The portal's three settings wait on Harshil's choice: wiring them changes what the
+   portal sends today.
 
 Each stage ships on its own, with its tests, documents and a change record.
 

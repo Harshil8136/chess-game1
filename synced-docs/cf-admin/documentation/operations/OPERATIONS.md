@@ -27,6 +27,8 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-28 | `ls migrations/*.sql` (64 files, highest `0086`), `d1_migrations` newest row through the Cloudflare D1 connector after `0086` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
+| 2026-10-28 | §5's `SENTRY_AUTH_TOKEN` row, for the Sentry page's Releases and updates: the calls in `src/lib/sentry/releases.ts` (`project:read` for the releases, `org:read` for `sdk-updates`) | No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | §5's `CLOUDFLARE_API_TOKEN` and `SENTRY_AUTH_TOKEN` rows, for the Sentry page's stage 2: the calls in `src/lib/sentry/trends.ts` (`cloudflareAccount`) and `monitors.ts` (`alerts:read`, `alerts:write`) | No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | `ls migrations/*.sql` (63 files, highest `0085`), `d1_migrations` newest row through the Cloudflare D1 connector after `0085` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | `ls migrations/*.sql` (62 files, highest `0084`), `d1_migrations` newest row through the Cloudflare D1 connector after `0084` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
@@ -592,7 +594,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
 | `RESEND_API_KEY` | Resend — System health's *Resend* check only (`resend` in `src/lib/health/catalog.ts`, since 2026-10-17; the diagnostics ping `resend_ping` before it was removed). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
-| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane until it was retired on 2026-10-28, the unresolved issues on System health → Logs, since 2026-10-26 the Analytics page's Reliability part (errors per day and open issues, [`ANALYTICS.md`](../features/ANALYTICS.md) §4) and, since 2026-10-28, the Sentry page (its Overview, Issues, Logs, Speed, Trends, Monitors and alerts, and Settings; resolving or archiving an issue needs the token's `event:write`, this month's use `org:read`, the Settings part's filters and key limits `project:write`, the monitors and alerts `alerts:read` and switching them `alerts:write`, [`SENTRY.md`](../features/SENTRY.md) §2) (build-time source-map upload uses the same token) |
+| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane until it was retired on 2026-10-28, the unresolved issues on System health → Logs, since 2026-10-26 the Analytics page's Reliability part (errors per day and open issues, [`ANALYTICS.md`](../features/ANALYTICS.md) §4) and, since 2026-10-28, the Sentry page (its Overview, Issues, Logs, Speed, Trends, Monitors and alerts, Releases and updates, and Settings; resolving or archiving an issue needs the token's `event:write`, this month's use and the updates Sentry suggests `org:read`, the releases `project:read`, the Settings part's filters and key limits `project:write`, the monitors and alerts `alerts:read` and switching them `alerts:write`, [`SENTRY.md`](../features/SENTRY.md) §2) (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads until Control Plane was retired on 2026-10-28, since 2026-10-26 the Analytics page's queries, which need the key's "Query: Read" scope ([`ANALYTICS.md`](../features/ANALYTICS.md) §4), and since 2026-10-28 the PostHog page, which needs the same scope and, for its free-allowance card, "Billing: Read" and "Project: Read" (with `POSTHOG_ORG_ID` and `POSTHOG_PROJECT_ID` when set; [`POSTHOG.md`](../features/POSTHOG.md) §2); its Settings part reads PostHog's own recording setting with "Project: Read" and changes it with "Project: Write" |
 | `GSC_SERVICE_ACCOUNT_JSON` | Google Search Console service-account key (documented RULE #0.8 exception); since 2026-10-26 also the Analytics page's search analytics, which needs the account as a user of the property |
 | `PAGESPEED_API_KEY` | PageSpeed Insights API key (documented RULE #0.8 exception) |
@@ -732,8 +734,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-28: migrations/ holds 63 files, highest
-# 0085_sentry_speed_trends_monitors.sql (applied 2026-10-28 09:22:21 UTC).
+# State as of 2026-10-28: migrations/ holds 64 files, highest
+# 0086_sentry_releases.sql (applied 2026-10-28 10:21:18 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/

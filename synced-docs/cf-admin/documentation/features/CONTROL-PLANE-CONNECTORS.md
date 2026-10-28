@@ -156,7 +156,7 @@ base URLs are public/standard and shown for orientation.
 Control Plane's Sentry reads and writes (top issues, inbound filters, client keys, key rate
 limits, spike protection, resolve and ignore) were removed from this file on 2026-10-28. The
 Sentry page does them through its own client, `src/lib/sentry/`, with its own permission checks
-([SENTRY.md](./SENTRY.md) §6 and §10).
+([SENTRY.md](./SENTRY.md) §6 and §11).
 
 ### 3.3 PostHog — removed 2026-10-28
 
@@ -282,6 +282,7 @@ audit) rather than wiring the UI to anything MCP-side.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | §3's link into SENTRY.md, whose sections after §9 moved down one when Releases and updates was added (§11 is now where each part reads from) | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | After Control Plane was retired: the files left in `src/lib/control-plane/` and who imports each connector (`grep -rln`); `sentry-admin.ts` now `getSentryUsage` and `getOrgIssues` only; `resolveToken(env)` still called 8 times in `cloudflare-admin.ts` (the §3.1 warning stands); `supabase-admin.ts` used only by System health's catalog; `posthog-admin.ts` and `preflight.ts` deleted; `src/lib/posthog/client.ts` reads `POSTHOG_PROJECT_ID`, else `PUBLIC_POSTHOG_PROJECT_ID`; `flushAstroConfigCache`'s callers (`settings-routes.ts`, `src/pages/api/configuration/limits.ts`) | The live secret list and token scopes (no connector used in this pass); provider API behaviour; §6 |
 | 2026-10-17 | The 11 files under `src/lib/control-plane/`: every exported function named in §2 and §3 and its API base; `errorStatus`, `httpError`, `networkError`; `resolveToken(env)` still called 8 times in `cloudflare-admin.ts` (the §3.1 warning stands); `resolveProjectId()` still falls back to the first listed project (the §3.3 warning stands); `tokenStatus()` (7 entries, label, purpose, presence); `flushAstroConfigCache` and its transport. No corrections needed | The live secret list and token scopes (no connector used in this pass); provider API behaviour; §6 |
 | 2026-09-19 | `cloudflare-admin.ts` — `resolveToken(env)` and its **8** call sites (the seven inventory reads plus the security-level write), so the override is not purge-scoped; `posthog-admin.ts` `resolveProjectId()` (env var, else first listed project) and its use by both the settings read and `setSessionRecording`; `supabase-admin.ts` unconfigured condition; `preflight.ts` `tokenStatus()` (label + purpose + presence); the audit targets of the three provider routes; live `wrangler secret list` — 25 names, no Supabase Management PAT and no PostHog org id. **`ls src/lib/control-plane` returns 11 files, not six**, as the 2026-09-14 row below claims | Which scopes the provisioned tokens actually carry; whether the PostHog personal key can see more than one project; provider API behaviour; the §6 MCP comparison |
