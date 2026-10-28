@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-28 | `ls migrations/*.sql` (60 files, highest `0082`), `d1_migrations` newest row through the Cloudflare D1 connector after `0082` was applied; §5's `POSTHOG_PERSONAL_API_KEY` row against `src/lib/posthog/settings.ts` | §7's state comment and count; §5 names the PostHog page's Settings part and its "Project: Write". No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (59 files, highest `0081`), `d1_migrations` newest row through the Cloudflare D1 connector after `0081` was applied; §5's `SENTRY_AUTH_TOKEN` row against `src/lib/sentry/settings.ts` | §7's state comment and count; §5 names the Sentry page's Settings part and its `project:write`. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (58 files, highest `0080`), `d1_migrations` newest row through the Cloudflare D1 connector after `0080` was applied; §5's `SENTRY_AUTH_TOKEN` and `CLOUDFLARE_API_TOKEN` rows against `src/lib/sentry/client.ts`, `overview.ts` and `cloudflare.ts` | §7's state comment and count; §5 names the Sentry page as a reader of both tokens and corrects the Cloudflare permission to Workers Observability: Edit. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (57 files, highest `0079`), `d1_migrations` newest row through the Cloudflare D1 connector after `0079` was applied; §5's `POSTHOG_PERSONAL_API_KEY` row against `src/lib/posthog/client.ts` and `overview.ts` | §7's state comment and count; §5 names the PostHog page as a reader of the key. No binding, secret or variable added. Not checked: the rest of the document |
@@ -587,7 +588,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `RESEND_API_KEY` | Resend — System health's *Resend* check only (`resend` in `src/lib/health/catalog.ts`, since 2026-10-17; the diagnostics ping `resend_ping` before it was removed). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
 | `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | cf-chatbot proxy fallback URL and its admin key (`X-Admin-Key`). The key must be the same value in both Workers: set it with `wrangler secret put CHATBOT_ADMIN_API_KEY` here and in cf-chatbot in the same sitting. *(The `sync:keys` npm script that did this pointed at a Python file outside the repository and was removed on 2026-09-15, assessment D-12.)* |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane, the unresolved issues on System health → Logs, since 2026-10-26 the Analytics page's Reliability part (errors per day and open issues, [`ANALYTICS.md`](../features/ANALYTICS.md) §4) and, since 2026-10-28, the Sentry page (its Overview, Issues, Logs and Settings; resolving or archiving an issue needs the token's `event:write`, this month's use `org:read`, the Settings part's filters and key limits `project:write`, [`SENTRY.md`](../features/SENTRY.md) §2) (build-time source-map upload uses the same token) |
-| `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads, since 2026-10-26 the Analytics page's queries, which need the key's "Query: Read" scope ([`ANALYTICS.md`](../features/ANALYTICS.md) §4), and since 2026-10-28 the PostHog page, which needs the same scope and, for its free-allowance card, "Billing: Read" and "Project: Read" (with `POSTHOG_ORG_ID` and `POSTHOG_PROJECT_ID` when set; [`POSTHOG.md`](../features/POSTHOG.md) §2) |
+| `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads, since 2026-10-26 the Analytics page's queries, which need the key's "Query: Read" scope ([`ANALYTICS.md`](../features/ANALYTICS.md) §4), and since 2026-10-28 the PostHog page, which needs the same scope and, for its free-allowance card, "Billing: Read" and "Project: Read" (with `POSTHOG_ORG_ID` and `POSTHOG_PROJECT_ID` when set; [`POSTHOG.md`](../features/POSTHOG.md) §2); its Settings part reads PostHog's own recording setting with "Project: Read" and changes it with "Project: Write" |
 | `GSC_SERVICE_ACCOUNT_JSON` | Google Search Console service-account key (documented RULE #0.8 exception); since 2026-10-26 also the Analytics page's search analytics, which needs the account as a user of the property |
 | `PAGESPEED_API_KEY` | PageSpeed Insights API key (documented RULE #0.8 exception) |
 
@@ -726,8 +727,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-28: migrations/ holds 59 files, highest
-# 0081_sentry_settings.sql (applied 2026-10-28 06:19:40 UTC).
+# State as of 2026-10-28: migrations/ holds 60 files, highest
+# 0082_posthog_settings.sql (applied 2026-10-28 06:57:49 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/

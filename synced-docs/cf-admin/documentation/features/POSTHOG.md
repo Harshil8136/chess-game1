@@ -13,6 +13,7 @@ related_code:
 - src/components/dashboard/posthog/Recordings.tsx
 - src/components/dashboard/posthog/Errors.tsx
 - src/components/dashboard/posthog/People.tsx
+- src/components/dashboard/posthog/Settings.tsx
 - src/components/dashboard/posthog/shared.tsx
 - src/components/dashboard/posthog/format.ts
 - src/styles/pages/posthog.css
@@ -26,13 +27,23 @@ related_code:
 - src/lib/posthog/errors.ts
 - src/lib/posthog/people.ts
 - src/lib/posthog/types.ts
+- src/lib/posthog/settings.ts
+- src/pages/api/posthog/settings.ts
+- src/lib/control-plane/settings-rows.ts
+- src/lib/control-plane/settings-routes.ts
+- src/components/admin/control-plane/SettingRows.tsx
+- src/styles/components/setting-rows.css
 - src/lib/auth/surface-guards.ts
 - migrations/0079_posthog_page.sql
+- migrations/0082_posthog_settings.sql
 - test/posthog.test.ts
+- test/posthog-settings.test.ts
 related_docs:
 - ANALYTICS.md
 - ../specs/2026-10-28-posthog-page.md
 - ../records/reports/2026-10-28-posthog-page.md
+- ../records/reports/2026-10-28-posthog-settings.md
+- CONTROL-PLANE.md
 - ../architecture/PERMISSIONS-SYSTEM.md
 - ../security/SECURITY.md
 - ../security/RoPA.md
@@ -49,7 +60,9 @@ tags: [feature, posthog, recordings, errors, events, permissions]
 > permission of its own. Visitors show as short made-up names ("Visitor 3f2a9c") unless you hold
 > "See who visitors are", and email addresses and phone numbers are hidden in any text the page
 > shows. Everything is read live from PostHog and kept for a minute or two, so opening a page
-> twice costs PostHog nothing the second time.
+> twice costs PostHog nothing the second time. Its **Settings** part, moved from Control Plane,
+> says what the website sends to PostHog and whether PostHog records visits, and lets the people
+> who hold its switches change them.
 
 Asked for by Harshil on 2026-10-28: "a page like PostHog where everything from PostHog is
 accessed by API like session recording, features, DOM manipulation, logs, analytics", within
@@ -57,7 +70,10 @@ Cloudflare's and PostHog's limits, with permissions, sub-pages and information. 
 stages and Harshil's choices are in the [plan](../specs/2026-10-28-posthog-page.md); what shipped
 and how it was checked is in the change record (private).
 This document describes stage 1: the page, its permissions, the Overview, Recordings (the list and
-one recording's moments), Errors (read only) and Events and people. Playing a recording inside the
+one recording's moments), Errors (read only) and Events and people. It also describes Settings, which
+Harshil moved here from Control Plane on 2026-10-28 ("each to the page that owns it"; the
+[Sentry page's plan](../specs/2026-10-28-sentry-page.md) §8, and the
+change record (private)). Playing a recording inside the
 portal, heatmaps, flags, experiments, surveys, insights and activity are later stages; Harshil
 chose on 2026-10-28 not to send logs to PostHog, so there is no Logs part.
 
@@ -69,15 +85,20 @@ chose on 2026-10-28 not to send logs to PostHog, so there is no Logs part.
 | `/dashboard/posthog/recordings` | Recordings | Admin (`super_admin`) | the Recordings part; a recording shows the text a guest saw, their own details on the booking summary included |
 | `/dashboard/posthog/errors` | Errors | Manager | the Errors part |
 | `/dashboard/posthog/people` | Events and people | Manager | the Events and people part |
+| `/dashboard/posthog/settings` | Settings | Admin (`super_admin`) | the Settings part: what the website sends to PostHog, PostHog's own recording setting, the last changes |
 | `/dashboard/posthog#people` | See who visitors are | Owner | PostHog's own id for a visitor (a guest's email after a booking) instead of the made-up name, everywhere on the page |
 | `/dashboard/posthog#refresh` | Refresh PostHog now | Manager | the Refresh button: ask PostHog again instead of the kept copy |
+| `/dashboard/posthog#sampling` | Change what is sent to PostHog | Admin | change the website's PostHog settings, and put them back to their defaults |
+| `/dashboard/posthog#provider-write` | Change PostHog's own settings | Owner | turn PostHog's recordings on or off and set the share of visits it records, in PostHog |
 
 `denyPostHog(user, part?, action?)` in `src/lib/auth/surface-guards.ts` asks for the page, then
 the part, then the action, each exactly with `placRequireGrant` (fail-closed: a key not in a
 person's map is refused, never inherited). The pages check it before any HTML is made, and
 `GET /api/posthog/{part}` checks it again. `posthogCan(user)` tells the page which parts and
 switches to offer, so it never shows a link or button the route would refuse. The rows are
-migration `0079`; the [permissions model](../architecture/PERMISSIONS-SYSTEM.md) owns the rules.
+migrations `0079` and `0082` (Settings and its two switches, which take over Control Plane's
+"Change sampling rates" and "Change provider settings" for PostHog); the
+[permissions model](../architecture/PERMISSIONS-SYSTEM.md) owns the rules.
 
 ## 2. Setting it up
 
@@ -88,8 +109,10 @@ and the organisation (`POSTHOG_ORG_ID`, else the one PostHog names for the proje
 **Project: Read**). The Overview's "What the portal's key can reach" card tries each product with
 its cheapest read and names any permission still missing in PostHog's own words (Session
 recording, Error tracking, Feature flag, Experiment, Survey, Insight, Activity log: Read); those
-are for later stages and nothing in stage 1 fails without them. Without the key or the project the
-page says "PostHog is not connected" instead of failing.
+are for later stages and nothing in stage 1 fails without them. Settings reads PostHog's own
+recording setting with **Project: Read** and changes it only with **Project: Write**; without it,
+a change is refused with that permission's name and nothing else on the part stops working.
+Without the key or the project the page says "PostHog is not connected" instead of failing.
 
 ## 3. The parts
 
@@ -132,6 +155,28 @@ for a person who holds Recordings. **Visitors** (`?tab=visitors`): how many visi
 days and how many have said who they are, then every visitor, last seen first, 50 at a time, with
 their visits, events, first and last visit, country and device.
 
+**Settings** (`/dashboard/posthog/settings`). Three cards, the same setting rows as the Sentry
+page's Settings ([SENTRY.md](SENTRY.md) §6), with a box for why a change is made, kept with it:
+
+- **What the website sends**: PostHog's rows in `service_config`, which the website reads from the
+  shared database within a minute (and at once, since the portal asks it to read them again after
+  a change): send to PostHog at all, count page visits, count taps and forms, and record visits.
+  Each is on or off in a sideways row, with its default beside it. The website's own "share of
+  visits recorded" row (`posthog.session_recording.sample_rate`) is shown and never offered: the
+  website reads it into its settings but nothing there uses it; whether a visit is recorded
+  follows the on/off row or a rule per page (`cf-astro/src/scripts/analytics-loader.ts` and
+  `cf-astro/src/lib/route-policy.ts`, read on its `main`, 53b1bd7, on 2026-10-28), so the share
+  that counts is PostHog's own, in the next card. A rule per
+  page on the Sentry page's Settings can count visits, taps or recordings differently for its pages.
+- **PostHog's own recording setting**, read from the project when the part opens and never kept:
+  whether PostHog keeps recordings (`session_recording_opt_in`) and the share of visits it records
+  (`session_recording_sample_rate`, "0.01" to "1.00", none meaning every visit), as two sideways
+  rows (10, 25, 50, 80 or 100%, and the current share when it is none of these). Changing either
+  sends exactly those two fields to PostHog and is kept in the audit log (`provider_write`). On
+  2026-10-28 PostHog kept recordings, of every visit.
+- **What differs from the defaults, and the last 20 changes**, with who made each and why, and
+  "Put PostHog's settings back", which asks first in a dialog and changes only PostHog's rows.
+
 When PostHog asks to wait (§5), the part says so and asks again by itself once, after that wait
 (at most 10 seconds); a read that failed for another reason offers "Try again"; a missing
 permission says which one to add.
@@ -147,6 +192,7 @@ named otherwise; the tables were confirmed through the PostHog connector on 2026
 | Recordings | `session_replay_events` grouped per recording, joined to the visit's `events` for device, browser, country, pages, stuck taps and booking; one recording's moments from `events` and `console_logs_log_entries` in one question |
 | Errors | `system.error_tracking_issues` joined to the period's `$exception` events; the occurrences from `$exception` events, with whether `session_replay_events` still holds the visit |
 | Events and people | `events`, for the list and for the counts per kind; visitors grouped by person from `events` |
+| Settings | D1 `service_config` and `service_config_history`, PostHog's rows; the project (`GET` and `PATCH /api/projects/{id}/`), of whose answer only the two recording fields are read |
 
 Nothing a person sends can change a question (`src/lib/posthog/sql.ts`): a recording, visit or
 error id must be a UUID (anything else is a 400 before a question is built), a time to page from
@@ -157,7 +203,9 @@ row's time as `before`), never by offset.
 ## 5. Staying inside the limits
 
 The route is `GET /api/posthog/{part}` (`overview`, `recordings`, `errors`, `people`), with
-`fresh=1` for Refresh now; [SECURITY.md](../security/SECURITY.md) §6a holds its row.
+`fresh=1` for Refresh now, and `/api/posthog/settings` (`GET`, `?own=1` for PostHog's own recording
+setting, `PATCH` for one row, `POST` to put the rows back or change PostHog's setting, at most 20
+changes a minute per person); [SECURITY.md](../security/SECURITY.md) §6a holds their rows.
 
 - **One way to PostHog** (`src/lib/posthog/client.ts`). Every call has 9 seconds. A 5xx, a dropped
   connection, or a 429 asking for at most 2 seconds is asked once more in the Worker; a longer
@@ -204,10 +252,20 @@ permission a refusal names, a second try after a 5xx, a long wait handed back); 
 and the route with a fetch stub (401, 404, 403 for a part not given, 400 for an id that is not an
 id, Refresh now behind its key, the id for a visitor only for a reader who may see it, the short
 copy answering a second look and Refresh asking again, "not connected" without the key).
-`test/action-keys-enforced.test.ts` checks that `#people` and `#refresh` are enforced.
+`test/posthog-settings.test.ts`: Settings' guards (the page, then Settings, then each switch) and
+the route mapping; a change on its way in (a whole share from 1 to 100, nothing it does not
+know); PostHog's recording setting read from the two fields (none as every visit) and refused in
+any other shape, and asked for as PostHog keeps it; the part's words for every one of PostHog's
+rows; and the route against the test database and a PostHog stub (401 and 403, PostHog's rows only,
+a change behind `#sampling` kept in the history and the audit log, another service's row and a
+stale version refused, a reset of PostHog's rows alone, PostHog's own setting read without the
+rest of the project, a change to it only behind `#provider-write` and audited, and a refusal that
+names "Project: Write"). `test/action-keys-enforced.test.ts` checks that `#people`, `#refresh`,
+`#sampling` and `#provider-write` are enforced.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
 | 2026-10-28 | Written with the code: every section against the files in `related_code`. Live through the PostHog connector, counts and lengths only (no person-level value read): the Overview's question (1,146 events, 64 visitors, 90 visits and 71 recordings in the last 30 days, 7 open error groups, no flags, experiments or surveys), the recordings list and moments questions, the error groups (10 returned) and occurrences questions, the events (49 stuck taps), kinds and visitors (51 rows, 64 and 2) questions all run; the six `admin_pages` rows read back after `0079` (D1 connector); `test/posthog.test.ts` passes | The portal's own key's permissions (only Query: Read is proven, by the Analytics page; the Overview's checks will say); the page in a phone browser |
+| 2026-10-28 | Settings (§1 to §5, §7), written with the code: the project's two recording fields and their live values (on, every visit; `session_replay_config` empty) through the PostHog connector; that the website uses PostHog's `enabled`, `capture_pageview`, `autocapture` and `session_recording.enabled` rows and nothing uses its `sample_rate` row (cf-astro `main`, 53b1bd7: `cf-astro/src/scripts/analytics-loader.ts`, `cf-astro/src/scripts/runtime-config-client.ts`, `cf-astro/src/lib/route-policy.ts` and `cf-astro/src/lib/service-config.ts`); the three `admin_pages` rows read back after `0082` (D1 connector); `test/posthog-settings.test.ts` passes | Whether the portal's key holds Project: Write (the part will say on the first change); the part in a phone browser |

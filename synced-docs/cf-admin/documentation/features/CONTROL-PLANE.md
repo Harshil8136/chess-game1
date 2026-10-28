@@ -18,7 +18,11 @@ tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observabili
 > **Being replaced (2026-10-28).** Harshil asked for Sentry's systems in this page's place. The
 > [Sentry page](SENTRY.md) now shows what the Sentry tab showed and more, and its Settings part
 > holds Sentry's settings and controls, the same rows edited the same way ([SENTRY.md](SENTRY.md)
-> §6); both pages change them until this one leads there. The other tabs move to the pages that
+> §6); both pages change them until this one leads there. The PostHog tab's settings and its
+> recording switch are on the [PostHog page](POSTHOG.md)'s Settings part (§3), where the share of
+> visits recorded is PostHog's own `session_recording_sample_rate`: this page's PostHog tab writes
+> its share into `session_replay_config`, which PostHog does not sample by
+> (MAINTENANCE (private) PH-2). The other tabs move to the pages that
 > own their subject ([SENTRY.md](SENTRY.md) §8), then this page's
 > addresses lead to the new places and its rows are switched off (MAINTENANCE (private)
 > SE-3). Until then this page works as described below.
@@ -433,6 +437,7 @@ operators who hold the relevant capability.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The "Being replaced" note against the PostHog page's Settings part (`src/pages/api/posthog/settings.ts`, migration `0082`); that this page's PostHog write (`setSessionRecording` in `src/lib/control-plane/posthog-admin.ts`) puts its share in `session_replay_config`, and that the project's live `session_replay_config` is empty while `session_recording_sample_rate` is none (every visit), through the PostHog connector | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the Sentry page's Settings part (`src/pages/api/sentry/settings.ts`, migration `0081`); `ConfigEditor.tsx` now saves through `useConfigEdit.ts`, which sends the row's version so a change made on the other page is refused (409) and reread, checked with `test/sentry-settings.test.ts` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the new Sentry page (`src/pages/dashboard/sentry/`, migration `0080`) and the plan's §2 and §8; this page's code and rows unchanged | The rest of the document; `last_verified` left as it was |
 | 2026-10-17 | Every route under `src/pages/api/control-plane/` again (role floor, PLAC fragment, `withETag` / `jsonFresh` / `jsonOk`), matching §7; `sentry.cf_admin.*` still read by nothing but `config-schema.ts`, and `tracesSampleRate: 0.1` still hardcoded in `cf-entry.ts` and `sentry.client.config.ts` (§4.5 stands); the schema's types, scopes, categories, services and route-policy caps; the env names each connector reads; every component and page in §8; cf-astro's `MEM_TTL_MS` (10 s) and `route-policy.ts` matching. No corrections needed | The live secret list and `admin_pages` rows (no connector used in this pass); provider API behaviour |

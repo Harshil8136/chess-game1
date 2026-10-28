@@ -14,6 +14,10 @@ related_code:
 - src/components/dashboard/sentry/Logs.tsx
 - src/components/dashboard/sentry/Settings.tsx
 - src/components/admin/control-plane/useConfigEdit.ts
+- src/components/admin/control-plane/SettingRows.tsx
+- src/lib/control-plane/settings-rows.ts
+- src/lib/control-plane/settings-routes.ts
+- src/styles/components/setting-rows.css
 - src/components/dashboard/sentry/parts.tsx
 - src/components/dashboard/sentry/format.ts
 - src/components/dashboard/posthog/shared.tsx
@@ -186,7 +190,10 @@ open it asks again every minute.
 
 `/dashboard/sentry/settings`. Moved from Control Plane on Harshil's choice of 2026-10-28 ("each to
 the page that owns it"). One optional box at the top, "Why you are changing something", is kept
-with each change in the list of changes.
+with each change in the list of changes. A setting, the reason box and the list of changes are
+the shared setting rows (`src/components/admin/control-plane/SettingRows.tsx`, with
+`src/lib/control-plane/settings-rows.ts` and `settings-routes.ts`), which the PostHog page's
+Settings part uses too ([POSTHOG.md](POSTHOG.md) §3).
 
 - **What the website sends:** the website's eight Sentry rows of `service_config` (on or off,
   the share of errors kept, the speed samples of bookings, of the API, of other pages and of the
@@ -314,3 +321,4 @@ and `#provider-write` are enforced.
 |---|---|---|
 | 2026-10-28 | Written with the code: every section against the files in `related_code`. Live through the Sentry connector (counts only, no text of an error or log, no user value): the three projects, the open issues, the 30-day usage by category and outcome, the logs dataset counted by project and severity, `is:ignored` and `is:archived` both accepted; the six `admin_pages` rows read back after `0080` (D1 connector); `test/sentry.test.ts` passes. Cloudflare's query API's shapes and its Write permission from Cloudflare's API reference and SDK | Cloudflare's query live (refused until the token step, MAINTENANCE SE-1); the portal's own Sentry token's permissions (the Overview's check will say, SE-2); the page in a phone browser |
 | 2026-10-28 | §1, §2, §6, §8 and §10 for the Settings part, against its files. Live: Sentry's rows of `service_config` read through the D1 connector (the ignored-errors row is missing, the rules per page set 90% and 50%), the three `admin_pages` rows read back after `0081`; Sentry's project, filter, key and spike-protection calls from Sentry's API reference; `test/sentry-settings.test.ts` passes | A change sent to Sentry live (the portal's token's `project:write` unknown, SE-2); the part in a phone browser |
+| 2026-10-28 | §6's opening and `related_code` for the shared setting rows, against `SettingRows.tsx`, `settings-rows.ts`, `settings-routes.ts` and `src/pages/api/sentry/settings.ts` after they were split out for the PostHog page; `test/sentry-settings.test.ts` passes unchanged in what it checks | The rest of the document |

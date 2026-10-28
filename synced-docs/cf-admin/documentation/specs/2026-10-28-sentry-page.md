@@ -178,8 +178,11 @@ who, what, before and after, and refused if the person lacks the permission.
    ([SENTRY.md](../features/SENTRY.md) §6): the website's rows, the rules per page, the ignored
    errors, Sentry's own spike protection, filters and key limits, the list of changes, and the
    drift check as "which settings differ from their defaults" with a way to put them back. The
-   portal's three rows are shown but not offered until stage 3. Control Plane's other tools
-   follow, then its addresses redirect; its rows are switched off in a push after that
+   portal's three rows are shown but not offered until stage 3. The third (2026-10-28, migration
+   `0082`) moved PostHog's settings and its recording switch to a Settings part on the PostHog
+   page ([POSTHOG.md](../features/POSTHOG.md) §3), on the same setting rows, now shared by both
+   pages; its share of visits recorded changes PostHog's own `session_recording_sample_rate`
+   (§10). Control Plane's other tools follow, then its addresses redirect; its rows are switched off in a push after that
    (MAINTENANCE SE-3).
 2. **Speed, Trends, Monitors and alerts.**
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
@@ -207,6 +210,10 @@ Each stage ships on its own, with its tests, documents and a change record.
   [CONTROL-PLANE.md](../features/CONTROL-PLANE.md) §4.5). Stage 3 makes them work, or removes them.
 - **The PostHog plan's logs recommendation** (Cloudflare's export to PostHog) would not have
   worked on the free plan either; noted in its §10.
+- **Control Plane's PostHog share never took effect:** it writes `session_replay_config`, which
+  PostHog does not sample by, and nothing on the website uses its own
+  `posthog.session_recording.sample_rate` row (`cf-astro/src/scripts/analytics-loader.ts`). Found
+  2026-10-28 while moving PostHog's settings; MAINTENANCE PH-2 and PH-3.
 - **System health's log scan is still refused** by Cloudflare (live row read 2026-10-28 04:35 UTC):
   the same token step as choice 2.
 
