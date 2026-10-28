@@ -45,7 +45,8 @@ tags: [feature, dashboard, overview, analytics, cloudflare, supabase]
 > record and in git.
 
 **Scope:** the `/dashboard` home page, its one data route, and the analytics provider layer whose
-snapshot its website figure and chart and the Cloud Services pages read.
+snapshot its website figure and chart read (the Cloud Services pages read it too until they were
+retired on 2026-10-28).
 
 ---
 
@@ -116,12 +117,14 @@ The website figure and chart read the analytics snapshot through `fetchAllAnalyt
    key back on success (one background refresh per isolate per 30 seconds);
 3. only when there is no snapshot at all does the request wait for the providers.
 
-The Service Control pages (`/dashboard/control-plane`) read the same snapshot the same way. Since
-2026-10-26 the old Overview's detailed views live there, on the owner's choice: the Workers list
-(`WidgetEdgeCompute`) on Cloud Services → Cloudflare (removed 2026-10-28 with that tab, which
-moved to Configuration; Analytics' Reliability part lists each Worker), the database details
-(`WidgetPostgresCluster`) on Cloud Services → Supabase, both drawn from the snapshot the page
-already reads; and Google's readiness report (`GscValidationWidget`) on the SEO page.
+The Service Control pages (`/dashboard/control-plane`) read the same snapshot until they were
+retired on 2026-10-28; since then the Overview's website card is its only reader
+(MAINTENANCE (private) SE-8). From 2026-10-26 the old Overview's detailed views lived
+there, on the owner's choice: the Workers list (`WidgetEdgeCompute`) on Cloud Services →
+Cloudflare and the database details (`WidgetPostgresCluster`) on Cloud Services → Supabase. Both
+were removed on 2026-10-28 with those tabs: Analytics' Reliability part lists each Worker, and
+Harshil chose to drop the Supabase tab. Google's readiness report (`GscValidationWidget`) is on
+the SEO page.
 
 *History:* until 2026-10-26 the island was `DashboardController.tsx` and it called
 `GET /api/dashboard/metrics` (both removed 2026-10-26). The poll went from every 60 seconds,
@@ -260,6 +263,7 @@ third-party chart library — `uplot` is **not** in `package.json` and is not us
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | **Scope-limited to the snapshot's readers.** The detailed-views paragraph and the Scope line after Control Plane was retired, against every importer of `fetchAllAnalytics` and `AnalyticsMetrics` (`src/pages/api/dashboard/overview.ts`, `src/lib/overview/sections.ts`) and the removed `SupabaseWidgets.tsx` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | **Scope-limited to the website card.** The Figures and chart rows' access column and the detailed-views paragraph against `SECTION_PAGE` and `sees.website` in `src/pages/api/dashboard/overview.ts` (now `denyAnalytics(user, 'traffic')`), `format.ts`'s card link and the removed `WidgetEdgeCompute`; `test/overview.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-26 | §0 rewritten for the glass page, against `src/pages/dashboard/index.astro`, `src/components/dashboard/overview/` (`Overview.tsx`, `OverviewCharts.tsx`, `format.ts`, `motion.ts`), `src/styles/pages/overview.css`, `src/lib/overview/sections.ts` and `src/lib/dal/OverviewRepository.ts`, with `test/overview.test.ts`; `bookings.created_at` and `email_audit_logs.created_at` read live through the Supabase connector (1 booking made in the last 30 days and 5 in the 30 before; emails on 25 of the last 30 days) | The page in a phone browser, the motion and both themes (the owner's test) |
 | 2026-10-26 | §0 to §0.2 rewritten for the redesign, against `src/pages/dashboard/index.astro`, `src/components/dashboard/overview/`, `src/pages/api/dashboard/overview.ts`, `src/lib/overview/sections.ts` and `src/lib/dal/OverviewRepository.ts`, with `test/overview.test.ts`; the live tables it reads (`bookings`, `booking_pets`, `contact_messages`, `legal_requests`, `email_audit_logs` in Supabase; `booking_attempts`, `backup_runs`, `admin_audit_log`, `admin_booking_state` in D1) through the Supabase and Cloudflare connectors, read only; the Architecture Decisions and Known Limitations edits | The provider sections and token scopes (unchanged); the page in a phone browser (the owner's test) |

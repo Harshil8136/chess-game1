@@ -5,7 +5,7 @@ audience: [owner, ai, technical]
 last_verified: 2026-10-28
 verified_against: [code, infra, docs]
 owner: harshil
-related_code: [src/pages/dashboard/control-plane/index.astro, src/lib/control-plane/sentry-admin.ts, src/lib/control-plane/config-schema.ts, src/pages/api/control-plane/sentry.ts, src/lib/health/logscan.ts, src/workers/cf-entry.ts]
+related_code: [src/pages/dashboard/control-plane/index.astro, src/lib/control-plane/sentry-admin.ts, src/lib/control-plane/config-schema.ts, src/pages/api/sentry/settings.ts, src/lib/health/logscan.ts, src/workers/cf-entry.ts]
 related_docs: [../features/SENTRY.md, ../records/reports/2026-10-28-sentry-page.md, ../features/CONTROL-PLANE.md, ../features/CONTROL-PLANE-CONNECTORS.md, ../features/SYSTEM-HEALTH.md, ../features/POSTHOG.md, 2026-10-28-posthog-page.md, ../architecture/PERMISSIONS-SYSTEM.md]
 tags: [sentry, control-plane, logs, errors, permissions, limits, plan]
 ---
@@ -187,8 +187,11 @@ who, what, before and after, and refused if the person lacks the permission.
    ([SETTINGS-AND-CONFIGURATION.md](../features/SETTINGS-AND-CONFIGURATION.md)), with Cloudflare's
    changes behind their own key, Change Cloudflare settings; Control Plane's Cloudflare address
    forwards there, and its Workers list was dropped, since Analytics' Reliability part lists each
-   Worker. Control Plane's other addresses redirect next; its rows are switched off in a push after that
-   (MAINTENANCE SE-3).
+   Worker. The fifth (2026-10-28) retired Control Plane: its overview and Sentry addresses lead to
+   this page, its PostHog address to the PostHog page's Settings, its Supabase address to System
+   health, and its routes and code were removed
+   ([CONTROL-PLANE.md](../features/CONTROL-PLANE.md)); its rows are switched off in the push
+   after that (MAINTENANCE SE-3).
 2. **Speed, Trends, Monitors and alerts.**
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
    (§10) start working, and Sentry's update suggestions.

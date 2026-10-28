@@ -3,44 +3,41 @@
 title: "Service Control Plane"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-17
+last_verified: 2026-10-28
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/control-plane/config-schema.ts, src/lib/control-plane/preflight.ts, src/lib/dal/ServiceConfigRepository.ts, src/pages/api/control-plane/config.ts, src/components/admin/control-plane/ConfigEditor.tsx]
-related_docs: [CONTROL-PLANE-CONNECTORS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/ARCHITECTURE.md, ../operations/OPERATIONS.md]
+related_code: [src/lib/control-plane/config-schema.ts, src/lib/control-plane/settings-rows.ts, src/lib/control-plane/settings-routes.ts, src/lib/dal/ServiceConfigRepository.ts, src/components/admin/control-plane/SettingRows.tsx, src/pages/dashboard/control-plane/index.astro]
+related_docs: [CONTROL-PLANE-CONNECTORS.md, SENTRY.md, POSTHOG.md, SETTINGS-AND-CONFIGURATION.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/ARCHITECTURE.md, ../operations/OPERATIONS.md]
 tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observability]
 ---
 
 # Service Control Plane
 
-> **TL;DR (non-technical):** A single admin screen to watch and tune the platform's external services (error tracking, analytics, CDN, database advisories) live, without redeploying code.
+> **TL;DR (non-technical):** Control Plane ("Cloud Services" in the sidebar) was one admin screen to watch and tune the platform's outside services. It was retired on 2026-10-28: its tools now sit on the pages that own them, and its old addresses lead there. What it left behind still works and is described here: the stored settings the website reads (Layer A) and the portal's connections to each provider (Layer B).
 
-> **Being replaced (2026-10-28).** Harshil asked for Sentry's systems in this page's place. The
-> [Sentry page](SENTRY.md) now shows what the Sentry tab showed and more, and its Settings part
-> holds Sentry's settings and controls, the same rows edited the same way ([SENTRY.md](SENTRY.md)
-> §6); both pages change them until this one leads there. The PostHog tab's settings and its
-> recording switch are on the [PostHog page](POSTHOG.md)'s Settings part (§3), where the share of
-> visits recorded is PostHog's own `session_recording_sample_rate`: this page's PostHog tab writes
-> its share into `session_replay_config`, which PostHog does not sample by
-> (MAINTENANCE (private) PH-2). The website's request limits and the Cloudflare tab's
-> tools are on the [Configuration page](SETTINGS-AND-CONFIGURATION.md) since the same day, and
-> the Cloudflare tab's address forwards there: its routes are `/api/configuration/limits` and
-> `/api/configuration/cloudflare`, the old `/api/control-plane/cloudflare` was removed, and its Workers
-> list is Analytics' Reliability part. The other tabs move to the pages that
-> own their subject ([SENTRY.md](SENTRY.md) §8), then this page's
-> addresses lead to the new places and its rows are switched off (MAINTENANCE (private)
-> SE-3). Until then this page works as described below.
+> **Retired (2026-10-28).** Harshil asked to "completely scrap" Control Plane and put Sentry's
+> systems in its place, each tool going to the page that owns it. The page and its API routes
+> were removed the same day; its five addresses forward:
+>
+> | Old address | Leads to | What took over |
+> |---|---|---|
+> | `/dashboard/control-plane` | `/dashboard/sentry` | the [Sentry page](SENTRY.md), in the same sidebar group |
+> | `/dashboard/control-plane/sentry` | `/dashboard/sentry` | the Sentry page's Overview and Issues, and its Settings part ([SENTRY.md](SENTRY.md) §6): Sentry's settings and controls |
+> | `/dashboard/control-plane/posthog` | `/dashboard/posthog/settings` | the [PostHog page](POSTHOG.md)'s Settings part (§3): the website's PostHog settings and PostHog's own recording switch |
+> | `/dashboard/control-plane/cloudflare` | `/dashboard/configuration#cloudflare` | the [Configuration page](SETTINGS-AND-CONFIGURATION.md): the website's request limits, emptying the website's cache, the site's security level |
+> | `/dashboard/control-plane/supabase` | `/dashboard/health` | dropped on Harshil's choice; System health has the Supabase security advice check (not set up until its token is, MAINTENANCE (private) SH-11) |
+>
+> The overview's six figures were dropped too: the Overview, Analytics and System health show
+> them. Its `admin_pages` rows stay until the next push switches them off, after the code that
+> stopped using them is live (MAINTENANCE (private) SE-3): a row switched off while
+> the old page still ran would have let its address fall back to the Overview's access.
 
-> **Status:** Deployed, **partially wired**. The surface, Layer-A store and the
-> Sentry/Cloudflare connectors work in production. Two Layer-B integrations
-> (Supabase advisors, PostHog billing) return `unconfigured` live because their
-> secrets are not on the Worker, and the **`sentry.cf_admin.*` keys are not read
-> by anything** — see §4.5 and §5. *Corrected 2026-09-19; this said "Production
-> Active" without qualification.*
-> **Surface:** `/dashboard/control-plane` (cf-admin) — RBAC + PLAC gated
-> **Scope:** Layer-A config is stored for both apps. Only **cf-astro** currently
-> reads its keys at runtime; cf-admin's own keys are editable but inert.
-> **Last Updated:** 2026-09-19
+> **Status:** Layer A (the stored settings) and the Sentry and Cloudflare connectors are live;
+> the Supabase one waits on its token (MAINTENANCE (private) SH-11). The **`sentry.cf_admin.*` keys are still read by nothing** (§4.5).
+> **Edited from:** the Sentry page's Settings part (Sentry rows), the PostHog page's Settings part
+> (PostHog rows) and the Configuration page (the request limits), since 2026-10-28.
+> **Scope:** Layer-A config is stored for both apps. Only **cf-astro** reads its keys at runtime;
+> cf-admin's own keys are shown, not offered (§4.5).
 
 > **Audience note:** This document is an architecture-level overview for AI IDE agents and
 > contributors. It intentionally omits all environment-specific values — resource IDs, account
@@ -51,8 +48,10 @@ tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observabili
 
 ## 1. Purpose
 
-The Service Control Plane is a single, access-controlled admin surface inside **cf-admin** that lets
+The Service Control Plane was a single, access-controlled admin surface inside **cf-admin** that let
 authorized operators **observe and tune** the platform's external services **without a redeploy**.
+Since 2026-10-28 the surface is gone and the three jobs below are done on the pages that own each
+service (the table at the top); the two layers it introduced remain.
 
 It solves a concrete problem: runtime knobs such as Sentry sampling/trace rates were historically
 **hardcoded in source** across both apps. The control plane converts them into runtime-resolved
@@ -107,55 +106,30 @@ it and caches locally (cf-astro via a 10 s in-isolate memory layer plus the Cach
 
 ## 3. Access Control (RBAC + PLAC)
 
-Every entry point is gated by the platform's two-engine access model:
+Every entry point is gated by the platform's two-engine access model: **RBAC**, the role ladder,
+and **PLAC**, per-user grants and denies keyed by page path and by `#fragment` action switch. Both
+are owned by [PERMISSIONS-SYSTEM.md](../architecture/PERMISSIONS-SYSTEM.md); read the resolution
+rules there. **Owner and vendor_support pass every switch** (`src/lib/auth/decide-access.ts`), so
+a deny written against them never applies.
 
-- **RBAC** — a 6-tier role hierarchy (`vendor_support > owner > admin > manager > staff > viewer`
-  since 2026-07-27; the databases still store the old names, translated on read — *corrected
-  2026-09-14, this line named the pre-rename ladder*; lower rank = higher
-  privilege).
-- **PLAC** — Page-Level Access Control: per-user grants and denies layered on the role baseline,
-  keyed by page path and by `#fragment` sub-capability.
+Since 2026-10-28 each page that edits these settings checks its own keys, each exactly with
+`placRequireGrant` (fail-closed):
 
-Both models are owned by
-[PERMISSIONS-SYSTEM.md](../architecture/PERMISSIONS-SYSTEM.md); read the
-resolution rules there rather than here.
+| Settings | Who may see them | Who may change them |
+|---|---|---|
+| The website's Sentry rows, and Sentry's own settings | `/dashboard/sentry/settings` (Admin) | `/dashboard/sentry#sampling` (Admin) for the rows; `/dashboard/sentry#provider-write` (Owner) in Sentry |
+| The website's PostHog rows, and PostHog's own recording switch | `/dashboard/posthog/settings` (Admin) | `/dashboard/posthog#sampling` (Admin); `/dashboard/posthog#provider-write` (Owner) in PostHog |
+| The website's request limits | `/dashboard/configuration` (Admin) | `/dashboard/configuration#edit` (Admin) |
+| Emptying the website's cache, the site's security level | `/dashboard/configuration` (Admin) | `/dashboard/configuration#cloudflare` (Owner) |
 
-> *Corrected 2026-09-19 — this section said PLAC is "resolved O(1) from a
-> KV-cached access map. Deny always wins", and linked the role ladder to
-> USER-MANAGEMENT.md rather than the owning document. Both halves were wrong in
-> ways that matter for this page: **owner and vendor_support bypass PLAC
-> entirely** (`src/lib/auth/decide-access.ts`), so a deny written against them
-> never applies — you cannot use `#provider-write` to hold an owner back.
-> Resolution is also not a single O(1) lookup: an exact key match first, then a
-> longest-ancestor scan across the map's keys.*
+Control Plane's own keys (`/dashboard/control-plane`, its four sub-pages, `#edit-sampling`,
+`#purge-config` and `#provider-write`) guard nothing since its routes were removed on 2026-10-28;
+the next push switches them off (MAINTENANCE (private) SE-3).
 
-The control plane uses **fragment sub-capabilities** on its page path so a user can be granted page
-visibility without write power, or one kind of write without another:
-
-| Capability (PLAC anchor)              | Grants                                         |
-|---------------------------------------|------------------------------------------------|
-| `/dashboard/control-plane`            | See the page, read all live metrics             |
-| `…#edit-sampling`                     | Edit Layer-A config; reset to defaults          |
-| `…#purge-config`                      | Force a cross-app config-cache flush            |
-| `…#provider-write`                    | Apply Layer-B writes via provider APIs          |
-
-The role floor is enforced **and** the PLAC capability is checked — both must pass. Reads are open to
-anyone who can see the page (provider reads require Admin+); Layer-A writes require Admin+; Layer-B writes require Owner+.
-
-Page-level denies also block the underlying API calls, but **enforcement is
-central, not per-route**: under `API_DENY_MODE = "enforce"` the middleware maps
-every `/api/*` path to a page through `API_PAGE_MAPPING` and denies anything
-unmapped (`src/lib/auth/routes.ts`, `src/lib/auth/stages/decide.ts`). That is
-what keeps the UI and the API from drifting apart — not each handler
-remembering to call a helper. `GET /api/control-plane/cloudflare` (moved to
-`/api/configuration/cloudflare` on 2026-10-28), for instance, never called
-`placDenyResponse` and was still gated. Note also that the
-middleware maps the provider routes to their **sub-pages**
-(`/dashboard/control-plane/sentry`, and so on) while the handlers check the
-parent page, so a deny written against a sub-page is caught by the middleware
-alone. *Corrected 2026-09-19 — this said "each route opts in via the shared
-deny helper", which invites a new route to be written without one on the
-assumption that it is then simply unguarded.*
+Page-level denies also block the underlying API calls, and **enforcement is central, not
+per-route**: under `API_DENY_MODE = "enforce"` the middleware maps every `/api/*` path to a page
+through `API_PAGE_MAPPING` and denies anything unmapped (`src/lib/auth/routes.ts`,
+`src/lib/auth/stages/decide.ts`). The routes above then check their part and switch themselves.
 
 ---
 
@@ -190,7 +164,7 @@ path safe. Drift is detected automatically (see §6).
 A Layer-A edit is an **optimistic, validated, audited, propagated** operation:
 
 ```
-UI edits a row ──▶ optimistic local update ──▶ PATCH config
+UI edits a row ──▶ optimistic local update ──▶ PATCH the page's settings route
                                                   │
                           ┌───────────────────────┼───────────────────────┐
                           ▼                        ▼                        ▼
@@ -214,17 +188,24 @@ UI edits a row ──▶ optimistic local update ──▶ PATCH config
 - **Propagation** — after a successful write, cf-astro is asked to drop its config cache via the
   existing internal revalidation webhook (the same mechanism the CMS already uses), so the public
   site picks up the change within one TTL instead of waiting it out.
+- **Where it runs** — since 2026-10-28, `changeRow` in `src/lib/control-plane/settings-routes.ts`,
+  called by `PATCH /api/sentry/settings`, `PATCH /api/posthog/settings` and
+  `PATCH /api/configuration/limits`; each first checks that the key belongs to its service
+  (`ownsKey`), so a page changes only its own rows. The screens save through `useConfigEdit.ts`.
 
 ### 4.3 Reset and purge
 
-- **Reset to defaults** — walks every writable spec and restores any value that has drifted from its
-  canonical default, recording each change in the audit trail. It is a destructive bulk action, so
-  the UI routes it through a typed confirmation dialog (not a browser `confirm`).
-- **Purge config cache** — forces the cross-app cache flush immediately rather than waiting for the
-  TTL, for when a change must take effect on the public site right now.
+- **Put back to defaults** — `resetRows` restores the rows of **one service** (the page's own)
+  whose value has drifted from its canonical default, recording each change in the history and
+  one audit entry. Each page asks first in a confirmation dialog. Control Plane's reset walked
+  every service at once; it was removed with the page on 2026-10-28.
+- **Ask the website to read its settings now** — the Configuration page's request-limit section
+  forces the cross-app cache flush (`POST /api/configuration/limits`, `{ action: 'refresh' }`,
+  audited as `cache_purge`), for when a change must take effect on the public site right now. It
+  replaced Control Plane's purge on 2026-10-28.
 
-Both fail soft: if the public site is briefly unreachable, the local change still succeeds and the
-result reports the flush outcome separately.
+Both fail soft: if the public site is briefly unreachable, the local change still succeeds; the
+refresh says so (502) and the website reads its settings within its TTL anyway.
 
 ### 4.4 Route policy — per-route telemetry rules
 
@@ -253,8 +234,9 @@ retuning one is a config edit rather than a redeploy.
 
 ### 4.5 What is stored but not yet consumed
 
-*Added 2026-09-19.* Three Layer-A keys are scoped to `cf-admin` and are fully
-editable in the UI, but **nothing in cf-admin reads them**:
+*Added 2026-09-19.* Three Layer-A keys are scoped to `cf-admin`, but **nothing in cf-admin
+reads them**. Control Plane let them be edited; since 2026-10-28 the Sentry page's Settings part
+shows them and does not offer them ("Shown, not offered: nothing in the portal reads these yet"):
 
 | Key | Declared as | Reality |
 |---|---|---|
@@ -262,15 +244,18 @@ editable in the UI, but **nothing in cf-admin reads them**:
 | `sentry.cf_admin.error_sample_rate` | Error sample rate via `beforeSend` | no reader |
 | `sentry.cf_admin.enabled` | "Master kill-switch for Sentry in cf-admin" | no reader |
 
-`grep -rn "sentry.cf_admin" src` returns only `config-schema.ts`. The practical
-consequence is the one that matters during an incident: **turning the
-kill-switch off, or dropping the sample rate, during a Sentry quota event
-changes nothing**, while the UI reports the edit as applied and audits it. The
+Outside `config-schema.ts`, `grep -rn "sentry.cf_admin" src` finds only the Sentry page's words
+for them (`src/components/dashboard/sentry/format.ts`, each "Meant to …") and its Settings part.
+The consequence that mattered during an incident, while Control Plane offered them: **turning the
+kill-switch off, or dropping the sample rate, during a Sentry quota event changed nothing**, while
+the UI reported the edit as applied and audited it. The
 equivalent `sentry.cf_astro.*` keys *are* read, by
 `cf-astro/src/lib/service-config.ts`.
 
-`cloudflare.cf_admin.observability_enabled` is a separate case and is correctly
-marked read-only in the schema: it is deploy-time config.
+`cloudflare.cf_admin.observability_enabled` and `cloudflare.cf_astro.head_sampling_rate` are
+read-only in the schema (deploy-time config) and read by nothing; no page offers them since
+2026-10-28, and they are switched off with Control Plane's rows (MAINTENANCE (private)
+SE-7).
 
 Until these are wired, treat the cf-admin Sentry rows as a declaration of
 intent. Wiring them means reading the config in `cf-entry.ts` and at client
@@ -282,129 +267,91 @@ init with the hardcoded values as the fail-safe fallback — which is what the
 ## 5. Layer B — Provider Control
 
 Layer B talks to each provider's **own management API**, server-to-server, using scoped tokens held
-as Worker secrets. Every call returns a **discriminated result** — success, error, or *unconfigured*
-— so a missing token renders a friendly "configure this to enable control" notice rather than
-breaking the page. Writes are gated behind the `#provider-write` capability and only render in the UI
-for operators who hold it.
+as Worker secrets. Every call returns a **discriminated result** (success, error, or
+*unconfigured*), so a missing token renders a "configure this" notice rather than breaking the
+page. Writes are behind an action switch (§3) and only render for people who hold it.
 
 **Failure classification.** A failed provider call is not automatically a server error: `unconfigured`
 and provider-4xx results map to **400**, genuine upstream 5xx and network failures to **502**. The
-table that defines this — and the reasoning behind it — is owned by
+table that defines this, and the reasoning behind it, is owned by
 [CONTROL-PLANE-CONNECTORS.md §2.1](./CONTROL-PLANE-CONNECTORS.md#21-failure-classification-why-a-502-is-not-the-default),
-along with the per-connector reference. *Corrected 2026-09-19 — this paragraph
-duplicated that section in full, so the two could drift.*
+along with the per-connector reference.
 
-| Provider    | Reads (visibility)                                              | Writes (Owner+ only)                                  | Configured in production? |
-|-------------|----------------------------------------------------------------|-------------------------------------------------------|---|
-| **Sentry**  | Quota outcomes, top unresolved issues, inbound filters, keys   | Toggle inbound filters, set key rate limits, spike protection, issue resolve/ignore/unresolve | ✅ yes |
-| **PostHog** | Project settings (recording opt-in, sample rate, autocapture) | Enable/disable session recording + set sample rate | ⚠️ partly — see below |
-| **PostHog** | Billing usage | — | ❌ no — the org id is not a live secret |
-| **Cloudflare** | Resource inventory (Workers, KV, D1, R2, queue detail, Zero Trust active users, zone security); metrics via the analytics aggregate | Cache purge — everything, by URL, or by cache-tag; zone security level | ✅ yes |
-| **Supabase** | Security & performance advisors                               | — (read-only; schema changes stay migration-driven)   | ❌ no — the Management API PAT is not a live secret |
+Since 2026-10-28 the provider tools live on the pages that own each provider:
 
-*Column added 2026-09-19.* Checked against `wrangler secret list` on the live
-Worker (names only, never values): 25 secrets, and neither the Supabase
-Management API PAT nor the PostHog org id is among them. Both cards therefore
-render the `unconfigured` "configure this to enable control" notice in
-production — correct fail-soft behaviour, but not the "Production Active" the
-banner used to claim. The PostHog settings read and the session-recording write
-work, but resolve their project by falling back to the first project the key can
-list; see
-[CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) §3.3.
+| Provider | Reads | Writes | Where, and its connector |
+|---|---|---|---|
+| **Sentry** | counts, issues, logs, the projects' filters, keys and spike protection | issue resolve, reopen and archive (`#triage`, Admin); filters, key limits, spike protection (`#provider-write`, Owner) | the [Sentry page](SENTRY.md), `src/lib/sentry/`; Analytics and System health still read usage and issues through `src/lib/control-plane/sentry-admin.ts` |
+| **PostHog** | the project's recording settings, and the page's reads | PostHog's recordings on or off and the share recorded (`#provider-write`, Owner) | the [PostHog page](POSTHOG.md), `src/lib/posthog/` |
+| **Cloudflare** | what the account holds, the zone's security level | emptying the website's cache, the security level (`#cloudflare`, Owner) | the [Configuration page](SETTINGS-AND-CONFIGURATION.md), `src/lib/control-plane/cloudflare-admin.ts` |
+| **Supabase** | the security advisor | — (schema changes stay migration-driven) | System health's check, `src/lib/control-plane/supabase-admin.ts` |
+
+Control Plane's own PostHog client (`posthog-admin.ts`) was removed with it on 2026-10-28. Its
+recording write put the share of visits recorded where PostHog does not sample by, and it picked
+its project by taking the first one the key could list; the PostHog page's client uses the
+configured project and PostHog's own sampling field ([POSTHOG.md](POSTHOG.md) §3).
 
 Notes that matter for correctness:
 
 - Some knobs are **deploy-time only** (e.g. Cloudflare Worker observability sampling is set in build
-  config and requires a redeploy) and are surfaced **read-only** — the UI explains this rather than
-  pretending it can change them at runtime.
-- **Provider writes are audited, but not identically to Layer-A writes.** A
-  Layer-A edit writes both an `admin_audit_log` row and a versioned
-  `service_config_history` row; a Layer-B provider write records only the
-  `admin_audit_log` row, because there is no local value to version. The
-  "recent change history" panel on the overview therefore shows Layer-A edits
-  only. *Corrected 2026-09-19 — this said provider writes are audited "the same
-  way".*
+  config and requires a redeploy); they are not offered for change (§4.5).
+- **Provider writes are audited, but not identically to Layer-A writes.** A Layer-A edit writes
+  both an `admin_audit_log` row and a versioned `service_config_history` row; a Layer-B provider
+  write records only the `admin_audit_log` row, because there is no local value to version. A
+  page's "last changes" list therefore shows Layer-A edits only.
 
 ---
 
 ## 6. Metrics, Health & Drift
 
-- **Live metrics** reuse the existing cached analytics aggregate (the same numbers as the main
-  dashboard), formatted into per-service stat cards. If a provider is unconfigured, the card area
-  shows an explanatory note instead of an empty or broken widget.
-- **Schema parity / drift** — a preflight check compares the live config store against the canonical
-  schema and reports three things: keys **missing** from the store, **unknown** keys in the store not
-  in the schema, and values that have **drifted** from their baseline default. This is surfaced in a
-  "Health & Drift" panel on the overview.
-- **Token presence** — the same panel reports which provider integrations are configured by checking
-  for the **presence** of their tokens only. Token values are never read into the UI, logged, or
-  exposed.
+Control Plane's overview showed the Overview's cached figures per service, and a "Health & Drift"
+panel (`preflight.ts`) listing keys missing from the store, unknown keys and drifted values, and
+which tokens were set. Both were removed with the page on 2026-10-28. What replaced them:
+
+- **Figures** — the Overview, the Analytics page and System health.
+- **Drift** — each settings part lists its own rows with their defaults, marks a value that differs
+  from its default, and names the keys the database has no row for (`rowsOf` in
+  `src/lib/control-plane/settings-rows.ts`).
+- **Tokens** — the Sentry page's Overview has "What the portal's tokens can reach", and the PostHog
+  page's Overview "What the portal's key can reach", each naming a permission to add; System
+  health checks that Sentry and Cloudflare accept the portal's tokens. Token values are never read into the UI, logged or exposed.
 
 ---
 
 ## 7. API Surface
 
-All endpoints live under `/api/control-plane/` and enforce the guards below. Reads are open to anyone
-who can see the page; writes require the role floor **and** the PLAC capability; mutations are
-same-origin (CSRF-guarded) and audited.
+Control Plane's retired routes under `/api/control-plane/` (config, reset, purge-cache, sentry,
+posthog, cloudflare, supabase) were all removed by 2026-10-28; nothing calls them
+(`test/control-plane-retired.test.ts`). The routes that took their jobs, each in
+[SECURITY.md](../security/SECURITY.md) §6a:
 
-| Endpoint                          | Method | Role floor | PLAC capability        | Purpose                              |
-|-----------------------------------|--------|------------|------------------------|--------------------------------------|
-| `/api/control-plane/config`       | GET    | Any auth   | page                   | Read all config + recent history     |
-| `/api/control-plane/config`       | PATCH  | Admin+     | `#edit-sampling`       | Edit one config value                |
-| `/api/control-plane/reset`        | POST   | Admin+     | `#edit-sampling`       | Restore drifted values to defaults   |
-| `/api/control-plane/purge-cache`  | POST   | Admin+     | `#purge-config`        | Force cross-app config-cache flush    |
-| `/api/control-plane/sentry`       | GET    | Admin+     | page                   | Sentry usage, issues, filters, keys  |
-| `/api/control-plane/sentry`       | POST   | Owner+     | `#provider-write`      | Filters / key limits / spike protection / issue resolve-ignore-unresolve |
-| `/api/control-plane/posthog`      | GET    | Admin+     | page                   | PostHog settings + billing           |
-| `/api/control-plane/posthog`      | POST   | Owner+     | `#provider-write`      | Session recording config             |
-| ~~Cloudflare inventory, cache purge, security level~~ | GET, POST | | | Removed 2026-10-28: now `/api/configuration/cloudflare`, the Configuration page's ([SETTINGS-AND-CONFIGURATION.md](SETTINGS-AND-CONFIGURATION.md)) |
-| `/api/control-plane/supabase`     | GET    | Admin+     | page                   | Security + performance advisors      |
-
-*Re-verified against each handler on 2026-09-14.* The three provider GETs were listed as "Any auth"
-but have always called `requireAuth(ctx, 'admin')`. `PATCH config` was the other way round: this
-table and the handler's own header said "Admin+ and `#edit-sampling`", but the code checked only the
-session and the page-level PLAC — fixed the same day to match `reset.ts`.
-
-`GET config` attaches an ETag (`withETag`) so the editor can revalidate cheaply; the provider GETs
-are served `Cache-Control: no-store` (`jsonFresh`) and the Cloudflare inventory plain `jsonOk`.
-*Corrected 2026-09-14 — this said every read endpoint carried ETag / short max-age headers.* Every mutating endpoint writes an audit entry via the post-response, fire-and-forget audit
-engine — zero added latency for the operator.
+| Removed (2026-10-28) | Replaced by |
+|---|---|
+| reading and changing the config, and the reset | `GET`, `PATCH`, `POST /api/sentry/settings`; `GET`, `PATCH`, `POST /api/posthog/settings`; `GET`, `PATCH`, `POST /api/configuration/limits` |
+| the cross-app config-cache flush (purge-cache) | `POST /api/configuration/limits` with `{ action: 'refresh' }` |
+| Sentry's reads and writes | `GET /api/sentry/{part}`, `POST /api/sentry/issues`, `POST /api/sentry/settings` |
+| PostHog's reads and the recording write | `GET /api/posthog/{part}`, `POST /api/posthog/settings` |
+| Cloudflare's inventory, cache purge and security level | `GET`, `POST /api/configuration/cloudflare` |
+| Supabase's advisors | dropped; System health's check reads them |
 
 ---
 
 ## 8. User Interface
 
-The surface is one overview page plus per-service sub-pages, all sharing a consistent component
-library (the Phase-6 redesign):
+Control Plane's overview and its four tabs were removed on 2026-10-28; each address is a forward
+(`src/pages/dashboard/control-plane/`, the table at the top). Its components went with it:
+`ConfigEditor`, `ConfigRow`, `ProviderControls`, `StatCard`, `MetricGrid`, `EmptyState`,
+`Sparkline`, `ProviderTile.astro`, `SubPageShell.astro` and the Supabase widgets were deleted.
 
-```
-/dashboard/control-plane              Overview: live snapshot · config editor ·
-                                      health & drift · recent change history
-/dashboard/control-plane/sentry       Sentry metrics + Layer-B controls
-/dashboard/control-plane/cloudflare    forwards to /dashboard/configuration#cloudflare (2026-10-28)
-/dashboard/control-plane/posthog       PostHog metrics + session-recording config
-/dashboard/control-plane/supabase      Supabase metrics + advisors
-```
+The pieces the new pages share stayed in `src/components/admin/control-plane/`:
 
-**Shared, mobile-first components**
-
-| Component         | Role                                                                       |
-|-------------------|----------------------------------------------------------------------------|
-| `ConfigEditor`    | Layer-A editor island: grouped rows, optimistic UI, rollback, conflict handling |
-| `ConfigRow`       | One config item — toggle for booleans, slider + numeric input for rates, locked display for read-only |
-| `RoutePolicyEditor` | Structured editor for the JSON route-policy key — reorderable rule cards, per-signal rate overrides, tri-state PostHog controls, per-rule traffic estimate |
-| `ProviderControls`| Layer-B panel island: fetches a service's provider data and renders per-provider views |
-| `StatCard` / `MetricGrid` | KPI card (accent bar, loading/empty states) + responsive 1→2→3→4 grid |
-| `SectionCard`     | Consistent section container (title, accent, body)                          |
-| Tab row           | `src/components/navigation/RegistryTabs.astro` since 2026-10-10: one sideways-scrolling row of links on every screen size (it replaced `ServiceSubNav`, which hid the choices in a `<select>` on phones), named from the page registry, and showing only the services this person may open |
-| `EmptyState`      | Consistent empty state (there is no `Skeleton` component; loading states are per-island) |
-| `IgnoreErrorsEditor` | Structured editor for the `sentry.cf_astro.ignore_errors` JSON key |
-| `Sparkline`, `ProviderTile.astro`, `SubPageShell.astro` | Trend glyph, provider summary tile, and the shared sub-page frame that carries the role / PLAC gating for the UI. The frame's heading and description are the page's registry row (`pageMeta`), so the page reads "Cloud Services" wherever it is named |
-
-Cross-island feedback uses the shared toast channel (a Preact signal) rather than per-island feedback
-state, and destructive actions use a typed confirmation dialog. Write controls only render for
-operators who hold the relevant capability.
+| Component | Used by |
+|---|---|
+| `SettingRows.tsx` | the Sentry and PostHog Settings parts and Configuration's request limits: one row per setting, the last changes, putting the rows back after a confirmation dialog |
+| `useConfigEdit.ts` | the same three: saves one row at a time, optimistic, with the version check (§4.2) |
+| `RoutePolicyEditor.tsx` | the Sentry Settings part, for the JSON rules per page (§4.4) |
+| `IgnoreErrorsEditor.tsx` | the Sentry Settings part, for `sentry.cf_astro.ignore_errors` once it has a row (MAINTENANCE (private) SE-5) |
+| `SectionCard.astro` | the Configuration page's sections |
 
 ---
 
@@ -428,6 +375,7 @@ operators who hold the relevant capability.
 
 ## 10. Cross-References
 
+- [SENTRY.md](./SENTRY.md), [POSTHOG.md](./POSTHOG.md), [SETTINGS-AND-CONFIGURATION.md](./SETTINGS-AND-CONFIGURATION.md) — the pages that took over Control Plane's tools on 2026-10-28
 - [CONTROL-PLANE-CONNECTORS.md](./CONTROL-PLANE-CONNECTORS.md) — Layer-B connector reference: provider management APIs, the shared result contract + failure classification, token scopes, config propagation, and how the connectors relate to MCP tooling
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — the "Lean Edge" stack, request lifecycle, DAL pattern
 - [PERMISSIONS-SYSTEM.md](../architecture/PERMISSIONS-SYSTEM.md) — **the owner of the permission model**: the role ladder, PLAC resolution and the owner/vendor bypass
@@ -441,6 +389,7 @@ operators who hold the relevant capability.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | Control Plane retired: the top table against the five forwards in `src/pages/dashboard/control-plane/` and `test/control-plane-retired.test.ts`; §3's keys against migrations `0068`, `0081`, `0082` and `0083`; §4.2 and §4.3 against `settings-routes.ts`, `useConfigEdit.ts` and `src/pages/api/configuration/limits.ts`; §4.1's types, scopes and categories and §4.4's caps against `config-schema.ts`; §4.5 by `grep -rn "sentry.cf_admin" src` and the hardcoded `0.1` in `cf-entry.ts` and `sentry.client.config.ts`; §5 to §8 against what is left in `src/lib/control-plane/` and `src/components/admin/control-plane/` and who imports each. `last_verified` moved | The live `admin_pages` and `service_config` rows (no change to them in this push); provider API behaviour; the pages in a phone browser |
 | 2026-10-28 | The "Being replaced" note, the §3 sentence on the Cloudflare route, the §7 route row and the §8 address against the Configuration page's two routes, `src/pages/dashboard/control-plane/cloudflare.astro` (a forward) and migration `0083`; `test/configuration-limits-cloudflare.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the PostHog page's Settings part (`src/pages/api/posthog/settings.ts`, migration `0082`); that this page's PostHog write (`setSessionRecording` in `src/lib/control-plane/posthog-admin.ts`) puts its share in `session_replay_config`, and that the project's live `session_replay_config` is empty while `session_recording_sample_rate` is none (every visit), through the PostHog connector | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the Sentry page's Settings part (`src/pages/api/sentry/settings.ts`, migration `0081`); `ConfigEditor.tsx` now saves through `useConfigEdit.ts`, which sends the row's version so a change made on the other page is refused (409) and reread, checked with `test/sentry-settings.test.ts` | The rest of the document; `last_verified` left as it was |

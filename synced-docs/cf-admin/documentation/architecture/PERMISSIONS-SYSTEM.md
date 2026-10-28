@@ -476,6 +476,14 @@ resets and refreshes behind `#edit`, as the page's other settings
 ([`SETTINGS-AND-CONFIGURATION.md`](../features/SETTINGS-AND-CONFIGURATION.md)). Control Plane's
 Cloudflare sub-page row stays until its rows are switched off; its address forwards to the
 Configuration page.
+*Added 2026-10-28 (Control Plane retired, no migration):* Control Plane's five addresses forward
+to the pages above and its `/api/control-plane/*` routes were removed, so its eight rows
+(`/dashboard/control-plane`, its four sub-pages, `#edit-sampling`, `#purge-config` and
+`#provider-write`) guard nothing; `test/action-keys-enforced.test.ts` lists the three keys as
+having nothing on the server to check. A forward checks no key: each page it leads to checks its
+own. The rows are switched off in the next push, not this one, because a migration runs just
+before the new code and a switched-off row under the old page would have let its address fall
+back to `/dashboard`'s access (MAINTENANCE (private) SE-3).
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a

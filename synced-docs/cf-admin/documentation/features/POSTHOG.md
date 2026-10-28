@@ -173,7 +173,11 @@ page's Settings ([SENTRY.md](SENTRY.md) §6), with a box for why a change is mad
   (`session_recording_sample_rate`, "0.01" to "1.00", none meaning every visit), as two sideways
   rows (10, 25, 50, 80 or 100%, and the current share when it is none of these). Changing either
   sends exactly those two fields to PostHog and is kept in the audit log (`provider_write`). On
-  2026-10-28 PostHog kept recordings, of every visit.
+  2026-10-28 PostHog kept recordings, of every visit. Control Plane's PostHog tab, removed the same
+  day, set its share in `session_replay_config` instead, which PostHog does not sample by, and
+  found its project by taking the first one the key could list; this part uses the configured
+  project and PostHog's own field (formerly MAINTENANCE PH-2 and DOC-2, closed with Control
+  Plane's retirement, [CONTROL-PLANE.md](CONTROL-PLANE.md)).
 - **What differs from the defaults, and the last 20 changes**, with who made each and why, and
   "Put PostHog's settings back", which asks first in a dialog and changes only PostHog's rows.
 
@@ -267,5 +271,6 @@ names "Project: Write"). `test/action-keys-enforced.test.ts` checks that `#peopl
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | §3's note on Control Plane's PostHog tab, after it was removed: `src/pages/dashboard/control-plane/posthog.astro` forwards to `/dashboard/posthog/settings`, and `src/lib/posthog/client.ts` reads `POSTHOG_PROJECT_ID`, else `PUBLIC_POSTHOG_PROJECT_ID` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | Written with the code: every section against the files in `related_code`. Live through the PostHog connector, counts and lengths only (no person-level value read): the Overview's question (1,146 events, 64 visitors, 90 visits and 71 recordings in the last 30 days, 7 open error groups, no flags, experiments or surveys), the recordings list and moments questions, the error groups (10 returned) and occurrences questions, the events (49 stuck taps), kinds and visitors (51 rows, 64 and 2) questions all run; the six `admin_pages` rows read back after `0079` (D1 connector); `test/posthog.test.ts` passes | The portal's own key's permissions (only Query: Read is proven, by the Analytics page; the Overview's checks will say); the page in a phone browser |
 | 2026-10-28 | Settings (§1 to §5, §7), written with the code: the project's two recording fields and their live values (on, every visit; `session_replay_config` empty) through the PostHog connector; that the website uses PostHog's `enabled`, `capture_pageview`, `autocapture` and `session_recording.enabled` rows and nothing uses its `sample_rate` row (cf-astro `main`, 53b1bd7: `cf-astro/src/scripts/analytics-loader.ts`, `cf-astro/src/scripts/runtime-config-client.ts`, `cf-astro/src/lib/route-policy.ts` and `cf-astro/src/lib/service-config.ts`); the three `admin_pages` rows read back after `0082` (D1 connector); `test/posthog-settings.test.ts` passes | Whether the portal's key holds Project: Write (the part will say on the first change); the part in a phone browser |
