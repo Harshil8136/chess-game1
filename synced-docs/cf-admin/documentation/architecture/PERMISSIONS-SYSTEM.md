@@ -437,6 +437,17 @@ then the part, then the action with `placRequireGrant`, on the pages and on
 `GET /api/posthog/{part}` (where `?fresh=1` needs `#refresh`, and the reader's `#people` decides
 whether PostHog is asked who a visitor is); `posthogCan` tells the page what to offer
 ([`POSTHOG.md`](../features/POSTHOG.md) §1).
+*Added 2026-10-28 (Sentry, migration `0080`):* `/dashboard/sentry` (`super_admin`, system group,
+as Control Plane's Sentry page was) with two sub-pages, `/issues` and `/logs` (both
+`super_admin`), and three action keys, `#triage` (Resolve and archive issues, `super_admin`: it
+changes Sentry, nothing on the website), `#refresh` (Refresh Sentry now, `super_admin`) and
+`#details` (See full details, `owner`: error text and log lines unmasked, where an email or IP
+address can appear). `denySentry(user, part?, action?)` in `surface-guards.ts` checks the page,
+then the part, then the action with `placRequireGrant`, on the pages and on
+`GET /api/sentry/{part}` (where `?fresh=1` needs `#refresh` and the reader's `#details` decides
+whether text is masked) and `POST /api/sentry/issues` (the Issues part and `#triage`);
+`sentryCan` tells the page what to offer ([`SENTRY.md`](../features/SENTRY.md) §1). Control
+Plane's rows stay until its tools have moved and its pages lead to the new places.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1378,6 +1389,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-28 | claude | **Scope-limited to the Sentry sentence.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts`, the two pages and `migrations/0080_sentry_page.sql`; read the six live rows back through the D1 connector after `0080` was applied; `test/sentry.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code and the live rows; `last_verified` left as it was, since the rest of the document was not re-read |
 | 2026-10-28 | claude | **Scope-limited to the PostHog sentence.** Read `surface-guards.ts` (`POSTHOG_PARTS`, `denyPostHog`, `posthogCan`), `src/pages/api/posthog/[part].ts`, the two pages and `migrations/0079_posthog_page.sql`; read the six live rows back through the D1 connector after `0079` was applied; `test/posthog.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence. The rest of the document not re-read |
 | 2026-10-26 | claude | **Scope-limited to the Analytics round-2 sentence.** Read `ANALYTICS_PARTS` in `surface-guards.ts`, `src/pages/api/analytics/[part].ts` (`retry`) and `migrations/0078_analytics_email_reliability.sql`; read the two new live rows back through the D1 connector after 0078 was applied; `test/analytics-round2.test.ts` passes (403 for a person without the part, 200 for the Owner) | The sentence. The rest of the document not re-read |
 | 2026-10-26 | claude | **Scope-limited to the Analytics sentence.** Read `surface-guards.ts` (`ANALYTICS_PARTS`, `denyAnalytics`, `analyticsCan`), `src/pages/api/analytics/[part].ts`, the two pages and `migrations/0077_analytics_page.sql`; read the eight live `/dashboard/analytics` rows back through the D1 connector after 0077 was applied (`admin`, active, parent and group); `test/analytics.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence. The rest of the document not re-read |

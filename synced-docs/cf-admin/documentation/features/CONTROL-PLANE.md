@@ -15,6 +15,12 @@ tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observabili
 
 > **TL;DR (non-technical):** A single admin screen to watch and tune the platform's external services (error tracking, analytics, CDN, database advisories) live, without redeploying code.
 
+> **Being replaced (2026-10-28).** Harshil asked for Sentry's systems in this page's place. The
+> [Sentry page](SENTRY.md) now shows what the Sentry tab showed and more; the settings and the
+> other tabs move to the pages that own their subject ([SENTRY.md](SENTRY.md) §7), then this page's
+> addresses lead to the new places and its rows are switched off (MAINTENANCE (private)
+> SE-3). Until then this page works as described below.
+
 > **Status:** Deployed, **partially wired**. The surface, Layer-A store and the
 > Sentry/Cloudflare connectors work in production. Two Layer-B integrations
 > (Supabase advisors, PostHog billing) return `unconfigured` live because their
@@ -425,6 +431,7 @@ operators who hold the relevant capability.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The "Being replaced" note against the new Sentry page (`src/pages/dashboard/sentry/`, migration `0080`) and the plan's §2 and §8; this page's code and rows unchanged | The rest of the document; `last_verified` left as it was |
 | 2026-10-17 | Every route under `src/pages/api/control-plane/` again (role floor, PLAC fragment, `withETag` / `jsonFresh` / `jsonOk`), matching §7; `sentry.cf_admin.*` still read by nothing but `config-schema.ts`, and `tracesSampleRate: 0.1` still hardcoded in `cf-entry.ts` and `sentry.client.config.ts` (§4.5 stands); the schema's types, scopes, categories, services and route-policy caps; the env names each connector reads; every component and page in §8; cf-astro's `MEM_TTL_MS` (10 s) and `route-policy.ts` matching. No corrections needed | The live secret list and `admin_pages` rows (no connector used in this pass); provider API behaviour |
 | 2026-09-19 | `grep -rn "sentry.cf_admin\|error_sample_rate" src` → only `config-schema.ts`; the hardcoded `tracesSampleRate: 0.1` in `src/workers/cf-entry.ts` and `sentry.client.config.ts`; `src/lib/auth/decide-access.ts` (owner / vendor_support bypass, exact-then-ancestor resolution); `src/lib/auth/routes.ts` + `stages/decide.ts` (central API→page mapping, `API_DENY_MODE`); `src/pages/api/control-plane/cloudflare.ts` GET (no deny helper); the audit targets in `sentry.ts` / `cloudflare.ts` / `posthog.ts`; `src/lib/control-plane/preflight.ts`; live `wrangler secret list` (25 names — no `SUPABASE_ACCESS_TOKEN`, no `POSTHOG_ORG_ID`) | Whether the unconfigured cards are *intended* to stay unconfigured; Cloudflare Observability behaviour; provider API behaviour |
 | 2026-09-14 | Every route under `src/pages/api/control-plane/` (role floor, PLAC fragment, response helper); the six-tier RBAC ladder in `src/lib/auth/rbac.ts`; the three PLAC anchors in routes and UI; the config schema (`config-schema.ts`: value types, categories, scopes, services, caps, route-policy validation); optimistic concurrency + history + audit + best-effort flush in `config.ts` / `ServiceConfigRepository.ts`; cf-astro's `route-policy.ts` matching and `service-config.ts` caching; every component under `src/components/admin/control-plane/`; the cross-reference targets. Ten corrections above, one of which was a code defect (PATCH config lacked its role floor and fragment; fixed). | Live `admin_pages` rows (the seed is in `database/legacy_migrations/0030_seed_control_plane_pages.sql`; the baseline migration carries no data); Cloudflare Observability behaviour; the pre-redesign "hardcoded in source" history |
