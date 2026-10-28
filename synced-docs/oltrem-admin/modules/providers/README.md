@@ -122,8 +122,21 @@ email module never names a provider.
   line break where a header goes, at most fifty recipients, no header a message may not set
   (`From`, `Bcc` and the like).
 - **A refusal** is `KIT-E-1407` with the provider's status and its answer cut to one line, every
-  secret value of the instance blanked. A probe never throws: it answers `{ ok, checkedAt,
-  latencyMs, detail }`.
+  secret value of the instance blanked; its `details` carry the status (`null` when no answer
+  came) and the seconds of a `Retry-After`. A send waits 20 seconds for the answer, a batch 30.
+  `failureOf(error)` sorts it for the bulk engine: `network` (no answer: it may have been sent),
+  `speed` (429), `allowance` (402, or a 429 that names a quota or credits), `account` (401, 403:
+  the key, the account or the sending domain), `message` (another 4xx), `provider` (5xx) or
+  `other`; an SMTP reply before `DATA` says nothing was sent. A probe never throws: it answers
+  `{ ok, checkedAt, latencyMs, detail }`.
+- **Many messages at once**: a definition's optional `batch` block (`path`, `max`, `idsPath` and
+  `idPath` for the ids in the answer, in order, and an optional `idempotencyHeader`) lets
+  `sendBatch(opened, messages, key)` send up to `max` messages in one call, each rendered from
+  the send's own template; `batchSize(opened)` is 1 for a definition without one. A send's own
+  `idempotencyHeader` carries the message key. Resend has both (100 a call, `Idempotency-Key`,
+  which Resend honours for 24 hours: a repeated call is answered as the first); Brevo has neither,
+  since its message versions carry no headers of their own and every bulk message has its own
+  unsubscribe header.
 - **The domain client**, `createDomainClient({ fetch?, now? })`, speaks the `domains` block:
   `supports`, `create`, `read` and `verify`, each answering the provider's id, whether it is
   verified, its status word and its records with full host names (`hostOf`; `@` is the domain
@@ -210,7 +223,8 @@ cannot do, a delivery report that failed its check, and a provider that refused 
 
 The screens, with the Setup page that tests a provider's key from its recipe. No adapter has spoken
 to a real provider yet: the request shapes stand on the public references until the sandbox
-sends through two of them.
+sends through two of them. A batch for Postmark (500 a call, on a broadcast message stream),
+SendGrid, Mailgun and Amazon SES: until then they send bulk mail one message a call.
 
 ## Tests
 

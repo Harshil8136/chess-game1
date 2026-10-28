@@ -146,6 +146,19 @@ change is audited: `email.list-add`, `email.list-update`, `email.list-import`,
 `email.list-remove-person`, `email.list-forget`, `email.list-archive`, `email.list-restore`,
 `email.list-remove`, `email.list-export`.
 
+## Bulk mail's pipe
+
+`createEmail(...).bulk` hands a slice of ready messages to the provider from the tick, not
+through the queue (stage 5 of the bulk sending plan): one queue message per email would spend the
+free plan's 10,000 queue operations a day at about three each.
+
+| Part | What it does |
+|---|---|
+| `bulk.route(env, tenantId, senderId)` | The instance bulk mail from this sender goes through: the one its domain was set up through, while it is active or a failover, else the active instance; never another provider in the middle of a send, since the domain is verified on one. It answers how many messages one call carries (`batch`: 100 for Resend, 1 for a provider without a batch) and whether a call with no answer can be repeated safely (`repeatable`: the provider honours a key). A sender that was removed, is for everyday mail or whose domain does not pass is the reason it cannot |
+| `bulk.send(env, { tenantId, senderId, template, items, key })` | One slice: through the batch in one call under `key`, or each message its own call, six at a time (a Worker opens six connections at once). The do-not-mail list is read at the send, so a person who left a minute ago is not mailed. Each sent or refused message is kept in `email_messages`, in one statement, so its delivery reports find it |
+| What becomes of each person | `sent`, with the provider's id; `refused` as it is, for good, with the provider's words; `skipped`, on the do-not-mail list; `repeat`, no answer from a provider that honours the key: the same slice is sent again under the same key and answered as the first; `unclear`, no answer from a provider that honours none: it may have been sent, so it is never sent again on its own; `again`, nothing was sent: it goes in a later run |
+| When the run stops | The provider asked to slow down, its allowance is used up, it refused the key, the account or the domain, or it failed: no more calls in this run, the rest `again`, and `stop` says why in words, with the seconds the provider asked to wait |
+
 ## Routes
 
 Under `/api/email`, through the IAM module's sessions and check. `email.manage` and

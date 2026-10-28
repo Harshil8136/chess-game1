@@ -72,8 +72,10 @@ keeps what each run made (`last_queries`), and starts a job only when the querie
 lease and outcome writes (two) and what its last run made (ten before its first) stay within
 `queryBudget`: 45 by default, the 50 less a few for the cron's other work. The first job of a tick
 starts whatever it costs. A job that does not fit is `deferred`: it stays due, so it is the
-longest waiting on the next tick and goes first. On a paid plan (1,000 queries an invocation) the
-budget may be raised.
+longest waiting on the next tick and goes first. `queryBudget` may also be a function of the env,
+asked once a tick, so it follows the client's Cloudflare plan: the client template hands in
+`PLAN_LIMITS[plan].jobQueries` from `@oltrem/core-health` (45 on the free plan, 900 on Workers
+Paid, of 1,000 an invocation). A function that throws is reported and the default is used.
 
 A module may still have a `scheduled` hook, which the Worker calls on every tick after the jobs,
 for the rare module that needs the raw tick. Work that should be seen, counted and tried again is
