@@ -46,7 +46,12 @@ its auth scheme (`bearer`, `basic`, `api-key-header`, `sigv4`, `smtp-plain`), th
 pastes with which are secret, a recipe (where to create the key, its scopes, how to test and
 rotate it, what the kit does without it), and, where the provider signs its webhooks, the
 signature scheme and the paths of the event type, message id, recipient, time and reason with the
-map of its event names to the kit's nine kinds. A fingerprint (SPF includes, DKIM selectors or
+map of its event names to the kit's nine kinds. An entry of the map may be an object that also
+says a bounce or refusal is for good (`permanent`) or an open was a machine's (`automatic`, such
+as Brevo's Apple privacy proxy opens); where the provider says it in the report itself, a
+`severity` path names the field and the values that mean for good and for now (Resend's
+`bounce.type`, Postmark's `Type`, SendGrid's `type`, Mailgun's `severity`, SES's `bounceType`).
+A fingerprint (SPF includes, DKIM selectors or
 CNAME suffix, a verification TXT prefix) is written only where the research confirmed the
 pattern; the rest is left for the sandbox to confirm, never guessed.
 
@@ -117,7 +122,9 @@ email module never names a provider.
 `createWebhookVerifier({ now?, fetchCertificate? }).verify(opened, { headers, body })` checks a
 report against the instance's definition and returns `{ deliveryId, payload, subscribeUrl? }`;
 `deliveryEvents(definition, payload)` turns it into the kit's events (`kind`, the provider's
-event name, message id, recipient, ISO time, reason) and lists the event names the map does not
+event name, message id, recipient, ISO time, reason; `permanent`, true, false or null when the
+provider did not say, for a bounce or a refusal only; `automatic` for a machine's open or click)
+and lists the event names the map does not
 name as `ignored`. The body is the raw text: a signature covers the bytes as they came.
 
 | Scheme | Provider | What is checked | Key field |

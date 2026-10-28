@@ -105,6 +105,38 @@ later event is already there; SendGrid's ids, which add a suffix after a dot, ar
 prefix. A repeated report changes nothing, and an event the provider's map does not name is
 counted as ignored.
 
+Each report also lands on its message as one write, read in two kinds:
+
+- **The outcome:** delivered, deferred, bounced or refused by the provider, with its time, the
+  provider's words (`reason`) and, for a bounce or a refusal, whether it is for good
+  (`permanent` 1) or for now (0, or unknown). An outcome for good is never replaced, so a late
+  "delayed" cannot hide a bounce.
+- **The first times:** the first open by a person, the first open by a machine (Apple's privacy
+  proxy opens every image, so Brevo's `proxy_open` is counted apart and never as a reader), the
+  first click, the spam report and the unsubscribe. A later report of the same kind changes
+  nothing.
+
+Each message keeps its milestones rather than a row per event, so a send of thousands stays well
+inside the free plan's daily writes.
+
+## The do-not-mail list
+
+`email_donotmail` is the company's list of addresses never to mail, kept in lower case, one row
+an address. `deliver` reads it before every send:
+
+| Reason | What it stops | Put there by |
+|---|---|---|
+| `bounced` | every message | a bounce for good, or three temporary bounces within 30 days (`email_softbounces` counts them) |
+| `refused` | every message | the provider refusing the address for good (Resend's suppressed, Brevo's blocked or invalid) |
+| `complained` | every message | a spam report |
+| `unsubscribed` | bulk mail only | the person's unsubscribe; a password reset still arrives |
+| `manual` | bulk mail only | a person in the portal (`@oltrem/campaigns`) |
+
+An address that unsubscribed and then reports spam moves from bulk only to every message. A
+message whose every address is on the list fails at once with the reason, never in silence; one
+with some barred sends to the rest and keeps the note in `last_error`. A caller marks bulk mail
+with `bulk: true` on `send`.
+
 | Answer | When |
 |---|---|
 | 200 `{ recorded, ignored }` | the report was checked; `recorded` events were kept |
@@ -121,21 +153,28 @@ Two failures in a row open a problem (`@oltrem/core-health`).
 ## Personal data
 
 For a privacy request (`personal`, read by the privacy module) the module answers each message
-sent to the address: its template, its state, the last delivery event and when it was sent. The
-text of a message is not kept, so it is not in the answer. The Email page is linked.
+sent to the address: its template, its state, the last delivery event, its outcome, its first
+open, click, spam report and unsubscribe, and when it was sent; and the address's row on the
+do-not-mail list, with its reason, when there is one. The text of a message is not kept, so it
+is not in the answer. The Email page is linked.
 
 ## Not here yet
 
-- Suppression of an address that bounced or complained comes with the screens; the reports are
-  kept on the messages until then.
+- A screen of the do-not-mail list in this module, senders, saved templates, lists and a daily
+  cap come with the bulk sending stages (docs/records/2026-10-28-email-statuses.md); until then
+  the list is seen and changed on the Campaigns pages.
 - The generated Modules page of a client lists routes, not public hooks.
-- Suppression and a daily cap come with the screens.
 
-## The table and the error codes
+## The tables and the error codes
 
 `email_messages` (migration `0011_email.sql`): the message key, the tenant, the template, the
 addresses, the status (`leased`, `sent`, `retrying`, `waiting`, `failed`), the attempts, the
-lease, the instance, the provider's id, the last error and the last delivery event.
+lease, the instance, the provider's id, the last error and the last delivery event; migration
+`0043_email_outcomes.sql` adds the outcome, its time, whether it is for good and the provider's
+words, and the first open by a person and by a machine, click, spam report and unsubscribe. The
+same migration makes `email_donotmail` (the address, what it stops, the reason, the message that
+put it there, who and when) and `email_softbounces` (temporary bounces per address and their
+window).
 
 | Code | Name | Status | When |
 |---|---|---|---|

@@ -3,8 +3,8 @@
 Bulk email (the owner's request of 2026-10-27): a message written in the portal, sent to a list
 read from a CSV file, in chunks within a daily limit the email provider's plan allows. Every
 message carries the one-click unsubscribe Gmail and Yahoo ask bulk senders for (RFC 8058), and
-the addresses that unsubscribe, complain or bounce are kept on the company's suppression list
-and never sent a campaign again. A campaign sits at a place of the company, and the roles held
+the addresses that unsubscribe, complain or bounce are kept on the company's do-not-mail list
+(the email module's, since 2026-10-28) and never sent a campaign again. A campaign sits at a place of the company, and the roles held
 there decide who may read it, write it and send it, as for every other capability.
 
 ## Using it
@@ -35,7 +35,7 @@ Three capabilities on bit plane `13`: `campaigns.read` sees the campaigns and th
 `campaigns.write` starts a draft, writes its message, uploads its list and sends a test to
 oneself; `campaigns.send` starts, pauses, resumes and cancels a campaign, and asks for a fresh
 sign-in. Each is read at the campaign's place, or a place above it; a campaign the person may
-not read is not found. The suppression list is the company's, so reading it and changing it need
+not read is not found. The do-not-mail list is the company's, so reading it and changing it need
 `campaigns.send` held at the company itself.
 
 ## A campaign, step by step
@@ -48,7 +48,7 @@ not read is not found. The suppression list is the company's, so reading it and 
 | The message           | The text as written, with the footer and an unsubscribe link under it; an HTML version of the same text, every value escaped, paragraphs at blank lines and web addresses made links. The page previews it as the first person of the list will receive it.                                                                                                                                                                                                                                                                                                        |
 | A test                | Sent to the signed-in person's own address, as the first person would receive it, its subject marked `[Test]`.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Start                 | Now, or in one, three or 24 hours (any time within 90 days through the API). It needs a subject, a message, someone to send to, merge fields the list has, and the footer setting; what is missing is named on the page. The portal's address at that moment is where the unsubscribe links point.                                                                                                                                                                                                                                                                 |
-| Sending               | The job `campaigns.send` runs every five minutes and hands the next people of each due campaign to the email module, in the order of the file: at most `campaigns.chunk_size` a run, and no more than `campaigns.daily_limit` campaign messages in a UTC day for the company. An address on the suppression list is skipped; a message the email module refuses as it is fails, without counting towards the limit.                                                                                                                                                |
+| Sending               | The job `campaigns.send` runs every five minutes and hands the next people of each due campaign to the email module, in the order of the file: at most `campaigns.chunk_size` a run, and no more than `campaigns.daily_limit` campaign messages in a UTC day for the company. An address on the do-not-mail list is skipped; a message the email module refuses as it is fails, without counting towards the limit.                                                                                                                                                |
 | Pause, resume, cancel | A pause stops the chunks until it is resumed; a cancel ends it for good, and who was not sent to stays unsent.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Sent                  | Once nobody waits, the campaign is marked sent and its figures are audited.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
@@ -64,13 +64,15 @@ headers, and a link in its footer, to `/hooks/campaigns/u/<token>`, outside the 
 is the person's row and an HMAC of it under the campaign's own random secret, so a link cannot be
 made up and nothing secret is sent. Opening the link shows a page that asks, because mail
 scanners open links; its button, or a mail app's one-click `POST`, unsubscribes at once and says
-so. The address joins the company's suppression list as `unsubscribed`, audited as the system's
-`campaigns.unsubscribe`. A test message's link only says it was a test.
+so. The address joins the company's do-not-mail list as `unsubscribed`, for bulk mail only,
+audited as the system's `campaigns.unsubscribe`. A test message's link only says it was a test.
 
-The job `campaigns.listen` runs every hour and adds the addresses whose last delivery report was
-a bounce, a complaint or an unsubscribe at the provider, for the campaigns sending, paused or
-finished in the last 30 days. On the page an Owner may add addresses by hand and take off one
-that was added by hand or bounced; an unsubscribe or a complaint stays for good
+The list is the email module's `email_donotmail` (its README says who is put there and what each
+reason stops): the delivery reports add bounces for good, three temporary bounces in 30 days,
+refusals by the provider and spam reports the moment they arrive, for every message the portal
+sends, so the hourly `campaigns.listen` job of before is gone. Messages a campaign hands out are
+marked as bulk mail. On the page an Owner may add addresses by hand (bulk mail only) and take off
+one that was added by hand, bounced or refused; an unsubscribe or a complaint stays for good
 (`KIT-E-2505`): that person signs up again through a form of the company's.
 
 ## The pages
@@ -78,7 +80,7 @@ that was added by hand or bounced; an unsubscribe or a complaint stays for good
 | Path                         | Shows                                                                                                                                                                                                                                                                                                                                     |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/campaigns`                 | a row of stages (all, drafts, sending, sent) and **Never mailed**; the campaigns of the places the person may see; **New campaign** for a writer, with a row of places when there is more than one                                                                                                                                        |
-| `/campaigns?show=suppressed` | the suppression list, found by part of an address, with **Add addresses** and **Take off**                                                                                                                                                                                                                                                |
+| `/campaigns?show=suppressed` | the do-not-mail list, found by part of an address, with **Add addresses** and **Take off**                                                                                                                                                                                                                                                |
 | `/campaigns/:id`             | the stage; what keeps a draft from starting; the commands (send me a test, send it, pause, resume, cancel, delete the draft); the figures (people, sent, delivered, problems, left the list, today against the limit); the message form, the preview and the list upload for a draft; the first hundred people with a row of their states |
 
 ## Search
@@ -88,9 +90,10 @@ the places the person may see, with their state.
 
 ## Personal data
 
-For a privacy request (`personal`, read by the privacy module) the module answers whether the
-address is never mailed (and why), then each campaign it was on, with the name and merge fields it
-was sent with, its state and when it was sent. The Campaigns page is linked.
+For a privacy request (`personal`, read by the privacy module) the module answers each campaign
+the address was on, with the name and merge fields it
+was sent with, its state and when it was sent; the email module answers the address's row on the
+do-not-mail list. The Campaigns page is linked.
 
 ## The routes
 
@@ -100,7 +103,7 @@ was sent with, its state and when it was sent. The Campaigns page is linked.
 | `GET /campaigns` (`status`), `GET /campaigns/:id`, `GET /campaigns/:id/recipients` (`status`)                              | `campaigns.read`                | the campaigns; one with its counts, today's sending, the preview and what is missing; its first hundred people    |
 | `POST /campaigns`, `PATCH /campaigns/:id`, `DELETE /campaigns/:id`, `POST /campaigns/:id/list`, `POST /campaigns/:id/test` | `campaigns.write`               | a draft; its name, subject and message; deleting it; its list (the CSV file as the body, a `bytes` route); a test |
 | `POST /campaigns/:id/start` (`at`), `/pause`, `/resume`, `/cancel`                                                         | `campaigns.send`                | the stages                                                                                                        |
-| `GET /suppressed` (`q`), `POST /suppressed` (`emails`), `POST /suppressed/remove` (`email`)                                | `campaigns.send` at the company | the suppression list                                                                                              |
+| `GET /suppressed` (`q`), `POST /suppressed` (`emails`), `POST /suppressed/remove` (`email`)                                | `campaigns.send` at the company | the do-not-mail list                                                                                              |
 
 The hooks `GET` and `POST /hooks/campaigns/u/:token` are the unsubscribe link. Every change is
 audited by the module (`campaigns.create`, `.update`, `.delete`, `.import` with its counts and
@@ -110,7 +113,7 @@ columns but no address, `.test`, `.start`, `.pause`, `.resume`, `.cancel`, `.sup
 ## Health
 
 `campaigns.reputation`, in the `email` lane, reads the campaign messages of the last seven days
-with their last delivery report: **warn** above 0.3% complaints (Gmail's limit) or 5% bounces once
+with their outcomes: **warn** above 0.3% spam reports (Gmail's limit) or 5% bounces for good once
 at least 100 were sent, **ok** otherwise, with the figures.
 
 ## Tables
@@ -119,8 +122,12 @@ Migration `0020_campaigns.sql`, additive and idempotent: `campaigns` (each campa
 name, subject, message, the list's merge fields, stage, start time, the portal's address, its
 link secret, who and when), `campaigns_recipients` (each person: the row of the file, address,
 name, merge fields, state and reason, message key, when it was handed out) and
-`campaigns_suppressed` (the company's addresses never mailed, why, from which campaign, by whom,
-when). The figures read the email module's `email_messages` by message key.
+`campaigns_suppressed` (the company's addresses never mailed, until 2026-10-28). Migration
+`0044_campaigns_donotmail.sql` copies its rows into the email module's `email_donotmail`
+(bounces and complaints stop every message, the rest bulk mail only); the table is no longer read
+or written, and dropping it is a later step with the owner's yes. The figures read the email
+module's `email_messages` by message key: its outcome and its first open, click, spam report and
+unsubscribe.
 
 ## Settings
 
@@ -141,7 +148,8 @@ unsubscribed or complained stays on the list.
 ## Not here yet
 
 - The unsubscribe page speaks English only; its words come from the client later.
-- Opens and clicks are the providers' last report of each message, not a count of every open.
+- Opens and clicks are the first of each message, not a count of every open; an open by Apple's
+  privacy proxy is not counted as a reader's.
 - No segments or saved audiences: each campaign brings its own file. Lists from the records
   module come with automations.
 
@@ -153,6 +161,6 @@ is `@oltrem/core-module`'s, tested there); merge fields and fallbacks;
 the HTML escaped with its links and the one-click headers; a draft at a place seen and written by
 the roles there; the list with a suppressed address; what keeps it from starting; a test to
 oneself; chunks within the day's limit and the rest the next day; the stages; the unsubscribe
-page and its POST, a forged link refused; bounces and complaints suppressed; the suppression
-list's rules; the audit. The client template's screens test runs the pages: a campaign written,
+page and its POST, a forged link refused; the figures from the outcomes and the do-not-mail list;
+the do-not-mail list's rules; the audit. The client template's screens test runs the pages: a campaign written,
 its list uploaded, a test, sending through the cron tick, and an unsubscribe.
