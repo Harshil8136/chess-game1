@@ -19,7 +19,7 @@ client's own configuration. Everything an agent or a person needs to know is in
 | How it deploys | a push to `main` runs the checks and `pnpm verify`, then `oltrem release`: a restore point, the migrations, the deploy, a health check, and a step back to the version before if the new one does not answer (`.github/workflows/deploy.yml`) |
 | A job on the live portal | the operations menu (GitHub, Actions, operations, Run workflow, from `main`): check the setup, apply waiting migrations, replace a Worker secret (its new value first added as a repository secret of the same name, deleted after), step back the code, restore the database; the last two replace what runs, so they ask for their name typed again (`.github/workflows/operations.yml`) |
 | Trying it on your computer | `npm run dev`, with no Cloudflare account: [below](#on-your-own-computer) |
-| Setting it up | `npm run deploy` from this computer (`npm run deploy -- --page` for the same steps in a page in the browser): it signs in to Cloudflare in the browser, asks the portal's address (Enter for the free workers.dev one), makes the KEK and the backup key (kept in `oltrem-keys.txt` for the Vendor to move offline), asks for the Access tag and the ops token with the steps to make them, creates the database, applies the migrations, deploys, then writes the Vendor's address and the backup's settings; run it again any time, it only adds what is missing. `pnpm setup` and `pnpm doctor` check the repository |
+| Setting it up | `npm run deploy` from this computer (`npm run deploy -- --page` for the same steps in a page in the browser): it signs in to Cloudflare in the browser, asks which account when the sign-in reaches several, asks the portal's address (the account's domains offered to pick from, or the free workers.dev one), makes the KEK and the backup key (kept in `oltrem-keys.txt` for the Vendor to move offline), asks for the ops token with a link to a filled-in Cloudflare form and checks it on paste, creates the database, applies the migrations, deploys, shows the steps for the door and notices by itself when it is on, then writes the Vendor's address and the backup's settings; run it again any time, it only adds what is missing. `pnpm setup` and `pnpm doctor` check the repository |
 | Taking a new kit version | `pnpm install`, then `pnpm exec oltrem upgrade`: it checks first, then copies the kit's new migrations and prints the release notes; then `pnpm verify` and push |
 | The reference, never written by hand | `docs/_generated/`, written by `oltrem docs` from the files above and checked on every verify |
 
@@ -28,7 +28,8 @@ client's own configuration. Everything an agent or a person needs to know is in
 `npm run dev` (`scripts/dev.mjs`) starts this Worker on your computer with local stand-ins for
 the database, the key-value namespace and the bucket, and no Cloudflare account. It applies the
 migrations to the local database and gives the Vendor the address `vendor@example.com` there,
-both without asking anything, then serves the portal at <http://localhost:8787>. The migrations
+both without asking anything, then serves the portal at <http://localhost:8787> (the next free
+port, said out loud, when another program already holds 8787). The migrations
 run in one database session (a few seconds for all of them, where wrangler's own command takes
 one session each), and wrangler's own commands run instead should that fail. It shows a line per
 step in [the kit's look](../../packages/cli/README.md#the-look-in-a-terminal), keeps wrangler's

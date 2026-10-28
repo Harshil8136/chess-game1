@@ -10,6 +10,13 @@ repositories an AI agent can work in safely. This repository is the kit itself.
   every document; the plan behind the work is linked from there.
 - **Checking a change?** `pnpm verify` is the one gate; [what it runs](./docs/reference/verify.md)
   is generated from the gate list.
+- **One click?** Double-click `start-windows.cmd` on Windows, `start-mac.command` on a Mac (the
+  first time, right-click it and choose Open) or `start-linux.sh` on Linux. It finds Node.js 22
+  (on Windows and with Homebrew it offers to install it; otherwise it opens the download page),
+  installs the kit the first time, then opens a start page in your browser with three choices: try
+  the portal on this computer, get the newest kit, or put it on Cloudflare, where the sign-in, the
+  account, the domain and the key are picked and checked in the page. When no browser opens the
+  page, the same three choices are asked in the window. `npm start` does the same from a terminal.
 - **On your own computer?** With Node 22 or newer, two commands from this folder: `npm install`,
   then `npm run dev`, and open <http://localhost:8787>. npm is all you need: the install fetches
   the pnpm version `package.json` names and installs the workspace with it. The portal opens on

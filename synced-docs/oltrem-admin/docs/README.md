@@ -195,6 +195,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Invoices module](records/2026-10-27-invoices-module.md) | staff bill a customer, from scratch or from an accepted quote; the customer sees what they owe on their account page; staff mark it paid; overdue ones in Needs you |
 | [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one short look for install, `npm run dev`, update and deploy; tools' output in a log; the first local start about four times faster; `npm run update` |
 | [The setup page](records/2026-10-27-setup-page.md) | `npm run setup` puts a portal on Cloudflare with a page in the browser that asks each question and shows the progress, in the portal's look |
+| [One-click setup](records/2026-10-28-one-click-setup.md) | a file to double-click on each system opens a start page; the deploy picks the account and domain, checks the key on paste and notices the door |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked

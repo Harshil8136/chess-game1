@@ -195,10 +195,17 @@ their output in `.oltrem/deploy.log`, and the last line names the `workers.dev` 
 printed:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
+   Then the account (`src/cloudflare.ts` reads it from `wrangler whoami --json`): the one the
+   sign-in reaches, or, when it reaches several, the one picked from their names. The pick goes to
+   wrangler as `CLOUDFLARE_ACCOUNT_ID` for the rest of the run, never into a file, so wrangler has
+   no account to ask about later.
 2. **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
    in step 7, and step 6 names it among the addresses the door lets in, so the two cannot differ.
-3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. An
+3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When
+   the sign-in can read the account's active domains (`wrangler auth token`, then Cloudflare's
+   zones list), they are offered as choices beside the free address, and a domain is followed by
+   the name before it (Enter for `portal`); otherwise the address is typed. An
    empty answer serves the portal on its free `workers.dev` address (`workers_dev` turned on);
    an address on a domain of the same Cloudflare account becomes `PUBLIC_HOST` and a `routes`
    entry making it the Worker's custom domain. `wrangler.jsonc` is written only once every answer
@@ -209,15 +216,24 @@ printed:
    Cloudflare never shows a secret back, the private key because no copy opens without it. The
    file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
    stopped before the deploy uses the keys it kept. `ACCESS_AUD` is set to `worker` with nothing
-   asked (step 6 says why). The ops token comes after the steps that make it, and without echo.
+   asked (step 6 says why). The ops token comes after the steps that make it, and without echo:
+   the first step is a link to Cloudflare's token form with the name and both permissions filled
+   in (D1 Edit, Account Analytics Read). The pasted key is checked with Cloudflare at once (active,
+   on the account or as a person's key, and allowed D1 on the account) and asked again, up to three
+   times, with what is wrong; when Cloudflare cannot be reached it is used as pasted.
    When the Worker exists but its secrets cannot be listed, the command stops rather than send a
    new KEK, which would leave every stored provider key unreadable.
 5. **The database, the migrations** (as `migrations apply` does) **and `wrangler deploy`**,
-   carrying the new secrets in a file (`--secrets-file`) that is removed right after; wrangler may
-   ask which account when the sign-in reaches several.
+   carrying the new secrets in a file (`--secrets-file`) that is removed right after. The
+   migrations and the deploy are tried once more, five seconds later, when what failed reads as a
+   passing network or Cloudflare error (a reset connection, a timeout, a 502).
 6. **The door**, once the deploy has made the Worker (an empty account has nothing to protect):
    the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
-   Access, All traffic, the allowed emails, the sign-in email first), then Enter. Nothing is copied back: `ACCESS_AUD`
+   Access, All traffic, the allowed emails, the sign-in email first), the first one a link to the
+   account's own Workers page, then Enter. The command checks the portal's address from outside
+   every few seconds while it waits: once the address sends people to the Access sign-in
+   (`*.cloudflareaccess.com`), the step ends by itself, and a door already on is not asked about at
+   all. Nothing is copied back: `ACCESS_AUD`
    `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
    the door is on no request carries it, so the portal refuses everyone. A client with a hostname
    Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
@@ -256,9 +272,20 @@ page has been closed for a minute while the deploy waits on it (never in the mid
 run). The second process's own output is in `.oltrem/setup.log`, wrangler's in
 `.oltrem/deploy.log`.
 
-The second process has no keyboard, so wrangler asks nothing there: a sign-in that reaches
-several Cloudflare accounts stops with wrangler's message, and `npm run deploy` in the terminal,
-which lets wrangler ask which account, is the way through.
+A question with choices (the account, the domain) is a card per choice; the key's box has a
+**Paste** button (Ctrl+V still works when the browser refuses it); the door's question says it is
+checking by itself, and is marked "Noticed by itself" when it is. When the page closes while a
+question waits, the browser is opened on it again once. When the page cannot start at all (no free
+port, a refused socket), the same deploy runs in the terminal instead.
+
+### The start page
+
+`servePage(null, { menu })` serves the same page with choices instead of one run: each choice is a
+card, runs as a second process whose lines come over IPC as the deploy's do (the kit's look sends
+them when `OLTREM_PAGE` is set and the process has an IPC channel), and ends with **Back to the
+start**. A choice marked stoppable (the portal on this computer) has a **Stop it** button, which
+asks the process over IPC to stop what it started, then ends it three seconds later. The kit's
+root runs it as `npm start` and from its one-click files; see the root README.
 
 ## `oltrem setup [dir]`
 
