@@ -22,7 +22,8 @@ tags: [analytics, design, ui, accessibility, colour, contrast, layout, motion, d
 > "how far people read" sheet per page.
 
 This extends the [first design](2026-10-26-analytics-page.md), which still holds for everything
-not named here. What each part reads is in the [feature document](../features/ANALYTICS.md).
+not named here. Speed and experience left the packed wall on 2026-10-28 for a
+[board of its own](2026-10-28-speed-and-experience-board.md). What each part reads is in the [feature document](../features/ANALYTICS.md).
 
 ## 1. Why
 
@@ -121,7 +122,7 @@ order of the page.
 |---|---|---|
 | Ring (`.an-donut`) | a whole in a few kinds: new and returning, who sent the emails, who was asking, how people reach out, where errors happen | an SVG ring with 3-unit gaps between slices in the categorical slots; the middle holds the total and what it counts, or the share and name of the slice picked; a key of buttons (label, count, share) picks a slice (`aria-pressed`) |
 | Columns (`.an-cols`) | counts by day or by band: visit lengths, where the site ranks, arrival times, cache or server each day, health checks each day, requests and errors each day | SVG columns sized to the card (`useWidth`), stacked with a 2 px gap, the top rounded; labels under each column when there are eight or fewer, otherwise ticks; a readout (`aria-live`) names the column picked; a key when there are two series |
-| Dial (`.an-dial`) | each Core Web Vital at 3 in 4 visits | a half circle in three zones from Google's good and poor limits, a needle at the reading, the value and its word in text |
+| Dial (`.an-dial`) | each Core Web Vital at 3 in 4 visits | a half circle in three zones from Google's good and poor limits, a needle at the reading, the value and its word in text. **Removed on 2026-10-28**: the readings are drawn as PageSpeed draws them, and Speed and experience has a board of its own ([its design](2026-10-28-speed-and-experience-board.md)) |
 | Reading (`.an-read`) | how far half of the people scrolled each page and how long they stayed | a small page sheet per page filled from the top as far as half its readers got, with the share, the time and the views in words |
 
 ## 5. Motion

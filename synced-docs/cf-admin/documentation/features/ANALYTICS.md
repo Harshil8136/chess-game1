@@ -2,7 +2,7 @@
 title: "Analytics — how the website and the platform are doing, from every source"
 status: active
 audience: [owner, ai, technical, operator]
-last_verified: 2026-10-26
+last_verified: 2026-10-28
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -12,6 +12,8 @@ related_code:
 - src/components/dashboard/analytics/Analytics.tsx
 - src/components/dashboard/analytics/AnalyticsBlocks.tsx
 - src/components/dashboard/analytics/AnalyticsCharts.tsx
+- src/components/dashboard/analytics/Experience.tsx
+- src/components/dashboard/analytics/experience.ts
 - src/components/dashboard/analytics/format.ts
 - src/styles/pages/analytics.css
 - src/lib/analytics/report/load.ts
@@ -32,6 +34,8 @@ related_code:
 - migrations/0078_analytics_email_reliability.sql
 - test/analytics.test.ts
 - test/analytics-round2.test.ts
+- test/analytics-experience.test.ts
+- test/experience-look.test.ts
 related_docs:
 - DASHBOARD.md
 - SYSTEM-HEALTH.md
@@ -43,8 +47,10 @@ related_docs:
 - ../operations/OPERATIONS.md
 - ../specs/2026-10-26-analytics-page.md
 - ../specs/2026-10-26-analytics-colours-and-layout.md
+- ../specs/2026-10-28-speed-and-experience-board.md
 - ../records/reports/2026-10-26-analytics-page.md
 - ../records/reports/2026-10-26-analytics-round-2.md
+- ../records/reports/2026-10-28-speed-and-experience-board.md
 tags: [feature, analytics, posthog, cloudflare, search-console, sentry, supabase, d1]
 ---
 
@@ -63,10 +69,15 @@ tags: [feature, analytics, posthog, cloudflare, search-console, sentry, supabase
 Asked for by Harshil on 2026-10-26: "we have ton of data auto collected but no way to process
 it, or get an insight into it". The second round the same day added Email and Reliability, more
 from every source, the per-part colours, a packed layout without blank space and the automatic
-retry. The look is in the [design spec](../specs/2026-10-26-analytics-page.md) and its
-[second round](../specs/2026-10-26-analytics-colours-and-layout.md); what shipped and how it was
-checked is in the change records of the first (private)
-and the second round (private).
+retry. On 2026-10-28, after Harshil found Speed and experience "very broken", that part got a
+board of its own that reads top to bottom. The look is in the
+[design spec](../specs/2026-10-26-analytics-page.md), its
+[second round](../specs/2026-10-26-analytics-colours-and-layout.md) and the
+[Speed and experience board](../specs/2026-10-28-speed-and-experience-board.md); what shipped and
+how it was checked is in the change records of the
+first (private) and the
+second round (private) and of the
+board (private).
 
 ## 1. The parts
 
@@ -82,7 +93,7 @@ time zone (the hotel has no time-zone setting).
 | **Visitors** | `/visitors` | Visitors, page views, visits, pages per visit, the share who left after one page, time on the website; where they are (countries, states, cities), what they use (devices, browsers, systems, languages), busiest weekday and hour, where they come from (channels, websites, campaign tags, AI assistants), first and last pages, cookie choices; how far people read each page (how far down half of them scrolled and how long half stayed), the links they tap (WhatsApp, phone, maps, social and the website's own pages), new and returning visitors, and how long visits last | PostHog (`events`: `$pageview`, `$pageleave`, `$autocapture`; `sessions`), Supabase `consent_records` |
 | **Booking journey** | `/bookings` | The booking form step by step (visit, booking page, form started, pet, owner, sent) with the biggest drop named; the share who finished; bookings made, pets, nights per stay, days booked ahead; what people book (service, pets, transport) and when (ahead, length, arrival day); every booking send (went through, refused by the checks, failed); inquiries by service; **how people reach out**: the booking form beside taps on WhatsApp, Google Maps, social media, phone and email, counted in people | PostHog funnel and link taps, Supabase `bookings` and `booking_pets`, `contact_messages`, D1 `booking_attempts` |
 | **Google search** | `/search` | Clicks, times shown, click rate, average position, by day; top searches, top pages, who clicks (device, country); **where the site ranks** (times shown at positions 1 to 3, 4 to 10, page 2 and further); which pages are in Google's index and when Google last read them | Search Console search analytics (250 searches for the ranks, 25 listed), D1 `gsc_index_log` (`url_inspect`) |
-| **Speed and experience** | `/experience` | Core Web Vitals from real visitors at 3 in 4 visits, each as a dial against Google's good and poor limits, split good / needs work / poor; speed by page; taps that did nothing and quick repeated taps; errors in browsers; Google's PageSpeed score per page | PostHog (`$web_vitals`, `$dead_click`, `$rageclick`, `$dead_swipe`, `$exception`), D1 `gsc_index_log` (`performance_check`) |
+| **Speed and experience** | `/experience` | On a board of its own, top to bottom (`Experience.tsx`): one verdict from the four readings beside Google's PageSpeed score; Core Web Vitals from real visitors at 3 in 4 visits, each with a bar of good / needs work / poor and a mark at 3 in 4, as PageSpeed draws them; what stands out beside where visitors get stuck (taps that did nothing, quick repeated taps, errors in browsers, each place); every page once, slowest first, with visitors' speed beside Google's test (a page with fewer than five readings is shown but not rated) | PostHog (`$web_vitals`, `$dead_click`, `$rageclick`, `$dead_swipe`, `$exception`), D1 `gsc_index_log` (`performance_check`) |
 | **Website traffic** | `/traffic` | Everything Cloudflare served: requests, visitors by address, page views, the share served from cache, data sent, threats stopped, **data sent from the cache and the share over HTTPS**, by day; each day's requests from the cache or the server; how the website answered (2xx to 5xx); who was asking (people, search engines, monitors, known abusers); HTTP and TLS versions; where threats came from; countries, kinds of file, browsers, pages and devices | Cloudflare GraphQL Analytics (`httpRequests1dGroups` with its `clientHTTPVersionMap`, `clientSSLMap`, `ipClassMap` and `countryMap`; `httpRequestsAdaptiveGroups`) |
 | **Email** | `/email` | Emails sent, the share that arrived, the share opened (of those that arrived), bounced or refused, how fast they arrived and how soon they were read, by day; each kind of email and how it did; how they ended; who sent them (the website or the portal); arrival times in bands; when emails are opened, by weekday and hour | Supabase `email_audit_logs` (the send ledger cf-email-consumer writes) |
 | **Reliability** | `/reliability` | Health checks all clear each day, errors Sentry recorded, open issues, requests the platform's Workers handled, their errors and their CPU time per request against the free plan's 10 ms; what Sentry did with errors; where errors happen; each Worker; requests and errors each day | D1 `health-state` (System health's day record), Sentry (error counts per day and open issues), Cloudflare GraphQL Analytics (`workersInvocationsAdaptive`, the platform's own Workers only) |
@@ -199,6 +210,11 @@ platform's own Workers, failures isolated), the Summary's order, the CSV of the 
 the colour folding and card widths, PostHog's retry (a 503 then an answer, a 403 not retried, no
 answer twice), the email ledger read (the reason dropped, the columns asked for), System health's
 day record, and the route (the two new keys, and a retry after a source came back).
+`test/analytics-experience.test.ts`: the Speed and experience board's verdict and its words,
+PageSpeed's score bands, the pages joined on their address and their order, the few-reading
+pages, and where visitors get stuck; `test/experience-look.test.ts`: the part on its own board
+without the figures or the packed wall, the readings without dials and with their mark, and the
+words for a screen reader.
 `test/action-keys-enforced.test.ts` checks that `#export` and `#refresh` are enforced.
 
 ## Verification log
@@ -207,3 +223,4 @@ day record, and the route (the two new keys, and a retry after a source came bac
 |---|---|---|
 | 2026-10-26 | Written with the code: every section against the files in `related_code`; the PostHog events and properties against the live project (PostHog connector), the D1 `gsc_index_log`, `booking_attempts` and `admin_pages` rows and the Supabase `bookings`, `booking_pets`, `contact_messages` and `consent_records` columns against the live databases (Cloudflare and Supabase connectors); `test/analytics.test.ts` passes | The portal's PostHog key's Query: Read scope, the Cloudflare `httpRequests1dGroups` answer for this zone and Search Console's search analytics for the service account: none can be called with the portal's own keys from here |
 | 2026-10-26 | Round 2 against the code: §1's Visitors, Booking journey, Google search, Website traffic, Email and Reliability rows, §2's retry, cache key and subrequests, §3's keys after `0078`, §4's account and Sentry rows. Live: `$pageleave` with the page, scroll and time properties and `$autocapture` link taps exist in the last 30 days (124 and 80, PostHog connector); `email_audit_logs` rows carry `delivery_events` arrays of `event`, `timestamp` and `reason` only, with `delivered`, `unique_opened`, `unique_proxy_open` and bounce events (Supabase connector); the `health-state` row and its `worker_errors` check passing every day since 2026-10-17 (D1 connector); `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass (56) | The `date` dimension and CPU quantiles of `workersInvocationsAdaptive`, Sentry's daily error counts over 14, 60 and 90 days, and `httpRequests1dGroups`' newer fields with the portal's keys (MAINTENANCE AN-4 to AN-6); the page in a phone browser |
+| 2026-10-28 | The Speed and experience row of §1, the introduction and §5 against `Experience.tsx`, `experience.ts`, `AnalyticsBlocks.tsx` and `analytics.css`; the page paths of PostHog's speed readings and PageSpeed's runs end in a slash in both sources, and one page had four readings with a p75 of 162.6 s (PostHog and D1 connectors); `test/analytics-experience.test.ts` and `test/experience-look.test.ts` pass | Every other part and section; the board in a phone browser |
