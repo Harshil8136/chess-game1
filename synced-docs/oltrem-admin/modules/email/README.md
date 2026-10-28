@@ -7,8 +7,8 @@ tenant's active email instance from `@oltrem/providers` and, when that one refus
 failover in order. The kit keeps its own lease per message key in D1, so a message the queue
 brings twice is sent once whatever the provider promises. The company's sending domains and the
 sender addresses on them live here too: who may send from which address, and whether a domain
-is set up well enough for bulk mail; and the company's saved templates, the designs bulk mail is
-written with.
+is set up well enough for bulk mail; and the company's saved templates and lists, the designs
+bulk mail is written with and the people it goes to.
 
 ## Using it
 
@@ -127,13 +127,33 @@ a send. Every change is audited: `email.template-add`, `email.template-save`,
 `email.template-copy`, `email.template-archive`, `email.template-restore`,
 `email.template-revert`, `email.template-test`.
 
+## Saved lists
+
+The people bulk mail goes to, kept in D1 as the company's (stage 4 of the bulk sending plan,
+`docs/records/2026-10-28-saved-lists.md`), on the page Messages, Lists (`/email/lists`).
+
+| Part | What it does |
+|---|---|
+| Filling a list | From a CSV file (1 MB at most, read by `readList`: an `email` column, every other column a merge field, the first and last name joined when there is no name column) or from addresses typed one a line, with a name before or after (`typedCsv`). The people there are kept and these added, a repeat updated, or all of them replaced. A list holds 50,000 people at most; each person is one row written |
+| The reason they may be mailed | Asked at every import, never assumed: `asked` (they signed up or ticked a box), `customers` (they bought, were told and may leave at any time) or `other` with a note; the page also asks the person to confirm. Each person keeps the reason, who added them and when; the list shows its last import's |
+| What an import says | How many were added, updated, repeated in the file and refused, the first twenty refused rows by number, how many are on the do-not-mail list and the merge fields. Nothing is dropped in silence |
+| The do-not-mail list | Read at every send, so a person on it stays on the list, is shown as never mailed with the reason, and the list counts them. The counts are kept on the list and counted again at most every fifteen minutes, so the page of lists reads one row a list |
+| Finding and tidying | A person is found by the start of their address or part of their name, fifty to a page; one is taken off a list, or an address off every list for a person who asks to be forgotten. A list is archived and brought back, or deleted with its people |
+| Downloading | A CSV of the people, their merge fields, their reason and whether they are on the do-not-mail list, for one who holds `email.lists.export` (with a fresh sign-in); every download is audited |
+
+`createEmail(...).lists.people` hands a send its people a page at a time, in address order. Every
+change is audited: `email.list-add`, `email.list-update`, `email.list-import`,
+`email.list-remove-person`, `email.list-forget`, `email.list-archive`, `email.list-restore`,
+`email.list-remove`, `email.list-export`.
+
 ## Routes
 
 Under `/api/email`, through the IAM module's sessions and check. `email.manage` and
 `email.senders.manage` ask for a fresh sign-in. The templates' capabilities are held at the
 company itself: `email.templates.read` to see and preview, `email.templates.write` to build from
 blocks and send oneself a test, `email.templates.html` as well to paste HTML or change a pasted
-body.
+body. So are the lists': `email.lists.read`, `email.lists.write`, and `email.lists.export` to
+download one.
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -162,6 +182,16 @@ body.
 | `POST /templates/:id/revert` | `email.templates.write` | Make an older `version` the current one again |
 | `GET /templates/:id/preview?version=&dark=` | `email.templates.read` | The message filled with sample values, as its own page under a policy that runs nothing |
 | `POST /templates/:id/test` | `email.templates.write` | Send it to oneself at once; the version is marked as tested |
+| `GET /lists?archived=` | `email.lists.read` | The saved lists with their counts, and whether the person may fill and download them |
+| `POST /lists` | `email.lists.write` | A new, empty list (`name`, `description`) |
+| `POST /lists/forget` | `email.lists.write` | Take an address off every list |
+| `GET /lists/:id?q=&after=` | `email.lists.read` | A list, its counts, its last import's reason, and fifty of its people |
+| `PATCH /lists/:id` | `email.lists.write` | Change its name or description |
+| `POST /lists/:id/import?mode=&consent=&note=&source=&typed=` | `email.lists.write` | Fill it from the body, a CSV file or typed addresses (`typed=1`), adding or replacing; answers what the import did |
+| `DELETE /lists/:id/people/:email` | `email.lists.write` | Take one person off |
+| `POST /lists/:id/archive` | `email.lists.write` | Archive it (`archived` true) or bring it back |
+| `DELETE /lists/:id` | `email.lists.write` | Delete it and its people |
+| `GET /lists/:id/download` | `email.lists.export` | The list as a CSV file; audited |
 
 ## Delivery reports
 
@@ -229,15 +259,18 @@ domain and what is wrong; **ok** otherwise.
 For a privacy request (`personal`, read by the privacy module) the module answers each message
 sent to the address: its template, its state, the last delivery event, its outcome, its first
 open, click, spam report and unsubscribe, and when it was sent; and the address's row on the
-do-not-mail list, with its reason, when there is one. The text of a message is not kept, so it
-is not in the answer. The Email page is linked.
+do-not-mail list, with its reason, when there is one. The saved lists the address is on are answered too, with
+the name and merge fields kept there, the reason and who added it. The text of a message is not
+kept, so it is not in the answer. The Email page is linked.
 
 ## Not here yet
 
-- A screen of the do-not-mail list in this module, saved lists and a daily cap come with the
-  later bulk sending stages (docs/records/2026-10-28-senders-and-domains.md); until then the
-  list is seen and changed on the Campaigns pages. A campaign is written with its own subject
-  and text until the sending engine of stage 5 lets it pick a saved template.
+- A screen of the do-not-mail list in this module and a daily cap come with the later bulk
+  sending stages (docs/records/2026-10-28-senders-and-domains.md); until then the list is seen
+  and changed on the Campaigns pages. A campaign is written with its own subject, text and file
+  until the sending engine of stage 5 lets it pick a saved template and a saved list.
+- A list is filled from a file or typed addresses; filling one from the customers module is
+  not built yet.
 - The domain calls are written from Resend's and Brevo's API references and tested against
   their documented answers, not yet against live accounts. Resend's sending-only keys cannot
   read domains, so with one the domain is confirmed by hand; the instance's own probe (`GET
@@ -260,7 +293,11 @@ addresses) and `email_senders` (the address, its name and reply-to, its place, i
 its domain). Migration `0047_email_templates.sql` makes `email_templates` (the name, the kind,
 the current version's subject, preview line, accent and body, the blocks as JSON or the cleaned
 HTML, what the last cleaning took out, the version last tested, by whom and when, and when it was
-archived) and `email_template_versions` (each version's content, by whom and when).
+archived) and `email_template_versions` (each version's content, by whom and when). Migration
+`0048_email_lists.sql` makes `email_lists` (the name, description, merge fields, the kept counts
+of people and of those on the do-not-mail list, the last import's reason, note, person, time and
+source, and when it was archived) and `email_list_members` (the address, name, merge fields as
+JSON, the reason, who added them and when).
 
 | Code | Name | Status | When |
 |---|---|---|---|
@@ -273,3 +310,4 @@ archived) and `email_template_versions` (each version's content, by whom and whe
 | `KIT-E-1507` | `ALREADY_ADDED` | 409 | the domain or the address is there already |
 | `KIT-E-1508` | `SENDER_NOT_READY` | 422 | the sender was removed, is for the other kind of mail, or its domain does not pass for bulk mail |
 | `KIT-E-1509` | `CHANGED_SINCE` | 409 | a template was saved again after the version the change was made to |
+| `KIT-E-1510` | `BAD_LIST` | 422 | a list's file has no email column or no one to mail, is over 1 MB, or would make the list longer than 50,000 |
