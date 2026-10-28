@@ -3,8 +3,8 @@
 The screens of a client portal: a home page with a card per mounted module, a page per module,
 the two first-run forms (the Vendor creates the company, the first Owner accepts), and the forms
 for people and access. They are rendered on the server with Preact inside the client's Worker,
-behind the same door as the API, and carry no script, so a page works on a phone before anything
-loads.
+behind the same door as the API, and work with no script, so a page works on a phone before
+anything loads. One small script (`/ui/app.js`) then moves from page to page without a reload.
 
 Every page reads and writes only through the portal's own API, called inside the same request
 with the caller's identity headers (`src/api.ts`). The session hook, the permission check, the
@@ -127,14 +127,8 @@ again with the API's reason and its status. Choices of one (a role, a place, a k
 fields are password fields; an optional field left empty is left out, and a secret is never put
 back into a page.
 
-Every page sits in the same frame (`src/layout.tsx`). From 1024 px wide, a sidebar: the portal's
-mark, every mounted section under its group (Work, People, Messages, Operations,
-Administration) with the current one marked, and at the bottom who is signed in with their role (Vendor, Owner or
-Member) with, on this computer, a Sign out button, a link to My access, and the colour theme as
-three icons. On a
-phone, a top bar with a Menu button that opens the same sidebar as a drawer from the left (a
-`dialog` opened by the browser's `commandfor`, no script; a tap outside closes it); the sections
-are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page says in one line what it is for, then a row of its actions
+Every page sits in the same frame (`src/layout.tsx`); [The frame](#the-frame) below has the
+detail. The sections are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page says in one line what it is for, then a row of its actions
 (`ActionRow`, links to the page's own forms), a row of summary tiles counted from the same API
 answers the page already reads (`Stats`; no extra request), and its sections, a form in a panel.
 Empty lists say so in a dashed box, and a list picked down to nothing says nothing matches. The theme
@@ -145,21 +139,61 @@ site is refused.
 
 ## The frame
 
-Every page sits in one frame: the sidebar on a computer, a bar with the menu button and the same
-sidebar as a drawer on a phone, both in glass over the portal's canvas. The sidebar starts with a
-search box (a plain form to `/search`); the phone's bar also has a search button. The current section is
-marked with a bar at its edge. The document names the phone browser's bar colour (light, dark, or
-both for the device's own) and carries one block of speculation rules: the browser fetches a page
-while the pointer rests on its link, so the tap that follows opens it at once. The rules leave out
-the API, the hooks, the stylesheet, the local door and the invitation link.
+Every page sits in one frame, drawn on the server:
 
-## The stylesheet
+- **The sidebar**, from 1024 px wide, down the left edge in the page's own colour with one line
+  beside it. From the top: an arrow that closes it, the portal's mark, a search box (a plain form
+  to `/search`, `Ctrl K` or `⌘K` from anywhere), Home, then every mounted section under its group,
+  and at the foot who is signed in. Rows are 36 px (44 px on a touch screen).
+- **Groups**, in this order: Work, Team (time clock, shifts, time off, expenses, equipment), Sales
+  (quotes, invoices), People, Messages, Operations, Developer, Administration. A module's page
+  joins its group wherever the module is listed; a group the kit does not know sits before
+  Administration (`groupRank` in `src/layout.tsx`). Each group has a colour (`hueOf`): its dot, its
+  icons, and the tint and edge marker of the section on screen, which is also bold, so it never
+  rests on colour alone. Home's cards use the same colours.
+- **Closed to icons.** The arrow closes the sidebar to a 64 px rail and opens it again. Only the
+  words fade: no icon moves. A section's name shows beside the rail while the pointer or the
+  keyboard is on it. The choice posts `side` (`closed` or `open`) and `back` to `POST /ui/side`,
+  which keeps it in the `oltrem_side` cookie, so the next page is drawn the same with no jump.
+- **Your account**, at the foot: pressed, a small menu opens above it (to the right of the closed
+  rail) with your address, My access, the colour theme as three icons and, on this computer, Sign
+  out. The theme posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, which keeps
+  the choice in the `oltrem_theme` cookie (cleared for system); the frame then sets `data-theme`
+  on the page. Both switches return to `back` when it is a path on the portal, Home otherwise, and
+  refuse a form posted from another site.
+- **On a phone**, a top bar with a Menu button that opens the same parts as a drawer from the left
+  (a `dialog` opened by the browser's `commandfor`; a tap outside closes it); the phone's bar also
+  has a search button. The document names the phone browser's bar colour (light, dark, or both for
+  the device's own).
+
+**No reloads.** The frame's script (`src/client/frame.js`, served at `/ui/app.js` under its
+version) opens a link to one of the portal's pages, a search, a filter or a form's change in
+place: it fetches the next page and swaps only the page's content (`main.ui-page`), so the
+sidebar stays on screen where it was scrolled and the section on screen is marked as the new page
+marks it. The address, the title, Back and Forward (with the page's scroll) behave as on a load.
+A page change fades the content in where the browser has view transitions and motion is on; a
+change that comes back to the same page keeps its scroll and brings its outcome (a `Done` notice
+or an error) into view. Focus moves to the new page's heading, or to a form's errors. The page
+under the pointer is fetched a moment ahead, so the click opens it at once. The arrow and the
+theme switch act at once and save behind the scenes. A thin line at the top shows a page that is
+still loading.
+
+What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,
+`/ui/*`, the local door and the invitation link (`NATIVE` in the script), and an answer that is
+not a page. When the sidebar itself changed (a section given or taken away, another account: the
+frame's `data-frame` key), it draws the new sidebar and keeps where it was scrolled. When a form's
+change gets no answer, it says so on the page instead of sending it twice. With no script at all,
+every link and form works as a plain load.
+
+## The stylesheet and the script
 
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
-theme and the classes the pages and primitives use, about 33 KiB. It is served at `/ui/app.css`,
-cached for good under its version and `no-cache` without it. After changing a class in a page or a
-primitive, run `pnpm ui:build`; a test fails while the committed file differs from what the build
-writes. The file is generated: never edit it by hand (R-06).
+theme and the classes the pages and primitives use, about 46 KiB. `src/generated/app-js.ts` holds
+the frame's script, copied from `src/client/frame.js`, about 17 KiB. They are served at
+`/ui/app.css` and `/ui/app.js`, cached for good under their version and `no-cache` without it.
+After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
+while a committed file differs from what the build writes. Both files are generated: never edit
+them by hand (R-06).
 
 ## Not here yet
 

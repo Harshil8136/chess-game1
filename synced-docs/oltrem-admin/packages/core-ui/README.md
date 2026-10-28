@@ -19,17 +19,21 @@ does not exist here, and a test proves it.
 | Type | `xs` 12/16 to `2xl` 24/32; weights 400, 500, 600; `tabular-nums` for data | `text-sm`, `font-semibold` |
 | Shadows | `sm`, `md` | `shadow-md` |
 | Motion | `fast` 120 ms, `base` 200 ms, one `ease-out`; enter and exit through `@starting-style`; from page to page a view transition | `duration-(--duration-fast)` |
+| Group colours | `--ui-hue-blue`, `green`, `amber`, `rose`, `cyan`, `violet`, `teal`, `slate`: one per group of sections, each at 3:1 or better on the page and the surface in both themes; `data-hue="green"` makes one the element's `--hue` | `data-hue`, `ui-hue-tile` |
 | Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves) | classes |
+| The frame | `ui-frame` (with `data-side` open or closed), `ui-side` and its parts (`-head`, `-search`, `-nav`, `-group`, `-row`, `-foot`, `-me`, `-menu`, `-themes`, `-tip`), `ui-side-drawer`, `ui-progress`: the portal's sidebar, drawn by `@oltrem/screens` | classes |
 
 Light and dark are the same names with different values; dark follows the system
 (`prefers-color-scheme`) unless `<html data-theme="light">` or `dark` says otherwise. Every
 text-on-colour pair reads at 4.5:1 or better in both, and a test computes the ratios from the
-OKLCH values rather than trusting the author's eye. There are no z-index layers: dialogs,
-popovers and toasts use the browser's top layer.
+OKLCH values rather than trusting the author's eye. Dialogs, popovers and toasts use the
+browser's top layer; only the frame (the sidebar, its account menu, the label beside the closed
+rail and the loading line) carries a z-index.
 
-From one page to the next the browser keeps the frame still and fades the page's content in
-(`@view-transition`, a cross-document view transition): no script, a plain load where the browser
-does not have it, and none under reduced motion. Buttons press in a little when tapped.
+From one page to the next, the frame's script (`@oltrem/screens`) swaps only the page's content
+and fades it in with a view transition; with no script, the browser does the same across a load
+(`@view-transition`, a cross-document view transition), and a browser without either just shows
+the page. None of it runs under reduced motion. Buttons press in a little when tapped.
 
 ## The primitives
 
