@@ -203,6 +203,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Saved email templates](records/2026-10-28-saved-templates.md) | designs kept in the portal, built from blocks or pasted as HTML and cleaned, checked at each save, previewed as a phone, a desktop and dark mode, tested to oneself, every version kept |
 | [Saved email lists](records/2026-10-28-saved-lists.md) | the people bulk mail goes to, kept in the portal from a file or typed in, each with the reason they may be mailed; refused rows named, the do-not-mail list honoured at every send, downloads audited |
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | campaigns sent in batch calls sized by the client's Cloudflare plan; no answer repeated under its key or left to a person; the provider's stops held and shown; large sends need a second person; templates, saved lists, pace and live progress |
+| [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's spam or bounce limits; a failed run is shown, retried and paused at the third; System health watches the timer and the reports; a summary email, results by mailbox provider and a download |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked

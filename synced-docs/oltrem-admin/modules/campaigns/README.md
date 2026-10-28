@@ -19,6 +19,13 @@ it with an alert. A send to more people than one person may send to alone waits 
 person's yes. People may be added and taken off while it runs, and its page refreshes its figures
 every ten seconds.
 
+Since the same day (stage 6) a sending campaign watches itself: above 0.3% spam reports or 5%
+bounces over its latest messages it pauses itself to protect the sender's name; a run that fails
+is said on its page and tried again, and the third failure in a row pauses it; System health
+says when the timer stops running the campaigns or the provider's reports stop arriving. Once it
+is done, the person who started it is emailed how it went, and its page shows the results by
+mailbox provider with a download of every person and what became of their message.
+
 ## Using it
 
 ```ts
@@ -79,7 +86,9 @@ starts it needs that too. The do-not-mail list is the company's, so reading it a
 | Waits and stops       | It waits, says why on its page and goes on by itself: outside its sending hours; while its sender cannot carry bulk mail (warning alert); when the day is used up (until 00:05 UTC); when the provider's allowance is used up (until 00:05 UTC, warning alert); when the provider asks to slow down (for the wait it names, at least a minute). A refusal of the key, the account, the domain or the provider counts: three runs in a row and it pauses itself with a critical alert, until a person resumes it. |
 | Unclear               | A call that got no answer is sent again under the same key at the next run while the provider honours keys (Resend, for 24 hours; the run size halves after it and grows back). With a provider that honours none, or after 23 hours, the people of that call are unclear: nothing more goes to them until someone holding `campaigns.send` decides to send again, count them as sent or not send them. A run that died half way is settled by what the email module wrote for those keys before anything is sent again. |
 | Pause, resume, cancel | A pause stops the chunks until it is resumed; a cancel ends it for good, and who was not sent to stays unsent.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Sent                  | Once nobody waits, the campaign is marked sent and its figures are audited.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| A run that fails      | A run that throws (the database busy, a bug) is caught for that campaign alone: the others still run, the reason is on its page and in the audit log (`campaigns.run-failed`) with a warning alert, and the next run tries again, settling from the claim it wrote. The third failure in a row pauses it with a critical alert, until a person resumes it. |
+| The sender's name     | Every half hour, once 200 were sent, the run reads the reports on the campaign's latest messages (at most 1,000): above 0.3% spam reports (Gmail's limit) or 5% bounces for good it pauses itself before sending more, says which on its page and raises a critical alert (audited as `campaigns.protect`). A person looks at who complained or bounced, cleans the list and resumes it; the same reports are not read again for a day. The page shows the latest figures while it sends. |
+| Sent                  | Once nobody waits, the campaign is marked sent and its figures are audited. The person who started it (the one who asked, when a second person approved) is emailed once, with the template `campaigns.summary`: the counts and a link to its page. |
 
 Each message carries the key `campaigns:<campaign>:<person>`, where the email module's delivery
 reports find it. With no email provider ready, or none that may send for the sender's domain, the
@@ -122,6 +131,7 @@ one that was added by hand, bounced or refused; an unsubscribe or a complaint st
 | `/campaigns`                 | a row of stages (all, drafts, sending, sent) and **Never mailed**; **Room today** (messages left, database writes, the events queue, the run size); the campaigns of the places the person may see; **New campaign** for a writer, with a row of places when there is more than one |
 | `/campaigns?show=suppressed` | the do-not-mail list, found by part of an address, with **Add addresses** and **Take off**                                                                                                                                                                                                                                                |
 | `/campaigns/:id`             | the stage and the address it goes out from; the approval it waits for, with **Yes, send it** and **No, send it back** and a note for whoever may approve; what keeps a draft from starting; the commands (send me a test, send it or ask to send it, pause, resume, cancel, delete the draft); the progress (people, sent, unclear, failed, today against the limit, the next run's size, the last run in words, why it waits, when it should be done), refreshed every ten seconds while it sends; the unclear people and the three decisions; delivered, clicked, problems and who left the list; **From**; **Message** (a template or plain text, while a draft or paused); the preview; **Pace** with the sending hours as a row of days; the list from a file or a saved list, or **Add people** and **Take people off** while it runs; the first hundred people with a row of their states, unclear among them |
+| `/campaigns/:id` (sent)      | after the figures, **By mailbox provider**: Gmail, Microsoft, Yahoo and AOL, Apple and the others, with the people, sent, delivered, opened, clicked, bounced, spam reports and who left, read from each address's domain (on a phone card: sent, bounced and spam); **Download the results** for whoever may send |
 | `/campaigns/:id/live`        | the progress alone: what an open campaign page fetches every ten seconds (one row read) and swaps in place, through the frame script's `data-live` blocks |
 
 ## Search
@@ -145,7 +155,8 @@ do-not-mail list. The Campaigns page is linked.
 | `POST /campaigns`, `PATCH /campaigns/:id`, `DELETE /campaigns/:id`, `POST /campaigns/:id/list`, `POST /campaigns/:id/test` | `campaigns.write`               | a draft; its name, subject and message, and its sender (until it is sent, with `campaigns.send` once it is sending); deleting it; its list (the CSV file as the body, a `bytes` route); a test |
 | `POST /campaigns/:id/list/add` (CSV body), `POST /campaigns/:id/use-list` (`listId`, `add`), `POST /campaigns/:id/remove-people` (`emails`) | `campaigns.write`               | people added from a file or a saved list, a draft's list replaced by a saved one, waiting people taken off         |
 | `POST /campaigns/:id/pace` (`perRun`, `dailyCap`, `hours`)                                                                 | `campaigns.write` (`campaigns.send` once it runs) | its pace and sending hours                                                                     |
-| `GET /campaigns/:id/live`, `GET /room`                                                                                     | `campaigns.read`                | the progress from the campaign's own row; what may still go out today                                             |
+| `GET /campaigns/:id/live`, `GET /room`, `GET /campaigns/:id/report`                                                        | `campaigns.read`                | the progress from the campaign's own row; what may still go out today; its results by mailbox provider             |
+| `GET /campaigns/:id/download`                                                                                              | `campaigns.send`                | every person and what became of their message, as a CSV file (`<name>-results.csv`), audited as `campaigns.download` |
 | `POST /campaigns/:id/start` (`at`), `/pause`, `/resume`, `/cancel`, `POST /campaigns/:id/decide` (`choice`)                | `campaigns.send`                | the stages (`start` answers `asked: true` when the send waits for approval); the unclear people                    |
 | `POST /campaigns/:id/approve` (`yes`, `note`)                                                                              | `campaigns.approve`             | the answer to a large send                                                                                        |
 | `GET /suppressed` (`q`), `POST /suppressed` (`emails`), `POST /suppressed/remove` (`email`)                                | `campaigns.send` at the company | the do-not-mail list                                                                                              |
@@ -153,15 +164,27 @@ do-not-mail list. The Campaigns page is linked.
 The hooks `GET` and `POST /hooks/campaigns/u/:token` are the unsubscribe link. Every change is
 audited by the module (`campaigns.create`, `.update`, `.delete`, `.import` with its counts and
 columns but no address, `.use-list`, `.add-people`, `.remove-people`, `.pace`, `.test`, `.start`,
-`.approve`, `.refuse`, `.decide`, `.pause`, `.resume`, `.cancel`, `.suppress`, `.unsuppress`; the
-system's `campaigns.run` with what each run did, `campaigns.unsubscribe` and `campaigns.finish`
-with the final counts).
+`.approve`, `.refuse`, `.decide`, `.pause`, `.resume`, `.cancel`, `.download`, `.suppress`,
+`.unsuppress`; the system's `campaigns.run` with what each run did, `campaigns.run-failed` with
+the reason and how many in a row, `campaigns.protect` with the figures it paused on,
+`campaigns.unsubscribe` and `campaigns.finish` with the final counts).
 
 ## Health
 
 `campaigns.reputation`, in the `email` lane, reads the campaign messages of the last seven days
 with their outcomes: **warn** above 0.3% spam reports (Gmail's limit) or 5% bounces for good once
-at least 100 were sent, **ok** otherwise, with the figures.
+at least 100 were sent, **ok** otherwise, with the figures. The two limits are the ones a
+campaign pauses itself at (`PAUSE_SPAM`, `PAUSE_BOUNCES`).
+
+`campaigns.timer`, in the `email` lane, **fails** when a campaign has been due to send for over
+20 minutes (`STALLED_MS`) while no campaign had a run at all: the five-minute job is not running
+them. A campaign that waits for a reason it names is not counted, nor one that waits its turn
+while others use the run.
+
+`campaigns.reports`, in the `email` lane, **warns** when 20 or more campaign messages were sent
+between two hours and 30 minutes ago (`SILENT_MS`) and the provider reported on none of them:
+its webhook is not set up or not arriving, and without the reports a campaign cannot pause
+itself on spam or bounces.
 
 ## Tables
 
@@ -181,7 +204,10 @@ the approval (state, who asked, who answered, when, the note), the engine's stat
 it waits and until when, refusals in a row, the last run, the open claims) and its counters
 (people, sent, skipped, failed, unclear, and the day's count), so the progress reads one row;
 and to `campaigns_recipients` when a person became unclear and the version they got. It fills
-the counters of the campaigns already there.
+the counters of the campaigns already there. Migration `0050_campaigns_watch.sql`, additive, adds
+to `campaigns` who started it (`started_by`), when the reports are read next (`rates_next`) and
+the latest reading (`rates_over`, `n_bounced`, `n_complained`), and when its summary was sent
+(`summary_at`).
 
 ## Settings
 
@@ -207,8 +233,10 @@ unsubscribed or complained stays on the list.
   privacy proxy is not counted as a reader's.
 - No segments: a campaign brings a file or a saved list. Lists from the records module come with
   automations.
-- Stopping by itself on a high spam or bounce rate, a summary to the person who started it, and
-  reports by mailbox provider come in stage 6 of the bulk sending plan.
+- The mailbox provider is read from the address's domain only; a company domain hosted by Google
+  or Microsoft counts under the others.
+- The watch reads its figures at the start of a run, so it pauses at most one run (50 messages
+  on the free plan) after the limit is crossed.
 
 ## Tests
 
@@ -228,7 +256,13 @@ half way settled by what the email module wrote; the provider's stops and the pa
 refusals, resolved on resume; pace, daily cap and sending hours, overnight and in a time zone;
 people added from a file and a saved list and taken off while it runs; the room today; the plan's
 run size and database writes; a template's version fixed at the start and a new wording version
-while paused. The client template's screens test runs the pages: a campaign written, its list
+while paused. The watch: a run that fails said on its page, tried again and paused at the
+third, then resumed and sent; a campaign pausing itself above 0.3% spam reports over 220
+reported messages, its alert and audit, and resumed without reading them again; the summary sent
+once to the person who started it; the results by mailbox provider; the download refused to a
+writer, its file and its audit; the reports check ok and then warning, and the timer check
+failing while nothing ran and ok after a run. The client template's screens test runs the pages: a campaign written, its list
 uploaded, a sender address added and picked, a test, the run waiting with no provider and saying
-so, then a provider connected and the run sending in one batch call, the live figures, and an
-unsubscribe.
+so, then a provider connected and the run sending in one batch call, the live figures, the
+results by mailbox provider and the download, the summary waiting in the outbox, **Bulk mail
+today** on the Email home, and an unsubscribe.
