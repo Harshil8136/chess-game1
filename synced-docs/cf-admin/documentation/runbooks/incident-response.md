@@ -206,8 +206,9 @@ delay containment to gather more.
    > re-issuance before rotating, not after; and record the rotation time in
    > the incident log so analysts know why hashes stop matching.
 4. **Tighten the edge if under active attack.** Cloudflare security level →
-   `under_attack` via `/dashboard/control-plane` or
-   `POST /api/control-plane/cloudflare {"action":"set-security-level","level":"under_attack"}`.
+   Under attack via Configuration → Cloudflare (`/dashboard/configuration`, the Owner by default;
+   since 2026-10-28) or
+   `POST /api/configuration/cloudflare {"action":"set-security-level","level":"under_attack"}`.
 5. **Cross-repo containment.** The neighbours share different things, and the
    rotation scope differs accordingly:
    - **`cf-astro`** shares the Supabase project, the D1 database
@@ -320,6 +321,7 @@ Stated plainly, because an assessor will find these anyway:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-10-28 | claude: step 4 against `src/pages/api/configuration/cloudflare.ts` (the route moved from Control Plane) and the Configuration page's Cloudflare section | Scope-limited to step 4 |
 | 2026-10-23 | claude: the sign-in alert email row again, for the per-way rules (evening), against `src/lib/login-alerts/decide.ts` (`wayRule`) | Scope-limited to that row |
 | 2026-10-23 | claude: the sign-in alert email row, against `src/lib/login-alerts/decide.ts` (`otherWayIn` and the policy's `normalWaysIn`) | Scope-limited to that row |
 | 2026-10-16 | claude: `src/pages/api/users/force-kick.ts`, `src/lib/auth/surface-guards.ts` (`denyForceKick`, `denySessions`), `src/lib/auth/guard.ts` (`placRequireGrant`), `src/pages/api/users/manage.ts` (PATCH), `src/lib/users/manage-apply.ts` (`applyUserUpdate`, `updateClearance`), `src/lib/approvals/ask.ts` and `rules.ts` (`kindForPersonChange`), `src/pages/api/sessions/active-sessions.ts` and `flush-sessions.ts`, `src/components/admin/users/PersonDrawer.tsx`, `src/lib/auth/plac.ts` (`forceLogoutUser`), `stages/session-stage.ts`, `stages/bootstrap.ts`, `stages/refresh-role.ts`, `src/lib/auth/fresh-sign-in.ts`, `src/lib/login-alerts/decide.ts` and `dispatch.ts`, `src/lib/auth/security-logging.ts`, `src/lib/access-changes/notify.ts`, `src/lib/audit-seal/mail.ts`, `src/pages/api/audit/seals.ts`, `src/lib/login-alerts/policy.ts`, `src/lib/audit-views.ts`, `src/lib/console-signature.ts`; the `cf-access-reconcile` interval read live (D1 connector, `cron-control`: 60 minutes); cf-backup `wrangler.json` | §3: rows for the sign-in alert, access-change and audit-seal emails, `view` rows and the login logs' method and alert columns. §4 step 1 rewritten for Users → Sign out everywhere (`#force-kick`, since `b78965c`) and the Sessions actions, the 10-minute sign-in and the 24-hour sign-in block; step 2 rewritten for Users → Suspend and Sessions → Lock out (what one suspension does, the two-person rule), with a direct database edit as the slower fallback; step 5 gains the consoles and `CONSOLE_SIGNING_KEY`; §5 step 4 names the `view` rows. Not re-checked: step 3's rotation order and the `IP_HASH_SECRET` caveat, §1, §2, §6 to §9, the legal deadlines in §7 |

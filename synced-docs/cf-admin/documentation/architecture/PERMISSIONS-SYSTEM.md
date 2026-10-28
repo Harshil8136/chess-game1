@@ -467,6 +467,15 @@ records, in PostHog itself). `GET /api/posthog/settings` checks the page and the
 its `PATCH` and a reset add `#sampling`, and a change in PostHog `#provider-write`
 ([`POSTHOG.md`](../features/POSTHOG.md) §1). Control Plane's own keys are unchanged until its pages
 lead here.
+*Added 2026-10-28 (Configuration's request limits and Cloudflare section, migration `0083`):*
+`/dashboard/configuration#cloudflare` (Change Cloudflare settings, `owner`, as Control Plane's
+`#provider-write`: the site's security level and emptying the website's cache), checked with
+`placRequireGrant` after the page key by `POST /api/configuration/cloudflare`. The website's
+request limits need no new key: `/api/configuration/limits` reads behind the page key and changes,
+resets and refreshes behind `#edit`, as the page's other settings
+([`SETTINGS-AND-CONFIGURATION.md`](../features/SETTINGS-AND-CONFIGURATION.md)). Control Plane's
+Cloudflare sub-page row stays until its rows are switched off; its address forwards to the
+Configuration page.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1408,6 +1417,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-28 | claude | **Scope-limited to the Configuration Cloudflare paragraph.** Read `src/pages/api/configuration/limits.ts` and `cloudflare.ts`, `src/pages/dashboard/configuration.astro` and `migrations/0083_configuration_cloudflare.sql`; read the live row back through the D1 connector after `0083` was applied; `test/configuration-limits-cloudflare.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |
 | 2026-10-28 | claude | **Scope-limited to the PostHog settings paragraph.** Read `surface-guards.ts` (`POSTHOG_PARTS`, `denyPostHog`, `posthogCan`), `src/pages/api/posthog/settings.ts` and `migrations/0082_posthog_settings.sql`; read the three live rows back through the D1 connector after `0082` was applied; `test/posthog-settings.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |
 | 2026-10-28 | claude | **Scope-limited to the Sentry settings paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/settings.ts` and `migrations/0081_sentry_settings.sql`; read the three live rows back through the D1 connector after `0081` was applied; `test/sentry-settings.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |
 | 2026-10-28 | claude | **Scope-limited to the Sentry sentence.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts`, the two pages and `migrations/0080_sentry_page.sql`; read the six live rows back through the D1 connector after `0080` was applied; `test/sentry.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code and the live rows; `last_verified` left as it was, since the rest of the document was not re-read |

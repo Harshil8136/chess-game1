@@ -182,7 +182,12 @@ who, what, before and after, and refused if the person lacks the permission.
    `0082`) moved PostHog's settings and its recording switch to a Settings part on the PostHog
    page ([POSTHOG.md](../features/POSTHOG.md) §3), on the same setting rows, now shared by both
    pages; its share of visits recorded changes PostHog's own `session_recording_sample_rate`
-   (§10). Control Plane's other tools follow, then its addresses redirect; its rows are switched off in a push after that
+   (§10). The fourth (2026-10-28, migration `0083`) moved the website's request limits and the
+   Cloudflare tools to the Configuration page
+   ([SETTINGS-AND-CONFIGURATION.md](../features/SETTINGS-AND-CONFIGURATION.md)), with Cloudflare's
+   changes behind their own key, Change Cloudflare settings; Control Plane's Cloudflare address
+   forwards there, and its Workers list was dropped, since Analytics' Reliability part lists each
+   Worker. Control Plane's other addresses redirect next; its rows are switched off in a push after that
    (MAINTENANCE SE-3).
 2. **Speed, Trends, Monitors and alerts.**
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
@@ -214,6 +219,10 @@ Each stage ships on its own, with its tests, documents and a change record.
   PostHog does not sample by, and nothing on the website uses its own
   `posthog.session_recording.sample_rate` row (`cf-astro/src/scripts/analytics-loader.ts`). Found
   2026-10-28 while moving PostHog's settings; MAINTENANCE PH-2 and PH-3.
+- **Two of the limits and Cloudflare rows do nothing:** the privacy request limit is read by no
+  website route (the form uses a limit built into the website), and Control Plane's two read-only
+  Cloudflare rows are read by nothing, one of them wrong. Found 2026-10-28 while moving them;
+  MAINTENANCE SE-6 and SE-7.
 - **System health's log scan is still refused** by Cloudflare (live row read 2026-10-28 04:35 UTC):
   the same token step as choice 2.
 

@@ -22,7 +22,11 @@ tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observabili
 > recording switch are on the [PostHog page](POSTHOG.md)'s Settings part (§3), where the share of
 > visits recorded is PostHog's own `session_recording_sample_rate`: this page's PostHog tab writes
 > its share into `session_replay_config`, which PostHog does not sample by
-> (MAINTENANCE (private) PH-2). The other tabs move to the pages that
+> (MAINTENANCE (private) PH-2). The website's request limits and the Cloudflare tab's
+> tools are on the [Configuration page](SETTINGS-AND-CONFIGURATION.md) since the same day, and
+> the Cloudflare tab's address forwards there: its routes are `/api/configuration/limits` and
+> `/api/configuration/cloudflare`, the old `/api/control-plane/cloudflare` was removed, and its Workers
+> list is Analytics' Reliability part. The other tabs move to the pages that
 > own their subject ([SENTRY.md](SENTRY.md) §8), then this page's
 > addresses lead to the new places and its rows are switched off (MAINTENANCE (private)
 > SE-3). Until then this page works as described below.
@@ -143,8 +147,9 @@ central, not per-route**: under `API_DENY_MODE = "enforce"` the middleware maps
 every `/api/*` path to a page through `API_PAGE_MAPPING` and denies anything
 unmapped (`src/lib/auth/routes.ts`, `src/lib/auth/stages/decide.ts`). That is
 what keeps the UI and the API from drifting apart — not each handler
-remembering to call a helper. `GET /api/control-plane/cloudflare`, for
-instance, never calls `placDenyResponse` and is still gated. Note also that the
+remembering to call a helper. `GET /api/control-plane/cloudflare` (moved to
+`/api/configuration/cloudflare` on 2026-10-28), for instance, never called
+`placDenyResponse` and was still gated. Note also that the
 middleware maps the provider routes to their **sub-pages**
 (`/dashboard/control-plane/sentry`, and so on) while the handlers check the
 parent page, so a deny written against a sub-page is caught by the middleware
@@ -353,8 +358,7 @@ same-origin (CSRF-guarded) and audited.
 | `/api/control-plane/sentry`       | POST   | Owner+     | `#provider-write`      | Filters / key limits / spike protection / issue resolve-ignore-unresolve |
 | `/api/control-plane/posthog`      | GET    | Admin+     | page                   | PostHog settings + billing           |
 | `/api/control-plane/posthog`      | POST   | Owner+     | `#provider-write`      | Session recording config             |
-| `/api/control-plane/cloudflare`   | GET    | Admin+     | page                   | Workers / KV / D1 / R2 / queue / ZT users / zone security inventory |
-| `/api/control-plane/cloudflare`   | POST   | Owner+     | `#provider-write`      | Cache purge; zone security level     |
+| ~~Cloudflare inventory, cache purge, security level~~ | GET, POST | | | Removed 2026-10-28: now `/api/configuration/cloudflare`, the Configuration page's ([SETTINGS-AND-CONFIGURATION.md](SETTINGS-AND-CONFIGURATION.md)) |
 | `/api/control-plane/supabase`     | GET    | Admin+     | page                   | Security + performance advisors      |
 
 *Re-verified against each handler on 2026-09-14.* The three provider GETs were listed as "Any auth"
@@ -378,7 +382,7 @@ library (the Phase-6 redesign):
 /dashboard/control-plane              Overview: live snapshot · config editor ·
                                       health & drift · recent change history
 /dashboard/control-plane/sentry       Sentry metrics + Layer-B controls
-/dashboard/control-plane/cloudflare    Cloudflare metrics + purge controls
+/dashboard/control-plane/cloudflare    forwards to /dashboard/configuration#cloudflare (2026-10-28)
 /dashboard/control-plane/posthog       PostHog metrics + session-recording config
 /dashboard/control-plane/supabase      Supabase metrics + advisors
 ```
@@ -437,6 +441,7 @@ operators who hold the relevant capability.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The "Being replaced" note, the §3 sentence on the Cloudflare route, the §7 route row and the §8 address against the Configuration page's two routes, `src/pages/dashboard/control-plane/cloudflare.astro` (a forward) and migration `0083`; `test/configuration-limits-cloudflare.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the PostHog page's Settings part (`src/pages/api/posthog/settings.ts`, migration `0082`); that this page's PostHog write (`setSessionRecording` in `src/lib/control-plane/posthog-admin.ts`) puts its share in `session_replay_config`, and that the project's live `session_replay_config` is empty while `session_recording_sample_rate` is none (every visit), through the PostHog connector | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the Sentry page's Settings part (`src/pages/api/sentry/settings.ts`, migration `0081`); `ConfigEditor.tsx` now saves through `useConfigEdit.ts`, which sends the row's version so a change made on the other page is refused (409) and reread, checked with `test/sentry-settings.test.ts` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the new Sentry page (`src/pages/dashboard/sentry/`, migration `0080`) and the plan's §2 and §8; this page's code and rows unchanged | The rest of the document; `last_verified` left as it was |

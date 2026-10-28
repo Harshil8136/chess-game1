@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-28 | `ls migrations/*.sql` (61 files, highest `0083`), `d1_migrations` newest row through the Cloudflare D1 connector after `0083` was applied; §5's `CLOUDFLARE_API_TOKEN` row against `src/pages/api/configuration/cloudflare.ts` and `src/lib/control-plane/cloudflare-admin.ts` | §7's state comment and count; §5 names the Configuration page's Cloudflare section as the reader of the control-plane calls. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (60 files, highest `0082`), `d1_migrations` newest row through the Cloudflare D1 connector after `0082` was applied; §5's `POSTHOG_PERSONAL_API_KEY` row against `src/lib/posthog/settings.ts` | §7's state comment and count; §5 names the PostHog page's Settings part and its "Project: Write". No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (59 files, highest `0081`), `d1_migrations` newest row through the Cloudflare D1 connector after `0081` was applied; §5's `SENTRY_AUTH_TOKEN` row against `src/lib/sentry/settings.ts` | §7's state comment and count; §5 names the Sentry page's Settings part and its `project:write`. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (58 files, highest `0080`), `d1_migrations` newest row through the Cloudflare D1 connector after `0080` was applied; §5's `SENTRY_AUTH_TOKEN` and `CLOUDFLARE_API_TOKEN` rows against `src/lib/sentry/client.ts`, `overview.ts` and `cloudflare.ts` | §7's state comment and count; §5 names the Sentry page as a reader of both tokens and corrects the Cloudflare permission to Workers Observability: Edit. No binding, secret or variable added. Not checked: the rest of the document |
@@ -578,7 +579,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `REVALIDATION_SECRET` | ISR webhook auth (cf-admin → cf-astro) |
 | `IP_HASH_SECRET` | Privacy-safe IP hashing in login forensics and audit |
 | `HEALTH_CHECK_SECRET` | Authenticates external health probes |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare GraphQL analytics (the Overview and, since 2026-10-26, the Analytics page's Website traffic, "Zone Analytics: Read", and its Reliability part's counts of the platform's own Workers for `CF_ACCOUNT_ID`, "Account Analytics: Read") + control-plane reads (and cache purge unless `CONTROL_PLANE_CF_TOKEN` overrides); since 2026-10-24 also the Workers Logs counts of System health → Logs and, since 2026-10-28, the Sentry page's Cloudflare log lines ([`SENTRY.md`](../features/SENTRY.md) §5), which both need its "Workers Observability: Edit" permission (corrected 2026-10-28: Cloudflare's query accepts Write only; [`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §3a) |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare GraphQL analytics (the Overview and, since 2026-10-26, the Analytics page's Website traffic, "Zone Analytics: Read", and its Reliability part's counts of the platform's own Workers for `CF_ACCOUNT_ID`, "Account Analytics: Read") + the Configuration page's Cloudflare section (its reads, and cache purge unless `CONTROL_PLANE_CF_TOKEN` overrides; moved from Control Plane on 2026-10-28, [`SETTINGS-AND-CONFIGURATION.md`](../features/SETTINGS-AND-CONFIGURATION.md)); since 2026-10-24 also the Workers Logs counts of System health → Logs and, since 2026-10-28, the Sentry page's Cloudflare log lines ([`SENTRY.md`](../features/SENTRY.md) §5), which both need its "Workers Observability: Edit" permission (corrected 2026-10-28: Cloudflare's query accepts Write only; [`SYSTEM-HEALTH.md`](../features/SYSTEM-HEALTH.md) §3a) |
 | `CLOUDFLARE_ZONE_ID` | Zone id for HTTP metrics and purge |
 | `CF_API_TOKEN_READ_LOGS` | Zero Trust audit-log read — 5-minute cron polling (token `cf-admin: Zero Trust Audit Read`) |
 | `CF_API_TOKEN_ZT_WRITE` | Zero Trust session revoke — Layer 3 force-kick (token `cf-admin: Zero Trust Session Revoke`) |
@@ -727,8 +728,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-28: migrations/ holds 60 files, highest
-# 0082_posthog_settings.sql (applied 2026-10-28 06:57:49 UTC).
+# State as of 2026-10-28: migrations/ holds 61 files, highest
+# 0083_configuration_cloudflare.sql (applied 2026-10-28 07:26:34 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/
