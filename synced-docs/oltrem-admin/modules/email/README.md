@@ -7,7 +7,8 @@ tenant's active email instance from `@oltrem/providers` and, when that one refus
 failover in order. The kit keeps its own lease per message key in D1, so a message the queue
 brings twice is sent once whatever the provider promises. The company's sending domains and the
 sender addresses on them live here too: who may send from which address, and whether a domain
-is set up well enough for bulk mail.
+is set up well enough for bulk mail; and the company's saved templates, the designs bulk mail is
+written with.
 
 ## Using it
 
@@ -103,10 +104,36 @@ Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain
 The page is Messages, Senders (`/email/senders`, from `@oltrem/email/pages`): the sender
 addresses, and the domains with their check lines and records.
 
+## Saved templates
+
+The designs bulk mail is written with, kept in D1 as the company's (stage 3 of the bulk sending
+plan, `docs/records/2026-10-28-saved-templates.md`). They are not the typed templates above,
+which are code; a saved template is data a person builds on the page Messages, Templates
+(`/email/templates`).
+
+| Part | What it does |
+|---|---|
+| Blocks | A heading, text (a blank line starts a paragraph, an https address becomes a link), a button, an image with its description and an optional link, a divider, a space; at most 40. `renderDesign` puts them together as table HTML a mail app shows well on a phone and in dark mode (`color-scheme`, a dark palette by media query), with a hidden preview line and the footer bulk mail carries, and the same message as plain text. Every value is escaped; links are https, mailto or tel, images https |
+| Pasted HTML | Only for someone who also holds `email.templates.html`. `sanitizeEmailHtml` cleans it with HTMLRewriter before it is saved: a script, frame, form, SVG and the like go with their content, an unknown tag goes and keeps its words, an attribute not on the list and every `on...` handler go, a link must be https, mailto, tel, `#` or a merge field, an image https or a small inline picture, a style that loads or runs something goes. What was taken out is kept on the template, in words, and shown on its page |
+| Merge fields | `{{first_name}}`, or `{{first_name|there}}` with words for an empty value, in the subject, the preview line and every block; a person's value is escaped before it goes into pasted HTML. The lists and merge fields are read by `readList` and `merge` (`src/people.ts`, moved here from `@oltrem/campaigns`, which re-exports them) |
+| The checks | Every view of a template carries them, filled with sample values: the subject is set and not all capitals, a preview line, words in the message, its size under the 100 KB Gmail cuts at, no http links, every button and image address whole and https, every image described. A line is `pass`, `warn` (worth a look) or `fail` (must be fixed before it goes to many people) |
+| Versions | Each save that changes the content is a version (the newest 30 are kept). Saves by the same person within ten minutes of a version not yet tested change that version, so moving a block does not bury the history. An older version can be previewed and brought back, as a new version. A save carries the version it was made to; one over a newer version is refused (`KIT-E-1509`) rather than undoing someone's work |
+| The preview | `GET /templates/:id/preview` answers the message as a page of its own, under a policy that runs nothing and loads only https images (`default-src 'none'; ...; sandbox`); the page frames it with `sandbox` as a phone, a desktop or a mail app in dark mode shows it |
+| The test | Sent at once, not through the queue, to the signed-in person's own address, from their default bulk sender when they have one, through the active instance and then each failover. It is kept as a message (`email.template-test`), so its delivery reports arrive like any other; a refusal is the answer and the message's row says `failed` with what each provider said. The version is then marked as tested; the next change makes a new, untested version |
+| Archive | A template is archived, never deleted, so a send that used it can still show it; it can be brought back |
+
+`createEmail(...).templates.design` hands a template's current or named version to
+a send. Every change is audited: `email.template-add`, `email.template-save`,
+`email.template-copy`, `email.template-archive`, `email.template-restore`,
+`email.template-revert`, `email.template-test`.
+
 ## Routes
 
 Under `/api/email`, through the IAM module's sessions and check. `email.manage` and
-`email.senders.manage` ask for a fresh sign-in.
+`email.senders.manage` ask for a fresh sign-in. The templates' capabilities are held at the
+company itself: `email.templates.read` to see and preview, `email.templates.write` to build from
+blocks and send oneself a test, `email.templates.html` as well to paste HTML or change a pasted
+body.
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -126,6 +153,15 @@ Under `/api/email`, through the IAM module's sessions and check. `email.manage` 
 | `POST /senders` | `email.senders.manage` | Add an address (`email`, `name`, `replyTo`, `scopeId`, `purpose`) |
 | `PATCH /senders/:id` | `email.senders.manage` | Change its name, reply-to, place or purpose |
 | `DELETE /senders/:id` | `email.senders.manage` | Remove it; a default goes last |
+| `GET /templates?archived=` | `email.templates.read` | The saved templates, the newest change first, and whether the person may build and paste |
+| `POST /templates` | `email.templates.write` | A new template (`name`, `kind` `blocks` or `html`); blocks start with three to change |
+| `GET /templates/:id?version=` | `email.templates.read` | The template with its checks, merge fields and versions; an older version when one is named |
+| `PATCH /templates/:id` | `email.templates.write` | Save `name`, `subject`, `preheader`, `accent`, `blocks` or `html`, with the `version` edited |
+| `POST /templates/:id/copy` | `email.templates.write` | A copy, as a new template |
+| `POST /templates/:id/archive` | `email.templates.write` | Archive it (`archived` true) or bring it back |
+| `POST /templates/:id/revert` | `email.templates.write` | Make an older `version` the current one again |
+| `GET /templates/:id/preview?version=&dark=` | `email.templates.read` | The message filled with sample values, as its own page under a policy that runs nothing |
+| `POST /templates/:id/test` | `email.templates.write` | Send it to oneself at once; the version is marked as tested |
 
 ## Delivery reports
 
@@ -198,9 +234,10 @@ is not in the answer. The Email page is linked.
 
 ## Not here yet
 
-- A screen of the do-not-mail list in this module, saved templates, lists and a daily cap come
-  with the later bulk sending stages (docs/records/2026-10-28-senders-and-domains.md); until
-  then the list is seen and changed on the Campaigns pages.
+- A screen of the do-not-mail list in this module, saved lists and a daily cap come with the
+  later bulk sending stages (docs/records/2026-10-28-senders-and-domains.md); until then the
+  list is seen and changed on the Campaigns pages. A campaign is written with its own subject
+  and text until the sending engine of stage 5 lets it pick a saved template.
 - The domain calls are written from Resend's and Brevo's API references and tested against
   their documented answers, not yet against live accounts. Resend's sending-only keys cannot
   read domains, so with one the domain is confirmed by hand; the instance's own probe (`GET
@@ -220,7 +257,10 @@ window). Migration `0045_email_senders.sql` makes `email_domains` (the domain, i
 the provider's id for it, the records and check lines as JSON, the state `new`, `failing` or
 `passing`, who confirmed it, when it was checked and first passed, and its two default
 addresses) and `email_senders` (the address, its name and reply-to, its place, its purpose and
-its domain).
+its domain). Migration `0047_email_templates.sql` makes `email_templates` (the name, the kind,
+the current version's subject, preview line, accent and body, the blocks as JSON or the cleaned
+HTML, what the last cleaning took out, the version last tested, by whom and when, and when it was
+archived) and `email_template_versions` (each version's content, by whom and when).
 
 | Code | Name | Status | When |
 |---|---|---|---|
@@ -232,3 +272,4 @@ its domain).
 | `KIT-E-1506` | `IN_USE` | 409 | a domain with addresses, or a default address while others remain, is removed or narrowed |
 | `KIT-E-1507` | `ALREADY_ADDED` | 409 | the domain or the address is there already |
 | `KIT-E-1508` | `SENDER_NOT_READY` | 422 | the sender was removed, is for the other kind of mail, or its domain does not pass for bulk mail |
+| `KIT-E-1509` | `CHANGED_SINCE` | 409 | a template was saved again after the version the change was made to |
