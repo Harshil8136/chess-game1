@@ -173,9 +173,14 @@ who, what, before and after, and refused if the person lacks the permission.
    as the token step is done (choice 2). *As built:* stage 1 shipped in two parts. The first
    (2026-10-28) is the Overview, Issues with Resolve, Reopen and Archive until it gets worse, and
    Logs from both sources (Cloudflare's side waits on the token step); the note, "resolve in the
-   next release" and the other archive lengths were left for later. The second moves the
-   settings and Control Plane's other tools, then its addresses redirect; its rows are switched
-   off in a push after that (MAINTENANCE SE-3).
+   next release" and the other archive lengths were left for later. The second (2026-10-28,
+   migration `0081`) moved Sentry's settings and controls to a Settings part
+   ([SENTRY.md](../features/SENTRY.md) §6): the website's rows, the rules per page, the ignored
+   errors, Sentry's own spike protection, filters and key limits, the list of changes, and the
+   drift check as "which settings differ from their defaults" with a way to put them back. The
+   portal's three rows are shown but not offered until stage 3. Control Plane's other tools
+   follow, then its addresses redirect; its rows are switched off in a push after that
+   (MAINTENANCE SE-3).
 2. **Speed, Trends, Monitors and alerts.**
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
    (§10) start working, and Sentry's update suggestions.

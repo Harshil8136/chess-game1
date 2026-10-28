@@ -449,6 +449,15 @@ whether text is masked) and `POST /api/sentry/issues` (the Issues part and `#tri
 `sentryCan` tells the page what to offer ([`SENTRY.md`](../features/SENTRY.md) §1). Control
 Plane's rows stay until its tools have moved and its pages lead to the new places.
 
+*Added 2026-10-28 (Sentry settings, migration `0081`):* a third sub-page, `/dashboard/sentry/settings`
+(`super_admin`), and two action keys, `#sampling` (Change what is sent to Sentry, `super_admin`,
+as Control Plane's `#edit-sampling`: the website's Sentry rows of `service_config`, the rules per
+page, the ignored errors and putting them back) and `#provider-write` (Change Sentry's own
+settings, `owner`, as Control Plane's `#provider-write`: spike protection, filters and key limits
+in Sentry itself). `GET /api/sentry/settings` checks the page and the Settings part; its `PATCH`
+and a reset add `#sampling`, and a change in Sentry `#provider-write`. Control Plane's own keys
+are unchanged until its pages lead here.
+
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
 top-level page required a migration rather than a re-link
@@ -1389,6 +1398,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-28 | claude | **Scope-limited to the Sentry settings paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/settings.ts` and `migrations/0081_sentry_settings.sql`; read the three live rows back through the D1 connector after `0081` was applied; `test/sentry-settings.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |
 | 2026-10-28 | claude | **Scope-limited to the Sentry sentence.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts`, the two pages and `migrations/0080_sentry_page.sql`; read the six live rows back through the D1 connector after `0080` was applied; `test/sentry.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code and the live rows; `last_verified` left as it was, since the rest of the document was not re-read |
 | 2026-10-28 | claude | **Scope-limited to the PostHog sentence.** Read `surface-guards.ts` (`POSTHOG_PARTS`, `denyPostHog`, `posthogCan`), `src/pages/api/posthog/[part].ts`, the two pages and `migrations/0079_posthog_page.sql`; read the six live rows back through the D1 connector after `0079` was applied; `test/posthog.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence. The rest of the document not re-read |
 | 2026-10-26 | claude | **Scope-limited to the Analytics round-2 sentence.** Read `ANALYTICS_PARTS` in `surface-guards.ts`, `src/pages/api/analytics/[part].ts` (`retry`) and `migrations/0078_analytics_email_reliability.sql`; read the two new live rows back through the D1 connector after 0078 was applied; `test/analytics-round2.test.ts` passes (403 for a person without the part, 200 for the Owner) | The sentence. The rest of the document not re-read |

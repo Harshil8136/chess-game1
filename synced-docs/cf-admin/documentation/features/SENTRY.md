@@ -12,6 +12,8 @@ related_code:
 - src/components/dashboard/sentry/Sentry.tsx
 - src/components/dashboard/sentry/Issues.tsx
 - src/components/dashboard/sentry/Logs.tsx
+- src/components/dashboard/sentry/Settings.tsx
+- src/components/admin/control-plane/useConfigEdit.ts
 - src/components/dashboard/sentry/parts.tsx
 - src/components/dashboard/sentry/format.ts
 - src/components/dashboard/posthog/shared.tsx
@@ -22,12 +24,18 @@ related_code:
 - src/lib/sentry/logs.ts
 - src/lib/sentry/cloudflare.ts
 - src/lib/sentry/overview.ts
+- src/lib/sentry/settings.ts
+- src/pages/api/sentry/settings.ts
+- src/lib/dal/ServiceConfigRepository.ts
+- src/lib/control-plane/config-schema.ts
 - src/lib/sentry/types.ts
 - src/lib/health/workers.ts
 - src/lib/auth/surface-guards.ts
 - src/lib/schemas/operations.ts
 - migrations/0080_sentry_page.sql
+- migrations/0081_sentry_settings.sql
 - test/sentry.test.ts
+- test/sentry-settings.test.ts
 related_docs:
 - POSTHOG.md
 - CONTROL-PLANE.md
@@ -48,8 +56,10 @@ tags: [feature, sentry, errors, issues, logs, cloudflare, permissions]
 > new or getting worse, this month's use of Sentry's free plan, and every log line our Workers
 > wrote, read live from Cloudflare. An Admin can mark an issue fixed or archive it from the
 > portal; the change is kept in the audit log. Email addresses, IP addresses and long tokens in
-> any text are hidden unless you hold "See full details". It is the first stage of Sentry taking
-> Control Plane's place: Control Plane stays until its other tools have moved to their own pages.
+> any text are hidden unless you hold "See full details". Its Settings part holds how much the
+> website sends to Sentry and Sentry's own filters, limits and spike protection, moved here from
+> Control Plane with every change kept. Control Plane stays until its other tools have moved to
+> their own pages.
 
 Asked for by Harshil on 2026-10-28: "completely scrap `/dashboard/control-plane` and put sentry
 systems there! for logs, analytics, trends, info, errors, permission based config changes and
@@ -58,9 +68,9 @@ updates available". His choices the same day: Cloudflare's logs are read live fr
 page that owns its subject. The plan, its stages and those choices are in the
 [plan](../specs/2026-10-28-sentry-page.md); what shipped and how it was checked is in the
 change record (private). This document describes stage 1:
-the page, its permissions, the Overview, Issues (with resolving and archiving) and Logs. Speed,
-Trends, Monitors and alerts, and a Settings part that takes over Control Plane's Sentry settings
-are later stages (§7).
+the page, its permissions, the Overview, Issues (with resolving and archiving) and Logs; and the
+Settings part, which took over Control Plane's Sentry settings the same day (§6). Speed, Trends,
+Monitors and alerts are later stages (§8).
 
 ## 1. Who may do what
 
@@ -69,16 +79,19 @@ are later stages (§7).
 | `/dashboard/sentry` | Sentry | Admin (`super_admin`) | the page and its Overview |
 | `/dashboard/sentry/issues` | Issues | Admin | the Issues part |
 | `/dashboard/sentry/logs` | Logs | Admin | the Logs part |
+| `/dashboard/sentry/settings` | Settings | Admin | the Settings part: every setting shown, none changed |
 | `/dashboard/sentry#triage` | Resolve and archive issues | Admin | the Resolve, Reopen and Archive buttons on an issue (needs the Issues part too) |
 | `/dashboard/sentry#refresh` | Refresh Sentry now | Admin | the Refresh button: ask Sentry and Cloudflare again instead of the kept copy |
-| `/dashboard/sentry#details` | See full details | Owner | error text, addresses and log lines unmasked (§8) |
+| `/dashboard/sentry#sampling` | Change what is sent to Sentry | Admin | change the website's rows, the rules per page and the list of ignored errors, and put them back to their defaults (needs the Settings part too) |
+| `/dashboard/sentry#provider-write` | Change Sentry's own settings | Owner | spike protection, the filters and the client keys' limits, in Sentry itself (needs the Settings part too) |
+| `/dashboard/sentry#details` | See full details | Owner | error text, addresses and log lines unmasked (§9) |
 
 The defaults are Control Plane's, so no one gains or loses access the day it ships.
 `denySentry(user, part?, action?)` in `src/lib/auth/surface-guards.ts` asks for the page, then the
 part, then the action, each exactly with `placRequireGrant` (fail-closed: a key not in a person's
 map is refused, never inherited). The pages check it before any HTML is made, and the route
 checks it again. `sentryCan(user)` tells the page which parts and buttons to offer, so it never
-shows one the route would refuse. The rows are migration `0080`; the
+shows one the route would refuse. The rows are migrations `0080` and `0081` (Settings); the
 [permissions model](../architecture/PERMISSIONS-SYSTEM.md) owns the rules.
 
 ## 2. Setting it up
@@ -92,10 +105,12 @@ binding, secret or variable was added ([OPERATIONS.md](../operations/OPERATIONS.
 | Sentry `event:read` | the open issues, the Issues part, Sentry's log lines |
 | Sentry `org:read` | this month's use (`stats_v2`) and the project list the filters ask by |
 | Sentry `event:write` | resolving, reopening and archiving |
+| Sentry `project:read` | Settings: a project's spike protection, filters and keys, and turning spike protection on or off |
+| Sentry `project:write` | Settings: turning a filter on or off and setting a key's limit (the part says when the token lacks it) |
 | Cloudflare "Workers Observability: Edit" | Cloudflare's log lines (Cloudflare's query accepts no lesser permission) |
 
 The Overview's "What the portal's tokens can reach" card reads the Sentry token's own permissions
-(only `auth.scopes` of Sentry's answer about the token, §8) and tries each read, and names any
+(only `auth.scopes` of Sentry's answer about the token, §9) and tries each read, and names any
 permission still missing in Sentry's or Cloudflare's own words. A Sentry token cannot gain a
 permission later: one that lacks `event:write` is replaced by a new token saved under the same
 name. Without the Sentry token or organisation the page says "Sentry is not connected" instead of
@@ -167,7 +182,45 @@ number on; errors and warnings by default, and a thrown error counts as an error
 one Worker or project, or every one; and words. While the list is on screen and no older page is
 open it asks again every minute.
 
-## 6. Where each part reads from, and staying inside the limits
+## 6. Settings
+
+`/dashboard/sentry/settings`. Moved from Control Plane on Harshil's choice of 2026-10-28 ("each to
+the page that owns it"). One optional box at the top, "Why you are changing something", is kept
+with each change in the list of changes.
+
+- **What the website sends:** the website's eight Sentry rows of `service_config` (on or off,
+  the share of errors kept, the speed samples of bookings, of the API, of other pages and of the
+  server, and the two screen-recording shares), each with a sideways On and Off or a share from
+  0 to 100% in steps of 5, its bounds and its default. The website re-reads them within a minute.
+  A speed share that a rule per page overrides says so: on 2026-10-28 the live rules set 90% for
+  bookings and 50% for the API, so the rows of those two do not apply to those pages
+  (MAINTENANCE (private) SE-4).
+- **Sentry's own settings**, one project at a time (Website, Portal or Server, a sideways row),
+  read from Sentry when the card opens and never kept: spike protection, each inbound filter
+  (the old-browsers one says how many of Sentry's eight kinds it covers, and On turns all eight
+  on), and each client key's limit (none, 100 a minute, 1,000 an hour or 10,000 a day; a limit
+  set in Sentry to anything else shows as it is). Of a key only its id, name, state and limit
+  are read; its secret, its addresses and the project's security token never leave the Worker.
+- **Rules per page** and **Errors the website ignores:** Control Plane's two editors, saved the
+  same way. The list of ignored errors has no row in the database on 2026-10-28, so the website
+  uses the list built into its own code and the card says so (SE-5).
+- **What the portal sends:** cf-admin's three Sentry rows, shown but not offered, since nothing
+  in the portal reads them yet (a later stage).
+- **Changes:** which settings differ from their defaults, the last 20 changes of Sentry's rows
+  (who, when, why), and "Put them back to the defaults" behind a confirmation. Putting back
+  touches only Sentry's rows, and a second time changes nothing.
+
+`GET /api/sentry/settings` reads the rows with `getConfigByService('sentry')` and their history;
+`?project=` reads one project's own settings from Sentry (two questions at a time, the token's
+permissions from their kept copy, §7). `PATCH` changes one row: only Sentry's rows, the bounds
+and types of `src/lib/control-plane/config-schema.ts`, and the row's `version`, so a change made
+elsewhere in between is refused (409) and the screen reads the latest. `POST` puts the rows back
+(`#sampling`) or changes one of Sentry's own settings (`#provider-write`). Every change is in
+the audit log (`config_change` or `provider_write`), at most 20 a minute per person, and a row
+change asks the website to re-read its settings. Control Plane's Sentry tab keeps working until
+its pages lead here (§8).
+
+## 7. Where each part reads from, and staying inside the limits
 
 The route is `GET /api/sentry/{part}` (`overview`, `issues`, `logs`), with `fresh=1` for Refresh
 now, and `POST /api/sentry/issues` for a change; [SECURITY.md](../security/SECURITY.md) §6a holds
@@ -201,7 +254,7 @@ their rows.
   question and reshapes at most 100 rows. Reading never counts against Sentry's allowance: only
   sending does, and this page sends nothing to it.
 
-## 7. Control Plane: what moves where
+## 8. Control Plane: what moves where
 
 Control Plane ("Cloud Services" in the sidebar) stays as it is until its tools have moved, then
 its pages lead to the new places and, in a later push, its rows are switched off
@@ -210,12 +263,12 @@ its pages lead to the new places and, in a later push, its rows are switched off
 | Control Plane today | Goes to | State |
 |---|---|---|
 | Sentry tab: counts, top issues, resolve or ignore | this page's Overview and Issues | shipped (stage 1) |
-| Sentry's settings and controls (sampling, rules, filters, key limits, spike protection) | a Settings part on this page (`#sampling` Admin, `#provider-write` Owner) | next |
+| Sentry's settings and controls (sampling, rules, filters, key limits, spike protection) | the Settings part (§6; `#sampling` Admin, `#provider-write` Owner) | shipped (2026-10-28) |
 | PostHog tab: session recording on or off | the PostHog page | next |
 | The website's request limits; Cloudflare's cache purge and security level | Configuration | next |
 | The Overview's six figures; the Supabase tab | dropped: the Overview, Analytics and System health show them | with the move |
 
-## 8. Privacy
+## 9. Privacy
 
 An error's message, a breadcrumb or a log line can quote what a person typed or who they are: a
 guest's email on a booking, a staff member's address, an IP address, a token in an address
@@ -230,10 +283,10 @@ guest's email on a booking, a staff member's address, an IP address, a token in 
 With or without it, Sentry's `user` of an event is never read, nor anything but `auth.scopes` of
 Sentry's answer about the token (which also names the token's owner); a library's line of code
 is not passed on, only our own; and texts are cut at 2,000 characters. Nothing is stored: answers
-live 30 seconds to an hour in the edge cache (§6) and in the browser while the page is open. The
+live 30 seconds to an hour in the edge cache (§7) and in the browser while the page is open. The
 [record of processing](../security/RoPA.md) has the Sentry and Cloudflare rows.
 
-## 9. Tests
+## 10. Tests
 
 `test/sentry.test.ts`: the guards (the page, then the part, then the switch, each exactly; the
 change needs the Issues part as well as `#triage`) and the route mapping; the value checks (issue
@@ -246,11 +299,18 @@ Sentry's next page, the copies kept apart per reader); the page's words and addr
 route with a fetch stub (401, 404, 403 for a part not given, 400 for an id or change that is not
 one, 405, Refresh now behind its key, masking without See full details, the token's email never
 passed on, Cloudflare's refusal naming Edit, a project asked by its id, a change sent to Sentry
-and its audit row). `test/action-keys-enforced.test.ts` checks that `#triage`, `#refresh` and
-`#details` are enforced.
+and its audit row). `test/sentry-settings.test.ts`: the Settings part's guards and checks (a filter or key id
+that is not one is refused), what is read of a project (no key secret, address or security
+token), the change each setting asks Sentry for, the rows, defaults and history, the words of
+every row, and the route with a fetch stub (401, 403, 400 for a project not ours, only Sentry's
+rows read and changed, a value out of bounds and a stale version refused, putting back twice,
+Sentry's own settings behind `#provider-write` and audited, a refusal naming `project:write`).
+`test/action-keys-enforced.test.ts` checks that `#triage`, `#refresh`, `#details`, `#sampling`
+and `#provider-write` are enforced.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
 | 2026-10-28 | Written with the code: every section against the files in `related_code`. Live through the Sentry connector (counts only, no text of an error or log, no user value): the three projects, the open issues, the 30-day usage by category and outcome, the logs dataset counted by project and severity, `is:ignored` and `is:archived` both accepted; the six `admin_pages` rows read back after `0080` (D1 connector); `test/sentry.test.ts` passes. Cloudflare's query API's shapes and its Write permission from Cloudflare's API reference and SDK | Cloudflare's query live (refused until the token step, MAINTENANCE SE-1); the portal's own Sentry token's permissions (the Overview's check will say, SE-2); the page in a phone browser |
+| 2026-10-28 | §1, §2, §6, §8 and §10 for the Settings part, against its files. Live: Sentry's rows of `service_config` read through the D1 connector (the ignored-errors row is missing, the rules per page set 90% and 50%), the three `admin_pages` rows read back after `0081`; Sentry's project, filter, key and spike-protection calls from Sentry's API reference; `test/sentry-settings.test.ts` passes | A change sent to Sentry live (the portal's token's `project:write` unknown, SE-2); the part in a phone browser |
