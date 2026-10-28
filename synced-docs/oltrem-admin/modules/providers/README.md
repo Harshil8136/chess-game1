@@ -37,9 +37,10 @@ without it. A Worker that mounts the module therefore lists `KEK` in `secrets.re
 
 ## The definitions
 
-The kit ships nine email definitions in `src/definitions/email.ts`, each written from the
+The kit ships twelve email definitions in `src/definitions/email.ts`, each written from the
 provider's public API reference: Resend, Brevo, Postmark, SendGrid, Mailgun, Amazon SES, Sender
-(its API and its SMTP relay) and any SMTP server. Seven are the HTTP template engine's: a base URL, a send template with `{{secret.x}}`,
+(its API and its SMTP relay), Mailjet, Mailtrap, SMTP2GO and any SMTP server. Ten are the HTTP
+template engine's: a base URL, a send template with `{{secret.x}}`,
 `{{config.x}}` and `{{message.x}}` placeholders (a `$each`/`$as` pair maps a list), a JSON or
 form body, where the message id is read from, a probe. Two are the SMTP client's: Sender's
 relay (`smtp.sender.net`, 587) and any server. Every one names
@@ -51,7 +52,10 @@ map of its event names to the kit's nine kinds. An entry of the map may be an ob
 says a bounce or refusal is for good (`permanent`) or an open was a machine's (`automatic`, such
 as Brevo's Apple privacy proxy opens); where the provider says it in the report itself, a
 `severity` path names the field and the values that mean for good and for now (Resend's
-`bounce.type`, Postmark's `Type`, SendGrid's `type`, Mailgun's `severity`, SES's `bounceType`).
+`bounce.type`, Postmark's `Type`, SendGrid's `type`, Mailgun's `severity`, SES's `bounceType`,
+Mailjet's `hard_bounce`, a flag read as `true` or `false`, SMTP2GO's `bounce`). A report that is an
+object holding the list names where it is (`eventsPath`: Mailtrap's `events`); a list where the
+definition expects one event (Mailjet's "Group events" setting) is read whole.
 A fingerprint (SPF includes, DKIM selectors or
 CNAME suffix, a verification TXT prefix) is written only where the research confirmed the
 pattern; the rest is left for the sandbox to confirm, never guessed.
@@ -63,6 +67,21 @@ sends Reply-To among the headers. Its webhooks carry only bounces, on its paid p
 a header it does not publish; it publishes no count of emails used or left and no domain API. So
 a Sender instance sends, is probed and is counted by the portal, while its delivery reports, its
 allowance and its domain set-up wait for the sandbox: the domain is set up in Sender's dashboard.
+
+Mailjet, Mailtrap and SMTP2GO (2026-10-28) were added from their references the same day:
+
+| | Mailjet | Mailtrap | SMTP2GO |
+|---|---|---|---|
+| Send | `POST /v3.1/send`, one message in `Messages`; the id kept is the `MessageUUID` (its numeric `MessageID` can pass what a JavaScript number holds) | `POST /api/send` on `send.api.mailtrap.io`, with a `User-Agent`, which its edge may ask for and a Worker's fetch does not add; one id a recipient, the first kept | `POST /v3/email/send`; Reply-To among `custom_headers` (`{{message.headerEntriesWithReplyTo}}`); it answers 200 to a send it refused, so `send.acceptedWhen` takes it only while `data.failed` is 0 |
+| Key | the key pair: the public key is the basic auth user, the secret key the password | a bearer token | `X-Smtp2go-Api-Key` |
+| Probe | lists the senders | none: the sending address answers nothing else, so the canary is the test | reads the email cycle |
+| Reports | unsigned (`none`), `Message_GUID` matches the kept id | `hmac-body`, `events` list; `suspension` is left unmapped | unsigned (`none`), `email_id`, `bounce` hard or soft |
+| Allowance | none published | none on the sending address | the month's cycle, `POST /v3/stats/email_cycle` |
+
+None has a `batch` or `domains` block yet: Mailtrap's and Mailjet's batch calls answer in shapes
+the engine's batch does not read, and their domains are set up in their dashboards. A
+multi-recipient SMTP2GO send that fails for some recipients only counts as failed. Mailjet's US
+platform answers on another address and waits for the sandbox, like every real answer here.
 
 An HTTP definition may also carry a `domains` block: how the provider adds a sending domain
 (`create`), reads it back (`read`) and is asked to look again (`verify`), each a method, a path
@@ -78,7 +97,7 @@ submitted through the route is checked the same way. The contract refuses an id 
 the wrong shape, a base URL that is not `https`, a port other than 465 or 587, an SMTP transport
 with an HTTP auth scheme, `api-key-header` without its header, `sigv4` without its service, a
 repeated field name, an event mapped to an unknown kind, a webhook signature without the field it
-reads its key from. A field marked `optional` may be left out of an instance: the webhook keys
+reads its key from, `hmac-body` without its header. A field marked `optional` may be left out of an instance: the webhook keys
 are, so a provider sends before its delivery reports are set up.
 
 ## Routes
@@ -147,7 +166,7 @@ email module never names a provider.
   since its message versions carry no headers of their own and every bulk message has its own
   unsubscribe header.
 - **What is used and left** (2026-10-28): a definition's optional `usage` block names the
-  provider's own count, a `GET` (`path`) read by JSONPaths into three windows, `day`, `month`
+  provider's own count, a `GET` or a `POST` with an empty object (`path`) read by JSONPaths into three windows, `day`, `month`
   and `plan` (a plan's credits that are neither), each with `used`, `limit`, `left` and `resets`,
   and a `when` that reads a window only when a field says so (Brevo's credits are today's on the
   free plan, the plan's on a paid one). `usage(opened)` answers `{ at, asked, day, month, plan,
@@ -159,7 +178,8 @@ email module never names a provider.
   `quota`, and `withQuota(kept, quota, at)` moves the kept figures on, the limit kept while the
   window has not started again. `leftOf(usage, now)` is the tightest window that still says what
   is left. The kit's definitions read Resend's `/usage`, Brevo's account, SendGrid's credits and
-  SES's 24-hour quota; Postmark, Mailgun and SMTP say nothing.
+  SES's 24-hour quota and SMTP2GO's monthly cycle; Postmark, Mailgun, Mailjet, Mailtrap, Sender
+  and SMTP say nothing.
 - **The domain client**, `createDomainClient({ fetch?, now? })`, speaks the `domains` block:
   `supports`, `create`, `read` and `verify`, each answering the provider's id, whether it is
   verified, its status word and its records with full host names (`hostOf`; `@` is the domain
@@ -184,7 +204,8 @@ name as `ignored`. The body is the raw text: a signature covers the bytes as the
 | `ecdsa-public-key` | SendGrid | ECDSA P-256 over timestamp and body, a DER signature | config `webhookPublicKey` |
 | `sns` | Amazon SES | RSA (SHA-1 or SHA-256) over the documented fields, the certificate fetched from an `sns.*.amazonaws.com` address and cached, the topic equal to the instance's | config `topicArn` |
 | `shared-secret` | Postmark | the password of the basic auth on the webhook's address, compared in constant time | secret `webhookSecret` |
-| `none` | Brevo | nothing: the token in the hook's address is the only guard | none |
+| `hmac-body` | Mailtrap | HMAC-SHA256 of the body alone, hex, in the header the definition names (`signatureHeader`); it carries no time, so a copy sent again verifies again | secret `webhookSecret` |
+| `none` | Brevo, Mailjet, SMTP2GO | nothing: the token in the hook's address is the only guard | none |
 
 A signed timestamp more than five minutes from the clock is refused. An SNS subscription is
 answered with its confirmation address only when that address is an AWS one. A refusal is
