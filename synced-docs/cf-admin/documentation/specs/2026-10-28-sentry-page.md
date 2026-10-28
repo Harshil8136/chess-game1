@@ -193,9 +193,19 @@ who, what, before and after, and refused if the person lacks the permission.
    ([CONTROL-PLANE.md](../features/CONTROL-PLANE.md)). The sixth (2026-10-28, migration `0084`),
    once that was live, switched off its eight registry rows and the two unused Cloudflare
    settings rows.
-2. **Speed, Trends, Monitors and alerts.**
+2. **Speed, Trends, Monitors and alerts.** *As built (2026-10-28, migration `0085`):* three
+   parts ([SENTRY.md](../features/SENTRY.md) §7 to §9). Speed: the pages and routes timed on our
+   Workers or in visitors' browsers, the outside services and the website's cache reads, by
+   period and project, and a route's slowest request step by step. Trends: errors, new issues,
+   log lines, speed samples, requests and failed requests each day of the last 7 or 14 days
+   against the days before, per project and per Worker (Cloudflare's counts for the requests).
+   Monitors and alerts: Sentry's up-time checks, heartbeats and alerts as they stand, each
+   switched on or off by a person who holds Change Sentry's own settings; who is told stays in
+   Sentry and is never read. The releases and Sentry's update suggestions moved to stage 3, since
+   both belong to what the portal sends; the cache card cannot show its found share until the
+   website tells Sentry (MAINTENANCE SE-9).
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
-   (§10) start working, and Sentry's update suggestions.
+   (§10) start working, the releases each project has sent, and Sentry's update suggestions.
 
 Each stage ships on its own, with its tests, documents and a change record.
 
