@@ -428,6 +428,15 @@ needs `#refresh`); the Summary shows only the parts `analyticsCan` allows
 `/reliability`, both `admin`, checked the same way (`ANALYTICS_PARTS` now holds seven). The page's
 own `?retry=1` (a read again after a source did not answer) needs no key of its own: it can only
 re-read a part the person may already open.
+*Added 2026-10-28 (PostHog, migration `0079`):* `/dashboard/posthog` (`admin`, daily group) with
+three sub-pages, `/recordings` (`super_admin`: a recording shows what was on a guest's screen),
+`/errors` and `/people` (both `admin`), and two action keys, `#people` (See who visitors are,
+`owner`: PostHog's id for a visitor is a guest's email after a booking) and `#refresh` (Refresh
+PostHog now, `admin`). `denyPostHog(user, part?, action?)` in `surface-guards.ts` checks the page,
+then the part, then the action with `placRequireGrant`, on the pages and on
+`GET /api/posthog/{part}` (where `?fresh=1` needs `#refresh`, and the reader's `#people` decides
+whether PostHog is asked who a visitor is); `posthogCan` tells the page what to offer
+([`POSTHOG.md`](../features/POSTHOG.md) §1).
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1369,6 +1378,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-28 | claude | **Scope-limited to the PostHog sentence.** Read `surface-guards.ts` (`POSTHOG_PARTS`, `denyPostHog`, `posthogCan`), `src/pages/api/posthog/[part].ts`, the two pages and `migrations/0079_posthog_page.sql`; read the six live rows back through the D1 connector after `0079` was applied; `test/posthog.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence. The rest of the document not re-read |
 | 2026-10-26 | claude | **Scope-limited to the Analytics round-2 sentence.** Read `ANALYTICS_PARTS` in `surface-guards.ts`, `src/pages/api/analytics/[part].ts` (`retry`) and `migrations/0078_analytics_email_reliability.sql`; read the two new live rows back through the D1 connector after 0078 was applied; `test/analytics-round2.test.ts` passes (403 for a person without the part, 200 for the Owner) | The sentence. The rest of the document not re-read |
 | 2026-10-26 | claude | **Scope-limited to the Analytics sentence.** Read `surface-guards.ts` (`ANALYTICS_PARTS`, `denyAnalytics`, `analyticsCan`), `src/pages/api/analytics/[part].ts`, the two pages and `migrations/0077_analytics_page.sql`; read the eight live `/dashboard/analytics` rows back through the D1 connector after 0077 was applied (`admin`, active, parent and group); `test/analytics.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence. The rest of the document not re-read |
 | 2026-10-17 | claude | **Scope-limited to the `#configure` sentence.** Read `surface-guards.ts` (`HEALTH_ACTIONS`, `denyHealth`, `healthCan`), `src/pages/api/system-health/settings.ts` and `migrations/0076_health_configure.sql`; read the live `/dashboard/health#configure` row back through the D1 connector after 0076 was applied (`owner`, active); `test/system-health-settings.test.ts`, `test/system-health.test.ts` and `test/action-keys-enforced.test.ts` pass | The sentence matches the code. The rest of the document not re-read |
