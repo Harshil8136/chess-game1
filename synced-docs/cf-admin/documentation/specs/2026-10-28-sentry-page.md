@@ -211,8 +211,10 @@ who, what, before and after, and refused if the person lacks the permission.
    first and last seen and the issues first seen in it, and the changes Sentry suggests to the
    library each project used in the last day (a newer version, an integration to turn on, another
    library), as words with Sentry's page, since an update is a change made in that project's own
-   repository. The portal's three settings wait on Harshil's choice: wiring them changes what the
-   portal sends today.
+   repository. The portal's three settings (Harshil's choice the same day, "make them work, start
+   at 10%"): the saved share timed was put back from 30% to 10%, then the portal began to follow
+   all three, each copy of the Worker reading them in the background at most once a minute and
+   each page handing them to the browser ([SENTRY.md](../features/SENTRY.md) §6).
 
 Each stage ships on its own, with its tests, documents and a change record.
 
@@ -234,6 +236,7 @@ Each stage ships on its own, with its tests, documents and a change record.
 - **The portal's own three Sentry settings do nothing:** `sentry.cf_admin.traces` reads 0.3 on
   the page, but the code uses 0.1, and the on/off switch is read by nothing (already written in
   [CONTROL-PLANE.md](../features/CONTROL-PLANE.md) §4.5). Stage 3 makes them work, or removes them.
+  *Done 2026-10-28:* they work, from 10% (§8).
 - **The PostHog plan's logs recommendation** (Cloudflare's export to PostHog) would not have
   worked on the free plan either; noted in its §10.
 - **Control Plane's PostHog share never took effect:** it writes `session_replay_config`, which

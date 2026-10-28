@@ -37,6 +37,10 @@ related_code:
 - src/lib/sentry/trends.ts
 - src/lib/sentry/monitors.ts
 - src/lib/sentry/releases.ts
+- src/lib/sentry-config.ts
+- src/workers/cf-entry.ts
+- sentry.client.config.ts
+- src/layouts/AdminLayout.astro
 - src/pages/api/sentry/settings.ts
 - src/lib/dal/ServiceConfigRepository.ts
 - src/lib/control-plane/config-schema.ts
@@ -52,6 +56,7 @@ related_code:
 - test/sentry-settings.test.ts
 - test/sentry-stage2.test.ts
 - test/sentry-stage3.test.ts
+- test/sentry-config.test.ts
 related_docs:
 - POSTHOG.md
 - CONTROL-PLANE.md
@@ -60,6 +65,7 @@ related_docs:
 - ../records/reports/2026-10-28-sentry-page.md
 - ../records/reports/2026-10-28-sentry-speed-trends-monitors.md
 - ../records/reports/2026-10-28-sentry-releases-updates.md
+- ../records/reports/2026-10-28-portal-sentry-settings.md
 - ../architecture/PERMISSIONS-SYSTEM.md
 - ../security/SECURITY.md
 - ../security/RoPA.md
@@ -80,7 +86,9 @@ tags: [feature, sentry, errors, issues, logs, speed, trends, monitors, alerts, r
 > each day against the days before, and Monitors and alerts Sentry's up-time checks, heartbeats
 > and alerts, each of which the owner can switch on or off from here. Releases and updates shows
 > the versions each project sent to Sentry with the new issues each brought, and the updates
-> Sentry suggests for the library each project uses.
+> Sentry suggests for the library each project uses. The portal's own three Sentry settings (on
+> or off, the share of errors kept, the share timed) work since 2026-10-28, at the 10% timed it
+> used before.
 
 Asked for by Harshil on 2026-10-28: "completely scrap `/dashboard/control-plane` and put sentry
 systems there! for logs, analytics, trends, info, errors, permission based config changes and
@@ -94,8 +102,9 @@ Settings part, which took over Control Plane's Sentry settings the same day (§6
 Speed, Trends, and Monitors and alerts (§7 to §9; its
 change record (private)); and from stage 3,
 Releases and updates (§10; its
-change record (private)). The rest of stage 3,
-the portal's own Sentry settings, is in the plan's §8.
+change record (private)) and the portal's own
+Sentry settings working (§6; its
+change record (private)).
 
 ## 1. Who may do what
 
@@ -242,8 +251,19 @@ Settings part uses too ([POSTHOG.md](POSTHOG.md) §3).
 - **Rules per page** and **Errors the website ignores:** Control Plane's two editors, saved the
   same way. The list of ignored errors has no row in the database on 2026-10-28, so the website
   uses the list built into its own code and the card says so (SE-5).
-- **What the portal sends:** cf-admin's three Sentry rows, shown but not offered, since nothing
-  in the portal reads them yet (a later stage).
+- **What the portal sends:** cf-admin's three Sentry rows, changed like the website's
+  (`#sampling`): **Send to Sentry** (off sends nothing at all: errors, speed samples or log
+  lines, from the server or a browser), **Errors kept** (Sentry's `sampleRate`) and **Speed
+  samples** (Sentry's `tracesSampleRate` for its requests and page loads; its scheduled jobs are
+  never timed). Since 2026-10-28 the portal follows them (`src/lib/sentry-config.ts`): Sentry's
+  options are made at the start of each invocation, before the database can be read, so each copy
+  of the Worker holds the values it last read and reads them again in the background at most
+  once a minute (on a request, a scheduled run or a queue batch). Until a copy's first read it
+  uses the values the portal used before (on, every error, 10%); a read that fails or finds none
+  of the rows keeps what it held. Each page carries the values its server held in a meta tag
+  (`cf-admin-sentry`), which the browser's Sentry reads when the page opens, so a page already
+  open keeps what it had. On the owner's choice the saved share timed was put back from 30% to
+  the 10% the portal used, before it took effect (kept in the list of changes, 2026-10-28).
 - **Changes:** which settings differ from their defaults, the last 20 changes of Sentry's rows
   (who, when, why), and "Put them back to the defaults" behind a confirmation. Putting back
   touches only Sentry's rows, and a second time changes nothing.
@@ -459,7 +479,11 @@ covers, both periods per project and Worker, a Worker not ours left out, an up-t
 its headers, body or owner, a heartbeat by its guid, an alert without its targets); the switch
 each kind asks Sentry for; the words (a site that was down never at 100%); and the route with a
 fetch stub (403, 400, a project asked by its id, nothing secret in the monitors' answer, a switch
-sent to Sentry and its audit row, 405). `test/sentry-stage3.test.ts`: the Releases and updates
+sent to Sentry and its audit row, 405). `test/sentry-config.test.ts`: the portal's three
+settings (their defaults the schema's, a value missing or out of bounds keeping what was held,
+the browser's tag read back, read again at most once a minute and never twice at once, a failed
+read keeping the values) and, over file text, that the Worker, the browser's Sentry and every
+page shell use them. `test/sentry-stage3.test.ts`: the Releases and updates
 part's key and route mapping; its two questions; a release read without its authors, owner, last
 commit or data; a suggestion's kind, its project named by slug and its page kept only when
 `https`; the words and the grouping by project; and the route with a fetch stub (403 before any
@@ -470,6 +494,7 @@ question, nothing of a person in the answer, only `GET`s sent). `test/action-key
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The intro, §6's "What the portal sends" and §14 for the portal's own settings, against `src/lib/sentry-config.ts`, `src/workers/cf-entry.ts`, `sentry.client.config.ts`, the five page shells and `Settings.tsx`; `@sentry/cloudflare` 10.73.0's own code (`withSentry` makes the options from the callback on each invocation); the three rows read live through the D1 connector, and `sentry.cf_admin.traces` set from 0.3 to 0.1 with its history row (20:50 UTC) and read back; `test/sentry-config.test.ts` passes | The settings changed from the phone and seen in Sentry; the rest of the document |
 | 2026-10-28 | §1, §2, §10, §11, §13 and §14 for Releases and updates, against the files in `related_code`; the sections after §9 renumbered (the old §10 to §13 are now §11 to §14, so the rows below name the old numbers). Sentry's releases and `sdk-updates` calls and their answers' shapes from Sentry's own source code (its endpoints and serializers); the `admin_pages` row read back after `0086` (D1 connector); `test/sentry-stage3.test.ts` passes | The part against a live answer from Sentry (the portal's token is not this session's; a reader in another shape says so, MAINTENANCE SE-10); the part in a phone browser |
 | 2026-10-28 | §1, §2, §7 to §10, §12 and §13 for stage 2 (Speed, Trends, Monitors and alerts), against the files in `related_code`; the sections after §6 renumbered (the old §7 to §10 are now §10 to §13, so the rows below name the old numbers). Sentry's spans, `stats_v2`, issue search, up-time, heartbeat and alert calls and their answers' shapes from Sentry's own source code (its API endpoints and serializers); the website's `cache.get` span read in `cf-astro/src/middleware.ts` (no `cache.hit`); the three `admin_pages` rows read back after `0085` (D1 connector); `test/sentry-stage2.test.ts` passes | The three parts against a live answer from Sentry (the portal's token is not this session's; a reader in another shape says so); whether the token holds `alerts:read` and `alerts:write`; the parts in a phone browser |
 | 2026-10-28 | §8's sentence on Control Plane's rows, against migration `0084` and its rows read back | The rest of the document; `last_verified` left as it was |

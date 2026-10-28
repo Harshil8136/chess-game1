@@ -35,11 +35,11 @@ tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observabili
 > decided by `/dashboard`, which everyone may open; the page it leads to checks its own key).
 
 > **Status:** Layer A (the stored settings) and the Sentry and Cloudflare connectors are live;
-> the Supabase one waits on its token (MAINTENANCE (private) SH-11). The **`sentry.cf_admin.*` keys are still read by nothing** (§4.5).
+> the Supabase one waits on its token (MAINTENANCE (private) SH-11). The **`sentry.cf_admin.*` keys are read by the portal since 2026-10-28** (§4.5).
 > **Edited from:** the Sentry page's Settings part (Sentry rows), the PostHog page's Settings part
 > (PostHog rows) and the Configuration page (the request limits), since 2026-10-28.
-> **Scope:** Layer-A config is stored for both apps. Only **cf-astro** reads its keys at runtime;
-> cf-admin's own keys are shown, not offered (§4.5).
+> **Scope:** Layer-A config is stored for both apps, and each reads its own keys at runtime
+> (cf-admin since 2026-10-28, §4.5).
 
 > **Audience note:** This document is an architecture-level overview for AI IDE agents and
 > contributors. It intentionally omits all environment-specific values — resource IDs, account
@@ -237,9 +237,10 @@ retuning one is a config edit rather than a redeploy.
 
 ### 4.5 What is stored but not yet consumed
 
-*Added 2026-09-19.* Three Layer-A keys are scoped to `cf-admin`, but **nothing in cf-admin
-reads them**. Control Plane let them be edited; since 2026-10-28 the Sentry page's Settings part
-shows them and does not offer them ("Shown, not offered: nothing in the portal reads these yet"):
+*Added 2026-09-19; wired 2026-10-28.* Three Layer-A keys are scoped to `cf-admin`. Until
+2026-10-28 **nothing in cf-admin read them**; since then the portal follows them, and the Sentry
+page's Settings part offers them ([SENTRY.md](SENTRY.md) §6: each copy of the Worker reads them
+in the background at most once a minute, `src/lib/sentry-config.ts`). What they were before:
 
 | Key | Declared as | Reality |
 |---|---|---|
@@ -261,10 +262,11 @@ them since 2026-10-28, and migration `0084` switched their rows off with Control
 said 1 while the website's `wrangler.toml` keeps 20% of its logs. Their specs stay in
 `config-schema.ts`, read-only.
 
-Until these are wired, treat the cf-admin Sentry rows as a declaration of
-intent. Wiring them means reading the config in `cf-entry.ts` and at client
-init with the hardcoded values as the fail-safe fallback — which is what the
-"parity invariant" in §4.1 already assumes.
+They were wired as this section said they would be: `cf-entry.ts` and the browser's Sentry read
+them, with the old hardcoded values (on, every error, 10%) as the fallback until a copy has read
+them, which is what the "parity invariant" in §4.1 assumes. `sentry.cf_admin.traces` read 0.3
+(set in July) and was put back to 0.1 before the code that reads it shipped, on the owner's
+choice.
 
 ---
 
@@ -393,6 +395,7 @@ The pieces the new pages share stayed in `src/components/admin/control-plane/`:
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The status note, the scope note and §4.5 after the portal's three Sentry keys were wired, against `src/lib/sentry-config.ts`, `src/workers/cf-entry.ts` and `sentry.client.config.ts`; the three rows read live (D1 connector) | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The top note, §3 and §4.5 after migration `0084`: the ten rows read back through the Cloudflare D1 connector (`is_active = 0`); cf-astro's settings query reads only active rows (`WHERE is_active = 1` in `cf-astro/src/lib/service-config.ts`, its `main`, 53b1bd7) and names neither Cloudflare key; `test/control-plane-retired.test.ts` passes | The sidebar and the forwards in a phone browser |
 | 2026-10-28 | Control Plane retired: the top table against the five forwards in `src/pages/dashboard/control-plane/` and `test/control-plane-retired.test.ts`; §3's keys against migrations `0068`, `0081`, `0082` and `0083`; §4.2 and §4.3 against `settings-routes.ts`, `useConfigEdit.ts` and `src/pages/api/configuration/limits.ts`; §4.1's types, scopes and categories and §4.4's caps against `config-schema.ts`; §4.5 by `grep -rn "sentry.cf_admin" src` and the hardcoded `0.1` in `cf-entry.ts` and `sentry.client.config.ts`; §5 to §8 against what is left in `src/lib/control-plane/` and `src/components/admin/control-plane/` and who imports each. `last_verified` moved | The live `admin_pages` and `service_config` rows (no change to them in this push); provider API behaviour; the pages in a phone browser |
 | 2026-10-28 | The "Being replaced" note, the §3 sentence on the Cloudflare route, the §7 route row and the §8 address against the Configuration page's two routes, `src/pages/dashboard/control-plane/cloudflare.astro` (a forward) and migration `0083`; `test/configuration-limits-cloudflare.test.ts` passes | The rest of the document; `last_verified` left as it was |
