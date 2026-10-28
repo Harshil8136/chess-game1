@@ -5,7 +5,9 @@ from a typed template and checked at once, so a mistake is the caller's answer a
 failed send later. The outbox and the queue carry it to `deliver`, which sends it through the
 tenant's active email instance from `@oltrem/providers` and, when that one refuses, through each
 failover in order. The kit keeps its own lease per message key in D1, so a message the queue
-brings twice is sent once whatever the provider promises.
+brings twice is sent once whatever the provider promises. The company's sending domains and the
+sender addresses on them live here too: who may send from which address, and whether a domain
+is set up well enough for bulk mail.
 
 ## Using it
 
@@ -80,10 +82,31 @@ The module adds one template of its own, `email.canary`, the test message the ca
 The subject and the body are never stored; the row keeps the addresses, for the screens and the
 delivery reports.
 
+## Senders and sending domains
+
+A message names the address it comes from with `senderId`; without one it comes from the
+`from` the client hands in (the two settings above). Bulk mail, such as a campaign, always names
+one.
+
+| Part | What it does |
+|---|---|
+| A sending domain | Added by someone who holds `email.senders.manage` for the whole company, with the email instance it sends through. Where the provider's definition has a `domains` block (Resend and Brevo, `@oltrem/providers`), the portal adds the domain there and shows the DNS records the provider asks for, each with a Copy button |
+| The check | Live from the page and once a day after (the job `email.domains`, hourly, four domains a run). One line per finding, in plain words: the provider says the domain is verified; each of its records is found in public DNS (DKIM by its key, SPF by its `include`); the domain publishes a DMARC record, which Gmail, Yahoo and Microsoft require of bulk senders; it has one SPF record, not two. A provider or DNS that does not answer leaves the state as it was and says so |
+| Passing | The provider verified the domain and it publishes DMARC, with no broken SPF. Where the portal cannot ask the provider (no `domains` block, or a key that may only send, which Resend refuses with 401), a person confirms the dashboard shows it verified, and the confirmation is audited |
+| A sender address | An address on an added domain, the name people see, an optional reply-to, the place of the company whose `email.senders.use` holders may send from it, and what it is for: bulk, everyday or both. The first address of a domain for each kind becomes its default; a default is changed, never left empty while the domain has addresses |
+| A send | `compose` reads the sender: one that was removed, or is for the other kind of mail, refuses the message (`KIT-E-1508`); bulk mail asked for from a domain that does not pass is refused the same way, before it is queued |
+
+Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain-confirm`,
+`email.domain-remove`, `email.sender-add`, `email.sender-update`, `email.sender-remove`,
+`email.sender-default`.
+
+The page is Messages, Senders (`/email/senders`, from `@oltrem/email/pages`): the sender
+addresses, and the domains with their check lines and records.
+
 ## Routes
 
-Under `/api/email`, through the IAM module's sessions and check. `email.manage` asks for a fresh
-sign-in.
+Under `/api/email`, through the IAM module's sessions and check. `email.manage` and
+`email.senders.manage` ask for a fresh sign-in.
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -91,6 +114,18 @@ sign-in.
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
+| `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
+| `POST /domains` | `email.senders.manage` | Add a domain (`domain`, `instanceId`), through the provider where it can, and check it |
+| `POST /domains/:domain/check` | `email.senders.manage` | Ask the provider to look again, then check the provider and DNS now |
+| `POST /domains/:domain/confirm` | `email.senders.manage` | A person confirms the provider's dashboard shows the domain verified |
+| `POST /domains/:domain/default` | `email.senders.manage` | Make an address the domain's default for bulk or everyday mail (`use`, `senderId`) |
+| `DELETE /domains/:domain` | `email.senders.manage` | Remove a domain that has no sender address |
+| `GET /senders` | `email.senders.manage` | Every sender address, with its domain's state and the defaults it holds |
+| `GET /senders/places` | `email.senders.manage` | The places where the person may add a sender address, the company first |
+| `GET /senders/usable?use=` | `email.senders.use` | The addresses the person may send bulk or everyday mail from, the defaults first; bulk only from a passing domain |
+| `POST /senders` | `email.senders.manage` | Add an address (`email`, `name`, `replyTo`, `scopeId`, `purpose`) |
+| `PATCH /senders/:id` | `email.senders.manage` | Change its name, reply-to, place or purpose |
+| `DELETE /senders/:id` | `email.senders.manage` | Remove it; a default goes last |
 
 ## Delivery reports
 
@@ -150,6 +185,9 @@ with `bulk: true` on `send`.
 after every provider refused it, **warn** while one waits for an email provider, **ok** otherwise.
 Two failures in a row open a problem (`@oltrem/core-health`).
 
+`email.domains`: **warn** while a sending domain that passed its check fails it now, naming the
+domain and what is wrong; **ok** otherwise.
+
 ## Personal data
 
 For a privacy request (`personal`, read by the privacy module) the module answers each message
@@ -160,9 +198,13 @@ is not in the answer. The Email page is linked.
 
 ## Not here yet
 
-- A screen of the do-not-mail list in this module, senders, saved templates, lists and a daily
-  cap come with the bulk sending stages (docs/records/2026-10-28-email-statuses.md); until then
-  the list is seen and changed on the Campaigns pages.
+- A screen of the do-not-mail list in this module, saved templates, lists and a daily cap come
+  with the later bulk sending stages (docs/records/2026-10-28-senders-and-domains.md); until
+  then the list is seen and changed on the Campaigns pages.
+- The domain calls are written from Resend's and Brevo's API references and tested against
+  their documented answers, not yet against live accounts. Resend's sending-only keys cannot
+  read domains, so with one the domain is confirmed by hand; the instance's own probe (`GET
+  /domains`) may also refuse such a key.
 - The generated Modules page of a client lists routes, not public hooks.
 
 ## The tables and the error codes
@@ -174,7 +216,11 @@ lease, the instance, the provider's id, the last error and the last delivery eve
 words, and the first open by a person and by a machine, click, spam report and unsubscribe. The
 same migration makes `email_donotmail` (the address, what it stops, the reason, the message that
 put it there, who and when) and `email_softbounces` (temporary bounces per address and their
-window).
+window). Migration `0045_email_senders.sql` makes `email_domains` (the domain, its instance and
+the provider's id for it, the records and check lines as JSON, the state `new`, `failing` or
+`passing`, who confirmed it, when it was checked and first passed, and its two default
+addresses) and `email_senders` (the address, its name and reply-to, its place, its purpose and
+its domain).
 
 | Code | Name | Status | When |
 |---|---|---|---|
@@ -183,3 +229,6 @@ window).
 | `KIT-E-1503` | `UNKNOWN_TEMPLATE` | 422 | no template the Worker was built with has that id |
 | `KIT-E-1504` | `ALL_FAILED` | 502 | the active instance and every failover refused the message |
 | `KIT-E-1505` | `BAD_TEMPLATE_DATA` | 422 | the data does not match the template's schema |
+| `KIT-E-1506` | `IN_USE` | 409 | a domain with addresses, or a default address while others remain, is removed or narrowed |
+| `KIT-E-1507` | `ALREADY_ADDED` | 409 | the domain or the address is there already |
+| `KIT-E-1508` | `SENDER_NOT_READY` | 422 | the sender was removed, is for the other kind of mail, or its domain does not pass for bulk mail |

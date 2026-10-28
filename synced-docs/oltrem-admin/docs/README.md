@@ -199,6 +199,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows what its tool says, the packages and the local start repair themselves, and a stop offers its details to copy |
 | [A sidebar without reloads](records/2026-10-28-sidebar-without-reloads.md) | pages and form changes open in place with the sidebar kept and scrolled; it closes to icons; group colours; Work split into Work, Team and Sales |
 | [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome, bounces for good told from temporary ones, Apple's opens apart; bounces, refusals and spam reports stop every email at once |
+| [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily in plain words, and campaigns send only from an address on a passing domain |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
 
 ## How this folder is checked

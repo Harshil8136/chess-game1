@@ -175,7 +175,8 @@ A page change fades the content in where the browser has view transitions and mo
 change that comes back to the same page keeps its scroll and brings its outcome (a `Done` notice
 or an error) into view. Focus moves to the new page's heading, or to a form's errors. The page
 under the pointer is fetched a moment ahead, so the click opens it at once. The arrow and the
-theme switch act at once and save behind the scenes. A thin line at the top shows a page that is
+theme switch act at once and save behind the scenes. A button with `data-copy` copies that value
+to the clipboard and says "Copied", aloud too, for two seconds. A thin line at the top shows a page that is
 still loading.
 
 What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,

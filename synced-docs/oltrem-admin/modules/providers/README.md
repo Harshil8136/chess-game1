@@ -55,6 +55,14 @@ A fingerprint (SPF includes, DKIM selectors or
 CNAME suffix, a verification TXT prefix) is written only where the research confirmed the
 pattern; the rest is left for the sandbox to confirm, never guessed.
 
+An HTTP definition may also carry a `domains` block: how the provider adds a sending domain
+(`create`), reads it back (`read`) and is asked to look again (`verify`), each a method, a path
+and an optional body template that may use `{{domain.name}}` and `{{domain.id}}`; where the
+provider's id for the domain is read (`idPath`, else the name is the id); where it says the
+domain is verified and the values that mean so; and where its DNS records are, with the paths of
+each record's name, type, value, priority and status and the status values that mean found.
+Resend and Brevo carry one; the others are added when their APIs are written up.
+
 `defineProvider` checks a definition against the contract where it is written, and
 `definitionProblems` returns what is wrong, one line each with the path; a client's definition
 submitted through the route is checked the same way. The contract refuses an id or field name in
@@ -116,6 +124,12 @@ email module never names a provider.
 - **A refusal** is `KIT-E-1407` with the provider's status and its answer cut to one line, every
   secret value of the instance blanked. A probe never throws: it answers `{ ok, checkedAt,
   latencyMs, detail }`.
+- **The domain client**, `createDomainClient({ fetch?, now? })`, speaks the `domains` block:
+  `supports`, `create`, `read` and `verify`, each answering the provider's id, whether it is
+  verified, its status word and its records with full host names (`hostOf`; `@` is the domain
+  itself). Adding a domain the provider already has reads it instead. A refusal is `KIT-E-1410`
+  with the provider's status and its answer cut to one line, the key blanked. The email module's
+  senders use it.
 
 ## Delivery reports
 
@@ -189,7 +203,8 @@ key per tenant, with the id of the key that wrapped it and when it was rotated) 
 `KIT-E-1401` to `1409`: a bad definition, an unknown one, a missing field, an instance not ready
 to activate, the active instance in use, the kit's definition that has no row to remove, a
 provider that did not take the message, what the definition asks for that this kit version
-cannot do, and a delivery report that failed its check.
+cannot do, a delivery report that failed its check, and a provider that refused a domain call
+(`KIT-E-1410`).
 
 ## Not here yet
 
