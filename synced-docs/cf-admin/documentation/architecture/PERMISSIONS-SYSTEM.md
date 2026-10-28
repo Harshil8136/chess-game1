@@ -474,16 +474,20 @@ lead here.
 request limits need no new key: `/api/configuration/limits` reads behind the page key and changes,
 resets and refreshes behind `#edit`, as the page's other settings
 ([`SETTINGS-AND-CONFIGURATION.md`](../features/SETTINGS-AND-CONFIGURATION.md)). Control Plane's
-Cloudflare sub-page row stays until its rows are switched off; its address forwards to the
-Configuration page.
+Cloudflare sub-page row stayed until Control Plane's rows were switched off (`0084`); its address
+forwards to the Configuration page.
 *Added 2026-10-28 (Control Plane retired, no migration):* Control Plane's five addresses forward
 to the pages above and its `/api/control-plane/*` routes were removed, so its eight rows
 (`/dashboard/control-plane`, its four sub-pages, `#edit-sampling`, `#purge-config` and
 `#provider-write`) guard nothing; `test/action-keys-enforced.test.ts` lists the three keys as
 having nothing on the server to check. A forward checks no key: each page it leads to checks its
-own. The rows are switched off in the next push, not this one, because a migration runs just
+own. The rows were switched off in the next push, not that one, because a migration runs just
 before the new code and a switched-off row under the old page would have let its address fall
-back to `/dashboard`'s access (MAINTENANCE (private) SE-3).
+back to `/dashboard`'s access.
+*Added 2026-10-28 (migration `0084`):* Control Plane's eight rows switched off (`is_active = 0`),
+in the push after the code that stopped using them was live, as `0073` did for Alerts. An old
+address now resolves to `/dashboard` and forwards; the page it leads to checks its own key.
+`test/action-keys-enforced.test.ts` lists the three keys as retired.
 
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
@@ -1425,6 +1429,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-28 | claude | **Scope-limited to the two Control Plane paragraphs.** Read the five forwards in `src/pages/dashboard/control-plane/`, `API_PAGE_MAPPING` in `src/lib/auth/routes.ts` and `migrations/0084_retire_control_plane.sql`; read the eight live rows before (all active) and after `0084` through the D1 connector; `test/control-plane-retired.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraphs match the code and the live rows; `last_verified` left as it was |
 | 2026-10-28 | claude | **Scope-limited to the Configuration Cloudflare paragraph.** Read `src/pages/api/configuration/limits.ts` and `cloudflare.ts`, `src/pages/dashboard/configuration.astro` and `migrations/0083_configuration_cloudflare.sql`; read the live row back through the D1 connector after `0083` was applied; `test/configuration-limits-cloudflare.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |
 | 2026-10-28 | claude | **Scope-limited to the PostHog settings paragraph.** Read `surface-guards.ts` (`POSTHOG_PARTS`, `denyPostHog`, `posthogCan`), `src/pages/api/posthog/settings.ts` and `migrations/0082_posthog_settings.sql`; read the three live rows back through the D1 connector after `0082` was applied; `test/posthog-settings.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |
 | 2026-10-28 | claude | **Scope-limited to the Sentry settings paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/settings.ts` and `migrations/0081_sentry_settings.sql`; read the three live rows back through the D1 connector after `0081` was applied; `test/sentry-settings.test.ts` and `test/action-keys-enforced.test.ts` pass | The paragraph. The rest of the document not re-read |

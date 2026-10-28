@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-28 | `ls migrations/*.sql` (62 files, highest `0084`), `d1_migrations` newest row through the Cloudflare D1 connector after `0084` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | §5's Sentry and PostHog rows and §5.3 after Control Plane was retired: `grep -rn` across `src/`, `wrangler.toml` and `.dev.vars.example` for `SENTRY_PROJECT_SLUG_ASTRO` (no reader left; its declaration removed from `src/env.d.ts`, the `wrangler.toml` comment and `.dev.vars.example`), `CONTROL_PLANE_CF_TOKEN` (still read by `cloudflare-admin.ts`), `POSTHOG_ORG_ID` (read by `src/lib/posthog/overview.ts`) | No binding, secret or variable added; one optional secret's declaration removed, never set in production. No migration in this push. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | `ls migrations/*.sql` (61 files, highest `0083`), `d1_migrations` newest row through the Cloudflare D1 connector after `0083` was applied; §5's `CLOUDFLARE_API_TOKEN` row against `src/pages/api/configuration/cloudflare.ts` and `src/lib/control-plane/cloudflare-admin.ts` | §7's state comment and count; §5 names the Configuration page's Cloudflare section as the reader of the control-plane calls. No binding, secret or variable added. Not checked: the rest of the document |
 | 2026-10-28 | `ls migrations/*.sql` (60 files, highest `0082`), `d1_migrations` newest row through the Cloudflare D1 connector after `0082` was applied; §5's `POSTHOG_PERSONAL_API_KEY` row against `src/lib/posthog/settings.ts` | §7's state comment and count; §5 names the PostHog page's Settings part and its "Project: Write". No binding, secret or variable added. Not checked: the rest of the document |
@@ -729,8 +730,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-28: migrations/ holds 61 files, highest
-# 0083_configuration_cloudflare.sql (applied 2026-10-28 07:26:34 UTC).
+# State as of 2026-10-28: migrations/ holds 62 files, highest
+# 0084_retire_control_plane.sql (applied 2026-10-28 08:48:44 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/

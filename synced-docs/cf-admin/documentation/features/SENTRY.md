@@ -264,8 +264,8 @@ their rows.
 ## 8. Control Plane: what moved where
 
 Control Plane ("Cloud Services" in the sidebar) was retired on 2026-10-28, once every tool had
-moved: its addresses lead to the new places, its routes and code were removed, and its rows are
-switched off in the next push ([plan](../specs/2026-10-28-sentry-page.md) §2 and §8;
+moved: its addresses lead to the new places, its routes and code were removed, and migration
+`0084` switched its rows off in the next push ([plan](../specs/2026-10-28-sentry-page.md) §2 and §8;
 [CONTROL-PLANE.md](CONTROL-PLANE.md)):
 
 | Control Plane | Went to | Its old address leads to |
@@ -321,6 +321,7 @@ and `#provider-write` are enforced.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | §8's sentence on Control Plane's rows, against migration `0084` and its rows read back | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | §8 after Control Plane was retired, against the five forwards in `src/pages/dashboard/control-plane/` and `test/control-plane-retired.test.ts` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | Written with the code: every section against the files in `related_code`. Live through the Sentry connector (counts only, no text of an error or log, no user value): the three projects, the open issues, the 30-day usage by category and outcome, the logs dataset counted by project and severity, `is:ignored` and `is:archived` both accepted; the six `admin_pages` rows read back after `0080` (D1 connector); `test/sentry.test.ts` passes. Cloudflare's query API's shapes and its Write permission from Cloudflare's API reference and SDK | Cloudflare's query live (refused until the token step, MAINTENANCE SE-1); the portal's own Sentry token's permissions (the Overview's check will say, SE-2); the page in a phone browser |
 | 2026-10-28 | §1, §2, §6, §8 and §10 for the Settings part, against its files. Live: Sentry's rows of `service_config` read through the D1 connector (the ignored-errors row is missing, the rules per page set 90% and 50%), the three `admin_pages` rows read back after `0081`; Sentry's project, filter, key and spike-protection calls from Sentry's API reference; `test/sentry-settings.test.ts` passes | A change sent to Sentry live (the portal's token's `project:write` unknown, SE-2); the part in a phone browser |

@@ -190,8 +190,9 @@ who, what, before and after, and refused if the person lacks the permission.
    Worker. The fifth (2026-10-28) retired Control Plane: its overview and Sentry addresses lead to
    this page, its PostHog address to the PostHog page's Settings, its Supabase address to System
    health, and its routes and code were removed
-   ([CONTROL-PLANE.md](../features/CONTROL-PLANE.md)); its rows are switched off in the push
-   after that (MAINTENANCE SE-3).
+   ([CONTROL-PLANE.md](../features/CONTROL-PLANE.md)). The sixth (2026-10-28, migration `0084`),
+   once that was live, switched off its eight registry rows and the two unused Cloudflare
+   settings rows.
 2. **Speed, Trends, Monitors and alerts.**
 3. **What the portal itself sends:** the portal's three Sentry settings that nothing reads today
    (§10) start working, and Sentry's update suggestions.

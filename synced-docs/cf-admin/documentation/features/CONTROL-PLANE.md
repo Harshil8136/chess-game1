@@ -28,9 +28,11 @@ tags: [control-plane, config, sentry, posthog, cloudflare, supabase, observabili
 > | `/dashboard/control-plane/supabase` | `/dashboard/health` | dropped on Harshil's choice; System health has the Supabase security advice check (not set up until its token is, MAINTENANCE (private) SH-11) |
 >
 > The overview's six figures were dropped too: the Overview, Analytics and System health show
-> them. Its `admin_pages` rows stay until the next push switches them off, after the code that
-> stopped using them is live (MAINTENANCE (private) SE-3): a row switched off while
-> the old page still ran would have let its address fall back to the Overview's access.
+> them. Its eight `admin_pages` rows were switched off by migration `0084` in the next push, once
+> the code that stopped using them was live: a row switched off while the old page still ran would
+> have let its address fall back to the Overview's access. Since then "Cloud Services" is gone from
+> the sidebar and the Access page, and an old address still forwards (a path whose row is off is
+> decided by `/dashboard`, which everyone may open; the page it leads to checks its own key).
 
 > **Status:** Layer A (the stored settings) and the Sentry and Cloudflare connectors are live;
 > the Supabase one waits on its token (MAINTENANCE (private) SH-11). The **`sentry.cf_admin.*` keys are still read by nothing** (§4.5).
@@ -123,8 +125,9 @@ Since 2026-10-28 each page that edits these settings checks its own keys, each e
 | Emptying the website's cache, the site's security level | `/dashboard/configuration` (Admin) | `/dashboard/configuration#cloudflare` (Owner) |
 
 Control Plane's own keys (`/dashboard/control-plane`, its four sub-pages, `#edit-sampling`,
-`#purge-config` and `#provider-write`) guard nothing since its routes were removed on 2026-10-28;
-the next push switches them off (MAINTENANCE (private) SE-3).
+`#purge-config` and `#provider-write`) guarded nothing once its routes were removed on 2026-10-28,
+and migration `0084` switched them off the same day (`is_active = 0`; setting it back to 1 in Page
+Registry undoes it).
 
 Page-level denies also block the underlying API calls, and **enforcement is central, not
 per-route**: under `API_DENY_MODE = "enforce"` the middleware maps every `/api/*` path to a page
@@ -253,9 +256,10 @@ equivalent `sentry.cf_astro.*` keys *are* read, by
 `cf-astro/src/lib/service-config.ts`.
 
 `cloudflare.cf_admin.observability_enabled` and `cloudflare.cf_astro.head_sampling_rate` are
-read-only in the schema (deploy-time config) and read by nothing; no page offers them since
-2026-10-28, and they are switched off with Control Plane's rows (MAINTENANCE (private)
-SE-7).
+read-only in the schema (deploy-time config) and read by nothing in either app; no page offers
+them since 2026-10-28, and migration `0084` switched their rows off with Control Plane's. The first
+said 1 while the website's `wrangler.toml` keeps 20% of its logs. Their specs stay in
+`config-schema.ts`, read-only.
 
 Until these are wired, treat the cf-admin Sentry rows as a declaration of
 intent. Wiring them means reading the config in `cf-entry.ts` and at client
@@ -389,6 +393,7 @@ The pieces the new pages share stayed in `src/components/admin/control-plane/`:
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The top note, §3 and §4.5 after migration `0084`: the ten rows read back through the Cloudflare D1 connector (`is_active = 0`); cf-astro's settings query reads only active rows (`WHERE is_active = 1` in `cf-astro/src/lib/service-config.ts`, its `main`, 53b1bd7) and names neither Cloudflare key; `test/control-plane-retired.test.ts` passes | The sidebar and the forwards in a phone browser |
 | 2026-10-28 | Control Plane retired: the top table against the five forwards in `src/pages/dashboard/control-plane/` and `test/control-plane-retired.test.ts`; §3's keys against migrations `0068`, `0081`, `0082` and `0083`; §4.2 and §4.3 against `settings-routes.ts`, `useConfigEdit.ts` and `src/pages/api/configuration/limits.ts`; §4.1's types, scopes and categories and §4.4's caps against `config-schema.ts`; §4.5 by `grep -rn "sentry.cf_admin" src` and the hardcoded `0.1` in `cf-entry.ts` and `sentry.client.config.ts`; §5 to §8 against what is left in `src/lib/control-plane/` and `src/components/admin/control-plane/` and who imports each. `last_verified` moved | The live `admin_pages` and `service_config` rows (no change to them in this push); provider API behaviour; the pages in a phone browser |
 | 2026-10-28 | The "Being replaced" note, the §3 sentence on the Cloudflare route, the §7 route row and the §8 address against the Configuration page's two routes, `src/pages/dashboard/control-plane/cloudflare.astro` (a forward) and migration `0083`; `test/configuration-limits-cloudflare.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The "Being replaced" note against the PostHog page's Settings part (`src/pages/api/posthog/settings.ts`, migration `0082`); that this page's PostHog write (`setSessionRecording` in `src/lib/control-plane/posthog-admin.ts`) puts its share in `session_replay_config`, and that the project's live `session_replay_config` is empty while `session_recording_sample_rate` is none (every visit), through the PostHog connector | The rest of the document; `last_verified` left as it was |

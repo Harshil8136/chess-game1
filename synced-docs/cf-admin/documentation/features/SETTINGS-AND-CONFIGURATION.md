@@ -169,8 +169,9 @@ Cloudflare refuses says so in its place:
 
 Both changes go to `POST /api/configuration/cloudflare`, limited to 10 a minute per person and
 audited as `provider_write` (target `cloudflare:purge` or `cloudflare:set-security-level`). The
-two read-only Cloudflare rows Control Plane showed are not offered: nothing reads them
-(MAINTENANCE (private) SE-7).
+two read-only Cloudflare rows Control Plane showed are not offered: nothing reads them, and
+migration `0084` switched them off with Control Plane's rows
+([CONTROL-PLANE.md](CONTROL-PLANE.md) §4.5).
 
 **Settings kept with their feature.** Below them, the page lists the pages that own every
 other setting (`SETTINGS_ELSEWHERE`): Email, SEO, the Blog's AI writing instructions, Scheduled
@@ -203,6 +204,7 @@ is named.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-28 | The Cloudflare section's sentence on Control Plane's two Cloudflare rows, against migration `0084` and the rows read back | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | **Scope-limited to the Configuration section** (the keys, the request limits, Cloudflare, the list of settings kept elsewhere) against `configuration.astro`, `WebsiteLimits.tsx`, `CloudflareSection.tsx`, `website-limits.ts`, `settings-routes.ts`, the two routes and `0083`; `cf-astro/src/lib/rate-limit.ts` (`RATE_LIMIT_BINDING_LIMITS`) and `cf-astro/src/lib/isr-cache-key.ts` (`pageCacheTag`) read on its main (53b1bd7); the `0083` row read back live (D1 connector); `test/configuration-limits-cloudflare.test.ts`, `test/overview.test.ts` and `test/action-keys-enforced.test.ts` pass | The Settings section; the Cloudflare reads against the live account; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-17 | **Scope-limited to the Testing pass bullet.** Against `TestingPassPanel.tsx`, `settingsView.ts` (`testingPassState`, `durationWords`), `index.astro`, `src/pages/api/settings/testing-pass.ts` and `src/lib/auth/fresh-sign-in.ts` (`testingPassInfo`); `test/testing-pass.test.ts` passes | The other bullets and the Configuration section; the panel on a phone, which Harshil tests after the deploy |
 | 2026-10-16 | **Scope-limited to Ask for a permission (#22).** The new paragraph of the Your access bullet against `AskForPermission.tsx`, `AccessPanel.tsx` (its children), `your-consoles.ts` (`readCatalogFor`, `askable`, `labels`) and `index.astro`; `test/access-console-requests.test.ts` and `test/access-why.test.ts` pass | The pop-up in a phone browser, which Harshil tests after the deploy |
