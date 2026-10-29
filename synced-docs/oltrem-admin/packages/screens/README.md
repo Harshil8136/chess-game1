@@ -145,13 +145,27 @@ Every page sits in one frame, drawn on the server:
   beside it. From the top: an arrow that closes it, the portal's mark, a search box (a plain form
   to `/search`, `Ctrl K` or `⌘K` from anywhere), Home, then every mounted section under its group,
   and at the foot who is signed in. Rows are 36 px (44 px on a touch screen).
-- **Groups**, in this order: Work, Team (time clock, shifts, time off, expenses, equipment), Sales
-  (quotes, invoices), People, Messages (Write, Email, Campaigns), Mail settings (Providers,
-  Addresses, Templates, Lists; since 2026-10-29), Operations, Developer, Administration. A module's page
-  joins its group wherever the module is listed; a group the kit does not know sits before
-  Administration (`groupRank` in `src/layout.tsx`). Each group has a colour (`hueOf`): its dot, its
-  icons, and the tint and edge marker of the section on screen, which is also bold, so it never
-  rests on colour alone. Home's cards use the same colours.
+- **Groups**, in this order: Work, Company, People, Messages, System (since 2026-10-29, the owner's ask:
+  few entries, sub-pages as tabs). A module's page joins its group wherever the module
+  is listed; a group the kit does not know sits before System (`groupRank` in `src/layout.tsx`).
+  Each group has a colour (`hueOf`): its dot, its icons, and the tint and edge marker of the
+  section on screen, which is also bold, so it never rests on colour alone. Home's cards use the
+  same colours.
+- **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
+  that name, at the first one's place, leading to the first tab and marked on any of them; each
+  of their pages opens with the set as a sideways row of tabs above its title (`tabSet` and
+  `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest
+  follow in the sidebar's order. A page with no entry of its own sits under the module's entry its
+  path starts with (`/email/sent/7` under Sent). With every kit module on, the sidebar holds 18
+  entries besides Home:
+
+  | Group | Entries (tabs) |
+  |---|---|
+  | Work | Records, Forms, Bookings, Tasks, Files, Approvals, Announcements, Analytics, Automations |
+  | Company | Team (Shifts, Time clock, Time off, Expenses, Equipment), Sales (Quotes, Invoices) |
+  | People | People (People, Access), Customers (Customers, Privacy) |
+  | Messages | Email (Write, Drafts, Sent, Activity, Addresses, Providers), Campaigns (Campaigns, Templates, Lists) |
+  | System | System health (System health, Backups, Deploys, Alerts), Settings (Settings, Audit log), Developer |
 - **Closed to icons.** The arrow closes the sidebar to a 64 px rail and opens it again. Only the
   words fade: no icon moves. A section's name shows beside the rail while the pointer or the
   keyboard is on it. The choice posts `side` (`closed` or `open`) and `back` to `POST /ui/side`,

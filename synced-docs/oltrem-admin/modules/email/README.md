@@ -93,7 +93,7 @@ list it is on; a copy is never moved up to To, so with no To left the message is
 
 ## Write
 
-The page Messages, Write (`/email/write`, stage 2 of the Mail plan, 2026-10-29) sends one email a
+The page Email, Write (`/email/write`, stage 2 of the Mail plan, 2026-10-29) sends one email a
 person writes, the way a mail app does, without a list, a template or a campaign.
 
 | Part | What it does |
@@ -103,9 +103,9 @@ person writes, the way a mail app does, without a list, a template or a campaign
 | Subject and message | The message is plain words with three marks: `**bold**`, `_italic_` and a line starting with `- ` for a list; an https address becomes a link. It is sent as a plain letter in HTML (`writtenHtml`, everything typed escaped) and as text, under the built-in template `email.written` |
 | Sending | `POST /write` checks the address may be used and queues the message like any other: the lease, the failover and the delivery reports are the same. It is audited as `email.write` with the number of recipients (and the time, for one scheduled), never the words |
 | Undo | A sent email waits ten seconds (`UNDO_SECONDS`) in the queue before it is handed over. The page says so with an Undo button that takes it back into the form as a draft (`POST /written/:id/undo`, audited as `email.unsend`). Once the queue has handed it over, Undo answers `KIT-E-1511` |
-| Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Messages, Drafts lists them, opens one into the form and deletes one |
-| Sent | The page Messages, Sent lists the emails the person sent from Write, newest first: the subject and first words, to whom, when, and what became of each in a word (Sending, Not sent, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
-| Signature | Each sender address keeps one (Mail settings, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
+| Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Email, Drafts lists them, opens one into the form and deletes one |
+| Sent | The page Email, Sent lists the emails the person sent from Write, newest first: the subject and first words, to whom, when, and what became of each in a word (Sending, Not sent, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
+| Signature | Each sender address keeps one (Email, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
 | Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
 
 Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
@@ -136,14 +136,14 @@ Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain
 `email.domain-remove`, `email.domains-discover`, `email.sender-add`, `email.sender-update`, `email.sender-remove`,
 `email.sender-default`.
 
-The page is Mail settings, Addresses (`/email/senders`, from `@oltrem/email/pages`): the sender
+The page is Email, Addresses (`/email/senders`, from `@oltrem/email/pages`): the sender
 addresses, and the domains with their check lines and records.
 
 ## Saved templates
 
 The designs bulk mail is written with, kept in D1 as the company's (stage 3 of the bulk sending
 plan, `docs/records/2026-10-28-saved-templates.md`). They are not the typed templates above,
-which are code; a saved template is data a person builds on the page Mail settings, Templates
+which are code; a saved template is data a person builds on the page Campaigns, Templates
 (`/email/templates`).
 
 | Part | What it does |
@@ -165,7 +165,7 @@ a send. Every change is audited: `email.template-add`, `email.template-save`,
 ## Saved lists
 
 The people bulk mail goes to, kept in D1 as the company's (stage 4 of the bulk sending plan,
-`docs/records/2026-10-28-saved-lists.md`), on the page Mail settings, Lists (`/email/lists`).
+`docs/records/2026-10-28-saved-lists.md`), on the page Campaigns, Lists (`/email/lists`).
 
 | Part | What it does |
 |---|---|
