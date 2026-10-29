@@ -94,6 +94,16 @@ domain is verified and the values that mean so; and where its DNS records are, w
 each record's name, type, value, priority and status and the status values that mean found.
 Resend and Brevo carry one; the others are added when their APIs are written up.
 
+An HTTP definition may also carry `identities`: up to three lists the provider keeps of what the
+account may send from, each a method, a path and an optional body; where the list is
+(`itemsPath`), each entry's domain or address (`namePath`; `*@example.com` is the whole domain),
+where it says the entry is verified and the values that mean so (`okPath` and `ok`, together), and
+the display name it keeps for an address. `needs` names fields that must be filled for the call to
+be made, and `auth: false` with `headers` sends a second key instead of the definition's own.
+Resend, Brevo, SendGrid, Postmark (with its optional account token), Mailgun, SES, Mailjet and
+SMTP2GO carry them. Mailtrap's list needs the account's number, which no field holds yet; Sender
+publishes no list.
+
 `defineProvider` checks a definition against the contract where it is written, and
 `definitionProblems` returns what is wrong, one line each with the path; a client's definition
 submitted through the route is checked the same way. The contract refuses an id or field name in
@@ -199,8 +209,10 @@ email module never names a provider.
   `supports`, `create`, `read` and `verify`, each answering the provider's id, whether it is
   verified, its status word and its records with full host names (`hostOf`; `@` is the domain
   itself). Adding a domain the provider already has reads it instead. A refusal is `KIT-E-1410`
-  with the provider's status and its answer cut to one line, the key blanked. The email module's
-  senders use it.
+  with the provider's status and its answer cut to one line, the key blanked. `identities` reads
+  the definition's lists: each domain and address once, verified when any list says so, and the
+  lists skipped because a field they need is empty; null for a definition without lists
+  (`readIdentities` reads one answer). The email module's senders use it.
 
 ## Delivery reports
 
