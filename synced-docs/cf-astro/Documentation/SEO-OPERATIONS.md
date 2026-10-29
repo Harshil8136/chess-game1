@@ -254,6 +254,8 @@ Google Business Profile:
   CLS 0.1.
 - **Don't bother expanding llms.txt** beyond cheap maintenance — Google
   explicitly doesn't use it and OpenAI/Anthropic haven't committed; ours
-  exists because it's zero-cost, not because it ranks.
+  exists because it's zero-cost, not because it ranks. Published articles
+  are listed in it automatically (since 2026-10-29); the rest is the
+  hand-written `src/data/llms.txt`.
 
 {% endraw %}

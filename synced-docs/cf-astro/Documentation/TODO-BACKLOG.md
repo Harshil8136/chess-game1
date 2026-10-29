@@ -122,8 +122,8 @@
 - [ ] 🟡 **RSS with full content, and crawlable.** The feeds carry only the summary, and
       robots.txt disallows them, which stops Google using them for discovery (they already
       send `noindex`).
-- [ ] 🟢 **Articles in `llms.txt`.** It is static, so posts written in cf-admin never reach it.
-      Cheap if wanted; SEO-OPERATIONS.md §2 keeps llms.txt low-effort on purpose.
+- [x] ~~🟢 **Articles in `llms.txt`.**~~ **Done 2026-10-29**: `/llms.txt` is an on-demand route
+      that lists every published article, cached like the sitemaps (FRONTEND-AND-SEO.md §4.3).
 - [ ] 🟢 **Thin tag pages.** About 25 tag pages per locale for 8 posts. Consider `noindex`
       below 2–3 posts (an indexing-policy decision for the owner).
 - [x] ~~🟢 **`410 Gone` for archived posts**~~ **Done 2026-10-11**: `resolveMissingPost` in

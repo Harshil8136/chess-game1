@@ -51,7 +51,7 @@ The frontend follows Astro's **island architecture** model to deliver near-zero 
 │  MarketingLayout (prerendered HTML)                          │
 │                                                              │
 │  [Header]           static HTML, small scroll script         │
-│  [Hero]             zero JS, preloaded LCP image             │
+│  [Hero]             zero JS, preloaded image, shown at once  │
 │  [AutoTabs]         Preact island, client:idle               │
 │  [InfiniteGallery]  Preact island, client:visible            │
 │  [BookingWizard]    Preact island, client:load (/booking)    │
@@ -82,6 +82,7 @@ Animations are powered by a unified Intersection Observer engine defined in `src
 - **Syntax**: Elements are tagged with `data-animate="slide-up"`, `data-delay="200"`, etc.
 - **Performance**: Vanilla JS sets the active state once inside a `requestAnimationFrame` loop, guaranteeing zero layout thrashing.
 - **Accessibility**: Motion transitions are automatically suppressed if the user has requested reduced motion (`@media (prefers-reduced-motion: reduce)`).
+- **Never on the first screen**: `[data-animate]` starts at opacity 0 and is revealed on an idle callback, so text that carries it is not "shown" for the browser's LCP until then. The home page hero had it on its headline and subtitle, and Google's phone test measured 4.4 to 5.6 s on `/es/` and `/en/` (every other page 98). Since 2026-10-29 the hero carries none; measured locally with a 4x slower CPU, the LCP went from about 2.5 s (the cookie banner's text) to 0.5 s (the hero subtitle). `test/hero-lcp.test.ts` keeps it that way.
 
 ### 3.2 Progressive Web App (PWA) Capabilities
 
@@ -129,7 +130,7 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 
 **BlogPosting entities (since 2026-10-10).** A byline that names the business resolves to the `#organization` node with the home page's name; any other byline is a `Person`. `publisher` carries the name and logo on the post itself (`src/lib/blog-schema.ts`).
 
-**Feed cache (since 2026-10-04).** The three sitemaps and the two RSS feeds (`/es/rss.xml`, `/en/rss.xml`) are kept in KV `ISR_CACHE` under `feed:<path>#<build>` for 6 hours (`src/lib/feed-cache.ts`; the response carries `X-Feed-Cache: HIT` or `MISS`). A miss reads only the post columns the feed prints, not whole post bodies. A render that fell back to the bundled posts because D1 failed is served but never stored, and every revalidation from cf-admin clears the `feed:` entries, so a publish shows up on the next crawl. `/llms.txt` and `/llms-full.txt` are static files in `public/`; an unused on-demand `llms.txt` route that the static file had always shadowed was removed the same day.
+**Feed cache (since 2026-10-04).** The three sitemaps and the two RSS feeds (`/es/rss.xml`, `/en/rss.xml`) are kept in KV `ISR_CACHE` under `feed:<path>#<build>` for 6 hours (`src/lib/feed-cache.ts`; the response carries `X-Feed-Cache: HIT` or `MISS`). A miss reads only the post columns the feed prints, not whole post bodies. A render that fell back to the bundled posts because D1 failed is served but never stored, and every revalidation from cf-admin clears the `feed:` entries, so a publish shows up on the next crawl. `/llms-full.txt` is a static file in `public/`. `/llms.txt` is served the same way as the sitemaps since 2026-10-29 (below).
 
 **Blog 404s (since 2026-10-04).** `/es/blog/tag/<tag>/` for a tag no post carries, and `/es/blog/?page=<n>` for a page number that is not a whole number from 1 to 9999 or is past the last page, render the 404 page with status 404 and are not cached (the same for `/en/`). A tag or page is still served when the database lookup failed, so a D1 outage never turns a real page into a 404 (AGENTS.md invariant #7).
 
@@ -140,7 +141,7 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 ### 4.3 Generative Engine Optimization (GEO / AIO)
 
 - **AI Crawler Allowances**: `robots.txt.ts` explicitly grants crawling permissions to AI agent engines (such as GPTBot, ClaudeBot, Applebot-Extended, and PerplexityBot).
-- **`llms.txt` & `llms-full.txt`**: Plaintext summaries served from `/public` that provide concise system context, services, pricing grids, and legal information specifically designed for LLMs to scrape.
+- **`llms.txt` & `llms-full.txt`**: Plaintext summaries that provide concise system context, services, pricing grids, and legal information specifically designed for LLMs to scrape. `llms-full.txt` is static in `public/`. `/llms.txt` (since 2026-10-29) is the hand-written `src/data/llms.txt` plus every published article of both locales, in two sections just above "## Optional" (`src/pages/llms.txt.ts`, `src/lib/llms-txt.ts`, the same post list as the RSS feeds). It shares the feed cache: `feed:/llms.txt#<build>` for up to 6 hours, cleared on every publish, never kept when D1 could not be asked. Edit the summary in `src/data/llms.txt`; a copy in `public/` would shadow the route.
 - **Quick answers on a post** (`components/blog/AioDirectAnswers.astro`): a cf-admin post's `aio_data.direct_answers` render as a light "Quick answers" / "Preguntas frecuentes" section after the article, an `<h2>` with one `<h3>` per question, targeted by the BlogPosting `speakable` selector `.article-direct-answers`. An answer that only repeats the post's meta description is not shown (`parseBlogPostRow`, `src/lib/blog.ts`). Restyled 2026-10-10 from a dark purple panel.
 - **A moved post** answers with a 301 to its `blog_redirects` target, cached for one hour
   (`[SUPABASE_PROJECT_REF]` in `src/lib/blog.ts`), only when no published post has that slug.
