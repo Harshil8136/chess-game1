@@ -33,7 +33,11 @@ installed for you.
    first what it does: the packages listed in `pnpm-lock.yaml`, downloaded from the public npm
    registry and checked against that file, saved in this folder, with nothing installed for the
    whole computer. Later starts skip this.
-5. **The start page** opens in your browser, with five choices:
+5. **Every start checks first.** In a git clone, it looks for a newer kit on GitHub and brings it
+   in when this copy has no changes of its own (a copy with its own changes, or with no internet,
+   starts as it is and says why). It then installs what the new kit needs, and runs the template's
+   checks (`oltrem doctor`, a few seconds), naming any that fail with its fix.
+6. **The start page** opens in your browser, with five choices:
    - **Try it on this computer:** the portal at a local address such as <http://localhost:8787>,
      with no Cloudflare account; it opens on a sign-in page that exists only on your computer.
      **Stop it** on the page stops it.
