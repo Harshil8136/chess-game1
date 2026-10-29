@@ -31,6 +31,7 @@ sources: [modules/email/README.md; modules/email/src/write-page.tsx; modules/ema
 | Bold, italic, lists and links typed as plain marks, sent as a plain letter | A personal email should look like one, not like a designed newsletter |
 | Undo for ten seconds after Send | The most common mistake is noticed just after pressing Send |
 | Drafts and Send later, kept per person, on the company's clock | What a mail app has; the company's clock, not the server's, says when "9:00" is |
+| A signature for each sender address, added under the emails written from it | What a mail app has; the company's address signs the same way whoever writes |
 | A Sent page with what became of each email, its timeline, Forward and Send again | A person sees their own mail, not the whole company's message log |
 | Messages and Mail settings in the sidebar | Sending and setting up are different jobs; the first is used every day |
 | No inbox | The owner's choice (C): replies reach the address's normal mailbox |
@@ -73,9 +74,9 @@ and Undo moves it from `queued` to `draft` the same way, so exactly one of them 
 |---|---|
 | `@oltrem/providers` | Each email definition may list what the account sends from (`transport.identities`); `cc` and `bcc` on a message, checked, and written into every provider's request; SMTP sends copies as recipients and never writes a `Bcc` header |
 | `@oltrem/core-outbox` | `enqueue(event, { delaySeconds })`: the queue's own wait, at most twelve hours, on the first send |
-| `@oltrem/email` | `POST /domains/discover`; the Write, Drafts and Sent pages and a sent email's page; routes `GET /write`, `POST /write`, `/written` and its undo and delete; migration `0052_email_written.sql`; the job `email.written`; the built-in template `email.written`; error `KIT-E-1511`; a privacy request lists the emails written to an address; `createEmail` takes an optional `timeZone` |
+| `@oltrem/email` | `POST /domains/discover`; the Write, Drafts and Sent pages and a sent email's page; routes `GET /write`, `POST /write`, `/written` and its undo and delete; migrations `0052_email_written.sql` and `0053_email_signatures.sql` (a signature for each sender address); the job `email.written`; the built-in template `email.written`; error `KIT-E-1511`; a privacy request lists the emails written to an address; `createEmail` takes an optional `timeZone` |
 | `@oltrem/screens` and `@oltrem/core-module` | A page may sit `before` another in its group; the group Mail settings |
-| A client repository | One new kit migration, applied by the next `npm run deploy` before the code that needs it. The template passes the bookings time zone to email. No new binding, variable or secret |
+| A client repository | Two new kit migrations, applied by the next `npm run deploy` before the code that needs it. The template passes the bookings time zone to email. No new binding, variable or secret |
 
 ## How it was verified
 
@@ -87,7 +88,8 @@ person may not use, too many people and an empty subject; Undo in the wait (the 
 dropped, nothing sent, the draft back) and too late after it went (`KIT-E-1511`); a draft saved,
 read only by its writer, saved again and deleted; Send later refused too soon, kept until its
 window, then queued with the wait left (600 seconds) and sent, and one taken back; the sent list
-with each message's state, and nothing of another person's; the outbox's
+with each message's state, and nothing of another person's; a signature saved on an address and
+carried under an email written from it, in the text after `-- `; the outbox's
 wait handed to the queue, its replay time after a failed first send, and a wait too long refused.
 The client template's screens write, undo, save a draft and list it, forward it and open Sent. Not verified: a real queue's
 wait on a deployed portal, real provider accounts' identity lists, the pages on a phone.

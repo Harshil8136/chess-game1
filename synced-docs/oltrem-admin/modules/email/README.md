@@ -105,6 +105,7 @@ person writes, the way a mail app does, without a list, a template or a campaign
 | Undo | A sent email waits ten seconds (`UNDO_SECONDS`) in the queue before it is handed over. The page says so with an Undo button that takes it back into the form as a draft (`POST /written/:id/undo`, audited as `email.unsend`). Once the queue has handed it over, Undo answers `KIT-E-1511` |
 | Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Messages, Drafts lists them, opens one into the form and deletes one |
 | Sent | The page Messages, Sent lists the emails the person sent from Write, newest first: the subject and first words, to whom, when, and what became of each in a word (Sending, Not sent, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
+| Signature | Each sender address keeps one (Mail settings, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
 | Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
 
 Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
@@ -376,7 +377,8 @@ source, and when it was archived) and `email_list_members` (the address, name, m
 JSON, the reason, who added them and when). Migration `0052_email_written.sql` makes
 `email_written` (the writer, the sender, the addresses as JSON, the subject and the words, the
 state, the time it goes for one scheduled, the message key once queued and why it was last not
-queued; see Write).
+queued; see Write). Migration `0053_email_signatures.sql` adds each sender address's
+`signature`.
 
 | Code | Name | Status | When |
 |---|---|---|---|
