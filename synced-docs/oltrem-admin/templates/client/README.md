@@ -50,6 +50,26 @@ root; `npm run update` there gets the newest kit, installs what changed and says
 Cloudflare Access, and only on `localhost`: type an address and you are signed in as that
 person. Once deployed, `ACCESS_AUD` is set, that page does not exist, and Access is the only door.
 
+### Sharing it with other devices
+
+`npm run dev -- --share network` also opens the portal to the phones and computers on the same
+Wi-Fi, and `npm run dev -- --share tunnel` to anywhere, through a Cloudflare
+[quick tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/): a temporary
+`trycloudflare.com` address, with no Cloudflare account, which needs
+[`cloudflared`](https://developers.cloudflare.com/tunnel/downloads/) installed. The start page
+offers both as **Share it on this Wi-Fi** and **Share it anywhere**.
+
+wrangler stays on this computer's own address either way; what is shared is a gate in front of it
+(`scripts/share.mjs`), on the next free port after the portal's. Each start makes a new code, shown
+where it was started. The browser asks for it once: any name, and the code as the password. The
+gate counts wrong codes and refuses an address after ten in ten minutes, takes the code out of the
+request and passes it on as if it came from this computer, so the sign-in page above works there
+and the forms' checks hold. Whoever has the code can sign in as anyone in this copy of the portal,
+as you can here, so share it only with people you trust. Stopping the portal ends the sharing,
+the tunnel too. On the network the code travels unencrypted (plain http), and on Windows the first
+start asks whether Node.js may use the network: allow private networks only. Without
+`cloudflared`, the tunnel choice says where to get it and the portal keeps running here.
+
 The first run:
 
 1. Sign in as `vendor@example.com` and create the company: its name, and the first Owner's

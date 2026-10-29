@@ -31,10 +31,14 @@ installed for you.
    install it, then double-click the file again.
 4. **The first install.** The first time, it installs the kit (a few minutes). Later starts skip
    this.
-5. **The start page** opens in your browser, with three choices:
+5. **The start page** opens in your browser, with five choices:
    - **Try it on this computer:** the portal at a local address such as <http://localhost:8787>,
      with no Cloudflare account; it opens on a sign-in page that exists only on your computer.
      **Stop it** on the page stops it.
+   - **Share it on this Wi-Fi** and **Share it anywhere:** the same, also open on other devices
+     behind a code shown when it starts: on your network, or at a temporary Cloudflare address
+     (this needs `cloudflared` installed, and no account). See
+     [sharing it](./templates/client/README.md#sharing-it-with-other-devices).
    - **Get the newest kit:** fetches what is new (this needs a git clone), installs it and says
      what changed.
    - **Put it on Cloudflare:** signs you in to Cloudflare in the same browser, lets you pick the
@@ -44,7 +48,7 @@ installed for you.
 
 Keep the window the file opened while you use the page: closing it stops everything. If the page
 does not open, the window shows its address, and if no browser opens it within two minutes, the
-window asks the same three choices by number. Each step keeps its full output in `.oltrem/`.
+window asks the same five choices by number. Each step keeps its full output in `.oltrem/`.
 
 Each step says what it is doing while it runs, including what the tool it waits on says right now.
 The start page repairs the kit's packages by itself when they are missing or older than the kit;
