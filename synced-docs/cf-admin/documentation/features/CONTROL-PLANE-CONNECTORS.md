@@ -156,7 +156,7 @@ base URLs are public/standard and shown for orientation.
 Control Plane's Sentry reads and writes (top issues, inbound filters, client keys, key rate
 limits, spike protection, resolve and ignore) were removed from this file on 2026-10-28. The
 Sentry page does them through its own client, `src/lib/sentry/`, with its own permission checks
-([SENTRY.md](./SENTRY.md) §6 and §11).
+([SENTRY.md](./SENTRY.md) §6 and §12).
 
 ### 3.3 PostHog — removed 2026-10-28
 

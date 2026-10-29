@@ -17,6 +17,7 @@ related_code:
 - src/components/dashboard/sentry/Trends.tsx
 - src/components/dashboard/sentry/Monitors.tsx
 - src/components/dashboard/sentry/Releases.tsx
+- src/components/dashboard/sentry/Threats.tsx
 - src/components/dashboard/sentry/frame.tsx
 - src/components/admin/control-plane/useConfigEdit.ts
 - src/components/admin/control-plane/SettingRows.tsx
@@ -38,6 +39,10 @@ related_code:
 - src/lib/sentry/trends.ts
 - src/lib/sentry/monitors.ts
 - src/lib/sentry/releases.ts
+- src/lib/sentry/threats.ts
+- src/lib/sentry/threat-types.ts
+- src/lib/sentry/probes.ts
+- src/lib/analytics/report/sources.ts
 - src/lib/sentry-config.ts
 - src/workers/cf-entry.ts
 - sentry.client.config.ts
@@ -53,6 +58,7 @@ related_code:
 - migrations/0081_sentry_settings.sql
 - migrations/0085_sentry_speed_trends_monitors.sql
 - migrations/0086_sentry_releases.sql
+- migrations/0089_sentry_threats.sql
 - test/sentry.test.ts
 - test/sentry-settings.test.ts
 - test/sentry-stage2.test.ts
@@ -60,6 +66,7 @@ related_code:
 - test/sentry-config.test.ts
 - test/sentry-console.test.ts
 - test/sentry-console-look.test.ts
+- test/sentry-threats.test.ts
 related_docs:
 - POSTHOG.md
 - CONTROL-PLANE.md
@@ -71,11 +78,13 @@ related_docs:
 - ../records/reports/2026-10-28-portal-sentry-settings.md
 - ../specs/2026-10-29-sentry-console-look.md
 - ../records/reports/2026-10-29-sentry-console-look.md
+- ../specs/2026-10-29-sentry-threats.md
+- ../records/reports/2026-10-29-sentry-threats.md
 - ../architecture/PERMISSIONS-SYSTEM.md
 - ../security/SECURITY.md
 - ../security/RoPA.md
 - ../operations/OPERATIONS.md
-tags: [feature, sentry, errors, issues, logs, speed, trends, monitors, alerts, releases, updates, cloudflare, permissions]
+tags: [feature, sentry, errors, issues, logs, speed, trends, monitors, alerts, releases, updates, threats, scanners, security, cloudflare, permissions]
 ---
 
 # Sentry — errors, logs and Sentry's own tools in the portal
@@ -94,7 +103,13 @@ tags: [feature, sentry, errors, issues, logs, speed, trends, monitors, alerts, r
 > Sentry suggests for the library each project uses. The portal's own three Sentry settings (on
 > or off, the share of errors kept, the share timed) work since 2026-10-28, at the 10% timed it
 > used before. Since 2026-10-29 the page is drawn as a console on plain panels, its lists as
-> tables, and the issue lists show Sentry's real counts (they read 0 before).
+> tables, and the issue lists show Sentry's real counts (they read 0 before). Also since
+> 2026-10-29: Issues offers Sentry's own views (Prioritized, For review, Getting worse, Back after
+> a fix, New) and its priority, and an issue shows Sentry's count of every tag across every time it
+> happened and its thread in Sentry, where an Admin can add a note; a new part, **Threats**, shows
+> the robots that scan our sites for open doors (such as `/_profiler/phpinfo`), how each site
+> answered them, what Cloudflare blocked, the browser security reports and what Sentry set aside;
+> and Speed no longer shows a request that never waited on anything as "0 ms".
 
 Asked for by Harshil on 2026-10-28: "completely scrap `/dashboard/control-plane` and put sentry
 systems there! for logs, analytics, trends, info, errors, permission based config changes and
@@ -121,6 +136,16 @@ when wide) and a grid of solid panels, three, two or one across, none spanning r
 tables with column heads once their panel is wide enough; narrower, each row's figures fold into a
 line under its name. Sentry's icon in the sidebar is a bug.
 
+**Sentry's own signals and Threats** (2026-10-29, Harshil: "can we have threads, issues, trends
+and such that are by sentry itself", and of a request for `GET /_profiler/phpinfo` timed at 0 ms,
+"this is actually a threat. Dont sentry flag such type request or any of our service providers?
+Can we see that?"): Sentry judges no request, but it rates its issues, sorts them into its own
+views, keeps a thread on each and sets aside errors it judges noise; Cloudflare sees every request
+before our code and records what it blocked. Issues (§4) and the new Threats part (§11) show them;
+the [design](../specs/2026-10-29-sentry-threats.md) and the
+change record (private) say why and how. "Threads" was
+read as each issue's thread in Sentry (what Sentry found, what was done, and the notes).
+
 ## 1. Who may do what
 
 | Key | Name | Default | What it allows |
@@ -131,13 +156,14 @@ line under its name. Sentry's icon in the sidebar is a bug.
 | `/dashboard/sentry/monitors` | Monitors and alerts | Admin | the Monitors and alerts part: every one shown, none switched |
 | `/dashboard/sentry/releases` | Releases and updates | Admin | the Releases and updates part (it only reads) |
 | `/dashboard/sentry/speed` | Speed | Admin | the Speed part |
+| `/dashboard/sentry/threats` | Threats | Admin | the Threats part (it only reads) |
 | `/dashboard/sentry/trends` | Trends | Admin | the Trends part |
 | `/dashboard/sentry/settings` | Settings | Admin | the Settings part: every setting shown, none changed |
-| `/dashboard/sentry#triage` | Resolve and archive issues | Admin | the Resolve, Reopen and Archive buttons on an issue (needs the Issues part too) |
+| `/dashboard/sentry#triage` | Resolve, archive and add notes | Admin | the Resolve, Reopen and Archive buttons on an issue, and adding a note to its thread in Sentry (needs the Issues part too) |
 | `/dashboard/sentry#refresh` | Refresh Sentry now | Admin | the Refresh button: ask Sentry and Cloudflare again instead of the kept copy |
 | `/dashboard/sentry#sampling` | Change what is sent to Sentry | Admin | change the website's rows, the rules per page and the list of ignored errors, and put them back to their defaults (needs the Settings part too) |
 | `/dashboard/sentry#provider-write` | Change Sentry's own settings | Owner | spike protection, the filters and the client keys' limits, in Sentry itself (needs the Settings part too); with the Monitors part, switching an up-time check, a heartbeat or an alert on or off |
-| `/dashboard/sentry#details` | See full details | Owner | error text, addresses and log lines unmasked (§13) |
+| `/dashboard/sentry#details` | See full details | Owner | error text, addresses and log lines unmasked (§14) |
 
 The defaults are Control Plane's, so no one gains or loses access the day it ships.
 `denySentry(user, part?, action?)` in `src/lib/auth/surface-guards.ts` asks for the page, then the
@@ -145,31 +171,33 @@ part, then the action, each exactly with `placRequireGrant` (fail-closed: a key 
 map is refused, never inherited). The pages check it before any HTML is made, and the route
 checks it again. `sentryCan(user)` tells the page which parts and buttons to offer, so it never
 shows one the route would refuse. The rows are migrations `0080`, `0081` (Settings), `0085`
-(Speed, Trends, Monitors and alerts) and `0086` (Releases and updates); the parts share Logs'
-sort order, so the tabs read Issues, Logs, Monitors and alerts, Releases and updates, Speed,
-Trends, Settings; the
+(Speed, Trends, Monitors and alerts), `0086` (Releases and updates) and `0089` (Threats, and
+`#triage`'s name now that it adds notes); the parts share Logs' sort order, so the tabs read
+Issues, Logs, Monitors and alerts, Releases and updates, Speed, Threats, Trends, Settings; the
 [permissions model](../architecture/PERMISSIONS-SYSTEM.md) owns the rules.
 
 ## 2. Setting it up
 
 The page uses what the portal already holds: `SENTRY_AUTH_TOKEN` against the organisation in
-`SENTRY_ORG_SLUG`, and `CLOUDFLARE_API_TOKEN` with `CF_ACCOUNT_ID` for Cloudflare's logs. No
-binding, secret or variable was added ([OPERATIONS.md](../operations/OPERATIONS.md) §5).
+`SENTRY_ORG_SLUG`, and `CLOUDFLARE_API_TOKEN` with `CF_ACCOUNT_ID` for Cloudflare's logs and
+with `CLOUDFLARE_ZONE_ID` for Threats (the zone the Analytics page reads). No binding, secret or
+variable was added ([OPERATIONS.md](../operations/OPERATIONS.md) §5).
 
 | Needs | For |
 |---|---|
-| Sentry `event:read` | the open issues, the Issues part, Sentry's log lines |
-| Sentry `org:read` | this month's use (`stats_v2`), the project list the filters ask by, and the updates Sentry suggests (`sdk-updates`) |
-| Sentry `event:write` | resolving, reopening and archiving |
+| Sentry `event:read` | the open issues, the Issues part (with an issue's tags and its thread), Sentry's log lines, and Threats' timed requests and browser security reports |
+| Sentry `org:read` | this month's use (`stats_v2`), the project list the filters ask by, the updates Sentry suggests (`sdk-updates`), and what Sentry set aside, on Threats |
+| Sentry `event:write` | resolving, reopening, archiving and adding a note |
 | Sentry `project:read` | Settings: a project's spike protection, filters and keys, and turning spike protection on or off; Releases and updates: the releases |
 | Sentry `project:write` | Settings: turning a filter on or off and setting a key's limit (the part says when the token lacks it) |
 | Sentry `alerts:read` | Monitors and alerts: the up-time checks, heartbeats and alerts |
 | Sentry `alerts:write` (or `project:write`) | Monitors and alerts: switching one on or off (the part says when the token holds neither) |
 | Cloudflare "Workers Observability: Edit" | Cloudflare's log lines (Cloudflare's query accepts no lesser permission) |
 | Cloudflare "Account Analytics: Read" | Trends: requests and failed requests per Worker (the question the Analytics page asks) |
+| Cloudflare "Zone Analytics: Read" | Threats: scanners' requests and Cloudflare's own blocks (the Analytics page's Website traffic asks the same) |
 
 The Overview's "What the portal's tokens can reach" card reads the Sentry token's own permissions
-(only `auth.scopes` of Sentry's answer about the token, §13) and tries each read, and names any
+(only `auth.scopes` of Sentry's answer about the token, §14) and tries each read, and names any
 permission still missing in Sentry's or Cloudflare's own words. A Sentry token cannot gain a
 permission later: one that lacks `event:write` is replaced by a new token saved under the same
 name. Without the Sentry token or organisation the page says "Sentry is not connected" instead of
@@ -204,8 +232,8 @@ when the person holds it; one that could not be read keeps its place with a dash
 ## 4. Issues
 
 `/dashboard/sentry/issues`. Every issue of the three projects seen in the last 24 hours, 14 days
-(the default), 30 or 90 days; open (the default), resolved, archived or all; one project or
-every one; last seen (the default), most often, newest or most people first; and words, searched
+(the default), 30 or 90 days; open (the default), one of Sentry's own views, resolved, archived or
+all; one project or every one; last seen (the default), most often, newest or most people first; and words, searched
 as one phrase. 25 at a time with "Show older issues" (Sentry's cursor), and how many match. A
 table: the issue (its title, where in the code, the level, the project, Sentry's short id, "Not
 caught", and the state when it is worth saying), a small chart of its errors over the period
@@ -215,6 +243,16 @@ The lists ask Sentry to collapse only `filtered`: until 2026-10-29 they also col
 and Sentry then leaves out each issue's counts and times, so every row read 0 times and 0 people
 and the Overview's "new today" stayed at 0.
 
+**Sentry's own views** (2026-10-29), in the same row of options as the states, each said in a line
+under the options when chosen: **Prioritized** (Sentry's default list: the open issues it rates
+high or medium priority, `is:unresolved issue.priority:[high,medium]`), **For review**
+(`is:for_review`: new, back or getting worse lately, and not yet marked reviewed), **Getting worse**
+(`is:escalating`, which the Overview's figure now opens), **Back after a fix** (`is:regressed`)
+and **New** (`is:new`). Each row also shows Sentry's priority (high, medium or low, from its own
+rating of how bad and how frequent), the kind of issue when Sentry found it itself rather than
+an error (slow database work, a missed heartbeat, a site down: its `issueCategory`), and how many
+notes it has (`numComments`). Words are not invented for how long "lately" is: Sentry decides.
+
 Opening one (`?i=<id>`, so Back closes it): beside what happened (first on a phone, kept in view
 on a wide screen) its state, level, counts, first and last seen and the releases, the changes and
 "Open in Sentry"; **the latest time it happened**: the error and its message, when, whether our code
@@ -222,13 +260,33 @@ caught it, the request, release, environment, runtime, browser and system and Se
 in the code (at most 12 frames, our own code first, newest call first, with our own code's line),
 and the tags worth showing (environment, release, transaction, page, handled, mechanism, level,
 runtime, browser, system, device, server); **what happened before**, the last 20 steps Sentry
-kept. "Open in Sentry" is offered only for an address on `*.sentry.io`.
+kept. "Open in Sentry" is offered only for an address on `*.sentry.io`. Its facts add Sentry's
+priority and kind. Since 2026-10-29 two more panels:
+
+- **Across every time it happened:** Sentry's own count of each tag over all of the issue's events
+  (`GET …/issues/{id}/tags/`, the five commonest values of each and their share): caught by our
+  code or not, where, release, route or job, address, browser, system, device, runtime, level,
+  how it was caught. Only those eleven keys are asked for; `user` never is, so a person's id,
+  email or address cannot come back.
+- **Its thread in Sentry** (`GET …/issues/{id}/activities/`, the newest 30): what Sentry found
+  (first seen, back after a fix, getting worse, priority set to high, marked ongoing), what was
+  done (resolved, archived until it gets worse, opened again, merged) and the notes, each with
+  when and whether Sentry, someone on the team or an app connected to Sentry did it. Who acted is
+  never said: an entry's `user` is read only for whether it is there. A kind of entry Sentry adds
+  later reads as its own name.
 
 **Changing an issue** (`#triage`): Resolve (Sentry opens it again if it happens again), Reopen,
 or Archive until it gets worse (hidden until Sentry sees it happen much more often than before),
 offered by its state. One `PUT` to Sentry's issue (`{status, substatus}`), at most 20 changes a
 minute per person, kept in the audit log as `provider_write` with the issue's id, the change and
 Sentry's new state. The page shows the new state at once; the lists catch up within a minute.
+
+**Adding a note** (`#triage`, 2026-10-29): a box under the thread, at most 1,000 characters, sent
+as one `POST …/issues/{id}/comments/` (`{text}`) as the portal's token, so in Sentry it reads as
+the token's note. It shares the 20 a minute. A note is never asked twice: after a 5xx or a dropped
+connection Sentry may have made it, so the page says it failed and the person can look before
+sending again. It is kept in the audit log by its length only, never its words. The issue's copy is
+dropped, so its thread shows the note at once.
 
 ## 5. Logs
 
@@ -296,13 +354,13 @@ Settings part uses too ([POSTHOG.md](POSTHOG.md) §3).
 
 `GET /api/sentry/settings` reads the rows with `getConfigByService('sentry')` and their history;
 `?project=` reads one project's own settings from Sentry (two questions at a time, the token's
-permissions from their kept copy, §11). `PATCH` changes one row: only Sentry's rows, the bounds
+permissions from their kept copy, §12). `PATCH` changes one row: only Sentry's rows, the bounds
 and types of `src/lib/control-plane/config-schema.ts`, and the row's `version`, so a change made
 elsewhere in between is refused (409) and the screen reads the latest. `POST` puts the rows back
 (`#sampling`) or changes one of Sentry's own settings (`#provider-write`). Every change is in
 the audit log (`config_change` or `provider_write`), at most 20 a minute per person, and a row
 change asks the website to re-read its settings. Control Plane's Sentry tab keeps working until
-its pages lead here (§12).
+its pages lead here (§13).
 
 ## 7. Speed
 
@@ -333,7 +391,15 @@ counts from that share, and the part says so.
 
 A route name must be 1 to 200 characters with no quote, backslash or control character, and its
 project one of ours, or the route answers 400 before a question is built. Without See full
-details a route's name and a step's text are masked like any other text (§13).
+details a route's name and a step's text are masked like any other text (§14).
+
+**Never "0 ms"** (2026-10-29). A Worker's clock only moves while it waits on something (a fetch,
+the database, the cache): Cloudflare stops it otherwise, against timing attacks. A request our
+code answers without waiting on anything, such as a redirect or a "not found", reads 0 ms to
+Sentry. That is "not timed", not fast, so a route whose typical and slow times are both 0 shows
+"– not timed", and the list says why. **Scanners kept out:** a request whose name a scanner would
+ask for (`probeKind`, §11, such as `GET /_profiler/phpinfo` or `GET /.env`) is left out of the
+list of routes and counted in a line under it, which opens Threats when the reader holds it.
 
 ## 8. Trends
 
@@ -400,25 +466,77 @@ address a check asks shows by its path only without See full details.
 Never read or passed on: a release's authors, its owner, its last commit and its data (any of
 them can name a person or quote a commit message).
 
-## 11. Where each part reads from, and staying inside the limits
+## 11. Threats
+
+`/dashboard/sentry/threats`, 2026-10-29. It only reads. Robots scan every site on the internet for
+doors left open: a settings file with passwords (`/.env`), a code history (`/.git/config`), a debug
+tool (`/_profiler/phpinfo`, Symfony's), a WordPress or PHP page, or a path trick that climbs out
+of the site's folder (`/../../etc/passwd`). None of our sites is built on those, so such a request
+is never a visitor. Sentry judges no request; this part puts together what three places saw, in
+the last 24 hours, 7 days (the default) or 30 days:
+
+- **Six figures:** scanner requests Cloudflare saw, those answered with a page (it should be none),
+  those Cloudflare stopped, those that reached our code (Sentry timed them), browser security
+  reports, and errors Sentry set aside. One that could not be read keeps its place with a dash
+  and why.
+- **What scanners asked for** (Cloudflare's HTTP request records, `httpRequestsAdaptiveGroups`):
+  each kind with its count (secret and settings files; debug and admin tools; PHP, WordPress and
+  other platforms; path tricks), then the 25 addresses asked most, each with its kind, the site
+  ("the website" or "the portal") and how it was answered: **not found** or **refused** (good),
+  **sent to sign in** (the portal's sign-in door, good), **sent elsewhere** (a redirect, such as
+  the website adding a slash before saying not found), **failed**, or **answered with a page**,
+  which raises an alarm at the top of the panel. Cloudflare is asked for paths matching 31
+  patterns (`PROBE_LIKES`), and every row it answers is named again by `probeKind`, which drops a
+  near miss. If Cloudflare lists as many addresses as asked (200), the panel says there are likely
+  more. Then each day, and where they came from (countries, never an address).
+- **What Cloudflare stopped** (its Security Events, `firewallEventsAdaptiveGroups`): what it did
+  (blocked, challenged, passed a challenge, and so on, in words), which protection acted (Bot
+  Fight Mode, its managed rules, our own rules, the security level, rate limiting and the others,
+  in words; one Cloudflare adds later shows as it names it), the addresses it stopped most, each
+  day and from where. Nothing here is changed: blocking a kind of request at the edge is a
+  Cloudflare rule, the owner's call.
+- **What reached our code** (Sentry's timed requests, `events/?dataset=spans` with `is_transaction:true
+  span.op:http.server` and the names matching 23 wildcards, `PROBE_WILDCARDS`): each with its
+  project, its count and its typical time, which says "not timed" for Sentry's 0 ms (§7). The
+  website answers most scanners with a fast "not found" before any page is built, and Sentry never
+  sees those; these got past that filter (`cf-astro/src/lib/probe-filter.ts`).
+- **Browser security reports** (Sentry's errors of `event.type:csp`, by `effective-directive` and
+  `blocked-uri`): what a visitor's browser refused to run on our pages, in words (a script, a
+  style, a connection to another site; written into the page, or from which site), its count and
+  how long since the last. Most come from a browser add-on or a translation tool; a script an
+  attacker slipped in would be refused and reported here too.
+- **What Sentry set aside itself** (`stats_v2` with `outcome=filtered`, by reason): errors its
+  inbound filters judged noise before counting them, in words: from known web crawlers, browser
+  security reports judged noise, from browser add-ons, from old browsers, and its other reasons.
+
+`probeKind` (`src/lib/sentry/probes.ts`) is the one place that says what a scanner looks for. It
+only names, and leaves out anything a page of ours could be: `/dashboard/debug`, `/sitemap-index.xml`,
+`/.well-known/security.txt` and every route of the website and the portal read as visitors. No IP
+address is ever asked of Cloudflare or Sentry; a country is its two letters (Cloudflare's
+"unknown" and Tor's codes dropped); a path is clipped to 120 characters, and a timed request's
+name and a blocked address are masked like any other text without See full details (§14).
+
+## 12. Where each part reads from, and staying inside the limits
 
 The route is `GET /api/sentry/{part}` (`overview`, `issues`, `logs`, `speed`, `trends`,
-`monitors`, `releases`), with `fresh=1` for Refresh now, `POST /api/sentry/issues` for a change to an issue
+`monitors`, `releases`, `threats`), with `fresh=1` for Refresh now, `POST /api/sentry/issues` for a change to or a note on an issue
 and `POST /api/sentry/monitors` for a switch; [SECURITY.md](../security/SECURITY.md) §6a holds
 their rows.
 
 | Part | Read from |
 |---|---|
 | Overview | Sentry: the token itself (`GET /api/0/`, for its permissions), the open issues (`/organizations/{org}/issues/`, up to 100, with `X-Hits` for more), this month's use (`stats_v2`, 31 days by category and outcome), Sentry's log lines counted by project and severity (`events/?dataset=logs`); Cloudflare: the last 24 hours counted by Worker and level (the query API's `calculations` view) |
-| Issues | the list (`/organizations/{org}/issues/`), one issue (`…/issues/{id}/`) and its latest event (`…/issues/{id}/events/latest/`) side by side; the project ids (`/organizations/{org}/projects/`, kept an hour) when a project is chosen |
+| Issues | the list (`/organizations/{org}/issues/`), one issue (`…/issues/{id}/`), its latest event (`…/issues/{id}/events/latest/`), its tags (`…/issues/{id}/tags/`) and its thread (`…/issues/{id}/activities/`), four at once; a note (`POST …/issues/{id}/comments/`); the project ids (`/organizations/{org}/projects/`, kept an hour) when a project is chosen |
 | Logs | Cloudflare's query API (`events` view) or Sentry's `events/?dataset=logs` |
 | Speed | Sentry's spans (`events/?dataset=spans`): the routes, the outside calls and the cache reads, three questions; a route's slowest request, then its steps |
 | Trends | Sentry's `stats_v2` (both periods by project and kind) and its issues first seen in both periods; Cloudflare's GraphQL (`workersInvocationsAdaptive` by Worker and day) |
 | Monitors and alerts | Sentry's `/organizations/{org}/uptime/`, `uptime-summary/` (both periods, every check in one question each), each check's `checks/`, `/organizations/{org}/monitors/` and `/organizations/{org}/workflows/` |
 | Releases and updates | Sentry's `/organizations/{org}/releases/` (every project, newest 30) and `/organizations/{org}/sdk-updates/` (every project), with the project list to name a project by its id |
+| Threats | Cloudflare's GraphQL for the zone (`httpRequestsAdaptiveGroups` filtered by path patterns, by address and by country, and by day; `firewallEventsAdaptiveGroups` by action and protection, by address, by country and by day: four questions, each answering at most 30 days, which Cloudflare keeps on every plan); Sentry's spans, its `event.type:csp` errors and `stats_v2` filtered by reason |
 
 - **One way to Sentry** (`src/lib/sentry/client.ts`). Every call has 9 seconds. A 5xx, a dropped
-  connection, or a 429 asking for at most 2 seconds is asked once more in the Worker; a longer
+  connection, or a 429 asking for at most 2 seconds is asked once more in the Worker (a `POST`,
+  a note, only after a 429, since after a 5xx Sentry may have made it); a longer
   wait goes back to the page, which asks again by itself. A refusal names the permission to give
   the token in Sentry's own words. A question Sentry refuses as malformed (400) is logged with
   Sentry's reason, since it is usually this code's fault. Cloudflare's query has the same 9
@@ -428,13 +546,14 @@ their rows.
   line id of word characters; a period, state, order, source, range or level that is not one of
   its listed values falls back to the default; a project or Worker that is not ours is dropped;
   typed words lose quotes, backslashes and line breaks and are searched as one quoted phrase.
-- **Few questions at once.** The Overview's five questions go at most three at a time; Issues
-  asks two at once for one issue; Speed, Trends, Monitors and alerts, and Releases and updates
+- **Few questions at once.** The Overview's five questions go at most three at a time, as do
+  Threats' seven (Cloudflare's four count against its 300 GraphQL questions in five minutes);
+  Issues asks four at once for one issue; Speed, Trends, Monitors and alerts, and Releases and updates
   two at a time (the up-time checks' own questions after the others); inside the Worker's six open connections.
 - **Short copies** in the Worker's own edge cache (the PostHog page's Cache API helper, no
   binding, nothing in D1): log lines for 30 seconds, a list, Speed and Monitors and alerts for a
-  minute, one issue and a route's slowest request for five, the Overview, Trends and Releases and
-  updates for ten, the
+  minute, one issue and a route's slowest request for five, the Overview, Trends, Releases and
+  updates and Threats for ten, the
   token's permissions and the project list for an hour. A read that failed is kept 20 seconds,
   and one Sentry asked us to wait on is not kept. Each copy is kept apart for readers with and
   without See full details. A change drops that issue's copies, and a switch the part's.
@@ -442,7 +561,7 @@ their rows.
   question and reshapes at most 100 rows. Reading never counts against Sentry's allowance: only
   sending does, and this page sends nothing to it.
 
-## 12. Control Plane: what moved where
+## 13. Control Plane: what moved where
 
 Control Plane ("Cloud Services" in the sidebar) was retired on 2026-10-28, once every tool had
 moved: its addresses lead to the new places, its routes and code were removed, and migration
@@ -458,7 +577,7 @@ moved: its addresses lead to the new places, its routes and code were removed, a
 | The website's request limits; Cloudflare's cache purge and security level | Configuration | `/dashboard/configuration#cloudflare` |
 | The overview's six figures; the Supabase tab | dropped: the Overview, Analytics and System health show them | `/dashboard/health` (the Supabase tab) |
 
-## 13. Privacy
+## 14. Privacy
 
 An error's message, a breadcrumb or a log line can quote what a person typed or who they are: a
 guest's email on a booking, a staff member's address, an IP address, a token in an address
@@ -470,15 +589,20 @@ guest's email on a booking, a staff member's address, an IP address, a token in 
 - addresses keep only their path, never what follows `?` or `#`; a file name in a stack frame
   keeps its path but not its query.
 
-With or without it, Sentry's `user` of an event is never read, nor an up-time check's headers, body
+With or without it, Sentry's `user` of an event is never read, nor an issue's `user` tag (never
+asked for), nor who wrote an entry of an issue's thread (only whether a person, an app or Sentry
+did), nor an up-time check's headers, body
 or owner, nor an alert's targets (§9), nor a release's authors, owner, last commit or data (§10),
+nor any IP address from Cloudflare (Threats asks for paths, sites, answers, countries and counts
+only, §11),
 nor anything but `auth.scopes` of Sentry's answer about the
 token (which also names the token's owner); a library's line of code is not passed on, only our
-own; and texts are cut at 2,000 characters. Nothing is stored: answers live 30 seconds to an hour
-in the edge cache (§11) and in the browser while the page is open. The [record of
+own; and texts are cut at 2,000 characters. A note someone adds is sent to Sentry and not
+stored here; the audit log keeps its length, never its words. Nothing is stored: answers live 30 seconds to an hour
+in the edge cache (§12) and in the browser while the page is open. The [record of
 processing](../security/RoPA.md) has the Sentry and Cloudflare rows.
 
-## 14. Tests
+## 15. Tests
 
 `test/sentry.test.ts`: the guards (the page, then the part, then the switch, each exactly; the
 change needs the Issues part as well as `#triage`) and the route mapping; the value checks (issue
@@ -521,13 +645,26 @@ its reason and links only to parts held, and the short ages. `test/sentry-consol
 `sentry.css`; the tones in both themes; motion only on loading rows; no menu and one row of
 options; the touch sizes; three, two or one columns without row spans; table heads only with
 room; long lists the width of the page; Sentry, Server and Developer Tools drawn differently in
-the sidebar, and `0087` as written. `test/action-keys-enforced.test.ts` checks that
+the sidebar, and `0087` as written. `test/sentry-threats.test.ts` (2026-10-29): `probeKind` naming
+scanners' requests of each kind and never a page of ours (the website's and portal's routes,
+`/dashboard/debug`, the sitemap, `.well-known`); Cloudflare's questions asking for no IP address;
+the builders (only scanners' rows kept, what each site answered, the sites in words, countries to
+two letters, each day, what Cloudflare did and which protection in words, Sentry's timed requests
+masked, the browser reports and what Sentry set aside by reason, an answer in another shape said
+to be one); the part's words and figures; Sentry's own views, its priority, kind and notes; the
+tags asked without `user` and masked; the thread in words without who acted; the note's bounds;
+Speed's "not timed" and its scanners marked; the Threats key; and the route with a fetch stub (403
+before any question, every source read with no IP asked and only `GET`s to Sentry, an unknown
+period falling back, Cloudflare not connected said, a note sent once, its length audited without
+its words, refused without `#triage`, and never sent twice when Sentry fails).
+`test/action-keys-enforced.test.ts` checks that
 `#triage`, `#refresh`, `#details`, `#sampling` and `#provider-write` are enforced.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-29 | The TL;DR, the intro, §1, §2, §4, §7, the new §11 (Threats), §12, §14 and §15 against the files in `related_code`; the sections after §10 renumbered (the old §11 to §14 are now §12 to §15, so the rows below name the old numbers). Live through the Sentry connector (counts and names of requests only, no text of an error, no user value): Sentry's search accepting `is:unresolved issue.priority:[high,medium]`, `is:for_review`, `is:escalating`, `is:regressed` and `is:new`; the spans search with the wildcards joined by `OR`, answering scanners' requests on cf-admin (the old website's traffic: `/.env`, `/.env.local`, `/.git/HEAD` and others, most at 0 ms) and cf-astro (`GET /_profiler/phpinfo`, 40 in 30 days); `event.type:csp` by `effective-directive` (110 `script-src-elem` reports on cf-admin in 30 days); `stats_v2` filtered by reason (`invalid-csp` and `web-crawlers` in 30 days). The `admin_pages` rows of the Sentry page read before `0089`, and `0089` applied and read back (D1 connector); `test/sentry-threats.test.ts` passes | Cloudflare's two datasets with the portal's token (no Cloudflare token in this session; Cloudflare's docs disagree on whether Security Events answer on the Free plan, MAINTENANCE SE-11); Sentry's tags, activities and comments calls against a live answer (their shapes from Sentry's API, SE-12); the part and the note in a phone browser; `last_verified` left as it was |
 | 2026-10-29 | The intro, §3, §4 and §14 for the console look and the counts, against `frame.tsx`, every part, `sentry.css`, both `.astro` pages, `issues.ts`, `overview.ts`, `trends.ts` and `NavIcon.tsx`; Sentry's issue search leaving out the seen stats when `stats` is collapsed, from Sentry's own serializer code; the `admin_pages` rows holding `bug` and `terminal` read through the D1 connector, and `0087` applied and read back; `test/sentry-console.test.ts` and `test/sentry-console-look.test.ts` pass | The page in a phone browser; the counts against a live answer from Sentry (the portal's token is not this session's); the rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The intro, §6's "What the portal sends" and §14 for the portal's own settings, against `src/lib/sentry-config.ts`, `src/workers/cf-entry.ts`, `sentry.client.config.ts`, the five page shells and `Settings.tsx`; `@sentry/cloudflare` 10.73.0's own code (`withSentry` makes the options from the callback on each invocation); the three rows read live through the D1 connector, and `sentry.cf_admin.traces` set from 0.3 to 0.1 with its history row (20:50 UTC) and read back; `test/sentry-config.test.ts` passes | The settings changed from the phone and seen in Sentry; the rest of the document |
 | 2026-10-28 | §1, §2, §10, §11, §13 and §14 for Releases and updates, against the files in `related_code`; the sections after §9 renumbered (the old §10 to §13 are now §11 to §14, so the rows below name the old numbers). Sentry's releases and `sdk-updates` calls and their answers' shapes from Sentry's own source code (its endpoints and serializers); the `admin_pages` row read back after `0086` (D1 connector); `test/sentry-stage3.test.ts` passes | The part against a live answer from Sentry (the portal's token is not this session's; a reader in another shape says so, MAINTENANCE SE-10); the part in a phone browser |
