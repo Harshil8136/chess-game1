@@ -28,6 +28,8 @@ sources: [packages/screens/src/layout.tsx; packages/screens/src/screens.tsx; pac
 | The Email activity page loses its row of links | The tabs replace it |
 | A page with no entry of its own is marked under the entry its path starts with | An opened sent email marks Sent, not Write |
 | Buttons 40 px (44 px for a form's main action), words 14 px semibold; fields 44 px | The owner found the buttons too big; text in fields stays 16 px so a phone does not zoom |
+| Write is the setup when there is no address to send from: 1. connect the email service, 2. read its addresses | The owner went through four places to send one email and did not know the order |
+| Connecting a provider checks its key at once, makes an email provider the one that sends when none does, reads its addresses and opens Write | Check, Make it send and Read from my email provider were three more presses on two pages |
 
 ## Before and after
 
@@ -41,7 +43,7 @@ flowchart LR
   end
 ```
 
-Now: main pages in the sidebar, the rest as tabs on the page.
+Now: main pages in the sidebar, the rest as tabs on the page, and the first email in one path.
 
 ```mermaid
 flowchart LR
@@ -50,6 +52,13 @@ flowchart LR
   end
   EM --> R1["Tabs: Write, Drafts, Sent, Activity, Addresses, Providers"]
   CA --> R2["Tabs: Campaigns, Templates, Lists"]
+```
+
+```mermaid
+flowchart LR
+  W["Write, nothing set up"] -->|"1. Connect one"| P["Providers: paste the key"]
+  P -->|"key checked, made the sender, addresses read"| W2["Write: From filled in"]
+  W -->|"2. Read my addresses"| W2
 ```
 
 ## Impact on each part
@@ -68,4 +77,6 @@ The screens tests on Node: a set folded into one sidebar entry, led by the tab l
 set and marked on another tab; the tab row above the title with the page's tab marked; a page
 without an entry marked under the entry its path starts with; the groups in their order and
 colours. The client template's screens tests: every page still opens in the frame with its
-section marked. The type check of every package. Not verified: the look on a phone.
+section marked; Write showing the two steps with nothing set up; connecting a provider (its
+answers stood in for) landing on Write with it the one that sends. The type check of every
+package. Not verified: the look on a phone; a real provider's key.

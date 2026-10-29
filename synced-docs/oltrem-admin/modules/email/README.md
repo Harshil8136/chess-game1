@@ -95,6 +95,10 @@ list it is on; a copy is never moved up to To, so with no To left the message is
 
 The page Email, Write (`/email/write`, stage 2 of the Mail plan, 2026-10-29) sends one email a
 person writes, the way a mail app does, without a list, a template or a campaign.
+With no address to send from, the page is the setup, in two steps: connect the email service
+(Email, Providers; connecting checks the key, makes it the one that sends when none does and reads
+its addresses, then comes back here), and read the addresses from it (`?intent=discover`, the
+route `POST /domains/discover`) or add one by hand.
 
 | Part | What it does |
 |---|---|

@@ -112,7 +112,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Give the group a role, end one | `POST /api/iam/bindings` (subject the group), `DELETE /api/iam/bindings/:id` | `?done=group-granted`, `group-grant-ended` |
 | The Vendor's access (`/access/vendor/mode`), open a window, close it | `PUT /api/iam/tenant/vendor-access`, `POST`, `DELETE /api/iam/tenant/vendor-window` | `?done=vendor-mode`, `window-opened`, `window-closed` |
 | Look up a domain (`/providers/detect`) | `POST /api/providers/detect` | what was found, on the page |
-| Connect a provider (`/providers/add/:definition`): a name and its fields | `POST /api/providers/instances` | `?done=connected` |
+| Connect a provider (`/providers/add/:definition`): a name and its fields; one step since 2026-10-29: the key is checked at once, and a working email key becomes the one that sends when none does and has its addresses read | `POST /api/providers/instances`, then `.../probe`; for email `.../activate` and `POST /api/email/domains/discover` | Write with `?done=connected`; a refused key its provider with `?done=connected-refused`; another kind `?done=checked` |
 | Check the key, send me a test message | `POST /api/providers/instances/:id/probe`, `POST /api/email/canary` | `?done=checked`, `tested`; the answer under Last check |
 | Make it the one that sends, take it out of use, remove it | `POST .../activate`, `.../disable`, `DELETE /api/providers/instances/:id` | `?done=sends`, `taken-out`, `removed` |
 | Paste the key again | `POST /api/providers/instances/:id/credential` | `?done=key-saved` |
