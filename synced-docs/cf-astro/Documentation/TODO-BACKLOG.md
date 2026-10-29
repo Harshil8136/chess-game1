@@ -36,10 +36,17 @@
       piece of original data with sources.
 - [ ] **Phase 4: the franchise across Mexico.** The franchise pages in depth; needs the real
       figures from the owner.
-- [ ] **Phase 5: presence off the site.** Directories, press, video, Wikidata (owner steps, texts
-      prepared here).
-- [ ] **Phase 6: measurement in cf-admin.** Share of visitors and searches from outside the state,
-      and visits from AI assistants, on the Analytics page.
+- [ ] **Phase 5: presence off the site.** Directories, press, video, Wikidata (owner steps).
+      2026-10-29: the texts are ready in [`BACKLINKS-PLAYBOOK.md`](./BACKLINKS-PLAYBOOK.md) §8
+      (directory descriptions, a calendar of press angles with a pitch, three video scripts, and
+      why Wikidata waits for press coverage); the same pass corrected the playbook's older
+      templates to the fact sheet. Left: the owner sends and posts them, and logs each in §6.
+- [x] **Phase 6: measurement in cf-admin.** Done 2026-10-29 (cf-admin 2e61315): Analytics →
+      Visitors shows the share of people from outside Aguascalientes, an "Aguascalientes and
+      beyond" card and the AI assistants by name; Google search splits the times shown by whether
+      the search named Aguascalientes (Search Console gives no state). First reading, last 90
+      days: 38% of visitors whose state is known came from outside the state; 16 visits came from
+      ChatGPT.
 - [ ] 🟢 **`areaServed` names Jesús María** (`src/data/business.ts`) with no state or country.
       Review in phase 2 with the towns the owner confirms.
 
