@@ -80,15 +80,28 @@ The module adds one template of its own, `email.canary`, the test message the ca
 
 | Step | What happens |
 |---|---|
-| `send` | The template is found and rendered, the message checked (addresses, header lines, one to fifty recipients) and queued through the outbox under its message key; the caller's own key makes a message asked for twice queued once |
+| `send` | The template is found and rendered, the message checked (addresses, header lines, one to fifty recipients in To, with `cc` and `bcc` fifty in all and none named twice) and queued through the outbox under its message key; the caller's own key makes a message asked for twice queued once |
 | No instance ready | The outbox row is held and the message's row says `waiting`; the job `email.release`, every five minutes, releases the held messages once a tenant that waits has an active or failover instance |
 | `deliver` takes the lease | One row per message key: a new key, or one that waits, retries or whose two-minute lease ran out, is taken; a `sent` or `failed` one is acknowledged without a send; one another delivery holds is `KIT-E-1502`, and the queue brings it back |
 | The instances in order | The active instance, then each failover by its order; the first that takes the message is kept on the row with the id the provider gave it |
 | A refusal | The next instance is tried; when every one refused, the row says `retrying` with what each said, and `KIT-E-1504` sends the message back to the queue |
 | A message that can never be sent | An unknown template, data that no longer matches, an address a provider refuses as such: the row says `failed` and the message is acknowledged |
 
-The subject and the body are never stored; the row keeps the addresses, for the screens and the
-delivery reports.
+The subject and the body are never stored; the row keeps the addresses (To, then Cc and Bcc), for
+the screens and the delivery reports. An address on the do-not-mail list is taken off whichever
+list it is on; a copy is never moved up to To, so with no To left the message is not sent.
+
+## Write
+
+The page Messages, Write (`/email/write`, stage 2 of the Mail plan, 2026-10-29) sends one email a
+person writes, the way a mail app does, without a list, a template or a campaign.
+
+| Part | What it does |
+|---|---|
+| From | The addresses the person may send everyday mail from (`email.senders.use` at the address's place), the defaults first. With none, the page says so and sends them to Senders |
+| To, Cc, Bcc | Typed as a mail app takes them: separated by commas, semicolons or lines, each a bare address or `Name <address>` (`readAddresses`). Cc and Bcc are folded away until they are opened. What is not an address is named, and the form comes back as typed. Fifty people at most in all; for more, the page points to a campaign |
+| Subject and message | The message is plain words with three marks: `**bold**`, `_italic_` and a line starting with `- ` for a list; an https address becomes a link. It is sent as a plain letter in HTML (`writtenHtml`, everything typed escaped) and as text, under the built-in template `email.written` |
+| Sending | `POST /write` checks the address may be used and queues the message like any other: the lease, the failover and the delivery reports are the same. It is audited as `email.write` with the number of recipients, never the words |
 
 ## Senders and sending domains
 
@@ -192,6 +205,7 @@ download one.
 | `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
 | `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
+| `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`) from an address they may use for everyday mail, through the queue (see Write) |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
