@@ -67,8 +67,11 @@ request and passes it on as if it came from this computer, so the sign-in page a
 and the forms' checks hold. Whoever has the code can sign in as anyone in this copy of the portal,
 as you can here, so share it only with people you trust. Stopping the portal ends the sharing,
 the tunnel too. On the network the code travels unencrypted (plain http), and on Windows the first
-start asks whether Node.js may use the network: allow private networks only. Without
-`cloudflared`, the tunnel choice says where to get it and the portal keeps running here.
+start asks whether Node.js may use the network: allow private networks only. When `cloudflared` is not on the computer, the tunnel choice asks first, on the start page or in
+the terminal, whether to download it: on a yes it fetches the file for this computer from
+Cloudflare's own releases on GitHub into `.oltrem/bin/` (git ignores it), keeps it only when it
+matches the SHA-256 the release states for it, and uses it from then on. On a no, or when the
+download fails, it says where to install it by hand and the portal keeps running here.
 
 The first run:
 
