@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
+related_code: [src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../operations/OPERATIONS.md]
 tags: [cms, blog, ai, rag, d1]
 ---
@@ -132,6 +132,30 @@ staff see.
 - **PLAC Capability**: `/dashboard/content/blog#bypass-quality-audit` (registered in D1 `admin_pages` with `required_role = 'admin'`; live and active on 2026-09-14, alongside `#edit-ai-prompts` and `#review-suggestions`, both `admin`).
 - **Enforcement**: Users with this PLAC permission (or Owner / Vendor Support) can override failing quality gate checks and publish articles. Every bypass is audited with `qualityGateBypassed: true`.
 
+### 3.2 Spreading articles out, and taking them down (2026-10-29)
+
+**Spread out.** The Blog Studio's list has a **Spread out** button. It opens a dialog
+(`BlogSpreadScheduleDialog.tsx`) where an editor picks drafts, articles in review or scheduled
+articles, a first day and a gap (3 to 6 days, 1 to 2 weeks, 2 to 3 weeks, 3 to 5 weeks, or any
+range from 1 to 90 days), and previews the dates. The server draws each gap at random within the
+range and each time at random between 09:00 and 19:00 Aguascalientes time (UTC−6 all year), gives
+an article and its translation one date when both are picked, and moves a date later, a day at a
+time, while the scheduled-publish job would hold it back: that job publishes at most 2 articles a
+day and 4 per language in 30 days (`publish-scheduled.ts`), counting what is already published
+and scheduled. **Schedule** saves the previewed dates as `scheduled`, after checking them again
+and running the quality gate on each article; a failing article needs `#bypass-quality-audit`
+(never for a body of raw AI JSON), and each article's change is audited with `spread: true`. The
+planner is `src/lib/blog/spread-schedule.ts`, the route `POST /api/content/blog/schedule`, tested
+in `test/blog-spread-schedule.test.ts`. Published and archived articles are never moved by it.
+
+**Taking an article down.** A scheduled article has an **Unschedule** button: it goes back to
+draft and will not go out. A published article's **Archive** answers 410 Gone on the website,
+leaves the blog list, the sitemaps, the feeds and `/llms.txt`, and is announced to IndexNow when that is switched on. Until
+2026-10-29 that did not hold for the fourteen articles first written as Markdown in cf-astro: the
+website served a bundled copy whenever D1 had no *published* row, so archiving or unpublishing
+one of them changed nothing. cf-astro now uses a bundled copy only for an article D1 has never
+had, or while D1 cannot be asked (`cf-astro/src/lib/blog.ts`, `getD1KnownSlugs`).
+
 
 ---
 
@@ -214,6 +238,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-29 | §3.2 against `src/lib/blog/spread-schedule.ts`, `src/pages/api/content/blog/schedule.ts`, `BlogSpreadScheduleDialog.tsx` and `BlogManager.tsx` with `test/blog-spread-schedule.test.ts`; the live `blog_posts` rows (Cloudflare D1 connector: 15 published, all 14 bundled cf-astro slugs present in D1) | The rest of the page; the dialog on a phone (the owner's test) |
 | 2026-10-17 | The whole page against the code: the nine pages under `src/pages/dashboard/content/`; each writer endpoint's D1 id and `cmsData` key (`services.ts`, `reviews.ts`, `faqs.ts`, `stats.ts`, `media/upload.ts`, `media/gallery.ts`); `src/lib/cms/revalidate.ts` (3 attempts, 5 s, service binding, read-back, outbox); `evaluateSeoGate` (11 checks, corrected from 10); `src/lib/cms/storage.ts` key shapes and `Cache-Control`; `AI_NEURON_RESERVE` and `timeoutForTokens`; the bookings guards; in the cf-astro sibling, `CMS_KV_TTL_SECONDS` (24 h, corrected from 1 h) and the `getBlogPostBySlug` call sites (two, corrected from four) | Live KV, D1 and a live AI generation (no connector used in this pass) |
 | 2026-10-11 | The redirect-rows paragraph in §1 against `src/lib/dal/BlogRepository.ts` (`updatePost`, `createPost`, `clearOwnRedirect`) with `test/blog-locale-and-redirects.test.ts`; the live `blog_redirects` rows (Cloudflare D1 connector, 1 row left: `welcome`/es) | The rest of the page |
 | 2026-10-10 | §4.1, §4.3, §4.4 and §4.5 against `src/lib/blog/body-envelope.ts`, `direct-answers.ts`, `pub-date.ts`, `ai-prompt-template.ts`, `src/lib/ai/inference.ts`, `src/pages/api/content/blog.ts`, `ai-generate-stream.ts`, `ai-visibility.ts` and `blog/suggest.ts`, with `test/blog-body-envelope.test.ts`, `test/blog-direct-answers.test.ts` and `test/ai-inference.test.ts` | The live D1 row of why-chose-us and a live Workers AI call (no Cloudflare connector in the session) |
