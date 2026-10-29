@@ -104,6 +104,7 @@ person writes, the way a mail app does, without a list, a template or a campaign
 | Sending | `POST /write` checks the address may be used and queues the message like any other: the lease, the failover and the delivery reports are the same. It is audited as `email.write` with the number of recipients (and the time, for one scheduled), never the words |
 | Undo | A sent email waits ten seconds (`UNDO_SECONDS`) in the queue before it is handed over. The page says so with an Undo button that takes it back into the form as a draft (`POST /written/:id/undo`, audited as `email.unsend`). Once the queue has handed it over, Undo answers `KIT-E-1511` |
 | Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Messages, Drafts lists them, opens one into the form and deletes one |
+| Sent | The page Messages, Sent lists the emails the person sent from Write, newest first: the subject and first words, to whom, when, and what became of each in a word (Sending, Not sent, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
 | Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
 
 Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
@@ -220,8 +221,8 @@ download one.
 | `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock |
 | `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`, optional `draftId` and `later: { day, time }`) from an address they may use for everyday mail, through the queue after the Undo wait, or at the time asked (see Write) |
 | `POST /written` | `email.senders.use` | Save a draft, new or over the person's draft `id` |
-| `GET /written?state=` | `email.senders.use` | The person's own drafts (`draft`) or scheduled emails (`scheduled`), newest first, a hundred at most |
-| `GET /written/:id` | `email.senders.use` | One email the person wrote |
+| `GET /written?state=` | `email.senders.use` | The person's own drafts (`draft`), scheduled emails (`scheduled`) or sent ones (`sent`), newest first, a hundred at most; each carries `delivery`, its message's state and reports, once queued |
+| `GET /written/:id` | `email.senders.use` | One email the person wrote, with its `delivery` |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
