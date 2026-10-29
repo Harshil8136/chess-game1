@@ -34,8 +34,8 @@ the local sign-in page and filled in there, and named again to anyone signed in 
 with no account: on a new portal it is the only account.
 
 A module that brings `pages` (`@oltrem/core-module`) has them mounted inside the same frame: a
-page with a `nav` gets a section in the sidebar after the last one of its group (or a new group
-before Administration), a page without one sits under its module's first section, a posted form
+page with a `nav` gets a section in the sidebar after the last one of its group, or just before
+the section its `nav.before` names (a new group goes before Administration), a page without one sits under its module's first section, a posted form
 must come from the portal itself, and the page answers only to someone with an account, like
 every other page. A page's `api.send` takes a `File` from a form as it is, with its own type,
 for an upload route. The stylesheet's build reads the kit modules' `src/pages.tsx` too, so
@@ -76,7 +76,7 @@ modules' own.
 | `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
 | `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
 | `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
-| `/email?state=` | a row of the email pages (Senders, Templates, Lists, and Campaigns and Providers when mounted); with the campaigns mounted, **Bulk mail today** (messages left under the daily limit, the messages the database writes leave room for, a run's size on the client's Cloudflare plan, the campaigns sending now with how far each is), for a person who may read campaigns; **Provider allowance**, a block per provider that may send: what it says is left (today, this month or on the plan) and when it starts again, and what the portal sent through it today, this week and this month beside the provider's own count, with the provider's words when its key may not read the count; the latest messages and their state, or only those sent, waiting or failed, picked from a row | `/api/email/messages`, `/api/email/usage`, `/api/campaigns/room`, `/api/campaigns/campaigns?status=sending` |
+| `/email?state=` | a row of the email pages (Write, Addresses, Templates, Lists, and Campaigns and Providers when mounted); with the campaigns mounted, **Bulk mail today** (messages left under the daily limit, the messages the database writes leave room for, a run's size on the client's Cloudflare plan, the campaigns sending now with how far each is), for a person who may read campaigns; **Provider allowance**, a block per provider that may send: what it says is left (today, this month or on the plan) and when it starts again, and what the portal sent through it today, this week and this month beside the provider's own count, with the provider's words when its key may not read the count; the latest messages and their state, or only those sent, waiting or failed, picked from a row | `/api/email/messages`, `/api/email/usage`, `/api/campaigns/room`, `/api/campaigns/campaigns?status=sending` |
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets; how many measured ones are close to their line (one not measured yet is not counted) | `/api/health/checks`, `budgets` |
@@ -146,7 +146,8 @@ Every page sits in one frame, drawn on the server:
   to `/search`, `Ctrl K` or `⌘K` from anywhere), Home, then every mounted section under its group,
   and at the foot who is signed in. Rows are 36 px (44 px on a touch screen).
 - **Groups**, in this order: Work, Team (time clock, shifts, time off, expenses, equipment), Sales
-  (quotes, invoices), People, Messages, Operations, Developer, Administration. A module's page
+  (quotes, invoices), People, Messages (Write, Email, Campaigns), Mail settings (Providers,
+  Addresses, Templates, Lists; since 2026-10-29), Operations, Developer, Administration. A module's page
   joins its group wherever the module is listed; a group the kit does not know sits before
   Administration (`groupRank` in `src/layout.tsx`). Each group has a colour (`hueOf`): its dot, its
   icons, and the tint and edge marker of the section on screen, which is also bold, so it never

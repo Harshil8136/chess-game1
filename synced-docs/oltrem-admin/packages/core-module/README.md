@@ -284,7 +284,8 @@ customer: {
 
 A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`
 that answer a page (a title and a body), a redirect or a plain response, and an optional `nav`
-(a label, a group and a summary) that gives it a section in the sidebar. A page reads and writes
+(a label, a group, a summary, and optionally `before`: the path of the section it goes just
+before) that gives it a section in the sidebar. A page reads and writes
 only through `api`, the portal's own API called inside the same request, so it can never show
 or change more than its routes allow. A path under `/api`, `/hooks`, `/ui` or `/local`, a path
 taken twice, a page with no `get` and a sidebar entry missing a word are refused when the module

@@ -122,14 +122,14 @@ Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain
 `email.domain-remove`, `email.domains-discover`, `email.sender-add`, `email.sender-update`, `email.sender-remove`,
 `email.sender-default`.
 
-The page is Messages, Senders (`/email/senders`, from `@oltrem/email/pages`): the sender
+The page is Mail settings, Addresses (`/email/senders`, from `@oltrem/email/pages`): the sender
 addresses, and the domains with their check lines and records.
 
 ## Saved templates
 
 The designs bulk mail is written with, kept in D1 as the company's (stage 3 of the bulk sending
 plan, `docs/records/2026-10-28-saved-templates.md`). They are not the typed templates above,
-which are code; a saved template is data a person builds on the page Messages, Templates
+which are code; a saved template is data a person builds on the page Mail settings, Templates
 (`/email/templates`).
 
 | Part | What it does |
@@ -151,7 +151,7 @@ a send. Every change is audited: `email.template-add`, `email.template-save`,
 ## Saved lists
 
 The people bulk mail goes to, kept in D1 as the company's (stage 4 of the bulk sending plan,
-`docs/records/2026-10-28-saved-lists.md`), on the page Messages, Lists (`/email/lists`).
+`docs/records/2026-10-28-saved-lists.md`), on the page Mail settings, Lists (`/email/lists`).
 
 | Part | What it does |
 |---|---|
