@@ -53,8 +53,9 @@ row with its plane and version, a bit for each new capability (the next free one
 already given), labels and flags refreshed, a capability no longer declared marked inactive while
 it keeps its bit, and a new one joined to every Owner role. Two modules claiming one plane, in one
 run or across runs, fail it. The pipeline's startup hook (`createIam(...).startup`, under The
-routes) runs it when the Worker starts, for the mounted modules whose version the registry has
-not seen; `capabilitySets(modules)` is the step from manifests to sets. `loadCapabilityIndex(db)`
+routes) runs it when the Worker starts, for the mounted modules whose declaration the registry
+has not seen (`registrationMark(set)`: the version and a fingerprint of the plane and
+capabilities, kept as the module row's version); `capabilitySets(modules)` is the step from manifests to sets. `loadCapabilityIndex(db)`
 reads the rows; a `capabilityIndexSource` reads them once per isolate and replaces them after a
 registration, and the sessions, the governance and the handover share one, so the compiler and
 the check read the same index.
@@ -302,12 +303,14 @@ const app = createApp<Env>({
 
 `createIam` builds the sessions, the governance and the handover on one set of bindings and
 returns them with the startup hook and the module manifest. `iam.startup` runs once per isolate,
-on the first request past the door: it reads the registry's module versions and registers the
-capabilities of every mounted module whose version it has not seen (a new module, an upgrade):
+on the first request past the door: it reads the registry's module marks and registers the
+capabilities of every mounted module whose declaration it has not seen (a new module, an upgrade,
+a pull of the kit that added a capability under the same version):
 the new ones join every Owner role, each tenant's policy version moves so the sessions recompile
 on their next request, and the index the check reads is replaced. A version already seen costs
-one read. A change to the capabilities under the same version is not seen: a change bumps the
-version. The IAM module declares its own eight on plane `0` the same way, so the registry fills
+one read. A change to the capabilities under the same version is seen too: a copy whose
+database was made before a pull would otherwise refuse the new capabilities to everyone, the
+Vendor included. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
 The manifest: fifty-eight JSON routes under `/api/iam` (the Home card's `GET /home`, under

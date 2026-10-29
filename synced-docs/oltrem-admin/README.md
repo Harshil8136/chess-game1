@@ -29,8 +29,10 @@ installed for you.
 3. **Node.js.** The file checks for Node.js 22 or newer. When it is missing, it offers to install
    it (with winget on Windows, Homebrew on a Mac); otherwise it opens the Node.js download page:
    install it, then double-click the file again.
-4. **The first install.** The first time, it installs the kit (a few minutes). Later starts skip
-   this.
+4. **The first install.** The first time, it installs the kit (a few minutes). Its window says
+   first what it does: the packages listed in `pnpm-lock.yaml`, downloaded from the public npm
+   registry and checked against that file, saved in this folder, with nothing installed for the
+   whole computer. Later starts skip this.
 5. **The start page** opens in your browser, with five choices:
    - **Try it on this computer:** the portal at a local address such as <http://localhost:8787>,
      with no Cloudflare account; it opens on a sign-in page that exists only on your computer.
