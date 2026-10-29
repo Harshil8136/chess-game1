@@ -156,6 +156,39 @@ website served a bundled copy whenever D1 had no *published* row, so archiving o
 one of them changed nothing. cf-astro now uses a bundled copy only for an article D1 has never
 had, or while D1 cannot be asked (`cf-astro/src/lib/blog.ts`, `getD1KnownSlugs`).
 
+### 3.3 Suggested edits waiting for review (2026-10-29)
+
+A suggested edit is a `blog_posts_history` row with `entry_type = 'ai_suggestion'` and
+`status = 'pending'` (§4). Until 2026-10-29 the Studio showed one only right after **Suggest
+Edits** made it; a suggestion stored any other way could not be reached. Now:
+
+- **The list** shows "N suggested edits" under an article's status. `getPosts` counts the pending
+  suggestions of each post in the same query (`pending_suggestions`).
+- **The editor** asks `GET /api/content/blog/suggest?postId=` when an article opens and, when one
+  is waiting, shows "N suggested edits waiting" with **Review**, which opens the review dialog
+  (`BlogSuggestionModal.tsx`) for the newest one.
+- **The review dialog** shows the body as the passages that change: each removed paragraph, list
+  item, table row or heading struck through, the new one under it, and how many unchanged
+  passages lie between (`src/lib/blog/text-diff.ts`, `diffPassages`). The full before and after
+  stay below it. Every rationale line for a field is shown, not only the first, and the neuron
+  count only when one was spent.
+
+Accepting still goes through `PATCH /api/content/blog/suggest` (needs `#review-suggestions`),
+refuses a suggestion the article has moved past (409 `STALE_SUGGESTION`) and records a revision,
+so an accepted edit can be reverted from the history drawer. Tested in
+`test/blog-text-diff.test.ts`.
+
+**The 2026-10-29 fact check.** Every published article (15) was checked against cf-astro's fact
+sheet (`cf-astro/src/data/canonical-facts.ts`) and its service pages, and one suggestion per
+article was stored this way, signed "Claude (fact check)". They fix prices quoted per night (the
+hotel charges per day), check-in at 2 PM and check-out at 11 AM (arrival is any time in opening
+hours, pickup from 9:00), the two branches described as north and south (they are split by
+species: dogs in Col. Héroes, cats in Jardines del Sol), vaccines and deworming called required
+(they are recommended), and claims the fact sheet does not back, such as three meals, a daily
+veterinary health check or an after-hours emergency line. Nothing changes on the website until
+someone accepts a suggestion. The record is
+2026-10-29-blog-fact-check (private).
+
 
 ---
 
@@ -238,6 +271,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-29 | §3.3 against `src/lib/blog/text-diff.ts`, `BlogSuggestionModal.tsx`, `BlogManager.tsx` and `BlogRepository.getPosts` with `test/blog-text-diff.test.ts`; the 15 pending fact-check rows in live `blog_posts_history` (Cloudflare D1 connector: one per published post, each `base_updated_at` equal to its post's `updated_at`, valid JSON) | The dialog on a phone (the owner's test) |
 | 2026-10-29 | §3.2 against `src/lib/blog/spread-schedule.ts`, `src/pages/api/content/blog/schedule.ts`, `BlogSpreadScheduleDialog.tsx` and `BlogManager.tsx` with `test/blog-spread-schedule.test.ts`; the live `blog_posts` rows (Cloudflare D1 connector: 15 published, all 14 bundled cf-astro slugs present in D1) | The rest of the page; the dialog on a phone (the owner's test) |
 | 2026-10-17 | The whole page against the code: the nine pages under `src/pages/dashboard/content/`; each writer endpoint's D1 id and `cmsData` key (`services.ts`, `reviews.ts`, `faqs.ts`, `stats.ts`, `media/upload.ts`, `media/gallery.ts`); `src/lib/cms/revalidate.ts` (3 attempts, 5 s, service binding, read-back, outbox); `evaluateSeoGate` (11 checks, corrected from 10); `src/lib/cms/storage.ts` key shapes and `Cache-Control`; `AI_NEURON_RESERVE` and `timeoutForTokens`; the bookings guards; in the cf-astro sibling, `CMS_KV_TTL_SECONDS` (24 h, corrected from 1 h) and the `getBlogPostBySlug` call sites (two, corrected from four) | Live KV, D1 and a live AI generation (no connector used in this pass) |
 | 2026-10-11 | The redirect-rows paragraph in §1 against `src/lib/dal/BlogRepository.ts` (`updatePost`, `createPost`, `clearOwnRedirect`) with `test/blog-locale-and-redirects.test.ts`; the live `blog_redirects` rows (Cloudflare D1 connector, 1 row left: `welcome`/es) | The rest of the page |
