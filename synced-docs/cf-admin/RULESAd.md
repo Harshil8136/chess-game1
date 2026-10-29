@@ -514,6 +514,7 @@ bug — nothing compares them automatically (see the enforcement note below).
 | `@sentry/cloudflare` | `10.73.0` | Error tracking (Workers runtime, V8 workerd only). Exports **no** `init()` — see OPERATIONS.md §4.1b |
 | `tailwindcss` + `@tailwindcss/vite` | `4.3.3` | Tailwind CSS v4 via Vite plugin |
 | `aws4fetch` | `1.0.20` | SigV4 signing for R2 presigned URLs (`src/pages/api/storage/presign.ts`) |
+| `@rrweb/replay` | `2.1.7` | The recording player on the PostHog page (`src/components/dashboard/posthog/replay/Player.tsx`), loaded only when Play is pressed (MIT; it brings `rrweb`, `rrweb-snapshot`, `rrdom` and small helpers, all MIT) |
 
 > *Corrected 2026-09-19.* The table listed `@preact/signals` (removed from
 > `dependencies` on 2026-09-02) and omitted `aws4fetch`, which has been in
@@ -525,6 +526,13 @@ bug — nothing compares them automatically (see the enforcement note below).
 > `dependencies` and this table when the rate limits moved to a Workers Rate
 > Limiting binding and D1 (§2b). Adding them back needs the owner's yes like any
 > other package.
+
+> *Added 2026-10-29.* `@rrweb/replay`, on Harshil's answer to the PostHog plan's
+> player question ("REAL video buffering inside browser";
+> [the analytics lab](./documentation/specs/2026-10-29-posthog-lab.md) §5). It is
+> pinned exactly and imported with `import()` only, so it is its own file that a
+> page never loads until Play is pressed; `test/posthog-lab-look.test.ts` fails on a
+> plain import.
 
 > **Enforcement: none.** "Anything not listed is blacklisted" is a **reading
 > rule** — no script compares `package.json` to this table, and a new

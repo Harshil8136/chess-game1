@@ -6,7 +6,7 @@ last_verified: 2026-10-28
 verified_against: [code, infra, docs]
 owner: harshil
 related_code: [src/lib/posthog/client.ts, src/pages/api/posthog/[part].ts, src/components/dashboard/posthog/PostHog.tsx, src/lib/auth/surface-guards.ts, migrations/0079_posthog_page.sql]
-related_docs: [../features/POSTHOG.md, ../features/ANALYTICS.md, 2026-10-26-analytics-page.md, ../security/RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-10-28-posthog-page.md]
+related_docs: [2026-10-29-posthog-lab.md, ../features/POSTHOG.md, ../features/ANALYTICS.md, 2026-10-26-analytics-page.md, ../security/RoPA.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-10-28-posthog-page.md]
 tags: [posthog, analytics, recordings, errors, permissions, limits, plan]
 ---
 
@@ -183,7 +183,7 @@ hour.
 | Stage | What | Needs |
 |---|---|---|
 | 1 | the page, its keys (migration `0079`), the shared PostHog client, Overview, Recordings (list and detail), Errors (read), Events and people | nothing new |
-| 2 | playing a recording in the portal, heatmaps | Harshil's choice on the player (§10) |
+| 2 | playing a recording in the portal (shipped 2026-10-29 with the page's [analytics lab](2026-10-29-posthog-lab.md)), heatmaps | Harshil's choice on the player (§10: answered) |
 | 3 | flags, experiments (page tests where allowed), surveys, error status, deleting a recording | write permissions on the key (Harshil, in PostHog); the website change for page tests if allowed |
 | 4 | insights and dashboards drawn, activity (no logs: §10) | nothing new |
 
@@ -196,6 +196,11 @@ Asked on 2026-10-28, each with a recommendation; the answers are recorded here w
    choices: a button that opens the recording on PostHog's site (no library, needs a PostHog
    sign-in), or PostHog's share links (plays in the portal without a library, but makes each
    opened recording watchable by anyone with its address: not recommended).
+   **Answered 2026-10-29: the portal's own player.** Harshil: "I was really hoping to have REAL
+   video buffering inside browser. Cant we do that?" Built with `@rrweb/replay` 2.1.7 (MIT),
+   loaded only when Play is pressed and listed in RULESAd §7.3; how it loads, waits and plays is
+   the [analytics lab](2026-10-29-posthog-lab.md) §5. Recordings stay private: they pass through
+   the portal to the viewer's browser and are never kept.
 2. **Page tests on the website.** Recommended: allowed, but never on booking pages. PostHog's
    page tests are off on the website today; allowing them is a small change to the website's
    PostHog setup that keeps them off on every booking address.
