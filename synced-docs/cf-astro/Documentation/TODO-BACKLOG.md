@@ -9,7 +9,7 @@
 ## 0e. 🇲🇽 Visibility beyond Aguascalientes (2026-10-29)
 
 > The owner's multi-phase program; the approach and its rules are
-> [ADR-0004](./adr/0004-visibility-beyond-aguascalientes.md) (proposed), the owner steps are
+> [ADR-0004](./adr/0004-visibility-beyond-aguascalientes.md) (accepted), the owner steps are
 > [`SEO-OPERATIONS.md`](./SEO-OPERATIONS.md) §10. Baseline checked 2026-10-29 in PostHog (180
 > days): 57% of visitors from the state of Aguascalientes; 3 visitors from blog pages and none
 > from the neighbourhood pages.
@@ -17,7 +17,16 @@
 - [x] **Phase 0: baseline and rules.** Done 2026-10-29: the baseline above, ADR-0004, §10.
 - [ ] **Phase 1: people coming to Aguascalientes.** Guides whose searches name the city: the
       Feria de San Marcos with a pet (live before February for the 2027 edition), visiting family,
-      business trips, road trips through the city, moving here.
+      business trips, road trips through the city, moving here. 2026-10-29: four subjects written
+      in Spanish and English with cited sources (the Feria with a dog, dogs and fireworks,
+      heatstroke, choosing a pet hotel) and saved in cf-admin as **In review**; they need a cover
+      photo, then **Spread out** schedules them. The other guides are still to write.
+- [ ] 🟡 **The bundled Markdown copies of the 14 original articles hold the old text.** The
+      2026-10-29 fact check stored corrections for every published article as suggestions in
+      cf-admin (prices per day, check-in in opening hours, the species-split hotels, vaccines
+      recommended). `src/content/blog/{es,en}` is served only while D1 cannot be reached, but
+      it would then show the old errors: once the suggestions are accepted, copy the accepted
+      text into the Markdown files, or drop the copies.
 - [ ] **Phase 2: the real region (about 2 hours).** A page per town only where the business
       truly serves it, with its own facts. Needs from the owner: which towns TaxiPet reaches, at
       what price. Fix or merge the seven neighbourhood pages (`src/data/zones.ts`,

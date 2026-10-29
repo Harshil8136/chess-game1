@@ -1,7 +1,7 @@
 {% raw %}
 # ADR-0004: Visibility beyond Aguascalientes without doorway pages
 
-**Status:** Proposed (2026-10-29), waiting for the owner's choice of phase order ·
+**Status:** Accepted (2026-10-29): the owner chose phase 1 first, then asked for all phases ·
 **Program:** [`SEO-OPERATIONS.md`](../SEO-OPERATIONS.md) §10, phases tracked in
 [`TODO-BACKLOG.md`](../TODO-BACKLOG.md) §0e
 
@@ -38,7 +38,7 @@ What was checked on 2026-10-29, and how:
   searcher. A search that names the place ("hotel para perros en Aguascalientes") reaches the
   site from anywhere in Mexico.
 
-## Decision (proposed)
+## Decision
 
 Reach people beyond Aguascalientes through audiences that can really use the business, and
 never through pages that pretend to be somewhere else:
