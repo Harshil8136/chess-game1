@@ -6,6 +6,34 @@
 > 2026-05-29 (moved here from the repository root on 2026-09-15); their open items are leads,
 > not facts, except where a 2026-10-17 note says otherwise.
 
+## 0e. 🇲🇽 Visibility beyond Aguascalientes (2026-10-29)
+
+> The owner's multi-phase program; the approach and its rules are
+> [ADR-0004](./adr/0004-visibility-beyond-aguascalientes.md) (proposed), the owner steps are
+> [`SEO-OPERATIONS.md`](./SEO-OPERATIONS.md) §10. Baseline checked 2026-10-29 in PostHog (180
+> days): 57% of visitors from the state of Aguascalientes; 3 visitors from blog pages and none
+> from the neighbourhood pages.
+
+- [x] **Phase 0: baseline and rules.** Done 2026-10-29: the baseline above, ADR-0004, §10.
+- [ ] **Phase 1: people coming to Aguascalientes.** Guides whose searches name the city: the
+      Feria de San Marcos with a pet (live before February for the 2027 edition), visiting family,
+      business trips, road trips through the city, moving here.
+- [ ] **Phase 2: the real region (about 2 hours).** A page per town only where the business
+      truly serves it, with its own facts. Needs from the owner: which towns TaxiPet reaches, at
+      what price. Fix or merge the seven neighbourhood pages (`src/data/zones.ts`,
+      `ZoneLanding.astro`): one template with the name swapped, no visitors in 180 days, close to
+      what Google calls doorway pages.
+- [ ] **Phase 3: nationwide know-how.** Spanish guides on questions asked across Mexico, and one
+      piece of original data with sources.
+- [ ] **Phase 4: the franchise across Mexico.** The franchise pages in depth; needs the real
+      figures from the owner.
+- [ ] **Phase 5: presence off the site.** Directories, press, video, Wikidata (owner steps, texts
+      prepared here).
+- [ ] **Phase 6: measurement in cf-admin.** Share of visitors and searches from outside the state,
+      and visits from AI assistants, on the Analytics page.
+- [ ] 🟢 **`areaServed` names Jesús María** (`src/data/business.ts`) with no state or country.
+      Review in phase 2 with the towns the owner confirms.
+
 ## 0d. 📚 Found in the documentation pass (2026-10-17)
 
 > Checked against the code, the live D1 and Supabase databases (connectors, read-only) on

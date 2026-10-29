@@ -258,4 +258,30 @@ Google Business Profile:
   are listed in it automatically (since 2026-10-29); the rest is the
   hand-written `src/data/llms.txt`.
 
+## 10. Reaching people beyond Aguascalientes (program started 2026-10-29)
+
+Why the site does not simply claim all of Mexico, and what it does instead:
+[ADR-0004](./adr/0004-visibility-beyond-aguascalientes.md). The phases and their state are in
+[`TODO-BACKLOG.md`](./TODO-BACKLOG.md) §0e.
+
+**Never do** (Google names each as spam, and a penalty takes down the pages that bring
+bookings too):
+
+- a page, a domain or a Business Profile for a city or state the business does not serve;
+- a list of cities or states in a page's text, in its keywords or in `areaServed`;
+- an address that is not a real, staffed location, or a service area wider than about two
+  hours' drive.
+
+**Owner steps that unlock the next phases:**
+
+1. **Phase 2:** list the towns outside the city that TaxiPet really reaches (or where customers
+   already come from), the price or how it is quoted, and the usual travel time.
+2. **Phase 4:** the franchise's real figures: investment, what it includes, the steps from
+   enquiry to opening, how many units are open, and the cities you would welcome.
+3. **Phase 5:** approve each press pitch and directory listing before it is sent; keep the name,
+   address and phone identical everywhere (the NAP block in
+   [`BACKLINKS-PLAYBOOK.md`](./BACKLINKS-PLAYBOOK.md)).
+4. **Always:** real photos (§8) and recent Google reviews (§4) help every phase, inside and
+   outside the state.
+
 {% endraw %}
