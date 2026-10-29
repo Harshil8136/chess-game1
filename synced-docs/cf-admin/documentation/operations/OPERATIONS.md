@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-29 | `ls migrations/*.sql` (65 files, highest `0087`), `d1_migrations` newest row through the Cloudflare D1 connector after `0087` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | `ls migrations/*.sql` (64 files, highest `0086`), `d1_migrations` newest row through the Cloudflare D1 connector after `0086` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | §5's `SENTRY_AUTH_TOKEN` row, for the Sentry page's Releases and updates: the calls in `src/lib/sentry/releases.ts` (`project:read` for the releases, `org:read` for `sdk-updates`) | No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | §5's `CLOUDFLARE_API_TOKEN` and `SENTRY_AUTH_TOKEN` rows, for the Sentry page's stage 2: the calls in `src/lib/sentry/trends.ts` (`cloudflareAccount`) and `monitors.ts` (`alerts:read`, `alerts:write`) | No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
@@ -734,8 +735,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-28: migrations/ holds 64 files, highest
-# 0086_sentry_releases.sql (applied 2026-10-28 10:21:18 UTC).
+# State as of 2026-10-29: migrations/ holds 65 files, highest
+# 0087_page_icons.sql (applied 2026-10-29 05:19:30 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/

@@ -17,6 +17,7 @@ related_code:
 - src/components/dashboard/sentry/Trends.tsx
 - src/components/dashboard/sentry/Monitors.tsx
 - src/components/dashboard/sentry/Releases.tsx
+- src/components/dashboard/sentry/frame.tsx
 - src/components/admin/control-plane/useConfigEdit.ts
 - src/components/admin/control-plane/SettingRows.tsx
 - src/lib/control-plane/settings-rows.ts
@@ -57,6 +58,8 @@ related_code:
 - test/sentry-stage2.test.ts
 - test/sentry-stage3.test.ts
 - test/sentry-config.test.ts
+- test/sentry-console.test.ts
+- test/sentry-console-look.test.ts
 related_docs:
 - POSTHOG.md
 - CONTROL-PLANE.md
@@ -66,6 +69,8 @@ related_docs:
 - ../records/reports/2026-10-28-sentry-speed-trends-monitors.md
 - ../records/reports/2026-10-28-sentry-releases-updates.md
 - ../records/reports/2026-10-28-portal-sentry-settings.md
+- ../specs/2026-10-29-sentry-console-look.md
+- ../records/reports/2026-10-29-sentry-console-look.md
 - ../architecture/PERMISSIONS-SYSTEM.md
 - ../security/SECURITY.md
 - ../security/RoPA.md
@@ -88,7 +93,8 @@ tags: [feature, sentry, errors, issues, logs, speed, trends, monitors, alerts, r
 > the versions each project sent to Sentry with the new issues each brought, and the updates
 > Sentry suggests for the library each project uses. The portal's own three Sentry settings (on
 > or off, the share of errors kept, the share timed) work since 2026-10-28, at the 10% timed it
-> used before.
+> used before. Since 2026-10-29 the page is drawn as a console on plain panels, its lists as
+> tables, and the issue lists show Sentry's real counts (they read 0 before).
 
 Asked for by Harshil on 2026-10-28: "completely scrap `/dashboard/control-plane` and put sentry
 systems there! for logs, analytics, trends, info, errors, permission based config changes and
@@ -105,6 +111,15 @@ Releases and updates (§10; its
 change record (private)) and the portal's own
 Sentry settings working (§6; its
 change record (private)).
+
+**How it is drawn** (2026-10-29, Harshil: every part "looks horrendous", the glass "not good for
+this type of work"): the console look of its [design](../specs/2026-10-29-sentry-console-look.md),
+built from `frame.tsx` and `src/styles/pages/sentry.css` (its
+change record (private)). Each part is a slim
+header, one toolbar (the search, then every option group in one row: sideways on a phone, wrapped
+when wide) and a grid of solid panels, three, two or one across, none spanning rows. Lists are
+tables with column heads once their panel is wide enough; narrower, each row's figures fold into a
+line under its name. Sentry's icon in the sidebar is a bug.
 
 ## 1. Who may do what
 
@@ -163,13 +178,17 @@ permission to add and the rest works (MAINTENANCE (private) SE-1, SE-2).
 
 ## 3. The Overview
 
-`/dashboard/sentry`. In numbers: open issues (seen in the last 90 days), new today, getting worse
-(Sentry's "escalating"), not caught by our code, Cloudflare's error lines and Sentry's log lines in
-the last 24 hours; a figure opens its part when the person holds it. Then:
+`/dashboard/sentry`. A strip of six figures: open issues (seen in the last 90 days), new today
+(issues that began in the last 24 hours), getting worse (Sentry's "escalating"), not caught by our
+code, Cloudflare's error lines and Sentry's log lines in the last 24 hours. A figure opens its part
+when the person holds it; one that could not be read keeps its place with a dash and says why
+("needs a permission" or "could not be read"). Then:
 
 - **Errors each day:** the errors Sentry kept and turned away each of the last 14 days, and why
   any were turned away this month (filtered by a project's settings, over a limit or the quota,
-  dropped by the app before sending, and Sentry's other reasons).
+  dropped by the app before sending, and Sentry's other reasons). The chart's key gives each
+  total with its span ("in the last 14 days"), and the line under it names the day it reads,
+  the busiest until a day is pointed at.
 - **Open issues by project:** cf-admin (the portal), cf-astro (the website) and cf-vps (the
   server), each with its new and not-caught counts, opening the Issues part on that project.
 - **Log lines, last 24 hours:** a table per source (Cloudflare per Worker, Sentry per project) of
@@ -179,24 +198,31 @@ the last 24 hours; a figure opens its part when the person holds it. Then:
   with any other kind Sentry counted this month; within it, near it (over 80%) or over it, in a
   glyph and a word. The page cannot read which plan the organisation is on, so the free plan's
   amounts are a mark to read the use against.
-- **What the portal's tokens can reach** (§2), and **the parts open to you**.
+- **What the portal's tokens can reach** (§2). The parts this person may open are the row of
+  tabs; the card that listed them again was removed on 2026-10-29.
 
 ## 4. Issues
 
 `/dashboard/sentry/issues`. Every issue of the three projects seen in the last 24 hours, 14 days
 (the default), 30 or 90 days; open (the default), resolved, archived or all; one project or
 every one; last seen (the default), most often, newest or most people first; and words, searched
-as one phrase. 25 at a time with "Show older issues" (Sentry's cursor), and how many match. Each
-row: how many times, the title and where in the code, the project, the level, "Not caught", the
-state when it is worth saying, how many people, when last seen, and Sentry's short id.
+as one phrase. 25 at a time with "Show older issues" (Sentry's cursor), and how many match. A
+table: the issue (its title, where in the code, the level, the project, Sentry's short id, "Not
+caught", and the state when it is worth saying), a small chart of its errors over the period
+(Sentry's own slices, `groupStatsPeriod=auto`), how many times and to how many people in the
+period, how long since it was last seen, and its age (from when it began, `lifetime.firstSeen`).
+The lists ask Sentry to collapse only `filtered`: until 2026-10-29 they also collapsed `stats`,
+and Sentry then leaves out each issue's counts and times, so every row read 0 times and 0 people
+and the Overview's "new today" stayed at 0.
 
-Opening one (`?i=<id>`, so Back closes it): its state, level, counts, first and last seen and the
-releases; **the latest time it happened**: the error and its message, when, whether our code
+Opening one (`?i=<id>`, so Back closes it): beside what happened (first on a phone, kept in view
+on a wide screen) its state, level, counts, first and last seen and the releases, the changes and
+"Open in Sentry"; **the latest time it happened**: the error and its message, when, whether our code
 caught it, the request, release, environment, runtime, browser and system and Sentry's SDK, where
 in the code (at most 12 frames, our own code first, newest call first, with our own code's line),
 and the tags worth showing (environment, release, transaction, page, handled, mechanism, level,
 runtime, browser, system, device, server); **what happened before**, the last 20 steps Sentry
-kept; and "Open in Sentry" (only an address on `*.sentry.io`).
+kept. "Open in Sentry" is offered only for an address on `*.sentry.io`.
 
 **Changing an issue** (`#triage`): Resolve (Sentry opens it again if it happens again), Reopen,
 or Archive until it gets worse (hidden until Sentry sees it happen much more often than before),
@@ -487,13 +513,22 @@ page shell use them. `test/sentry-stage3.test.ts`: the Releases and updates
 part's key and route mapping; its two questions; a release read without its authors, owner, last
 commit or data; a suggestion's kind, its project named by slug and its page kept only when
 `https`; the words and the grouping by project; and the route with a fetch stub (403 before any
-question, nothing of a person in the answer, only `GET`s sent). `test/action-keys-enforced.test.ts` checks that
+question, nothing of a person in the answer, only `GET`s sent). `test/sentry-console.test.ts`:
+no list collapses `stats`, slices asked only by the Issues list, an issue's counts, age and slices
+read, new today by when an issue began, the Overview's six figures in a fixed order with a dash and
+its reason and links only to parts held, and the short ages. `test/sentry-console-look.test.ts`
+(over file text): no glass, circles or blur; every `se-` class the parts use defined in
+`sentry.css`; the tones in both themes; motion only on loading rows; no menu and one row of
+options; the touch sizes; three, two or one columns without row spans; table heads only with
+room; long lists the width of the page; Sentry, Server and Developer Tools drawn differently in
+the sidebar, and `0087` as written. `test/action-keys-enforced.test.ts` checks that
 `#triage`, `#refresh`, `#details`, `#sampling` and `#provider-write` are enforced.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-29 | The intro, §3, §4 and §14 for the console look and the counts, against `frame.tsx`, every part, `sentry.css`, both `.astro` pages, `issues.ts`, `overview.ts`, `trends.ts` and `NavIcon.tsx`; Sentry's issue search leaving out the seen stats when `stats` is collapsed, from Sentry's own serializer code; the `admin_pages` rows holding `bug` and `terminal` read through the D1 connector, and `0087` applied and read back; `test/sentry-console.test.ts` and `test/sentry-console-look.test.ts` pass | The page in a phone browser; the counts against a live answer from Sentry (the portal's token is not this session's); the rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The intro, §6's "What the portal sends" and §14 for the portal's own settings, against `src/lib/sentry-config.ts`, `src/workers/cf-entry.ts`, `sentry.client.config.ts`, the five page shells and `Settings.tsx`; `@sentry/cloudflare` 10.73.0's own code (`withSentry` makes the options from the callback on each invocation); the three rows read live through the D1 connector, and `sentry.cf_admin.traces` set from 0.3 to 0.1 with its history row (20:50 UTC) and read back; `test/sentry-config.test.ts` passes | The settings changed from the phone and seen in Sentry; the rest of the document |
 | 2026-10-28 | §1, §2, §10, §11, §13 and §14 for Releases and updates, against the files in `related_code`; the sections after §9 renumbered (the old §10 to §13 are now §11 to §14, so the rows below name the old numbers). Sentry's releases and `sdk-updates` calls and their answers' shapes from Sentry's own source code (its endpoints and serializers); the `admin_pages` row read back after `0086` (D1 connector); `test/sentry-stage3.test.ts` passes | The part against a live answer from Sentry (the portal's token is not this session's; a reader in another shape says so, MAINTENANCE SE-10); the part in a phone browser |
 | 2026-10-28 | §1, §2, §7 to §10, §12 and §13 for stage 2 (Speed, Trends, Monitors and alerts), against the files in `related_code`; the sections after §6 renumbered (the old §7 to §10 are now §10 to §13, so the rows below name the old numbers). Sentry's spans, `stats_v2`, issue search, up-time, heartbeat and alert calls and their answers' shapes from Sentry's own source code (its API endpoints and serializers); the website's `cache.get` span read in `cf-astro/src/middleware.ts` (no `cache.hit`); the three `admin_pages` rows read back after `0085` (D1 connector); `test/sentry-stage2.test.ts` passes | The three parts against a live answer from Sentry (the portal's token is not this session's; a reader in another shape says so); whether the token holds `alerts:read` and `alerts:write`; the parts in a phone browser |
