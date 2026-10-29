@@ -2,7 +2,7 @@
 title: "Analytics — how the website and the platform are doing, from every source"
 status: active
 audience: [owner, ai, technical, operator]
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 verified_against: [code, infra]
 owner: harshil
 related_code:
@@ -35,6 +35,7 @@ related_code:
 - test/analytics.test.ts
 - test/analytics-round2.test.ts
 - test/analytics-experience.test.ts
+- test/analytics-reach.test.ts
 - test/experience-look.test.ts
 related_docs:
 - DASHBOARD.md
@@ -90,9 +91,9 @@ time zone (the hotel has no time-zone setting).
 | Part | Path | What it shows | Read from |
 |---|---|---|---|
 | **Summary** | `/dashboard/analytics` | Each allowed part's lead figure with a sparkline linking to it, the day-by-day lines, what stands out (the two strongest sentences of every part, Visitors first, each in its part's colour), and which sources answered | the parts below |
-| **Visitors** | `/visitors` | Visitors, page views, visits, pages per visit, the share who left after one page, time on the website; where they are (countries, states, cities), what they use (devices, browsers, systems, languages), busiest weekday and hour, where they come from (channels, websites, campaign tags, AI assistants), first and last pages, cookie choices; how far people read each page (how far down half of them scrolled and how long half stayed), the links they tap (WhatsApp, phone, maps, social and the website's own pages), new and returning visitors, and how long visits last | PostHog (`events`: `$pageview`, `$pageleave`, `$autocapture`; `sessions`), Supabase `consent_records` |
+| **Visitors** | `/visitors` | Visitors, page views, the share from outside Aguascalientes, visits, pages per visit, the share who left after one page, time on the website; where they are (countries, states, cities) and **Aguascalientes and beyond** (people in Aguascalientes, the rest of Mexico, other countries, place unknown), what they use (devices, browsers, systems, languages), busiest weekday and hour, where they come from (channels, websites, campaign tags, and AI assistants by name), first and last pages, cookie choices; how far people read each page (how far down half of them scrolled and how long half stayed), the links they tap (WhatsApp, phone, maps, social and the website's own pages), new and returning visitors, and how long visits last | PostHog (`events`: `$pageview`, `$pageleave`, `$autocapture`; `sessions`), Supabase `consent_records` |
 | **Booking journey** | `/bookings` | The booking form step by step (visit, booking page, form started, pet, owner, sent) with the biggest drop named; the share who finished; bookings made, pets, nights per stay, days booked ahead; what people book (service, pets, transport) and when (ahead, length, arrival day); every booking send (went through, refused by the checks, failed); inquiries by service; **how people reach out**: the booking form beside taps on WhatsApp, Google Maps, social media, phone and email, counted in people | PostHog funnel and link taps, Supabase `bookings` and `booking_pets`, `contact_messages`, D1 `booking_attempts` |
-| **Google search** | `/search` | Clicks, times shown, click rate, average position, by day; top searches, top pages, who clicks (device, country); **where the site ranks** (times shown at positions 1 to 3, 4 to 10, page 2 and further); which pages are in Google's index and when Google last read them | Search Console search analytics (250 searches for the ranks, 25 listed), D1 `gsc_index_log` (`url_inspect`) |
+| **Google search** | `/search` | Clicks, times shown, click rate, average position, by day; top searches, top pages, who clicks (device, country); **searches with and without the place** (times shown for searches that name Aguascalientes, "ags" or "aguas", and for the rest); **where the site ranks** (times shown at positions 1 to 3, 4 to 10, page 2 and further); which pages are in Google's index and when Google last read them | Search Console search analytics (250 searches for the ranks, 25 listed), D1 `gsc_index_log` (`url_inspect`) |
 | **Speed and experience** | `/experience` | On a board of its own, top to bottom (`Experience.tsx`): one verdict from the four readings beside Google's PageSpeed score; Core Web Vitals from real visitors at 3 in 4 visits, each with a bar of good / needs work / poor and a mark at 3 in 4, as PageSpeed draws them; what stands out beside where visitors get stuck (taps that did nothing, quick repeated taps, errors in browsers, each place); every page once, slowest first, with visitors' speed beside Google's test (a page with fewer than five readings is shown but not rated) | PostHog (`$web_vitals`, `$dead_click`, `$rageclick`, `$dead_swipe`, `$exception`), D1 `gsc_index_log` (`performance_check`) |
 | **Website traffic** | `/traffic` | Everything Cloudflare served: requests, visitors by address, page views, the share served from cache, data sent, threats stopped, **data sent from the cache and the share over HTTPS**, by day; each day's requests from the cache or the server; how the website answered (2xx to 5xx); who was asking (people, search engines, monitors, known abusers); HTTP and TLS versions; where threats came from; countries, kinds of file, browsers, pages and devices | Cloudflare GraphQL Analytics (`httpRequests1dGroups` with its `clientHTTPVersionMap`, `clientSSLMap`, `ipClassMap` and `countryMap`; `httpRequestsAdaptiveGroups`) |
 | **Email** | `/email` | Emails sent, the share that arrived, the share opened (of those that arrived), bounced or refused, how fast they arrived and how soon they were read, by day; each kind of email and how it did; how they ended; who sent them (the website or the portal); arrival times in bands; when emails are opened, by weekday and hour | Supabase `email_audit_logs` (the send ledger cf-email-consumer writes) |
@@ -109,6 +110,19 @@ counts 90 days, so on 90 days Reliability's errors have no period before. An ema
 opened at its first `unique_opened` report; the provider's proxy opens (a mail app opening it to
 check for images) are not counted. Reliability lists only the platform's own Workers
 (`OWN_WORKERS`), never the other Workers in the account.
+
+**Reach beyond Aguascalientes (2026-10-29).** The measurement of cf-astro's national-visibility
+program (its ADR-0004, phase 6). PostHog places each page view from its internet address; the
+query sorts it as Aguascalientes (country `MX`, state code `AGU`), the rest of Mexico, other
+countries, or unknown (no country, or a Mexican address with no state), and the share from
+outside counts only people whose state is known. A person seen in two areas in one period counts
+in both. An AI assistant is a visit PostHog files under its `AI` channel, named by the referring
+site or, when the browser sends none, by the `utm_source` the assistant adds to its links
+(ChatGPT adds `chatgpt.com`). Search Console does not say which state a searcher is in, so
+Google search splits the times shown by whether the search named the place, over the 250
+searches it reads. On 2026-10-29 the last 90 days held 127 people in Aguascalientes, 62 from
+the rest of Mexico, 17 from other countries and 11 unknown (38% from outside), and 16 visits from
+ChatGPT (PostHog connector).
 
 **Sentences.** Each part writes its own "what stands out" lines from the numbers it read (a
 figure that rose or fell, the busiest hour, the step where the form loses most people, more
@@ -215,6 +229,9 @@ PageSpeed's score bands, the pages joined on their address and their order, the 
 pages, and where visitors get stuck; `test/experience-look.test.ts`: the part on its own board
 without the figures or the packed wall, the readings without dials and with their mark, and the
 words for a screen reader.
+`test/analytics-reach.test.ts`: the area and AI-assistant questions (a Mexican address with no
+state is never counted as outside), the assistant names, the share, card and sentence on
+Visitors, and the place split on Google search.
 `test/action-keys-enforced.test.ts` checks that `#export` and `#refresh` are enforced.
 
 ## Verification log
@@ -224,3 +241,4 @@ words for a screen reader.
 | 2026-10-26 | Written with the code: every section against the files in `related_code`; the PostHog events and properties against the live project (PostHog connector), the D1 `gsc_index_log`, `booking_attempts` and `admin_pages` rows and the Supabase `bookings`, `booking_pets`, `contact_messages` and `consent_records` columns against the live databases (Cloudflare and Supabase connectors); `test/analytics.test.ts` passes | The portal's PostHog key's Query: Read scope, the Cloudflare `httpRequests1dGroups` answer for this zone and Search Console's search analytics for the service account: none can be called with the portal's own keys from here |
 | 2026-10-26 | Round 2 against the code: §1's Visitors, Booking journey, Google search, Website traffic, Email and Reliability rows, §2's retry, cache key and subrequests, §3's keys after `0078`, §4's account and Sentry rows. Live: `$pageleave` with the page, scroll and time properties and `$autocapture` link taps exist in the last 30 days (124 and 80, PostHog connector); `email_audit_logs` rows carry `delivery_events` arrays of `event`, `timestamp` and `reason` only, with `delivered`, `unique_opened`, `unique_proxy_open` and bounce events (Supabase connector); the `health-state` row and its `worker_errors` check passing every day since 2026-10-17 (D1 connector); `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass (56) | The `date` dimension and CPU quantiles of `workersInvocationsAdaptive`, Sentry's daily error counts over 14, 60 and 90 days, and `httpRequests1dGroups`' newer fields with the portal's keys (MAINTENANCE AN-4 to AN-6); the page in a phone browser |
 | 2026-10-28 | The Speed and experience row of §1, the introduction and §5 against `Experience.tsx`, `experience.ts`, `AnalyticsBlocks.tsx` and `analytics.css`; the page paths of PostHog's speed readings and PageSpeed's runs end in a slash in both sources, and one page had four readings with a p75 of 162.6 s (PostHog and D1 connectors); `test/analytics-experience.test.ts` and `test/experience-look.test.ts` pass | Every other part and section; the board in a phone browser |
+| 2026-10-29 | The Visitors and Google search rows of §1, the reach paragraph and §5 against `queries.ts`, `parts.ts` and `names.ts`; the area and AI-assistant questions run against the live project with the figures quoted (PostHog connector); `test/analytics-reach.test.ts`, `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass | The search split against the portal's Search Console answer (it cannot be called from here); the cards in a phone browser |
