@@ -46,7 +46,10 @@ form body, where the message id is read from, a probe. Two are the SMTP client's
 relay (`smtp.sender.net`, 587) and any server. Every one names
 its auth scheme (`bearer`, `basic`, `api-key-header`, `sigv4`, `smtp-plain`), the fields a person
 pastes with which are secret, a recipe (where to create the key, its scopes, how to test and
-rotate it, what the kit does without it), and, where the provider signs its webhooks, the
+rotate it, what the kit does without it, and a `guide`: the steps in the provider's own dashboard
+for the key, the sending domain and the delivery reports, each with a link to the page it names,
+the day they were checked and the provider's own guide for when its screens change; the steps
+live in `src/definitions/guides.ts`, and report steps without a webhook block are refused), and, where the provider signs its webhooks, the
 signature scheme and the paths of the event type, message id, recipient, time and reason with the
 map of its event names to the kit's nine kinds. An entry of the map may be an object that also
 says a bounce or refusal is for good (`permanent`) or an open was a machine's (`automatic`, such
@@ -113,7 +116,7 @@ fresh sign-in), on bit plane 2:
 | `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set |
 | `GET /instances/:id` | read | one instance; never its credential |
 | `POST /instances` | manage | sets one up: the definition, a label, every field the definition lists; `201` |
-| `POST /instances/:id/credential` | manage | the fields again (a new key, a changed domain); a suggestion becomes confirmed |
+| `POST /instances/:id/credential` | manage | the fields again (a new key, a changed domain); a secret left out keeps the one stored, so a webhook secret is added without the key being pasted again; a suggestion becomes confirmed |
 | `POST /instances/:id/activate` | manage | this instance sends; the one that was active becomes the first failover |
 | `POST /instances/:id/disable` | manage | out of the failover order |
 | `POST /instances/:id/probe` | manage | reaches the provider with the sealed credential; the result (ok, when, how long, the provider's words) is kept on the row and audited as `providers.probe` |
@@ -137,6 +140,18 @@ email module never names a provider.
   placeholder alone takes its value as it is; one with no value removes its key, and an object
   or a list entry left empty goes with it, so a message without HTML sends no empty HTML part. A
   URL or a header with a missing value is refused, naming the field (`KIT-E-1403`).
+- **Each provider's own features**, from three optional fields of the message. A `tag` (made by
+  `tagOf(text)`: letters, digits, `_` and `-`, at most 64) groups the message in the provider's
+  own reports: Resend's and SES's tags (as `category`), Brevo's tags, Postmark's `Tag`,
+  SendGrid's categories, Mailgun's `o:tag`, Mailjet's `CustomCampaign`, Mailtrap's `category`.
+  `tracking: false` asks the provider not to track opens and clicks, in its own words: Postmark
+  `TrackOpens` and `TrackLinks`, SendGrid `tracking_settings`, Mailgun `o:tracking`, Mailjet
+  `TrackOpens` and `TrackClicks`; the others track by their account setting. `bulk: true` sends
+  bulk mail the provider's bulk way: Postmark's broadcast stream, the instance's
+  `broadcastStream` field, read in the template as `{{bulk.broadcastStream}}` (the `bulk` scope is
+  the config, present only for a bulk message). A definition's `send.bulkNeeds` lists the config
+  fields bulk mail needs; while one is empty a bulk message is refused before any call
+  (`KIT-E-1408`), so it never goes out the everyday way.
 - **The auth schemes**: `bearer`, `basic` (the definition's user, else the `user` field),
   `api-key-header` and `none`, a line each; `sigv4`, the AWS signature, computed with WebCrypto
   over every header sent and checked against AWS's published vector. `oauth2-client-credentials`
@@ -247,7 +262,8 @@ sealed value copied to another row refuses to open; the other fields are config 
 them, and a credential that did not open is written to the audit log as `providers.open`,
 `failed`, with the error code and never the value. Beside the pasted fields the seal holds one
 the kit makes, `HOOK_FIELD`: the secret token of the instance's address for delivery reports,
-made when a key is first pasted and kept when one is pasted again. `registry.instance(db, id)`
+made when a key is first pasted and kept when one is pasted again. A secret field left out of a
+new paste keeps the stored value, so a signing secret is added without pasting the key again. `registry.instance(db, id)`
 finds an instance by its id alone, for that public address. Every write is audited under the person who
 made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
 `remove` and `rewrap`, with the field names and never a value.
