@@ -19,8 +19,11 @@
       Feria de San Marcos with a pet (live before February for the 2027 edition), visiting family,
       business trips, road trips through the city, moving here. 2026-10-29: four subjects written
       in Spanish and English with cited sources (the Feria with a dog, dogs and fireworks,
-      heatstroke, choosing a pet hotel) and saved in cf-admin as **In review**; they need a cover
-      photo, then **Spread out** schedules them. The other guides are still to write.
+      heatstroke, choosing a pet hotel) and saved in cf-admin as **In review**. The owner chose to
+      schedule them without cover photos (the only quality check skipped, recorded in the audit
+      log); each Spanish and English pair goes live together on 5, 12, 20 and 27 November 2026,
+      at random times in the working day. A photo can be added before each date. The other
+      guides are still to write.
 - [ ] 🟡 **The bundled Markdown copies of the 14 original articles hold the old text.** The
       2026-10-29 fact check stored corrections for every published article as suggestions in
       cf-admin (prices per day, check-in in opening hours, the species-split hotels, vaccines
