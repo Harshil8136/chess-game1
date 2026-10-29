@@ -280,10 +280,17 @@ port, a refused socket), the same deploy runs in the terminal instead.
 
 ### The start page
 
-`servePage(null, { menu })` serves the same page with choices instead of one run: each choice is a
-card, runs as a second process whose lines come over IPC as the deploy's do (the kit's look sends
-them when `OLTREM_PAGE` is set and the process has an IPC channel), and ends with **Back to the
-start**. A choice marked stoppable (the portal on this computer) has a **Stop it** button, which
+`servePage(null, { menu, status })` serves the same page as a dashboard instead of one run (since
+2026-10-29): `status` (`StartStatus`) is what the start made ready (the kit's commit, what an
+update brought in or why it was held, Node, the doctor's checks, where the portal is set up to
+live), drawn as the **This computer** card and sent first to every page that connects, before the
+choices; a `status` event from a run (**Check again**, `run.mjs check`) replaces it. The choices
+whose id starts with `dev` are one card, picked by their `short` names; `check` and `deploy` have
+their own cards; any other choice gets a card of its own. Each runs as a second process whose
+lines come over IPC as the deploy's do (the kit's look sends them when `OLTREM_PAGE` is set and
+the process has an IPC channel), shown under the cards and cleared with **Clear**. The template's
+dev script sends a `serving` event with its address, which the card shows as **Open the portal**.
+A choice marked stoppable (the portal on this computer) has a **Stop the portal** button, which
 asks the process over IPC to stop what it started, then ends it three seconds later, with every
 process it started (`stopTree` in the look: `taskkill /T` on Windows, where a plain kill would leave
 wrangler's runtime holding the port). The kit's root runs it as `npm start` and from its one-click

@@ -33,28 +33,34 @@ installed for you.
    first what it does: the packages listed in `pnpm-lock.yaml`, downloaded from the public npm
    registry and checked against that file, saved in this folder, with nothing installed for the
    whole computer. Later starts skip this.
-5. **Every start checks first.** In a git clone, it looks for a newer kit on GitHub and brings it
-   in when this copy has no changes of its own (a copy with its own changes, or with no internet,
-   starts as it is and says why). It then installs what the new kit needs, and runs the template's
-   checks (`oltrem doctor`, a few seconds), naming any that fail with its fix.
-6. **The start page** opens in your browser, with five choices:
-   - **Try it on this computer:** the portal at a local address such as <http://localhost:8787>,
-     with no Cloudflare account; it opens on a sign-in page that exists only on your computer.
-     **Stop it** on the page stops it.
-   - **Share it on this Wi-Fi** and **Share it anywhere:** the same, also open on other devices
-     behind a code shown when it starts: on your network, or at a temporary Cloudflare address
-     (this needs `cloudflared` installed, and no account). See
-     [sharing it](./templates/client/README.md#sharing-it-with-other-devices).
-   - **Get the newest kit:** fetches what is new (this needs a git clone), installs it and says
-     what changed.
-   - **Put it on Cloudflare:** signs you in to Cloudflare in the same browser, lets you pick the
-     account and the domain, opens Cloudflare's key form already filled in, checks the key when
-     you paste it, and notices by itself when the door (Cloudflare Access) is on. Running it again
-     only does what is missing.
+5. **Every start makes this computer ready.** In a git clone, it looks for a newer kit on GitHub
+   and brings it in, around files changed here (such as the address a deploy writes); git changes
+   nothing when a new change would touch one of them, or when this copy has commits of its own,
+   and the page says so. It then installs what the new kit needs, builds the `oltrem` tool, and
+   runs the template's checks (`oltrem doctor`, a few seconds).
+6. **The start page** opens in your browser: a dashboard of three cards.
+   - **This computer:** what the start found: the newest kit (or what it brought in just now,
+     change by change), Node.js and the packages, and the checks, each one that needs a look named
+     with its fix. **Check again** does the whole start again without closing anything.
+   - **On this computer:** the portal at a local address such as <http://localhost:8787>, with no
+     Cloudflare account; it opens on a sign-in page that exists only on your computer. **Who may
+     open it** picks Only this computer, This Wi-Fi or Anywhere: the last two are also open on
+     other devices behind a code shown when it starts, on your network or at a temporary
+     Cloudflare address (this needs `cloudflared` installed, and no account; see
+     [sharing it](./templates/client/README.md#sharing-it-with-other-devices)). While it runs, the
+     card has **Open the portal** and **Stop the portal**.
+   - **On Cloudflare:** where the portal is set up to live, or that it is not there yet, and
+     **Put it live**: it signs you in to Cloudflare in the same browser, lets you pick the account
+     and the domain, opens Cloudflare's key form already filled in, checks the key when you paste
+     it, and notices by itself when the door (Cloudflare Access) is on. Running it again only does
+     what is missing.
+
+   What runs shows its steps under the cards, and **Clear** takes them away. The header says
+   Ready, Running, or that something needs a look.
 
 Keep the window the file opened while you use the page: closing it stops everything. If the page
 does not open, the window shows its address, and if no browser opens it within two minutes, the
-window asks the same five choices by number. Each step keeps its full output in `.oltrem/`.
+window asks the same choices by number. Each step keeps its full output in `.oltrem/`.
 
 Each step says what it is doing while it runs, including what the tool it waits on says right now.
 The start page repairs the kit's packages by itself when they are missing or older than the kit;
