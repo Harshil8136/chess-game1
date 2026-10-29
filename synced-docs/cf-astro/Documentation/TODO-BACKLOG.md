@@ -232,7 +232,10 @@
       middleware reads KV.
 - [ ] 🟢 **A free WAF rule for scanner paths** (`.env`, `.git`, `wp-`,
       `phpmyadmin`) would stop them before the Worker runs. A dashboard change, so
-      it needs the owner.
+      it needs the owner. On 2026-10-29 the owner chose to widen the Worker's own
+      filter instead (`src/lib/probe-filter.ts`) and leave Cloudflare's rules as
+      they are; the portal's Sentry page, Threats, shows what still reaches the
+      Worker, so this can be weighed again from there.
 - [ ] 🟢 **cf-graph still says rate limiting is "Redis-backed".** Its public
       Systems view (`data/platform-facts.source.ts` in cf-graph) should name
       Cloudflare's built-in rate limiting once this site and cf-admin are deployed
