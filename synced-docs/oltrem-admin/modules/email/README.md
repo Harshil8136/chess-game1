@@ -101,7 +101,19 @@ person writes, the way a mail app does, without a list, a template or a campaign
 | From | The addresses the person may send everyday mail from (`email.senders.use` at the address's place), the defaults first. With none, the page says so and sends them to Senders |
 | To, Cc, Bcc | Typed as a mail app takes them: separated by commas, semicolons or lines, each a bare address or `Name <address>` (`readAddresses`). Cc and Bcc are folded away until they are opened. What is not an address is named, and the form comes back as typed. Fifty people at most in all; for more, the page points to a campaign |
 | Subject and message | The message is plain words with three marks: `**bold**`, `_italic_` and a line starting with `- ` for a list; an https address becomes a link. It is sent as a plain letter in HTML (`writtenHtml`, everything typed escaped) and as text, under the built-in template `email.written` |
-| Sending | `POST /write` checks the address may be used and queues the message like any other: the lease, the failover and the delivery reports are the same. It is audited as `email.write` with the number of recipients, never the words |
+| Sending | `POST /write` checks the address may be used and queues the message like any other: the lease, the failover and the delivery reports are the same. It is audited as `email.write` with the number of recipients (and the time, for one scheduled), never the words |
+| Undo | A sent email waits ten seconds (`UNDO_SECONDS`) in the queue before it is handed over. The page says so with an Undo button that takes it back into the form as a draft (`POST /written/:id/undo`, audited as `email.unsend`). Once the queue has handed it over, Undo answers `KIT-E-1511` |
+| Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Messages, Drafts lists them, opens one into the form and deletes one |
+| Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
+
+Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
+they read it, and only through these routes. Its state is `draft`, `scheduled`, `queued` (in the
+queue, its words still taken back) or `sent` (handed over; its `email_messages` row with the same
+key says what became of it). The queue's copy carries the row's id, and the delivery first moves
+the row from `queued` to `sent` in one guarded update: an email taken back is a draft by then, so
+the copy is dropped without a send, and two moves that race cannot both win. When the queue
+refuses an email at once, a draft stays a draft and says why (`problem`), and a new email is not
+kept, since the page still shows what was typed.
 
 ## Senders and sending domains
 
@@ -205,7 +217,13 @@ download one.
 | `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
 | `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
-| `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`) from an address they may use for everyday mail, through the queue (see Write) |
+| `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock |
+| `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`, optional `draftId` and `later: { day, time }`) from an address they may use for everyday mail, through the queue after the Undo wait, or at the time asked (see Write) |
+| `POST /written` | `email.senders.use` | Save a draft, new or over the person's draft `id` |
+| `GET /written?state=` | `email.senders.use` | The person's own drafts (`draft`) or scheduled emails (`scheduled`), newest first, a hundred at most |
+| `GET /written/:id` | `email.senders.use` | One email the person wrote |
+| `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
+| `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
@@ -314,7 +332,11 @@ sent to the address: its template, its state, the last delivery event, its outco
 open, click, spam report and unsubscribe, and when it was sent; and the address's row on the
 do-not-mail list, with its reason, when there is one. The saved lists the address is on are answered too, with
 the name and merge fields kept there, the reason and who added it. The text of a message is not
-kept, so it is not in the answer. The Email page is linked.
+kept, so it is not in the answer, except an email a person wrote on the Write page: its words are
+kept in `email_written` for its writer (to finish a draft, send it later or take it back), and the
+answer lists each one written to the address with its subject and state. A draft stays until its
+writer sends or deletes it; a sent one is kept for the Sent list of the next Mail stage. The Email
+page is linked.
 
 ## Not here yet
 
@@ -350,7 +372,10 @@ archived) and `email_template_versions` (each version's content, by whom and whe
 `0048_email_lists.sql` makes `email_lists` (the name, description, merge fields, the kept counts
 of people and of those on the do-not-mail list, the last import's reason, note, person, time and
 source, and when it was archived) and `email_list_members` (the address, name, merge fields as
-JSON, the reason, who added them and when).
+JSON, the reason, who added them and when). Migration `0052_email_written.sql` makes
+`email_written` (the writer, the sender, the addresses as JSON, the subject and the words, the
+state, the time it goes for one scheduled, the message key once queued and why it was last not
+queued; see Write).
 
 | Code | Name | Status | When |
 |---|---|---|---|
@@ -364,3 +389,4 @@ JSON, the reason, who added them and when).
 | `KIT-E-1508` | `SENDER_NOT_READY` | 422 | the sender was removed, is for the other kind of mail, or its domain does not pass for bulk mail |
 | `KIT-E-1509` | `CHANGED_SINCE` | 409 | a template was saved again after the version the change was made to |
 | `KIT-E-1510` | `BAD_LIST` | 422 | a list's file has no email column or no one to mail, is over 1 MB, or would make the list longer than 50,000 |
+| `KIT-E-1511` | `TOO_LATE` | 409 | Undo or Take back after the queue handed the email over, or for one not waiting to be sent |

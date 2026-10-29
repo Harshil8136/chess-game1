@@ -31,7 +31,7 @@ createWorker({ ..., onHandled: (event) => outbox.complete(event.idempotencyKey) 
 
 | Call | What it does |
 |---|---|
-| `enqueue(event, { hold })` | inserts the row by its idempotency key (a second call with the same key writes nothing and sends nothing), then sends it; a failed send leaves it pending with the error and the next time to try |
+| `enqueue(event, { hold, delaySeconds })` | inserts the row by its idempotency key (a second call with the same key writes nothing and sends nothing), then sends it; a failed send leaves it pending with the error and the next time to try. `delaySeconds` (at most 43 200, the queue's twelve hours) is handed to the queue on that first send, as `send(event, { delaySeconds })`; when that send fails, the replay comes no sooner than the wait would have ended |
 | `complete(key)` | the consumer handled it: done |
 | `release(type)` | held rows of that type become pending, for when the provider's key appears |
 | `replay({ limit })` | sends what is due: pending rows whose time has come, and sent rows an hour old with no confirmation; returns how many were sent, failed, went dead, or were claimed by another replay first |
