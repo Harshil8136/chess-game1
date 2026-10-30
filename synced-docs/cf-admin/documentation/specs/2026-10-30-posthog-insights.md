@@ -13,10 +13,14 @@ related_code:
 - src/components/dashboard/posthog/now.tsx
 - src/components/dashboard/posthog/frame.tsx
 - src/components/dashboard/posthog/charts.tsx
+- src/components/dashboard/posthog/Recordings.tsx
+- src/components/dashboard/posthog/Errors.tsx
+- src/components/dashboard/posthog/People.tsx
 - src/styles/pages/posthog.css
 - src/lib/posthog/board.ts
 - src/lib/posthog/names.ts
 - src/lib/posthog/recordings.ts
+- src/lib/posthog/people.ts
 - src/lib/posthog/types.ts
 - src/lib/analytics/report/queries.ts
 - test/posthog-lab.test.ts
@@ -38,7 +42,9 @@ tags: [posthog, design, ui, dataviz, analytics, funnel, paths, web-vitals]
 > Below it: the booking form step by step, where visitors went after each page and the most
 > common ways through the website, how they found it, where they got stuck, what they tapped,
 > how fast pages were on phones and computers, and where visitors are, down to the state. The
-> gap missing between the figures at the top and the panels under them is back.
+> gap missing between the figures at the top and the panels under them is back. Recordings,
+> Errors, and Events and people open the same way: each visit, each period's errors and the
+> visitors in a sentence, and what every state and kind of event means.
 
 This builds on [the analytics lab](2026-10-29-posthog-lab.md), which drew the page; this note
 changes what the Overview says, not how it is drawn. What each part shows is in the
@@ -60,8 +66,8 @@ How it is read, in two stages:
 
 - **Stage A, the Overview** (this note): the gap fixed everywhere it is missing; more of what
   PostHog collects turned into answers; every figure and panel explained for someone new.
-- **Stage B, the other parts** (Recordings, Errors, Events and people): the same treatment, in a
-  later note.
+- **Stage B, the other parts** (Recordings, Errors, Events and people): the same treatment
+  (§8).
 
 ## 2. The gap
 
@@ -178,8 +184,31 @@ PostHog reads from the internet address, and the address itself is never asked f
 - **A sentence written by a model:** every sentence is made from the numbers by plain code, so
   it can be tested and is never wrong in a new way.
 
+## 8. The other parts
+
+Stage B, the same day: each part opens with what it means before its list.
+
+- **Recordings:** each row says what the visitor did in a sentence (`recordingSay`: the pages
+  opened, taps, typing, whether they opened booking and sent it, stuck taps and errors), and its
+  booking mark says sent (good) or not sent (worth a look). A seventh figure counts the visits
+  that sent a booking. A line under the list's title names the switches that find the visits
+  worth watching first. One recording opens with the same sentence above its facts, booking
+  among them. The list question now also passes on each visit's bookings sent, which it already
+  counted for the "Booking not sent" switch.
+- **Errors:** "In plain words" (`errorsStory`): how many errors and of how many kinds, whether
+  more or fewer came in the second half of the period, the most common, and how many groups are
+  open. Under the state's tab, what the state means (`STATUS_SAY`), worded from PostHog's own
+  page: a group marked fixed opens again by itself; an ignored group's new errors are dropped.
+  One error's latest occurrences are summed up in a sentence (`occurrencesSay`), said to be of
+  the latest few only.
+- **Events and people:** each kind of event has a line saying what it is (`KIND_SAY`). Visitors
+  gain their visits together and on average and how many came back more than once, as figures
+  and as sentences (`visitorsStory`); the totals question groups the events by person once
+  instead of counting people twice, and still asks for nothing that names one.
+
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-10-30 | Written with the code: every section against the files in `related_code`. Live through the PostHog connector, counts and sums only (no page, tap or visitor value read): both board questions and right now, as built by the code, answer (the paths: 12 funnel, 37 next-page, 6 way, 5 stuck, 8 tap and 2 speed rows; the counts: 87 visits in 5 kinds of source, 54 days of visits); `test/posthog-lab.test.ts` and `test/posthog-lab-look.test.ts` pass | The page in a phone browser (Harshil's test); stage B |
+| 2026-10-30 | §8 (stage B), written with the code: against the files in `related_code`; the states' meanings against PostHog's "Manage and resolve issues" page (documentation search through the PostHog connector); the visitor totals question live, counts only (62 visitors, 17 came back, 2 said who they are, 87 visits); `test/posthog.test.ts` and `test/posthog-lab.test.ts` pass | The parts in a phone browser |
+| 2026-10-30 | §1 to §7, written with the code: every section against the files in `related_code`. Live through the PostHog connector, counts and sums only (no page, tap or visitor value read): both board questions and right now, as built by the code, answer (the paths: 12 funnel, 37 next-page, 6 way, 5 stuck, 8 tap and 2 speed rows; the counts: 87 visits in 5 kinds of source, 54 days of visits); `test/posthog-lab.test.ts` and `test/posthog-lab-look.test.ts` pass | The page in a phone browser (Harshil's test) |

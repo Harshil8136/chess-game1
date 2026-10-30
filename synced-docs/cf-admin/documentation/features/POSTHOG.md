@@ -178,17 +178,21 @@ as a thin mark and the state in a glyph and a word (within it, heading over it, 
 the portal's key can reach (§2), with how many error groups are open and how many flags,
 experiments and surveys are set up in PostHog now.
 
-**Recordings** (`/dashboard/posthog/recordings`). Six figures for the list shown (recordings,
-average length, the share of time active, and how many had errors, stuck taps or reached
-booking), then every recorded visit of the last 24 hours, 7
+**Recordings** (`/dashboard/posthog/recordings`). Seven figures for the list shown (recordings,
+average length, the share of time active, how many had errors, stuck taps or reached booking,
+and how many of those sent a booking), a line on how to find the visits worth watching first,
+then every recorded visit of the last 24 hours, 7
 days (the default) or 30 days, newest first, 50 at a time with "Show older recordings": when,
-how long and how long active, the page it started on and how many more, the device, browser and
-country, the visitor, and marks for errors, stuck taps (quick repeated taps, or taps and swipes
-that did nothing), reaching booking and having said who they are. Switches in a sideways row keep
+how long and how long active, the page it started on and how many more, what the visitor did in
+a sentence ("Opened 3 pages, tapped 12 times and typed in a form; opened booking but did not
+send it", since 2026-10-30), the device, browser and country, the visitor, and marks for
+errors, stuck taps (quick repeated taps, or taps and swipes that did nothing), booking sent or
+not sent, and having said who they are. Switches in a sideways row keep
 only visits with errors, with stuck taps, over a minute active, on a phone, that reached
 booking, or that opened booking and did not send it ("Booking not sent", since 2026-10-30); any
 number may be on. Opening one (`?r=<id>`, so Back closes it and a link from Errors or
-Events opens it) shows the visit's facts and **what happened, in order**: every page, tap, stuck
+Events opens it) shows the visit in that sentence, its facts (booking among them: not opened,
+opened and not sent, or sent) and **what happened, in order**: every page, tap, stuck
 tap, booking step, error, speed reading and console message at its place in the recording, at
 most 500, with a sideways row to show only pages, taps, problems or the console. **The
 recording plays on the page** (since 2026-10-29; [the lab](../specs/2026-10-29-posthog-lab.md)
@@ -203,14 +207,20 @@ player as tall as it (under it on a phone), the moment on screen lit; tapping on
 PostHog's site with the viewer's own sign-in. What a visitor types in a
 form is hidden in the recording itself (`maskAllInputs` in cf-astro's PostHog setup).
 
-**Errors** (`/dashboard/posthog/errors`). A chart of every group's errors over the period in 30
+**Errors** (`/dashboard/posthog/errors`). **In plain words** (since 2026-10-30): how many errors
+happened in the period and of how many kinds, whether more or fewer happened in its second half
+than its first, the most common one with how many times and to how many people, and how many
+groups are open. A chart of every group's errors over the period in 30
 bars (a day each over 30 days, three over 90, six over 180) with the total, the groups seen and
 the busiest bar. PostHog's error groups, open (the default), marked
-fixed, ignored or all, each with its count in the sideways row; for the last 30 (default), 90 or
+fixed, ignored or all, each with its count in the sideways row and what the state means, as
+PostHog documents it (a group marked fixed opens again by itself when it happens again; PostHog
+drops new errors of an ignored group); for the last 30 (default), 90 or
 180 days, how many times each happened, to how many people, and when last, with a small line of
 its 30 bars; seen most recently
 first, the ones not seen in the period after. Opening one (`?e=<id>`) shows its state and counts,
-a link to it in PostHog, and its latest 8 occurrences: when, the page, device, browser and system,
+a link to it in PostHog, and its latest 8 occurrences, summed up in a sentence (on what devices,
+and on which page and in which browser most), then each: when, the page, device, browser and system,
 the visitor, the message, and where in the code it broke, newest call first, the website's own
 code marked; "Watch this moment" opens the visit's recording at the time of that occurrence when
 PostHog still keeps one and the person holds Recordings. Changing an error's state from the portal is stage 3.
@@ -218,10 +228,12 @@ PostHog still keeps one and the person holds Recordings. Changing an error's sta
 **Events and people** (`/dashboard/posthog/people`). Two tabs. **Live events**: Right now (as on
 the Overview), then everything
 visitors did in the last 30 days, newest first, 100 at a time, by kind (everything, pages, taps,
-stuck taps, booking, errors) with each kind's 30-day count; while the tab is on screen and no
+stuck taps, booking, errors) with each kind's 30-day count and a line on what the kind is; while
+the tab is on screen and no
 older page is open it asks again every minute. A row's camera button opens the visit's recording at that
 event for a person who holds Recordings. **Visitors** (`?tab=visitors`): how many visited in the last 30
-days and how many have said who they are, then every visitor, last seen first, 50 at a time, with
+days, their visits together and on average, how many came back more than once and how many have
+said who they are, the same in plain sentences, then every visitor, last seen first, 50 at a time, with
 their visits, events, first and last visit, country and device.
 
 **Settings** (`/dashboard/posthog/settings`). Three cards, the same setting rows as the Sentry
@@ -264,7 +276,7 @@ named otherwise; the tables were confirmed through the PostHog connector on 2026
 | Overview | one question over `events`, `session_replay_events` and PostHog's `system.error_tracking_issues`, `system.feature_flags`, `system.experiments` and `system.surveys`; the project (`/api/projects/{id}/`); the organisation's billing (`/api/organizations/{org}/billing/`); one `?limit=1` read per product for the key check; the board, two questions asked one after the other (`src/lib/posthog/board.ts`): the counts over `events`, `sessions` and `session_replay_events` in 15 parts (`boardQuery`), then the paths over `events` in 6 parts (`PATHS_QUERY`: the booking steps by `windowFunnel`, each visit's pages in order, stuck taps and errors per page, tapped words, speed readings); right now, one question over the last 30 minutes, the last day and the last 7 days of `events` |
 | Recordings | `session_replay_events` grouped per recording, joined to the visit's `events` for device, browser, country, pages, stuck taps and booking; one recording's moments from `events` and `console_logs_log_entries` in one question; playing it, PostHog's snapshot API (`GET /api/environments/{id}/session_recordings/{recording}/snapshots`: the list of its blocks with `blob_v2=true`, then runs of at most 20 blocks with `source=blob_v2&start_blob_key=&end_blob_key=`) |
 | Errors | `system.error_tracking_issues` joined to the period's `$exception` events, and each group's `$exception` events by day for the charts; the occurrences from `$exception` events, with whether `session_replay_events` still holds the visit |
-| Events and people | `events`, for the list and for the counts per kind; visitors grouped by person from `events` |
+| Events and people | `events`, for the list and for the counts per kind; visitors grouped by person from `events`, and their totals (visitors, those who said who they are, those with more than one visit, all their visits) from the same grouping |
 | Settings | D1 `service_config` and `service_config_history`, PostHog's rows; the project (`GET` and `PATCH /api/projects/{id}/`), of whose answer only the two recording fields are read |
 
 Nothing a person sends can change a question (`src/lib/posthog/sql.ts`): a recording, visit or
@@ -364,8 +376,9 @@ booking steps, the next pages and ways, stuck pages, tapped words, speed reading
 source, how far pages were read), the sentences of In plain words with and without the parts'
 links, days across a clock change, right now with its pages, last day and last page, the error
 trends in 30 bars and their labels, the figures' changes (in points for a share), slots and
-meanings, the axis steps, the "Booking not sent" filter, the list's figures, the moment on
-screen and a jump's place, and the route's two views (a bad time zone falls back to UTC;
+meanings, the axis steps, the "Booking not sent" filter, the list's figures, the other parts'
+sentences (a recorded visit, a period's errors and one error's occurrences, the visitors, what
+each kind of event and each error state is), the moment on screen and a jump's place, and the route's two views (a bad time zone falls back to UTC;
 Refresh now behind its key). `test/posthog-replay.test.ts`: the list of
 blocks, a run's limits, PostHog's snapshot addresses, the route (401, 403 without Recordings, 400
 for an id or run that is not one, Refresh now behind its key, the copy answering a second look, a
@@ -380,6 +393,7 @@ legend or table for every chart, and the player's library loaded only on Play.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | The other parts in plain words: §3's Recordings, Errors and Events and people, §4's Events and people row and §7's lab test, against the files in `related_code`; the states' meanings against PostHog's "Manage and resolve issues" page (through the PostHog connector's documentation search); the visitor totals question run live (counts only); `test/posthog.test.ts` and `test/posthog-lab.test.ts` pass | The parts in a phone browser; the rest of the document |
 | 2026-10-30 | The insights: §3's Overview and Recordings' switches, §4's Overview row, §5's "Few questions at once", §6's board bullet and §7's two lab tests, each against the files in `related_code`. Live through the PostHog connector, counts and sums only: both board questions and right now as the code builds them answer; `test/posthog-lab.test.ts` and `test/posthog-lab-look.test.ts` pass | The page in a phone browser; the rest of the document; `last_verified` left as it was |
 | 2026-10-29 | The analytics lab: §2's Session recording note, §3's Overview, Recordings (the player), Errors (the chart, "Watch this moment") and Events and people, §4's board, right now, error days and snapshot rows, §5's routes, questions at once, copies and CPU, §6's playing and board bullets and §7's three new test files, each against the files in `related_code`; `test/posthog-lab.test.ts`, `test/posthog-lab-look.test.ts` and `test/posthog-replay.test.ts` pass | The page and the player in a phone browser; PostHog's live snapshot API and whether the portal's key holds Session recording: Read (the Overview's key card will say); the Settings part beyond its new layout |
 | 2026-10-28 | §3's note on Control Plane's PostHog tab, after it was removed: `src/pages/dashboard/control-plane/posthog.astro` forwards to `/dashboard/posthog/settings`, and `src/lib/posthog/client.ts` reads `POSTHOG_PROJECT_ID`, else `PUBLIC_POSTHOG_PROJECT_ID` | The rest of the document; `last_verified` left as it was |
