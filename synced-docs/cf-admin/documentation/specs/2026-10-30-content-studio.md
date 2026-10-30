@@ -168,6 +168,13 @@ One page, its views in a sideways row:
 - **Visits and searches:** each published article's requests (Cloudflare), views (PostHog) and
   Search Console impressions, clicks and position, read with the tokens the Analytics page uses.
 
+*As built (2026-10-30):* the Articles view has no language filter, because each card already
+shows both languages and "Needs a translation" is one of the needs. Visits and searches leaves
+out Cloudflare's requests per page: they count bots and the website's own checks with the
+people, so a number beside PostHog's views would claim readers that never read. Its views are
+PostHog page views, and its showings, clicks and position are Search Console's
+([`CMS.md`](../features/CMS.md) §3.4).
+
 ### 5.3 The website
 
 The article page gains a list of its sections (from its headings, no script), the short answers
@@ -196,7 +203,7 @@ record.
 | 1a | cf-astro | Reviews in both languages, gallery `alt_en` (shipped 2026-10-30, `acb81d9`) | none |
 | 1b | cf-admin | The sections, the route, the Overview and six section pages, `0090` (shipped 2026-10-30, `2b2c489`) | 1a live; `0090` applied first |
 | 2 | cf-admin | Photos: every folder, where used, safe delete, pick from the library (shipped 2026-10-30, its record (private)) | 1b |
-| 3 | cf-admin | The Blog Studio (its writing-assistant routes are still mapped to the Overview's key; the editor's inline photo upload sends a slot the upload route refuses) | 1b |
+| 3 | cf-admin | The Blog Studio: pairs and what each needs, the calendar with the publishing limits, visits and searches, the editor on a page of its own; the writing-assistant routes on the Blog Studio's key and the inline photo upload's own slot (shipped 2026-10-30, its record (private)) | 1b |
 | 4 | cf-astro | The blog's pages | 3 |
 
 A stage that fails its checks does not ship; the pages before it keep working.

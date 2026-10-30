@@ -525,6 +525,16 @@ a key no page registers. `0090` renamed four of the pages (Prices, Reviews, Ques
 figures) and reworded six descriptions, each only where it still held its old words
 ([`CMS.md`](../features/CMS.md) §3.0).
 
+*Added 2026-10-30 (Blog Studio, no migration, no new key):* the Blog Studio's page asks for
+`/dashboard/content/blog` exactly (`placRequireGrant`) and no longer also asks for an admin role;
+its two reads, `GET /api/content/blog/studio` and `/reach`, ask the same. The writing assistant's
+routes (`/api/content/ai-generate-stream`, `/ai-prompt`, `/ai-visibility`) and the live-page check
+(`/api/content/edge-verify`) are now mapped to the Blog Studio's key in `API_PAGE_MAPPING`, which
+their handlers already checked: under `/api/content` they fell to the Overview's key, so a person
+with the Blog Studio but not the Overview was refused. The upload route's new `blog-image` slot
+asks for the Blog Studio's key too. The three powers stay as they were: `#bypass-quality-audit`,
+`#edit-ai-prompts` and `#review-suggestions` ([`CMS.md`](../features/CMS.md) §3.4).
+
 **Only depth-2 paths render as sidebar items** (`computeNavItems`); anything deeper
 is reachable but not navigable. That rule is why promoting the sessions screen to a
 top-level page required a migration rather than a re-link
@@ -1465,6 +1475,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-30 | claude | **Scope-limited to the Blog Studio paragraph.** Read `API_PAGE_MAPPING` in `src/lib/auth/routes.ts`, `src/pages/dashboard/content/blog.astro`, `src/pages/api/content/blog/studio.ts`, `reach.ts`, the four AI and live-check handlers and `src/pages/api/media/upload.ts`; `test/content-blog-studio.test.ts` passes. Nothing else re-checked | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Website Content paragraph's photos sentence.** Read `src/pages/api/media/library.ts` and `API_PAGE_MAPPING`; `test/content-photos.test.ts` passes. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Website Content paragraph.** Read `surface-guards.ts` (`denyContent`, `contentCan`), `API_PAGE_MAPPING` in `src/lib/auth/routes.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, the two pages and `migrations/0090_content_studio.sql`; `test/content-studio.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-29 | claude | **Scope-limited to the Sentry Threats and notes paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts` (GET `threats`, POST `note`) and `migrations/0089_sentry_threats.sql`; read the live rows back through the D1 connector after `0089`; `test/sentry-threats.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |

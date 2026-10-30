@@ -327,7 +327,7 @@ src/styles/
 ├── utilities.css           ← Custom utility classes (.sr-only, etc.)
 ├── bookings.css            ← Bookings dashboard styles
 ├── components/             ← Component-scoped CSS (2026-09-14 listing)
-│   ├── blog-studio.css, cms-module-panel.css, seo-patterns.css
+│   ├── blog-studio.css (three button styles since 2026-10-30), seo-patterns.css
 │   ├── console.css      ← the console kit, `.ck-*` (§9.9, 2026-10-10)
 │   ├── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
 │   └── chatbot/

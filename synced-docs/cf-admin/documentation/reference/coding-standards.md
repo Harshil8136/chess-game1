@@ -75,7 +75,7 @@ All file names must be unique and descriptive:
   **105 of 196 `.tsx` files under `src/components/` are over 200 lines (54%)**,
   the largest being `BlogManager.tsx`, `PlatformAlertsManager.tsx` and
   `BrevoTelemetryView.tsx`, all over 1,200 (`PlatformAlertsManager.tsx` was removed on
-  2026-10-17 with the Alerts page). The only count anything holds is
+  2026-10-17 with the Alerts page, and `BlogManager.tsx` on 2026-10-30 with the old Blog Studio). The only count anything holds is
   `.ratchet.json` `A14` — `src/` files over **600** lines — which may fall but
   not rise. So 200 is the design target you justify departing from, 600 is the
   line the build defends, and the majority of the tree is already between them.
@@ -419,6 +419,7 @@ because the pattern it guards against has already recurred enough times to earn 
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §3's largest-files sentence: `BlogManager.tsx` is gone (`git rm`, the Blog Studio rebuild) | The file counts, not re-measured |
 | 2026-09-14 | `tsconfig.json`, `eslint.config.js` (max-lines off, 600-line warn list, `prerender` guard), `scripts/ratchet.py` + `.ratchet.json` (A1 history), RULE #0.6 and §8.1 in `RULESAd.md`, every file and repository method this doc names, the motion token names in `global.css`. Five corrections above. | Whether `admin_sessions` / `privacy_requests` are dead on the Supabase side; Sentry dedup behaviour |
 | 2026-09-20 | `sentry.server.config.ts` (no-op, by design) and `src/workers/cf-entry.ts` (`@sentry/cloudflare` `withSentry`) — §4.4 rewritten; `var(--duration-…)` has 0 valid uses in `src/` — §7 rewritten; `scripts/rules_check.py` SEC-03 + its 18-file exempt list and the 19 `src/lib/dal/*Repository.ts` files — new §0; `scripts/a11y_check.py` (6 checks, `title` accepted as a name) — §6 labelled; 105 of 196 components over 200 lines — §3 labelled; `eslint.config.js` (`no-explicit-any: warn`, `max-lines: off`) and `.ratchet.json` re-read; the `admin_sessions` / `privacy_requests` question closed (renamed `zz_dead_*_20260916` by chunk 14a, removal tracked as D-15). | Sentry client-side dedup behaviour (still an SDK claim, not measured here) |
 | 2026-10-10 | §8's `admin_feature_flags` sentence, against `migrations/0069_settings_cleanup.sql` and `src/lib/configuration.ts` | Everything else |

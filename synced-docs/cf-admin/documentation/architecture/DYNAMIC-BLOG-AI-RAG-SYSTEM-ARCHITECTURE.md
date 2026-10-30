@@ -152,7 +152,7 @@ The platform operates as a decoupled, dual-application ecosystem connected via s
    - Injects the knowledge block into the system prompt.
    - Executes Cloudflare Workers AI — default `@cf/meta/llama-4-scout-17b-16e-instruct`; see `src/lib/ai-pricing.ts` for the catalogue, which is the single source of truth. Every listed model supports guided JSON, and every call sends `response_format` plus a temperature, a scaled `max_tokens`, a 60s timeout and one retry.
    - Generates a structured JSON response (`title`, `slug`, `description`, `body`, `translation_slug`, `direct_answers`). **`seo_score` was removed from the schema on 2026-08-31** — the model no longer grades its own work; `evaluateSeoGate` is the single source of that number.
-5. **1-Click Form Population**: User clicks **"Apply to Editor"** in `BlogAiCopilotModal.tsx`, automatically populating all 7 fields into `BlogManager.tsx`.
+5. **1-Click Form Population**: User clicks **"Apply to Editor"** in `BlogAiCopilotModal.tsx`, automatically populating all 7 fields into a new article in the Blog Studio's editor (`BlogEditor.tsx`; `BlogManager.tsx` until 2026-10-30).
 
 ### Phase 2: D1 Database Mutation & Revision Snapshot (`cf-admin`)
 1. **D1 Write**: Article is persisted to D1 database `blog_posts` table:

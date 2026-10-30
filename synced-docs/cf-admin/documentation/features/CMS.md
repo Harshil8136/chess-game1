@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-30
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/content/sections.ts, src/lib/content/studio.ts, src/lib/content/overview.ts, src/pages/api/content/sections/[id].ts, src/pages/api/content/overview.ts, src/components/dashboard/content/Content.tsx, src/workers/scheduled-asset-cleanup.ts, src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
+related_code: [src/lib/blog/studio.ts, src/lib/blog/reach.ts, src/pages/api/content/blog/studio.ts, src/pages/api/content/blog/reach.ts, src/components/dashboard/content/Blog.tsx, src/components/dashboard/content/BlogEditor.tsx, src/components/dashboard/content/ArticleText.tsx, src/lib/content/sections.ts, src/lib/content/studio.ts, src/lib/content/overview.ts, src/pages/api/content/sections/[id].ts, src/pages/api/content/overview.ts, src/components/dashboard/content/Content.tsx, src/workers/scheduled-asset-cleanup.ts, src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../operations/OPERATIONS.md]
 tags: [cms, blog, ai, rag, d1]
 ---
@@ -15,7 +15,7 @@ tags: [cms, blog, ai, rag, d1]
 
 > **TL;DR (non-technical):** How staff edit the public website's content (hero, gallery, reviews, services, dynamic blog articles) from the admin portal, generate ground-truth AI articles via Workers AI, and how those edits appear on the live site within seconds.
 
-> **Last Updated:** 2026-10-30 — Website Content rebuilt: one route for the six sections, versions for every section, the website's own reading of each, and the section pages in the console look (§1, §3.0, §5; [the spec](../specs/2026-10-30-content-studio.md)). 2026-10-17 — the KV TTL, the quality-gate count and the cf-astro call sites corrected (see §7). The 2026-08-03 entry ("Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via the `cf-chatbot` service binding") is when the feature set described here landed.  
+> **Last Updated:** 2026-10-30 — the Blog Studio rebuilt: article pairs and what each lacks, a calendar, visits and searches, and each article on a page of its own (§3.4). Earlier the same day, Website Content rebuilt: one route for the six sections, versions for every section, the website's own reading of each, and the section pages in the console look (§1, §3.0, §5; [the spec](../specs/2026-10-30-content-studio.md)). 2026-10-17 — the KV TTL, the quality-gate count and the cf-astro call sites corrected (see §7). The 2026-08-03 entry ("Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via the `cf-chatbot` service binding") is when the feature set described here landed.  
 > **Projects:** `cf-admin` (writes & AI authoring), `cf-astro` (edge SSR reads & AIO/GEO citation)
 
 ---
@@ -30,7 +30,7 @@ cf-admin is the headless CMS for the Madagascar Hotel public site (cf-astro). Al
 - **Bookings Database:** Supabase PostgreSQL
 - **Asset Storage:** Cloudflare R2 (`madagascar-images`, bound in cf-admin as `IMAGES`, served via `cdn.madagascarhotelags.com`)
 - **Caching & Propagation:** cf-astro's `ISR_CACHE` KV namespace, written **by cf-astro**, not by cf-admin — see below
-- **Interactivity:** Preact islands + an in-house rich editor (`src/components/admin/content/TiptapRichEditor.tsx` — Preact and `contenteditable`; despite its name the `@tiptap` packages are **not** a dependency and are not on the `RULESAd.md` §7.3 whitelist) + native HTML5 drag and drop
+- **Interactivity:** Preact islands; an article's text is written in an in-house editor (`src/components/dashboard/content/ArticleText.tsx`, Preact and `contenteditable`; since 2026-10-30 it replaces `TiptapRichEditor.tsx`, which, despite its name, used no `@tiptap` package either)
 
 ### How a publish reaches the edge
 
@@ -122,7 +122,7 @@ this person may open. The names below are the registry's since migration `0090`.
 | Questions | `/dashboard/content/faq` | The home page's questions and answers, in Spanish and English |
 | About figures | `/dashboard/content/about` | The four figures of "Why choose us" |
 | Media | `/dashboard/content/media` | R2 media library |
-| **Blog Studio** | `/dashboard/content/blog` | Dynamic D1 Blog Manager & Workers AI Copilot |
+| Blog | `/dashboard/content/blog` | The Blog Studio: the articles in both languages, the calendar, visits and searches, and each article (§3.4) |
 
 ### 3.0 The Overview and the six section pages (2026-10-30)
 
@@ -197,7 +197,7 @@ them until the hotel confirms them.
 
 ### 3.2 Spreading articles out, and taking them down (2026-10-29)
 
-**Spread out.** The Blog Studio's list has a **Spread out** button. It opens a dialog
+**Spread out.** The Blog Studio's Calendar has a **Spread out** button (in its list until 2026-10-30, §3.4). It opens a dialog
 (`BlogSpreadScheduleDialog.tsx`) where an editor picks drafts, articles in review or scheduled
 articles, a first day and a gap (3 to 6 days, 1 to 2 weeks, 2 to 3 weeks, 3 to 5 weeks, or any
 range from 1 to 90 days), and previews the dates. The server draws each gap at random within the
@@ -211,8 +211,9 @@ and running the quality gate on each article; a failing article needs `#bypass-q
 planner is `src/lib/blog/spread-schedule.ts`, the route `POST /api/content/blog/schedule`, tested
 in `test/blog-spread-schedule.test.ts`. Published and archived articles are never moved by it.
 
-**Taking an article down.** A scheduled article has an **Unschedule** button: it goes back to
-draft and will not go out. A published article's **Archive** answers 410 Gone on the website,
+**Taking an article down.** A scheduled article has **Back to a draft** in its editor's Publish
+part (called Unschedule in the list until 2026-10-30): it goes back to draft and will not go out.
+A published article's **Take it down** (Archive until then) answers 410 Gone on the website,
 leaves the blog list, the sitemaps, the feeds and `/llms.txt`, and is announced to IndexNow when that is switched on. Until
 2026-10-29 that did not hold for the fourteen articles first written as Markdown in cf-astro: the
 website served a bundled copy whenever D1 had no *published* row, so archiving or unpublishing
@@ -225,11 +226,11 @@ A suggested edit is a `blog_posts_history` row with `entry_type = 'ai_suggestion
 `status = 'pending'` (§4). Until 2026-10-29 the Studio showed one only right after **Suggest
 Edits** made it; a suggestion stored any other way could not be reached. Now:
 
-- **The list** shows "N suggested edits" under an article's status. `getPosts` counts the pending
-  suggestions of each post in the same query (`pending_suggestions`).
-- **The editor** asks `GET /api/content/blog/suggest?postId=` when an article opens and, when one
-  is waiting, shows "N suggested edits waiting" with **Review**, which opens the review dialog
-  (`BlogSuggestionModal.tsx`) for the newest one.
+- **The list** says "N suggested edits to review" on an article's card. `getPosts` counts the
+  pending suggestions of each post in the same query (`pending_suggestions`).
+- **The editor** asks `GET /api/content/blog/suggest?postId=` when an article opens; its
+  Suggestions part lists every waiting one with **Review**, which opens the review dialog
+  (`BlogSuggestionModal.tsx`).
 - **The review dialog** shows the body as the passages that change: each removed paragraph, list
   item, table row or heading struck through, the new one under it, and how many unchanged
   passages lie between (`src/lib/blog/text-diff.ts`, `diffPassages`). The full before and after
@@ -251,6 +252,110 @@ species: dogs in Col. Héroes, cats in Jardines del Sol), vaccines and deworming
 veterinary health check or an after-hours emergency line. Nothing changes on the website until
 someone accepts a suggestion. The record is
 2026-10-29-blog-fact-check (private).
+
+### 3.4 The Blog Studio (2026-10-30)
+
+The Blog page (`src/pages/dashboard/content/blog.astro`, its island
+`src/components/dashboard/content/Blog.tsx`) wears the console look of the other Content pages.
+It asks for the page key `/dashboard/content/blog` exactly before any HTML is made; until
+2026-10-30 it also asked for an admin role. One read, `GET /api/content/blog/studio`
+(`src/lib/blog/studio.ts`), answers every article without its text, in its pair, with what each
+pair still needs; the page then offers three views in a sideways row.
+
+**The figures at the top:** articles (and how many subjects are in both languages), live,
+scheduled (with the next date), pairs that need fixing (and how many articles have no cover),
+suggested edits waiting, and the writing assistant: *Working*, *Failed* or *Not used*, from its
+last recorded runs of `ai-generate-stream`, `ai-visibility` and `blog/suggest` in the activity log
+(`getRecentAiRuns`: when, which route and whether it worked, never who).
+
+**Articles.** One card per subject: the cover photo, or "No cover photo" in amber; each language
+with its title, its state and date and its word count, or **Write the Spanish/English version**
+for the language it lacks, which opens a new article already paired with it; then what the pair
+needs, the fixes first:
+
+| Need | When | Level |
+|---|---|---|
+| No cover photo; the cover is not described | always; *goes live without a cover photo* for a scheduled one | fix when live or scheduled, else improve |
+| A failing quality check (§3.1) | each blocking check the article fails, in the gate's words | fix when live or scheduled, else improve |
+| Suggested edits to review | a pending suggestion (§3.3) | review |
+| No short answers for AI search | no `direct_answers` | improve |
+| No version in the other language | a lone article, not taken down | improve |
+| Names a version that does not exist | its `translation_slug` names no article in the other language | fix |
+| Does not name the other version | a pair named from one side only; the website draws the language link only from the side that names the other | fix |
+
+Two articles are a pair when one names the other's address in the other language; an article is
+in one pair at most. Filters in one row: state (live, scheduled, drafts, taken down) and needs
+(something to fix, a cover photo, suggested edits, its other language), and a search by title,
+address or topic. Twenty cards at a time.
+
+**Calendar.** The month's live and scheduled articles on their day, in this browser's time, each
+opening its article; a month grid once the panel is wide enough and a list of the days that have
+articles on a phone. Beside it, the publishing job: how many articles went live in the last 24
+hours and, per language, in the last 30 days, against its limits (2 a day, 4 per language in 30
+days, counted as `countPublishedSince` counts them), the next article it puts live, and
+**Spread out** (§3.2), which now offers every article whatever the filters.
+
+**Visits and searches** (`GET /api/content/blog/reach?days=28|90|365`,
+`src/lib/blog/reach.ts`): each blog address's page views and the people behind them (PostHog,
+one HogQL question; only visitors who allowed cookies) and its showings, clicks and average
+position in Google's results (Search Console, two questions filtered to pages containing
+`/blog`), with the keys the Analytics page uses. An address with and without its slash is one
+article; the blog's list pages are counted apart; a tag page is left out. Figures: article
+views, list views, showings, clicks (and the share of showings), the average position weighted
+by showings, and live articles nobody visited. Then each article (ordered by reads, showings or
+clicks), the 25 searches that showed a blog page most, and the live articles with no visit. A
+source that is not set up or refuses is said in the page while the other's figures still show.
+Cloudflare's per-page request counts are left out: they count crawlers and bots with visitors,
+so they would claim readers the blog does not have.
+
+**An article** opens on a page of its own (`BlogEditor.tsx`); its id is in the address
+(`?article=`), so Back closes it and a link opens it. Its parts, in one row:
+
+- **Write:** the title (10 to 60 characters) and the text, set as the website sets it
+  (`ArticleText.tsx`): paragraph, heading, subheading, bold, italic, the two lists, quote, link
+  (an address starting `https://`, `/`, `mailto:` or `tel:`), undo and redo, and a photo, uploaded
+  (`blog-image`, into `blog/images/`) or chosen from Photos, which goes in only once it is
+  described. There is no first-level heading: the title is one. The word count is the quality
+  gate's (`wordCount` in `seo-gate.ts`).
+- **Details:** the language, the address (the saved form shown; a live article's new address
+  forwards from the old one), the author, the other language's version chosen from that
+  language's articles, with **Link it back** when that article does not name this one, and the
+  topics (at most 8, each with its page on the website).
+- **Search and answers:** the description (70 to 160), how it may look in Google, the advisory
+  checks, and up to six short answers, which **Draft them with the assistant** fills
+  (`ai-visibility`) for a person to read and change before saving.
+- **Cover:** upload, Choose from Photos, take it off, and what the photo shows.
+- **Publish** (with the count of needed checks that pass): the date in this browser's time and
+  the actions the article's state allows: save as a draft, schedule (a later date), publish now;
+  for a scheduled one save, back to a draft, publish now; for a live one save the change and take
+  it down (asked first); for a taken-down one publish it again; delete only for an article that
+  was never live (asked first). For a live or taken-down article, **Check the page** asks the
+  website for it now (`edge-verify`), and offers to refresh the website's copy when the answer is
+  wrong for its state.
+- **Versions:** every earlier save, by date and by whom ("By you", "By the publishing job",
+  "By someone else", never another person's address), each one put back in the editor without
+  saving.
+- **Suggestions:** the waiting suggested edits and **Ask for suggestions** (§3.3).
+
+A bar at the foot offers Save while there are unsaved changes; leaving, by a link or by Back,
+asks first through the portal's dialog. **A save is made against the copy the editor opened:**
+`POST /api/content/blog` takes `base`, the article's `updated_at` as it was read, and answers 409
+`STALE` when the article has changed since (another person, an accepted suggestion, the
+publishing job), and the editor offers to load the saved version. A save answers the new
+`updatedAt`. The check runs just before the write, not inside it.
+
+**Who may do what.** The Studio's two reads, the writing assistant's routes (`ai-generate-stream`,
+`ai-prompt`, `ai-visibility`) and `edge-verify` are mapped to the Blog page in the middleware
+since 2026-10-30, as `/api/content/blog` already was; until then they sat on the Overview's key,
+so a person with the Blog page but not the Overview was refused. The three powers below the
+page, `#bypass-quality-audit`, `#edit-ai-prompts` and `#review-suggestions` (§3.1, §3.3, §4),
+decide what the page offers, and each route checks its own.
+
+**The blog on 2026-10-30** (Cloudflare D1 connector, counts only): 23 articles, 15 live (8
+English, 7 Spanish) and 8 scheduled (4 each), none with a cover photo; 22 name their other
+version and are named back, and one live English article names a Spanish version that does not
+exist (MAINTENANCE BL-5). The activity log, which keeps rows from 2026-09-20 on, holds no run of
+the writing assistant. So the Studio opens with every subject marked to fix, for its cover.
 
 
 ---
@@ -292,7 +397,7 @@ measured. The score now comes from `evaluateSeoGate()`
 absent for the same reason — the model has no cover image to describe.*
 
 ### 3. 1-Click Form Population
-Clicking **"Apply to Editor"** populates the returned fields into `BlogManager.tsx`. The slug of an already published post is kept, so Apply never moves a live URL.
+Clicking **"Apply to Editor"** puts the returned fields into the article editor (`BlogEditor.tsx`, `withWritten`): a new article from the Studio's **Write with the assistant**, or the open one from its Write part. The slug of an already published post is kept, so Apply never moves a live URL, and the editor says to read it against the hotel's facts and add a cover before saving. Nothing is saved until Save.
 
 ### 4. AI JSON in a body, and answer checks (2026-10-10)
 
@@ -310,19 +415,20 @@ Direct answers from the writer, from the visibility audit and on every save pass
 - The timeout scales with the requested tokens (60–180 s, `timeoutForTokens`) and is not retried: a timed-out call is still billed. An unmet JSON schema is not retried either.
 - A failed generation is charged to the day's neuron budget: the full estimate for a timeout, the real usage for an unparseable answer. `AI_NEURON_RESERVE` is 1,900, the cost of the longest article on Llama 3.3 70B.
 - A body suggestion is refused for an article over 12,000 characters, and its answer budget grows with the body, so a rewrite can no longer come back truncated.
-- The Studio's date picker shows local time and stores UTC; the Author field is saved on edit, and a translation slug with no published partner shows a warning.
+- The Studio's date picker shows local time and stores UTC; the Author field is saved on edit. Since 2026-10-30 the other language's version is chosen from a list of that language's articles, never typed (§3.4).
 
 ---
 
 ## 5. Storage & CDN Flow
 
 - **CDN URL:** `https://cdn.madagascarhotelags.com` (R2 Custom Domain)
-- **Key strategy:** UUID-based R2 keys per upload (`hero/hero-{uuid}.{ext}`, `gallery/{uuid}.{ext}`, `blog/covers/blog-{uuid}.{ext}`), the extension taken from the upload's MIME type (`src/lib/cms/storage.ts`)
+- **Key strategy:** UUID-based R2 keys per upload (`hero/hero-{uuid}.{ext}`, `gallery/{uuid}.{ext}`, `blog/covers/blog-{uuid}.{ext}`, and since 2026-10-30 `blog/images/blog-{uuid}.{ext}` for a photo in an article's text), the extension taken from the upload's MIME type (`src/lib/cms/storage.ts`)
 - **Cache-Control:** `public, max-age=31536000`
 - **An upload saves nothing (2026-10-30).** `POST /api/media/upload` stores the photo and answers
   its address; the section, or the article, saves it. Until then a banner upload replaced the live
   banner at once, with no version kept. The route asks for the key of the page the photo is for
-  (`hero_image`: the Home banner, `temp_gallery_upload`: the Gallery, `blog-cover`: the Blog), and
+  (`hero_image`: the Home banner, `temp_gallery_upload`: the Gallery, `blog-cover` and, since
+  2026-10-30, `blog-image`: the Blog), and
   the middleware maps it to `/dashboard`, so a person with only the Home banner can upload one.
 - **The Sunday clean-up** (`src/workers/scheduled-asset-cleanup.ts`) deletes an upload nothing
   names any more. What names one: `cms_content` and its versions in `cms_content_history`, blog
@@ -364,6 +470,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §3.4 and the Blog Studio sentences of §1, §3, §3.2, §3.3, §4.3, §4.5 and §5 against `src/lib/blog/studio.ts`, `reach.ts`, `src/pages/api/content/blog/studio.ts`, `reach.ts`, `src/pages/api/content/blog.ts` (`base`), `src/components/dashboard/content/Blog.tsx`, `BlogEditor.tsx`, `ArticleText.tsx`, `API_PAGE_MAPPING` and `src/pages/api/media/upload.ts`, with `test/content-blog-studio.test.ts`; the live `blog_posts` counts and `admin_audit_log`'s `ai_inference` rows (Cloudflare D1 connector, counts and routes only) | The pages on a phone (the owner's test); a live PostHog or Search Console answer for the blog (no call made from this session); a live run of the writing assistant |
 | 2026-10-30 | §5's clean-up sentence, Media and Choose from Photos against `src/lib/content/photos.ts`, `src/pages/api/media/library.ts`, `src/components/dashboard/content/Photos.tsx`, `editors.tsx` and `src/workers/scheduled-asset-cleanup.ts`; `test/content-photos.test.ts` passes | The live bucket's photos (no R2 object listing through the connector) |
 | 2026-10-30 | §1's section table, §3, §3.0 and §5 against `src/lib/content/{sections,studio,overview}.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, `src/lib/cms/storage.ts`, `src/lib/cms-status.ts` and `src/workers/scheduled-asset-cleanup.ts`, with `test/content-studio.test.ts`; in the cf-astro sibling, the readers named in §1, its two sitemaps and `/api/cms-status`; the live `cms_content` rows and `admin_pages` content rows (Cloudflare D1 connector) | The pages on a phone (the owner's test); §2, §3.1 to §3.3 and §4 were not re-checked |
 | 2026-10-29 | §3.3 against `src/lib/blog/text-diff.ts`, `BlogSuggestionModal.tsx`, `BlogManager.tsx` and `BlogRepository.getPosts` with `test/blog-text-diff.test.ts`; the 15 pending fact-check rows in live `blog_posts_history` (Cloudflare D1 connector: one per published post, each `base_updated_at` equal to its post's `updated_at`, valid JSON) | The dialog on a phone (the owner's test) |
