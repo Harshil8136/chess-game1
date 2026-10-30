@@ -193,9 +193,9 @@ record.
 
 | Stage | Repository | What | Before it |
 |---|---|---|---|
-| 1a | cf-astro | Reviews in both languages, gallery `alt_en` | none |
-| 1b | cf-admin | The sections, the route, the Overview and six section pages, `0090` | 1a live; `0090` applied first |
-| 2 | cf-admin | Photos: every folder, where used, safe delete, pick from the library | 1b |
+| 1a | cf-astro | Reviews in both languages, gallery `alt_en` (shipped 2026-10-30, `acb81d9`) | none |
+| 1b | cf-admin | The sections, the route, the Overview and six section pages, `0090` (shipped 2026-10-30, `2b2c489`) | 1a live; `0090` applied first |
+| 2 | cf-admin | Photos: every folder, where used, safe delete, pick from the library (shipped 2026-10-30, its record (private)) | 1b |
 | 3 | cf-admin | The Blog Studio (its writing-assistant routes are still mapped to the Overview's key; the editor's inline photo upload sends a slot the upload route refuses) | 1b |
 | 4 | cf-astro | The blog's pages | 3 |
 

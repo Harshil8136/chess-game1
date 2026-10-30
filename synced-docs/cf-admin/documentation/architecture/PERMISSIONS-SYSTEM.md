@@ -516,8 +516,9 @@ sections is its own page key, checked exactly: `denyContent(user, section?)` in
 `/gallery`, `/services`, `/reviews`, `/faq`, `/about`), or for `/dashboard/content` for the
 Overview, on the pages and on `GET`/`POST /api/content/sections/[id]` and
 `GET /api/content/overview`. Both routes are mapped to `/dashboard` in `API_PAGE_MAPPING`, so a
-section does not need the Overview, and `POST /api/media/upload` is mapped to `/dashboard` too and
-asks for the key of the page the photo is for. `contentCan` tells the Overview which sections and
+section does not need the Overview, and `POST /api/media/upload` and `/api/media/library` are
+mapped to `/dashboard` too: each asks for the key of the page the photo is for (the library, with
+`?for=`, for "Choose from Photos"), or the Media page's (`/dashboard/content/media`). `contentCan` tells the Overview which sections and
 whether the blog figures to show. Until 2026-10-30 the section routes checked the Overview's key
 (a person kept from one section could change it while holding the Overview) and the upload route
 a key no page registers. `0090` renamed four of the pages (Prices, Reviews, Questions, About
@@ -1464,6 +1465,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-30 | claude | **Scope-limited to the Website Content paragraph's photos sentence.** Read `src/pages/api/media/library.ts` and `API_PAGE_MAPPING`; `test/content-photos.test.ts` passes. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Website Content paragraph.** Read `surface-guards.ts` (`denyContent`, `contentCan`), `API_PAGE_MAPPING` in `src/lib/auth/routes.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, the two pages and `migrations/0090_content_studio.sql`; `test/content-studio.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-29 | claude | **Scope-limited to the Sentry Threats and notes paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts` (GET `threats`, POST `note`) and `migrations/0089_sentry_threats.sql`; read the live rows back through the D1 connector after `0089`; `test/sentry-threats.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-28 | claude | **Scope-limited to the Sentry stage 3 paragraph.** Read `surface-guards.ts` (`SENTRY_PARTS`, `denySentry`, `sentryCan`), `src/pages/api/sentry/[part].ts` and `migrations/0086_sentry_releases.sql`; read the live row back through the D1 connector after `0086`; `test/sentry-stage3.test.ts` passes | The rest of the document; `last_verified` left as it was |

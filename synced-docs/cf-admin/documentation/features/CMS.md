@@ -331,7 +331,24 @@ Direct answers from the writer, from the visibility audit and on every save pass
   upload older than a week (one may be waiting to be saved), and a failed read of any of those
   tables deletes nothing that run. Until 2026-10-30 it read `cms_content` alone, so a blog cover
   was deleted the Sunday after it was uploaded, and an earlier version's photos before anyone
-  could restore them.
+  could restore them. What "names" means is one function, `photoUsesOf` in
+  `src/lib/content/photos.ts`, which the Media page reads too.
+- **Media (`/dashboard/content/media`, rebuilt 2026-10-30).** Every photo in the portal's three
+  folders, newest first, each with where it is used: a section ("Home banner"), an earlier
+  version of one, an article's cover or text (its title, language and state), or an earlier
+  version of an article. Figures: how many, how much space, how many in use, only in earlier
+  versions, and not used, with the date the Sunday clean-up (02:00 UTC) removes an unused one,
+  or that the clean-up is switched off on the Jobs page. Options in one row: folder, use, order.
+  Copy address on every photo. Delete is the Owner's and vendor support's: a photo in use cannot
+  be deleted (the route answers 409 and names where), one only earlier versions use is deleted
+  only once that is confirmed, and each delete is in the audit log by its key and size. Until
+  2026-10-30 the page listed the banner and gallery folders only and deleted with no check and no
+  record.
+- **Choose from Photos (2026-10-30).** The Home banner and the Gallery each have a "Choose from
+  Photos" window beside the upload button: the same photos, read with the section's own key
+  (`GET /api/media/library?for=hero|gallery`, without where each is used), so a photo uploaded
+  once can be used again without uploading it twice. The Gallery leaves out the photos it
+  already holds and takes at most the room left of its 24.
 
 ---
 
@@ -347,6 +364,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §5's clean-up sentence, Media and Choose from Photos against `src/lib/content/photos.ts`, `src/pages/api/media/library.ts`, `src/components/dashboard/content/Photos.tsx`, `editors.tsx` and `src/workers/scheduled-asset-cleanup.ts`; `test/content-photos.test.ts` passes | The live bucket's photos (no R2 object listing through the connector) |
 | 2026-10-30 | §1's section table, §3, §3.0 and §5 against `src/lib/content/{sections,studio,overview}.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, `src/lib/cms/storage.ts`, `src/lib/cms-status.ts` and `src/workers/scheduled-asset-cleanup.ts`, with `test/content-studio.test.ts`; in the cf-astro sibling, the readers named in §1, its two sitemaps and `/api/cms-status`; the live `cms_content` rows and `admin_pages` content rows (Cloudflare D1 connector) | The pages on a phone (the owner's test); §2, §3.1 to §3.3 and §4 were not re-checked |
 | 2026-10-29 | §3.3 against `src/lib/blog/text-diff.ts`, `BlogSuggestionModal.tsx`, `BlogManager.tsx` and `BlogRepository.getPosts` with `test/blog-text-diff.test.ts`; the 15 pending fact-check rows in live `blog_posts_history` (Cloudflare D1 connector: one per published post, each `base_updated_at` equal to its post's `updated_at`, valid JSON) | The dialog on a phone (the owner's test) |
 | 2026-10-29 | §3.2 against `src/lib/blog/spread-schedule.ts`, `src/pages/api/content/blog/schedule.ts`, `BlogSpreadScheduleDialog.tsx` and `BlogManager.tsx` with `test/blog-spread-schedule.test.ts`; the live `blog_posts` rows (Cloudflare D1 connector: 15 published, all 14 bundled cf-astro slugs present in D1) | The rest of the page; the dialog on a phone (the owner's test) |
