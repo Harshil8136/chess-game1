@@ -324,7 +324,9 @@ so they would claim readers the blog does not have.
 - **Search and answers:** the description (70 to 160), how it may look in Google, the advisory
   checks, and up to six short answers, which **Draft them with the assistant** fills
   (`ai-visibility`) for a person to read and change before saving.
-- **Cover:** upload, Choose from Photos, take it off, and what the photo shows.
+- **Cover:** upload, Choose from Photos, take it off, and what the photo shows. Without one the
+  website draws a cover from the article's topic and title (cf-astro `WordCover.astro`, since
+  2026-10-30); the photo replaces it.
 - **Publish** (with the count of needed checks that pass): the date in this browser's time and
   the actions the article's state allows: save as a draft, schedule (a later date), publish now;
   for a scheduled one save, back to a draft, publish now; for a live one save the change and take
@@ -470,6 +472,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §3.4's Cover sentence against `cf-astro/src/components/blog/WordCover.astro` (`2376e62`) | The rest |
 | 2026-10-30 | §3.4 and the Blog Studio sentences of §1, §3, §3.2, §3.3, §4.3, §4.5 and §5 against `src/lib/blog/studio.ts`, `reach.ts`, `src/pages/api/content/blog/studio.ts`, `reach.ts`, `src/pages/api/content/blog.ts` (`base`), `src/components/dashboard/content/Blog.tsx`, `BlogEditor.tsx`, `ArticleText.tsx`, `API_PAGE_MAPPING` and `src/pages/api/media/upload.ts`, with `test/content-blog-studio.test.ts`; the live `blog_posts` counts and `admin_audit_log`'s `ai_inference` rows (Cloudflare D1 connector, counts and routes only) | The pages on a phone (the owner's test); a live PostHog or Search Console answer for the blog (no call made from this session); a live run of the writing assistant |
 | 2026-10-30 | §5's clean-up sentence, Media and Choose from Photos against `src/lib/content/photos.ts`, `src/pages/api/media/library.ts`, `src/components/dashboard/content/Photos.tsx`, `editors.tsx` and `src/workers/scheduled-asset-cleanup.ts`; `test/content-photos.test.ts` passes | The live bucket's photos (no R2 object listing through the connector) |
 | 2026-10-30 | §1's section table, §3, §3.0 and §5 against `src/lib/content/{sections,studio,overview}.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, `src/lib/cms/storage.ts`, `src/lib/cms-status.ts` and `src/workers/scheduled-asset-cleanup.ts`, with `test/content-studio.test.ts`; in the cf-astro sibling, the readers named in §1, its two sitemaps and `/api/cms-status`; the live `cms_content` rows and `admin_pages` content rows (Cloudflare D1 connector) | The pages on a phone (the owner's test); §2, §3.1 to §3.3 and §4 were not re-checked |

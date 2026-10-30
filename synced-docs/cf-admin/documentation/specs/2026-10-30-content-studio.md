@@ -204,6 +204,6 @@ record.
 | 1b | cf-admin | The sections, the route, the Overview and six section pages, `0090` (shipped 2026-10-30, `2b2c489`) | 1a live; `0090` applied first |
 | 2 | cf-admin | Photos: every folder, where used, safe delete, pick from the library (shipped 2026-10-30, its record (private)) | 1b |
 | 3 | cf-admin | The Blog Studio: pairs and what each needs, the calendar with the publishing limits, visits and searches, the editor on a page of its own; the writing-assistant routes on the Blog Studio's key and the inline photo upload's own slot (shipped 2026-10-30, its record (private)) | 1b |
-| 4 | cf-astro | The blog's pages | 3 |
+| 4 | cf-astro | The blog's pages: answers first, In this article, the booking box at the website's prices, share links, the topics row, the newest article first, covers drawn from the title, the hotel as the author (shipped 2026-10-30, cf-astro `2376e62`, its record `cf-astro/Documentation/records/2026-10-30-blog-pages-remade.md`); the Markdown copies (CS-5) wait on the fact-check decisions | 3 |
 
 A stage that fails its checks does not ship; the pages before it keep working.
