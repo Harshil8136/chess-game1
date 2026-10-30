@@ -140,7 +140,11 @@ and condenses them (`summaryView`).
 - **Each source is read side by side**, and a failure costs only its own cards: the reader's
   error becomes a sentence (`SourceError`), and the part still answers with whatever else was
   read. A missing key or refused permission is marked as a setup step, so the page can say what
-  to give the key.
+  to give the key. So is Cloudflare's answer that the site's plan does not include a dataset or
+  field ("does not have access to the path"): the card says "This site's Cloudflare plan does not
+  include these figures", it is never asked again, and the log line is information naming the
+  refused path (2026-10-30, `PLAN_REFUSAL` in `sources.ts`; first seen on the Sentry page's
+  Threats, MAINTENANCE (private) SE-11).
 - **Asked again when a source does not answer.** PostHog's question is asked a second and last
   time 2.5 seconds after no answer, a 429 or a 5xx, never after a refusal (`hogql`,
   `RETRY_AFTER_MS`). The page itself, when a part comes back with a source that failed for a
@@ -242,3 +246,4 @@ Visitors, and the place split on Google search.
 | 2026-10-26 | Round 2 against the code: §1's Visitors, Booking journey, Google search, Website traffic, Email and Reliability rows, §2's retry, cache key and subrequests, §3's keys after `0078`, §4's account and Sentry rows. Live: `$pageleave` with the page, scroll and time properties and `$autocapture` link taps exist in the last 30 days (124 and 80, PostHog connector); `email_audit_logs` rows carry `delivery_events` arrays of `event`, `timestamp` and `reason` only, with `delivered`, `unique_opened`, `unique_proxy_open` and bounce events (Supabase connector); the `health-state` row and its `worker_errors` check passing every day since 2026-10-17 (D1 connector); `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass (56) | The `date` dimension and CPU quantiles of `workersInvocationsAdaptive`, Sentry's daily error counts over 14, 60 and 90 days, and `httpRequests1dGroups`' newer fields with the portal's keys (MAINTENANCE AN-4 to AN-6); the page in a phone browser |
 | 2026-10-28 | The Speed and experience row of §1, the introduction and §5 against `Experience.tsx`, `experience.ts`, `AnalyticsBlocks.tsx` and `analytics.css`; the page paths of PostHog's speed readings and PageSpeed's runs end in a slash in both sources, and one page had four readings with a p75 of 162.6 s (PostHog and D1 connectors); `test/analytics-experience.test.ts` and `test/experience-look.test.ts` pass | Every other part and section; the board in a phone browser |
 | 2026-10-29 | The Visitors and Google search rows of §1, the reach paragraph and §5 against `queries.ts`, `parts.ts` and `names.ts`; the area and AI-assistant questions run against the live project with the figures quoted (PostHog connector); `test/analytics-reach.test.ts`, `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass | The search split against the portal's Search Console answer (it cannot be called from here); the cards in a phone browser |
+| 2026-10-30 | §2's setup steps against `cloudflareViewer` in `src/lib/analytics/report/sources.ts` and `test/analytics-round2.test.ts` (Cloudflare's plan refusal, and any other refusal still retried) | Whether any of this page's own Cloudflare questions meets the plan refusal (none was seen in the portal's log lines back to 2026-10-26); `last_verified` left as it was |

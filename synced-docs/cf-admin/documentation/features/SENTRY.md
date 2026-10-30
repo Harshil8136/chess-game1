@@ -478,7 +478,8 @@ the last 24 hours, 7 days (the default) or 30 days:
 - **Six figures:** scanner requests Cloudflare saw, those answered with a page (it should be none),
   those Cloudflare stopped, those that reached our code (Sentry timed them), browser security
   reports, and errors Sentry set aside. One that could not be read keeps its place with a dash
-  and why.
+  and why: "could not be read", or "not available to the portal" when a token lacks a permission
+  or the site's Cloudflare plan does not include the figures.
 - **What scanners asked for** (Cloudflare's HTTP request records, `httpRequestsAdaptiveGroups`):
   each kind with its count (secret and settings files; debug and admin tools; PHP, WordPress and
   other platforms; path tricks), then the 25 addresses asked most, each with its kind, the site
@@ -494,7 +495,12 @@ the last 24 hours, 7 days (the default) or 30 days:
   Fight Mode, its managed rules, our own rules, the security level, rate limiting and the others,
   in words; one Cloudflare adds later shows as it names it), the addresses it stopped most, each
   day and from where. Nothing here is changed: blocking a kind of request at the edge is a
-  Cloudflare rule, the owner's call.
+  Cloudflare rule, the owner's call. On the site's plan (free) Cloudflare refuses both of these
+  questions ("does not have access to the path", seen on every look on 2026-10-29), so the two
+  panels say "This site's Cloudflare plan does not include these figures." The portal reads that
+  answer as a plan limit for any Cloudflare question (`src/lib/analytics/report/sources.ts`):
+  never retried, kept as long as a good answer, and logged as information with the refused path
+  (MAINTENANCE SE-11).
 - **What reached our code** (Sentry's timed requests, `events/?dataset=spans` with `is_transaction:true
   span.op:http.server` and the names matching 23 wildcards, `PROBE_WILDCARDS`): each with its
   project, its count and its typical time, which says "not timed" for Sentry's 0 ms (§7). The
@@ -655,7 +661,8 @@ to be one); the part's words and figures; Sentry's own views, its priority, kind
 tags asked without `user` and masked; the thread in words without who acted; the note's bounds;
 Speed's "not timed" and its scanners marked; the Threats key; and the route with a fetch stub (403
 before any question, every source read with no IP asked and only `GET`s to Sentry, an unknown
-period falling back, Cloudflare not connected said, a note sent once, its length audited without
+period falling back, Cloudflare not connected said, the site's plan leaving out Security Events
+said on their panels and figure while the scanners still show (2026-10-30), a note sent once, its length audited without
 its words, refused without `#triage`, and never sent twice when Sentry fails).
 `test/action-keys-enforced.test.ts` checks that
 `#triage`, `#refresh`, `#details`, `#sampling` and `#provider-write` are enforced.
@@ -664,6 +671,7 @@ its words, refused without `#triage`, and never sent twice when Sentry fails).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §11's figures and "What Cloudflare stopped" against `sources.ts`, `Threats.tsx` and `test/sentry-threats.test.ts`. Live through the Sentry connector: the portal's log lines "Cloudflare GraphQL refused a question" ("zone … does not have access to the path"), two in each of five looks between 20:44 and 20:49 UTC on 2026-10-29, the first hour after Threats shipped, and no other such line among the platform's log lines back to 2026-10-26 16:49 UTC (the 50 most recent). Which two is inferred, not read: the four questions run three at a time, the two refusals came one Cloudflare round trip apart, as the Security Events pair would, and Cloudflare's docs list `firewallEventsAdaptive` from Pro up and give the free plan's Security Events "sampled logs only" | The refused path itself (the old log line did not carry it; the new one does); the part in a phone browser; `last_verified` left as it was |
 | 2026-10-29 | The TL;DR, the intro, §1, §2, §4, §7, the new §11 (Threats), §12, §14 and §15 against the files in `related_code`; the sections after §10 renumbered (the old §11 to §14 are now §12 to §15, so the rows below name the old numbers). Live through the Sentry connector (counts and names of requests only, no text of an error, no user value): Sentry's search accepting `is:unresolved issue.priority:[high,medium]`, `is:for_review`, `is:escalating`, `is:regressed` and `is:new`; the spans search with the wildcards joined by `OR`, answering scanners' requests on cf-admin (the old website's traffic: `/.env`, `/.env.local`, `/.git/HEAD` and others, most at 0 ms) and cf-astro (`GET /_profiler/phpinfo`, 40 in 30 days); `event.type:csp` by `effective-directive` (110 `script-src-elem` reports on cf-admin in 30 days); `stats_v2` filtered by reason (`invalid-csp` and `web-crawlers` in 30 days). The `admin_pages` rows of the Sentry page read before `0089`, and `0089` applied and read back (D1 connector); `test/sentry-threats.test.ts` passes | Cloudflare's two datasets with the portal's token (no Cloudflare token in this session; Cloudflare's docs disagree on whether Security Events answer on the Free plan, MAINTENANCE SE-11); Sentry's tags, activities and comments calls against a live answer (their shapes from Sentry's API, SE-12); the part and the note in a phone browser; `last_verified` left as it was |
 | 2026-10-29 | The intro, §3, §4 and §14 for the console look and the counts, against `frame.tsx`, every part, `sentry.css`, both `.astro` pages, `issues.ts`, `overview.ts`, `trends.ts` and `NavIcon.tsx`; Sentry's issue search leaving out the seen stats when `stats` is collapsed, from Sentry's own serializer code; the `admin_pages` rows holding `bug` and `terminal` read through the D1 connector, and `0087` applied and read back; `test/sentry-console.test.ts` and `test/sentry-console-look.test.ts` pass | The page in a phone browser; the counts against a live answer from Sentry (the portal's token is not this session's); the rest of the document; `last_verified` left as it was |
 | 2026-10-28 | The intro, §6's "What the portal sends" and §14 for the portal's own settings, against `src/lib/sentry-config.ts`, `src/workers/cf-entry.ts`, `sentry.client.config.ts`, the five page shells and `Settings.tsx`; `@sentry/cloudflare` 10.73.0's own code (`withSentry` makes the options from the callback on each invocation); the three rows read live through the D1 connector, and `sentry.cf_admin.traces` set from 0.3 to 0.1 with its history row (20:50 UTC) and read back; `test/sentry-config.test.ts` passes | The settings changed from the phone and seen in Sentry; the rest of the document |
