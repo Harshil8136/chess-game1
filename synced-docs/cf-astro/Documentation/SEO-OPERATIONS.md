@@ -205,12 +205,21 @@ source the visible carousel uses (`src/lib/testimonials.ts`: KV/D1 CMS
 `happy_clients` block, falling back to the i18n `Testimonials.items`). The
 markup therefore always matches the on-page content automatically.
 
+Since 2026-10-30 cf-admin stores each review in both languages (`text: { es, en }`) with the
+service it was about (`service`: dogs, cats or daycare), and `localizeTestimonial` shows the
+visitor's language, the other one when only one was written, and the website's own label for the
+service ("Hotel Canino" / "Dog Hotel"). A review stored the old way (`text` as one string) is
+shown as it was. cf-admin's migration `0090` (2026-10-30) copies the eight fallback reviews into
+the block in this shape, so that from then on the block, not the i18n lists, is what visitors see;
+`test/cms-bilingual.test.ts` proves each renders with the same words. The gallery's photos carry `alt_en` beside `alt` the
+same way (`galleryImageFor` in `src/lib/images.ts`).
+
 The monthly job is now purely editorial — keep the CMS mirroring the live
 Google Business Profile:
 
-1. Open the GBP listing; compare its reviews with the `happy_clients` block
-   in cf-admin (and the i18n fallback lists in
-   `src/i18n/translations/{es,en}.json`).
+1. Open the GBP listing; compare its reviews with cf-admin's Reviews section (the
+   `happy_clients` block; the i18n fallback lists in `src/i18n/translations/{es,en}.json` are
+   shown only while D1 cannot be read).
 2. If a review was deleted on Google, remove it from the CMS/fallback; add
    recent real GBP reviews (name + text + rating exactly as published).
 3. Never seed a review that doesn't exist on GBP — fabricated review markup
