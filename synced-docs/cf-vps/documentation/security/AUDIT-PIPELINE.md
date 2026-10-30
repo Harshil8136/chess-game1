@@ -122,7 +122,9 @@ R2 refuses with a passing server error (`InternalError`, `ServiceUnavailable`, `
 that never answers, is tried once more 3 seconds later before it counts as a problem
 (`heartbeat_list_retryable`, 2026-10-23). It reads yesterday's canaries, just after midnight,
 only when R2 answered today's listing; a refused or unanswered listing is reported as that, not
-as a stale canary (`heartbeat_list_answered`, 2026-10-23). It reports to a
+as a stale canary (`heartbeat_list_answered`, 2026-10-23). Only a whole listing counts as an
+answer: one that curl's 20-second limit cut short is tried once more and otherwise reported the
+same way, and its dates are never read (2026-10-30). It reports to a
 Sentry cron monitor, and sends a Sentry event only when the set of problems changes, with a
 reminder every 6 hours while it lasts.
 
