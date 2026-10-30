@@ -82,5 +82,7 @@ The first run:
 4. Home shows a card per module; the row at the top opens each page.
 
 The local data is kept in `.wrangler/` in this folder: stop the server and delete that folder to
-start again. The five-minute tick does not run under `wrangler dev`, so System health says no
-check has run yet.
+start again. wrangler never runs the five-minute tick by itself, so `npm run dev` runs it every
+minute through wrangler's test route (`--test-scheduled`, `/__scheduled`; since 2026-10-30): email
+held until a provider sends, Send later, campaigns and the other jobs go on this computer too, each
+at its own pace.

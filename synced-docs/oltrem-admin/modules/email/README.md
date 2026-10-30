@@ -51,7 +51,7 @@ template reads the two settings below.
 
 | Name | Layer, editor | What it is |
 |---|---|---|
-| `email.from_address` | system, an Owner; empty by default | the address the portal's messages come from, one the active provider may send from; a message composed while it is empty fails as `from: not an email address` and is never sent |
+| `email.from_address` | system, an Owner; empty by default | the address the portal's messages come from, one the active provider may send from; while it is empty they come from the company's sender address for everyday mail (Email, Addresses; since 2026-10-30), and with neither a message fails as `from: there is no address to send from yet` and is never sent |
 | `email.from_name` | system, an Owner; empty by default | the name they come from; the client template uses the client's name while it is empty |
 
 The client file sets both at onboarding (`settings` in `oltrem.config.ts`); an Owner may change
@@ -230,7 +230,8 @@ download one.
 | `GET /written/:id` | `email.senders.use` | One email the person wrote, with its `delivery` |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
-| `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the signed-in person's own address, before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
+| `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Providers page calls it when a provider is made the one that sends |
+| `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
 | `POST /domains` | `email.senders.manage` | Add a domain (`domain`, `instanceId`), through the provider where it can, and check it |
