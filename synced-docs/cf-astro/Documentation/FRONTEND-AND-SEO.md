@@ -130,7 +130,7 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 
 **A post taken down in cf-admin stays down (since 2026-10-29).** The fourteen bundled Markdown posts in `src/content/blog/` are all in D1 too. A bundled copy now stands in only for a slug D1 has never had (no row in `blog_posts` in any status, no old slug in `blog_redirects`), or while D1 cannot be asked (`getD1KnownSlugs`, `src/lib/blog.ts`). So a post archived in cf-admin answers 410, one moved answers 301, one back to draft, in review or scheduled answers 404, and none of them is listed on the blog index, a tag page, a sitemap, an RSS feed or `/llms.txt` from its bundled copy. Before, the copy was served whenever D1 had no _published_ row, so archiving one of the fourteen changed nothing a visitor or a crawler saw (`test/blog-takedown.test.ts`).
 
-**BlogPosting entities (since 2026-10-10).** A byline that names the business resolves to the `#organization` node with the home page's name; any other byline is a `Person`. `publisher` carries the name and logo on the post itself (`src/lib/blog-schema.ts`).
+**BlogPosting entities (since 2026-10-10).** A byline that names the business resolves to the `#organization` node with the home page's name; any other byline is a `Person`. `publisher` carries the name and logo on the post itself (`src/lib/blog-schema.ts`). Since 2026-10-30 "Hotel Madagascar", the byline of 15 of the 23 articles, is one of the business names (it was marked up as a `Person`), and the page shows the hotel's logo and name for such a byline (`isBusinessByline`).
 
 **Feed cache (since 2026-10-04).** The three sitemaps and the two RSS feeds (`/es/rss.xml`, `/en/rss.xml`) are kept in KV `ISR_CACHE` under `feed:<path>#<build>` for 6 hours (`src/lib/feed-cache.ts`; the response carries `X-Feed-Cache: HIT` or `MISS`). A miss reads only the post columns the feed prints, not whole post bodies. A render that fell back to the bundled posts because D1 failed is served but never stored, and every revalidation from cf-admin clears the `feed:` entries, so a publish shows up on the next crawl. `/llms-full.txt` is a static file in `public/`. `/llms.txt` is served the same way as the sitemaps since 2026-10-29 (below).
 
@@ -144,7 +144,7 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
 
 - **AI Crawler Allowances**: `robots.txt.ts` explicitly grants crawling permissions to AI agent engines (such as GPTBot, ClaudeBot, Applebot-Extended, and PerplexityBot).
 - **`llms.txt` & `llms-full.txt`**: Plaintext summaries that provide concise system context, services, pricing grids, and legal information specifically designed for LLMs to scrape. `llms-full.txt` is static in `public/`. `/llms.txt` (since 2026-10-29) is the hand-written `src/data/llms.txt` plus every published article of both locales, in two sections just above "## Optional" (`src/pages/llms.txt.ts`, `src/lib/llms-txt.ts`, the same post list as the RSS feeds). It shares the feed cache: `feed:/llms.txt#<build>` for up to 6 hours, cleared on every publish, never kept when D1 could not be asked. Edit the summary in `src/data/llms.txt`; a copy in `public/` would shadow the route.
-- **Quick answers on a post** (`components/blog/AioDirectAnswers.astro`): a cf-admin post's `aio_data.direct_answers` render as a light "Quick answers" / "Preguntas frecuentes" section after the article, an `<h2>` with one `<h3>` per question, targeted by the BlogPosting `speakable` selector `.article-direct-answers`. An answer that only repeats the post's meta description is not shown (`parseBlogPostRow`, `src/lib/blog.ts`). Restyled 2026-10-10 from a dark purple panel.
+- **Quick answers on a post** (`components/blog/AioDirectAnswers.astro`): a cf-admin post's `aio_data.direct_answers` render as a light "Quick answers" / "Preguntas frecuentes" section at the top of the article since 2026-10-30 (after it before), an `<h2>` with one `<h3>` per question, targeted by the BlogPosting `speakable` selector `.article-direct-answers`. An answer that only repeats the post's meta description is not shown (`parseBlogPostRow`, `src/lib/blog.ts`). Restyled 2026-10-10 from a dark purple panel.
 - **A moved post** answers with a 301 to its `blog_redirects` target, cached for one hour
   (`[SUPABASE_PROJECT_REF]` in `src/lib/blog.ts`), only when no published post has that slug.
   Without the max-age a browser kept the 301 for good: a post brought back stayed unreachable on
@@ -154,6 +154,29 @@ Because the default `@astrojs/sitemap` integration cannot embed crucial locale r
   to the bare blog index: a 301 to the index read as a soft 404 to Google, while a 410 tells it
   the post was removed on purpose.
 - **Leaked AI JSON in a post body** is stripped at render (`src/lib/blog-body-envelope.ts`, reported once per post as `blog.body_envelope_repaired`). cf-admin repairs and blocks such bodies at save; this guard covers rows stored before that. The `<blockquote class="cms-callout">` "Key takeaway" box the AI writer emits is styled in `global.css`.
+
+### 4.4 The blog's pages (2026-10-30)
+
+An article page (`src/components/sections/BlogPostContent.astro`) reads, top to bottom: the
+title, the byline (the hotel's logo, name and founding year when the byline is the hotel), the
+cover photo when there is one, the quick answers (§4.3), **In this article** (`ArticleOutline`, a
+`<details>` open by default, shown from two sections), the text, the booking box
+(`BookingBox`: the three priced services of `src/data/servicePages.ts` at `getPricing`'s prices,
+each linking to its page, then Book and WhatsApp), the share links (`ShareLinks`: plain links to
+WhatsApp, Facebook, X and email, no script), the topics and the related articles.
+
+The outline comes from the article itself: `outlineArticle` (`src/lib/blog-article.ts`) gives
+every `h2` and `h3` of the sanitized D1 body an anchor made of letters, digits and hyphens, and a
+bundled Markdown article uses the headings Astro's `render()` returns. Reading time is counted
+from the words, never the markup (`readingMinutes`).
+
+The list and topic pages (`BlogPageContent.astro`) show the topics row first (`TopicsRow`: "All"
+and the twelve most used topics with their counts, from one `getBlogTopics` (`src/lib/blog-sources.ts`) read of every
+published article's tags; the shown posts' while D1 cannot be asked), then on the index's first
+page the newest article as a wide card, then the cards. An article without a photo gets a cover
+drawn from its own words (`WordCover`: its first topic and title on one of six tones chosen from
+its address), on the list and among related articles; the site ships no stock photos. A topic's
+page is headed by its topic. [Record](records/2026-10-30-blog-pages-remade.md).
 
 ---
 
