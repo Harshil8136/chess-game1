@@ -625,7 +625,7 @@ failure the exact command that fixes it. No check prints a secret value.
 | Id | Check | Fix printed |
 |---|---|---|
 | `NODE-01` | the running Node satisfies `engines.node` of package.json (a `>=version` floor) | the install command for that version |
-| `PM-01` | the installed pnpm is the one `packageManager` names | the corepack or npm command for that version |
+| `PM-01` | the installed pnpm is the one `packageManager` names, or, with none installed, the pnpm npx fetched to run this check is | the corepack or npm command for that version |
 | `MANIFEST-01` | the Worker here matches its manifest (the check above); skipped where there is no manifest | the rule, or the file to fix |
 | `MIG-01` | every kit migration is copied into `migrations/`, unchanged, with a current `kit.json`; skipped where there is no manifest or no installed kit package | `oltrem migrations sync` |
 | `WF-01` | the deploy workflow `.github/workflows/deploy.yml` is in place | copy it from the client template |

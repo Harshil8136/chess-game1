@@ -84,7 +84,7 @@ The module adds one template of its own, `email.canary`, the test message the ca
 | No instance ready | The outbox row is held and the message's row says `waiting`; the job `email.release`, every five minutes, releases the held messages once a tenant that waits has an active or failover instance |
 | `deliver` takes the lease | One row per message key: a new key, or one that waits, retries or whose two-minute lease ran out, is taken; a `sent` or `failed` one is acknowledged without a send; one another delivery holds is `KIT-E-1502`, and the queue brings it back |
 | The instances in order | The active instance, then each failover by its order; the first that takes the message is kept on the row with the id the provider gave it |
-| A refusal | The next instance is tried; when every one refused, the row says `retrying` with what each said, and `KIT-E-1504` sends the message back to the queue |
+| A refusal | The next instance is tried; when every one refused, the row says `retrying` with what each said, and `KIT-E-1504` sends the message back to the queue. When every one refused the account itself (401 or 403: a wrong key, an account not activated or suspended), a retry would get the same answer, so the row says `failed` at once with what each said, and the queue is not asked again |
 | A message that can never be sent | An unknown template, data that no longer matches, an address a provider refuses as such: the row says `failed` and the message is acknowledged |
 
 The subject and the body are never stored; the row keeps the addresses (To, then Cc and Bcc), for
