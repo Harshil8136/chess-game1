@@ -685,7 +685,7 @@ No BEM `__` double underscore. Single hyphen for children, double hyphen for mod
 only.** The `base--modifier` half of this convention is shipped and widespread,
 under per-module prefixes: `.role-badge--vendor_support|owner|admin|manager|staff|viewer|suspended`
 (`global.css`, documented in §2.8), `.hero-badge--warning/--success/--amber`
-(scoped in `src/pages/dashboard/content/hero.astro`), plus diff badges in
+(scoped in `src/pages/dashboard/content/hero.astro` until that page was removed on 2026-10-30), plus diff badges in
 `pages/audit.css` and query-kind badges (`.cron-op-badge--*`) in `pages/cron.css`. And `__` does appear: the console kit's
 `ck-head__title`, `ck-tile__value` and the rest (§9.9). Read §9 as: *the generic `.btn` /
 `.badge` vocabulary was never adopted; the shipped convention is a per-module

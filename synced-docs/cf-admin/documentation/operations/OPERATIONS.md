@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-10-30 | `ls migrations/*.sql` (68 files, highest `0090`), `d1_migrations` newest row through the Cloudflare D1 connector after `0090` was applied | §7's state line. No binding, secret, variable or cron added (the Sunday asset clean-up keeps its schedule; it now reads more tables). Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-29 | `ls migrations/*.sql` (67 files, highest `0089`), `d1_migrations` newest row through the Cloudflare D1 connector after `0089` was applied; §5's `CLOUDFLARE_API_TOKEN` and `SENTRY_AUTH_TOKEN` rows against `src/lib/sentry/threats.ts` and `issues.ts` | §7's state line (it still named `0087` after `0088`); §5 names the Sentry page's Threats and notes. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-29 | `ls migrations/*.sql` (65 files, highest `0087`), `d1_migrations` newest row through the Cloudflare D1 connector after `0087` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-28 | `ls migrations/*.sql` (64 files, highest `0086`), `d1_migrations` newest row through the Cloudflare D1 connector after `0086` was applied | §7's state line. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
@@ -736,8 +737,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-29: migrations/ holds 67 files, highest
-# 0089_sentry_threats.sql (applied 2026-10-29 18:42:42 UTC).
+# State as of 2026-10-30: migrations/ holds 68 files, highest
+# 0090_content_studio.sql (applied 2026-10-30 05:12:02 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/

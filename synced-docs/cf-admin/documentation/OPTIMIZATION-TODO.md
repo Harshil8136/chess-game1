@@ -422,7 +422,12 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 
 #### OPT-D1 (P1). FAQ, stats and review edits skip version history
 
-- `src/pages/api/content/faqs.ts`, `stats.ts` and `reviews.ts` each write their own
+*Resolved 2026-10-30:* the three routes were removed with the Website Content rebuild; every
+section now saves through `src/pages/api/content/sections/[id].ts`, which keeps each replaced
+version ([features/CMS.md](features/CMS.md) §3.0).
+
+
+- `src/pages/api/content/faqs.ts`, `stats.ts` and `reviews.ts` (removed 2026-10-30) each wrote their own
   `INSERT … ON CONFLICT` into `cms_content` instead of using `updateCmsBlock` in
   `src/lib/cms/storage.ts`, which also records history. **These edits are never
   versioned and cannot be restored.** They also store an ISO timestamp and
@@ -432,7 +437,7 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 #### OPT-D2 (P1). Auth failures return the wrong status in 34 handlers
 
 - **403 reported as 401 (10):** a role check fails into a blanket 401 — e.g.
-  `src/pages/api/content/faqs.ts` catches `requireAuth(context, 'admin')` and
+  `src/pages/api/content/faqs.ts` (removed 2026-10-30) catches `requireAuth(context, 'admin')` and
   returns 401. Also `ai/health`, `content/blocks` and the `content/{faqs,history,
   reviews,stats}` GET and POST handlers.
 - **Any failure reported as 403 (10):** `arco/requests`, the `retention` routes,

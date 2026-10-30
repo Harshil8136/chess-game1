@@ -149,18 +149,22 @@ projected, secret-free subset from `GET /api/runtime-config` (CDN-cached 60s).
   2026-05-13, since consolidated into `migrations/0000_baseline.sql`) was unwired
   at review time. `recordCmsHistory` has since been wired into `updateCmsBlock()`
   (`src/lib/cms/storage.ts`) and a history/rollback API exists
-  (`src/pages/api/content/history.ts`) — items 1.3 / 1.3b. **But live on
+  (`src/pages/api/content/history.ts`, removed 2026-10-30) — items 1.3 / 1.3b. **But live on
   2026-09-20 the table is still 0 rows**: the path has not fired in production in
   three months, so rollback is untested against real data. For contrast,
   `service_config_history` is now **30** rows (3 at review time). A history
   **UI** in the Content Studio is still unbuilt.
   *Re-checked 2026-10-17:* still 0 history rows, because nothing has been saved:
   the newest live `cms_content` row is from 2026-04-29. Two gaps remain in the
-  code: the FAQ, reviews and stats routes (`src/pages/api/content/faqs.ts`,
+  code: the FAQ, reviews and stats routes (`src/pages/api/content/faqs.ts`, removed 2026-10-30,
   `reviews.ts`, `stats.ts`) write `cms_content` with their own SQL instead of
   `updateCmsBlock()`, so their saves would record **no** history; only gallery,
   services, blocks and a rollback do (`../MAINTENANCE.md` (private)
   DOC-3).
+  *Re-checked 2026-10-30 (code only):* those routes and `history.ts` are gone. Every section saves
+  through one route that writes `cms_content` only when it is still the version the editor
+  loaded, keeps the replaced text in `cms_content_history`, and offers Restore on the section's
+  page ([`../features/CMS.md`](../features/CMS.md) §3.0).
 - **C2 — `service_config` has no `version` column** *(closed — item 1.4, §6)* (verified live), yet
   `TECHNICAL_OVERVIEW.md` claims "version bumped / version-tracked for change
   detection." Cache invalidation is therefore purely time/flush-based, and

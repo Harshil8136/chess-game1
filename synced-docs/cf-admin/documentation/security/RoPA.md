@@ -121,7 +121,7 @@ repositories need their own entries for a complete group-level RoPA.
 
 | Field | Detail |
 |---|---|
-| Purpose | Draft marketing email copy and blog content from a staff prompt (`src/pages/api/content/ai-generate.ts`, `src/pages/api/content/blog/suggest.ts`, `src/pages/api/emails/ai-generate.ts`) |
+| Purpose | Draft marketing email copy and blog content from a staff prompt (`src/pages/api/content/ai-generate-stream.ts`, `src/pages/api/content/blog/suggest.ts`, `src/pages/api/emails/ai-generate.ts`; `src/pages/api/content/ai-generate.ts`, which had no caller, was removed on 2026-10-30) |
 | Categories of subject | Staff (prompt author) |
 | Categories of data | Prompt text, generated output, token usage |
 | Legal basis | Art. 6(1)(f) legitimate interests |

@@ -325,7 +325,7 @@ Instead of making external Redis calls, daily AI neuron consumption is tracked d
    }
    ```
 
-3. **Write Path:** The AI generation endpoint (`/api/content/ai-generate` or `/api/emails/ai-generate`) updates the count in D1 asynchronously via `ctx.waitUntil()` after streaming the response to the user.
+3. **Write Path:** The AI generation endpoint (`/api/content/ai-generate` or `/api/emails/ai-generate`) updates the count in D1 asynchronously via `ctx.waitUntil()` after streaming the response to the user; the first of the two was removed on 2026-10-30.
 4. **Performance:** Zero latency added to the user's stream; zero external Redis dependency.
 
 ---

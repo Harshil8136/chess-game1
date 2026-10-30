@@ -46,7 +46,7 @@ checked and what it did not.
 | Area | Current state | Verified | How to re-check |
 |------|---------------|----------|-----------------|
 | `npm audit` (production deps) | **0 unexcepted advisories**; 6 documented, time-boxed exceptions in `.audit-exceptions.json` (js-yaml ×1, sharp ×3, svgo ×2 — all build-time only, all expiring **2026-11-30**). `audit_gate.py` audits this package's own lockfile in isolation (chunk 4) and fails the build on an expired or undocumented entry. *Corrected 2026-09-14* — this row described the pre-chunk-4 state (16 findings, ten exceptions expiring 2026-10-23). | 2026-09-14 | `npm audit --omit=dev`, then `python scripts/audit_gate.py` |
-| PLAC on API routes | **52** path prefixes in `API_PAGE_MAPPING`. Of the **171** route files under `src/pages/api/`, 162 resolve through a prefix and 9 are the session-less routes of §2; none is unmapped, and `test/api-authz-inventory.test.ts` fails the build on one that is | 2026-10-29 | `resolveApiAuthz` in `src/lib/auth/routes.ts`; count the files under `src/pages/api/` |
+| PLAC on API routes | **50** path prefixes in `API_PAGE_MAPPING`. Of the **165** route files under `src/pages/api/`, 156 resolve through a prefix and 9 are the session-less routes of §2; none is unmapped, and `test/api-authz-inventory.test.ts` fails the build on one that is | 2026-10-30 | `resolveApiAuthz` in `src/lib/auth/routes.ts`; count the files under `src/pages/api/` |
 | API authorization mode | **`enforce`** — an unmapped, un-allowlisted `/api/*` request is denied 403. Flipped from `shadow` 2026-08-12. | 2026-10-16 | `API_DENY_MODE` in `wrangler.toml`; logic in `src/lib/auth/stages/decide.ts` |
 | Break-glass / hardcoded admins | None (removed; whitelist-only) | 2026-06-06 | `src/lib/auth/` — no hardcoded email list |
 | Session expiry | 30-min role re-check, 24h hard expiry. The revocation flag's TTL is a **fixed 24 h** (`expirationTtl: 86400` in `src/lib/auth/plac.ts`). *Corrected 2026-09-20* — this row said it follows `SESSION_MAX_LIFETIME_MS`; the TTL-aware writer `writeRevocationFlag()` in `src/lib/auth/session.ts` exists but has no callers | 2026-09-20 | `src/lib/auth/plac.ts`, `src/lib/auth/session.ts` |
@@ -644,8 +644,6 @@ try {
 |-------|-------------|--------|
 | `GET /api/bookings/[id]` | `admin` | Returns consent records, email audit logs, quality metadata (PII). Since 2026-10-15 the consent record keeps only its row's fields for someone without "View consent details" (`canViewConsentDetails`, [PRIVACY.md](./PRIVACY.md) §1) |
 | `GET /api/bookings` | authenticated | Booking list |
-| `GET /api/media/gallery` | `admin` | Gallery management |
-| `POST /api/media/gallery` | `admin` | Gallery mutations; CDN URL whitelist enforced on image src |
 | `GET /api/users` | bare `requireAuth` + PLAC on `/dashboard/users` | Full user list. Admin is the floor only because the registry row says so, so a PLAC grant can change it — *this row read "canonical Admin via `requireAuth`" until 2026-09-20* |
 | `GET /api/users/[id]/session-status` | bare `requireAuth` + PLAC on `/dashboard/sessions` | Returns session telemetry (IP, UA, geo, Ray ID, lastActiveAt) — PII; Ghost Protection at DB boundary. Each session is named by a handle, never its ID, which is the session cookie (`src/lib/auth/session-ref.ts`, 2026-10-10) |
 
@@ -772,23 +770,19 @@ which wait for a second person by §10.7; the rows below name them where they ap
 | `GET/PATCH /api/system/pages`, `GET/POST/PATCH /api/system/console-features` | `/dashboard/debug/pages` | 2026-10-10 | `canUsePageRegistry()`: since 2026-10-17 (the owner's decision) vendor support and the people vendor support gives the key to, the owner included only by such a grant (a grant-only page, `src/lib/auth/page-floors.ts`), then the exact key. From 2026-10-15 to 2026-10-17 vendor support only; from 2026-10-10 to 2026-10-15 the owner and a grant of the key passed; before that, vendor support only. Below vendor support a page's required role and switch, and a console permission's default role, move only within the editor's own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`). PATCH keeps Page Registry's own default role at vendor support (400), refuses Viewer as a page's default (`canBePageDefault` in `src/lib/auth/rbac.ts`: a Viewer opens only the pages given to them, and the column's CHECK admits only the five older role names), refuses switching off a debug page, and asks a recent sign-in for a change of role or switch; since 2026-10-14 such a change marks every active person for a re-check. 3 changes a minute (`registry`, §6b), shared with the console permission defaults. `POST /api/system/preview` was removed on 2026-10-14 with the old registry screen, its only caller. |
 | `GET /api/system/access-overview`, `POST /api/system/page-access`, `GET /api/system/access-history` | `/dashboard/debug/pages` | 2026-10-14 | `canUsePageRegistry()`, as above ([control-room spec](../specs/2026-10-14-access-control-room.md)). The overview applies the viewer's rules on the server (hidden accounts, an owner's or vendor support's overrides). `page-access` takes at most 100 changes in a body of at most 32,768 characters, checks every change with the Access Center's page gates before writing any, writes one D1 batch with one audit row per change, and refuses a read-only viewer; a removed account's setting may only be removed, by vendor support. The history is a read over `admin_audit_log`. |
 | `POST /api/content/blog/schedule` | `/dashboard/content/blog` | 2026-10-29 | Spread out ([`../features/CMS.md`](../features/CMS.md) §3.2). `requireAuth`, then `placDenyResponse` on the Blog Studio page; 30 a minute per person below owner (`blog-write`, shared with the blog save). A strict body by `action`: `preview` (1 to 40 post ids, a first day `YYYY-MM-DD`, gaps of whole days 1 to 60 and 1 to 90) writes nothing; `apply` (1 to 40 `{ id, pub_date }` with `pub_date` `YYYY-MM-DDTHH:MM`, an optional reason up to 500 characters) re-checks every date (at least 10 minutes ahead, within a year, inside the publishing limits) and runs the quality gate on each post, a failure needing `#bypass-quality-audit` by `decideAccess` (never for a body of raw AI JSON). Only drafts, posts in review and scheduled posts (409 otherwise). Each scheduled post is audited (`update`, `spread: true`). `no-store`. Tested in `test/blog-spread-schedule.test.ts` |
-| `GET/POST /api/content/services` | `/dashboard/content` | 2026-05-26 | |
-| `POST /api/content/blocks` | `/dashboard/content` | 2026-05-26 | |
-| `GET/POST /api/content/faqs` | `/dashboard/content` | 2026-05-26 | |
-| `GET/POST /api/content/stats` | `/dashboard/content` | 2026-05-26 | |
-| `GET/POST /api/content/reviews` | `/dashboard/content` | 2026-05-26 | |
-| `GET/POST /api/media/gallery` | `/dashboard/content/media` (middleware) | 2026-05-26 | See the media note below. |
-| `POST /api/media/upload` | `/dashboard/content/media` (middleware) | 2026-05-26 | |
+| `GET/POST /api/content/sections/[id]` | `/dashboard` (middleware), then the section's page key | 2026-10-30 | One website section: `hero`, `gallery`, `prices`, `reviews`, `questions` or `about` (404 otherwise) ([`../features/CMS.md`](../features/CMS.md) §3.0). `requireAuth` (401), then `denyContent(user, id)`: the section's page key by exact key, fail closed (`placRequireGrant`; the owner and vendor support bypass). POST: 30 changes an hour per person (`content-sections`); a strict body by `action` (`save` with `value` and `base`, `restore` with `version` and `base`, `resend`); `value` checked against the section's shape (`src/lib/content/sections.ts`, 400 naming the item); every photo must be one of the portal's uploads (`PUBLIC_CDN_URL`, 400); a `base` that is not the row's version is a 409, and the write itself is conditional on it. Audited (`update`, `cms_section`) by counts and field names only. Replaced the `services`, `reviews`, `faqs`, `stats`, `blocks` and `history` routes and the media `gallery` and `revalidate` routes, which checked the hub's key or one no page registers. Tested in `test/content-studio.test.ts` |
+| `GET /api/content/overview` | `/dashboard` (middleware), then `/dashboard/content` | 2026-10-30 | The Website Content Overview. `denyContent(user)`: the Overview's own key by exact key; it shows only the sections, and the blog figures, whose own keys this person holds (`contentCan`). Read only. Tested in `test/content-studio.test.ts` |
+| `POST /api/media/upload` | `/dashboard` (middleware), then the key of the page the photo is for | 2026-10-30 | Since 2026-10-30 it stores the photo and answers its address, and writes neither D1 nor the website: the section, or the article, saves it. `slot` `hero_image` needs the Home banner's key, `temp_gallery_upload` the Gallery's, `blog-cover` the Blog Studio's, each by exact key (400 for any other slot). Admin and above. Until 2026-10-30 it was mapped to the Media page and its route check named a key no page registers. Tested in `test/content-studio.test.ts` |
 | `GET/DELETE /api/media/library` | `/dashboard/content/media` (middleware) | 2026-05-26 | DELETE also restricted to DEV/Owner via existing `isOwnerOrDev` check. |
-| `POST /api/media/revalidate` | `/dashboard/content/media` (middleware) | 2026-05-26 | |
 | `GET /api/cron/jobs/[id]/check`, `GET /api/cron/jobs/[id]/history` | `/dashboard/cron` | 2026-10-09 | `denyCron()` (`src/lib/auth/surface-guards.ts`) on the page key alone, like `GET /api/cron`, because both only read: the check reads the control document, the job's own gate and its lease row and writes nothing; the history reads Analytics Engine. An id the registry does not hold answers 404 before anything is read, and the history query also refuses any id that is not lowercase letters, digits and hyphens. The other Cron Control routes and their action keys: [`../features/CRON-CONTROL.md`](../features/CRON-CONTROL.md) §1. |
 
-**Media note (2026-09-20).** The four media handlers call
+**Media note (2026-09-20, updated 2026-10-30).** The media handlers called
 `placDenyResponse(user, '/dashboard/media')`, but that key is neither a page nor
-a registry row, so their route-level check resolves against nothing and is
-effectively inert. The gate that actually holds is the middleware mapping
-`/api/media` → `/dashboard/content/media`. Flagged to the code owners; the fix
-is a one-word change in the handlers, not in this document.
+a registry row, so their route-level check resolved against nothing. The gallery
+and revalidate handlers were removed on 2026-10-30, and the upload handler now
+asks for the key of the page the photo is for (above). The library handler still
+names that key; the gate that holds for it is the middleware mapping
+`/api/media` → `/dashboard/content/media`.
 
 All data-bearing API routes that map to a dashboard page enforce PLAC — and
 since the `enforce` flip, so does every other `/api/*` route, because an unmapped
@@ -817,11 +811,7 @@ role-only gates "by design".*
 | `DELETE /api/sessions/active-revocations` | 30/min | `revocation-unblock` | `session.userId` |
 | `POST /api/sessions/flush-sessions` | 5/min | `session-flush` | `session.userId` |
 | `GET /api/users/cf-access-audit` | 10/min | `cf-access-audit` | `session.userId` |
-| `POST /api/content/blocks` | 30/h | `content-blocks` | `user.userId` |
-| `POST /api/content/faqs` | 30/h | `content-faqs` | `user.userId` |
-| `POST /api/content/stats` | 30/h | `content-stats` | `user.userId` |
-| `POST /api/content/reviews` | 30/h | `content-reviews` | `user.userId` |
-| `POST /api/content/services` | 30/h | `content-services` | `user.userId` |
+| `POST /api/content/sections/[id]` | 30/h | `content-sections` | `user.userId` |
 | `POST /api/audit/export` | 5/h | `audit-export` | `session.userId` |
 | `POST /api/media/upload` | 20/min | `media-upload` | `user.userId` |
 | `POST /api/users/access-center` | 5 saves/min (each save counts once, however many changes) | `plac` | `viewer.userId` |
@@ -881,10 +871,9 @@ history (3 s timeouts, keys without expiry) is in
 
 | Route | Schema | Validates |
 |-------|--------|----------|
-| `POST /api/content/reviews` | `ReviewsSchema` | `Array<{ id, name, text: string; rating: int 1-5 }>`, max 50 items |
-| `POST /api/content/services` | `ServicesBodySchema` | `{ dogs?, cats?, daycare?: string(max 100); currency?: string(max 10) }` |
+| `POST /api/content/sections/[id]` | each section's `schema` in `src/lib/content/sections.ts` | Home banner `{ src: https }`; Gallery up to 24 `{ id, src: https, alt: 8–200, alt_en? }`; Prices `{ dogs, cats, daycare: whole pesos 1–100,000 }`; Reviews up to 50 `{ id, name: 1–80, rating: 1–5, text: { es: 1–1,000, en: ≤1,000 }, service? }`; Questions up to 30, each of the four texts 5 characters or more; About figures, four of 1–12 characters. Ids are letters, digits, `-` and `_` |
 
-The `services.ts` POST no longer spreads `rawBody` directly — only validated fields are written to D1.
+Only the section's own value is written to D1, in the shape cf-astro reads (`toStored`).
 
 ### Email Format Validation
 
@@ -1373,6 +1362,7 @@ This pass re-verified every deferred item from the 2026-05-25 review and closed 
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §6a's new `/api/content/sections/[id]`, `/api/content/overview` and `/api/media/upload` rows (the removed content and media rows taken out), the media note, the `content-sections` rate limit and the section schemas against `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, `src/lib/content/sections.ts`, `denyContent` and `contentCan` in `src/lib/auth/surface-guards.ts` and `API_PAGE_MAPPING`; `test/content-studio.test.ts` passes; §0's PLAC row re-counted (50 prefixes; 165 route files, 156 mapped and 9 session-less) | The rest of the document; `last_verified` left as it was |
 | 2026-10-29 | §6a's `GET /api/sentry/{part}` row for `threats`, an issue's tags and thread, and the `POST /api/sentry/issues` row for notes, against `src/pages/api/sentry/[part].ts`, `src/lib/sentry/threats.ts`, `probes.ts`, `issues.ts` and `client.ts`, `sentryTriageSchema` in `src/lib/schemas/operations.ts` and `denySentry` in `src/lib/auth/surface-guards.ts`; `test/sentry-threats.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-29 | §6a's new `GET /api/posthog/replay` row and the `GET /api/posthog/{part}` row's two Overview views against `src/pages/api/posthog/replay.ts`, `src/pages/api/posthog/[part].ts`, `src/lib/posthog/replay.ts`, `src/lib/posthog/board.ts` and `denyPostHog`; the enforced policy's `font-src` against `src/lib/security/csp.ts`; `test/posthog-replay.test.ts`, `test/posthog-lab.test.ts` and `test/csp.test.ts` pass; §0's PLAC row re-counted (52 prefixes; 171 route files, 162 mapped and 9 session-less) against `API_PAGE_MAPPING` and the files under `src/pages/api/` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | §6a's `GET /api/sentry/{part}` row for `releases`, against `src/pages/api/sentry/[part].ts`, `src/lib/sentry/releases.ts` and `denySentry` in `src/lib/auth/surface-guards.ts`; `test/sentry-stage3.test.ts` passes | The rest of the document; `last_verified` left as it was |

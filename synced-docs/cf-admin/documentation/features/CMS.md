@@ -3,10 +3,10 @@
 title: "CMS, Image, Blog & Bookings Management"
 status: active
 audience: [ai, technical]
-last_verified: 2026-10-17
+last_verified: 2026-10-30
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
+related_code: [src/lib/content/sections.ts, src/lib/content/studio.ts, src/lib/content/overview.ts, src/pages/api/content/sections/[id].ts, src/pages/api/content/overview.ts, src/components/dashboard/content/Content.tsx, src/workers/scheduled-asset-cleanup.ts, src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../operations/OPERATIONS.md]
 tags: [cms, blog, ai, rag, d1]
 ---
@@ -15,7 +15,7 @@ tags: [cms, blog, ai, rag, d1]
 
 > **TL;DR (non-technical):** How staff edit the public website's content (hero, gallery, reviews, services, dynamic blog articles) from the admin portal, generate ground-truth AI articles via Workers AI, and how those edits appear on the live site within seconds.
 
-> **Last Updated:** 2026-10-17 — the KV TTL, the quality-gate count and the cf-astro call sites corrected (see §7). The 2026-08-03 entry ("Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via the `cf-chatbot` service binding") is when the feature set described here landed.  
+> **Last Updated:** 2026-10-30 — Website Content rebuilt: one route for the six sections, versions for every section, the website's own reading of each, and the section pages in the console look (§1, §3.0, §5; [the spec](../specs/2026-10-30-content-studio.md)). 2026-10-17 — the KV TTL, the quality-gate count and the cf-astro call sites corrected (see §7). The 2026-08-03 entry ("Added Dynamic D1 Blog Manager, Workers AI Author & RAG Knowledge Base Context integration via the `cf-chatbot` service binding") is when the feature set described here landed.  
 > **Projects:** `cf-admin` (writes & AI authoring), `cf-astro` (edge SSR reads & AIO/GEO citation)
 
 ---
@@ -59,14 +59,19 @@ cf-admin wrote it. It does not: `ISR_CACHE` is a **cf-astro** binding and
 
 ### KV Injection & Edge Routing Coverage
 
-| Section | D1 id / Table | KV Key | Writer Endpoint | cf-astro Reader |
-|---------|-------------|--------|-----------------|-----------------|
-| Hero Image | `hero_image` (`home`) | `cms:hero_image` | `POST /api/media/upload` | `Hero.astro` |
-| Gallery | `gallery_images` (`home`) | `cms:gallery_images` | `POST /api/media/gallery` | `Gallery.astro` |
-| Services Pricing | `services_pricing` (`home`) | `cms:services_pricing` | `POST /api/content/services` | `Services.astro` via `pricing.ts` |
-| Reviews | `happy_clients` (`global`) | `cms:happy_clients` | `POST /api/content/reviews` | `Testimonials.astro` |
-| FAQ | `faq_items` (`global`) | `cms:faqs` | `POST /api/content/faqs` | `FAQ.astro` |
-| About / Stats | `about_stats` (`global`) | `cms:about` | `POST /api/content/stats` | `About.astro` |
+Since 2026-10-30 every section is written by one route, `POST /api/content/sections/[id]`
+(§3.0), and the section, its row and its key are named once, in `src/lib/content/sections.ts`.
+Until then six routes wrote them, two of which sent the website a key it does not read on a
+restore.
+
+| Section (`[id]`) | D1 id (`page`) | KV Key | Refreshes | cf-astro Reader |
+|---------|-------------|--------|-----------|-----------------|
+| Home banner (`hero`) | `hero_image` (`home`) | `cms:hero_image` | the home page | `Hero.astro` |
+| Gallery (`gallery`) | `gallery_images` (`home`) | `cms:gallery_images` | the home page | `Gallery.astro` |
+| Prices (`prices`) | `services_pricing` (`home`) | `cms:services_pricing` | every page in the two sitemaps | `pricing.ts`, read by the home page's Services, the services, booking, service and area pages, the structured data and `BaseLayout.astro` (every page) |
+| Reviews (`reviews`) | `happy_clients` (`global`) | `cms:happy_clients` | the home page and each area's page | `testimonials.ts`, read by `Testimonials.astro` and each area's rating |
+| Questions (`questions`) | `faq_items` (`global`) | `cms:faqs` | the home page | `FAQ.astro` |
+| About figures (`about`) | `about_stats` (`global`) | `cms:about` | the home page | `about-stats.ts`, read by `About.astro` and the bar under the banner |
 | **Dynamic Blog Posts** | `blog_posts` table | Purged via ISR path | `POST /api/content/blog` | the blog post page via `getBlogPostBySlug()` — one call site in each of `src/pages/en/blog/[slug].astro` and `src/pages/es/blog/[slug].astro`; the translation check there uses `getPublishedSlugs()`. *Corrected 2026-10-17: this said four call sites, two per page.* |
 
 KV keys in the table are the `cms:` names cf-astro writes; they were read from
@@ -101,31 +106,89 @@ rename can never send its visitors away.
 
 ---
 
-## 3. Content Studio Hub (`/dashboard/content`)
+## 3. Website Content (`/dashboard/content`)
 
-Nine pages under `src/pages/dashboard/content/` (re-listed 2026-09-14 — this
-table said "five core modules" and omitted four of them), all backed by
-Cloudflare D1:
+Nine pages, each a page-registry row (`admin_pages`) of its own, so each can be given or kept
+back alone. The tab row (`src/components/navigation/RegistryTabs.astro`) lists only the pages
+this person may open. The names below are the registry's since migration `0090`.
 
-Each page's name, description and tab come from its page-registry row (`admin_pages`, migration
-`0067`): the shared header `src/components/admin/content/ContentHeader.astro` shows the name and
-description, then the tab row (`src/components/navigation/RegistryTabs.astro`), which lists only
-the pages this person may open. Until 2026-10-10 every page carried its own "Content Studio"
-heading, a "Sync Active" badge that reflected nothing, and its own copy of the tab list
-(`ContentTabs.astro`). The module names below are descriptive; the registry holds the names
-staff see.
-
-| Module | Route | Purpose |
+| Page | Route | What it edits |
 |--------|-------|---------|
-| Hub | `/dashboard/content` | The section's entry page (registry name: Website Content) |
-| Hero | `/dashboard/content/hero` | Hero background image (LCP critical) |
-| Gallery | `/dashboard/content/gallery` | Drag-and-drop visual asset manager |
-| Services | `/dashboard/content/services` | Pricing editor — syncs marketing pages + booking wizard |
-| Reviews | `/dashboard/content/reviews` | "Happy Clients" testimonials carousel |
-| FAQ | `/dashboard/content/faq` | FAQ items (`faq_items`) |
-| About / Stats | `/dashboard/content/about` | About block and stats (`about_stats`) |
+| Overview | `/dashboard/content` | Nothing: each section as the website shows it now, and the blog in figures |
+| Home banner | `/dashboard/content/hero` | The photo behind the home page's headline |
+| Gallery | `/dashboard/content/gallery` | The home page's gallery photos, each described in Spanish and English |
+| Prices | `/dashboard/content/services` | The three "from" prices a day (dogs, cats, daycare) |
+| Reviews | `/dashboard/content/reviews` | The home page's reviews, in Spanish and English, and the rating worked out from them |
+| Questions | `/dashboard/content/faq` | The home page's questions and answers, in Spanish and English |
+| About figures | `/dashboard/content/about` | The four figures of "Why choose us" |
 | Media | `/dashboard/content/media` | R2 media library |
 | **Blog Studio** | `/dashboard/content/blog` | Dynamic D1 Blog Manager & Workers AI Copilot |
+
+### 3.0 The Overview and the six section pages (2026-10-30)
+
+The Overview and the six sections are one Preact island
+(`src/components/dashboard/content/Content.tsx`, a section in `Section.tsx`, its editor in
+`editors.tsx`) in the Sentry page's console look, drawn in the Website group's emerald
+(`src/styles/pages/content.css`). The six section pages are one Astro file,
+`src/pages/dashboard/content/[section].astro`; the Blog and Media pages are their own files.
+
+**The Overview** (`GET /api/content/overview`) shows, for each section this person holds: what is
+saved, in counts ("8 reviews, average 5.0"), never anyone's words; when it was saved; whether the
+website shows it; and what it still needs (a photo without a real or an English description, a
+review without English, an About figure the website's fact sheet does not back). Its strip of
+figures counts the sections the website shows, the ones it shows an older copy of, and what needs
+attention, then the blog: articles live, scheduled (with the next date), and live or scheduled
+without a cover. The Blog panel names the next article to go live, and warns when it has no
+cover. The blog figures show only to a person who holds the Blog page.
+
+**A section page** (`GET` and `POST /api/content/sections/[id]`) shows four facts (on the website,
+last saved, earlier versions, needs attention), the editor, where on the website the section
+shows and which pages a save refreshes, and the ten newest versions. Nothing changes on the
+website until **Save**, which a bar at the foot of the screen offers while there are unsaved
+changes; leaving the page with unsaved changes asks first, through the portal's dialog. Lists
+(photos, reviews, questions) move with Earlier and Later buttons, so they work the same with a
+finger, a mouse or a keyboard; the star rating and a review's service are rows of choices.
+
+**What a change does** (`src/lib/content/studio.ts`):
+
+- **Save** checks the value against its section's shape (`sections.ts`; an error names the item,
+  counted from one), refuses a photo that was not uploaded here (`PUBLIC_CDN_URL`), and saves only
+  over the version the editor read: `saveCmsBlock` (`src/lib/cms/storage.ts`) updates the row
+  `WHERE updated_at IS` that version, so a save someone made in the meantime is answered 409 and
+  the page offers to load theirs. `updated_at` carries milliseconds. A save that changes nothing
+  sends nothing.
+- **Versions.** Every save keeps the text it replaced in `cms_content_history` (the ten newest per
+  section). A row saved before versions existed is kept as the first version, under the time it
+  was saved. **Restore** makes an earlier version the saved one; what was saved stays in the list.
+- **Send again** sends what is saved to the website once more, for when it shows an older copy.
+- **Delivery.** The saved text goes to cf-astro with the pages that carry it (the table in §1):
+  for Prices, every page the website lists in `/sitemap-es.xml` and `/sitemap-en.xml`, read
+  through `ASTRO_SERVICE` (at most 150); for Reviews, the home page and each area's page. When
+  the sitemaps cannot be read, the home page is refreshed at once and the answer says the other
+  pages follow within a day (cf-astro keeps each page that long). A failed delivery is queued in
+  `sync_outbox` as before (§1).
+- **"On the website"** is read back, never assumed: cf-astro's `/api/cms-status` answers the hash
+  of the copy it holds for each key, compared with the saved text as cf-astro stores it
+  (`websiteCopyOf` in `src/lib/cms-status.ts`: JSON re-serialised, `<` escaped). A key it holds no
+  copy of is read from D1, so that is live too. The states are *On the website*, *Website shows
+  an older version*, *Website shows its own text* (nothing saved) and *Could not ask the
+  website*.
+- **The audit log** keeps each change by its counts and field names (`changeSummary`): items
+  added, removed, changed, reordered, never a review's or an answer's words.
+
+**Who may do what.** Each section route asks for its section's page key exactly (`denyContent`
+in `src/lib/auth/surface-guards.ts`; the owner and vendor support bypass), and the Overview for
+its own; both routes are mapped to `/dashboard` in the middleware, so a section does not need the
+Overview. Until 2026-10-30 the section routes checked the hub's key or a key no page registers,
+which every role passed. Thirty changes an hour per person.
+
+**The rows 0090 saved.** Until 2026-10-30 D1 held no row for the reviews, the questions or the
+About figures, so the website showed its built-in text while the editors opened empty, and a first
+save would have replaced the eight reviews and five questions with whatever was typed. Migration
+`0090` copied the website's own text into `cms_content`, in the shape cf-astro reads since
+cf-astro `acb81d9` (both languages, and a review's service). The About figures "5,000+ happy pets"
+and "100% satisfaction" are the website's built-in words, not in its fact sheet; the page flags
+them until the hotel confirms them.
 
 ### 3.1 Publish Quality Gate & PLAC Bypass Capability
 - **Quality Gate**: Server-side 11-check SEO/content audit (`evaluateSeoGate`, `src/lib/blog/seo-gate.ts`; the eleventh, `body-not-json`, was added on 2026-10-10).
@@ -196,7 +259,7 @@ someone accepts a suggestion. The record is
 
 **Files:** `src/components/admin/content/BlogAiCopilotModal.tsx` → `src/pages/api/content/ai-generate-stream.ts`, with the schema in `src/lib/blog/article-schema.ts`.
 
-*Corrected 2026-09-19 — this named `src/pages/api/content/ai-generate.ts`. The modal calls the **streaming** route; `ai-generate.ts` has no in-app caller.*
+*Corrected 2026-09-19 — this named `src/pages/api/content/ai-generate.ts`. The modal calls the **streaming** route; `ai-generate.ts`, which had no in-app caller, was removed on 2026-10-30.*
 
 ### 1. Ground-Truth RAG Pipeline & Prompt Customization Studio
 - The AI content generator calls `getKnowledgeBaseContext(env)` in `src/lib/ai-knowledge.ts` to retrieve ground-truth facts from `cf-chatbot`.
@@ -256,6 +319,19 @@ Direct answers from the writer, from the visibility audit and on every save pass
 - **CDN URL:** `https://cdn.madagascarhotelags.com` (R2 Custom Domain)
 - **Key strategy:** UUID-based R2 keys per upload (`hero/hero-{uuid}.{ext}`, `gallery/{uuid}.{ext}`, `blog/covers/blog-{uuid}.{ext}`), the extension taken from the upload's MIME type (`src/lib/cms/storage.ts`)
 - **Cache-Control:** `public, max-age=31536000`
+- **An upload saves nothing (2026-10-30).** `POST /api/media/upload` stores the photo and answers
+  its address; the section, or the article, saves it. Until then a banner upload replaced the live
+  banner at once, with no version kept. The route asks for the key of the page the photo is for
+  (`hero_image`: the Home banner, `temp_gallery_upload`: the Gallery, `blog-cover`: the Blog), and
+  the middleware maps it to `/dashboard`, so a person with only the Home banner can upload one.
+- **The Sunday clean-up** (`src/workers/scheduled-asset-cleanup.ts`) deletes an upload nothing
+  names any more. What names one: `cms_content` and its versions in `cms_content_history`, blog
+  articles (cover and body) and their versions in `blog_posts_history`, email drafts and sent
+  emails. Only the portal's own folders are considered (`hero/`, `gallery/`, `blog/`), only an
+  upload older than a week (one may be waiting to be saved), and a failed read of any of those
+  tables deletes nothing that run. Until 2026-10-30 it read `cms_content` alone, so a blog cover
+  was deleted the Sunday after it was uploaded, and an earlier version's photos before anyone
+  could restore them.
 
 ---
 
@@ -271,6 +347,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-30 | §1's section table, §3, §3.0 and §5 against `src/lib/content/{sections,studio,overview}.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, `src/lib/cms/storage.ts`, `src/lib/cms-status.ts` and `src/workers/scheduled-asset-cleanup.ts`, with `test/content-studio.test.ts`; in the cf-astro sibling, the readers named in §1, its two sitemaps and `/api/cms-status`; the live `cms_content` rows and `admin_pages` content rows (Cloudflare D1 connector) | The pages on a phone (the owner's test); §2, §3.1 to §3.3 and §4 were not re-checked |
 | 2026-10-29 | §3.3 against `src/lib/blog/text-diff.ts`, `BlogSuggestionModal.tsx`, `BlogManager.tsx` and `BlogRepository.getPosts` with `test/blog-text-diff.test.ts`; the 15 pending fact-check rows in live `blog_posts_history` (Cloudflare D1 connector: one per published post, each `base_updated_at` equal to its post's `updated_at`, valid JSON) | The dialog on a phone (the owner's test) |
 | 2026-10-29 | §3.2 against `src/lib/blog/spread-schedule.ts`, `src/pages/api/content/blog/schedule.ts`, `BlogSpreadScheduleDialog.tsx` and `BlogManager.tsx` with `test/blog-spread-schedule.test.ts`; the live `blog_posts` rows (Cloudflare D1 connector: 15 published, all 14 bundled cf-astro slugs present in D1) | The rest of the page; the dialog on a phone (the owner's test) |
 | 2026-10-17 | The whole page against the code: the nine pages under `src/pages/dashboard/content/`; each writer endpoint's D1 id and `cmsData` key (`services.ts`, `reviews.ts`, `faqs.ts`, `stats.ts`, `media/upload.ts`, `media/gallery.ts`); `src/lib/cms/revalidate.ts` (3 attempts, 5 s, service binding, read-back, outbox); `evaluateSeoGate` (11 checks, corrected from 10); `src/lib/cms/storage.ts` key shapes and `Cache-Control`; `AI_NEURON_RESERVE` and `timeoutForTokens`; the bookings guards; in the cf-astro sibling, `CMS_KV_TTL_SECONDS` (24 h, corrected from 1 h) and the `getBlogPostBySlug` call sites (two, corrected from four) | Live KV, D1 and a live AI generation (no connector used in this pass) |
