@@ -324,6 +324,14 @@ within their own rank (`registryEditRefusal`, `src/lib/auth/registry-impact.ts`)
 the registry cannot open a page above its holder. [`DEV-TOOLS.md`](../operations/DEV-TOOLS.md)
 §2 has the routes. *From 2026-10-15 to 2026-10-17 no grant opened Page Registry; since then a
 grant from vendor support does (below). The Developer Tools grant is unchanged.*
+*Changed 2026-10-31 (the owner's pick of Developer Tools' first tools):* Developer Tools has
+three parts and one action of its own, migration `0091`: `/dashboard/debug/migrations`,
+`/dashboard/debug/switches`, `/dashboard/debug/documents` and `/dashboard/debug#handoff` (Copy
+for Claude), all stored role `dev`. `denyDebug` (`src/lib/auth/surface-guards.ts`) asks for the
+hub key, then the part or the action, each by exact key, in the page and in
+`GET /api/debug/handoff`; holding the hub alone opens none of them. The owner and vendor support
+pass as on every key. They are not grant-only like Page Registry: a grant from the Access page
+opens one ([`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md)).
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
 its route will allow it. Until then it decided from the role: any admin saw the block
 controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
@@ -1475,6 +1483,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-10-31 | claude | **Scope-limited to the Developer Tools parts paragraph.** Read `denyDebug` in `src/lib/auth/surface-guards.ts`, the three new pages under `src/pages/dashboard/debug/`, `src/pages/api/debug/handoff.ts`, `API_PAGE_MAPPING` (`/api/debug`) and `migrations/0091_developer_tools.sql`, and the four rows read back live through the D1 connector; `test/devtools.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Blog Studio paragraph.** Read `API_PAGE_MAPPING` in `src/lib/auth/routes.ts`, `src/pages/dashboard/content/blog.astro`, `src/pages/api/content/blog/studio.ts`, `reach.ts`, the four AI and live-check handlers and `src/pages/api/media/upload.ts`; `test/content-blog-studio.test.ts` passes. Nothing else re-checked | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Website Content paragraph's photos sentence.** Read `src/pages/api/media/library.ts` and `API_PAGE_MAPPING`; `test/content-photos.test.ts` passes. Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Website Content paragraph.** Read `surface-guards.ts` (`denyContent`, `contentCan`), `API_PAGE_MAPPING` in `src/lib/auth/routes.ts`, `src/pages/api/content/sections/[id].ts`, `overview.ts`, `src/pages/api/media/upload.ts`, the two pages and `migrations/0090_content_studio.sql`; `test/content-studio.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |
