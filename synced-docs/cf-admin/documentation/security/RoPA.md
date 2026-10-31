@@ -121,12 +121,12 @@ repositories need their own entries for a complete group-level RoPA.
 
 | Field | Detail |
 |---|---|
-| Purpose | Draft marketing email copy and blog content from a staff prompt (`src/pages/api/content/ai-generate-stream.ts`, `src/pages/api/content/blog/suggest.ts`, `src/pages/api/emails/ai-generate.ts`; `src/pages/api/content/ai-generate.ts`, which had no caller, was removed on 2026-10-30) |
+| Purpose | Draft marketing email copy and blog content from a staff prompt (`src/pages/api/content/ai-generate-stream.ts`, `src/pages/api/content/blog/suggest.ts`, `src/pages/api/emails/ai-generate.ts`; `src/pages/api/content/ai-generate.ts`, which had no caller, was removed on 2026-10-30), and since 2026-10-31 describe a blog cover photo (`src/pages/api/content/blog/describe-photo.ts`) |
 | Categories of subject | Staff (prompt author) |
-| Categories of data | Prompt text, generated output, token usage |
+| Categories of data | Prompt text, generated output, token usage. Since 2026-10-31 also a blog cover photo, which can show a person (staff or a guest) when the hotel chose such a photo for an article |
 | Legal basis | Art. 6(1)(f) legitimate interests |
 | Recipients | Cloudflare Workers AI; **OpenRouter** when an `openrouter/*` model is selected — a cross-border transfer to a third party |
-| Safeguards | Model IDs constrained to the `AI_MODELS` catalogue or a bounded `openrouter/<vendor>/<model>` pattern; prompt capped at 2000 chars; prompt-injection keyword screen |
+| Safeguards | Model IDs constrained to the `AI_MODELS` catalogue or a bounded `openrouter/<vendor>/<model>` pattern; prompt capped at 2000 chars; prompt-injection keyword screen. A photo goes only to Cloudflare Workers AI (Llama 4 Scout, never OpenRouter), only when a staff member taps **Describe it with the assistant**, only if it is already stored in the portal's photos (already public on the website once the article is live), made small first; it is not kept, and the activity log records only the outcome and cost |
 | Note | Full inventory in `compliance/AI-GOVERNANCE.md` |
 
 ### H. Retained data from a superseded product version — pending decommission
@@ -300,6 +300,7 @@ Summarised; full detail in [`SECURITY.md`](SECURITY.md).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-31 | §2 G's purpose, data and safeguards, for the cover photo description: `src/pages/api/content/blog/describe-photo.ts` and `src/lib/blog/photo-alt.ts` (only portal photos, resized, sent to Workers AI only, not kept; the audit row holds outcome and cost), with `test/blog-articles-found.test.ts` | The rest of the document; legal bases remain owner and counsel judgements; `last_verified` left as it was |
 | 2026-10-29 | §5's Cloudflare and Sentry rows, for the Sentry page's Threats, an issue's tags and thread, and notes: what `src/lib/sentry/threats.ts` asks of Cloudflare (no IP address) and passes on, what `issues.ts` asks (tags by a fixed list without `user`) and reads of the thread (whether a person acted, not who), and the note's audit row (its length); `test/sentry-threats.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-30 | §5's PostHog row, for the PostHog Overview's new counts: `boardQuery` and `PATHS_QUERY` in `src/lib/posthog/board.ts` (no visitor id asked for; `tapWords` masks and cuts tapped words), with `test/posthog-lab.test.ts`; then the recordings' bookings sent (`listQuery` in `src/lib/posthog/recordings.ts`) and the visitor totals (`VISITOR_TOTALS_QUERY` in `src/lib/posthog/people.ts`, counts only), with `test/posthog.test.ts` | The rest of the document; legal bases remain owner and counsel judgements |
 | 2026-10-29 | §5's PostHog row, for playing a recording on the PostHog page: `src/lib/posthog/replay.ts` and `src/pages/api/posthog/replay.ts` (the blocks passed on untouched, `private, no-store`, never kept), the player in `src/components/dashboard/posthog/replay/`, with `test/posthog-replay.test.ts` | The rest of the document; legal bases remain owner and counsel judgements; whether rrweb's frame runs no script was read from its code, not seen in a browser |

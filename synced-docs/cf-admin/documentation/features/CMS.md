@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-30
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/blog/studio.ts, src/lib/blog/reach.ts, src/pages/api/content/blog/studio.ts, src/pages/api/content/blog/reach.ts, src/components/dashboard/content/Blog.tsx, src/components/dashboard/content/BlogEditor.tsx, src/components/dashboard/content/ArticleText.tsx, src/lib/content/sections.ts, src/lib/content/studio.ts, src/lib/content/overview.ts, src/pages/api/content/sections/[id].ts, src/pages/api/content/overview.ts, src/components/dashboard/content/Content.tsx, src/workers/scheduled-asset-cleanup.ts, src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
+related_code: [src/lib/blog/studio.ts, src/lib/blog/link-ideas.ts, src/lib/blog/photo-alt.ts, src/pages/api/content/blog/describe-photo.ts, src/components/dashboard/content/BlogGaps.tsx, src/lib/blog/reach.ts, src/pages/api/content/blog/studio.ts, src/pages/api/content/blog/reach.ts, src/components/dashboard/content/Blog.tsx, src/components/dashboard/content/BlogEditor.tsx, src/components/dashboard/content/ArticleText.tsx, src/lib/content/sections.ts, src/lib/content/studio.ts, src/lib/content/overview.ts, src/pages/api/content/sections/[id].ts, src/pages/api/content/overview.ts, src/components/dashboard/content/Content.tsx, src/workers/scheduled-asset-cleanup.ts, src/lib/cms/revalidate.ts, src/lib/blog/revalidation-paths.ts, src/lib/blog/publish-scheduled.ts, src/lib/blog/spread-schedule.ts, src/pages/api/content/blog/schedule.ts, src/lib/cms/storage.ts, src/lib/blog/article-schema.ts, src/lib/blog/seo-gate.ts, src/lib/blog/ai-prompt-template.ts, src/lib/ai-knowledge.ts, src/pages/api/bookings/index.ts, src/components/admin/content/BlogAiCopilotModal.tsx]
 related_docs: [USER-MANAGEMENT.md, ../architecture/PERMISSIONS-SYSTEM.md, ../architecture/DYNAMIC-BLOG-AI-RAG-SYSTEM-ARCHITECTURE.md, ../reference/SYNC-SYSTEM-REVIEW.md, ../operations/OPERATIONS.md]
 tags: [cms, blog, ai, rag, d1]
 ---
@@ -85,7 +85,10 @@ the blog index and the live post are purged; an archived, unpublished or renamed
 has its old URL purged and sent to IndexNow, so what the site now answers there is served at
 once (a 301 for a rename, 410 Gone for an archive);
 and the post's tag pages and its translation (whose hreflang link is decided at render
-time) are purged when the post goes live or leaves, or when its tags or pairing change. A
+time) are purged when the post goes live or leaves, or when its tags or pairing change. Since
+2026-10-31 the home page and the four service pages of the languages the post was and is live
+in are purged too when it goes live or leaves, changes language, or changes its title, cover or
+tags, because they show "From our blog" (`showcasePaths`; cf-astro `FromTheBlog.astro`). A
 routine edit of a live post purges only the index and the post, as before. The live URL is
 sent to IndexNow and Search Console on every publish, scheduled ones included.
 
@@ -260,12 +263,13 @@ The Blog page (`src/pages/dashboard/content/blog.astro`, its island
 It asks for the page key `/dashboard/content/blog` exactly before any HTML is made; until
 2026-10-30 it also asked for an admin role. One read, `GET /api/content/blog/studio`
 (`src/lib/blog/studio.ts`), answers every article without its text, in its pair, with what each
-pair still needs; the page then offers three views in a sideways row.
+pair still needs; the page then offers four views in a sideways row.
 
 **The figures at the top:** articles (and how many subjects are in both languages), live,
 scheduled (with the next date), pairs that need fixing (and how many articles have no cover),
 suggested edits waiting, and the writing assistant: *Working*, *Failed* or *Not used*, from its
-last recorded runs of `ai-generate-stream`, `ai-visibility` and `blog/suggest` in the activity log
+last recorded runs of `ai-generate-stream`, `ai-visibility`, `blog/suggest` and (since 2026-10-31)
+`blog/describe-photo` in the activity log
 (`getRecentAiRuns`: when, which route and whether it worked, never who).
 
 **Articles.** One card per subject: the cover photo, or "No cover photo" in amber; each language
@@ -279,6 +283,7 @@ needs, the fixes first:
 | A failing quality check (§3.1) | each blocking check the article fails, in the gate's words | fix when live or scheduled, else improve |
 | Suggested edits to review | a pending suggestion (§3.3) | review |
 | No short answers for AI search | no `direct_answers` | improve |
+| Links to no other article | its text links to no other article of the blog (`blogLinkCount`, `src/lib/blog/link-ideas.ts`; since 2026-10-31) | improve |
 | No version in the other language | a lone article, not taken down | improve |
 | Names a version that does not exist | its `translation_slug` names no article in the other language | fix |
 | Does not name the other version | a pair named from one side only; the website draws the language link only from the side that names the other | fix |
@@ -287,6 +292,15 @@ Two articles are a pair when one names the other's address in the other language
 in one pair at most. Filters in one row: state (live, scheduled, drafts, taken down) and needs
 (something to fix, a cover photo, suggested edits, its other language), and a search by title,
 address or topic. Twenty cards at a time.
+
+**Fill the gaps** (`BlogGaps.tsx`, since 2026-10-31,
+[spec](../specs/2026-10-31-articles-found.md)). Every article not taken down that lacks short
+answers, links to other articles, a cover photo or its cover's description, live first, then the
+next to go live, then drafts, with the gap and the language to choose in one row. Each gap has
+one button that opens the article at its part and starts there: **Draft short answers** (Search
+and answers, the assistant's draft), **Add links** (Write, the link ideas), **Add a cover photo**
+(Cover) and **Describe the photo** (Cover, the assistant's description). A draft only fills the
+editor; the person reads it and saves, through the same checks as any save.
 
 **Calendar.** The month's live and scheduled articles on their day, in this browser's time, each
 opening its article; a month grid once the panel is wide enough and a list of the days that have
@@ -316,7 +330,10 @@ so they would claim readers the blog does not have.
   (an address starting `https://`, `/`, `mailto:` or `tel:`), undo and redo, and a photo, uploaded
   (`blog-image`, into `blog/images/`) or chosen from Photos, which goes in only once it is
   described. There is no first-level heading: the title is one. The word count is the quality
-  gate's (`wordCount` in `seo-gate.ts`).
+  gate's (`wordCount` in `seo-gate.ts`). **Link ideas** (since 2026-10-31) lists the live
+  articles of the same language that share its topics or title words, at most six, then the four
+  service pages, each marked when the text already links to it; one goes on the selected words,
+  or its title goes in as a link at the cursor.
 - **Details:** the language, the address (the saved form shown; a live article's new address
   forwards from the old one), the author, the other language's version chosen from that
   language's articles, with **Link it back** when that article does not name this one, and the
@@ -326,7 +343,10 @@ so they would claim readers the blog does not have.
   (`ai-visibility`) for a person to read and change before saving.
 - **Cover:** upload, Choose from Photos, take it off, and what the photo shows. Without one the
   website draws a cover from the article's topic and title (cf-astro `WordCover.astro`, since
-  2026-10-30); the photo replaces it.
+  2026-10-30); the photo replaces it. **Describe it with the assistant** (since 2026-10-31,
+  `POST /api/content/blog/describe-photo`) sends the cover, made small, to Llama 4 Scout and puts
+  its one-sentence description, in the article's language, in the field to read before saving;
+  only a photo stored in the portal is sent.
 - **Publish** (with the count of needed checks that pass): the date in this browser's time and
   the actions the article's state allows: save as a draft, schedule (a later date), publish now;
   for a scheduled one save, back to a draft, publish now; for a live one save the change and take
@@ -347,7 +367,8 @@ publishing job), and the editor offers to load the saved version. A save answers
 `updatedAt`. The check runs just before the write, not inside it.
 
 **Who may do what.** The Studio's two reads, the writing assistant's routes (`ai-generate-stream`,
-`ai-prompt`, `ai-visibility`) and `edge-verify` are mapped to the Blog page in the middleware
+`ai-prompt`, `ai-visibility`, and since 2026-10-31 `blog/describe-photo`) and `edge-verify` are
+mapped to the Blog page in the middleware
 since 2026-10-30, as `/api/content/blog` already was; until then they sat on the Overview's key,
 so a person with the Blog page but not the Overview was refused. The three powers below the
 page, `#bypass-quality-audit`, `#edit-ai-prompts` and `#review-suggestions` (§3.1, §3.3, §4),
@@ -472,6 +493,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-31 | §1's purge paragraph and §3.4's views, needs table, Write, Cover and "Who may do what" sentences against `src/lib/blog/revalidation-paths.ts`, `link-ideas.ts`, `photo-alt.ts`, `studio.ts`, `src/pages/api/content/blog/describe-photo.ts`, `studio.ts` (route), `Blog.tsx`, `BlogGaps.tsx`, `BlogEditor.tsx` and `ArticleText.tsx`, with `test/blog-articles-found.test.ts`, `test/blog-publish-effects.test.ts` and `test/content-blog-studio.test.ts` | A live photo description (no article has a cover yet); the pages on a phone (the owner's test); the rest of the page |
 | 2026-10-30 | §3.4's Cover sentence against `cf-astro/src/components/blog/WordCover.astro` (`2376e62`) | The rest |
 | 2026-10-30 | §3.4 and the Blog Studio sentences of §1, §3, §3.2, §3.3, §4.3, §4.5 and §5 against `src/lib/blog/studio.ts`, `reach.ts`, `src/pages/api/content/blog/studio.ts`, `reach.ts`, `src/pages/api/content/blog.ts` (`base`), `src/components/dashboard/content/Blog.tsx`, `BlogEditor.tsx`, `ArticleText.tsx`, `API_PAGE_MAPPING` and `src/pages/api/media/upload.ts`, with `test/content-blog-studio.test.ts`; the live `blog_posts` counts and `admin_audit_log`'s `ai_inference` rows (Cloudflare D1 connector, counts and routes only) | The pages on a phone (the owner's test); a live PostHog or Search Console answer for the blog (no call made from this session); a live run of the writing assistant |
 | 2026-10-30 | §5's clean-up sentence, Media and Choose from Photos against `src/lib/content/photos.ts`, `src/pages/api/media/library.ts`, `src/components/dashboard/content/Photos.tsx`, `editors.tsx` and `src/workers/scheduled-asset-cleanup.ts`; `test/content-photos.test.ts` passes | The live bucket's photos (no R2 object listing through the connector) |
