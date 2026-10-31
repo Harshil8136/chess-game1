@@ -154,7 +154,7 @@ route runs. The defence-in-depth argument stands; the example did not.
 
 ### 3.1 Purpose
 
-`/dashboard/debug` is a landing hub (its heading is the registry label, Developer Tools) with Copy for Claude and a card for each tool the viewer may open: Migrations, Switches and Documents (2026-10-31), Page Registry (for someone it opens for) and System health (`denyHealth`). What the 2026-10-31 tools show, their keys and their limits are in [`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md).
+`/dashboard/debug` is a landing hub (its heading is the registry label, Developer Tools) with Copy for Claude and a card for each tool the viewer may open: Migrations, Switches, Documents, Deploys, Keys and tokens and Private links (2026-10-31), Page Registry (for someone it opens for) and System health (`denyHealth`). What the 2026-10-31 tools show, their keys and their limits are in [`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md).
 
 ### 3.2 Diagnostics (moved)
 
@@ -169,7 +169,7 @@ whole probe suite in `src/lib/diagnostics/runner.ts` and wrote one row per probe
 | File | Purpose |
 |------|---------|
 | `pages/dashboard/debug/index.astro` | Landing hub (`canUseDebug`), on the console kit since 2026-10-31 |
-| `pages/dashboard/debug/migrations.astro`, `switches.astro`, `documents.astro`, `pages/api/debug/handoff.ts`, `components/admin/debug/tools/`, `lib/devtools/`, `lib/dal/DevToolsRepository.ts`, `styles/pages/devtools.css` | The 2026-10-31 tools (`denyDebug`), in [`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md) |
+| `pages/dashboard/debug/migrations.astro`, `switches.astro`, `documents.astro`, `deploys.astro`, `keys.astro`, `links.astro`, `pages/api/debug/handoff.ts`, `components/admin/debug/tools/`, `lib/devtools/`, `lib/dal/DevToolsRepository.ts`, `styles/pages/devtools.css` | The 2026-10-31 tools (`denyDebug`), in [`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md) |
 | `pages/dashboard/debug/diagnostics.astro` | Forwards to `/dashboard/health?tab=checks` (2026-10-17) |
 | `pages/dashboard/debug/pages.astro` + `components/admin/debug/registry/` (`RegistryConsole.tsx` and one file per tab and pop-up), `ConsoleFeatures.tsx`, `styles/pages/page-registry.css` | Page Registry, the access control room (rebuilt 2026-10-14; the old `PageRegistryManager.tsx` was deleted): tiles, then Pages, Who opens what, See it as (2026-10-16), Personal settings, Consoles, Checks and History, and a pop-up per page with its settings, its people and its actions ([spec](../specs/2026-10-14-access-control-room.md) §4) |
 
@@ -308,6 +308,7 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-31 | §3.1 and §3.3 after wave 2: the three new pages under `src/pages/dashboard/debug/` and the hub's cards | Everything else; the pages in a browser (the owner's phone test) |
 | 2026-10-31 | The naming note and §3.1 and §3.3 after the hub gained its tools: `src/pages/dashboard/debug/` (the heading is `page.label`, and was before), the live `/dashboard/debug` row (label Developer Tools) read through the D1 connector | §1, §2 and §4 onward; §7's table, a record of the old rename, left as it was; the pages in a browser (the owner's phone test) |
 | 2026-10-17 | §1, §2.1 to §2.3, §3 and §8.3 after Diagnostics merged into System health: `src/pages/dashboard/debug/` (`diagnostics.astro` forwards, `diagnostics/history.astro` removed, `index.astro` shows the System health card through `denyHealth`), `src/lib/diagnostics/`, `src/pages/api/diagnostics/` and the three `components/admin/debug/` Diagnostics files removed (`git status`) | §4 onward; the pages in a browser (the owner's phone test) |
 | 2026-10-17 | §2.1 and §2.2's rank rule after Page Registry became a grant-only page: `page-floors.ts`, `canUsePageRegistry`, `computeNavItems`, `page-gates.ts`, `api/system/pages.ts` (its role stays `dev`); `test/debug-access.test.ts`, `test/registry-access.test.ts`, `test/registry-console-features.test.ts` | Everything else; the page in a browser (the owner's phone test) |
