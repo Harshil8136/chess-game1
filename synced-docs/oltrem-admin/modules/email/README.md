@@ -114,6 +114,20 @@ with its people and its words as the email shows them, and **What became of it**
 Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
 domain a pane with every check and every record, each value with its own Copy button.
 
+Since 2026-10-31 ([the record](../../docs/records/2026-10-31-write-templates-and-code.md)) Write
+starts from the company's saved templates for Write (see [Saved templates](#saved-templates)):
+
+| Part | What it does |
+|---|---|
+| The template row | At the top of the card, every template for Write in one sideways row, letters first and the most used next, after **No template**. Each is a button that posts the form as it is (`?intent=template`, `pick`), so nothing typed is lost; `?template=<id>` opens Write with one picked (the template page's **Write with it**). A template that holds code is shown locked, with why, to someone without `email.write.code` |
+| A letter | Its subject and words go in the form to be changed: into an empty box, or in place of the last letter's words when they were not changed; words the person wrote are kept, with the letter's under them. **No template** takes unchanged letter words away again |
+| A design | The message goes in its message place, with the address's signature; a design with no message place shows no box and goes as it is |
+| Fields | `{{first_name}}`, `{{last_name}}`, `{{name}}` and `{{email}}` come from the first person in To; each other field the template names is a line to fill in (`field.<name>`, 300 characters, 30 at most), and a field it does not name is dropped. A value is escaped before it goes into markup |
+| Write in HTML | For someone who holds `email.write.code` at the company: a Words or HTML choice. HTML is cleaned by `sanitizeEmailHtml` before it is kept or sent, and its text copy is read out of it |
+| Preview | Saves the draft and shows it framed above the form, as `GET /written/:id/preview` renders it: the template at the version written with, the fields and the signature filled in, under a policy that runs nothing. A sent email written with a template or in HTML opens the same way |
+| Address suggestions | The browser offers the addresses the person wrote to lately (the last forty emails sent) as they type To, Cc or Bcc |
+| Save as template | For someone who may build templates: the subject and words become a new letter named after the subject, and the email is kept as a draft. Only words, never HTML |
+
 | Part | What it does |
 |---|---|
 | From | The addresses the person may send everyday mail from (`email.senders.use` at the address's place), the defaults first. With none, the page says so and sends them to Senders |
@@ -159,10 +173,28 @@ addresses, and the domains with their check lines and records.
 
 ## Saved templates
 
-The designs bulk mail is written with, kept in D1 as the company's (stage 3 of the bulk sending
-plan, `docs/records/2026-10-28-saved-templates.md`). They are not the typed templates above,
-which are code; a saved template is data a person builds on the page Campaigns, Templates
-(`/email/templates`).
+The letters and designs the company writes with, kept in D1 as the company's (stage 3 of the
+bulk sending plan, `docs/records/2026-10-28-saved-templates.md`; Write since 2026-10-31,
+[the record](../../docs/records/2026-10-31-write-templates-and-code.md)). They are not the typed
+templates above, which are code; a saved template is data a person builds on the page Email,
+Templates (`/email/templates`): a row filters them (all, for Write, for campaigns, with code,
+archived), and one opens to Edit, Preview (as a phone, a desktop or in dark mode) and Versions.
+
+Each template says where it is used (`uses`, migration `0054`): `everyday` on the Write page,
+`bulk` in campaigns, or `both`; a campaign refuses one for Write alone, and its picker lists only
+the others. A **letter** (`style` `letter`) is a saved reply for Write: a subject and words with
+the marks Write reads, kept as one text block; its words open in the message box to be changed. A
+**design** for Write starts with a heading and a **message** block, where the words written on
+Write go; pasted HTML takes them where it says `{{message}}`. The checks warn when a design for
+campaigns has a message place, since a campaign leaves it empty, and campaigns' footer and
+unsubscribe line are left out of a template for Write alone. Each send from Write counts on the
+template (`used_count`, `used_at`), and the row offers the most used first.
+
+A **code** block holds HTML inside a design, cleaned like pasted HTML. Code is added or changed
+only by someone who holds `email.templates.html`; someone who builds from blocks sees it locked,
+and may move it or take it out (the HTML they send back must match what is kept), never change it,
+and may not copy a template that holds code. On Write, a template with code (a code block or
+pasted HTML) is used only by someone who holds `email.write.code`.
 
 | Part | What it does |
 |---|---|
@@ -250,8 +282,9 @@ Under `/api/email`, through the IAM module's sessions and check. `email.manage` 
 `email.senders.manage` ask for a fresh sign-in. The templates' capabilities are held at the
 company itself: `email.templates.read` to see and preview, `email.templates.write` to build from
 blocks and send oneself a test, `email.templates.html` as well to paste HTML or change a pasted
-body. So are the lists': `email.lists.read`, `email.lists.write`, and `email.lists.export` to
-download one.
+body or a code block. So are the lists': `email.lists.read`, `email.lists.write`, and
+`email.lists.export` to download one, and `email.write.code`, to write in HTML on Write and send
+with a template that holds code.
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -259,9 +292,10 @@ download one.
 | `GET /stats` | `email.read` | The last 14 days (UTC), a row each, every day there even when nothing was sent: the messages that left, those still on the way, the problems (failed, bounced, refused, marked as spam), and of those that left, how many were delivered, opened and clicked. Read through the tenant's index on its last change, so it costs one read per message of the fortnight; the Activity page draws its figures and chart from it |
 | `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
-| `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock, and [Ready to send](#ready-to-send) |
-| `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`, optional `draftId` and `later: { day, time }`) from an address they may use for everyday mail, through the queue after the Undo wait, or at the time asked (see Write) |
-| `POST /written` | `email.senders.use` | Save a draft, new or over the person's draft `id` |
+| `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock, [Ready to send](#ready-to-send), the templates for Write (each with its fields, whether it has a message place, a letter's words, and `locked` with why when the person may not use it), whether they may use code (`code`) and save a template (`saveTemplate`), and the addresses they wrote to lately (`recent`) |
+| `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`, optional `draftId`, `later: { day, time }`, `templateId`, `templateVersion`, `fields` and `format` `words` or `html`) from an address they may use for everyday mail, through the queue after the Undo wait, or at the time asked (see Write); audited with the template and its version, and `format` when HTML |
+| `POST /written` | `email.senders.use` | Save a draft, new or over the person's draft `id`, with its template, fields and format checked as for a send |
+| `GET /written/:id/preview` | `email.senders.use` | One of the person's emails as it will be sent, as its own page under a policy that runs nothing |
 | `GET /written?state=` | `email.senders.use` | The person's own drafts (`draft`), scheduled emails (`scheduled`) or sent ones (`sent`), newest first, a hundred at most; each carries `delivery`, its message's state and reports, once queued |
 | `GET /written/:id` | `email.senders.use` | One email the person wrote, with its `delivery` |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
@@ -284,10 +318,10 @@ download one.
 | `POST /senders` | `email.senders.manage` | Add an address (`email`, `name`, `replyTo`, `scopeId`, `purpose`) |
 | `PATCH /senders/:id` | `email.senders.manage` | Change its name, reply-to, place or purpose |
 | `DELETE /senders/:id` | `email.senders.manage` | Remove it; a default goes last |
-| `GET /templates?archived=` | `email.templates.read` | The saved templates, the newest change first, and whether the person may build and paste |
-| `POST /templates` | `email.templates.write` | A new template (`name`, `kind` `blocks` or `html`); blocks start with three to change |
+| `GET /templates?archived=&use=` | `email.templates.read` | The saved templates, the newest change first, and whether the person may build and paste; `use=bulk` only those for campaigns, `use=everyday` only those for Write |
+| `POST /templates` | `email.templates.write` | A new template (`name`, `kind` `blocks` or `html`, `style` `design` or `letter`, `uses`, and a letter's `subject` and `body`); blocks start with three to change, or a heading and a message place for Write |
 | `GET /templates/:id?version=` | `email.templates.read` | The template with its checks, merge fields and versions; an older version when one is named |
-| `PATCH /templates/:id` | `email.templates.write` | Save `name`, `subject`, `preheader`, `accent`, `blocks` or `html`, with the `version` edited |
+| `PATCH /templates/:id` | `email.templates.write` | Save `name`, `subject`, `preheader`, `accent`, `uses`, `blocks`, `html` or a letter's `body`, with the `version` edited; a code block needs `email.templates.html` to be added or changed |
 | `POST /templates/:id/copy` | `email.templates.write` | A copy, as a new template |
 | `POST /templates/:id/archive` | `email.templates.write` | Archive it (`archived` true) or bring it back |
 | `POST /templates/:id/revert` | `email.templates.write` | Make an older `version` the current one again |

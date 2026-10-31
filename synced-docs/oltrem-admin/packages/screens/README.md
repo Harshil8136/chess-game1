@@ -168,7 +168,7 @@ Every page sits in one frame, drawn on the server:
   | Work | Records, Forms, Bookings, Tasks, Files, Approvals, Announcements, Analytics, Automations |
   | Company | Team (Shifts, Time clock, Time off, Expenses, Equipment), Sales (Quotes, Invoices) |
   | People | People (People, Access), Customers (Customers, Privacy) |
-  | Messages | Email (Write, Drafts, Sent, Activity, Addresses, Providers), Campaigns (Campaigns, Templates, Lists) |
+  | Messages | Email (Write, Drafts, Sent, Activity, Addresses, Templates, Providers), Campaigns (Campaigns, Lists) |
   | System | System health (System health, Backups, Deploys, Alerts), Settings (Settings, Audit log), Developer |
 - **Closed to icons.** The arrow closes the sidebar to a 64 px rail and opens it again. Only the
   words fade: no icon moves. A section's name shows beside the rail while the pointer or the
