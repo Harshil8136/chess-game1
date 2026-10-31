@@ -48,7 +48,9 @@ relay (`smtp.sender.net`, 587) and any server. A message may carry copies, `cc` 
 (`{{message.cc}}`, `{{message.ccList}}` and the same for `bcc`, gone when there are none), and
 the SMTP client writes a `Cc` header and gives every copy as a recipient, never writing `Bcc`. Every one names
 its auth scheme (`bearer`, `basic`, `api-key-header`, `sigv4`, `smtp-plain`), the fields a person
-pastes with which are secret, a recipe (where to create the key, its scopes, how to test and
+pastes with which are secret (a field's `wrong` names values that are surely the wrong thing by how
+they start, refused on save with what to paste instead: Brevo's SMTP key, `xsmtpsib-`, where its
+API key goes, and its API key, `xkeysib-`, as an SMTP password), a recipe (where to create the key, its scopes, how to test and
 rotate it, what the kit does without it, and a `guide`: the steps in the provider's own dashboard
 for the key, the sending domain and the delivery reports, each with a link to the page it names,
 the day they were checked and the provider's own guide for when its screens change; the steps
