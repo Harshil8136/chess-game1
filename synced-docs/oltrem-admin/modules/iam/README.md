@@ -185,9 +185,13 @@ The rules, each refused with its own code:
   above it (`rankAt`). A capability enters a role only if the actor holds it at every scope where
   the role is granted (anywhere, for a role not granted yet); a role is made or edited below the
   actor's best position; the Owner role is edited by the Vendor alone and never deleted.
-  Otherwise `KIT-E-2007`.
+  Otherwise `KIT-E-2007`. A refusal about a role names the permission by its label in words
+  ("you do not hold “See the people directory” yourself") and a place by its name, not by id.
 - **Never for yourself.** Nobody changes their own grants, overrides or group membership, nor the
   grants of a group they belong to (`KIT-E-2008`); they request access instead.
+- **No role twice at one place.** A grant of a role the person or group already holds at that
+  place, in force and held the same way (both eligible or both not), is refused in plain words
+  (`KIT-E-2010`): change or end the one in force instead.
 - **Every grant but the Owner's expires**: ninety days unless an expiry is given, a year at most,
   and it may start later; an override has the same window. An *eligible* grant is held but not in
   force until its holder activates it, for one to twelve hours (four unless said) with a reason;
@@ -210,7 +214,9 @@ The rules, each refused with its own code:
   each of the group's grants to that person. The tree is the Owners' (`iam.scopes.manage` has the
   owner floor): four levels at most, the root stays, and a scope, role or group with any grant in
   its history is never deleted; its grants are ended instead. Anything else that does not fit
-  (an unknown role, scope or person, a date out of range, a thing still in use) is `KIT-E-2010`.
+  (an unknown role, scope or person, a date out of range, a thing still in use) is `KIT-E-2010`,
+  titled "That cannot be done", its detail naming what to change. Before the company exists every
+  write is refused with "The company is not made yet: name it first on the Home page."
 
 ## The Vendor and the handover
 
@@ -366,7 +372,7 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 
 | Routes | Capability | What they do |
 |---|---|---|
-| `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map; my sign-ins; end one of them (`iam.device-end` in the audit log) |
+| `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map, with `may`: whether I hold, anywhere, what the access pages change (`read`, `give` for grants and invitations, `roles`, `groups`, `places`, `vendor`), by the routes' own check, so a screen offers only what would be allowed; my sign-ins; end one of them (`iam.device-end` in the audit log) |
 | `POST /me/sign-out` | `iam.self` | Sign out (the sidebar's plain form; no body): ends this sign-in (`iam.sign-out` in the audit log), then answers 303 to `/cdn-cgi/access/logout` (`ACCESS_SIGN_OUT`), Cloudflare Access's own sign-out, which clears the door's cookie and ends the Access session |
 | `GET /me/grants`, `POST /me/grants/:id/activate` | `iam.self` | the grants that reach me; bring an eligible one into force for a few hours |
 | `GET /me/options` | `iam.self` | what I may ask for: every role but the Owner's and every place, by name, so a member who cannot read the Access page can still ask |

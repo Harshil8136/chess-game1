@@ -227,8 +227,9 @@ printed:
    carrying the new secrets in a file (`--secrets-file`) that is removed right after. The
    migrations and the deploy are tried once more, five seconds later, when what failed reads as a
    passing network or Cloudflare error (a reset connection, a timeout, a 502).
-6. **The door**, once the deploy has made the Worker (an empty account has nothing to protect):
-   the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
+6. **The Vendor's address** from step 2, written while the database has none, as `vendor set` does;
+   then `backup setup`; then **the door**, once the deploy has made the Worker (an empty account
+   has nothing to protect): the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
    Access, All traffic, the allowed emails, the sign-in email first), the first one a link to the
    account's own Workers page, then Enter. The command checks the portal's address from outside
    every few seconds while it waits: once the address sends people to the Access sign-in
@@ -237,12 +238,20 @@ printed:
    `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
    the door is on no request carries it, so the portal refuses everyone. A client with a hostname
    Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
-7. **The Vendor's address** from step 2, written while the database has none, as `vendor set` does;
-   then `backup setup`; last, the one door step left for later: a self-hosted Access application
-   on the address's `hooks`, `healthz` and `account` paths with a Bypass policy, needed once a
-   website's form posts to the portal, an email provider sends delivery reports, the release
-   checks the portal's health, or customers sign in at `/account` (`@oltrem/customers`), on a
-   custom domain and on `workers.dev` alike.
+7. **The parts of the portal**: which parts (modules) are on, written to `settings.parts_off` as
+   `parts set` does. The question (`parts` on the asker, `partsQuestion(off)` in `src/parts.ts`)
+   carries every part with its one line, whether it is always on and what it needs, its group as
+   the portal's sidebar puts it (Work, Company, People, Messages, System), the parts off now, and
+   three presets: Everything, Email only and Only what's always on. The answer is the parts
+   switched off, one per line; a list `partsRefusal` refuses is asked again with the reason under
+   the question. The setup page shows it as a dashboard (below); the terminal lists the parts
+   numbered under their groups, on, off or always on, and takes numbers or names to switch (on
+   with what a part needs, off with what needs it), a preset's name, and Enter to use them. The
+   portal's Parts page switches them later, with no deploy. Last, the one door step left for
+   later: a self-hosted Access application on the address's `hooks`, `healthz` and `account`
+   paths with a Bypass policy, needed once a website's form posts to the portal, an email
+   provider sends delivery reports, the release checks the portal's health, or customers sign in
+   at `/account` (`@oltrem/customers`), on a custom domain and on `workers.dev` alike.
 
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
@@ -273,6 +282,16 @@ appears instead. An `https` address (or this computer's own) is a link; nothing 
 turned into a control, and every text is put in the page as text. When wrangler's sign-in does not
 open the browser by itself, the step shows a button to its sign-in page. The terminal shows the
 same steps in the kit's look and says where the page is, in case the browser did not open.
+
+Step 7's question is a dashboard as wide as the step: how many parts are on (always on, switched
+on, off) with a bar, the presets as chips that fill the switches, filter chips (All, On, Off) and
+a search, then the parts under their sidebar groups as tiles (one column on a phone, two or three
+on a computer), each with its name, its line, an On/Off switch or "Always on", and "Needs …".
+Switching a part on switches on what it needs and says so on its tile; switching off a part that
+parts still on need asks first, on its tile, with **Switch both off** (or all of them) and
+**Keep … on**. Nothing is sent until **Use these parts**, in a bar that stays in view. The page's
+switching rule is the tool's (`switchPart`), held equal by `test/setup-page.test.ts`, which also
+draws the dashboard on a stand-in page and presses its switches.
 
 Two processes (`src/setup-page.ts`), because the deploy's tools hold their process while they
 run: this one serves the page on `127.0.0.1` and stays free to answer it, and a second one, the
@@ -672,6 +691,9 @@ the core, `preset everything` switches every part on. The deploy calls the same 
 | `readParts(dir, run)` | `{ off?: string[], problem?: string }`, through `wrangler d1 execute --remote --json`; `[]` before anything is written |
 | `writeParts(dir, off, run, now?)` | `{ ran, written, off, steps, problems }`: refused before any read when the rule says no; nothing written when the list is already stored; otherwise `writeSetting` (above: the version moves up, a history row, the cached settings cleared) |
 | `partsLines(off)` | the lines `list` prints |
+| `partsQuestion(off)` | the deploy's question: `{ items, off, presets }`, each item the catalogue's row with its sidebar `group` (`partGroup(id)`, kept here since the catalogue is held equal to core-config's and has none; a client's own part that is off shows under `OWN_GROUP`), the presets `everything`, `email` and `core` |
+| `switchPart(items, off, id, on)` | the list after one switch: on with what the part needs, off with what needs it; a core part never moves |
+| `partsTyped(question, off, typed)` / `partsQuestionLines(question, off)` | the terminal's side: a typed line applied (numbers, names, a preset), and the numbered lines it prints |
 
 Exit `0` when written or already so, `1` when a write failed, `3` when it could not run (a list
 the rule refuses, a database wrangler cannot read).

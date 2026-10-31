@@ -71,7 +71,19 @@ const limit = config.get<number>('email.daily_limit');
 
 A definition is refused at once when its key is not `module.name` (the module segment as a
 module id, dashes allowed; the name in lower snake case), when its module does not match the key,
-when its default fails its own schema, or when the key already exists.
+when its default fails its own schema, when the key already exists, when it names a section the
+page does not have, or when its unit is not a short word.
+
+Two optional fields place a setting on the Settings page. `section` is one of `SETTING_SECTIONS`,
+shown in this fixed order with these names: `company` (Company), `email` (Email), `money`
+(Money), `people` (People and access), `security` (Security) and `system` (System: the ids the
+Vendor writes at setup, a section only the Vendor sees). Left out, a setting takes its module's
+section (`sectionOf`: email and campaigns in Email, invoices, quotes and expenses in Money, iam,
+users and time off in People and access, alerts, audit and privacy in Security, backup, health
+and settings in System, anything else in Company); every kit setting names its own. `unit` says
+what a number counts (`days`, `MB`, `people`) and is shown beside its box. Settings that mean the
+same in several modules keep one key each (`invoices.currency`, `quotes.currency`,
+`expenses.currency`); the page shows them together under titles that say which is which.
 
 ## The company's clock
 
@@ -89,7 +101,7 @@ routes; the Settings page of `@oltrem/screens` reads and writes through them.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/settings/values` | `settings.read` | every defined setting: its title and description, its live value (left out for a sensitive one), where it comes from (`default`, `client`, `system`), who changed it last and when, the control it takes, and whether the caller may change it; read from D1, the truth, not the snapshot |
+| `GET /api/settings/values` | `settings.read` | `{ items, standing, sections }`: every defined setting with its title and description, its section, its live value and its default (both left out for a sensitive one), where it comes from (`default`, `client`, `system`), who changed it last and when, the control it takes (`text`, `number` with `min`, `max` and `unit`, `switch`, `choice` with its `options`, `list` of words, or `other`), read once from its schema, and whether the caller may change it; how the caller stands (`vendor`, `owner`, `admin`); the sections in their order with their names. Read from D1, the truth, not the snapshot |
 | `PUT /api/settings/values/:key` | `settings.manage` | `{ value, reason? }`: refused when the key is unknown (`KIT-E-0404`), set in the client file (`KIT-E-0422`), above the caller (`KIT-E-0403`) or rejected by its schema (`KIT-E-0422`); otherwise saved through `Config.save` and audited as `settings.update` |
 
 Who may change a setting is its `editableBy` read against the caller's standing, which the client
@@ -101,10 +113,14 @@ needs `oltrem_audit_log` from `@oltrem/core-audit`.
 
 Given `parts: { modules }`, the settings module also keeps the portal's parts (its modules)
 switched off while it runs, with no deploy and no migration: one live setting,
-`settings.parts_off` (`PARTS_SETTING`, the list of module ids switched off, the Vendor's), kept
-off the Settings page and its free edit. `src/parts.ts` holds the catalogue (`KIT_PARTS`: each
-kit module's name, one line, `core`, `requires`), the presets (`PART_PRESETS`: Everything, Email
-only) and the rule: `partsOff(stored, mounted)` never switches a core part off (`CORE_PARTS`:
+`settings.parts_off` (`PARTS_SETTING`, the list of module ids switched off), kept off the
+Settings page and its free edit. Whoever holds `settings.parts` changes it: an admin capability
+with no floor (since 2026-10-31; it was the Vendor's alone), so every Owner holds it, the Vendor
+holds it by kind, and an Owner may put it in a role; it asks for a sign-in within the last few
+minutes (`freshSignIn`), for reading the list as for saving it. `src/parts.ts` holds the catalogue (`KIT_PARTS`: each
+kit module's name, one line, `core`, `requires`; the screens name each part with a copy of
+these names, `packages/screens/src/names.ts`, which a test holds to this list), the presets (`PART_PRESETS`: Everything, Email
+only; the route adds Nothing optional, every part but the core off) and the rule: `partsOff(stored, mounted)` never switches a core part off (`CORE_PARTS`:
 iam, users, settings, audit, health, alerts), drops an id nothing mounts and takes along a part
 whose needs are off, so a list written by hand stays safe; `partsRefusal(wanted, mounted)` says,
 in the page's words, why a list cannot be saved; `createPartsReader` makes the set again only when
@@ -112,7 +128,7 @@ the snapshot's list changes, so a request pays one comparison and no I/O.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/settings/parts` | `settings.parts` (floor `vendor`) | every mounted part: on or off, always on, what it needs and what needs it; the list off; the presets with the parts each switches off |
+| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it; the list off; the presets with the parts each switches off |
 | `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }`: refused (`KIT-E-0422`) for an unknown part, a core one, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on |
 
 The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
