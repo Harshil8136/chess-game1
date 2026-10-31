@@ -252,8 +252,8 @@ when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secre
 The same seven steps, with their questions and their progress in a page in the browser
 (`npm run setup` at the kit's root; `npm run deploy -- --page` in a client repository). The page
 is drawn in the portal's look, from `@oltrem/core-ui`'s theme tokens (a test fails when the two
-differ): a step is a card, a question a box with a button, an `https` address a link, an email
-address a chip with a copy button, a tool's run a spinner with the time it has taken, a stop a
+differ): a step is a card, a question a box with a button, an `https` address a link (nothing
+else in a line is turned into a control), a tool's run a spinner with the time it has taken, a stop a
 card with what the tool printed last and a **Try again** button. When wrangler's sign-in does not
 open the browser by itself, the page shows a button to its sign-in page. The terminal shows the
 same steps in the kit's look and says where the page is, in case the browser did not open.
@@ -283,14 +283,20 @@ port, a refused socket), the same deploy runs in the terminal instead.
 `servePage(null, { menu, status })` serves the same page as a dashboard instead of one run (since
 2026-10-29): `status` (`StartStatus`) is what the start made ready (the kit's commit, what an
 update brought in or why it was held, Node, the doctor's checks, where the portal is set up to
-live), drawn as the **This computer** card and sent first to every page that connects, before the
-choices; a `status` event from a run (**Check again**, `run.mjs check`) replaces it. The choices
+live), drawn as the **This computer** list and sent first to every page that connects, before the
+choices; a `status` event from a run (**Check again**, `run.mjs check`) replaces it. The list has
+one line for the kit (the commit and day on the right; what an update brought in folds under its
+count) and one for the checks; each check that needs a look shows its title, its summary and its
+fix, and a fix that is a command (or a few joined by "or") is a box with **Copy**. The choices
 whose id starts with `dev` are one card, picked by their `short` names; `check` and `deploy` have
 their own cards; any other choice gets a card of its own. Each runs as a second process whose
 lines come over IPC as the deploy's do (the kit's look sends them when `OLTREM_PAGE` is set and
-the process has an IPC channel), shown under the cards and cleared with **Clear**. The template's
-dev script sends a `serving` event with its address, which the card shows as **Open the portal**.
-A choice marked stoppable (the portal on this computer) has a **Stop the portal** button, which
+the process has an IPC channel), shown under the cards as one log and cleared with **Clear**;
+wrangler's error lines (`✘ [ERROR]`, `[wrangler:error]`) gather in a small console in that log,
+an error seen again counted (×6) rather than repeated. The template's dev script sends a
+`serving` event with its address, which the card shows as **Open**. The page was remade compact on
+2026-10-31 ([record](../../docs/records/2026-10-31-start-page-remake.md)).
+A choice marked stoppable (the portal on this computer) has a **Stop** button, which
 asks the process over IPC to stop what it started, then ends it three seconds later, with every
 process it started (`stopTree` in the look: `taskkill /T` on Windows, where a plain kill would leave
 wrangler's runtime holding the port). The kit's root runs it as `npm start` and from its one-click
@@ -625,7 +631,7 @@ failure the exact command that fixes it. No check prints a secret value.
 | Id | Check | Fix printed |
 |---|---|---|
 | `NODE-01` | the running Node satisfies `engines.node` of package.json (a `>=version` floor) | the install command for that version |
-| `PM-01` | the installed pnpm is the one `packageManager` names, or, with none installed, the pnpm npx fetched to run this check is | the corepack or npm command for that version |
+| `PM-01` | the installed pnpm is the one `packageManager` names, or, with none installed, the pnpm npx fetched to run this check is | `npm install -g pnpm@<version>`, one command on every Node the kit supports (Node 25 no longer ships Corepack) |
 | `MANIFEST-01` | the Worker here matches its manifest (the check above); skipped where there is no manifest | the rule, or the file to fix |
 | `MIG-01` | every kit migration is copied into `migrations/`, unchanged, with a current `kit.json`; skipped where there is no manifest or no installed kit package | `oltrem migrations sync` |
 | `WF-01` | the deploy workflow `.github/workflows/deploy.yml` is in place | copy it from the client template |

@@ -39,24 +39,26 @@ installed for you.
    and the page says so. It then installs what the new kit needs, builds the `oltrem` tool, and
    runs the template's checks (`oltrem doctor`, a few seconds).
 6. **The start page** opens in your browser: a dashboard of three cards.
-   - **This computer:** what the start found: the newest kit (or what it brought in just now,
-     change by change), Node.js and the packages, and the checks, each one that needs a look named
-     with its fix. **Check again** does the whole start again without closing anything.
+   - **This computer:** two lines: the kit (the newest, or how many changes it brought in just
+     now, which open to show them) and the checks. A check that needs a look says what is wrong
+     and how to fix it; a fix you type is one command with **Copy**. **Check again** does the
+     whole start again without closing anything.
    - **On this computer:** the portal at a local address such as <http://localhost:8787>, with no
      Cloudflare account; it opens on a sign-in page that exists only on your computer. **Who may
      open it** picks Only this computer, This Wi-Fi or Anywhere: the last two are also open on
      other devices behind a code shown when it starts, on your network or at a temporary
      Cloudflare address (this needs `cloudflared` installed, and no account; see
      [sharing it](./templates/client/README.md#sharing-it-with-other-devices)). While it runs, the
-     card has **Open the portal** and **Stop the portal**.
+     card shows its address with **Open** and **Stop**.
    - **On Cloudflare:** where the portal is set up to live, or that it is not there yet, and
      **Put it live**: it signs you in to Cloudflare in the same browser, lets you pick the account
      and the domain, opens Cloudflare's key form already filled in, checks the key when you paste
      it, and notices by itself when the door (Cloudflare Access) is on. Running it again only does
      what is missing.
 
-   What runs shows its steps under the cards, and **Clear** takes them away. The header says
-   Ready, Running, or that something needs a look.
+   What runs shows its steps under the cards as one log, and **Clear** takes it away; errors the
+   portal reports while it runs gather in a small console there, each counted once. The header
+   says Ready, Running, or how many things need a look.
 
 Keep the window the file opened while you use the page: closing it stops everything. If the page
 does not open, the window shows its address, and if no browser opens it within two minutes, the
