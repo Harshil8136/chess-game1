@@ -238,16 +238,16 @@ printed:
    `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
    the door is on no request carries it, so the portal refuses everyone. A client with a hostname
    Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
-7. **The parts of the portal**: which parts (modules) are on, written to `settings.parts_off` as
+7. **The modules of the portal**: which modules are on, written to `settings.parts_off` as
    `parts set` does. The question (`parts` on the asker, `partsQuestion(off)` in `src/parts.ts`)
    carries every part with its one line, whether it is always on and what it needs, its group as
-   the portal's sidebar puts it (Work, Company, People, Messages, System), the parts off now, and
+   the portal's sidebar puts it (Work, Company, Users & access, Messages, System), the parts off now, and
    three presets: Everything, Email only and Only what's always on. The answer is the parts
    switched off, one per line; a list `partsRefusal` refuses is asked again with the reason under
    the question. The setup page shows it as a dashboard (below); the terminal lists the parts
    numbered under their groups, on, off or always on, and takes numbers or names to switch (on
    with what a part needs, off with what needs it), a preset's name, and Enter to use them. The
-   portal's Parts page switches them later, with no deploy. Last, the one door step left for
+   portal's Modules page switches them later, with no deploy. Last, the one door step left for
    later: a self-hosted Access application on the address's `hooks`, `healthz` and `account`
    paths with a Bypass policy, needed once a website's form posts to the portal, an email
    provider sends delivery reports, the release checks the portal's health, or customers sign in
@@ -676,9 +676,9 @@ SQL. Tested in `test/door.test.ts` against SQLite holding the real settings migr
 ## `oltrem parts list [dir]`, `set <ids...>`, `preset everything|email [dir]`
 
 Which parts of the portal (its modules) are switched off: the live setting `settings.parts_off`
-of `@oltrem/core-config`, which the Vendor also changes on the portal's Parts page. `list` prints
+of `@oltrem/core-config`, which the Vendor also changes on the portal's Modules page. `list` prints
 each kit part `on`, `off` or `always on` with what it needs; `set` switches off exactly the parts
-named, every other one on, in the repository here; `preset email` keeps email, its providers and
+named, every other one on, in the repository here; `preset email` keeps email, its integrations and
 the core, `preset everything` switches every part on. The deploy calls the same exports from
 `src/parts.ts`:
 

@@ -76,10 +76,10 @@ page does not have, or when its unit is not a short word.
 
 Two optional fields place a setting on the Settings page. `section` is one of `SETTING_SECTIONS`,
 shown in this fixed order with these names: `company` (Company), `email` (Email), `money`
-(Money), `people` (People and access), `security` (Security) and `system` (System: the ids the
+(Money), `people` (Users & access), `security` (Security) and `system` (System: the ids the
 Vendor writes at setup, a section only the Vendor sees). Left out, a setting takes its module's
 section (`sectionOf`: email and campaigns in Email, invoices, quotes and expenses in Money, iam,
-users and time off in People and access, alerts, audit and privacy in Security, backup, health
+users and time off in Users & access, alerts, audit and privacy in Security, backup, health
 and settings in System, anything else in Company); every kit setting names its own. `unit` says
 what a number counts (`days`, `MB`, `people`) and is shown beside its box. Settings that mean the
 same in several modules keep one key each (`invoices.currency`, `quotes.currency`,

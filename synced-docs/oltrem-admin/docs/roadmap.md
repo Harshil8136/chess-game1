@@ -46,7 +46,7 @@ self-hosted tiers of the builders reserved for their enterprise plans. That is t
 | Ready-made features, not a builder | nothing to assemble: records, forms, people, email, backups work on day one |
 | Phone first | every page works on a phone before anything loads, with no app to install |
 | Permissions by place | a role holds at one branch or department and not another, with exceptions per person and "see it as" to check |
-| Audit, backups and health built in | the log is sealed daily, the database is copied nightly and a drill proves it opens, and System health watches the free plan's limits |
+| Audit, backups and health built in | the log is sealed daily, the database is copied nightly and a drill proves it opens, and System status watches the free plan's limits |
 | An AI agent can extend it safely | a contract file, strict gates and a module generator, so a client's own feature is added without breaking the rest |
 
 ## Editions: how the modules group into what a client buys
@@ -65,7 +65,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 
 | Module | Edition | State |
 |---|---|---|
-| `iam`, `users` | Core | **built**: places, roles, groups, exceptions, see it as, invitations (one or fifty at a time, each link emailed since 2026-10-27), switching off; since 2026-10-27 a grant ending within the week is emailed to its holder and an overdue access review shows on the health page; the phone screens for My access (hold, turn on, ask), the decisions waiting (requests and approvals) and access reviews (start, keep or remove, close), groups (members, roles) and the Vendor's access, and a role given for 30 days, 90 or a year, or off until turned on |
+| `iam`, `users` | Core | **built**: places, roles, groups, exceptions, see it as, invitations (one or fifty at a time, each link emailed since 2026-10-27), switching off; since 2026-10-27 a grant ending within the week is emailed to its holder and an overdue access review shows on the System status page; the phone screens for My access (hold, turn on, ask), the decisions waiting (requests and approvals) and access reviews (start, keep or remove, close), groups (members, roles) and the Vendor's access, and a role given for 30 days, 90 or a year, or off until turned on |
 | settings, audit, alerts, health, backup, github | Core | **built** |
 | `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export; since 2026-10-27 CSV import (all rows or none) |
 | `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies |

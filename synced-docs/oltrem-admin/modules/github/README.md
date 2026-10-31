@@ -2,7 +2,7 @@
 
 The client's repository as the portal sees it (plan 4.4): the kit version production runs,
 whether a newer kit is published, the last run of the deploy workflow and its outcome, and a
-check on System health that says when production is behind the code. There is no GitHub token
+check on System status that says when production is behind the code. There is no GitHub token
 in the Worker or anywhere else (plan 9.2): the deploy workflow reports each run on main into
 the portal's database with `oltrem github report` (`@oltrem/cli`), using the Cloudflare deploy
 token it already holds, and the module reads those rows. What the page shows is as fresh as the

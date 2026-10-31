@@ -205,13 +205,14 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | campaigns sent in batch calls sized by the Cloudflare plan; no answer repeated under its key or left to a person; provider stops shown; large sends need a second person |
 | [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's spam or bounce limits; failed runs retried, paused at the third; System health watches; a summary email and results by mailbox |
 | [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses read from the provider, drafts, Send later on the company's clock and ten seconds to Undo; mail split into Messages and Mail settings |
-| [A shorter sidebar, tabs and compact buttons](records/2026-10-29-shorter-sidebar.md) | the sidebar lists main pages only (18, in five groups); the pages that belong to one are tabs at its top; Email is one entry; smaller buttons and fields |
+| [A shorter sidebar, tabs and compact buttons](records/2026-10-29-shorter-sidebar.md) | main pages only, in five groups; sub-pages as tabs |
 | [Ready to send](records/2026-10-31-ready-to-send.md) | the portal checks all an email needs to leave, provider account included, says what to do, and checks hourly |
 | [The start page, remade compact](records/2026-10-31-start-page-remake.md) | each fact once, a fix as one command with Copy, errors counted; no pnpm warning when the kit fetches it |
 | [The email pages, remade as a console](records/2026-10-31-email-console-remake.md) | every email page remade with the kit's console pieces |
 | [Templates on Write, and who may use code](records/2026-10-31-write-templates-and-code.md) | letters and designs picked on Write, fields filled from To; code only with its permission; preview, save as template |
 | [Setup remade; the door keeps itself; parts](records/2026-10-31-setup-door-parts.md) | a failed deploy's network cause, setup in sections, more sign-ins, the door kept by the Worker, parts off, access console |
 | [Access, roles, settings and parts redesigned](records/2026-10-31-access-settings-redesign.md) | name the company first; a role as a level per part; invite with role and place; settings in sections; parts as tiles |
+| [Standard admin terms](records/2026-10-31-standard-admin-terms.md) | Modules, Users, Locations, overrides, View, Edit, Admin |
 | [The start page as a dashboard](records/2026-10-29-start-dashboard.md) | every start brings in the newest kit, installs, builds and checks; the page runs the portal and says where it lives |
 | [Email allowance, and code kept once](records/2026-10-28-email-allowance-and-shared-code.md) | what each provider says is left beside what was sent; bulk mail never sends past it; four helpers kept once |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |

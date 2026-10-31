@@ -1,9 +1,9 @@
 # @oltrem/core-health
 
-System health of a client Worker (plan sections 4.3 and 10): every module declares its checks on
+System status of a client Worker (plan sections 4.3 and 10): every module declares its checks on
 its manifest, one job on the tick runs them all, and one table keeps the last result per check.
 A problem opens only after two failures in a row (two-fails-open), so one bad minute never pages
-anyone. The health page, acknowledging and snoozing come with the health module of phase 5; the
+anyone. The System status page, acknowledging and snoozing come with the health module of phase 5; the
 alerts with the providers of phase 4, through `onOpen` and `onClose`.
 
 ## Declaring a check
@@ -30,7 +30,7 @@ export const notes = defineModule({
 |---|---|
 | `id` | `<module>.<name>`, stable: the key of its row |
 | `lane` | the group the page shows it under, lower-case letters, digits and dashes: `storage`, `email`, `access` |
-| `summary` | a few words the health page shows |
+| `summary` | a few words the System status page shows |
 | `run(env, ctx)` | answers `{ status: 'ok' \| 'warn' \| 'fail', message? }`; a throw, no answer within the timeout (five seconds) or an answer of another shape is a failure with the reason |
 
 The contract (`@oltrem/core-module`) refuses a bad id, lane or summary when the module loads.
@@ -44,7 +44,7 @@ const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), mo
 ```
 
 `createHealth` returns the runner and the `health` module, with one job, `health.run`, every
-five minutes, and two routes for System health, each checked against `health.read` (bit plane 6,
+five minutes, and two routes for System status, each checked against `health.read` (bit plane 6,
 a read): `GET /api/health/checks` (every row `list` returns) and `GET /api/health/budgets` (each
 budget's reading as `items`, an empty list when the budgets are not measured, with the `plan`,
 what one run may do on it as `limits`, and the events queue's backlog asked live as `queue`), and the Home card's
@@ -61,7 +61,7 @@ either hook is reported through `report(error, checkId)` and the run goes on.
 returns every row by lane then id, with `declared` false for the row of a check no mounted module
 declares any more; the row is kept.
 
-Given `off` (the parts switched off on the Parts page, `@oltrem/core-config`), a switched-off
+Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a switched-off
 module's checks are not run and its rows are left out of `list`, so of the page, Home's card and
 their counts; a problem of theirs that was open is closed through `onClose`, so its alert
 resolves, and so is one of a check no mounted module declares any more. Switched back on, its
@@ -161,7 +161,7 @@ nothing until the next measure, fifteen minutes later at most.
 
 ### The events queue
 
-Given `queue`, System health asks Cloudflare for the queue's backlog when the page opens
+Given `queue`, System status asks Cloudflare for the queue's backlog when the page opens
 (`queue(env)`: how many events wait, their size, since when the oldest waits) and adds one check,
 **`health.queue`**, lane `budget`: it warns when the oldest event has waited 15 minutes and fails
 from an hour, since the consumer is then not taking them; a backlog that cannot be read warns.

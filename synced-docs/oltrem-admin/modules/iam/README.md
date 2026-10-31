@@ -186,7 +186,7 @@ The rules, each refused with its own code:
   the role is granted (anywhere, for a role not granted yet); a role is made or edited below the
   actor's best position; the Owner role is edited by the Vendor alone and never deleted.
   Otherwise `KIT-E-2007`. A refusal about a role names the permission by its label in words
-  ("you do not hold “See the people directory” yourself") and a place by its name, not by id.
+  ("you do not hold “View the user directory” yourself") and a location by its name, not by id.
 - **Never for yourself.** Nobody changes their own grants, overrides or group membership, nor the
   grants of a group they belong to (`KIT-E-2008`); they request access instead.
 - **No role twice at one place.** A grant of a role the person or group already holds at that
@@ -327,7 +327,7 @@ is made only when the Worker has none.
 | Health check, lane `access` | `iam.door` | `ok` with how many may sign in; `warn` while a piece the deploy gives is missing; `fail` with `DOOR_ADVICE` and Cloudflare's answer when it refused. |
 
 Making or withdrawing an invitation, and creating the company, call `door.soon` after the
-response: a failing door never fails the change, it shows on the health page. Switching a person
+response: a failing door never fails the change, it shows on the System status page. Switching a person
 off (the users module) is followed by the next tick. Without `door` none of this is mounted and
 the door is the Vendor's to keep by hand.
 
@@ -400,7 +400,7 @@ the very reason it needs a way to declare the incident; the handover functions d
 open and close by the mode. Reads are not audited; every write goes through the governance or the
 handover and is.
 
-Given `off` (the parts switched off on the Parts page, `@oltrem/core-config`), a switched-off
+Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a switched-off
 module's capabilities stay registered and active, but `GET /capabilities` and "See it as" leave
 them out, so the role and exception forms do not show them; `PATCH /roles/:id` with a list of
 capabilities keeps the ones of a switched-off module the role already holds, so saving a role

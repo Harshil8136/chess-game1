@@ -21,7 +21,7 @@ every ten seconds.
 
 Since the same day (stage 6) a sending campaign watches itself: above 0.3% spam reports or 5%
 bounces over its latest messages it pauses itself to protect the sender's name; a run that fails
-is said on its page and tried again, and the third failure in a row pauses it; System health
+is said on its page and tried again, and the third failure in a row pauses it; System status
 says when the timer stops running the campaigns or the provider's reports stop arriving. Once it
 is done, the person who started it is emailed how it went, and its page shows the results by
 mailbox provider with a download of every person and what became of their message.
@@ -39,7 +39,7 @@ const campaigns = createCampaigns<Env>({
   // The email module's `send`, `senders`, `bulk`, `templates` and `lists`.
   email,
   config: settingsFor, // where the five settings below are read
-  // What the Cloudflare plan allows now, from System health (optional: the free plan's run without).
+  // What the Cloudflare plan allows now, from System status (optional: the free plan's run without).
   capacity: async (env) => ({ plan, external, writesLeft, queue }),
   alerts: { raise, resolve }, // the alerts module's, for waits, pauses and approvals (optional)
   timeZone: async (env) => 'Europe/Madrid', // sending hours are read in it (optional: UTC)
@@ -96,7 +96,7 @@ campaign waits and its page says why; it goes on once one is.
 
 ## The Cloudflare plan
 
-The client's plan is the setting `health.cloudflare_plan` of System health (free or Workers
+The client's plan is the setting `health.cloudflare_plan` of System status (free or Workers
 Paid), and the run follows it: on the free plan a run hands out 50 messages at most and makes at
 most 40 calls to the provider (50 outside calls a run, 10 kept for the rest), and it stops before
 the database writes left today run out (about ten rows written a message, measured by System

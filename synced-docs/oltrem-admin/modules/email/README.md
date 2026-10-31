@@ -260,7 +260,7 @@ portal's own count of what it sent through each instance today, this week and th
 Every condition an email needs to leave, from what the portal already knows (`src/ready.ts`),
 each with what was found and what to do; added on 2026-10-31 after a day of email refused by a
 Brevo account Brevo had not switched on. `GET /ready` answers it, the Write page and the Providers
-pages show it first, and `email.ready` raises it in System health.
+pages show it first, and `email.ready` raises it in System status.
 
 | Check | Stops mail when | May cost mail when |
 |---|---|---|
@@ -302,7 +302,7 @@ with a template that holds code.
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
 | `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href }] }`, read from what the portal knows, no call to a provider beyond its kept allowance |
 | `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
-| `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Providers page calls it when a provider is made the one that sends |
+| `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Integrations page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |

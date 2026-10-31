@@ -4,7 +4,7 @@ Backups as the kit makes them (plan sections 4.4 and 9.3). Every night a flow in
 Workflow asks Cloudflare to export the database, waits for the dump, encrypts it to the vendor's
 age key on its way through the Worker and keeps it under `backups/d1/` in the files bucket. The
 Worker holds only the public half of that key, so it can make a copy and can never open one. Each
-run is a row the backup page lists, and a check on System health says how old the newest copy is.
+run is a row the backup page lists, and a check on System status says how old the newest copy is.
 Time Travel, D1's own restore to any minute of the last seven days, stays the first answer; the
 copies cover what it does not: a deleted database, an account lost, a mistake found too late.
 
@@ -85,7 +85,7 @@ private key never leaves the vendor's machine, and the client's database is only
 |---|---|---|
 | `backup.account_id` | setting, system layer, vendor only, sensitive | the Cloudflare account the database lives in |
 | `backup.database_id` | setting, system layer, vendor only, sensitive | the client's one D1 database |
-| `KIT_OPS_TOKEN` | Worker secret | an account token with four permissions, Account, D1, Edit for the export, Account, Account Analytics, Read for System health's budgets, and the two Access permissions for the door (`@oltrem/iam`): the only Cloudflare token inside the Worker; its recipe is `@oltrem/core-health`'s |
+| `KIT_OPS_TOKEN` | Worker secret | an account token with four permissions, Account, D1, Edit for the export, Account, Account Analytics, Read for System status's budgets, and the two Access permissions for the door (`@oltrem/iam`): the only Cloudflare token inside the Worker; its recipe is `@oltrem/core-health`'s |
 | `BACKUP_PUBLIC_KEY` | Worker secret | the age public key every copy is encrypted to; its private half stays offline with the vendor |
 
 The two settings exist only once the account and the database do: `oltrem backup setup`, run

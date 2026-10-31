@@ -65,7 +65,7 @@ isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
 `before` it returns is the cursor for the next page. `range(since, until, limit)` returns the
 rows of a time range oldest first, for the export. `verify({ from, to })` recomputes the hash
 of every row in the range and names the rows whose content no longer matches, so the seal job
-and the System health page can say "the log is intact" and mean it. The hash covers every field
+and the System status page can say "the log is intact" and mean it. The hash covers every field
 but the sequence number; details are stored as canonical JSON (keys sorted), so the same facts
 always hash the same.
 
@@ -99,7 +99,7 @@ lifecycle rules keep it. Each run then rechecks the newest 7 seals: a row change
 hash no longer matches), a row removed or added (the chain no longer adds up) or a bucket copy
 that differs marks the seal broken and names the problem.
 
-**The check.** `audit.sealed`, in the audit lane of System health: failing when a seal is
+**The check.** `audit.sealed`, in the audit lane of System status: failing when a seal is
 broken, a warning before the first seal and when the last seal is more than two days old, ok
 otherwise.
 

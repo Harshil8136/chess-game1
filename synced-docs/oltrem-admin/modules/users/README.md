@@ -76,7 +76,7 @@ page is linked.
 | `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
-| `GET /home` | `users.read` | the Home card: people with an account that is on, and how many are switched off |
+| `GET /home` | `users.read` | the Home card, Users: the active users, and how many are deactivated |
 
 ## Later
 
@@ -95,7 +95,7 @@ Migration `0007_users.sql`, additive and idempotent, in the one ledger `oltrem_m
 ## Errors
 
 The module owns the `2100` to `2199` block: `KIT-E-2101` nothing to change (the account is in
-that state already), `KIT-E-2102` an Owner is not switched off. What the permission model names
+that state already), `KIT-E-2102` an Owner cannot be deactivated. What the permission model names
 keeps its codes: `KIT-E-2007` beyond your standing, `KIT-E-2008` your own account, `KIT-E-2010`
 a bad profile or a missing reason, and the core's `KIT-E-0404` for a person who does not exist.
 

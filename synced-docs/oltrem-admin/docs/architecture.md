@@ -89,7 +89,7 @@ document with a `KIT-E-` code, a plain sentence and what to do (`@oltrem/core-er
 | A public hook | `hooks: [{ path, handler }]` | on a POST from outside, before the door; the handler verifies the caller | `@oltrem/core-http` |
 
 The free plan's limits shape all of it: about ten milliseconds of CPU per request, so heavy work
-is a flow, and the budgets on System health pause the jobs before a daily allowance runs out.
+is a flow, and the budgets on System status pause the jobs before a daily allowance runs out.
 
 ## What a module is
 
