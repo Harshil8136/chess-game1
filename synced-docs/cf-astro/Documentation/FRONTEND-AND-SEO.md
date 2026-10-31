@@ -178,6 +178,22 @@ drawn from its own words (`WordCover`: its first topic and title on one of six t
 its address), on the list and among related articles; the site ships no stock photos. A topic's
 page is headed by its topic. [Record](records/2026-10-30-blog-pages-remade.md).
 
+### 4.5 "From our blog" on the home page and the service pages (2026-10-31)
+
+Until this date the blog was reached only from the menu and the footer. The home page (after the
+questions, before contact) and each service page (after its questions, before the address block)
+now show up to three published articles in the page's language (`FromTheBlog`,
+`src/components/blog/FromTheBlog.astro`, drawn by `RelatedPosts` with its own heading and a link
+to every article). The home page shows the newest. A service page shows only the articles that
+share one of its topics (`blogTags` in `src/data/servicePages.ts`, per language), the most shared
+first, then the newest (`topicPosts` in `src/lib/blog-article.ts`): the cat page never fills its row with
+dog articles. It is one D1 read of at most 20 rows without their text; with no article to show,
+or with D1 unavailable, the row is left out and the page renders as before.
+
+The pages are kept 24 hours in the ISR cache, so cf-admin refreshes the home page and the service
+pages of an article's language when an article goes live, comes down, or changes its title, cover
+or topics (cf-admin `src/lib/blog/revalidation-paths.ts`).
+
 ---
 
 ## 5. Client-Side Sentry Observability
