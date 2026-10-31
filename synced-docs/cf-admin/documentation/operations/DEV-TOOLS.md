@@ -154,7 +154,7 @@ route runs. The defence-in-depth argument stands; the example did not.
 
 ### 3.1 Purpose
 
-`/dashboard/debug` is a landing hub (its heading is the registry label, Developer Tools) with Copy for Claude and a card for each tool the viewer may open: Migrations, Switches, Documents, Deploys, Keys and tokens and Private links (2026-10-31), Page Registry (for someone it opens for) and System health (`denyHealth`). What the 2026-10-31 tools show, their keys and their limits are in [`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md).
+`/dashboard/debug` is a landing hub (its heading is the registry label, Developer Tools) with four figures and one grouped list of the tools the viewer may open, drawn as Page Registry is since 2026-10-31, with Copy for Claude as a button in every tool's head: Migrations, Switches, Documents, Deploys, Keys and tokens and Private links (2026-10-31), Page Registry (for someone it opens for) and System health (`denyHealth`). What the 2026-10-31 tools show, their keys and their limits are in [`DEVELOPER-TOOLS.md`](../features/DEVELOPER-TOOLS.md).
 
 ### 3.2 Diagnostics (moved)
 
@@ -308,6 +308,7 @@ System Debugging is **DEV-exclusive** (Feature Configuration was too, until it w
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-31 | §3 after the makeover: `src/pages/dashboard/debug/index.astro` (figures and the grouped list) and `components/admin/debug/tools/` (`ToolHead`, `ToolTile`, `ToolRow`, `HandoffCopy`) | Everything else; the pages in a browser (the owner's phone test) |
 | 2026-10-31 | §3.1 and §3.3 after wave 2: the three new pages under `src/pages/dashboard/debug/` and the hub's cards | Everything else; the pages in a browser (the owner's phone test) |
 | 2026-10-31 | The naming note and §3.1 and §3.3 after the hub gained its tools: `src/pages/dashboard/debug/` (the heading is `page.label`, and was before), the live `/dashboard/debug` row (label Developer Tools) read through the D1 connector | §1, §2 and §4 onward; §7's table, a record of the old rename, left as it was; the pages in a browser (the owner's phone test) |
 | 2026-10-17 | §1, §2.1 to §2.3, §3 and §8.3 after Diagnostics merged into System health: `src/pages/dashboard/debug/` (`diagnostics.astro` forwards, `diagnostics/history.astro` removed, `index.astro` shows the System health card through `denyHealth`), `src/lib/diagnostics/`, `src/pages/api/diagnostics/` and the three `components/admin/debug/` Diagnostics files removed (`git status`) | §4 onward; the pages in a browser (the owner's phone test) |

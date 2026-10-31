@@ -6,7 +6,7 @@ last_verified: 2026-10-31
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/pages/dashboard/debug/index.astro, src/pages/dashboard/debug/migrations.astro, src/pages/dashboard/debug/switches.astro, src/pages/dashboard/debug/documents.astro, src/pages/dashboard/debug/deploys.astro, src/pages/dashboard/debug/keys.astro, src/pages/dashboard/debug/links.astro, src/pages/api/debug/handoff.ts, src/components/admin/debug/tools/, src/lib/devtools/, src/lib/dal/DevToolsRepository.ts, src/lib/auth/surface-guards.ts, src/lib/auth/routes.ts, scripts/lib/docs-freshness.mjs, src/styles/pages/devtools.css, migrations/0091_developer_tools.sql, migrations/0092_developer_tools_wave2.sql, test/devtools.test.ts, test/devtools-docs-plugin.test.ts, test/devtools-wave2.test.ts, test/devtools-keys.test.ts]
-related_docs: [../operations/DEV-TOOLS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../reference/schema-change-ledger.md, SYSTEM-HEALTH.md, CRON-CONTROL.md, GITHUB.md, ../operations/OPERATIONS.md, ../records/reports/2026-10-31-developer-tools.md, ../records/reports/2026-10-31-developer-tools-wave2.md]
+related_docs: [../records/reports/2026-10-31-developer-tools-look.md, ../operations/DEV-TOOLS.md, ../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, ../reference/schema-change-ledger.md, SYSTEM-HEALTH.md, CRON-CONTROL.md, GITHUB.md, ../operations/OPERATIONS.md, ../records/reports/2026-10-31-developer-tools.md, ../records/reports/2026-10-31-developer-tools-wave2.md]
 tags: [developer-tools, debug, migrations, settings, documentation, permissions, ui]
 ---
 
@@ -30,16 +30,23 @@ tags: [developer-tools, debug, migrations, settings, documentation, permissions,
 
 - **The hub** is `/dashboard/debug`, labelled Developer Tools in the sidebar. Its sideways row
   (`RegistryTabs`, read from the registry) reads Overview, Page Registry, Migrations, Switches,
-  Documents, Deploys, Keys and tokens, Private links. The hub shows Copy for Claude, then one card per tool the viewer may open, and the
-  System health card for someone it opens for.
+  Documents, Deploys, Keys and tokens, Private links. Under its head the hub shows four figures
+  (this deploy's commit, its newest migration, needed secrets missing, documents due), each a
+  link to its tool, then one list of the tools the viewer may open in three groups (What runs,
+  How it is set, Access and health), System health among them for someone it opens for.
 - **The keys** (migrations `0091` and `0092`, all stored role `dev`): `/dashboard/debug/migrations`,
   `/dashboard/debug/switches`, `/dashboard/debug/documents`, `/dashboard/debug/deploys`,
   `/dashboard/debug/keys`, `/dashboard/debug/links` and the action `/dashboard/debug#handoff`. `denyDebug` asks for the hub key, then the part or the action, each
   by exact key, so holding Developer Tools alone opens none of them. The owner and vendor support
   pass every key; anyone else needs a grant from the Access page. Unlike Page Registry, they are
   not grant-only. [`PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md) owns the model.
-- Every page is read only. The look is the console kit (`console.css`, hue rose) with
-  `devtools.css` for the hub's cards and the report box; tables stack on a phone.
+- Every page is read only. Since 2026-10-31 every page is drawn as Page Registry is, at the
+  owner's ask: the console kit (`console.css`, hue violet), a head with when the page was read,
+  a Refresh and Copy for Claude (`ToolHead.astro`), figures as tiles with an icon
+  (`ToolTile.astro`), and lists as rows with an icon chip, a name, the lines under it and a badge
+  (`ToolRow.astro`). `devtools.css` holds only what the kit has no class for. On a phone a row
+  keeps its icon, name and badge, and drops only the detail beside the badge (a document's
+  checked date, also in its badge's wording).
 
 ## 2. Migrations (`/dashboard/debug/migrations`)
 
@@ -89,8 +96,11 @@ over the real documents, so the two cannot drift.
 
 ## 5. Copy for Claude (`/dashboard/debug#handoff`)
 
-A button on the hub. It calls `GET /api/debug/handoff`, copies the answer to the clipboard and
-shows it in a box with a Copy button, for a phone that refuses the clipboard. The report, in
+A small button in the head of every Developer Tools page, for someone the action's key opens
+for. A press opens a pop-up (the portal's `Dialog`), calls `GET /api/debug/handoff`, copies the
+answer to the clipboard and shows it in the pop-up with Copy and Make it again, for a phone that
+refuses the clipboard. Until 2026-10-31 it was a panel in the middle of the hub; the owner found
+it took too much room. The report, in
 plain text:
 
 - the deploy it came from and when;
@@ -168,5 +178,6 @@ Tracked in `MAINTENANCE.md` (private), "Developer Tools follow-ups".
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-10-31 | §1 and §5 after the makeover: the seven pages under `src/pages/dashboard/debug/` (all but `pages.astro`), `ToolHead.astro`, `ToolTile.astro`, `ToolRow.astro`, `HandoffCopy.tsx` and `devtools.css`; `npm run build` builds them; the data each page reads is unchanged | The pages in a phone browser (the owner's test) |
 | 2026-10-31 | Wave 2 (§1, §6 to §10) with its code: the three pages, `src/lib/devtools/deploys.ts`, `keys.ts`, `links.ts`, `cloudflare.ts` and `readCheckLatencies`; `test/devtools-wave2.test.ts` and `test/devtools-keys.test.ts` pass; migration `0092` applied and its three rows and ledger row (id 128) read back through the D1 connector; the eight Workers' names and the private checks' recent timings read live | The pages in a phone browser; the Cloudflare token's permissions (its value cannot be read from here) |
 | 2026-10-31 | Written with the code: the pages, `denyDebug`, the route and `src/lib/devtools/`; `test/devtools.test.ts` (20) and `test/devtools-docs-plugin.test.ts` (3) pass; `npm run build` builds the pages; migration `0091` applied and its four rows and ledger row read back through the D1 connector | The pages in a phone browser (the owner's test) |
