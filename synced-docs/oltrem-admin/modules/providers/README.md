@@ -184,7 +184,11 @@ email module never names a provider.
   `speed` (429), `allowance` (402, or a 429 that names a quota or credits), `account` (401, 403:
   the key, the account or the sending domain), `message` (another 4xx), `provider` (5xx) or
   `other`; an SMTP reply before `DATA` says nothing was sent. A probe never throws: it answers
-  `{ ok, checkedAt, latencyMs, detail }`.
+  `{ ok, checkedAt, latencyMs, detail }`. A definition's `probe.ready` (up to five
+  `{ path, is, problem }`) says what the probe's answer must also hold for the account to send:
+  a key the provider accepts on an account it has not switched sending on fails the probe with
+  `problem`, which says what to do. Brevo's reads `relay.enabled` from `GET /v3/account` (a new
+  account answers with its key and refuses every send until Brevo activates transactional email).
 - **Many messages at once**: a definition's optional `batch` block (`path`, `max`, `idsPath` and
   `idPath` for the ids in the answer, in order, and an optional `idempotencyHeader`) lets
   `sendBatch(opened, messages, key)` send up to `max` messages in one call, each rendered from

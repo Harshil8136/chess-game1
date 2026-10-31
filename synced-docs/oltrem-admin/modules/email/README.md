@@ -98,7 +98,9 @@ person writes, the way a mail app does, without a list, a template or a campaign
 With no address to send from, the page is the setup, in two steps: connect the email service
 (Email, Providers; connecting checks the key, makes it the one that sends when none does and reads
 its addresses, then comes back here), and read the addresses from it (`?intent=discover`, the
-route `POST /domains/discover`) or add one by hand.
+route `POST /domains/discover`) or add one by hand. Above it all, [Ready to send](#ready-to-send):
+when a check stops every email, a red notice says so first and lists what to do, with Check again
+(`?intent=recheck`); otherwise one line that opens to every check.
 
 | Part | What it does |
 |---|---|
@@ -209,6 +211,27 @@ cannot read Resend's count: the headers' counts stay, with the provider's words.
 portal's own count of what it sent through each instance today, this week and this month, from
 `email_messages`. Nothing is guessed: a figure the provider did not give stays empty.
 
+## Ready to send
+
+Every condition an email needs to leave, from what the portal already knows (`src/ready.ts`),
+each with what was found and what to do; added on 2026-10-31 after a day of email refused by a
+Brevo account Brevo had not switched on. `GET /ready` answers it, the Write page and the Providers
+pages show it first, and `email.ready` raises it in System health.
+
+| Check | Stops mail when | May cost mail when |
+|---|---|---|
+| An email service sends | none is active or standing by | only one standing by |
+| Its key works and the account may send | the last check of its key failed, or a real send was refused for the account (401 or 403): that refusal is kept on the instance at once | it was never checked |
+| An address to send from | there is none | |
+| Its domain is verified | | it was never checked, or it is not passing (the service has not verified it, or no DMARC) |
+| Room left to send | the service says none is left | |
+
+The last check of each key is fresh: the job `email.ready` asks each service that may send every
+hour, and **Check again** (`POST /ready/check`) asks them now and checks the From address's
+domain. A provider's definition says what its answer must also hold for the account to send
+(`probe.ready` in `@oltrem/providers`; Brevo's `relay.enabled`), so an account the provider has
+not switched on fails the check with what to do, even though its key works.
+
 ## Routes
 
 Under `/api/email`, through the IAM module's sessions and check. `email.manage` and
@@ -223,13 +246,15 @@ download one.
 | `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
 | `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
-| `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock |
+| `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock, and [Ready to send](#ready-to-send) |
 | `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`, optional `draftId` and `later: { day, time }`) from an address they may use for everyday mail, through the queue after the Undo wait, or at the time asked (see Write) |
 | `POST /written` | `email.senders.use` | Save a draft, new or over the person's draft `id` |
 | `GET /written?state=` | `email.senders.use` | The person's own drafts (`draft`), scheduled emails (`scheduled`) or sent ones (`sent`), newest first, a hundred at most; each carries `delivery`, its message's state and reports, once queued |
 | `GET /written/:id` | `email.senders.use` | One email the person wrote, with its `delivery` |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
+| `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href }] }`, read from what the portal knows, no call to a provider beyond its kept allowance |
+| `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
 | `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Providers page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
 | `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
@@ -331,6 +356,10 @@ says what is left".
 
 `email.domains`: **warn** while a sending domain that passed its check fails it now, naming the
 domain and what is wrong; **ok** otherwise.
+
+`email.ready`, for a company with an email service connected: **fail** while a check of
+[Ready to send](#ready-to-send) stops every email, **warn** while one may cost mail, naming the
+first; **ok** when every check passes.
 
 ## Personal data
 
