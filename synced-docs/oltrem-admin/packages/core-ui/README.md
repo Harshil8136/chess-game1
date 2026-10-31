@@ -60,7 +60,8 @@ holds (plan 12.1); a test renders every one and checks.
 The page building blocks (`Panel`, `Section`, `Notice`, `Stats`, `ActionRow`, `ProblemNotice`,
 `Loaded`, `Done` and `when`) are the ones every portal page is made of, here so a module's own
 pages look like the kit's: a page that read an API answer shows it with `Loaded`, its problem
-with `ProblemNotice`, a change's outcome with `Done`.
+with `ProblemNotice`, a change's outcome with `Done`. `Stats` are compact on a phone (smaller padding and figure, two
+across) and full size from 640 px.
 
 ## The three widgets
 

@@ -73,10 +73,10 @@ modules' own.
 | `/access/reviews/:id` | one review: its place and counts, every grant under review with Keep and Remove, and Close the review (a dialog first) once each is decided | `/api/iam/reviews/:id`, `groups`, `people`, `roles`, `scopes` |
 | `/access/groups/new`, `/access/groups/:id` | a new group's name; one group: its members with Take out, Add a member by address (the people offered as the browser types), the roles it holds with End, Give the group a role, Rename, and Remove the group (a dialog first) | `/api/iam/groups/:id`, `bindings`, `roles`, `scopes`, `people` |
 | `/access/vendor` | how the Vendor may enter (at any time, in a window an Owner opens, only in an incident it declares), picked from a row; the open window with its reason and Close it now, or the form to open one for 1 to 12 hours | `/api/iam/tenant` |
-| `/providers` | the connected providers, the providers to connect, and the domain look-up | `/api/providers/instances`, `definitions` |
+| `/providers` | the connected providers, the providers to connect as tiles (a colour and initials each, two across on a phone, a heading per kind when there is more than one), and the domain look-up | `/api/providers/instances`, `definitions` |
 | `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
 | `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
-| `/email?state=` | a row of the email pages (Write, Addresses, Templates, Lists, and Campaigns and Providers when mounted); with the campaigns mounted, **Bulk mail today** (messages left under the daily limit, the messages the database writes leave room for, a run's size on the client's Cloudflare plan, the campaigns sending now with how far each is), for a person who may read campaigns; **Provider allowance**, a block per provider that may send: what it says is left (today, this month or on the plan) and when it starts again, and what the portal sent through it today, this week and this month beside the provider's own count, with the provider's words when its key may not read the count; the latest messages and their state, or only those sent, waiting or failed, picked from a row | `/api/email/messages`, `/api/email/usage`, `/api/campaigns/room`, `/api/campaigns/campaigns?status=sending` |
+| `/email?state=` | a row of the email pages (Write, Addresses, Templates, Lists, and Campaigns and Providers when mounted); first the latest messages and their state, or only those sent, waiting or failed, picked from a row whose chips carry the counts; then, with the campaigns mounted, **Bulk mail today** (messages left under the daily limit, the messages the database writes leave room for, a run's size on the client's Cloudflare plan, the campaigns sending now with how far each is), for a person who may read campaigns; **Provider allowance**, a block per provider that may send: what it says is left (today, this month or on the plan) and when it starts again, and what the portal sent through it today, this week and this month beside the provider's own count, with the provider's words when its key may not read the count | `/api/email/messages`, `/api/email/usage`, `/api/campaigns/room`, `/api/campaigns/campaigns?status=sending` |
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets; how many measured ones are close to their line (one not measured yet is not counted) | `/api/health/checks`, `budgets` |
@@ -207,6 +207,11 @@ not a page. When the sidebar itself changed (a section given or taken away, anot
 frame's `data-frame` key), it draws the new sidebar and keeps where it was scrolled. When a form's
 change gets no answer, it says so on the page instead of sending it twice. With no script at all,
 every link and form works as a plain load.
+
+An address that answers nothing, opened in a browser (a `GET` that accepts HTML, outside
+`/api/`), is the **Not found** page in the frame, with a way to the home page, still with the 404
+status. Only the API's problem answer is replaced: a page's own 404 is kept, and `/api/` keeps
+the problem.
 
 ## The stylesheet and the script
 
