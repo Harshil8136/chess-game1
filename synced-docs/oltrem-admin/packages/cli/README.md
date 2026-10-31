@@ -252,10 +252,26 @@ when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secre
 The same seven steps, with their questions and their progress in a page in the browser
 (`npm run setup` at the kit's root; `npm run deploy -- --page` in a client repository). The page
 is drawn in the portal's look, from `@oltrem/core-ui`'s theme tokens (a test fails when the two
-differ): a step is a card, a question a box with a button, an `https` address a link (nothing
-else in a line is turned into a control), a tool's run a spinner with the time it has taken, a stop a
-card with what the tool printed last and a **Try again** button. When wrangler's sign-in does not
-open the browser by itself, the page shows a button to its sign-in page. The terminal shows the
+differ), light and dark, as an app shell since 2026-10-31: on a computer (960 px and wider) a
+sidebar of sections, the seven steps under **Put it on Cloudflare** each with its state (waiting,
+in progress, needs you, done, stopped), and a main area up to 1200 px; on a phone the sidebar is a
+sideways row of chips under the top bar. All seven steps show from the start (their names are the
+deploy's own titles; a test compares them with `deploy.ts`), with a bar of seven for the progress.
+
+A `Step n of 7: …` title line starts a step, and every later line, question and tool run belongs
+to it, sorted into parts: what it is (`text` lines), **What to do** (`do` lines, a numbered
+checklist to tick), the **Question** and then its answer, **What happened** (`ok`, warnings, each
+tool's run with a spinner, what it says right now and the time it took), **What went wrong**
+(`cause` lines: the deploy's plain-words diagnosis of a failed tool, also a warning in the
+terminal) and **Tool output**, a console of everything the tools printed, folded until a tool
+fails. On a wide screen what it is and what to do sit beside the question and what happened. A
+finished step folds to its title and time; a stop is a callout in its step with **Try again** and
+**Copy the details**. When a step starts, a question appears or a run stops, the page scrolls to
+it (the step's top too when both fit) and puts the cursor in the question's first field, unless
+the person scrolled by hand in the last eight seconds: then a **Jump to the current step** button
+appears instead. An `https` address (or this computer's own) is a link; nothing else in a line is
+turned into a control, and every text is put in the page as text. When wrangler's sign-in does not
+open the browser by itself, the step shows a button to its sign-in page. The terminal shows the
 same steps in the kit's look and says where the page is, in case the browser did not open.
 
 Two processes (`src/setup-page.ts`), because the deploy's tools hold their process while they
@@ -272,8 +288,16 @@ page has been closed for a minute while the deploy waits on it (never in the mid
 run). The second process's own output is in `.oltrem/setup.log`, wrangler's in
 `.oltrem/deploy.log`.
 
-A question with choices (the account, the domain) is a card per choice; the key's box has a
-**Paste** button (Ctrl+V still works when the browser refuses it); the door's question says it is
+A question with choices (the account, the domain) is a grid of cards, label and hint, the one
+given before (`value`) or the first chosen already, arrow keys between them; a question may carry
+`value` (the answer filled in) and `help` (more lines under it). A question with `list`
+(`{ placeholder?, min?, roles?: { value, label }[] }`) takes several entries: one row each, with a
+role to pick per row when it has `roles`, a remove button and **Add another**; Enter adds a row and
+Enter on an empty row sends it, pasted lines become one row each, and it is not sent with fewer than
+`min` entries or one entry twice. It starts from `value` (one entry per line, `entry<TAB>role`) and
+answers the same way: the filled rows, one per line, the role after a tab when there are roles.
+The page's rules for these are plain functions (`SETUP_PAGE_RULES`) the tests run in Node.
+The key's box has a **Paste** button (Ctrl+V still works when the browser refuses it); the door's question says it is
 checking by itself, and is marked "Noticed by itself" when it is. When the page closes while a
 question waits, the browser is opened on it again once. When the page cannot start at all (no free
 port, a refused socket), the same deploy runs in the terminal instead.
@@ -283,19 +307,24 @@ port, a refused socket), the same deploy runs in the terminal instead.
 `servePage(null, { menu, status })` serves the same page as a dashboard instead of one run (since
 2026-10-29): `status` (`StartStatus`) is what the start made ready (the kit's commit, what an
 update brought in or why it was held, Node, the doctor's checks, where the portal is set up to
-live), drawn as the **This computer** list and sent first to every page that connects, before the
-choices; a `status` event from a run (**Check again**, `run.mjs check`) replaces it. The list has
-one line for the kit (the commit and day on the right; what an update brought in folds under its
-count) and one for the checks; each check that needs a look shows its title, its summary and its
-fix, and a fix that is a command (or a few joined by "or") is a box with **Copy**. The choices
-whose id starts with `dev` are one card, picked by their `short` names; `check` and `deploy` have
-their own cards; any other choice gets a card of its own. Each runs as a second process whose
-lines come over IPC as the deploy's do (the kit's look sends them when `OLTREM_PAGE` is set and
-the process has an IPC channel), shown under the cards as one log and cleared with **Clear**;
-wrangler's error lines (`✘ [ERROR]`, `[wrangler:error]`) gather in a small console in that log,
-an error seen again counted (×6) rather than repeated. The template's dev script sends a
-`serving` event with its address, which the card shows as **Open**. The page was remade compact on
-2026-10-31 ([record](../../docs/records/2026-10-31-start-page-remake.md)).
+live), sent first to every page that connects, before the choices; a `status` event from a run
+(**Check again**, `run.mjs check`) replaces it. Its sections: **Overview** (what runs now, with a
+way to it, and a tile each for this computer, the portal here and Cloudflare), **This computer**
+(the kit: its state, commit, day, latest change, Node, what an update brought in; beside it the
+checks: each one that needs a look with its title, summary and fix, a fix that is a command, or a
+few joined by "or", a box with **Copy**; **Check again** in the section's corner), **Try it here**
+(the choices whose id starts with `dev`, as cards with their label and hint, and **Start**; while
+one runs, its address with **Open** and **Stop**), **Put it on Cloudflare** (where the portal
+lives, **Put it live** or **Update it**, and the seven steps as above), **More** (any other choice,
+a card each) and **Help & details**. A choice runs as a second process whose lines come over IPC
+as the deploy's do (the kit's look sends them when `OLTREM_PAGE` is set and the process has an IPC
+channel), drawn in its own section as a card with one part per title line, cleared with
+**Clear**; wrangler's error lines (`✘ [ERROR]`, `[wrangler:error]`) gather in their own console in
+that card, an error seen again counted (×6) rather than repeated. The template's dev script sends a
+`serving` event with its address. The sidebar marks each section's state (the checks, the portal
+running, Cloudflare live, working, needing you or stopped) and the section being read. The page was
+remade compact on 2026-10-31 ([record](../../docs/records/2026-10-31-start-page-remake.md)), then
+as an app shell the same day.
 A choice marked stoppable (the portal on this computer) has a **Stop** button, which
 asks the process over IPC to stop what it started, then ends it three seconds later, with every
 process it started (`stopTree` in the look: `taskkill /T` on Windows, where a plain kill would leave
@@ -598,6 +627,54 @@ Exit `0` when the address is written or already the same, `1` when another one i
 write failed, `3` when it could not start: no address, an address with a quote or a space, a
 configuration without exactly one D1 database, a database wrangler cannot read, or one with no
 Vendor row yet.
+
+## The door and settings from this computer (`src/door.ts`, `src/settings-write.ts`)
+
+The deploy's helpers for the door, which the Worker keeps in step from then on (`@oltrem/iam`,
+"The door, kept in step"). The portal's key needs four permissions, `OPS_TOKEN_PERMISSIONS`:
+`d1` edit, `account_analytics` read, and for the door `access` edit ("Access: Apps and
+Policies") and `access_acct` edit ("Access: Organizations, Identity Providers, and Groups");
+`opsTokenForm()` is the account-token form opened with them chosen. wrangler's sign-in has no
+Access permission, so the key does it.
+
+| Export | What it does |
+|---|---|
+| `checkKey` (`src/cloudflare.ts`) | A good key also says `door: 'yes' \| 'no' \| 'unknown'` (`keyKeepsDoor`: it may read Access applications and logins) |
+| `doorReadiness(fetch, token, account)` | `{ key, zeroTrust }`: whether the key may keep the door, and whether Zero Trust is set up (`zeroTrustOf`) |
+| `workerIdOf(fetch, signInToken, account, name)` | The Worker's id, which Access names, read with the sign-in's own token |
+| `writeDoorSettings(dir, run, { workerId?, extras? })` | Writes `iam.door_worker_id` and `iam.door_extra_emails` (`doorEntries`: addresses and `@domain`s, lower case, each once) |
+| `askDoorSync(fetch, base)` | `POST /hooks/iam/door`: the Worker syncs now and answers its outcome word (`DOOR_ANSWERS` says each in plain words) |
+| `checkDoor(fetch, url)` | `{ on, answer, right }`: Access answers in front of the portal, and the Worker says it set the door right |
+| `zeroTrustSteps(account)`, `doorManualSteps({ account, worker, emails, domains })` | The one step a person does per account (team name, Free plan), and the door by hand for a key without Access: One-time PIN and an email list, never "Cloudflare account" members |
+
+`writeSettings(dir, run, writes, { reason })` (and `writeSetting` for one) writes live settings
+the way the Worker's own save does: per setting, `oltrem_meta`'s `config_version` moves up, the row
+takes that version and a history row records who (`vendor`) and why; then the settings snapshot
+(`cfg:snapshot` in KV) is removed, so the Worker reads them within a minute. Keys are checked
+against the setting key shape and values are JSON, quoted for SQLite, so nothing else reaches the
+SQL. Tested in `test/door.test.ts` against SQLite holding the real settings migration.
+
+## `oltrem parts list [dir]`, `set <ids...>`, `preset everything|email [dir]`
+
+Which parts of the portal (its modules) are switched off: the live setting `settings.parts_off`
+of `@oltrem/core-config`, which the Vendor also changes on the portal's Parts page. `list` prints
+each kit part `on`, `off` or `always on` with what it needs; `set` switches off exactly the parts
+named, every other one on, in the repository here; `preset email` keeps email, its providers and
+the core, `preset everything` switches every part on. The deploy calls the same exports from
+`src/parts.ts`:
+
+| Export | What it is |
+|---|---|
+| `PARTS: PartChoice[]` | the catalogue, `{ id, label, description, core, requires }` per kit part, a copy of `KIT_PARTS` held equal by `test/parts.test.ts` |
+| `PART_PRESETS` | `{ id: 'everything' \| 'email', label, off: string[] }` |
+| `PARTS_KEY` | `'settings.parts_off'` |
+| `partsRefusal(off)` | why a list cannot be written (a bad name, a core part, a part one left on needs), or null |
+| `readParts(dir, run)` | `{ off?: string[], problem?: string }`, through `wrangler d1 execute --remote --json`; `[]` before anything is written |
+| `writeParts(dir, off, run, now?)` | `{ ran, written, off, steps, problems }`: refused before any read when the rule says no; nothing written when the list is already stored; otherwise `writeSetting` (above: the version moves up, a history row, the cached settings cleared) |
+| `partsLines(off)` | the lines `list` prints |
+
+Exit `0` when written or already so, `1` when a write failed, `3` when it could not run (a list
+the rule refuses, a database wrangler cannot read).
 
 ## `oltrem upgrade [dir]`
 

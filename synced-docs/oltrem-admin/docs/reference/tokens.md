@@ -145,14 +145,14 @@ sources: [tokens.registry.json]
 |---|---|
 | Status | planned |
 | Provider and account | Cloudflare; the client's own Cloudflare account; account-owned, not tied to a person |
-| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for System health's budgets: the day's use of the free plan) |
-| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; System health's measure job: the day's use of the free plan, from the GraphQL Analytics API |
+| What it may do | Account, D1: Edit (for the database export API); Account, Account Analytics: Read (for System health's budgets: the day's use of the free plan); Account, Access: Apps and Policies: Edit (the door: the Access application on the Worker and its allow policy); Account, Access: Organizations, Identity Providers, and Groups: Edit (the door: the One-time PIN login, and reading whether Zero Trust is set up) |
+| Used by | the jobs workflow inside the client's Worker: the nightly database export; the backup module's Time Travel bookmark route; System health's measure job: the day's use of the free plan, from the GraphQL Analytics API; the IAM module's door job (iam.door): keeps Cloudflare Access on the Worker letting in, by an emailed code, exactly the portal's people, its pending invitations and the Vendor's extra sign-ins |
 | Stored in | a Worker secret, set with wrangler secret put |
 | Owner | vendor |
 | Created | not yet |
 | Expires | not set |
-| Rotation | make a new token with the same two scopes, set it with wrangler secret put, delete the old one; yearly |
-| Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. Widened on 2026-10-21 with Account Analytics Read for System health's budgets, rather than a second token inside the Worker (R-05). |
+| Rotation | make a new token with the same four scopes (the form npm run deploy shows), set it with wrangler secret put, delete the old one; yearly |
+| Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. Widened on 2026-10-21 with Account Analytics Read for System health's budgets, and on 2026-10-31 with the two Access groups for the door, rather than a second token inside the Worker (R-05): the Worker is the one place that sees every change to who may come in and holds a key on every later day, and wrangler's own sign-in has no Access permission. |
 | Plan section | 9.3 |
 
 ## PERSONAL_PAT

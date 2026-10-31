@@ -109,6 +109,14 @@ the instance then fails, so the Workflow's own record shows it. Each step has it
 timeout and CPU budget (ten milliseconds of CPU per step on the free plan), and the instance's
 state is kept three days.
 
+## Parts switched off
+
+Given `off` (the parts switched off on the Parts page, `@oltrem/core-config`), a due job of a
+switched-off module waits untouched, still due, listed in the tick's `switchedOff`, and runs on
+the first tick after the module is back on; an instance of the Workflow skips that module's flows
+(a flow's module is its id's first segment), and `startDue(workflow, at, off)` starts no instance
+for a schedule whose every flow is off (`test/parts.test.ts`).
+
 ## Table
 
 Migration `0008`, `oltrem_jobs`: `id`, `module_id`, `every_seconds`, `next_run_at`,

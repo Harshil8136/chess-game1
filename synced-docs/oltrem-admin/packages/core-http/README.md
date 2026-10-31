@@ -149,5 +149,12 @@ before the door, such as the screens' stylesheet.
 | `scheduled` | runs the `tick` it was given (the jobs' scheduler of `@oltrem/core-jobs`), then every module's `scheduled` hook, on the one cron; an error in one is reported and the others still run |
 | `queue` | reads each message as an envelope, dispatches on `type` to the module that declares it, calls `onHandled` (the outbox marks its row done), acknowledges; a handler that throws retries the message; an unknown type is reported and retried, so it reaches the dead-letter queue |
 
+With `off` (the parts switched off, `@oltrem/core-config`), read once per request before the
+hooks: a switched-off module's `/api/<id>/` and `/hooks/<id>/` answer Not found (`KIT-E-0404`),
+`/healthz` leaves it out, and the set rides on the request as the `partsOff` variable, which the
+screens read. Given the same `off`, the Worker skips that module's `scheduled` hook and
+acknowledges its events without calling `onEvent` or `onHandled`, so the outbox keeps the row and
+sends it again until the module is back on (`test/parts.test.ts`).
+
 Tests run inside the Workers runtime with a sample module that has one route of each shape, and
 a second module that echoes what the session hook returned.

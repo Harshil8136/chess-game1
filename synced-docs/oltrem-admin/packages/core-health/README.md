@@ -61,6 +61,12 @@ either hook is reported through `report(error, checkId)` and the run goes on.
 returns every row by lane then id, with `declared` false for the row of a check no mounted module
 declares any more; the row is kept.
 
+Given `off` (the parts switched off on the Parts page, `@oltrem/core-config`), a switched-off
+module's checks are not run and its rows are left out of `list`, so of the page, Home's card and
+their counts; a problem of theirs that was open is closed through `onClose`, so its alert
+resolves, and so is one of a check no mounted module declares any more. Switched back on, its
+checks run again on the next tick (`test/parts.test.ts`).
+
 ## The Cloudflare plan's budgets
 
 ```ts

@@ -82,7 +82,9 @@ so a decision can be replayed. A map is a few hundred bytes to a few kilobytes.
 1. An unknown or inactive capability: `unknown_capability`, `inactive_capability`.
 2. A scope that is not in the tree: `unknown_scope`, whoever asks.
 3. The Vendor: `vendor` (allow), unless the tenant set its access to `approval` or
-   `incident_only` and no window is open (below, the handover).
+   `incident_only` and no window is open (below, the handover). The Vendor holds by its kind,
+   not by bits, so it holds every capability the index knows, a module registered after the
+   company was made included, the moment the registry has it, with no grant and no recompile.
 4. A capability on the vendor floor, for anyone else: `vendor_floor`.
 5. An Owner (the Owner role at the root, in force): `owner` (allow).
 6. Otherwise walk from the scope up to the root: a deny bit on any node is `deny`; an allow bit on
@@ -283,6 +285,46 @@ access review with grants they may keep or remove, and their own grants ending w
 `waitingFor` counts with the rules the decisions check (`standingAt`, `can`, never one's own
 request, approval or grant), so a person is never sent to a decision the API would refuse.
 
+## The door, kept in step
+
+Cloudflare Access stands on the Worker itself (ACCESS_AUD `worker`). Given `door` (`src/door.ts`),
+the module keeps it letting in exactly the portal's people, by a code sent to their email:
+
+```ts
+createIam({ ...,
+  door: {
+    token: (env) => env.KIT_OPS_TOKEN,                // Access: Apps and Policies, and Organizations, Identity Providers, and Groups
+    account: async (env) => (await settingsFor(env)).get('backup.account_id'),
+    settings: (env) => settingsFor(env),              // iam.door_worker_id, iam.door_extra_emails
+  },
+});
+```
+
+Why: Cloudflare's one-click "Protect this Worker behind Access" admits members of the Cloudflare
+account, and a Zero Trust organization made since June 2026 has only the "Cloudflare" login, so
+anyone else reads "Cloudflare sign-in is restricted to members of the account". `syncAccess` reads
+each piece first and writes only what differs: Zero Trust is set up (a person does that once:
+team name, Free plan; `no-zero-trust` until then); the One-time PIN login exists; one reusable
+allow policy, `DOOR_POLICY_NAME`, includes every active person's address (the Vendor's included),
+every pending invitation's, and each entry of `iam.door_extra_emails` (an address, or
+`@company.example` as an email domain); and the Access application whose destination is this
+Worker (`iam.door_worker_id`, which the deploy writes) uses only that login, goes straight to it
+(`auto_redirect_to_identity`), links only that policy, and leaves `DOOR_OPEN_PATHS` public
+(`/hooks/*`, `/healthz`, `/account`, `/account/*`, `/ui/*`) as destination overrides. That
+application is edited, never replaced, so its audience and the runtime's word stay the same; one
+is made only when the Worker has none.
+
+| Kind | Id | What it does |
+|---|---|---|
+| Job, every 5 minutes | `iam.door` | `door.sync`: works out who is wanted (two D1 reads), and calls Cloudflare only when that list, the account or the Worker changed, an hour has passed since it last matched, or a failure is due another try (15 minutes; an hour when a person must act). The outcome is one KV key, `iam:door`. |
+| Hook | `POST /hooks/iam/door` | The same sync, at once; answers only `{ state }`, the outcome word. The deploy calls it. |
+| Health check, lane `access` | `iam.door` | `ok` with how many may sign in; `warn` while a piece the deploy gives is missing; `fail` with `DOOR_ADVICE` and Cloudflare's answer when it refused. |
+
+Making or withdrawing an invitation, and creating the company, call `door.soon` after the
+response: a failing door never fails the change, it shows on the health page. Switching a person
+off (the users module) is followed by the next tick. Without `door` none of this is mounted and
+the door is the Vendor's to keep by hand.
+
 ## The routes
 
 ```ts
@@ -325,13 +367,14 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | Routes | Capability | What they do |
 |---|---|---|
 | `GET /me`, `GET /me/devices`, `DELETE /me/devices/:id` | `iam.self` | my session and compiled map; my sign-ins; end one of them (`iam.device-end` in the audit log) |
+| `POST /me/sign-out` | `iam.self` | Sign out (the sidebar's plain form; no body): ends this sign-in (`iam.sign-out` in the audit log), then answers 303 to `/cdn-cgi/access/logout` (`ACCESS_SIGN_OUT`), Cloudflare Access's own sign-out, which clears the door's cookie and ends the Access session |
 | `GET /me/grants`, `POST /me/grants/:id/activate` | `iam.self` | the grants that reach me; bring an eligible one into force for a few hours |
 | `GET /me/options` | `iam.self` | what I may ask for: every role but the Owner's and every place, by name, so a member who cannot read the Access page can still ask |
 | `GET /todo` | `iam.self` | Home's Needs you: what waits for me (`waitingFor`, above) |
 | `GET`, `POST /me/requests`, `DELETE /me/requests/:id` | `iam.self` | my access requests: ask for a role at a scope, withdraw |
 | `GET`, `POST /me/approvals`, `POST /approvals/:id/decision` | `iam.self` | the approvals I asked for; ask a second person; decide one (you must hold the same power and not be the one who asked) |
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |
-| `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be; `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
+| `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be, and `sources`: the grants behind it at that place or above it (`kind` `role` with the role's and the group's name, or `exception`; `effect`, `scopeId`, `expiresAt`), by the compiler's own rules (`sourcesOf`); `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
 | `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
 | `POST /invitations`, `POST /invitations/many`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), or up to fifty addresses at once, each under the same rules and a refusal stopping none (`made` and `refused`); with `send`, each link is emailed; withdraw |
 | `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
@@ -350,6 +393,13 @@ still validated and the same-origin check still applies. The incident and window
 the very reason it needs a way to declare the incident; the handover functions decide who may
 open and close by the mode. Reads are not audited; every write goes through the governance or the
 handover and is.
+
+Given `off` (the parts switched off on the Parts page, `@oltrem/core-config`), a switched-off
+module's capabilities stay registered and active, but `GET /capabilities` and "See it as" leave
+them out, so the role and exception forms do not show them; `PATCH /roles/:id` with a list of
+capabilities keeps the ones of a switched-off module the role already holds, so saving a role
+from a form that does not show them never takes them away. Back on, they show again with every
+grant where it was (`test/parts.test.ts`).
 
 ## Tables
 
@@ -380,9 +430,16 @@ not exist with the core's `KIT-E-0404`.
 
 ## Tests
 
+`test/door.test.ts` runs the door against an in-memory stand-in for Cloudflare's Access API: who is
+wanted, the one-click application turned to the code by email and kept, nothing written when in
+step, Cloudflare skipped while nothing changed and asked again an hour later, each refusal named,
+and an invitation answered 201 while the door fails.
+
 Inside the Workers runtime, against the real migration: the registry's rules and bit stability;
 the tree's limits; a small tenant decided case by case (owner, vendor, floors, deny over allow,
-inheritance, siblings, groups, time, eligibility, overrides, the hash and the compile record);
+inheritance, siblings, groups, time, eligibility, overrides, the hash and the compile record,
+"See it as" with where each permission comes from, and the Vendor holding a module registered
+after its map was compiled, at every scope, its floors included);
 and a synthetic tenant of three locations, four departments, twelve roles and forty people on
 which 320 generated decisions of the compiled check are compared with a plain evaluator that
 reads the rows one question at a time (`test/reference.ts`). The sessions are tested with the KV

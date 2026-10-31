@@ -48,6 +48,7 @@ modules' own.
 |---|---|---|
 | `/` | a Vendor with no company yet: the company form; anyone else: Needs you first (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits), then the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/todo` and `/api/<module>/home`, together |
 | `/search?q=` | the search box, then what matches two letters or more: the sections by name and line, then each module that searches, as the person (a module that refuses them is left out); nothing found says so | each `/api/<module>/search` |
+| `/settings/parts?preset=` | the Vendor's alone (`settings.parts`, floor `vendor`; the tab shows to the Vendor only): each part a row with its name, one line, On or Off and its switch, Always on for the core, what it needs and what needs it; the presets (Everything, Email only, the set saved now) a sideways row of chips that fill the switches without saving; Save sends the whole set, and a refusal names the part that still needs another | `/api/settings/parts`, `PUT /api/settings/parts` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
 | `/records` | the lists the person may see, with their records and place; Make a list when a role allows it somewhere | `/api/records/lists` |
@@ -64,9 +65,9 @@ modules' own.
 | `/people?show=` | everyone in the directory, or only those switched on (`on`) or off (`off`), picked from a row; the invitations waiting, and the invitation form | `/api/users/people`, `/api/iam/roles`, `scopes`, `invitations` |
 | `/people/:id` | one person: the roles they hold, the form to give one (for 30 days, 90 or a year, and off until they turn it on if chosen), their exceptions in force, switching the account off or on | `/api/users/people/:id`, `/api/iam/bindings`, `roles`, `scopes`, `overrides`, `capabilities` |
 | `/people/:id/exceptions?place=` | one person's exceptions at one place, picked from a row: every capability that may be given one person at a time, with three chips (as their roles say, allow, deny) | `/api/iam/overrides`, `capabilities`, `scopes` |
-| `/people/:id/see?place=` | "See it as": what the person can do at one place, picked from a row, each capability with yes or no and why, grouped by module; an account switched off says so. Read only, never their session | `/api/users/people/:id`, `/api/iam/scopes`, `/api/iam/people/:id/access` |
-| `/access` | the company, its roles, groups and places, and the form to add a place | `/api/iam/tenant`, `roles`, `groups`, `scopes` |
-| `/access/roles/new`, `/access/roles/:id` | a role's name and its capabilities as a checklist grouped by module | `/api/iam/roles/:id`, `/api/iam/capabilities` |
+| `/people/:id/see?place=` | "See it as": what the person can do at one place, picked from a row, each capability with yes or no and where it comes from (the role and place, a group's role, or an exception, a deny first), grouped by module; an account switched off says so. Read only, never their session | `/api/users/people/:id`, `/api/iam/scopes`, `/api/iam/people/:id/access` |
+| `/access` | the access pages in one sideways row (Roles and people, My access, Waiting for a decision with its count, Access reviews, Vendor access, on every access page); Make a role, Invite someone (`/people#invite`), Make a group, Add a place; panes of the roles (permissions and holders each), the people (the roles each holds), the groups, and how permissions work; the company and its places with the form to add one | `/api/iam/tenant`, `roles`, `groups`, `scopes`, `people`, `bindings?inForce=true`, `requests` |
+| `/access/roles/new?from=`, `/access/roles/:id` | the role editor: start from Nothing, a ready set (Look only, Everyday work, Run every part: built from the capabilities' classes, specials left out) or a copy of a role (`from=template:<id>`, `role:<id>`); its name and a sentence on what it holds; a search box and "select all" per part with live counts (the page script's; every box is there without it); the default permissions part by part, by See, Do and Manage, each with its words and id; the special ones apart under a warning, badged Owner only, Vendor only (shown locked, never sent), Fresh sign-in or Second person; an existing role adds who holds it and Remove the role (a dialog first) | `/api/iam/roles/:id`, `roles`, `capabilities`, `bindings?roleId=&inForce=true`, `groups`, `people` |
 | `/access/mine` | My access, for everyone (also linked under the account in the sidebar): the roles they hold, each at its place, through them or a group, until when, and in force, ended, not started or off until turned on; the form to turn on an eligible role for 1 to 12 hours with a reason; the form to ask for a role at a place with a reason (every role but the Owner's); their requests and what became of each | `/api/iam/me/options`, `me/grants`, `me/requests` |
 | `/access/decisions` | Waiting for a decision: the access requests still open (who, the role and place, why) and the approvals for a change that needs a second person, each with Approve and Refuse | `/api/iam/requests`, `approvals`, `people`, `roles`, `scopes` |
 | `/access/reviews` | the access reviews, each open, past due or closed, and the form to start one at a place | `/api/iam/reviews`, `people`, `roles`, `scopes` |
@@ -101,7 +102,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Give a role (`/people/:id/grant`): the role, the place, for how long (30 days, 90 or a year) and whether it is off until turned on; end one | `POST /api/iam/bindings`, `DELETE /api/iam/bindings/:id` | `?done=granted`, `ended` |
 | Save the exceptions (`/people/:id/exceptions`): only what changed is written; end one from the person page | `POST /api/iam/overrides`, `DELETE /api/iam/overrides/:id` | `?done=exceptions-saved`, `exception-ended` |
 | Switch the account off, with a reason, or on | `POST /api/users/people/:id/deactivate`, `reactivate` | `?done=off`, `on` |
-| Make a role, save one | `POST /api/iam/roles` (placed below every existing role), `PATCH /api/iam/roles/:id` | `?done=role-made`, `role-saved` |
+| Make a role, save one, remove one (`/access/roles/:id/remove`) | `POST /api/iam/roles` (placed below every existing role), `PATCH`, `DELETE /api/iam/roles/:id` | the role with `?done=role-made`; `role-saved`; `/access` with `role-removed` |
 | Add a place (`/access/places`) | `POST /api/iam/scopes` | `?done=place-added` |
 | Turn on a role (`/access/mine/turn-on`): which, for how many hours, why | `POST /api/iam/me/grants/:id/activate` | `?done=turned-on` |
 | Ask for access (`/access/mine/ask`), withdraw a request | `POST /api/iam/me/requests`, `DELETE /api/iam/me/requests/:id` | `?done=asked`, `request-withdrawn` |
@@ -140,10 +141,19 @@ switch posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, whi
 in the `oltrem_theme` cookie (cleared for system) and returns to `back` when it is a path on the
 portal, Home otherwise; the frame then sets `data-theme` on the page. A form posted from another
 site is refused.
+Sign out, in the same account menu, is a plain post (`data-reload`, so the browser follows it out
+of the portal): behind Access to `SIGN_OUT`, `POST /api/iam/me/sign-out`, which ends this
+sign-in and sends the browser on to Cloudflare Access's `/cdn-cgi/access/logout`, ending the
+door's session too; on this computer to the local door's `/local/sign-out`.
 
 ## The frame
 
 Every page sits in one frame, drawn on the server:
+
+A part switched off on the Parts page (the `partsOff` set `@oltrem/core-http` puts on each
+request) is gone for that request: no sidebar entry or tab, no Home card or Needs you, nothing in
+the search; its pages, a module's own by their pattern and a kit section by its address, answer
+the portal's Not found page. Switched back on, all of it is there on the next request.
 
 - **The sidebar**, from 1024 px wide, down the left edge in the page's own colour with one line
   beside it. From the top: an arrow that closes it, the portal's mark, a search box (a plain form
@@ -196,7 +206,13 @@ or an error) into view. Focus moves to the new page's heading, or to a form's er
 under the pointer is fetched a moment ahead, so the click opens it at once. The arrow and the
 theme switch act at once and save behind the scenes. A button with `data-copy` copies that value
 to the clipboard and says "Copied", aloud too, for two seconds. A thin line at the top shows a page that is
-still loading.
+still loading. A link to a section of the page on screen (`#invite`) is the browser's own: it
+scrolls there, and the popstate it fires is not taken for Back (until 2026-10-31 it fetched the
+page again and put it back at the top, which looked like a reload). Lists of boxes to tick: a
+group's ticks are counted (`data-check-group` with `data-count`, the form's in
+`data-count-all`), `data-check-all` ticks or clears one group, and an input with `data-filter`
+hides the `data-filter-item` rows (and emptied `data-filter-group`s) of the element it names;
+those controls start `hidden` with `data-enhance` and appear with the script.
 
 **Live blocks.** A block marked `data-live="name"` with `data-refresh="seconds"` (at least five)
 is kept up to date: the script fetches the page again, or the lighter page `data-refresh-from`

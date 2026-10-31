@@ -97,6 +97,28 @@ hands in as `standing` from its session: the Vendor may change every live settin
 `owner` and `admin` ones, anyone else who holds `settings.manage` the `admin` ones. The audit row
 needs `oltrem_audit_log` from `@oltrem/core-audit`.
 
+## The parts switches
+
+Given `parts: { modules }`, the settings module also keeps the portal's parts (its modules)
+switched off while it runs, with no deploy and no migration: one live setting,
+`settings.parts_off` (`PARTS_SETTING`, the list of module ids switched off, the Vendor's), kept
+off the Settings page and its free edit. `src/parts.ts` holds the catalogue (`KIT_PARTS`: each
+kit module's name, one line, `core`, `requires`), the presets (`PART_PRESETS`: Everything, Email
+only) and the rule: `partsOff(stored, mounted)` never switches a core part off (`CORE_PARTS`:
+iam, users, settings, audit, health, alerts), drops an id nothing mounts and takes along a part
+whose needs are off, so a list written by hand stays safe; `partsRefusal(wanted, mounted)` says,
+in the page's words, why a list cannot be saved; `createPartsReader` makes the set again only when
+the snapshot's list changes, so a request pays one comparison and no I/O.
+
+| Route | Capability | What it does |
+|---|---|---|
+| `GET /api/settings/parts` | `settings.parts` (floor `vendor`) | every mounted part: on or off, always on, what it needs and what needs it; the list off; the presets with the parts each switches off |
+| `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }`: refused (`KIT-E-0422`) for an unknown part, a core one, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on |
+
+The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
+health and the IAM module as their `off` option; each says what it does with it. A switched-off
+part's data is never touched, so switching it back on restores everything.
+
 ## Storage this package owns
 
 Migration `0001_settings.sql`: `oltrem_meta` (the configuration version and, later, the client
