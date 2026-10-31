@@ -102,6 +102,18 @@ route `POST /domains/discover`) or add one by hand. Above it all, [Ready to send
 when a check stops every email, a red notice says so first and lists what to do, with Check again
 (`?intent=recheck`); otherwise one line that opens to every check.
 
+Since 2026-10-31 ([the record](../../docs/records/2026-10-31-email-console-remake.md)) the email
+pages are drawn with the console pieces of `@oltrem/core-ui`. Write is a mail app's compose card:
+From, To, Cc and Bcc (folded), Subject as lines, the message under them, Send, Save draft and Send
+later in a bar at its foot, and how the marks look beside it on a wide page. Drafts and Scheduled
+are one page with a row to pick, each email a row with its avatar, its subject, to whom and when,
+and its own Delete or Take back. Sent is cut into days (Today, Yesterday, then the date, on the
+company's clock), filtered from a row (all, opened, on the way, problems) with the counts, each
+email a row with what became of it and a mark at its edge when it went wrong. An email sent opens
+with its people and its words as the email shows them, and **What became of it** as a timeline.
+Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
+domain a pane with every check and every record, each value with its own Copy button.
+
 | Part | What it does |
 |---|---|
 | From | The addresses the person may send everyday mail from (`email.senders.use` at the address's place), the defaults first. With none, the page says so and sends them to Senders |
@@ -244,6 +256,7 @@ download one.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
+| `GET /stats` | `email.read` | The last 14 days (UTC), a row each, every day there even when nothing was sent: the messages that left, those still on the way, the problems (failed, bounced, refused, marked as spam), and of those that left, how many were delivered, opened and clicked. Read through the tenant's index on its last change, so it costs one read per message of the fortnight; the Activity page draws its figures and chart from it |
 | `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so reading it is audited as `email.hook` |
 | `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, the company's time zone and today on its clock, and [Ready to send](#ready-to-send) |

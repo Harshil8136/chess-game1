@@ -20,7 +20,7 @@ does not exist here, and a test proves it.
 | Shadows | `sm`, `md` | `shadow-md` |
 | Motion | `fast` 120 ms, `base` 200 ms, one `ease-out`; enter and exit through `@starting-style`; from page to page a view transition | `duration-(--duration-fast)` |
 | Group colours | `--ui-hue-blue`, `green`, `amber`, `rose`, `cyan`, `violet`, `teal`, `slate`: one per group of sections, each at 3:1 or better on the page and the surface in both themes; `data-hue="green"` makes one the element's `--hue` | `data-hue`, `ui-hue-tile` |
-| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves) | classes |
+| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves, and a size container, so `@xl:` and `@3xl:` follow the page's width rather than the window's) | classes |
 | The frame | `ui-frame` (with `data-side` open or closed), `ui-side` and its parts (`-head`, `-search`, `-nav`, `-group`, `-row`, `-foot`, `-me`, `-menu`, `-themes`, `-tip`), `ui-side-drawer`, `ui-progress`: the portal's sidebar, drawn by `@oltrem/screens` | classes |
 
 Light and dark are the same names with different values; dark follows the system
@@ -43,7 +43,7 @@ holds (plan 12.1); a test renders every one and checks.
 
 | Primitive | Built on | Rule it keeps |
 |---|---|---|
-| `Button`, `IconButton` | `<button>` | four looks, two heights (40, 44; 14 px semibold words, since 2026-10-29), never a fixed width; an icon button refuses an empty label |
+| `Button`, `IconButton`, `LinkButton` | `<button>`; `LinkButton` is an `<a>` in a button's look, for a page's tools | four looks, two heights (40, 44; 14 px semibold words, since 2026-10-29), never a fixed width; an icon button refuses an empty label |
 | `ChipRow`, `CommandRow` | `<nav>` with a list of links or buttons in the `.ui-chip-row` scroller | the sideways navigation: every option visible, the current one marked for the browser and the scroller; a destructive command last and red. The scroller reaches into the gutter on both sides, so its first chip lines up with the text above and the fades sit in the gutter; it needs a parent with the gutter's padding (the page, a dialog, a card) |
 | `ChoiceChips` | `<fieldset>` of native radios inside chips, in the `.ui-chip-row` scroller | a choice of one with every option visible, never a dropdown alone; posts without a script; the chosen chip filled |
 | `CheckChips` | `<fieldset>` of native checkboxes inside chips, in the `.ui-chip-row` scroller | a choice of several with every option visible; each ticked option posts `name-value` as `1`, since a page's form keeps one value per name |
@@ -53,7 +53,7 @@ holds (plan 12.1); a test renders every one and checks.
 | `Popover` | the popover API, anchored to its trigger | dismissed by a tap outside; no script |
 | `Tabs`, `Pagination` | `<nav>` with links | the current page marked; `rel="prev"` and `rel="next"`; the ends disabled |
 | `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows; a data column with no header (a command) sits below the named ones on a card, full width |
-| `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word |
+| `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word; the pill is a soft tint of the state's colour with the word in the text colour, so it reads in both themes |
 | `Checklist` | `<ul>` with a label | checks one under another, each an icon and its state in words for a screen reader, what was found, and for one that did not pass, what to do, linked where it is done |
 | `ToastRegion`, `Toast` | a polite live region; each toast a manual popover its own button hides | one live region in the layout |
 | `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds |
@@ -61,8 +61,29 @@ holds (plan 12.1); a test renders every one and checks.
 The page building blocks (`Panel`, `Section`, `Notice`, `Stats`, `ActionRow`, `ProblemNotice`,
 `Loaded`, `Done` and `when`) are the ones every portal page is made of, here so a module's own
 pages look like the kit's: a page that read an API answer shows it with `Loaded`, its problem
-with `ProblemNotice`, a change's outcome with `Done`. `Stats` are compact on a phone (smaller padding and figure, two
-across) and full size from 640 px.
+with `ProblemNotice`, a change's outcome with `Done`. `Stats` draws its figures with `Figures`
+(below), so every page's numbers look the same.
+
+## The console pieces
+
+Since 2026-10-31 (`src/console.tsx`) the kit has the pieces an operations console is made of: a
+page reads as solid panes on hairlines, one row of options at the top, dense rows with a state at
+their edge, and numbers in a strip. A tone colour marks a state only, always beside a glyph or a
+word; a group's hue marks identity only. The pages of the email module are the first built from
+them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
+
+| Piece | Built on | Rule it keeps |
+|---|---|---|
+| `Toolbar`, `Segmented` | a `role="group"` row; a `<nav>` of links | the page's options in one sideways row on a phone, wrapping on a wide page; the current option marked for the browser, each with its count |
+| `PaneGrid`, `Pane` | a grid; a `<section>` with a heading, a line, an icon on a group's hue and its own tools | one column on a phone, two from 44 rem of page, three when asked from 60 rem; `span="all"` takes the row; a pane is a size container too |
+| `Figures` | a `<dl>` strip on hairlines | a label, a value and a note; a tone draws a bar on top; an `href` makes the whole figure the link |
+| `Rows`, `Row` | a `<ul>` under an optional heading; each row a link or a block | a lead (an avatar or a badge), a title on one line, a line under it, an aside, a tone bar at the edge; a row's own buttons sit outside its link |
+| `Avatar`, `initialsOf`, `hueFor` | `<span aria-hidden>` | two letters from the name or the address, on the hue the address always picks |
+| `Timeline` | `<ol>` | each step an icon and its state, its time and its detail |
+| `Meter` | the browser's own `<meter>` | green under 70 %, amber to 90 %, red above; the figures in words beside it, so the bar is never the only telling |
+| `CopyField` | `<code>` and a button with `data-copy` | the value shown whole and selectable; the button names what it copies |
+| `Facts` | `<dl>` | label above value on a narrow pane, side by side from 26 rem |
+| `ColumnChart` | an SVG whose sizes are attributes, a key, a caption and a table for a screen reader | stacked columns by series, each column named on hover, each series keyed with its total; no inline style |
 
 ## The three widgets
 

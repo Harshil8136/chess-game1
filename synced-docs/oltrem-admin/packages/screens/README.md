@@ -73,10 +73,10 @@ modules' own.
 | `/access/reviews/:id` | one review: its place and counts, every grant under review with Keep and Remove, and Close the review (a dialog first) once each is decided | `/api/iam/reviews/:id`, `groups`, `people`, `roles`, `scopes` |
 | `/access/groups/new`, `/access/groups/:id` | a new group's name; one group: its members with Take out, Add a member by address (the people offered as the browser types), the roles it holds with End, Give the group a role, Rename, and Remove the group (a dialog first) | `/api/iam/groups/:id`, `bindings`, `roles`, `scopes`, `people` |
 | `/access/vendor` | how the Vendor may enter (at any time, in a window an Owner opens, only in an incident it declares), picked from a row; the open window with its reason and Close it now, or the form to open one for 1 to 12 hours | `/api/iam/tenant` |
-| `/providers` | Ready to send (with the email module: every check an email needs to leave, what to do under each that did not pass, and Check again, which posts `/providers/ready`), the connected providers, the providers to connect as tiles (a colour and initials each, two across on a phone, a heading per kind when there is more than one), and the domain look-up | `/api/providers/instances`, `definitions` |
+| `/providers` | Find from a domain and Connect in the page's tools; Ready to send as a pane (with the email module: every check an email needs to leave, what to do under each that did not pass, Check again, which posts `/providers/ready`, and the list folded away once all pass), the connected providers as cards (initials, state, today's use on a meter where the provider tells it, the key and its last answer), the providers to connect as tiles (two across on a phone, more as the page widens, a heading per kind when there is more than one), and the domain look-up | `/api/providers/instances`, `definitions`, `/api/email/usage` |
 | `/providers/add/:definition` | where to make the provider's key and what it needs, then its fields to paste | `/api/providers/definitions` |
-| `/providers/:id` | one connected provider: its state, its key (stored or not, never shown), Ready to send for an email service, the last check, what can be done to it, and its fields to paste again | `/api/providers/instances/:id` |
-| `/email?state=` | a row of the email pages (Write, Addresses, Templates, Lists, and Campaigns and Providers when mounted); first the latest messages and their state, or only those sent, waiting or failed, picked from a row whose chips carry the counts; then, with the campaigns mounted, **Bulk mail today** (messages left under the daily limit, the messages the database writes leave room for, a run's size on the client's Cloudflare plan, the campaigns sending now with how far each is), for a person who may read campaigns; **Provider allowance**, a block per provider that may send: what it says is left (today, this month or on the plan) and when it starts again, and what the portal sent through it today, this week and this month beside the provider's own count, with the provider's words when its key may not read the count | `/api/email/messages`, `/api/email/usage`, `/api/campaigns/room`, `/api/campaigns/campaigns?status=sending` |
+| `/providers/:id` | one connected provider, titled with its name: its state, its key (sealed or missing, never shown) and its last check as figures, the last failure in full, what can be done to it, Ready to send for an email service, the provider's own steps folded; beside them on a wide page, the test message and its fields to paste again | `/api/providers/instances/:id` |
+| `/email?state=` | Activity: the day's figures (sent, on the way, problems, opened, from the last 14 days), then the latest messages as rows (whom, the subject or what kind, what became of it, a mark at the edge for a problem), or only those sent, waiting or failed, picked from a row with the counts; a 14-day chart of what went out by outcome, with its table for a screen reader; then, with the campaigns mounted, **Bulk mail today** (messages left under the daily limit, the messages the database writes leave room for, a run's size on the client's Cloudflare plan, the campaigns sending now with how far each is), for a person who may read campaigns; **Provider allowance**, a block per provider that may send: what it says is left (today, this month or on the plan) and when it starts again, and what the portal sent through it today, this week and this month beside the provider's own count, with the provider's words when its key may not read the count | `/api/email/messages`, `stats`, `usage`, `/api/campaigns/room`, `/api/campaigns/campaigns?status=sending` |
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets; how many measured ones are close to their line (one not measured yet is not counted) | `/api/health/checks`, `budgets` |
@@ -129,9 +129,12 @@ fields are password fields; an optional field left empty is left out, and a secr
 back into a page.
 
 Every page sits in the same frame (`src/layout.tsx`); [The frame](#the-frame) below has the
-detail. The sections are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page says in one line what it is for, then a row of its actions
-(`ActionRow`, links to the page's own forms), a row of summary tiles counted from the same API
-answers the page already reads (`Stats`; no extra request), and its sections, a form in a panel.
+detail. The sections are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page opens with its
+group's icon on its colour, its title, one line on what it is for (a module page may give its own,
+`sub`) and, on the right, the page's tools (`tools`: a few links in a button's look); then a row of
+its actions (`ActionRow`, links to the page's own forms), a strip of figures counted from the same
+API answers the page already reads (`Stats`; no extra request), and its sections, a form in a
+panel. The pages remade on 2026-10-31 use the console pieces of `@oltrem/core-ui` instead.
 Empty lists say so in a dashed box, and a list picked down to nothing says nothing matches. The theme
 switch posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, which keeps the choice
 in the `oltrem_theme` cookie (cleared for system) and returns to `back` when it is a path on the
@@ -217,7 +220,8 @@ the problem.
 ## The stylesheet and the script
 
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
-theme and the classes the pages and primitives use, about 46 KiB. `src/generated/app-js.ts` holds
+theme and the classes the pages, the primitives and every module's `src/*.tsx` use, just under
+the 64 KiB a test allows. `src/generated/app-js.ts` holds
 the frame's script, copied from `src/client/frame.js`, about 20 KiB. They are served at
 `/ui/app.css` and `/ui/app.js`, cached for good under their version and `no-cache` without it.
 After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
