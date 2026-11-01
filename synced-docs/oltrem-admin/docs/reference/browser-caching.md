@@ -45,8 +45,9 @@ One approach for every module, so a new module gets it for free:
 
 1. **A change stamp per area.** Each module area (email sent, users, settings, …) has a number
    that goes up on every write. The kit already sees every write (the audit log and the outbox),
-   so the stamp is bumped in the same place: one row or one KV key per company, read once a
-   request and held in the Worker's memory for a few seconds.
+   so the stamp is bumped in the same place, inside the same D1 batch as the write: a row in
+   D1, never a KV key (see the budgets below). It is read once a request and held in the
+   Worker's memory for a few seconds.
 2. **Every read answers with an ETag** built from the stamps it depends on and the person's
    policy version. A repeat visit sends `If-None-Match`; when nothing changed the Worker answers
    `304 Not Modified` before rendering anything. This is where the CPU is saved, and it needs no
@@ -102,6 +103,19 @@ should not see.
 - **Keys, tokens and secrets.** Never in browser storage, never in a cookie the page can read.
 - **Other people's data beyond the page in front of you.** No prefetching of records a person has
   not opened.
+
+## The free plan's budgets decide the design
+
+| Limit (free plan, per day unless said) | What it rules out | What the design uses instead |
+|---|---|---|
+| **10 ms CPU** per request and per cron run | rebuilding a page that has not changed; heavy signature checks on every request | a 304 answered from one stamp read; the Worker's memory |
+| **1,000 KV writes** | a KV key bumped on every change (a busy hour alone would spend it); a session rewritten on every request | stamps as D1 rows (100,000 writes a day), KV written only when something really changed: the settings snapshot on a save, a session on a new device or a permission change, the door at most hourly |
+| **100,000 KV reads** | a KV read per request for each stamp | one stamps read per request at most, then memory for a few seconds |
+| **100,000 D1 rows written, 5,000,000 rows read** | a stamp table that is scanned | one row per company and area, read by its key |
+| **50 D1 queries** per invocation | a page that asks once per area | all of a page's stamps in one query |
+
+The browser's own storage costs the Worker nothing: every copy kept there is a request, a KV read
+and a render that never happen. That is why the design leans on it for what is safe to keep there.
 
 ## Order of work
 
