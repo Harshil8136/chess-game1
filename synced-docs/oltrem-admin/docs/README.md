@@ -52,6 +52,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
+| [Open-source ideas](reference/open-source-ideas.md) | 30 ranked ideas from open-source projects | proposed |
 | [Browser caching](reference/browser-caching.md) | what to keep in the browser, versioned reads, instant updates | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
 | [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
@@ -76,20 +77,20 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/tasks](../modules/tasks/README.md) | tasks: who sees, gives and does them at a place, the email when given, the automations' task, the routes and the table | written, beside the code |
 | [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
 | [@oltrem/bookings](../modules/bookings/README.md) | bookings: who books and who manages at a place, the company's clock, never twice at once, cancelling and removing, the routes and the tables | written, beside the code |
-| [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, never two requests on one day, vacation days a year, the reason kept private, the routes and the table | written, beside the code |
+| [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, vacation days a year, the reason kept private, the routes and the table | written, beside the code |
 | [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the month's CSV, the routes and the table | written, beside the code |
 | [@oltrem/assets](../modules/assets/README.md) | equipment: who sees and manages it at a place, one tag one item, handed over with every move kept, retired when nobody holds it, the routes and the tables | written, beside the code |
-| [@oltrem/customers](../modules/customers/README.md) | customers: the door at /account past Access, the email code, the `__Host-` sign-in, OpenID Connect, who manages customers, the routes and the tables | written, beside the code |
+| [@oltrem/customers](../modules/customers/README.md) | customers: the door at /account past Access, the email code, OpenID Connect, who manages customers, the routes and the tables | written, beside the code |
 | [@oltrem/quotes](../modules/quotes/README.md) | quotes: who sees and who makes them at a place, drafts until sent, lines and total in the company's currency, the customer's answer once, the routes and the table | written, beside the code |
 | [@oltrem/invoices](../modules/invoices/README.md) | invoices: who sees and who makes them at a place, drafts until sent, from an accepted quote, paid once, overdue in Needs you, voided, the routes and the table | written, beside the code |
 | [@oltrem/shifts](../modules/shifts/README.md) | shifts: who plans and who sees at a place, drafts until published, an email each, open shifts taken once, one shift at a time a person, the routes and the table | written, beside the code |
-| [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, one open stretch a person, the payroll CSV, the routes and the table | written, beside the code |
+| [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, the payroll CSV, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
-| [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
+| [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV, merge fields, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the kit's seven email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
 | [@oltrem/email](../modules/email/README.md) | email as the kit sends it: typed templates, the escaping `html` tag, the outbox, failover, held messages, Write, Sent, Addresses, routes, errors | written, beside the code |
-| [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, the checks, settings and secrets, how to open a copy, errors | written, beside the code |
+| [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
 | [@oltrem/screens](../packages/screens/README.md) | the portal's screens: the frame and its row, each page and the API it reads, the first run, the stylesheet | written, beside the code |
