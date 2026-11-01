@@ -58,7 +58,9 @@ has not seen (`registrationMark(set)`: the version and a fingerprint of the plan
 capabilities, kept as the module row's version); `capabilitySets(modules)` is the step from manifests to sets. `loadCapabilityIndex(db)`
 reads the rows; a `capabilityIndexSource` reads them once per isolate and replaces them after a
 registration, and the sessions, the governance and the handover share one, so the compiler and
-the check read the same index.
+the check read the same index. `createIam(...).index` hands that one to the other modules (their
+`index` option), so a module's own checks use it too instead of reading the registry into a copy
+of their own on first use; the client template passes it to every module that takes one.
 
 ## Compiling and checking
 

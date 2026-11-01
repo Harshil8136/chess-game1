@@ -43,6 +43,25 @@ the same-origin check refuses never reaches a route and is not. A hook that thro
 `report` and leaves the answer as it was. The client template passes the audit module's
 `createChangeAudit` (`@oltrem/core-audit`), so every change is a row in the audit log.
 
+**A page's own calls to the API stay in process.** The screens render a page by calling the
+portal's API inside the page's request (Home makes about 25 such calls). Each used to go through
+`app.fetch`, the whole pipeline again, which cost most of a page's CPU. The app now keeps an
+inner way to its module routes under the well-known symbol `INNER_CALL`
+(`Symbol.for('oltrem.core-http.inner-call')`), an `InnerCall(outer, request)`, and the screens'
+`api` uses it when the app has it. It reuses only what the door already established for the
+outer request: its identity and the parts switched off. It leaves out the request id (a fresh
+one is made for the call), the security headers and the same-origin check, since the answer
+never leaves the Worker. Everything that decides what may be done runs exactly as on a request
+of its own: the part switched off, the session hook, the capability check, the schema, the
+handler and `onChange`; a refusal is the same problem with the same status. A call goes through
+the whole pipeline instead when the outer request has no identity (a public route), before the
+startup hook has finished, to another origin, or to a path that is not under `/api/`.
+
+**The router.** The app uses Hono's trie router, which takes each route as it is added while the
+Worker loads. Hono's default router tries a faster router first, cannot take every module route,
+and so builds two routers on an isolate's first request, about 10 ms of that request's CPU
+(`docs/records/2026-11-01-cpu-budget.md`).
+
 ## Using it
 
 ```ts
@@ -163,3 +182,9 @@ sends it again until the module is back on (`test/parts.test.ts`).
 
 Tests run inside the Workers runtime with a sample module that has one route of each shape, and
 a second module that echoes what the session hook returned.
+The inner call has its own tests (`test/inner.test.ts`): a page past the door is answered in
+process with one pass through the pipeline and the session hook still run; without the
+capability the inner call is refused with the same 403; a session hook that refuses, a bad input
+(422), a module switched off and an unknown path (404) answer as on a request; a change and a
+refusal made through it are told to `onChange`; with no identity, or to another origin, the call
+goes through the whole pipeline.

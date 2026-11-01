@@ -95,7 +95,12 @@ names. `wallClock(at, zone)` gives the day and time on that clock, `instant(day,
 moment a day and time name (a time the clocks skip lands an hour later, one they repeat takes the
 first), `nextDay` the day after, and `isTimeZone` whether Intl knows a zone. Intl holds every
 zone's offsets, daylight saving included, so no table is kept. The bookings and time clock modules
-read them.
+read them. Each zone's formatter is made once per isolate and kept, and so is whether a text
+names a zone: making one costs far more CPU than using it, and the first one made in an isolate
+also loads the runtime's time zone data (10 to 30 ms measured locally). `warmClock()` makes one
+and checks a zone; the client template calls it in the Worker's global scope, which runs while
+the Worker loads, outside the CPU time of its first request or tick
+(`docs/records/2026-11-01-cpu-budget.md`).
 
 ## The settings routes
 

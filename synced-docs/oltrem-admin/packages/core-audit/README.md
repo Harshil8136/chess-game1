@@ -64,7 +64,8 @@ isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
 `list({ actor, action, module, outcome, since, until, before, limit })` pages newest first (`module` reads every action of one module); the
 `before` it returns is the cursor for the next page. `range(since, until, limit)` returns the
 rows of a time range oldest first, for the export. `verify({ from, to })` recomputes the hash
-of every row in the range and names the rows whose content no longer matches, so the seal job
+of every row in the range and names the rows whose content no longer matches (it also returns
+the stored hashes it read, in order, for the seal's chain), so the seal job
 and the System status page can say "the log is intact" and mean it. The hash covers every field
 but the sequence number; details are stored as canonical JSON (keys sorted), so the same facts
 always hash the same.
@@ -95,9 +96,23 @@ the hash of the previous seal and of every row of that day, in order, hashed tog
 (`chainHash`), so each seal depends on all before it. A day with no row is sealed too, which
 keeps the chain unbroken. The seal goes into `oltrem_audit_seals` (migration `0016`) and a copy
 with every row's hash goes into the bucket at `logs/audit/<day>.json`, where the backup's
-lifecycle rules keep it. Each run then rechecks the newest 7 seals: a row changed since (its
-hash no longer matches), a row removed or added (the chain no longer adds up) or a bucket copy
-that differs marks the seal broken and names the problem.
+lifecycle rules keep it.
+
+**The recheck.** The job `audit.recheck` runs every 15 minutes and checks again the newest 7
+seals (`RECHECK_SEALS`) not yet checked since today's UTC midnight, the one never checked or
+checked longest ago first: a row changed since (its hash no longer matches), a row removed or
+added (the chain no longer adds up) or a bucket copy that differs marks the seal broken and names
+the problem. One run hashes at most `RECHECK_ROWS` (200) rows again, so it fits a tick's share of
+the Free plan's 10 ms of CPU however busy the log is. A seal that fits is read once: `verify`
+returns the stored hashes it read (`hashes`), and the chain is computed from them. A larger seal
+is checked as a whole first, with the database joining its row hashes into one value
+(`group_concat ... ORDER BY seq`), so the Worker does one digest and no work per row; its rows
+are then checked in parts over the next runs, and the run that stops partway keeps its place
+(the day and the next row) in the bucket at `logs/audit/recheck.json`, removed once no seal is
+partly checked. With 96 runs a day this keeps up with about 2,700 rows a day; a busier log is
+checked over more than a day, never skipped. The daily seal no longer rechecks: before the
+change it rechecked all 7 seals in one run, which took most of a tick's CPU on its own
+(`docs/records/2026-11-01-cpu-budget.md`).
 
 **The check.** `audit.sealed`, in the audit lane of System status: failing when a seal is
 broken, a warning before the first seal and when the last seal is more than two days old, ok
@@ -111,5 +126,6 @@ credential-like fields refused at any depth while `tokenCount` and `keyName` pas
 write and its reported failure, the filters and the paging, and a row changed by hand found by
 its sequence number. The module's own tests: the seal chained and copied, sealed once a day, an
 empty day sealed; a row changed and a row removed after the seal, each found by the next run
-and failing the check; the entries paged; the CSV export, its quoting, a typed formula defused and its own audit row;
+and failing the check; a large seal checked over three runs from its kept place, a change late
+in it still found, and a row removed from it found by its first run; the entries paged; the CSV export, its quoting, a typed formula defused and its own audit row;
 the Home card.

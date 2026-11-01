@@ -10,6 +10,9 @@ Every page reads and writes only through the portal's own API, called inside the
 with the caller's identity headers (`src/api.ts`). The session hook, the permission check, the
 schema and the audit run exactly as they do for any other caller, so a screen never shows or
 changes more than the API allows. A refusal is shown as a notice in plain words, with what to do.
+When the app has core-http's inner call (`INNER_CALL`), `api` answers in process with the page's
+own identity instead of sending each call through the whole pipeline again: the same checks run,
+and a page is one pass through the pipeline however many calls it makes (core-http's README).
 
 ## Using it
 
