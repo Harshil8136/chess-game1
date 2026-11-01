@@ -401,11 +401,64 @@ cannot create itself; its scopes are the five the deploy needs, on that account 
 codes are the doctor's, or `1` when the migrations folder has a problem and `3` when the kit
 packages are not installed.
 
+## `oltrem new client <dir> [--name "Acme Ltd"] [--kit <folder>] [--git]`
+
+A new client repository, one per client (the owner's choice of 2026-11-01), in an empty folder
+(or one holding only `.git`, such as a fresh clone of an empty private repository). It copies the
+client template (`templates/client` in the kit; the copy the tool's package carries once packed)
+without `node_modules`, builds or anything local to a machine, and **vendors the kit**: every kit
+package, packed as `oltrem-<name>-<version>.tgz`, goes into the repository's `kit/` folder, so it
+installs with no registry and no token, on a computer and in GitHub Actions alike.
+
+- **Where the packed kit comes from.** `--kit <folder>` names a folder of them, as
+  `pnpm kit:pack` writes in the kit (`.oltrem/kit` by default). Without it, run from the kit, the
+  tool packs every package itself first, each one built (a minute or two). Every kit package must
+  be in the folder, one file each; the names come with the tool (`kit-files.json`). A missing or
+  doubled one is refused before anything is written.
+- **`package.json`.** Each kit package (`workspace:*` in the template) becomes
+  `file:./kit/<its file>`, and `pnpm.overrides` sends every kit package, including the ones the
+  packages name among themselves, to its file. Each third-party package (`catalog:`) becomes the
+  catalog's one version, which `kit-files.json` carries since the catalog itself stays in the kit.
+  The lockfile `pnpm install` writes records each packed file's checksum, so a changed file stops
+  a `--frozen-lockfile` install.
+- **`--name`.** The client's names, written as the first deploy writes them (the same function,
+  `namingOf` in `src/deploy.ts`): the client file's id and name, and every resource in
+  `wrangler.jsonc` and `oltrem.manifest.json` (`Acme Ltd` is `acme-ltd-portal`,
+  `acme-ltd-portal-db` and the rest). Without it the template's names stay and the first deploy
+  asks "What is this client called?", as it always has.
+- **The setup steps that need no account**, as `oltrem setup` runs them: the pointer files, the
+  kit migrations and the generated reference. The last two read the installed kit packages; run
+  from the kit, the kit template's stand in for a moment (a link that is removed again); from a
+  packed tool, they came with the template and `pnpm exec oltrem setup` checks them after
+  `pnpm install`.
+- **`--git`** runs `git init -b main`.
+
+It prints the next steps: `pnpm install` (commit `pnpm-lock.yaml` with the rest), `pnpm verify`,
+a private GitHub repository pushed from `main`, then `npm run deploy`. `--json` prints
+`{ ok, exitCode, dir, ran, written, problems, notes, worker }`. Exit `0` when written, `1` on a
+problem (a package missing from the kit, one that did not pack), `3` when the folder is not empty
+or the name is not one.
+
+`kit/README.md` is one of the kit's files. `oltrem check files` also holds `kit/` to
+`package.json`: each `file:./kit/` it names is there, and every file there is one it names.
+
+### Proving it: `pnpm check:client-repo`
+
+In the kit, `pnpm check:client-repo [--keep]` (`scripts/client-repo-check.mjs`) proves the whole
+path with no registry: it packs every kit package into a scratch folder, unpacks the packed tool
+on its own and runs its `oltrem new client --name "Acme Ltd" --kit`, installs the new repository
+with `pnpm install --offline`, then runs inside it `oltrem setup`, `oltrem new module pet-food`
+(the module template the installed tool carries), its own `pnpm verify` (the type check, the
+tests, the client checks, the generated reference and a dry-run build with its budgets) and
+`oltrem doctor`. Each step is timed and the size of `kit/` printed. It takes about two and a half
+minutes on four cores, most of it the packing and the client's own tests, so it is not a gate of
+`pnpm verify`; run it after a change to how the packages are built or packed, or to the template.
+
 ## `oltrem new module <name> [dir]`
 
 Writes a complete module into the client repository in `dir` (the current directory by default),
-copied from the kit's module template (`templates/module` in the kit; beside the tool once it is
-published) with the name written in wherever it goes: as the id (`pet-food`), as a table prefix
+copied from the kit's module template (`templates/module` in the kit; the copy the tool's package
+carries once packed) with the name written in wherever it goes: as the id (`pet-food`), as a table prefix
 (`pet_food`) and as a title (`Pet food`). The module gets one of each part the manifest knows: two
 capabilities, two routes, a page in the sidebar, a daily job, a health check, a migration, a
 setting and an error code, plus its own test and its how-to (`modules/<name>/README.md`). Its
@@ -507,8 +560,10 @@ settings, each equal by checksum to the copy of the kit version installed. The l
 the tool as `kit-files.json`, which the kit's `pnpm docs:build` generates from its client
 template. A missing or changed kit file is refused: the change belongs in a module under
 `modules/` or in `oltrem.config.ts`, and an upgrade rewrites the kit's files whole. The
-template's `.claude/settings.json` denies Claude Code an edit of the same files. Exit `0`, `1` on
-a problem, `3` when there is no `oltrem.manifest.json`.
+template's `.claude/settings.json` denies Claude Code an edit of the same files. The packed kit in
+`kit/` is held too: every `file:./kit/` that `package.json` names (a dependency or an override) is
+there, and every file there is one it names. Exit `0`, `1` on a problem, `3` when there is no
+`oltrem.manifest.json`.
 
 ## `oltrem check modules [dir]`
 
@@ -755,6 +810,17 @@ some, and one line counting those without. Then run `pnpm verify`, commit and pu
 Exit `0` when it wrote, `2` when it wrote with warnings, `1` when a check failed and nothing was
 written, `3` when it could not start: no wrangler configuration, or no kit package installed.
 
+### `oltrem upgrade [dir] --from <folder>`
+
+The step before, for a repository with the kit vendored in `kit/`: it takes a newer packed kit
+(`pnpm kit:pack` in the kit) from the folder. `kit/` then holds exactly those files, one per kit
+package, the older ones removed, and `package.json` names them: each `file:./kit/` dependency
+and every kit override. A folder missing a package, or holding two of one, changes nothing. It
+installs nothing: run `pnpm install`, then `oltrem upgrade` again, which checks and takes the
+migrations and the reference as above. The kit's own files (the deploy workflow, `src/index.ts`
+and the rest) are not rewritten by it yet. `--json` prints `{ ok, exitCode, written, removed,
+problems }`. Exit `0` when taken, `1` on a problem.
+
 ## `oltrem doctor`
 
 Runs the check registry against the repository in the current directory and prints one line
@@ -783,6 +849,10 @@ the docs can render the same checks later; the ids are stable from here on.
 ## In the kit repository
 
 `pnpm build` compiles the tool to `packages/cli/dist/`; `pnpm oltrem …` runs it from there.
+Packed (`pnpm pack`, which `pnpm kit:pack` runs for every package), the tool carries `dist/`,
+`bin/`, `look/`, `kit-files.json` and the two templates, which its prepack places beside it and its
+postpack removes again (`scripts/package.mjs`); npm leaves a `.gitignore` out of a package, so the
+client template's travels as `_gitignore` and `oltrem new client` gives it its name back.
 `pnpm verify` builds it and runs `oltrem manifest check` on the client template and the three
 packages that declare a test Worker with a binding (`core-config`, `core-outbox`, `core-audit`)
 as its `manifest` gate. The tool is typed against Node (`tsconfig.json` here extends the shared
