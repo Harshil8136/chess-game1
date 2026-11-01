@@ -1,7 +1,8 @@
 # @oltrem/core-health
 
 System status of a client Worker (plan sections 4.3 and 10): every module declares its checks on
-its manifest, one job on the tick runs them all, and one table keeps the last result per check.
+its manifest, one job on the tick runs them, each at its own pace, and one table keeps the last
+result per check.
 A problem opens only after two failures in a row (two-fails-open), so one bad minute never pages
 anyone. The System status page, acknowledging and snoozing come with the health module of phase 5; the
 alerts with the providers of phase 4, through `onOpen` and `onClose`.
@@ -31,9 +32,11 @@ export const notes = defineModule({
 | `id` | `<module>.<name>`, stable: the key of its row |
 | `lane` | the group the page shows it under, lower-case letters, digits and dashes: `storage`, `email`, `access` |
 | `summary` | a few words the System status page shows |
+| `every` | optional: how often it runs, as a job's interval (`5m`, `1h`); `15m` (`CHECK_EVERY`) when left out. A check that failed last time runs on every run of the job until it passes |
 | `run(env, ctx)` | answers `{ status: 'ok' \| 'warn' \| 'fail', message? }`; a throw, no answer within the timeout (five seconds) or an answer of another shape is a failure with the reason |
 
-The contract (`@oltrem/core-module`) refuses a bad id, lane or summary when the module loads.
+The contract (`@oltrem/core-module`) refuses a bad id, lane, interval or summary when the module
+loads.
 
 ## Running the checks
 
@@ -50,14 +53,27 @@ budget's reading as `items`, an empty list when the budgets are not measured, wi
 what one run may do on it as `limits`, and the events queue's backlog asked live as `queue`), and the Home card's
 `GET /api/health/home` (how many checks fail or need a look). The tick runs the job like
 any other job, so a client gets system health by mounting the module, with no cron of its own.
-On each run, every declared check is run in manifest order, with the time it took, and its row
-written: the status, the message (its first 400 characters), when, how many failures in a row,
+Each run of the job takes a share of the checks, so it fits in the tick's 45 queries (the
+Free plan's 50 an invocation) beside the other five-minute jobs: every check that failed last
+time or is due every five minutes, and of the others whose time has come (never run, or their
+`every` since the last run, less half a run of slack), the ones never run first, then the longest
+overdue, as many as the run's share of them (each check's runs per job run, added up and rounded
+up: a third of the fifteen-minute checks). So the checks spread over the runs, each about at its
+own pace, a fresh portal's first run makes no more queries than any other, and a failure is
+confirmed on the next run, five minutes later. In the client template with every module mounted
+a run makes about nine queries; it made 43 when every check ran on every run and wrote its row
+alone (measured 2026-11-01).
+
+The checks taken run in manifest order, each with the time it took, and their rows are written in
+one batch: the status, the message (its first 400 characters), when, how many failures in a row,
 and since when the problem is open. The count of failures in a row resets on any pass or
 warning. From the second failure in a row the problem is open: `onOpen(row, env)` is called
-once, when it opens, and `onClose(row, env)` once, when the check passes again; a failure of
-either hook is reported through `report(error, checkId)` and the run goes on.
+once, when it opens, and `onClose(row, env)` once, when the check passes again, after the rows
+are written; a failure of either hook is reported through `report(error, checkId)` and the run
+goes on.
 
-`run(env, ctx)` returns the ids by status and the ids opened and closed on that run. `list(env)`
+`run(env, ctx)` runs every declared check at once, whatever its pace, and returns the ids by
+status and the ids opened and closed on that run. `list(env)`
 returns every row by lane then id, with `declared` false for the row of a check no mounted module
 declares any more; the row is kept.
 

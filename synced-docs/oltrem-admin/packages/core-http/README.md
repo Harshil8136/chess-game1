@@ -11,8 +11,8 @@ every error, and the three Worker handlers (`fetch`, `scheduled`, `queue`) from 
 flowchart LR
   R["request"] --> I["request id"] --> H["security headers"] --> Z{"/healthz?"}
   Z -- "yes" --> OK["200, the module ids"]
-  Z -- "no, /api/*" --> N["no-store, same-origin check (CSRF)"] --> D["identity from the Access headers"]
-  D -- "missing or unreadable" --> P401["problem 401"]
+  Z -- "no, /api/*" --> N["no-store, same-origin check (CSRF)"] --> D["identity from ctx.access"]
+  D -- "no ctx.access, or incomplete" --> P401["problem 401"]
   D --> U["startup hook, once per isolate"] --> A{"route open to any identity?"}
   U -- "throws" --> PB
   A -- "yes" --> S
@@ -99,24 +99,29 @@ request without an identity never start it.
 
 `session` and `authorize` are the two places the permission model plugs in. The session hook
 runs once per request after the identity is read and before the capability check; whatever it
-returns reaches the authorizer as its fourth argument and the handler as `ctx.session`. Either may
+returns reaches the authorizer as its fourth argument and the handler as `ctx.session`. It is
+given the request's `executionCtx` when the request came with one: the calls a screen makes to the
+API inside one page share it, so the hook may keep what it read for the rest of them. Either may
 throw a `KitError` to answer with a reason of its own. The IAM module provides both, with the
 startup hook (`createIam` in `@oltrem/iam`); without the module a client uses the own-account authorizer
 and no hook: the one owner email holds every capability and `ctx.session` is `undefined`.
 
-The identity comes from the headers Cloudflare Access adds: the email, and the token whose claims
-(`sub`, `iat`, `aud`) become `subject`, `signedInAt` and `audience`. Access verified the person at
-the edge, so the Worker does no crypto in the request (plan 11): the claims are decoded, not
-verified, and a token that does not parse or lacks a subject or a sign-in time is no identity at
-all. The IAM module checks the audience.
+The identity comes only from the runtime. When Cloudflare Access authenticates a request that
+invokes the Worker (Access on the Worker itself, the account's "Protect all Workers", or a
+hostname's Access application in front of it), the runtime hands the Worker `ctx.access`: the
+application's `aud` and `getIdentity()`, the signed-in person. `readAccessIdentity(ctx.access)`
+turns that into the identity: the email, `user_uuid` as `subject`, `iat` as `signedInAt`,
+`audience: [aud]` and `door: 'worker'`; a record without an email, a subject or a sign-in time
+(a service token's) is no identity. It is read once per request, so the screens' calls inside
+the same request reuse it. The IAM module checks the audience: `worker` accepts any application
+the runtime names, a tag only that application.
 
-When Access stands on the Worker itself (its Access tab, or the account's "Protect all Workers"),
-the runtime hands
-the Worker `ctx.access`, with the application's `aud` and `getIdentity()`. The identity is then read
-by `readWorkerAccessIdentity`: a token naming that `aud`, or, with no token, a `getIdentity()` that
-gives an email, a subject and a sign-in time, carries `door: 'worker'`, which the audience `worker`
-requires, so nothing is copied from the dashboard into a secret. A token for another application
-(a hostname application in front) stays unmarked, for that application's own tag.
+Request headers are never read for the identity, Access's own `cf-access-*` headers included:
+anyone can send a header, and a request that did not come through Access has no `ctx.access`, so
+it gets the 401 problem whatever headers it carries. Cloudflare's documentation ("Cloudflare
+Access" under Workers, configuration) names the limits: `ctx.access` is not passed through a
+service binding, and a Worker with static assets does not get it. A client's Worker has neither:
+nothing reaches it through a binding, and its stylesheet is a route, not a static asset.
 
 ## The local door
 
@@ -136,7 +141,7 @@ cookie is no identity.
 The identity read from the cookie carries `door: 'local'` and no audience, which the IAM
 module's audience check accepts only for this door. A page request with no identity is sent to
 the sign-in page; an API request still gets the 401 problem. Both forms carry the same-origin
-check. Access's own headers, when present, always win.
+check. Access's own record, when the runtime gives one, always wins.
 
 `publicRoutes(app)`, when given, is called before anything else is mounted: routes that answer
 before the door, such as the screens' stylesheet.

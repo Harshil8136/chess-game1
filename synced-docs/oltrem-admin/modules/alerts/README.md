@@ -49,7 +49,7 @@ All three are system settings an Owner changes on the Settings page; each takes 
 
 | Key | Default | What it holds |
 |---|---|---|
-| `alerts.recipients` | empty | the addresses alerts are emailed to, separated by commas |
+| `alerts.recipients` | empty | the addresses alerts are emailed to, separated by commas; while it is empty, `oltrem deploy` writes the Vendor's address (and the client's Owner from `oltrem.config.ts` when it is a real one), so someone is told; it never changes a list someone wrote |
 | `alerts.quiet_hours` | empty | from one hour to another, as `22-07`; it may run past midnight; empty, or the same hour twice, is no quiet hours |
 | `alerts.time_zone` | `UTC` | the time zone the quiet hours are read in, as `America/Mexico_City`; one the runtime does not know is refused |
 

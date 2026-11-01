@@ -199,7 +199,19 @@ printed:
    sign-in reaches, or, when it reaches several, the one picked from their names. The pick goes to
    wrangler as `CLOUDFLARE_ACCOUNT_ID` for the rest of the run, never into a file, so wrangler has
    no account to ask about later.
-2. **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
+2. **The client's name**, on the first deploy only: while `wrangler.jsonc` still names the
+   template (`oltrem-client`) and neither that Worker nor its database is on the account
+   (`wrangler deployments list`, `wrangler d1 info`; a network error counts as "there", so the name
+   is kept), "What is this client called?" (a short name, like Acme Ltd). The Worker's name is made
+   from it (`acme-ltd-portal`: lower case, a-z, 0-9 and dashes, at most 52 characters so the longest
+   resource name, `<name>-events-dlq`, stays within Cloudflare's 63), and a name already on the
+   account is asked again. In step 5 it replaces the template's name everywhere it is a name: the
+   Worker, `CLIENT_ID`, the database, the bucket, the queues and the Workflow in `wrangler.jsonc`,
+   the queues in `oltrem.manifest.json` (and the generated reference that lists them), and
+   `client.id` and `client.name` in `oltrem.config.ts`; the person commits them. A Worker already
+   on Cloudflare keeps its name, whatever it is, and nothing is asked: a new name would make a
+   second Worker and lose the address.
+   **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
    in step 7, and step 6 names it among the addresses the door lets in, so the two cannot differ.
 3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When
@@ -226,9 +238,19 @@ printed:
 5. **The database, the migrations** (as `migrations apply` does) **and `wrangler deploy`**,
    carrying the new secrets in a file (`--secrets-file`) that is removed right after. The
    migrations and the deploy are tried once more, five seconds later, when what failed reads as a
-   passing network or Cloudflare error (a reset connection, a timeout, a 502).
+   passing network or Cloudflare error (a reset connection, a timeout, a 502). Then the release's
+   health check (`watchHealth` in `src/release.ts`, the same reads as `oltrem release`): `/healthz`
+   on the portal's address, up to six times five seconds apart. A new version that does not answer
+   is stepped back at once to the version that ran before the deploy (`wrangler rollback`, the
+   release's `stepBack`), said in plain words, and the run stops there; the database is left as it
+   is, which is safe because the migrations only add. On the first deploy there is no earlier
+   version: the failed check is said, with a new address's few minutes to start, and the run goes
+   on. When something in front of the Worker answers in its place, the new version stays.
 6. **The Vendor's address** from step 2, written while the database has none, as `vendor set` does;
-   then `backup setup`; then **the door**, once the deploy has made the Worker (an empty account
+   then, while `alerts.recipients` (@oltrem/alerts) is empty, alerts are sent to the Vendor and to
+   the client's Owner from `oltrem.config.ts` when that is a real address (not one at
+   `example.com`, `.org` or `.net`), written as the portal's Settings would and said in one line; a
+   list someone wrote is never changed. Then `backup setup`; then **the door**, once the deploy has made the Worker (an empty account
    has nothing to protect): the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
    Access, All traffic, the allowed emails, the sign-in email first), the first one a link to the
    account's own Workers page, then Enter. The command checks the portal's address from outside
@@ -237,12 +259,15 @@ printed:
    all. Nothing is copied back: `ACCESS_AUD`
    `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
    the door is on no request carries it, so the portal refuses everyone. A client with a hostname
-   Access application instead sets its tag with `wrangler secret put ACCESS_AUD`.
+   Access application instead sets its tag with `wrangler secret put ACCESS_AUD`; the runtime
+   names that application in `ctx.access.aud` too, and no request header is ever trusted.
 7. **The modules of the portal**: which modules are on, written to `settings.parts_off` as
    `parts set` does. The question (`parts` on the asker, `partsQuestion(off)` in `src/parts.ts`)
    carries every part with its one line, whether it is always on and what it needs, its group as
    the portal's sidebar puts it (Work, Company, Users & access, Messages, System), the parts off now, and
-   three presets: Everything, Email only and Only what's always on. The answer is the parts
+   three presets: Everything, Email only (Email, Integrations and Deployments on) and Only what's
+   always on. Backups is always on, since 2026-11-01: no switch or preset pauses the nightly copy,
+   and a list stored before that names it leaves it on. The answer is the parts
    switched off, one per line; a list `partsRefusal` refuses is asked again with the reason under
    the question. The setup page shows it as a dashboard (below); the terminal lists the parts
    numbered under their groups, on, off or always on, and takes numbers or names to switch (on
@@ -251,7 +276,10 @@ printed:
    later: a self-hosted Access application on the address's `hooks`, `healthz` and `account`
    paths with a Bypass policy, needed once a website's form posts to the portal, an email
    provider sends delivery reports, the release checks the portal's health, or customers sign in
-   at `/account` (`@oltrem/customers`), on a custom domain and on `workers.dev` alike.
+   at `/account` (`@oltrem/customers`), on a custom domain and on `workers.dev` alike. New keys leave
+   `.oltrem/keys-reminder` (git ignores the folder), and while it is there each run, even after
+   one that stopped, ends with "Have you put a copy of oltrem-keys.txt somewhere safe?": **I saved
+   a copy** removes it, **Remind me next time** keeps it for the next run.
 
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
@@ -547,6 +575,9 @@ The client template's deploy workflow runs it on `main` after its checks and `ve
    version noted in step 2, at once. The database is left as it is, which is safe because a
    client's migrations only add (`check modules`).
 
+Steps 2, 5 and 6 are exported for `oltrem deploy`, which runs them after its own deploy:
+`versionNow(run)`, `watchHealth(host, fetch, sleep)` and `stepBack(run, version, after)`.
+
 When the door or a bot challenge answers in the Worker's place (a redirect to the door's sign-in,
 or a `cf-mitigated` header), the release cannot see the Worker: it keeps the new version and says
 how to let `/healthz` through. The token is the workflow's `CLOUDFLARE_API_TOKEN`, whose Workers
@@ -662,8 +693,9 @@ Access permission, so the key does it.
 | `doorReadiness(fetch, token, account)` | `{ key, zeroTrust }`: whether the key may keep the door, and whether Zero Trust is set up (`zeroTrustOf`) |
 | `workerIdOf(fetch, signInToken, account, name)` | The Worker's id, which Access names, read with the sign-in's own token |
 | `writeDoorSettings(dir, run, { workerId?, extras? })` | Writes `iam.door_worker_id` and `iam.door_extra_emails` (`doorEntries`: addresses and `@domain`s, lower case, each once) |
-| `askDoorSync(fetch, base)` | `POST /hooks/iam/door`: the Worker syncs now and answers its outcome word (`DOOR_ANSWERS` says each in plain words) |
-| `checkDoor(fetch, url)` | `{ on, answer, right }`: Access answers in front of the portal, and the Worker says it set the door right |
+| `askDoorSync(fetch, base, read)` | `POST /hooks/iam/door`: the Worker syncs now and answers 204 with nothing else (anyone may post there); then `read()` gives the outcome word (`DOOR_ANSWERS` says each in plain words) |
+| `readDoorState(dir, run)` | The outcome the Worker kept in KV (`iam:door`), read with `wrangler kv key get --remote` under wrangler's own sign-in; `unreachable` when it cannot be read |
+| `checkDoor(fetch, url, read)` | `{ on, answer, right }`: Access answers in front of the portal, and the Worker's kept outcome says it set the door right |
 | `zeroTrustSteps(account)`, `doorManualSteps({ account, worker, emails, domains })` | The one step a person does per account (team name, Free plan), and the door by hand for a key without Access: One-time PIN and an email list, never "Cloudflare account" members |
 
 `writeSettings(dir, run, writes, { reason })` (and `writeSetting` for one) writes live settings
@@ -671,15 +703,17 @@ the way the Worker's own save does: per setting, `oltrem_meta`'s `config_version
 takes that version and a history row records who (`vendor`) and why; then the settings snapshot
 (`cfg:snapshot` in KV) is removed, so the Worker reads them within a minute. Keys are checked
 against the setting key shape and values are JSON, quoted for SQLite, so nothing else reaches the
-SQL. Tested in `test/door.test.ts` against SQLite holding the real settings migration.
+SQL. `readSettingState(dir, run, key)` reads one back as `{ read, value? }`, so a caller that
+writes only over an unset value (the deploy's alert recipients) can tell unset from unreadable.
+Tested in `test/door.test.ts` against SQLite holding the real settings migration.
 
 ## `oltrem parts list [dir]`, `set <ids...>`, `preset everything|email [dir]`
 
 Which parts of the portal (its modules) are switched off: the live setting `settings.parts_off`
 of `@oltrem/core-config`, which the Vendor also changes on the portal's Modules page. `list` prints
 each kit part `on`, `off` or `always on` with what it needs; `set` switches off exactly the parts
-named, every other one on, in the repository here; `preset email` keeps email, its integrations and
-the core, `preset everything` switches every part on. The deploy calls the same exports from
+named, every other one on, in the repository here; `preset email` keeps email, its integrations,
+Deployments and the core (Backups among it: always on), `preset everything` switches every part on. The deploy calls the same exports from
 `src/parts.ts`:
 
 | Export | What it is |

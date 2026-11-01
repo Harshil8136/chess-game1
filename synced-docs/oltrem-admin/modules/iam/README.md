@@ -74,8 +74,10 @@ person and those groups, the bound roles' capabilities and the person's override
 then ORs each role's bits into `allow` or `deny` per scope and module. The map holds the tree
 (`parent`), the bits per scope, whether the person holds the Owner role at the root, the
 tenant's policy version and Vendor setting, `refreshAt` (when the next grant starts or ends), and
-a `sha256-` hash of all of it. Every compile is recorded in `iam_policy_compiles` with that hash,
-so a decision can be replayed. A map is a few hundred bytes to a few kilobytes.
+a `sha256-` hash of all of it. Every compile for a session is recorded in `iam_policy_compiles`
+with that hash, so a decision can be replayed; "See it as" compiles a person's map only to show
+it and records nothing (`record: false`), so the page writes no row. A map is a few hundred bytes
+to a few kilobytes.
 
 `can` decides in this order, and refuses when in doubt (R-10):
 
@@ -103,7 +105,7 @@ import { asSession, createSessions } from '@oltrem/iam';
 
 const sessions = createSessions<Env>({
   bindings: (env) => ({ kv: env.CACHE, db: env.DB }),
-  audience: (env) => env.ACCESS_AUD, // read on each request; a token for another application is refused
+  audience: (env) => env.ACCESS_AUD, // read on each request; a sign-in at another application is refused
 });
 const app = createApp<Env>({ modules, session: sessions.hook, authorize: sessions.authorize });
 
@@ -115,11 +117,14 @@ allowedScopes(access, index, 'rooms.read'); // for WHERE scope_id IN (...)
 
 The **audience** is the Worker secret `ACCESS_AUD`, whose key recipe (`ACCESS_AUD_RECIPE`) the
 module declares: `worker` (`WORKER_AUDIENCE`) when Access stands on the Worker itself, which
-`npm run deploy` sets and which lets in only an identity marked `door: 'worker'`, or the tag of a
-hostname Access application. Given as a function it is read from the
-env on each request, so the Worker file needs no Workers-only import at module scope and the tool
-can still load it; an empty tag is one no token names, so a Worker without the secret refuses
-everyone (`KIT-E-0401`).
+`npm run deploy` sets and which accepts any application the runtime names, or the tag of a
+hostname Access application, which the runtime's `ctx.access.aud` must equal. Either way only an
+identity the runtime vouched for (`door: 'worker'`, read from `ctx.access` by `@oltrem/core-http`,
+never from a request header) or the local door's on the owner's own computer gets in; anything
+else is refused (`wrongAudience`). Given as a function it is read from the env on each request,
+so the Worker file needs no Workers-only import at module scope and the tool can still load it;
+an empty tag is one no application has, so a Worker without the secret refuses everyone
+(`KIT-E-0401`).
 
 The door (Cloudflare Access) signs the person in and keeps its own cookie; the kit sets none. On
 each request the **hook** reads one KV record, `sess:<email>`, carrying the compiled map, its hard
@@ -127,9 +132,14 @@ expiry (a day after the compile) and the person's sign-ins. It compiles afresh, 
 when the record is missing, a day old, past the map's `refreshAt` (a grant started or ended), or
 when the tenant's policy version has moved, which an isolate checks against the database at most
 every `recheckSeconds` (five minutes) per person. An email with no active account is refused
-(`KIT-E-2005`). Nothing writes per request: KV allows 1,000 writes a day on the free plan.
+(`KIT-E-2005`). Nothing writes per request: KV allows 1,000 writes a day on the free plan. Nor
+does a page read the record more than once: the screens call the API several times a page, with
+the page's ExecutionContext, and the record read for the first call serves the others (KV allows
+100,000 reads a day; Home made 24 before, one now). A write or removal of the record in that
+isolate (a new sign-in, `invalidate`, `revokeDevice`, a recompile) makes the next call read it
+again, so a change made in the request shows in the rest of it.
 
-A **device** is one sign-in at the door, keyed by the token's issue time, which stays the same
+A **device** is one sign-in at the door, keyed by the sign-in's issue time (`iat`), which stays the same
 for the whole of that sign-in and differs between browsers. The first request of a sign-in adds
 it to the record (one write; the ten most recent are kept); `revokeDevice` ends one, and that
 sign-in is refused from then on (`KIT-E-2006`) until the person signs in again.
@@ -323,7 +333,7 @@ is made only when the Worker has none.
 | Kind | Id | What it does |
 |---|---|---|
 | Job, every 5 minutes | `iam.door` | `door.sync`: works out who is wanted (two D1 reads), and calls Cloudflare only when that list, the account or the Worker changed, an hour has passed since it last matched, or a failure is due another try (15 minutes; an hour when a person must act). The outcome is one KV key, `iam:door`. |
-| Hook | `POST /hooks/iam/door` | The same sync, at once; answers only `{ state }`, the outcome word. The deploy calls it. |
+| Hook | `POST /hooks/iam/door` | The same sync, at once; answers 204 and nothing else, since anyone may post there. The deploy calls it, then reads the outcome from `iam:door` with `wrangler kv key get`. |
 | Health check, lane `access` | `iam.door` | `ok` with how many may sign in; `warn` while a piece the deploy gives is missing; `fail` with `DOOR_ADVICE` and Cloudflare's answer when it refused. |
 
 Making or withdrawing an invitation, and creating the company, call `door.soon` after the
@@ -398,7 +408,9 @@ still validated and the same-origin check still applies. The incident and window
 `iam.self` because under `incident_only` and `approval` the check refuses the Vendor everything,
 the very reason it needs a way to declare the incident; the handover functions decide who may
 open and close by the mode. Reads are not audited; every write goes through the governance or the
-handover and is.
+handover and is. The registry `GET /capabilities` and "See it as" list is read once per isolate,
+like the capability index, and again after the startup registers a changed module: it changes
+only with a deploy, so People and Access pages do not read its rows on every request.
 
 Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a switched-off
 module's capabilities stay registered and active, but `GET /capabilities` and "See it as" leave
@@ -430,7 +442,7 @@ to one's own access, `KIT-E-2009` the last Owner, `KIT-E-2010` a grant that does
 rules, `KIT-E-2011` a second person's approval missing, `KIT-E-2012` an approval that does not
 fit, `KIT-E-2013` a review closed with grants undecided, `KIT-E-2014` a second company,
 `KIT-E-2015` an invitation that cannot be used (unknown, used, withdrawn, a week old),
-`KIT-E-2016` an invitation taken with another address. A token for another Access application
+`KIT-E-2016` an invitation taken with another address. A sign-in at another Access application
 answers with the core's `KIT-E-0401`; a grant, request, approval, review or invitation that does
 not exist with the core's `KIT-E-0404`.
 
@@ -451,8 +463,9 @@ which 320 generated decisions of the compiled check are compared with a plain ev
 reads the rows one question at a time (`test/reference.ts`). The sessions are tested with the KV
 writes counted (one on the first request, none on the next), a grant ending and the day passing,
 the dangerous route's re-read, a revoke seen on the next request, an ended sign-in, the audience
-read from the env with an empty one refusing everyone, and the whole pipeline from the Access
-headers to the problem codes. The governance is tested on a tenant of
+read from the env with an empty one refusing everyone, an identity the runtime did not vouch for
+refused under every audience, and the whole pipeline from the runtime's `ctx.access` to the
+problem codes. The governance is tested on a tenant of
 four scopes, four roles and twelve people, every rule refused and then obeyed: the standing at a
 scope, the self-edit, the dates, the Owner made and unmade with approvals that fit one change
 once, an eligible grant activated and lapsed, roles edited only with what is held where they are

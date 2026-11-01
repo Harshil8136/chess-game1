@@ -71,8 +71,11 @@ const limit = config.get<number>('email.daily_limit');
 
 A definition is refused at once when its key is not `module.name` (the module segment as a
 module id, dashes allowed; the name in lower snake case), when its module does not match the key,
-when its default fails its own schema, when the key already exists, when it names a section the
-page does not have, or when its unit is not a short word.
+when the key already exists, when it names a section the page does not have, or when its unit is
+not a short word. A default that fails its own schema is refused by `settings.checkDefaults()`,
+which throws one error naming every such default: the client template's tests run it over every
+mounted module's settings, so a bad default fails the build. It is not run when the Worker loads,
+where parsing every default took a third of the start-up time.
 
 Two optional fields place a setting on the Settings page. `section` is one of `SETTING_SECTIONS`,
 shown in this fixed order with these names: `company` (Company), `email` (Email), `money`
@@ -120,8 +123,9 @@ holds it by kind, and an Owner may put it in a role; it asks for a sign-in withi
 minutes (`freshSignIn`), for reading the list as for saving it. `src/parts.ts` holds the catalogue (`KIT_PARTS`: each
 kit module's name, one line, `core`, `requires`; the screens name each part with a copy of
 these names, `packages/screens/src/names.ts`, which a test holds to this list), the presets (`PART_PRESETS`: Everything, Email
-only; the route adds Nothing optional, every part but the core off) and the rule: `partsOff(stored, mounted)` never switches a core part off (`CORE_PARTS`:
-iam, users, settings, audit, health, alerts), drops an id nothing mounts and takes along a part
+only, which keeps the email parts and Deployments on; the route adds Nothing optional, every part but the core off) and the rule: `partsOff(stored, mounted)` never switches a core part off (`CORE_PARTS`:
+iam, users, settings, audit, health, alerts and, since 2026-11-01, backup, so no switch or preset
+pauses the nightly copy and a stored list that names it leaves it on), drops an id nothing mounts and takes along a part
 whose needs are off, so a list written by hand stays safe; `partsRefusal(wanted, mounted)` says,
 in the page's words, why a list cannot be saved; `createPartsReader` makes the set again only when
 the snapshot's list changes, so a request pays one comparison and no I/O.

@@ -36,14 +36,19 @@ export default createWorker({ app, modules, tick: scheduler.tick });
 
 On each tick: one read of `oltrem_jobs`; a row is made for every declared job without one (its
 first run is this tick), and a changed interval is written, the next run brought forward when the
-new interval makes it sooner. Then, for each declared job whose time has passed, the longest
-waiting first (in manifest order when they wait as long): the lease is taken with one conditional write (`lease_until`, ten minutes by default);
-when another tick holds it the job is `held`; otherwise the job runs, and one write records the
-outcome (`ok`, or `failed` with the error's first 400 characters), the time it took, the database
-queries it made, the counts, and the next run at the tick's time plus the interval. A failure is reported through
-`report(error, jobId)` and the other jobs still run; the job runs again at its next time, never in
-a tight loop. A lease that lapses without a write (a job that died with its isolate) is taken by
-the next tick.
+new interval makes it sooner. Then the declared jobs whose time has passed, the longest waiting
+first (in manifest order when they wait as long), are leased in one batch of conditional writes
+(`lease_until`, ten minutes by default); a job whose lease another tick holds is `held`. The
+leased jobs run one after another, and a last batch records every outcome (`ok`, or `failed` with
+the error's first 400 characters), the time each took, the database queries it made, the counts,
+and the next run at the tick's time plus the interval, and gives back the lease of a job that did
+not fit (below). So a tick makes three queries of its own, not two a job. A failure is reported
+through `report(error, jobId)` and the other jobs still run; the job runs again at its next time,
+never in a tight loop. A lease that lapses without a write (a job that died with its isolate, or a
+tick that died before its last batch) is taken by the next tick.
+
+At most one daily job (an interval of a day or more) starts a tick; the others are `deferred` and
+go first on the next ticks, so the day's work is spread over a few ticks instead of landing on one.
 
 With `pause` (System status's, from `@oltrem/core-health`), a tick that has a due job asks it once
 why jobs should wait. While it gives a reason, every due job but the `exempt` ones (System
@@ -68,11 +73,14 @@ requests by single Worker invocation`. A fresh client portal's first tick, with 
 once, made 99 when it was measured on 2026-10-27, `health.run` 33 of them. So the tick hands the
 jobs an env whose databases count each query (`countQueries`, exported for a client's own tests;
 nothing else about them changes),
-keeps what each run made (`last_queries`), and starts a job only when the queries so far, its
-lease and outcome writes (two) and what its last run made (ten before its first) stay within
-`queryBudget`: 45 by default, the 50 less a few for the cron's other work. The first job of a tick
-starts whatever it costs. A job that does not fit is `deferred`: it stays due, so it is the
-longest waiting on the next tick and goes first. `queryBudget` may also be a function of the env,
+keeps what each run made (`last_queries`), and starts a job only when the queries so far, what its
+last run made (ten before its first) and the tick's last batch stay within `queryBudget`: 45 by
+default, the 50 less a few for the cron's other work. A job due every tick (every five minutes or
+less, the cron's own period) runs on every tick: a longer job starts only when it also leaves room
+for the ones due every tick that are still to run. The first job of a tick starts whatever it
+costs. A job that does not fit is `deferred`: it stays due, so it is the longest waiting on the
+next tick and goes first. In the client template a day of ticks runs every five-minute job on
+every tick, each tick within 45 queries (`templates/client/test/worker.test.ts`). `queryBudget` may also be a function of the env,
 asked once a tick, so it follows the client's Cloudflare plan: the client template hands in
 `PLAN_LIMITS[plan].jobQueries` from `@oltrem/core-health` (45 on the free plan, 900 on Workers
 Paid, of 1,000 an invocation). A function that throws is reported and the default is used.

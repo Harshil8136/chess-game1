@@ -236,7 +236,7 @@ the client template mounts it: the manifest; a customer added once an address an
 when asked, refused without the capability, with a bad address or no name; the list and the search
 to whoever sees customers; a change; a customer asking for a code, typing it with a space, signed
 in with the `__Host-` cookie, the code working once; the cookie refused by the staff routes and
-Access's headers refused by the door; an address that is not a customer answered the same with no
+a staff sign-in at Access refused by the door; an address that is not a customer answered the same with no
 email; a form from elsewhere refused; five wrong tries ending a code, a new code ending the last, a
 code expiring after ten minutes; five codes an hour an address and thirty requests a network;
 signing out on the other devices and on this one; staff ending the sign-ins, switching off and on;

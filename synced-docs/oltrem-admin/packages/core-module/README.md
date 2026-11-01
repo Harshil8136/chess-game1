@@ -106,7 +106,7 @@ export const notes = defineModule({
 | An event type is prefixed with the module's id; event types and `onEvent` come together                                                                                                                 | `KIT-E-1006`               |
 | A job is `<module>.<name>`, declared once, with a summary, a `run` and an interval of a count and a unit (`15m`, `6h`, `1d`)                                                                            | `KIT-E-1006`               |
 | A flow is `<module>.<name>`, declared once, with a summary, a `run` and, when scheduled, five cron fields                                                                                               | `KIT-E-1006`               |
-| A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary and a `run`                                                                         | `KIT-E-1006`               |
+| A health check is `<module>.<name>`, declared once, with a lane of lower-case letters, digits and dashes, a summary, a `run` and, when given, an `every` of a count and a unit                     | `KIT-E-1006`               |
 | A migration is named `NNNN_name.sql` and declared once                                                                                                                                                  | `KIT-E-1006`               |
 | A setting's key starts with the module's id and its definition names the module; an error's definition names the module                                                                                 | `KIT-E-1006`               |
 | A key recipe names its secret once, in upper case letters, digits and `_`, with a purpose and how to create, test and rotate it and live without it; `createAt` is an https address; `scopes` is a list | `KIT-E-1006`               |
@@ -167,8 +167,9 @@ outside one runs again whenever the instance resumes; `step.sleep` pauses withou
 ## Health
 
 A module's checks are declared as `health`, each with a stable id, a lane the page groups it
-under, a summary and a `run` that answers `ok`, `warn` or `fail` with a few words. The health job
-(`@oltrem/core-health`) runs every mounted module's checks on the tick, keeps the last result per
+under, a summary, a `run` that answers `ok`, `warn` or `fail` with a few words and, optionally,
+`every`: how often it runs (fifteen minutes when left out). The health job (`@oltrem/core-health`)
+runs every mounted module's checks on the tick, each at its own pace, keeps the last result per
 check and opens a problem after two failures in a row.
 
 ## Home

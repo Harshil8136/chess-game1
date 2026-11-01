@@ -120,14 +120,17 @@ are, so a provider sends before its delivery reports are set up.
 
 ## Routes
 
-Under `/api/providers`, with `providers.read` (class read) and `providers.manage` (class admin,
-fresh sign-in), on bit plane 2:
+Under `/api/providers`, with `providers.read` (class read), `providers.manage` (class admin,
+fresh sign-in) and `providers.definitions` (class admin, fresh sign-in, the Vendor's floor: no
+role carries it, so only the Vendor holds it), on bit plane 2. A definition says where a
+provider's key is sent, so writing one is the Vendor's alone; `providers.manage` sets up
+instances and pastes their keys.
 
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /definitions` | read | every definition, the kit's and the client's, with its fields and recipe |
-| `PUT /definitions/:id` | manage | the client's own definition, or its change to the kit's; checked, then a row |
-| `DELETE /definitions/:id` | manage | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
+| `PUT /definitions/:id` | definitions | the client's own definition, or its change to the kit's; checked, then a row |
+| `DELETE /definitions/:id` | definitions | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
 | `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set |
 | `GET /instances/:id` | read | one instance; never its credential |
 | `POST /instances` | manage | sets one up: the definition, a label, every field the definition lists; `201` |
@@ -243,7 +246,8 @@ name as `ignored`. The body is the raw text: a signature covers the bytes as the
 | `hmac-body` | Mailtrap | HMAC-SHA256 of the body alone, hex, in the header the definition names (`signatureHeader`); it carries no time, so a copy sent again verifies again | secret `webhookSecret` |
 | `none` | Brevo, Mailjet, SMTP2GO | nothing: the token in the hook's address is the only guard | none |
 
-A signed timestamp more than five minutes from the clock is refused. An SNS subscription is
+A signed timestamp more than five minutes from the clock is refused, SNS's signed `Timestamp`
+(when the message was published) included. An SNS subscription is
 answered with its confirmation address only when that address is an AWS one. A refusal is
 `KIT-E-1409` naming the check. The public address the reports arrive at,
 `/hooks/email/<instance>/<token>`, is the email module's; its token is the one sealed with the
@@ -284,7 +288,17 @@ them, and a credential that did not open is written to the audit log as `provide
 `failed`, with the error code and never the value. Beside the pasted fields the seal holds one
 the kit makes, `HOOK_FIELD`: the secret token of the instance's address for delivery reports,
 made when a key is first pasted and kept when one is pasted again. A secret field left out of a
-new paste keeps the stored value, so a signing secret is added without pasting the key again. `registry.instance(db, id)`
+new paste keeps the stored value, so a signing secret is added without pasting the key again.
+
+A stored key goes only to the host it was saved for. The seal also holds `ORIGIN_FIELD`: the host
+the definition sent to when the key was pasted (`originOf`: its base URL's host, SMTP host or
+endpoint, rendered with the instance's fields, such as Mailgun's `apiHost` or the SMTP host a
+person types). `open` refuses the credential (`KIT-E-1411`, naming both hosts) when the
+definition, or the instance's own fields, now name another host, so a changed definition cannot
+send a stored key elsewhere; putting the definition back opens it again. A new paste that moves
+the instance to another host keeps no stored secret: every secret field is pasted again, and the
+key is then saved for the new host. A key sealed before hosts were recorded opens only where the
+kit's own definition of that id sends; for a client's own definition it is pasted again. `registry.instance(db, id)`
 finds an instance by its id alone, for that public address. Every write is audited under the person who
 made it: `providers.define`, `undefine`, `create`, `credential`, `probe`, `activate`, `disable`,
 `remove` and `rewrap`, with the field names and never a value.
@@ -296,11 +310,11 @@ key per tenant, with the id of the key that wrapped it and when it was rotated) 
 `providers_instances` (indexed by tenant, kind, status and failover order). Migration `0051`
 adds `usage` to the instance: what its provider last said was used and left, as JSON, written by
 `registry.recordUsage(db, id, usage)`. Error codes
-`KIT-E-1401` to `1409`: a bad definition, an unknown one, a missing field, an instance not ready
+`KIT-E-1401` to `1411`: a bad definition, an unknown one, a missing field, an instance not ready
 to activate, the active instance in use, the kit's definition that has no row to remove, a
 provider that did not take the message, what the definition asks for that this kit version
-cannot do, a delivery report that failed its check, and a provider that refused a domain call
-(`KIT-E-1410`).
+cannot do, a delivery report that failed its check, a provider that refused a domain call
+(`KIT-E-1410`), and a stored key whose definition now names another host (`KIT-E-1411`).
 
 ## Not here yet
 
@@ -315,7 +329,10 @@ Inside the Workers runtime, through the pipeline beside the IAM module: the seve
 pass the contract and a bad one is refused with its path; an instance set up with its credential
 sealed to its row and the key nowhere in a response or the table; a missing, unknown or empty
 field refused; activation and the failover order, `pick`, the active instance not removable, a
-suggestion not activatable; a client's definition added, replacing the kit's and removed; the
+suggestion not activatable; a client's definition added by the Vendor, replacing the kit's and
+removed, and refused to the Owner and to whoever sets up integrations; a stored key refused when
+its definition or its host field names another host, opened again when put back, bound to the
+new host only when pasted again, and an older key without a host held to the kit's definition; the
 audit rows with field names and no value; a credential moved to another row refused and recorded;
 the data keys wrapped again after the KEK changed, and opened under the new key alone; the probe
 route with the sealed key, its result kept and audited. The adapters without the network: the
@@ -325,7 +342,8 @@ key blanked; a bad message refused before any request; SigV4 against AWS's publi
 one computed apart; the SMTP client against a scripted server on a fake socket, on 587 and 465,
 refusing to sign in without TLS. The webhooks against reports signed outside the kit: the Standard
 Webhooks published vector, a Mailgun HMAC made in Python, SendGrid and SNS signatures made with
-openssl (SNS with SHA-256 and SHA-1); a changed body, an old timestamp, another key or topic, a
+openssl (SNS with SHA-256 and SHA-1); a changed body, an old timestamp (SNS's publish time too),
+another key or topic, a
 certificate address that is not AWS's and a missing key field refused; every provider's events
 read by its field map; an unmapped or inherited event name ignored. The detection against small
 zones: strong and weak evidence, a look-alike include refused, the resolver's TXT chunks, CNAMEs,
