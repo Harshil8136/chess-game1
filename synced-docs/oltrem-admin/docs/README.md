@@ -43,8 +43,8 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | Document | Owns | Kind |
 |---|---|---|
 | [Where things stand](status.md) | each phase's parts, their state and the record of each | living |
-| [Roadmap](roadmap.md) | what buyers pay for, the editions, each module's state, what comes next and why | living |
-| [Architecture guide](architecture.md) | the parts on one page, how a request and a job travel, what a module is, the numbers taken, where a change goes | living |
+| [Roadmap](roadmap.md) | what buyers pay for, the editions, module states, what comes next | living |
+| [Architecture guide](architecture.md) | the parts, how a request and a job travel, what a module is, the numbers taken, where a change goes | living |
 | [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
 | [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
 | [The licence in plain words](licence.md) | what the Oltrem Licence allows, what needs permission, and how to ask | written |
@@ -52,8 +52,9 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
+| [Browser caching](reference/browser-caching.md) | what to keep in the browser, versioned reads, instant updates | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
-| [Dependencies](reference/dependencies.md) | every third-party package, its one pinned version, who uses it and why | generated from `dependencies.registry.json` and the catalog |
+| [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
 | [@oltrem/cli](../packages/cli/README.md) | the `oltrem` tool: the manifest check and format, `new module`, `deploy`, the restore drill, the run report, the doctor's checks, exit codes | written, beside the code |
 | [@oltrem/core-errors](../packages/core-errors/README.md) | how an error is defined, the code blocks, and the problem document every failure answers with | written, beside the code |
@@ -62,7 +63,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/core-outbox](../packages/core-outbox/README.md) | the outbox: how a row moves, the backoff ladder, replay, and the table it owns | written, beside the code |
 | [@oltrem/core-audit](../packages/core-audit/README.md) | the audit log: the fields and their rules, hashing and verify; the module with its page's routes, the export and the daily seal | written, beside the code |
 | [@oltrem/core-jobs](../packages/core-jobs/README.md) | the one tick: how a job is declared, how it is leased, run and recorded, and the table it owns; the one Workflow: how a flow is started and run step by step | written, beside the code |
-| [@oltrem/core-health](../packages/core-health/README.md) | system health: how a module declares its checks, how the health job runs them on the tick and opens a problem after two failures in a row, and the table it owns | written, beside the code |
+| [@oltrem/core-health](../packages/core-health/README.md) | system health: how a module declares its checks, how the tick runs them and opens a problem after two failures, and the table it owns | written, beside the code |
 | [@oltrem/core-crypto](../packages/core-crypto/README.md) | envelope encryption for stored credentials: the one key-encryption key, a data key per tenant, each value sealed to its row, key rotation | written, beside the code |
 | [@oltrem/core-ui](../packages/core-ui/README.md) | the token list, the brand variables, light and dark, every primitive with the rule it keeps, and the three widgets | written, beside the code |
 | [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities, roles, scopes, groups, bindings, overrides, the check, sessions, governance, the Vendor and the handover, the door, tables, errors | written, beside the code |
@@ -76,13 +77,13 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
 | [@oltrem/bookings](../modules/bookings/README.md) | bookings: who books and who manages at a place, the company's clock, never twice at once, cancelling and removing, the routes and the tables | written, beside the code |
 | [@oltrem/timeoff](../modules/timeoff/README.md) | time off: who asks and who answers at a place, never one's own, never two requests on one day, vacation days a year, the reason kept private, the routes and the table | written, beside the code |
-| [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the receipt in the bucket, the company's currency, the month's CSV, the routes and the table | written, beside the code |
+| [@oltrem/expenses](../modules/expenses/README.md) | expense claims: who claims and who answers and pays at a place, never one's own, the receipt, the month's CSV, the routes and the table | written, beside the code |
 | [@oltrem/assets](../modules/assets/README.md) | equipment: who sees and manages it at a place, one tag one item, handed over with every move kept, retired when nobody holds it, the routes and the tables | written, beside the code |
 | [@oltrem/customers](../modules/customers/README.md) | customers: the door at /account past Access, the email code, the `__Host-` sign-in, OpenID Connect, who manages customers, the routes and the tables | written, beside the code |
 | [@oltrem/quotes](../modules/quotes/README.md) | quotes: who sees and who makes them at a place, drafts until sent, lines and total in the company's currency, the customer's answer once, the routes and the table | written, beside the code |
 | [@oltrem/invoices](../modules/invoices/README.md) | invoices: who sees and who makes them at a place, drafts until sent, from an accepted quote, paid once, overdue in Needs you, voided, the routes and the table | written, beside the code |
 | [@oltrem/shifts](../modules/shifts/README.md) | shifts: who plans and who sees at a place, drafts until the week is published, an email each, open shifts taken once, one shift at a time a person, the routes and the table | written, beside the code |
-| [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, one open stretch a person, the week on the company's clock, hours fixed with why, the payroll CSV, the routes and the table | written, beside the code |
+| [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, one open stretch a person, the week on the company's clock, the payroll CSV, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV, merge fields, a test, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks from the audit log, signed, retried, logged, the API reference, the pages, routes, tables, errors | written, beside the code |
@@ -201,7 +202,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome, bounces for good told from temporary ones, Apple's opens apart; bounces, refusals and spam reports stop every email at once |
 | [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily in plain words, and campaigns send only from an address on a passing domain |
 | [Saved email templates](records/2026-10-28-saved-templates.md) | designs kept in the portal, built from blocks or pasted as HTML and cleaned, checked at each save, previewed as a phone, a desktop and dark mode, tested to oneself, every version kept |
-| [Saved email lists](records/2026-10-28-saved-lists.md) | the people bulk mail goes to, kept in the portal from a file or typed in, each with the reason they may be mailed; refused rows named, the do-not-mail list honoured at every send, downloads audited |
+| [Saved email lists](records/2026-10-28-saved-lists.md) | the people bulk mail goes to, from a file or typed in, each with the reason they may be mailed; refused rows named, the do-not-mail list honoured at every send, downloads audited |
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | campaigns sent in batch calls sized by the Cloudflare plan; no answer repeated under its key or left to a person; provider stops shown; large sends need a second person |
 | [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's spam or bounce limits; failed runs retried, paused at the third; System health watches; a summary email and results by mailbox |
 | [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses read from the provider, drafts, Send later on the company's clock and ten seconds to Undo; mail split into Messages and Mail settings |
