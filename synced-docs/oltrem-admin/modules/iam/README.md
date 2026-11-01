@@ -150,7 +150,12 @@ widest question and the handler narrows to the scope at hand. On a route whose c
 flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
 recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. An
 allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes` (ten), else
-`KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs. One
+`KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs. A
+fresh sign-in is for what reveals or replaces a secret, or hands out people's data, never for
+everyday work: a capability that also covers everyday routes leaves the flag off, and the one
+route that reveals a secret asks itself, refusing with `IAM_ERRORS.FRESH_SIGN_IN_NEEDED` when
+`session.fresh` is false (the email module's delivery reports address, since 2026-11-01). A page
+that meets `KIT-E-2004` shows a way to sign in again in place, never a smaller view. One
 capability is the authorizer's alone: `iam.self` (`SELF`), which every account holds by having a
 session and no role carries; the routes about one's own things name it, and the function behind
 each decides the rest. Any module's `<module>.self` is read the same way (`SELF_SUFFIX`).

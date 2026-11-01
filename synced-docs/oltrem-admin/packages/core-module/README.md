@@ -284,7 +284,9 @@ customer: {
 ## Pages
 
 A module brings its own screens as `pages`: each a portal path, a `get` and an optional `post`
-that answer a page (a title and a body), a redirect or a plain response, and an optional `nav`
+that answer a page (a title and a body; optionally the line under the title, `sub`, the buttons
+on the head's right, `tools`, a count beside a tab of its set by the tab's path, `counts`, and
+`kind: 'form'` for a form that keeps a readable width), a redirect or a plain response, and an optional `nav`
 (a label, a group, a summary, and optionally `before`: the path of the section it goes just
 before) that gives it a section in the sidebar. A page reads and writes
 only through `api`, the portal's own API called inside the same request, so it can never show

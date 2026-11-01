@@ -66,7 +66,7 @@ modules' own.
 | `/people/:id` | one user: who they are and whether they are Active or Deactivated; their roles as rows, "Role · at Location · until date", each with a quiet Change (a dialog: another role or location; the old grant ends and the new one is given in one step) and a quiet Remove (a dialog first); Give another role, folded, without the roles they already hold at the whole company (the API refuses a duplicate in plain words too), with "Only when they switch it on (for a few hours)" under More options; What they can do, module by module, each permission with where it comes from, and the link to view it at another location; their permission overrides with Add a permission override; Deactivate the user or Reactivate the user in a Danger zone at the bottom | `/api/users/people/:id`, `/api/iam/bindings?inForce=true`, `roles`, `scopes`, `overrides`, `capabilities`, `people/:id/access` |
 | `/people/:id/exceptions?part=` | Permission overrides: only what the user has, each with a quiet End (a dialog first), and Add a permission override: a module picked from a row of links, then one of its permissions, Allow (the default) or Deny (folded, explained in one line), the location folded to the whole company, and when it is looked at again. Only permissions that may be given one user at a time are offered; a module with nothing left to add is not | `/api/iam/overrides`, `capabilities`, `scopes` |
 | `/people/:id/see?place=` | "View what they can do": what the user can do at one location, picked from a row, each capability with yes or no and where it comes from (the role and location, a group's role, or a permission override, a deny first), grouped by module; a deactivated user says so. Read only, never their session | `/api/users/people/:id`, `/api/iam/scopes`, `/api/iam/people/:id/access` |
-| `/access` | Roles, the first page of Users & access: Create role (the page's one main action, for those who may make roles); each role in a line with the modules it reaches, how many permissions and how many hold it; "How permissions work" folded. Every Users & access page opens with one sideways row of chips: Users, Roles, Groups, Locations, and Access requests and Access reviews for those who may give roles, Vendor access for Owners and the Vendor (`PeopleNav`, from `may` in `/api/iam/me`); the frame draws no tabs above them (`ownRow`). Before the company exists each of them shows "First, name the company" with the company form instead, and nothing that would fail | `/api/iam/me`, `roles`, `bindings?inForce=true` |
+| `/access` | Roles, the first page of Users & access: Create role (the page's one main action, for those who may make roles); each role in a line with the modules it reaches, how many permissions and how many hold it; "How permissions work" folded. Every Users & access page opens with one row of tabs under its head: Users, Roles, Groups, Locations, and Access requests and Access reviews for those who may give roles, Vendor access for Owners and the Vendor (`PeopleNav`, from `may` in `/api/iam/me`); the frame draws no tabs above them (`ownRow`). Before the company exists each of them shows "First, name the company" with the company form instead, and nothing that would fail | `/api/iam/me`, `roles`, `bindings?inForce=true` |
 | `/access/groups` | the groups with their member counts, and Create group | `/api/iam/groups` |
 | `/access/places` | the Locations page: the locations of the company as a tree (each with the locations it sits inside), and the form to add one (Add location) | `/api/iam/scopes` |
 | `/access/roles/new?from=&name=`, `/access/roles/:id` | the role editor: its name first; for a new role, Start from Nothing, a ready set (View only, Standard user, Full admin: View, Edit or Admin in every module) or Copy of any role but the Owner, as buttons of the same form so the name typed is kept (`from=template:see\|do\|manage`, `role:<id>`); a sentence on what it holds ("Views 6 modules, edits 3, administers 1"); one row per module, by the module's name (`names.ts`), sorted, closed: opened, a level None / View / Edit / Admin (each holds the one before; a level never holds a special permission) or Custom when the ticks match none, and Pick one by one: each permission in words (its id only in the title), the special ones badged "asks for a fresh sign-in" or "needs a second person's yes"; Owner-only permissions listed only on the Owner role, Vendor-only never; one Save bar at the bottom. The page script ticks a level's boxes and moves the level as boxes change; without it the server works the level out (below). The Owner role is the Vendor's to change: anyone else reads it as a summary with no Save. An existing role adds who holds it and Remove the role (a dialog first) | `/api/iam/roles/:id`, `roles`, `capabilities`, `me`, `bindings?roleId=&inForce=true`, `groups`, `people` |
@@ -134,9 +134,11 @@ fields are password fields; an optional field left empty is left out, and a secr
 back into a page.
 
 Every page sits in the same frame (`src/layout.tsx`); [The frame](#the-frame) below has the
-detail. The sections are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page opens with its
-group's icon on its colour, its title, one line on what it is for (a module page may give its own,
-`sub`) and, on the right, the page's tools (`tools`: a few links in a button's look); then a row of
+detail. The sections are in the sidebar only, the owner's choice of 2026-10-22 (R-12). Each section's page opens with
+its head (since 2026-11-01, the owner's point 12): one row with the group's icon on its colour, the
+title, one short line on what it is for (a module page may give its own, `sub`) and, on the right,
+the page's tools (`tools`: a few links in a button's look, the main one last); then, for a section
+that is one of a set, the set's tabs ([The frame](#the-frame)). Then a row of
 its actions (`ActionRow`, links to the page's own forms), a strip of figures counted from the same
 API answers the page already reads (`Stats`; no extra request), and its sections, a form in a
 panel. The pages remade on 2026-10-31 use the console pieces of `@oltrem/core-ui` instead.
@@ -170,10 +172,30 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   section on screen, which is also bold, so it never rests on colour alone. Home's cards use the
   same colours.
 - **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
-  that name, at the first one's place, leading to the first tab and marked on any of them; each
-  of their pages opens with the set as a sideways row of tabs above its title (`tabSet` and
-  `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest
-  follow in the sidebar's order. A page with no entry of its own sits under the module's entry its
+  that name, at the first one's place, leading to the first tab and marked on any of them (`tabSet`
+  and `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest
+  follow in the sidebar's order. Since 2026-11-01 the tabs sit under the page's head, as a
+  console's do (`PageHead`): on a set's own pages the heading is the set's name (Email) and the
+  marked tab names the page, so no word shows twice (a screen reader hears "Email: Sent"); a page
+  inside a tab (a message, `Connect an integration`) keeps the set's row and tabs and puts its own
+  title under them; a page inside a section with no tabs (a list of Records, Create form) shows a
+  breadcrumb back to the section above its title. The tabs are links on an underline, the marked
+  one in the group's colour and never bold (no label moves), a count beside a tab when the page
+  gives one (`counts` in a page's answer, by the tab's path). On a phone the row scrolls sideways
+  into the gutters, which fade, and the frame script scrolls the marked tab into view; the arrow
+  keys, Home and End move between tabs. From 1024 px the row stays at the top while a long page
+  scrolls, on glass once stuck, where the browser can tell (`scroll-state` queries; elsewhere it
+  scrolls with the page). The head and the tabs keep still in a page change; only the content
+  below them fades. Users & access draws the same tabs in its pages (`PeopleNav`, `ownRow`).
+- **Width.** A page is a console or a form (`kind` in a page's answer; `console` by default). A
+  console uses the screen up to 96 rem, its gutters 16 px on a phone and 32, 40 and 48 px from 1024,
+  1280 and 1536 px; a form (Settings, Connect an integration) keeps its content to 56 rem under a
+  head and tabs as wide as a console's, so they never move between the two. The sign-in pages
+  stay a 40 rem column.
+- **No sideways shift.** The document keeps the scrollbar's room on every page
+  (`scrollbar-gutter: stable`), so a short page and a long one start at the same place; before
+  2026-11-01 a classic scrollbar (Windows) came and went between pages and moved the centred page
+  by half its width. A page with no entry of its own sits under the module's entry its
   path starts with (`/email/sent/7` under Sent). With every kit module on, the sidebar holds 18
   entries besides Home:
 
@@ -226,6 +248,17 @@ names, and swaps that block alone, so what the person is reading or typing elsew
 does not fetch while the tab is hidden, a dialog is open, a page is on its way or the person is in
 a form. A block whose new copy has no `data-refresh` stops refreshing; a fetch that fails dims the
 block (`data-stale`) until one works. A campaign's progress is the first such block.
+
+**Compose boxes** (the email Write page, 2026-11-01). An input with `data-chips` turns each
+address typed into a chip (its class is the attribute's value; a chip that is not an address gets
+`data-bad`), while a hidden input of the same name posts them comma-separated as before. A line
+marked `data-fold` with an empty input folds behind the button whose `data-unfold` names it. A
+button with `data-mark` (`strong`, `em`, `list`, `link`) puts that mark around the selection in
+the box its `aria-controls` names; a block with `data-marks-of` draws that box's words with
+their marks as they are typed (a list takes `data-list-class`). Ctrl or Cmd with Enter in a form
+with `data-send-key` presses its `data-send` button, and a select with `data-submit-with`
+presses the button it names when it changes, that button hidden. Without the script each is a
+plain box, line, select and button.
 
 What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,
 `/ui/*`, the local door and the invitation link (`NATIVE` in the script), and an answer that is
