@@ -218,8 +218,9 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Access, roles, settings and parts redesigned](records/2026-10-31-access-settings-redesign.md) | name the company first; a role as a level per part; invite with role and place; settings in sections; parts as tiles |
 | [Standard admin terms](records/2026-10-31-standard-admin-terms.md) | Modules, Users, Locations, overrides, View, Edit, Admin |
 | [Core hardening](records/2026-11-01-core-hardening.md) | ctx.access sign-in, keys bound to hosts, tick fits, rollback |
-| [Mail moved to Oltrem Mail](records/2026-11-02-mail-moved-out.md) | email and campaigns in their own repository, kept here packed in vendor/mail/ |
+| [Mail moved to Oltrem Mail](records/2026-11-02-mail-moved-out.md) | email and campaigns in their own repository, packed in vendor/mail/ |
 | [Oltrem Mail in the tool](records/2026-11-02-oltrem-mail-in-the-tool.md) | asked on the first deploy, `oltrem mail add` or `remove` later; off by default |
+| [Mail's inbox in the portal](records/2026-11-02-oltrem-mail-inbox.md) | the email handler, the bucket, mailboxes on a computer |
 | [One repo per client](records/2026-11-01-one-repo-per-client.md) | kit vendored in kit/, `oltrem new client`, upgrade --from |
 | [Frame and page head](records/2026-11-01-frame-and-page-head.md) | no sideways shift, wider pages, new head, tabs |
 | [Email remake](records/2026-11-01-email-remake.md) | Write, Sent at once, From adds an address, Addresses |

@@ -808,8 +808,8 @@ the rule refuses, a database wrangler cannot read).
 
 ## `oltrem mail`
 
-Oltrem Mail (the `@oltrem/mail` add-on: sending through Cloudflare, and the Mail setup page) put
-into a portal or taken out of it, in a client repository or in the kit's own template
+Oltrem Mail (the `@oltrem/mail` add-on: sending through Cloudflare, the Mail setup page, and the
+inbox for mail sent to the business's own addresses) put into a portal or taken out of it, in a client repository or in the kit's own template
 (`src/mail.ts`). A portal without it sends through its providers, with Write, Sent and Bulk mail:
 today's email. The first deploy asks the same question (step 4 above).
 
@@ -817,8 +817,8 @@ today's email. The first deploy asks the same question (step 4 above).
 |---|---|
 | `oltrem mail status [dir]` | one line per fact: in or not, where the package comes from, and what is half in with its fix; exit `1` when something is half in |
 | `oltrem mail add [dir] [--from <folder>]` | puts the five parts in (below), runs `pnpm install` in a client repository, then the kit migrations and the reference (as `oltrem setup`), and prints what is left: `pnpm verify` and a commit, `pnpm dev` to try it, the key's rights, `npm run deploy`. It runs again safely and finishes a half-done add |
-| `oltrem mail remove [dir] --confirm remove` | takes the five parts out and Mail's migration files with their `kit.json` entries, then installs and refreshes the reference as `add` does. Its data stays in the database, and adding it back applies nothing twice. Email Routing and the key's rights stay on Cloudflare until a person changes them, and it says how |
-| `oltrem mail try [dir] [--port 8787] [--to <address>]` | one test email into the portal `pnpm dev` runs on this computer, through wrangler's local address (`/cdn-cgi/local/email`, never the internet), from `someone@example.org` to `hello@example.com` by default. It waits for a Worker that takes mail (an `email` handler in the default export, which comes with Mail's inbox); until then it says how to try sending instead |
+| `oltrem mail remove [dir] --confirm remove` | takes the five parts out and Mail's migration files with their `kit.json` entries, then installs and refreshes the reference as `add` does. Its data stays in the database and the inbox's mail in the bucket, and adding it back applies nothing twice; meanwhile the portal refuses mail to every address. Email Routing and the key's rights stay on Cloudflare until a person changes them, and it says how |
+| `oltrem mail try [dir] [--port 8787] [--to <address>]` | one test email into the portal `pnpm dev` runs on this computer, through wrangler's local address (`/cdn-cgi/local/email`, never the internet), from `someone@example.org` to `hello@example.com` by default. The Worker's `email` handler hands it to the inbox, which keeps it only for a mailbox's address: a refused address says to add a mailbox on the Inbox page, then try again with `--to`. A Worker without the handler (a kit older than Mail's inbox) is told to upgrade, and how to try sending meanwhile |
 
 **The five parts.** Mail is in when all five are: `package.json` names `@oltrem/mail` (in a
 client repository only: the kit's template always does, for its own lockfile and checks);

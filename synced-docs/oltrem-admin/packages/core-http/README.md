@@ -101,7 +101,9 @@ A module's public hooks (`hooks` in `@oltrem/core-module`) are mounted at
 the identity is read, so an outside service such as an email provider can post its reports with
 no sign-in. The body is read once, as text, at most
 `HOOK_BODY_MAX` (512 KiB), and handed to the handler with the path's parameters; the answer is
-`no-store`, and a `KitError` the handler throws is a problem response like any other. No session,
+`no-store`, except a successful answer to a GET that asks to be kept for ever (`immutable`), as a
+script whose address changes with any byte of it does (Oltrem Mail's reader), and a `KitError` the
+handler throws is a problem response like any other. No session,
 capability or same-origin check runs, so the handler checks the caller itself. The client's Access
 door must let `/hooks/` through: a self-hosted Access application on that path with a Bypass
 policy, on a custom domain or a `workers.dev` address alike (a path rule wins over the door that
