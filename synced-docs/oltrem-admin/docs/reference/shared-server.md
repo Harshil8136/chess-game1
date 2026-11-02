@@ -3,7 +3,7 @@ title: "The shared server: one vendor server that every client portal may use, w
 status: proposed
 owner: vendor
 last_verified: 2026-11-02
-sources: [the owner's messages of 2026-11-02 04:36Z and 04:43Z and his choice of 04:45Z; Oracle Cloud Always Free resources page and the outbound SMTP release note (read 2026-11-02); Oracle Email Delivery FAQ (read 2026-11-02); oltrem-mail docs/plan.md, docs/inbox.md and docs/kit-contract.md; docs/reference/browser-caching.md and docs/architecture.md in this repository]
+sources: [the owner's messages of 2026-11-02 04:36Z and 04:43Z and his choice of 04:45Z; the Oltrem Mail thread's review of section 9; Oracle Cloud Always Free resources page and the outbound SMTP release note (read 2026-11-02); Oracle Email Delivery FAQ (read 2026-11-02); oltrem-mail docs/plan.md, docs/inbox.md and docs/kit-contract.md; docs/reference/browser-caching.md and docs/architecture.md in this repository]
 ---
 
 # The shared server
@@ -140,13 +140,16 @@ a module only names the job kinds it uses.
 
 | Job kind | Without the shared server (oltrem-mail's plan) | With it |
 |---|---|---|
-| `mail.parse` | the Worker reads the first 128 KB of each arrival; the phone parses the message when opened | the whole message and every attachment parsed on arrival; text, headers and the attachment list returned |
-| `mail.search` | the first 8 KB of text indexed | the whole text extracted for the portal's own search index |
-| `mail.scan` | none | a virus and spam verdict before the message is shown |
-| `lists.check` | the address's form checked | the domain's mail records looked up, and throwaway domains flagged, before a bulk send |
+| `mail.parse` | the Worker reads the first 128 KB of each arrival; the phone parses the message when opened | the whole message and every attachment parsed on arrival; the parsed copy goes to the one bucket beside the raw message, for the phone to open instead of parsing; the database gets only the same rows as without the server (headers, snippet, attachment list) |
+| `mail.search` | the first 8 KB of text indexed | a cleaner source for the same 8 KB per message (HTML turned into clean text, attachment text); the index never grows past it, since a free database stops at 500 MB and the whole portal shares it; anything bigger stays in the bucket |
+| `mail.scan` | none | a virus and spam verdict; a message is never held back waiting for it, unless the owner turns on "hold until scanned" |
+| `lists.check` | the address's form checked | warnings before a bulk send: the domain's mail records looked up, throwaway domains flagged |
 
-Sending stays in the portal: provider keys never leave the client, and a provider's daily limit,
-not CPU, caps how much mail goes out. The mail thread designs these job kinds; the kit owns the
+Every job kind is optional and fails open: when the server is down or the allowance is used, the
+inbox behaves exactly as it does without the server. Sending stays in the portal: provider keys
+never leave the client, and a provider's daily limit, not CPU, caps how much mail goes out. The
+do-not-mail list and the consent checks stay in the portal too, so M-4 never depends on the
+server. The mail thread designs these job kinds; the kit owns the
 queue, the keys and the Settings card (oltrem-mail `docs/kit-contract.md`).
 
 Other kit modules could use it later for PDFs of quotes and invoices, image thumbnails for files
