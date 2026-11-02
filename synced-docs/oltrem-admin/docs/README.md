@@ -55,6 +55,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [Open-source ideas](reference/open-source-ideas.md) | 30 ranked open-source ideas | proposed |
 | [Browser caching](reference/browser-caching.md) | browser storage, versioned reads, instant updates | proposed |
 | [Private mail Worker](reference/private-mail-worker.md) | Mailflare, Cloudflare email, a mail Worker | proposed |
+| [Mail projects](reference/mail-projects.md) | 35 projects compared; a mail repo | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
 | [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
@@ -71,10 +72,10 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities, roles, scopes, groups, bindings, overrides, the check, sessions, governance, the Vendor and the handover, the door, tables, errors | written, beside the code |
 | [@oltrem/users](../modules/users/README.md) | the people: the directory and the profile, the rules of switching an account off and on, the routes, the table and the error codes | written, beside the code |
 | [@oltrem/records](../modules/records/README.md) | the company's own lists: places and the four capabilities, the kinds of field, search, the CSV, routes, tables, errors | written, beside the code |
-| [@oltrem/files](../modules/files/README.md) | the company's files: a drive per place opened by the roles held there, folders and names, uploads, links that end, the trash, the pages, routes, tables, settings, errors | written, beside the code |
+| [@oltrem/files](../modules/files/README.md) | the company's files: a drive per place opened by the roles held there, folders, uploads, links that end, the trash, pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/automations](../modules/automations/README.md) | automations: an event or a schedule, one action, run within the tick's budget, the kit's two actions and how to add one, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/analytics](../modules/analytics/README.md) | analytics: the audit log counted by day in SQL, the figures against the period before, the charts, the CSV, the route and the tables | written, beside the code |
-| [@oltrem/privacy](../modules/privacy/README.md) | privacy requests: the due day and its setting, the search through every module's `personal` and the audit log, the identity check, the copy, the routes and the table | written, beside the code |
+| [@oltrem/privacy](../modules/privacy/README.md) | privacy requests: the due day and its setting, the search through every module's `personal` and the audit log, the identity check, the copy, routes, table | written, beside the code |
 | [@oltrem/tasks](../modules/tasks/README.md) | tasks: who sees, gives and does them at a place, the email when given, the automations' task, the routes and the table | written, beside the code |
 | [@oltrem/announcements](../modules/announcements/README.md) | announcements: who posts and who reads at a place, read and confirmed, who has read what, the routes and the tables | written, beside the code |
 | [@oltrem/bookings](../modules/bookings/README.md) | bookings: who books and who manages at a place, the company's clock, never twice at once, cancelling and removing, the routes and the tables | written, beside the code |
@@ -202,12 +203,12 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows what its tool says, the packages and the local start repair themselves, and a stop offers its details to copy |
 | [A sidebar without reloads](records/2026-10-28-sidebar-without-reloads.md) | pages and form changes open in place with the sidebar kept and scrolled; it closes to icons; group colours; Work split into Work, Team and Sales |
 | [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome, bounces for good told from temporary ones, Apple's opens apart; bounces, refusals and spam reports stop every email at once |
-| [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily in plain words, and campaigns send only from an address on a passing domain |
+| [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily, and campaigns send only from a passing domain |
 | [Saved email templates](records/2026-10-28-saved-templates.md) | designs built from blocks or pasted as HTML and cleaned, checked at each save, previewed as a phone, a desktop and dark mode, tested to oneself, every version kept |
 | [Saved email lists](records/2026-10-28-saved-lists.md) | the people bulk mail goes to, from a file or typed in, each with the reason they may be mailed; refused rows named, the do-not-mail list honoured at every send, downloads audited |
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | campaigns sent in batch calls sized by the Cloudflare plan; no answer repeated under its key or left to a person; provider stops shown; large sends need a second person |
 | [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's spam or bounce limits; failed runs retried, paused at the third; System health watches; a summary email and results by mailbox |
-| [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses read from the provider, drafts, Send later on the company's clock and ten seconds to Undo; mail split into Messages and Mail settings |
+| [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses from the provider, drafts, Send later and ten seconds to Undo; mail split into Messages and Mail settings |
 | [A shorter sidebar, tabs and compact buttons](records/2026-10-29-shorter-sidebar.md) | main pages only, in five groups; sub-pages as tabs |
 | [Ready to send](records/2026-10-31-ready-to-send.md) | the portal checks all an email needs to leave, provider account included, says what to do, and checks hourly |
 | [The start page, remade compact](records/2026-10-31-start-page-remake.md) | each fact once, a fix as one command with Copy, errors counted; no pnpm warning when the kit fetches it |
