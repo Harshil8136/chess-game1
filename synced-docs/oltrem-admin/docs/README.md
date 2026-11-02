@@ -52,8 +52,9 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
-| [Open-source ideas](reference/open-source-ideas.md) | 30 ranked ideas from open-source projects | proposed |
-| [Browser caching](reference/browser-caching.md) | what to keep in the browser, versioned reads, instant updates | proposed |
+| [Open-source ideas](reference/open-source-ideas.md) | 30 ranked open-source ideas | proposed |
+| [Browser caching](reference/browser-caching.md) | browser storage, versioned reads, instant updates | proposed |
+| [Private mail Worker](reference/private-mail-worker.md) | Mailflare, Cloudflare email, a mail Worker | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
 | [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
@@ -86,16 +87,16 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/shifts](../modules/shifts/README.md) | shifts: who plans and who sees at a place, drafts until published, an email each, open shifts taken once, one shift at a time a person, the routes and the table | written, beside the code |
 | [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, the payroll CSV, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
-| [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: a list from a CSV, merge fields, chunks within a daily limit, one-click unsubscribe, the suppression list, the pages, routes, tables, settings, errors | written, beside the code |
+| [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: lists, merge fields, daily limits, one-click unsubscribe, suppression, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
-| [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the kit's seven email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
+| [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
 | [@oltrem/email](../modules/email/README.md) | email as the kit sends it: typed templates, the escaping `html` tag, the outbox, failover, held messages, Write, Sent, Addresses, routes, errors | written, beside the code |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
 | [@oltrem/screens](../packages/screens/README.md) | the portal's screens: the frame and its row, each page and the API it reads, the first run, the stylesheet | written, beside the code |
 | [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
-| [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies into a client repository, written as the client's how-to: its parts, what to change | written, beside the code; copied by the generator |
+| [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies, written as the client's how-to | written, beside the code; copied by the generator |
 
 The records, each dated and frozen once written, with its decisions and how it was verified:
 
