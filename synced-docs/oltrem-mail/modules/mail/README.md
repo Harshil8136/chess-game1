@@ -106,7 +106,7 @@ step when the portal's key may not do it.
 | Setting | `mail.inbox.keep_days` | mail older than this is removed, with its stored copy; 0 (the default) keeps it all; the Owner's |
 | Setting | `mail.inbox.spam_score` | files arriving mail scoring at least this as spam; 0 (the default) files nothing by score |
 | Job | `mail.soon` | every five minutes; brings back the snoozed conversations whose time came (one write for all); reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after |
-| Job | `mail.inbox` | hourly; removes mail past `keep_days` (100 messages a run), and the senders kept only for their list's unsubscribe once their mail is gone |
+| Job | `mail.inbox` | hourly; brings back once the conversations answered three days ago and not since (one write); removes mail past `keep_days` (100 messages a run), and the senders kept only for their list's unsubscribe once their mail is gone |
 | Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), for a forwarding address whose link has not been pressed a day after Cloudflare emailed it, and past 250 MB of rows or 8 GB of stored copies |
 
 The add-on holds the `4000`s of the error codes (`src/errors.ts`):
@@ -133,6 +133,8 @@ The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 | Rules | when the sender, the subject or a recipient contains words: archive, mark read, label, or spam; per mailbox or every one, with how often each matched |
 | Updates | mail from a list or a machine (List-Id, List-Unsubscribe, Precedence bulk or list, Auto-Submitted other than `no`) goes to Updates, out of the inbox and its unread count; Move to Inbox or Move to Updates on a conversation moves all of its sender's conversations and is remembered for their next mail (`mail_senders`) |
 | Unsubscribe | a list's List-Unsubscribe is believed only when Cloudflare's DKIM check passed; with List-Unsubscribe-Post (RFC 8058) the portal POSTs `List-Unsubscribe=One-Click` to its https address for the person (10 s, no redirects followed), records when, and moves the sender to Updates; without it the sender's own https page or mailto address is offered |
+| Automatic reply | per mailbox (`PUT .../mailboxes/:id/auto-reply`, `mail.inbox.manage`): on or off, a subject (empty answers `Re:` and theirs, in their conversation), its words, and a first and last day on the company's clock; turning it on makes the mailbox's address a sender, as the first reply does. Sent through email (`email.send`, message key `mail.auto.<tenant>.<message>`, so a message delivered twice is answered once) once the message is kept, at most once a sender in four days (`mail_senders.auto_replied_at`), never to a list or machine, a no-reply, mailer-daemon or notifications address, the mailbox itself, spam, or a sender whose SPF, DKIM and DMARC all failed; a reply that does not go is recorded on the mailbox (and System health) and never fails the delivery. It goes through the provider's route and its daily allowance, not Cloudflare's `message.reply()` (unconfirmed on the free plan), and carries no `Auto-Submitted` header (email has no header option yet) |
+| No answer yet | a reply from the portal starts a wait (`waiting_since`); their answer ends it; three days without one, the hourly `mail.inbox` job brings the conversation back to the top of its box once (`nudged`), marked "No answer yet"; never spam, muted or snoozed ones |
 | Snooze, mute, sweep | snooze: in three hours, tomorrow at 8 or Monday at 8 on the company's clock (`email.timeZone`), then back at the top of its box, unread; new mail wakes it early. Mute: archived, and new replies stay archived until Unmute. Archive all from sender: every conversation of that sender archived, and, where the person manages the mailbox, an archive rule for their next mail (once, within the 200 rules) |
 | Search | an FTS5 index without content over the first 8 KB of each message's text, accents folded; each word matched as a prefix; Gmail's words read first, across every box: `from:`, `to:`, `subject:` (a quoted phrase too), `has:attachment`, `is:unread`, `is:read`, `before:` and `after:` a day (`2026-10-31`), `in:` a box (`inbox`, `updates`, `snoozed`, `archived`, `spam`, `anywhere`) |
 | Reading | the Worker passes the stored copy along without reading it (the first 256 KB, all of it with `whole=1`, always as a download); the phone reads it with the reader script, served by the hook `GET /hooks/mail/reader/<version>/<file>` (postal-mime, DOMPurify, `src/reader/reader.js` and the list's `src/reader/swipe.js`, built into `src/generated/reader.ts` by `pnpm docs:build`) into a frame that never runs a script (docs/inbox.md section 4) |
@@ -144,6 +146,7 @@ The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 | `GET /api/mail/inbox/mailboxes` | `mail.inbox.read` | the mailboxes the person may read or manage, the domain, the locations a new one may go at, and whether the inbox is offered |
 | `POST /api/mail/inbox/mailboxes` | `mail.inbox.manage` | add one (`local`, `name`, `scopeId`, `forwardTo`) and its routing rule |
 | `PATCH /api/mail/inbox/mailboxes/:id` | `mail.inbox.manage` | its name, location, forwarding address, or `live` |
+| `PUT /api/mail/inbox/mailboxes/:id/auto-reply` | `mail.inbox.manage` | its automatic reply (`on`, `subject`, `body`, `from`, `until` as `2026-12-24`) |
 | `DELETE /api/mail/inbox/mailboxes/:id` | `mail.inbox.manage` | delete an empty one and its rule |
 | `GET /api/mail/inbox` | `mail.inbox.read` | conversations, 50 a page (`mailbox`, `box` of inbox, updates, snoozed, archived, spam or all, `q`, `before`) |
 | `GET /api/mail/inbox/threads/:id` | `mail.inbox.read` | one conversation, its messages, and how its sender lets a person leave their list (`sender.unsubscribe`: one-click, page, email or none) |
@@ -168,12 +171,14 @@ commands for the ticked ones (archive, read, unread, three snoozes, Move to Upda
 archive all from sender, spam, block). Each change says what it did, with an Undo that sends the
 same conversations back (but sweep and block, taken back on Mailboxes). On a phone a conversation
 swiped left is archived and swiped right is marked read, through the same commands. Updates lists
-the subscriptions with Unsubscribe. A conversation (`/email/inbox/:id`) is
-marked read when opened; it has the same commands, says when it is snoozed or muted, and offers
-Unsubscribe for list mail; older messages fold and are fetched only when opened; the reply form
+the subscriptions with Unsubscribe. A conversation waiting three days for an answer shows "No answer yet". A conversation
+(`/email/inbox/:id`) is marked read when opened; it has the same commands, says when it is
+snoozed, muted or waiting for an answer, and offers Unsubscribe for list mail; above the reply
+box, **Saved replies** are the person's letters from Write (no design, no code), each added
+under what is already typed with the person's name filled in; older messages fold and are fetched only when opened; the reply form
 sends from the mailbox, and Undo puts the words back in it. Mailboxes and rules
 (`/email/mailboxes`): each mailbox with its state and what stands in its way, add, change, switch
-off and delete, the rules, the blocked senders, and the room used against the free plan.
+off and delete, its automatic reply, the rules, the blocked senders, and the room used against the free plan.
 
 Mail setup (`/email/mail`), in the Email tabs: the route's line, the steps as a checklist, the
 form that turns Email Routing on, the sending domains with records missing and **Write them**,
@@ -192,4 +197,8 @@ score; never the body), `mail_search` (FTS5, no content kept), `mail_blocked` an
 Migration `1004_mail_familiar.sql`: `mail_threads` gains `updates`, `muted` and `snoozed_until`
 (with a partial index on the snoozed ones and one on the correspondent), and `mail_senders`, a
 row for a sender a person moved or whose list offers an unsubscribe (the choice, the unsubscribe
-addresses, how many and when, when they were left). Never KV (mail law M-3).
+addresses, how many and when, when they were left). Migration `1005_mail_answers.sql`:
+`mail_mailboxes` gains the automatic reply (`auto_on`, `auto_subject`, `auto_body`, `auto_from`,
+`auto_until`, `auto_sender_id`, `auto_sent`), `mail_senders` gains `auto_replied_at`, and
+`mail_threads` gains `waiting_since` (with a partial index) and `nudged`. Never KV (mail law
+M-3).

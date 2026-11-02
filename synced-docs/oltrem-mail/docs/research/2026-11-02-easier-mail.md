@@ -161,3 +161,8 @@ look where the message landed.
 Bundle A followed, as [its record](../records/2026-11-02-familiar-inbox.md) says. Suggested
 contacts were already on Write (its To field offers recent recipients), so nothing was added
 there; a search looks in every box, so its chips narrow rather than widen.
+
+Bundle B followed, as [its record](../records/2026-11-02-answers-by-itself.md) says. The automatic
+reply goes through the provider route (email's send), not Cloudflare's `message.reply()`, whose
+free-plan behaviour is not confirmed; so it carries the journal, consent and the allowance, and
+its loops are stopped by the skip rules and the four days rather than by a header.

@@ -184,3 +184,22 @@ so the inbox works the way Gmail, Outlook and Yahoo taught everyone
   of buttons, so it needs nothing more of the server; without the script the buttons work alone.
 - **Contact suggestions** were already on Write: its To field offers the people recently written
   to.
+
+## 8. The inbox answers by itself (as built, bundle B)
+
+Bundle B of [the same research](research/2026-11-02-easier-mail.md)
+([the record](records/2026-11-02-answers-by-itself.md)):
+
+- **Automatic reply** on each mailbox (Mailboxes and rules, under the mailbox): on or off, an
+  optional first and last day on the company's clock, a subject (or `Re:` and theirs) and the
+  words. It is sent from the mailbox's own address through the provider route, so the journal,
+  consent and the allowance apply as to every message. It answers a sender once in four days at
+  most, never a list or a machine, a no-reply address, the mailbox itself, spam or a sender whose
+  mail failed Cloudflare's checks. A failure is the mailbox's problem line and the error log, and
+  never stops the message being kept.
+- **Saved replies** above the reply box: the company's saved templates for Write, each one press,
+  added under what is already typed with the person's details filled in.
+- **No answer yet:** a conversation the portal answered last and heard nothing on for three days
+  comes back to the top of its box once, marked "No answer yet", as Gmail's nudges. An answer
+  clears it; a muted, snoozed or spam conversation is left alone.
+- **Undo send** lasts 5 to 30 seconds, as the Owner sets it (`email.undo_seconds`, 10 by default).
