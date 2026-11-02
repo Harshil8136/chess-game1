@@ -96,7 +96,8 @@ dashboard step and the `mail.soon` job tries again.
 The inbox gives the kit three things to show: a Home figure (unread conversations), a search
 section (mail by its words) and a privacy search (messages from an address). Its health check
 and its hourly job are both `mail.inbox`; a second job, `mail.soon`, runs every five minutes
-(addresses waiting for their verify link, rules not made yet). The `mail.cloudflare` check's
+(snoozed conversations whose time came, addresses waiting for their verify link, rules not made
+yet). The Home figure counts the inbox's unread conversations, not Updates or Snoozed. The `mail.cloudflare` check's
 words are unchanged. The
 Allowance page may read `GET /api/mail/inbox/usage` for the inbox's share of the database and
 the bucket.
@@ -120,7 +121,7 @@ fingerprint in the kit would place it by the domain's DNS instead.
 
 | Kind | Mail holds | A new one |
 |---|---|---|
-| Migrations | `0011`, `0020`, `0043` to `0050`, `0052` to `0054`, in the kit's one series; `1000` (email: the route a message is pinned to), `1001` (mail: the Cloudflare route), `1002` (mail: the inbox) and `1003` (email: who left a saved list, and the warm-up's first day of a domain) | mail's new migrations number from `1000` up; the kit keeps its own series below; a client's own start at `5000` |
+| Migrations | `0011`, `0020`, `0043` to `0050`, `0052` to `0054`, in the kit's one series; `1000` (email: the route a message is pinned to), `1001` (mail: the Cloudflare route), `1002` (mail: the inbox), `1003` (email: who left a saved list, and the warm-up's first day of a domain) and `1004` (mail: Updates, snooze, mute and the senders a person moved) | mail's new migrations number from `1000` up; the kit keeps its own series below; a client's own start at `5000` |
 | Permission bit planes | `3` email, `13` campaigns, `30` mail | the kit's thread reserves the next free plane in the kit's architecture table first |
 | Error codes | the `1500`s email, the `2500`s campaigns, the `4000`s mail (`4001` to `4007` used) | the kit's thread reserves a block the same way |
 

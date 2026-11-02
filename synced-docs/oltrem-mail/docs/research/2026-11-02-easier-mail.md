@@ -157,3 +157,7 @@ Built so far (the owner chose all five, in this order, on 2026-11-02): bundle C,
 "a message when done" is the domain's line and System health's warning when it is stuck, rather
 than an email of its own; and the placement test is not re-run by itself, since a person has to
 look where the message landed.
+
+Bundle A followed, as [its record](../records/2026-11-02-familiar-inbox.md) says. Suggested
+contacts were already on Write (its To field offers recent recipients), so nothing was added
+there; a search looks in every box, so its chips narrow rather than widen.

@@ -157,3 +157,30 @@ setting keeps both in bounds.
   0 by default); the hourly job then removes older mail with its stored copy. The health check
   warns past 250 MB of rows or 8 GB of stored copies, well inside the free plan.
 - **Not included:** IMAP. The portal is the mail app.
+
+## 7. What people already know (as built, bundle A)
+
+Built from [the research on making mail easier](research/2026-11-02-easier-mail.md), bundle A,
+so the inbox works the way Gmail, Outlook and Yahoo taught everyone
+([the record](records/2026-11-02-familiar-inbox.md)):
+
+- **Updates beside the inbox.** Mail from a list or a machine (it carries `List-Id` or
+  `List-Unsubscribe`, `Precedence: bulk`, or `Auto-Submitted`) goes to Updates by itself, out of
+  the inbox and its unread count, as Gmail's Promotions and Outlook's Other. Move to Inbox or Move
+  to Updates moves all of that sender's conversations and is remembered for their next mail.
+- **Unsubscribe in one press.** When a list's message offers RFC 8058's one-click unsubscribe
+  and Cloudflare's DKIM check passed (so the header is the sender's own), the portal makes the
+  POST for the person and moves the sender to Updates; otherwise the sender's own page or address
+  is offered. Updates lists every subscription with its button, as Gmail's Manage subscriptions.
+- **Snooze:** in three hours, tomorrow at 8 or Monday at 8, on the company's clock. The
+  five-minute job brings it back to the top, unread; an answer brings it back at once.
+- **Mute:** new replies to a muted conversation stay archived until it is unmuted.
+- **Archive all from sender:** every conversation of that sender archived, and a rule for what
+  they send next where the person manages the mailbox (removed on Mailboxes).
+- **Undo** after every change but sweep and block, in the "Done" line.
+- **Search words:** `from:`, `to:`, `subject:`, `has:attachment`, `is:unread`, `before:`,
+  `after:`, `in:`, with chips for the common ones. A search looks in every box.
+- **Swipe** on a phone: left archives, right marks read. It presses the same command as the row
+  of buttons, so it needs nothing more of the server; without the script the buttons work alone.
+- **Contact suggestions** were already on Write: its To field offers the people recently written
+  to.
