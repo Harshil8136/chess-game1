@@ -52,7 +52,7 @@ Before, an address was checked for its shape only.
 | The email module | `src/clean.ts` (`likelyDomain`, `likelyAddress`, `kindOf`, `NO_REPLY_LOCALS`); `readList` takes `{ fix }` and answers `fixed`, `fixedCount`, `shared`, `noReply` and `domains`; `POST /lists/:id/import` takes `fix=0`; the job `email.servers` every five minutes; `lists.noteDomains`, `lists.lookServers` and `lists.unreachable`; bulk mail skips what no mail reaches; migration `1006_email_clean_lists.sql`; a list summary carries `unreachable`, a member `flag` |
 | The campaigns module | a CSV upload puts misspellings right unless `fix=0`, notes its domains, and answers `fixed`, `fixedCount` and `noReply`; the saved list picker counts who can be mailed without the unreachable |
 | The kit | the migration and the job come with the module; its worker test lists the new job |
-| Cloudflare's free plan | ten domains a run, five at a time, one DNS call each: ten of a run's fifty outbound calls; one batch of writes a run; no KV |
+| Cloudflare's free plan | five domains a run, together, one DNS call each: five of the fifty outbound calls a run shares with every other job, and never more than five connections open at once; one batch of writes a run; no KV |
 
 ## How it was checked
 
