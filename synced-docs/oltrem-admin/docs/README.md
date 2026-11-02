@@ -88,10 +88,9 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/shifts](../modules/shifts/README.md) | shifts: who plans and who sees at a place, drafts until published, an email each, open shifts taken once, one shift at a time a person, the routes and the table | written, beside the code |
 | [@oltrem/timeclock](../modules/timeclock/README.md) | time clock: who clocks in and who manages at a place, the payroll CSV, the routes and the table | written, beside the code |
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
-| [@oltrem/campaigns](../modules/campaigns/README.md) | bulk email: lists, merge fields, daily limits, one-click unsubscribe, suppression, the pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
-| [@oltrem/email](../modules/email/README.md) | email as the kit sends it: typed templates, the escaping `html` tag, the outbox, failover, held messages, Write, Sent, Addresses, routes, errors | written, beside the code |
+| [@oltrem/email and @oltrem/campaigns](../vendor/mail/README.md) | email and bulk mail, kept here packed since they moved to their own repository, oltrem-mail; their READMEs travel inside the packed files | packed copy |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
@@ -218,6 +217,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Access, roles, settings and parts redesigned](records/2026-10-31-access-settings-redesign.md) | name the company first; a role as a level per part; invite with role and place; settings in sections; parts as tiles |
 | [Standard admin terms](records/2026-10-31-standard-admin-terms.md) | Modules, Users, Locations, overrides, View, Edit, Admin |
 | [Core hardening](records/2026-11-01-core-hardening.md) | ctx.access sign-in, keys bound to hosts, tick fits, rollback |
+| [Mail moved to Oltrem Mail](records/2026-11-02-mail-moved-out.md) | email and campaigns in their own repository, kept here packed in vendor/mail/ |
 | [One repo per client](records/2026-11-01-one-repo-per-client.md) | kit vendored in kit/, `oltrem new client`, upgrade --from |
 | [Frame and page head](records/2026-11-01-frame-and-page-head.md) | no sideways shift, wider pages, new head, tabs |
 | [Email remake](records/2026-11-01-email-remake.md) | Write, Sent at once, From adds an address, Addresses |
