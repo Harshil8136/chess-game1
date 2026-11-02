@@ -9,8 +9,8 @@ sources: [this repository]
 # Documentation: index and where things stand
 
 > **In plain words.** This folder is the written side of the kit, kept so the owner can follow
-> the work on a phone as it happens. This page says where the work stands, lists every
-> document and says which fact each one owns. The plan the work follows lives elsewhere and is
+> the work on a phone. This page says where the work stands, lists every document and the fact
+> each one owns. The plan the work follows lives elsewhere and is
 > linked below.
 
 ## Where things stand
@@ -25,18 +25,17 @@ repository reads [the architecture guide](architecture.md) after ai.md.
 The plan, its research and the owner's decisions are kept in the first client's documentation
 and published on the public docs mirror:
 [the platform-kit folder on the mirror](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/cf-admin/documentation/program/platform-kit).
-Its plan document is the authority on the design; this repository follows it and records here
-what was built.
+Its plan document is the authority on the design.
 
 ## Where these documents are published
 
 On every push to `main` the verify workflow's `mirror-docs` job runs the identifiers gate, then
-copies this folder, the root `.md` files, every package, module and template README and
-LICENSE to the public docs mirror, under
-[synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin),
-with a provenance file. Nothing is redacted: the gate is the scanner,
-and everything here is written as if public (R-04). It signs in with `PERSONAL_PAT`
-([registry](reference/tokens.md)).
+copies this folder, the root `.md` files, each package, module and template README and LICENSE
+to [synced-docs/oltrem-admin](https://github.com/Harshil8136/chess-game1/tree/main/synced-docs/oltrem-admin)
+on the docs mirror, and every Oltrem Mail document (`vendor/mail/published/`, in each
+pack) to `synced-docs/oltrem-mail`, each with a provenance file. Nothing is redacted: the gate
+is the scanner, and all of it is written as if public (R-04). It signs in with
+`PERSONAL_PAT` ([registry](reference/tokens.md)).
 
 ## Index
 

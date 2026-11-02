@@ -1,0 +1,107 @@
+Oltrem Licence, version 1.0
+
+Copyright (c) 2026 Harshil8136, the author of the Oltrem kit and the owner of its repository.
+
+This licence is written in plain words on purpose. Each numbered section is a term of the
+licence. Using the Software means you accept these terms.
+
+1. Who is who.
+
+   "The Licensor" is the copyright holder of the Software, named in the copyright notice
+   above. "The Software" is the Oltrem kit: the code, files, documentation and packages that
+   carry this licence, in any form. "You" means the person or organisation using the Software.
+   An organisation includes every company that controls it, that it controls, or that is under
+   common control with it.
+
+2. What you may always do.
+
+   You may download, install and run the Software, and keep copies of it, for Personal Use:
+   use by you as an individual, for yourself, not for or on behalf of any business or other
+   organisation, and not in exchange for money. You may also read the Software to understand
+   how it works.
+
+3. What a small organisation may do.
+
+   You may use the Software for the benefit of your organisation, including in a business, if
+   your organisation's gross revenue (for a non-profit, a school or a public body: its total
+   income) in the previous twelve months was below one million United States dollars
+   (USD 1,000,000), counting every company described in section 1 together. Revenue in another
+   currency is converted at the exchange rate on the last day of that period. Using the
+   Software to run anything for other businesses or people counts as your own use, and your
+   revenue is what counts.
+
+4. Above the ceiling.
+
+   If your organisation's revenue is at or above the ceiling in section 3, your use needs a
+   Commercial Licence: a separate written agreement with the Licensor, on the terms the
+   Licensor publishes or agrees at the time, which may include a fee or a usage charge. If your
+   revenue crosses the ceiling, you have ninety days to obtain a Commercial Licence or to stop
+   using the Software.
+
+5. No changes without permission.
+
+   You may not change the Software: not its code, not its files, not its documentation, not in
+   part and not in whole, not even privately or on your own machine, and you may not build
+   anything from a changed copy, without the Licensor's prior written permission. To ask, send
+   the proposed change to the Licensor at the contact address the Licensor publishes on
+   oltrem.com or in the Software's README; the Licensor may review it, and may grant, refuse or
+   condition permission. The Licensor's silence is a refusal. Where the law of your country
+   gives you a right to study, test or decompile the Software for interoperability, or to
+   correct an error that stops the Software from working as documented, this section does not
+   take that right away; it does require you to tell the Licensor about any such correction and
+   to apply nothing else.
+
+6. Your permitted changes belong to the kit too.
+
+   If the Licensor permits a change, you grant the Licensor a permanent, worldwide,
+   royalty-free licence to use, change, publish and distribute that change as part of the
+   Software, under this licence or any other. You keep your copyright in it.
+
+7. What is use, not change.
+
+   Configuring the Software through its documented configuration files, settings and client
+   file; creating a client repository from the Software's template; and writing your own code
+   that works with the Software through its documented interfaces, without changing any of the
+   Software's own files, are use under sections 2 to 4 and not changes under section 5.
+
+8. Sharing copies.
+
+   You may give others complete, unchanged copies of the Software, with this licence and every
+   copyright and attribution notice intact, free of charge. You may not sell copies, and you
+   may not share any changed copy, even one the Licensor has permitted, unless the permission
+   says so.
+
+9. Names and marks.
+
+   This licence gives you no right to use the name Oltrem, the Licensor's name or any logo,
+   except to say truthfully that you use the Software.
+
+10. Patents.
+
+   The Licensor grants you only the patent rights needed to use the Software as this licence
+   allows. If you or your organisation bring a patent claim against anyone over the Software,
+   your rights under this licence end at once.
+
+11. Ending.
+
+   If you break this licence, your rights under it end automatically. For a first breach that
+   is not a change under section 5 or a sale under section 8, your rights come back if you fully
+   correct the breach within thirty days of noticing it, or of being told. After that, or for a
+   change or a sale, they do not come back unless the Licensor says so in writing.
+
+12. No warranty.
+
+   The Software is provided as it is, with no warranty of any kind, express or implied,
+   including of merchantability, fitness for a purpose or non-infringement. You use it at your
+   own risk.
+
+13. Liability.
+
+   To the extent the law allows, the Licensor is not liable to you for any damages arising from
+   the Software or this licence, whatever the legal theory, even if told of the possibility.
+
+14. Versions.
+
+   The Licensor may publish new versions of this licence. A copy of the Software you received
+   under version 1.0 stays under version 1.0 unless the Licensor offers you a later version and
+   you accept it.

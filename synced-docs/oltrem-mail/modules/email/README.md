@@ -1,0 +1,572 @@
+# @oltrem/email
+
+Email as the kit sends it (plan sections 8.1 and 8.2). A message is asked for once, rendered
+from a typed template and checked at once, so a mistake is the caller's answer and never a
+failed send later. The outbox and the queue carry it to `deliver`, which sends it through the
+tenant's active email instance from `@oltrem/providers` and, when that one refuses, through each
+failover in order. The kit keeps its own lease per message key in D1, so a message the queue
+brings twice is sent once whatever the provider promises. The company's sending domains and the
+sender addresses on them live here too: who may send from which address, and whether a domain
+is set up well enough for bulk mail; and the company's saved templates and lists, the designs
+bulk mail is written with and the people it goes to.
+
+## Using it
+
+```ts
+import { createOutbox } from '@oltrem/core-outbox';
+import { createEmail, defineTemplate, html } from '@oltrem/email';
+import * as z from 'zod/mini';
+
+const booked = defineTemplate({
+  id: 'bookings.confirmed',
+  summary: 'The booking is confirmed',
+  schema: z.object({ name: z.string() }),
+  subject: (d) => `Booked for ${d.name}`,
+  text: (d) => `Hello ${d.name}, the booking is confirmed.`,
+  html: (d) => html`<p>Hello ${d.name}</p>`,
+});
+
+const email = createEmail<Env>({
+  bindings: (env) => ({ db: env.DB }),
+  providers: providers.registry,
+  templates: [booked],
+  from: () => ({ email: 'portal@example.com', name: 'The portal' }),
+  outbox: (env) => createOutbox({ db: env.DB, send: (e) => env.EVENTS.send(e) }),
+});
+
+await email.send(env, {
+  tenantId,
+  template: 'bookings.confirmed',
+  to: [{ email: 'guest@example.com' }],
+  data: { name: 'Ann' },
+  messageKey: `booking-${id}-confirmed`,
+});
+```
+
+Mount `email.module` beside the IAM and providers modules; the queue handler of
+`@oltrem/core-http` calls its `onEvent` for `email.send`. `from` is the client's; the client
+template reads the two settings below.
+
+## Settings
+
+| Name | Layer, editor | What it is |
+|---|---|---|
+| `email.from_address` | system, an Owner; empty by default | the address the portal's messages come from, one the active provider may send from; while it is empty they come from the company's sender address for everyday mail (Email, Addresses; since 2026-10-30), and with neither a message fails as `from: there is no address to send from yet` and is never sent |
+| `email.from_name` | system, an Owner; empty by default | the name they come from; the client template uses the client's name while it is empty |
+
+The client file sets both at onboarding (`settings` in `oltrem.config.ts`); an Owner may change
+them live once the Settings page exists.
+
+## Templates
+
+A template is code, compiled with the Worker: an id `<module>.<name>`, a line saying what it is
+for, the schema of its data, and a subject, a text body and an optional HTML body. The data is
+checked against the schema before anything is rendered (`KIT-E-1505`, with each field). A template may also add headers, such as a bulk message's
+`List-Unsubscribe` (`@oltrem/campaigns`); they are checked like the rest of the message. The HTML
+is written with the `html` tag, which escapes every value it is given unless the value is itself
+`html`, so a name a guest typed never becomes markup. Prettier formats an `html` template as
+HTML, which changes only the whitespace between elements.
+
+Every message names its template to the provider as a tag (`bookings.confirmed` becomes
+`bookings-confirmed`), so the provider's own reports group the messages by kind. A template whose
+links sign someone in sets `tracking: false`, and the provider is asked not to track its opens and
+clicks (the client template's `iam.message` and `customers.message`). Bulk mail is tagged with the
+campaign's name (`bulk.send`'s `tag`) and marked as bulk, so a provider with a separate way for it
+uses that way (`@oltrem/providers`, "Each provider's own features").
+
+The module adds one template of its own, `email.canary`, the test message the canary route sends.
+
+## Sending, the lease and failover
+
+| Step | What happens |
+|---|---|
+| `send` | The template is found and rendered, the message checked (addresses, header lines, one to fifty recipients in To, with `cc` and `bcc` fifty in all and none named twice) and queued through the outbox under its message key; the caller's own key makes a message asked for twice queued once |
+| A reply | `thread: { inReplyTo, references }` puts `In-Reply-To` and `References` on the message (RFC 5322), on every route; each id must be one `<...>` on one line (`KIT-E-0422` otherwise), repeats are dropped and the newest 20 kept (`THREAD_IDS`) |
+| No instance ready | The outbox row is held and the message's row says `waiting`; the job `email.release`, every five minutes, releases the held messages once a tenant that waits has an active or failover instance |
+| `deliver` takes the lease | One row per message key: a new key, or one that waits, retries or whose two-minute lease ran out, is taken; a `sent` or `failed` one is acknowledged without a send; one another delivery holds is `KIT-E-1502`, and the queue brings it back |
+| The routes in order | An add-on's route first when it takes the message (Oltrem Mail's Cloudflare route, handed in as the `route` option; see below), then the active instance, then each failover by its order; the first that takes the message is kept on the row (`instance_id`, `cloudflare` for that route) with the id it gave it. A message held for want of an instance is held only when no add-on route takes it either |
+| Each answer, sorted | Every route's answer goes into one list (`src/routes.ts`): the message is wrong (fails now), the receiving server refused it (fails now), the route may not carry it, is not set up, is too fast for now or has used its allowance (the next route tries), or there was no clear answer: a timeout, a broken connection, a 500, 502 or 504 |
+| No clear answer | The route may have sent it, so the row is pinned to that route (`pinned_route`, migration `1000`) and says `retrying`; every retry goes to that route only, never through another (mail law M-1). A 503 says the provider did not take it in, so it fails over. A pinned route that can no longer send (removed, disabled) fails the message, saying it was not sent again elsewhere and to ask the recipient whether it arrived |
+| A refusal | The next route is tried; when every one refused, the row says `retrying` with what each said, and `KIT-E-1504` sends the message back to the queue. When every one refused the account itself (401 or 403: a wrong key, an account not activated or suspended), a retry would get the same answer, so the row says `failed` at once with what each said, and the queue is not asked again |
+| A message that can never be sent | An unknown template, data that no longer matches, an address a provider refuses as such: the row says `failed` and the message is acknowledged |
+
+The subject and the body are never stored; the row keeps the addresses (To, then Cc and Bcc), for
+the screens and the delivery reports. An address on the do-not-mail list is taken off whichever
+list it is on; a copy is never moved up to To, so with no To left the message is not sent.
+
+### An add-on's route
+
+`createEmail({ route: () => taker })` takes a `RouteTaker` (`src/addon.ts`): for each message,
+`take(env, tenantId, message, { bulk, own })` answers a `SendRoute` (an id, a label, `send()` and
+`failure(error)` that sorts its own answers into the list) or null to leave it to the providers.
+Its optional `records(env, actor, domain, wanted)` writes a sending domain's missing DNS records
+where the add-on can (Oltrem Mail, on Cloudflare) and answers each in words, or null when it
+cannot there; the provider card calls it. It is read on every message, so a client builds email first and the add-on after. A client
+without Oltrem Mail hands in nothing, and sending is as before. `MailAddonDeps`, `MailAddon` and
+`MailAddonFactory` are the types the client wires `@oltrem/mail` with (docs/kit-contract.md);
+the add-on's `receive` is the client Worker's `email` handler, and `bucket` and `worker` give it
+the portal's bucket and the Worker's own name for the inbox.
+
+`email.write(env, actor, input)` is the `POST /write` route as a function, with the same checks,
+Undo and Sent page: the inbox replies through it, with a `thread` (refused together with `later`,
+since a reply goes now).
+
+## Write
+
+The page Email, Write (`/email/write`, stage 2 of the Mail plan, 2026-10-29) sends one email a
+person writes, the way a mail app does, without a list, a template or a campaign.
+With no address to send from, the page is the setup, in two steps: connect the email service
+(Email, Providers; connecting checks the key, makes it the one that sends when none does and reads
+its addresses, then comes back here), and read the addresses from it (`?intent=discover`, the
+route `POST /domains/discover`) or add one by hand. Above it all, [Ready to send](#ready-to-send):
+when a check stops every email, a red notice says so first and lists what to do, with Check again
+(`?intent=recheck`); otherwise one line that opens to every check.
+
+Since 2026-10-31 (the kit's record `docs/records/2026-10-31-email-console-remake.md` in oltrem-admin) the email
+pages are drawn with the console pieces of `@oltrem/core-ui`. Write is a mail app's compose card:
+From, To, Cc and Bcc (folded), Subject as lines, the message under them, Send, Save draft and Send
+later in a bar at its foot, and how the marks look beside it on a wide page. Drafts and Scheduled
+are one page with a row to pick, each email a row with its avatar, its subject, to whom and when,
+and its own Delete or Take back. Sent is cut into days (Today, Yesterday, then the date, on the
+company's clock), filtered from a row (all, opened, on the way, problems) with the counts, each
+email a row with what became of it and a mark at its edge when it went wrong. An email sent opens
+with its people and its words as the email shows them, and **What became of it** as a timeline.
+Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
+domain a pane with every check and every record, each value with its own Copy button.
+
+Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
+compose card in the manner of Gmail and Resend, and every part still works without the script.
+From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, with the browser's
+suggestions; an empty Cc or Bcc folds behind a small button on the To line. One tools row holds
+the template picker (a select, posted with its Use button, which the script presses for it), the
+bold, italic, list and link buttons, the Words or HTML choice (only for `email.write.code`) and a
+**Formatting** popover with the marks. Beside the card on a wide page, under it on a phone, a
+preview draws the words with their marks as they are typed. Readiness folds to one line when every
+check passes. The bar holds Send (Ctrl or Cmd with Enter), Send later and Save draft. **Another
+address** in the From line opens a dialog to send from an address not added yet (see
+[Senders](#senders-and-sending-domains)), for someone who holds `email.senders.add` or
+`email.senders.manage`: the address is checked and saved and picked in From, the words typed kept.
+
+Since 2026-10-31 (the kit's record `docs/records/2026-10-31-write-templates-and-code.md` in oltrem-admin) Write
+starts from the company's saved templates for Write (see [Saved templates](#saved-templates)):
+
+| Part | What it does |
+|---|---|
+| The template picker | In the tools row, every template for Write in one select, letters first and the most used next, after **No template**, with its Use button, which posts the form as it is (`?intent=template`, `pick`), so nothing typed is lost; with the script, picking one presses Use. `?template=<id>` opens Write with one picked (the template page's **Write with it**). A template that holds code is shown locked, with why, to someone without `email.write.code` |
+| A letter | Its subject and words go in the form to be changed: into an empty box, or in place of the last letter's words when they were not changed; words the person wrote are kept, with the letter's under them. **No template** takes unchanged letter words away again |
+| A design | The message goes in its message place, with the address's signature; a design with no message place shows no box and goes as it is |
+| Fields | `{{first_name}}`, `{{last_name}}`, `{{name}}` and `{{email}}` come from the first person in To; each other field the template names is a line to fill in (`field.<name>`, 300 characters, 30 at most), and a field it does not name is dropped. A value is escaped before it goes into markup |
+| Write in HTML | For someone who holds `email.write.code` at the company: a Words or HTML choice. HTML is cleaned by `sanitizeEmailHtml` before it is kept or sent, and its text copy is read out of it |
+| Preview | Words with no template: the pane beside the card draws them with their marks as they are typed (`data-marks-of`), from the server's copy at first. With a template or HTML, **Preview** saves the draft and shows it framed, as `GET /written/:id/preview` renders it: the template at the version written with, the fields and the signature filled in, under a policy that runs nothing. A sent email written with a template or in HTML opens the same way |
+| Address suggestions | The browser offers the addresses the person wrote to lately (the last forty emails sent) as they type To, Cc or Bcc |
+| Save as template | For someone who may build templates: the subject and words become a new letter named after the subject, and the email is kept as a draft. Only words, never HTML |
+
+| Part | What it does |
+|---|---|
+| From | The addresses the person may send everyday mail from (`email.senders.use` at the address's place), the defaults first. With none, the page says so and sends them to Senders. **Another address** (`?intent=add-from`, `newEmail`, `newName`; `POST /senders/own`) adds one there and then |
+| To, Cc, Bcc | Typed as a mail app takes them: separated by commas, semicolons or lines, each a bare address or `Name <address>` (`readAddresses`); with the script each becomes a chip (red when it is not an address), Backspace takes the last back, and the form posts the same comma-separated line. An empty Cc or Bcc is folded away until it is opened. What is not an address is named, and the form comes back as typed. Fifty people at most in all; for more, the page points to a campaign |
+| Subject and message | The message is plain words with three marks: `**bold**`, `_italic_` and a line starting with `- ` for a list; an https address becomes a link. It is sent as a plain letter in HTML (`writtenHtml`, everything typed escaped) and as text, under the built-in template `email.written` |
+| Sending | `POST /write` checks the address may be used and queues the message like any other: the lease, the failover and the delivery reports are the same. It is audited as `email.write` with the number of recipients (and the time, for one scheduled), never the words |
+| Undo | A sent email waits ten seconds (`UNDO_SECONDS`) in the queue before it is handed over. The page says so, to whom it goes, with an Undo button that takes it back into the form as a draft (`POST /written/:id/undo`, audited as `email.unsend`) and a link to it on Sent; Sent has the same Undo while it is in the queue (`/email/sent?intent=undo`). Once the queue has handed it over, Undo answers `KIT-E-1511` |
+| Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Email, Drafts lists them, opens one into the form and deletes one |
+| Sent | The page Email, Sent lists the emails the person sent from Write, newest first, from the moment Send is pressed (since 2026-11-01: `GET /written?state=sent` lists `queued` rows as well as `sent` ones, each with `undoUntil` while its Undo wait lasts): the subject and first words, to whom, when, and what became of each in a word (Undo window, Queued, Waiting, Retrying, Sending, Failed, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One held for want of an email service says so in plain words, and the list looks again by itself (`data-live`) every five seconds while one is in its Undo window or being handed over, every thirty while one waits, and not at all when nothing moves. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
+| Signature | Each sender address keeps one (Email, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
+| Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
+
+Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
+they read it, and only through these routes. Its state is `draft`, `scheduled`, `queued` (in the
+queue, its words still taken back) or `sent` (handed over; its `email_messages` row with the same
+key says what became of it). The queue's copy carries the row's id, and the delivery first moves
+the row from `queued` to `sent` in one guarded update: an email taken back is a draft by then, so
+the copy is dropped without a send, and two moves that race cannot both win. When the queue
+refuses an email at once, a draft stays a draft and says why (`problem`), and a new email is not
+kept, since the page still shows what was typed.
+
+## Senders and sending domains
+
+A message names the address it comes from with `senderId`; without one it comes from the
+`from` the client hands in (the two settings above). Bulk mail, such as a campaign, always names
+one.
+
+| Part | What it does |
+|---|---|
+| A sending domain | Added by someone who holds `email.senders.manage` for the whole company, with the email instance it sends through. Where the provider's definition has a `domains` block (Resend and Brevo, `@oltrem/providers`), the portal adds the domain there and shows the DNS records the provider asks for, each with a Copy button |
+| The check | Live from the page and once a day after (the job `email.domains`, hourly, four domains a run). One line per finding, in plain words: the provider says the domain is verified; each of its records is found in public DNS (DKIM by its key, SPF by its `include`); the domain publishes a DMARC record, which Gmail, Yahoo and Microsoft require of bulk senders; it has one SPF record, not two. A provider or DNS that does not answer leaves the state as it was and says so |
+| Passing | The provider verified the domain and it publishes DMARC, with no broken SPF. Where the portal cannot ask the provider (no `domains` block, or a key that may only send, which Resend refuses with 401), a person confirms the dashboard shows it verified, and the confirmation is audited |
+| Read from the provider | **Look at my provider** on the page (`GET /domains/found`) lists what each email instance with a key may send from, each marked as here or not, with **Add all** and a per-item **Add** (`POST /domains/discover`, all, or `names` for the ones named). Discovering asks every email instance with a key for the domains and single addresses its account may send from (the definition's `identities` lists, `@oltrem/providers`). A domain new here is added with that instance and checked at once; an address new here is added at the company, for both kinds of mail, with the name the provider keeps or its local part, and becomes the domain's default where it has none. An address whose domain is not here is not added. What could not be read (a key that may only send, a provider that did not answer, a list that needs a second key) is said in words. For a definition with lists but no `domains` block, the check's provider line reads the domain's state from its lists |
+| Another address, from Write | `POST /senders/own` (`email`, `name`), for someone who holds `email.senders.add` or `email.senders.manage` at the company: the address is added at the company for everyday mail. Its domain must be here, or listed by an email provider, as a domain or as that very address (the discover logic), and is then added with its check; otherwise it is refused (`KIT-E-1508`) with what to do: add and verify the domain at the provider. Audited as `email.sender-add` with `from: write` |
+| A sender address | An address on an added domain, the name people see, an optional reply-to, the place of the company whose `email.senders.use` holders may send from it, and what it is for: bulk, everyday or both. The first address of a domain for each kind becomes its default; a default is changed, never left empty while the domain has addresses |
+| A send | `compose` reads the sender: one that was removed, or is for the other kind of mail, refuses the message (`KIT-E-1508`); bulk mail asked for from a domain that does not pass is refused the same way, before it is queued |
+
+### The SPF limit
+
+`spfLine` and `countSpf` (`src/spf.ts`) count a domain's SPF record the way RFC 7208 does: each
+`include`, `a`, `mx`, `ptr`, `exists` and a followed `redirect` is one DNS lookup, every include's
+own record counts too, at most 10 lookups and 2 that find nothing. A loop counts as past the limit,
+a macro is counted and not followed. The domain's check carries the line: two SPF records, a count
+past either limit, or an include the provider asks for that would take the domain past 10 fail;
+9 or 10 pass with the warning that the next provider belongs on a subdomain.
+
+### The simple provider card
+
+Email, Set up (`/email/connect`, `src/connect-page.tsx`) is docs/setup.md section 1 in one press:
+the address mail comes from, an optional sending subdomain and name, and the provider's key.
+`POST /connect` (`email.manage`, and `providers.manage` at the company; audited as
+`email.connect`) then does every step itself and answers each in words (`src/card.ts`):
+
+| Step | What happens |
+|---|---|
+| The provider | Read from the key's start (`re_` Resend, `xkeysib-` Brevo, `SG.` SendGrid, `api-` SMTP2GO, `AKIA` Amazon SES; `providerOfKey`), else from the domain's DNS (the providers' detection, the domain and then its parent). Only when neither says does the answer ask for one tap (`step: 'provider'`, a sideways row of every email provider) |
+| Its fields | The key fills the provider's key field (`cardFields`: the first required field its label calls a key, else its first required secret, as SMTP's password). A provider that needs more (Mailjet's secret key, Amazon SES's secret and region) asks for exactly those (`step: 'fields'`); a `domain` field is filled from the address |
+| Set up | On the instance of that provider not turned off, else a new one; made the one that sends, the one before becoming its backup, or with **Add it as the backup** made first in the failover order behind the one that sends |
+| The domain | Added at the provider with the instance and checked, or checked again when it is here; one set up with another provider is left there, in words. With Oltrem Mail beside it, the records the provider asks for are written on Cloudflare (the `records` of the add-on's route taker), then the domain is checked again |
+| The sender | The address becomes a sender at the company for both kinds of mail; the page also sets `email.from_address` and `email.from_name` to it |
+| Reports and a test | Delivery reports registered by API (below), then a test message to the person who pressed |
+
+Below it, **Where does it land?** sends one test to a Gmail and one to an Outlook address through
+the provider picked (`POST /canary` with `to`), so staff see whether it lands in the Inbox or in
+Spam before a campaign.
+
+### Delivery reports, registered by themselves
+
+`POST /instances/:id/reports` (`email.manage`, audited as `email.reports`) registers the
+instance's public address, `/hooks/email/<id>/<token>`, at the provider by its API, for the
+events its definition reads (`src/reports.ts`): Resend's webhook API (its signing secret is
+sealed on the instance), Brevo's transactional webhooks, and Mailjet's event callbacks, one per
+event, leaving alone an event another address already gets. Registering again changes nothing
+that is right. `DELETE /instances/:id/reports` (`email.reports-remove`) takes away only this
+instance's addresses. Another provider answers that it is set up by hand, with the address shown
+on Integrations. A key that may not register is told so in words.
+
+Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain-confirm`,
+`email.domain-remove`, `email.domains-discover`, `email.sender-add`, `email.sender-update`, `email.sender-remove`,
+`email.sender-default`.
+
+The page is Email, Addresses (`/email/senders`, from `@oltrem/email/pages`). Since 2026-11-01 it
+is one path: connect an email service, then the portal reads its domains and addresses (on its
+own when no domain is here yet, or with **Look at my provider**) to add all or one by one. Each
+domain is a pane with its state and **Check again**, its addresses as rows with Edit and Remove,
+the defaults picked inline where two addresses could serve, **Add an address** and the checks and
+DNS records folded (open while the domain does not pass). With nothing yet, the empty state names
+the one next step. Someone who may only send from addresses sees them as a plain list.
+
+## Saved templates
+
+The letters and designs the company writes with, kept in D1 as the company's (stage 3 of the
+bulk sending plan, `docs/records/2026-10-28-saved-templates.md`; Write since 2026-10-31,
+the kit's record `docs/records/2026-10-31-write-templates-and-code.md` in oltrem-admin). They are not the typed
+templates above, which are code; a saved template is data a person builds on the page Email,
+Templates (`/email/templates`): a row filters them (all, for Write, for campaigns, with code,
+archived), and one opens to Edit, Preview (as a phone, a desktop or in dark mode) and Versions.
+
+Each template says where it is used (`uses`, migration `0054`): `everyday` on the Write page,
+`bulk` in campaigns, or `both`; a campaign refuses one for Write alone, and its picker lists only
+the others. A **letter** (`style` `letter`) is a saved reply for Write: a subject and words with
+the marks Write reads, kept as one text block; its words open in the message box to be changed. A
+**design** for Write starts with a heading and a **message** block, where the words written on
+Write go; pasted HTML takes them where it says `{{message}}`. The checks warn when a design for
+campaigns has a message place, since a campaign leaves it empty, and campaigns' footer and
+unsubscribe line are left out of a template for Write alone. Each send from Write counts on the
+template (`used_count`, `used_at`), and the row offers the most used first.
+
+A **code** block holds HTML inside a design, cleaned like pasted HTML. Code is added or changed
+only by someone who holds `email.templates.html`; someone who builds from blocks sees it locked,
+and may move it or take it out (the HTML they send back must match what is kept), never change it,
+and may not copy a template that holds code. On Write, a template with code (a code block or
+pasted HTML) is used only by someone who holds `email.write.code`.
+
+| Part | What it does |
+|---|---|
+| Blocks | A heading, text (a blank line starts a paragraph, an https address becomes a link), a button, an image with its description and an optional link, a divider, a space; at most 40. `renderDesign` puts them together as table HTML a mail app shows well on a phone and in dark mode (`color-scheme`, a dark palette by media query), with a hidden preview line and the footer bulk mail carries, and the same message as plain text. Every value is escaped; links are https, mailto or tel, images https |
+| Pasted HTML | Only for someone who also holds `email.templates.html`. `sanitizeEmailHtml` cleans it with HTMLRewriter before it is saved: a script, frame, form, SVG and the like go with their content, an unknown tag goes and keeps its words, an attribute not on the list and every `on...` handler go, a link must be https, mailto, tel, `#` or a merge field, an image https or a small inline picture, a style that loads or runs something goes. What was taken out is kept on the template, in words, and shown on its page |
+| Merge fields | `{{first_name}}`, or `{{first_name|there}}` with words for an empty value, in the subject, the preview line and every block; a person's value is escaped before it goes into pasted HTML. The lists and merge fields are read by `readList` and `merge` (`src/people.ts`, moved here from `@oltrem/campaigns`, which re-exports them) |
+| The checks | Every view of a template carries them, filled with sample values: the subject is set and not all capitals, a preview line, words in the message, its size under the 100 KB Gmail cuts at, no http links, every button and image address whole and https, every image described. A line is `pass`, `warn` (worth a look) or `fail` (must be fixed before it goes to many people) |
+| Versions | Each save that changes the content is a version (the newest 30 are kept). Saves by the same person within ten minutes of a version not yet tested change that version, so moving a block does not bury the history. An older version can be previewed and brought back, as a new version. A save carries the version it was made to; one over a newer version is refused (`KIT-E-1509`) rather than undoing someone's work |
+| The preview | `GET /templates/:id/preview` answers the message as a page of its own, under a policy that runs nothing and loads only https images (`default-src 'none'; ...; sandbox`); the page frames it with `sandbox` as a phone, a desktop or a mail app in dark mode shows it |
+| The test | Sent at once, not through the queue, to the signed-in person's own address, from their default bulk sender when they have one, through the active instance and then each failover. It is kept as a message (`email.template-test`), so its delivery reports arrive like any other; a refusal is the answer and the message's row says `failed` with what each provider said. The version is then marked as tested; the next change makes a new, untested version |
+| Archive | A template is archived, never deleted, so a send that used it can still show it; it can be brought back |
+
+`createEmail(...).templates.design` hands a template's current or named version to
+a send. Every change is audited: `email.template-add`, `email.template-save`,
+`email.template-copy`, `email.template-archive`, `email.template-restore`,
+`email.template-revert`, `email.template-test`.
+
+## Saved lists
+
+The people bulk mail goes to, kept in D1 as the company's (stage 4 of the bulk sending plan,
+`docs/records/2026-10-28-saved-lists.md`), on the page Campaigns, Lists (`/email/lists`).
+
+| Part | What it does |
+|---|---|
+| Filling a list | From a CSV file (1 MB at most, read by `readList`: an `email` column, every other column a merge field, the first and last name joined when there is no name column) or from addresses typed one a line, with a name before or after (`typedCsv`). The people there are kept and these added, a repeat updated, or all of them replaced. A list holds 50,000 people at most; each person is one row written |
+| The reason they may be mailed | Asked at every import, never assumed: `asked` (they signed up or ticked a box), `customers` (they bought, were told and may leave at any time) or `other` with a note; the page also asks the person to confirm. Each person keeps the reason, who added them and when; the list shows its last import's |
+| What an import says | How many were added, updated, repeated in the file and refused, the first twenty refused rows by number, how many are on the do-not-mail list and the merge fields. Nothing is dropped in silence |
+| The do-not-mail list | Read at every send, so a person on it stays on the list, is shown as never mailed with the reason, and the list counts them. The counts are kept on the list and counted again at most every fifteen minutes, so the page of lists reads one row a list |
+| Finding and tidying | A person is found by the start of their address or part of their name, fifty to a page; one is taken off a list, or an address off every list for a person who asks to be forgotten. A list is archived and brought back, or deleted with its people |
+| Downloading | A CSV of the people, their merge fields, their reason and whether they are on the do-not-mail list, for one who holds `email.lists.export` (with a fresh sign-in); every download is audited |
+
+`createEmail(...).lists.people` hands a send its people a page at a time, in address order. Every
+change is audited: `email.list-add`, `email.list-update`, `email.list-import`,
+`email.list-remove-person`, `email.list-forget`, `email.list-archive`, `email.list-restore`,
+`email.list-remove`, `email.list-export`.
+
+## Bulk mail's pipe
+
+`createEmail(...).bulk` hands a slice of ready messages to the provider from the tick, not
+through the queue (stage 5 of the bulk sending plan): one queue message per email would spend the
+free plan's 10,000 queue operations a day at about three each.
+
+| Part | What it does |
+|---|---|
+| `bulk.route(env, tenantId, senderId)` | The instance bulk mail from this sender goes through: the one its domain was set up through, while it is active or a failover, else the active instance; never another provider in the middle of a send, since the domain is verified on one. It answers how many messages one call carries (`batch`: 100 for Resend, 1 for a provider without a batch) and whether a call with no answer can be repeated safely (`repeatable`: the provider honours a key), and what the provider says may still go out (`left`: `{ left, window, resets }`, null when it does not say). A sender that was removed, is for everyday mail or whose domain does not pass is the reason it cannot |
+| `bulk.send(env, { tenantId, senderId, template, items, key, tag? })` | One slice: through the batch in one call under `key`, or each message its own call, six at a time (a Worker opens six connections at once). The do-not-mail list is read at the send, so a person who left a minute ago is not mailed. Each sent or refused message is kept in `email_messages`, in one statement, so its delivery reports find it |
+| What becomes of each person | `sent`, with the provider's id; `refused` as it is, for good, with the provider's words; `skipped`, on the do-not-mail list; `repeat`, no answer from a provider that honours the key: the same slice is sent again under the same key and answered as the first; `unclear`, no answer from a provider that honours none: it may have been sent, so it is never sent again on its own; `again`, nothing was sent: it goes in a later run |
+| When the run stops | The provider asked to slow down, its allowance is used up, it refused the key, the account or the domain, or it failed: no more calls in this run, the rest `again`, and `stop` says why in words, with the seconds the provider asked to wait |
+
+## Allowance
+
+`createEmail(...).usage` (2026-10-28) reads what each provider says is used and left, through
+the providers module's `usage` block: asked at most every 15 minutes, when the Email home, System
+health or the bulk engine needs it, and kept on the instance. Between asks, the counts used on a
+send's headers (Resend's) move the kept figures on, after a queued send, a send at once and a
+bulk slice alike; that write never fails a send the provider took. A key that may only send
+cannot read Resend's count: the headers' counts stay, with the provider's words. Beside it, the
+portal's own count of what it sent through each instance today, this week and this month, from
+`email_messages`. Nothing is guessed: a figure the provider did not give stays empty.
+
+## Ready to send
+
+Every condition an email needs to leave, from what the portal already knows (`src/ready.ts`),
+each with what was found and what to do; added on 2026-10-31 after a day of email refused by a
+Brevo account Brevo had not switched on. `GET /ready` answers it, the Write page and the Providers
+pages show it first, and `email.ready` raises it in System status.
+
+| Check | Stops mail when | May cost mail when |
+|---|---|---|
+| An email service sends | none is active or standing by | only one standing by |
+| Its key works and the account may send | the last check of its key failed, or a real send was refused for the account (401 or 403): that refusal is kept on the instance at once | it was never checked |
+| An address to send from | there is none | |
+| Its domain is verified | | it was never checked, or it is not passing (the service has not verified it, or no DMARC) |
+| Room left to send | the service says none is left | |
+
+The last check of each key is fresh: the job `email.ready` asks each service that may send every
+hour, and **Check again** (`POST /ready/check`) asks them now and checks the From address's
+domain. A provider's definition says what its answer must also hold for the account to send
+(`probe.ready` in `@oltrem/providers`; Brevo's `relay.enabled`), so an account the provider has
+not switched on fails the check with what to do, even though its key works.
+
+## Routes
+
+Under `/api/email`, through the IAM module's sessions and check. Since 2026-11-01 only
+`email.lists.export` asks for a fresh sign-in (a download of people's data), and
+`GET /instances/:id/hook` asks for one itself (it reveals a secret token); sending, the readiness
+check, releasing held mail and address work do not. A page that needs a fresh sign-in shows
+**Confirm it's you** in place, never a smaller view: the list page asks
+`GET /lists/:id/download/ready` first. The templates' capabilities are held at the
+company itself: `email.templates.read` to see and preview, `email.templates.write` to build from
+blocks and send oneself a test, `email.templates.html` as well to paste HTML or change a pasted
+body or a code block. So are the lists': `email.lists.read`, `email.lists.write`, and
+`email.lists.export` to download one, and `email.write.code`, to write in HTML on Write and send
+with a template that holds code.
+
+| Route | Capability | What it does |
+|---|---|---|
+| `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
+| `GET /stats` | `email.read` | The last 14 days (UTC), a row each, every day there even when nothing was sent: the messages that left, those still on the way, the problems (failed, bounced, refused, marked as spam), and of those that left, how many were delivered, opened and clicked. Read through the tenant's index on its last change, so it costs one read per message of the fortnight; the Activity page draws its figures and chart from it |
+| `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
+| `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so it needs a sign-in within ten minutes (`KIT-E-2004`) and reading it is audited as `email.hook` |
+| `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, whether they may add another (`addFrom`), the company's time zone and today on its clock, [Ready to send](#ready-to-send), the templates for Write (each with its fields, whether it has a message place, a letter's words, and `locked` with why when the person may not use it), whether they may use code (`code`) and save a template (`saveTemplate`), and the addresses they wrote to lately (`recent`) |
+| `POST /write` | `email.senders.use` | Send an email the person wrote (`senderId`, `to`, `cc`, `bcc`, `subject`, `body`, optional `draftId`, `later: { day, time }`, `templateId`, `templateVersion`, `fields`, `format` `words` or `html`, and `thread` for a reply) from an address they may use for everyday mail, through the queue after the Undo wait, or at the time asked (see Write); audited with the template and its version, and `format` when HTML |
+| `POST /written` | `email.senders.use` | Save a draft, new or over the person's draft `id`, with its template, fields and format checked as for a send |
+| `GET /written/:id/preview` | `email.senders.use` | One of the person's emails as it will be sent, as its own page under a policy that runs nothing |
+| `GET /written?state=` | `email.senders.use` | The person's own drafts (`draft`), scheduled emails (`scheduled`) or sent ones (`sent`: those still in the queue too), newest first, a hundred at most; each carries `delivery`, its message's state and reports, once queued, and `undoUntil` while its Undo wait lasts |
+| `GET /written/:id` | `email.senders.use` | One email the person wrote, with its `delivery` |
+| `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
+| `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
+| `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href }] }`, read from what the portal knows, no call to a provider beyond its kept allowance |
+| `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
+| `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Integrations page calls it when a provider is made the one that sends |
+| `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
+| `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
+| `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
+| `POST /domains` | `email.senders.manage` | Add a domain (`domain`, `instanceId`), through the provider where it can, and check it |
+| `POST /domains/discover` | `email.senders.manage` | Read the domains and addresses each email provider lists, and add the new ones, or only those in `names` (see Senders) |
+| `GET /domains/found` | `email.senders.manage` | What each email provider lists, each marked `here` or not, with what could not be read (`notes`) and how many were read; nothing is added |
+| `POST /domains/:domain/check` | `email.senders.manage` | Ask the provider to look again, then check the provider and DNS now |
+| `POST /domains/:domain/confirm` | `email.senders.manage` | A person confirms the provider's dashboard shows the domain verified |
+| `POST /domains/:domain/default` | `email.senders.manage` | Make an address the domain's default for bulk or everyday mail (`use`, `senderId`) |
+| `DELETE /domains/:domain` | `email.senders.manage` | Remove a domain that has no sender address |
+| `GET /senders` | `email.senders.manage` | Every sender address, with its domain's state and the defaults it holds |
+| `GET /senders/places` | `email.senders.manage` | The places where the person may add a sender address, the company first |
+| `GET /senders/usable?use=` | `email.senders.use` | The addresses the person may send bulk or everyday mail from, the defaults first; bulk only from a passing domain |
+| `POST /senders` | `email.senders.manage` | Add an address (`email`, `name`, `replyTo`, `scopeId`, `purpose`) |
+| `POST /senders/own` | `email.senders.use`, and `email.senders.add` or `email.senders.manage` at the company | Another address from Write (`email`, `name`): for everyday mail, at the company, on a domain here or one a provider lists (see Senders); 201 with the address |
+| `PATCH /senders/:id` | `email.senders.manage` | Change its name, reply-to, place or purpose |
+| `DELETE /senders/:id` | `email.senders.manage` | Remove it; a default goes last |
+| `GET /templates?archived=&use=` | `email.templates.read` | The saved templates, the newest change first, and whether the person may build and paste; `use=bulk` only those for campaigns, `use=everyday` only those for Write |
+| `POST /templates` | `email.templates.write` | A new template (`name`, `kind` `blocks` or `html`, `style` `design` or `letter`, `uses`, and a letter's `subject` and `body`); blocks start with three to change, or a heading and a message place for Write |
+| `GET /templates/:id?version=` | `email.templates.read` | The template with its checks, merge fields and versions; an older version when one is named |
+| `PATCH /templates/:id` | `email.templates.write` | Save `name`, `subject`, `preheader`, `accent`, `uses`, `blocks`, `html` or a letter's `body`, with the `version` edited; a code block needs `email.templates.html` to be added or changed |
+| `POST /templates/:id/copy` | `email.templates.write` | A copy, as a new template |
+| `POST /templates/:id/archive` | `email.templates.write` | Archive it (`archived` true) or bring it back |
+| `POST /templates/:id/revert` | `email.templates.write` | Make an older `version` the current one again |
+| `GET /templates/:id/preview?version=&dark=` | `email.templates.read` | The message filled with sample values, as its own page under a policy that runs nothing |
+| `POST /templates/:id/test` | `email.templates.write` | Send it to oneself at once; the version is marked as tested |
+| `GET /lists?archived=` | `email.lists.read` | The saved lists with their counts, and whether the person may fill and download them |
+| `POST /lists` | `email.lists.write` | A new, empty list (`name`, `description`) |
+| `POST /lists/forget` | `email.lists.write` | Take an address off every list |
+| `GET /lists/:id?q=&after=` | `email.lists.read` | A list, its counts, its last import's reason, and fifty of its people |
+| `PATCH /lists/:id` | `email.lists.write` | Change its name or description |
+| `POST /lists/:id/import?mode=&consent=&note=&source=&typed=` | `email.lists.write` | Fill it from the body, a CSV file or typed addresses (`typed=1`), adding or replacing; answers what the import did |
+| `DELETE /lists/:id/people/:email` | `email.lists.write` | Take one person off |
+| `POST /lists/:id/archive` | `email.lists.write` | Archive it (`archived` true) or bring it back |
+| `DELETE /lists/:id` | `email.lists.write` | Delete it and its people |
+| `GET /lists/:id/download/ready` | `email.lists.export` | `{ ready: true }` when a download would be allowed now; `KIT-E-2004` when it needs a fresh sign-in, so the page shows Confirm it's you |
+| `GET /lists/:id/download` | `email.lists.export` | The list as a CSV file; audited |
+
+## Delivery reports
+
+Each email instance has a public address, `POST /hooks/email/<instance>/<token>`, which the
+client's Access door lets through. The token is made when the instance's key is first pasted,
+sealed with it, and kept when a key is pasted again, so the address the provider was given stays
+valid. A report is checked twice: the token against the instance's, in constant time, then the
+provider's own signature (`@oltrem/providers`); Brevo signs nothing, so its token is its only
+guard. An SNS subscription is confirmed at the AWS address the verified message names. Each event
+is then kept on its message, sent through that instance, as `last_event` with its time, unless a
+later event is already there; SendGrid's ids, which add a suffix after a dot, are matched by
+prefix. A repeated report changes nothing, and an event the provider's map does not name is
+counted as ignored.
+
+Each report also lands on its message as one write, read in two kinds:
+
+- **The outcome:** delivered, deferred, bounced or refused by the provider, with its time, the
+  provider's words (`reason`) and, for a bounce or a refusal, whether it is for good
+  (`permanent` 1) or for now (0, or unknown). An outcome for good is never replaced, so a late
+  "delayed" cannot hide a bounce.
+- **The first times:** the first open by a person, the first open by a machine (Apple's privacy
+  proxy opens every image, so Brevo's `proxy_open` is counted apart and never as a reader), the
+  first click, the spam report and the unsubscribe. A later report of the same kind changes
+  nothing.
+
+Each message keeps its milestones rather than a row per event, so a send of thousands stays well
+inside the free plan's daily writes.
+
+## The do-not-mail list
+
+`email_donotmail` is the company's list of addresses never to mail, kept in lower case, one row
+an address. `deliver` reads it before every send:
+
+| Reason | What it stops | Put there by |
+|---|---|---|
+| `bounced` | every message | a bounce for good, or three temporary bounces within 30 days (`email_softbounces` counts them) |
+| `refused` | every message | the provider refusing the address for good (Resend's suppressed, Brevo's blocked or invalid) |
+| `complained` | every message | a spam report |
+| `unsubscribed` | bulk mail only, or every message when the person chose **Every email** | the person's unsubscribe (`@oltrem/campaigns`); with bulk only, a password reset still arrives. The person may take it back themselves (**Mail me again**); no other reason is theirs to undo |
+| `manual` | bulk mail only | a person in the portal (`@oltrem/campaigns`) |
+
+Leaving one saved list is not on this list: it is a mark in `email_list_left` (the list, the
+address, the message whose link was pressed). The person stays on the list, shown as never mailed
+with the words "left this list" (`LEFT_WORD`), counted with those on the do-not-mail list, and
+kept across imports, so an import does not bring them back.
+
+An address that unsubscribed and then reports spam moves from bulk only to every message. A
+message whose every address is on the list fails at once with the reason, never in silence; one
+with some barred sends to the rest and keeps the note in `last_error`. A caller marks bulk mail
+with `bulk: true` on `send`.
+
+| Answer | When |
+|---|---|
+| 200 `{ recorded, ignored }` | the report was checked; `recorded` events were kept |
+| 200 `{ subscribed: true }` | an SNS subscription was confirmed |
+| 401 `KIT-E-1409` | the token or the signature does not match, or the instance's signing field is not set |
+| 404 `KIT-E-0404` | no email instance has that id |
+
+## Health
+
+`email.sending`, in the `email` lane: **fail** while a message of the last day waits for a retry
+after every provider refused it, **warn** while one waits for an email provider, **ok** otherwise.
+Two failures in a row open a problem (`@oltrem/core-health`).
+
+`email.quota`: **warn** while an instance that may send is down to its last tenth of what its
+provider says its plan allows (a provider that says only what is left warns at none), **fail**
+when one says none are left, naming the instance and the window; **ok** otherwise, or "no provider
+says what is left".
+
+`email.domains`: **warn** while a sending domain that passed its check fails it now, naming the
+domain and what is wrong; **ok** otherwise.
+
+`email.ready`, for a company with an email service connected: **fail** while a check of
+[Ready to send](#ready-to-send) stops every email, **warn** while one may cost mail, naming the
+first; **ok** when every check passes.
+
+## Personal data
+
+For a privacy request (`personal`, read by the privacy module) the module answers each message
+sent to the address: its template, its state, the last delivery event, its outcome, its first
+open, click, spam report and unsubscribe, and when it was sent; and the address's row on the
+do-not-mail list, with its reason, when there is one. The saved lists the address is on are answered too, with
+the name and merge fields kept there, the reason and who added it, and when they left it from a
+link (`leftAt`). The text of a message is not
+kept, so it is not in the answer, except an email a person wrote on the Write page: its words are
+kept in `email_written` for its writer (to finish a draft, send it later or take it back), and the
+answer lists each one written to the address with its subject and state. A draft stays until its
+writer sends or deletes it; a sent one is kept for the Sent list of the next Mail stage. The Email
+page is linked.
+
+## Not here yet
+
+- A screen of the do-not-mail list in this module and a daily cap come with the later bulk
+  sending stages (docs/records/2026-10-28-senders-and-domains.md); until then the list is seen
+  and changed on the Campaigns pages. Since stage 5 a campaign picks a saved template and a saved
+  list, and the campaigns module's engine is what calls `bulk.route` and `bulk.send`.
+- A list is filled from a file or typed addresses; filling one from the customers module is
+  not built yet.
+- The domain calls are written from Resend's and Brevo's API references and tested against
+  their documented answers, not yet against live accounts. Resend's sending-only keys cannot
+  read domains, so with one the domain is confirmed by hand; the instance's own probe (`GET
+  /domains`) may also refuse such a key.
+- The generated Modules page of a client lists routes, not public hooks.
+
+## The tables and the error codes
+
+`email_messages` (migration `0011_email.sql`): the message key, the tenant, the template, the
+addresses, the status (`leased`, `sent`, `retrying`, `waiting`, `failed`), the attempts, the
+lease, the instance, the provider's id, the last error and the last delivery event; migration
+`0043_email_outcomes.sql` adds the outcome, its time, whether it is for good and the provider's
+words, and the first open by a person and by a machine, click, spam report and unsubscribe. The
+same migration makes `email_donotmail` (the address, what it stops, the reason, the message that
+put it there, who and when) and `email_softbounces` (temporary bounces per address and their
+window). Migration `0045_email_senders.sql` makes `email_domains` (the domain, its instance and
+the provider's id for it, the records and check lines as JSON, the state `new`, `failing` or
+`passing`, who confirmed it, when it was checked and first passed, and its two default
+addresses) and `email_senders` (the address, its name and reply-to, its place, its purpose and
+its domain). Migration `0047_email_templates.sql` makes `email_templates` (the name, the kind,
+the current version's subject, preview line, accent and body, the blocks as JSON or the cleaned
+HTML, what the last cleaning took out, the version last tested, by whom and when, and when it was
+archived) and `email_template_versions` (each version's content, by whom and when). Migration
+`0048_email_lists.sql` makes `email_lists` (the name, description, merge fields, the kept counts
+of people and of those on the do-not-mail list, the last import's reason, note, person, time and
+source, and when it was archived) and `email_list_members` (the address, name, merge fields as
+JSON, the reason, who added them and when). Migration `0052_email_written.sql` makes
+`email_written` (the writer, the sender, the addresses as JSON, the subject and the words, the
+state, the time it goes for one scheduled, the message key once queued and why it was last not
+queued; see Write). Migration `0053_email_signatures.sql` adds each sender address's
+`signature`. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
+route a message with no clear answer stays on. Migration `1003_email_consent.sql` makes
+`email_list_left` (who left which saved list from an unsubscribe link, the message and when) and
+adds `email_domains.bulk_since`, the first day a domain sent bulk mail, which `@oltrem/campaigns`
+warms up from. Forgetting an address removes its marks; deleting a list removes the list's.
+
+| Code | Name | Status | When |
+|---|---|---|---|
+| `KIT-E-1501` | `NO_PROVIDER` | 503 | the tenant has no active or failover email instance |
+| `KIT-E-1502` | `LEASED` | 409 | another delivery of the message holds its lease |
+| `KIT-E-1503` | `UNKNOWN_TEMPLATE` | 422 | no template the Worker was built with has that id |
+| `KIT-E-1504` | `ALL_FAILED` | 502 | the active instance and every failover refused the message |
+| `KIT-E-1505` | `BAD_TEMPLATE_DATA` | 422 | the data does not match the template's schema |
+| `KIT-E-1506` | `IN_USE` | 409 | a domain with addresses, or a default address while others remain, is removed or narrowed |
+| `KIT-E-1507` | `ALREADY_ADDED` | 409 | the domain or the address is there already |
+| `KIT-E-1508` | `SENDER_NOT_READY` | 422 | the sender was removed, is for the other kind of mail, or its domain does not pass for bulk mail |
+| `KIT-E-1509` | `CHANGED_SINCE` | 409 | a template was saved again after the version the change was made to |
+| `KIT-E-1510` | `BAD_LIST` | 422 | a list's file has no email column or no one to mail, is over 1 MB, or would make the list longer than 50,000 |
+| `KIT-E-1511` | `TOO_LATE` | 409 | Undo or Take back after the queue handed the email over, or for one not waiting to be sent |
