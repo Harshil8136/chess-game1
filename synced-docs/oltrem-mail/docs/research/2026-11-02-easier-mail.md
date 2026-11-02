@@ -172,3 +172,10 @@ Bundle L followed, as [its record](../records/2026-11-02-cleaner-lists.md) says.
 put right on import by default, named in the import's answer, with a tick to keep them as
 written, rather than listed for a press afterwards: one fewer step each time. A domain with no MX
 record counts as having no mail server, without a second question for its address record.
+
+Bundle F followed, the owner's question of 2026-11-02 ("we have ImprovMX on our domains for email
+rerouting: can't we have the same?"), as [its record](../records/2026-11-02-forwarding.md) says.
+Two facts read that day shaped it: a Cloudflare forward rule takes exactly one verified address,
+so an alias to several people goes through the Worker; and ImprovMX's API (v4) needs the account's
+key, so the import takes a pasted list first, and reading ImprovMX with a key waits for the
+owner's yes on a new credential (R-05).

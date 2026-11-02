@@ -3,15 +3,16 @@ title: 'Oltrem Mail: the setup page'
 status: approved
 owner: vendor
 last_verified: 2026-11-02
-sources: [Cloudflare docs read 2026-11-02 (Email Service, Email Routing API reference, email authentication), the provider API and free-plan pages read 2026-11-02, oltrem-admin modules/email, modules/providers and packages/core-http, the owner's decisions of 2026-11-02]
+sources: [Cloudflare docs read 2026-11-02 (Email Service, Email Routing API reference, email authentication), the provider API and free-plan pages read 2026-11-02, oltrem-admin modules/email, modules/providers and packages/core-http, the owner's decisions of 2026-11-02, ImprovMX's API reference (v4) read 2026-11-02]
 ---
 
 # Oltrem Mail: the setup page
 
 > **In plain words.** How a business turns on email in its portal: an email provider with two
 > fields, or Cloudflare's own email with one button, delivery reports that register themselves, a
-> backup provider, and the check that keeps the domain's SPF record valid. Part of
-> [the plan](plan.md), approved 2026-11-02; built in phases 2 and 3.
+> backup provider, the check that keeps the domain's SPF record valid, and forwarding the way
+> ImprovMX does it, with a guided move from ImprovMX. Part of [the plan](plan.md), approved
+> 2026-11-02; built in phases 2 and 3, forwarding in bundle F.
 
 ## 1. "Use an email provider"
 
@@ -158,3 +159,56 @@ instead of trusting this list):
 | Cloudflare Email Routing | `include:_spf.mx.cloudflare.net` on the domain Routing runs on | Its own, if Routing runs at the root |
 | Mailjet | `include:spf.mailjet.com` at the root | Its own |
 | Brevo | Whatever Brevo's own records ask for | Counted live |
+
+## 5. Forwarding, as ImprovMX does it
+
+Built in bundle F ([its record](records/2026-11-02-forwarding.md)), on its own page, Forwarding
+(`/email/forwarding`), in the Email tabs. An **alias** forwards one address of a domain
+(`info@example.com`), or every address of it that has no alias or mailbox of its own (the
+catch-all, written `*@example.com`), to one person or up to ten, and keeps nothing. A **mailbox**
+of [the inbox](inbox.md) keeps the mail in the portal; an address is one or the other.
+
+| What | How Cloudflare carries it |
+|---|---|
+| An alias to one person | Cloudflare's own forward rule: the Worker is not used at all |
+| An alias to several people | a rule that sends the mail to the portal's Worker, which forwards it to each confirmed person (Cloudflare forwards to exactly one address a rule) |
+| The catch-all | Cloudflare's catch-all rule, the same two ways |
+| Each person it goes to | an address verified in Email Routing; the portal asks Cloudflare to email each one its link, at most eight a press and the rest by the five-minute job, and starts the alias by itself once one is pressed |
+
+**A domain**, added by hand or by the first alias on it, is looked up in the account's Cloudflare
+zone (never a cached DNS answer):
+
+| Its MX records | What the portal does |
+|---|---|
+| None | turns Email Routing on in the same press: nothing is replaced |
+| Cloudflare's | reads Email Routing's state |
+| ImprovMX's | notes it: the aliases are saved and set on Cloudflare ahead, and the domain's mail keeps going to ImprovMX until **Move from ImprovMX** is pressed |
+| Another mail service's | notes it and changes nothing; forwarding there takes a subdomain |
+
+**The import** takes what a person pastes: ImprovMX's exported list as it is (a header naming the
+alias and its forwards), or one alias a line followed by its people, with spaces, commas, tabs,
+`->` or `=>` between. A line without a domain takes the one filled in. A webhook is left out,
+saying so. Pasting the same list again changes nothing; a changed list changes the people.
+
+**The move**, one domain at a time, is offered once every alias of the domain has at least one
+confirmed person. Its dialog says what changes. Then, in this order:
+
+1. ImprovMX's MX records and the SPF record are kept in the portal, so Move back works from any
+   point of the move.
+2. `include:_spf.mx.cloudflare.net` is added to the SPF record (ImprovMX's include stays, so mail
+   sent through ImprovMX keeps passing); a record that would pass 10 lookups stops the move first.
+3. The aliases' rules are made, while mail still goes to ImprovMX.
+4. ImprovMX's MX records are deleted and Email Routing is turned on, which adds Cloudflare's.
+   Should Cloudflare refuse either, ImprovMX's records are put back at once and the domain stays
+   with ImprovMX.
+
+**Move back** unlocks Cloudflare's records, adds ImprovMX's MX records again beside them (both
+forward, so no mail is lost in between), turns Email Routing off for the domain, which takes
+Cloudflare's own records away, and takes Cloudflare's include out of the SPF record. ImprovMX itself
+is never changed by either, so its aliases are there on the way back. When the same Cloudflare zone
+also carries the sending route, another forwarding domain or mailboxes, Move back is refused with
+the dashboard steps instead, since turning Email Routing off would stop those too.
+
+Every Cloudflare and DNS call is counted: 35 a press and 8 a run of the five-minute job, inside
+Workers Free's 50 an invocation; what is left over is done by the next run. Each move, move back
+and import is on the audit log, a refused one too.

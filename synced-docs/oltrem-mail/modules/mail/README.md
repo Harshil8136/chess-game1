@@ -7,7 +7,10 @@ the account's verified addresses, so staff mail and alerts go out through Cloudf
 while customers' mail keeps its provider; on Workers Paid it may carry customers' transactional
 mail too. Bulk mail never takes it (Cloudflare's rule, mail law M-2). A client without the add-on
 sends exactly as before. It also brings the inbox (docs/inbox.md): mail to the business's own
-addresses kept in the portal, read safely on a phone and answered from the mailbox's address.
+addresses kept in the portal, read safely on a phone and answered from the mailbox's address; and
+forwarding the way ImprovMX does it (docs/setup.md section 5): aliases to one or several people,
+the catch-all, an import of ImprovMX's aliases and a guided move of each domain from ImprovMX,
+with Move back.
 
 ## Using it
 
@@ -28,7 +31,7 @@ mail = createMail<Env>({
 
 export default {
   fetch: app.fetch,
-  // Mail to a mailbox; without the add-on, every address is refused.
+  // Mail to an alias or a mailbox; without the add-on, every address is refused.
   email: (message, env, ctx) =>
     mail ? mail.receive(message, env, ctx) : message.setReject('Unknown recipient'),
 };
@@ -86,6 +89,16 @@ error codes; Cloudflare's delivery events are not wired yet.
 | `POST /api/mail/cloudflare/test` | `mail.manage` | send the test (`to`, the signed-in person when empty) |
 | `DELETE /api/mail/cloudflare` | `mail.manage` | stop sending through Cloudflare |
 | `POST /api/mail/records` | `mail.manage` | write a sending domain's missing records on Cloudflare (`domain`), then check it again |
+| `GET /api/mail/forwarding` | `mail.read` | forwarding as it stands: each domain (`state`, `was`, `line`, `movable`, `before`, `back`) and each alias (its people with `verified`, `waiting` or `queued`, `state`, `line`, `how`), and `may.manage` |
+| `POST /api/mail/forwarding/domains` | `mail.manage` | add a domain (`domain`): looked up, and Email Routing turned on when it has no MX record |
+| `POST /api/mail/forwarding/domains/:domain/check` | `mail.manage` | read it back now, its people's links too, and make the rules left over |
+| `DELETE /api/mail/forwarding/domains/:domain` | `mail.manage` | forget a domain with no alias left |
+| `POST /api/mail/forwarding/domains/:domain/move` | `mail.manage` | move it from ImprovMX to Cloudflare (setup.md section 5); `KIT-E-4009` until it may |
+| `POST /api/mail/forwarding/domains/:domain/back` | `mail.manage` | move it back to ImprovMX |
+| `POST /api/mail/forwarding/aliases` | `mail.manage` | forward an address (`address`, `*@` and the domain for the catch-all) to `forwardTo` (1 to 10) |
+| `PATCH /api/mail/forwarding/aliases/:id` | `mail.manage` | change its people (`forwardTo`) or switch it off and on (`live`) |
+| `DELETE /api/mail/forwarding/aliases/:id` | `mail.manage` | delete it and its rule |
+| `POST /api/mail/forwarding/import` | `mail.manage` | take pasted aliases (`text`, ImprovMX's export or one a line; `domain` for lines without one), 500 at a time: `added`, `changed`, `same`, `skipped` with why |
 
 Each step answers `{ ok, words, dashboard? }`: what happened in plain words, and the dashboard
 step when the portal's key may not do it.
@@ -105,8 +118,9 @@ step when the portal's key may not do it.
 | Capability | `mail.inbox.manage` | add, change and switch off mailboxes, rules and blocked senders; on the admin floor |
 | Setting | `mail.inbox.keep_days` | mail older than this is removed, with its stored copy; 0 (the default) keeps it all; the Owner's |
 | Setting | `mail.inbox.spam_score` | files arriving mail scoring at least this as spam; 0 (the default) files nothing by score |
-| Job | `mail.soon` | every five minutes; brings back the snoozed conversations whose time came (one write for all); reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after |
+| Job | `mail.soon` | every five minutes; brings back the snoozed conversations whose time came (one write for all); reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after; then forwarding, 8 Cloudflare calls at most: the people waiting their turn asked about, the aliases' rules made once a link is pressed, and one domain read back (new, moving, or not read for a day) with its people's links |
 | Job | `mail.inbox` | hourly; brings back once the conversations answered three days ago and not since (one write); removes mail past `keep_days` (100 messages a run), and the senders kept only for their list's unsubscribe once their mail is gone |
+| Health | `mail.forwarding` | `warn` for a forwarding domain or a switched-on alias with a problem (a rule Cloudflare refused, a forward that did not go), with what to do; an alias waiting for a link is not a problem |
 | Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), for a forwarding address whose link has not been pressed a day after Cloudflare emailed it, and past 250 MB of rows or 8 GB of stored copies |
 
 The add-on holds the `4000`s of the error codes (`src/errors.ts`):
@@ -120,6 +134,8 @@ The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 | `KIT-E-4005` | 502 | Cloudflare refused a routing rule; the answer says the dashboard step |
 | `KIT-E-4006` | 409 | the conversation has no message from outside to answer |
 | `KIT-E-4007` | 409 | the mailbox's address could not be made a sender for the reply |
+| `KIT-E-4008` | 409 | that address forwards already, or is a mailbox |
+| `KIT-E-4009` | 409 | the domain cannot move yet (not with ImprovMX, a person has not pressed the link) or was not moved by the portal |
 
 ## The inbox
 
@@ -180,6 +196,12 @@ sends from the mailbox, and Undo puts the words back in it. Mailboxes and rules
 (`/email/mailboxes`): each mailbox with its state and what stands in its way, add, change, switch
 off and delete, its automatic reply, the rules, the blocked senders, and the room used against the free plan.
 
+Forwarding (`/email/forwarding`), in the Email tabs: the domains, each with where its mail goes,
+what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
+with its people and whether each pressed Cloudflare's link, Change, Switch off and Delete; a form
+to add one; and Import from ImprovMX, which takes a pasted list. Someone who may only read sees
+it all and nothing to change.
+
 Mail setup (`/email/mail`), in the Email tabs: the route's line, the steps as a checklist, the
 form that turns Email Routing on, the sending domains with records missing and **Write them**,
 the staff addresses with their state, the test, and Stop. A step that is not ready says whether
@@ -200,5 +222,10 @@ row for a sender a person moved or whose list offers an unsubscribe (the choice,
 addresses, how many and when, when they were left). Migration `1005_mail_answers.sql`:
 `mail_mailboxes` gains the automatic reply (`auto_on`, `auto_subject`, `auto_body`, `auto_from`,
 `auto_until`, `auto_sender_id`, `auto_sent`), `mail_senders` gains `auto_replied_at`, and
-`mail_threads` gains `waiting_since` (with a partial index) and `nudged`. Never KV (mail law
+`mail_threads` gains `waiting_since` (with a partial index) and `nudged`. Migration
+`1007_mail_forwarding.sql`: `mail_forward_domains`, one row a company and domain (its zone, where
+its mail goes, the service it went to, the records a move kept for Move back, whether the move
+added Cloudflare to its SPF record), `mail_aliases` (the address, its people as a JSON list, its
+rule and whether Cloudflare says what the row says, its counts), and `mail_cloudflare_addresses`
+gains `asked_at`, NULL while an address waits its turn to be asked about. Never KV (mail law
 M-3).
