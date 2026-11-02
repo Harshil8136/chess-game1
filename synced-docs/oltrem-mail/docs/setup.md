@@ -25,7 +25,7 @@ flowchart TD
   extra --> look{"Does the provider<br/>know the domain?"}
   look -- "yes, verified" --> hooks["Register delivery reports"]
   look -- "no" --> add["Add it at the provider,<br/>write the records on Cloudflare"]
-  add --> check["Check now, then daily"]
+  add --> check["Check now, then by itself:<br/>every 5 min, hourly, daily"]
   check --> hooks
   hooks --> test["Send a test to me"]
 ```
@@ -47,7 +47,7 @@ flowchart TD
   region; plain SMTP a host, user and password. Resend, Brevo, SendGrid, SMTP2GO and Postmark stay
   at two fields.
 - **Already in the kit:** reading a provider's domains and addresses (8 providers), adding a domain
-  at Resend and Brevo, records with Copy buttons, the daily check in words, DMARC required, sender
+  at Resend and Brevo, records with Copy buttons, the check in words, DMARC required, sender
   addresses with permissions.
 - **Built in phase 3 (2026-11-02):** the single card (Email, Set up), which does every step in
   one press and lists each in words; the records written on Cloudflare when Oltrem Mail is on
@@ -55,6 +55,14 @@ flowchart TD
   3); a backup provider from the same card (section 4); the placement test. What each step does
   is in the email module's README ("The simple provider card") and the mail add-on's ("Records
   on Cloudflare").
+- **Built in bundle C (2026-11-02):** a domain not yet passing is checked by itself every five
+  minutes in its first hour, hourly in its first day, then daily, the provider asked each time to
+  look again; DMARC is read from the domain or the nearest parent, and written in the same press
+  only when none covers it, so a parent's stricter policy is never weakened; each domain says
+  whether it is ready for Gmail, Yahoo and Outlook; a domain that has not passed in a day warns
+  on System health; everyday mail goes through the backup first once the main provider is down
+  to its last tenth. The record is
+  [records/2026-11-02-sets-itself-up.md](records/2026-11-02-sets-itself-up.md).
 
 ## 2. "Use Cloudflare email"
 
@@ -72,7 +80,8 @@ a domain with Email Routing on. The card sets up both cases and tells them apart
    card shows the one guided tap in the Cloudflare dashboard instead.
 3. **Verify staff addresses:** each staff member is added to Verified Destination Addresses
    (`POST /accounts/{account_id}/email/routing/addresses`). Each person clicks Cloudflare's link
-   once; the portal reads the verified state back (on demand and daily) and keeps it in the
+   once; the portal reads the verified state back (on demand, every five minutes for a day after
+   asking, then daily) and keeps it in the
    database, never in KV. New staff are added when they join.
 4. **Onboard the domain for sending, and send the test.** Cloudflare has no API for onboarding a
    domain to Email Sending (checked 2026-11-02, when phase 2 was built), so this one step is a

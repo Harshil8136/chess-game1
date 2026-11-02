@@ -151,3 +151,9 @@ first.
 Not checked yet: a live Cloudflare account for `message.reply()` on the free plan and for how
 Email Routing treats a Worker's error, and live Brevo and Resend accounts for their SMTP settings
 in Gmail's form. Each bundle's first push checks its own on a live account before it is promised.
+
+Built so far (the owner chose all five, in this order, on 2026-11-02): bundle C, as
+[its record](../records/2026-11-02-sets-itself-up.md) says. Two parts changed in the building:
+"a message when done" is the domain's line and System health's warning when it is stuck, rather
+than an email of its own; and the placement test is not re-run by itself, since a person has to
+look where the message landed.

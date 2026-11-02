@@ -91,11 +91,13 @@ binding `EMAIL` and the key's three extra rights: Zone, DNS, Edit; Email Routing
 Email Routing Addresses, Edit. Onboarding a domain for Email Sending has no API, so the setup
 page gives that one step as a tap in the Cloudflare dashboard (setup.md section 2). Email
 Routing Rules, Edit is also what makes each mailbox's rule; without it a mailbox says the
-dashboard step and the hourly job tries again.
+dashboard step and the `mail.soon` job tries again.
 
 The inbox gives the kit three things to show: a Home figure (unread conversations), a search
 section (mail by its words) and a privacy search (messages from an address). Its health check
-and its job are both `mail.inbox`; the `mail.cloudflare` check's words are unchanged. The
+and its hourly job are both `mail.inbox`; a second job, `mail.soon`, runs every five minutes
+(addresses waiting for their verify link, rules not made yet). The `mail.cloudflare` check's
+words are unchanged. The
 Allowance page may read `GET /api/mail/inbox/usage` for the inbox's share of the database and
 the bucket.
 

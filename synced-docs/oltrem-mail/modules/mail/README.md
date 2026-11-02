@@ -63,7 +63,7 @@ missing, with **Write them** (`POST /api/mail/records`). The rule is only to add
 | An SPF record already | never a second one: says which `include:` to add to the one there |
 | Another mail server (MX) | never replaced, in words |
 | A CNAME, or a CNAME wanted beside anything | left to a person, in words |
-| A DMARC record already | kept |
+| A DMARC record already, here or above | kept; none is written under a parent's policy, even when the provider offers one, so a stricter policy above is never weakened (`wantedOf` in `@oltrem/email`); with none anywhere, the provider's own DMARC record, else `v=DMARC1; p=none` |
 | A new SPF record past 10 DNS lookups | not written, with the advice to use a subdomain |
 
 A name outside the zone, a key that may not read or add records (403, "make the key again with
@@ -105,8 +105,9 @@ step when the portal's key may not do it.
 | Capability | `mail.inbox.manage` | add, change and switch off mailboxes, rules and blocked senders; on the admin floor |
 | Setting | `mail.inbox.keep_days` | mail older than this is removed, with its stored copy; 0 (the default) keeps it all; the Owner's |
 | Setting | `mail.inbox.spam_score` | files arriving mail scoring at least this as spam; 0 (the default) files nothing by score |
-| Job | `mail.inbox` | hourly; makes again each live mailbox's routing rule that failed (5 a run) and removes mail past `keep_days` (100 messages a run) |
-| Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), and past 250 MB of rows or 8 GB of stored copies |
+| Job | `mail.soon` | every five minutes; reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after |
+| Job | `mail.inbox` | hourly; removes mail past `keep_days` (100 messages a run) |
+| Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), for a forwarding address whose link has not been pressed a day after Cloudflare emailed it, and past 250 MB of rows or 8 GB of stored copies |
 
 The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 
@@ -124,8 +125,9 @@ The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 
 | Part | How |
 |---|---|
-| A mailbox | a row (`hello` on the Email Routing domain), at a location, with its own literal routing rule in Cloudflare that sends its mail to this Worker; switching it off disables the rule and refuses its mail; a rule the key may not make is retried every hour and its dashboard step shown meanwhile |
-| Arrival | `receive`: an address that is not a live mailbox is refused (`setReject`); a blocked sender (or domain, subdomains too) is dropped and counted; the stream is split: the whole message to the bucket at `mail/inbox/<id>.eml`, the first 128 KB read by postal-mime; one batch writes the message, its search words, its conversation and the mailbox's counts; a failure takes the stored copy back and tells the sender's server so it tries again; a copy goes to the mailbox's forwarding address when it has one |
+| A mailbox | a row (`hello` on the Email Routing domain), at a location, with its own literal routing rule in Cloudflare that sends its mail to this Worker; switching it off disables the rule and refuses its mail; a rule the key may not make is retried by `mail.soon` and its dashboard step shown meanwhile |
+| Arrival | `receive`: an address that is not a live mailbox is refused (`setReject`); a blocked sender (or domain, subdomains too) is dropped and counted; the stream is split: the whole message to the bucket at `mail/inbox/<id>.eml`, the first 128 KB read by postal-mime; one batch writes the message, its search words, its conversation and the mailbox's counts; a failure takes the stored copy back and, when the mailbox has a forwarding address, sends the message there instead and takes it (the safety copy: nothing lost, the problem recorded), else tells the sender's server so it tries again; a copy goes to the mailbox's forwarding address when it has one, and a problem with that copy clears itself once one goes |
+| Forwarding | setting a mailbox's forwarding address asks Cloudflare to email that address its verify link (Email Routing forwards only to verified addresses), so no one opens the dashboard; the mailbox shows `forward`: `waiting` until the link is pressed, read back every five minutes for a day, then `verified`; `unknown` when Cloudflare could not be asked, with why |
 | Conversations | joined by In-Reply-To and References (the last 20 ids), else by subject and correspondent within 30 days; a Message-ID seen before is kept once |
 | Checks | SPF, DKIM and DMARC believed only from Cloudflare's own first Authentication-Results header; a score of 0 to 10 from them and a sender's name that is an address on another domain |
 | Rules | when the sender, the subject or a recipient contains words: archive, mark read, label, or spam; per mailbox or every one, with how often each matched |

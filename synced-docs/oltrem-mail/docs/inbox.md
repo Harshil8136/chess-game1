@@ -139,7 +139,10 @@ setting keeps both in bounds.
   Routing Rules, Edit), at most 200 per domain, on the root as on a subdomain (as built: the
   design had a catch-all on the root, which would also take mail for addresses the business still
   receives elsewhere through other rules). A rule the key may not make is shown with its
-  dashboard step and retried every hour; a copy of each message may go to a verified address.
+  dashboard step and retried by itself (every five minutes in the mailbox's first hour, hourly
+  after); a copy of each message may go to another address, which Cloudflare is asked to send its
+  verify link to as soon as it is set. Should a message not be kept (the bucket or the database
+  failing), it goes to that address instead and is taken, so nothing is lost.
 - **Who may read and who may send** from each mailbox is a capability, like everything else.
 - **Rules:** when the sender, the subject or a recipient contains some words: archive, mark read,
   label, or file as spam, for one mailbox or every one (forwarding is per mailbox). A spam score
