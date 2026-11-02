@@ -91,7 +91,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
-| [@oltrem/email and @oltrem/campaigns](../vendor/mail/README.md) | email and bulk mail, from oltrem-mail, kept here packed; their READMEs are inside | packed copy |
+| [@oltrem/email, campaigns and mail](../vendor/mail/README.md) | email, bulk mail and the Oltrem Mail add-on, from oltrem-mail, kept here packed; their READMEs are inside | packed copy |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
@@ -202,11 +202,11 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [One-click setup](records/2026-10-28-one-click-setup.md) | a file to double-click on each system opens a start page; the deploy picks the account and domain, checks the key on paste and notices the door |
 | [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows what its tool says, the packages and the local start repair themselves, and a stop offers its details to copy |
 | [A sidebar without reloads](records/2026-10-28-sidebar-without-reloads.md) | pages and form changes open in place with the sidebar kept and scrolled; it closes to icons; group colours; Work split into Work, Team and Sales |
-| [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome, bounces for good told from temporary ones, Apple's opens apart; bounces, refusals and spam reports stop every email at once |
+| [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome; hard and soft bounces apart; bounces and spam reports stop all mail |
 | [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily, and campaigns send only from a passing domain |
 | [Saved email templates](records/2026-10-28-saved-templates.md) | designs built from blocks or pasted as HTML and cleaned, checked at each save, previewed as a phone, a desktop and dark mode, tested to oneself, every version kept |
-| [Saved email lists](records/2026-10-28-saved-lists.md) | the people bulk mail goes to, from a file or typed in, each with the reason they may be mailed; refused rows named, the do-not-mail list honoured at every send, downloads audited |
-| [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | campaigns sent in batch calls sized by the Cloudflare plan; no answer repeated under its key or left to a person; provider stops shown; large sends need a second person |
+| [Saved email lists](records/2026-10-28-saved-lists.md) | who bulk mail goes to, from a file or typed, each with a reason; the do-not-mail list at every send |
+| [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | batch calls sized by the plan; nothing sent twice; large sends need a second person |
 | [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's spam or bounce limits; failed runs retried, paused at the third; System health watches; a summary email and results by mailbox |
 | [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses from the provider, drafts, Send later and ten seconds to Undo; mail split into Messages and Mail settings |
 | [A shorter sidebar, tabs and compact buttons](records/2026-10-29-shorter-sidebar.md) | main pages only, in five groups; sub-pages as tabs |
@@ -219,13 +219,14 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Standard admin terms](records/2026-10-31-standard-admin-terms.md) | Modules, Users, Locations, overrides, View, Edit, Admin |
 | [Core hardening](records/2026-11-01-core-hardening.md) | ctx.access sign-in, keys bound to hosts, tick fits, rollback |
 | [Mail moved to Oltrem Mail](records/2026-11-02-mail-moved-out.md) | email and campaigns in their own repository, kept here packed in vendor/mail/ |
+| [Oltrem Mail in the tool](records/2026-11-02-oltrem-mail-in-the-tool.md) | asked on the first deploy, `oltrem mail add` or `remove` later; off by default |
 | [One repo per client](records/2026-11-01-one-repo-per-client.md) | kit vendored in kit/, `oltrem new client`, upgrade --from |
 | [Frame and page head](records/2026-11-01-frame-and-page-head.md) | no sideways shift, wider pages, new head, tabs |
 | [Email remake](records/2026-11-01-email-remake.md) | Write, Sent at once, From adds an address, Addresses |
 | [CPU budget](records/2026-11-01-cpu-budget.md) | in-process API calls, audit recheck spread, time zones once |
-| [The start page as a dashboard](records/2026-10-29-start-dashboard.md) | every start brings in the newest kit, installs, builds and checks; the page runs the portal and says where it lives |
-| [Email allowance, and code kept once](records/2026-10-28-email-allowance-and-shared-code.md) | what each provider says is left beside what was sent; bulk mail never sends past it; four helpers kept once |
-| [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has its own permissions and a page in the sidebar from its first deploy |
+| [The start page as a dashboard](records/2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
+| [Email allowance, and code kept once](records/2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
+| [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |
 
 ## How this folder is checked
 

@@ -124,6 +124,7 @@ cap is the discipline. Each is a ceiling; a configuration may have fewer.
 | `workflow` | 1 | workflow bindings |
 | `assets` | 1 | assets bindings |
 | `ratelimit` | 1 | rate limiter bindings |
+| `send_email` | 1 | email sending bindings: Oltrem Mail's `EMAIL`, only while it is installed ([`oltrem mail`](#oltrem-mail)) |
 | `cron` | 1 | cron triggers |
 | `var` | 3 | `vars` (the three identity values) |
 | `secret` | 12 | names in `secrets.required` |
@@ -228,11 +229,22 @@ printed:
    Cloudflare never shows a secret back, the private key because no copy opens without it. The
    file is an age identity, so `oltrem backup drill --key oltrem-keys.txt` reads it. A run that
    stopped before the deploy uses the keys it kept. `ACCESS_AUD` is set to `worker` with nothing
-   asked (step 6 says why). The ops token comes after the steps that make it, and without echo:
-   the first step is a link to Cloudflare's token form with the name and both permissions filled
-   in (D1 Edit, Account Analytics Read). The pasted key is checked with Cloudflare at once (active,
-   on the account or as a person's key, and allowed D1 on the account) and asked again, up to three
-   times, with what is wrong; when Cloudflare cannot be reached it is used as pasted.
+   asked (step 6 says why). **Oltrem Mail** comes first, on the first deploy only, when kit/ (or
+   the kit itself) carries it and the portal does not have it yet: what it adds in a few lines,
+   then "Should this portal have Oltrem Mail?", **Not now: today's email** listed first or **Yes:
+   add Oltrem Mail**. It is asked here because Mail adds three rights to the key. A yes is
+   written in step 5, as [`oltrem mail add`](#oltrem-mail) does it with its `pnpm install`,
+   before the migrations, so the deploy carries Mail and its migration. A deploy finds Mail half
+   in before it signs in, and stops with the command that finishes it or takes it out.
+   The ops token comes after the steps that make it, and without echo: the first step is a link
+   to Cloudflare's token form with the name and its four permissions filled in (D1 Edit, Account
+   Analytics Read and the two Access ones). With Oltrem Mail the form also chooses DNS Edit, and
+   the steps name the two rights Cloudflare's form has no short key for (Zone, Email Routing
+   Rules, Edit; Account, Email Routing Addresses, Edit). The pasted key is checked with Cloudflare
+   at once (active, on the account or as a person's key, and allowed D1 on the account) and asked
+   again, up to three times, with what is wrong; when Cloudflare cannot be reached it is used as
+   pasted. With Mail, a key that may not list the account's verified addresses is said in one
+   line: the portal goes up all the same, and its Mail setup page checks the domain's rights.
    When the Worker exists but its secrets cannot be listed, the command stops rather than send a
    new KEK, which would leave every stored provider key unreadable.
 5. **The database, the migrations** (as `migrations apply` does) **and `wrangler deploy`**,
@@ -401,7 +413,7 @@ cannot create itself; its scopes are the five the deploy needs, on that account 
 codes are the doctor's, or `1` when the migrations folder has a problem and `3` when the kit
 packages are not installed.
 
-## `oltrem new client <dir> [--name "Acme Ltd"] [--kit <folder>] [--git]`
+## `oltrem new client <dir> [--name "Acme Ltd"] [--kit <folder>] [--mail] [--git]`
 
 A new client repository, one per client (the owner's choice of 2026-11-01), in an empty folder
 (or one holding only `.git`, such as a fresh clone of an empty private repository). It copies the
@@ -431,6 +443,10 @@ installs with no registry and no token, on a computer and in GitHub Actions alik
   from the kit, the kit template's stand in for a moment (a link that is removed again); from a
   packed tool, they came with the template and `pnpm exec oltrem setup` checks them after
   `pnpm install`.
+- **Oltrem Mail.** kit/ always holds its packed file and `pnpm.overrides` names it, so adding it
+  later needs no download. Without `--mail`, `package.json` does not name `@oltrem/mail`, its
+  migrations stay out of `migrations/`, and the portal sends through its providers (today's
+  email). `--mail` wires it in from the start, as [`oltrem mail add`](#oltrem-mail) does.
 - **`--git`** runs `git init -b main`.
 
 It prints the next steps: `pnpm install` (commit `pnpm-lock.yaml` with the rest), `pnpm verify`,
@@ -449,8 +465,10 @@ path with no registry: it packs every kit package into a scratch folder, unpacks
 on its own and runs its `oltrem new client --name "Acme Ltd" --kit`, installs the new repository
 with `pnpm install --offline`, then runs inside it `oltrem setup`, `oltrem new module pet-food`
 (the module template the installed tool carries), its own `pnpm verify` (the type check, the
-tests, the client checks, the generated reference and a dry-run build with its budgets) and
-`oltrem doctor`. Each step is timed and the size of `kit/` printed. It takes about two and a half
+tests, the client checks, the generated reference and a dry-run build with its budgets), then
+Oltrem Mail in and out again (`oltrem mail add`, `pnpm verify`, `oltrem mail status`,
+`oltrem mail remove --confirm remove`, `pnpm verify`), and `oltrem doctor`. Each step is timed and
+the size of `kit/` printed. It takes about two and a half
 minutes on four cores, most of it the packing and the client's own tests, so it is not a gate of
 `pnpm verify`; run it after a change to how the packages are built or packed, or to the template.
 
@@ -774,6 +792,7 @@ Deployments and the core (Backups among it: always on), `preset everything` swit
 | Export | What it is |
 |---|---|
 | `PARTS: PartChoice[]` | the catalogue, `{ id, label, description, core, requires }` per kit part, a copy of `KIT_PARTS` held equal by `test/parts.test.ts` |
+| `ADD_ONS`, `BASE_PARTS`, `partsHere(dir)` | the parts a repository has only when it installed them (`mail`: `@oltrem/mail`), the parts every one has, and this repository's: Mail's switch only where `src/mail.ts` wires it in. `list`, `set` and the deploy's question go by `partsHere` |
 | `PART_PRESETS` | `{ id: 'everything' \| 'email', label, off: string[] }` |
 | `PARTS_KEY` | `'settings.parts_off'` |
 | `partsRefusal(off)` | why a list cannot be written (a bad name, a core part, a part one left on needs), or null |
@@ -786,6 +805,43 @@ Deployments and the core (Backups among it: always on), `preset everything` swit
 
 Exit `0` when written or already so, `1` when a write failed, `3` when it could not run (a list
 the rule refuses, a database wrangler cannot read).
+
+## `oltrem mail`
+
+Oltrem Mail (the `@oltrem/mail` add-on: sending through Cloudflare, and the Mail setup page) put
+into a portal or taken out of it, in a client repository or in the kit's own template
+(`src/mail.ts`). A portal without it sends through its providers, with Write, Sent and Bulk mail:
+today's email. The first deploy asks the same question (step 4 above).
+
+| Command | What it does |
+|---|---|
+| `oltrem mail status [dir]` | one line per fact: in or not, where the package comes from, and what is half in with its fix; exit `1` when something is half in |
+| `oltrem mail add [dir] [--from <folder>]` | puts the five parts in (below), runs `pnpm install` in a client repository, then the kit migrations and the reference (as `oltrem setup`), and prints what is left: `pnpm verify` and a commit, `pnpm dev` to try it, the key's rights, `npm run deploy`. It runs again safely and finishes a half-done add |
+| `oltrem mail remove [dir] --confirm remove` | takes the five parts out and Mail's migration files with their `kit.json` entries, then installs and refreshes the reference as `add` does. Its data stays in the database, and adding it back applies nothing twice. Email Routing and the key's rights stay on Cloudflare until a person changes them, and it says how |
+| `oltrem mail try [dir] [--port 8787] [--to <address>]` | one test email into the portal `pnpm dev` runs on this computer, through wrangler's local address (`/cdn-cgi/local/email`, never the internet), from `someone@example.org` to `hello@example.com` by default. It waits for a Worker that takes mail (an `email` handler in the default export, which comes with Mail's inbox); until then it says how to try sending instead |
+
+**The five parts.** Mail is in when all five are: `package.json` names `@oltrem/mail` (in a
+client repository only: the kit's template always does, for its own lockfile and checks);
+`src/mail.ts` hands `createMail` and Mail's pages to the Worker, which builds Mail when it is
+there and leaves it out when it is not; `wrangler.jsonc` has the `send_email` binding `EMAIL`;
+`oltrem.manifest.json` names it; and the `KIT_OPS_TOKEN` row of `tokens.registry.json` lists the
+three rights Mail adds to the portal's key (Zone, DNS, Edit; Zone, Email Routing Rules, Edit;
+Account, Email Routing Addresses, Edit). Some in and some out is "half in": the deploy stops,
+and the doctor's `MAIL-01` fails, each naming the command that fixes it.
+
+**Where the package comes from.** In a client repository, from its own `kit/`, which every new
+client gets with Mail's packed file whether or not Mail is chosen. `--from <folder>` takes a
+newer build instead (oltrem-mail's `pnpm mail:pack`): all three of its packages (`@oltrem/email`,
+`@oltrem/campaigns`, `@oltrem/mail`) replace the older files in `kit/`, each checked against the
+fingerprint in the folder's `oltrem-mail.json` first. In the kit's template the package comes
+from `vendor/mail/`, so `--from` is refused there. A repository whose `src/index.ts` does not
+mount `src/mail.ts` has a kit older than Mail and is refused, with the upgrade to take.
+
+Every edit is worked out before any file is written, so a refusal changes nothing. `--json`
+prints `{ ok, exitCode, ran, written, removed, steps, problems, next }` (`status`: the state's
+facts). Exit `0` when done or already so, `1` on a problem after the files were written (an
+install that failed: the files stay, and running `pnpm install` by hand finishes it), `3` when it
+could not run.
 
 ## `oltrem upgrade [dir]`
 
@@ -833,6 +889,7 @@ failure the exact command that fixes it. No check prints a secret value.
 | `PM-01` | the installed pnpm is the one `packageManager` names, or, with none installed, the pnpm npx fetched to run this check is | `npm install -g pnpm@<version>`, one command on every Node the kit supports (Node 25 no longer ships Corepack) |
 | `MANIFEST-01` | the Worker here matches its manifest (the check above); skipped where there is no manifest | the rule, or the file to fix |
 | `MIG-01` | every kit migration is copied into `migrations/`, unchanged, with a current `kit.json`; skipped where there is no manifest or no installed kit package | `oltrem migrations sync` |
+| `MAIL-01` | Oltrem Mail is all in or all out: its five parts (below, [`oltrem mail`](#oltrem-mail)) agree, and a package that package.json names is installed; skipped where there is no manifest | `oltrem mail add` to finish it or `oltrem mail remove --confirm remove` to take it out; `pnpm install` |
 | `WF-01` | the deploy workflow `.github/workflows/deploy.yml` is in place | copy it from the client template |
 | `CF-SEC-02` | the Worker's `secrets.required` names exactly the key recipes of the modules `src/index.ts` mounts, so wrangler refuses a deploy with one missing; skipped where there is no manifest or no `modules` export | the two blocks to write, for the wrangler file and the manifest, with the names |
 | `TOKEN-01` | every secret name the repository uses (as `check tokens` finds them) has a row in `tokens.registry.json`; skipped where there is no registry | add the row, with the reason it cannot be an existing token |
