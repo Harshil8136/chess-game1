@@ -166,3 +166,8 @@ Bundle B followed, as [its record](../records/2026-11-02-answers-by-itself.md) s
 reply goes through the provider route (email's send), not Cloudflare's `message.reply()`, whose
 free-plan behaviour is not confirmed; so it carries the journal, consent and the allowance, and
 its loops are stopped by the skip rules and the four days rather than by a header.
+
+Bundle L followed, as [its record](../records/2026-11-02-cleaner-lists.md) says. Misspellings are
+put right on import by default, named in the import's answer, with a tick to keep them as
+written, rather than listed for a press afterwards: one fewer step each time. A domain with no MX
+record counts as having no mail server, without a second question for its address record.
