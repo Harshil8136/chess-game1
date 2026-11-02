@@ -56,6 +56,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [Browser caching](reference/browser-caching.md) | browser storage, versioned reads, instant updates | proposed |
 | [Private mail Worker](reference/private-mail-worker.md) | Mailflare, Cloudflare email, a mail Worker | proposed |
 | [Mail projects](reference/mail-projects.md) | 35 projects compared; a mail repo | proposed |
+| [The shared server](reference/shared-server.md) | one vendor server, a key and limit per client | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
 | [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
 | [@oltrem/core-config](../packages/core-config/README.md) | the four configuration layers, the settings registry, the read path and the storage the package owns | written, beside the code |
@@ -90,7 +91,7 @@ and everything here is written as if public (R-04). It signs in with `PERSONAL_P
 | [@oltrem/approvals](../modules/approvals/README.md) | approvals: who asks and who answers at a place, never one's own, the email with the answer, the routes and the table | written, beside the code |
 | [@oltrem/developer](../modules/developer/README.md) | developer tools: the jobs page with run soon and pause, outgoing webhooks, signed and retried, the API reference, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/providers](../modules/providers/README.md) | providers as data: the definition contract, the email definitions, sealed credentials, the failover order, the routes, the tables and the error codes | written, beside the code |
-| [@oltrem/email and @oltrem/campaigns](../vendor/mail/README.md) | email and bulk mail, kept here packed since they moved to their own repository, oltrem-mail; their READMEs travel inside the packed files | packed copy |
+| [@oltrem/email and @oltrem/campaigns](../vendor/mail/README.md) | email and bulk mail, from oltrem-mail, kept here packed; their READMEs are inside | packed copy |
 | [@oltrem/backup](../modules/backup/README.md) | backups as the kit makes them: the export flow, one at a time, the routes, checks, settings, secrets, errors | written, beside the code |
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
