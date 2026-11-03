@@ -95,7 +95,8 @@ The tool's other commands, which serve a client repository, are in `packages/cli
 | A dependency | the catalog in `pnpm-workspace.yaml` and `dependencies.registry.json`, then `pnpm docs:build` |
 | A binding, var or secret of a Worker | its `oltrem.manifest.json`; one more than the cap needs an exception row with the reason and the owner's yes |
 | Where things stand | docs/README.md |
-| A big change | a dated record in `docs/records/`, linked from docs/README.md |
+| A big change | a dated record in `docs/records/`, in its README |
+| What a page shows | docs/phone-tests.md |
 | A pointer file | its template in `scripts/lib/agents.mjs`, then `pnpm agents:write` |
 | What a package does for its users | a note from `pnpm changeset` (docs/release.md) |
 
