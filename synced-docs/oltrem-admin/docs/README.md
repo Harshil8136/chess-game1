@@ -127,7 +127,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The Vendor's address](records/2026-10-21-vendor-address.md) | the command that writes the Vendor's address after the first deploy, why it is in no file |
 | [Phase 3: capabilities on the manifest](records/2026-10-21-module-capabilities.md) | how a module declares what its routes check, how the Worker registers it at its start and keeps the check current |
 | [Phase 3: jobs and the tick](records/2026-10-21-jobs-and-the-tick.md) | how a module declares its periodic work, how the one tick runs it under a lease and records it |
-| [Phase 3: health and the manifest's last data fields](records/2026-10-21-health-and-manifest-fields.md) | how a module declares its health checks, migrations, settings and errors, how the health job runs them and opens a problem |
+| [Phase 3: health and the manifest's last data fields](records/2026-10-21-health-and-manifest-fields.md) | how a module declares health checks, migrations, settings, errors |
 | [Phase 3: the module generator](records/2026-10-21-the-module-generator.md) | how `oltrem new module` writes a module |
 | [Phase 3: the generated references](records/2026-10-21-generated-references.md) | how a client's reference reads its modules by importing them in Node, what the Modules page shows |
 | [Phase 3: the capability version gate](records/2026-10-21-capability-version-gate.md) | why a module's version must move with its capabilities, how `oltrem docs` refuses a change made under the same version |
@@ -189,7 +189,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Approvals module](records/2026-10-27-approvals-module.md) | ask for a yes at a place; whoever decides there answers, never their own, a no with its reason |
 | [Announcements module](records/2026-10-27-announcements-module.md) | notices to the people at a place, on Home until read, confirmed when they must be, who has read them |
 | [Bookings module](records/2026-10-27-bookings-module.md) | rooms, vehicles and equipment booked by the hour on the company's clock, never twice at once |
-| [The jobs within the queries of one tick](records/2026-10-27-jobs-query-budget.md) | the tick counts each job's database queries and leaves what does not fit to the next tick, under the Free plan's 50 an invocation |
+| [The jobs within the queries of one tick](records/2026-10-27-jobs-query-budget.md) | each job's queries counted; what does not fit waits for the next tick |
 | [Time off module](records/2026-10-27-timeoff-module.md) | days off asked at a place, answered by whoever decides there, counted against the vacation days a year; who is off, never why |
 | [Expenses module](records/2026-10-27-expenses-module.md) | what people spent claimed back with the receipt, answered and marked paid at a place, a month as a spreadsheet for the accountant |
 | [Equipment module](records/2026-10-27-assets-module.md) | who holds which laptop, phone or key, every hand-over kept, and what people whose account is off still hold |
@@ -219,7 +219,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The email pages, remade as a console](records/2026-10-31-email-console-remake.md) | every email page remade with the kit's console pieces |
 | [Templates on Write, and who may use code](records/2026-10-31-write-templates-and-code.md) | letters and designs picked on Write, fields filled from To; code only with its permission; preview, save as template |
 | [Setup remade; the door keeps itself; parts](records/2026-10-31-setup-door-parts.md) | a failed deploy's network cause, setup in sections, more sign-ins, the door kept by the Worker, parts off, access console |
-| [Access, roles, settings and parts redesigned](records/2026-10-31-access-settings-redesign.md) | name the company first; a role as a level per part; invite with role and place; settings in sections; parts as tiles |
+| [Access, roles, settings and parts redesigned](records/2026-10-31-access-settings-redesign.md) | company first; a role per part; invite with role and place |
 | [Standard admin terms](records/2026-10-31-standard-admin-terms.md) | Modules, Users, Locations, overrides, View, Edit, Admin |
 | [Core hardening](records/2026-11-01-core-hardening.md) | ctx.access sign-in, keys bound to hosts, tick fits, rollback |
 | [Mail moved to Oltrem Mail](records/2026-11-02-mail-moved-out.md) | email and campaigns in their own repository, packed in vendor/mail/ |
@@ -229,6 +229,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Frame and page head](records/2026-11-01-frame-and-page-head.md) | no sideways shift, wider pages, new head, tabs |
 | [Email remake](records/2026-11-01-email-remake.md) | Write, Sent at once, From adds an address, Addresses |
 | [CPU budget](records/2026-11-01-cpu-budget.md) | in-process API calls, audit recheck spread, time zones once |
+| [Every server error kept](records/2026-11-03-error-log.md) | each error an alert, grouped, counted, emailed once |
 | [The start page as a dashboard](records/2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](records/2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |

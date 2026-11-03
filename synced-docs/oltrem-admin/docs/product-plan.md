@@ -76,7 +76,7 @@ without it works exactly as it does on Cloudflare alone.
 | Messages | `providers`, then Mail's three modules | built |
 | Developer | `developer` (jobs page, webhooks, API reference) | built; API keys later |
 | Everyday polish, across every module | saved views, bulk actions, a get-started checklist, undo, a notifications inbox (the top of [the open-source ideas](reference/open-source-ideas.md)) | proposed, waiting for the owner's pick |
-| Kit health, under every module | an error log, performance budgets, a phone and accessibility check (the top of [the kit review](reference/kit-review.md)) | proposed 2026-11-03; the error log is the first begun |
+| Kit health, under every module | an error log, performance budgets, a phone and accessibility check (the top of [the kit review](reference/kit-review.md)) | proposed 2026-11-03; the error log done the same day |
 
 ### Mail
 
@@ -107,7 +107,7 @@ written in a record; the next phase may start before, but nothing is called fini
 
 | Phase | Name | What it is for | Done when |
 |---|---|---|---|
-| **A** | Trustworthy | what is built works, is watched and is proven: no error goes unseen, the free plan's limits are measured and kept, docs say what is true | every server error is kept and shown in the portal; a client Worker's size and its CPU per page have a budget the verify chain enforces; a sandbox client deploys with one command and its doctor is green |
+| **A** | Trustworthy | what is built works, is watched and is proven: no error goes unseen, the free plan's limits are measured and kept, docs say what is true | every server error is kept and shown in the portal (done 2026-11-03); a client Worker's size and its CPU per page have a budget the verify chain enforces; a sandbox client deploys with one command and its doctor is green |
 | **B** | Tested by people | the owner, then friends, then a first client use a real portal for their real work | the owed phone tests pass; an upgrade from one kit version to the next is done twice without help; a restore drill passes on the live sandbox; Mail runs on a real domain for a month |
 | **C** | Pleasant every day | the small things people notice: saved views, doing many at once, undo, a first-day checklist, one place for notices | the owner's chosen items from [the open-source ideas](reference/open-source-ideas.md) are built and tested on a phone |
 | **D** | Ready to sell | what a buyer needs before paying | the licence has its legal name and a lawyer's read; the editions and prices are written; a demo portal with sample-free real setup exists; the Server's first version runs for one client, if the owner approves it |
@@ -124,7 +124,7 @@ flowchart LR
 
 | Phase | Work | Who |
 |---|---|---|
-| A | **A1** error log: every server error kept in the database, grouped, shown on System status and raised once as an alert ([kit review K1](reference/kit-review.md)) | agent, begun 2026-11-03 |
+| A | **A1** error log: every server error kept in the database, grouped, listed on the Alerts page and emailed once ([kit review K1](reference/kit-review.md)) | **done** 2026-11-03 |
 | A | **A2** performance budgets: the Worker's size held by the verify chain, CPU per page measured in tests; then the cold start made cheaper (K2) | agent |
 | A | **A3** the sandbox: a fresh Cloudflare account and a private client repository, made with `oltrem new client` and `npm run deploy` (K3) | owner, about 15 minutes, then agent |
 | A | **A4** a phone and accessibility check on every page's HTML in the verify chain (K5) | agent |

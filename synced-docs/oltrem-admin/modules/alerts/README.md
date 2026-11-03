@@ -28,6 +28,21 @@ hands in `send`. The client template sends through `@oltrem/email` with one plai
 `alerts.notice`, as the company the first-run form made, and raises a warning for each System
 health problem when it opens (a check failed twice in a row), resolved when the check passes.
 
+## Server errors
+
+`alerts.reportError(env, { error, area, ref })` keeps a server error as a warning, so none is
+lost to Workers Logs' sampling. Its key is `error.<area>.<fingerprint>`: the fingerprint is the
+error's name and message with numbers, long ids and quoted values taken out, hashed to seven
+characters, so the same failure counts up on one alert. An id inside the area (a queue message's)
+moves to the reference. The detail keeps the message, the reference, when it was last seen and
+the first fifteen lines of the stack. One isolate writes a key at most once a minute and adds the
+occurrences between to the next write, so a failing loop cannot spend the day's D1 writes. It
+never throws: a failure to keep the error goes to the module's own `report`.
+
+The client template's `report`, which every module and the request pipeline call, prints the
+error with its stack and hands it to `reportError` under `waitUntil` from `cloudflare:workers`.
+Errors are emailed like any warning (once, then counted) and listed on the Alerts page.
+
 ## What becomes of the email
 
 `notified` on each alert says it:
