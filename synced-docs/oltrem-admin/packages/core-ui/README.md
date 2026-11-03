@@ -57,7 +57,7 @@ holds (plan 12.1); a test renders every one and checks.
 | `BulkBar` | a `<form>` posting to the screens' `/ui/bulk`, with a `Dialog` for each destructive action | the ticks of a `Table` with `select` join it by its id wherever they sit; it says how many are ticked and its buttons wait for one (frame script); a destructive action asks first and is red; without the script every part still posts |
 | `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word; the pill is a soft tint of the state's colour with the word in the text colour, so it reads in both themes |
 | `Checklist` | `<ul>` with a label | checks one under another, each an icon and its state in words for a screen reader, what was found, and for one that did not pass, what to do, linked where it is done |
-| `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds |
+| `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds; compact since 2026-11-03 (a 40 px icon disc, a plain heading, a short line) |
 
 The page building blocks (`Panel`, `Section`, `Notice`, `Toasts`, `Stats`, `ActionRow`,
 `ProblemNotice`, `Loaded`, `Done` and `when`) are the ones every portal page is made of, here so a
@@ -72,9 +72,15 @@ render their notice inside `Toasts`, a region fixed to the bottom-right corner o
 the foot of a phone, over the page and never in its flow, and the screens put a page's flash
 there too. A notice there is a card with its tone on its edge and a close button; the frame
 script takes one that went well (ok, info) away after six seconds, waiting while the pointer or
-the focus is on it, and leaves a refusal until it is closed. A `Notice` placed in a page is a
+the focus is on it, and leaves a refusal until it is closed; a notice with `keep` (a link or a
+secret shown once) stays until closed too. A `Notice` placed in a page is a
 quiet callout tinted by its tone (`.ui-note`), for a state of things rather than an outcome. The
-popover `Toast` and `ToastRegion`, which nothing used, are gone. `Stats` draws its figures with `Figures`
+popover `Toast` and `ToastRegion`, which nothing used, are gone.
+
+**A page's toolbar (look 2, step 2).** `ChipRow` marks its `<nav>` `ui-filters`; `CommandRow` and
+`ActionRow` mark theirs `ui-cmds`. The page is a grid: from 640 px a command row that follows the
+page's heading sits at its right, and one that follows a row of filters sits at the end of that
+row, so filters and the page's button share one line. On a phone each keeps its own row. `Stats` draws its figures with `Figures`
 (below), so every page's numbers look the same.
 
 ## The console pieces

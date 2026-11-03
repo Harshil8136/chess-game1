@@ -178,8 +178,9 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   page (one indexed read more; none without the users module). It opens `/notifications`: All or
   Unread as chips, Mark all read, each notification a row (unread ones bold) that opens through
   `/notifications/:id`, which marks it read and goes to its page (a path inside the portal, else
-  the list); thirty a page with Older; under them "How you are told", four chips per module and
-  one Save, which sends only what changed. With the sidebar closed to icons the figure is hidden.
+  the list); thirty a page with Older; under them "How you are told", a grid of two switches per
+  module, In the portal and By email (both on is `both`, neither is `off`), saved as one flips
+  (a Save button only without the page script); only what changed is sent. With the sidebar closed to icons the figure is hidden.
 - **Bulk actions** (since 2026-11-03), on a list whose module declares `bulk` (the tasks): a
   tick on each row and card, one in the header for the whole page, and the bar (`BulkBar`) above
   the list with the module's actions. The frame script counts the ticks ("3 tasks chosen"), keeps

@@ -31,7 +31,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P4 | Any page with tabs (Email, Access) | the tabs as one sideways row under the title, the open one marked | [record](records/2026-10-29-shorter-sidebar.md) |
 | P5 | The theme switch at the foot of the sidebar | light and dark both readable, buttons 40 px tall, fields do not zoom when tapped | [record](records/2026-10-27-portal-makeover.md) |
 | P32 | The bell (sidebar, or beside Search on a phone), after someone gives you a task | a figure on the bell; the page lists the task, bold; tapping it opens the task and the figure goes down |
-| P33 | Notifications, How you are told: Tasks to Portal only, Save | "Saved" shows; the next task given to you is under the bell and no email comes |
+| P33 | Notifications, How you are told: switch Tasks' By email off | "Saved" shows at once, no Save button; the next task given to you is under the bell and no email comes |
 | P34 | Any page with chips (Tasks, Access), on a phone and on a computer | small rounded chips on one soft row, the open one tinted in the brand colour; buttons 40 px on the phone and 36 px under a mouse | [record](records/2026-11-03-look-2.md) |
 | P35 | Save any change (a task done), then a change refused (a form left blank) | "Saved" or "done" comes up at the bottom right (the foot on a phone) and leaves by itself after 6 s; a refusal stays until you press × | [record](records/2026-11-03-look-2.md) |
 | P36 | Settings, Find a setting; Parts, Find a module | one field with a magnifier and an arrow inside it, no separate big button; the page loads styled straight away | [record](records/2026-11-03-look-2.md) |
@@ -41,6 +41,10 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P42 | Automations, Files, a booking | the filters (All, On, Off) are soft chips; what you can do (When something happens, Upload a file, New folder) are white buttons with a border, so the two never look alike | [record](records/2026-11-03-look-2.md) |
 | P43 | Search (the magnifier), Customers, a records list, a form's answers | each search is one field with the magnifier in front and the arrow inside; Enter or the arrow searches | [record](records/2026-11-03-look-2.md) |
 | P44 | Users → Roles; Developer → Jobs | Roles lists View only, Standard user and Full admin under "Start a role from a ready set"; a press opens the editor filled in, named, ready to save. In Jobs each time sits on one line with its cost beneath, and Run soon and Pause are two bordered buttons side by side | [record](records/2026-11-03-look-2.md) |
+| P46 | Approvals, Automations, Records on a computer; then on the phone | on the computer the page's button sits at the right of the filters (or of the heading on Records); on the phone it has its own row under them; nothing is cut off | [record](records/2026-11-03-look-2-step-2.md) |
+| P47 | Notifications, How you are told, on the phone | one grid, a row per module with two switches, In the portal and By email, all in view without sideways scrolling | [record](records/2026-11-03-look-2-step-2.md) |
+| P48 | Look and colours | each palette a gradient tile, each background a small preview; the one in use ringed; a tap changes the page at once | [record](records/2026-11-03-look-2-step-2.md) |
+| P49 | Users, Locations, Add a location; then Files, a file, Make a link | the add form opens in a dialog; the link comes up in the corner and stays until you press × | [record](records/2026-11-03-look-2-step-2.md) |
 | P45 | Records → a list → a record → Remove the record | the notice in the corner says it was removed and has Undo; Undo brings the record back with its values; leave it and it stays removed | [record](records/2026-11-03-undo.md) |
 
 ### Lists, saved views and bulk actions
