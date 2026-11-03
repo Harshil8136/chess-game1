@@ -12,7 +12,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 15 tools (used only to build, check or test) and 9 runtime packages (shipped inside a Worker).
+**Where things stand:** 16 tools (used only to build, check or test) and 9 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
@@ -23,6 +23,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 | @internationalized/date | 3.12.4 | runtime | @oltrem/core-ui | The calendar arithmetic the date picker machine requires as its peer dependency; time zones and locales done right instead of by hand. | 12.3 |
 | @tailwindcss/node | 4.3.3 | tool | @oltrem/core-ui, @oltrem/screens | Compiles the kit's theme stylesheet in a test, so a broken token list or a palette that was not reset fails verify, not a client's build. | 12.2 |
 | @types/node | 22.20.5 | tool | @oltrem/analytics, @oltrem/announcements, @oltrem/approvals, @oltrem/assets, @oltrem/automations, @oltrem/bookings, @oltrem/cli, @oltrem/core-ui, @oltrem/customers, @oltrem/developer, @oltrem/expenses, @oltrem/files, @oltrem/invoices, @oltrem/privacy, @oltrem/quotes, @oltrem/screens, @oltrem/shifts, @oltrem/tasks, @oltrem/timeclock, @oltrem/timeoff, oltrem-module-template | The types of Node's own modules (fs, path, child_process) for the command-line tool, which runs on Node rather than in a Worker. | 15.3 |
+| @vitest/coverage-istanbul | 4.1.12 | tool | oltrem-tools | Measures which lines the package and module tests run, inside the Workers runtime too (the Workers pool supports Istanbul only), so the coverage gate can refuse a change that lowers a package's figure (kit review K6; the owner's yes of 2026-11-03). | 15.6 |
 | @zag-js/combobox | 1.46.0 | runtime | @oltrem/core-ui | The combobox state machine: a filtered list with keyboard navigation and a live region, the first of the three widgets the kit does not build itself. | 12.3 |
 | @zag-js/date-picker | 1.46.0 | runtime | @oltrem/core-ui | The date picker state machine in range mode, the third of the three widgets. | 12.3 |
 | @zag-js/menu | 1.46.0 | runtime | @oltrem/core-ui | The menu state machine with submenus and typeahead, the second of the three widgets. | 12.3 |

@@ -147,6 +147,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Saved views](2026-11-03-saved-views.md) | a list's filters kept under a name, a chip above the list |
 | [Bulk actions](2026-11-03-bulk-actions.md) | tick rows on a list, one press for all, each row checked |
 | [Undo after removing a record](2026-11-03-undo.md) | the removal's notice offers Undo; the record waits a day in a trash table |
+| [Test coverage per package](2026-11-03-coverage.md) | verify counts the lines each package's tests run and refuses a drop below its floor |
 | [Notifications](2026-11-03-notifications.md) | a bell with what modules told a person, and their choice per module |
 | [Phone and accessibility check](2026-11-03-phone-a11y-check.md) | every page's names, labels and viewport checked on verify |
 | [Mail with one tick](2026-11-03-mail-tick.md) | the start page's Try it here puts Oltrem Mail in or out |
