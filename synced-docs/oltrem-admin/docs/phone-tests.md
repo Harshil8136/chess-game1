@@ -101,6 +101,8 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 |---|---|---|---|
 | P27 | Messages, Inbox, on a portal started with Mail on your computer: add a mailbox `hello`, then run `oltrem mail try --to` its address | the mailbox is made at once, with no Cloudflare step; the test email is in the Inbox and opens on tap | [record](records/2026-11-02-oltrem-mail-inbox.md) |
 | P31 | The start page on your computer, Try it here: tick **With Oltrem Mail**, press Start; then on your phone (the portal shared to it) Forwarding, **Send a test** to an alias | the start says Oltrem Mail is in, then the portal starts with Mail setup, Inbox and Forwarding; the test says Forwarded, with no Cloudflare step | [record](records/2026-11-03-mail-tick.md) |
+| P38 | Email, Mail setup on a portal whose Settings, Email has a From address | the domain, Send as and name are already filled in from it, with a line saying so; Forwarding's Add a domain has the same domain | [record](records/2026-11-03-mail-tick.md) |
+| P39 | Email, Write: send one; then Forwarding, Send a test | "Sending to …" with Undo comes up at the bottom right and leaves by itself; "Forwarded" or "Refused" comes up the same way, and a refusal stays until you press × | [record](records/2026-11-03-mail-tick.md) |
 | P28 | A deployed portal with Mail: add a mailbox, write to it from your own email, open it, reply | it arrives within a minute or two; your reply reaches you from the mailbox's address | [record](records/2026-11-02-oltrem-mail-inbox.md) |
 
 The Mail add-on's own owed tests (its bundles A, B, C, F and L) are listed in Oltrem Mail's

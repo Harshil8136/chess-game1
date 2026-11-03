@@ -28,7 +28,7 @@ Mail never builds its own version of any of these.
 | Sending and jobs | `@oltrem/core-outbox`, `@oltrem/core-module` | a message leaves through the outbox, with the kit's lease per message key; scheduled work is a job the kit's tick runs |
 | Providers | `@oltrem/providers` | provider instances, their sealed keys, adapters and failover order |
 | Errors | `@oltrem/core-errors` | codes in the blocks mail holds (below) |
-| The look | `@oltrem/core-ui`, `@oltrem/core-module/pages` | the kit's tokens and primitives, pages in the sidebar's Messages group, phone first (R-12); the kit's stylesheet is built from mail's packed pages |
+| The look | `@oltrem/core-ui`, `@oltrem/core-module/pages` | the kit's tokens and primitives, pages in the sidebar's Messages group, phone first (R-12); what a press did (done, refused, imported, sent with Undo) inside the kit's `Toasts`, at the bottom right, while a state of things stays in the page; the kit's stylesheet is built from mail's packed pages |
 | Storage | the client's one database and one bucket | no second Worker, database or bucket; never KV for mail (M-3) |
 
 ## What mail gives the kit

@@ -82,14 +82,14 @@ error codes; Cloudflare's delivery events are not wired yet.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/mail/cloudflare` | `mail.read` | the route as it stands: needs, line, mode, plan, staff, sent today, and `may.manage` |
+| `GET /api/mail/cloudflare` | `mail.read` | the route as it stands: needs, line, mode, plan, staff, sent today, `main` (the portal's main address, name and domain, from the settings `email.from_address` and `email.from_name`, which the setup form starts from) and `may.manage` |
 | `POST /api/mail/cloudflare/setup` | `mail.manage` | turn Email Routing on (`domain`, `subdomain`, `replaceMx`, `local`, `name`) |
 | `POST /api/mail/cloudflare/staff` | `mail.manage` | ask Cloudflare to verify staff addresses (`emails`, or everyone waiting) |
 | `POST /api/mail/cloudflare/check` | `mail.manage` | read Routing, the plan and each address back |
 | `POST /api/mail/cloudflare/test` | `mail.manage` | send the test (`to`, the signed-in person when empty) |
 | `DELETE /api/mail/cloudflare` | `mail.manage` | stop sending through Cloudflare |
 | `POST /api/mail/records` | `mail.manage` | write a sending domain's missing records on Cloudflare (`domain`), then check it again |
-| `GET /api/mail/forwarding` | `mail.read` | forwarding as it stands: each domain (`state`, `was`, `line`, `movable`, `before`, `back`) and each alias (its people with `verified`, `waiting` or `queued`, `state`, `line`, `how`), and `may.manage` |
+| `GET /api/mail/forwarding` | `mail.read` | forwarding as it stands: each domain (`state`, `was`, `line`, `movable`, `before`, `back`) and each alias (its people with `verified`, `waiting` or `queued`, `state`, `line`, `how`), `mainDomain` (Add a domain starts from it while it is not added yet), and `may.manage` |
 | `POST /api/mail/forwarding/domains` | `mail.manage` | add a domain (`domain`): looked up, and Email Routing turned on when it has no MX record |
 | `POST /api/mail/forwarding/domains/:domain/check` | `mail.manage` | read it back now, its people's links too, and make the rules left over |
 | `DELETE /api/mail/forwarding/domains/:domain` | `mail.manage` | forget a domain with no alias left |
