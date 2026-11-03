@@ -139,7 +139,9 @@ users, last seen, age).
   here (`#a1a1aa`), because the Analytics grey sat too close to the blue on a solid dark panel.
 - **Controls** are 2rem tall with a mouse and 2.75rem on a touch screen (`--g-touch`).
 - **Motion:** none on arrival, no counting up. Only the refresh icon turns while it asks, and the
-  loading rows pulse, both only for those who have not asked their device for less.
+  loading rows pulse, both only for those who have not asked their device for less. The loading
+  rows show after a quarter of a second, at once, in the shape of the part's strip and panels
+  (since 2026-11-03, [loading screens](2026-11-03-loading-screens.md)).
 
 ## 6. The counts Sentry left out
 
@@ -170,4 +172,5 @@ Tools to `code-xml`, drawn as `</>`, so the three are each their own.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | The motion line against `src/components/dashboard/sentry/frame.tsx` (`Loading`) and `src/styles/pages/sentry.css` | The rest of the spec; `last_verified` left as it was |
 | 2026-10-29 | Written with the code: every section against the files in `related_code`; the colours with the WCAG formula and the dataviz validator; `test/sentry-console.test.ts` and `test/sentry-console-look.test.ts` pass | The page in a phone browser (Harshil's test); the counts against a live answer from Sentry (the portal's token is not this session's) |

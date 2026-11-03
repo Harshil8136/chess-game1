@@ -88,7 +88,8 @@ watch a visit.
 - **Motion that serves reading.** Panels rise in, lines draw from left to right, bars grow,
   figures count up, the live dot breathes. All of it sits inside
   `@media (prefers-reduced-motion: no-preference)`; with less motion asked for, the page arrives
-  still.
+  still. While a part is read, grey bars stand where its figures and panels will be, after a
+  quarter of a second (since 2026-11-03, [loading screens](2026-11-03-loading-screens.md)).
 - **The portal's own rules kept:** phone first, every option on screen in a row that scrolls
   sideways (never a menu), a word beside every state colour, controls a finger can hit.
 
@@ -234,4 +235,5 @@ the recording there (PH-5).
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | The motion rule's loading sentence against `src/components/dashboard/posthog/frame.tsx` (`Loading`, `Pending`) and `src/styles/pages/posthog.css` | The rest of the spec; `last_verified` left as it was |
 | 2026-10-29 | Written with the code: every section against the files in `related_code`; the categorical palette with the dataviz validator in both themes and the text pairs with the WCAG formula; rrweb's frame sandbox in `node_modules/@rrweb/replay/dist/replay.js`; `test/posthog-lab.test.ts`, `test/posthog-lab-look.test.ts` and `test/posthog-replay.test.ts` pass | The page and the player in a phone browser (Harshil's test); a recording played against PostHog's live snapshot API (the portal's key is not this session's) |

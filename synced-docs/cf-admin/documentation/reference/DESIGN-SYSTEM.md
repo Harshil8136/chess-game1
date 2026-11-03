@@ -553,6 +553,17 @@ box-shadow:  0 0 0 1px rgba(34,211,238,0.06),
 
 **Performance rules:** Animate only `transform`/`opacity` — never layout properties. Nothing over 500ms. Never animate what sits under frosted glass: every pane above it re-blurs on every frame (why the drifting orbs and the full-screen `mix-blend-mode` noise layer were removed on 2026-10-27, `test/shell-look.test.ts`).
 
+### 6.5 Loading placeholders *(shipped 2026-11-03)*
+
+The dashboard pages that read their figures after they open (Overview, Analytics, PostHog,
+Sentry, Content) follow one pattern ([loading screens](../specs/2026-11-03-loading-screens.md)):
+the header and options are drawn by the server; the placeholder has the page's shape (the strip
+of figures, then the panels at their widths); it waits a quarter of a second before it shows
+(`.sk-wait`), so an answer from a kept copy never flashes it; its bars (`.sk-bar`) take their
+colour from the text around them; and a new answer changes the page in place. Both classes are
+in `src/styles/components/skeleton.css`, imported by `global.css`. The console kit's
+`.ck-skeleton` is the older shimmer, still used inside dialogs and lists.
+
 ---
 
 ## 7. Accessibility (WCAG 2.2 AA)
@@ -848,6 +859,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §6.5 (new) against `src/styles/components/skeleton.css`, `src/styles/global.css`, the placeholders in `posthog/frame.tsx`, `sentry/frame.tsx`, `Analytics.tsx` and `Overview.tsx`, and `test/loading-screens-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (fourth) | §5 Sidebar States (Hidden) and §8.1's phone row, against the phone menu's width in `shell.css` (`.ui-dialog.sh-drawer[data-layout='side']`) and `test/sidebar-look.test.ts` | Every other section; the width on a phone, which Harshil checks |
 | 2026-10-27 (third) | §5 "Its look since 2026-10-27", against the group colours as built: `shell.css` (`--nav-hue-*`, `--nav-tint`, `[data-nav-hue]`), `categories.ts` (`hue`), `SidebarMenu.tsx`, `CommandPalette.tsx`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (second) | §3 tree, §4.3 (the browser bar), §5 (shell diagram and text, Sidebar States, its look, the breakpoint table), §6.4's comment and the Login Portal note, against the edge-to-edge frame: `shell.css` (`--nav-*`), `AdminLayout.astro`/`.css`, `Sidebar/index.tsx` (64px), `SidebarHeader.tsx`, `SidebarMenu.tsx`, `config.ts`, `CommandPalette.tsx`, `RegistryTabs.astro`, `categories.ts`, `theme-client.ts`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |

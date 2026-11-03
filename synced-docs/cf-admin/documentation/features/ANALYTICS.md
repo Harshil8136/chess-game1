@@ -135,7 +135,8 @@ each part the viewer may open, in the order of the parts.
 
 `GET /api/analytics/{part}?range=7d|30d|90d&tz=<zone>` answers one part as JSON, built by
 `loadPart` (`src/lib/analytics/report/load.ts`). `summary` loads every part the viewer may open
-and condenses them (`summaryView`).
+and condenses them (`summaryView`); since 2026-11-03 the page has those parts read first, side by
+side (below).
 
 - **Each source is read side by side**, and a failure costs only its own cards: the reader's
   error becomes a sentence (`SourceError`), and the part still answers with whatever else was
@@ -165,6 +166,21 @@ and condenses them (`summaryView`).
 - **Subrequests.** Google search makes 8 calls, the Summary at most 32 when PostHog has to be
   asked twice for each of its four questions, inside the free plan's 50 per request; the runtime
   queues past six at once.
+- **The summary's parts, side by side (2026-11-03).** Inside its one request the summary's
+  questions waited six at a time: 5 s at the middle and 14 s at the slowest over 50 requests in
+  October (Sentry traces), while a part asked alone answered in 12 to 32 ms at the middle from its
+  copy. So the page first asks for every part the person may open, one request each, at the same
+  time, and then the summary, which reads the copies they leave (`warmParts` and `shouldWarm` in
+  `Analytics.tsx`). Not again within nine minutes in the same tab for the same range and zone
+  (`WARM_MS`, kept in `sessionStorage`); Refresh now asks the parts with `fresh=1` and then the
+  summary from their copies, unless a part did not answer; a retry asks the summary alone. The
+  page reads only whether each part answered, and every request checks its own keys
+  ([loading screens](../specs/2026-11-03-loading-screens.md) §3).
+- **On screen while it loads.** The header and the range are drawn at once (the range and
+  Download held hidden in their places until the browser knows the range), grey cards stand in
+  for the board after a quarter of a second, the cards are packed before the first paint, and a
+  new answer changes the board in place: the numbers count on from the old ones and nothing rises
+  in again (2026-11-03).
 - **Nothing a person typed reaches a query.** The range is one of three values, the time zone is
   checked by `safeTimeZone` (no quote or space) and times are built from dates.
 
@@ -242,6 +258,7 @@ Visitors, and the place split on Google search.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §2's summary-side-by-side and loading bullets against `Analytics.tsx`, `AnalyticsCharts.tsx` (`usePack`), `load.ts` and `src/pages/api/analytics/[part].ts`; the times quoted read live through the Sentry connector (`/api/analytics/summary` p50 4,990 ms and p95 13,931 ms over 50 requests, `visitors` p50 31 ms and p95 2,013 ms, `traffic` 32 ms, `search` 20 ms, `email` 12 ms, 30 days); `test/loading-screens.test.ts` and `test/loading-screens-look.test.ts` pass | The summary's time after the change (LS-1); the page in a phone browser; `last_verified` left as it was |
 | 2026-10-26 | Written with the code: every section against the files in `related_code`; the PostHog events and properties against the live project (PostHog connector), the D1 `gsc_index_log`, `booking_attempts` and `admin_pages` rows and the Supabase `bookings`, `booking_pets`, `contact_messages` and `consent_records` columns against the live databases (Cloudflare and Supabase connectors); `test/analytics.test.ts` passes | The portal's PostHog key's Query: Read scope, the Cloudflare `httpRequests1dGroups` answer for this zone and Search Console's search analytics for the service account: none can be called with the portal's own keys from here |
 | 2026-10-26 | Round 2 against the code: §1's Visitors, Booking journey, Google search, Website traffic, Email and Reliability rows, §2's retry, cache key and subrequests, §3's keys after `0078`, §4's account and Sentry rows. Live: `$pageleave` with the page, scroll and time properties and `$autocapture` link taps exist in the last 30 days (124 and 80, PostHog connector); `email_audit_logs` rows carry `delivery_events` arrays of `event`, `timestamp` and `reason` only, with `delivered`, `unique_opened`, `unique_proxy_open` and bounce events (Supabase connector); the `health-state` row and its `worker_errors` check passing every day since 2026-10-17 (D1 connector); `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass (56) | The `date` dimension and CPU quantiles of `workersInvocationsAdaptive`, Sentry's daily error counts over 14, 60 and 90 days, and `httpRequests1dGroups`' newer fields with the portal's keys (MAINTENANCE AN-4 to AN-6); the page in a phone browser |
 | 2026-10-28 | The Speed and experience row of §1, the introduction and §5 against `Experience.tsx`, `experience.ts`, `AnalyticsBlocks.tsx` and `analytics.css`; the page paths of PostHog's speed readings and PageSpeed's runs end in a slash in both sources, and one page had four readings with a p75 of 162.6 s (PostHog and D1 connectors); `test/analytics-experience.test.ts` and `test/experience-look.test.ts` pass | Every other part and section; the board in a phone browser |

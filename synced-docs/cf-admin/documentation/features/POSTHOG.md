@@ -142,6 +142,11 @@ Without the key or the project the page says "PostHog is not connected" instead 
 
 ## 3. The parts
 
+Every part draws its header and options at once, from the address the page was asked with, and
+while its figures are read, grey bars in the places they will take (the figures, then the panels
+at their widths), shown only after a quarter of a second, so a kept copy never flashes them
+([loading screens](../specs/2026-11-03-loading-screens.md), 2026-11-03).
+
 **Overview** (`/dashboard/posthog`), the board ([the lab](../specs/2026-10-29-posthog-lab.md) §4;
 what it says, [the insights](../specs/2026-10-30-posthog-insights.md) §3), its days and hours
 counted in the viewer's own time zone. Ten figures for the last 30 days: visitors, visits, page
@@ -393,6 +398,7 @@ legend or table for every chart, and the player's library loaded only on Play.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §3's loading paragraph against `src/components/dashboard/posthog/shared.tsx` (`useAddress`, `AddressProvider`), `frame.tsx` (`Loading`, `Pending`), the parts' call sites and `src/styles/pages/posthog.css`; `test/loading-screens-look.test.ts` and `test/posthog-lab-look.test.ts` pass | The rest of the document; the parts in a phone browser; `last_verified` left as it was |
 | 2026-10-30 | The other parts in plain words: §3's Recordings, Errors and Events and people, §4's Events and people row and §7's lab test, against the files in `related_code`; the states' meanings against PostHog's "Manage and resolve issues" page (through the PostHog connector's documentation search); the visitor totals question run live (counts only); `test/posthog.test.ts` and `test/posthog-lab.test.ts` pass | The parts in a phone browser; the rest of the document |
 | 2026-10-30 | The insights: §3's Overview and Recordings' switches, §4's Overview row, §5's "Few questions at once", §6's board bullet and §7's two lab tests, each against the files in `related_code`. Live through the PostHog connector, counts and sums only: both board questions and right now as the code builds them answer; `test/posthog-lab.test.ts` and `test/posthog-lab-look.test.ts` pass | The page in a phone browser; the rest of the document; `last_verified` left as it was |
 | 2026-10-29 | The analytics lab: §2's Session recording note, §3's Overview, Recordings (the player), Errors (the chart, "Watch this moment") and Events and people, §4's board, right now, error days and snapshot rows, §5's routes, questions at once, copies and CPU, §6's playing and board bullets and §7's three new test files, each against the files in `related_code`; `test/posthog-lab.test.ts`, `test/posthog-lab-look.test.ts` and `test/posthog-replay.test.ts` pass | The page and the player in a phone browser; PostHog's live snapshot API and whether the portal's key holds Session recording: Read (the Overview's key card will say); the Settings part beyond its new layout |

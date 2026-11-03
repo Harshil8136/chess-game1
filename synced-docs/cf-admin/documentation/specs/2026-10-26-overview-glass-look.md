@@ -77,9 +77,9 @@ own blur and costs a phone much more.
 
 | What | How | When |
 |---|---|---|
-| Backdrop | the circles grow and fade in | once, on opening |
-| Loading | glass outlines of the cards in their places, a light sweeping across them | until the answer comes |
-| Cards | rise 18 px and fade in, one after another (`ov-in` with `ov-d0` to `ov-d14`, 50 to 60 ms apart) | once, when the answer comes |
+| Backdrop | the circles grow and fade in | once, on opening; a page swap keeps them still since 2026-11-03 (`data-swapped`) |
+| Loading | glass outlines of the cards in their places, a light sweeping across them, shown only after a quarter of a second ([loading screens](2026-11-03-loading-screens.md)) | until the answer comes |
+| Cards | rise 12 px and fade in over 0.5 s, one after another (`ov-in` with `ov-d0` to `ov-d14`, 30 ms apart; 18 px, 0.7 s and 50 to 60 ms until 2026-11-03) | once, when the first answer comes; a refresh changes them in place |
 | Figures | count from 0 to the value in one second, fast at first (`useCountUp`, `motion.ts`); on a refresh, from the old value to the new | on opening and on every refresh |
 | Line chart | the line draws itself (`pathLength` 1 and a dash offset), the area fades in after it, the last point pops | on opening and when the chart is switched |
 | Bars, ring, strips | bars grow from the base, the ring's parts sweep round, the day bars and the backup strip are revealed from the left | on opening |
@@ -123,5 +123,6 @@ one under the other. The steps rise in one after another when it opens.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §4's Backdrop, Loading and Cards rows against `src/styles/pages/overview.css` and `src/styles/components/skeleton.css` after the loading pass ([loading screens](2026-11-03-loading-screens.md)) | The rest of the spec; the motion on a phone; `last_verified` left as it was |
 | 2026-10-26 | §6 only, after Invite someone's second pass: the glass tiles and the wide arrangement, against `src/styles/components/invite.css` | The rest of the spec; the look on a phone |
 | 2026-10-26 | Written from the code as built: `src/styles/pages/overview.css` (tokens, pieces, motion), `Overview.tsx`, `OverviewCharts.tsx`, `motion.ts`, `src/styles/components/invite.css`; the contrast figures computed from the token values | The look on a phone, in both themes, and the motion (the owner's test) |

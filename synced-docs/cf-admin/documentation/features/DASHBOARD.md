@@ -57,11 +57,15 @@ backdrop of its own (`.ov-scene`, four blurred colour blobs) with translucent "f
 panels over it (`src/styles/pages/overview.css`, warm in the light theme, violet and blue in the
 dark; [the look](../specs/2026-10-26-overview-glass-look.md)). The island makes one call,
 `GET /api/dashboard/overview?day=<the viewer's date>`, on opening, every 5 minutes while the tab
-is on screen (`src/lib/visible-poll.ts`) and on the refresh button. While it waits, glass outlines
-of the cards shimmer in their places; then the cards rise in one after another, the figures count
-up from 0, the chart's line draws itself, the health ring sweeps round and the backup strip fills
-from the left. On a refresh the figures run from the old value to the new one. A device set to
-reduce motion gets none of this movement.
+is on screen (`src/lib/visible-poll.ts`) and on the refresh button. The greeting, the date and the
+person's first name are drawn by the server, in the time zone Cloudflare places the viewer in
+(`clockIn` and `firstName` in `format.ts`), so they do not change when the browser takes over.
+While it waits, glass outlines of the cards' three rows shimmer in their places, shown only after a
+quarter of a second; then the cards rise in one after another (0.5 s each, 30 ms apart), the
+figures count up from 0, the chart's line draws itself, the health ring sweeps round and the
+backup strip fills from the left. On a refresh the figures run from the old value to the new one.
+The backdrop blooms once, when the tab opens the portal, not on every page after it. A device set
+to reduce motion gets none of this movement ([loading screens](../specs/2026-11-03-loading-screens.md), 2026-11-03).
 
 From the top, in this order on a phone. On a wide screen the chart row moves up to second place,
 under the figures:
@@ -263,6 +267,7 @@ third-party chart library — `uplot` is **not** in `package.json` and is not us
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §0's loading paragraph against `src/pages/dashboard/index.astro`, `Overview.tsx`, `format.ts` (`clockIn`, `firstName`), `src/styles/pages/overview.css` and `NativeNavigationState.astro`; `test/loading-screens.test.ts`, `test/loading-screens-look.test.ts` and `test/overview.test.ts` pass | The rest of the document; the page in a phone browser; `last_verified` left as it was |
 | 2026-10-28 | **Scope-limited to the snapshot's readers.** The detailed-views paragraph and the Scope line after Control Plane was retired, against every importer of `fetchAllAnalytics` and `AnalyticsMetrics` (`src/pages/api/dashboard/overview.ts`, `src/lib/overview/sections.ts`) and the removed `SupabaseWidgets.tsx` | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | **Scope-limited to the website card.** The Figures and chart rows' access column and the detailed-views paragraph against `SECTION_PAGE` and `sees.website` in `src/pages/api/dashboard/overview.ts` (now `denyAnalytics(user, 'traffic')`), `format.ts`'s card link and the removed `WidgetEdgeCompute`; `test/overview.test.ts` passes | The rest of the document; `last_verified` left as it was |
 | 2026-10-26 | §0 rewritten for the glass page, against `src/pages/dashboard/index.astro`, `src/components/dashboard/overview/` (`Overview.tsx`, `OverviewCharts.tsx`, `format.ts`, `motion.ts`), `src/styles/pages/overview.css`, `src/lib/overview/sections.ts` and `src/lib/dal/OverviewRepository.ts`, with `test/overview.test.ts`; `bookings.created_at` and `email_audit_logs.created_at` read live through the Supabase connector (1 booking made in the last 30 days and 5 in the 30 before; emails on 25 of the last 30 days) | The page in a phone browser, the motion and both themes (the owner's test) |
