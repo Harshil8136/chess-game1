@@ -1,8 +1,8 @@
 ---
 title: "Incident Record — Redis Keys Without an Expiry: Rate-Limit Analytics Kept Identifiers Indefinitely"
-status: active
+status: historical
 audience: [ai, technical, operator, owner]
-last_verified: 2026-10-02
+last_verified: 2026-11-03
 verified_against: [code, infra, live]
 owner: harshil
 related_code: [src/lib/ratelimit.ts, src/lib/alert-gate.ts, src/pages/api/auth/logout.ts, src/pages/api/emails/unsubscribe.ts]
@@ -170,3 +170,9 @@ Outside this repository, for the owner:
 - The one-off sweep script from 2026-08-07 expires every key it finds, including
   ones it does not recognise, and prints raw keys. The weekly job replaces it;
   retire it.
+
+**Closed 2026-11-03.** R-1 to R-3 are resolved in `../../MAINTENANCE.md` "Redis TTL
+remediation", and nothing under `src/` imports an Upstash client
+(`grep -rni upstash src/` finds comments only). The two owner steps are on the
+owner's computer and were not checked here. Nothing else is owed from this record,
+so it is historical.

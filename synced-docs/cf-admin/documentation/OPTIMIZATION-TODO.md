@@ -2,7 +2,7 @@
 title: "Optimization To-Do — Runtime Cost, Duplicated Code and Repo Size"
 status: active
 audience: [ai, technical, owner]
-last_verified: 2026-09-23
+last_verified: 2026-11-03
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/api.ts, src/lib/supabase.ts, src/lib/observability.ts, src/lib/jobs/runJob.ts, src/lib/jobs/registry.ts, src/lib/dal/HealthResultsRepository.ts, src/lib/gsc/client.ts, src/lib/formatters.ts, src/stores/dialogStore.ts, scripts/ratchet.py, wrangler.toml]
@@ -214,6 +214,9 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 
 ### OPT-R2 (P1, deadline 2026-10-01). Tracing records every request
 
+> **Done 2026-10-04** (resource plan item 9): `[observability.traces]` in `wrangler.toml`
+> carries `head_sampling_rate = 0.1`, so one request in ten is traced. Re-read 2026-11-03.
+
 - **Evidence.** `wrangler.toml` enables `[observability.traces]` with no
   `head_sampling_rate`, so the default of 1 (100%) applies. From **2026-10-01** each
   span counts as one observability event against **200,000 a day on Free**, shared
@@ -322,8 +325,8 @@ must stay (AI_CODE_MAINTENANCE §4), so comment trimming is not a real lever her
 
 - **Evidence.** `src/workers/scheduled-asset-cleanup.ts` selects `payload` (full
   HTML) for every `email_audit_logs` row, with no range, only to collect attachment
-  keys — but those keys all live under `email-attachments/`, a prefix the same job's
-  `PROTECTED_PREFIXES` never deletes (the file's own comment says so). The drafts
+  keys — but those keys all live under `email-attachments/`, a prefix outside the same job's
+  `DELETABLE_PREFIXES` allow-list, which replaced `PROTECTED_PREFIXES` (the file's own comment says so). The drafts
   scan is equally moot.
 - **Fix.** Delete steps 1b and 1c. **Risk** none while the prefix stays protected.
   **Effort** S.
@@ -719,6 +722,7 @@ the unused images and templates (OPT-S1–S4); the sitemap pings (OPT-R18).
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-03 | claude (docs pass) | `wrangler.toml` `[observability.traces]`; `src/lib/supabase.ts` `createAdminClient`; `withTimeout` in `src/lib/gsc/client.ts` and `src/lib/pagespeed/client.ts`; `src/workers/scheduled-asset-cleanup.ts`; `src/workers/cf-entry.ts`; `src/lib/seo/pings.ts` | OPT-R2 marked done (`head_sampling_rate = 0.1` since 2026-10-04). Still open as written: R6 (no fetch timeout), R7 (the `AbortController` is never passed on), R9 (the payload `select`, its prefix name corrected), R17 (the static registry import), R18 (`pings.ts` is still there). Not re-checked: the other R items, Part B's counts, Part C's sizes |
 | 2026-10-30 | claude | `git status` (`BlogManager.tsx` removed with the old Blog Studio) | OPT-D42's `BlogManager` figure struck; the other figures not re-measured |
 | 2026-10-17 | claude | `src/lib/dal/HealthResultsRepository.ts` (`prune`), `src/lib/auth/routes.ts` (`/api/system-health` → `/dashboard/health`), `git status` (the `alerts` routes, `src/lib/diagnostics/` and `PlatformAlertsManager.tsx` removed) | OPT-R1 marked done; OPT-D3's alerts rows, OPT-D40's diagnostics types and OPT-D42's `PlatformAlertsManager` struck through. No other row re-checked |
 | 2026-10-15 | claude | Read `src/lib/auth/routes.ts` (`/api/access-requests` → `/dashboard`) and `test/access-requests.test.ts` (`resolveApiAuthz`) | OPT-D3's aside on `/api/access-requests` struck through as fixed; the rest of OPT-D3 not re-checked |

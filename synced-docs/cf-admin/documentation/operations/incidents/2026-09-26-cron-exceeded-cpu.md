@@ -1,8 +1,8 @@
 ---
 title: "Incident Record — Scheduled Jobs Stopped: Cron Invocation Exceeded Its CPU Limit"
-status: active
+status: historical
 audience: [ai, technical, operator, owner]
-last_verified: 2026-09-27
+last_verified: 2026-11-03
 verified_against: [code, infra, live-mcp]
 owner: harshil
 related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/workers/cf-entry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/registry.ts]
@@ -200,3 +200,11 @@ sharing one batched read, and no two running jobs share a key.
 3. **Owner decision:** throttle `blog-scheduled-publish` (§5).
 4. **Run the missed Sunday jobs** from `/dashboard/cron`, or let them run on
    2026-10-04.
+
+**Closed 2026-11-03.** Item 4 is done: the Sunday jobs ran on 2026-10-04. Item 3
+was settled another way the same day: `blog-scheduled-publish` now reports its next
+scheduled post as its next due time, so it no longer runs on every tick
+(`src/lib/jobs/registry.ts`). Item 1 is partly covered by cf-backup's daily
+`tick-deadman.yml`, which fails when the tick stops; an alert within one interval is
+still open as `../../MAINTENANCE.md` CR-8. Item 2 stays optional. Nothing else is
+owed from this record, so it is historical.

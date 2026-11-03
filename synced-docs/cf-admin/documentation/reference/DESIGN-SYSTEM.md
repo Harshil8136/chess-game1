@@ -3,7 +3,7 @@
 title: "Design System — 'Midnight Slate'"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-30
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 related_code: [src/styles/, src/components/ui/, src/components/navigation/Sidebar/]
@@ -58,14 +58,15 @@ Verified 2026-09-20 — each of the first five has **0 occurrences** in `src/`:
 The two below were **not** eliminated and are tracked debt, not achieved states:
 
 - Inline `style={{}}` objects and raw hex in components — held by `.ratchet.json`
-  `A6` / `A7` (the counts may fall, never rise). Measured 2026-09-20: **922
-  `style={` lines across 116 `.tsx` files**, and 455 raw six-digit-hex lines in
-  75 files under `src/components/`. Many are static, not computed (e.g. the
+  `A6` / `A7` (the counts may fall, never rise). Measured 2026-11-03: **626
+  `style={` lines across 76 `.tsx` files** (A6), and 251 raw six-digit-hex lines in
+  45 files under `src/components/`. Many are static, not computed (e.g. the
   sidebar's `280px`/`72px` width and `CommandPalette.tsx`'s inline `animation:`).
   `coding-standards.md` §1/§3 uses the same ratchet framing.
-- `window.location.reload()` — **6 call sites remain**, four of them dashboard
-  surfaces (`InquiriesDashboard.tsx`, `ConfigEditor.tsx`, `TopBar.tsx`,
-  `UserSettingsPanel.tsx`), plus `ui/ErrorBoundary.tsx` and one API route. What
+- `window.location.reload()` — **5 call sites remain** (counted 2026-11-03): three
+  components (`InquiriesDashboard.tsx`, `UserSettingsPanel.tsx`, `ui/RequestAccess.tsx`),
+  `ui/ErrorBoundary.tsx`, and the page one API route returns
+  (`src/pages/api/storage/request/[token]/index.ts`). What
   went away is the *automatic* CMS/dashboard refresh reload; explicit
   user-triggered reloads are still the pattern.
 
@@ -451,7 +452,8 @@ with room for a badge (it was 280px, which left a wide empty strip on the right)
 Page names are Inter at 14px, medium weight, slate-300 in the dark theme
 (slate-600 in the light one) and white on hover or when current; the icons and
 group titles take their section colour at the 400 tint in the dark theme
-(`SECTION_ACCENT` in `Sidebar/config.ts`). The page list scrolls with the slim
+(since 2026-10-27 `--nav-hue-*` and `[data-nav-hue]` in
+`src/styles/components/shell.css`; until then `SECTION_ACCENT` in `Sidebar/config.ts`). The page list scrolls with the slim
 4px bar of `.sidebar-scroll` in `global.css`: never put a standard
 `scrollbar-width` or `scrollbar-color` on it, because Chrome and Edge then drop
 the slim bar for their own, with arrows and a grey track
@@ -859,6 +861,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §1's tracked-debt counts re-measured (626 `style={` lines in 76 files, the ratchet's A6; 251 raw-hex lines in 45 component files) and the `window.location.reload()` sites re-listed (5: `TopBar.tsx` and `ConfigEditor.tsx` no longer have one, `RequestAccess.tsx` does); §5's sidebar colour source corrected (`SECTION_ACCENT` is gone; `--nav-hue-*` and `[data-nav-hue]` in `shell.css`); every other component name the document gives exists (`ActivityCenter.tsx`, `ApiAccessView.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx`, the sessions panels), and `useFocusTrap` still does not | Every token value, size and colour against the stylesheets; the pages in a browser |
 | 2026-11-03 | §6.5 (new) against `src/styles/components/skeleton.css`, `src/styles/global.css`, the placeholders in `posthog/frame.tsx`, `sentry/frame.tsx`, `Analytics.tsx` and `Overview.tsx`, and `test/loading-screens-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (fourth) | §5 Sidebar States (Hidden) and §8.1's phone row, against the phone menu's width in `shell.css` (`.ui-dialog.sh-drawer[data-layout='side']`) and `test/sidebar-look.test.ts` | Every other section; the width on a phone, which Harshil checks |
 | 2026-10-27 (third) | §5 "Its look since 2026-10-27", against the group colours as built: `shell.css` (`--nav-hue-*`, `--nav-tint`, `[data-nav-hue]`), `categories.ts` (`hue`), `SidebarMenu.tsx`, `CommandPalette.tsx`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |

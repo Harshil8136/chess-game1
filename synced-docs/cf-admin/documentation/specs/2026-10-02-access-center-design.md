@@ -1,8 +1,8 @@
 ---
 title: "Access Center: one place to see and grant every permission"
-status: active
+status: historical
 audience: [owner, technical, ai, operator]
-last_verified: 2026-10-02
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 related_code: [src/lib/access-center/, src/pages/api/users/access-center.ts, src/components/admin/users/access-editor/, src/pages/dashboard/users/[id]/access.astro, src/lib/vps-proxy.ts]
@@ -18,6 +18,12 @@ tags: [permissions, rbac, plac, acm, access-center, vps, delegation, design]
 > is on or off, and lets managers hand out what they themselves hold to people below them,
 > following the same hierarchy the portal already uses for pages. Each console still checks
 > every change itself, so nothing gets weaker.
+
+> **Historical since 2026-11-03.** All three stages of §9 shipped: stage 3's page edits
+> came with v2, through the four page gates extracted into
+> `src/lib/access-center/page-gates.ts`, which the Access Center's save and the page
+> routes (`src/pages/api/users/pages.ts`, `manage.ts`) call. How it works today:
+> [`../features/ACCESS-CENTER.md`](../features/ACCESS-CENTER.md).
 
 **Screen and save superseded 2026-10-03** by
 [Access Center v2](2026-10-03-access-center-v2-design.md): one editor per person, one save

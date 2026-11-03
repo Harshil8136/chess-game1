@@ -3,7 +3,7 @@
 title: "Disaster Recovery & Backup Restore Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-09-27
+last_verified: 2026-11-03
 verified_against: [code, config, infra, live-mcp]
 owner: harshil
 related_docs: [incident-response.md, ../operations/OPERATIONS.md, ../architecture/KV-RESILIENCE.md, ../security/compliance/SOC2-TSC-mapping.md]
@@ -15,11 +15,12 @@ tags: [disaster-recovery, backup, rto, rpo, soc2, iso22301, runbook]
 > **TL;DR (non-technical):** How to get the platform back if data is lost or a
 > service fails — which button restores what, and how much data you would lose
 > in each case. Read the honest caveat first: **the restore procedures below
-> have never been executed against the production services.** Backup files do
-> exist since 2026-09-26 (cf-backup, see the next note), and each one was
-> restore-checked in a scratch database when it was made. The recovery targets
-> are still estimates derived from vendor documentation, not measurements from
-> a real recovery.
+> have never been executed against the production services.** Backup files
+> exist since 2026-09-26 (cf-backup, see the next note: 25 good backups by
+> 2026-11-01), each one restore-checked in a scratch database when it was made,
+> and since 2026-10-08 whole copies are rebuilt and checked on the server
+> (§8). A full recovery of production has still never been rehearsed, so the
+> recovery times are estimates, not measurements.
 
 > **Superseded for backups, 2026-09-27.** `.github/workflows/backups.yml` was
 > deleted (cf-backup remediation decision RD-8): it never produced a backup.
@@ -29,37 +30,29 @@ tags: [disaster-recovery, backup, rto, rpo, soc2, iso22301, runbook]
 > database and row-counted against the source, then encrypted and archived to
 > R2 (`secondary/pipeline/`), with a 14-day copy in GitHub. cf-backup's tick
 > starts it on the days the backup console's Settings → Schedule names (read
-> 2026-10-16: a full backup on Sundays and Wednesdays at 09:17 UTC), and
+> 2026-11-03: a full backup on Sundays and Wednesdays at 09:17 UTC, the
+> Supabase-only backup off), and
 > GitHub's own daily schedule is the fallback, which stands down on a day that
 > already has a good backup or names none. How to restore from it: cf-backup
-> `docs/remediation/09-secondary-pipeline-specification.md` §5. §0, §1 and §8
-> below describe the retired workflow and are kept as the record of what was
-> planned; `scripts/backup_drill.mjs` still works locally.
+> `docs/remediation/09-secondary-pipeline-specification.md` §5, and its
+> `docs/RESTORE.md` "Recovery points from the Secondary Pipeline". §0, §1, §2.1,
+> §3 and §8 were rewritten for it on 2026-11-03; the retired workflow's plan is
+> in git history and in
+> `../records/reports/2026-09-22-ci-workflow-consolidation.md` (private).
+> `scripts/backup_drill.mjs` still works locally.
 
-## 0. Blocking prerequisites — owner actions, none taken (verified 2026-09-19)
+## 0. Owner actions still open (re-checked 2026-11-03)
 
-**Nothing in §1's "from the export / from the dump" column works until these
-are done.** Every claim in this runbook that depends on a backup artifact is,
-today, a description of a mechanism that has never produced one.
+The three secrets this section once listed (`CLOUDFLARE_API_TOKEN`,
+`SUPABASE_DB_URL`, `BACKUP_PASSPHRASE`) belonged to the deleted `backups.yml`
+and are no longer needed here: cf-backup holds its own keys (cf-backup
+`RULES.md` 3). What is still open:
 
-| # | Action | Why it blocks | Verified state |
+| # | Action | Why it matters | State |
 |---|---|---|---|
-| 1 | Add repository Actions secrets `CLOUDFLARE_API_TOKEN` (account → D1 Edit) and `CLOUDFLARE_ACCOUNT_ID` | `.github/workflows/backups.yml` names each missing secret and skips that store, and its verdict step turns the run red, so no D1 artifact is produced and the D1 drill does not run | The repository holds exactly **one** Actions secret, `PERSONAL_PAT`. No repository variables, no environments |
-| 2 | Add `SUPABASE_DB_URL` (session pooler URI, port 5432 — the direct host is IPv6-only and unreachable from GitHub runners) | Without it the Supabase steps are skipped and the run is **red** (until 2026-09-22 this was a green skip); there is **no** Postgres backup of any kind | Not set |
-| 3 | Add `BACKUP_PASSPHRASE` | **Required since 2026-09-22.** Without it the run uploads nothing and fails, because the archives contain login logs, consent evidence and bookings; unencrypted personal data is never uploaded | Not set |
-| 4 | Decide owner decision **D-13** (§5) | R2 has no backup at all | Open since 2026-09-15 |
-
-**The `backups` workflow has run once, ever:** a manual `workflow_dispatch` on
-2026-09-15 that **failed after 41 seconds** (`d1-export` failed at the
-credentials check; both drills skipped; `supabase-dump` skipped everything).
-The first scheduled run (2026-09-21, started 08:55 UTC for a 03:17 slot) failed the same
-way. *Rebuilt 2026-09-22 as one job* (`documentation/records/reports/2026-09-22-ci-workflow-consolidation.md` §8):
-it now runs **every Sunday 09:17 UTC**, and until prerequisites 1–3 are done every run will fail.
-
-**Consequence for any external statement:** there is no evidence artifact for
-SOC 2 A1.3 today, because no run has produced a summary. Claiming a rehearsed
-restore on the strength of an automated workflow that has never succeeded is an
-audit finding, not evidence.
+| 1 | Decide owner decision **D-13** (§5; `../MAINTENANCE.md` S-2) | `madagascar-images`, `madagascar-staff-storage` and `arco-documents` have no backup at all | Open since 2026-09-15 |
+| 2 | Lock the activity log's copies in R2 (`../MAINTENANCE.md` AL-1) | A copy can be deleted as easily as an entry | Owner step |
+| 3 | Run the incident-response tabletop and one timed recovery (`../MAINTENANCE.md` C-6) | SOC 2 A1.3 asks for evidence that recovery works, not only that copies open | Never run |
 
 ## Context / Scope
 
@@ -81,28 +74,27 @@ deletion event is *both*; run the incident runbook first, this one second.
 
 ## 1. Recovery objectives — targets, not measurements
 
-**Nothing in this table has been measured.** The figures are what the
-mechanisms promise, read from vendor documentation. Read §0 first: the only
-figure with anything behind it today is D1 Time Travel, which is a platform
-feature that needs no artifact.
+**The recovery times in this table have not been measured on production.**
+The data-loss figures follow from the backup schedule (§0's note above: full
+backups on Sundays and Wednesdays, so at most four days apart) and from D1
+Time Travel's window.
 
 | Store | What lives there | RPO (data loss) | RTO (time to restore) | Mechanism |
 |---|---|---|---|---|
-| **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** within 7 days (Time Travel). **Unbounded beyond 7 days** — the weekly export has never produced an artifact (§0) | Time Travel: minutes, per Cloudflare's documentation; never drilled on production, by design. From the export: unknown, and unmeasurable until §0 item 1 | Time Travel, **7-day window on Workers Free**; weekly `wrangler d1 export` artifact, 90 days (`backups` workflow, chunk 6) — **not yet producing artifacts** |
-| **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **Unbounded.** The organisation is on the **free** plan: Supabase backs up Pro/Team/Enterprise projects daily, not free ones, and there is no Dashboard restore here (§3). The weekly `pg_dump` has never run (§0 item 2) | n/a — there is nothing to restore from | Self-service `pg_dump` only. **This is the platform's single largest recovery gap.** |
+| **D1** `madagascar-db` | Audit log, page registry, bookings state, login logs, email drafts | **~0** within 7 days (Time Travel). **Up to 4 days** beyond that: the last cf-backup copy | Time Travel: minutes, per Cloudflare's documentation; never drilled on production, by design. From a copy: not measured on production; the restore tests' rebuild times are on the backup console's Restore tests page | Time Travel, **7-day window on Workers Free**; cf-backup's encrypted copy in R2 (`madagascar-backups`, `secondary/pipeline/`), and for 14 days on GitHub (§2.1) |
+| **Supabase Postgres** | Users, ARCO tickets, consent records, email ledger, inquiries | **Up to 4 days**: the last cf-backup copy. The organisation is still on the **free** plan (read 2026-11-03), so Supabase itself keeps no backup and there is no Dashboard restore (§3) | Not measured on production (§3.1) | cf-backup's encrypted copy of the `public` and `supabase_migrations` schemas and the authentication records, in R2 and for 14 days on GitHub |
 | **KV** `ADMIN_SESSION` (binding `SESSION`) | Sessions, sign-out marks, caches | N/A — by design | ~0 | Not backed up (§4); losing it lifts the last 24 hours' sign-out blocks |
 | **R2** `madagascar-images` | CMS images, email attachments | **No backup** | Unbounded | See §5 — real gap |
 | **R2** `madagascar-staff-storage` | Staff drive files — **including payroll and medical records** | **No backup** | Unbounded | See §5 — same gap, higher-sensitivity data |
 | **Worker** | Application code | 0 | ~5 min | `git` + redeploy |
 
-> **The drill is automated but has never succeeded.** `.github/workflows/backups.yml`
-> is written to rehearse both restores every Sunday and print the elapsed time
-> and a row-count verdict in its job summary (Actions → backups → latest run).
-> That summary is what SOC 2 A1.3 asks for — and it does not exist, because the
-> workflow's one run failed (§0). Until the first green run of each half, the
-> honest external answer for D1-beyond-7-days and for Postgres is *"documented
-> targets, drill automated, **no result yet, and the automation is blocked on an
-> owner action**."* R2 and KV are policies (§4, §5), not estimates.
+> **What is proven, and what is not.** Every backup is restored into a scratch
+> database and row-counted when it is made, and restore tests rebuild a whole
+> copy on the server and score it (§8). That proves a copy opens and is
+> complete. It does not prove how long putting production back would take: no
+> full recovery has been timed (§0 item 3). The honest external answer is
+> *"backups twice a week, each restore-checked, copies test-restored; recovery
+> time a documented estimate."* R2 and KV are policies (§4, §5), not estimates.
 
 ## 2. D1 — point-in-time recovery
 
@@ -133,29 +125,23 @@ wrangler d1 time-travel restore madagascar-db --bookmark=<BOOKMARK_FROM_STEP_2>
 > immediate, whole-database restore. `time-travel info` is the read-only half;
 > restore is not.
 
-### 2.1 Beyond seven days — restore from the weekly export
+### 2.1 Beyond seven days — restore from a cf-backup copy
 
-The `backups` workflow is written to keep a full `wrangler d1 export` (schema +
-data) for 90 days as artifact `d1-madagascar-db-<run id>`, always a `.tar.gz.gpg`
-(the run refuses to upload without `BACKUP_PASSPHRASE`, which is not set yet — §0
-item 3). No such artifact exists yet (§0). The export **creates tables**, so it cannot be
-imported into the live database; restore into a fresh one and swap the binding:
+Each cf-backup run holds `d1-<database>.sql.gz.age` per D1 database, in
+`madagascar-backups` under `secondary/pipeline/<date>/<run>/`, checked by its
+`SHA256SUMS`. The procedure, and the private key it needs, are cf-backup's:
+`docs/remediation/09-secondary-pipeline-specification.md` §5 step 4 (fetch,
+check, decrypt, then `wrangler d1 create` and `wrangler d1 execute --file`). The
+export **creates tables**, so it cannot be imported into the live database:
+restore into a fresh one and point **both** repos at it, `database_id` in
+cf-admin's and cf-astro's `wrangler.toml` `[[d1_databases]]`, then deploy each
+(RULESAd §12: a wrong binding UUID fails silently, so copy it from
+`wrangler d1 list`).
 
-```bash
-# 1. Download the artifact (Actions → backups → run → Artifacts) and unpack
-# 2. Fresh database, import, verify every table's row count against the export's source-counts.json
-npx wrangler d1 create madagascar-db-restore-$(date +%Y%m%d) --location enam
-npx wrangler d1 execute madagascar-db-restore-YYYYMMDD --remote --yes --file madagascar-db.sql
-node scripts/backup_drill.mjs counts madagascar-db-restore-YYYYMMDD madagascar-db.sql restored.json
-node scripts/backup_drill.mjs compare source-counts.json restored.json
-# 3. Point BOTH repos at it: database_id in cf-admin wrangler.toml [[d1_databases]] and
-#    cf-astro's, then release each (RULESAd §12: a wrong binding UUID fails silently — copy it from `wrangler d1 list`)
-```
-
-This is what the weekly drill is written to rehearse (into
-`madagascar-db-drill-<run>`, deleted afterwards). It has not run successfully
-yet (§0), so the duration is **not** known before it is needed — treat the
-steps as untested.
+Each run already restores its own export into a scratch database and compares
+the row counts, and the restore tests rebuild whole copies (§8), so the files
+are known to open. How long the steps take against production has not been
+measured.
 
 > 🚨 **`madagascar-db` is SHARED with `cf-astro`.** A Time Travel restore rolls
 > back the ENTIRE database, not the `admin_*` tables. Restoring to undo an
@@ -164,7 +150,7 @@ steps as untested.
 > row-level repair when the damage is narrow. Binding IDs in
 > [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §1.
 
-## 3. Supabase Postgres — there is no restore path today
+## 3. Supabase Postgres — restore from a cf-backup copy
 
 > 🚨 **Corrected 2026-09-19. This section previously opened with "Dashboard →
 > Database → Backups → pick the most recent good day → Restore" and an RPO of
@@ -175,17 +161,20 @@ steps as untested.
 > `Mascotas Madagascar's projects` → `"plan": "free"`. An operator who opens
 > the dashboard mid-incident expecting that button will not find it.
 
-**Today's real Postgres RPO is unbounded**: no platform backup, and the weekly
-`pg_dump` has never run (§0 item 2). If the data is lost, it is lost.
+**Today's Postgres RPO is the last cf-backup copy**: at most four days old
+(the schedule in the note at the top). Supabase keeps nothing of its own on
+this plan.
 
 Recovery options, in the order to try them:
 
-1. **Nothing has been deleted yet?** Stop writing and take a dump immediately —
-   `pg_dump --schema=public --format=custom` through the session pooler URI.
-   Doing this by hand once is strictly better than the zero copies that exist.
-2. **A dump artifact exists** (only once §0 item 2 is done) — §3.1.
-3. **The project itself is gone** — open a Supabase support ticket; free-plan
-   recovery is discretionary, not contractual.
+1. **Nothing has been deleted yet?** Stop writing and take a copy now: Run now
+   in the backup console, or the hand-taken full export (cf-backup
+   `docs/SUPABASE-FULL-EXPORT.md`). A copy of what survives is worth taking
+   before any restore.
+2. **Restore the last good copy** — §3.1.
+3. **The project itself is gone** — restore into a new project (§3.1), and
+   open a Supabase support ticket; free-plan recovery is discretionary, not
+   contractual.
 
 After any restore, verify in this order — highest compliance value first:
 
@@ -202,25 +191,19 @@ that was previously fixed.
 single cheapest improvement available to the RPO". It is neither: Supabase
 prices 7-day PITR at roughly **$100/month**, and it requires the Pro plan
 (~$25) *plus* at least a Small compute add-on — about **$130/month** all in,
-which breaks the $0 constraint in ADR-0001. The cheap improvement is §0 item 2:
-a weekly `pg_dump` in a workflow that already exists, for $0.
+which breaks the $0 constraint in ADR-0001. The $0 alternative is the one in
+place since 2026-09-26: cf-backup's copies, twice a week.
 
-### 3.1 From the weekly dump
+### 3.1 From a cf-backup copy
 
-Artifact `supabase-madagascar-<run id>` holds `madagascar-public.dump`
-(`pg_dump --schema=public --format=custom`, Postgres 17 client) and
-`source-counts.csv`. To restore into a new Supabase project or branch:
-
-```bash
-pg_restore --dbname "<session pooler URI of the target>" --no-owner --no-privileges madagascar-public.dump
-# then the three compliance counts above, and compare every table with source-counts.csv
-```
-
-The dump exists only once the `SUPABASE_DB_URL` secret is set (the **session
-pooler** URI — the direct host is IPv6-only and unreachable from GitHub
-runners); until then every run skips this half and ends red.
-**It is not set** (§0 item 2), so there is no dump to restore from and this
-subsection describes a procedure, not an option.
+Each run holds `postgres-schema.sql.gz.age`, `postgres-data.sql.gz.age` and
+`postgres-auth.sql.gz.age` (the authentication records). The procedure is
+cf-backup's `docs/remediation/09-secondary-pipeline-specification.md` §5 step 3:
+create the roles the schema grants to (`cf_astro_writer`, `backup_reader`),
+load the schema, the authentication records and the data into the new
+project in one transaction, then set the roles' passwords and grants. Restore
+PostgreSQL before D1. Then run the three compliance counts above, and compare
+each table with the run's `manifest.json`.
 
 > **Open ARCO tickets are the priority check.** Losing one loses a statutory
 > deadline the data subject is still owed (GDPR Art. 15–17 / LFPDPPP), and the
@@ -282,7 +265,7 @@ Options, none yet implemented:
 | Option | Protects against | Leaves open | Cost |
 |---|---|---|---|
 | Bucket lock on `madagascar-staff-storage`, `--retention-days N` | deletes/overwrites of objects younger than N days | everything older than N days; also blocks the app's own Trash hard-delete for young objects | $0 |
-| Weekly `rclone sync` to a backup bucket from the `backups` workflow (R2 S3 token as secrets) | loss of any object, up to a week of lag | a token that can delete the copy too | $0 within the free tier |
+| Weekly `rclone sync` to a backup bucket from a scheduled job (first planned in the `backups` workflow, deleted on 2026-09-27), with an R2 S3 token as its secret | loss of any object, up to a week of lag | a token that can delete the copy too | $0 within the free tier |
 | **Both — the copy, plus an indefinite lock on the backup bucket** (recommended, chunk 6 §3.4) | both | nothing known | $0 |
 | Accept the risk, document it | — | everything | current state |
 
@@ -328,28 +311,32 @@ CMS outage in April 2026 (`RULESAd.md` §12). Verify against
 
 | Scenario | First action | Then |
 |---|---|---|
-| Accidental `retention/purge` on the wrong table | Do **not** re-run anything | D1 → Time Travel to just before. **Postgres → nothing to restore from (§3); take a dump of what survives before doing anything else** |
+| Accidental `retention/purge` on the wrong table | Do **not** re-run anything | D1 → Time Travel to just before. **Postgres → take a copy of what survives (§3 option 1), then restore the rows from the last cf-backup copy (§3.1)** |
 | Supabase project deleted | Open a Supabase support ticket immediately | Free-plan recovery is discretionary (§3); rotate `SUPABASE_SERVICE_ROLE_KEY` |
 | D1 corruption | `time-travel info` to resolve a bookmark | Check the `cf-astro` blast radius, then restore — the restore commits, there is no preview (§2) |
 | R2 objects deleted (`madagascar-images` or `madagascar-staff-storage`) | Stop the cleanup cron | **Unrecoverable today** (§5). For staff-storage, first check whether the file is still in Trash (`is_deleted=1`, within 30 days) — that path is recoverable via `POST /api/storage/[id]/restore` even though the R2-level gap remains |
 | Bad deploy | Cloudflare dashboard rollback | Then `git revert` so `main` matches production |
 | Cloudflare account compromise | Incident runbook §4 | Rotate every token; audit Zero Trust policies |
 
-## 8. The drill — automated 2026-09-15, first measurement still pending
+## 8. The drill — restore tests since 2026-10-08
 
 **This runbook owns the drill cadence.** Any other document stating a restore
 cadence should link here rather than restate it.
 
-`.github/workflows/backups.yml` (every Sunday 09:17 UTC, and on demand from the
-Actions tab) is written to restore the D1 export into
-`madagascar-db-drill-<run id>`, check every table's row count against the
-source, delete the database, and do the same for the Supabase dump in a
-`postgres:17` container. Each run's summary is meant to state the elapsed
-seconds and the verdict.
+Two checks run without anyone asking:
 
-**Status, verified 2026-09-19: one run ever — manual, 2026-09-15, failed after
-41 s. Zero successful runs, zero summaries, zero measurements.** It is blocked
-on §0 items 1–3 and will keep failing the same way until they are done.
+- **Every backup run** restores each export into a scratch database and
+  compares the row counts with the source before it seals the copy (cf-backup
+  `secondary-pipeline.yml`).
+- **Restore tests** (backup console → Restore tests, since 2026-10-08) rebuild a
+  chosen copy on the server in a sealed container with no network, check it in
+  ten groups, score it and delete it ([`../features/BACKUP-CONSOLE.md`](../features/BACKUP-CONSOLE.md)).
+  Read 2026-11-03: nine tests from 2026-10-08 to 2026-10-25, seven with a
+  verdict. The copies of 2026-10-08, 2026-10-18 and 2026-10-25 scored 100
+  ("Ready to restore"), those of 2026-10-07 and 2026-10-14 88 and 94 (ready,
+  with notes). The first two tests, of 2026-10-07's copy, failed on a false
+  finding fixed the same day (`../MAINTENANCE.md` RT-3). Run one after a change
+  to the backup engine, and at least once a quarter.
 
 Still manual, quarterly, ~30 minutes:
 
@@ -360,15 +347,17 @@ Still manual, quarterly, ~30 minutes:
 3. `wrangler d1 time-travel info madagascar-db` — read-only, to keep the
    bookmark lookup familiar. **Do not rehearse `restore` against production:**
    there is no read-only form of it, and the database is shared with cf-astro.
-   Rehearse the restore path by importing an export into a throw-away database
-   (§2.1), which is what the automated drill does.
+   Rehearse the restore path with a restore test instead.
 
-Record the quarterly results in `../security/reviews/` as a dated snapshot.
+Never run yet: a timed recovery of production from a copy, and the incident
+tabletop (§0 item 3). Record the quarterly results in `../security/reviews/` as
+a dated snapshot.
 
 ## 9. Verification log
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | claude: D1 `backup_runs` (25 succeeded backups, 2026-09-26 to 2026-11-01), `backup:config` schedule and `backup:restore-tests` verdicts and scores read through the D1 connector (no names or keys); Supabase `get_organization` (plan `free`); cf-backup `docs/RESTORE.md` and remediation 09 §5 | §0, §1, §2.1, §3, §3.1, §7's first row and §8 rewritten from the deleted `backups.yml` to cf-backup's copies and the restore tests. Not checked: §4, §5 beyond D-13's state, §6, a timed recovery (none exists) |
 | 2026-10-17 | claude: `backup_runs` grouped by kind and status (D1 connector: 19 successful backups, 2026-09-26 to 2026-10-14) | The TL;DR still said there was no backup file to restore from. Corrected. Not checked: anything in §1–§8 |
 | 2026-10-16 | claude: `backup:config`'s schedule read live (D1 connector: full backups on weekdays 0 and 3 at 09:17 UTC, the daily Supabase-only backup off); cf-backup `.github/workflows/secondary-pipeline.yml` (its daily fallback and when it stands down) | The superseded banner said backups ran daily at 09:17 UTC; it now names the schedule's days and the fallback. Not re-checked: the rest of the banner |
 | 2026-10-16 | claude: `src/lib/auth/plac.ts` (`forceLogoutUser`, `revokeSingleSession`), `src/lib/auth/stages/session-stage.ts` and `bootstrap.ts` (where the marks are read), `src/lib/auth/authz-signal.ts`, `src/lib/auth/session.ts`, `src/lib/github/cache.ts`, `src/lib/analytics/providers/index.ts`, `src/pages/api/sessions/active-revocations.ts`, `src/components/admin/users/sessions/BlocksPanel.tsx`; every `SESSION` key prefix in `src/` listed; the links in this runbook resolved | §4 rewritten as a table of what the namespace holds and what losing each part means: the sign-out marks are the one loss that matters, and the step after it; §1's KV row says so. The §0–§3 backup status, §5 and §8 not re-checked |

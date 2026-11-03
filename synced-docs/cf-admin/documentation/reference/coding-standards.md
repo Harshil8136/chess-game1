@@ -32,10 +32,12 @@ alias). SQL for a table lives in that table's repository, once.
   of `npm run verify`. It matches `.prepare(`/`.batch(` on *any* alias — until
   2026-09-02 it matched only the literal `env.DB.prepare(`, so
   `const db = env.DB; db.prepare(...)` was invisible.
-- **Grandfathered:** 10 handlers are on the exempt list inside `rules_check.py`
+- **Grandfathered:** 9 handlers are on the exempt list inside `rules_check.py`
   (`src/pages/api/health.ts` is exempt by design — the authenticated branch
-  probes bindings directly; the other 9 are a burn-down list, down from 17 on
-  2026-09-20). Each vertical
+  probes bindings directly; the other 8 are a burn-down list, down from 17 on
+  2026-09-20). Since 2026-11-03 a test fails when an entry's file is gone or no
+  longer uses raw D1 (`scripts/tests/test_rules_check.py`), so the list only
+  shrinks. Each vertical
   slice moves its queries into `src/lib/dal/` and deletes its line there. Adding
   a line to that list is not a fix.
 - **28 repositories exist today** (`src/lib/dal/*Repository.ts`, counted 2026-11-03). Check for one
@@ -419,7 +421,7 @@ because the pattern it guards against has already recurred enough times to earn 
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-11-03 | §0, §2 and §3 re-measured: the SEC-03 exempt list in `scripts/rules_check.py` is 10 handlers (was 18), `src/lib/dal/` holds 28 repositories (was 19), 130 of 279 components are over 200 lines (was 105 of 196) with the three largest named; `eslint.config.js` (`max-lines` off, the 600-line warn list) and `.ratchet.json` A14 (20) re-read; §2's examples swapped for files that exist; `a11y_check` (6 rules) and `rules_check` (11 rules) as `npm run verify` prints them | §4 to §8 not re-read line by line; Sentry client-side dedup behaviour (an SDK claim) |
+| 2026-11-03 | §0, §2 and §3 re-measured: the SEC-03 exempt list in `scripts/rules_check.py` is 9 handlers (was 18; a tenth entry named the deleted `users/access.ts` and was removed, with a test), `src/lib/dal/` holds 28 repositories (was 19), 130 of 279 components are over 200 lines (was 105 of 196) with the three largest named; `eslint.config.js` (`max-lines` off, the 600-line warn list) and `.ratchet.json` A14 (20) re-read; §2's examples swapped for files that exist; `a11y_check` (6 rules) and `rules_check` (11 rules) as `npm run verify` prints them | §4 to §8 not re-read line by line; Sentry client-side dedup behaviour (an SDK claim) |
 | 2026-10-30 | §3's largest-files sentence: `BlogManager.tsx` is gone (`git rm`, the Blog Studio rebuild) | The file counts, not re-measured |
 | 2026-09-14 | `tsconfig.json`, `eslint.config.js` (max-lines off, 600-line warn list, `prerender` guard), `scripts/ratchet.py` + `.ratchet.json` (A1 history), RULE #0.6 and §8.1 in `RULESAd.md`, every file and repository method this doc names, the motion token names in `global.css`. Five corrections above. | Whether `admin_sessions` / `privacy_requests` are dead on the Supabase side; Sentry dedup behaviour |
 | 2026-09-20 | `sentry.server.config.ts` (no-op, by design) and `src/workers/cf-entry.ts` (`@sentry/cloudflare` `withSentry`) — §4.4 rewritten; `var(--duration-…)` has 0 valid uses in `src/` — §7 rewritten; `scripts/rules_check.py` SEC-03 + its 18-file exempt list and the 19 `src/lib/dal/*Repository.ts` files — new §0; `scripts/a11y_check.py` (6 checks, `title` accepted as a name) — §6 labelled; 105 of 196 components over 200 lines — §3 labelled; `eslint.config.js` (`no-explicit-any: warn`, `max-lines: off`) and `.ratchet.json` re-read; the `admin_sessions` / `privacy_requests` question closed (renamed `zz_dead_*_20260916` by chunk 14a, removal tracked as D-15). | Sentry client-side dedup behaviour (still an SDK claim, not measured here) |

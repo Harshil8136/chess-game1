@@ -3,7 +3,7 @@
 title: "Data Residency & Cross-Border Transfers"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-10-02
+last_verified: 2026-11-03
 verified_against: [code, config]
 owner: harshil
 related_docs: [../RoPA.md, ../SECURITY.md, ISO-27017-27018.md, ../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -33,10 +33,19 @@ of **G6** (GPC) from
 | R2 `madagascar-images` | Cloudflare | **US** | CMS images, email attachments |
 | R2 `madagascar-staff-storage` | Cloudflare | **US** | Staff drive files, incl. payroll/medical records — same jurisdiction and hosting posture as `madagascar-images`; no separate residency treatment |
 | R2 `arco-documents` | Cloudflare | **US** | **ARCO identity documents** — written by `cf-astro` (binding `ARCO_DOCS`), not by `cf-admin`. The most sensitive category in the estate, and the reason this row exists |
+| R2 `madagascar-backups` | Cloudflare | **US** (ENAM) | cf-backup's encrypted copies of the databases (`age`; the key is not in the bucket) |
+| R2 `madagascar-email-files` | Cloudflare | **US** (ENAM) | Attachments of email sent through the email API, written by `cf-email-consumer` |
+| R2 `madagascar-vps-audit` | Cloudflare | **US** (ENAM) | The off-server copy of the cf-vps server's security logs, written by `cf-vps` |
+| GitHub Actions artifacts | GitHub | US | The same encrypted backup copies, kept 14 days |
+| cf-vps server | Oracle Cloud Infrastructure | Canada | The server's own logs; during a restore test, a decrypted copy in a container's memory, deleted when the test ends ([`../RoPA.md`](../RoPA.md) §3) |
 | Queues | Cloudflare | US | Email payloads in transit |
 | Workers | Cloudflare | Edge (global) | Compute only — no durable storage |
 
-*Added 2026-09-19: `arco-documents`.* The live account holds **three** R2
+*Added 2026-11-03: the three newer buckets, GitHub and the cf-vps server.* The live
+account holds **six** R2 buckets (`r2_buckets_list`, 2026-11-03), all in the default
+jurisdiction.
+
+*Added 2026-09-19: `arco-documents`.* The live account then held **three** R2
 buckets, which this document's own 2026-09-14 verification log recorded, but
 the table listed two — a transcription gap, not a measurement gap. A residency
 statement that omits the identity-document store is the omission a privacy
@@ -50,7 +59,8 @@ thousand rows to single digits after a bulk delete on 2026-09-18. Table counts
 stay; row counts belong in the verification log as dated snapshots.
 
 **There is no EU-region deployment, and no per-tenant region selection.**
-Every durable store is US-region.
+Every durable store is US-region except the cf-vps server in Canada, which keeps
+its own logs and holds a decrypted backup copy only for the length of a restore test.
 
 Note the KV nuance: Cloudflare KV replicates globally by design. It holds only
 session state and cached access maps — no customer PII — but "globally
@@ -173,6 +183,7 @@ having even where there is nothing to opt out of.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §1 against the live account: `r2_buckets_list` → **six** buckets, and `r2_bucket_get` on the three new ones (`madagascar-backups`, `madagascar-email-files`, `madagascar-vps-audit`: location ENAM, default jurisdiction); their contents from cf-backup `docs/RESTORE.md`, cf-email-consumer `docs/reference/CONFIG.md` and cf-vps's log-storage design; GitHub and the cf-vps server from `../RoPA.md` §3 | §2's transfer mechanisms for GitHub and Oracle Cloud (not assessed here); §3 to §6 |
 | 2026-10-07 | The Upstash sub-processor row (changed 2026-10-04): no Upstash import or client under `src/` (`grep -rni "upstash" src/` finds only historical comments), the `[[ratelimits]]` bindings in `wrangler.toml`, `RoPA.md` §3's matching row | The Upstash instance itself (no connector reaches it); cf-astro's and cf-chatbot's use of it; every other row |
 | 2026-09-19 | §1 against the live account: `r2_buckets_list` → **three** buckets (`arco-documents`, `madagascar-images`, `madagascar-staff-storage`), so `arco-documents` was added; `wrangler.toml` KV block (namespace `ADMIN_SESSION`, binding `SESSION`) — the name `cf-admin-session` does not exist and was removed. §2 Upstash row against `src/lib/ratelimit.ts` (keys are the raw client IP on session-less routes such as `auth/logout`, and the user UUID elsewhere) and `src/lib/audit-helpers.ts` (`hashIp` is on the D1 write path); Google added to match `RoPA.md` §3; OpenRouter marked not-configured against `wrangler.toml` `[secrets] required`. §4 D1 residency mechanism (jurisdiction, not location hint) and the D1 topology (three databases). §5/§6 GPC against `src/lib/security/gpc.ts` and its single caller in `src/lib/security/csp.ts` — detection only, nothing persisted. **Dated snapshot:** D1 `madagascar-db` holds 30 application tables; `admin_audit_log` held 7 rows, oldest `2026-09-18 04:49:11` UTC. | The DPA filing status in §2 (an owner action); Supabase's actual region (still inferred from a connection string in `cf-astro`); §3's commercial assertions; §4's cost estimates |
 | 2026-09-14 | §1 store list and regions against the live estate (Cloudflare MCP: D1 queries served from `ENAM`, three R2 buckets listed, KV global; Supabase `us-east-1` per the connection string in cf-astro's `wrangler.toml`); §2 sub-processor list against code (`api.brevo.com` in 13 files, `api.resend.com` in 1, PostHog in 10, `src/lib/sentry-scrub.ts` and `src/lib/security/gpc.ts` present, Upstash still on the request path, OpenRouter in `src/lib/ai/`); §5 GPC detection file present | The DPA filing status in §2 (an owner action), the commercial assessment in §3, and §4's cost estimates |
