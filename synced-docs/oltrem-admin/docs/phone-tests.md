@@ -38,7 +38,8 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P37 | Users, Roles, Create role, Start from Standard user | every module a row with None, View, Edit and Admin always showing (a level the module has not is faded); Set all shown to Admin, then type in Find a module and press None: only the rows shown change; the arrow on Records lists its four permissions; the sentence in the Save bar follows | [record](records/2026-11-03-role-matrix.md) |
 | P40 | Your account (the foot of the sidebar), Look and colours: tap Emerald, then Dots; then open Tasks; switch the theme to Dark | each tap changes the page at once with a "saved" note; the green and the dots stay on every page and in dark; Back to the portal's own returns the blue | [record](records/2026-11-03-looks.md) |
 | P41 | Users, a user who holds a role: What they can do | one row per module with "3 of 4" and a word (View, Edit, Admin, Custom); the arrow on a row lists each permission and where it comes from | [record](records/2026-11-03-role-matrix.md) |
-| P42 | Automations, Files, a booking | the filters (All, On, Off) are soft chips; what you can do (When something happens, Upload a file, New folder) are white buttons with a border, so the two never look alike | look 2 |
+| P42 | Automations, Files, a booking | the filters (All, On, Off) are soft chips; what you can do (When something happens, Upload a file, New folder) are white buttons with a border, so the two never look alike | [record](records/2026-11-03-look-2.md) |
+| P43 | Search (the magnifier), Customers, a records list, a form's answers | each search is one field with the magnifier in front and the arrow inside; Enter or the arrow searches | [record](records/2026-11-03-look-2.md) |
 
 ### Lists, saved views and bulk actions
 
