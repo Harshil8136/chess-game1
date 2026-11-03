@@ -89,6 +89,11 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 ### Mail
 
+| # | Open | You should see | From |
+|---|---|---|---|
+| P27 | Messages, Inbox, on a portal started with Mail on your computer: add a mailbox `hello`, then run `oltrem mail try --to` its address | the mailbox is made at once, with no Cloudflare step; the test email is in the Inbox and opens on tap | [record](records/2026-11-02-oltrem-mail-inbox.md) |
+| P28 | A deployed portal with Mail: add a mailbox, write to it from your own email, open it, reply | it arrives within a minute or two; your reply reaches you from the mailbox's address | [record](records/2026-11-02-oltrem-mail-inbox.md) |
+
 The Mail add-on's own owed tests (its bundles A, B, C, F and L) are listed in Oltrem Mail's
 documents, packed in [vendor/mail](../vendor/mail/README.md); they are run with a domain on the
 Cloudflare route.
