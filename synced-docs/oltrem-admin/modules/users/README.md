@@ -76,6 +76,8 @@ page is linked.
 | `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
+| `GET /me/views?path=`, `POST /me/views`, `DELETE /me/views/:id` | `users.self` | my saved views of one page: list, save under a name (the same name replaces), remove; another person's id removes nothing |
+| `GET /onboarding` | `users.manage` | Home's Get started: invite a second person |
 | `GET /home` | `users.read` | the Home card, Users: the active users, and how many are deactivated |
 
 ## Later
@@ -92,10 +94,17 @@ Migration `0007_users.sql`, additive and idempotent, in the one ledger `oltrem_m
 `users_profiles` (`principal_id`, `display_name`, `locale`, `updated_at`). The account itself is
 `iam_principals` (`@oltrem/iam`, migration `0004`).
 
+Migration `0055_users_views.sql` (2026-11-03): `users_views` (`id`, `principal_id`, `path`,
+`name`, `query`, `created_at`, one name per person and page). A saved view keeps a page's address
+and its filters, never rows, so opening it runs the page's own permission check. At most
+`VIEWS_PER_PAGE` (12) per person and page, checked in the same statement as the write. Personal
+preferences, like the theme: not audited.
+
 ## Errors
 
 The module owns the `2100` to `2199` block: `KIT-E-2101` nothing to change (the account is in
-that state already), `KIT-E-2102` an Owner cannot be deactivated. What the permission model names
+that state already), `KIT-E-2102` an Owner cannot be deactivated, `KIT-E-2103` too many saved
+views on one page. What the permission model names
 keeps its codes: `KIT-E-2007` beyond your standing, `KIT-E-2008` your own account, `KIT-E-2010`
 a bad profile or a missing reason, and the core's `KIT-E-0404` for a person who does not exist.
 

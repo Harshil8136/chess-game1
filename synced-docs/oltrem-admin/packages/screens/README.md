@@ -164,6 +164,13 @@ request) is gone for that request: no sidebar entry or tab, no Home card or Need
 the search; its pages, a module's own by their pattern and a kit section by its address, answer
 the portal's Not found page. Switched back on, all of it is there on the next request.
 
+- **Saved views** (since 2026-11-03), above a list page that keeps them (`views` on a module's
+  page; a records list, a form's inbox and the audit log): the person's views as a sideways row of
+  chips, All first and the one on screen marked, then a field to name the filters on screen and
+  Save view, or Remove on a saved one. Both post to `/ui/views` and `/ui/views/remove`, which
+  call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
+  the page already) is shown with the way back. One D1 read per such page; nothing when users is
+  off.
 - **The sidebar**, from 1024 px wide, down the left edge in the page's own colour with one line
   beside it. From the top: an arrow that closes it, the portal's mark, a search box (a plain form
   to `/search`, `Ctrl K` or `⌘K` from anywhere), Home, then every mounted section under its group,

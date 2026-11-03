@@ -316,6 +316,13 @@ or change more than its routes allow. A path under `/api`, `/hooks`, `/ui` or `/
 taken twice, a page with no `get` and a sidebar entry missing a word are refused when the module
 is defined.
 
+A list page whose filters live in its address declares `views`: the query parameters a saved view
+keeps (`views: ['view', 'place']`), lower case, never a page's own state (`done`, `page` and the
+like are refused). The screens then show the person's saved views of that page as a sideways row
+of chips above it (All first), offer to save the filters on screen under a name, and to remove
+the view on screen; the views are `@oltrem/users`'s. The kit declares them on tasks, files and
+customers, and the screens on a records list, a form's inbox and the audit log.
+
 Pages are JSX, which the Workers-typed manifest cannot compile, so a module keeps them in their
 own entry (`src/pages.tsx`, type-checked against the DOM) and the client joins them to the
 manifest with `withPages(module, pages)`, checked the same way. The module's own `module.ts`
