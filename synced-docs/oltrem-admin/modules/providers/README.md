@@ -111,7 +111,9 @@ publishes no list.
 
 `defineProvider` checks a definition against the contract where it is written, and
 `definitionProblems` returns what is wrong, one line each with the path; a client's definition
-submitted through the route is checked the same way. The contract refuses an id or field name in
+submitted through the route is checked the same way. The kit's own definitions are frozen by `kitProvider`, which skips
+the check so a Worker's start does not repeat it; `test/definitions.test.ts` checks each of them
+instead (since 2026-11-03). The contract refuses an id or field name in
 the wrong shape, a base URL that is not `https`, a port other than 465 or 587, an SMTP transport
 with an HTTP auth scheme, `api-key-header` without its header, `sigv4` without its service, a
 repeated field name, an event mapped to an unknown kind, a webhook signature without the field it
