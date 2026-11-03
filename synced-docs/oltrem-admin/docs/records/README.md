@@ -149,6 +149,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Notifications](2026-11-03-notifications.md) | a bell with what modules told a person, and their choice per module |
 | [Phone and accessibility check](2026-11-03-phone-a11y-check.md) | every page's names, labels and viewport checked on verify |
 | [Mail with one tick](2026-11-03-mail-tick.md) | the start page's Try it here puts Oltrem Mail in or out |
+| [Look 2, step 1](2026-11-03-look-2.md) | lean chips and buttons, every notice a toast, the style and script served as files |
 | [The start page as a dashboard](2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
 | [Generated module pages](2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |

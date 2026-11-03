@@ -32,6 +32,9 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P5 | The theme switch at the foot of the sidebar | light and dark both readable, buttons 40 px tall, fields do not zoom when tapped | [record](records/2026-10-27-portal-makeover.md) |
 | P32 | The bell (sidebar, or beside Search on a phone), after someone gives you a task | a figure on the bell; the page lists the task, bold; tapping it opens the task and the figure goes down |
 | P33 | Notifications, How you are told: Tasks to Portal only, Save | "Saved" shows; the next task given to you is under the bell and no email comes |
+| P34 | Any page with chips (Tasks, Access), on a phone and on a computer | small rounded chips on one soft row, the open one tinted in the brand colour; buttons 40 px on the phone and 36 px under a mouse | [record](records/2026-11-03-look-2.md) |
+| P35 | Save any change (a task done), then a change refused (a form left blank) | "Saved" or "done" comes up at the bottom right (the foot on a phone) and leaves by itself after 6 s; a refusal stays until you press × | [record](records/2026-11-03-look-2.md) |
+| P36 | Settings, Find a setting; Parts, Find a module | one field with a magnifier and an arrow inside it, no separate big button; the page loads styled straight away | [record](records/2026-11-03-look-2.md) |
 
 ### Lists, saved views and bulk actions
 

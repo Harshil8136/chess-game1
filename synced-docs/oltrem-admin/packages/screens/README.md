@@ -22,7 +22,7 @@ import { createScreens } from '@oltrem/screens';
 const screens = createScreens({ portal: client.name, owner: client.owner, modules });
 const app = createApp<Env>({
   modules,
-  publicRoutes: screens.publicRoutes, // the stylesheet, before the door
+  publicRoutes: screens.publicRoutes, // nothing since the stylesheet became a static asset
   localDoor: { enabled: (env) => !env.ACCESS_AUD, page: screens.signInPage },
   // ...the session hook, the authorizer and the rest, as in @oltrem/core-http
 });
@@ -299,16 +299,25 @@ the problem.
 
 ## The stylesheet and the script
 
-`src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
-theme and the classes the pages, the primitives and every module's `src/*.tsx` use, just under
-the 64 KiB a test allows. `src/generated/app-js.ts` holds
-the frame's script, copied from `src/client/frame.js` with its comment lines and indents left
-out, about 27 KiB (38 KiB as written; since 2026-11-03). The build refuses a string or template
-that spans lines, the one case where that is not safe, and checks that the result compiles. They are served at
-`/ui/app.css` and `/ui/app.js`, cached for good under their version and `no-cache` without it.
-After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
-while a committed file differs from what the build writes. Both files are generated: never edit
-them by hand (R-06).
+`public/ui/app.css` is the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s theme and
+the classes the pages, the primitives and every module's `src/*.tsx` use, under the 64 KiB a
+test allows. A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()`:
+Tailwind's second copy for browsers without it, about a tenth of the file, is left out
+(2026-11-03), as the theme's own rules use the mix bare. `public/ui/app.js` is the frame's
+script, copied from `src/client/frame.js` with its comment lines and indents left out, about
+28 KiB (39 KiB as written). The build refuses a string or template that spans lines, the one case
+where that is not safe, and checks that the result compiles.
+
+**Static assets (2026-11-03, the owner's choice).** `public/` ships in the package and the client's
+`wrangler.jsonc` names it (`"assets": { "directory": "node_modules/@oltrem/screens/public" }`), so
+Cloudflare serves both files from its edge before the Worker runs: they are not in the Worker's
+code (the client Worker went from 498 to 477 KiB compressed) and their requests never count
+against the Worker's. Every page links them with their version (`src/generated/versions.ts`), and
+`public/_headers` caches `/ui/*` for good, so a new build is a new address. A client repository
+made before then gets the `assets` line from `oltrem upgrade` or its next deploy (`withAssets` in
+`@oltrem/cli`). After changing a class in a page or a primitive, or the script, run
+`pnpm ui:build`; a test fails while a committed file differs from what the build writes. The three
+files are generated: never edit them by hand (R-06).
 
 ## Not here yet
 

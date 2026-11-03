@@ -43,11 +43,12 @@ holds (plan 12.1); a test renders every one and checks.
 
 | Primitive | Built on | Rule it keeps |
 |---|---|---|
-| `Button`, `IconButton`, `LinkButton` | `<button>`; `LinkButton` is an `<a>` in a button's look, for a page's tools | four looks, two heights (40, 44; 14 px semibold words, since 2026-10-29), never a fixed width; an icon button refuses an empty label |
+| `Button`, `IconButton`, `LinkButton` | `<button>`; `LinkButton` is an `<a>` in a button's look, for a page's tools | four looks, two heights (40, 44 under a finger; 36, 40 under a mouse since 2026-11-03; 14 px semibold words), never a fixed width; an icon button refuses an empty label |
 | `ChipRow`, `CommandRow` | `<nav>` with a list of links or buttons in the `.ui-chip-row` scroller | the sideways navigation: every option visible, the current one marked for the browser and the scroller; a destructive command last and red. The scroller reaches into the gutter on both sides, so its first chip lines up with the text above and the fades sit in the gutter; it needs a parent with the gutter's padding (the page, a dialog, a card) |
-| `ChoiceChips` | `<fieldset>` of native radios inside chips, in the `.ui-chip-row` scroller | a choice of one with every option visible, never a dropdown alone; posts without a script; the chosen chip filled |
+| `ChoiceChips` | `<fieldset>` of native radios inside chips, in the `.ui-chip-row` scroller | a choice of one with every option visible, never a dropdown alone; posts without a script; the chosen chip tinted |
 | `CheckChips` | `<fieldset>` of native checkboxes inside chips, in the `.ui-chip-row` scroller | a choice of several with every option visible; each ticked option posts `name-value` as `1`, since a page's form keeps one value per name |
-| `Input`, `Textarea`, `Select`, `Switch`, `Checkbox`, `Radio` | the native controls; a switch is a checkbox with the switch role | one column, 44 px controls with 16 px text, 44 px choice rows, right `type` and `autocomplete` are the caller's |
+| `Input`, `Textarea`, `Select`, `Switch`, `Checkbox`, `Radio` | the native controls; a switch is a checkbox with the switch role | one column, 44 px controls with 16 px text under a finger (a phone zooms in on smaller), 40 px with 14 px under a mouse, 44 px choice rows, right `type` and `autocomplete` are the caller's |
+| `SearchField` | a search `<input>` with the magnifier in front and the submit button inside its end | one field's room, no separate Find button; its label is read and shown as the placeholder; `data-filter` passes on for the frame script |
 | `FormField`, `FormErrors` | `<label>`, the control, `<p>` hint and error; a `role="alert"` summary | the control carries `aria-describedby` and `aria-invalid`; the summary links to each field |
 | `Dialog`, `DialogButton`, `DialogClose`, `ConfirmDialog` | `<dialog>` with `closedby="any"`, opened and closed by the browser's `command` attributes | a bottom sheet on a phone, centred from 640 px; one system, never a dialog in a dialog; the confirm dialog names the object and the consequence, focuses cancel, puts the red button last, and can demand a typed word |
 | `Popover` | the popover API, anchored to its trigger | dismissed by a tap outside; no script |
@@ -56,13 +57,24 @@ holds (plan 12.1); a test renders every one and checks.
 | `BulkBar` | a `<form>` posting to the screens' `/ui/bulk`, with a `Dialog` for each destructive action | the ticks of a `Table` with `select` join it by its id wherever they sit; it says how many are ticked and its buttons wait for one (frame script); a destructive action asks first and is red; without the script every part still posts |
 | `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word; the pill is a soft tint of the state's colour with the word in the text colour, so it reads in both themes |
 | `Checklist` | `<ul>` with a label | checks one under another, each an icon and its state in words for a screen reader, what was found, and for one that did not pass, what to do, linked where it is done |
-| `ToastRegion`, `Toast` | a polite live region; each toast a manual popover its own button hides | one live region in the layout |
 | `Skeleton`, `EmptyState` | `<div aria-hidden>`; `<section>` | shimmer off under reduced motion; one icon, two lines, one action, three kinds |
 
-The page building blocks (`Panel`, `Section`, `Notice`, `Stats`, `ActionRow`, `ProblemNotice`,
-`Loaded`, `Done` and `when`) are the ones every portal page is made of, here so a module's own
-pages look like the kit's: a page that read an API answer shows it with `Loaded`, its problem
-with `ProblemNotice`, a change's outcome with `Done`. `Stats` draws its figures with `Figures`
+The page building blocks (`Panel`, `Section`, `Notice`, `Toasts`, `Stats`, `ActionRow`,
+`ProblemNotice`, `Loaded`, `Done` and `when`) are the ones every portal page is made of, here so a
+module's own pages look like the kit's: a page that read an API answer shows it with `Loaded`, its
+problem with `ProblemNotice`, a change's outcome with `Done`.
+
+**Chips and toasts (look 2, 2026-11-03, the owner's ask).** A chip is one named rule,
+`.ui-chip` (`CHIP_BASE`; `CHIP_CURRENT` is `ui-chip-on`): a soft, compact tag, 32 px under a mouse
+and 36 under a finger, tinted with the primary when it is the current one or its radio or box is
+ticked, in place of the outlined pills. Every outcome is a toast: `Done` and `ProblemNotice`
+render their notice inside `Toasts`, a region fixed to the bottom-right corner of a computer and
+the foot of a phone, over the page and never in its flow, and the screens put a page's flash
+there too. A notice there is a card with its tone on its edge and a close button; the frame
+script takes one that went well (ok, info) away after six seconds, waiting while the pointer or
+the focus is on it, and leaves a refusal until it is closed. A `Notice` placed in a page is a
+quiet callout tinted by its tone (`.ui-note`), for a state of things rather than an outcome. The
+popover `Toast` and `ToastRegion`, which nothing used, are gone. `Stats` draws its figures with `Figures`
 (below), so every page's numbers look the same.
 
 ## The console pieces
