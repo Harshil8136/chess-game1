@@ -358,6 +358,13 @@ domain. A provider's definition says what its answer must also hold for the acco
 (`probe.ready` in `@oltrem/providers`; Brevo's `relay.enabled`), so an account the provider has
 not switched on fails the check with what to do, even though its key works.
 
+Nothing sends a person to another page when the portal can do the step itself (2026-11-03, the
+owner's ask). With a service connected, a missing From address and a domain never checked carry
+`read` (`[]` for every address, or the domain's name), and Write's **Check again** reads them from
+the service (`POST /domains/discover`, which keeps its own capability) and checks again in the
+same press. A missing service, or a missing address with no service, links to Set up email
+(`/email/connect`), the one card that sets the service, domain and address together.
+
 ## Routes
 
 Under `/api/email`, through the IAM module's sessions and check. Since 2026-11-01 only
@@ -386,7 +393,7 @@ with a template that holds code.
 | `GET /written/:id` | `email.senders.use` | One email the person wrote, with its `delivery` |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
-| `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href }] }`, read from what the portal knows, no call to a provider beyond its kept allowance |
+| `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href, read? }] }`, read from what the portal knows, no call to a provider beyond its kept allowance |
 | `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
 | `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Integrations page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
