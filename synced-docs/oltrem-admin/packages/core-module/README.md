@@ -244,6 +244,27 @@ onboarding: {
 },
 ```
 
+## Bulk actions
+
+A module whose list can act on many rows at once declares `bulk`: each action an `id` (lower case,
+the route's last segment), the button's `label`, the `capability` the route needs somewhere,
+`destructive` when it cannot be taken back, and `run(ctx, ids)`. `defineModule` adds
+`POST /api/<module>/bulk/<id>` with the body `{ ids }`: one to `BULK_MAX` (100) ids, repeats
+dropped. `run` checks each row by the same rule its one-row action checks, refuses the rows that
+fail with a reason, and answers `{ done, refused: [{ id, reason }] }`. To stay inside an
+invocation's 50 database calls it reads the rows in one query (`json_each(?1)` with the ids as
+JSON, never one bind per id) and writes the changes and one audit row per record in one
+`db.batch`: `auditStatements` from `@oltrem/iam` (or `statements` of `@oltrem/core-audit`) makes
+the rows for that batch. The screens draw the bar (`BulkBar` in `@oltrem/core-ui`) and post to it
+through `/ui/bulk`. The kit's: Mark done and Remove on the tasks.
+
+```ts
+bulk: [
+  { id: 'remove', label: 'Remove', capability: 'notes.manage', destructive: true,
+    run: (ctx, ids) => store.removeMany(ctx.env, actorOf(ctx), ids) },
+],
+```
+
 ## Personal data
 
 A module that keeps rows about people declares `personal`: a `title` and `find(env, tenantId,

@@ -70,7 +70,7 @@ task, never to the person who wrote it.
 
 | Path | Shows |
 |---|---|
-| `/tasks` | a row of Mine (the person's own open tasks at every place, with the count), Open and Done; for Open and Done, a row of the places they may see with their open counts; "New task" in a dialog where they manage the tasks; the tasks, open ones by due day |
+| `/tasks` | a row of Mine (the person's own open tasks at every place, with the count), Open and Done; for Open and Done, a row of the places they may see with their open counts; "New task" in a dialog where they manage the tasks; the tasks, open ones by due day; with two or more, a tick on each and the bar: Mark done (not on Done), Remove where they manage or on Done (after a dialog) |
 | `/tasks/:id` | the task, its state and place; a row with "Mark done" or "Open it again", "Change it", "All tasks" and "Remove it" (after a confirmation), each shown only to whoever may; its notes, its comments with a box to add one, and its history |
 
 ## The routes
@@ -85,11 +85,13 @@ task, never to the person who wrote it.
 | `POST /tasks/:id/done` | `tasks.read`, and manages it or has it given to them | marks it done, or open again |
 | `POST /tasks/:id/comments` | `tasks.read` at its place | adds a comment; the people on it are told |
 | `DELETE /tasks/:id` | `tasks.manage` at its place | removes it with its comments; the audit log keeps its title |
+| `POST /bulk/done` | `tasks.read`, and each task by the rule of `/done` | marks up to 100 done at once; answers what was done and each refusal with its reason |
+| `POST /bulk/remove` | `tasks.manage`, and each task at its place | removes up to 100 at once, the same way |
 | `GET /todo` | `tasks.read` | Needs you: how many open tasks are the person's, how many past due or due today |
 | `GET /search` | `tasks.read` | the portal's search: tasks by title at the places the person may see |
 
 Every change is audited: `tasks.create`, `tasks.update`, `tasks.done`, `tasks.reopen`,
-`tasks.comment`, `tasks.remove`, refusals included. One that went through can set off an automation.
+`tasks.comment`, `tasks.remove`, refusals included; a bulk press writes one row per task with `bulk: true`, in the same batch as its change. One that went through can set off an automation.
 
 ## For automations
 
@@ -125,6 +127,6 @@ account, the email to the person it is given to and none to oneself, every refus
 person's places and their own list, Needs you; done by the person it is given to or a manager and
 by nobody else; comments by anyone who may see it, with the people on it told and never the
 writer; changed, given to another (who is told) and to nobody, removed with its title kept
-in the log; the automations' task made once per key; the search. The automations tests cover the
+in the log; many at once, each by its one-task rule, the refused ones named and every row audited in one batch; the automations' task made once per key; the search. The automations tests cover the
 task action's fields. The client template's screens test makes a task for today, sees it on Home,
 marks it done, opens it again, comments on it, changes it and removes it.

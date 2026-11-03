@@ -171,6 +171,13 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
+- **Bulk actions** (since 2026-11-03), on a list whose module declares `bulk` (the tasks): a
+  tick on each row and card, one in the header for the whole page, and the bar (`BulkBar`) above
+  the list with the module's actions. The frame script counts the ticks ("3 tasks chosen"), keeps
+  a row's two ticks alike and holds the buttons until one is ticked; a destructive action asks in
+  a dialog. A press posts to `/ui/bulk`, which calls `POST /api/<module>/bulk/<action>` once and
+  returns to the list with `?bulk=<module>.<action>.<done>.<refused>`; the list shows how many
+  were done and how many refused, in the kit's own words, never words from the address.
 - **The sidebar**, from 1024 px wide, down the left edge in the page's own colour with one line
   beside it. From the top: an arrow that closes it, the portal's mark, a search box (a plain form
   to `/search`, `Ctrl K` or `⌘K` from anywhere), Home, then every mounted section under its group,

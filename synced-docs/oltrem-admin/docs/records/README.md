@@ -145,6 +145,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Faster start, smaller index](2026-11-03-faster-start-records-index.md) | the kit's email providers no longer checked at each start; records indexed here |
 | [Get started on Home](2026-11-03-get-started.md) | a new portal's first steps, each ticked by what is stored |
 | [Saved views](2026-11-03-saved-views.md) | a list's filters kept under a name, a chip above the list |
+| [Bulk actions](2026-11-03-bulk-actions.md) | tick rows on a list, one press for all, each row checked |
 | [Phone and accessibility check](2026-11-03-phone-a11y-check.md) | every page's names, labels and viewport checked on verify |
 | [The start page as a dashboard](2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
