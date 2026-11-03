@@ -79,7 +79,10 @@ default, the 50 less a few for the cron's other work. A job due every tick (ever
 less, the cron's own period) runs on every tick: a longer job starts only when it also leaves room
 for the ones due every tick that are still to run. The first job of a tick starts whatever it
 costs. A job that does not fit is `deferred`: it stays due, so it is the longest waiting on the
-next tick and goes first. In the client template a day of ticks runs every five-minute job on
+next tick and goes first. So every tick after a new portal's first starts at least one job that
+had not run, and its jobs have all run within one tick per job not due every tick, plus one: the
+client template's tick test holds that bound, reading the period from `EVERY_TICK_SECONDS`
+(exported). In the client template a day of ticks runs every five-minute job on
 every tick, each tick within 45 queries (`templates/client/test/worker.test.ts`). `queryBudget` may also be a function of the env,
 asked once a tick, so it follows the client's Cloudflare plan: the client template hands in
 `PLAN_LIMITS[plan].jobQueries` from `@oltrem/core-health` (45 on the free plan, 900 on Workers
