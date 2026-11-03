@@ -2,7 +2,7 @@
 title: "Token registry: every credential by name"
 status: generated
 owner: vendor
-last_verified: 2026-11-02
+last_verified: 2026-11-03
 sources: [tokens.registry.json]
 ---
 
@@ -12,7 +12,24 @@ sources: [tokens.registry.json]
 
 > **In plain words.** This page lists every token, key and secret the system uses, by name only; a value never appears here or anywhere in the repository. Before anyone creates a credential, they read this page: if a row already covers the need, it is reused; if a row is close, it is widened and the row says so; only then is a new one created, with its row in the same commit. `pnpm verify` refuses a secret name without a row.
 
-**Where things stand:** 0 active, 0 planned (named in the plan, nothing created yet), 0 provided by a platform for each run (nothing stored), 0 retired.
+**Where things stand:** 0 active, 0 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
+| IMPROVMX_API_KEY | provided | ImprovMX | nowhere: typed into the Forwarding page for one press, sent to ImprovMX in that press's requests only, and never stored, logged, audited or shown again |
+
+## IMPROVMX_API_KEY
+
+| Field | Value |
+|---|---|
+| Status | provided |
+| Provider and account | ImprovMX; the client's own ImprovMX account, the one its domains forward through before they move to Cloudflare |
+| What it may do | read the account's domains and their aliases (GET /domains and GET /domains/:domain/aliases of ImprovMX's API v4); the portal makes no other call with it, though ImprovMX's key itself is not narrower than the account |
+| Used by | Read from ImprovMX on the Forwarding page (POST /api/mail/forwarding/import/improvmx), for that one press only |
+| Stored in | nowhere: typed into the Forwarding page for one press, sent to ImprovMX in that press's requests only, and never stored, logged, audited or shown again |
+| Owner | the client |
+| Created | not yet |
+| Expires | at the end of the press; the key itself lasts until the client changes it at ImprovMX |
+| Rotation | none needed here; the client may make a new key on ImprovMX's API page after the import, which ends the old one |
+| Why it exists | ImprovMX lists aliases only to its account's key, and a pasted export loses no less work than one press; the owner said yes on 2026-11-03 to a key typed once and never kept. |
+| Plan section | docs/setup.md section 5 |

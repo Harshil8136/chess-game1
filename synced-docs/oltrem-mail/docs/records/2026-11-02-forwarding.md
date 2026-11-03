@@ -113,6 +113,6 @@ Not checked here, so each is said where it applies and checked on the first live
   Move back refuses, with the dashboard steps instead, whenever the zone also carries the
   sending route, another forwarding domain or mailboxes.
 
-Waiting for the owner: reading ImprovMX directly with the account's API key, typed once and never
-kept, is the true one-press import. It is a new credential, so it waits for his yes (R-05). The
-pasted list works without it.
+Waiting for the owner when this was written: reading ImprovMX directly with the account's API key,
+typed once and never kept, the true one-press import. It is a new credential (R-05). He said yes on
+2026-11-03, and **Read from ImprovMX** was built that day: setup.md section 5 owns how it works.

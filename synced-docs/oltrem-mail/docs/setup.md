@@ -2,8 +2,8 @@
 title: 'Oltrem Mail: the setup page'
 status: approved
 owner: vendor
-last_verified: 2026-11-02
-sources: [Cloudflare docs read 2026-11-02 (Email Service, Email Routing API reference, email authentication), the provider API and free-plan pages read 2026-11-02, oltrem-admin modules/email, modules/providers and packages/core-http, the owner's decisions of 2026-11-02, ImprovMX's API reference (v4) read 2026-11-02]
+last_verified: 2026-11-03
+sources: [Cloudflare docs read 2026-11-02 (Email Service, Email Routing API reference, email authentication), the provider API and free-plan pages read 2026-11-02, oltrem-admin modules/email, modules/providers and packages/core-http, the owner's decisions of 2026-11-02, ImprovMX's API reference (v4) read 2026-11-02 and again 2026-11-03]
 ---
 
 # Oltrem Mail: the setup page
@@ -185,10 +185,21 @@ zone (never a cached DNS answer):
 | ImprovMX's | notes it: the aliases are saved and set on Cloudflare ahead, and the domain's mail keeps going to ImprovMX until **Move from ImprovMX** is pressed |
 | Another mail service's | notes it and changes nothing; forwarding there takes a subdomain |
 
-**The import** takes what a person pastes: ImprovMX's exported list as it is (a header naming the
-alias and its forwards), or one alias a line followed by its people, with spaces, commas, tabs,
-`->` or `=>` between. A line without a domain takes the one filled in. A webhook is left out,
-saying so. Pasting the same list again changes nothing; a changed list changes the people.
+**The import** is one press: **Read from ImprovMX** takes the account's API key (the API page of
+ImprovMX's dashboard), reads every domain of the account and every alias of each, 200 a page, and
+takes them all. The key is used in that press's requests and nowhere else: it is not stored,
+logged, audited or shown again (its row, `IMPROVMX_API_KEY`, is in the
+[token registry](reference/tokens.md)). A press makes at most 12 calls to ImprovMX beside its 35
+to Cloudflare; a domain it could not reach is named, to fill in for the next press. A wrong key,
+ImprovMX asking to wait (with how long), or a domain it does not know each say so in words. A
+domain on ImprovMX's rules has its aliases read and its other rules named, since those are not
+aliases.
+
+Without a key, the import takes what a person pastes: ImprovMX's exported list as it is (a header
+naming the alias and its forwards), or one alias a line followed by its people, with spaces,
+commas, tabs, `->` or `=>` between. A line without a domain takes the one filled in. Either way a
+webhook is left out, saying so; the same list again changes nothing; a changed list changes the
+people.
 
 **The move**, one domain at a time, is offered once every alias of the domain has at least one
 confirmed person. Its dialog says what changes. Then, in this order:

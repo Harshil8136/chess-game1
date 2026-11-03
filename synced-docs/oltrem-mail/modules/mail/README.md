@@ -99,6 +99,7 @@ error codes; Cloudflare's delivery events are not wired yet.
 | `PATCH /api/mail/forwarding/aliases/:id` | `mail.manage` | change its people (`forwardTo`) or switch it off and on (`live`) |
 | `DELETE /api/mail/forwarding/aliases/:id` | `mail.manage` | delete it and its rule |
 | `POST /api/mail/forwarding/import` | `mail.manage` | take pasted aliases (`text`, ImprovMX's export or one a line; `domain` for lines without one), 500 at a time: `added`, `changed`, `same`, `skipped` with why |
+| `POST /api/mail/forwarding/import/improvmx` | `mail.manage` | read every alias of the ImprovMX account (`key`, used for this press only and never kept; `domain` for one only), 12 ImprovMX calls a press, and take them as the paste does |
 
 Each step answers `{ ok, words, dashboard? }`: what happened in plain words, and the dashboard
 step when the portal's key may not do it.
@@ -199,7 +200,8 @@ off and delete, its automatic reply, the rules, the blocked senders, and the roo
 Forwarding (`/email/forwarding`), in the Email tabs: the domains, each with where its mail goes,
 what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
 with its people and whether each pressed Cloudflare's link, Change, Switch off and Delete; a form
-to add one; and Import from ImprovMX, which takes a pasted list. Someone who may only read sees
+to add one; and Import from ImprovMX, which reads the account with its API key in one press (the
+key is never kept) or takes a pasted list. Someone who may only read sees
 it all and nothing to change.
 
 Mail setup (`/email/mail`), in the Email tabs: the route's line, the steps as a checklist, the

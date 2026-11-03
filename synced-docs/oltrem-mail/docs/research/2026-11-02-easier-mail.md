@@ -123,7 +123,7 @@ Workers Free plan is to be confirmed in a live test before it is promised.
 |---|---|---|
 | Read the portal's mailbox in the Gmail or Outlook app | **Partly.** A Worker cannot listen for IMAP connections, so the portal can never be a mail server an app signs in to | the forwarding copy already sends each message to a staff address; keep it as the way to read in another app |
 | Reply from Gmail or Outlook **as** `hello@` the business | **Yes**, with the provider the portal already uses: Gmail's "Send mail as" and Outlook's "send from another address" accept an SMTP server, and Brevo and Resend both offer one (Resend: `smtp.resend.com`, user `resend`, the key as the password) | a **Use in Gmail or Outlook** card per mailbox: the exact settings with Copy buttons, the steps in words, and a test once it is set up. A key just for this, with sending rights only, is made at the provider by the owner (R-05: by name only) |
-| Found while building bundle G (read 2026-11-02 in Gmail's Help: "Send emails from a different address or alias" and "Learn about changes to third-party email account support in Gmail") | **No longer for Gmail.** Gmail ends "Send as" for addresses outside Google, on the web and in its phone apps, in January 2027, and may refuse new ones before then; a business address on its own domain counts as outside Google. Resend's SMTP settings were confirmed (`smtp.resend.com`, ports 465 or 587, user `resend`, the key as the password), and so were Brevo's (`smtp-relay.brevo.com`, port 587, the account's SMTP login and an SMTP key) | the card is held for the owner's choice: a mail app on a computer still takes these settings, Gmail soon will not |
+| Found while building bundle G (read 2026-11-02 in Gmail's Help: "Send emails from a different address or alias" and "Learn about changes to third-party email account support in Gmail") | **No longer for Gmail.** Gmail ends "Send as" for addresses outside Google, on the web and in its phone apps, in January 2027, and may refuse new ones before then; a business address on its own domain counts as outside Google. Resend's SMTP settings were confirmed (`smtp.resend.com`, ports 465 or 587, user `resend`, the key as the password), and so were Brevo's (`smtp-relay.brevo.com`, port 587, the account's SMTP login and an SMTP key) | the owner chose on 2026-11-03 to skip the card: a mail app on a computer still takes these settings, Gmail soon will not |
 | Sign in with a Google or Microsoft account | **Yes**, in the kit: Cloudflare Access already accepts both | the kit's thread, not mail |
 
 ## 6. What this page recommends not doing
@@ -147,7 +147,7 @@ first.
 | **A. A familiar inbox** | swipe, the Undo bar, Updates, Unsubscribe and Subscriptions, Snooze, Mute, Sweep, search words and their chips, suggested contacts | the staff's daily use; no training |
 | **B. Answers by itself** | automatic replies, saved replies in the reply box, follow-up nudges, the Undo send setting | saves the most typing once mail flows |
 | **L. Cleaner lists** | typo fixes, mail-server checks and role addresses on import | fewer bounces, so fewer pauses |
-| **G. Gmail and Outlook as well** | the "Use in Gmail or Outlook" card with its test | for staff who live in another app |
+| **G. Gmail and Outlook as well** | the "Use in Gmail or Outlook" card with its test | for staff who live in another app; skipped by the owner on 2026-11-03 |
 
 Not checked yet: a live Cloudflare account for `message.reply()` on the free plan and for how
 Email Routing treats a Worker's error, and live Brevo and Resend accounts for their SMTP settings
@@ -178,4 +178,8 @@ rerouting: can't we have the same?"), as [its record](../records/2026-11-02-forw
 Two facts read that day shaped it: a Cloudflare forward rule takes exactly one verified address,
 so an alias to several people goes through the Worker; and ImprovMX's API (v4) needs the account's
 key, so the import takes a pasted list first, and reading ImprovMX with a key waits for the
-owner's yes on a new credential (R-05).
+owner's yes on a new credential (R-05). He said yes on 2026-11-03 to a key typed once and never
+kept, and Read from ImprovMX was built the same day (setup.md section 5).
+
+Bundle G is not built: on 2026-11-03 the owner chose to skip it, since Gmail ends "Send as" for
+addresses outside Google in January 2027 (section 5 above).
