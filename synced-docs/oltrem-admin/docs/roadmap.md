@@ -2,7 +2,7 @@
 title: "Roadmap: what the kit sells, what is built, what comes next"
 status: living
 owner: vendor
-last_verified: 2026-10-27
+last_verified: 2026-11-03
 sources: [the plan sections 4.4 and 18; market research of 2026-10-27 listed at the end]
 ---
 
@@ -12,7 +12,9 @@ sources: [the plan sections 4.4 and 18; market research of 2026-10-27 listed at 
 > the client's own Cloudflare account at almost no hosting cost. This page says what buyers of
 > such portals pay for, how the kit's parts group into things a client can buy, which parts are
 > built, and the order of what comes next with the reason for each. It never aims the kit at one
-> kind of business: every feature here is one any company uses.
+> kind of business: every feature here is one any company uses. The products built on the kit
+> (Portal, Mail, Server, Console, Website) and their phases are in
+> [the product plan](product-plan.md), the newest plan; this page keeps the modules.
 
 ## What buyers pay for
 
@@ -69,7 +71,7 @@ An edition is a list of modules mounted in the client's Worker; nothing else cha
 | settings, audit, alerts, health, backup, github | Core | **built** |
 | `records` | Work | **built** 2026-10-22: lists with nine kinds of field, CSV export; since 2026-10-27 CSV import (all rows or none) |
 | `forms` | Work | **built** 2026-10-22: website forms, an inbox with take, notes and replies |
-| `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports |
+| `providers`, `email` | Messages | **built**: seven email providers as data, failover, delivery reports; since 2026-11-02 `email` and `campaigns` live in Oltrem Mail, their own private repository, and the kit keeps them packed in `vendor/mail/` ([the record](records/2026-11-02-mail-moved-out.md)) |
 | `files` | Work | **built** 2026-10-27: a drive per place in the client's bucket, opened by the roles held there, links that end, a trash |
 | `campaigns` | Messages | **built** 2026-10-27: a list from a CSV file, merge fields, a test, chunks within a daily limit, one-click unsubscribe, a suppression list fed by bounces and complaints |
 | `developer` | Developer | **built** 2026-10-27: the jobs page (every job and flow, its last runs, run soon, pause), webhooks fed by the audit log and signed as Standard Webhooks sign them, with retries and a delivery log, the API reference read from the manifests |
@@ -110,6 +112,14 @@ The changes under every module, done before the new modules or beside them, so e
   decision or a task for the person signed in says so (access requests, approvals and reviews
   they may decide, their own access ending, alerts nobody took, new answers to the forms they
   handle), each a row to the page that acts on it.
+
+## Rounds since 2026-10-27
+
+[Where things stand](status.md#since-2026-10-27) lists each round with its record: setup in one
+press, the free plan's CPU, one repository per client, Oltrem Mail as an add-on, the kit review's
+findings, the everyday features (Get started, saved views, bulk actions, notifications, optional
+extras) and look 2. What comes next for the kit itself is the order of work in
+[the kit review](reference/kit-review.md); for the products, [the product plan](product-plan.md).
 
 ## How a round is chosen
 

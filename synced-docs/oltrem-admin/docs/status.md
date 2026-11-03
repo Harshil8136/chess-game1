@@ -2,7 +2,7 @@
 title: "Where things stand, phase by phase"
 status: living
 owner: vendor
-last_verified: 2026-10-27
+last_verified: 2026-11-03
 sources: [this repository, its records]
 ---
 
@@ -10,13 +10,16 @@ sources: [this repository, its records]
 
 > **In plain words.** One table per phase of the plan, one row per part, each with its state and
 > the record that says how it was built. What comes next, and why, is in
-> [the roadmap](roadmap.md).
+> [the roadmap](roadmap.md). The products built on the kit, and their phases, are in
+> [the product plan](product-plan.md); the kit's own weak points, ranked, in
+> [the kit review](reference/kit-review.md).
 
-The kit is in **phase 6, release pipeline and upgrade**, since 2026-10-21; phases 3 to 5
-were built the same day but for the parts their tables name as waiting. The first screens run on
-the owner's computer since 2026-10-21, with two commands; their cost on Cloudflare is measured
-with the sandbox, and every phase's acceptance waits on the sandbox repository.
-The plan's open decisions still wait on the owner. Phase 0, set up
+The kit's six phases are built but for the parts their tables name as waiting, and since
+2026-10-27 the work has been the modules and screens of the [roadmap](roadmap.md) and the rounds
+listed [at the end of this page](#since-2026-10-27). Each client has a private repository of its
+own with the kit inside it (2026-11-01). Every phase's acceptance still waits on the sandbox
+client: a fresh Cloudflare account and a private client repository, the owner's steps (K3 of the
+kit review). The phone tests owed are listed in [one place](phone-tests.md). Phase 0, set up
 and measure, has these parts:
 
 | Part | State |
@@ -113,6 +116,21 @@ Phase 6 has these parts so far:
 | Checks on a client's code | **done** 2026-10-24: records [one](records/2026-10-24-client-code-checks.md), [two](records/2026-10-24-client-code-checks-part-two.md) |
 | The automatic release, with its health check and step back | **done** 2026-10-24: [the record](records/2026-10-24-automatic-release.md) |
 | The operations menu: fixed jobs on the live portal, from `main` | **done** 2026-10-24: [the record](records/2026-10-24-operations-menu.md) |
-| Publishing to GitHub Packages, previews on a branch | waits on the `oltrem` organisation and the sandbox |
+| Publishing to GitHub Packages, previews on a branch | not planned for now: the owner chose on 2026-11-01 that Oltrem stays private, with no organisation and no registry until the owner calls it finished; each client repository carries the kit inside it instead ([the record](records/2026-11-01-one-repo-per-client.md)) |
 
 Features for any business, the owner's picks, **done** 2026-10-22: [your own records](records/2026-10-22-your-own-records.md), [forms and inbox](records/2026-10-22-forms-and-inbox.md).
+
+## Since 2026-10-27
+
+The rounds after the phases, each with its record. The modules themselves are on
+[the roadmap](roadmap.md).
+
+| Round | State |
+|---|---|
+| Setup in one press: a start file per kind of computer, the setup page, the door (Cloudflare Access) kept by the portal, parts of the portal switched off without a deploy | **done** 2026-10-28 to 2026-10-31: records [one-click setup](records/2026-10-28-one-click-setup.md), [setup help](records/2026-10-28-setup-help-and-repair.md), [setup remade](records/2026-10-31-setup-door-parts.md) |
+| The free plan's CPU: each page and each tick inside 10 ms, the sign-in trusted only as Cloudflare checked it, a key sent only to its own service, a deploy that steps back on its own | **done** 2026-11-01: [CPU](records/2026-11-01-cpu-budget.md), [core hardening](records/2026-11-01-core-hardening.md) |
+| One private repository per client, the kit inside it, nothing published | **done** 2026-11-01: [the record](records/2026-11-01-one-repo-per-client.md) |
+| Email and bulk mail moved to Oltrem Mail, its own private repository, and kept here packed in `vendor/mail/`; the Mail add-on chosen, added and removed by the tool | **done** 2026-11-02: [moved out](records/2026-11-02-mail-moved-out.md), [in the tool](records/2026-11-02-oltrem-mail-in-the-tool.md), [the inbox](records/2026-11-02-oltrem-mail-inbox.md) |
+| The kit review's findings: the error log, the size gate, one list of phone tests, the check of every page's names and labels | **done** 2026-11-03: [error log](records/2026-11-03-error-log.md), [size gate](records/2026-11-03-size-gate.md), [phone checks](records/2026-11-03-phone-a11y-check.md); the rest, ranked, in [the kit review](reference/kit-review.md) |
+| Everyday features from open-source ideas: Get started on Home, saved views, bulk actions, notifications, optional extras | **done** 2026-11-03: [get started](records/2026-11-03-get-started.md), [saved views](records/2026-11-03-saved-views.md), [bulk actions](records/2026-11-03-bulk-actions.md), [notifications](records/2026-11-03-notifications.md), [extras](records/2026-11-03-optional-extras.md) |
+| Look 2: every notice in the corner, smaller buttons under a mouse, the role matrix, 24 colour sets and 7 backgrounds each person picks | **done** 2026-11-03: [look 2](records/2026-11-03-look-2.md), [role matrix](records/2026-11-03-role-matrix.md), [looks](records/2026-11-03-looks.md) |
