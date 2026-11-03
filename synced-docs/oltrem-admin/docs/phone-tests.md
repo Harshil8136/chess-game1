@@ -30,6 +30,8 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P3 | The menu button, then a section | the sidebar slides in over the page; a section opens without the whole page reloading | [record](records/2026-10-28-sidebar-without-reloads.md) |
 | P4 | Any page with tabs (Email, Access) | the tabs as one sideways row under the title, the open one marked | [record](records/2026-10-29-shorter-sidebar.md) |
 | P5 | The theme switch at the foot of the sidebar | light and dark both readable, buttons 40 px tall, fields do not zoom when tapped | [record](records/2026-10-27-portal-makeover.md) |
+| P32 | The bell (sidebar, or beside Search on a phone), after someone gives you a task | a figure on the bell; the page lists the task, bold; tapping it opens the task and the figure goes down |
+| P33 | Notifications, How you are told: Tasks to Portal only, Save | "Saved" shows; the next task given to you is under the bell and no email comes |
 
 ### Lists, saved views and bulk actions
 

@@ -51,6 +51,7 @@ modules' own.
 |---|---|---|
 | `/` | a Vendor with no company yet: the company form; anyone else: Get started while a step of setting the portal up is open (each step ticked by what is stored, an open one a row to its page; the Modules page can switch the card off), then Needs you (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits), then the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me`, then each `/api/<module>/onboarding`, `/api/<module>/todo` and `/api/<module>/home`, together |
 | `/search?q=` | the search box, then what matches two letters or more: the sections by name and line, then each module that searches, as the person (a module that refuses them is left out); nothing found says so | each `/api/<module>/search` |
+| `/notifications?show=&before=` | the person's notifications, All or Unread, Mark all read, thirty a page, and how each module tells them; `/notifications/:id` marks one read and opens its page | `/api/users/me/notifications`, `/api/users/me/notifications/choices` |
 | `/settings/parts?show=&q=&preset=` | whoever holds `settings.parts` (every Owner and the Vendor at first, anyone a role gives it to; the tab shows to them alone, asked of the API when the Settings tabs are on screen, and anyone else at the address reads "You need the permission to switch modules"): the Modules page, a dashboard. How many modules are on; All, On (n) and Off (n) chips and a search box (at once with the frame script, by `?q=` without it); the presets as "Start from" chips (Everything, Email only, Nothing optional, and the set saved now) that fill the switches without saving; then a section per sidebar group (Work, Company, Users & access, Messages, System), each module a tile in one column on a phone and two on a wide screen with the sidebar's icon, its name, one line, On or Off and its switch, Always on for the core, what it needs and what needs it, and a warning when it is off while a module that needs it is on (kept in step by the frame script before Save); under a module's line, its optional extras (the daily audit seal, the emails about access ending, the review and restore-drill reminders), each with its own switch, a core module's too, kept as they are saved when a preset fills the module switches; one Save bar at the bottom sends the whole set, and a refusal names the module that still needs another | `/api/settings/parts`, `PUT /api/settings/parts` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
 | `/accept?token=` | the invitation and its Accept button; accepting returns to `/` | `POST /api/iam/invitations/accept` |
@@ -171,6 +172,13 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
+- **Notifications** (since 2026-11-03): a bell under the search box in the sidebar, and beside
+  Search in the phone's bar, with the unread figure (to "99+"), read with `/api/iam/me` on every
+  page (one indexed read more; none without the users module). It opens `/notifications`: All or
+  Unread as chips, Mark all read, each notification a row (unread ones bold) that opens through
+  `/notifications/:id`, which marks it read and goes to its page (a path inside the portal, else
+  the list); thirty a page with Older; under them "How you are told", four chips per module and
+  one Save, which sends only what changed. With the sidebar closed to icons the figure is hidden.
 - **Bulk actions** (since 2026-11-03), on a list whose module declares `bulk` (the tasks): a
   tick on each row and card, one in the header for the whole page, and the bar (`BulkBar`) above
   the list with the module's actions. The frame script counts the ticks ("3 tasks chosen"), keeps
@@ -294,7 +302,9 @@ the problem.
 `src/generated/app-css.ts` holds the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s
 theme and the classes the pages, the primitives and every module's `src/*.tsx` use, just under
 the 64 KiB a test allows. `src/generated/app-js.ts` holds
-the frame's script, copied from `src/client/frame.js`, about 20 KiB. They are served at
+the frame's script, copied from `src/client/frame.js` with its comment lines and indents left
+out, about 27 KiB (38 KiB as written; since 2026-11-03). The build refuses a string or template
+that spans lines, the one case where that is not safe, and checks that the result compiles. They are served at
 `/ui/app.css` and `/ui/app.js`, cached for good under their version and `no-cache` without it.
 After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
 while a committed file differs from what the build writes. Both files are generated: never edit

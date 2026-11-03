@@ -146,6 +146,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Get started on Home](2026-11-03-get-started.md) | a new portal's first steps, each ticked by what is stored |
 | [Saved views](2026-11-03-saved-views.md) | a list's filters kept under a name, a chip above the list |
 | [Bulk actions](2026-11-03-bulk-actions.md) | tick rows on a list, one press for all, each row checked |
+| [Notifications](2026-11-03-notifications.md) | a bell with what modules told a person, and their choice per module |
 | [Phone and accessibility check](2026-11-03-phone-a11y-check.md) | every page's names, labels and viewport checked on verify |
 | [Mail with one tick](2026-11-03-mail-tick.md) | the start page's Try it here puts Oltrem Mail in or out |
 | [The start page as a dashboard](2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |

@@ -65,8 +65,26 @@ name, each with whether their account is on, linking to their page.
 
 For a privacy request (`personal`, read by the privacy module) the module answers the account
 under the address (its address, display name, language, whether it is on, when it was made) and
-every role given to it, with the place, the effect and the days it starts and ends. The person's
-page is linked.
+every role given to it, with the place, the effect and the days it starts and ends, and what
+modules told them (each notification's module, subject, day and whether it was read). The
+person's page is linked.
+
+## Notifications
+
+What a module tells a person (a task given to them, their time off answered, their shifts
+published) lands in their own Notifications in the portal, by email, or both, as they chose for
+that module; both until they choose, so nothing is lost. The template routes the staff modules'
+messages through `notifications.deliver(db, notice)`: one read finds which addresses are active
+people of the company with their choice, one batch keeps a row for each who reads in the portal,
+and the answer is the addresses still to email (an address that is nobody's account, a
+customer's, is emailed as before). A row keeps the subject, up to 2,000 characters of the text
+and the portal page it is about: the last portal address in the text, its path only, else the
+module's first page; another site's address never. The same event key is kept once per person.
+`createUsers({ notifies })` names the modules the Notifications page lists with each person's
+choice: portal and email, portal only, email only, or off. The daily job
+`users.notifications-prune` removes rows older than 90 days. The bell's figure is one indexed
+read, counted to 100. Personal, like saved views: only the owner lists, reads or chooses; not
+audited.
 
 ## The routes
 
@@ -77,6 +95,10 @@ page is linked.
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
 | `GET /me/views?path=`, `POST /me/views`, `DELETE /me/views/:id` | `users.self` | my saved views of one page: list, save under a name (the same name replaces), remove; another person's id removes nothing |
+| `GET /me/notifications?before=&unread=` | `users.self` | my notifications, newest first, thirty a page, with the unread count and a cursor for the next page |
+| `GET /me/notifications/unread` | `users.self` | how many are unread, up to 100: the bell |
+| `POST /me/notifications/:id/read`, `POST /me/notifications/read` | `users.self` | mark one read (answers its page; another person's id is 404) or all |
+| `GET /me/notifications/choices`, `PUT /me/notifications/choices` | `users.self` | how each module that tells people things tells me; a module that tells nobody, or another channel, is 422 |
 | `GET /onboarding` | `users.manage` | Home's Get started: invite a second person |
 | `GET /home` | `users.read` | the Home card, Users: the active users, and how many are deactivated |
 
@@ -100,6 +122,11 @@ and its filters, never rows, so opening it runs the page's own permission check.
 `VIEWS_PER_PAGE` (12) per person and page, checked in the same statement as the write. Personal
 preferences, like the theme: not audited.
 
+Migration `0056_users_notifications.sql` (2026-11-03): `users_notifications` (`id`,
+`principal_id`, `module`, `subject`, `body`, `link`, `key`, `created_at`, `read_at`; one key per
+person) with indexes for the newest first, the unread and the age; `users_notify_choices`
+(`principal_id`, `module`, `channel`: `both`, `portal`, `email` or `off`; no row is both).
+
 ## Errors
 
 The module owns the `2100` to `2199` block: `KIT-E-2101` nothing to change (the account is in
@@ -117,4 +144,8 @@ Vendor left out, a person without `users.read` refused; profiles edited by onese
 switch refused to a clerk, done by a manager over a clerk at her scope and refused over a group
 grant at the root, refused for oneself and for an Owner, needing a reason, done once and nothing
 to change the second time, the sessions following each switch, and the Vendor standing above a
-manager; the audit rows with their actors, reasons and refusals.
+manager; the audit rows with their actors, reasons and refusals; saved views; notifications kept
+and emailed as each person chose (an inactive account and an address of nobody emailed only, a
+key kept once, off keeps and sends nothing), the link taken from the text and never another
+site's, opened by its owner only, all read, the privacy rows, pages of thirty by a cursor that
+never skips a row of the same moment, and the 90-day job.
