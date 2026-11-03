@@ -99,6 +99,8 @@ error codes; Cloudflare's delivery events are not wired yet.
 | `PATCH /api/mail/forwarding/aliases/:id` | `mail.manage` | change its people (`forwardTo`) or switch it off and on (`live`) |
 | `DELETE /api/mail/forwarding/aliases/:id` | `mail.manage` | delete it and its rule |
 | `POST /api/mail/forwarding/import` | `mail.manage` | take pasted aliases (`text`, ImprovMX's export or one a line; `domain` for lines without one), 500 at a time: `added`, `changed`, `same`, `skipped` with why |
+| `GET /api/mail/try` | `mail.read` | `{ local }`: whether Send a test is offered, true only on the builder's own computer |
+| `POST /api/mail/try` | `mail.manage` | on the builder's own computer only (404 elsewhere): a test message to `to` (from `from`, or someone@example.org) handed to the Worker as Email Routing would; `went` is `forwarded` (with `forwardedTo`), `kept` or `refused`, with words. Nothing leaves the computer |
 | `POST /api/mail/forwarding/import/improvmx` | `mail.manage` | read every alias of the ImprovMX account (`key`, used for this press only and never kept; `domain` for one only), 12 ImprovMX calls a press, and take them as the paste does |
 
 Each step answers `{ ok, words, dashboard? }`: what happened in plain words, and the dashboard
@@ -119,7 +121,7 @@ step when the portal's key may not do it.
 | Capability | `mail.inbox.manage` | add, change and switch off mailboxes, rules and blocked senders; on the admin floor |
 | Setting | `mail.inbox.keep_days` | mail older than this is removed, with its stored copy; 0 (the default) keeps it all; the Owner's |
 | Setting | `mail.inbox.spam_score` | files arriving mail scoring at least this as spam; 0 (the default) files nothing by score |
-| Job | `mail.soon` | every five minutes; brings back the snoozed conversations whose time came (one write for all); reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after; then forwarding, 8 Cloudflare calls at most: the people waiting their turn asked about, the aliases' rules made once a link is pressed, and one domain read back (new, moving, or not read for a day) with its people's links |
+| Job | `mail.soon` | every five minutes; brings back the snoozed conversations whose time came (one write for all); reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); sends again, for a day after the press, a route test refused only because the domain is not onboarded for Email Sending, 4 companies a run (one binding call each), so the route turns ready by itself once the dashboard step is taken; makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after; then forwarding, 8 Cloudflare calls at most: the people waiting their turn asked about, the aliases' rules made once a link is pressed, and one domain read back (new, moving, or not read for a day) with its people's links |
 | Job | `mail.inbox` | hourly; brings back once the conversations answered three days ago and not since (one write); removes mail past `keep_days` (100 messages a run), and the senders kept only for their list's unsubscribe once their mail is gone |
 | Health | `mail.forwarding` | `warn` for a forwarding domain or a switched-on alias with a problem (a rule Cloudflare refused, a forward that did not go), with what to do; an alias waiting for a link is not a problem |
 | Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), for a forwarding address whose link has not been pressed a day after Cloudflare emailed it, and past 250 MB of rows or 8 GB of stored copies |
@@ -201,7 +203,9 @@ Forwarding (`/email/forwarding`), in the Email tabs: the domains, each with wher
 what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
 with its people and whether each pressed Cloudflare's link, Change, Switch off and Delete; a form
 to add one; and Import from ImprovMX, which reads the account with its API key in one press (the
-key is never kept) or takes a pasted list. Someone who may only read sees
+key is never kept) or takes a pasted list. On the builder's own computer, Forwarding and
+Mailboxes also show **Send a test** (`src/try-here.tsx`): a message to an alias or a mailbox,
+handed to the Worker as Email Routing would, and what became of it. Someone who may only read sees
 it all and nothing to change.
 
 Mail setup (`/email/mail`), in the Email tabs: the route's line, the steps as a checklist, the
@@ -229,5 +233,7 @@ addresses, how many and when, when they were left). Migration `1005_mail_answers
 its mail goes, the service it went to, the records a move kept for Move back, whether the move
 added Cloudflare to its SPF record), `mail_aliases` (the address, its people as a JSON list, its
 rule and whether Cloudflare says what the row says, its counts), and `mail_cloudflare_addresses`
-gains `asked_at`, NULL while an address waits its turn to be asked about. Never KV (mail law
-M-3).
+gains `asked_at`, NULL while an address waits its turn to be asked about. Migration
+`1008_mail_test_again.sql`: `mail_cloudflare` gains `test_to` and `test_asked_at`, the address a
+test refused for a domain not onboarded went to and when it was pressed, cleared when a test
+passes. Never KV (mail law M-3).

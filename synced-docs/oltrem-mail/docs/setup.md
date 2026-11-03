@@ -88,7 +88,12 @@ a domain with Email Routing on. The card sets up both cases and tells them apart
    domain to Email Sending (checked 2026-11-02, when phase 2 was built), so this one step is a
    tap in the dashboard (Email Service, Email Sending, Onboard Domain), and the portal never asks
    for Email Sending Edit: the key needs the three rights above and nothing more, narrower than
-   [decision 3](plan.md#14-the-owners-decisions) allowed. The test tells the states apart: an
+   [decision 3](plan.md#14-the-owners-decisions) allowed. Checked again on 2026-11-03: the
+   Email Sending API has sending, suppressions and SMTP, and still no onboarding call. The step's
+   line links straight to the dashboard's Email Sending page, and a test refused only because the
+   domain is not onboarded is sent again by itself to the same address every five minutes for a
+   day (the `mail.soon` job, four companies a run), so the route turns ready without a second
+   press. The test tells the states apart: an
    answer that the domain is not onboarded shows the dashboard step; an unverified recipient
    shows "verify it first"; a pass marks the route ready. The mode is read, never guessed: Paid
    only when the portal's plan setting says Workers Paid, Free otherwise, and a plan that changes
@@ -219,6 +224,13 @@ Cloudflare's own records away, and takes Cloudflare's include out of the SPF rec
 is never changed by either, so its aliases are there on the way back. When the same Cloudflare zone
 also carries the sending route, another forwarding domain or mailboxes, Move back is refused with
 the dashboard steps instead, since turning Email Routing off would stop those too.
+
+**On the builder's own computer** (the portal tried with the kit's start page), Cloudflare is
+never asked: each domain says "On this computer", everyone an alias names counts as confirmed,
+and Move and Move back say that nothing moves there. **Send a test**, on the Forwarding page and
+on Mailboxes, hands the portal a message as Email Routing would and says what became of it:
+forwarded to whom, kept in which inbox, or refused, as the sender would be told. Nothing leaves
+the computer. Read from ImprovMX works there too, since it only reads.
 
 Every Cloudflare and DNS call is counted: 35 a press and 8 a run of the five-minute job, inside
 Workers Free's 50 an invocation; what is left over is done by the next run. Each move, move back

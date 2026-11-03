@@ -72,7 +72,7 @@ addon = mail?.({ email, /* the rest of MailAddonDeps, below */ });
 | `index`, `report` | the capability index and the error reporter, as for every module |
 | `bucket` | the client's one bucket (`FILES`); the inbox keeps each message whole under `mail/inbox/`; without it the inbox refuses mail and its health check fails |
 | `worker` | the Worker's own name, as the client's wrangler file names it; each mailbox's routing rule sends its mail to it |
-| `local` | optional: true only on the builder's computer (the kit hands `(env) => !env.ACCESS_AUD`, so a deployed portal is never local); a mailbox is then made without Email Routing and its rule, on the domain of `email.from_address` or example.com, so mail tried there reaches the inbox |
+| `local` | optional: true only on the builder's computer (the kit hands `(env) => !env.ACCESS_AUD`, so a deployed portal is never local); a mailbox is then made without Email Routing and its rule, on the domain of `email.from_address` or example.com, so mail tried there reaches the inbox; forwarding asks Cloudflare nothing (each domain is "on this computer", everyone an alias names counts as confirmed, nothing moves); and Send a test is offered on Forwarding and Mailboxes |
 
 The client's Worker hands every arriving message to the add-on, and refuses mail when there is
 none, so a client without Mail never keeps mail by accident:
@@ -82,8 +82,9 @@ email: (message, env, ctx) =>
   addon ? addon.receive(message, env, ctx) : message.setReject('Unknown recipient'),
 ```
 
-`oltrem mail try` posts a message to `/cdn-cgi/local/email` on the local portal, which reaches
-the same handler.
+On the builder's computer **Send a test** (Forwarding and Mailboxes, `POST /api/mail/try`) hands
+the add-on a message as Email Routing would, so nobody needs a terminal; `oltrem mail try` still
+posts one to `/cdn-cgi/local/email` on the local portal, which reaches the same handler.
 
 `MailAddonDeps` and `MailAddon` are exported by `@oltrem/email` (`src/addon.ts`), so the client
 types the wiring without importing the add-on. With Mail on, the deploy adds the `send_email`
@@ -123,7 +124,7 @@ fingerprint in the kit would place it by the domain's DNS instead.
 
 | Kind | Mail holds | A new one |
 |---|---|---|
-| Migrations | `0011`, `0020`, `0043` to `0050`, `0052` to `0054`, in the kit's one series; `1000` (email: the route a message is pinned to), `1001` (mail: the Cloudflare route), `1002` (mail: the inbox), `1003` (email: who left a saved list, and the warm-up's first day of a domain), `1004` (mail: Updates, snooze, mute and the senders a person moved), `1005` (mail: automatic replies and "No answer yet"), `1006` (email: each list domain's mail servers) and `1007` (mail: forwarding domains and aliases) | mail's new migrations number from `1000` up; the kit keeps its own series below; a client's own start at `5000` |
+| Migrations | `0011`, `0020`, `0043` to `0050`, `0052` to `0054`, in the kit's one series; `1000` (email: the route a message is pinned to), `1001` (mail: the Cloudflare route), `1002` (mail: the inbox), `1003` (email: who left a saved list, and the warm-up's first day of a domain), `1004` (mail: Updates, snooze, mute and the senders a person moved), `1005` (mail: automatic replies and "No answer yet"), `1006` (email: each list domain's mail servers), `1007` (mail: forwarding domains and aliases) and `1008` (mail: the route test sent again by itself) | mail's new migrations number from `1000` up; the kit keeps its own series below; a client's own start at `5000` |
 | Permission bit planes | `3` email, `13` campaigns, `30` mail | the kit's thread reserves the next free plane in the kit's architecture table first |
 | Error codes | the `1500`s email, the `2500`s campaigns, the `4000`s mail (`4001` to `4007` used) | the kit's thread reserves a block the same way |
 

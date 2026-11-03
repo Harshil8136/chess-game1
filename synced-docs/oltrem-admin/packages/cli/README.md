@@ -373,7 +373,11 @@ way to it, and a tile each for this computer, the portal here and Cloudflare), *
 checks: each one that needs a look with its title, summary and fix, a fix that is a command, or a
 few joined by "or", a box with **Copy**; **Check again** in the section's corner), **Try it here**
 (the choices whose id starts with `dev`, as cards with their label and hint, and **Start**; while
-one runs, its address with **Open** and **Stop**), **Put it on Cloudflare** (where the portal
+one runs, its address with **Open** and **Stop**; when the kit carries Oltrem Mail, a **With Oltrem
+Mail** tick, which Start sends only when it changes: the template's dev script then runs `oltrem
+mail add` or `oltrem mail remove --confirm remove` before the portal starts, and its `mail` event
+updates the page. While Mail is ticked in, an update that only Mail's files hold back takes Mail
+out, comes in, and puts Mail back: `MAIL_FILES` in `scripts/run.mjs`), **Put it on Cloudflare** (where the portal
 lives, **Put it live** or **Update it**, and the seven steps as above), **More** (any other choice,
 a card each) and **Help & details**. A choice runs as a second process whose lines come over IPC
 as the deploy's do (the kit's look sends them when `OLTREM_PAGE` is set and the process has an IPC

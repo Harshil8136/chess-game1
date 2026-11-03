@@ -32,6 +32,9 @@ flowchart LR
   rows --> inbox["Inbox page, and the<br/>unread count on Home"]
 ```
 
+On the builder's own computer, where Email Routing cannot reach the portal, **Send a test** on
+Mailboxes hands it a message the same way (setup.md section 5).
+
 1. **The mailbox is looked up first** (one query). Unknown: `message.setReject("Unknown
    recipient")`, a permanent refusal the sender sees.
 2. **The stream is split** with `tee()`. One side goes to R2 as `mail/inbox/{id}.eml` through a
