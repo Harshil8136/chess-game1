@@ -3,7 +3,7 @@
 title: "Data Privacy Dashboard"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 related_docs: [RoPA.md, SECURITY.md, ../architecture/plac-and-audit.md, ../features/USER-MANAGEMENT.md]
@@ -85,12 +85,14 @@ claim — records here are deletable, see §3.
 
 ### RLS Policy
 
-`consent_records` table — verified live via `pg_policies` on 2026-08-13:
+`consent_records` table — verified live via `pg_policies` on 2026-08-13, re-read 2026-11-03:
 
 - **INSERT:** `cf_astro_writer` (policy `cf_astro_writer_insert`) — the dedicated,
   least-privilege role the public cookie-consent banner on cf-astro writes through.
 - **SELECT/UPDATE/DELETE:** `service_role` only.
 - **`anon`:** zero policies, zero grants.
+- **`authenticated`:** table grants but no policy, so row-level security (enabled on the
+  table) refuses it every row.
 
 > **Corrected 2026-08-13.** This said INSERT was granted to `anon`, which
 > contradicted [`SECURITY.md`](./SECURITY.md) §10 ("all anon policies dropped
@@ -274,6 +276,7 @@ count in prose goes stale on the next commit.)*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | Every code path in the document resolves (50 checked); the `consent_records` access rules re-read on production Supabase: policies `Service role full access` (ALL, `service_role`) and `cf_astro_writer_insert` (INSERT, `cf_astro_writer`), row-level security on, no `anon` grant or policy, `authenticated` granted but without a policy (added to §RLS Policy); the metric cards' colours still come from `.consent-metric-card--{variant}` (`PrivacyMetrics.tsx`, `privacy-dashboard.css`), with no `colorVar` prop anywhere in `src/` | The dashboard's screens in a browser; the receipts query fan-out and cache figures in §3; the 10K-records-a-month scaling claim |
 | 2026-10-17 | §3's Delete paragraph against `src/pages/api/audit/delete.ts` (Owner, PLAC `#delete`, fresh sign-in, still no `auditLog()` naming the record) and `receipts.ts` (`requireAuth(context)` with no role, `METRICS_TTL_MS` 60 s) | The rest of §2–§4 |
 | 2026-10-16 | §1's new "Who opened them" bullet, against `src/pages/api/audit/enrich.ts`, `src/lib/audit-views.ts` and `test/sensitive-views.test.ts` | Everything else in this document |
 | 2026-10-15 | §1 "Consent details" and the `records` shape in §3, against `src/lib/consent-details.ts`, `src/lib/auth/surface-guards.ts`, `receipts.ts`, `enrich.ts`, `consent.ts`, `bookings/[id].ts`, the Inquiries page and `test/action-keys-enforced.test.ts` | Everything else in this document; live `admin_pages` rows other than `#forensics` (read live: stored `admin`, active) |

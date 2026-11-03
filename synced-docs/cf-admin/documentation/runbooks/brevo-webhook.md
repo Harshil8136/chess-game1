@@ -3,7 +3,7 @@
 title: "Runbook: Brevo Delivery Webhook"
 status: active
 audience: [technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config, infra, live-mcp]
 owner: harshil
 related_docs: [../features/EMAIL-PORTAL.md, ../security/SECURITY.md, public-share-links-domain-isolation.md]
@@ -155,8 +155,8 @@ GROUP BY 1;
 
 Success for *this* runbook means the `true` row's `newest` advances. If only the
 `false` row moves, Brevo is still posting to cf-astro and steps 2–3 are
-incomplete. Baseline to compare against (2026-09-19): `false` → 129 events,
-newest `2026-09-20`; `true` → 4 events, newest `2026-06-07`.
+incomplete. Baseline to compare against (2026-11-03): `false` → 647 events,
+newest `2026-11-02`; `true` → 4 events, newest `2026-06-07`.
 
 ## Rollback / disable
 
@@ -167,5 +167,6 @@ Remove the Brevo webhook URL (stops events), or delete the Access Bypass policy
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | `src/pages/api/emails/webhook.ts` read (rate limit 120 a minute before the secret check, `503` when the secret is unset, `x-brevo-secret` header then `?secret`/`?token`), `WEBHOOK_ROUTES` in `src/lib/auth/routes.ts`, `cf-astro/src/pages/api/webhooks/brevo.ts` present; `email_audit_logs` delivery events grouped by shape (Supabase connector, counts only) | 647 cf-astro-shaped events (newest 2026-11-02) vs 4 cf-admin-shaped (none after 2026-06-07): cf-astro still owns the live webhook; baseline updated. Not re-checked: the edge `302` to the Access login (this session's network refuses the portal's host) and the Brevo dashboard's webhook URL |
 | 2026-10-07 | `src/pages/api/emails/webhook.ts` read (`getRateLimiter({ requests: 120, window: '1 m' }, 'brevo-webhook')`, before the secret check) and `src/lib/ratelimit.ts` | The `429` row (changed 2026-10-04): 120 a minute per IP on the `RL_PER_MIN_120` binding. Nothing else re-checked; no live webhook call made |
 | 2026-09-19 | Unauthenticated `GET /api/emails/webhook` from outside the tenant; `src/pages/api/emails/webhook.ts` read; cf-astro `src/pages/api/webhooks/brevo.ts` read; `email_audit_logs` delivery events grouped by shape (Supabase MCP) | `302` to the Access login — **no bypass exists**. 129 cf-astro-shaped events (2026-07-08 → 2026-09-20) vs 4 cf-admin-shaped (none after 2026-06-07). Banner added; the ledger verification replaced with a shape-specific query; the three auth forms reordered to put the header first; `429` added to the failure list; owner changed from `ai-agent` to a human |

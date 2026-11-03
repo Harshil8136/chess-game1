@@ -3,7 +3,7 @@
 title: "Documentation Conventions & Governance"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 related_docs: [README.md,_templates/doc-template.md,commercial/MODULE-PRICING-CATALOG.md]
@@ -199,3 +199,9 @@ Migration references may use numeric shorthand (`migrations/0037`); the check
 resolves it against the directory. Note that `migrations/` and
 `database/legacy_migrations/` are **separate series overlapping on 19 numbers**,
 so always give the directory too — see `operations/OPERATIONS.md` §7.
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-11-03 | §6's mirror lists against `SYNC_EXCLUDE_PREFIXES` and the include prefixes in `.github/workflows/sync-docs.yml`; §8's checks against `scripts/docs_check.py` (the 45-day gate, the 14-day warning, the root-file list, the two markers, the absence cues, the batch-stamp warning); the 19 numbers shared by `migrations/` and `database/legacy_migrations/` | The folder map row by row, and the templates under `_templates/` |

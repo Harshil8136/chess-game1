@@ -3,7 +3,7 @@
 title: "SOC 2 Type I Readiness — TSC Control Mapping (cf-admin-madagascar)"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [ASVS-L2.md, CSA-CAIQ-v4.md, ../SECURITY.md]
@@ -48,8 +48,9 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
   Confidentiality touched where evidence is strong. Processing Integrity and
   Privacy left for a future Type II engagement.
 - **Report boundary:** the admin application layer. Underlying platform TSCs
-  (Cloudflare, Supabase, Upstash) inherit through those vendors' own SOC 2
-  reports.
+  (Cloudflare, Supabase) inherit through those vendors' own SOC 2
+  reports. (Upstash was listed here until cf-admin stopped using it on
+  2026-10-04; cf-astro and cf-chatbot still do.)
 
 ## Legend
 
@@ -86,13 +87,13 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 | CC3.1 | Specifies objectives with clarity | ✅ | Mission statement in `RULESAd.md`. |
 | CC3.2 | Identifies risks to objectives | ✅ | `../../records/reviews/2026-07-05-comprehensive-codebase-and-system-review.md` scorecard. |
 | CC3.3 | Considers potential for fraud | ✅ | Ghost Audit Engine surfaces all privileged actions; force-kick + revocation flows. |
-| CC3.4 | Assesses changes that could affect internal controls | ✅ *(since 2026-07-25)* | `quality.yml` (unified 2026-09-22) runs secret scan, `rules_check.py`, `a11y_check.py`, `docs_check.py`, markdownlint, `audit_gate.py`, `astro check`, `eslint` via `ratchet.py`, `vitest`, `astro build`, and CycloneDX SBOM. **Effective date matters:** no lint, typecheck, test or build job existed in CI at all before 2026-07-25 (finding N6 in `../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`), so this control cannot be evidenced for any period before that date. *(Consolidated 2026-09-22: the former `security.yml` and `docs-quality.yml` gates were merged into `quality.yml` — see `records/reports/2026-09-22-ci-workflow-consolidation.md`.)* Re-dated 2026-07-29 — it previously carried an unqualified ✅ written on 2026-07-08. |
+| CC3.4 | Assesses changes that could affect internal controls | ✅ *(since 2026-07-25)* | `quality.yml` (unified 2026-09-22) runs secret scan, `rules_check.py`, `a11y_check.py`, `docs_check.py`, markdownlint, `audit_gate.py`, `astro check`, `eslint` via `ratchet.py`, `vitest`, `astro build`, and CycloneDX SBOM. Since 2026-10-18 it runs weekly, on pull requests and by hand, not on push; `npm run verify` runs the same gates before every push except `types:check`, the build and the SBOM (`scripts/lib/verify-runner.mjs`). **Effective date matters:** no lint, typecheck, test or build job existed in CI at all before 2026-07-25 (finding N6 in `../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md`), so this control cannot be evidenced for any period before that date. *(Consolidated 2026-09-22: the former `security.yml` and `docs-quality.yml` gates were merged into `quality.yml` — see `records/reports/2026-09-22-ci-workflow-consolidation.md`.)* Re-dated 2026-07-29 — it previously carried an unqualified ✅ written on 2026-07-08. |
 
 ## CC4 — Monitoring Activities
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC4.1 | Ongoing + periodic evaluations of controls | 🟡 | Automated evaluation is real and continuous: weekly `npm audit` cron, `rules_check.py` on every push, `audit_gate.py` failing on undocumented or expired advisories. **Human periodic review is ad-hoc, not monthly** — the actual review dates (2026-04-24, 05-24, 05-25, 05-26, 06-13, 07-17) show an irregular cadence. `CSA-CAIQ-v4.md` GRC-03 now states quarterly, which is what a single-operator team can sustain and evidence. Downgraded 2026-07-29. |
+| CC4.1 | Ongoing + periodic evaluations of controls | 🟡 | Automated evaluation is real and continuous: `rules_check.py`, `audit_gate.py` (failing on undocumented or expired advisories) and the secret scan in `npm run verify` before every push, and the weekly `quality.yml` run. **Human periodic review is ad-hoc, not monthly** — the actual review dates (2026-04-24, 05-24, 05-25, 05-26, 06-13, 07-17) show an irregular cadence. `CSA-CAIQ-v4.md` GRC-03 now states quarterly, which is what a single-operator team can sustain and evidence. Downgraded 2026-07-29. |
 | CC4.2 | Communicates + acts on deficiencies | ✅ | `MAINTENANCE.md` open-items table; each PR closes findings with commit hash. |
 
 ## CC5 — Control Activities
@@ -114,7 +115,7 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 | CC6.5 | Discontinues logical + physical access | ✅ | Force-kick, session flush, revocation flag KV + CF Access session revoke — `documentation/features/SESSION-MANAGEMENT.md`. |
 | CC6.6 | Implements logical access security to protect from threats outside boundaries | ✅ | HTTPS-only + HSTS `max-age=63072000; preload`; CSP nonce-based; Cloudflare WAF. |
 | CC6.7 | Restricts transmission, movement, removal of information | ✅ | Export gated by `#export` PLAC fragment; downloads audit-logged. |
-| CC6.8 | Prevents + detects unauthorized software installation | ✅ | Worker deploys require `wrangler` auth; commit signing recommended; secret-scan CI. |
+| CC6.8 | Prevents + detects unauthorized software installation | ✅ | Worker deploys require `wrangler` auth; commit signing recommended; `scripts/secret_scan.py` in `npm run verify` before every push (since 2026-11-03) and in CI. |
 
 ## CC7 — System Operations
 
@@ -130,14 +131,14 @@ tags: [compliance, soc2, tsc, aicpa, self-attestation]
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `ratchet.py`, the full `vitest` suite, `test:gates`, then `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`, `audit_gate.py` — and the same gates re-run in CI on push to `main` (`quality.yml`, unified 2026-09-22 from the former `quality.yml` + `security.yml` + `docs-quality.yml`). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `RULESAd.md` §12 mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** CI gates run on every push, so a failing change is visible immediately after push rather than approved before it. **Branch protection on `main` is not enabled** — there is no required status check and force-push is not prevented; `CSA-CAIQ-v4.md` CCC-03 records the same. *(Corrected 2026-09-19: this row read "authorised and pending enablement", which reads to an assessor as a control in flight. Nothing in the repository evidences an authorisation, and it is tracked as an open item, not a scheduled one. The exact test count was also dropped — it goes stale on the next commit.)* Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `RULESAd.md` §12 and the repo's own audit. |
+| CC8.1 | Authorizes, designs, develops, tests, approves, implements changes | 🟡 | **What is actually true:** changes are verified locally before push via `npm run verify` — `astro check`, `eslint`, `ratchet.py`, the full `vitest` suite, `test:gates`, then `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`, `audit_gate.py`, `secret_scan.py` — and CI re-runs them weekly, on pull requests and by hand (`quality.yml`, unified 2026-09-22 from the former `quality.yml` + `security.yml` + `docs-quality.yml`; off the push since 2026-10-18, the owner's decision on Actions minutes). A local repository backup is retained before each push. **What is not true:** there is no pull-request approval step. `RULESAd.md` §12 mandates direct pushes to `main` and forbids sub-branches, and the 2026-07-17 audit confirmed no PR gate (finding O11). As a single-operator team there is also no separation of duties — an independent approver does not exist, which `security/THREAT-MODEL.md` already records as a residual risk. **Compensating control:** the local gate itself. The contract (`main.md`) forbids a push with a red `verify`, but no machine enforces that it ran: since 2026-10-18 CI no longer runs on push, so a failing change is found at the next weekly run at the latest, not immediately after the push. **Branch protection on `main` is not enabled** — there is no required status check and force-push is not prevented; `CSA-CAIQ-v4.md` CCC-03 records the same. *(Corrected 2026-09-19: this row read "authorised and pending enablement", which reads to an assessor as a control in flight. Nothing in the repository evidences an authorisation, and it is tracked as an open item, not a scheduled one. The exact test count was also dropped — it goes stale on the next commit.)* Corrected 2026-07-29 — the prior ✅ claimed "PR + CI" and "branch protection on `main`", both of which contradicted `RULESAd.md` §12 and the repo's own audit. |
 
 ## CC9 — Risk Mitigation
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
 | CC9.1 | Identifies + implements activities to mitigate risks from partners + vendors | 🟡 | Sub-processors are enumerated with transfer mechanisms in `security/RoPA.md` and `compliance/data-residency.md`, each vendor's published DPA terms apply, and connector scopes are documented in `features/CONTROL-PLANE-CONNECTORS.md`. **Countersigned DPAs are being collected individually and are not yet held** — `data-residency.md` flags this as an outstanding action and notes that published terms are weaker evidence than a signed agreement when an assessor asks. Downgraded 2026-07-29 — the prior ✅ read "DPAs on file". |
-| CC9.2 | Assesses + manages risks associated with vendors + business partners | 🟡 | The sub-processor list is `security/RoPA.md` §3 (nine entries — the authoritative home); supply-chain risk is covered by the weekly `npm audit` → `audit_gate.py` and the Supabase advisor sweep. **Downgraded 2026-09-19:** the ✅ rested on "STA-01/02 in CAIQ", and STA-01 listed only five of the nine sub-processors — now corrected to cite RoPA. More substantively, no vendor SOC 2 or ISO 27001 report has actually been obtained or read; this is reliance on published claims, which an assessor will name as such. |
+| CC9.2 | Assesses + manages risks associated with vendors + business partners | 🟡 | The sub-processor list is `security/RoPA.md` §3 (the authoritative home, which owns the count); supply-chain risk is covered by the weekly `npm audit` → `audit_gate.py` and the Supabase advisor sweep. **Downgraded 2026-09-19:** the ✅ rested on "STA-01/02 in CAIQ", and STA-01 listed only five of the then nine sub-processors — now corrected to cite RoPA. More substantively, no vendor SOC 2 or ISO 27001 report has actually been obtained or read; this is reliance on published claims, which an assessor will name as such. |
 
 ## A1 — Availability (partial coverage)
 
@@ -171,7 +172,8 @@ Before an actual SOC 2 Type I engagement is worth engaging, close these:
    small-scope engagement.
 5. ~~**STA-03 — SBOM**: emit CycloneDX SBOM from `npm ls --production --json`
    as a CI artifact.~~ **Closed 2026-09-14 (re-verified):** `quality.yml` runs
-   `npm sbom --sbom-format cyclonedx` on every push to `main` and uploads
+   `npm sbom --sbom-format cyclonedx` on each run (on every push to `main` until
+   2026-10-18; weekly, on pull requests and by hand since) and uploads
    `sbom.cyclonedx.json` as the `sbom-cyclonedx` artifact.
 6. **IPY-02 — API docs**: generate an OpenAPI schema (Zod → OpenAPI) so
    external integrators + auditors have a stable API surface.
@@ -182,10 +184,11 @@ Before an actual SOC 2 Type I engagement is worth engaging, close these:
    the tiering and the handling rules per tier. Days of work, and it unblocks
    C1.1, ASVS 6.1.1–6.1.3 and CAIQ DSP-01 together.
 8. **CC1.5 — evidence retention and a review log** *(added 2026-09-19)*: the
-   audit trail can be cleared from the application (`MAINTENANCE.md` C-9) and
-   was, on 2026-09-18. Until deletion leaves a counter-record that survives it,
-   and until the weekly review is written down somewhere an assessor can
-   sample, CC1.5 cannot be evidenced at all.
+   audit trail was cleared from the application on 2026-09-18. Half of this is
+   done: since 2026-10-16 no route deletes an entry younger than 180 days and
+   each day is sealed the next morning (`MAINTENANCE.md` C-9, closed). Until the
+   weekly review is written down somewhere an assessor can sample, CC1.5 still
+   cannot be evidenced.
 
 Once (1–8) are addressed, the org is Type I audit-ready. Cost of Type I
 engagement itself (excluding remediation): typically $10k–$25k for a
@@ -213,6 +216,7 @@ small-scope, single-service report.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | Every file, path and symbol the mapping cites resolves (a scripted check of each backticked name); CC3.4, CC4.1, CC6.8, CC8.1 and gap 5 against `.github/workflows/quality.yml` (`on:` since 2026-10-18) and `scripts/lib/verify-runner.mjs` (with `secret_scan` since 2026-11-03); CC7.1's `sessionRisk.ts` (`src/components/admin/users/sessions/`); CC7.4's twelve runbooks; CC9.2 against RoPA §3 (eleven entries now); gap 8 against `MAINTENANCE.md` C-9 (closed 2026-10-16); a `review log` grep over `documentation/` (still none) | Seven places corrected: CI no longer runs on push, so CC8.1's compensating control is the local gate and says so; the secret scan now runs before every push; Upstash left the scope; RoPA's count is no longer restated; gap 8 is half done. Statuses unchanged. Not re-derived: the other rows, vendor reports, GitHub settings |
 | 2026-10-17 | A1.3: `backup_runs` grouped by kind and status through the Cloudflare D1 connector (19 succeeded, last 2026-10-14), cf-backup `.github/workflows/secondary-pipeline.yml` (restore-verification steps), `ls .github/workflows/` here (no `backups.yml`), the disaster-recovery runbook's 2026-09-27 banner | The cf-backup run reports themselves, and every other row |
 | 2026-10-16 | CC1.5's trail half, for the daily seal: `src/pages/api/audit/logs.ts` (no `DELETE`), `src/lib/retention-tables.ts` (`minDays`), `src/lib/audit-seal/`, and a count of `admin_audit_log` through the D1 connector (95 rows, oldest 2026-09-20) | The review half (still no review log); the other rows |
 | 2026-09-19 | CC1.5 against a live `SELECT COUNT(*) AS n, MIN(created_at) FROM admin_audit_log` (7 rows; oldest `2026-09-18 04:49:11` UTC, a `delete` on module `logs`) and a `"review log"` grep across `documentation/` (no artifact); C1.1 against `documentation/security/PRIVACY.md` (no classification section, no keyword match); CC5.2/CC6.1 against `security/SECURITY.md` §1.1 (identity providers) and §1.3 (`loginMethod` union); A1.3 against `.github/workflows/backups.yml` (schedule, four jobs, required secrets, first-run outcome); CC7.4 against `ls documentation/runbooks/` (12 files); CC8.1 and CC9.2 against `CSA-CAIQ-v4.md` CCC-03 / `security/RoPA.md` §3 (nine sub-processors). | Vendor SOC 2 reports (CC6.4); whether the local pre-push repository backup in CC8.1 exists; GitHub repository settings; Cloudflare Access policy contents |

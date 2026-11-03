@@ -3,7 +3,7 @@
 title: "Runbook: Public Share-Link Architecture (Single-Domain Access Bypass)"
 status: active
 audience: [technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, infra]
 owner: harshil
 related_docs: [../features/STAFF-MANAGED-STORAGE.md, brevo-webhook.md, ../security/SECURITY.md]
@@ -158,14 +158,14 @@ Every token on this surface derives its signing key from the single root secret 
 | Purpose | Signing key | Legacy fallback |
 |---|---|---|
 | IP pseudonymisation (`hashIp`) | the **raw root secret**, unchanged | n/a |
-| Share + file-request tokens | `HKDF(root, "cf-admin/storage/share-token/v1")` | sunset **2026-09-15 — expired, branches still live** (see below) |
+| Share + file-request tokens | `HKDF(root, "cf-admin/storage/share-token/v1")` | **removed 2026-11-03** (see below) |
 | Share + request passcodes | `HKDF(root, "cf-admin/storage/passcode/v1")` | permanent (upgrade-on-use) |
 | RFC 8058 unsubscribe tokens | `HKDF(root, "cf-admin/email/unsubscribe/v1")` | **permanent — never remove** |
 
 Notes a future maintainer needs:
 
 - **`hashIp` deliberately stays on the raw root.** Re-keying it would break correlation with every historical `ip_hash` already written to `storage_share_access_logs`, `admin_audit_log` and the login logs, and buys nothing once the token signers have moved off it.
-- **The share-token fallback has a hard sunset, and it has passed.** Share and request TTLs are capped at 30 days (`schemas/storage.ts`, max 2592000s), so every token signed with the raw root was guaranteed expired by **2026-09-15**. ⚠️ **As of 2026-09-19 both branches are still in the code** — the raw-root HMAC comparison in `verifyShareToken` (marked "safe to delete this branch on or after 2026-09-15") and the legacy remint path in the same file. This runbook is the only tracker for the deletion: delete them, or record an owner decision and a new date. A signing fallback that outlives its window is exactly the kind of thing nobody notices.
+- **The share-token fallback is gone.** Share and request TTLs are capped at 30 days (`schemas/storage.ts`, max 2592000s), so every token signed with the raw root expired by **2026-09-15**. Both branches stayed in the code past that date; they were removed on **2026-11-03**, the raw-root comparison in `verifyShareToken` and the raw-root remint in `remintForStoredHash` (`src/lib/storage/share-token.ts`), when production held no live share link and no live request link (D1, counts only). `test/share-token.test.ts` now proves a raw-root token is refused. A passcode or unsubscribe fallback is a different matter: see the next two notes.
 - **The unsubscribe fallback must never be removed.** Those tokens are intentionally not time-limited, because an opt-out link in a two-year-old email has to keep working; dropping the branch would silently break opt-out on every message already delivered, which is a CAN-SPAM and deliverability problem rather than a broken link.
 - **Passcodes migrate themselves.** `verifyPasscode` checks the keyed scheme first and falls back to the legacy unsalted SHA-256; on a legacy match the caller rewrites the stored hash with the keyed form, so records drain over as they are used. No migration script, no forced link regeneration.
 - **Mass revocation does not need a key change.** Nulling `storage_files.share_token_hash` (or setting `storage_file_requests.status`) revokes links immediately — that lever already exists and is why no separate token-generation counter was added.
@@ -175,4 +175,5 @@ Notes a future maintainer needs:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | claude: `src/lib/auth/routes.ts` (`PUBLIC_API_ROUTES`, `PUBLIC_API_PREFIXES`), `astro.config.ts` `checkOrigin: false`, `validateCsrf` in `src/lib/auth/stages/classify.ts`, the three HKDF labels, the 30-day cap in `src/lib/schemas/storage.ts`; live shares and request links counted (D1 connector: 0 and 0 unexpired) | The expired share-token fallback removed from `src/lib/storage/share-token.ts` in this commit, with its tests; §3 says so. Not re-checked: the live probes of the four paths and the Access application's three hostnames (this session's network refuses the portal's host) |
 | 2026-09-19 | Unauthenticated `curl` from outside the tenant against `/api/storage/share/<invalid>`, `/api/storage/request/<invalid>`, `/api/emails/unsubscribe`, `/api/emails/send`, `/api/health` and `/api/emails/webhook`; `grep -rn validateCsrf src/lib/auth/`; `src/lib/storage/share-token.ts` read | 404 / 404 / 200 / 302 / 302 / **302**. Bypass scope confirmed unchanged and correctly narrow. Three stale banners collapsed into the resolved note above; §1 and §2 rewritten to state the configuration rather than ask about it; `validateCsrf` path corrected to `stages/classify.ts`; the expired share-token legacy window flagged; the RULE #0.8 number dropped. New: `/api/emails/webhook` has **no** Access bypass — recorded here and in `brevo-webhook.md` |

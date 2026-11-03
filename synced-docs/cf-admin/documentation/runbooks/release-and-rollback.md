@@ -58,8 +58,8 @@ git push origin main
 ```
 
 `npm run verify` (`scripts/verify.mjs`, since 2026-10-11) runs the quick gates
-first, `test:gates`, `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`
-and `audit_gate.py`, and stops there on a failure; then `typecheck`, `ratchet` and
+first, `test:gates`, `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`,
+`audit_gate.py` and `secret_scan.py` (since 2026-11-03), and stops there on a failure; then `typecheck`, `ratchet` and
 `test:run` side by side. About 3 minutes instead of the old chain's 4 to 6, with
 every gate kept. **`scripts/lib/verify-runner.mjs` owns that list** — read it
 there rather than trusting this line. (Note what is *not* in it:
@@ -169,6 +169,7 @@ and somebody has to actually run them.
 | 2026-10-10 | claude | `d1_migrations` read through the Cloudflare D1 connector after pushing `2979706`: `0069_settings_cleanup.sql` id 105, applied 04:21:03 UTC; the commit's Workers Builds check completed 04:21:18 UTC; no session or person had applied it (the thread that wrote it meant to apply it after the deploy). `scripts/release.mjs` `deploy` stage read (drift check, migrate, deploy, smoke) | The deploy command is `deploy:ci` and its token can write D1 (inferred from that timing; the dashboard is not readable from here). §1's banner now says so and how to order a destructive migration. Not checked: the smoke token |
 | 2026-10-11 | claude | Each gate timed alone in a 4-CPU session: `typecheck` 42 s, `ratchet` 42 s, `test:run` 142 s, the six quick gates 11 s together; then `scripts/verify.mjs` end to end, 167 s, every gate green; `test/verify-runner.test.ts` (7) | §1's `verify` paragraph rewritten for the new runner. Tried and not kept: more test workers (142 s to 129 s at 6) and pre-bundling `lucide-preact` and `zod` (135 s); per-file module loading in workerd, not the tests (42 s), is most of the suite's time. Not re-checked: the rest of the runbook |
 | 2026-10-18 | claude | `.github/workflows/quality.yml` triggers after the push trigger was removed; `quality` run lengths 2026-10-17/18 from the Actions API (13 full runs of 5.9 to 9.3 min, 8 documentation-only runs under a minute) | The deploy stage was not re-run |
+| 2026-11-03 | claude | `scripts/lib/verify-runner.mjs` and `test/verify-runner.test.ts` after `secret_scan` joined the quick gates; `python3 scripts/secret_scan.py` and `scripts/tests/test_secret_scan.py` | §1's gate list names the new quick gate. Scope-limited to that line; `last_verified` left as it was |
 
 ## 7. Related
 

@@ -3,7 +3,7 @@
 title: "Schema Change Ledger"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-11-03
 verified_against: [code, infra]
 owner: harshil
 related_docs: [../../RULESAd.md, ../records/reviews/2026-08-06-data-infrastructure-audit-and-reuse-policy.md]
@@ -43,7 +43,7 @@ Add a row whenever a new migration file lands in `migrations/` (D1) or
 build when a D1 file has no row.
 
 **Scope, precisely.** `migrations/` (D1, cf-admin) is complete and enforced:
-57 files today (to `0079`), 57 rows — re-count with `ls migrations/*.sql | wc -l` rather than trusting this. Supabase (`supabase/migrations/`, 12 files) and
+70 files today (to `0092`), 70 rows (counted 2026-11-03) — re-count with `ls migrations/*.sql | wc -l` rather than trusting this. Supabase (`supabase/migrations/`, 12 files) and
 cf-astro rows are added by convention only from 2026-08-12 onward, so earlier
 Supabase files have no row here by design. `database/legacy_migrations/`
 (44 files, consolidated into `migrations/0000_baseline.sql`) is deliberately
@@ -168,6 +168,12 @@ even when the change is data rather than schema.
 - A new D1 migration's row is written in the same commit as the file, with the
   date the deploy that carries it will apply it; `release.mjs` applies pending
   files before the code deploys, so the date is the push date.
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-11-03 | The scope paragraph re-counted: 70 files in `migrations/` (to `0092`) and 70 rows here, 12 files in `supabase/migrations/`, 44 SQL files in `database/legacy_migrations/`; the production ledger read through the Cloudflare D1 connector has 128 rows, the last `0092_developer_tools_wave2.sql`; `node scripts/migrations_manifest.mjs --check` reports 70 files frozen | Each historical row's description and date, which stay as written |
 
 ## Related
 

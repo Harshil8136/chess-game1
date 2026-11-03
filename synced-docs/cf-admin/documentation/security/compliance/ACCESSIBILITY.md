@@ -3,7 +3,7 @@
 title: "Accessibility Conformance Statement (WCAG 2.2 AA)"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config]
 owner: harshil
 related_docs: [../../reference/DESIGN-SYSTEM.md, ../../MAINTENANCE.md, ../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -15,7 +15,7 @@ tags: [accessibility, wcag, ada, en301549, compliance]
 > **TL;DR (non-technical):** Where this admin portal stands on accessibility.
 > Honest summary: the foundations are better than expected — native dialogs,
 > keyboard support, a skip link, a declared page language — and an automated
-> guard now runs blocking in CI with **zero findings**. But **we still do not
+> guard runs blocking before every push with **zero findings**. But **we still do not
 > claim WCAG 2.2 AA conformance**: the automated guard only covers the
 > mechanically checkable criteria, and the ones that need a human tester
 > (contrast, focus order, screen-reader announcement, zoom/reflow, motion) have
@@ -97,9 +97,11 @@ count, which is 0:
 | A11Y-06 | 3.1.1 — `<html>` without `lang` | 0 | ✅ Fixed 2026-07-25 |
 
 All static accessibility findings are resolved (0 findings). The guard runs in
-strict **blocking** mode in `package.json` (`npm run verify`) and, since
-2026-09-14, in `.github/workflows/quality.yml` as well — the CI job had kept
-`--warn-only` after the burn-down, so a regression would have passed CI.
+strict **blocking** mode in `npm run verify` (`scripts/lib/verify-runner.mjs`), the
+gate before every push, and, since 2026-09-14, in `.github/workflows/quality.yml` as
+well — the CI job had kept `--warn-only` after the burn-down. Since 2026-10-18
+`quality.yml` runs weekly, on pull requests and by hand, not on every push, so
+`verify` is the run that stops a regression.
 
 **Why A11Y-01 mattered, while it was open** *(re-framed 2026-09-19 — this
 paragraph sat under a table of zeros and read as a live defect):* a
@@ -115,6 +117,7 @@ change. Recorded regressions:
 
 | Date | What happened | Resolution |
 |------|---------------|------------|
+| 2026-11-03 | Re-run during a documentation verification pass: 0 findings over 362 files. No regression. | — |
 | 2026-09-19 | Re-run during a documentation verification pass: 0 findings over 263 files. No regression. ARIA/role coverage re-counted at 151 of 196 component files. | — |
 | 2026-09-14 | Re-run after the Emails-portal dead subtree was deleted and the CI job flipped to blocking: 0 findings over 259 files. No regression. | — |
 | 2026-08-13 | Search Console Sync UI took the count to 7 (A11Y-01 ×6, A11Y-04 ×1) while this document, `MAINTENANCE.md` and `RULESAd.md` §9.0 all still recorded zero. `npm run verify` was red. | 6 were **false positives** — `has_text_content()` deleted JSX expression containers wholesale, so a button whose label is rendered by a ternary read as icon-only. Fixed in `scripts/a11y_check.py`, not by adding `aria-label` to buttons that already have visible text (which would risk a WCAG 2.5.3 *Label in Name* mismatch). The 7th was genuine and was labelled. See `MAINTENANCE.md` → Accessibility burn-down and C-16. |
@@ -175,3 +178,9 @@ Only the last produces a defensible external conformance claim.
 Accessibility problems: `mascotasmadagascar@gmail.com`. Target response 5
 business days. **No formal SLA is offered** — stating one that is not resourced
 would be worse than stating none.
+
+## Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-11-03 | `python3 scripts/a11y_check.py` (6 rules over 362 files, 0 findings); where it runs: `scripts/lib/verify-runner.mjs` and `.github/workflows/quality.yml` (its triggers since 2026-10-18); `RULESAd.md` §7.3 for the dependency reason in §5 | The criteria of §4: still never tested by a person, a screen reader or a browser; the feedback address and the roadmap's costs |

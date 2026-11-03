@@ -922,7 +922,8 @@ npm run knip             # Dead-code sweep, run through `npx --yes knip` (the
 
 # The full gate — run this before any commit (see "Git & deployment protocol")
 npm run verify           # quick gates first: test:gates, rules_check, docs_check, lint:md,
-                         #   a11y_check, audit_gate (a failure stops here, in seconds);
+                         #   a11y_check, audit_gate, secret_scan (a failure stops here,
+                         #   in seconds);
                          #   then typecheck, ratchet and test:run side by side (all blocking).
                          # scripts/lib/verify-runner.mjs owns the list. `types:check` is NOT in it.
                          # ESLint *is* gated: scripts/ratchet.py runs `eslint . -f json`

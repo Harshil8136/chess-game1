@@ -3,7 +3,7 @@
 title: "OWASP ASVS v4.0.3 Level 2 Verification Matrix"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [../SECURITY.md, CSA-CAIQ-v4.md, SOC2-TSC-mapping.md, ../../../RULESAd.md]
@@ -161,7 +161,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
 | 8.1.1–8.1.6 | Client data protection | ✅ | HttpOnly cookies; no localStorage secrets; auth token never sent to non-`/api/*` endpoints. |
-| 8.2.1–8.2.3 | Client-side data destruction | ✅ | Session-invalidation flow clears the cookie server-side and `SessionWatchdog.tsx` removes `sb-*` `localStorage` keys; `sessionStorage` is not touched (nothing is stored there). |
+| 8.2.1–8.2.3 | Client-side data destruction | ✅ | Session-invalidation flow clears the cookie server-side and `SessionWatchdog.tsx` removes `sb-*` `localStorage` keys; `sessionStorage` is not cleared: since 2026-11-03 it holds one entry, the time the Analytics summary last had its parts read (`cf-admin:analytics-warm:…`, `src/components/dashboard/analytics/Analytics.tsx`), which says nothing about a person and ends with the tab. |
 | 8.3.1–8.3.8 | Sensitive private data | ✅ | Consent records (`consent_records` in Supabase); privacy dashboard (`documentation/security/PRIVACY.md`). |
 
 ## V9 — Communications
@@ -175,9 +175,9 @@ tags: [compliance, owasp, asvs, self-attestation]
 
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
-| 10.1.1 | Malicious-code check on external deps | ✅ | `npm audit --omit=dev` → `scripts/audit_gate.py` on every push and weekly (`.github/workflows/quality.yml`, consolidated 2026-09-22 from the former `security.yml`). As of 2026-09-14: 6 high/critical advisory groups documented in `.audit-exceptions.json` (js-yaml, sharp ×3, svgo ×2; expire 2026-11-30), 0 unexcepted. *(Pointer corrected 2026-09-19: this row cited `MAINTENANCE.md` C-14, which is struck through and CLOSED 2026-09-02 and describes a different, deleted set of ten Astro-6 entries. Read `.audit-exceptions.json` itself.)* |
+| 10.1.1 | Malicious-code check on external deps | ✅ | `npm audit --omit=dev` → `scripts/audit_gate.py` in `npm run verify` before every push, and in `.github/workflows/quality.yml` weekly, on pull requests and by hand (not on push since 2026-10-18). As of 2026-11-03: 0 high/critical advisory groups and no exceptions (`.audit-exceptions.json` emptied that day, when its seven entries matched nothing). *(Pointer corrected 2026-09-19: this row cited `MAINTENANCE.md` C-14, which is struck through and CLOSED 2026-09-02 and describes a different, deleted set of ten Astro-6 entries. Read `.audit-exceptions.json` itself.)* |
 | 10.2.1–10.2.6 | Malicious-code inclusion | ✅ | No dynamic `import()` of untrusted URLs; CSP `script-src` allowlist. |
-| 10.3.1–10.3.3 | Deployed source integrity | ✅ | Wrangler deploys signed bundle; secret-scan CI blocks credential commits. |
+| 10.3.1–10.3.3 | Deployed source integrity | ✅ | Wrangler deploys signed bundle; `scripts/secret_scan.py` refuses a credential pattern in tracked files, blocking in `npm run verify` before every push (since 2026-11-03) and in CI. |
 
 ## V12 — Files
 
@@ -221,7 +221,7 @@ purge. `wrangler.toml` records the isolation reasoning in the binding comment.
 | ID | Control | Status | Evidence |
 |----|---------|--------|----------|
 | 14.1.1 | Build reproducible | ✅ | `package-lock.json` pinned; wrangler builds are deterministic. |
-| 14.1.2 | Deps clean | 🟡 | 6 documented high/critical exceptions with an expiry (`.audit-exceptions.json`), 0 unexcepted; `audit_gate.py` fails the build on any new or expired one. *(Re-stated 2026-09-14; previously "3 low-severity".)* |
+| 14.1.2 | Deps clean | 🟡 | 0 high/critical advisories and no exceptions (2026-11-03); `audit_gate.py` fails the build on any new one. Still partial: 5 moderate and 1 low advisories in the production tree sit below the gate. *(Re-stated 2026-11-03; on 2026-09-14 it was 6 documented exceptions.)* |
 | 14.1.3–14.1.5 | Build hardening | ✅ | TypeScript strict mode; no debug endpoints exposed in prod. |
 | 14.2.1 | Latest patched libraries | ✅ | Weekly `npm audit` cron; Dependabot enabled (`.github/dependabot.yml`, monthly npm + github-actions groups). |
 | 14.2.2 | Unused features removed | ✅ | Recent E-1/E-2/E-3 cleanup; `MAINTENANCE.md` tracks. |
@@ -288,6 +288,7 @@ Residual partials are documented and tracked in `MAINTENANCE.md`.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | Every file, path and symbol the sheet cites resolves (a scripted check of each backticked name); rows 3.2.1–3.3.4 against `src/lib/auth/session.ts` (`createSession`, `crypto.randomUUID`, `httpOnly`, `sameSite: 'strict'`, `needsRoleRecheck`), 7.1.1 and 14.3.1 (`sendDefaultPii: false` in both Sentry configs, no `X-Powered-By`), 8.2.1 (`SessionWatchdog.tsx` and every `sessionStorage` use in `src/`), 10.1.1 and 14.1.2 (`npm audit --omit=dev`, `python3 scripts/audit_gate.py`), 10.3.1 (`scripts/secret_scan.py` in `scripts/lib/verify-runner.mjs`) | Four rows corrected: 8.2.1 (one `sessionStorage` entry since 2026-11-03), 10.1.1 and 14.1.2 (no exceptions, and where the gate runs since CI left the push), 10.3.1 (the secret scan before every push); statuses and the TL;DR's counts unchanged. Not re-derived: the other rows' statuses, which were last re-derived on 2026-09-19 |
 | 2026-10-30 | Row 5.2.6: the SEC-08 `exempt` list in `scripts/rules_check.py` (two files; `TiptapRichEditor.tsx` removed); no `dangerouslySetInnerHTML` in `src/components/dashboard/content/` | Every other row |
 | 2026-10-17 | Row 1.1.1: `ls .github/workflows/` (three workflows; `backups.yml` deleted 2026-09-27) | Every other row |
 | 2026-10-07 | Rows 2.2.1, 9.2.1–9.2.5 and 13.3.1, for the move of cf-admin's rate limits off Upstash: `src/lib/ratelimit.ts` (the `RL_PER_MIN_<n>` bindings for `'1 m'`, `RateLimitRepository.ts` for `'1 h'` / `'1 d'`), `wrangler.toml` `[[ratelimits]]`, and no Upstash client left under `src/` | Every other row; whether Cloudflare's limiter counts exactly (its documentation calls the counts approximate) |

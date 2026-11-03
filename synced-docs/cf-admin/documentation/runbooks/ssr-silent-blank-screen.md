@@ -3,7 +3,7 @@
 title: "Silent Blank Screen (SSR Hydration Failure)"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 tags: [runbook, ssr, preact, observability]
@@ -100,11 +100,12 @@ const ramUsedPct = fmtPct((pg.ramTotal ?? 0) - (pg.ramAvailable ?? 0), pg.ramTot
 
 ### Layer 1: ErrorBoundary → console, and Sentry *if* it is there
 
-Dashboard widgets are wrapped in `<ErrorBoundary sectionName="...">`
-(`src/components/ui/ErrorBoundary.tsx`). **Two** mounting files as of
-2026-09-19 — `src/components/dashboard/DashboardController.tsx` (removed 2026-10-26) and
-`src/pages/dashboard/bookings/index.astro` (`src/middleware.ts` only mentions
-the name in a comment). When a widget crashes:
+A page's widgets can be wrapped in `<ErrorBoundary sectionName="...">`
+(`src/components/ui/ErrorBoundary.tsx`). **One** page mounts it since
+2026-10-26, `src/pages/dashboard/bookings/index.astro`; the other,
+`src/components/dashboard/DashboardController.tsx`, was removed with the old Overview.
+Every other island that throws takes its own spot down without this box. When a
+wrapped widget crashes:
 
 - **The user sees Spanish UI**, and these are the strings to look for in a
   screenshot or a support ticket: heading `Error en <sectionName>`, body
@@ -118,7 +119,8 @@ the name in a comment). When a widget crashes:
   (`win?.Sentry?.captureException`), tagged `preact.island_boundary: 'true'`
   and `preact.section_name`. Nothing in this repo assigns `window.Sentry` — the
   browser SDK is an ES-module import — so do not assume a boundary catch
-  reached Sentry. The console line is the reliable one.
+  reached Sentry, whatever the box's text says about the fault being reported
+  (`MAINTENANCE.md` (private) DOC-4). The console line is the reliable one.
 - Other widgets continue working normally.
 
 ### Layer 2: Chunk-404 reload
@@ -178,6 +180,7 @@ If a blank screen recurs, follow this checklist in order:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | `src/components/ui/ErrorBoundary.tsx` read (the prefixes, tags, Spanish strings and the `window.Sentry` condition); `grep -rln "<ErrorBoundary" src/`; `grep` for an assignment to `window.Sentry` in `src/` and `public/` (none); `public/scripts/error-capture.js` and its tag in `AdminLayout.astro`; `src/workers/cf-entry.ts` (`withSentry`, `consoleLoggingIntegration`); `sentry.client.config.ts`; `src/lib/health/catalog.ts` | Layer 1: one mounting page now, not two, and the box's "reported automatically" text is not to be trusted (MAINTENANCE DOC-4, new). Every playbook string still exists. Not re-derived: the three crash patterns and the April 2026 post-mortem (history) |
 | 2026-10-27 | `public/scripts/error-capture.js` read after the change; `test/error-capture.test.ts` run against it and against the previous version (the old one printed and kept all 50 test errors) | Layer 2 and playbook step 1 rewritten: the queue and its console prefixes are gone, the chunk-404 reload stays. Nothing else re-checked |
 | 2026-10-17 | `src/lib/health/catalog.ts` and `src/pages/dashboard/health.astro` read | Step 3 now points to System health, which replaced Diagnostics. Nothing else re-checked |
 | 2026-10-07 | `src/lib/diagnostics/tests/connectivity.ts` and `src/lib/diagnostics/runner.ts` read (both removed 2026-10-17) | The diagnostics step (changed 2026-10-04): the suite checks the rate-limit bindings (`ratelimit_bindings`) where it pinged Upstash. Nothing else re-checked |

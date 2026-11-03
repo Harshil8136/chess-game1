@@ -3,7 +3,7 @@
 title: "Code Quality Rules"
 status: active
 audience: [ai, technical]
-last_verified: 2026-09-20
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 related_code: [eslint.config.js, scripts/ratchet.py, scripts/rules_check.py, scripts/a11y_check.py, src/lib/dal/]
@@ -32,12 +32,13 @@ alias). SQL for a table lives in that table's repository, once.
   of `npm run verify`. It matches `.prepare(`/`.batch(` on *any* alias — until
   2026-09-02 it matched only the literal `env.DB.prepare(`, so
   `const db = env.DB; db.prepare(...)` was invisible.
-- **Grandfathered:** 18 handlers are on the exempt list inside `rules_check.py`
+- **Grandfathered:** 10 handlers are on the exempt list inside `rules_check.py`
   (`src/pages/api/health.ts` is exempt by design — the authenticated branch
-  probes bindings directly; the other 17 are a burn-down list). Each vertical
+  probes bindings directly; the other 9 are a burn-down list, down from 17 on
+  2026-09-20). Each vertical
   slice moves its queries into `src/lib/dal/` and deletes its line there. Adding
   a line to that list is not a fix.
-- **19 repositories exist today** (`src/lib/dal/*Repository.ts`). Check for one
+- **28 repositories exist today** (`src/lib/dal/*Repository.ts`, counted 2026-11-03). Check for one
   that already covers your table before writing a new one — see §8.1.
 
 ## 1. TypeScript Strictness
@@ -61,7 +62,7 @@ alias). SQL for a table lives in that table's repository, once.
 
 All file names must be unique and descriptive:
 
-- ✅ `LoginForm.tsx`, `AuthLayout.astro`, `rbac.ts`
+- ✅ `RetentionInspectModal.tsx`, `NativeNavigationState.astro`, `rbac.ts`
 - ❌ `Form.tsx` (ambiguous), `index.tsx` (without context)
 
 ## 3. Component Architecture ("LEGO-Style" Atomic Design)
@@ -71,11 +72,10 @@ All file names must be unique and descriptive:
   ⚠️ **Aspirational, not the status quo, and not enforced anywhere:**
   `eslint.config.js` sets `'max-lines': 'off'` globally (marked TEMP, pending
   the god-file split pass), with a 600-line *warning* for three named
-  exceptions (`pipeline.ts` left the list on 2026-09-02). Measured 2026-09-20:
-  **105 of 196 `.tsx` files under `src/components/` are over 200 lines (54%)**,
-  the largest being `BlogManager.tsx`, `PlatformAlertsManager.tsx` and
-  `BrevoTelemetryView.tsx`, all over 1,200 (`PlatformAlertsManager.tsx` was removed on
-  2026-10-17 with the Alerts page, and `BlogManager.tsx` on 2026-10-30 with the old Blog Studio). The only count anything holds is
+  exceptions (`pipeline.ts` left the list on 2026-09-02). Measured 2026-11-03:
+  **130 of 279 `.tsx` files under `src/components/` are over 200 lines (47%)**,
+  the largest being `BrevoTelemetryView.tsx` (1,244), `SeoDashboard.tsx` (1,146) and
+  `BlogAiCopilotModal.tsx` (1,101). The only count anything holds is
   `.ratchet.json` `A14` — `src/` files over **600** lines — which may fall but
   not rise. So 200 is the design target you justify departing from, 600 is the
   line the build defends, and the majority of the tree is already between them.
@@ -419,6 +419,7 @@ because the pattern it guards against has already recurred enough times to earn 
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §0, §2 and §3 re-measured: the SEC-03 exempt list in `scripts/rules_check.py` is 10 handlers (was 18), `src/lib/dal/` holds 28 repositories (was 19), 130 of 279 components are over 200 lines (was 105 of 196) with the three largest named; `eslint.config.js` (`max-lines` off, the 600-line warn list) and `.ratchet.json` A14 (20) re-read; §2's examples swapped for files that exist; `a11y_check` (6 rules) and `rules_check` (11 rules) as `npm run verify` prints them | §4 to §8 not re-read line by line; Sentry client-side dedup behaviour (an SDK claim) |
 | 2026-10-30 | §3's largest-files sentence: `BlogManager.tsx` is gone (`git rm`, the Blog Studio rebuild) | The file counts, not re-measured |
 | 2026-09-14 | `tsconfig.json`, `eslint.config.js` (max-lines off, 600-line warn list, `prerender` guard), `scripts/ratchet.py` + `.ratchet.json` (A1 history), RULE #0.6 and §8.1 in `RULESAd.md`, every file and repository method this doc names, the motion token names in `global.css`. Five corrections above. | Whether `admin_sessions` / `privacy_requests` are dead on the Supabase side; Sentry dedup behaviour |
 | 2026-09-20 | `sentry.server.config.ts` (no-op, by design) and `src/workers/cf-entry.ts` (`@sentry/cloudflare` `withSentry`) — §4.4 rewritten; `var(--duration-…)` has 0 valid uses in `src/` — §7 rewritten; `scripts/rules_check.py` SEC-03 + its 18-file exempt list and the 19 `src/lib/dal/*Repository.ts` files — new §0; `scripts/a11y_check.py` (6 checks, `title` accepted as a name) — §6 labelled; 105 of 196 components over 200 lines — §3 labelled; `eslint.config.js` (`no-explicit-any: warn`, `max-lines: off`) and `.ratchet.json` re-read; the `admin_sessions` / `privacy_requests` question closed (renamed `zz_dead_*_20260916` by chunk 14a, removal tracked as D-15). | Sentry client-side dedup behaviour (still an SDK claim, not measured here) |

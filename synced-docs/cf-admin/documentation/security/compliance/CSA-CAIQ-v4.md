@@ -3,7 +3,7 @@
 title: "CSA STAR Level 1 — CAIQ v4.0.3 (cf-admin-madagascar)"
 status: active
 audience: [technical, operator, owner]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config, mcp]
 owner: harshil
 related_docs: [ASVS-L2.md, SOC2-TSC-mapping.md, ../SECURITY.md]
@@ -43,9 +43,9 @@ Response (Yes/No/NA) | Notes`. This Markdown file mirrors that *structure*.
 - **Deployment model:** Public cloud (Cloudflare Workers), single-tenant
 - **Service model:** Software-as-a-Service (SaaS) — first-party, not resold
 - **Cloud provider(s) leveraged:** Cloudflare (Workers, D1, KV, R2, Queues,
-  Access, Analytics Engine), Supabase (Postgres — GoTrue auth retired, see `SECURITY.md` §1), Upstash (Redis),
+  Access, Analytics Engine), Supabase (Postgres — GoTrue auth retired, see `SECURITY.md` §1), Upstash (Redis; cf-astro and cf-chatbot only, cf-admin left it on 2026-10-04),
   Sentry (error tracking), Brevo (email). **The authoritative sub-processor list
-  is `documentation/security/RoPA.md` §3** (nine entries as of 2026-09-19); the five named here
+  is `documentation/security/RoPA.md` §3**, which owns the count; the five named here
   are the platform dependencies, not the Art. 28 list.
 
 ## Domain answers
@@ -73,7 +73,7 @@ CSA-canonical column headers.
 | AIS-03 | Are inputs validated at every boundary? | Yes | Zod schemas at every API handler. |
 | AIS-04 | Is output encoded to prevent injection? | Yes | Preact/Astro auto-escape; `src/lib/email/sanitize-html.ts` HTMLRewriter sanitizer. |
 | AIS-05 | Is CSRF protection in place for state-changing ops? | Yes | `src/lib/csrf.ts::validateCsrf()` on all mutation methods. |
-| AIS-06 | Are dependencies scanned for vulnerabilities? | Yes | `npm audit --omit=dev --audit-level=high` on every push + weekly Monday cron, gated by `scripts/audit_gate.py`, which fails the build on any undocumented high/critical advisory **and** on an expired exception. Blocking since **2026-07-25**; before that date the step was suffixed `|| true` and could not fail. Date added 2026-07-29. |
+| AIS-06 | Are dependencies scanned for vulnerabilities? | Yes | `npm audit --omit=dev --audit-level=high`, gated by `scripts/audit_gate.py`, in `npm run verify` before every push and in `quality.yml` weekly, on pull requests and by hand (it left the push on 2026-10-18), which fails the build on any undocumented high/critical advisory **and** on an expired exception. Blocking since **2026-07-25**; before that date the step was suffixed `|| true` and could not fail. Date added 2026-07-29. |
 | AIS-07 | Are APIs protected by strong authentication + rate limiting? | Yes | `requireAuth()` + per-route rate limits (`src/lib/ratelimit.ts`): Cloudflare's Workers Rate Limiting binding for one-minute limits, D1 counter rows for hour and day limits. *(Corrected 2026-10-07: Upstash Redis until 2026-10-04.)* |
 
 ### BCR — Business Continuity Management & Operational Resilience
@@ -91,11 +91,11 @@ CSA-canonical column headers.
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| CCC-01 | Are changes tested before production? | Yes | CI on every push to `main`: `quality.yml` (unified — secret scan, compliance rules, a11y, docs check, markdownlint, audit gate, types:check, typecheck, ratchet/ESLint, gate self-tests, vitest, build, SBOM). No branch protection — see CCC-02. *(Consolidated 2026-09-22: `security.yml` and `docs-quality.yml` merged into `quality.yml` — same gates, one runner. See `records/reports/2026-09-22-ci-workflow-consolidation.md`. Corrected 2026-09-14: this row claimed "per-branch protection".)* |
+| CCC-01 | Are changes tested before production? | Yes | **Updated 2026-11-03.** Before every push, which is a deploy: `npm run verify` (rules, docs check, markdownlint, a11y, audit gate, secret scan, gate self-tests, typecheck, ratchet/ESLint, vitest; `scripts/lib/verify-runner.mjs`). Nothing on GitHub enforces that it was run. Since 2026-10-18 CI runs weekly, on pull requests and by hand, not on push: `quality.yml` (unified — secret scan, compliance rules, a11y, docs check, markdownlint, audit gate, types:check, typecheck, ratchet/ESLint, gate self-tests, vitest, build, SBOM). No branch protection — see CCC-02. *(Consolidated 2026-09-22: `security.yml` and `docs-quality.yml` merged into `quality.yml` — same gates, one runner. See `records/reports/2026-09-22-ci-workflow-consolidation.md`. Corrected 2026-09-14: this row claimed "per-branch protection".)* |
 | CCC-02 | Is a change-approval process documented? | **Partial** | **Corrected 2026-08-13 — there is no PR-review requirement.** `RULESAd.md` §12 mandates the opposite: *"DO NOT create new branches. ALWAYS push directly to `origin main`"*, with no branch protection. The real, documented gate is automated and pre-push: `npm run verify` (typecheck, ratchet/ESLint, the full vitest suite, gate self-tests, `rules_check`, `docs_check`, markdownlint, `a11y_check`, `audit_gate`), and CI re-runs the same guards on `main`. *(2026-09-19: the exact test count — "855 as of 2026-09-14" — was dropped. A number that changes with the next commit and cannot be re-derived by the reader is not evidence.)* *Corrected 2026-08-23:* this row also cited a monorepo-root checklist script that is not part of this repository. That is a genuine change control, but it is a **machine** approval, not a second pair of human eyes. `SOC2-TSC-mapping.md` CC8.1 states this correctly and was contradicted by this row. |
 | CCC-03 | Are unauthorized changes detected? | Partial | Git history; Cloudflare Worker version history; Workers Builds deploys only from `main`. There is **no** branch protection (CCC-02), so force-push is not prevented. *(Corrected 2026-09-14.)* |
 | CCC-04 | Is configuration baseline maintained? | Yes | `wrangler.toml` + `documentation/operations/OPERATIONS.md` binding registry. |
-| CCC-05 | Are separation-of-duty controls enforced? | **Partial** | **Corrected 2026-08-13.** *Within the application*, yes: the six-tier role ladder (`vendor_support > owner > admin > manager > staff > viewer`, `architecture/plac-and-audit.md` §1.1) plus PLAC per-page overrides genuinely separate duties between portal users, and some destructive operations refuse self-targeting (`users/force-kick`, `users/access`, `users/manage`, `access-requests/[id]`). *In the deployment pipeline*, no: a single operator writes, approves and ships every change. Do not present this as an organisational SoD control. |
+| CCC-05 | Are separation-of-duty controls enforced? | **Partial** | **Corrected 2026-08-13.** *Within the application*, yes: the six-tier role ladder (`vendor_support > owner > admin > manager > staff > viewer`, `architecture/plac-and-audit.md` §1.1) plus PLAC per-page overrides genuinely separate duties between portal users, and some destructive operations refuse self-targeting (`src/pages/api/users/force-kick.ts`, `src/lib/users/manage-apply.ts` for suspending, deleting or re-roling yourself, and access requests in `src/lib/access-requests/handlers.ts`). Since 2026-10-16 the two-person rule makes a top-tier role change, a deletion, suspending the last Owner and a log-retention change wait for a second Owner or Vendor support, never the person who asked (`mayDecide`, `src/lib/approvals/rules.ts`). *In the deployment pipeline*, no: a single operator writes, approves and ships every change. Do not present this as an organisational SoD control. |
 
 ### CEK — Cryptography, Encryption & Key Management
 
@@ -124,7 +124,7 @@ CSA-canonical column headers.
 | DSP-04 | Are logs privacy-safe? | Yes | Sentry `sendDefaultPii: false`; IP hashed via `hashIp()` (`src/lib/audit-helpers.ts`). |
 | DSP-05 | Are cross-border transfers governed? | Yes | Data resides in US-East (Supabase) + Cloudflare's global edge; PII limited to authorized-user emails + admin-generated content. |
 | DSP-06 | Is data deleted on request? | Yes | Privacy request handler + Supabase RLS-enforced deletes. |
-| DSP-07 | Are data-sharing agreements documented? | Partial | Sub-processors are enumerated with transfer mechanisms in `documentation/security/RoPA.md` §3 — **the authoritative list, nine entries** — and mirrored in `compliance/data-residency.md` §2; each vendor's published DPA terms apply. *(Corrected 2026-09-19: this row listed five of them — Cloudflare, Supabase, Upstash, Sentry, Brevo — omitting Resend, PostHog, OpenRouter and Google. An incomplete Art. 28 list in a buyer-facing questionnaire is a substantive error, so the list is now cited rather than restated.)* **Countersigned DPAs are being collected individually and are available on request once held.** `data-residency.md` notes that relying on published terms is weaker evidence than a signed agreement. Corrected 2026-07-29 — the prior answer read "DPAs on file". |
+| DSP-07 | Are data-sharing agreements documented? | Partial | Sub-processors are enumerated with transfer mechanisms in `documentation/security/RoPA.md` §3 — **the authoritative list** — and mirrored in `compliance/data-residency.md` §2; each vendor's published DPA terms apply. *(Corrected 2026-09-19: this row listed five of them — Cloudflare, Supabase, Upstash, Sentry, Brevo — omitting Resend, PostHog, OpenRouter and Google. An incomplete Art. 28 list in a buyer-facing questionnaire is a substantive error, so the list is now cited rather than restated.)* **Countersigned DPAs are being collected individually and are available on request once held.** `data-residency.md` notes that relying on published terms is weaker evidence than a signed agreement. Corrected 2026-07-29 — the prior answer read "DPAs on file". |
 
 ### GRC — Governance, Risk & Compliance
 
@@ -196,17 +196,17 @@ CSA-canonical column headers.
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
-| STA-01 | Are third parties assessed? | Partial | The sub-processor list is `documentation/security/RoPA.md` §3 (nine entries). The major platform vendors — Cloudflare, Supabase, Upstash, Sentry — publish SOC 2 / ISO 27001 attestations; **no vendor report has been read or filed here**, so this is reliance on published claims, not an assessment. *(Corrected 2026-09-19: this row restated five of the nine sub-processors; see DSP-07.)* |
-| STA-02 | Is supply-chain risk tracked? | Yes | `npm audit --omit=dev` on every push + weekly cron. |
-| STA-03 | Are SBOMs generated? | **Yes** | **Corrected 2026-08-13 — this row contradicted BCR-06 in this same document.** A CycloneDX SBOM is generated on every CI run (`.github/workflows/quality.yml`, `npm sbom --sbom-format cyclonedx --sbom-type application`) and uploaded as the `sbom-cyclonedx` artifact; `npm run sbom` produces it locally. |
-| STA-04 | Is source-code integrity enforced? | Yes | GitHub commit signing recommended; secret-scan CI blocks credential commits. |
+| STA-01 | Are third parties assessed? | Partial | The sub-processor list is `documentation/security/RoPA.md` §3. The major platform vendors — Cloudflare, Supabase, Upstash, Sentry — publish SOC 2 / ISO 27001 attestations; **no vendor report has been read or filed here**, so this is reliance on published claims, not an assessment. *(Corrected 2026-09-19: this row restated five of the then nine sub-processors; see DSP-07.)* |
+| STA-02 | Is supply-chain risk tracked? | Yes | `npm audit --omit=dev` through `audit_gate.py` before every push (`npm run verify`) and weekly in CI. |
+| STA-03 | Are SBOMs generated? | **Yes** | **Corrected 2026-08-13 — this row contradicted BCR-06 in this same document.** A CycloneDX SBOM is generated on every CI run, weekly, on pull requests and by hand since 2026-10-18 (`.github/workflows/quality.yml`, `npm sbom --sbom-format cyclonedx --sbom-type application`) and uploaded as the `sbom-cyclonedx` artifact; `npm run sbom` produces it locally. |
+| STA-04 | Is source-code integrity enforced? | Yes | GitHub commit signing recommended; `scripts/secret_scan.py` refuses credential patterns in tracked files, blocking in `npm run verify` before every push (since 2026-11-03) and in CI. |
 
 ### TVM — Threat & Vulnerability Management
 
 | # | Question | Ans | Evidence |
 |---|----------|-----|----------|
 | TVM-01 | Are vulnerabilities scanned? | Yes | Weekly `npm audit`, Supabase advisor MCP, `rules_check.py`. |
-| TVM-02 | Are patches applied timely? | Yes | `audit_gate.py` blocking in CI and weekly; Dependabot monthly groups; 6 documented high/critical exceptions with an expiry, 0 unexcepted on 2026-09-14 (`MAINTENANCE.md` C-14). |
+| TVM-02 | Are patches applied timely? | Yes | `audit_gate.py` blocking before every push and in the weekly CI run; Dependabot monthly groups; 0 high/critical advisories and no exceptions on 2026-11-03 (`MAINTENANCE.md` DA-3). |
 | TVM-03 | Are pen tests performed? | No | Follow-up — external engagement not yet budgeted. |
 | TVM-04 | Are secure defaults used? | Yes | Fail-closed API deny; SameSite=Strict cookies; nonce-based CSP. |
 
@@ -259,3 +259,17 @@ every other row.
 *2026-10-17 pass — two rows changed.* **BCR-02** and **BCR-03** described cf-admin's
 `backups.yml`, deleted on 2026-09-27; they now describe cf-backup's engine, checked against
 `backup_runs` grouped by kind and status through the Cloudflare D1 connector (19 succeeded, last 2026-10-14), cf-backup `.github/workflows/secondary-pipeline.yml` (restore-verification steps), `ls .github/workflows/` here (no `backups.yml`), the disaster-recovery runbook's 2026-09-27 banner. Not re-checked: the cf-backup run reports themselves, and every other row.
+
+*2026-11-03 pass — nine rows changed.* Every file, path and symbol the
+questionnaire cites resolves (a scripted check of each backticked name). **AIS-06,
+CCC-01, STA-02, STA-03 and TVM-02** say where the gates run since CI left the push
+on 2026-10-18, checked against `.github/workflows/quality.yml` (`on:`) and
+`scripts/lib/verify-runner.mjs`; **STA-04** names the secret scan that joined
+`npm run verify` the same day (`scripts/secret_scan.py`); **TVM-02** reads
+`python3 scripts/audit_gate.py` (0 groups, `.audit-exceptions.json` emptied).
+**CCC-05** cited a `users/access` route that no longer exists; it now names the
+self-targeting checks in code and the two-person rule (`src/lib/approvals/rules.ts`).
+The scope paragraph and **DSP-07/STA-01** no longer state RoPA's sub-processor count
+(nine on 2026-09-19, eleven on 2026-11-03), and the scope says cf-admin left Upstash.
+Not re-checked: every other row's answer, vendor reports, DPAs, GitHub repository
+settings and Cloudflare Access policy contents.

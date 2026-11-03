@@ -3,7 +3,7 @@
 title: "AI Governance — Model Inventory, Human Oversight & NIST AI RMF Self-Map"
 status: active
 audience: [owner, operator, technical, ai]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config]
 owner: harshil
 related_docs: [../RoPA.md, ../../features/CHATBOT.md, ../../records/reviews/2026-07-22-compliance-certification-audit-all-frameworks-and-roadmap.md]
@@ -15,8 +15,8 @@ tags: [ai-governance, iso42001, eu-ai-act, nist-ai-rmf, transparency, compliance
 > **TL;DR (non-technical):** What AI this platform uses, which models, who is
 > accountable for the output, and how that maps to the AI rules buyers and
 > regulators are starting to ask about. The short version: **five narrow,
-> staff-facing inference surfaces** — blog drafting (two routes), suggested
-> edits, AI-visibility answers and email drafting — plus a configuration proxy
+> staff-facing inference surfaces** — blog drafting, suggested edits,
+> AI-visibility answers, cover photo descriptions and email drafting — plus a configuration proxy
 > for the customer chatbot, each with a human in the loop before anything
 > reaches a customer, and none of them anywhere near the EU AI Act's
 > "high-risk" tier. This is a **self-assessment**, not a certification.
@@ -46,7 +46,7 @@ analytics dashboard, which changes the obligations materially — see §4.
 | # | Feature | Entry point | Provider | Data sent | Human in loop? |
 |---|---|---|---|---|---|
 | 1 | Blog article drafting | `POST /api/content/ai-generate-stream` | Cloudflare Workers AI / OpenRouter | Staff-authored topic + brand knowledge base. **No customer PII.** | ✅ Draft lands in the Blog Studio editor; a separate publish action with a blocking quality gate is required |
-| 2 | Blog article drafting (non-streaming twin) | `POST /api/content/ai-generate` | Same | Same | ✅ Same |
+| 2 | Cover photo description (since 2026-10-31; the non-streaming drafting twin `POST /api/content/ai-generate` was removed on 2026-10-30) | `POST /api/content/blog/describe-photo` | Cloudflare Workers AI (Llama 4 Scout) | A photo from the portal's own photo address, made small on the way, and the article's title. **No customer PII.** | ✅ The draft goes into the editor's "What the photo shows" field; the person reads it and saves |
 | 3 | Suggested edits to a published article | `POST /api/content/blog/suggest` | Cloudflare Workers AI | The existing article + an optional editor instruction | ✅ Proposals are stored for review; a human accepts or rejects each one |
 | 4 | AI-visibility direct answers | `POST /api/content/ai-visibility` | Cloudflare Workers AI | Article title and body excerpt | ⚠️ Accepted answers are emitted as schema.org markup on publish — reviewed as part of the article, not separately |
 | 5 | Marketing-email drafting | `POST /api/emails/ai-generate` | Cloudflare Workers AI / OpenRouter | Staff-authored prompt + brand parameters. **No customer PII.** | ✅ Always — output lands in a draft the operator must review and send |
@@ -113,7 +113,8 @@ than separately).
     to Blog Studio (`/dashboard/content/blog`) or the Email Portal
     (`/dashboard/emails`), whose registry default today is the canonical
     **manager** tier and which is overridable per user, plus the per-user rate
-    limit and the shared neuron budget. Only the AI-visibility route passes an
+    limit and the shared neuron budget. The photo description asks for the Blog
+    Studio key exactly (`placRequireGrant`). Only the AI-visibility route passes an
     explicit `'admin'` minimum.
   - *The chatbot proxy does not "require the most restrictive `dev` role".* It
     applies a per-endpoint ladder: **staff** for reads, live takeover and
@@ -126,7 +127,8 @@ than separately).
     keyword screen rejects obvious override attempts before inference on most,
     **but not all**, of the prompt-taking routes — coverage is not uniform, and
     one route also accepts an operator-supplied system-prompt override that
-    replaces the template wholesale. Both are tracked as engineering work; see
+    replaces the template wholesale (honoured only for a person holding the
+    Blog Studio's `#edit-ai-prompts` key). Both are tracked as engineering work; see
     MEASURE 2.7 in §5, which is downgraded accordingly. The compensating
     control is unchanged and is the one that matters: the output is a draft, it
     is never an action, and a human publishes it.
@@ -188,20 +190,20 @@ unless it is obvious.
   with an AI, and its UI lives in a different repository. **This document does
   not close G16 for the chatbot.** An explicit, user-visible "you are chatting
   with an AI assistant" disclosure had to be in place by 2 August 2026 if any
-  EU user can reach the widget. As of 2026-09-19 that is **48 days past the
+  EU user can reach the widget. As of 2026-11-03 that is **93 days past the
   date** and the disclosure has still not been confirmed by anyone.
 
 | Overdue action | Owner | Due | Status |
 |---|---|---|---|
-| Confirm (or ship) a user-visible AI disclosure in the `cf-chatbot` widget, screenshot it, and link the evidence from this section. If EU users cannot reach the widget, record *that* determination here instead — with what it is based on — and the obligation falls away. | harshil | **was 2026-08-02** | 🔴 **OVERDUE — 48 days on 2026-09-19** |
+| Confirm (or ship) a user-visible AI disclosure in the `cf-chatbot` widget, screenshot it, and link the evidence from this section. If EU users cannot reach the widget, record *that* determination here instead — with what it is based on — and the obligation falls away. | harshil | **was 2026-08-02** | 🔴 **OVERDUE — 93 days on 2026-11-03** (`MAINTENANCE.md` (private) C-28) |
 
 Two things keep this from being an emergency, and neither closes it: the
 platform makes **no** EU AI Act compliance claim anywhere (§7 forbids it), and
 Art. 50(1) is satisfied by a visible label, which is hours of work rather than
 a project. The risk is that an obligation sat in a compliance document in the
-future tense for seven weeks after it came into application. **Mirror this row
-into `MAINTENANCE.md` so it is visible outside this file** — a deadline tracked
-only in the document that describes it is not tracked.
+future tense for months after it came into application. It is mirrored into
+`MAINTENANCE.md` as C-28 since 2026-11-03, so it is visible outside this file —
+a deadline tracked only in the document that describes it is not tracked.
 
 ## 5. NIST AI RMF 1.0 self-map
 
@@ -264,4 +266,5 @@ buyers actually ask for first.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-03 | §1's inventory against every inference call in `src/` (`runGuidedInference`, `env.AI.run` and the OpenRouter branch): `content/ai-generate.ts` gone (2b2c489, 2026-10-30), `content/blog/describe-photo.ts` new (f2bb6fc, 2026-10-31), still five routes; their gates (four `requireAuth` without a minimum, `ai-visibility` with `'admin'`, `describe-photo` with `placRequireGrant`); the override's `#edit-ai-prompts` key in `ai-generate-stream.ts`; `AI_MODELS` (three models, rates and context windows unchanged); the prompt caps; `GET /api/ai/health` and `AiHealthPanel.tsx`; no `OPENROUTER_API_KEY` in `wrangler.toml` `[secrets] required`; today against the Art. 50 date, and the row mirrored into `MAINTENANCE.md` (C-28) | The live Worker's secret list (the connector does not list it); whether `cf-chatbot` now carries a user-visible AI disclosure (different repository); §3's risk ratings and §5's scores, kept as they were |
 | 2026-09-19 | §2's access statements against `src/pages/api/content/ai-generate-stream.ts`, `content/ai-generate.ts`, `emails/ai-generate.ts`, `content/ai-visibility.ts` and `src/lib/auth/guard.ts` (only the last passes a minimum role), against `src/pages/api/chatbot/[...path].ts` (`RBAC_RULES` ladder + fail-closed default) and against the live `admin_pages` rows for `/dashboard/content/blog` and `/dashboard/emails` (`required_role = admin` in the stored vocabulary = canonical **manager**); prompt caps in `src/lib/schemas/ai.ts` (2,000) and `src/lib/schemas/ai-content.ts` (3,000); injection-screen coverage across the prompt-taking routes; `AI_MODELS`, `AI_NEURON_DAILY_CAP`/`RESERVE` and `calculateNeurons()` returning 0 for unknown ids in `src/lib/ai-pricing.ts`; the absence of an OpenRouter key in `wrangler.toml`'s `[secrets] required` and in the live Worker inventory; today's date against the Art. 50 deadline. | Whether `cf-chatbot` now carries a user-visible AI disclosure (different repository — this is the overdue item in §4); the claim at §3 that the fabricated-content risk "was realised once, on 2026-08-30"; the chatbot's own model inventory |

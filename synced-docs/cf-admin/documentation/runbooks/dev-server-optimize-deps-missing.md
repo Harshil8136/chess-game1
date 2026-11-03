@@ -3,7 +3,7 @@
 title: "Dev server: file missing from the optimize deps directory"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code]
 owner: harshil
 related_docs: [ssr-silent-blank-screen.md, ../operations/DEV-TOOLS.md]
@@ -208,6 +208,9 @@ a signed-in session saw the failure.
 **Fixed in `8a6495f`** and guarded by `test/vite-optimize-deps-contract.test.ts`:
 every package in any `optimizeDeps.exclude` must resolve as ESM.
 `@astrojs/cloudflare` is `type: module`, so excluding it stays legitimate.
+The Upstash packages themselves left cf-admin on 2026-10-04, when the rate limits
+moved to Cloudflare's own binding and D1 (`src/lib/ratelimit.ts`); the rule stays,
+because the next CommonJS package fails the same way.
 
 ## Verifying a fix
 
@@ -252,4 +255,5 @@ Two traps when verifying:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | `astro.config.ts` (`optimizeDeps.exclude` only `@astrojs/cloudflare`, `ssr.optimizeDeps` with `noDiscovery: true` and `include` naming `lucide-preact`, `@astrojs/preact/server.js`, `astro/logger/console`, `astro/assets/services/noop`), `vitest.config.ts` `cacheDir`, the `predev` and `dev` scripts, `scripts/predev-guard.mjs`, `test/vite-optimize-deps-contract.test.ts`, Astro's `noDiscovery === false` branch in `astro/dist/vite-plugin-environment/index.js`; `grep -rln "lib/ratelimit" src/pages/api` (53) | Every configuration claim holds. One line added: Upstash left cf-admin on 2026-10-04 (`src/lib/ratelimit.ts`), the CommonJS rule stays. Not re-checked: the dev server itself (`npm run dev` not run in this pass) |
 | 2026-09-19 | `astro.config.ts` `ssr.optimizeDeps`, `vitest.config.ts` `cacheDir`, the `predev`/`dev` scripts and `test/vite-optimize-deps-contract.test.ts` re-checked; `grep -rln "lib/ratelimit" src/pages/api` | Every configuration claim still holds exactly as written. Two corrections: the blast-radius figure (28 → ~50 routes, now derived rather than stated) and a shell note on the POSIX-only verification block. **Not re-checked:** the dev-server behaviour itself — running `npm run dev` was out of scope for this pass |

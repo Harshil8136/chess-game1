@@ -2,7 +2,7 @@
 title: "Cloudflare Deploy Fails: Queue Handler Is Missing (code 11001)"
 status: active
 audience: [ai, technical, operator]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, infra]
 owner: harshil
 related_code: [wrangler.toml, src/workers/cf-entry.ts, src/workers/sync-revalidate-consumer.ts, test/worker-entry-contract.test.ts]
@@ -47,7 +47,12 @@ The user's `main` wins **when it is set**. The fallback is, in full:
 ```js
 // node_modules/@astrojs/cloudflare/dist/entrypoints/server.js
 import { handle } from "../utils/handler.js";
-export default { fetch: handle };
+var server_default = {
+  fetch: handle
+};
+export {
+  server_default as default
+};
 ```
 
 `fetch` only — no `queue`, no `scheduled`. Because `wrangler.toml` declares
@@ -118,10 +123,12 @@ every shell and invalid on PowerShell.
 
 ## Guard
 
-`test/worker-entry-contract.test.ts` fails the build if `main` is missing or
+`test/worker-entry-contract.test.ts` fails if `main` is missing or
 commented out, if it points at a nonexistent file, or if a declared queue
 consumer / cron trigger has no matching handler in the entrypoint. It runs in
-`npm run test:run`, which is blocking in `.github/workflows/quality.yml`.
+the test suite of `npm run verify`, the gate before every push (a push deploys).
+`.github/workflows/quality.yml` runs it too, but only weekly, on pull requests and by
+hand since 2026-10-18, so it no longer stands between a push and production.
 
 ## History
 
@@ -136,5 +143,6 @@ why the guard test exists.
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | `wrangler.toml` (`main`, the two crons, the `madagascar-sync-revalidate` consumers), `src/workers/cf-entry.ts` (`handle` from `@astrojs/cloudflare/handler`, `fetch`, `scheduled`, `queue`, `withSentry`), the adapter's `main` fallback and its `entrypoints/server.js`, `.env.build`, `package.json` `build` and `verify`, `.github/workflows/quality.yml` triggers; `npm run build`, then the two checks of "Verify before pushing" | Built `main` is `entry.mjs` and it holds `fetch`, `queue` and `scheduled`. Two corrections: the adapter's fallback is quoted as the file now reads (same meaning), and the guard's paragraph says the gate is `npm run verify`, since `quality.yml` no longer runs on every push. Not re-checked: `wrangler deploy --dry-run`, and the dashboard checks after deploying |
 | 2026-09-19 | `src/lib/jobs/registry.ts` re-counted; `package.json` `build` script and `.env.build` read; front-matter re-parsed | The job arithmetic was stale again (9 + 2, not 8 + 2) and is now replaced by a pointer to `registry.ts`; the `CLOUDFLARE_VITE_FORCE_LOCAL=` prefix dropped as redundant and PowerShell-invalid; `related_code:` converted to the inline list form so the key parses. **Not re-checked:** whether `dist/server/entry.mjs` still emits all three handlers flat — building is out of scope for this pass; the 2026-09-14 row below is the last evidence for it |
 | 2026-09-14 | `wrangler.toml` read; `CLOUDFLARE_VITE_FORCE_LOCAL=true npm run build`; `node -e "…dist/server/wrangler.json…main"`; `grep -oE 'async (fetch\|scheduled\|queue)\(' dist/server/entry.mjs`; `ls test/` | `main = "./src/workers/cf-entry.ts"` present; built `main` resolves to `entry.mjs`, which exports `fetch`, `queue` and `scheduled`; `test/worker-entry-contract.test.ts` present and in `npm run test:run`. Three lines corrected above: the cron count (two triggers since chunk 7), the Astro version, and the grep path for the bundled handlers |

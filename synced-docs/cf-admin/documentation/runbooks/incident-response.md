@@ -3,7 +3,7 @@
 title: "Incident Response & Breach Notification Runbook"
 status: active
 audience: [operator, technical, ai, owner]
-last_verified: 2026-09-19
+last_verified: 2026-11-03
 verified_against: [code, config, live-mcp]
 owner: harshil
 related_docs: [disaster-recovery.md, ../security/SECURITY.md, ../security/RoPA.md, ../security/compliance/SOC2-TSC-mapping.md, ../MAINTENANCE.md]
@@ -93,7 +93,7 @@ Detection sources, in the order they usually fire:
 | **Login logs** | D1 `admin_login_logs` | **Failed logins live here, not in the audit log.** `event_type` is one of `LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`, with a `failure_reason`; `cf_identity_provider` says how a sign-in was made, and `alert` what became of its alert email. There is no `login_failed` audit action anywhere in `src/`: querying the audit log for one returns nothing and looks like "no brute force" |
 | CF Access logs | Zero Trust dashboard | Failed auth, unexpected geography |
 | Supabase advisors | `get_advisors` MCP | RLS/policy drift |
-| CI | `quality.yml` | `audit_gate.py`, secret-scan, `rules_check.py` |
+| The gates | `npm run verify` before every push; `quality.yml` weekly, on pull requests and by hand (since 2026-10-18) | `audit_gate.py`, `rules_check.py` and the credential-pattern scan `secret_scan.py`, in both |
 | External report | email | Treat as credible until disproven |
 
 Triage queries:
@@ -184,6 +184,9 @@ delay containment to gather more.
    `CHATBOT_ADMIN_API_KEY`. (`UPSTASH_REDIS_REST_TOKEN` closed this list until
    2026-10-04; cf-admin no longer reads it, so rotate it in the services that do,
    cf-astro and cf-chatbot, and delete it here: `../MAINTENANCE.md` (private) RU-1.)
+   Then the other credentials the Worker holds, which this list does not
+   repeat: the R2 access keys, the Sentry, PostHog and Google tokens, and the
+   webhook, revalidation and health-check secrets.
    `wrangler secret put <KEY>`; full registry in
    [`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §5.
    > **`IP_HASH_SECRET` is the most consequential rotation in this list.**
@@ -299,7 +302,7 @@ require evidence the plan works.
 |---|---|---|
 | Tabletop: leaked service-role key | Annual | ❌ **Never run** |
 | Credential-rotation walkthrough | Annual | ❌ Never run |
-| Restore drill | — | **Owned by [`disaster-recovery.md`](disaster-recovery.md) §8 — read the status there, do not restate it.** (In short as of 2026-09-19: automated, blocked on an owner action, never yet succeeded.) |
+| Restore drill | — | **Owned by [`disaster-recovery.md`](disaster-recovery.md) §8 — read the status there, do not restate it.** Since 2026-10-08 the backups are also rebuilt and counted on the server by cf-backup's restore tests ([`15-restore-tests.md`](../program/cf-backup/15-restore-tests.md)). |
 
 Until the first tabletop is complete, the honest external statement is *"we
 have a documented incident-response plan; our first drill is scheduled"* — not
@@ -321,6 +324,7 @@ Stated plainly, because an assessor will find these anyway:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-03 | claude: §1 and §3 against the code (`[SECURITY ALERT]` sent only by `src/pages/api/retention/purge.ts`; no `login_failed` action in `src/`), the gates' row against `scripts/verify.mjs` and `.github/workflows/quality.yml`, step 3's rotation list against `wrangler.toml` `[secrets] required`, §8's restore row against `disaster-recovery.md` §8 and cf-backup's `15-restore-tests.md` §13 | The CI row now names the local gate (`quality.yml` no longer runs on every push); step 3 points to the credentials it left out (R2 keys, the outside services' tokens, the webhook, revalidation and health-check secrets); §8's stale 'in short' line replaced by a link to the restore tests. Not re-checked: the `IP_HASH_SECRET` caveat, §2, §6, §7's legal deadlines (not a legal review), §9 |
 | 2026-10-28 | claude: step 4 against `src/pages/api/configuration/cloudflare.ts` (the route moved from Control Plane) and the Configuration page's Cloudflare section | Scope-limited to step 4 |
 | 2026-10-23 | claude: the sign-in alert email row again, for the per-way rules (evening), against `src/lib/login-alerts/decide.ts` (`wayRule`) | Scope-limited to that row |
 | 2026-10-23 | claude: the sign-in alert email row, against `src/lib/login-alerts/decide.ts` (`otherWayIn` and the policy's `normalWaysIn`) | Scope-limited to that row |
