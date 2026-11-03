@@ -125,7 +125,7 @@ flowchart LR
 | Phase | Work | Who |
 |---|---|---|
 | A | **A1** error log: every server error kept in the database, grouped, listed on the Alerts page and emailed once ([kit review K1](reference/kit-review.md)) | **done** 2026-11-03 |
-| A | **A2** performance budgets: the Worker's size held by the verify chain, CPU per page measured in tests; then the cold start made cheaper (K2) | agent |
+| A | **A2** performance budgets: the Worker's size held by the verify chain (**done** 2026-11-03), CPU per page measured in tests; then the cold start made cheaper (K2) | agent |
 | A | **A3** the sandbox: a fresh Cloudflare account and a private client repository, made with `oltrem new client` and `npm run deploy` (K3) | owner, about 15 minutes, then agent |
 | A | **A4** a phone and accessibility check on every page's HTML in the verify chain (K5) | agent |
 | A | **A5** documents brought up to date: where things stand and the roadmap (K4) | agent |

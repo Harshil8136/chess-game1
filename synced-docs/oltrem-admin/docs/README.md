@@ -201,14 +201,14 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Files shared with customers](records/2026-10-27-files-shared-with-customers.md) | staff share a file with a customer, who downloads it from their account page, signed in, with no link to leak |
 | [Quotes module](records/2026-10-27-quotes-module.md) | staff send a customer a price, line by line; the customer accepts or declines it on their account page, and the maker is told |
 | [Invoices module](records/2026-10-27-invoices-module.md) | bill a customer, from an accepted quote too; paid once; overdue in Needs you |
-| [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one short look for install, dev, update and deploy; a faster first start |
+| [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one look for install, dev, update, deploy |
 | [The setup page](records/2026-10-27-setup-page.md) | `npm run setup` puts a portal on Cloudflare with a page in the browser that asks each question and shows the progress, in the portal's look |
 | [One-click setup](records/2026-10-28-one-click-setup.md) | a file to double-click on each system opens a start page; the deploy picks the account and domain, checks the key on paste and notices the door |
-| [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows its tool's words and repairs itself; a stop offers its details |
+| [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step explains and repairs itself |
 | [A sidebar without reloads](records/2026-10-28-sidebar-without-reloads.md) | pages open in place with the sidebar kept; icons only when closed; groups |
 | [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome; hard and soft bounces apart; bounces and spam reports stop all mail |
 | [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily, and campaigns send only from a passing domain |
-| [Saved email templates](records/2026-10-28-saved-templates.md) | designs from blocks or HTML, checked, previewed, every version kept |
+| [Saved email templates](records/2026-10-28-saved-templates.md) | designs from blocks or HTML, every version kept |
 | [Saved email lists](records/2026-10-28-saved-lists.md) | who bulk mail goes to, from a file or typed, each with a reason; the do-not-mail list at every send |
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | batch calls sized by the plan; nothing sent twice; large sends need a second person |
 | [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's limits; retries; a summary email |
@@ -230,6 +230,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Email remake](records/2026-11-01-email-remake.md) | Write, Sent at once, From adds an address, Addresses |
 | [CPU budget](records/2026-11-01-cpu-budget.md) | in-process API calls, audit recheck spread, time zones once |
 | [Every server error kept](records/2026-11-03-error-log.md) | each error an alert, grouped, counted, emailed once |
+| [Worker size budget](records/2026-11-03-size-gate.md) | verify refuses a bigger Worker |
 | [The start page as a dashboard](records/2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](records/2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |

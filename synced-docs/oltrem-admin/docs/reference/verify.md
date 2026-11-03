@@ -24,7 +24,8 @@ sources: [scripts/lib/gates.mjs]
 | 8 | typecheck | `pnpm -r run typecheck` | a type error in any package or module; each one is checked against the runtime it is typed for (the Workers runtime, or Node for the command-line tool) |
 | 9 | build | `pnpm --filter @oltrem/cli run build` | a command-line tool that does not build; the next two gates run the built tool |
 | 10 | manifest | `node packages/cli/dist/bin.js manifest check packages/core-config packages/core-outbox packages/core-audit packages/core-jobs packages/core-health packages/core-crypto modules/iam modules/users modules/providers modules/backup modules/github modules/alerts templates/client templates/module` | a binding, queue, class, cron, var or secret in the client template or one of the kit's own test Worker configurations that its oltrem.manifest.json does not list, one over its cap, or an env.NAME use the manifest does not list (R-09) |
-| 11 | tests | `node --test scripts/**/*.test.mjs` | a failing test of the verify chain itself (Node's built-in runner, every *.test.mjs file under scripts/) |
-| 12 | packages | `pnpm exec vitest run` | a failing package or module test; Worker code is tested inside the Workers runtime with the bindings its wrangler configuration declares, the command-line tool on Node |
+| 11 | size | `node scripts/check-size.mjs` | a Worker named in size-budget.json whose compressed size, built by wrangler's dry run, is over its budget (the client template's cold start is paid inside the free plan's 10 ms) |
+| 12 | tests | `node --test scripts/**/*.test.mjs` | a failing test of the verify chain itself (Node's built-in runner, every *.test.mjs file under scripts/) |
+| 13 | packages | `pnpm exec vitest run` | a failing package or module test; Worker code is tested inside the Workers runtime with the bindings its wrangler configuration declares, the command-line tool on Node |
 
 A gate is never skipped, weakened or bypassed to get green (R-02): the cause is fixed. A new gate is a new entry in `scripts/lib/gates.mjs`, a test, and this page regenerated with `pnpm docs:build`.
