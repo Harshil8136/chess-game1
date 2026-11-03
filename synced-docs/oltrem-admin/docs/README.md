@@ -2,7 +2,7 @@
 title: "Documentation index, and where things stand"
 status: living
 owner: vendor
-last_verified: 2026-10-21
+last_verified: 2026-11-03
 sources: [this repository]
 ---
 
@@ -18,7 +18,10 @@ sources: [this repository]
 The kit is in **phase 6, release pipeline and upgrade**, with the first features for any business
 built beside it. Each phase's parts and their state are on [the status page](status.md); what
 comes next, and why it sells, is in [the roadmap](roadmap.md). A person or an agent new to the
-repository reads [the architecture guide](architecture.md) after ai.md.
+repository reads [the architecture guide](architecture.md) after ai.md. Every Oltrem product
+(the Portal, Mail, the shared Server, and later the Console and the Website), its modules and the
+five phases of work across them are in [the product plan](product-plan.md); what keeps the kit
+at "fine" rather than "best", and the order of fixes, is in [the kit review](reference/kit-review.md).
 
 ## The plan
 
@@ -42,6 +45,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | Document | Owns | Kind |
 |---|---|---|
 | [Where things stand](status.md) | each phase's parts, their state and the record of each | living |
+| [Product plan](product-plan.md) | the product line, the products, their modules, the five phases across them and the owner's open decisions | proposed |
 | [Roadmap](roadmap.md) | what buyers pay for, the editions, module states, what comes next | living |
 | [Architecture guide](architecture.md) | the parts, how a request and a job travel, what a module is, the numbers taken, where a change goes | living |
 | [ai.md](../ai.md) | the session-start procedure, the rules in one line each, the commands, what to read and what to update | written |
@@ -55,6 +59,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Browser caching](reference/browser-caching.md) | browser storage, versioned reads, instant updates | proposed |
 | [Private mail Worker](reference/private-mail-worker.md) | Mailflare, Cloudflare email, a mail Worker | proposed |
 | [Mail projects](reference/mail-projects.md) | 35 projects compared; a mail repo | proposed |
+| [Kit review](reference/kit-review.md) | what keeps the kit at fine rather than best: the findings of 2026-11-03, their evidence and the order of fixes | proposed |
 | [The shared server](reference/shared-server.md) | one vendor server, a key and limit per client | proposed |
 | [Adding a module to the kit](reference/kit-module.md) | the steps, files, numbers, mounting, tests and documents of a new kit module | living |
 | [Dependencies](reference/dependencies.md) | every third-party package, its pinned version, who uses it, why | generated from `dependencies.registry.json` and the catalog |
@@ -189,24 +194,24 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Expenses module](records/2026-10-27-expenses-module.md) | what people spent claimed back with the receipt, answered and marked paid at a place, a month as a spreadsheet for the accountant |
 | [Equipment module](records/2026-10-27-assets-module.md) | who holds which laptop, phone or key, every hand-over kept, and what people whose account is off still hold |
 | [Time clock module](records/2026-10-27-timeclock-module.md) | clocking in and out at a place, the week's hours, missed clock-outs fixed with why, the hours for payroll; the company's clock moved to the core |
-| [Customer sign-in](records/2026-10-27-customer-sign-in.md) | the company's customers sign in at /account with a code emailed to them, outside Cloudflare Access's 50 places; staff add them, switch them off and end their sign-ins |
+| [Customer sign-in](records/2026-10-27-customer-sign-in.md) | customers sign in at /account with an emailed code, outside Access |
 | [Shifts module](records/2026-10-27-shifts-module.md) | who works when at each place: drafts, the week published and emailed, open shifts taken, changes told |
-| [Customer sign-in services](records/2026-10-27-customer-sign-in-services.md) | beside the code, "Continue with" a sign-in service the company already uses (any OpenID Connect provider), connected on the "How customers sign in" page |
+| [Customer sign-in services](records/2026-10-27-customer-sign-in-services.md) | "Continue with" any OpenID Connect sign-in service |
 | [Customer account sections](records/2026-10-27-customer-account-sections.md) | each module adds the customer's own things to their account page; forms shows the messages they sent and the replies staff sent them |
 | [Files shared with customers](records/2026-10-27-files-shared-with-customers.md) | staff share a file with a customer, who downloads it from their account page, signed in, with no link to leak |
 | [Quotes module](records/2026-10-27-quotes-module.md) | staff send a customer a price, line by line; the customer accepts or declines it on their account page, and the maker is told |
-| [Invoices module](records/2026-10-27-invoices-module.md) | staff bill a customer, from scratch or from an accepted quote; the customer sees what they owe on their account page; staff mark it paid; overdue ones in Needs you |
-| [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one short look for install, `npm run dev`, update and deploy; tools' output in a log; the first local start about four times faster; `npm run update` |
+| [Invoices module](records/2026-10-27-invoices-module.md) | bill a customer, from an accepted quote too; paid once; overdue in Needs you |
+| [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one short look for install, dev, update and deploy; a faster first start |
 | [The setup page](records/2026-10-27-setup-page.md) | `npm run setup` puts a portal on Cloudflare with a page in the browser that asks each question and shows the progress, in the portal's look |
 | [One-click setup](records/2026-10-28-one-click-setup.md) | a file to double-click on each system opens a start page; the deploy picks the account and domain, checks the key on paste and notices the door |
-| [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows what its tool says, the packages and the local start repair themselves, and a stop offers its details to copy |
-| [A sidebar without reloads](records/2026-10-28-sidebar-without-reloads.md) | pages and form changes open in place with the sidebar kept and scrolled; it closes to icons; group colours; Work split into Work, Team and Sales |
+| [Setup that explains, repairs and hands over its details](records/2026-10-28-setup-help-and-repair.md) | each step shows its tool's words and repairs itself; a stop offers its details |
+| [A sidebar without reloads](records/2026-10-28-sidebar-without-reloads.md) | pages open in place with the sidebar kept; icons only when closed; groups |
 | [Email statuses and the do-not-mail list](records/2026-10-28-email-statuses.md) | each email keeps its outcome; hard and soft bounces apart; bounces and spam reports stop all mail |
 | [Sender addresses and sending domains](records/2026-10-28-senders-and-domains.md) | the portal sets up the company's domain with Resend or Brevo, checks it daily, and campaigns send only from a passing domain |
-| [Saved email templates](records/2026-10-28-saved-templates.md) | designs built from blocks or pasted as HTML and cleaned, checked at each save, previewed as a phone, a desktop and dark mode, tested to oneself, every version kept |
+| [Saved email templates](records/2026-10-28-saved-templates.md) | designs from blocks or HTML, checked, previewed, every version kept |
 | [Saved email lists](records/2026-10-28-saved-lists.md) | who bulk mail goes to, from a file or typed, each with a reason; the do-not-mail list at every send |
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | batch calls sized by the plan; nothing sent twice; large sends need a second person |
-| [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's spam or bounce limits; failed runs retried, paused at the third; System health watches; a summary email and results by mailbox |
+| [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's limits; retries; a summary email |
 | [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses from the provider, drafts, Send later and ten seconds to Undo; mail split into Messages and Mail settings |
 | [A shorter sidebar, tabs and compact buttons](records/2026-10-29-shorter-sidebar.md) | main pages only, in five groups; sub-pages as tabs |
 | [Ready to send](records/2026-10-31-ready-to-send.md) | the portal checks all an email needs to leave, provider account included, says what to do, and checks hourly |
