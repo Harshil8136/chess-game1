@@ -131,7 +131,7 @@ flowchart LR
 | A | **A5** documents brought up to date: where things stand and the roadmap (K4) | agent |
 | A | **A6** extras a portal can do without (the daily audit seal, the reminders) switched off on the Modules page (the owner's ask) | **done** 2026-11-03 |
 | B | the owed phone tests, collected on one list; the upgrade path twice; a live restore drill | owner on a phone, agent the rest |
-| C | the owner's pick of R1 to R15; first suggestion: R3 get-started checklist, R1 saved views, R2 bulk actions, R6 notifications inbox | agent |
+| C | the owner's pick of R1 to R15; first suggestion: R3 get-started checklist (**done** 2026-11-03), R1 saved views, R2 bulk actions, R6 notifications inbox | agent |
 | D | editions turned on and off from the client file; a demo portal; the buyer's guide | agent, owner for prices |
 | E | Spanish, API keys, website forms in more languages, SMS and WhatsApp | later |
 

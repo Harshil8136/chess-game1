@@ -139,7 +139,8 @@ the snapshot's list changes, so a request pays one comparison and no I/O.
 `features`, each an extra the portal works without, with the ids of the jobs and health checks
 it stops. The kit's: `audit.seal` (the daily seal, its recheck and its check), `iam.expiring`
 (the emails about access ending), `iam.reviews` (the overdue-review warning) and `backup.drill`
-(the restore-drill warning; the nightly copy itself stays on). An extra switched off is kept in
+(the restore-drill warning; the nightly copy itself stays on), and `settings.get-started` (Home's
+Get started card; it stops no job). An extra switched off is kept in
 the same list by its id, so no new setting; `featuresOff(stored, mounted)` gives the jobs and
 checks it stops, and the reader's set holds them beside the parts (ids with a dot never name a
 part). All are on until switched off; nothing they wrote is deleted.

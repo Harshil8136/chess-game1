@@ -222,6 +222,28 @@ todo: {
 },
 ```
 
+## Get started
+
+A module that has a step of setting a new portal up declares `onboarding`: one of its own
+capabilities and `steps(ctx)`, which answers each step's title, an optional note, the portal page
+where it is done and `done`, read from what the module really stores (a row, a setting), never
+from a click. `defineModule` adds `GET /api/<module>/onboarding` under that capability; a step
+whose address is not a page of the portal is dropped, and at most `ONBOARDING_STEPS` (five) are
+answered. Home asks every mounted module that has one, in the sidebar's order, and shows the card
+"Get started: n of m done" above Needs you while a step is open; once all are done the card is
+gone. The settings part's extra `settings.get-started` switches it off. The kit's steps: connect
+an email service (`providers`), invite a second person (`users`), make the first backup copy and
+run a restore drill (`backup`), name who gets alerts (`alerts`).
+
+```ts
+onboarding: {
+  capability: 'notes.manage',
+  steps: async (ctx) => [
+    { title: 'Write the first note', href: '/notes', done: await anyNote(ctx.env) },
+  ],
+},
+```
+
 ## Personal data
 
 A module that keeps rows about people declares `personal`: a `title` and `find(env, tenantId,
