@@ -117,6 +117,14 @@ hands in as `standing` from its session: the Vendor may change every live settin
 `owner` and `admin` ones, anyone else who holds `settings.manage` the `admin` ones. The audit row
 needs `oltrem_audit_log` from `@oltrem/core-audit`.
 
+## The portal's look for everyone
+
+`settings.look` (`LOOK_SETTING`, since 2026-11-03) is the look an Owner set for everyone on the
+Look page, `<palette>.<background>` as the screens name them (`emerald.dots`); empty, its
+default, leaves the client file's `brand.look`. Owner-editable, immediate, in the System
+section of the Settings page too. The settings module always registers it. The template reads it
+from memory with the parts on every request, so a change costs no read of its own.
+
 ## The parts switches
 
 Given `parts: { modules }`, the settings module also keeps the portal's parts (its modules)

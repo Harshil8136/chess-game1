@@ -45,6 +45,9 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P47 | Notifications, How you are told, on the phone | one grid, a row per module with two switches, In the portal and By email, all in view without sideways scrolling | [record](records/2026-11-03-look-2-step-2.md) |
 | P48 | Look and colours | each palette a gradient tile, each background a small preview; the one in use ringed; a tap changes the page at once | [record](records/2026-11-03-look-2-step-2.md) |
 | P49 | Users, Locations, Add a location; then Files, a file, Make a link | the add form opens in a dialog; the link comes up in the corner and stays until you press × | [record](records/2026-11-03-look-2-step-2.md) |
+| P50 | Bookings, Notifications, Tasks with nothing in them | the same dashed box on each, never a box inside a box | [record](records/2026-11-03-look-2-step-3.md) |
+| P51 | Settings on a computer, then on the phone | on the computer each setting's name and words on the left, its box and Save on the right; on the phone one under the other | [record](records/2026-11-03-look-2-step-3.md) |
+| P52 | As an Owner: Look and colours, pick Forest and Grid, press Make it everyone's look; then sign in as another user | "saved for everyone"; the other user sees green and the grid without picking anything; their own pick still wins on their phone | [record](records/2026-11-03-look-2-step-3.md) |
 | P45 | Records → a list → a record → Remove the record | the notice in the corner says it was removed and has Undo; Undo brings the record back with its values; leave it and it stays removed | [record](records/2026-11-03-undo.md) |
 
 ### Lists, saved views and bulk actions
