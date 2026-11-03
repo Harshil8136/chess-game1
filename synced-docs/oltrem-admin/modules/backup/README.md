@@ -45,6 +45,14 @@ tick's own cron trigger. The Worker needs the `nodejs_compat` flag for the age f
 | `record` | The row is `ok`, with the object key, the size before and after encryption, the export's bookmark and the recipient |
 | `record the failure` | The row is `failed`, with the code and the detail; the error is reported and the instance fails |
 
+A new portal does not wait for the night: the job `backup.first` (every fifteen minutes) starts
+the first copy as soon as the settings and both keys are there, once. The instance is named
+`backup-first-copy` (`FIRST_COPY`), so Workflows refuses a second start under it, and its run keeps
+the name, so a start after Workflows forgot it finds the run and stops; once any export is in
+`backup_runs` the job reads one row and does nothing. Home's Get started step "Make the first
+backup copy" says it starts by itself, with a Make it now button (`POST /runs`) once backups are
+set up, and who it waits for before then.
+
 The object key is the run's start time, `backups/d1/2026-10-21T03-00-00Z.sql.age`, so a copy is
 never written over. The object carries the run's id, the bookmark and the format as metadata. An
 error never carries the token or the signed address.

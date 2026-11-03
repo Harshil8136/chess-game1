@@ -154,6 +154,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Look 2, step 1](2026-11-03-look-2.md) | lean chips and buttons, every notice a toast, the style and script served as files |
 | [The role editor as a permission matrix](2026-11-03-role-matrix.md) | every module's level in view, set all, find, special permissions apart |
 | [Looks: palettes and backgrounds](2026-11-03-looks.md) | 24 palettes and 7 backgrounds each person picks, at no stylesheet cost |
+| [Easier setup](2026-11-03-easier-setup.md) | email in one step from Home and Integrations, delivery reports registered by themselves, the first backup without waiting for the night |
 | [Look 2, step 3](2026-11-03-look-2-step-3.md) | one empty box everywhere, settings side by side, an Owner's look for everyone |
 | [Look 2, step 2](2026-11-03-look-2-step-2.md) | each page's button beside its heading or filters, smaller empty boxes, shown-once results as toasts, a switch grid for notifications, Look tiles |
 | [Verification log, 27 to 31 October](2026-10-27-to-31-verification-log.md) | the log's rows of those days, moved when it passed its size |

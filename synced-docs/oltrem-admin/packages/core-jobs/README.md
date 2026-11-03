@@ -111,7 +111,7 @@ export class KitJobs extends WorkflowEntrypoint<Env> {
 | Start | What runs |
 |---|---|
 | The tick finds a schedule due (`flows.startDue(env.JOBS, now)`, in the five minutes up to now, UTC) | one instance per schedule and minute, named after both, so a second tick finds it and starts none; it runs every flow whose `schedule` is that cron, in module order. The free plan refuses `schedules` on a Workflow binding, so none is set there |
-| `startFlow(env.JOBS, kind, params)` | the one flow with that id, with the params; it returns the instance id |
+| `startFlow(env.JOBS, kind, params, id?)` | the one flow with that id, with the params; it returns the instance id. Given `id`, the instance takes that name, so Workflows refuses a second start under it: a flow started once, however often it is asked (the backup's first copy) |
 | Neither matches a mounted flow | nothing; it is reported with the schedule or the kind |
 
 Each step a flow takes is named after it (`backup.export: claim`), so two flows on one schedule
