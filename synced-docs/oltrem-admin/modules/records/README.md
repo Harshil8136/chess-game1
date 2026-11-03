@@ -85,7 +85,8 @@ by its first field.
 
 For a privacy request (`personal`, read by the privacy module) the module answers every record
 whose text names the address, newest change first, with its list and its values by field label.
-The Records page is linked; a record is corrected or removed from its list.
+The Records page is linked; a record is corrected or removed from its list. A removed record
+waits in `records_trash` for a day, for its Undo, then the daily job deletes it for good.
 
 ## The routes
 
@@ -96,10 +97,10 @@ The Records page is linked; a record is corrected or removed from its list.
 | `POST /lists/:id/fields`, `DELETE /lists/:id/fields/:field`, `POST /lists/:id/fields/:field/move` | `records.design` | add a field at the end; remove one with its values; move one up or down |
 | `GET /lists/:id`, `GET /lists/:id/items`, `GET /lists/:id/items/:item`, `GET /lists/:id/export` | `records.read` | a list with its fields and what the person may do; its records (`q`, `field` and `value`, `sort` and `dir`, `limit`, `offset`); one record; the CSV file |
 | `POST /lists/:id/items`, `PATCH /lists/:id/items/:item`, `POST /lists/:id/import` | `records.write` | add a record; change one; add one for each row of a CSV file |
-| `DELETE /lists/:id/items/:item` | `records.remove` | remove a record |
+| `DELETE /lists/:id/items/:item`, `POST /lists/:id/items/:item/restore` | `records.remove` | remove a record: it waits a day in the trash; Undo puts one removed within the day back, with the fields the list has now |
 
 Every change is audited (`records.list-create`, `-update`, `-remove`; `records.field-add`,
-`-remove`, `-move`; `records.item-create`, `-update`, `-remove`, `-import`), the refusals as much as the
+`-remove`, `-move`; `records.item-create`, `-update`, `-remove`, `-restore`, `-import`), the refusals as much as the
 successes, with ids and names only: never the values a record holds.
 
 The module has no card on Home: Home reads a card without the person, and a count of every list
@@ -111,6 +112,13 @@ Migration `0017_records.sql`, additive and idempotent, in the one ledger `oltrem
 `records_lists` (the list, its tenant, its place, name and description; one name per company),
 `records_fields` (each field's label, kind, whether it is needed, its choices and position) and
 `records_items` (each record's values as JSON, its search text, who added and changed it, when).
+Migration `0057_records_trash.sql` (2026-11-03): `records_trash`, a removed record's row with who
+removed it and when, for its Undo; removing a list empties its rows there.
+
+## Jobs
+
+`records.trash-prune`, daily: deletes the records removed more than a day ago (`TRASH_HOURS`),
+past their Undo. One query.
 
 ## Errors
 
@@ -129,6 +137,7 @@ not removing; search, a choice and a yes or no narrowing, sorting by a field, pa
 replacing the values; fields added, moved and removed with their values; a list moved to another
 place; the CSV with a formula defused; a download added back whole with its defused formula restored, a
 file refused with its rows named and nothing added, a file naming no field, an empty one and a
-person without the place refused; a list with records kept; every change audited without a value.
+person without the place refused; a list with records kept; a removed record put back by Undo, refused to a person without the
+place, refused past its day and deleted by the job; every change audited without a value.
 
 The search test finds lists and records only where a person's roles reach, and takes `%` as a letter.

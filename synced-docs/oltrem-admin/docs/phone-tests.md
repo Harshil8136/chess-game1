@@ -41,6 +41,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P42 | Automations, Files, a booking | the filters (All, On, Off) are soft chips; what you can do (When something happens, Upload a file, New folder) are white buttons with a border, so the two never look alike | [record](records/2026-11-03-look-2.md) |
 | P43 | Search (the magnifier), Customers, a records list, a form's answers | each search is one field with the magnifier in front and the arrow inside; Enter or the arrow searches | [record](records/2026-11-03-look-2.md) |
 | P44 | Users → Roles; Developer → Jobs | Roles lists View only, Standard user and Full admin under "Start a role from a ready set"; a press opens the editor filled in, named, ready to save. In Jobs each time sits on one line with its cost beneath, and Run soon and Pause are two bordered buttons side by side | [record](records/2026-11-03-look-2.md) |
+| P45 | Records → a list → a record → Remove the record | the notice in the corner says it was removed and has Undo; Undo brings the record back with its values; leave it and it stays removed | [record](records/2026-11-03-undo.md) |
 
 ### Lists, saved views and bulk actions
 
