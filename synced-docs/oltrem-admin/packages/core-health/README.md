@@ -81,7 +81,8 @@ Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`),
 module's checks are not run and its rows are left out of `list`, so of the page, Home's card and
 their counts; a problem of theirs that was open is closed through `onClose`, so its alert
 resolves, and so is one of a check no mounted module declares any more. Switched back on, its
-checks run again on the next tick (`test/parts.test.ts`).
+checks run again on the next tick (`test/parts.test.ts`). A check whose own id is in the set (an
+optional extra switched off, such as `audit.sealed`) is treated the same way, alone.
 
 ## The Cloudflare plan's budgets
 

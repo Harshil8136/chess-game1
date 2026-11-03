@@ -196,11 +196,11 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Time clock module](records/2026-10-27-timeclock-module.md) | clocking in and out at a place, the week's hours, missed clock-outs fixed with why, the hours for payroll; the company's clock moved to the core |
 | [Customer sign-in](records/2026-10-27-customer-sign-in.md) | customers sign in at /account with an emailed code, outside Access |
 | [Shifts module](records/2026-10-27-shifts-module.md) | who works when at each place: drafts, the week published and emailed, open shifts taken, changes told |
-| [Customer sign-in services](records/2026-10-27-customer-sign-in-services.md) | "Continue with" any OpenID Connect sign-in service |
+| [Customer sign-in services](records/2026-10-27-customer-sign-in-services.md) | "Continue with" any OpenID Connect service |
 | [Customer account sections](records/2026-10-27-customer-account-sections.md) | each module adds the customer's own things to their account page; forms shows the messages they sent and the replies staff sent them |
 | [Files shared with customers](records/2026-10-27-files-shared-with-customers.md) | staff share a file with a customer, who downloads it from their account page, signed in, with no link to leak |
 | [Quotes module](records/2026-10-27-quotes-module.md) | staff send a customer a price, line by line; the customer accepts or declines it on their account page, and the maker is told |
-| [Invoices module](records/2026-10-27-invoices-module.md) | bill a customer, from an accepted quote too; paid once; overdue in Needs you |
+| [Invoices module](records/2026-10-27-invoices-module.md) | bill a customer; paid once; overdue in Needs you |
 | [The kit's look in a terminal](records/2026-10-27-terminal-look.md) | one look for install, dev, update, deploy |
 | [The setup page](records/2026-10-27-setup-page.md) | `npm run setup` puts a portal on Cloudflare with a page in the browser that asks each question and shows the progress, in the portal's look |
 | [One-click setup](records/2026-10-28-one-click-setup.md) | a file to double-click on each system opens a start page; the deploy picks the account and domain, checks the key on paste and notices the door |
@@ -211,7 +211,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Saved email templates](records/2026-10-28-saved-templates.md) | designs from blocks or HTML, every version kept |
 | [Saved email lists](records/2026-10-28-saved-lists.md) | who bulk mail goes to, from a file or typed, each with a reason; the do-not-mail list at every send |
 | [The bulk sending engine](records/2026-10-28-bulk-sending-engine.md) | batch calls sized by the plan; nothing sent twice; large sends need a second person |
-| [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's limits; retries; a summary email |
+| [The watch over bulk mail](records/2026-10-28-bulk-mail-watch.md) | a campaign pauses itself above Gmail's limits |
 | [Writing email like a mail app](records/2026-10-29-mail-write.md) | a Write page with Cc and Bcc, addresses from the provider, drafts, Send later and ten seconds to Undo; mail split into Messages and Mail settings |
 | [A shorter sidebar, tabs and compact buttons](records/2026-10-29-shorter-sidebar.md) | main pages only, in five groups; sub-pages as tabs |
 | [Ready to send](records/2026-10-31-ready-to-send.md) | the portal checks all an email needs to leave, provider account included, says what to do, and checks hourly |
@@ -231,6 +231,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [CPU budget](records/2026-11-01-cpu-budget.md) | in-process API calls, audit recheck spread, time zones once |
 | [Every server error kept](records/2026-11-03-error-log.md) | each error an alert, grouped, counted, emailed once |
 | [Worker size budget](records/2026-11-03-size-gate.md) | verify refuses a bigger Worker |
+| [Optional extras](records/2026-11-03-optional-extras.md) | audit seal and reminders switched off |
 | [The start page as a dashboard](records/2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](records/2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
 | [Generated module pages](records/2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |

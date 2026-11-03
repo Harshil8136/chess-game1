@@ -135,10 +135,19 @@ whose needs are off, so a list written by hand stays safe; `partsRefusal(wanted,
 in the page's words, why a list cannot be saved; `createPartsReader` makes the set again only when
 the snapshot's list changes, so a request pays one comparison and no I/O.
 
+**Optional extras** (since 2026-11-03, the owner's ask): a part, a core one included, may list
+`features`, each an extra the portal works without, with the ids of the jobs and health checks
+it stops. The kit's: `audit.seal` (the daily seal, its recheck and its check), `iam.expiring`
+(the emails about access ending), `iam.reviews` (the overdue-review warning) and `backup.drill`
+(the restore-drill warning; the nightly copy itself stays on). An extra switched off is kept in
+the same list by its id, so no new setting; `featuresOff(stored, mounted)` gives the jobs and
+checks it stops, and the reader's set holds them beside the parts (ids with a dot never name a
+part). All are on until switched off; nothing they wrote is deleted.
+
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it; the list off; the presets with the parts each switches off |
-| `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }`: refused (`KIT-E-0422`) for an unknown part, a core one, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on |
+| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off; the list off, extras included; the presets with the parts each switches off |
+| `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }` (parts and extras): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on |
 
 The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
 health and the IAM module as their `off` option; each says what it does with it. A switched-off

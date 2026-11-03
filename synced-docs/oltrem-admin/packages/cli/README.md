@@ -791,13 +791,13 @@ Deployments and the core (Backups among it: always on), `preset everything` swit
 
 | Export | What it is |
 |---|---|
-| `PARTS: PartChoice[]` | the catalogue, `{ id, label, description, core, requires }` per kit part, a copy of `KIT_PARTS` held equal by `test/parts.test.ts` |
+| `PARTS: PartChoice[]` | the catalogue, `{ id, label, description, core, requires, features }` per kit part (`features`: its optional extras, switched on the portal's page only), a copy of `KIT_PARTS` held equal by `test/parts.test.ts` |
 | `ADD_ONS`, `BASE_PARTS`, `partsHere(dir)` | the parts a repository has only when it installed them (`mail`: `@oltrem/mail`), the parts every one has, and this repository's: Mail's switch only where `src/mail.ts` wires it in. `list`, `set` and the deploy's question go by `partsHere` |
 | `PART_PRESETS` | `{ id: 'everything' \| 'email', label, off: string[] }` |
 | `PARTS_KEY` | `'settings.parts_off'` |
 | `partsRefusal(off)` | why a list cannot be written (a bad name, a core part, a part one left on needs), or null |
 | `readParts(dir, run)` | `{ off?: string[], problem?: string }`, through `wrangler d1 execute --remote --json`; `[]` before anything is written |
-| `writeParts(dir, off, run, now?)` | `{ ran, written, off, steps, problems }`: refused before any read when the rule says no; nothing written when the list is already stored; otherwise `writeSetting` (above: the version moves up, a history row, the cached settings cleared) |
+| `writeParts(dir, off, run, now?)` | `{ ran, written, off, steps, problems }`: refused before any read when the rule says no; the optional extras already stored (ids with a dot) are kept; nothing written when the list is already stored; otherwise `writeSetting` (above: the version moves up, a history row, the cached settings cleared) |
 | `partsLines(off)` | the lines `list` prints |
 | `partsQuestion(off)` | the deploy's question: `{ items, off, presets }`, each item the catalogue's row with its sidebar `group` (`partGroup(id)`, kept here since the catalogue is held equal to core-config's and has none; a client's own part that is off shows under `OWN_GROUP`), the presets `everything`, `email` and `core` |
 | `switchPart(items, off, id, on)` | the list after one switch: on with what the part needs, off with what needs it; a core part never moves |

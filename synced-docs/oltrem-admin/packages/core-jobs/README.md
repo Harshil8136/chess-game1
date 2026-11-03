@@ -123,7 +123,9 @@ Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`),
 switched-off module waits untouched, still due, listed in the tick's `switchedOff`, and runs on
 the first tick after the module is back on; an instance of the Workflow skips that module's flows
 (a flow's module is its id's first segment), and `startDue(workflow, at, off)` starts no instance
-for a schedule whose every flow is off (`test/parts.test.ts`).
+for a schedule whose every flow is off (`test/parts.test.ts`). A job whose own id is in the set (an
+optional extra switched off, such as `audit.seal`) waits the same way while its module's other
+jobs run.
 
 ## Table
 
