@@ -256,7 +256,7 @@ A full set of semantic badge color tokens for status badges across the admin UI.
 --color-badge-teal-border:    rgba(192, 132, 252, 0.3);
 ```
 
-**Usage:** In `src/styles/components/chatbot/buttons-badges.css`, the `.chatbot-badge-*` selectors reference these variables, except `.chatbot-badge-primary`, `-fallback` and `-thinking`, which still carry raw `#60a5fa` / `#fbbf24` / `#c084fc` and `rgba()` literals (2026-09-14).
+**Usage:** The `.chatbot-badge-*` selectors that read these variables were deleted with the old Chatbot stylesheets on 2026-11-04 (the Chatbot pages use the kit's `ck-badge`); check for other readers before changing a value.
 
 **Rule:** When adding a new badge color, add the three-variant token group here first, then reference `var(--color-badge-*)` in component CSS. Never write raw hex values for badge colors.
 
@@ -330,12 +330,10 @@ src/styles/
 ├── components/             ← Component-scoped CSS (2026-09-14 listing)
 │   ├── blog-studio.css (three button styles since 2026-10-30), seo-patterns.css
 │   ├── console.css      ← the console kit, `.ck-*` (§9.9, 2026-10-10)
-│   ├── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
-│   └── chatbot/
-│       ├── buttons-badges.css   ← .chatbot-badge-* (mostly --color-badge-* vars; three raw-hex selectors remain)
-│       ├── stats.css            ← .ad-* analytics dashboard classes (extracted from AnalyticsDashboard.tsx)
-│       └── cards, forms, layout, messages, modal-toast, tables, utilities .css
+│   └── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
+│                          (the old `chatbot/` folder of nine stylesheets was deleted 2026-11-04: the Chatbot pages are on the kit)
 └── pages/                  ← Page-level overrides
+    ├── chatbot.css  ← the Chatbot section's `cb-` pieces on the kit: hue `chat`, bar rows, the daily token chart, the conversation thread, prompt previews, the form grid, the save bar (2026-11-04)
     ├── audit.css, cron.css  (diagnostics.css was removed 2026-10-17 with Diagnostics)
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
     ├── health.css  ← System health's own look on the kit's frame: hue `pulse`, monitor band, pulse line, triage board (2026-10-17)
@@ -800,7 +798,7 @@ in `shell.css`).
 ### 9.9 Console kit *(implemented 2026-10-10)*
 
 `src/styles/components/console.css`, the page frame Sessions, Settings, GitHub, Page
-Registry, Users (since 2026-10-16) and System health (since 2026-10-17) share (and, through `ck-scope`, a person's Access page
+Registry, Users (since 2026-10-16), System health (since 2026-10-17) and the eight Chatbot pages (since 2026-11-04) share (and, through `ck-scope`, a person's Access page
 since 2026-10-14), on the look
 of the cf-backup and cf-vps consoles. A page opts in with
 `<div class="ck-page" data-hue="rose|violet|blue">` and imports the file from its `.astro`
@@ -841,6 +839,15 @@ Its lists are dense rows (`ss-row`, a tone bar inset on the left), its alert tab
 (`ss-savebar`); all in `src/styles/pages/sessions.css`, on theme tokens only. The change record
 is `2026-10-24-sessions-page-redesign.md` (private).
 
+The Chatbot section (since 2026-11-04) uses the kit as it is: its layout (`src/layouts/ChatbotLayout.astro`) wraps every page in
+`ck-page data-hue="chat"` (cyan, mixed 72% toward the text colour on the light theme, as System
+health does) with the page registry's tab row, and its pop-ups open inside that frame, so they
+take its hue without `ck-scope`. `src/styles/pages/chatbot.css` adds only what the kit has no
+piece for: bar rows (`cb-bar`), a daily token chart (`cb-days`), the conversation thread
+(`cb-msg`), prompt previews (`cb-pre`), a two-column form (`cb-form`) and a sticky save bar
+(`cb-savebar`), on theme tokens only (`test/chatbot-look.test.ts`). The change record is
+`2026-11-04-chatbot-section-look.md` (private).
+
 `ck-search` and `ck-rename` work in a row and in a column alike: their 16rem flex basis
 applies only inside `ck-toolbar` and `ck-item`, because in a column (`ck-group`, a pop-up's
 body) a basis is a height, and it made a tall empty box around the field
@@ -861,6 +868,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-04 | §3's `pages/chatbot.css` line and the removed `components/chatbot/` folder, §4's badge-token usage note, §9.9's Chatbot paragraph, against `src/layouts/ChatbotLayout.astro`, `src/styles/pages/chatbot.css`, `src/components/admin/chatbot/` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-03 | §1's tracked-debt counts re-measured (626 `style={` lines in 76 files, the ratchet's A6; 251 raw-hex lines in 45 component files) and the `window.location.reload()` sites re-listed (5: `TopBar.tsx` and `ConfigEditor.tsx` no longer have one, `RequestAccess.tsx` does); §5's sidebar colour source corrected (`SECTION_ACCENT` is gone; `--nav-hue-*` and `[data-nav-hue]` in `shell.css`); every other component name the document gives exists (`ActivityCenter.tsx`, `ApiAccessView.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx`, the sessions panels), and `useFocusTrap` still does not | Every token value, size and colour against the stylesheets; the pages in a browser |
 | 2026-11-03 | §6.5 (new) against `src/styles/components/skeleton.css`, `src/styles/global.css`, the placeholders in `posthog/frame.tsx`, `sentry/frame.tsx`, `Analytics.tsx` and `Overview.tsx`, and `test/loading-screens-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (fourth) | §5 Sidebar States (Hidden) and §8.1's phone row, against the phone menu's width in `shell.css` (`.ui-dialog.sh-drawer[data-layout='side']`) and `test/sidebar-look.test.ts` | Every other section; the width on a phone, which Harshil checks |

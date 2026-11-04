@@ -65,16 +65,17 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 | Component | File | Purpose |
 |-----------|------|---------|
 | **AnalyticsDashboard** | `AnalyticsDashboard.tsx` | AI Command Center (`/dashboard/chatbot/analytics`), served by `/api/chatbot/analytics/command-center` and `/analytics/kb-clusters` |
-| **BotConfig** | `BotConfig.tsx` (+ `BotConfigShared.tsx`, `BotConfigThinkingSection.tsx`) | AI hyperparameters (`ai_temperature`, `max_history_turns`), model dropdowns, fallback messages |
-| **ModelsCatalog** | `ModelsCatalog.tsx` | Authorized model grid with Set Primary / Set Fallback actions |
+| **BotConfig** | `BotConfig.tsx` (+ `BotConfigThinkingSection.tsx`) | Settings: identity, the two model pickers, temperature, reply length, history, extended thinking, idle closing, greetings and fallbacks, hand-over. Its fields start from the saved values and are read once on Save (`BotConfigShared.tsx` removed 2026-11-04) |
+| **ModelsCatalog** | `ModelsCatalog.tsx` | Model cards by provider with Make primary / Make fallback; the cost of one reply is worked out for 1,000 tokens read and 200 written, and the page says so |
 | **KnowledgeBase** | `KnowledgeBase.tsx` | CRUD for KB entries across `content_en` / `content_es` |
 | **ConversationsBrowser** | `ConversationsBrowser.tsx` | Channel/status filters, paginated conversation table, message-thread modal with per-message AI metadata, status / takeover / release-to-AI / send-message actions. *2026-09-14: this row claimed "cron session sweeping"; no such feature exists in cf-admin.* |
 | **PromptsEditor** | `PromptsEditor.tsx` | System prompt management |
 | **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking |
 | **ChatbotDashboard** | `ChatbotDashboard.tsx` | Overview page (`/dashboard/chatbot/dashboard`), served by the bare `/api/chatbot/analytics` |
+| **Shared pieces** | `parts.tsx` | The page head, the 7/30/90-day chips, a figure tile, a panel and bar rows; the empty, failed and loading states and the badge come from the Sessions console's parts |
 | **Tab row** | `src/components/navigation/RegistryTabs.astro`, in `src/layouts/ChatbotLayout.astro` | The sub-page row. Since 2026-10-10 its names, order and icons come from the page registry (`admin_pages`), as do each page's heading and tab title, and a tab shows only when the person may open that page. It replaced `ChatbotSubnav.tsx`, which kept its own list of eight names |
 
-All panels maintain the **Midnight Slate** aesthetic per standard cf-admin rules.
+**Look (since 2026-11-04):** every page sits on the console kit (`src/styles/components/console.css`, [DESIGN-SYSTEM.md](../reference/DESIGN-SYSTEM.md) §9.9) in the section's own cyan hue (`data-hue="chat"`), with `src/styles/pages/chatbot.css` for the few pieces the kit has no part for. Time windows, filters, categories and short settings are chip rows, tables stack into cards on a phone, results are the portal's toasts and confirmations are its shared confirm. The old hard-coded dark stylesheets (`src/styles/components/chatbot/`, deleted) are gone. Change record: the Chatbot section's new look (private).
 
 ---
 
@@ -376,6 +377,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-04 | §2 for the makeover: every component in `src/components/admin/chatbot/`, the layout, `parts.tsx`, `src/styles/pages/chatbot.css`; each page's API paths unchanged (read against the old code line by line) | §3 to §10 not re-read; the pages were not opened in a browser (the owner's phone test) |
 | 2026-11-04 | §1 rewritten for the lock-down: cf-admin `src/lib/chatbot-proxy.ts` (binding only, no header, no HTTP fallback), `src/lib/health/catalog.ts` (`chatbot` check over the binding), `wrangler.toml` (`entrypoint = "AdminApi"`, the two secrets out of `[secrets] required`); cf-chatbot `src/index.ts`, `src/router.ts`, `src/admin/api.ts` (no key check; public door is `/health` and `/whatsapp/webhook` only), both checked running in workerd through a binding to the entrypoint; §9 CSAT note (writer removed) | §2 to §8 and §10 (models, prompts, pricing, RPCs): not re-read. Not probed live: this session cannot reach the public domain or deploy cf-chatbot |
 | 2026-10-17 | cf-admin's side again: `src/pages/api/chatbot/[...path].ts` (RBAC rules per path and method), `src/lib/chatbot-proxy.ts` (binding first, HTTP fallback, `X-Admin-Key` only when set, 8 s timeout, and the constant trust header on the binding call is still sent, so the §1 issue stands), the `mutate(path, method, body)` signature in `useChatbotApi.ts`, every component in §2 and the nine pages under `src/pages/dashboard/chatbot/`. Removed a local Windows path from §9 | Everything inside `cf-chatbot` (§3 to §9: live `bot_config`, `model_registry`, its migrations, RPCs and routes): no cf-chatbot checkout in this session, so those stand as read on 2026-09-19 |
 | 2026-10-07 | The neuron-budget note (changed 2026-10-04): cf-admin's budget is the sum of today's `ai_inference` audit rows (`src/lib/dal/RateLimitRepository.ts` `sumAiNeuronsToday`, `src/lib/ratelimit.ts`), no longer an Upstash counter | The chatbot Worker's own counter; everything else in this document |
