@@ -64,7 +64,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 1.1.3 | User stories capture security features | 🟡 | Feature docs in `documentation/features/` capture RBAC + audit expectations. |
 | 1.1.4 | High-level architecture defined | ✅ | `documentation/architecture/ARCHITECTURE.md`, `documentation/architecture/plac-and-audit.md`. |
 | 1.2.1 | Unique low-privilege service accounts | ✅ | `SUPABASE_SERVICE_ROLE_KEY` used only in cf-admin; `anon` role revoked from all tables (RULESAd §9.1). |
-| 1.2.2 | Auth between services | ✅ | Service bindings (`CHATBOT_SERVICE`, `ASTRO_SERVICE`) via Cloudflare Service Bindings — private, not exposed. Chatbot proxy uses shared `X-Admin-Key` (`CHATBOT_ADMIN_API_KEY`). |
+| 1.2.2 | Auth between services | ✅ | Service bindings (`CHATBOT_SERVICE`, `ASTRO_SERVICE`) via Cloudflare Service Bindings — private, not exposed. Since 2026-11-04 the chatbot's admin API answers only on its private `AdminApi` entrypoint, which only the `CHATBOT_SERVICE` binding can reach: no shared key, nothing on its public domain ([CHATBOT](../../features/CHATBOT.md) §1). |
 | 1.2.3 | Central authenticated auth mechanism | ✅ | Cloudflare Zero Trust JWT + `src/middleware.ts` centralized bootstrap. |
 | 1.2.4 | Clear communication paths between components | ✅ | `documentation/architecture/ARCHITECTURE.md`. |
 | 1.4.1–1.4.5 | Access control architecture | ✅ | PLAC in `src/lib/auth/plac.ts` + `admin_pages` D1 table + `admin_page_overrides`; RBAC in `src/lib/auth/rbac.ts`. |

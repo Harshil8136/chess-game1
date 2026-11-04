@@ -180,8 +180,9 @@ delay containment to gather more.
 3. **Rotate credentials** — order matters, most privileged first:
    `SUPABASE_SERVICE_ROLE_KEY` → `CF_API_TOKEN_ZT_WRITE` →
    `CLOUDFLARE_API_TOKEN` → `CF_API_TOKEN_READ_LOGS` → `IP_HASH_SECRET` (see
-   caveat below) → `RESEND_API_KEY` / `BREVO_API_KEY` →
-   `CHATBOT_ADMIN_API_KEY`. (`UPSTASH_REDIS_REST_TOKEN` closed this list until
+   caveat below) → `RESEND_API_KEY` / `BREVO_API_KEY`. (`CHATBOT_ADMIN_API_KEY`
+   left this list on 2026-11-04: nothing reads it, so delete it rather than
+   rotate it, `../MAINTENANCE.md` (private) CB-1.) (`UPSTASH_REDIS_REST_TOKEN` closed this list until
    2026-10-04; cf-admin no longer reads it, so rotate it in the services that do,
    cf-astro and cf-chatbot, and delete it here: `../MAINTENANCE.md` (private) RU-1.)
    Then the other credentials the Worker holds, which this list does not
@@ -220,8 +221,9 @@ delay containment to gather more.
      redeploy both.
    - **`cf-chatbot`** is reached over a **service binding**, not shared
      storage: it has its own D1 (`chatbot-kb`) and no shared R2. Its scope is
-     its own copy of the Supabase key plus `CHATBOT_ADMIN_API_KEY`, which must
-     be set to the same value in both Workers in one sitting.
+     its own copy of the Supabase key. Since 2026-11-04 its admin API answers
+     only on the private `AdminApi` entrypoint that the binding names, so there
+     is no shared admin key to rotate.
    - **The consoles** (`cf-backup`, `cf-vps` and the email API's Console) are
      reached only over service bindings. `cf-backup` also reads and writes the
      shared D1 database `madagascar-db`. `CONSOLE_SIGNING_KEY`, once set, is the

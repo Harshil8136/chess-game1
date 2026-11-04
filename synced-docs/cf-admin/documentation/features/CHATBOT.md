@@ -27,7 +27,7 @@ tags: [chatbot, ai, proxy, models, analytics]
 
 `cf-admin` serves as the administrative interface for the Madagascar AI Chatbot (`cf-chatbot`), brokering every administrative command through a monolithic Astro SSR proxy so that RBAC, PLAC and the audit trail apply to them.
 
-> *Corrected 2026-09-19 — this said "`cf-chatbot` has no built-in admin auth".* It does: `cf-chatbot/src/admin/api.ts` compares an `X-Admin-Key` header or a `Bearer` token in constant time against its own `ADMIN_API_KEY` / `CHATBOT_ADMIN_API_KEY`. The proxy exists for governance, not because the other side is unguarded.
+> *Changed 2026-11-04 (change record (private)).* `cf-chatbot`'s admin API now answers only on its private `AdminApi` entrypoint. A named entrypoint has no public address: only a Worker on this account with a service binding to it can call it, and the `CHATBOT_SERVICE` binding in `wrangler.toml` names it (`entrypoint = "AdminApi"`). The binding is therefore the credential; there is no key and no trust header any more. `cf-chatbot`'s public domain answers only `GET /health` and the WhatsApp webhook, and `/admin` there is a 404. The proxy exists for governance (RBAC, PLAC and the audit trail), and it is now also the only way in.
 
 **Proxy endpoint:** `src/pages/api/chatbot/[...path].ts`
 
@@ -35,21 +35,15 @@ Every request through the proxy:
 
 1. Blocks unauthenticated requests (session check)
 2. Validates user RBAC clearance against required role
-3. Calls `cf-chatbot` over the `CHATBOT_SERVICE` service binding first, falling back to HTTP against `CHATBOT_WORKER_URL`; `CHATBOT_ADMIN_API_KEY` is appended only when it is configured (`src/lib/chatbot-proxy.ts`). *Corrected 2026-09-14.*
+3. Calls `cf-chatbot`'s `AdminApi` entrypoint over the `CHATBOT_SERVICE` service binding, with no credential header and no fallback to the public domain (`src/lib/chatbot-proxy.ts`; `test/chatbot-proxy.test.ts`, `test/chatbot-binding-contract.test.ts`). System health's *Website chat assistant* check calls `GET /admin/health` the same way.
 
-> ⚠️ **Open security issue — the trust signal on the service-binding path is not a secret.** On the binding call the proxy also sends a fixed, build-time-constant trust header. `cf-chatbot` authorizes its **entire** `/admin/*` surface on that constant alone: it does not verify that the request actually arrived over a service binding, and it routes `/admin*` on its public custom domain. Anyone who learns the pair can therefore reach chatbot config, prompts, the knowledge base, model switching, conversations including send-message, and the paid-LLM `/admin/test` endpoint — without any cf-admin session.
->
-> Neither the header name nor its value is recorded in this repository's documentation, and **neither is to be reintroduced** into any published doc. The value was redacted from the AI-overhaul record on 2026-09-19; the names live in code only.
->
-> **The fix is in `cf-chatbot`, not here:** make it require the real shared secret even over the binding, then rotate. Removing the constant from cf-admin alone would break the proxy without closing anything. Found by code reading on 2026-09-19; not probed live.
+> *Closed 2026-11-04: the open security issue recorded here since 2026-09-19.* The binding call used to carry a fixed, build-time-constant trust header on which `cf-chatbot` authorised its whole `/admin/*` surface, and `cf-chatbot` also answered `/admin*` on its public domain. Both are gone: the header is no longer sent or read, and the public domain no longer routes `/admin`. Neither the header name nor its value is to be written into any document.
 
-### Required Secrets (both Workers)
+### Secrets
 
-| Worker | Secret | Value |
-|--------|--------|-------|
-| `cf-admin` | `CHATBOT_WORKER_URL` | `http://localhost:8787` (local) or production Worker URL |
-| `cf-admin` | `CHATBOT_ADMIN_API_KEY` | 64-character UUID-like string |
-| `cf-chatbot` | `ADMIN_API_KEY` | Must exactly match `CHATBOT_ADMIN_API_KEY` |
+None. `CHATBOT_WORKER_URL` and `CHATBOT_ADMIN_API_KEY` (cf-admin) and `ADMIN_API_KEY` (cf-chatbot) have had no reader since 2026-11-04 and left `wrangler.toml`'s `[secrets] required`; they are still set on the Workers until the owner deletes them (MAINTENANCE (private) CB-1).
+
+**Deploy order:** cf-chatbot first (it adds the `AdminApi` entrypoint), cf-admin second, as for the other entrypoint bindings ([OPERATIONS](../operations/OPERATIONS.md) §1).
 
 > **Security rule:** Never expose `cf-chatbot` endpoint URLs to the client boundary. All URLs are server-side only.
 
@@ -340,7 +334,7 @@ Analytics shifted from tracking raw technical metrics to tracking **customer out
 
 **Zero-blocking telemetry:** `cf-chatbot/src/storage/supabase.ts` uses `Promise.allSettled` for fire-and-forget inserts after response is sent — zero latency added to chat experience.
 
-**Admin API routes** (protected by `X-Admin-Key`):
+**Admin API routes** (on the private `AdminApi` entrypoint, reached only over the binding):
 
 - `GET /admin/analytics/command-center?days=N`
 - `GET /admin/analytics/kb-clusters?resolved=false`
@@ -356,8 +350,11 @@ Analytics shifted from tracking raw technical metrics to tracking **customer out
 1. **Background AI Clustering Cron** — scheduled Worker to assign `cluster_topic` to unclustered `kb_gaps` rows. Still unbuilt; this is why the knowledge-gaps panel is empty.
 
 *Corrected 2026-09-19: "CSAT UI Widget" was listed here as future work. It
-exists — `cf-chatbot/src/channels/web/chat.ts` calls the `feedback_events`
+existed — `cf-chatbot/src/channels/web/chat.ts` (removed 2026-11-04) called the `feedback_events`
 insert in `cf-chatbot/src/storage/supabase.ts`, and the live table holds rows.
+**2026-11-04:** the web chat, its widget and that writer were removed with the
+public test page, so no new `feedback_events` rows are written; the existing
+rows stay.
 The 2026-09-14 verification log claimed to have found "no writer of
 `cluster_topic` / `feedback_events` in either checkout" while also listing
 cf-chatbot as not on disk; the 2026-09-19 pass read a local cf-chatbot checkout.
@@ -379,6 +376,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-04 | §1 rewritten for the lock-down: cf-admin `src/lib/chatbot-proxy.ts` (binding only, no header, no HTTP fallback), `src/lib/health/catalog.ts` (`chatbot` check over the binding), `wrangler.toml` (`entrypoint = "AdminApi"`, the two secrets out of `[secrets] required`); cf-chatbot `src/index.ts`, `src/router.ts`, `src/admin/api.ts` (no key check; public door is `/health` and `/whatsapp/webhook` only), both checked running in workerd through a binding to the entrypoint; §9 CSAT note (writer removed) | §2 to §8 and §10 (models, prompts, pricing, RPCs): not re-read. Not probed live: this session cannot reach the public domain or deploy cf-chatbot |
 | 2026-10-17 | cf-admin's side again: `src/pages/api/chatbot/[...path].ts` (RBAC rules per path and method), `src/lib/chatbot-proxy.ts` (binding first, HTTP fallback, `X-Admin-Key` only when set, 8 s timeout, and the constant trust header on the binding call is still sent, so the §1 issue stands), the `mutate(path, method, body)` signature in `useChatbotApi.ts`, every component in §2 and the nine pages under `src/pages/dashboard/chatbot/`. Removed a local Windows path from §9 | Everything inside `cf-chatbot` (§3 to §9: live `bot_config`, `model_registry`, its migrations, RPCs and routes): no cf-chatbot checkout in this session, so those stand as read on 2026-09-19 |
 | 2026-10-07 | The neuron-budget note (changed 2026-10-04): cf-admin's budget is the sum of today's `ai_inference` audit rows (`src/lib/dal/RateLimitRepository.ts` `sumAiNeuronsToday`, `src/lib/ratelimit.ts`), no longer an Upstash counter | The chatbot Worker's own counter; everything else in this document |
 | 2026-09-19 | Live `chatbot-kb` D1 via `wrangler … --remote`: `bot_config` (primary / fallback / classifier), the full `model_registry` (ids, providers, context windows, prices, deprecation flags), the `model_registry` column list; `cf-chatbot/migrations/` (22 files, to `0022`); `cf-chatbot/src/admin/api.ts` (key-based auth **and** the static trust-header bypass); `cf-chatbot/src/core/pipeline.ts` (classifier from config), `cf-chatbot/src/core/rag.ts` (BGE-Small), `cf-chatbot/src/storage/supabase.ts` + `cf-chatbot/src/channels/web/chat.ts` (`feedback_events` writer); cf-admin `src/lib/chatbot-proxy.ts`; `src/lib/ai-pricing.ts` on the shared account allocation | Workers AI neuron prices in §4 (carried forward, not re-fetched from Cloudflare); RLS **policy content** (only that RLS is enabled); the §9 Supabase RPCs and `/admin/analytics/*` handlers; live conversation volume or cost |
