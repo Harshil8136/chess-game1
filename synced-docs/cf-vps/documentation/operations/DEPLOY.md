@@ -105,8 +105,9 @@ With no computer at hand, the same `install` runs from the console itself:
    above, then packs `host/lib`, `00-baseline`, `30-node`, `60-agent` and the release into one
    file, `agent/pkg/vps-host-<version>.tgz`, and prints its SHA-256 and the install command.
 2. Upload the file on the Files page to `/srv/share`.
-3. Open the Terminal as `vps-admin`. Check the file: `sha256sum /srv/share/vps-host-<version>.tgz`
-   must print the same sum.
+3. Open the Terminal as `vps-admin`. Check the file: `sudo sha256sum /srv/share/vps-host-<version>.tgz`
+   must print the same sum. It needs `sudo` because an upload is saved readable by the agent
+   only (`0600`, the agent's `UMask=0077`); without it the answer is "Permission denied".
 4. Unpack it where only root can write: `sudo tar --no-same-owner -xzf
    /srv/share/vps-host-<version>.tgz -C /root`.
 5. Run the printed command, which starts `install` as its own systemd unit:
