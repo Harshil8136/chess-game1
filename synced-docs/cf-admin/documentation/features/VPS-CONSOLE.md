@@ -295,6 +295,7 @@ action onto a cf-admin verb, module `vps`, target type `vps_console`
 | `files.upload`, `files.mkdir`, `files.rename`, `files.delete` | `vps_file_change` |
 | `access.save` | `vps_access_change` |
 | `terminal.open` | `vps_terminal_open` |
+| `claude.start`, `claude.stop` (Claude Remote Control on the server, from the Terminal page) | `vps_claude` |
 | `logs.purge`, `logs.vacuum` | `vps_logs_purge` |
 | `retention.set` | `vps_retention_change` |
 
@@ -389,6 +390,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-04 | claude | §6's verb table against `src/lib/vps-audit.ts` after adding `claude.start` and `claude.stop` (41 actions; `test/vps-audit.test.ts` passes), for cf-vps's Claude button (cf-vps `documentation/features/CLAUDE.md`) | §6's table matches. Not re-checked: every other section |
 | 2026-11-04 | claude | §2's `signedInAt` row, for the one-hour email code, against `confirmedAt` and `codeConfirmedActive` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes; `cf-vps/contract/signing.ts` keeps its 10-minute check | The row. The rest of the document not re-read; the agent did not change |
 | 2026-11-04 | claude | §6's verb table against `src/lib/vps-audit.ts` after adding `app.image`, `app.secret` and `app.bridge` (39 actions; `test/vps-audit.test.ts` passes), for cf-vps's private app groups (cf-vps `documentation/specs/2026-11-04-private-app-groups.md`) | §6's table matches. Not re-checked: every other section |
 | 2026-10-17 | claude | §3's system caller against `vpsSystemRead` in `src/lib/vps-proxy.ts` and cf-vps `3f52d9a` (`SYSTEM_JOB_READS` in `cf-vps/contract/capabilities.ts`, `systemCapabilities` in `cf-vps/src/access/policy.ts`, the router's `held`); `test/vps-proxy.test.ts`, `test/system-health-checks.test.ts` and `cf-vps/test/worker.test.ts` pass | The paragraph. The rest of the document not re-read; a live read waits for the push |
