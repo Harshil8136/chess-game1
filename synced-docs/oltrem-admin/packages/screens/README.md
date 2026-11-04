@@ -246,7 +246,10 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   refuse a form posted from another site.
 - **On a phone**, a top bar with a Menu button that opens the same parts as a drawer from the left
   (a `dialog` opened by the browser's `commandfor`; a tap outside closes it); the phone's bar also
-  has a search button. The document names the phone browser's bar colour (light, dark, or both for
+  has a search button. Since 2026-11-04 the bar names where you are, the section's coloured icon
+  and the set's or section's name (the portal's name is in the drawer), and a page head that would
+  say the same again (`data-bar`) keeps only its actions on a phone: its heading stays for screen
+  readers, its icon and line go, so the content starts about 150 px higher. The document names the phone browser's bar colour (light, dark, or both for
   the device's own).
 
 **No reloads.** The frame's script (`src/client/frame.js`, served at `/ui/app.js` under its
