@@ -217,6 +217,12 @@ not hand a Worker with static assets the Access sign-in:
    **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
    in step 7, and step 6 names it among the addresses the door lets in, so the two cannot differ.
+   **Who else may sign in**: addresses (each as Owner, Staff or Your team) and `@domain`s, all on
+   the door's allow list (`iam.door_extra_emails`). Being let through the door is not an account,
+   so each named person is also written to `iam.setup_people`; once the company exists, the
+   Users page invites them all in one press (Owner as Owner, Staff as Standard user, Your team as
+   Full admin), with no email: each signs in at the door and presses Accept on the page they land
+   on. The run's last lines say so.
 3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When
    the sign-in can read the account's active domains (`wrangler auth token`, then Cloudflare's
    zones list), they are offered as choices beside the free address, and a domain is followed by
@@ -771,7 +777,7 @@ Access permission, so the key does it.
 | `checkKey` (`src/cloudflare.ts`) | A good key also says `door: 'yes' \| 'no' \| 'unknown'` (`keyKeepsDoor`: it may read Access applications and logins) |
 | `doorReadiness(fetch, token, account)` | `{ key, zeroTrust }`: whether the key may keep the door, and whether Zero Trust is set up (`zeroTrustOf`) |
 | `workerIdOf(fetch, signInToken, account, name)` | The Worker's id, which Access names, read with the sign-in's own token |
-| `writeDoorSettings(dir, run, { workerId?, extras? })` | Writes `iam.door_worker_id` and `iam.door_extra_emails` (`doorEntries`: addresses and `@domain`s, lower case, each once) |
+| `writeDoorSettings(dir, run, { workerId?, extras?, people? })` | Writes `iam.door_worker_id`, `iam.door_extra_emails` (`doorEntries`: addresses and `@domain`s, lower case, each once) and `iam.setup_people` (`address owner\|staff\|team` for each person step 2 named), which the Users page invites in one press |
 | `askDoorSync(fetch, base, read)` | `POST /hooks/iam/door`: the Worker syncs now and answers 204 with nothing else (anyone may post there); then `read()` gives the outcome word (`DOOR_ANSWERS` says each in plain words) |
 | `readDoorState(dir, run)` | The outcome the Worker kept in KV (`iam:door`), read with `wrangler kv key get --remote` under wrangler's own sign-in; `unreachable` when it cannot be read |
 | `checkDoor(fetch, url, read)` | `{ on, answer, right }`: Access answers in front of the portal, and the Worker's kept outcome says it set the door right |

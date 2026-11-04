@@ -157,6 +157,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Sign-in refused on a live portal](2026-11-04-sign-in-and-static-files.md) | static files hid the Access sign-in; the Worker serves its style and script again, and the deploy refuses static files |
 | [Colour pass](2026-11-04-colour-pass.md) | solid buttons with white text, darker fields, a richer dark theme in every look |
 | [The phone's top](2026-11-04-phone-top.md) | the bar names the page; the content starts about 150 px higher on a phone |
+| [The people named at setup get in](2026-11-04-setup-people.md) | the Users page invites everyone setup step 2 named in one press; each accepts after the door's code, no email or link |
 | [Easier setup](2026-11-03-easier-setup.md) | email in one step from Home and Integrations, delivery reports registered by themselves, the first backup without waiting for the night |
 | [Look 2, step 3](2026-11-03-look-2-step-3.md) | one empty box everywhere, settings side by side, an Owner's look for everyone |
 | [Look 2, step 2](2026-11-03-look-2-step-2.md) | each page's button beside its heading or filters, smaller empty boxes, shown-once results as toasts, a switch grid for notifications, Look tiles |

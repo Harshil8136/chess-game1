@@ -249,6 +249,8 @@ const handover = createHandover<Env>({
 const { invitation } = await handover.createTenant(env, actor, { name, ownerEmail });
 // the invited person, signed in at the door, with the token from the link; no account yet
 await handover.acceptInvitation(env, ctx.identity, token, ctx.requestId);
+// or with no token: the newest invitation waiting for the address Access proved
+await handover.acceptInvitation(env, ctx.identity, null, ctx.requestId);
 ```
 
 The **Vendor** is the one account that exists before the company does: tenant-less, with every
@@ -343,6 +345,19 @@ is made only when the Worker has none.
 | Hook | `POST /hooks/iam/door` | The same sync, at once; answers 204 and nothing else, since anyone may post there. The deploy calls it, then reads the outcome from `iam:door` with `wrangler kv key get`. |
 | Health check, lane `access` | `iam.door` | `ok` with how many may sign in; `warn` while a piece the deploy gives is missing; `fail` with `DOOR_ADVICE` and Cloudflare's answer when it refused. |
 
+**The people named at setup.** Step 2 of `npm run deploy` ("Who signs in") writes each person
+it names, with what they are, to `iam.setup_people` (`SETUP_PEOPLE_SETTING`: lines
+`address owner|staff|team`, lower case, set by the Vendor). Those addresses are on the door's
+allow list through `iam.door_extra_emails`, but an allow list is not an account. So the module
+lists the ones still without an account or a pending invitation (`GET /setup-people`), Home's
+Get started names them ("Invite the 3 people named at setup", `iam.bindings.manage`), and the
+Users page invites them all in one press, each at the company to its role: the Owner as Owner,
+Staff as Standard user, Your team as Full admin (each made from its ready set when missing). No
+email is sent: each person signs in at the door with their address and presses Accept on the page
+they land on (`POST /invitations/mine`, then `/invitations/accept` without a token). An Owner after
+the handover still needs a second person, as every Owner invitation does, and the press says so by
+name (`templates/client/test/setup-people.test.ts`).
+
 Making or withdrawing an invitation, and creating the company, call `door.soon` after the
 response: a failing door never fails the change, it shows on the System status page. Switching a person
 off (the users module) is followed by the next tick. Without `door` none of this is mounted and
@@ -407,11 +422,17 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `PUT /tenant/vendor-access`, `POST /tenant/vendor-window` | `iam.tenant.manage` | how the Vendor may enter; the window an Owner opens |
 | `POST /tenant/incident`, `DELETE /tenant/vendor-window` | `iam.self` | the Vendor declares an incident (the handler lets only the Vendor through); the Vendor or an Owner closes a window early |
 | `POST /tenant` | `iam.vendor.manage` | the Vendor creates the one company and invites its first Owner |
-| `POST /invitations/accept` | open to any identity | the invited person, signed in at the door with no account yet, takes the grant with the token from the link |
+| `GET /setup-people` | `iam.bindings.manage` | the people setup step 2 named (`iam.setup_people`) who are not users and hold no pending invitation, each with what they are (`owner`, `staff`, `team`) |
+| `POST /invitations/accept` | open to any identity | the invited person, signed in at the door with no account yet, takes the grant: with the token from the link, or without one the newest invitation waiting for the signed-in address |
+| `POST /invitations/mine` | open to any identity | the newest invitation waiting for the signed-in address: the company, the role and the place, never the token (`{ invitation: null }` when none) |
 
-The last route is the pipeline's one exception (`access: 'identity'` in `@oltrem/core-module`):
+The last two routes are the pipeline's one exception (`access: 'identity'` in `@oltrem/core-module`):
 no session is loaded and no capability checked, since the person has no account; the body is
-still validated and the same-origin check still applies. The incident and window routes name
+still validated and the same-origin check still applies. `/invitations/mine` is a read made a
+POST for that reason. Accepting without the token is safe because the address is the one Access
+proved with its email code, the same check the token's address gets (`KIT-E-2016`): the link only
+helps find the invitation, and a person with nothing waiting is refused (`KIT-E-2015`, "no
+invitation waits for this address"). The incident and window routes name
 `iam.self` because under `incident_only` and `approval` the check refuses the Vendor everything,
 the very reason it needs a way to declare the incident; the handover functions decide who may
 open and close by the mode. Reads are not audited; every write goes through the governance or the
