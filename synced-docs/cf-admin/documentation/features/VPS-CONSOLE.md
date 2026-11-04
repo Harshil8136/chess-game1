@@ -282,10 +282,12 @@ action onto a cf-admin verb, module `vps`, target type `vps_console`
 | `service.restart`, `service.start`, `service.stop` | `vps_service_control` |
 | `packages.update`, `packages.upgrade` | `vps_package_update` |
 | `host.reboot` | `vps_host_reboot` |
-| `app.deploy`, `app.restart`, `app.rollback` | `vps_app_deploy` |
+| `app.deploy`, `app.restart`, `app.rollback`, `app.image` (target `<app>[.<member>]:<sha256 digest>`) | `vps_app_deploy` |
 | `app.start`, `app.stop`, `app.pause`, `app.resume` | `vps_app_control` |
 | `app.block`, `app.unblock` | `vps_app_block` |
-| `app.resources` (target `<app>:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
+| `app.resources` (target `<app>[.<member>]:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
+| `app.secret` (target `<app>[.<member>]:<KEY>:<stage>`: the key's name, never its value) | `vps_app_secret` |
+| `app.bridge` (`app=`, `level=`, `path=`: a call to a private app's own admin port; reads are not recorded) | `vps_app_bridge` |
 | `job.run` | `vps_job_run` |
 | `job.stop`, `job.restart`, `job.pause`, `job.resume` | `vps_job_control` |
 | `job.block`, `job.unblock`, `job.limits` (target `<job>:<limits>` or `<job>:reset`), `job.schedule` (target `<job>:<pattern>` or `<job>:repo`) | `vps_job_manage` |
@@ -387,6 +389,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-04 | claude | §6's verb table against `src/lib/vps-audit.ts` after adding `app.image`, `app.secret` and `app.bridge` (39 actions; `test/vps-audit.test.ts` passes), for cf-vps's private app groups (cf-vps `documentation/specs/2026-11-04-private-app-groups.md`) | §6's table matches. Not re-checked: every other section |
 | 2026-10-17 | claude | §3's system caller against `vpsSystemRead` in `src/lib/vps-proxy.ts` and cf-vps `3f52d9a` (`SYSTEM_JOB_READS` in `cf-vps/contract/capabilities.ts`, `systemCapabilities` in `cf-vps/src/access/policy.ts`, the router's `held`); `test/vps-proxy.test.ts`, `test/system-health-checks.test.ts` and `cf-vps/test/worker.test.ts` pass | The paragraph. The rest of the document not re-read; a live read waits for the push |
 | 2026-10-17 | claude | §2's `signedInAt` row against `userActor` in `src/lib/vps-proxy.ts`, `confirmedAt` in `src/lib/auth/fresh-sign-in.ts` and `noticeAuditContext` in `src/lib/vps-notice-record.ts`; `test/testing-pass.test.ts` passes | The row. The rest of the document not re-read; nothing in cf-vps or the agent changed |
 | 2026-10-25 | claude | §2's `signedInAt` row, for the email code, against `confirmedAt` in `src/lib/auth/fresh-sign-in.ts` and `cf-vps/src/ui/api.ts` and `cf-vps/src/ui/portal-confirm.ts`; `test/confirm-code.test.ts` passes | The row. The rest of the document not re-read; the agent did not change |
