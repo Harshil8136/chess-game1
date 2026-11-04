@@ -58,6 +58,8 @@ Worker and again by the agent ([PERMISSIONS](../security/PERMISSIONS.md#fresh-si
 | `job.unblock` | `jobs.manage` | A job name | none | no | Unmask it; its timer starts again unless it is paused |
 | `job.limits` | `jobs.manage` | `<job>:<memory>:<cpus>:<timeout>:<max_wait>:<retry>` or `<job>:reset` | none | no | Limits for its next run, kept as an override beside the repository's manifest |
 | `job.schedule` | `jobs.manage` | `<job>:<pattern>` or `<job>:repo` | none | no | A schedule from the fixed patterns (never more often than every 5 minutes), kept as a timer drop-in |
+| `claude.start` | `terminal.admin` | none | none | yes | Start Claude on the server as `vps-admin` for 24 hours (pressed while it runs, a fresh 24 hours); Owner or Vendor support only, and counted with the admin terminal's hourly limit (private: `features/CLAUDE.md`) |
+| `claude.stop` | `terminal.admin` | none | none | no | Stop Claude on the server now; never held back by the hourly limit |
 
 Target shapes (checked by `checkActionRequest`): a unit is `[A-Za-z0-9@._:-]` ending in
 `.service`, at most 120 characters; an app is lowercase letters, digits and hyphens; a job is
@@ -149,7 +151,10 @@ leaves the cancel mark, so the run ends `cancelled` and raises no alert. Run now
 job, with the way out. The other job controls share one template,
 `vps-act-jobctl@<verb>:<target>`, which runs `vps job act` as root under one lock
 (`flock /run/lock/vps-jobctl.lock`), so two people's presses are served one after the other;
-its lines sit with the job runner's in the journal. Its `test` step runs
+its lines sit with the job runner's in the journal. `vps-act-claude-start` and
+`vps-act-claude-stop` run `vps-act-claude start|stop`, which start and stop the one long-running
+unit the module installs, `vps-claude.service` (never enabled, stopped by systemd after
+24 hours); polkit names the two action units, never that unit. Its `test` step runs
 the scripts on scratch trees. A unit-template test (`test/host-units.test.ts`) checks that
 every templated unit passes the unescaped instance (`%I`) to its script, because the Worker
 escapes unit names the way `systemd-escape` does (`escapeUnitInstance`).

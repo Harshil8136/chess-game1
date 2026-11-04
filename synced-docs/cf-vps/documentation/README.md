@@ -58,6 +58,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`features/JOBS.md`](features/JOBS.md) **P** | Server jobs: the busy gate every job waits on, the queue, a job's manifest and secrets, jobs with staged input, the Jobs page |
 | [`features/RESTORE-TESTS.md`](features/RESTORE-TESTS.md) **P** | Backup restore tests: a cf-backup copy staged, unlocked, rebuilt and checked in a sealed container; who may run one, the checks and score, resources, the lab key, testing PostgreSQL by hand |
 | [`features/MAILROOM.md`](features/MAILROOM.md) | **Retired 2026-10-14**, kept as history: Mailroom, the app that held the email service's attachments while ClamAV scanned them. The email service now checks files itself and keeps them on Cloudflare |
+| [`features/CLAUDE.md`](features/CLAUDE.md) | Claude on the server: the Terminal page's Start Claude, which runs Claude Remote Control as `vps-admin` for 24 hours; who may press it, the two actions, the unit that stops itself, how to look at it |
 | [`features/LOG-STORAGE.md`](features/LOG-STORAGE.md) **P** | Retention per kind, preview and delete, compression |
 
 ## Operations
@@ -145,6 +146,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-10-16-ssh-loopback-and-recorded-typing.md`](records/2026-10-16-ssh-loopback-and-recorded-typing.md) | Change record: sshd on loopback only, and `vps-admin`'s typing under sudo recorded with secret prompts starred (cf-admin permissions item 38); the server steps wait on the owner |
 | [`records/2026-10-17-instant-typing-and-navigation.md`](records/2026-10-17-instant-typing-and-navigation.md) | Change record: typing in the Terminal shows at once and the server's echo replaces it (never for passwords); the Terminal's tools wrap; the top bar scrolls instead of hiding page buttons |
 | [`records/2026-10-25-confirm-with-email-code.md`](records/2026-10-25-confirm-with-email-code.md) | Change record: an action that needs a fresh sign-in opens cf-admin's "Confirm it's you" pop-up, which emails a code, instead of sending you to sign in again; the agent is unchanged |
+| [`records/2026-11-04-claude-button.md`](records/2026-11-04-claude-button.md) | Change record: Start Claude on the Terminal page runs Claude on the server for 24 hours from one press, as a system service the terminal reaper cannot end; Owner or Vendor support, with a recent sign-in |
 | [`records/2026-11-04-private-app-groups.md`](records/2026-11-04-private-app-groups.md) | Change record: private app groups with no address, versions that roll back by themselves, keys that can be set but never read, and a checked bridge from cf-admin to an app's own pages (WhatsApp bot rebuild, phase 1) |
 
 ### Incidents

@@ -54,7 +54,7 @@ support can hold.
 | `retention.manage` | admin | Change how long each kind of log is kept, within fixed limits | owner, vendor | yes |
 | `logs.purge` | admin | Delete stored logs by date, size or kind; never today, never the locked R2 copy | owner, vendor | yes |
 | `terminal.ops` | operate | A shell as the unprivileged `vps-ops` account through a 60-second certificate; recorded | owner, vendor | no |
-| `terminal.admin` | admin | A shell as `vps-admin` (sudo); a fresh sign-in, at most 6 opens an hour per person; recorded, and each opening raises an alert. Root needs no password: these checks stand in for one, and what the account types under sudo is recorded once the server's `80-terminal sudoers` step is applied ([AUDIT-PIPELINE](AUDIT-PIPELINE.md)) | owner, vendor | yes |
+| `terminal.admin` | admin | A shell as `vps-admin` (sudo), and Start and Stop Claude, which runs Claude on the server as the same account (private: `features/CLAUDE.md`); a fresh sign-in, at most 6 opens or starts an hour per person; recorded, and each opening raises an alert. Root needs no password: these checks stand in for one, and what the account types under sudo is recorded once the server's `80-terminal sudoers` step is applied ([AUDIT-PIPELINE](AUDIT-PIPELINE.md)) | owner, vendor | yes |
 | `access.view` | read | See who holds which capabilities | owner, vendor | no |
 | `access.delegate` | admin | Give or take away capabilities you hold yourself, for people below you, from cf-admin's Access Center (see Delegation) | owner, vendor, admin | no |
 | `access.manage` | admin | Change role defaults and per-person grants | owner, vendor | yes |
@@ -208,6 +208,7 @@ needs a sign-in from the last 10 minutes."). It applies to:
 | Delete a file or folder (`files/delete`) | `files.write` | `FRESH_SIGN_IN_ROUTES` |
 | Stage a backup copy (`restore/stage`) | `restore.test` | `FRESH_SIGN_IN_ROUTES` |
 | Open a terminal as `vps-admin` | `terminal.admin` | `FRESH_SIGN_IN_ACCOUNTS` |
+| Start Claude on the server (`claude.start`) | `terminal.admin` | `ACTIONS` (`fresh`) |
 
 The capability is checked first, so someone without it hears about the capability, not the
 sign-in. Both the Worker and the agent check it. The Worker refuses before it signs anything;
@@ -250,16 +251,17 @@ Log storage page shows the answer as a notice rather than an error.
 ## The agent's own red lines
 
 The agent does not take the signed capability list alone for the two most dangerous powers.
-It refuses the root terminal (`terminal.admin`) and a reboot (`host.reboot`) unless the signed
-role (`r`) is owner or vendor support (`RED_LINE_CAPS`, `isFloorRole`), with 403,
-`need: owner_role` and "Only the Owner or Vendor support can reboot the server." (or "open the
-admin terminal"). The Worker already refuses both to every other role, because both are floors;
+It refuses the root terminal and Start or Stop Claude (`terminal.admin`) and a reboot
+(`host.reboot`) unless the signed role (`r`) is owner or vendor support (`RED_LINE_CAPS`,
+`isFloorRole`), with 403, `need: owner_role` and "Only the Owner or Vendor support can reboot
+the server." (or "open the admin terminal or start Claude"). The Worker already refuses both to every other role, because both are floors;
 this check holds even if the Worker signed a wider list by mistake.
 
 ## Hourly limits
 
-Each person may open the admin terminal **6** times and ask for a reboot **3** times in any
-rolling hour (`HOURLY_LIMITS`). The agent counts a use once it has passed every other check,
+Each person may open the admin terminal or start Claude **6** times in all, and ask for a
+reboot **3** times, in any rolling hour (`HOURLY_LIMITS`). Stop Claude is never counted or
+held back. The agent counts a use once it has passed every other check,
 and refuses the next one with 429, `error: too_many`, `need: hourly_limit` and when to try
 again ("A reboot can be asked for 3 times an hour per person, and you have reached that. Try
 again after 14:05 UTC."). The count is kept in the agent's state folder

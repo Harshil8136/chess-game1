@@ -291,6 +291,12 @@ Every page has the same three layers (see the design system, `documentation/refe
   open, and the server four in all; a session ends after 10 minutes without typing or 30 minutes
   in all, and taking the capability away does not end one already open
   ([Stored policy](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)).
+- Claude on the server (since 2026-11-04, `src/ui/components/claude.tsx`): while no session is
+  open, a panel in a warm clay colour above the account choice, only for someone who holds
+  `terminal.admin`. It says On (with the time left and when it stops itself), Starting, Off
+  (and why), or Not set up on the server yet, from `services/detail` every 30 seconds; Start
+  Claude, or Restart for 24 more hours and Stop while it runs. What it starts and every rule
+  that guards it: private `features/CLAUDE.md`.
 - The bar above the terminal: on the left the state badge, the account and the link in use (a
   green dot and Fast link, or an amber dot and Basic link, see
   [How the terminal connects](#how-the-terminal-connects)); on the right the tools in three
@@ -312,8 +318,8 @@ Every page has the same three layers (see the design system, `documentation/refe
   scrolls the history; in a full-screen program it sends the mouse wheel (when the program reads
   the mouse) or the arrow keys. Full screen asks the browser for the whole screen where it
   allows that, and keeps the bottom of the terminal above the on-screen keyboard.
-- About: certificates, the connection, the keyboard, phone use, recording, accounts, limits,
-  reconnects, reattaching and colours.
+- About: certificates, the connection, the keyboard, phone use, recording, accounts, Claude on
+  the server, limits, reconnects, reattaching and colours.
 
 #### How the terminal connects
 
