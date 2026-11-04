@@ -22,7 +22,7 @@ import { createScreens } from '@oltrem/screens';
 const screens = createScreens({ portal: client.name, owner: client.owner, modules });
 const app = createApp<Env>({
   modules,
-  publicRoutes: screens.publicRoutes, // nothing since the stylesheet became a static asset
+  publicRoutes: screens.publicRoutes, // /ui/app.css and /ui/app.js, before the door
   localDoor: { enabled: (env) => !env.ACCESS_AUD, page: screens.signInPage },
   // ...the session hook, the authorizer and the rest, as in @oltrem/core-http
 });
@@ -305,25 +305,25 @@ the problem.
 
 ## The stylesheet and the script
 
-`public/ui/app.css` is the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s theme and
+`/ui/app.css` is the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s theme and
 the classes the pages, the primitives and every module's `src/*.tsx` use, under the 80 KiB a
 test allows (64 until the colour pass of 2026-11-04, by the owner's yes). A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()`:
 Tailwind's second copy for browsers without it, about a tenth of the file, is left out
-(2026-11-03), as the theme's own rules use the mix bare. `public/ui/app.js` is the frame's
+(2026-11-03), as the theme's own rules use the mix bare. `/ui/app.js` is the frame's
 script, copied from `src/client/frame.js` with its comment lines and indents left out, about
 28 KiB (39 KiB as written). The build refuses a string or template that spans lines, the one case
 where that is not safe, and checks that the result compiles.
 
-**Static assets (2026-11-03, the owner's choice).** `public/` ships in the package and the client's
-`wrangler.jsonc` names it (`"assets": { "directory": "node_modules/@oltrem/screens/public" }`), so
-Cloudflare serves both files from its edge before the Worker runs: they are not in the Worker's
-code (the client Worker went from 498 to 477 KiB compressed) and their requests never count
-against the Worker's. Every page links them with their version (`src/generated/versions.ts`), and
-`public/_headers` caches `/ui/*` for good, so a new build is a new address. A client repository
-made before then gets the `assets` line from `oltrem upgrade` or its next deploy (`withAssets` in
-`@oltrem/cli`). After changing a class in a page or a primitive, or the script, run
-`pnpm ui:build`; a test fails while a committed file differs from what the build writes. The three
-files are generated: never edit them by hand (R-06).
+**Served by the Worker, never as static assets.** Both files are strings in
+`src/generated/assets.ts`, served by `publicRoutes` before the door, cached for good under the
+version every page links (`src/generated/versions.ts`) and `no-cache` without it. From 2026-11-03
+to 2026-11-04 they were Cloudflare static assets: a Worker with static assets runs behind
+Cloudflare's asset router, which does not hand it the Access sign-in (`ctx.access`), so every page
+of a live portal refused everyone with KIT-E-0401 ([the record](../../docs/records/2026-11-04-sign-in-and-static-files.md)).
+`oltrem deploy` and `oltrem upgrade` take that `assets` line out, and the deploy refuses any other.
+After changing a class in a page or a primitive, or the script, run `pnpm ui:build`; a test fails
+while a committed file differs from what the build writes. The two files are generated: never
+edit them by hand (R-06).
 
 ## Not here yet
 

@@ -193,8 +193,9 @@ only adds, so a run that stopped carries on the next time. The terminal shows se
 in [the kit's look](#the-look-in-a-terminal) as they happen, each question after what it is and why
 it is needed (the door, the ops token); wrangler's sign-in, database and deploy run behind a spinner,
 their output in `.oltrem/deploy.log`, and the last line names the `workers.dev` address the deploy
-printed. The configuration it deploys always carries the `assets` line that serves the screens'
-stylesheet and script as static files (`withAssets`), added when the file lacks it:
+printed. The configuration it deploys never has static assets (`withoutAssets`): the kit's own
+`assets` line of 2026-11-03 is taken out, and any other stops the deploy, because Cloudflare does
+not hand a Worker with static assets the Access sign-in:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
    Then the account (`src/cloudflare.ts` reads it from `wrangler whoami --json`): the one the
@@ -861,8 +862,9 @@ a doctor first, and it writes nothing until every check passes:
 | `UP-SEC-01` | every name in `secrets.required` is set on the deployed Worker (`wrangler secret list`); a warning when wrangler cannot list them |
 | `UP-SIZE-01` | the bundle `wrangler deploy --dry-run` builds, against 64 MiB, and the startup `wrangler check startup` measures on this computer, against 1 s; a warning from 70 % |
 
-When none fails, it adds the `assets` line of the screens' static files to `wrangler.jsonc` when
-an older client's file lacks it (since 2026-11-03), copies the new kit migrations, writes the
+When none fails, it takes the kit's `assets` line of 2026-11-03 out of `wrangler.jsonc` (a Worker
+with static assets is not handed the Access sign-in; another `assets` is reported to take out by
+hand), copies the new kit migrations, writes the
 generated reference, and records
 the installed kit versions in `migrations/kit.json`. It prints each installed `@oltrem/*`
 package's release notes, from its `CHANGELOG.md`, since the version recorded last; on the first

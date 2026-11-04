@@ -25,6 +25,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P60 | The live portal, after Update it: open its address, enter the code from the email | Home loads with its look (colours, the sidebar), not "Not signed in"; a second page opens without a reload | [record](records/2026-11-04-sign-in-and-static-files.md) |
 | P59 | In the dark theme: Email, Write, then Settings, then Look and pick two other palettes | main buttons are a deep colour with white text, not pale with dark text; text boxes a shade darker than their card; a switch that is on has the same deep colour; links and tabs still light and easy to read | [record](records/2026-11-04-colour-pass.md) |
 | P58 | Email, Templates, then Users, then a list in Records | the bar says Email (or Users, Records) with its coloured icon; no second big title or description under it; the tabs right under the bar; a list's own name still shows under the tabs | [record](records/2026-11-04-phone-top.md) |
 | P1 | Home on a new portal | "Get started: 0 of 5 done", each open step a row; tapping one opens its page | [record](records/2026-11-03-get-started.md) |
