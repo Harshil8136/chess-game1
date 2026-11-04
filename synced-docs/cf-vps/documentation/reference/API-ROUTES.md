@@ -5,7 +5,7 @@ audience: [ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [contract/capabilities.ts, contract/metrics-history.ts, contract/jobs.ts, contract/restore.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
+related_code: [contract/capabilities.ts, contract/bridge.ts, contract/actions.ts, contract/metrics-history.ts, contract/jobs.ts, contract/restore.ts, src/agent/proxy.ts, src/http/router.ts, agent/src/server.ts]
 related_docs: [../security/PERMISSIONS.md, ../features/ACTIONS.md, ../features/JOBS.md, ../features/RESTORE-TESTS.md, ../architecture/OVERVIEW.md]
 tags: [reference, api, routes, capabilities]
 ---
@@ -27,17 +27,18 @@ and the console. A route is reached in two forms:
 | Worker to agent | `/v1/<route>`, signed |
 
 - **GET** routes read. **POST** routes (`CHANGE_ROUTES`) change something and carry a signed
-  body hash; the body is limited to 16 KiB, or 1 MiB for `files/upload` and `restore/stage`.
+  body hash; the body is limited to 16 KiB, or 1 MiB for `files/upload` and `restore/stage`,
+  or 257 KiB for `apps/bridge`.
   Anything else is 405.
 - **Stream** routes stay open (`STREAM_ROUTES`); every other route is a bounded request.
 - **Wait** is how long the Worker waits for the agent's response headers (`timeoutFor`): 60
   seconds for the slow reads, 15 seconds otherwise, no limit for streams. A timeout is 504.
 - The Worker refuses a missing capability with 403 and `need: <capability>` before it signs
   anything. The agent re-checks it from the signed list.
-- The Worker decides on its 30-second copy of the access policy, except for 14 routes that read
+- The Worker decides on its 30-second copy of the access policy, except for 15 routes that read
   the stored row first (`FRESH_POLICY_ROUTES`): every change except typing into, resizing or
   closing a terminal already open (`restore/stage`, the four `files/` changes, `actions/run`,
-  `terminal/open`), and the reads a floor guards (`audit/days`, `audit/events`, `audit/event`,
+  `apps/bridge`, `terminal/open`), and the reads a floor guards (`audit/days`, `audit/events`, `audit/event`,
   `audit/sessions`, `audit/recordings`, `audit/recording`, `logstore/preview`). A power taken
   away stops those at once ([PERMISSIONS](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)).
 - A route missing from this table is 404 on the Worker and on the agent.
@@ -150,13 +151,42 @@ the Worker and the agent check it), and deleting a folder with its contents need
 | `logstore/usage` | GET | `security.view` | 15 s |
 | `logstore/preview` | GET | `logs.purge` | 15 s |
 
+## The admin bridge
+
+Added 2026-11-04 (`contract/bridge.ts`). It lets the console, and through cf-admin an app's own
+section there, reach a private app's admin port without the app having any address. The agent
+forwards the call on loopback to the member's `admin_port` (published on `127.0.0.1` only), with
+the method, the exact path and query, the Worker's signature headers as they arrived, and the
+body. The app verifies the Worker's signature itself, so it trusts nobody on the way.
+
+| Route | Type | Capability | Wait | Audited |
+|---|---|---|---|---|
+| `apps/bridge/view` | GET | `apps.bridge.view` | 60 s | no |
+| `apps/bridge` | POST | `apps.bridge.operate`, or `apps.bridge.admin` and a fresh sign-in for level `admin` | 60 s | yes |
+
+- The view query is `app`, an optional `member` and `path`; any other parameter is the app's.
+  The change body is `{ app, member?, level, path, body? }` with `level` `operate` or `admin`.
+- `app` is an app group's name, `member` one of its members (or none, when only one member has
+  an admin port). `path` is lowercase segments of letters, digits, `-` and `_` joined by `/`, at
+  most 128 characters: no dots, no query. What a path means is the app's business.
+- The Worker refuses a bad query or body with 400 `bad_request` (`bad_app`, `bad_path` or
+  `bad_level`) and a missing level capability with 403 before it signs anything; the agent checks
+  both again.
+- The agent answers 404 `no_bridge` when the app has no admin port, and 502 `bridge_unreachable`,
+  504 `bridge_timeout` (55 seconds), 502 `bridge_too_large` (over 2 MiB) or 502 `bridge_not_json`.
+  Otherwise the app's own status and JSON body come back, with nothing else of its response.
+- An operate or admin call carries `x-vps-audit: app.bridge app=<group>.<member> level=<level>
+  path=<path> status=<status>` when the app answers below 400, and the agent logs the same line
+  with the person's email. Reads are not audited, and the agent logs a bridge call without its
+  query, which may hold a person's search words.
+
 ## Actions and terminal
 
 The route needs only `host.view`; the request body then decides the real capability.
 
 | Route | Type | Route capability | Also needs |
 |---|---|---|---|
-| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
+| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`, `app.image`, `app.secret`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
 | `actions/job` | GET | `host.view` | Nothing more; only `vps-act-*` units can be read |
 | `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in, and (checked by the agent) the owner or vendor support role and the hourly limit |
 | `terminal/socket` | stream (WebSocket) | `host.view` | `terminal.ops` or `terminal.admin` (Worker and agent); own session only; a GET with `Upgrade: websocket`, else 400 at the Worker and 426 at the agent |

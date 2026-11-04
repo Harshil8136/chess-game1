@@ -143,6 +143,18 @@ Every page has the same three layers (see the design system, `documentation/refe
   Unblock and the inspector's Change allocation form (memory cap, CPU cap, CPU weight) need
   `apps.manage`; Deploy needs `apps.deploy`. Buttons the person does not hold stay visible but
   locked. A job card has the controls listed under Jobs.
+- App groups (since 2026-11-04): a group is one row with the runtime "group" and a row for each
+  member named `<group>.<member>`, each with its own controls. A member has no Deploy (it deploys
+  with its group), and a group has no allocation form (each member has its own).
+- The inspector's **Version** section, for an image from a registry: the image and the pinned
+  digest, if any, and a box that takes a digest however it is pasted (the 64 hex digits,
+  `sha256:<digits>` or a whole `<image>@sha256:<digits>`). Change version (`app.image`, typed
+  word `upgrade`, a fresh sign-in, `apps.manage`) pulls it first, switches, health-checks and
+  puts the old version back at once if it is not healthy.
+- The inspector's **Keys** section, when the manifest lists `secrets`: a chip per key name and a
+  password box. Set key (`app.secret`, a fresh sign-in, `apps.manage`) writes the value to the
+  app's root-only key file and restarts the app if it runs. The value is write-only: it is never
+  shown again, and the box is cleared the moment the action starts.
 - About: how to add an app (the deploy guide), what the status words mean, limits, public and
   private access, the busy rule, and who can do what.
 

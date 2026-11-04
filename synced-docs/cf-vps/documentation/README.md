@@ -109,6 +109,7 @@ contain no identifiers. Everything else is private, so links to it do not resolv
 | [`specs/2026-10-08-console-redesign-design.md`](specs/2026-10-08-console-redesign-design.md) | The console redesign: one design system, three layers per page (Now, Work, About), phone first, emoji banned; delivered in waves 0 to 4, summarised in `reference/DESIGN-SYSTEM.md` | historical |
 | [`specs/2026-10-08-job-controls-and-jobs-page-design.md`](specs/2026-10-08-job-controls-and-jobs-page-design.md) | Job controls (Stop, Restart, Pause, Resume, Block, limits, schedule) on the Apps and Jobs pages, and the rebuilt Jobs page; built, summarised in `features/JOBS.md` | historical |
 | [`specs/2026-10-16-terminal-live-connection-design.md`](specs/2026-10-16-terminal-live-connection-design.md) | The Terminal's live connection (one WebSocket per session, the old stream as fallback), its copy and paste keys and its phone layout; built, summarised in `features/CONSOLE.md` | active |
+| [`specs/2026-11-04-private-app-groups-design.md`](specs/2026-11-04-private-app-groups-design.md) | Private apps, app groups (one pod, a container per member), pinned versions with a rollback, write-only keys and the admin bridge: phase 1 of the WhatsApp bot rebuild; built, summarised in `features/ACTIONS.md` and `reference/API-ROUTES.md` | active |
 
 ## Proposals (not built)
 
@@ -144,6 +145,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-10-16-ssh-loopback-and-recorded-typing.md`](records/2026-10-16-ssh-loopback-and-recorded-typing.md) | Change record: sshd on loopback only, and `vps-admin`'s typing under sudo recorded with secret prompts starred (cf-admin permissions item 38); the server steps wait on the owner |
 | [`records/2026-10-17-instant-typing-and-navigation.md`](records/2026-10-17-instant-typing-and-navigation.md) | Change record: typing in the Terminal shows at once and the server's echo replaces it (never for passwords); the Terminal's tools wrap; the top bar scrolls instead of hiding page buttons |
 | [`records/2026-10-25-confirm-with-email-code.md`](records/2026-10-25-confirm-with-email-code.md) | Change record: an action that needs a fresh sign-in opens cf-admin's "Confirm it's you" pop-up, which emails a code, instead of sending you to sign in again; the agent is unchanged |
+| [`records/2026-11-04-private-app-groups.md`](records/2026-11-04-private-app-groups.md) | Change record: private app groups with no address, versions that roll back by themselves, keys that can be set but never read, and a checked bridge from cf-admin to an app's own pages (WhatsApp bot rebuild, phase 1) |
 
 ### Incidents
 

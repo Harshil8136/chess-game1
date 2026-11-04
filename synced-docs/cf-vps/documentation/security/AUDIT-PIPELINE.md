@@ -110,6 +110,18 @@ logged by the agent with the person's email, like every console change (`restore
 `restore.start`, `restore.cancel`, which cf-admin's activity log records as
 `vps_restore_test`); see [RESTORE-TESTS](../features/RESTORE-TESTS.md).
 
+Changing an app's version and setting an app's key (since 2026-11-04) are console actions like
+the others: the agent logs `app.image` and `app.secret` with the person's email, the target and
+the job, and cf-admin's activity log records them as `vps_app_deploy` and `vps_app_secret`. The
+target names the key and a random stage id, never the value: the value travels in the request
+body only, is staged in a 0600 file the root unit reads once and deletes, and is never on a
+command line, in a unit name, a journal line, an audit row or an answer. An operate or admin
+call through the admin bridge is logged by the agent with the person's email, the app, the
+level, the path and the app's status (`app.bridge`, cf-admin's `vps_app_bridge`), without its
+query or body; a bridge read is not logged as a change. The app keeps its own record of what
+the call did, under the person named in the signed request
+([API-ROUTES](../reference/API-ROUTES.md#the-admin-bridge)).
+
 A release switch under the platform folder is recorded as a `deploy` info event, not sent;
 unpacking a release or pruning an old one is recorded and not alerted.
 

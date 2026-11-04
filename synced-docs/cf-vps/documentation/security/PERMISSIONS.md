@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/gateway/target.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
+related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/bridge.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/gateway/target.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
 related_docs: [../architecture/OVERVIEW.md, ../features/ACTIONS.md, ../features/CONSOLE.md, ../features/RESTORE-TESTS.md, ../reference/API-ROUTES.md]
 tags: [security, permissions, capabilities, rbac]
 ---
@@ -42,8 +42,11 @@ support can hold.
 | `services.control` | operate | Start, stop and restart allow-listed services (never SSH, the tunnel, the audit pipeline or the agent); a stop needs a fresh sign-in | owner, vendor | no |
 | `packages.update` | operate | Refresh package lists and install updates (no removals); installing needs a fresh sign-in | owner, vendor | no |
 | `apps.deploy` | operate | Deploy hosted apps from their manifests (regenerate the unit and site, restart, health-check) | owner, vendor | no |
-| `apps.control` | operate | Start, stop, restart, pause and resume hosted apps | owner, vendor | no |
-| `apps.manage` | admin | Block or unblock a hosted app, and change its memory cap, CPU cap and CPU weight within the server's limits | owner, vendor | no |
+| `apps.control` | operate | Start, stop, restart, pause and resume hosted apps, app groups and a group's members | owner, vendor | no |
+| `apps.manage` | admin | Block or unblock a hosted app, change its memory cap, CPU cap and CPU weight within the server's limits, pin its version (put back at once if it is not healthy) and set its keys (write-only); a version or a key needs a fresh sign-in | owner, vendor | no |
+| `apps.bridge.view` | read | Read a private app's own panels through the admin bridge ([API-ROUTES](../reference/API-ROUTES.md#the-admin-bridge)): its status, settings and records, as the app decides; not audited | owner, vendor | no |
+| `apps.bridge.operate` | operate | Everyday changes in a private app's own panels through the bridge (with view); every change is recorded | owner, vendor | no |
+| `apps.bridge.admin` | admin | What the app marks as admin through the bridge (with view), such as relinking or its command list; a fresh sign-in; recorded | owner, vendor | no |
 | `restore.test` | admin | Stage a backup copy on the server and start or cancel a restore test with the memory and processor chosen for it; the copy is unlocked in a sealed container with no network ([RESTORE-TESTS](../features/RESTORE-TESTS.md)) | owner, vendor | yes |
 | `jobs.run` | operate | Run and control server jobs: Run now (it still waits its turn while the server is busy), Stop or Restart the run in flight, Pause or Resume a job's schedule ([JOBS](../features/JOBS.md)) | owner, vendor | no |
 | `jobs.manage` | admin | Block or unblock a server job, and change its limits and schedule within the server's bounds | owner, vendor | no |
@@ -60,7 +63,7 @@ support can hold.
 
 | Role | Default capabilities |
 |---|---|
-| `owner`, `vendor_support` | All 25 |
+| `owner`, `vendor_support` | All 28 |
 | `admin` | `host.view`, `logs.view`, `access.delegate` |
 | `manager`, `staff`, `viewer` | None |
 
@@ -200,6 +203,8 @@ needs a sign-in from the last 10 minutes."). It applies to:
 | Delete logs, delete old journal (`logs.purge`, `logs.vacuum`) | `logs.purge` | `ACTIONS` (`fresh`) |
 | Set retention (`retention.set`) | `retention.manage` | `ACTIONS` (`fresh`) |
 | Start a restore test (`restore.start`) | `restore.test` | `ACTIONS` (`fresh`) |
+| Change an app's version, set an app's key (`app.image`, `app.secret`) | `apps.manage` | `ACTIONS` (`fresh`) |
+| An admin call through the bridge (`apps/bridge`, level `admin`) | `apps.bridge.admin` | `src/agent/proxy.ts` and the agent (`BRIDGE_LEVEL_CAPS`) |
 | Delete a file or folder (`files/delete`) | `files.write` | `FRESH_SIGN_IN_ROUTES` |
 | Stage a backup copy (`restore/stage`) | `restore.test` | `FRESH_SIGN_IN_ROUTES` |
 | Open a terminal as `vps-admin` | `terminal.admin` | `FRESH_SIGN_IN_ACCOUNTS` |
@@ -218,10 +223,11 @@ as before. When the console hears `fresh_sign_in`, it asks the portal to open th
 (`src/ui/portal-confirm.ts`) and shows "Confirm it's you first: the portal emails you a code
 (or sign in to cf-admin again), then try once more." in place of the agent's wording.
 
-Most of these also ask for a typed word: `reboot`, `upgrade`, `delete` for logs, `restore`, or
-the service's name for a stop, checked again by the Worker and the agent (`checkAction` in
+Most of these also ask for a typed word: `reboot`, `upgrade` (for updates and for an app's
+version), `delete` for logs, `restore`, or the service's name for a stop, checked again by the Worker and the agent (`checkAction` in
 `contract/actions.ts`). Deleting a folder asks for its name, which the agent checks; deleting a
-single file, staging a backup copy and opening the admin terminal ask for none. Shortening how
+single file, staging a backup copy, setting an app's key, a bridge admin call and opening the
+admin terminal ask for none. Shortening how
 long a log is kept asks for `shorten` in the console only. Stopping or blocking an app and
 blocking a job ask for its name without a recent sign-in. Restarting or starting a service,
 refreshing package lists, and creating, uploading or renaming files need neither. See
@@ -270,6 +276,7 @@ ordinary terminal (`vps-ops`) has no hourly limit.
 | Worker | With `CONSOLE_SIGNING_KEY` set, first refuses identity headers cf-admin did not sign (400 `bad_signature`, [OVERVIEW](../architecture/OVERVIEW.md#trust-boundaries)). Then `proxyToAgent` refuses with 403 and the capability needed, or `fresh_sign_in`, before anything is signed |
 | Agent | Re-checks the route's capability from the signed list; the Worker's headers alone are never trusted. Then its own checks: the red lines from the signed role, the fresh sign-in from the signed sign-in time, and the hourly limits |
 | Root script | Runs only with a fresh, unused action ticket the Worker signed for that exact unit (`contract/action-ticket.ts`, checked by `vps-act-ticket.mjs`), so the agent cannot start an action on its own; then validates its own target again |
+| A private app, through the bridge | Verifies the Worker's signature itself, with the Worker's public key mounted read-only and its own nonce store, and checks that the signed capability list holds the level's capability (`contract/bridge.ts`), so neither the agent nor anything else on the server can call it as someone else |
 
 The local preview signs with a dev key that the agent limits to `read`-class capabilities
 (`DEV_KEY_CAPS`), so a laptop can look at the server but change nothing. Its `/api/me` still

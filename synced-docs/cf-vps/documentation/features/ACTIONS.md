@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [contract/actions.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
+related_code: [contract/actions.ts, agent/src/cli/commands.ts, agent/src/collectors/bridge.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
 related_docs: [../security/PERMISSIONS.md, LOG-STORAGE.md, JOBS.md, RESTORE-TESTS.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md]
 tags: [feature, actions, polkit, systemd, enforcement]
 ---
@@ -34,14 +34,16 @@ Worker and again by the agent ([PERMISSIONS](../security/PERMISSIONS.md#fresh-si
 | `packages.upgrade` | `packages.update` | none | `upgrade` | yes | Install updates; no removals, config files kept |
 | `host.reboot` | `host.reboot` | none | `reboot` | yes | Reboot in one minute; cancellable on the host. Owner or Vendor support only, and a few times an hour per person, checked by the agent itself ([PERMISSIONS](../security/PERMISSIONS.md#the-agents-own-red-lines)) |
 | `app.deploy` | `apps.deploy` | An app name | none | no | Regenerate the app's unit and site from its manifest, restart, health-check |
-| `app.start` | `apps.control` | An app name | none | no | Start the app's container unit |
-| `app.stop` | `apps.control` | An app name | the app name | no | Stop it; it stays stopped until started again or the server reboots |
-| `app.restart` | `apps.control` | An app name | none | no | Restart the app's container unit |
-| `app.pause` | `apps.control` | An app name | none | no | Freeze its processes in place (systemd's freezer): memory kept, no CPU, no answers |
-| `app.resume` | `apps.control` | An app name | none | no | Unfreeze a paused app |
-| `app.block` | `apps.manage` | An app name | the app name | no | Stop it and mask its unit, so nothing starts it (a start, a deploy, a reboot or an image update) until it is unblocked |
-| `app.unblock` | `apps.manage` | An app name | none | no | Unmask and start it |
-| `app.resources` | `apps.manage` | `<app>:<memory>:<cpu %>:<weight>` | none | no | New memory cap, CPU cap (a share of the whole server) and CPU weight; applied live without a restart, and written to the manifest and unit |
+| `app.start` | `apps.control` | An app, group or member | none | no | Start the app's container unit |
+| `app.stop` | `apps.control` | An app, group or member | its name | no | Stop it; it stays stopped until started again or the server reboots |
+| `app.restart` | `apps.control` | An app, group or member | none | no | Restart the app's container unit |
+| `app.pause` | `apps.control` | An app, group or member | none | no | Freeze its processes in place (systemd's freezer): memory kept, no CPU, no answers |
+| `app.resume` | `apps.control` | An app, group or member | none | no | Unfreeze a paused app |
+| `app.block` | `apps.manage` | An app, group or member | its name | no | Stop it and mask its unit, so nothing starts it (a start, a deploy, a reboot or an image update) until it is unblocked |
+| `app.unblock` | `apps.manage` | An app, group or member | none | no | Unmask and start it |
+| `app.resources` | `apps.manage` | `<app>[.<member>]:<memory>:<cpu %>:<weight>` | none | no | New memory cap, CPU cap (a share of the whole server) and CPU weight; applied live without a restart, and written to the manifest and unit. A group's members take their own; the members together stay within 6G |
+| `app.image` | `apps.manage` | `<app>[.<member>]:<64 hex digits>` | `upgrade` | yes | Pin the app or member to an exact version of its image by its sha256 digest, in the same repository. It pulls first and changes nothing if the pull fails or takes too long; then it switches, health-checks, and puts the old manifest and unit back at once if the new version is not healthy. A pinned version never updates on its own |
+| `app.secret` | `apps.manage` | `<app>[.<member>]:<KEY>:<stage id>` | none | yes | Write one key the manifest lists in `secrets` into the app's root-only key file, then restart it if it runs. The value is in the request body only (below) |
 | `logs.purge` | `logs.purge` | Dates and kinds | `delete` | yes | Delete stored log files for past days |
 | `logs.vacuum` | `logs.purge` | Days | `delete` | yes | Delete journal files (and recordings in them) older than N days |
 | `retention.set` | `retention.manage` | Key and days | none | yes | Change how long one kind of log is kept |
@@ -66,13 +68,19 @@ lowercase letters, digits and underscores (`JOB_NAME`, no hyphen, so no unit esc
 up to 4 cores, time 10s to 4h, wait 30s to 4h, retries 0 to 2) and `job.schedule` by
 `parseScheduleTarget` (every 5, 10, 15, 20 or 30 minutes; hourly at a minute; every 2, 3, 4, 6, 8
 or 12 hours at a minute; daily or weekly at a time, UTC);
-`app.resources` is `<app>:<memory>:<cpu %>:<weight>` (`parseAppResources`: memory 32M to 6G,
+the app controls take an app, a group, or a member as `<group>.<member>` (`APP_REF`), and
+`app.deploy` an app or a group only (a member deploys with its group);
+`app.resources` is `<app>[.<member>]:<memory>:<cpu %>:<weight>` (`parseAppResources`: memory 32M to 6G,
 CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10000);
+`app.image` is the ref and 64 lowercase hex digits (`parseAppImageTarget`); `app.secret` is the
+ref, a key name of capitals, digits and underscores (at most 64, never `DATABASE_URL`, which
+`vps db create` owns) and a 16-hex stage id (`parseAppSecretTarget`), and its body carries
+`value`, one line of 1 to 8192 characters (`isSecretValue`); any other action refuses a value;
 `logs.purge` is `YYYYMMDD:YYYYMMDD:kind.kind` (real dates, from before to, never today, at
 most 400 days, known kinds without repeats); `logs.vacuum` is 1 to 3650 days; `retention.set`
 is `<key>:<days>` within that key's limits. An action that takes no target refuses one.
 Errors: `unknown_action`, `bad_target`, `protected`, `confirm_required`, `includes_today`,
-`range_too_long`, `out_of_range`; from the agent also `bad_json` (a body that is not JSON),
+`range_too_long`, `out_of_range`, `bad_value`; from the agent also `bad_json` (a body that is not JSON),
 `bad_ticket` (no action ticket for exactly this unit) and 502 `action_refused` (the unit did not
 start). Refusals carry `need`: the capability, `fresh_sign_in`, or from
 the agent `owner_role` (403) and `hourly_limit` (429), each with a plain-words `message` that the
@@ -90,7 +98,7 @@ instances, and the action units themselves (`isProtectedUnit`).
 | 2 | Worker (`proxyToAgent`) | The route needs `host.view`; `checkActionRequest` validates the action, target and confirmation; the action's own capability is in the person's list; fresh sign-in where required. Then it adds the action ticket for exactly this unit (below) to the body and signs the body hash, so the agent runs exactly this body, and the actor with the person's role and sign-in time |
 | 3 | Agent (`actions/run`) | Verifies the signature and nonce, repeats `checkActionRequest` and the capability check, then its own checks from the signed actor: a reboot only for the owner or vendor support role, the fresh sign-in where required (refused when the time is missing, old, or more than a minute ahead), and the hourly limit on reboots. It refuses a ticket that names another unit (`bad_ticket`). Then it starts the unit with `systemctl start --no-block` as its own unprivileged user. The job id is the systemd invocation id |
 | 4 | polkit rule | Lets only the agent user start units named `vps-act-*` (fixed oneshot units, and templated ones with a restricted instance name). Any other verb, unit or polkit action is denied |
-| 5 | Root oneshot unit | First `vps-act-ticket.mjs` checks the Worker's ticket (below), then a fixed script that validates its target once more. `vps-act-svc` allows a unit only if it is an app unit created by the platform or is listed in a root-owned allow-list file, and never if it is protected. The app controls run `vps act <verb>:<target>` from `vps-act-app@.service`, which accepts only the eight app verbs, a valid app name and resources within the bounds, and refuses to start, restart, pause or deploy a blocked app |
+| 5 | Root oneshot unit | First `vps-act-ticket.mjs` checks the Worker's ticket (below), then a fixed script that validates its target once more. `vps-act-svc` allows a unit only if it is an app unit created by the platform or is listed in a root-owned allow-list file, and never if it is protected. The app controls run `vps act <verb>:<target>` from `vps-act-app@.service`, which accepts only the ten app verbs, a valid app, group or member, resources within the bounds, a digest, or a key the manifest lists, and refuses to start, restart, pause or deploy a blocked app |
 
 A caller who skips the console still meets checks 2 to 5. A caller who skips the Worker still
 meets 3 to 5, because the agent trusts only what the Worker signed: the capability list, and the
@@ -146,8 +154,47 @@ the scripts on scratch trees. A unit-template test (`test/host-units.test.ts`) c
 every templated unit passes the unescaped instance (`%I`) to its script, because the Worker
 escapes unit names the way `systemd-escape` does (`escapeUnitInstance`).
 
+## App groups, versions and keys (2026-11-04)
+
+An **app group** is one manifest with up to six `[member.<name>]` tables: one private pod
+(`app-<group>.service`) with a container per member (`app-<group>.<member>.service`). Members
+reach each other on the pod's own loopback; at most one member has a hostname and an nginx
+site, and the rest have no address. `app.deploy` on the group writes the pod and every member,
+removes a member taken out of the manifest, and checks each member's health; a member marked
+`optional` only gets a note when it does not answer, and `vps doctor` shows it stopped or
+blocked without counting it as a problem. Every other
+app control takes the group (the pod, which starts and stops its members with it) or one
+member. A single app can be private too (`access = "private"`): no site, only its loopback port.
+
+**Change version** (`app.image`) runs as root in `vps-act-app@image:<ref>:<digest>`:
+
+1. Pull `<repository>@sha256:<digest>`. A failed pull changes nothing. A pull that used more
+   than three of the unit's five minutes stops here too, so the switch always has time to
+   finish.
+2. Write the manifest and the unit with the pinned image (and no automatic image updates), then
+   reload systemd and restart.
+3. Wait for the health check, or for the unit to be active when there is none. If it fails, put
+   the previous manifest and unit back and restart: the app runs its old version again.
+
+**Set key** (`app.secret`): the key's value never touches a unit name, a log line or an answer.
+
+1. The console makes a random 16-hex stage id in the browser and sends the key name and stage in
+   the target, and the value in the body. The Worker checks both and signs the body hash; the
+   ticket binds the unit, which names the key and stage but not the value.
+2. The agent writes the value to `/var/lib/vps/jobs-stage/app_secret/<stage>` (created new, never
+   over a file, 0600, in its 0700 folder) and starts the unit. If the unit does not start, the
+   agent deletes the stage. A stage nobody read is swept after two hours like a job's.
+3. Root `vps act secret` opens the stage without following links, checks it is a small regular
+   file in that exact folder, reads it and deletes it whatever happens next. It refuses a key the
+   manifest does not list, then writes `KEY=value` into the root-only key file (0600:
+   `/etc/vps/apps/<app>.env`, or `<group>.<member>.env` for a member) and restarts the app if it
+   runs.
+
+The ticket proves who asked for which key, not the value itself: the value's integrity rests
+on the agent, as a file upload's does. The person can always set the key again.
+
 ## Not in this list
 
-File changes (`files.write`) and the terminal (`terminal.ops`, `terminal.admin`) are separate
-change routes with their own checks; see [API-ROUTES](../reference/API-ROUTES.md) and
+File changes (`files.write`), the terminal (`terminal.ops`, `terminal.admin`) and the admin
+bridge to a private app (`apps.bridge.*`) are separate change routes with their own checks; see [API-ROUTES](../reference/API-ROUTES.md) and
 [PERMISSIONS](../security/PERMISSIONS.md).
