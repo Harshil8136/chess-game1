@@ -280,7 +280,11 @@ Every page has the same three layers (see the design system, `documentation/refe
   holds more than one; the dark terminal in a framed panel; open sessions to reattach
   (reattaching clears the screen first, and ending is guarded while the session runs). The
   sudo-capable account needs `terminal.admin` (Owner or Vendor support) and a sign-in from the
-  last 10 minutes, and each person can open it a few times an hour
+  last 10 minutes; when it is older, opening it brings up cf-admin's "Confirm it's you" dialog,
+  whose emailed code keeps the person confirmed for an hour (since 2026-11-04: before, the
+  Terminal and the action buttons posted by hand and only said to sign in again; every change now
+  goes through `postJson` in `src/ui/api.ts`, which `test/design-hygiene.test.ts` holds), and
+  each person can open it a few times an hour
   ([Hourly limits](../security/PERMISSIONS.md#hourly-limits)). Each person can have two sessions
   open, and the server four in all; a session ends after 10 minutes without typing or 30 minutes
   in all, and taking the capability away does not end one already open
