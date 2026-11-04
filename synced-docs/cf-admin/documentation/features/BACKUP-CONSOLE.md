@@ -100,7 +100,8 @@ time. Since 2026-10-17, while Vendor support holds a testing pass, cf-admin send
 the current time instead, so these checks pass for that session until the pass
 ends; nothing changed in cf-backup
 ([PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)). Since 2026-10-25 a
-6-digit code emailed to the person counts too, for 10 minutes after it is entered: the
+6-digit code emailed to the person counts too, for an hour after it is entered (since
+2026-11-04; cf-admin sends the current time for that hour, as for a testing pass): the
 console's refusal, or its **Confirm it's you** button on Keys and Restore tests, asks the
 portal to open its dialog, and the console reads again once the code is in, so nobody has to
 sign out.
@@ -302,6 +303,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-04 | claude | §3's email code sentence, for the hour, against `confirmedAt` and `codeConfirmedActive` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes; `cf-backup/src/lib/fresh.ts` keeps its 10-minute check | The sentence. The rest of the document not re-read |
 | 2026-10-23 | claude | §6's failure reporting and §8's "Tick fails" row against `src/workers/scheduled-backup-tick.ts` (`CALL_REPORT_AFTER_MS`) and `reportIfPersistent` in `src/lib/observability.ts`; `test/backup-tick.test.ts` passes | Those two places. The rest not re-read; not checked live (not deployed when written) |
 | 2026-10-17 | claude | §1 and §5 to §9 against `src/lib/backup-section.ts`, `FRAMEABLE_PREFIXES` in `src/lib/security/csp.ts`, `src/workers/scheduled-backup-tick.ts` (`TICK_TIMEOUT_MS` 25 s, the one-hour `nextTickAt` ceiling, the report cooldown), `src/lib/jobs/tiers.ts` (`essential`), `MAX_REQUEST_BYTES` and `API_TIMEOUT_MS` in `src/lib/backup-proxy.ts`, `scripts/d1_schema_snapshot.mjs`; cf-backup's `tick-deadman.yml` present | §5 named only the backup prefix: the server console's frame is the other one, now said. With the 2026-10-16 rows, the whole page has been re-read against the code. Not checked: the account's trigger count (§6), the console in a phone browser |
 | 2026-10-17 | claude | §3's testing pass sentence against `userActor` in `src/lib/backup-proxy.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/testing-pass.test.ts` passes | The sentence. The rest of the document not re-read |

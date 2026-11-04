@@ -127,7 +127,8 @@ than the 25 capabilities first proposed: the owner wanted fewer switches to mana
   §10.5). During a Vendor support testing pass (since 2026-10-17) the portal
   skips its own check and sends the current time as `signedInAt`, so the Console
   accepts the session too until the pass ends. Since 2026-10-25 a 6-digit code
-  emailed to the person counts the same way for 10 minutes after it is entered.
+  emailed to the person counts the same way for an hour after it is entered
+  (10 minutes until 2026-11-04).
 - **Nothing new at sign-in.** The five rows join every person's access map, which
   sign-in already computes in one database query, and nothing in this feature
   writes to KV.
@@ -279,6 +280,7 @@ new one is sent, and cf-admin sends both.
 
 ## Verification log
 
+- 2026-11-04: §3's email code sentence, for the hour, checked against `userActor` in `src/lib/email-console.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes. The rest not re-read; nothing in cf-email-consumer changed.
 - 2026-10-17: §3's testing pass sentence checked against `userActor` in `src/lib/email-console.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/testing-pass.test.ts` passes. The rest not re-read; nothing in cf-email-consumer changed.
 - 2026-10-25: §3's email code sentence checked against `userActor` in `src/lib/email-console.ts` and `confirmedAt` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes. The rest not re-read; nothing in cf-email-consumer changed.
 - 2026-09-30: written with the feature; the route, client and model tests above pass, and the three page rows are asserted by the migration replay test.

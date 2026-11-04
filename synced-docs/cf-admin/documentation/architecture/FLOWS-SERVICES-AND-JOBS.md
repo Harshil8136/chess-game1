@@ -116,8 +116,9 @@ flowchart TD
     W2 --> OK
 ```
 
-`signedInAt` is the later of the real sign-in and an emailed code, so a console's 10-minute rule
-follows the portal's with no change of its own
+`signedInAt` is the later of the real sign-in and an emailed code, or the current time during a
+testing pass and for the hour after an emailed code, so a console's 10-minute rule follows the
+portal's with no change of its own
 ([FLOWS-SIGN-IN-AND-CHECKS](FLOWS-SIGN-IN-AND-CHECKS.md) §9). The backup-tick job sends a
 `system` actor instead (`kind: system`, `job: backup-tick`), which cf-backup accepts only on its
 `/internal/*` endpoints. The Email API console's actor also carries the person's Email API
@@ -245,4 +246,5 @@ predate that rule and are deploy-time on purpose.
 
 | Date | Who | What was checked | Result |
 |---|---|---|---|
+| 2026-11-04 | claude | The `signedInAt` sentence under the actor diagram, for the one-hour email code, against `confirmedAt` and `codeConfirmedActive` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes | The rest of the document not re-read |
 | 2026-10-25 | claude | Every diagram against the code named in it: `wrangler.toml` bindings, queues and crons; `backup-proxy.ts`, `vps-proxy.ts`, `email-console.ts`, `console-signature.ts`; both gateway routes' rule lists; `jobs/dispatch.ts`, `jobs/control.ts` `decideJobRun`, `jobs/runJob.ts`; `scheduled-backup-tick.ts`; `sync-revalidate-consumer.ts`; `configuration.ts`, `approvals/store.ts`, `CronControlRepository.ts`; the email path against cf-email-consumer's `main.md`. Every mermaid block parsed with mermaid 11.4.1. Not checked: GitHub's own renderer, the live settings rows | pass |

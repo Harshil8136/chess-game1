@@ -327,14 +327,15 @@ sequenceDiagram
     Note over UI: The portal posts cf-admin:confirmed to every frame
     U->>UI: Taps the button again
     UI->>P: POST the action
-    P->>P: confirmedAt = later of signedInAt and codeConfirmedAt
+    P->>P: confirmedAt = now, for an hour after codeConfirmedAt
     P-->>UI: The action runs
 ```
 
 `confirmedAt` (`src/lib/auth/fresh-sign-in.ts`) is the one time every recent-sign-in rule
 reads: the portal's own routes and the actor header sent to the Backups, Server and Email API
 consoles. The code works only in the session that asked for it, lasts 10 minutes, allows 5
-tries, is used once, and a new one needs a minute's wait. A Vendor support testing pass
+tries, is used once, and a new one needs a minute's wait; once entered it keeps the session
+confirmed for an hour (since 2026-11-04), during which `confirmedAt` is now. A Vendor support testing pass
 makes `confirmedAt` now, but only from a real sign-in. The design:
 2026-10-25 email code (private).
 
@@ -366,5 +367,6 @@ compare-and-swap, checks it again as the asker, then makes it as the approver
 
 | Date | Who | What was checked | Result |
 |---|---|---|---|
+| 2026-11-04 | claude | Section 9's diagram line and paragraph, for the one-hour email code, against `confirmedAt` and `codeConfirmedActive` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes | The rest of the document not re-read |
 | 2026-10-25 | claude | Section 2's lifetime paragraph, after the 24-hour re-sign-in fix, against `SessionWatchdog.tsx` and `landing.ts` (`RENEW_CODES`, `renewSignInPath`). Not checked: the diagrams again | pass |
 | 2026-10-25 | claude | Every diagram against the code named in it: `src/middleware.ts`; `src/lib/auth/pipeline.ts` and all nine stage files (each branch, status, redirect code and audit action); `decide-access.ts`, `plac.ts` `computeAccessMap`, `guard.ts`, `surface-guards.ts`, `routes.ts`, `session.ts` (lifetime), `fresh-sign-in.ts`, `confirm-code.ts`, `fresh-sign-in-client.ts`, `src/lib/approvals/`; the two-person and revocation rules against PERMISSIONS-SYSTEM §10.7 and §11. Every mermaid block parsed with mermaid 11.4.1. Not checked: GitHub's own renderer, and live traffic | pass |

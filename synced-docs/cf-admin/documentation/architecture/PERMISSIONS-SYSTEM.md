@@ -1073,17 +1073,23 @@ limits:
 **Email code** (*added 2026-10-25, the owner's choice: signing out and in again to confirm was the
 pain*). **Confirm it's you** now offers *Email me a code* first: `POST /api/settings/confirm-code
 { action: 'send' }` emails a 6-digit code to the person's own address through the email queue, and
-`{ action: 'check', code }` with the right code writes `codeConfirmedAt` into the session. Until 10
-minutes after that, `confirmedAt` reads the code time (`provenAt`, the later of `signedInAt` and
-`codeConfirmedAt`): every action above goes through, and the Backups, Server and Email API
-consoles receive it as `signedInAt` in their actor headers, so their own checks pass with no
-change in their rules. The limits:
+`{ action: 'check', code }` with the right code writes `codeConfirmedAt` into the session. For an
+hour after that (`CODE_CONFIRMED_MS`; 10 minutes until 2026-11-04, when the owner asked for the
+hour because the Server console's Terminal kept asking), `confirmedAt` reads the current time, as
+during a testing pass (`codeConfirmedActive`: the code must be the session's latest proof, later
+than `signedInAt` and not ahead of the clock): every action above goes through, and the Backups,
+Server and Email API consoles receive it as `signedInAt` in their actor headers, so their own
+10-minute checks pass with no change in their rules, the server's agent included. After the hour
+`confirmedAt` falls back to the code time (`provenAt`), which every check refuses. A real sign-in
+still counts for 10 minutes only. The limits:
 
 - **Only in this browser.** The code is kept as a SHA-256 hash in this session
   (`AdminSession.confirmCode`), never as the code itself, so it is useless in another browser,
   even to someone who reads the email or its Email Log row.
-- **10 minutes, 5 tries, used once**; a new code needs a minute's wait. A code time ahead of the
-  clock is ignored.
+- **The code: 10 minutes to enter it, 5 tries, used once**; a new code needs a minute's wait. A
+  code time ahead of the clock is ignored.
+- **The confirmation: one hour**, in this session only; a sign-out, a forced sign-out or the
+  session's end ends it sooner. The Audit Log's `confirm_code_ok` row records its end (`until`).
 - **The person's own address**, the one they signed in with; any role.
 - **Recorded**: `confirm_code_sent`, `confirm_code_ok`, `confirm_code_failed`, module `auth`.
 - *Sign in again* stays the way out when no code can be sent. The Backups and Server consoles run
@@ -1485,6 +1491,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-04 | claude | **Scope-limited to §10.5's Email code paragraph and its limits**, for the one-hour confirmation. Read `src/lib/auth/fresh-sign-in.ts` (`CODE_CONFIRMED_MS`, `codeConfirmedActive`, `confirmedAt`), `src/pages/api/settings/confirm-code.ts`, `src/lib/fresh-sign-in-client.ts` and the three actor builders; in `cf-vps/contract/signing.ts` and `cf-backup/src/lib/fresh.ts` (their own 10-minute checks, unchanged); `test/confirm-code.test.ts` passes | The rest of §10.5 and the document not re-read |
 | 2026-10-31 | claude | **Scope-limited to the Developer Tools parts paragraph, wave 2.** Read `DEBUG_PARTS`, the three new pages under `src/pages/dashboard/debug/` (each `denyDebug(user, '<part>')`, and `canViewGitHub` before the GitHub snapshot) and `migrations/0092_developer_tools_wave2.sql`, and the three rows read back live through the D1 connector; `test/devtools-wave2.test.ts` and `test/debug-access.test.ts` pass | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-31 | claude | **Scope-limited to the Developer Tools parts paragraph.** Read `denyDebug` in `src/lib/auth/surface-guards.ts`, the three new pages under `src/pages/dashboard/debug/`, `src/pages/api/debug/handoff.ts`, `API_PAGE_MAPPING` (`/api/debug`) and `migrations/0091_developer_tools.sql`, and the four rows read back live through the D1 connector; `test/devtools.test.ts` passes | The paragraph matches the code; `last_verified` left as it was |
 | 2026-10-30 | claude | **Scope-limited to the Blog Studio paragraph.** Read `API_PAGE_MAPPING` in `src/lib/auth/routes.ts`, `src/pages/dashboard/content/blog.astro`, `src/pages/api/content/blog/studio.ts`, `reach.ts`, the four AI and live-check handlers and `src/pages/api/media/upload.ts`; `test/content-blog-studio.test.ts` passes. Nothing else re-checked | The paragraph matches the code; `last_verified` left as it was |
