@@ -12,7 +12,7 @@ does not exist here, and a test proves it.
 
 | Group | Names | Utilities |
 |---|---|---|
-| Colours | `bg`, `surface`, `surface-raised`, `border`, `fg`, `fg-muted`, `primary`, `accent`, `ok`, `attention`, `danger`, `info`, `focus`; each colour text sits on has a `-fg` | `bg-primary`, `text-primary-fg`, `border-danger` |
+| Colours | `bg`, `surface`, `surface-raised`, `border`, `fg`, `fg-muted`, `primary`, `accent`, `ok`, `attention`, `danger`, `info`, `focus`; each colour text sits on has a `-fg`; `fill` and `fill-fg` for a main button, a switch that is on and a count (in dark, the primary at 52% lightness with white text), `field` for a text box | `bg-primary`, `text-primary-fg`, `bg-fill`, `border-danger` |
 | Brand (from the client's generated `/theme.css`) | `--brand-primary`, `--brand-primary-dark`, `--brand-accent`, `--brand-radius`, `--brand-font` | fall back to the kit's values when unset |
 | Spacing | Tailwind's 4 px scale, plus `gutter` 16, `row-h` 44, `row-h-form` 56, `touch` 44 | `p-gutter`, `min-h-row-h`, `size-touch` |
 | Radius | `sm` 4, `md` the brand radius (10), `lg` 12 (since 2026-11-01: cards, panes and figures share it), `full` | `rounded-md` |

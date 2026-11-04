@@ -306,8 +306,8 @@ the problem.
 ## The stylesheet and the script
 
 `public/ui/app.css` is the one stylesheet, compiled by Tailwind from `@oltrem/core-ui`'s theme and
-the classes the pages, the primitives and every module's `src/*.tsx` use, under the 64 KiB a
-test allows. A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()`:
+the classes the pages, the primitives and every module's `src/*.tsx` use, under the 80 KiB a
+test allows (64 until the colour pass of 2026-11-04, by the owner's yes). A colour with an opacity (`bg-primary/10`) is written once, as its `color-mix()`:
 Tailwind's second copy for browsers without it, about a tenth of the file, is left out
 (2026-11-03), as the theme's own rules use the mix bare. `public/ui/app.js` is the frame's
 script, copied from `src/client/frame.js` with its comment lines and indents left out, about

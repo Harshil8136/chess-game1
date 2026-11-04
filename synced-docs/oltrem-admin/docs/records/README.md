@@ -154,6 +154,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Look 2, step 1](2026-11-03-look-2.md) | lean chips and buttons, every notice a toast, the style and script served as files |
 | [The role editor as a permission matrix](2026-11-03-role-matrix.md) | every module's level in view, set all, find, special permissions apart |
 | [Looks: palettes and backgrounds](2026-11-03-looks.md) | 24 palettes and 7 backgrounds each person picks, at no stylesheet cost |
+| [Colour pass](2026-11-04-colour-pass.md) | solid buttons with white text, darker fields, a richer dark theme in every look |
 | [The phone's top](2026-11-04-phone-top.md) | the bar names the page; the content starts about 150 px higher on a phone |
 | [Easier setup](2026-11-03-easier-setup.md) | email in one step from Home and Integrations, delivery reports registered by themselves, the first backup without waiting for the night |
 | [Look 2, step 3](2026-11-03-look-2-step-3.md) | one empty box everywhere, settings side by side, an Owner's look for everyone |
