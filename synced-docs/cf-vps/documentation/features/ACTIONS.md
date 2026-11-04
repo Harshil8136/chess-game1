@@ -166,6 +166,15 @@ blocked without counting it as a problem. Every other
 app control takes the group (the pod, which starts and stops its members with it) or one
 member. A single app can be private too (`access = "private"`): no site, only its loopback port.
 
+Inside the pod, every member is reachable by its own name, and by up to four `aliases`: each goes
+into the pod's one `/etc/hosts` as its localhost, so members call each other as they did on a
+compose network (`http://waha:3000`, Redis as `evolution-redis`). Two members may not share a name
+or an alias. A member may also name `user` (a numeric `uid` or `uid:gid`, for an image whose
+entrypoint would need root powers the pod does not give, such as Redis's) and `exec` (up to 32
+arguments that replace the image's command, like `["--appendonly", "yes"]`; each argument is
+letters, digits and `._/:=@+,-` only, so systemd has nothing to split or expand). Added
+2026-11-04 so the hotel's current WhatsApp stack moves in with no change to its workflows.
+
 **Change version** (`app.image`) runs as root in `vps-act-app@image:<ref>:<digest>`:
 
 1. Pull `<repository>@sha256:<digest>`. A failed pull changes nothing. A pull that used more
