@@ -145,7 +145,9 @@ Every page has the same three layers (see the design system, `documentation/refe
   locked. A job card has the controls listed under Jobs.
 - App groups (since 2026-11-04): a group is one row with the runtime "group" and a row for each
   member named `<group>.<member>`, each with its own controls. A member has no Deploy (it deploys
-  with its group), and a group has no allocation form (each member has its own).
+  with its group), and a group has no allocation form (each member has its own). A member's row
+  opens that member's own inspector, with its Keys; the page finds the row by its name, since a
+  group and its members share one manifest file.
 - The inspector's **Version** section, for an image from a registry: the image and the pinned
   digest, if any, and a box that takes a digest however it is pasted (the 64 hex digits,
   `sha256:<digits>` or a whole `<image>@sha256:<digits>`). Change version (`app.image`, typed
