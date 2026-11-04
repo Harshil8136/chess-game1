@@ -186,8 +186,24 @@ kept, since the page still shows what was typed.
 ## Senders and sending domains
 
 A message names the address it comes from with `senderId`; without one it comes from the
-`from` the client hands in (the two settings above). Bulk mail, such as a campaign, always names
-one.
+address picked for its kind of mail, else from the `from` the client hands in (the two settings
+above, the main address). Bulk mail, such as a campaign, always names one.
+
+### Which address each kind of mail comes from
+
+Since 2026-11-03 (the owner's "Yes, all of it" to mail settings asked once,
+`docs/research/2026-11-03-mail-settings-once.md` in oltrem-mail): a kind is a module that emails,
+read from the part of its template ids before the dot (`invoices.message` is Invoices), so the
+kit's modules name no sender and need no change. Each kind comes from the main address unless
+someone who holds `email.senders.manage` for the whole company picks another everyday sender for
+it on Addresses (`PUT /kinds`, audited `email.kinds`; one row per changed kind in
+`email_kind_senders`). Write and campaigns (`email.*`, `campaigns.*`) pick their sender each time
+and are not listed. A pick whose address was removed, or is now for bulk mail only, is not used:
+the mail comes from the main address, Addresses says so on the kind, and the health check
+`email.kinds` warns until it is picked again. Reading the pick is one D1 read per message.
+
+Add a domain on Addresses starts filled in with the main address's domain while it is not added
+yet, as Mail setup and Forwarding do in `@oltrem/mail`.
 
 | Part | What it does |
 |---|---|
@@ -242,7 +258,7 @@ on Integrations. A key that may not register is told so in words.
 
 Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain-confirm`,
 `email.domain-remove`, `email.domains-discover`, `email.sender-add`, `email.sender-update`, `email.sender-remove`,
-`email.sender-default`.
+`email.sender-default`, `email.kinds`.
 
 The page is Email, Addresses (`/email/senders`, from `@oltrem/email/pages`). Since 2026-11-01 it
 is one path: connect an email service, then the portal reads its domains and addresses (on its
@@ -407,6 +423,8 @@ with a template that holds code.
 | `POST /domains/:domain/default` | `email.senders.manage` | Make an address the domain's default for bulk or everyday mail (`use`, `senderId`) |
 | `DELETE /domains/:domain` | `email.senders.manage` | Remove a domain that has no sender address |
 | `GET /senders` | `email.senders.manage` | Every sender address, with its domain's state and the defaults it holds |
+| `GET /kinds` | `email.senders.manage` | [Which address each kind of mail comes from](#which-address-each-kind-of-mail-comes-from): `{ main, items: [{ kind, title, summary, senderId, sender, problem }], choices: [{ id, email }] }` |
+| `PUT /kinds` | `email.senders.manage` at the company | `{ picks: { <kind>: <senderId or ''> } }`: an everyday sender of the company, or empty for the main address; a kind the portal does not send is refused. Answers `{ changed }` |
 | `GET /senders/places` | `email.senders.manage` | The places where the person may add a sender address, the company first |
 | `GET /senders/usable?use=` | `email.senders.use` | The addresses the person may send bulk or everyday mail from, the defaults first; bulk only from a passing domain |
 | `POST /senders` | `email.senders.manage` | Add an address (`email`, `name`, `replyTo`, `scopeId`, `purpose`) |
@@ -505,6 +523,10 @@ says what is left".
 `email.domains`: **warn** while a sending domain that passed its check fails it now, or one
 added over a day ago has never passed, naming the domain and what is wrong; **ok** otherwise.
 
+`email.kinds`: **warn** while a kind of mail is set to come from an address that was removed or
+is now for bulk mail only (its mail comes from the main address meanwhile), naming the kind;
+**ok** otherwise.
+
 `email.ready`, for a company with an email service connected: **fail** while a check of
 [Ready to send](#ready-to-send) stops every email, **warn** while one may cost mail, naming the
 first; **ok** when every check passes.
@@ -568,7 +590,9 @@ adds `email_domains.bulk_since`, the first day a domain sent bulk mail, which `@
 warms up from. Migration `1006_email_clean_lists.sql` makes `email_mail_servers` (a domain, whether
 it has a mail server, why not, when it was asked and noted; no tenant, since a DNS answer is the
 same for every company), adds `email_lists.unreachable`, and notes the domains already on the
-lists. Forgetting an address removes its marks; deleting a list removes the list's.
+lists. Migration `1009_email_kind_senders.sql` makes `email_kind_senders` (a kind of mail and the
+sender it comes from; no row, the main address). Forgetting an address removes its marks;
+deleting a list removes the list's.
 
 | Code | Name | Status | When |
 |---|---|---|---|

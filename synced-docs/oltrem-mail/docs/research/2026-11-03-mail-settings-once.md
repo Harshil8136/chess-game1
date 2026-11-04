@@ -1,6 +1,6 @@
 ---
 title: "Mail settings set once, used by every module (2026-11-03)"
-status: proposal
+status: active
 owner: vendor
 last_verified: 2026-11-03
 sources: [the owner's ask of 2026-11-03 06:38 (point 1); modules/email (settings email.from_address and email.from_name, email_domains, email_senders, companyFrom, prepare), modules/mail (mail_cloudflare, mail_mailboxes, mail_forward_domains), modules/campaigns; the kit's templates/client/src/index.ts, where every kit module calls email.send; all read 2026-11-03]
@@ -51,9 +51,23 @@ default sender when that is empty, and Mail setup's "Send as" may replace either
    Outlook line). A module row pointing at a sender that was removed falls back to the main address
    and raises one alert naming it.
 
-**Built first (2026-11-03), the part every choice shares:** Mail setup's form starts from the main
-address (domain, "Send as" and name), and Forwarding's Add a domain from its domain. The rest waits
-for the owner's choice.
+## Built (2026-11-03, the owner's "Yes, all of it")
+
+- **Asked once:** Set up email (the provider card) already asks for the address and the name, and
+  sets the settings `email.from_address` and `email.from_name`, the domain and the everyday
+  sender. Mail setup, Forwarding and Addresses' Add a domain start from them. The main domain is
+  read from `email.from_address`, its one home, so it needed no flag of its own (the one change
+  from point 1 and section 3 above).
+- **Send as:** the Cloudflare route already sends from the message's own address when it is on the
+  route's domain, so the main address wins there; Send as is used only for mail from another
+  domain.
+- **Each kind of mail:** Addresses lists the kinds the portal sends, each from the main address or
+  the sender picked for it (`email_kind_senders`, migration 1009; the email module's README,
+  "Which address each kind of mail comes from").
+- **Mailboxes:** a mailbox's address becomes a sender at the mailbox's own location on its first
+  reply or automatic reply, not at the company's.
+- **Self-checks:** a pick whose address was removed or is bulk only falls back to the main address,
+  is shown on Addresses and warns in the health check `email.kinds`.
 
 ## 3. Cost and limits
 
