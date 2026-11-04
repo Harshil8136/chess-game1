@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-09
 verified_against: [code]
 owner: harshil
-related_code: [src/ui/pages.ts, src/ui/terminal-keys.ts, src/ui/terminal-link.ts, src/ui/terminal-predict.ts, src/ui/screens, src/ui/shell, src/ui/theme.ts, src/ui/restore.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
+related_code: [src/ui/pages.ts, src/ui/terminal-keys.ts, src/ui/terminal-text.ts, src/ui/terminal-link.ts, src/ui/terminal-predict.ts, src/ui/screens, src/ui/shell, src/ui/theme.ts, src/ui/restore.ts, src/ui/App.tsx, src/ui/hooks.ts, src/ui/api.ts, src/ui/status.ts, src/ui/me.ts, src/http/router.ts, contract/metrics-history.ts, agent/src/recorder.ts, agent/src/history-store.ts, agent/src/collectors/metrics-history.ts]
 related_docs: [../security/PERMISSIONS.md, ACTIONS.md, JOBS.md, RESTORE-TESTS.md, LOG-STORAGE.md, ../reference/API-ROUTES.md]
 tags: [feature, console, ui, pages]
 ---
@@ -289,9 +289,13 @@ Every page has the same three layers (see the design system, `documentation/refe
   green dot and Fast link, or an amber dot and Basic link, see
   [How the terminal connects](#how-the-terminal-connects)); on the right the tools in three
   groups, which wrap under the status on a narrow screen so none is ever hidden: Copy (the
-  selection), Paste and Select text (the newest 2,000 lines as plain text, to select with a
-  phone's own handles or Copy all); smaller and larger text with the size between them (9 to
-  24 px, kept on this device); and Full screen. Each tool shows its word from 768 px.
+  selection), Copy all (since 2026-11-04: one press puts the newest 2,000 rows on the clipboard,
+  to paste into a chat from a phone; it opens Select text when the browser refuses the
+  clipboard), Paste and Select text (the same text, to select with a phone's own handles or
+  copy whole). Both rebuild a line the narrow screen wrapped, so no word is cut in two, and keep
+  a tab as the spaces it moved over (`src/ui/terminal-text.ts`); smaller and larger text with
+  the size between them (9 to 24 px, kept on this device); and Full screen. Each tool shows its
+  word from 768 px, except Copy all, which shows it on every screen.
 - Keyboard: copy with Ctrl+C while text is selected (Ctrl+C with nothing selected stops the
   command, as in a shell), Ctrl+Shift+C or Ctrl+Insert; paste with Ctrl+V, Ctrl+Shift+V or
   Shift+Insert. On a Mac, Cmd+C and Cmd+V, and Ctrl+C and Ctrl+V stay the shell's. Every other
@@ -547,7 +551,7 @@ screen shows. Access edits save to the local test database on the PC, never the 
   a matching `test/ui-*.test.ts`; the screen only draws what it returns. Alerts and Timeline
   share `audit-view.ts`; Restore tests use `restore.ts`.
 - The Terminal: `src/ui/screens/Terminal.tsx`; its keys, swipes and text size in
-  `src/ui/terminal-keys.ts`; its connection in `src/ui/terminal-link.ts`; the typed letters it
+  `src/ui/terminal-keys.ts`; the text Copy all and Select text take in `src/ui/terminal-text.ts`; its connection in `src/ui/terminal-link.ts`; the typed letters it
   draws before the echo in `src/ui/terminal-predict.ts`; the socket in
   `agent/src/websocket.ts` and `terminalSocket` in `agent/src/server.ts`
 - The shell (top bar, group tabs, launcher, Needs attention): `src/ui/shell/`,
