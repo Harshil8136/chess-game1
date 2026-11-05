@@ -26,6 +26,7 @@ related_docs:
 - 2026-11-05-chatbot-section-frame.md
 - ../records/reports/2026-11-05-chatbot-analytics-sections.md
 - ../records/reports/2026-11-05-chatbot-server-record.md
+- ../records/reports/2026-11-05-chatbot-checks-from-record.md
 tags: [design, chatbot, whatsapp, posthog, analytics, ui]
 ---
 
@@ -37,7 +38,9 @@ tags: [design, chatbot, whatsapp, posthog, analytics, ui]
 > is. Phase 1 (this design, built on 2026-11-05) gives the section an Overview and seven tabs,
 > Chats, Quality, Flags, Money, Trends, Models and steps, and System, all from data the bot already
 > sends today. Phase 2 (built the same night) has Money, Models and steps, and System read the
-> bot's own record on the server first; phase 3 adds the real customers' chats after move night.
+> bot's own record on the server first, and once the lab copies PostHog's AI checks (lab 1.7.0)
+> the Overview, Quality, Flags, Trends and a chat's checks do too; phase 3 adds the real
+> customers' chats after move night.
 
 ## 1. The ask
 
@@ -119,13 +122,42 @@ the console bridge the lab's pages already read (`apps/bridge/view`, any member)
 answers, the page draws the record; if neither does (not installed, an older lab, no database),
 it reads PostHog as in phase 1. One line under the page's choices says which, and why a record
 is missing. Money's allowance is read by the page (`[part].astro`), since the record does not
-carry it. The Overview, Quality, Flags and Trends stay on PostHog: the record holds no checks or
-messages until phase 3.
+carry it.
 
 **Not taken.** Mixing a record's source with PostHog's other source on one page (PostHog's lab
 numbers with the record's live ones): the two count differently, and a page from two systems
 could not say where a figure came from. A new cf-admin route that queries Postgres: the
 Worker cannot reach the server's database, and the bridge already carries signed reads.
+
+### Phase 2, continued: the AI checks from the record (lab 1.7.0, built 2026-11-05)
+
+*The owner, 21:15 UTC: "we kind of need to fetch or download PostHog data cuz it takes ton of
+time to get all PostHog data to us".* The AI checks were the one thing only PostHog had. The lab
+now reads them back from PostHog with two saved reads (PostHog Endpoints, a key that can run
+only those) and keeps each verdict in its record, graded by the check's own pass rule as PostHog
+grades it, with one row per reply beside it (cf-vps
+`documentation/records/2026-11-05-ai-checks-copy.md`). Its record then answers four more reads,
+`record/overview|quality|flags|trends?days=`, and `record/chats?traces=` for a lab chat's checks,
+in the shapes of `bot.ts` and `bot-parts.ts`.
+
+| Page | On the record |
+|---|---|
+| Overview | Both records as one: each source's totals and checks apart; the month, days, hours and errors added; a typical time weighted by calls. The allowance is read by the page (`dashboard.astro`). The *Needs a look* panel reads `record/flags` |
+| Quality | Each source's checks, every failure newest first |
+| Flags | Failed checks and failed calls of both, newest first |
+| Trends | The week's heat and the moods added, days kept by source, the whole-chat score weighted by chats |
+| Chats | A lab chat's checks from the lab's record, by the replies' PostHog trace ids |
+
+**Never fewer checks than PostHog.** A record whose checks are not copied yet (no read key, or
+before its first read) refuses these reads with `checks_off`, so the page reads PostHog and says
+"its AI checks are not copied yet" rather than show no checks while PostHog has them. Money,
+Models and System are not affected. The real bot's checks join in phase 3, when the recorder
+copies them the same way.
+
+**Not taken.** PostHog's destinations (a webhook per event) miss what comes while the server
+cannot be reached and need an address into the server; a batch export writes to an outside
+store the server would have to read in turn; asking PostHog's query API from the lab needs a
+key that can run any question on the project (cf-vps change record, §5).
 
 ## 4. Who may open what
 
@@ -163,5 +195,6 @@ light, rendered from the real lab numbers read live from PostHog on 2026-11-05.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | Phase 2's AI-checks part: `insights/record.ts` (`CHECK_PARTS`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx` and `dashboard.astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`VIEWS`, `shapeView`), `checks.ts` and `admin.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/checks.test.ts` ran against a real Postgres 16 | The pages against the installed lab 1.7.0 (not on the server yet; it needs the owner's read key); the pages on the owner's phone |
 | 2026-11-05 | Phase 2: `insights/record.ts`, `insights/BotInsights.tsx`, `lab-api.ts` and `[part].astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`, `VIEWS`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/record.test.ts` ran against a real Postgres 16 | The pages against the installed records (not on the server yet); the pages on the owner's phone |
 | 2026-11-05 | Every question in `partQueries` run live against the PostHog project (lab events only); the parsers and the confidence math in `test/whatsapp-bot-sections.test.ts`; the route's 401, 400 and 403; the look in `test/chatbot-look.test.ts`; screenshots at 390 px and 1,280 px in both themes from those live numbers | The pages on the owner's phone; the live bot's events (it sends none until move night) |

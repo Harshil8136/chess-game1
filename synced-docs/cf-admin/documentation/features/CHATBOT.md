@@ -16,7 +16,7 @@ tags: [chatbot, whatsapp, n8n, ai, analytics]
 > **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1). §3 to §10 are history (below).
+> **Last Updated:** 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
@@ -61,6 +61,11 @@ phone number is asked of PostHog or reaches the page. Until the live bot answers
 from the server (after move night) only the lab sends these events, so the live figures are 0
 and the page says every figure is from the lab's tests.
 
+Since lab 1.7.0 the Overview and its *Needs a look* panel ask the server's record first
+(`record/overview` and `record/flags`, §0.1) and read these PostHog questions only when no
+record answers; the allowance is then read by the page itself (`dashboard.astro`), since the
+record does not carry it.
+
 ### 0.1 The seven tabs (since 2026-11-05 evening)
 
 *The owner's ask of 2026-11-05: "multiple sections from header like posthog, our pricing
@@ -97,9 +102,22 @@ the shapes of `bot-parts.ts`). When at least one answers, the page draws it: Mon
 Real customers / Lab tests row, and System adds each n8n workflow's runs and usually slowest
 step. When neither answers (not installed, an older lab, no database), the page reads PostHog
 as before. A line under each page's choices says which it shows and why a record is missing.
-Money's allowance comes from the page (`[part].astro`), since the record does not carry it. The
-Overview, Quality, Flags and Trends stay on PostHog until phase 3
+Money's allowance comes from the page (`[part].astro`), since the record does not carry it
 (change record (private)).
+
+**The AI checks from the record (lab 1.7.0, since 2026-11-05 night).** The owner asked on
+2026-11-05 to stop waiting on PostHog for every page. The lab now copies PostHog's AI checks
+(each verdict, graded by the check's own pass rule) and every reply into its record
+(change record (private)). So
+the Overview, Quality, Flags and Trends ask `record/overview|quality|flags|trends?days=` first,
+and a lab chat's checks on Chats ask `record/chats?traces=`, all the same way as Money. Both
+records' answers become one page (`mergeOverview`, `mergeQuality`, `mergeFlags`, `mergeTrends`):
+each source's totals and checks apart, days, hours, moods and errors added, a typical time
+weighted by calls and the whole-chat score by chats, failures newest first. A record whose
+checks are not copied yet (no PostHog read key, or before its first read) refuses these pages
+with `checks_off`, so they keep reading PostHog rather than show no checks while PostHog has
+them; the line under the page's choices then says "its AI checks are not copied yet". The real
+bot's checks join with phase 3.
 
 ---
 
@@ -438,6 +456,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | §0's record sentence and §0.1's AI-checks paragraph against `insights/record.ts` (`CHECK_PARTS`, `whyOf`, `fromLine`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx`, `dashboard.astro` and cf-vps `apps/whatsapp-lab/src/record.ts`, `admin.ts` (`checks_off`) and `agent/src/server.ts` (the bridge passes a member's answer through unchanged); `test/whatsapp-bot-record.test.ts` and `test/chatbot-look.test.ts` pass | The pages against the installed lab 1.7.0 (not on the server yet, and it needs the owner's read key); §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
 | 2026-11-05 | §0.1's server-record paragraph against `insights/record.ts`, `insights/BotInsights.tsx`, `insights/kit.tsx`, `lab-api.ts`, `[part].astro` and cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` and `test/chatbot-look.test.ts` pass | The pages against the installed record (not on the server yet); §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
 | 2026-11-05 | §0's Overview rows and the new §0.1 against `BotOverview.tsx`, `insights/BotInsights.tsx`, `insights/kit.tsx`, `src/lib/posthog/bot-parts.ts`, `src/pages/api/whatsapp-bot/part.ts`, `denyBotPart` and migration `0096` (its rows read back live through the D1 connector); `test/whatsapp-bot-sections.test.ts`, `test/whatsapp-bot-overview.test.ts` and `test/chatbot-look.test.ts` pass; local screenshots at 390 px and 1,280 px from live lab numbers | §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
 | 2026-11-05 | The header, §1 and §2 rewritten for charlar leaving the portal: `src/pages/dashboard/chatbot/` (dashboard, index and the lab only), `src/components/admin/chatbot/`, `src/lib/auth/routes.ts` (the `/api/chatbot` keys removed), `src/lib/health/catalog.ts` (no `chatbot` check), `wrangler.toml` (no `CHATBOT_SERVICE`), `src/lib/ai-knowledge.ts`; the live `admin_pages` rows after `0095` (seven off) read through the D1 connector; the tests named in the change record pass | §3 to §10 marked as history, not re-read; the pages in a browser (the owner's phone test) |
