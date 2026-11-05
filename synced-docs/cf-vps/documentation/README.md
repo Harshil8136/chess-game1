@@ -157,6 +157,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-11-05-bot-record.md`](records/2026-11-05-bot-record.md) | Change record: the bot's record (lab 1.6.0), every AI call and n8n run of the WhatsApp bot, numbers only, in the server's Postgres: the lab copies its own, a recorder beside the door copies the real bot's, and the portal's Chatbot pages read the totals |
 | [`records/2026-11-05-ai-checks-copy.md`](records/2026-11-05-ai-checks-copy.md) | Change record: the AI checks' copy (lab 1.7.0), PostHog's AI checks' verdicts and every reply copied into the bot's record through two saved reads and a key that can only run them, so every Chatbot page reads the server |
 | [`records/2026-11-05-bot-conversations.md`](records/2026-11-05-bot-conversations.md) | Change record: the conversations in the bot's record (lab 1.8.0), every message with who wrote it, the wait for an answer and WhatsApp's ticks, the lab's test chats copied and the real number's taken from WAHA's second webhook, the phone kept only as a keyed hash and its last 4 digits |
+| [`records/2026-11-05-ai-checks-on-server.md`](records/2026-11-05-ai-checks-on-server.md) | Change record: the real bot's AI checks on the server (lab 1.9.0), PostHog's 9 checks and pass rules run by the recorder on every real reply, the code checks always and the Claude Haiku judges where they matter, so no customer's words go to PostHog |
 
 ### Incidents
 
