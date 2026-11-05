@@ -75,7 +75,8 @@ same question.
 
 Later the same day the header decision (the first row above) was replaced by the section's new
 frame ([design](2026-11-05-chatbot-section-frame.md)): the lab's three pages are a segmented row
-in the page's own bar, and the second tab row is gone.
+in the page's own bar, and the second tab row is gone. That evening the segmented row gave way in
+turn: the three pages are a group in the section's one row of tabs (the frame design, §7).
 
 Kept as they were: the reply details drawer, the photo shrinking, the reactions of the hotel's
 phone, the 3-second reading while a turn is open, and every call through the server console's

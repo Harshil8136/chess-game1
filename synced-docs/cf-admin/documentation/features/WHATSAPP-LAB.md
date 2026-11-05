@@ -26,8 +26,9 @@ repository; where the two disagree, the cf-vps code wins.
 
 ## 1. The pages
 
-**Chatbot → WhatsApp lab**, the last tab of the Chatbot section, set apart from the website
-chatbot's tabs by a short divider and shown in WhatsApp's green, has three pages:
+**Chatbot → WhatsApp lab**, the last group in the Chatbot section's row of tabs, set apart
+from the website chatbot's tabs by a short divider and shown in WhatsApp's green, has three
+pages:
 
 | Tab | Page | What it shows |
 |---|---|---|
@@ -35,14 +36,19 @@ chatbot's tabs by a short divider and shown in WhatsApp's green, has three pages
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens and ratings as small figures in the page's bar; the comparison **by model** and **by step and model** (each model with its maker: calls, failures, average time, average tokens read and written, cost, cost per call), the average time and the cost per call each with a bar against the slowest and the dearest row; the last 100 turns, each with Details |
 | Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready, as a checklist where each line says its state in words as well as its mark (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys, PostHog), the PostHog panel (below), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with each model's maker and the sources, and the last 50 changes made in the lab and by whom, as a timeline |
 
-Each opens on the section's slim page bar (2026-11-05, [frame design](../specs/2026-11-05-chatbot-section-frame.md)):
-the three pages as one segmented row, which the server hands over with only the pages the
-person may open (`src/lib/auth/registry-tabs.ts`), and the page's buttons on the right
-(`src/components/admin/chatbot/PageBar.tsx`). There is no second row of tabs.
+The three pages are tabs in the section's one row (since the evening of 2026-11-05, the
+owner's "2 layer tabs are bad looking"): after the divider a small green **WhatsApp lab**
+caption, then **Test chat**, **Usage** and **Set-up**, each in the lab's green whichever page is
+on screen (`RegistryTabs.astro` `expand`, set in `src/layouts/ChatbotLayout.astro`). Only the
+pages the person may open are shown, by the sidebar's rule (`src/lib/auth/registry-tabs.ts`);
+if they may open just one, the single **WhatsApp lab** tab stays. Each page then opens on the
+section's slim page bar ([frame design](../specs/2026-11-05-chatbot-section-frame.md)): the
+page's icon and name, one line on what it shows (hidden on a phone), and its buttons on the
+right (`src/components/admin/chatbot/PageBar.tsx`). There is no second row of tabs.
 
 ### The Test chat
 
-The page has no head of its own: the Chatbot section's tabs and the lab's bar (its three pages,
+The page has no head of its own: the Chatbot section's tabs and the page's bar (its name,
 and **Ready** or how many things are left to fix) are the whole header, and the chat starts
 under them. Its layout follows the room the page has, not the screen's: from 42rem wide the
 chats and the chat sit side by side, and from 62rem the chat's info is a third column (narrower,
@@ -217,6 +223,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | One row of tabs (the owner's "2 layer tabs are bad looking"): §1 against `RegistryTabs.astro` (`expand`), `ChatbotLayout.astro`, the three pages' `.astro` files and islands (`LabChat.tsx`, `LabUsage.tsx`, `LabSetup.tsx` on a plain `PageBar`), `PageBar.tsx` (`SubNav` removed) and the `--tab-group` tint in `chatbot.css`; `test/chatbot-look.test.ts`, `test/whatsapp-lab-look.test.ts` and `test/whatsapp-lab-ssr.test.ts` (each page renders in workerd with its name in the bar and no second row) | The row in a phone browser (the owner's phone test); the rest of the document not re-read |
 | 2026-11-05 | claude | Change models remade on the owner's "extreme makeover" ask (`ChatModels.tsx`: one line per step, the choices as cards grouped by maker, Every step at once, How the bot is sent), its estimates (`stepAverage`, `perCall`, `dollars`, `providerOf` in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`) against the lab's `usage` by-step rows; "testing number" in place of "fake number" in every lab page and the text export; the drawer at 390 and 1,440 pixels, dark and light, on the lab's real price list (cf-vps `apps/whatsapp-lab/prices.json`) and sample usage, in a local preview never committed | The drawer in a phone browser against the lab on the server (the owner's phone test) |
 | 2026-11-05 | claude | The second pass over the three pages (Harshil's "make EVERYTHING modern … especially /whatsapp", with their yes to local screenshots): every part of the Test chat, Usage, Set-up and Details redrawn as described in §1, from the code (`LabChat.tsx`, `ChatList.tsx`, `ChatThread.tsx`, `Composer.tsx`, `ChatInfo.tsx`, `ChatModels.tsx`, `LabUsage.tsx`, `LabSetup.tsx`, `ReplyDetails.tsx`, `LabNotices.tsx`, `format.ts`, the lab block of `chatbot.css`); the helpers (`dayLabel`, `sameDay`, `clock`, `tint`, `phone`, the Workers AI names, the chip order, the lean summary) in `test/whatsapp-lab-pages.test.ts`; the look rules in `test/whatsapp-lab-look.test.ts`; each page at 390 and 1,440 pixels wide, dark and light, in a local preview on sample data (never committed); lab 1.3.0's `lean` and Workers AI fields read from cf-vps `apps/whatsapp-lab/` (`lab.ts`, `prices.json`) and its install from cf-vps `program/HANDOFF.md` | The pages in a phone browser against the lab on the server (the owner's phone test); a lean or Workers AI test chat |
 | 2026-11-05 | claude | The section's new frame (Harshil's "complete makeover" ask): the three pages' bar is the shared `PageBar` with the lab's pages as a segmented row (`SubNav`) handed over by the server (`registryTabs`), the pages in WhatsApp's green (`hue="whatsapp"`), the Test chat filling the screen (`fill`); the old `whatsapp/PageBar.tsx` and the second tab row are gone. Checked by `test/whatsapp-lab-look.test.ts`, `test/chatbot-look.test.ts` and `test/whatsapp-lab-ssr.test.ts` (each page renders in workerd with three tabs and the right one marked) | The pages in a phone browser (the owner's phone test) |
