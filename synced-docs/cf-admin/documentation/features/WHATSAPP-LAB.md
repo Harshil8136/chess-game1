@@ -32,7 +32,7 @@ repository; where the two disagree, the cf-vps code wins.
 |---|---|---|
 | Test chat | `/dashboard/chatbot/whatsapp` | Laid out as WhatsApp is (remade 2026-11-05, below): the test chats, one chat with its answers, ratings and figures, and the chat's info with its tools and models |
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens; the comparison **by model** and **by step and model** (calls, failures, average time, average tokens read and written, cost, cost per call); the last 100 turns, each with Details |
-| Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys set or not), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with its sources, and the last 50 changes made in the lab and by whom |
+| Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys set or not), the PostHog panel (below), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with its sources, and the last 50 changes made in the lab and by whom |
 
 ### The Test chat
 
@@ -94,6 +94,18 @@ server since 2026-11-05. An older lab still shows its chats and turns, and a but
 answer says the lab needs its 1.1.0 update. The Usage page shows the ratings too: how many
 answers were rated good and bad, and each turn's verdict and note.
 
+**PostHog** (lab 1.2.0). With PostHog's project token set on the Server page (Apps, then
+`whatsapp-lab.phone`, then Keys, `POSTHOG_API_KEY`), the lab sends every test chat to PostHog's
+AI observability, each message with its English: cf-vps's guide, "PostHog", says what goes. The
+Set-up page's PostHog panel shows the token (set, the wrong kind, or not set), whether the
+English is on, paused or off, what PostHog has, what is waiting, and the last failure with when
+the lab tries again, and links to the lab's traces in PostHog. Each reply's details open its
+turn in PostHog ("Open in PostHog"), and a chat's info its session (the PostHog chip); the links
+show only when the lab sends to PostHog, and only an `https` address the lab gives is used, in a
+new tab. The Usage page names the lab's own English step "English for PostHog (the lab's own)":
+its cost is the lab's, never a turn's. A lab older than 1.2.0 shows "sends nothing to PostHog
+yet".
+
 **A turn** is one customer burst and everything the bot did about it. The bot waits on purpose
 (10 s to gather a burst, more before a booking draft), so a turn shows "Bot working" for a while
 after its answer; while one is open the page reads the chat again every 3 seconds, and stops
@@ -148,7 +160,9 @@ beyond the audit row per change.
 ## 4. Limits and what comes next
 
 - **A judge's score and a simulated customer** (step 3 of the plan). Side by side is built
-  (Compare, above), and the tester's own 👍 and 👎 are the score until then.
+  (Compare, above), and the tester's own 👍 and 👎 are the score until then. PostHog's checks
+  on every reply and its whole-chat review come next, set up in PostHog; lab 1.3.0 then reads
+  their verdicts back, and these pages show them on each reply.
 - **Client access**: the pages need the Server page's key, which also opens the server's
   terminal. Giving the client's staff the lab without the server needs its own route first.
 - **Voice notes**: the lab needs a Whisper member.
@@ -159,6 +173,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | The PostHog panel and links, from the code: `LabSetup.tsx` (`PostHogPanel`), `ReplyDetails.tsx`, `ChatInfo.tsx`, `LabUsage.tsx`, `postHogLink` and `ENGLISH_STEP` in `format.ts` (`test/whatsapp-lab-pages.test.ts`), the new-tab rule (`test/whatsapp-lab-look.test.ts`), and the lab's `status`, `chat` and `turn` fields in cf-vps `apps/whatsapp-lab/src/posthog.ts` and `lab.ts` (`cf-vps/test/lab/posthog.test.ts`) | The panel against the lab on the server (1.2.0 is not installed yet); a real send to PostHog |
 | 2026-11-05 | claude | The Test chat remake, from the code: `LabChat.tsx`, `ChatList.tsx`, `ChatThread.tsx`, `ChatInfo.tsx`, `ChatModels.tsx`, `Composer.tsx`, `useChat.ts`, the helpers in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), the look rules (`test/whatsapp-lab-look.test.ts`), the lab's new paths in cf-vps `apps/whatsapp-lab/src/admin.ts` and `lab.ts` (`cf-vps/test/lab/chats.test.ts`), and lab 1.1.0 on the server (its `status` and `chats` read back) | The page in a phone browser (the owner's phone test); a reset, copy, rating or Compare against the lab on the server |
 | 2026-11-05 | claude | The Every step row (`ChatModels.tsx`, `everyStep` and `oneModel` in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`); that a chat left as it is uses only Claude, read from the lab's `gateway.ts` and the server's log of the first test | A whole chat on Gemini against Google (no Gemini call has run yet) |
 | 2026-11-05 | claude | Written from the code: the three pages and their components, `ChatbotLayout.astro`, migration `0093`, the gateway's change path (`src/pages/dashboard/vps/app/[...path].ts`: notice, CSRF, audit) and cf-vps's bridge routes and lab paths (`contract/bridge.ts`, `apps/whatsapp-lab/src/admin.ts`, `store.ts`, `lab.ts`). `test/whatsapp-lab-pages.test.ts` and `test/whatsapp-lab-look.test.ts` pass | The pages in a phone browser against the lab on the server (the owner's phone test); the lab's `usage` read and the chat's `sums` need lab version 1.0.1 on the server |
