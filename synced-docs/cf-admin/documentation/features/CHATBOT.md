@@ -7,7 +7,7 @@ last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
 related_code: ["src/pages/api/chatbot/[...path].ts", src/lib/chatbot-proxy.ts, src/components/admin/chatbot/hooks/useChatbotApi.ts, src/lib/auth/routes.ts]
-related_docs: [AI-HEALTH.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
+related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, ai, proxy, models, analytics]
 ---
 
@@ -20,6 +20,8 @@ tags: [chatbot, ai, proxy, models, analytics]
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view: the proxy, the admin UI, and enough of the pipeline to operate it. `cf-chatbot` owns the pipeline itself; where the two disagree, the live `bot_config` row and the `cf-chatbot` repository win.
+>
+> **The WhatsApp lab** (since 2026-11-05) is the section's last tab and is not part of `cf-chatbot`: it tests the hotel's n8n WhatsApp bot on the server, and [WHATSAPP-LAB.md](WHATSAPP-LAB.md) owns it.
 
 ---
 
