@@ -66,8 +66,11 @@ legal action. The console's frame is not rendered until they choose **I agree**;
 writes one Audit Log row (§6) and, for an acceptance, keeps the notice's version
 in the session, so it lasts until the session ends. The words live in
 `src/lib/vps-notice.ts`; a change to them is a new version, which everyone
-accepts again. The gateway holds the console too (§2). Why each sentence says
-what it says, and the limits:
+accepts again. Since 2026-11-05 (version `2026-11-05`) the same words, from the
+same file, also stand in front of every Chatbot page, and one acceptance covers
+both; the text adds the owner's terms on the use of data and on liability. The
+gateway holds the console too (§2). Why each sentence says what it says, and the
+limits:
 [the notice's design](../specs/2026-10-11-server-access-notice.md).
 
 ## 2. The gateway contract
@@ -403,6 +406,7 @@ hourly); the owner and vendor support see it at once.
 | 2026-10-16 | claude | §4's `x-vps-target` sentence against `consoleTarget` (`src/lib/access-center/profile.ts`) and `cf-vps/src/gateway/target.ts` and `cf-vps/src/access/policy.ts` (`grantFor`); `test/access-center-api.test.ts` asserts the id is sent | Not re-checked: every other section |
 | 2026-10-16 | claude | §1's frame features against the iframe in `src/pages/dashboard/vps/[...section].astro` (pinned by `test/vps-page.test.ts`); §5 against the gateway's `UNAUDITED` (now with `socket`) and cf-vps's live terminal connection (`cf-vps/src/agent/proxy.ts`, `cf-vps/agent/src/server.ts`); the new case in `test/vps-gateway.test.ts` passes | §5 matches. Not re-checked: every other section; the live connection not yet seen on a phone |
 | 2026-10-11 | claude | §1's access notice paragraph, §2's Access notice row, §6's notice verbs and §8's two new rows, written with the code: `src/pages/dashboard/vps/[...section].astro`, the gateway, `src/pages/api/vps/notice.ts`, `src/lib/vps-notice-record.ts`; `test/vps-notice.test.ts`, `test/vps-gateway.test.ts` and `test/vps-page.test.ts` pass | Those parts match. Not re-checked: every other section; not yet seen on a phone |
+| 2026-11-05 | claude | §1's access notice paragraph against `src/lib/vps-notice.ts` (version `2026-11-05`) and `src/layouts/ChatbotLayout.astro` | The rest of the document; not seen in a browser |
 | 2026-10-12 | claude | §1's access notice paragraph against `src/lib/vps-notice.ts` and `src/components/admin/vps/ServerNotice.tsx` after the notice's rewrite (version `2026-10-12`) | Heading and owner card updated. Not re-checked: every other section |
 | 2026-10-08 | claude | §2's Time row against `endStreamCleanly` in `src/lib/vps-proxy.ts` (event streams only; a download still fails) and the cf-vps agent's stream intervals (`agent/src/main.ts`: a sample a second, a ping every 15 s); the new cases in `test/vps-proxy.test.ts` | The Time row matches. Not re-checked: every other section |
 | 2026-10-08 | claude | §6's paragraph on error answers against the gateway (`answered()`, the `vps.gateway.change_failed` report) and cf-vps's agent (`written()` and `actions/run` stamp `x-vps-audit` only on success); the new cases in `test/vps-gateway.test.ts` | §6 matches. Not re-checked: every other section |

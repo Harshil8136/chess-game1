@@ -23,6 +23,8 @@ tags: [chatbot, ai, proxy, models, analytics]
 >
 > **The WhatsApp lab** (since 2026-11-05) is the section's last tab and is not part of `cf-chatbot`: it tests the hotel's n8n WhatsApp bot on the server, and [WHATSAPP-LAB.md](WHATSAPP-LAB.md) owns it.
 >
+> **The server access notice** (since 2026-11-05, the owner's ask): every Chatbot page shows the Server page's access notice, the same words from `src/lib/vps-notice.ts`, until the sign-in has accepted it; one acceptance covers both places ([design §7](../specs/2026-10-11-server-access-notice.md)).
+>
 > **Being retired** (the owner's decision, 2026-11-05). The n8n WhatsApp bot on the server becomes the hotel's one chatbot, and `cf-chatbot` (charlar) will be removed in steps, each with the owner's yes; until then everything below still describes what runs. Charlar's knowledge base, prompts and settings are outdated and kept only as history in `cf-chatbot`'s `archive/` folder (commit `dc0aa48`): never a source for the n8n bot. Its conversations stay in the shared Supabase project, inside the nightly encrypted backup, until the delete step.
 
 ---
@@ -385,6 +387,7 @@ a low sample count as low confidence, not as absence.*
 | Date | Checked | Not checked |
 |---|---|---|
 | 2026-11-05 | §2's component rows against the code and against the live data (Supabase conversations, analytics functions and metric tables; D1 `chatbot-kb` knowledge base, prompts and model registry) and `cf-chatbot/src/admin/api.ts`, `cf-chatbot/src/storage/d1.ts`, `cf-chatbot/src/core/pipeline.ts` | §1 and §3 to §10 not re-read; `last_verified` left as it was; the pages were not opened in a browser (the owner's phone test) |
+| 2026-11-05 | The access notice note against `src/layouts/ChatbotLayout.astro` and `test/chatbot-look.test.ts` | The rest of the document; the pages in a browser (the owner's phone test) |
 | 2026-11-05 | The retirement note: `cf-chatbot` `archive/` (commit `dc0aa48`) against the live `chatbot-kb` (checksum over all 28 articles and 4 prompts equal); the nine chatbot tables are in the `public` schema the nightly backup exports (run of 2026-11-04, verdict ok, read from `backup_runs`) | The rest of the document; `last_verified` left as it was |
 | 2026-11-05 | §2's tab row and page bar rows again after the one-row change: `RegistryTabs.astro` (`expand`), `ChatbotLayout.astro`, `PageBar.tsx` (`SubNav` removed), `test/chatbot-look.test.ts` | The rest of the document; the row in a browser (the owner's phone test) |
 | 2026-11-05 | §2's tab row and page bar rows, against `ChatbotLayout.astro`, `RegistryTabs.astro`, `src/lib/auth/registry-tabs.ts`, `PageBar.tsx` and `test/chatbot-look.test.ts` | The rest of the document; the pages in a browser (the owner's phone test) |

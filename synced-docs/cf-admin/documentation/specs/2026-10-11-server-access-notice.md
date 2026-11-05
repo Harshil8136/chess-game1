@@ -2,10 +2,10 @@
 title: "Server access notice — design"
 status: active
 audience: [owner, ai, technical, operator, non-technical]
-last_verified: 2026-10-12
+last_verified: 2026-11-05
 verified_against: [code]
 owner: harshil
-related_code: [src/lib/vps-notice.ts, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, src/pages/dashboard/vps/[...section].astro, src/pages/dashboard/vps/app/[...path].ts, src/lib/auth/session.ts, src/lib/audit.ts, test/vps-notice.test.ts, test/vps-gateway.test.ts, test/vps-page.test.ts]
+related_code: [src/lib/vps-notice.ts, src/layouts/ChatbotLayout.astro, src/lib/vps-notice-record.ts, src/components/admin/vps/ServerNotice.tsx, src/pages/api/vps/notice.ts, src/pages/dashboard/vps/[...section].astro, src/pages/dashboard/vps/app/[...path].ts, src/lib/auth/session.ts, src/lib/audit.ts, test/vps-notice.test.ts, test/vps-gateway.test.ts, test/vps-page.test.ts]
 related_docs: [../features/VPS-CONSOLE.md, ../security/SECURITY.md, ../security/RoPA.md, ../architecture/plac-and-audit.md]
 tags: [vps, cf-vps, notice, consent, audit, legal]
 ---
@@ -146,9 +146,46 @@ record of the same session holds it.
 - **English only**, like the rest of the portal. A Spanish version is a new version of the text,
   if the owner wants one.
 
-## 7. Verification log
+## 7. The 2026-11-05 version: the Chatbot pages, data and liability
+
+The owner asked on 2026-11-05 for two changes, in his words: the Chatbot page must show "exact
+same thing here from same file and data so if I update 1 other is automatically updated", and
+the notice must say that the vendor, the developer and he hold no responsibility or
+accountability, may process, explore, delete and analyze data in every way, and that anyone who
+has programs on the server and does not agree should reach out.
+
+- **One file, two places.** `src/lib/vps-notice.ts` stays the only text. The Chatbot section's
+  layout (`src/layouts/ChatbotLayout.astro`) shows the same pop-up (`ServerNotice`, with
+  `place="chatbot"`, which changes only the panel behind it) in place of every Chatbot page until
+  the sign-in has accepted the current version. One acceptance per sign-in covers both places.
+- **Who may answer.** `POST /api/vps/notice` now also takes an answer from a person who may open
+  the Chatbot section (its key, explicit or inherited), not only from one with the Server page's
+  own key (`mayUseNotice` in `src/lib/vps-notice-record.ts`). Accepting from a Chatbot page opens
+  no console: the Server page and its gateway still ask `mayUseConsole`. The route table sends
+  `/api/vps/notice` to `/dashboard` so that the handler makes this check.
+- **The new words** (version `2026-11-05`, so everyone accepts again): the subtitle and the
+  introduction name the Chatbot pages and call the server the owner's personal system; three new
+  rules sit between "Unauthorized use" and "This answer is recorded":
+  - *Data here may be used in any way*: the owner, the vendor and the developer may process,
+    explore, analyze, copy, change or delete anything on the server, at any time and without
+    notice.
+  - *No responsibility and no liability*: offered as it is, with no warranty; to the fullest
+    extent the law allows, none of them is responsible, accountable or liable for anything on
+    it or anything that happens to it; use is at the person's own risk.
+  - *If you do not agree*: do not use it; a person with programs or data on it tells the owner
+    first, by email or through any portal administrator.
+  The consent line repeats that the person accepts the use of data and that no liability falls
+  on the owner, the vendor or the developer.
+- **The limit, said plainly to the owner.** A notice cannot remove every duty the law puts on
+  whoever runs a system: Mexico's personal data law (LFPDPPP) still applies to the hotel's
+  customers' messages, and courts in most places do not enforce a waiver of liability for gross
+  negligence or intent. "To the fullest extent the law allows" is there for that reason. The
+  owner was told to have a lawyer read the text once.
+
+## 8. Verification log
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
 | 2026-10-11 | claude | Written with the code. `test/vps-notice.test.ts` (the route, the record, the acceptance check, which requests are held, the text), `test/vps-gateway.test.ts` (frames and tabs held until acceptance, console calls not held), `test/vps-page.test.ts` (one frame, in the accepted branch; the pop-up's choices) | Matches the code. Not yet seen on a phone (owner step); the research in §2 is from secondary sources |
+| 2026-11-05 | claude | Version `2026-11-05` (§7) written with the code: `src/lib/vps-notice.ts`, `ServerNotice.tsx` (`place`, three new icons), `src/layouts/ChatbotLayout.astro`, `src/lib/vps-notice-record.ts` (`mayUseNotice`, `isChatbotPath`), `src/pages/api/vps/notice.ts`, `src/lib/auth/routes.ts`; `test/vps-notice.test.ts` and `test/chatbot-look.test.ts` pass | §1 to §5 still describe the Server page as before; not seen in a browser (the owner's phone test); not read by a lawyer |
 | 2026-10-12 | claude | Rewritten and redesigned with the code (version `2026-10-12`): `src/lib/vps-notice.ts`, `src/components/admin/vps/ServerNotice.tsx`, `src/styles/pages/vps.css`; `test/vps-notice.test.ts` (the words, the owner, the rule icons) and `test/vps-page.test.ts` (the consent line in the foot above both buttons, an icon for every rule) pass. §2's two new rows from secondary sources read the same day | §1, §2 and §3 match the code. Not seen in a browser: the owner checks it on his phone. Not re-checked: §5 and §6, whose code did not change |
