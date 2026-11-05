@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: ["src/pages/api/chatbot/[...path].ts", src/lib/chatbot-proxy.ts, src/components/admin/chatbot/hooks/useChatbotApi.ts, src/lib/auth/routes.ts]
+related_code: ["src/pages/api/chatbot/[...path].ts", src/lib/chatbot-proxy.ts, src/components/admin/chatbot/BotOverview.tsx, src/lib/posthog/bot.ts, src/pages/api/whatsapp-bot/insights.ts, src/components/admin/chatbot/hooks/useChatbotApi.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, ai, proxy, models, analytics]
 ---
@@ -26,6 +26,37 @@ tags: [chatbot, ai, proxy, models, analytics]
 > **The server access notice** (since 2026-11-05, the owner's ask): every Chatbot page shows the Server page's access notice, the same words from `src/lib/vps-notice.ts`, until the sign-in has accepted it; one acceptance covers both places ([design §7](../specs/2026-10-11-server-access-notice.md)).
 >
 > **Being retired** (the owner's decision, 2026-11-05). The n8n WhatsApp bot on the server becomes the hotel's one chatbot, and `cf-chatbot` (charlar) will be removed in steps, each with the owner's yes; until then everything below still describes what runs. Charlar's knowledge base, prompts and settings are outdated and kept only as history in `cf-chatbot`'s `archive/` folder (commit `dc0aa48`): never a source for the n8n bot. Its conversations stay in the shared Supabase project, inside the nightly encrypted backup, until the delete step.
+
+---
+
+## 0. The WhatsApp bot on n8n: the Overview
+
+*Since 2026-11-05, the owner's ask: the Chatbot section becomes the n8n WhatsApp bot's.* The
+section's front page (`/dashboard/chatbot/dashboard`, `BotOverview.tsx`) no longer shows
+charlar: it shows the WhatsApp bot that runs on the server, from two sources, each named on
+screen. It is the first part of the plan the owner approved on 2026-11-05 (one chatbot system on
+n8n); the full records (every chat, take-overs, switches, models and instructions) follow with
+the server's records helper.
+
+| Part | Source | What it shows |
+|------|--------|---------------|
+| Page bar | both below | Parts running on the server (x of y), this month's AI spend against the month's AI allowance, live replies in the window, the share of PostHog's yes/no checks that passed |
+| On the server | the server console's `apps` read through its gateway (`lab-api.ts` `serverApps`), the same read as the Server page's Apps screen | Each member of the groups `whatsapp` (the live bot: WAHA, n8n, Redis, Whisper, the model door) and `whatsapp-lab` (the lab): running or not, since when, restarts, memory. It needs the person's Server page access too; without it the panel says so and the rest of the page still shows |
+| Spend this month | PostHog, every `$ai_generation`'s `$ai_total_cost_usd` since the 1st, the hotel's time; the allowance from D1 | A meter against the month's AI allowance, coloured by the owner's brake as shares of it: emails at 60% and 80%, the free model from 90% (US$30, US$40 and US$45 of US$50) |
+| Live and lab | PostHog `$ai_generation` and `$ai_trace` in the window | Replies, chats, AI calls, failed calls, average call time and cost, split by source: an event with a `lab_chat` property is the lab's test, any other is the live bot's |
+| Quality checks | PostHog `$ai_evaluation` | Each check by name and source; a yes/no check as passed and failed (for "Promises a person" a `true` is the failure), a numeric check as its average, a categorical one as its categories |
+| By step, By model | `$ai_generation` | Calls, failures, average time and cost per step and per model |
+| By day, Busiest hours | `$ai_trace` | Replies per day and per hour of day, the hotel's time (America/Mexico_City) |
+| Errors | failed `$ai_generation` | The five most frequent error texts, with their count and when last seen |
+
+**The monthly AI allowance** (the owner, 2026-11-05): one limit in US dollars for everything that uses AI in a month (the bot, PostHog AI and the portal's AI), which the client sets each month. It is the `admin_portal_settings` row `ai_monthly_allowance_usd` (migration `0094`); with no row it is 5, and Vendor support set it at 50 on 2026-11-05. The page compares it with the AI spend PostHog was told about, which today is the bot's (lab) calls only; no screen changes it yet.
+
+The numbers come from `GET /api/whatsapp-bot/insights?days=7|30|90` (`src/lib/posthog/bot.ts`:
+nine fixed HogQL questions through the PostHog page's client, kept 10 minutes; the page's
+Refresh asks again). Numbers only, the owner's choice of 2026-11-05: no message text and no
+phone number is asked of PostHog or reaches the page. Until the live bot answers customers
+from the server (after move night) only the lab sends these events, so the live figures are 0
+and the page says every figure is from the lab's tests.
 
 ---
 
@@ -77,7 +108,7 @@ All chatbot admin panels are Preact islands co-located in `src/components/admin/
 | **ConversationsBrowser** | `ConversationsBrowser.tsx` | Channel/status filters (with Staff live, and `?channel=` / `?status=` from the address, read by the page on the server), a paginated inbox-style list, message-thread modal with per-message AI metadata, status / takeover / release-to-AI / send-message actions. Replies and take-over are offered on WhatsApp only, since cf-chatbot delivers a staff reply only there. *2026-09-14: this row claimed "cron session sweeping"; no such feature exists in cf-admin.* |
 | **PromptsEditor** | `PromptsEditor.tsx` | System prompt management; each prompt says when cf-chatbot reads it (`cf-chatbot/src/core/pipeline.ts`: complaint, then after hours, then booking, otherwise default) |
 | **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking; a column for every UTC day of the window, each a button whose day's figures show under the chart |
-| **ChatbotDashboard** | `ChatbotDashboard.tsx` | Overview page (`/dashboard/chatbot/dashboard`): a Right now band from `health`, `models` and `conversations?status=…&limit=1` (escalated, then staff_active), each figure a link to its page; then the window's figures from the bare `/api/chatbot/analytics`, the knowledge share as hits out of look-ups, a dash when nothing was recorded |
+| **BotOverview** | `BotOverview.tsx` | The Overview page (`/dashboard/chatbot/dashboard`) since 2026-11-05: the n8n WhatsApp bot, §0. It replaced `ChatbotDashboard.tsx`, charlar's overview (deleted), whose `/api/chatbot/analytics` read no page uses now |
 | **Shared pieces** | `parts.tsx` | The Refresh buttons (`RefreshIcon` for the page bar), the 7/30/90-day chips ("7d", announced "7 days"), a figure tile (a link with `href`), a panel and bar rows (`Head` retired 2026-11-05, when the last page moved onto the page bar); the empty, failed and loading states and the badge come from the Sessions console's parts |
 | **Page bar** | `PageBar.tsx` | The slim bar each page opens on (2026-11-05): a small hue icon, the name, one line cut to fit, the actions, an optional row of `Figure` pills. Every page opens on it since 2026-11-05; `parts.tsx` `Head` is retired. Its segmented row of sub-pages (`SubNav`) was removed the same evening, when the WhatsApp lab's pages joined the tab row |
 | **Tab row** | `src/components/navigation/RegistryTabs.astro` (`variant="line"`), in `src/layouts/ChatbotLayout.astro` | The section's tabs as one underlined row (since 2026-11-05, [frame design](../specs/2026-11-05-chatbot-section-frame.md)), a divider before WhatsApp lab setting the WhatsApp bot apart from the website's chatbot. Since the evening of 2026-11-05 the lab's own three pages (Test chat, Usage, Set-up) stand in this row after a small green "WhatsApp lab" caption (`expand`), so there is no second row of tabs ([frame design](../specs/2026-11-05-chatbot-section-frame.md) §7). Since 2026-10-10 its names, order and icons come from the page registry (`admin_pages`), as do each page's heading and tab title, and a tab shows only when the person may open that page (`src/lib/auth/registry-tabs.ts`). It replaced `ChatbotSubnav.tsx`, which kept its own list of eight names |
@@ -386,6 +417,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | §0 and §2's BotOverview row against `BotOverview.tsx`, `src/lib/posthog/bot.ts`, `src/pages/api/whatsapp-bot/insights.ts`, `lab-api.ts` and cf-vps `contract/views.ts` (`AppRow`); every HogQL question run live against the PostHog project (lab events only; the live bot sends none yet); `test/whatsapp-bot-overview.test.ts` and `test/chatbot-look.test.ts` pass | §1 and §3 to §10; `last_verified` left as it was; the page in a browser (the owner's phone test) |
 | 2026-11-05 | §2's component rows against the code and against the live data (Supabase conversations, analytics functions and metric tables; D1 `chatbot-kb` knowledge base, prompts and model registry) and `cf-chatbot/src/admin/api.ts`, `cf-chatbot/src/storage/d1.ts`, `cf-chatbot/src/core/pipeline.ts` | §1 and §3 to §10 not re-read; `last_verified` left as it was; the pages were not opened in a browser (the owner's phone test) |
 | 2026-11-05 | The access notice note against `src/layouts/ChatbotLayout.astro` and `test/chatbot-look.test.ts` | The rest of the document; the pages in a browser (the owner's phone test) |
 | 2026-11-05 | The retirement note: `cf-chatbot` `archive/` (commit `dc0aa48`) against the live `chatbot-kb` (checksum over all 28 articles and 4 prompts equal); the nine chatbot tables are in the `public` schema the nightly backup exports (run of 2026-11-04, verdict ok, read from `backup_runs`) | The rest of the document; `last_verified` left as it was |
