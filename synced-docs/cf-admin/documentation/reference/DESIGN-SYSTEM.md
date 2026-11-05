@@ -333,7 +333,7 @@ src/styles/
 │   └── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
 │                          (the old `chatbot/` folder of nine stylesheets was deleted 2026-11-04: the Chatbot pages are on the kit)
 └── pages/                  ← Page-level overrides
-    ├── chatbot.css  ← the Chatbot section's `cb-` pieces on the kit: hue `chat`, bar rows, the daily token chart, the conversation thread, prompt previews, the form grid, the save bar (2026-11-04)
+    ├── chatbot.css  ← the Chatbot section's frame (`ch-`: hues `chat` and `whatsapp`, the page bar, figures, segmented sub-pages; 2026-11-05) and its `cb-` pieces on the kit: bar rows, the daily token chart, the conversation thread, prompt previews, the form grid, the save bar (2026-11-04)
     ├── audit.css, cron.css  (diagnostics.css was removed 2026-10-17 with Diagnostics)
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
     ├── health.css  ← System health's own look on the kit's frame: hue `pulse`, monitor band, pulse line, triage board (2026-10-17)
@@ -848,6 +848,15 @@ piece for: bar rows (`cb-bar`), a daily token chart (`cb-days`), the conversatio
 (`cb-savebar`), on theme tokens only (`test/chatbot-look.test.ts`). The change record is
 `2026-11-04-chatbot-section-look.md` (private).
 
+Since 2026-11-05 the section's frame is its own ([design](../specs/2026-11-05-chatbot-section-frame.md)):
+the layout takes `hue` (`chat`, or `whatsapp` for the WhatsApp lab, WhatsApp's green: the
+emerald leaning to cyan) and `fill` (a page that is one app window grows to the screen's height);
+the tab row is `RegistryTabs variant="line"`, one underlined row with a divider before the
+WhatsApp lab (`groupStart`); and each page opens on `PageBar`
+(`src/components/admin/chatbot/PageBar.tsx`: `ch-bar`, a row of `Figure` pills `ch-fig`, and
+`SubNav` `ch-seg`, a segmented row for a page's own sub-pages). `--ck-on-hue` is the colour on a
+solid hue fill. `RegistryTabs`' default stays the pill row everywhere else.
+
 `ck-search` and `ck-rename` work in a row and in a column alike: their 16rem flex basis
 applies only inside `ck-toolbar` and `ck-item`, because in a column (`ck-group`, a pop-up's
 body) a basis is a height, and it made a tall empty box around the field
@@ -868,6 +877,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | §9.9's Chatbot paragraph (the frame: `hue`, `fill`, the line tab row, `PageBar`, `Figure`, `SubNav`), against `ChatbotLayout.astro`, `RegistryTabs.astro`, `PageBar.tsx`, `src/styles/pages/chatbot.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-04 | §3's `pages/chatbot.css` line and the removed `components/chatbot/` folder, §4's badge-token usage note, §9.9's Chatbot paragraph, against `src/layouts/ChatbotLayout.astro`, `src/styles/pages/chatbot.css`, `src/components/admin/chatbot/` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-03 | §1's tracked-debt counts re-measured (626 `style={` lines in 76 files, the ratchet's A6; 251 raw-hex lines in 45 component files) and the `window.location.reload()` sites re-listed (5: `TopBar.tsx` and `ConfigEditor.tsx` no longer have one, `RequestAccess.tsx` does); §5's sidebar colour source corrected (`SECTION_ACCENT` is gone; `--nav-hue-*` and `[data-nav-hue]` in `shell.css`); every other component name the document gives exists (`ActivityCenter.tsx`, `ApiAccessView.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx`, the sessions panels), and `useFocusTrap` still does not | Every token value, size and colour against the stylesheets; the pages in a browser |
 | 2026-11-03 | §6.5 (new) against `src/styles/components/skeleton.css`, `src/styles/global.css`, the placeholders in `posthog/frame.tsx`, `sentry/frame.tsx`, `Analytics.tsx` and `Overview.tsx`, and `test/loading-screens-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |

@@ -69,6 +69,10 @@ same question.
 | Quick messages are a sideways row of chips that fill the box, not send | The tester can still edit; the most common first questions in the customers' Spanish, never a payment claim | Sending on press (one slip sends) |
 | Export as text or JSON is made in the browser | No route and no storage in the portal; the JSON is exactly the lab's answer | A server export (a new route for a one-off) |
 
+Later the same day the header decision (the first row above) was replaced by the section's new
+frame ([design](2026-11-05-chatbot-section-frame.md)): the lab's three pages are a segmented row
+in the page's own bar, and the second tab row is gone.
+
 Kept as they were: the reply details drawer, the photo shrinking, the reactions of the hotel's
 phone, the 3-second reading while a turn is open, and every call through the server console's
 gateway (`lab-api.ts`, no route of the portal's own).

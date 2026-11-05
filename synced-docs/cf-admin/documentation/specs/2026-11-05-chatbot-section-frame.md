@@ -1,0 +1,94 @@
+---
+title: "The Chatbot section's frame, remade — design"
+status: active
+audience: [owner, ai, technical]
+last_verified: 2026-11-05
+verified_against: [code]
+owner: harshil
+related_code:
+- src/layouts/ChatbotLayout.astro
+- src/components/navigation/RegistryTabs.astro
+- src/lib/auth/registry-tabs.ts
+- src/components/admin/chatbot/PageBar.tsx
+- src/styles/pages/chatbot.css
+- src/pages/dashboard/chatbot/whatsapp/index.astro
+related_docs:
+- ../features/CHATBOT.md
+- ../features/WHATSAPP-LAB.md
+- ../reference/DESIGN-SYSTEM.md
+- 2026-11-05-whatsapp-lab-test-chat.md
+- ../records/reports/2026-10-24-sessions-page-redesign.md
+tags: [design, chatbot, whatsapp, navigation, ui]
+---
+
+# The Chatbot section's frame, remade — design
+
+> **TL;DR (non-technical):** The owner asked for a complete makeover of the Chatbot section,
+> starting with its row of tabs ("it needs complete makeover … especially /whatsapp"). The tabs
+> are now one clean underlined row across the page, split in two: the website's chatbot on the
+> left and the WhatsApp bot's lab on the right. Each page then opens on one slim bar (its name,
+> a line on what it shows, its buttons, and a row of small figures) instead of a large heading.
+> The WhatsApp lab pages are in WhatsApp's own green. This page is the design both threads
+> working on the section build on.
+
+## 1. The problem
+
+The section's tabs were a pill row floating in the middle of the page: nine tabs in one
+rounded track, with a wide empty band above it. Two different bots shared it without a sign
+of which was which (the website's assistant, "charlar", and the hotel's WhatsApp bot's test
+lab). Each page then opened on a large head (a 2.75rem icon, a title in a gradient, a
+subtitle), and the WhatsApp lab added a second row of tabs under the first. On a phone the
+header took about a quarter of the screen before the page began, the problem the owner
+already had fixed on the Sessions page (2026-10-24).
+
+## 2. What we looked at
+
+- **The Sessions page** (the owner's approved pattern, record (private)):
+  one slim bar with a small hue icon, the name, an icon-only Refresh, and a sideways row of
+  small figures that each open their list.
+- **Product navigation in tools people use daily** (GitHub's repository tabs, Vercel's
+  project tabs, Linear): a full-width row of underlined tabs over one hairline, left-aligned,
+  the current tab marked by a short bar and stronger text, never a floating track.
+- **Segmented controls** (iOS, macOS): two or three choices of the same thing side by side, the
+  chosen one raised; the right shape for a page's own two or three sub-pages.
+
+## 3. Decisions
+
+| Decision | Why | Rejected |
+|---|---|---|
+| The section's tabs are one underlined row (`RegistryTabs variant="line"`), full width and left-aligned, the tab on screen marked by a 2px bar in the page's hue | Reads as the section's navigation, not a toolbar; takes no more height than the pill row | The pill row (floats, reads as a toolbar); a drop-down (hides the choices) |
+| A short divider before WhatsApp lab (`groupStart`) | Two bots in one section: the website's chatbot, then the WhatsApp bot | A second row for the WhatsApp bot (another band); a group label (more text than the divider says) |
+| Each page opens on `PageBar`: a small hue icon, the name, one line cut to fit (hidden on a phone), the actions on the right, an optional row of `Figure` pills under it | The Sessions bar, which the owner approved; one h1 per page is kept | The old head (`parts.tsx` `Head`), which with chips and tiles took a quarter of a phone screen |
+| On a wide screen with no line of text, the figures sit between the name and the actions | One row instead of two where there is room | Always two rows |
+| A page with sub-pages of its own (the WhatsApp lab) puts them in its bar as a segmented row (`SubNav`), the name kept for screen readers | The lab's three pages and its buttons share one line; the second tab row is gone | The underlined second row (2026-11-05 morning): a third band |
+| The sub-pages come from the server (`src/lib/auth/registry-tabs.ts`), the same rule `RegistryTabs` uses | One rule for which tabs a person sees, whether Astro or an island draws them | A list kept in the island (it would show a page the person may not open) |
+| The lab's hue is WhatsApp's green (`data-hue="whatsapp"`: the emerald leaning to cyan), the website's chatbot keeps cyan | The lab is the WhatsApp bot; green bubbles and buttons say so at a glance, and it is not the plain green of a good state | One hue for both bots |
+| A page that is one app window (`ChatbotLayout fill`) grows to the screen's height; that frame is a size container | The Test chat fills the screen on any device without a height worked out by hand | `100dvh` minus a guessed number of rem (wrong as soon as a band changes) |
+| The empty band above the tabs is gone (`.ch-frame` has no top padding of its own) | The page's own padding is enough; the band was the frame's padding on top of it | — |
+
+## 4. The pieces
+
+| Piece | Where | Use |
+|---|---|---|
+| `ChatbotLayout` | `src/layouts/ChatbotLayout.astro` | `hue` (`chat`, `whatsapp`), `fill` |
+| Section tabs | `RegistryTabs.astro`, `variant="line"`, `groupStart` | Drawn by the layout; nothing for a page to do |
+| `PageBar` | `src/components/admin/chatbot/PageBar.tsx` | `title` (always), `icon`, `sub`, `actions`, `figures`, or `nav` in place of icon, name and line |
+| `Figure` | the same file | `icon`, `value` (null reads as a dash), `label`, `tone`, `onClick` to open what it counts |
+| `SubNav` | the same file | `tabs` from `registryTabs(Astro, parent, overview)` in the page's `.astro` file |
+| Styles | `src/styles/pages/chatbot.css`, top block | `.ch-frame`, `.ch-bar*`, `.ch-figs`, `.ch-fig`, `.ch-seg*`, `.ch-icon-btn`, the hues and `--ck-on-hue` |
+
+Tones on a figure: `hue` for what the page is about, `good`, `warn`, `bad`, `info` for a state
+(always with its icon and word), `muted` for a count with no judgement.
+
+## 5. The look
+
+Theme tokens only, so the light and the dark theme both work (`test/chatbot-look.test.ts`).
+Touch targets are at least 2.5rem on a touch screen. The tab row and the figures scroll sideways
+on a phone, every option in view, never a drop-down; the tab on screen is brought into view when
+a page opens (`NativeNavigationState.astro`).
+
+## 6. Who builds what
+
+The frame, the bar and the WhatsApp lab's pages: the "Build and test the WhatsApp bot lab"
+thread. The eight pages of the website's chatbot move onto `PageBar` in the "Redesign the
+Chatbot section" thread, which retires `parts.tsx` `Head` once no page uses it.

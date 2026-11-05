@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-11-05
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/chatbot/whatsapp/, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
+related_code: [src/components/admin/chatbot/whatsapp/, src/components/admin/chatbot/PageBar.tsx, src/lib/auth/registry-tabs.ts, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
 related_docs: [CHATBOT.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md]
 tags: [chatbot, whatsapp, lab, testing, models, n8n]
 ---
@@ -26,7 +26,8 @@ repository; where the two disagree, the cf-vps code wins.
 
 ## 1. The pages
 
-**Chatbot → WhatsApp lab**, the last tab of the Chatbot section, has a row of its own:
+**Chatbot → WhatsApp lab**, the last tab of the Chatbot section, set apart from the website
+chatbot's tabs by a short divider and shown in WhatsApp's green, has three pages:
 
 | Tab | Page | What it shows |
 |---|---|---|
@@ -34,13 +35,15 @@ repository; where the two disagree, the cf-vps code wins.
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens; the comparison **by model** and **by step and model** (calls, failures, average time, average tokens read and written, cost, cost per call); the last 100 turns, each with Details |
 | Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys set or not), the PostHog panel (below), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with its sources, and the last 50 changes made in the lab and by whom |
 
-Usage and Set-up open on one slim line under the tabs, not a page head (2026-11-05): what the
-page shows, cut to one line, and Refresh on the right (`PageBar.tsx`).
+Each opens on the section's slim page bar (2026-11-05, [frame design](../specs/2026-11-05-chatbot-section-frame.md)):
+the three pages as one segmented row, which the server hands over with only the pages the
+person may open (`src/lib/auth/registry-tabs.ts`), and the page's buttons on the right
+(`src/components/admin/chatbot/PageBar.tsx`). There is no second row of tabs.
 
 ### The Test chat
 
-The page has no head of its own: the Chatbot section's tabs and the lab's slim underlined row
-(Test chat, Usage, Set-up) are the whole header, and the chat starts under them. On a computer
+The page has no head of its own: the Chatbot section's tabs and the lab's bar are the whole
+header, and the chat starts under them. On a computer
 the page is three columns: the chats, the chat, and the chat's info (from 84rem wide; narrower,
 the info opens from the chat's top bar). On a phone the list and the chat are two screens, as in
 WhatsApp: a press on a chat opens it, the arrow goes back, and a press on the chat's name opens
@@ -176,6 +179,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | The section's new frame (Harshil's "complete makeover" ask): the three pages' bar is the shared `PageBar` with the lab's pages as a segmented row (`SubNav`) handed over by the server (`registryTabs`), the pages in WhatsApp's green (`hue="whatsapp"`), the Test chat filling the screen (`fill`); the old `whatsapp/PageBar.tsx` and the second tab row are gone. Checked by `test/whatsapp-lab-look.test.ts`, `test/chatbot-look.test.ts` and `test/whatsapp-lab-ssr.test.ts` (each page renders in workerd with three tabs and the right one marked) | The pages in a phone browser (the owner's phone test) |
 | 2026-11-05 | claude | Usage and Set-up's page head replaced by one slim line (`PageBar.tsx`, `.wl-pagebar` in `chatbot.css`), checked by `test/whatsapp-lab-look.test.ts` (no `<Head`, a screen-reader `<h1>`, the one-line rule) and `test/whatsapp-lab-ssr.test.ts` (both still render in workerd) | Both pages in a phone browser (the owner's phone test) |
 | 2026-11-05 | claude | The Test chat page answered 500 since the remake (Sentry CF-ADMIN-2V, `location is not defined`): `LabChat.tsx` read `?chat=` while rendering, and the Worker renders the page first, where there is no `location`. It now starts on the list and reads `?chat=` in an effect. `test/whatsapp-lab-ssr.test.ts` renders all three pages inside workerd: it failed with the same error before the fix and passes after | The page in a phone browser after the deploy (the owner's phone test) |
 | 2026-11-05 | claude | The PostHog panel and links, from the code: `LabSetup.tsx` (`PostHogPanel`), `ReplyDetails.tsx`, `ChatInfo.tsx`, `LabUsage.tsx`, `postHogLink` and `ENGLISH_STEP` in `format.ts` (`test/whatsapp-lab-pages.test.ts`), the new-tab rule (`test/whatsapp-lab-look.test.ts`), and the lab's `status`, `chat` and `turn` fields in cf-vps `apps/whatsapp-lab/src/posthog.ts` and `lab.ts` (`cf-vps/test/lab/posthog.test.ts`) | The panel against the lab on the server (1.2.0 is not installed yet); a real send to PostHog |
