@@ -34,6 +34,9 @@ repository; where the two disagree, the cf-vps code wins.
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens; the comparison **by model** and **by step and model** (calls, failures, average time, average tokens read and written, cost, cost per call); the last 100 turns, each with Details |
 | Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys set or not), the PostHog panel (below), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with its sources, and the last 50 changes made in the lab and by whom |
 
+Usage and Set-up open on one slim line under the tabs, not a page head (2026-11-05): what the
+page shows, cut to one line, and Refresh on the right (`PageBar.tsx`).
+
 ### The Test chat
 
 The page has no head of its own: the Chatbot section's tabs and the lab's slim underlined row
@@ -173,6 +176,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | Usage and Set-up's page head replaced by one slim line (`PageBar.tsx`, `.wl-pagebar` in `chatbot.css`), checked by `test/whatsapp-lab-look.test.ts` (no `<Head`, a screen-reader `<h1>`, the one-line rule) and `test/whatsapp-lab-ssr.test.ts` (both still render in workerd) | Both pages in a phone browser (the owner's phone test) |
 | 2026-11-05 | claude | The Test chat page answered 500 since the remake (Sentry CF-ADMIN-2V, `location is not defined`): `LabChat.tsx` read `?chat=` while rendering, and the Worker renders the page first, where there is no `location`. It now starts on the list and reads `?chat=` in an effect. `test/whatsapp-lab-ssr.test.ts` renders all three pages inside workerd: it failed with the same error before the fix and passes after | The page in a phone browser after the deploy (the owner's phone test) |
 | 2026-11-05 | claude | The PostHog panel and links, from the code: `LabSetup.tsx` (`PostHogPanel`), `ReplyDetails.tsx`, `ChatInfo.tsx`, `LabUsage.tsx`, `postHogLink` and `ENGLISH_STEP` in `format.ts` (`test/whatsapp-lab-pages.test.ts`), the new-tab rule (`test/whatsapp-lab-look.test.ts`), and the lab's `status`, `chat` and `turn` fields in cf-vps `apps/whatsapp-lab/src/posthog.ts` and `lab.ts` (`cf-vps/test/lab/posthog.test.ts`) | The panel against the lab on the server (1.2.0 is not installed yet); a real send to PostHog |
 | 2026-11-05 | claude | The Test chat remake, from the code: `LabChat.tsx`, `ChatList.tsx`, `ChatThread.tsx`, `ChatInfo.tsx`, `ChatModels.tsx`, `Composer.tsx`, `useChat.ts`, the helpers in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), the look rules (`test/whatsapp-lab-look.test.ts`), the lab's new paths in cf-vps `apps/whatsapp-lab/src/admin.ts` and `lab.ts` (`cf-vps/test/lab/chats.test.ts`), and lab 1.1.0 on the server (its `status` and `chats` read back) | The page in a phone browser (the owner's phone test); a reset, copy, rating or Compare against the lab on the server |
