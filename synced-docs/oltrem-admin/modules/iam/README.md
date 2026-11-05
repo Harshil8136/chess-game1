@@ -341,7 +341,7 @@ is made only when the Worker has none.
 
 | Kind | Id | What it does |
 |---|---|---|
-| Job, every 5 minutes | `iam.door` | `door.sync`: works out who is wanted (two D1 reads), and calls Cloudflare only when that list, the account or the Worker changed, an hour has passed since it last matched, or a failure is due another try (15 minutes; an hour when a person must act). The outcome is one KV key, `iam:door`. |
+| Job, every 5 minutes | `iam.door` | `door.sync`: works out who is wanted (two D1 reads), and calls Cloudflare only when that list, the key, the account or the Worker changed, an hour has passed since it last matched, or a failure is due another try (15 minutes; an hour when a person must act). The outcome is one KV key, `iam:door`. A key Cloudflare does not know at all (400 "Authentication failed", code 9106, and the like) is `bad-key`, apart from a known key that lacks a permission (`no-access-permission`); a new key changes the hash, so the next tick uses it. |
 | Hook | `POST /hooks/iam/door` | The same sync, at once; answers 204 and nothing else, since anyone may post there. The deploy calls it, then reads the outcome from `iam:door` with `wrangler kv key get`. |
 | Health check, lane `access` | `iam.door` | `ok` with how many may sign in; `warn` while a piece the deploy gives is missing; `fail` with `DOOR_ADVICE` and Cloudflare's answer when it refused. |
 
