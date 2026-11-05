@@ -64,7 +64,7 @@ tags: [compliance, owasp, asvs, self-attestation]
 | 1.1.3 | User stories capture security features | 🟡 | Feature docs in `documentation/features/` capture RBAC + audit expectations. |
 | 1.1.4 | High-level architecture defined | ✅ | `documentation/architecture/ARCHITECTURE.md`, `documentation/architecture/plac-and-audit.md`. |
 | 1.2.1 | Unique low-privilege service accounts | ✅ | `SUPABASE_SERVICE_ROLE_KEY` used only in cf-admin; `anon` role revoked from all tables (RULESAd §9.1). |
-| 1.2.2 | Auth between services | ✅ | Service bindings (`CHATBOT_SERVICE`, `ASTRO_SERVICE`) via Cloudflare Service Bindings — private, not exposed. Since 2026-11-04 the chatbot's admin API answers only on its private `AdminApi` entrypoint, which only the `CHATBOT_SERVICE` binding can reach: no shared key, nothing on its public domain ([CHATBOT](../../features/CHATBOT.md) §1). |
+| 1.2.2 | Auth between services | ✅ | Service bindings (`ASTRO_SERVICE`, `BACKUP`, `VPS`, `EMAIL_CONSOLE`) via Cloudflare Service Bindings — private, not exposed. The chatbot's `CHATBOT_SERVICE` binding left with charlar on 2026-11-05 ([CHATBOT](../../features/CHATBOT.md) §1). |
 | 1.2.3 | Central authenticated auth mechanism | ✅ | Cloudflare Zero Trust JWT + `src/middleware.ts` centralized bootstrap. |
 | 1.2.4 | Clear communication paths between components | ✅ | `documentation/architecture/ARCHITECTURE.md`. |
 | 1.4.1–1.4.5 | Access control architecture | ✅ | PLAC in `src/lib/auth/plac.ts` + `admin_pages` D1 table + `admin_page_overrides`; RBAC in `src/lib/auth/rbac.ts`. |
@@ -288,6 +288,7 @@ Residual partials are documented and tracked in `MAINTENANCE.md`.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | Row 1.2.2 against `wrangler.toml`'s `[[services]]` (four bindings, no `CHATBOT_SERVICE`) | The rest of the sheet |
 | 2026-11-03 | Every file, path and symbol the sheet cites resolves (a scripted check of each backticked name); rows 3.2.1–3.3.4 against `src/lib/auth/session.ts` (`createSession`, `crypto.randomUUID`, `httpOnly`, `sameSite: 'strict'`, `needsRoleRecheck`), 7.1.1 and 14.3.1 (`sendDefaultPii: false` in both Sentry configs, no `X-Powered-By`), 8.2.1 (`SessionWatchdog.tsx` and every `sessionStorage` use in `src/`), 10.1.1 and 14.1.2 (`npm audit --omit=dev`, `python3 scripts/audit_gate.py`), 10.3.1 (`scripts/secret_scan.py` in `scripts/lib/verify-runner.mjs`) | Four rows corrected: 8.2.1 (one `sessionStorage` entry since 2026-11-03), 10.1.1 and 14.1.2 (no exceptions, and where the gate runs since CI left the push), 10.3.1 (the secret scan before every push); statuses and the TL;DR's counts unchanged. Not re-derived: the other rows' statuses, which were last re-derived on 2026-09-19 |
 | 2026-10-30 | Row 5.2.6: the SEC-08 `exempt` list in `scripts/rules_check.py` (two files; `TiptapRichEditor.tsx` removed); no `dangerouslySetInnerHTML` in `src/components/dashboard/content/` | Every other row |
 | 2026-10-17 | Row 1.1.1: `ls .github/workflows/` (three workflows; `backups.yml` deleted 2026-09-27) | Every other row |

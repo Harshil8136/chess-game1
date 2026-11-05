@@ -151,8 +151,8 @@ none is not proof of "never". Where a secret is set or replaced is in
 
 How long the portal's private connections (service bindings) to our other Workers took to answer
 over the last 7 days, from the results System health already stores for the checks that use one:
-those given the private time limit in `src/lib/health/catalog.ts` (Website, Chat assistant, Email
-service and Server's site checks today). For each: how many answers were timed, the usual (middle)
+those given the private time limit in `src/lib/health/catalog.ts` (Website, Email service and
+Server's site checks today; Chat assistant until it was removed with charlar on 2026-11-05). For each: how many answers were timed, the usual (middle)
 and slow (95th of 100) answer, the slowest, the stalls (5 seconds or more) and the runs not
 passing; then the stalls by hour of the day (UTC) and the ten slowest answers. It is the question
 of MAINTENANCE SH-10 ([`SYSTEM-HEALTH.md`](SYSTEM-HEALTH.md) §3). One batch of indexed reads, no
@@ -178,6 +178,7 @@ Tracked in `MAINTENANCE.md` (private), "Developer Tools follow-ups".
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | §8's list of checks that use a private connection, after the chat assistant's check left with charlar: `PRIVATE_CHECKS` and `test/devtools-wave2.test.ts` | The rest of the page |
 | 2026-10-31 | §1 and §5 after the makeover: the seven pages under `src/pages/dashboard/debug/` (all but `pages.astro`), `ToolHead.astro`, `ToolTile.astro`, `ToolRow.astro`, `HandoffCopy.tsx` and `devtools.css`; `npm run build` builds them; the data each page reads is unchanged | The pages in a phone browser (the owner's test) |
 | 2026-10-31 | Wave 2 (§1, §6 to §10) with its code: the three pages, `src/lib/devtools/deploys.ts`, `keys.ts`, `links.ts`, `cloudflare.ts` and `readCheckLatencies`; `test/devtools-wave2.test.ts` and `test/devtools-keys.test.ts` pass; migration `0092` applied and its three rows and ledger row (id 128) read back through the D1 connector; the eight Workers' names and the private checks' recent timings read live | The pages in a phone browser; the Cloudflare token's permissions (its value cannot be read from here) |
 | 2026-10-31 | Written with the code: the pages, `denyDebug`, the route and `src/lib/devtools/`; `test/devtools.test.ts` (20) and `test/devtools-docs-plugin.test.ts` (3) pass; `npm run build` builds the pages; migration `0091` applied and its four rows and ledger row read back through the D1 connector | The pages in a phone browser (the owner's test) |

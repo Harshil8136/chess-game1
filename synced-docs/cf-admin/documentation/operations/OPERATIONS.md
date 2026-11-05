@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-11-05 | `ls migrations/*.sql` (73 files, highest `0095`), `d1_migrations` newest rows through the Cloudflare D1 connector after `0093`, `0094` and `0095` were applied (ids 129 to 131); §1's service bindings against `wrangler.toml` and the regenerated `worker-configuration.d.ts` (`CHATBOT_SERVICE` removed); §5's chatbot secrets row | §7's state line, §1's binding table and the secrets row. No binding, secret, variable or cron added. Not checked: whether the two old chatbot secrets are still set (the portal's secrets cannot be read from here) |
 | 2026-10-31 | `ls migrations/*.sql` (70 files, highest `0092`), `d1_migrations` newest rows through the Cloudflare D1 connector after `0091` and `0092` were applied (ids 127 and 128); §5's `CLOUDFLARE_API_TOKEN` row against `src/lib/devtools/cloudflare.ts` | §7's state line and the token row. No binding, secret, variable or cron added. Not checked: the token's live permissions (the portal's secrets cannot be read from here) |
 | 2026-10-30 | `ls migrations/*.sql` (68 files, highest `0090`), `d1_migrations` newest row through the Cloudflare D1 connector after `0090` was applied | §7's state line. No binding, secret, variable or cron added (the Sunday asset clean-up keeps its schedule; it now reads more tables). Nothing else re-checked; `last_verified` left as it was |
 | 2026-10-29 | `ls migrations/*.sql` (67 files, highest `0089`), `d1_migrations` newest row through the Cloudflare D1 connector after `0089` was applied; §5's `CLOUDFLARE_API_TOKEN` and `SENTRY_AUTH_TOKEN` rows against `src/lib/sentry/threats.ts` and `issues.ts` | §7's state line (it still named `0087` after `0088`); §5 names the Sentry page's Threats and notes. No binding, secret or variable added. Nothing else re-checked; `last_verified` left as it was |
@@ -161,9 +162,10 @@ consumes (`max_retries = 1`). Provisioned 2026-06-10 — see
 
 ### Service Bindings
 
+`CHATBOT_SERVICE` (cf-chatbot's `AdminApi` entrypoint) left `wrangler.toml` on 2026-11-05 with charlar's proxy, pages and health check ([CHATBOT](../features/CHATBOT.md) §1).
+
 | Binding | Target Worker | Purpose |
 |---------|---------------|---------|
-| `CHATBOT_SERVICE` | `cf-chatbot` (entrypoint `AdminApi`) | The chatbot's admin API, which since 2026-11-04 answers only on this private entrypoint: the binding is the credential, with no key or header, and cf-chatbot's public domain answers only `/health` and the WhatsApp webhook ([Chatbot](../features/CHATBOT.md) §1). Used by the Chatbot section's proxy and System health's *Website chat assistant* check. **Deploy cf-chatbot first** — the entrypoint must exist before this binding calls it |
 | `ASTRO_SERVICE` | `cf-astro` | Worker-to-Worker calls to the public site (ISR revalidation, booking outbox drain poke, edge sync probes, and since 2026-10-07 the `heartbeat-watchdog` job's fallback heartbeat run and outbox drains; System health's website checks: its health report, and since 2026-10-17 the home and booking pages in both languages) |
 | `BACKUP` | `cf-backup` | The private backup Worker (no route, no `workers.dev`): the `/dashboard/backup/app/` gateway and the `backup-tick` job. **Deploy cf-backup first** — a deploy that binds a Worker that does not exist fails |
 | `VPS` | `cf-vps` | The private server-console Worker (no route, no `workers.dev`): the `/dashboard/vps/app/` gateway, including the browser terminal's WebSocket ([VPS Console](../features/VPS-CONSOLE.md)). **Deploy cf-vps first** — a deploy that binds a Worker that does not exist fails |
@@ -597,7 +599,7 @@ All secrets are set with `wrangler secret put <KEY>`; vars live in `wrangler.tom
 | `BREVO_API_KEY` | Brevo transactional email (primary provider) |
 | `BREVO_WEBHOOK_SECRET` | Authenticates Brevo delivery webhooks (`/api/emails/webhook`) |
 | `RESEND_API_KEY` | Resend — System health's *Resend* check only (`resend` in `src/lib/health/catalog.ts`, since 2026-10-17; the diagnostics ping `resend_ping` before it was removed). Re-sent invitations go through `EMAIL_QUEUE` since 2026-10-10 (`src/pages/api/users/resend-invite.ts`) |
-| `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | **No reader in `src/` since 2026-11-04**: the chatbot proxy and its health check reach cf-chatbot over the `CHATBOT_SERVICE` entrypoint binding alone (§1), and both left `[secrets] required`. Still set on the Worker until the owner deletes them with `wrangler secret delete` (MAINTENANCE (private) CB-1); until then they are 2 of the entries RULE #0.8 counts |
+| `CHATBOT_WORKER_URL` / `CHATBOT_ADMIN_API_KEY` | **No reader in `src/` since 2026-11-04**, when the chatbot proxy moved to the `CHATBOT_SERVICE` binding alone, and both left `[secrets] required`; the proxy and the binding left on 2026-11-05. Still set on the Worker until the owner deletes them with `wrangler secret delete` (MAINTENANCE (private) CB-1); until then they are 2 of the entries RULE #0.8 counts |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG_SLUG` / `SENTRY_PROJECT_SLUG` | Sentry API for dashboard metrics, the control plane until it was retired on 2026-10-28, the unresolved issues on System health → Logs, since 2026-10-26 the Analytics page's Reliability part (errors per day and open issues, [`ANALYTICS.md`](../features/ANALYTICS.md) §4) and, since 2026-10-28, the Sentry page (its Overview, Issues, Logs, Speed, Trends, Monitors and alerts, Releases and updates, Threats and Settings; resolving, archiving or adding a note to an issue needs the token's `event:write`, this month's use and the updates Sentry suggests `org:read`, the releases `project:read`, the Settings part's filters and key limits `project:write`, the monitors and alerts `alerts:read` and switching them `alerts:write`, [`SENTRY.md`](../features/SENTRY.md) §2) (build-time source-map upload uses the same token) |
 | `POSTHOG_PERSONAL_API_KEY` / `PUBLIC_POSTHOG_PROJECT_ID` | PostHog control-plane reads until Control Plane was retired on 2026-10-28, since 2026-10-26 the Analytics page's queries, which need the key's "Query: Read" scope ([`ANALYTICS.md`](../features/ANALYTICS.md) §4), and since 2026-10-28 the PostHog page, which needs the same scope and, for its free-allowance card, "Billing: Read" and "Project: Read" (with `POSTHOG_ORG_ID` and `POSTHOG_PROJECT_ID` when set; [`POSTHOG.md`](../features/POSTHOG.md) §2); its Settings part reads PostHog's own recording setting with "Project: Read" and changes it with "Project: Write" |
 | `GSC_SERVICE_ACCOUNT_JSON` | Google Search Console service-account key (documented RULE #0.8 exception); since 2026-10-26 also the Analytics page's search analytics, which needs the account as a user of the property |
@@ -738,8 +740,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-10-31: migrations/ holds 70 files, highest
-# 0092_developer_tools_wave2.sql (applied 2026-10-31 02:45:12 UTC).
+# State as of 2026-11-05: migrations/ holds 73 files, highest
+# 0095_chatbot_charlar_pages_off.sql (applied 2026-11-05 18:15:15 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/

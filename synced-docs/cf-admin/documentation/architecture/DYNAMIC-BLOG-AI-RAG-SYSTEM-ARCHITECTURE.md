@@ -43,7 +43,10 @@ tags: [blog, ai, rag, seo, architecture, blueprint, historical]
 > `CHATBOT_SERVICE.fetch` URL (the code calls `chatbotFetch`); "all 7 fields" (the
 > UI reports 9); a publish that POSTs the public revalidate URL (the
 > `ASTRO_SERVICE` binding goes first, then the outbox and queue redrive); and an
-> `ADMIN_AI_SECRET` in §5 that is neither declared nor read anywhere.
+> `ADMIN_AI_SECRET` in §5 that is neither declared nor read anywhere. Since 2026-11-05 the
+> knowledge fetch itself is gone: the writing assistant is grounded in the website's own facts
+> (`src/lib/ai-knowledge.ts`), and the `CHATBOT_SERVICE` binding left with charlar
+> ([CHATBOT](../features/CHATBOT.md) §1).
 >
 > **The §1 benchmark and §4 latency tables are illustrative targets, not
 > measurements** — as the document's own note has said since 2026-08-03. Do not

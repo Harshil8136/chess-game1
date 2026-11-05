@@ -47,7 +47,6 @@ flowchart LR
     P -->|"signed actor header"| VP
     P -->|"signed actor header"| EA
     P -->|"revalidate, health checks"| AS["cf-astro<br/>binding ASTRO_SERVICE"]
-    P -->|"chat proxy"| CB["cf-chatbot<br/>binding CHATBOT_SERVICE"]
     P -->|"EMAIL_QUEUE"| EQ[["Email queue"]]
     EQ --> EC["cf-email-consumer"] --> MAIL["Brevo, Resend as failover"]
     P -->|"SYNC_QUEUE"| SQ[["Revalidation queue"]] --> P
@@ -246,5 +245,6 @@ predate that rule and are deploy-time on purpose.
 
 | Date | Who | What was checked | Result |
 |---|---|---|---|
+| 2026-11-05 | claude | The services diagram against `wrangler.toml`: the `CHATBOT_SERVICE` arrow removed with charlar's proxy | The other diagrams not re-read |
 | 2026-11-04 | claude | The `signedInAt` sentence under the actor diagram, for the one-hour email code, against `confirmedAt` and `codeConfirmedActive` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes | The rest of the document not re-read |
 | 2026-10-25 | claude | Every diagram against the code named in it: `wrangler.toml` bindings, queues and crons; `backup-proxy.ts`, `vps-proxy.ts`, `email-console.ts`, `console-signature.ts`; both gateway routes' rule lists; `jobs/dispatch.ts`, `jobs/control.ts` `decideJobRun`, `jobs/runJob.ts`; `scheduled-backup-tick.ts`; `sync-revalidate-consumer.ts`; `configuration.ts`, `approvals/store.ts`, `CronControlRepository.ts`; the email path against cf-email-consumer's `main.md`. Every mermaid block parsed with mermaid 11.4.1. Not checked: GitHub's own renderer, the live settings rows | pass |

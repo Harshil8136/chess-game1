@@ -69,7 +69,7 @@ was also dropped; see §7.*
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    LAYER 5: EXTERNAL PROXY                          │
-│  Astro API gateway (/api/chatbot/*) → cf-chatbot Worker (binding)   │
+│  Private Workers by binding: cf-backup, cf-vps, cf-email-api, astro │
 ├─────────────────────────────────────────────────────────────────────┤
 │                    LAYER 4: OBSERVER                                │
 │  Ghost Audit Engine (waitUntil → D1 admin_audit_log)                │
@@ -270,9 +270,9 @@ the build if they rise; ROADMAP chunks 13.x and 18 are what drives them down.
 
 ### Chatbot
 
-Proxied at `/api/chatbot/[...path]` with RBAC gating; admin panels are Preact
-islands in `src/components/admin/chatbot/`. The model ladder is owned by the
-chatbot doc, not by this one.
+Since 2026-11-05 the section shows the hotel's WhatsApp bot on n8n, on the server: an Overview
+read from the server console and PostHog, and the bot's test lab. The old website chatbot
+(`cf-chatbot`) and its `/api/chatbot` proxy were removed from the portal that day.
 
 → [`../features/CHATBOT.md`](../features/CHATBOT.md)
 
@@ -374,8 +374,8 @@ Architecturally sound, not needed until the trigger fires.
 IDs. The table that used to sit here listed five bindings and omitted six:
 `STAFF_STORAGE`, `SYNC_QUEUE` (and its consumer and dead-letter queue),
 `CHATBOT_SERVICE`, `ASTRO_SERVICE`, `AI` and `ASSETS`. In outline (`wrangler.toml`,
-read 2026-10-17): one D1, one KV, two R2, two Queues, five service bindings
-(`CHATBOT_SERVICE`, `ASTRO_SERVICE`, `BACKUP`, `VPS`, `EMAIL_CONSOLE`), seven Rate
+read 2026-10-17, the chatbot binding 2026-11-05): one D1, one KV, two R2, two Queues, four service bindings
+(`ASTRO_SERVICE`, `BACKUP`, `VPS`, `EMAIL_CONSOLE`; `CHATBOT_SERVICE` left on 2026-11-05), seven Rate
 Limiting bindings, Workers AI, Analytics Engine and the static-assets binding.
 
 **Observability** — enabled in `wrangler.toml`: invocation logs and traces, both at
@@ -402,6 +402,7 @@ tier limits, the environment registry, Sentry integration and deploy commands.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-05 | claude | §2's layer 5 box, §6's Chatbot paragraph and §8's bindings outline against `wrangler.toml` (no `CHATBOT_SERVICE`) and `src/pages/dashboard/chatbot/` | Updated for charlar leaving the portal; the rest not re-read |
 | 2026-10-17 | claude | Read `src/pages/dashboard/`, `src/lib/dal/`, `src/lib/jobs/registry.ts` and `tiers.ts`, `src/workers/cf-entry.ts` (`queue` handler), `src/lib/auth/pipeline.ts`, `src/middleware.ts`, `src/lib/auth/stages/bootstrap.ts`, `eslint.config.js`, `.ratchet.json`, `wrangler.toml` | §5 module list (21 folders, was 19 on 2026-09-19); DAL count 24, not 19; ratchet values removed (they had drifted; `.ratchet.json` owns them); §7 **seventeen** jobs (9 essential, 6 deferrable, 2 idle) and the `queue` row, which named `EMAIL_QUEUE` as consumed here (it is only produced to); §10 outline now counts five service and seven Rate Limiting bindings. Not checked: §1, §2, §4, §8, §9 beyond reading |
 | 2026-10-07 | claude | Read `src/lib/jobs/tiers.ts` and `src/lib/jobs/registry.ts` after adding `heartbeat-watchdog` | The cron paragraph: **thirteen** jobs (7 essential, 4 deferrable, 2 idle), eleven on the five-minute tick; "Two of the thirteen" now true again. Nothing else re-checked |
 | 2026-10-07 | claude | Read `src/lib/jobs/tiers.ts` and `src/lib/jobs/registry.ts` (`FIVE_MIN_JOBS`, `SUNDAY_JOBS`) | The cron paragraph: `redis-ttl-hygiene` removed on 2026-10-04, so **twelve** jobs (6 essential, 4 deferrable, 2 idle); "Thirteen" corrected. Nothing else re-checked |

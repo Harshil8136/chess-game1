@@ -1,31 +1,33 @@
 ---
 
-title: "Chatbot Integration & AI Infrastructure — CF-Admin"
+title: "The Chatbot section: the WhatsApp bot on n8n — CF-Admin"
 status: active
 audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: ["src/pages/api/chatbot/[...path].ts", src/lib/chatbot-proxy.ts, src/components/admin/chatbot/BotOverview.tsx, src/lib/posthog/bot.ts, src/pages/api/whatsapp-bot/insights.ts, src/components/admin/chatbot/hooks/useChatbotApi.ts, src/lib/auth/routes.ts]
+related_code: [src/components/admin/chatbot/BotOverview.tsx, src/lib/posthog/bot.ts, src/pages/api/whatsapp-bot/insights.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
-tags: [chatbot, ai, proxy, models, analytics]
+tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
 
-# Chatbot Integration & AI Infrastructure — CF-Admin
+# The Chatbot section: the WhatsApp bot on n8n — CF-Admin
 
-> **TL;DR (non-technical):** How the customer-facing AI chatbot is configured and monitored from the admin portal — which AI models it uses, and how its analytics and conversations are surfaced.
+> **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-09-19 — §3–§8 rebuilt from the live `chatbot-kb` D1 and the `cf-chatbot` checkout; they had described the April 2026 architecture. Earlier corrections 2026-08-31 and 2026-09-14 (see §11).
+> **Last Updated:** 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
-> **Scope note.** This document is cf-admin's view: the proxy, the admin UI, and enough of the pipeline to operate it. `cf-chatbot` owns the pipeline itself; where the two disagree, the live `bot_config` row and the `cf-chatbot` repository win.
+> **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
 >
-> **The WhatsApp lab** (since 2026-11-05) is the section's last tab and is not part of `cf-chatbot`: it tests the hotel's n8n WhatsApp bot on the server, and [WHATSAPP-LAB.md](WHATSAPP-LAB.md) owns it.
+> **The WhatsApp lab** (since 2026-11-05) is the section's other tab group: it tests the hotel's n8n WhatsApp bot on the server, and [WHATSAPP-LAB.md](WHATSAPP-LAB.md) owns it.
 >
 > **The server access notice** (since 2026-11-05, the owner's ask): every Chatbot page shows the Server page's access notice, the same words from `src/lib/vps-notice.ts`, until the sign-in has accepted it; one acceptance covers both places ([design §7](../specs/2026-10-11-server-access-notice.md)).
 >
-> **Being retired** (the owner's decision, 2026-11-05). The n8n WhatsApp bot on the server becomes the hotel's one chatbot, and `cf-chatbot` (charlar) will be removed in steps, each with the owner's yes; until then everything below still describes what runs. Charlar's knowledge base, prompts and settings are outdated and kept only as history in `cf-chatbot`'s `archive/` folder (commit `dc0aa48`): never a source for the n8n bot. Its conversations stay in the shared Supabase project, inside the nightly encrypted backup, until the delete step.
+> **charlar is retired** (the owner's decision, 2026-11-05). The n8n WhatsApp bot on the server is the hotel's one chatbot. On 2026-11-05 charlar left the portal: its seven pages (Quality, Conversations, Usage, Knowledge Base, Instructions, AI Models, Settings), the `/api/chatbot` proxy, the `CHATBOT_SERVICE` binding and the *Website chat assistant* health check were removed, and migration `0095` switched their registry rows off (change record (private)). charlar's knowledge base, prompts and settings are outdated and kept only as history in `cf-chatbot`'s `archive/` folder (commit `dc0aa48`): never a source for the n8n bot or anything else. Its conversations stay in the shared Supabase project, inside the nightly encrypted backup, until the delete step; the Worker, its database and its tables are deleted one by one with the owner's yes.
+>
+> **The RLS note** above and §3 to §10 describe charlar as it ran until 2026-11-05. They are kept until its stores are deleted, so the history is readable; nothing in them describes what the portal does now.
 
 ---
 
@@ -60,64 +62,41 @@ and the page says every figure is from the lab's tests.
 
 ---
 
-## 1. Proxy Architecture
+## 1. The connection to charlar (removed 2026-11-05)
 
-`cf-admin` serves as the administrative interface for the Madagascar AI Chatbot (`cf-chatbot`), brokering every administrative command through a monolithic Astro SSR proxy so that RBAC, PLAC and the audit trail apply to them.
+Until 2026-11-05 the portal reached `cf-chatbot`'s private `AdminApi` entrypoint over the
+`CHATBOT_SERVICE` service binding, through the proxy `src/pages/api/chatbot/[...path].ts` and
+`src/lib/chatbot-proxy.ts` (lock-down record (private)).
+All three are gone: no portal page, check or AI feature talks to charlar any more. The two
+secrets that once held its address and key (`CHATBOT_WORKER_URL`, `CHATBOT_ADMIN_API_KEY`) have
+had no reader since 2026-11-04 and are still set on the Worker until the owner deletes them
+(MAINTENANCE (private) CB-1).
 
-> *Changed 2026-11-04 (change record (private)).* `cf-chatbot`'s admin API now answers only on its private `AdminApi` entrypoint. A named entrypoint has no public address: only a Worker on this account with a service binding to it can call it, and the `CHATBOT_SERVICE` binding in `wrangler.toml` names it (`entrypoint = "AdminApi"`). The binding is therefore the credential; there is no key and no trust header any more. `cf-chatbot`'s public domain answers only `GET /health` and the WhatsApp webhook, and `/admin` there is a 404. The proxy exists for governance (RBAC, PLAC and the audit trail), and it is now also the only way in.
-
-**Proxy endpoint:** `src/pages/api/chatbot/[...path].ts`
-
-Every request through the proxy:
-
-1. Blocks unauthenticated requests (session check)
-2. Validates user RBAC clearance against required role
-3. Calls `cf-chatbot`'s `AdminApi` entrypoint over the `CHATBOT_SERVICE` service binding, with no credential header and no fallback to the public domain (`src/lib/chatbot-proxy.ts`; `test/chatbot-proxy.test.ts`, `test/chatbot-binding-contract.test.ts`). System health's *Website chat assistant* check calls `GET /admin/health` the same way.
-
-> *Closed 2026-11-04: the open security issue recorded here since 2026-09-19.* The binding call used to carry a fixed, build-time-constant trust header on which `cf-chatbot` authorised its whole `/admin/*` surface, and `cf-chatbot` also answered `/admin*` on its public domain. Both are gone: the header is no longer sent or read, and the public domain no longer routes `/admin`. Neither the header name nor its value is to be written into any document.
-
-### Secrets
-
-None. `CHATBOT_WORKER_URL` and `CHATBOT_ADMIN_API_KEY` (cf-admin) and `ADMIN_API_KEY` (cf-chatbot) have had no reader since 2026-11-04 and left `wrangler.toml`'s `[secrets] required`; they are still set on the Workers until the owner deletes them (MAINTENANCE (private) CB-1).
-
-**Deploy order:** cf-chatbot first (it adds the `AdminApi` entrypoint), cf-admin second, as for the other entrypoint bindings ([OPERATIONS](../operations/OPERATIONS.md) §1).
-
-> **Security rule:** Never expose `cf-chatbot` endpoint URLs to the client boundary. All URLs are server-side only.
+The portal's writing AI (the blog's assistant and the email designer) used to fetch charlar's
+knowledge base for its facts. Since 2026-11-05 it uses the website's own facts only
+(`src/lib/ai-knowledge.ts`, [CMS](CMS.md)).
 
 ---
 
 ## 2. UI Component System
 
-All chatbot admin panels are Preact islands co-located in `src/components/admin/chatbot/`. Reads use standard component mounts; writes use the `mutate()` pipeline inside `useChatbotApi.ts`.
-
-**Custom hook:** `src/components/admin/chatbot/hooks/useChatbotApi.ts`
-
-- `useChatbotApi('analytics')` — fetches data on mount
-- `mutate(path, method, body)` — fires POST/PUT/DELETE and returns the parsed body (throws on error); callers call `refetch()` themselves. *Corrected 2026-09-14 — this said `mutate` refetches.*
-  (Documented here as `mutate(method, path, body)` until 2026-08-31 — the first
-  two arguments were reversed, which is exactly the kind of error a reader
-  copies straight into a bug.)
-- Never caches sensitive payloads client-side — always re-fetches from the proxy
+The section's pages are Preact islands in `src/components/admin/chatbot/` (the Overview) and
+`src/components/admin/chatbot/whatsapp/` (the lab, [WHATSAPP-LAB.md](WHATSAPP-LAB.md)).
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| **AnalyticsDashboard** | `AnalyticsDashboard.tsx` | AI Command Center (`/dashboard/chatbot/analytics`), served by `/api/chatbot/analytics/command-center` and `/analytics/kb-clusters`. Reply time, replies without knowledge and cost per resolution come from cf-chatbot's per-conversation metrics and show a dash when the window lists no model (no such rows were written); rates over conversations dash when there were none |
-| **BotConfig** | `BotConfig.tsx` (+ `BotConfigThinkingSection.tsx`) | Settings: identity, the models in use (shown, with a link to the Models page; since 2026-11-05 the form carries no model field, so a save cannot change or blank one), temperature, reply length, history, extended thinking, idle closing, greetings and fallbacks, hand-over. Its fields start from the saved values and are read once on Save (`BotConfigShared.tsx` removed 2026-11-04) |
-| **ModelsCatalog** | `ModelsCatalog.tsx` | Model cards by provider with Make primary / Make fallback (`models/switch`, the one place the models change); the cost of one reply is worked out for 1,000 tokens read and 200 written, the page says so, and Cheapest sorts by it |
-| **KnowledgeBase** | `KnowledgeBase.tsx` | CRUD for KB entries across `content_en` / `content_es`. cf-chatbot's list answers `{ entries, total }` and filters by category only, so the page loads up to 500 entries once (`kb?limit=500`) and works out the categories in use, their counts, the search and the pages itself (2026-11-05) |
-| **ConversationsBrowser** | `ConversationsBrowser.tsx` | Channel/status filters (with Staff live, and `?channel=` / `?status=` from the address, read by the page on the server), a paginated inbox-style list, message-thread modal with per-message AI metadata, status / takeover / release-to-AI / send-message actions. Replies and take-over are offered on WhatsApp only, since cf-chatbot delivers a staff reply only there. *2026-09-14: this row claimed "cron session sweeping"; no such feature exists in cf-admin.* |
-| **PromptsEditor** | `PromptsEditor.tsx` | System prompt management; each prompt says when cf-chatbot reads it (`cf-chatbot/src/core/pipeline.ts`: complaint, then after hours, then booking, otherwise default) |
-| **UsageAnalytics** | `UsageAnalytics.tsx` | Token usage, neuron consumption, cost tracking; a column for every UTC day of the window, each a button whose day's figures show under the chart |
-| **BotOverview** | `BotOverview.tsx` | The Overview page (`/dashboard/chatbot/dashboard`) since 2026-11-05: the n8n WhatsApp bot, §0. It replaced `ChatbotDashboard.tsx`, charlar's overview (deleted), whose `/api/chatbot/analytics` read no page uses now |
-| **Shared pieces** | `parts.tsx` | The Refresh buttons (`RefreshIcon` for the page bar), the 7/30/90-day chips ("7d", announced "7 days"), a figure tile (a link with `href`), a panel and bar rows (`Head` retired 2026-11-05, when the last page moved onto the page bar); the empty, failed and loading states and the badge come from the Sessions console's parts |
+| **BotOverview** | `BotOverview.tsx` | The Overview page (`/dashboard/chatbot/dashboard`) since 2026-11-05: the n8n WhatsApp bot, §0. It replaced `ChatbotDashboard.tsx`, charlar's overview; charlar's other seven pages (`AnalyticsDashboard`, `BotConfig`, `ModelsCatalog`, `KnowledgeBase`, `ConversationsBrowser`, `PromptsEditor`, `UsageAnalytics`) and their hook `useChatbotApi.ts` were deleted the same day |
+| **Shared pieces** | `parts.tsx` | The Refresh button (`RefreshIcon`, for the page bar), the 7/30/90-day chips ("7d", announced "7 days"), a panel and bar rows (largest first, or as given with `inOrder`, for days); `Head` retired 2026-11-05, when the last page moved onto the page bar; the empty, failed and loading states and the badge come from the Sessions console's parts |
 | **Page bar** | `PageBar.tsx` | The slim bar each page opens on (2026-11-05): a small hue icon, the name, one line cut to fit, the actions, an optional row of `Figure` pills. Every page opens on it since 2026-11-05; `parts.tsx` `Head` is retired. Its segmented row of sub-pages (`SubNav`) was removed the same evening, when the WhatsApp lab's pages joined the tab row |
-| **Tab row** | `src/components/navigation/RegistryTabs.astro` (`variant="line"`), in `src/layouts/ChatbotLayout.astro` | The section's tabs as one underlined row (since 2026-11-05, [frame design](../specs/2026-11-05-chatbot-section-frame.md)), a divider before WhatsApp lab setting the WhatsApp bot apart from the website's chatbot. Since the evening of 2026-11-05 the lab's own three pages (Test chat, Usage, Set-up) stand in this row after a small green "WhatsApp lab" caption (`expand`), so there is no second row of tabs ([frame design](../specs/2026-11-05-chatbot-section-frame.md) §7). Since 2026-10-10 its names, order and icons come from the page registry (`admin_pages`), as do each page's heading and tab title, and a tab shows only when the person may open that page (`src/lib/auth/registry-tabs.ts`). It replaced `ChatbotSubnav.tsx`, which kept its own list of eight names |
+| **Tab row** | `src/components/navigation/RegistryTabs.astro` (`variant="line"`), in `src/layouts/ChatbotLayout.astro` | The section's tabs as one underlined row (since 2026-11-05, [frame design](../specs/2026-11-05-chatbot-section-frame.md)), a divider before WhatsApp lab setting the lab apart from the Overview (until 2026-11-05 it set the WhatsApp bot apart from the website's chatbot). Since the evening of 2026-11-05 the lab's own three pages (Test chat, Usage, Set-up) stand in this row after a small green "WhatsApp lab" caption (`expand`), so there is no second row of tabs ([frame design](../specs/2026-11-05-chatbot-section-frame.md) §7). Since 2026-10-10 its names, order and icons come from the page registry (`admin_pages`), as do each page's heading and tab title, and a tab shows only when the person may open that page (`src/lib/auth/registry-tabs.ts`). It replaced `ChatbotSubnav.tsx`, which kept its own list of eight names |
 
-**Look (since 2026-11-04):** every page sits on the console kit (`src/styles/components/console.css`, [DESIGN-SYSTEM.md](../reference/DESIGN-SYSTEM.md) §9.9) in the section's own cyan hue (`data-hue="chat"`), with `src/styles/pages/chatbot.css` for the few pieces the kit has no part for. Time windows, filters, categories and short settings are chip rows, tables stack into cards on a phone, results are the portal's toasts and confirmations are its shared confirm. The old hard-coded dark stylesheets (`src/styles/components/chatbot/`, deleted) are gone. Change record: the Chatbot section's new look (private).
+**Look (since 2026-11-04):** every page sits on the console kit (`src/styles/components/console.css`, [DESIGN-SYSTEM.md](../reference/DESIGN-SYSTEM.md) §9.9) in the section's own cyan hue (`data-hue="chat"`, the lab in WhatsApp's green), with `src/styles/pages/chatbot.css` for the few pieces the kit has no part for. Time windows, filters, categories and short settings are chip rows, tables stack into cards on a phone, results are the portal's toasts and confirmations are its shared confirm. The old hard-coded dark stylesheets (`src/styles/components/chatbot/`, deleted) are gone. Change record: the Chatbot section's new look (private).
 
-**Figures checked against the live data (2026-11-05):** a figure the assistant did not record reads as a dash, never as zero. cf-chatbot has written no per-conversation metrics or intent events since 2026-07-26 and logs no knowledge look-ups (MAINTENANCE (private) CB-2), so the reply-time, knowledge and cost figures show dashes until it does. Change record: the Chatbot pages reviewed (private).
+**A figure not known reads as a dash, never as zero** (the review of charlar's pages, 2026-11-05 (private), kept for the Overview).
 
 ---
+
+> **History from here to §10:** charlar (`cf-chatbot`) as it ran until 2026-11-05, kept until its stores are deleted. Nothing below describes what the portal does now.
 
 ## 3. AI Tiered Fallback Pipeline
 
@@ -417,6 +396,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | The header, §1 and §2 rewritten for charlar leaving the portal: `src/pages/dashboard/chatbot/` (dashboard, index and the lab only), `src/components/admin/chatbot/`, `src/lib/auth/routes.ts` (the `/api/chatbot` keys removed), `src/lib/health/catalog.ts` (no `chatbot` check), `wrangler.toml` (no `CHATBOT_SERVICE`), `src/lib/ai-knowledge.ts`; the live `admin_pages` rows after `0095` (seven off) read through the D1 connector; the tests named in the change record pass | §3 to §10 marked as history, not re-read; the pages in a browser (the owner's phone test) |
 | 2026-11-05 | §0 and §2's BotOverview row against `BotOverview.tsx`, `src/lib/posthog/bot.ts`, `src/pages/api/whatsapp-bot/insights.ts`, `lab-api.ts` and cf-vps `contract/views.ts` (`AppRow`); every HogQL question run live against the PostHog project (lab events only; the live bot sends none yet); `test/whatsapp-bot-overview.test.ts` and `test/chatbot-look.test.ts` pass | §1 and §3 to §10; `last_verified` left as it was; the page in a browser (the owner's phone test) |
 | 2026-11-05 | §2's component rows against the code and against the live data (Supabase conversations, analytics functions and metric tables; D1 `chatbot-kb` knowledge base, prompts and model registry) and `cf-chatbot/src/admin/api.ts`, `cf-chatbot/src/storage/d1.ts`, `cf-chatbot/src/core/pipeline.ts` | §1 and §3 to §10 not re-read; `last_verified` left as it was; the pages were not opened in a browser (the owner's phone test) |
 | 2026-11-05 | The access notice note against `src/layouts/ChatbotLayout.astro` and `test/chatbot-look.test.ts` | The rest of the document; the pages in a browser (the owner's phone test) |

@@ -124,6 +124,7 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
       { "outcome": "upstream_error", "calls": 1 }
     ],
     "grounding": {
+      "site": 0,
       "kb": 20,
       "fallback": 3,
       "none": 0
@@ -164,7 +165,7 @@ Before the 2026-08-31 AI overhaul, the platform had **no record of any AI call m
 | `p50LatencyMs` | `number \| null` | Median round-trip latency in milliseconds, or `null` if no valid latencies recorded. |
 | `byModel` | `Array` | List of models sorted descending by neuron spend. Contains `modelId`, `modelName`, `calls`, and `neurons`. |
 | `byOutcome` | `Array` | Distribution of outcomes sorted descending by call count. |
-| `grounding` | `Object` | Grounding source count for successful inferences: `kb` (live knowledge base), `fallback` (built-in fallback), or `none`. |
+| `grounding` | `Object` | Grounding source count for successful inferences: `site` (the website's own facts, the one source since 2026-11-05), `kb` (charlar's knowledge base) and `fallback` (the built-in copy) for calls before that day, or `none`. |
 
 #### `budget` Object (`NeuronBudget`)
 
@@ -292,7 +293,7 @@ The primary consumer of `/api/ai/health` is `src/components/admin/logs/AiHealthP
    - p50 latency (median ms roundtrip)
 4. **Spend by Model Table:** Lists each model, number of calls, and total neuron spend.
 5. **Outcomes Table:** Lists all failure modes and successes.
-6. **Grounding Distribution:** Progress bar comparing Knowledge Base vs. Built-in Fallback vs. No Grounding.
+6. **Grounding Distribution:** Progress bar comparing the website's facts, the old knowledge base, the built-in fallback and no grounding.
 
 > ⚠️ **Known defect — the success-rate card renders 100× too high.** The API
 > already returns an integer percentage 0–100 (`telemetry.ts`:
@@ -316,6 +317,7 @@ The primary consumer of `/api/ai/health` is `src/components/admin/logs/AiHealthP
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | The `grounding` field, its example and the panel's rows against `src/lib/ai/telemetry.ts` (`site` added) and `src/components/admin/logs/AiHealthPanel.tsx`; `test/ai-telemetry.test.ts` passes | The rest of the page |
 | 2026-10-17 | The flow diagram, the `softLimit` example and field, and "Budget alerting" after the alert fix: `alertOnNeuronThreshold` in `src/lib/ai/telemetry.ts`, the constants in `src/lib/ai-pricing.ts` (soft limit 8,100, warning 8,000), `checkNeuronBudget` in `src/lib/ratelimit.ts`, the severity channels in `src/lib/alert-gate.ts`; `test/ai-telemetry.test.ts` | The rest of the page; a live generation end to end |
 | 2026-10-16 | The durability caveat only, for the daily seal (#21): `src/pages/api/audit/logs.ts` (no `DELETE`), the deleted `prune.ts`, `src/lib/retention-tables.ts` (`minDays: 180`) | The rest of the page; `last_verified` left at 2026-10-04 |
 | 2026-10-04 | The budget source (`src/lib/ratelimit.ts` `checkNeuronBudget` / `getGlobalAiNeurons`, `src/lib/dal/RateLimitRepository.ts` `sumAiNeuronsToday`, pinned by `test/hot-query-plans.test.ts`), the crossing inputs in the AI routes (the budget read before the call plus this call's neurons), and the `critical` channels in `src/lib/alert-gate.ts`. Live D1, read-only: 2 `ai_inference` rows in the whole log on 2026-10-04 | A live generation end to end; Cloudflare's current neuron price and allocation |

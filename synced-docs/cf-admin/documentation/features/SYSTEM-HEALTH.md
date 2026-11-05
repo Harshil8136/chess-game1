@@ -14,7 +14,7 @@ tags: [health, alerts, diagnostics, monitoring, permissions, ui]
 
 > **TL;DR (non-technical):** One page answers "is everything working?". It checks the website,
 > email, the data and backups, security, the server and scheduled jobs, and the portal itself on
-> its own, day and night, 29 checks each as often as it needs, opens a problem after two failures in a row and closes it after two passes, lists every
+> its own, day and night, 28 checks each as often as it needs, opens a problem after two failures in a row and closes it after two passes, lists every
 > problem those checks and the
 > website have filed, says in plain words what each check proves and how to fix it when it
 > fails, and, when the service it depends on reports a problem on its own status page, says so. It lets you send a test alert to prove an alert would reach someone, and the Owner run
@@ -114,7 +114,6 @@ rules that turn what a check read into Working, Needs a look or Failing live apa
 | Website's booking and consent systems | Website and booking | Urgent | every 15 minutes | The website's own health report, booking and consent queues included, says nothing is wrong. A report that names a problem, such as bookings that stopped retrying, is a failure |
 | Booking and consent heartbeat | Website and booking | Soon | every 15 minutes | The website's hourly heartbeat ran within its window and found nothing wrong |
 | Website updates | Website and booking | Soon | every 15 minutes | Changes made in the portal reach the website: none waiting over an hour, none given up in the last 24 hours |
-| Website chat assistant | Website and booking | Soon | every 15 minutes | The chat assistant answers its health question |
 | Email queue | Email | Urgent | every 5 minutes | Emails leave the queue: how many wait and how long the oldest has waited (from Cloudflare's Queues API), a warning at 5 minutes and a failure at 15 |
 | Email service: stuck and failed mail | Email | Soon | every 15 minutes | The email service's own count: no email stuck over 10 minutes, none that failed every retry in the last 24 hours |
 | Brevo, the main email sender | Email | Soon | hourly | Brevo accepts the portal's key, and today's sends are not nearly used up (300 a day on the free plan, a warning at 80%) |
@@ -232,15 +231,16 @@ from outside, or with the console answering but no recent pass, it stays a failu
 applies to *Email queue*, which reads Cloudflare's own Queues API over the internet: a reading
 that only timed out is a warning while the queue last read fine within the hour (2026-10-22, 15:36
 to 16:01 UTC, during a Cloudflare outage, it could not be read three times while it held nothing
-before and after, and filed a critical problem). So does *Website chat assistant* and *Email
-service: stuck and failed mail*, read through the portal's private connections to them, which
-stall for minutes at a time (MAINTENANCE SH-10): on 2026-10-23 both timed out in the same runs and
-passed the run after, and each filed a problem for failing and recovering. A wrong answer (an error status, a missing part of
+before and after, and filed a critical problem). So does *Email service: stuck and failed
+mail*, read through the portal's private connection to it, which stalls for minutes at a time
+(MAINTENANCE SH-10): on 2026-10-23 it and *Website chat assistant* (a check that left with
+charlar on 2026-11-05) timed out in the same runs and passed the run after, and each filed a
+problem for failing and recovering. A wrong answer (an error status, a missing part of
 a page, a report that names a problem) is never softened, and Test again and Check everything now
-show the raw result. Check everything now tries each check once: 29
+show the raw result. Check everything now tries each check once: 28
 checks each tried twice could pass the 50 requests a Worker invocation may make on the free plan,
 a limit calls to our other Workers count towards as well. Tried once, they make 28 outside requests
-and 4 calls to our other Workers in the test that pins it (24 and 8 until 2026-10-27) (`test/system-health-checks.test.ts`). A
+and 3 calls to our other Workers in the test that pins it (24 and 8 until 2026-10-27, 4 until the chat assistant's check left on 2026-11-05) (`test/system-health-checks.test.ts`). A
 person's run leaves the checks' places in the schedule as they were. The waiting does not count
 towards the Worker's CPU time.
 
@@ -252,8 +252,8 @@ the public website's included, answer at once. Cloudflare runs scheduled work on
 own, where our other Workers are often not running yet. The checks used to give up after eight
 seconds, twice, so every slow start was a timeout and the day's bar turned orange or red. Now the
 checks that reach our other Workers (*Website's booking and
-consent systems*, *Website chat assistant*, *Email service: stuck and failed mail* and *Server's
-site checks*) wait up to 25 seconds for the answer (`PRIVATE_WAIT_MS` in
+consent systems*, *Email service: stuck and failed mail* and *Server's site checks*; *Website
+chat assistant* too until 2026-11-05) wait up to 25 seconds for the answer (`PRIVATE_WAIT_MS` in
 `src/lib/health/probes.ts`) within a 30-second limit for the check (`PRIVATE_CHECK_MS` in
 `src/lib/health/catalog.ts`); the backup tick has waited 25 seconds for cf-backup since
 2026-10-01 and timed out three times in 25 days. Waiting costs no CPU. A start slower than that
@@ -267,7 +267,7 @@ second try (2026-10-26 19:20 to 20:03 UTC, for one), while *Website's protective
 reads the public website, answered all 205 of its reads that week, in under 3 seconds. So, by the
 owner's choice, *Website and booking pages* opens the four pages at the website's public address
 (`openPage` in `src/lib/health/probes.ts`, the `PUBLIC_ASTRO_URL` variable), as a guest does, with
-the usual eight seconds. The other four still use the private connection, which their questions
+the usual eight seconds. The other three still use the private connection (four until the chat assistant's check left on 2026-11-05), which their questions
 need (a secret the website accepts only that way, or a service with no public door); they may
 still turn amber a few times a day (MAINTENANCE.md (private) SH-10).
 
@@ -453,9 +453,9 @@ test is recorded as `health_heavy_test`, with how each store did or the email's 
 
 | Where | What | Kept |
 |---|---|---|
-| D1 `system_test_results` | A check's result: the run, the check, its level, status, time taken, the plain summary, the technical part as JSON, and the id of the person who ran it (`system` for the job, whose runs are `auto-…`). Kept: every result someone ran, and from the job every change of state plus one an hour per check, about 630 rows a day with 29 checks | 30 days; the job deletes older results on its first run after 03:00 UTC |
+| D1 `system_test_results` | A check's result: the run, the check, its level, status, time taken, the plain summary, the technical part as JSON, and the id of the person who ran it (`system` for the job, whose runs are `auto-…`). Kept: every result someone ran, and from the job every change of state plus one an hour per check, about 610 rows a day with 28 checks | 30 days; the job deletes older results on its first run after 03:00 UTC |
 | D1 `admin_portal_settings` row `health-config` | System health's settings (§3, "Settings"): each paused check's end, reason and the email address of the person who paused it; each quiet window's start, end, reason and the address of the person who added it; the two thresholds; and how often the logs are scanned. Read by the checks job with the state in one query, by Test again, and by the website's alert gate | A pause or window is dropped from the row by the next change after it ends |
-| D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days; and when the job last ran on its own (`tick`), which the website's hourly heartbeat reads (§3). About 27 KB with 29 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
+| D1 `admin_portal_settings` row `health-state` | What System health remembers between runs (`src/lib/health/state.ts`): each check's latest state and words, when it ran and when it is next due, its failures and passes in a row, its last 21 states, and per day its worst state and how many results, for 30 days; and when the job last ran on its own (`tick`), which the website's hourly heartbeat reads (§3). About 26 KB with 28 checks, written by every run (compare-and-swap, so the job and Test again never lose each other's results) | Replaced on each run; the days older than 30 drop out |
 | D1 `admin_portal_settings` row `log-scan-state` | The log scan (§3a): where the last scan ended, when it ran, whether Cloudflare refused, a stretch it could not read, and up to 60 groups, each a Worker, a level, the message with ids, addresses, IP addresses, tokens and numbers masked, and a count per day. No full log line and nothing personal | Days older than seven drop out at each scan; written once a scan, compare-and-swap |
 | D1 `platform_alerts` | Problems, compliance records and test alerts; who closed a problem and why; since `0074` who is on it and since when, a snooze's end and reason, and a row's repeats and when it last came | No automatic clean-up yet |
 | D1 `admin_audit_log` | `health_run`, `health_resolve`, `health_test_alert`, `health_ack`, `health_snooze`, `health_unsnooze`, `health_heavy_test`, `health_configure` | The activity log's own rules |
@@ -488,6 +488,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-11-05 | The *Website chat assistant* check removed with charlar's connection: §3's table, the grace and private-wait paragraphs and the counts (28 checks, 3 calls to our other Workers) against `src/lib/health/catalog.ts`, `READ_TIMEOUT_GRACE` in `src/lib/health/run.ts` and `test/system-health-checks.test.ts` | The rows-a-day and state-size figures are scaled from 29 checks, not measured; the rest of the page |
 | 2026-10-28 | §3a's permission sentence corrected to "Workers Observability: Edit" against Cloudflare's API reference for the telemetry query (Workers Observability Write is its only permission), with the refusal note in `src/lib/health/logscan.ts` and the Logs tab's token steps in `src/components/admin/health/LogsPanel.tsx`; `test/log-scan.test.ts` passes | The rest of the page; the permission not yet seen working live (MAINTENANCE LS-1) |
 | 2026-10-27 | §3's table row for *Website and booking pages*, the limits, the private connections and the new paragraph on the day after, against `openPage` in `src/lib/health/probes.ts` and the check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts` (the public address asked, never the private connection; 28 outside requests and 4 calls to our other Workers for Check everything now); the day's results read through the Cloudflare D1 connector (`system_test_results` and `platform_alerts`, 2026-10-26 12:40 to 2026-10-27 12:40 UTC) | Whether the public reads stay clear of the stalls: read from the days after the push. The rest of the document not re-read |
 | 2026-10-26 | Why the bars were orange and red most days, read live through the Cloudflare D1 connector (`system_test_results` 2026-10-19 to 26: the timeouts at exactly 8 and 16 seconds, the outside requests of the same runs, Test again runs at 130 to 370 ms, the 216 providers readings, the 11 slow database readings) and Sentry (CF-ADMIN-2A, 1W); Cloudflare's status page read through the Exa fetch (status, components, open incidents). Then §3's table rows for *Shared database* and *Providers' status pages*, the limits, the private connections and the providers' paragraphs against `PRIVATE_WAIT_MS`, `privateSignal`, `STATUS_PAGES` and `readIncidents` in `src/lib/health/probes.ts`, `PRIVATE_CHECK_MS` and the checks in `src/lib/health/catalog.ts` and `runChecks` in `src/lib/health/run.ts`, pinned by `test/system-health-checks.test.ts` | Whether 25 seconds covers every slow start: read from the results of the days after the push. That our other Workers have to start on the machine a scheduled run lands on is the reading of the timings; Cloudflare's documentation says only that scheduled runs go to machines with spare capacity. The rest of the document not re-read |
