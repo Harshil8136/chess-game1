@@ -6,7 +6,7 @@ last_verified: 2026-11-05
 verified_against: [code]
 owner: harshil
 related_code: [src/components/admin/chatbot/whatsapp/, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts]
-related_docs: [CHATBOT.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md]
+related_docs: [CHATBOT.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md]
 tags: [chatbot, whatsapp, lab, testing, models, n8n]
 ---
 
@@ -30,9 +30,53 @@ repository; where the two disagree, the cf-vps code wins.
 
 | Tab | Page | What it shows |
 |---|---|---|
-| Test chat | `/dashboard/chatbot/whatsapp` | The test chats as a row of chips, and New chat (each chat gets its own fake number, so the bot sees a new customer). In a chat: the messages, grouped by turn, and under each turn its status, the models used, tokens read and written, cost and the time to the bot's first answer, with **Details**. A box to write as the customer or as the hotel's phone (a person taking over), with an optional photo. Tapping a message offers the hotel's reactions: 👍 brings the bot back, ✅ approves. **Models for this chat**: an **Every step** row that puts the whole chat on one model in one press (a chat on Gemini, say), then each of the bot's AI steps with its model as a row of chips (the live bot's own model first), and caching of the bot's instructions |
+| Test chat | `/dashboard/chatbot/whatsapp` | Laid out as WhatsApp is (remade 2026-11-05, below): the test chats, one chat with its answers, ratings and figures, and the chat's info with its tools and models |
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens; the comparison **by model** and **by step and model** (calls, failures, average time, average tokens read and written, cost, cost per call); the last 100 turns, each with Details |
 | Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys set or not), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with its sources, and the last 50 changes made in the lab and by whom |
+
+### The Test chat
+
+The page has no head of its own: the Chatbot section's tabs and the lab's slim underlined row
+(Test chat, Usage, Set-up) are the whole header, and the chat starts under them. On a computer
+the page is three columns: the chats, the chat, and the chat's info (from 84rem wide; narrower,
+the info opens from the chat's top bar). On a phone the list and the chat are two screens, as in
+WhatsApp: a press on a chat opens it, the arrow goes back, and a press on the chat's name opens
+its info.
+
+- **The list**, the latest activity first: each chat's badge, name, time, last message (or "The
+  bot is writing…"), and its turns and cost since its last reset. Above it: what every test has
+  spent and how many answers were rated 👍 and 👎, Refresh, **New** (each chat gets its own fake
+  number, so the bot sees a new customer), **Archived** once a chat is archived, and **Compare**.
+- **The chat**: the customer's messages on the right with one tick when sent and two once the
+  bot has read them, the bot's and the hotel's phone's on the left, three moving dots while the
+  bot is writing (still for people who ask their phone for less motion). Under each answer one
+  slim line: the models used, tokens read and written, cost, the time to the first answer and
+  any failed call, then 👍 and 👎 and **Details**. 👎 asks at once what was wrong (optional);
+  either verdict can carry a note, and a second press takes it back. Tapping a message offers
+  the hotel's reactions: 👍 brings the bot back, ✅ approves. The top bar has the chat's name, its
+  models in one line ("Gemini 3.8 Flash on every step") or "the bot is writing…", and **Reset**.
+- **The composer**: one sideways row to write as the customer or as the hotel's phone (a person
+  taking over), and the quick messages (a press puts "¿Cuál es su horario?" or another common
+  first question in the box), then the photo button, a box that grows with the text, and Send
+  (Ctrl+Enter on a computer).
+- **The chat's info**: its fake number; **Reset**, **Copy**, **Rename**, **Archive** (or **Bring
+  back**), and export as **Text** or **JSON**; since the last reset its turns, spend, tokens,
+  ratings and failed calls; each AI step's model, caching, and **Change models**.
+- **Change models** is a drawer: an **Every step** row that puts the whole chat on one model in
+  one press (a chat on Gemini, say), then each of the bot's AI steps with its model as a row of
+  chips (the live bot's own model first), and caching of the bot's instructions; **Save models**.
+- **Reset** (after a confirm) starts the chat again as a new customer: the lab gives it the next
+  fake number, never one used before, so the bot has no memory of it, and the chat starts empty.
+  Its models stay, its earlier turns stay on the Usage page, and the chat says how many there
+  were. It is refused while the bot is still working on the chat. **Copy** makes a new chat with
+  the same models on its own number, to change one thing and compare. **Archive** takes a chat
+  out of the list and deletes nothing. The owner's chat (where the bot writes to the hotel's
+  owner) cannot be reset or copied.
+- **Compare** puts up to three chats side by side (swiped sideways on a phone), each with its
+  models in a line and its spend, and one message from the composer goes to all of them, so
+  three setups answer the same question. **Done** goes back to one chat.
+- **Export**: **Text** is every message with its time and each turn's line of figures and
+  rating; **JSON** is the chat exactly as the lab answered it. The file is made in the browser.
 
 **Details** (a drawer, the shared Dialog) is one turn in full: each AI step's model (and the
 live model it stood in for), time, tokens read, written, read from and written to the cache,
@@ -44,9 +88,11 @@ When something stops a test, each page says so at the top, with where to fix it:
 bot yet, its n8n not answering, the copy switched off, or no Anthropic key (set on the Server
 page: Apps, then `whatsapp-lab.phone`, then Keys).
 
-The totals under each turn and the Usage page's figures come from the lab's version 1.0.1. Until
-that version is on the server, each turn shows its status and Details only, and the Usage page
-says the lab needs its 1.0.1 update.
+The totals under each turn and the Usage page's figures need the lab's version 1.0.1; reset,
+copy, rename, archive, ratings and the list's last message and cost need 1.1.0. Both are on the
+server since 2026-11-05. An older lab still shows its chats and turns, and a button it cannot
+answer says the lab needs its 1.1.0 update. The Usage page shows the ratings too: how many
+answers were rated good and bad, and each turn's verdict and note.
 
 **A turn** is one customer burst and everything the bot did about it. The bot waits on purpose
 (10 s to gather a burst, more before a booking draft), so a turn shows "Bot working" for a while
@@ -101,8 +147,8 @@ beyond the audit row per change.
 
 ## 4. Limits and what comes next
 
-- **Comparisons side by side, a judge's score and a simulated customer** (step 3 of the plan):
-  the same conversation on two setups, scored. Until then, compare by step on the Usage page.
+- **A judge's score and a simulated customer** (step 3 of the plan). Side by side is built
+  (Compare, above), and the tester's own 👍 and 👎 are the score until then.
 - **Client access**: the pages need the Server page's key, which also opens the server's
   terminal. Giving the client's staff the lab without the server needs its own route first.
 - **Voice notes**: the lab needs a Whisper member.
@@ -113,5 +159,6 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | The Test chat remake, from the code: `LabChat.tsx`, `ChatList.tsx`, `ChatThread.tsx`, `ChatInfo.tsx`, `ChatModels.tsx`, `Composer.tsx`, `useChat.ts`, the helpers in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), the look rules (`test/whatsapp-lab-look.test.ts`), the lab's new paths in cf-vps `apps/whatsapp-lab/src/admin.ts` and `lab.ts` (`cf-vps/test/lab/chats.test.ts`), and lab 1.1.0 on the server (its `status` and `chats` read back) | The page in a phone browser (the owner's phone test); a reset, copy, rating or Compare against the lab on the server |
 | 2026-11-05 | claude | The Every step row (`ChatModels.tsx`, `everyStep` and `oneModel` in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`); that a chat left as it is uses only Claude, read from the lab's `gateway.ts` and the server's log of the first test | A whole chat on Gemini against Google (no Gemini call has run yet) |
 | 2026-11-05 | claude | Written from the code: the three pages and their components, `ChatbotLayout.astro`, migration `0093`, the gateway's change path (`src/pages/dashboard/vps/app/[...path].ts`: notice, CSRF, audit) and cf-vps's bridge routes and lab paths (`contract/bridge.ts`, `apps/whatsapp-lab/src/admin.ts`, `store.ts`, `lab.ts`). `test/whatsapp-lab-pages.test.ts` and `test/whatsapp-lab-look.test.ts` pass | The pages in a phone browser against the lab on the server (the owner's phone test); the lab's `usage` read and the chat's `sums` need lab version 1.0.1 on the server |
