@@ -20,7 +20,7 @@ tags: [chatbot, whatsapp, lab, testing, models, n8n]
 > Gemini model for one chat to compare them. Nothing here changes the real bot.
 
 This document is cf-admin's side: the three pages, who may open them and how they reach the
-lab. The lab itself (its fake WhatsApp, its model gateway, how a copy of the bot is made, its
+lab. The lab itself (its test WhatsApp, its model gateway, how a copy of the bot is made, its
 record) is cf-vps's, and its guide is `documentation/features/WHATSAPP-LAB.md` in the cf-vps
 repository; where the two disagree, the cf-vps code wins.
 
@@ -54,7 +54,7 @@ its info. Since the second pass of 2026-11-05 every part is drawn as WhatsApp dr
 - **The list**, the latest activity first: each chat's round badge in its own colour (the same
   colour every time; the owner's chat a phone), name, time, one tick or two on the customer's
   last message, the last message (or "The bot is writing…" in the lab's green), and its turns
-  and cost since its last reset. Above it: Refresh, **New chat** (each chat gets its own fake
+  and cost since its last reset. Above it: Refresh, **New chat** (each chat gets its own testing
   number, so the bot sees a new customer), a search box for a chat's name or last message,
   **Chats** and **Archived** with their counts, and **Compare**. Under it, what every test has
   spent and how many answers were rated 👍 and 👎.
@@ -77,19 +77,26 @@ its info. Since the second pass of 2026-11-05 every part is drawn as WhatsApp dr
   field, and the round Send (Ctrl+Enter on a computer).
 - **An empty page** (no chat open) says what the lab is, offers **New chat**, and three tips:
   the models from the chat's top bar, Compare, and the ratings.
-- **The chat's info**, as WhatsApp's contact page: the chat's large badge, name and fake number
+- **The chat's info**, as WhatsApp's contact page: the chat's large badge, name and testing number
   written in groups (+52 1 000 000 0101), when it was made or reset; the tools as a grid of
   buttons: **Reset**, **Copy**, **Rename**, **Archive** (or **Bring back**), **Text file**,
   **JSON file** and **PostHog**; since the last reset its turns, spend, ratings, tokens read and
   written, and failed calls as small figures; each AI step's model (a changed one in the lab's
   green), caching, lean side steps (lab 1.3.0), and **Change models**.
-- **Change models** is a drawer: an **Every step** row that puts the whole chat on one model in
-  one press (a chat on Gemini, say), then each of the bot's AI steps with its model as a row of
-  chips (the live bot's own model first), caching of the bot's instructions and, from the lab's
-  1.3.0, **Lean side steps** (below); **Save models**. The chips are Claude's models first, then
-  Gemini's, then the Workers AI models (Cloudflare) the lab has a price for.
+- **Change models** is a drawer (remade again on 2026-11-05, on the owner's "extreme makeover"
+  ask): one line per AI step, with the model it runs on in this chat (a changed one in the lab's
+  green, with a dot), the live bot's model under the step's name, and **≈ a call**: what one of
+  that step's calls costs on that model, from the step's average tokens read and written in the
+  lab so far at the model's list price (an estimate, before any cache discount; a step that has
+  not answered yet shows only prices). A press on a line opens its choices as cards, every model
+  in view and none off the screen, grouped by who makes it (Anthropic, Google, Cloudflare), each
+  with its own ≈ a call and its price in and out per million tokens; the live bot's model is
+  marked Live, and a press picks it and closes the line. **Every step at once** heads the list
+  and puts the whole chat on one model (or back on the live bot's models). Under the list, **How
+  the bot is sent**: caching of the bot's instructions and, from the lab's 1.3.0, **Lean side
+  steps**, each Off or On with what it does. **Save models**.
 - **Reset** (after a confirm) starts the chat again as a new customer: the lab gives it the next
-  fake number, never one used before, so the bot has no memory of it, and the chat starts empty.
+  testing number, never one used before, so the bot has no memory of it, and the chat starts empty.
   Its models stay, its earlier turns stay on the Usage page, and the chat says how many there
   were. It is refused while the bot is still working on the chat. **Copy** makes a new chat with
   the same models on its own number, to change one thing and compare. **Archive** takes a chat
@@ -108,7 +115,7 @@ figures; each AI step's model (and the live model it stood in for, when it was c
 tokens read, written, read from and written to the cache, cost, stop reason and the lab's notes
 (what it adapted for a model), with **Show what was sent and the answer**; the bot's n8n runs,
 each step a bar placed at its start and as long as it took, so the slow step stands out, a
-failed step in red with its error; and what the bot sent to the lab's fake WhatsApp.
+failed step in red with its error; and what the bot sent to the lab's test WhatsApp.
 
 When something stops a test, each page says so at the top, with where to fix it: no copy of the
 bot yet, its n8n not answering, the copy switched off, or no Anthropic key (set on the Server
@@ -152,8 +159,8 @@ change is noted on the call; cf-vps's guide, "Choosing models", has the detail. 
 in Change models and the chat's info only when the lab sends it, so an older lab shows neither.
 **Workers AI** models (Cloudflare's, such as Gemma 4 26B A4B IT) are offered after Claude's and
 Gemini's, once the lab has a price for them. The lab does not say whether its two Workers AI
-keys are set, so their chips are always offered and the drawer says that a call without the
-keys fails and says so.
+keys are set, so their cards are always offered, and their group in the drawer says they need
+those keys (a call without them fails and says so).
 
 **Photos** are made smaller in the browser before they are sent (a JPEG of at most 1,280
 pixels, stepped down until it fits the 256 KiB a server-console change may carry). **Voice notes
@@ -190,7 +197,7 @@ server's loopback, and the lab checks that signature itself and records who made
 `src/components/admin/chatbot/whatsapp/lab-api.ts` is the one place that builds these calls, and
 it turns any layer's refusal into one sentence for the screen.
 
-What the pages show lives in the lab on the server: test chats on fake numbers, every model call
+What the pages show lives in the lab on the server: test chats on testing numbers, every model call
 with its request and answer, and the bot's runs. Nothing about a test is stored in this portal
 beyond the audit row per change.
 
@@ -210,6 +217,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | Change models remade on the owner's "extreme makeover" ask (`ChatModels.tsx`: one line per step, the choices as cards grouped by maker, Every step at once, How the bot is sent), its estimates (`stepAverage`, `perCall`, `dollars`, `providerOf` in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`) against the lab's `usage` by-step rows; "testing number" in place of "fake number" in every lab page and the text export; the drawer at 390 and 1,440 pixels, dark and light, on the lab's real price list (cf-vps `apps/whatsapp-lab/prices.json`) and sample usage, in a local preview never committed | The drawer in a phone browser against the lab on the server (the owner's phone test) |
 | 2026-11-05 | claude | The second pass over the three pages (Harshil's "make EVERYTHING modern … especially /whatsapp", with their yes to local screenshots): every part of the Test chat, Usage, Set-up and Details redrawn as described in §1, from the code (`LabChat.tsx`, `ChatList.tsx`, `ChatThread.tsx`, `Composer.tsx`, `ChatInfo.tsx`, `ChatModels.tsx`, `LabUsage.tsx`, `LabSetup.tsx`, `ReplyDetails.tsx`, `LabNotices.tsx`, `format.ts`, the lab block of `chatbot.css`); the helpers (`dayLabel`, `sameDay`, `clock`, `tint`, `phone`, the Workers AI names, the chip order, the lean summary) in `test/whatsapp-lab-pages.test.ts`; the look rules in `test/whatsapp-lab-look.test.ts`; each page at 390 and 1,440 pixels wide, dark and light, in a local preview on sample data (never committed); lab 1.3.0's `lean` and Workers AI fields read from cf-vps `apps/whatsapp-lab/` (`lab.ts`, `prices.json`) and its install from cf-vps `program/HANDOFF.md` | The pages in a phone browser against the lab on the server (the owner's phone test); a lean or Workers AI test chat |
 | 2026-11-05 | claude | The section's new frame (Harshil's "complete makeover" ask): the three pages' bar is the shared `PageBar` with the lab's pages as a segmented row (`SubNav`) handed over by the server (`registryTabs`), the pages in WhatsApp's green (`hue="whatsapp"`), the Test chat filling the screen (`fill`); the old `whatsapp/PageBar.tsx` and the second tab row are gone. Checked by `test/whatsapp-lab-look.test.ts`, `test/chatbot-look.test.ts` and `test/whatsapp-lab-ssr.test.ts` (each page renders in workerd with three tabs and the right one marked) | The pages in a phone browser (the owner's phone test) |
 | 2026-11-05 | claude | Usage and Set-up's page head replaced by one slim line (`PageBar.tsx`, `.wl-pagebar` in `chatbot.css`), checked by `test/whatsapp-lab-look.test.ts` (no `<Head`, a screen-reader `<h1>`, the one-line rule) and `test/whatsapp-lab-ssr.test.ts` (both still render in workerd) | Both pages in a phone browser (the owner's phone test) |

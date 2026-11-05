@@ -120,3 +120,13 @@ bubbles the hue at 30% over the surface in the dark theme and 15% in the light, 
 bubbles are white with a soft shadow; the hotel's phone's the info colour at 10% in the light
 theme. The bar's name is cut with an ellipsis before it pushes the buttons off a phone, and on a
 phone the segmented row shows the icon of the page on screen only ([frame](2026-11-05-chatbot-section-frame.md), §5).
+
+Later the same day the owner asked for an "extreme makeover" of the models drawer, whose rows of
+chips (one row per step, each running off the screen, with the chosen chip often out of view)
+the second pass had kept, and for "testing number" in place of "fake number":
+
+| Decision | Why | Rejected |
+|---|---|---|
+| Change models is a list, one line per step: its model here (a changed one in green, with a dot), the live model under its name, and **≈ a call**; a press opens its choices as cards in a wrapping grid, grouped by maker, and a pick closes the line | Every step's model is readable at once on a phone, and every choice is in view when choosing, never off the screen; one press to open, one to pick | Rows of chips (the owner's screenshot: nine rows running off the screen, the picked chip hidden); a drop-down per step (hides the choices) |
+| **≈ a call** is the step's average tokens read and written in the lab so far (the `usage` read, by step, answered calls on any model) at each model's list price, before any cache discount, and only once the step has answered | Price per million tokens says little about a step; a real call's size does. It is said to be an estimate, and a step with no call yet shows only prices | A per-turn total (not every step runs every turn); a guessed token count |
+| The lab's numbers are "testing numbers" on every page and in the text export | The owner's wording: "we cant say FAKE NUMBER" | — |
