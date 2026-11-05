@@ -2,7 +2,7 @@
 title: "cf-vps Permissions"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-10-16
+last_verified: 2026-11-05
 verified_against: [code]
 owner: harshil
 related_code: [contract/capabilities.ts, contract/signing.ts, contract/actions.ts, contract/bridge.ts, contract/terminal.ts, src/access/policy.ts, src/access/save.ts, src/gateway/target.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/limits.ts, src/ui/pages.ts]
@@ -20,6 +20,9 @@ tags: [security, permissions, capabilities, rbac]
 > private service, on the server's agent, and again by the root script that makes a change.
 > The riskiest changes also need a sign-in from the last 10 minutes, and the server itself
 > keeps the root terminal and reboots for the owner and the vendor, a few times an hour.
+> **Vendor support holds every capability, always** (since 2026-11-05): it is built in, so no
+> saved setting, grant or deny can take one away, and a capability added later is held from
+> the day it ships.
 
 ## The catalog
 
@@ -63,13 +66,23 @@ support can hold.
 
 | Role | Default capabilities |
 |---|---|
-| `owner`, `vendor_support` | All 28 |
+| `vendor_support` | All 28, always: built in, not a default (below) |
+| `owner` | All 28 |
 | `admin` | `host.view`, `logs.view`, `access.delegate` |
 | `manager`, `staff`, `viewer` | None |
 
 The role comes from cf-admin in the actor header. These are the code defaults
 (`DEFAULT_ROLE_CAPABILITIES`); a saved policy can change them for any role except that a
-floor capability can never be added to a role outside `FLOOR_ROLES`.
+floor capability can never be added to a role outside `FLOOR_ROLES`, and Vendor support
+cannot be changed at all.
+
+**Vendor support holds everything** (`ALL_CAPABILITIES_ROLE` in `contract/capabilities.ts`, the
+owner's ruling of 2026-11-05). `can()` and `roleHas()` answer yes for it before they read the
+stored policy, so a stored role list, a per-person deny or a role move cannot narrow it; every
+save writes its list out in full, and a save that sends a shorter one is refused. A capability
+added to `CAPABILITIES` is held by Vendor support at once, with no save. On a person's access
+for this role, the API answers `mayEdit: false` with nothing to allow or deny, since nothing on
+their grant would count. The console's role matrix shows the role as holding every capability.
 
 ## How a decision is made
 
@@ -79,12 +92,13 @@ floor capability can never be added to a role outside `FLOOR_ROLES`.
    `SYSTEM_JOB_READS` (`contract/capabilities.ts`) names for its job and route: since 2026-10-17
    cf-admin's System health job (`health-checks`) may read `diagnostics` with `host.view`, for its
    "Server's site checks" check (`systemCapabilities`, used by the router).
-2. A floor capability is refused unless the role is owner or vendor support.
-3. A per-person **deny** wins over everything.
-4. A power **given for a while** (the grant's `temporary`) grants the capability until its own
+2. **Vendor support** holds every capability: yes, whatever follows.
+3. A floor capability is refused unless the role is owner or vendor support.
+4. A per-person **deny** wins over everything else.
+5. A power **given for a while** (the grant's `temporary`) grants the capability until its own
    end, whatever the grant's `expiresAt` says.
-5. A per-person **allow** grants the capability unless it has expired.
-6. Otherwise the role's list decides (the stored policy, or the code default for any
+6. A per-person **allow** grants the capability unless it has expired.
+7. Otherwise the role's list decides (the stored policy, or the code default for any
    capability the stored policy predates).
 
 ## Stored policy and per-person grants
@@ -110,8 +124,9 @@ and 4 in all); a live view lasts while its page stays open.
 | Powers given for a while | `temporary`, by capability: an `until` at most 90 days ahead and an optional `note`. One whose end has passed is dropped on the next save without an issue; never a floor |
 | Note length | 200 characters |
 | Floor capabilities in `allow` | Refused: a floor follows the role |
-| Floor capabilities in `deny` | Allowed: it can switch one person off |
-| Lock-out guard | Owner or vendor must always keep `access.manage`, and a save cannot remove it from the person saving |
+| Floor capabilities in `deny` | Allowed: it can switch one person off (never Vendor support, who holds everything) |
+| Roles a save leaves alone | Written out as what each role holds now: its stored list, or the code default for a capability the stored policy predates. Until 2026-11-05 a save that sent only people (the Access page, a person's grant) copied the stored lists as they were and marked every capability known, so capabilities added since the last role save were taken from every role; one such save, at 00:37 UTC that day, took 8 from Owner and Vendor support |
+| Lock-out guard | Owner or vendor must always keep `access.manage` (Vendor support always does), and a save cannot remove it from the person saving |
 | Concurrency | Compare-and-swap on the revision; a stale save gets a conflict |
 
 People are edited on the console's Access page (`access.view` to read, `access.manage` to
