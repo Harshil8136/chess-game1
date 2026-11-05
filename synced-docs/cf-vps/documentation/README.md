@@ -153,6 +153,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-11-05-whatsapp-lab-posthog.md`](records/2026-11-05-whatsapp-lab-posthog.md) | Change record: the test lab (1.2.0) sends every test chat to PostHog's AI observability, each AI step, run, wait and WhatsApp call timed, each message with its English, the bot's fixed instructions as a marker |
 | [`records/2026-11-05-whatsapp-lab-lean-workers-ai.md`](records/2026-11-05-whatsapp-lab-lean-workers-ai.md) | Change record: the test lab (1.3.0) can try the bot's cost clean-ups on a test chat ("lean": the payment check's short instructions, brief thinking on side steps) and run any AI step on Cloudflare Workers AI |
 | [`records/2026-11-05-whatsapp-lab-facts-compare.md`](records/2026-11-05-whatsapp-lab-facts-compare.md) | Change record: the test lab (1.4.0) adds checked days of the week to the bot's reply step, sets the reply model's effort, offers a one-hour cache, and runs a whole model test with one command (`compare`) |
+| [`records/2026-11-05-model-door.md`](records/2026-11-05-model-door.md) | Change record: the model door (lab 1.5.0), which can sit in front of the real WhatsApp bot to send its reply and payment check to Claude Haiku 5.5 with the lab's tested changes, pass every other call unchanged, fall back by itself and log each call's cost |
 
 ### Incidents
 
