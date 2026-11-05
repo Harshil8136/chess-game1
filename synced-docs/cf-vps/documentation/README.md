@@ -155,6 +155,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-11-05-whatsapp-lab-facts-compare.md`](records/2026-11-05-whatsapp-lab-facts-compare.md) | Change record: the test lab (1.4.0) adds checked days of the week to the bot's reply step, sets the reply model's effort, offers a one-hour cache, and runs a whole model test with one command (`compare`) |
 | [`records/2026-11-05-model-door.md`](records/2026-11-05-model-door.md) | Change record: the model door (lab 1.5.0), which can sit in front of the real WhatsApp bot to send its reply and payment check to Claude Haiku 5.5 with the lab's tested changes, pass every other call unchanged, fall back by itself and log each call's cost |
 | [`records/2026-11-05-bot-record.md`](records/2026-11-05-bot-record.md) | Change record: the bot's record (lab 1.6.0), every AI call and n8n run of the WhatsApp bot, numbers only, in the server's Postgres: the lab copies its own, a recorder beside the door copies the real bot's, and the portal's Chatbot pages read the totals |
+| [`records/2026-11-05-ai-checks-copy.md`](records/2026-11-05-ai-checks-copy.md) | Change record: the AI checks' copy (lab 1.7.0), PostHog's AI checks' verdicts and every reply copied into the bot's record through two saved reads and a key that can only run them, so every Chatbot page reads the server |
 
 ### Incidents
 
