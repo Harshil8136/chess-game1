@@ -30,7 +30,7 @@ repository; where the two disagree, the cf-vps code wins.
 
 | Tab | Page | What it shows |
 |---|---|---|
-| Test chat | `/dashboard/chatbot/whatsapp` | The test chats as a row of chips, and New chat (each chat gets its own fake number, so the bot sees a new customer). In a chat: the messages, grouped by turn, and under each turn its status, the models used, tokens read and written, cost and the time to the bot's first answer, with **Details**. A box to write as the customer or as the hotel's phone (a person taking over), with an optional photo. Tapping a message offers the hotel's reactions: 👍 brings the bot back, ✅ approves. **Models for this chat**: each of the bot's AI steps with its model as a row of chips (the live bot's own model first), and caching of the bot's instructions |
+| Test chat | `/dashboard/chatbot/whatsapp` | The test chats as a row of chips, and New chat (each chat gets its own fake number, so the bot sees a new customer). In a chat: the messages, grouped by turn, and under each turn its status, the models used, tokens read and written, cost and the time to the bot's first answer, with **Details**. A box to write as the customer or as the hotel's phone (a person taking over), with an optional photo. Tapping a message offers the hotel's reactions: 👍 brings the bot back, ✅ approves. **Models for this chat**: an **Every step** row that puts the whole chat on one model in one press (a chat on Gemini, say), then each of the bot's AI steps with its model as a row of chips (the live bot's own model first), and caching of the bot's instructions |
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens; the comparison **by model** and **by step and model** (calls, failures, average time, average tokens read and written, cost, cost per call); the last 100 turns, each with Details |
 | Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys set or not), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with its sources, and the last 50 changes made in the lab and by whom |
 
@@ -56,7 +56,7 @@ rule).
 
 **Models.** A choice applies from the chat's next message: each turn keeps the models it started
 with, so a chat can compare Sonnet on one question with Haiku on the next. The models offered are
-those the lab has a price for. Gemini models are offered once a Gemini key is set in the lab. A
+those the lab has a price for. Gemini models are offered once a Gemini key is set in the lab. A chat left as it is runs every step on the live bot's Claude models, so it needs the Anthropic key even when a Gemini key is set; **Every step** → a Gemini model runs it on Gemini alone. A
 newer Claude model that refuses sampling settings, or thinks before it answers, is adapted by
 the lab, and the call's notes say what was changed.
 
@@ -113,4 +113,5 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | The Every step row (`ChatModels.tsx`, `everyStep` and `oneModel` in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`); that a chat left as it is uses only Claude, read from the lab's `gateway.ts` and the server's log of the first test | A whole chat on Gemini against Google (no Gemini call has run yet) |
 | 2026-11-05 | claude | Written from the code: the three pages and their components, `ChatbotLayout.astro`, migration `0093`, the gateway's change path (`src/pages/dashboard/vps/app/[...path].ts`: notice, CSRF, audit) and cf-vps's bridge routes and lab paths (`contract/bridge.ts`, `apps/whatsapp-lab/src/admin.ts`, `store.ts`, `lab.ts`). `test/whatsapp-lab-pages.test.ts` and `test/whatsapp-lab-look.test.ts` pass | The pages in a phone browser against the lab on the server (the owner's phone test); the lab's `usage` read and the chat's `sums` need lab version 1.0.1 on the server |
