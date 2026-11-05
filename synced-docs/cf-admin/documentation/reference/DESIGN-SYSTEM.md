@@ -333,6 +333,7 @@ src/styles/
 │   └── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
 │                          (the old `chatbot/` folder of nine stylesheets was deleted 2026-11-04: the Chatbot pages are on the kit)
 └── pages/                  ← Page-level overrides
+    ├── chatbot-insights.css  ← the WhatsApp bot's Overview and seven tabs on the PostHog page's scene (`ph-scene[data-part='chatbot']`): a teal accent per theme, then `bt-` pieces: status strip, likely-range bars, flag cards, allowance meter, server parts, chat thread (2026-11-05)
     ├── chatbot.css  ← the Chatbot section's frame (`ch-`: hues `chat` and `whatsapp`, the page bar, figures, segmented sub-pages; 2026-11-05) and its `cb-` pieces on the kit: bar rows, the daily token chart, the conversation thread, prompt previews, the form grid, the save bar (2026-11-04)
     ├── audit.css, cron.css  (diagnostics.css was removed 2026-10-17 with Diagnostics)
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
@@ -846,7 +847,12 @@ take its hue without `ck-scope`. `src/styles/pages/chatbot.css` adds only what t
 piece for: bar rows (`cb-bar`), a daily token chart (`cb-days`), the conversation thread
 (`cb-msg`), prompt previews (`cb-pre`), a two-column form (`cb-form`) and a sticky save bar
 (`cb-savebar`), on theme tokens only (`test/chatbot-look.test.ts`). The change record is
-`2026-11-04-chatbot-section-look.md` (private).
+`2026-11-04-chatbot-section-look.md` (private). *Since the evening of 2026-11-05* the bot's Overview and its seven tabs are drawn instead with
+the PostHog page's scene and kit (`ChatbotLayout scene`: `an-scene ph-scene` with
+`data-part="chatbot"`), so they read like the PostHog page; `src/styles/pages/chatbot-insights.css`
+sets a teal accent for each theme (hex only in its token blocks) and the `bt-` pieces the kit has
+no part for ([analytics design](../specs/2026-11-05-chatbot-analytics.md) §5). The WhatsApp lab
+keeps the console kit frame above.
 
 Since 2026-11-05 the section's frame is its own ([design](../specs/2026-11-05-chatbot-section-frame.md)):
 the layout takes `hue` (`chat`, or `whatsapp` for the WhatsApp lab, WhatsApp's green: the
@@ -877,6 +883,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | §3's `pages/chatbot-insights.css` line and §9.9's note on the bot's scene, against `ChatbotLayout.astro` (`scene`), `src/styles/pages/chatbot-insights.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone (local screenshots at 390 px and 1,280 px were looked at) |
 | 2026-11-05 | §9.9's Chatbot paragraph (the frame: `hue`, `fill`, the line tab row, `PageBar`, `Figure`, `SubNav`), against `ChatbotLayout.astro`, `RegistryTabs.astro`, `PageBar.tsx`, `src/styles/pages/chatbot.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-04 | §3's `pages/chatbot.css` line and the removed `components/chatbot/` folder, §4's badge-token usage note, §9.9's Chatbot paragraph, against `src/layouts/ChatbotLayout.astro`, `src/styles/pages/chatbot.css`, `src/components/admin/chatbot/` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-03 | §1's tracked-debt counts re-measured (626 `style={` lines in 76 files, the ratchet's A6; 251 raw-hex lines in 45 component files) and the `window.location.reload()` sites re-listed (5: `TopBar.tsx` and `ConfigEditor.tsx` no longer have one, `RequestAccess.tsx` does); §5's sidebar colour source corrected (`SECTION_ACCENT` is gone; `--nav-hue-*` and `[data-nav-hue]` in `shell.css`); every other component name the document gives exists (`ActivityCenter.tsx`, `ApiAccessView.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx`, the sessions panels), and `useFocusTrap` still does not | Every token value, size and colour against the stylesheets; the pages in a browser |

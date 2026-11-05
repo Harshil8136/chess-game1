@@ -342,6 +342,14 @@ and write through the server console's gateway, so the console's own rules apply
 page key: `mayUseConsole` (the `/dashboard/vps` key by exact match), the server access notice
 before any change, and cf-vps's `apps.bridge.view` and `apps.bridge.operate`. A grant on the lab
 pages alone opens them and shows why the lab refuses ([`WHATSAPP-LAB.md`](../features/WHATSAPP-LAB.md)).
+*Changed 2026-11-05 evening (the owner's ask for analytics sections like the PostHog page):* the
+Chatbot section has seven tabs about the WhatsApp bot, migration `0096`: `/dashboard/chatbot/chats`
+(stored role `owner`, as it shows the lab chats' words), and `/dashboard/chatbot/quality`, `/flags`,
+`/money`, `/trends`, `/steps` (Models and steps) and `/system`, stored role `admin`. `denyBotPart`
+(`src/lib/auth/surface-guards.ts`) asks for the section's key `/dashboard/chatbot` and then the
+tab's own, each by exact key, in the page and in `GET /api/whatsapp-bot/part`, so holding the
+section or one tab opens no other tab; the owner and vendor support pass as on every key. The
+Overview links a panel to a tab only for someone that rule admits ([`CHATBOT.md`](../features/CHATBOT.md) §0.1).
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
 its route will allow it. Until then it decided from the role: any admin saw the block
 controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
@@ -1499,6 +1507,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-05 | claude | **Scope-limited to the Chatbot tabs paragraph**: read `migrations/0096_chatbot_bot_sections.sql`, `denyBotPart` and `CHATBOT_PAGE` in `src/lib/auth/surface-guards.ts`, `src/pages/dashboard/chatbot/[part].astro`, `src/pages/api/whatsapp-bot/part.ts` and `API_PAGE_MAPPING`; `test/whatsapp-bot-sections.test.ts` passes (a tab refused without its own key, the route's 403) | The rest of the document not re-read |
 | 2026-11-05 | claude | **Scope-limited to the WhatsApp lab paragraph** (after Developer Tools' of 2026-10-31): read `migrations/0093_whatsapp_lab_pages.sql`, `mayUseConsole` in `src/lib/vps-proxy.ts`, the notice check in `src/pages/dashboard/vps/app/[...path].ts` and cf-vps's `DEFAULT_ROLE_CAPABILITIES` (`contract/capabilities.ts`: the Owner holds every capability); `test/whatsapp-lab-look.test.ts` passes | The rest of the document not re-read |
 | 2026-11-04 | claude | **Scope-limited to §10.5's Email code paragraph and its limits**, for the one-hour confirmation. Read `src/lib/auth/fresh-sign-in.ts` (`CODE_CONFIRMED_MS`, `codeConfirmedActive`, `confirmedAt`), `src/pages/api/settings/confirm-code.ts`, `src/lib/fresh-sign-in-client.ts` and the three actor builders; in `cf-vps/contract/signing.ts` and `cf-backup/src/lib/fresh.ts` (their own 10-minute checks, unchanged); `test/confirm-code.test.ts` passes | The rest of §10.5 and the document not re-read |
 | 2026-10-31 | claude | **Scope-limited to the Developer Tools parts paragraph, wave 2.** Read `DEBUG_PARTS`, the three new pages under `src/pages/dashboard/debug/` (each `denyDebug(user, '<part>')`, and `canViewGitHub` before the GitHub snapshot) and `migrations/0092_developer_tools_wave2.sql`, and the three rows read back live through the D1 connector; `test/devtools-wave2.test.ts` and `test/debug-access.test.ts` pass | The paragraph matches the code; `last_verified` left as it was |

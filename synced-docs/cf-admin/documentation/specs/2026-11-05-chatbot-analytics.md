@@ -1,0 +1,138 @@
+---
+title: "The WhatsApp bot's analytics in the Chatbot section — design"
+status: active
+audience: [owner, ai, technical]
+last_verified: 2026-11-05
+verified_against: [code, infra]
+owner: harshil
+related_code:
+- src/lib/posthog/bot-parts.ts
+- src/lib/posthog/bot.ts
+- src/pages/api/whatsapp-bot/part.ts
+- src/pages/api/whatsapp-bot/insights.ts
+- src/pages/dashboard/chatbot/[part].astro
+- src/pages/dashboard/chatbot/dashboard.astro
+- src/components/admin/chatbot/BotOverview.tsx
+- src/components/admin/chatbot/insights/BotInsights.tsx
+- src/components/admin/chatbot/insights/kit.tsx
+- src/layouts/ChatbotLayout.astro
+- src/styles/pages/chatbot-insights.css
+- migrations/0096_chatbot_bot_sections.sql
+related_docs:
+- ../features/CHATBOT.md
+- ../features/WHATSAPP-LAB.md
+- ../features/POSTHOG.md
+- 2026-11-05-chatbot-section-frame.md
+- ../records/reports/2026-11-05-chatbot-analytics-sections.md
+tags: [design, chatbot, whatsapp, posthog, analytics, ui]
+---
+
+# The WhatsApp bot's analytics in the Chatbot section — design
+
+> **TL;DR (non-technical):** The owner asked for the Chatbot section to become a real analytics
+> section like the PostHog page, "but unique and better": several sections across the top, the
+> AI's cost from the data we collect, trends, what the AI checks flagged, and how sure each number
+> is. Phase 1 (this design, built on 2026-11-05) gives the section an Overview and seven tabs,
+> Chats, Quality, Flags, Money, Trends, Models and steps, and System, all from data the bot already
+> sends today. Later phases add the bot's own records on the server, then the real customers'
+> chats after move night.
+
+## 1. The ask
+
+Harshil, 2026-11-05 18:49 UTC, about `/dashboard/chatbot/dashboard`: "I was expecting multiple
+sections from header like posthog, our pricing analytics from collected data, trends, any flags
+by ai, confidence rate … isn't it possible to store logs and data of it accurately! then use it
+for all analytics, metrics, graphs and much more in all sections? … its ui/ux is extremely
+horrible! it needs complete makeover … like our PostHog page have but unique and better."
+
+The research and the plan of four phases were written up for him the same evening ("WhatsApp
+bot analytics: research and rebuild plan", a Claude Doc in the project). This document is the
+design of phase 1, which needs no server change and so could start at once.
+
+## 2. The four phases
+
+| Phase | What | Gate before it |
+|---|---|---|
+| 1 | The section's Overview and seven tabs from today's data: PostHog's `$ai_*` events from the bot's AI steps, and the lab's own chats through the server console's gateway | none |
+| 2 | A recorder on the server and the bot's own database (Postgres beside n8n): the lab's calls and n8n's runs written as they happen; the pages switch to its totals | the owner's yes to install it |
+| 3 | The real bot: WhatsApp messages and read ticks, a chat insight step, urgent flags by email when switched on | move night, the privacy record (RoPA) and the owner's yes |
+| 4 | Similar chats, topic groups in our own database, a weekly report | the owner's yes to a new server package |
+
+## 3. Phase 1: what each tab shows
+
+Every tab reads one fixed set of HogQL questions (`partQueries` in `src/lib/posthog/bot-parts.ts`)
+through `GET /api/whatsapp-bot/part?part=…&days=7|30|90`, with the PostHog key the portal
+already holds. The questions have two inputs only, the window (7, 30 or 90 days) and, for Chats,
+trace ids that match `wl-<8 hex>-turn-<n>`; nothing a person types reaches a question.
+
+| Tab | Path | Shows |
+|---|---|---|
+| Overview | `/dashboard/chatbot/dashboard` | A status strip (server parts running, live or not, AI this month against the allowance, urgent flags), six figures, and panels that each open the tab behind them: replies each day, the weakest AI checks with their likely range, the latest flags, the allowance, cost by step and by model, busiest hours, the bot's parts on the server, the most frequent errors |
+| Chats | `/dashboard/chatbot/chats` | The lab's chats (the lab's `chats` and `chat` views through the console gateway) and, for the chat opened, each reply with the AI checks it passed or failed and the judge's reason. A flag's "Open the chat" lands here on its chat |
+| Quality | `/dashboard/chatbot/quality` | Each AI check, weakest first: passed of answered, the rate, its 95% likely range as a bar, a daily line, and the latest failures with the judge's reason |
+| Flags | `/dashboard/chatbot/flags` | What the checks flagged and the AI calls that failed, newest first, filtered All, Urgent, Checks, Errors. Urgent, because staff must act: a payment claim not handed to the owner, and a person promised when nothing alerts anyone |
+| Money | `/dashboard/chatbot/money` | This month against the AI allowance with the month's end at this pace, per reply and per chat, cost each day, by step and by model, the tokens read fresh, read from the cache, written to the cache and written as replies, and lab against real customers |
+| Trends | `/dashboard/chatbot/trends` | Replies and chats each day, a weekday by hour heat map in the hotel's time, the customer's mood each day and the whole-chat score each day |
+| Models and steps | `/dashboard/chatbot/steps` | Each model and each step: calls, the typical and the slow time (median and 95th percentile), failures, tokens, cache use and cost, why answers stopped, and the HTTP answers |
+| System | `/dashboard/chatbot/system` | The bot's parts on the server (the console's Apps read), n8n's runs each day, when each source was last heard from, and the most frequent errors of runs and of AI calls |
+
+**How sure a rate is.** Every pass rate carries its 95% Wilson interval ("likely 85% to 94%") and
+how many answers it rests on. Under 20 answers it is marked as resting on few answers and drawn
+in a quieter tone, so a rate from three answers never reads as firm. A check's answer counts as
+skipped, not passed, when the check says it does not apply.
+
+**What passes.** A yes/no check passes on yes, except Promises a person, which fails on yes. The
+whole-chat review passes at 4 or more of 5; a WhatsApp-sized reply at 700 characters or fewer; the
+customer's mood when it is neutral or positive (`CHECK_RULES`, `verdictOf`).
+
+**Lab and real customers.** An AI call with a `lab_chat` property, or a check whose name starts
+with "WhatsApp lab", is the lab's; anything else is the live bot's. Quality, Flags and Trends offer
+the choice as a sideways row (Real customers, Lab tests); Money shows the two side by side. Until move night the live bot sends nothing,
+and each tab says so in words rather than showing zeros as if they were real.
+
+**Privacy.** Numbers only for real customers (the owner's choice of 2026-11-05): a judge's
+reason is asked of PostHog only for the lab's tests, never for a real customer's reply, and no
+message text or phone number is asked of PostHog at all. The chats' words on the Chats tab are
+the lab's fake test chats, read from the lab, and the tab is Owner by default.
+
+**Freshness and cost.** Answers are kept in the edge cache (never KV): one minute for Chats and
+Flags, ten minutes for the others; Refresh asks again. Each tab is at most four questions,
+asked three at a time so PostHog's limit on queries running at once is never reached.
+
+## 4. Who may open what
+
+Each tab is a page of its own in `admin_pages` (migration `0096`), so it can be given or kept
+back alone on the Access page, like the PostHog and Sentry sections' tabs. Defaults: Chats is
+Owner (it shows chat words, like the lab); the other six are Admin. The page and its route both
+ask for the Chatbot section's key and then the tab's own (`denyBotPart`), by exact key, so
+holding one tab opens no other. The Overview links a panel to its tab only when the person may
+open that tab, and reads the Flags panel only then.
+
+## 5. The look
+
+The tabs sit in the section's one underlined tab row ([frame design](2026-11-05-chatbot-section-frame.md)),
+between the Overview and the WhatsApp lab. Every tab is built from the PostHog page's kit
+(`src/components/dashboard/posthog/frame.tsx` and `charts.tsx`): the same header, panels, figures,
+charts and heat map, so the two sections read as one portal. What makes it the bot's own is a
+teal accent tuned for both themes (`src/styles/pages/chatbot-insights.css`, contrast checked
+against both backgrounds), the status strip, the likely-range bars and the flag cards. On a phone
+every choice (window, source, filter) is a sideways-scrolling row above the panels, and every
+panel stacks to one column.
+
+The tabs were checked in local screenshots at phone width (390 px) and at 1,280 px, dark and
+light, rendered from the real lab numbers read live from PostHog on 2026-11-05.
+
+## 6. Alternatives not taken
+
+- **A new table or a second store for the numbers.** PostHog already holds every AI call, check
+  and trace the bot sends, with costs; phase 1 reads it. The bot's own records are phase 2, on the
+  server's Postgres, not in D1 (RULE #0.9).
+- **One long page.** The owner asked for sections across the top; separate pages also let a tab
+  be given alone.
+- **Showing a judge's reasoning for real customers.** Left out by the owner's numbers-only choice.
+
+## 7. Verification log
+
+| Date | Checked | Not checked |
+|---|---|---|
+| 2026-11-05 | Every question in `partQueries` run live against the PostHog project (lab events only); the parsers and the confidence math in `test/whatsapp-bot-sections.test.ts`; the route's 401, 400 and 403; the look in `test/chatbot-look.test.ts`; screenshots at 390 px and 1,280 px in both themes from those live numbers | The pages on the owner's phone; the live bot's events (it sends none until move night) |

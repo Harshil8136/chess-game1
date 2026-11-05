@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-11-05 | `ls migrations/*.sql` (74 files, highest `0096`), `d1_migrations` newest row through the Cloudflare D1 connector after `0096` was applied (id 132) | §7's state line. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-05 | `ls migrations/*.sql` (73 files, highest `0095`), `d1_migrations` newest rows through the Cloudflare D1 connector after `0093`, `0094` and `0095` were applied (ids 129 to 131); §1's service bindings against `wrangler.toml` and the regenerated `worker-configuration.d.ts` (`CHATBOT_SERVICE` removed); §5's chatbot secrets row | §7's state line, §1's binding table and the secrets row. No binding, secret, variable or cron added. Not checked: whether the two old chatbot secrets are still set (the portal's secrets cannot be read from here) |
 | 2026-10-31 | `ls migrations/*.sql` (70 files, highest `0092`), `d1_migrations` newest rows through the Cloudflare D1 connector after `0091` and `0092` were applied (ids 127 and 128); §5's `CLOUDFLARE_API_TOKEN` row against `src/lib/devtools/cloudflare.ts` | §7's state line and the token row. No binding, secret, variable or cron added. Not checked: the token's live permissions (the portal's secrets cannot be read from here) |
 | 2026-10-30 | `ls migrations/*.sql` (68 files, highest `0090`), `d1_migrations` newest row through the Cloudflare D1 connector after `0090` was applied | §7's state line. No binding, secret, variable or cron added (the Sunday asset clean-up keeps its schedule; it now reads more tables). Nothing else re-checked; `last_verified` left as it was |
@@ -740,8 +741,8 @@ npx wrangler d1 migrations list  madagascar-db --remote   # what is pending
 npx wrangler d1 migrations apply madagascar-db --remote   # release.mjs does this before deploying
 node scripts/d1_schema_snapshot.mjs --check               # live schema vs database/schema.snapshot.sql
 
-# State as of 2026-11-05: migrations/ holds 73 files, highest
-# 0095_chatbot_charlar_pages_off.sql (applied 2026-11-05 18:15:15 UTC).
+# State as of 2026-11-05: migrations/ holds 74 files, highest
+# 0096_chatbot_bot_sections.sql (applied 2026-11-05 19:45:41 UTC).
 # `0002` appears twice — both applied, never rename. Do not hand-maintain this
 # count; `database/migrations.manifest.json` and the query below are the answer.
 ls migrations/
