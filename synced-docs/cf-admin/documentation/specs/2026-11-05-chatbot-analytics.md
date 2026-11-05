@@ -15,6 +15,7 @@ related_code:
 - src/components/admin/chatbot/BotOverview.tsx
 - src/components/admin/chatbot/insights/BotInsights.tsx
 - src/components/admin/chatbot/insights/kit.tsx
+- src/components/admin/chatbot/insights/record.ts
 - src/layouts/ChatbotLayout.astro
 - src/styles/pages/chatbot-insights.css
 - migrations/0096_chatbot_bot_sections.sql
@@ -24,6 +25,7 @@ related_docs:
 - ../features/POSTHOG.md
 - 2026-11-05-chatbot-section-frame.md
 - ../records/reports/2026-11-05-chatbot-analytics-sections.md
+- ../records/reports/2026-11-05-chatbot-server-record.md
 tags: [design, chatbot, whatsapp, posthog, analytics, ui]
 ---
 
@@ -34,8 +36,8 @@ tags: [design, chatbot, whatsapp, posthog, analytics, ui]
 > AI's cost from the data we collect, trends, what the AI checks flagged, and how sure each number
 > is. Phase 1 (this design, built on 2026-11-05) gives the section an Overview and seven tabs,
 > Chats, Quality, Flags, Money, Trends, Models and steps, and System, all from data the bot already
-> sends today. Later phases add the bot's own records on the server, then the real customers'
-> chats after move night.
+> sends today. Phase 2 (built the same night) has Money, Models and steps, and System read the
+> bot's own record on the server first; phase 3 adds the real customers' chats after move night.
 
 ## 1. The ask
 
@@ -99,6 +101,32 @@ the lab's fake test chats, read from the lab, and the tab is Owner by default.
 Flags, ten minutes for the others; Refresh asks again. Each tab is at most four questions,
 asked three at a time so PostHog's limit on queries running at once is never reached.
 
+### Phase 2: the server's record (built 2026-11-05)
+
+The lab (1.6.0) and a recorder beside the real bot write every AI call and n8n run, one row
+each, to their own databases in the server's Postgres (cf-vps
+`documentation/records/2026-11-05-bot-record.md`). Each answers `record/money`,
+`record/models` and `record/system` for 7, 30 or 90 days in the shapes of `bot-parts.ts`, through
+the console bridge the lab's pages already read (`apps/bridge/view`, any member).
+
+| Tab | On the record |
+|---|---|
+| Money | Both records added: each source's month, days and tokens kept apart, steps and models summed by name |
+| Models and steps | One source at a time (Real customers, Lab tests): a median cannot be added across two |
+| System | One source at a time, each source's last call or run side by side, and each n8n workflow's runs, failures, typical time and usually slowest step |
+
+**Which it reads.** Both records are asked at once (`insights/record.ts`). If at least one
+answers, the page draws the record; if neither does (not installed, an older lab, no database),
+it reads PostHog as in phase 1. One line under the page's choices says which, and why a record
+is missing. Money's allowance is read by the page (`[part].astro`), since the record does not
+carry it. The Overview, Quality, Flags and Trends stay on PostHog: the record holds no checks or
+messages until phase 3.
+
+**Not taken.** Mixing a record's source with PostHog's other source on one page (PostHog's lab
+numbers with the record's live ones): the two count differently, and a page from two systems
+could not say where a figure came from. A new cf-admin route that queries Postgres: the
+Worker cannot reach the server's database, and the bridge already carries signed reads.
+
 ## 4. Who may open what
 
 Each tab is a page of its own in `admin_pages` (migration `0096`), so it can be given or kept
@@ -135,4 +163,5 @@ light, rendered from the real lab numbers read live from PostHog on 2026-11-05.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | Phase 2: `insights/record.ts`, `insights/BotInsights.tsx`, `lab-api.ts` and `[part].astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`, `VIEWS`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/record.test.ts` ran against a real Postgres 16 | The pages against the installed records (not on the server yet); the pages on the owner's phone |
 | 2026-11-05 | Every question in `partQueries` run live against the PostHog project (lab events only); the parsers and the confidence math in `test/whatsapp-bot-sections.test.ts`; the route's 401, 400 and 403; the look in `test/chatbot-look.test.ts`; screenshots at 390 px and 1,280 px in both themes from those live numbers | The pages on the owner's phone; the live bot's events (it sends none until move night) |

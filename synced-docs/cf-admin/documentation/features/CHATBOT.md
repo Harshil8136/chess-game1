@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
+related_code: [src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
@@ -16,7 +16,7 @@ tags: [chatbot, whatsapp, n8n, ai, analytics]
 > **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1). §3 to §10 are history (below).
+> **Last Updated:** 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
@@ -86,6 +86,20 @@ A tab needs the Chatbot section's key and its own, each by exact key (`denyBotPa
 and in the route, so it can be given or kept back alone on the Access page. Every pass rate shows
 its 95% Wilson range and how many answers it rests on; under 20 answers it is marked as resting on
 few. A judge's reasoning is asked of PostHog only for the lab's tests, never for a real customer.
+
+**The server's record (phase 2, since 2026-11-05 night).** Money, Models and steps, and System
+ask the bot's own record in the server's Postgres first (`insights/record.ts`): the lab's
+(`whatsapp-lab`, member `phone`) and the real bot's recorder's (`whatsapp`, member `recorder`),
+both read as `record/money|models|system?days=` through the console bridge the lab's pages
+already use (`memberView` in `lab-api.ts`; cf-vps `apps/whatsapp-lab/src/record.ts` answers in
+the shapes of `bot-parts.ts`). When at least one answers, the page draws it: Money adds both
+(each source's month and tokens apart), Models and System show one source at a time with the
+Real customers / Lab tests row, and System adds each n8n workflow's runs and usually slowest
+step. When neither answers (not installed, an older lab, no database), the page reads PostHog
+as before. A line under each page's choices says which it shows and why a record is missing.
+Money's allowance comes from the page (`[part].astro`), since the record does not carry it. The
+Overview, Quality, Flags and Trends stay on PostHog until phase 3
+(change record (private)).
 
 ---
 
@@ -424,6 +438,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-05 | §0.1's server-record paragraph against `insights/record.ts`, `insights/BotInsights.tsx`, `insights/kit.tsx`, `lab-api.ts`, `[part].astro` and cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` and `test/chatbot-look.test.ts` pass | The pages against the installed record (not on the server yet); §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
 | 2026-11-05 | §0's Overview rows and the new §0.1 against `BotOverview.tsx`, `insights/BotInsights.tsx`, `insights/kit.tsx`, `src/lib/posthog/bot-parts.ts`, `src/pages/api/whatsapp-bot/part.ts`, `denyBotPart` and migration `0096` (its rows read back live through the D1 connector); `test/whatsapp-bot-sections.test.ts`, `test/whatsapp-bot-overview.test.ts` and `test/chatbot-look.test.ts` pass; local screenshots at 390 px and 1,280 px from live lab numbers | §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
 | 2026-11-05 | The header, §1 and §2 rewritten for charlar leaving the portal: `src/pages/dashboard/chatbot/` (dashboard, index and the lab only), `src/components/admin/chatbot/`, `src/lib/auth/routes.ts` (the `/api/chatbot` keys removed), `src/lib/health/catalog.ts` (no `chatbot` check), `wrangler.toml` (no `CHATBOT_SERVICE`), `src/lib/ai-knowledge.ts`; the live `admin_pages` rows after `0095` (seven off) read through the D1 connector; the tests named in the change record pass | §3 to §10 marked as history, not re-read; the pages in a browser (the owner's phone test) |
 | 2026-11-05 | §0 and §2's BotOverview row against `BotOverview.tsx`, `src/lib/posthog/bot.ts`, `src/pages/api/whatsapp-bot/insights.ts`, `lab-api.ts` and cf-vps `contract/views.ts` (`AppRow`); every HogQL question run live against the PostHog project (lab events only; the live bot sends none yet); `test/whatsapp-bot-overview.test.ts` and `test/chatbot-look.test.ts` pass | §1 and §3 to §10; `last_verified` left as it was; the page in a browser (the owner's phone test) |
