@@ -12,6 +12,9 @@ related_code:
 - src/components/admin/chatbot/whatsapp/ChatInfo.tsx
 - src/components/admin/chatbot/whatsapp/ChatModels.tsx
 - src/components/admin/chatbot/whatsapp/Composer.tsx
+- src/components/admin/chatbot/whatsapp/LabUsage.tsx
+- src/components/admin/chatbot/whatsapp/LabSetup.tsx
+- src/components/admin/chatbot/whatsapp/ReplyDetails.tsx
 - src/components/admin/chatbot/whatsapp/useChat.ts
 - src/components/admin/chatbot/whatsapp/format.ts
 - src/layouts/ChatbotLayout.astro
@@ -19,6 +22,7 @@ related_code:
 related_docs:
 - ../features/WHATSAPP-LAB.md
 - ../records/reports/2026-11-05-whatsapp-lab-test-chat.md
+- ../records/reports/2026-11-05-whatsapp-lab-makeover.md
 - ../records/reports/2026-11-05-whatsapp-lab-pages.md
 - ../reference/DESIGN-SYSTEM.md
 tags: [design, chatbot, whatsapp, lab, testing]
@@ -90,3 +94,29 @@ never a drop-down.
 
 A judge's score and a simulated customer (MAINTENANCE WL-2), voice notes (WL-4), and access for
 the client's staff (WL-3).
+
+## 6. The second pass (2026-11-05, afternoon)
+
+The owner looked again and asked for more ("make EVERYTHING modern, smart, amazing looking …
+especially /whatsapp … review each-and-every part"), with their yes to local screenshots before the
+push. Each part was drawn at 390 and 1,440 pixels, dark and light, on sample data in a preview
+kept out of the repository, and changed until it read well at both sizes. The decisions:
+
+| Decision | Why | Rejected |
+|---|---|---|
+| The lab's window takes its columns from the frame's width (`@container ch-frame`: two columns from 42rem, the info as a third from 62rem), not the screen's | The sidebar and a tablet change the room the page has; a screen width guessed it wrong | The 84rem screen breakpoint of the first pass |
+| The list as WhatsApp's: a round badge per chat in one of six steady colours (`tint`), a search box, **New chat** in the lab's green, the counts on Chats and Archived, the ticks on the customer's last message, the totals in the list's foot | Each chat is found by colour and name at a glance; the totals stop crowding the list's head | Initials on one grey; the totals in the head |
+| The chat as WhatsApp's: the day over its first message, the hour (not the seconds) in each bubble with the full time on hover, a run of bubbles squared toward its sender, a reaction shown on the bubble it answers, a dotted background | What a phone user expects of a chat; the seconds and a sticky day label only got in the way | A sticky day label (it covered the first line of a bubble) |
+| A turn's figures as small icons and numbers (models, time, tokens, cost, failures), hidden while the turn is still open | One line a tester scans; nothing floats under an answer the bot is still writing | Words for each figure (two lines on a phone) |
+| **Models** in the chat's top bar, beside **Reset** | The tester changes models often; the info column is not always there | Models only in the info |
+| The composer's sender as a two-way switch, the quick messages as short English names under **Try** that put the Spanish text in the box, the photo inside the rounded field, a round Send | Short names fit a phone's row and say what each message tests; the box still takes an edit before sending | The Spanish texts as the chips (long, and cut off) |
+| The chat's info as WhatsApp's contact page: a large badge, the number in groups, its tools as a grid of buttons, its figures as small cards | Every tool in reach with one press; a grid wraps on a narrow column where a row of buttons did not | A row of text buttons |
+| Usage's bars and Details' run waterfall are SVG, their length an attribute (`width`, `x`) | The portal's CSP allows no inline style; an attribute is drawn the same | A `style` width |
+| Set-up's readiness is a checklist: each line a mark and its state in words (screen readers hear "Ready", "Stops the tests", "Needs a look" or "Optional, not set"), and the changes a timeline | Colour alone cannot carry a state; a list reads in one pass | Badges in a table |
+| Lab 1.3.0's **Lean side steps** shows only when the lab sends `lean`, and Workers AI chips come after Claude's and Gemini's with a note on their keys | The page works on every lab version; the lab does not say whether those keys are set | A Workers AI key flag the lab does not send |
+
+The look of §4 changed with it: the chat's dots are the hue at 5% over the page; the customer's
+bubbles the hue at 30% over the surface in the dark theme and 15% in the light, where the bot's
+bubbles are white with a soft shadow; the hotel's phone's the info colour at 10% in the light
+theme. The bar's name is cut with an ellipsis before it pushes the buttons off a phone, and on a
+phone the segmented row shows the icon of the page on screen only ([frame](2026-11-05-chatbot-section-frame.md), §5).

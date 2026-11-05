@@ -18,6 +18,7 @@ related_docs:
 - ../reference/DESIGN-SYSTEM.md
 - 2026-11-05-whatsapp-lab-test-chat.md
 - ../records/reports/2026-10-24-sessions-page-redesign.md
+- ../records/reports/2026-11-05-whatsapp-lab-makeover.md
 tags: [design, chatbot, whatsapp, navigation, ui]
 ---
 
@@ -86,6 +87,11 @@ Theme tokens only, so the light and the dark theme both work (`test/chatbot-look
 Touch targets are at least 2.5rem on a touch screen. The tab row and the figures scroll sideways
 on a phone, every option in view, never a drop-down; the tab on screen is brought into view when
 a page opens (`NativeNavigationState.astro`).
+
+The bar's name gives way first: it is cut with an ellipsis before it pushes the actions off a
+narrow screen, and its line of text takes what room is left. On a phone (under 40rem) the
+segmented row keeps the icon of the page on screen only, so three sub-pages and a page's buttons
+share one line.
 
 ## 6. Who builds what
 
