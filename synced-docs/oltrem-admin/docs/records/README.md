@@ -159,6 +159,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The phone's top](2026-11-04-phone-top.md) | the bar names the page; the content starts about 150 px higher on a phone |
 | [The people named at setup get in](2026-11-04-setup-people.md) | the Users page invites everyone setup step 2 named in one press; each accepts after the door's code, no email or link |
 | [A key Cloudflare does not know](2026-11-05-dead-key.md) | the door names a dead key, the deploy asks for a new one and waits, a new key is used on the next check |
+| [The door with no key](2026-11-05-no-key-door.md) | the deploy sets Cloudflare Access once with Cloudflare's own sign-in; anyone may ask for a code, the portal lets in only its own people |
 | [Easier setup](2026-11-03-easier-setup.md) | email in one step from Home and Integrations, delivery reports registered by themselves, the first backup without waiting for the night |
 | [Look 2, step 3](2026-11-03-look-2-step-3.md) | one empty box everywhere, settings side by side, an Owner's look for everyone |
 | [Look 2, step 2](2026-11-03-look-2-step-2.md) | each page's button beside its heading or filters, smaller empty boxes, shown-once results as toasts, a switch grid for notifications, Look tiles |

@@ -53,7 +53,7 @@ installed for you.
    - **On Cloudflare:** where the portal is set up to live, or that it is not there yet, and
      **Put it live**: it signs you in to Cloudflare in the same browser, lets you pick the account
      and the domain, opens Cloudflare's key form already filled in, checks the key when you paste
-     it, and notices by itself when the door (Cloudflare Access) is on. Running it again only does
+     it, and sets the door (Cloudflare Access) with Cloudflare's own sign-in, no key. Running it again only does
      what is missing.
 
    What runs shows its steps under the cards as one log, and **Clear** takes it away; errors the

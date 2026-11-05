@@ -198,6 +198,7 @@ printed. The configuration it deploys never has static assets (`withoutAssets`):
 not hand a Worker with static assets the Access sign-in:
 
 1. **Sign in.** `wrangler whoami`; when it is not signed in, `wrangler login` opens the browser.
+   (cf's own sign-in, for the door, comes in step 6.)
    Then the account (`src/cloudflare.ts` reads it from `wrangler whoami --json`): the one the
    sign-in reaches, or, when it reaches several, the one picked from their names. The pick goes to
    wrangler as `CLOUDFLARE_ACCOUNT_ID` for the rest of the run, never into a file, so wrangler has
@@ -216,13 +217,13 @@ not hand a Worker with static assets the Access sign-in:
    second Worker and lose the address.
    **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
-   in step 7, and step 6 names it among the addresses the door lets in, so the two cannot differ.
-   **Who else may sign in**: addresses (each as Owner, Staff or Your team) and `@domain`s, all on
-   the door's allow list (`iam.door_extra_emails`). Being let through the door is not an account,
-   so each named person is also written to `iam.setup_people`; once the company exists, the
-   Users page invites them all in one press (Owner as Owner, Staff as Standard user, Your team as
-   Full admin), with no email: each signs in at the door and presses Accept on the page they land
-   on. The run's last lines say so.
+   in step 6.
+   **Who else will use the portal**: addresses, each as Owner, Staff or Your team (a row with no
+   role is Staff, the least power), written in step 6 to `iam.setup_people`. A whole domain
+   (`@example.com`) is refused: the door lets anyone ask for a code, and the portal lets in only
+   the people it invited. Once the company exists, the Users page invites them all in one press
+   (Owner as Owner, Staff as Standard user, Your team as Full admin), with no email: each signs in
+   at the door and presses Accept on the page they land on. The run's last lines say so.
 3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When
    the sign-in can read the account's active domains (`wrangler auth token`, then Cloudflare's
    zones list), they are offered as choices beside the free address, and a domain is followed by
@@ -245,8 +246,9 @@ not hand a Worker with static assets the Access sign-in:
    before the migrations, so the deploy carries Mail and its migration. A deploy finds Mail half
    in before it signs in, and stops with the command that finishes it or takes it out.
    The ops token comes after the steps that make it, and without echo: the first step is a link
-   to Cloudflare's token form with the name and its four permissions filled in (D1 Edit, Account
-   Analytics Read and the two Access ones). With Oltrem Mail the form also chooses DNS Edit, and
+   to Cloudflare's token form with the name and its two permissions filled in (D1 Edit and Account
+   Analytics Read; it has no Access permission, since step 6 sets the door without it). With Oltrem
+   Mail the form also chooses DNS Edit, and
    the steps name the two rights Cloudflare's form has no short key for (Zone, Email Routing
    Rules, Edit; Account, Email Routing Addresses, Edit). The pasted key is checked with Cloudflare
    at once (active, on the account or as a person's key, and allowed D1 on the account) and asked
@@ -270,17 +272,28 @@ not hand a Worker with static assets the Access sign-in:
    then, while `alerts.recipients` (@oltrem/alerts) is empty, alerts are sent to the Vendor and to
    the client's Owner from `oltrem.config.ts` when that is a real address (not one at
    `example.com`, `.org` or `.net`), written as the portal's Settings would and said in one line; a
-   list someone wrote is never changed. Then `backup setup`; then **the door**, once the deploy has made the Worker (an empty account
-   has nothing to protect): the steps that turn Access on for it (the Worker's Access tab, Protect this Worker behind
-   Access, All traffic, the allowed emails, the sign-in email first), the first one a link to the
-   account's own Workers page, then Enter. The command checks the portal's address from outside
-   every few seconds while it waits: once the address sends people to the Access sign-in
-   (`*.cloudflareaccess.com`), the step ends by itself, and a door already on is not asked about at
-   all. Nothing is copied back: `ACCESS_AUD`
-   `worker` makes the portal trust the sign-in the runtime vouches for (`ctx.access`), and until
-   the door is on no request carries it, so the portal refuses everyone. A client with a hostname
-   Access application instead sets its tag with `wrangler secret put ACCESS_AUD`; the runtime
-   names that application in `ctx.access.aud` too, and no request header is ever trusted.
+   list someone wrote is never changed. Then `backup setup`; then the people from step 2, written
+   to `iam.setup_people`; then **the door**, once the deploy has made the Worker (an empty account
+   has nothing to protect). It is set with Cloudflare's own command line, `cf` (pinned in the
+   template), because wrangler's sign-in cannot reach Zero Trust and a key kept for it would be
+   upkeep on every client: `cf auth whoami`, and when cf is not signed in, `cf auth login
+   --no-device` opens the browser once on this computer, as wrangler's sign-in does. cf is told the
+   account (`CLOUDFLARE_ACCOUNT_ID`). Then `setDoor` reads each part and writes only what differs:
+   Zero Trust set up, the One-time PIN login, one policy that lets everyone ask for a code, and the
+   Access application on the Worker with the open paths (`/hooks/*`, `/healthz`, `/account`,
+   `/account/*`, `/ui/*`). Zero Trust not set up yet shows its one step (a team name and the Free
+   plan) and waits for Enter, checking by itself; a sign-in Cloudflare refuses (403) or one that
+   lapsed is asked again (`cf auth login --force`), as someone who may change Access. Another
+   Access application on the portal's address, which Cloudflare runs first, is named. Last the
+   door is checked from outside: the address sends people to the sign-in (`*.cloudflareaccess.com`)
+   and `/healthz` answers without one. When cf cannot set it (not installed, the Worker's id
+   unreadable, a refusal after the tries), the reason is said with the steps by hand, and the run
+   goes on. Nothing is copied back: `ACCESS_AUD` `worker` makes the portal trust the sign-in the
+   runtime vouches for (`ctx.access`), and until the door is on no request carries it, so the
+   portal refuses everyone. Who gets in past the door is the portal's own list (`@oltrem/iam`,
+   "The door, and who gets in"). A client with a hostname Access application instead sets its tag
+   with `wrangler secret put ACCESS_AUD`; the runtime names that application in `ctx.access.aud`
+   too, and no request header is ever trusted.
 7. **The modules of the portal**: which modules are on, written to `settings.parts_off` as
    `parts set` does. The question (`parts` on the asker, `partsQuestion(off)` in `src/parts.ts`)
    carries every part with its one line, whether it is always on and what it needs, its group as
@@ -292,11 +305,7 @@ not hand a Worker with static assets the Access sign-in:
    the question. The setup page shows it as a dashboard (below); the terminal lists the parts
    numbered under their groups, on, off or always on, and takes numbers or names to switch (on
    with what a part needs, off with what needs it), a preset's name, and Enter to use them. The
-   portal's Modules page switches them later, with no deploy. Last, the one door step left for
-   later: a self-hosted Access application on the address's `hooks`, `healthz` and `account`
-   paths with a Bypass policy, needed once a website's form posts to the portal, an email
-   provider sends delivery reports, the release checks the portal's health, or customers sign in
-   at `/account` (`@oltrem/customers`), on a custom domain and on `workers.dev` alike. New keys leave
+   portal's Modules page switches them later, with no deploy. New keys leave
    `.oltrem/keys-reminder` (git ignores the folder), and while it is there each run, even after
    one that stopped, ends with "Have you put a copy of oltrem-keys.txt somewhere safe?": **I saved
    a copy** removes it, **Remind me next time** keeps it for the next run.
@@ -765,23 +774,22 @@ Vendor row yet.
 
 ## The door and settings from this computer (`src/door.ts`, `src/settings-write.ts`)
 
-The deploy's helpers for the door, which the Worker keeps in step from then on (`@oltrem/iam`,
-"The door, kept in step"). The portal's key needs four permissions, `OPS_TOKEN_PERMISSIONS`:
-`d1` edit, `account_analytics` read, and for the door `access` edit ("Access: Apps and
-Policies") and `access_acct` edit ("Access: Organizations, Identity Providers, and Groups");
-`opsTokenForm()` is the account-token form opened with them chosen. wrangler's sign-in has no
-Access permission, so the key does it.
+The deploy's helpers for the door, which it sets once with Cloudflare's `cf` and its sign-in, and
+which nothing keeps in step afterwards: anyone may ask for a code, and the portal lets in only its
+own people (`@oltrem/iam`, "The door, and who gets in"). The portal's key has no Access permission
+since 2026-11-05: `OPS_TOKEN_PERMISSIONS` is `d1` edit and `account_analytics` read, and
+`opsTokenForm()` is the account-token form opened with them chosen.
 
 | Export | What it does |
 |---|---|
-| `checkKey` (`src/cloudflare.ts`) | A good key also says `door: 'yes' \| 'no' \| 'unknown'` (`keyKeepsDoor`: it may read Access applications and logins) |
-| `doorReadiness(fetch, token, account)` | `{ key, zeroTrust }`: whether the key may keep the door, and whether Zero Trust is set up (`zeroTrustOf`) |
-| `workerIdOf(fetch, signInToken, account, name)` | The Worker's id, which Access names, read with the sign-in's own token |
-| `writeDoorSettings(dir, run, { workerId?, extras?, people? })` | Writes `iam.door_worker_id`, `iam.door_extra_emails` (`doorEntries`: addresses and `@domain`s, lower case, each once) and `iam.setup_people` (`address owner\|staff\|team` for each person step 2 named), which the Users page invites in one press |
-| `askDoorSync(fetch, base, read)` | `POST /hooks/iam/door`: the Worker syncs now and answers 204 with nothing else (anyone may post there); then `read()` gives the outcome word (`DOOR_ANSWERS` says each in plain words). When the hook does not answer (a door never set leaves it behind Cloudflare's own sign-in), the outcome the five-minute tick kept is read all the same. `bad-key` (Cloudflare does not know the key) and `no-access-permission` make the deploy ask for a new key, set it, and wait until the portal has used it |
-| `readDoorState(dir, run)` | The outcome the Worker kept in KV (`iam:door`), read with `wrangler kv key get --remote` under wrangler's own sign-in; `unreachable` when it cannot be read |
-| `checkDoor(fetch, url, read)` | `{ on, answer, right }`: Access answers in front of the portal, and the Worker's kept outcome says it set the door right |
-| `zeroTrustSteps(account)`, `doorManualSteps({ account, worker, emails, domains })` | The one step a person does per account (team name, Free plan), and the door by hand for a key without Access: One-time PIN and an email list, never "Cloudflare account" members |
+| `cfRunner(dir, log?)` | Runs the repository's own cf as `node <its script>` (`toolArgv`), as wrangler is: its JSON on success, its error when it fails; a labelled call with `log` shows the kit's look |
+| `cfSignedIn(cf)`, `cfSignIn(cf, { again? })` | `cf auth whoami`, and `cf auth login --no-device` (the browser, as wrangler's sign-in; `--force` with `again`) |
+| `setDoor(cf, workerId, host?)` | Reads each part and writes only what differs: the Zero Trust organization (`no-zero-trust` without one), the One-time PIN login (`DOOR_LOGIN_NAME`), the reusable policy `DOOR_POLICY_NAME` that includes everyone, and the application whose destination is this Worker: only that login, straight to it, only that policy, `DOOR_OPEN_PATHS` public. An application the dashboard made is edited, never replaced, so its audience stays. Never throws: `ok`, `signed-out`, `no-zero-trust`, `refused` (403) or `cloudflare`, each said in `DOOR_ANSWERS`, with what changed and any other application on `host` |
+| `zeroTrustReady(cf)` | Whether the account has a Zero Trust organization (a team name) |
+| `doorFromOutside(fetch, url)` | `{ on, open }`: the address sends people to the Access sign-in, and `/healthz` answers 200 without one |
+| `workerIdOf(fetch, signInToken, account, name)` | The Worker's id, which Access names, read with wrangler's own sign-in token |
+| `writeSetupPeople(dir, run, people)` | Writes `iam.setup_people` (`address owner\|staff\|team` for each person step 2 named, lower case, each once), which the Users page invites in one press |
+| `zeroTrustSteps(account)`, `doorManualSteps({ account, worker, host })` | The one step a person does per account (team name, Free plan), and the door by hand when cf cannot set it: One-time PIN, Everyone (never "Cloudflare account" members), and the open paths as an application of their own with a Bypass policy |
 
 `writeSettings(dir, run, writes, { reason })` (and `writeSetting` for one) writes live settings
 the way the Worker's own save does: per setting, `oltrem_meta`'s `config_version` moves up, the row
@@ -790,7 +798,8 @@ takes that version and a history row records who (`vendor`) and why; then the se
 against the setting key shape and values are JSON, quoted for SQLite, so nothing else reaches the
 SQL. `readSettingState(dir, run, key)` reads one back as `{ read, value? }`, so a caller that
 writes only over an unset value (the deploy's alert recipients) can tell unset from unreadable.
-Tested in `test/door.test.ts` against SQLite holding the real settings migration.
+Tested in `test/door.test.ts`: the door against an in-memory Zero Trust answering as cf prints, and
+the settings against SQLite holding the real settings migration.
 
 ## `oltrem parts list [dir]`, `set <ids...>`, `preset everything|email [dir]`
 

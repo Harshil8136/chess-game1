@@ -310,58 +310,40 @@ access review with grants they may keep or remove, and their own grants ending w
 `waitingFor` counts with the rules the decisions check (`standingAt`, `can`, never one's own
 request, approval or grant), so a person is never sent to a decision the API would refuse.
 
-## The door, kept in step
+## The door, and who gets in
 
-Cloudflare Access stands on the Worker itself (ACCESS_AUD `worker`). Given `door` (`src/door.ts`),
-the module keeps it letting in exactly the portal's people, by a code sent to their email:
+Cloudflare Access stands on the Worker itself (ACCESS_AUD `worker`). Since 2026-11-05 the module
+keeps nothing of it in step: `npm run deploy` sets it once with Cloudflare's own command line and
+its sign-in (`@oltrem/cli`, `src/door.ts`), and the Worker holds no key that could change it. The
+door asks anyone for a code sent to their email (the One-time PIN login, one policy that includes
+everyone), and leaves the customers' pages, the webhooks, the health check and the styles open.
+
+Who gets in is this module's own list. A sign-in whose email has no active account here is refused
+with `KIT-E-2005` ("No account here"), except on the routes that make one: accepting an invitation
+(`POST /invitations/accept`, `POST /invitations/mine`). So people come and go on the Users page
+alone, and the door never needs changing. A Zero Trust organization made since June 2026 has only
+the "Cloudflare" login, which admits members of the Cloudflare account and no one else; the door the
+deploy sets uses only the One-time PIN login instead. The cost: anyone may ask for a code and so
+take one of the 50 free Zero Trust seats for a month, while they still see nothing of the portal.
 
 ```ts
 createIam({ ...,
-  door: {
-    token: (env) => env.KIT_OPS_TOKEN,                // Access: Apps and Policies, and Organizations, Identity Providers, and Groups
-    account: async (env) => (await settingsFor(env)).get('backup.account_id'),
-    settings: (env) => settingsFor(env),              // iam.door_worker_id, iam.door_extra_emails
-  },
+  settings: (env) => settingsFor(env), // iam.setup_people, for the Users page's one-press invite
 });
 ```
 
-Why: Cloudflare's one-click "Protect this Worker behind Access" admits members of the Cloudflare
-account, and a Zero Trust organization made since June 2026 has only the "Cloudflare" login, so
-anyone else reads "Cloudflare sign-in is restricted to members of the account". `syncAccess` reads
-each piece first and writes only what differs: Zero Trust is set up (a person does that once:
-team name, Free plan; `no-zero-trust` until then); the One-time PIN login exists; one reusable
-allow policy, `DOOR_POLICY_NAME`, includes every active person's address (the Vendor's included),
-every pending invitation's, and each entry of `iam.door_extra_emails` (an address, or
-`@company.example` as an email domain); and the Access application whose destination is this
-Worker (`iam.door_worker_id`, which the deploy writes) uses only that login, goes straight to it
-(`auto_redirect_to_identity`), links only that policy, and leaves `DOOR_OPEN_PATHS` public
-(`/hooks/*`, `/healthz`, `/account`, `/account/*`, `/ui/*`) as destination overrides. That
-application is edited, never replaced, so its audience and the runtime's word stay the same; one
-is made only when the Worker has none.
-
-| Kind | Id | What it does |
-|---|---|---|
-| Job, every 5 minutes | `iam.door` | `door.sync`: works out who is wanted (two D1 reads), and calls Cloudflare only when that list, the key, the account or the Worker changed, an hour has passed since it last matched, or a failure is due another try (15 minutes; an hour when a person must act). The outcome is one KV key, `iam:door`. A key Cloudflare does not know at all (400 "Authentication failed", code 9106, and the like) is `bad-key`, apart from a known key that lacks a permission (`no-access-permission`); a new key changes the hash, so the next tick uses it. |
-| Hook | `POST /hooks/iam/door` | The same sync, at once; answers 204 and nothing else, since anyone may post there. The deploy calls it, then reads the outcome from `iam:door` with `wrangler kv key get`. |
-| Health check, lane `access` | `iam.door` | `ok` with how many may sign in; `warn` while a piece the deploy gives is missing; `fail` with `DOOR_ADVICE` and Cloudflare's answer when it refused. |
-
 **The people named at setup.** Step 2 of `npm run deploy` ("Who signs in") writes each person
 it names, with what they are, to `iam.setup_people` (`SETUP_PEOPLE_SETTING`: lines
-`address owner|staff|team`, lower case, set by the Vendor). Those addresses are on the door's
-allow list through `iam.door_extra_emails`, but an allow list is not an account. So the module
-lists the ones still without an account or a pending invitation (`GET /setup-people`), Home's
+`address owner|staff|team`, lower case, set by the Vendor). Being named is not an account. So the
+module lists the ones still without an account or a pending invitation (`GET /setup-people`), Home's
 Get started names them ("Invite the 3 people named at setup", `iam.bindings.manage`), and the
 Users page invites them all in one press, each at the company to its role: the Owner as Owner,
 Staff as Standard user, Your team as Full admin (each made from its ready set when missing). No
 email is sent: each person signs in at the door with their address and presses Accept on the page
 they land on (`POST /invitations/mine`, then `/invitations/accept` without a token). An Owner after
 the handover still needs a second person, as every Owner invitation does, and the press says so by
-name (`templates/client/test/setup-people.test.ts`).
-
-Making or withdrawing an invitation, and creating the company, call `door.soon` after the
-response: a failing door never fails the change, it shows on the System status page. Switching a person
-off (the users module) is followed by the next tick. Without `door` none of this is mounted and
-the door is the Vendor's to keep by hand.
+name (`templates/client/test/setup-people.test.ts`). Without `settings` the Users page offers no
+one.
 
 ## The routes
 
@@ -476,10 +458,8 @@ not exist with the core's `KIT-E-0404`.
 
 ## Tests
 
-`test/door.test.ts` runs the door against an in-memory stand-in for Cloudflare's Access API: who is
-wanted, the one-click application turned to the code by email and kept, nothing written when in
-step, Cloudflare skipped while nothing changed and asked again an hour later, each refusal named,
-and an invitation answered 201 while the door fails.
+`test/sign-out.test.ts`: signing out ends the sign-in and hands over to Cloudflare's own sign-out,
+and the module keeps no door (no hook, no job, no health check, only `iam.setup_people`).
 
 Inside the Workers runtime, against the real migration: the registry's rules and bit stability;
 the tree's limits; a small tenant decided case by case (owner, vendor, floors, deny over allow,
