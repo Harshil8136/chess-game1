@@ -151,6 +151,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-11-04-private-app-groups.md`](records/2026-11-04-private-app-groups.md) | Change record: private app groups with no address, versions that roll back by themselves, keys that can be set but never read, and a checked bridge from cf-admin to an app's own pages (WhatsApp bot rebuild, phase 1) |
 | [`records/2026-11-04-whatsapp-lab.md`](records/2026-11-04-whatsapp-lab.md) | Change record: the WhatsApp bot's test lab, a private copy of the bot that answers real test chats on fake numbers and records every model call's tokens and cost, with each AI step switchable between Claude and Gemini |
 | [`records/2026-11-05-whatsapp-lab-posthog.md`](records/2026-11-05-whatsapp-lab-posthog.md) | Change record: the test lab (1.2.0) sends every test chat to PostHog's AI observability, each AI step, run, wait and WhatsApp call timed, each message with its English, the bot's fixed instructions as a marker |
+| [`records/2026-11-05-whatsapp-lab-lean-workers-ai.md`](records/2026-11-05-whatsapp-lab-lean-workers-ai.md) | Change record: the test lab (1.3.0) can try the bot's cost clean-ups on a test chat ("lean": the payment check's short instructions, brief thinking on side steps) and run any AI step on Cloudflare Workers AI |
 
 ### Incidents
 
