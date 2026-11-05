@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-11-05
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/chatbot/whatsapp/, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts]
+related_code: [src/components/admin/chatbot/whatsapp/, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
 related_docs: [CHATBOT.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md]
 tags: [chatbot, whatsapp, lab, testing, models, n8n]
 ---
@@ -173,6 +173,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-05 | claude | The Test chat page answered 500 since the remake (Sentry CF-ADMIN-2V, `location is not defined`): `LabChat.tsx` read `?chat=` while rendering, and the Worker renders the page first, where there is no `location`. It now starts on the list and reads `?chat=` in an effect. `test/whatsapp-lab-ssr.test.ts` renders all three pages inside workerd: it failed with the same error before the fix and passes after | The page in a phone browser after the deploy (the owner's phone test) |
 | 2026-11-05 | claude | The PostHog panel and links, from the code: `LabSetup.tsx` (`PostHogPanel`), `ReplyDetails.tsx`, `ChatInfo.tsx`, `LabUsage.tsx`, `postHogLink` and `ENGLISH_STEP` in `format.ts` (`test/whatsapp-lab-pages.test.ts`), the new-tab rule (`test/whatsapp-lab-look.test.ts`), and the lab's `status`, `chat` and `turn` fields in cf-vps `apps/whatsapp-lab/src/posthog.ts` and `lab.ts` (`cf-vps/test/lab/posthog.test.ts`) | The panel against the lab on the server (1.2.0 is not installed yet); a real send to PostHog |
 | 2026-11-05 | claude | The Test chat remake, from the code: `LabChat.tsx`, `ChatList.tsx`, `ChatThread.tsx`, `ChatInfo.tsx`, `ChatModels.tsx`, `Composer.tsx`, `useChat.ts`, the helpers in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), the look rules (`test/whatsapp-lab-look.test.ts`), the lab's new paths in cf-vps `apps/whatsapp-lab/src/admin.ts` and `lab.ts` (`cf-vps/test/lab/chats.test.ts`), and lab 1.1.0 on the server (its `status` and `chats` read back) | The page in a phone browser (the owner's phone test); a reset, copy, rating or Compare against the lab on the server |
 | 2026-11-05 | claude | The Every step row (`ChatModels.tsx`, `everyStep` and `oneModel` in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`); that a chat left as it is uses only Claude, read from the lab's `gateway.ts` and the server's log of the first test | A whole chat on Gemini against Google (no Gemini call has run yet) |
