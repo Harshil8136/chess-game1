@@ -3,8 +3,8 @@
 | Field | Value |
 |-------|-------|
 | source_repo | mascotasmadagascar-cmd/cf-vps |
-| source_commit | f817e70fd712c35dbd0606d69a88c3631575e21b |
-| synced_at | 2026-11-05T23:41:29.631Z |
+| source_commit | 190932ced595ef2dd30d009be4d23dc61d38bc2c |
+| synced_at | 2026-11-05T23:55:31.443Z |
 | files | 15 |
 
 Published by `.github/workflows/sync-docs.yml` from the allow-list in `scripts/docs-mirror.mjs`; everything else in the repository is private.

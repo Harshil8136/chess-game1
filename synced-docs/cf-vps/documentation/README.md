@@ -158,6 +158,7 @@ Rulings, change records and the superseded first draft, oldest first.
 | [`records/2026-11-05-ai-checks-copy.md`](records/2026-11-05-ai-checks-copy.md) | Change record: the AI checks' copy (lab 1.7.0), PostHog's AI checks' verdicts and every reply copied into the bot's record through two saved reads and a key that can only run them, so every Chatbot page reads the server |
 | [`records/2026-11-05-bot-conversations.md`](records/2026-11-05-bot-conversations.md) | Change record: the conversations in the bot's record (lab 1.8.0), every message with who wrote it, the wait for an answer and WhatsApp's ticks, the lab's test chats copied and the real number's taken from WAHA's second webhook, the phone kept only as a keyed hash and its last 4 digits |
 | [`records/2026-11-05-ai-checks-on-server.md`](records/2026-11-05-ai-checks-on-server.md) | Change record: the real bot's AI checks on the server (lab 1.9.0), PostHog's 9 checks and pass rules run by the recorder on every real reply, the code checks always and the Claude Haiku judges where they matter, so no customer's words go to PostHog |
+| [`records/2026-11-05-bot-flags.md`](records/2026-11-05-bot-flags.md) | Change record: the bot's flags (lab 1.10.0), what a person should look at (a person promised, a payment claim, a customer left waiting 10 minutes in opening hours, a failed check, a bot error) raised once a minute in each record, and marked right, wrong or done |
 
 ### Incidents
 
