@@ -159,6 +159,30 @@ cannot be reached and need an address into the server; a batch export writes to 
 store the server would have to read in turn; asking PostHog's query API from the lab needs a
 key that can run any question on the project (cf-vps change record, §5).
 
+### Phase 4: topic groups, similar chats and a weekly report (started 2026-11-06)
+
+**Topic groups (built, cf-vps lab 1.15.0).** The chat insight step, which already reads each
+conversation once, also names the topics the customer raised, at most four, from a fixed list of
+11 (prices, availability, booking and paying, vaccines and rules, food and care, health and
+temperament, address and hours, transport, updates, a complaint, other), kept in the record and
+counted by `record/insights`. Trends draws them as **What customers raise**. A fixed list counts
+the same way every month and needs no new package; the same call, so no new cost.
+
+**Similar chats: the owner's choice, pending.** Three ways were weighed (2026-11-06):
+
+| Way | What it needs | Text leaves the server? | Cost at about 9 chats a day |
+|---|---|---|---|
+| The record's word search (Postgres full-text, Spanish and English, since lab 1.8.0) with the topics and services, ranked by shared words | nothing new | no | none |
+| pgvector (`postgresql-18-pgvector` from the PostgreSQL apt repository the server already uses; `CREATE EXTENSION vector` by the database's owner) with Cloudflare Workers AI's `@cf/baai/bge-m3` embeddings (multilingual) | one server package; the recorder gets the Workers AI keys the lab already has (`WORKERS_AI_TOKEN`, `WORKERS_AI_ACCOUNT`) | to Cloudflare | about US$0: 1,075 neurons per million tokens against 10,000 free neurons a day |
+| pgvector with an embedding model running on the server | one server package and a new library in the bot, a few hundred MB more memory | no | none |
+
+The recommendation is the first: at this traffic, topics plus shared words find the same kind of
+chat, and pgvector can be added when the real chats number in the thousands. Anthropic offers no
+embeddings of its own.
+
+**The weekly report** comes once the choice is made: the week's chats, bookings, cost, topics and
+open flags by email, off until the owner turns it on, as the urgent email is.
+
 ## 4. Who may open what
 
 Each tab is a page of its own in `admin_pages` (migration `0096`), so it can be given or kept
@@ -200,6 +224,7 @@ light, rendered from the real lab numbers read live from PostHog on 2026-11-05.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | Phase 4's section: the topics against cf-vps `apps/whatsapp-lab/src/insights.ts` and `record.ts` at `c6f4e8b`; pgvector's package against cf-vps `host/57-postgres/apply.sh` (the PostgreSQL apt repository, PostgreSQL 18) and the lab's Workers AI key names against `apps/whatsapp-lab/whatsapp-lab.toml`; the bge-m3 price against Cloudflare's Workers AI pricing page, read 2026-11-06 | pgvector on the server (not installed); the embeddings' quality on the hotel's chats |
 | 2026-11-06 | §4's Settings paragraph against `migrations/0097_chatbot_settings_page.sql`, `src/pages/dashboard/chatbot/settings.astro` and `changesBotAi` in `src/lib/vps-proxy.ts`; `test/whatsapp-bot-settings.test.ts` passes | The rest of the design |
 | 2026-11-05 | Phase 2's AI-checks part: `insights/record.ts` (`CHECK_PARTS`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx` and `dashboard.astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`VIEWS`, `shapeView`), `checks.ts` and `admin.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/checks.test.ts` ran against a real Postgres 16 | The pages against the installed lab 1.7.0 (not on the server yet; it needs the owner's read key); the pages on the owner's phone |
 | 2026-11-05 | Phase 2: `insights/record.ts`, `insights/BotInsights.tsx`, `lab-api.ts` and `[part].astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`, `VIEWS`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/record.test.ts` ran against a real Postgres 16 | The pages against the installed records (not on the server yet); the pages on the owner's phone |
