@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: [src/workers/scheduled-bot-flags.ts, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
+related_code: [src/workers/scheduled-bot-flags.ts, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
@@ -189,6 +189,39 @@ behind its own permission, Owner and Vendor support by default."*
 
 Nothing new on this side: no route, table, setting or key; the pages read and change the record
 through the console gateway the lab's pages already use.
+
+### 0.4 What the chats were about and how they ended (since 2026-11-06)
+
+*Phase 3 of the [analytics design](../specs/2026-11-05-chatbot-analytics.md): "The booking
+path", "Demand ahead", "Cost per booking", "Questions the bot could not answer" and "Busy hours
+against staff hours".* The record's chat insight step (cf-vps lab 1.11.0) reads each conversation
+once, after 30 quiet minutes, and keeps a fixed form: the services asked for, the pets, the dates
+and nights, the price quoted, a deposit asked, the outcome, the lost reason and a question left
+unanswered. `insights/Business.tsx` draws the record's counts of those forms
+(`record/insights?days=`, numbers only; `readInsights` and `useInsights` in `insights/record.ts`),
+one source at a time, so lab tests are never added to real customers.
+
+- **Money: What the chats became.** Its own Real customers or Lab tests choice. The
+  conversations, the bookings (the hotel confirmed) as a share of those about a stay or a service,
+  the **cost per booking** (all of that record's AI in the window over its bookings) and the
+  middle price quoted in pesos; **the booking path** (asked, got a price, asked for a deposit,
+  said they paid, booked), each step a share of the conversations about a booking; and **why the
+  others did not book** (the price, the dates, a Sunday, the distance, a missing service, nobody
+  answered, not clear).
+- **Trends**, for the page's source: **stays asked about, by check-in day** from today on (asked,
+  not booked), with the nights and how many days ahead customers typically ask; **what customers
+  ask for**; **their pets** by kind and size; **languages**; and under the week's heat map, the
+  share of replies outside opening hours (Monday to Saturday, 9:00 to 14:00 and 15:00 to 18:00,
+  the live bot's own hours).
+- **Questions the hotel did not answer** (`record/questions`, in the insight step's few English
+  words, newest first, each with a link to its chat) are the customers' own, so the page asks for
+  them only for who may open Chats, and the console gateway refuses them to anyone else (§0.3).
+  Everyone else sees how many conversations left one.
+
+Before lab 1.11.0 the panels say the lab needs its 1.11.0 update; until move night, that the real
+bot sends nothing yet. There is no PostHog fallback: PostHog never had these forms. Not built yet
+(cf-vps): the price check against the price list and returning customers
+(`MAINTENANCE.md` (private) BI-1).
 
 ---
 
@@ -527,6 +560,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | §0.4 (new) against `insights/Business.tsx` (`bookingPath`, `outsideHours`, `aheadDays`, `noForms`, `Bookings`, `Demand`), `insights/record.ts` (`readInsights`, `readQuestions`, `useInsights`), `insights/BotInsights.tsx` (Money and Trends), and cf-vps `apps/whatsapp-lab/src/record.ts` (`insights`, `questions`), `insights.ts` (the form's fields) and `flags.ts` (`OPEN_HOURS`); `test/whatsapp-bot-business.test.ts` passes | The pages against the installed lab 1.11.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.3 (new) and §0.1's Chats row against `insights/Conversations.tsx`, `insights/FlagInbox.tsx`, `insights/record.ts` (`readConversations`, `readThread`, `mergeConversations`, `mergeFlags`, `reviewFlag`), `lab-api.ts` (`memberChange`), `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`), the console gateway and `[part].astro`, and cf-vps `apps/whatsapp-lab/src/messages.ts` (`list`, `chat`), `flags.ts` (`reviewFlag`) and `record.ts` (`flagOf`); `test/whatsapp-bot-conversations.test.ts` and `test/vps-gateway.test.ts` pass | The pages against the installed lab 1.8.0 to 1.12.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.2 (new) against `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (`bot-flags`, its gate), `src/lib/vps-proxy.ts` (`vpsSystemRead` with a query), and cf-vps `apps/whatsapp-lab/src/record.ts` (`urgent`), `admin.ts` (`SYSTEM_PATHS`) and `contract/capabilities.ts` (`SYSTEM_JOB_BRIDGE`); `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass | Nothing live: the job is off, and the record is not installed on the server; an email in a real mailbox; `last_verified` left as it was |
 | 2026-11-05 | §0's record sentence and §0.1's AI-checks paragraph against `insights/record.ts` (`CHECK_PARTS`, `whyOf`, `fromLine`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx`, `dashboard.astro` and cf-vps `apps/whatsapp-lab/src/record.ts`, `admin.ts` (`checks_off`) and `agent/src/server.ts` (the bridge passes a member's answer through unchanged); `test/whatsapp-bot-record.test.ts` and `test/chatbot-look.test.ts` pass | The pages against the installed lab 1.7.0 (not on the server yet, and it needs the owner's read key); §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
