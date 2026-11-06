@@ -5,8 +5,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-11-05
 verified_against: [code]
 owner: harshil
-related_code: [src/components/admin/chatbot/whatsapp/, src/components/admin/chatbot/PageBar.tsx, src/lib/auth/registry-tabs.ts, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
-related_docs: [CHATBOT.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-makeover.md]
+related_code: [src/components/admin/chatbot/whatsapp/, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/PageBar.tsx, src/lib/auth/registry-tabs.ts, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
+related_docs: [CHATBOT.md, ../records/reports/2026-11-06-bot-models-settings.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-makeover.md]
 tags: [chatbot, whatsapp, lab, testing, models, n8n]
 ---
 
@@ -183,6 +183,14 @@ or a Cloudflare model; any other model is sent as it is, and the call's notes sa
 noted on the call; cf-vps's guide, "Choosing models", has the detail. The chat's info and its
 one-line summary show them (for example "cached for an hour, dates checked, low effort").
 
+**Run as the real bot's door** (the lab's `door`, lab 1.5.0; shown only when the lab sends it).
+On, the chat runs as the model door runs the real bot: the door sorts each call into its step
+by the request's words and sends it on the model, cache, effort and lean side steps the lab's
+**Models** settings give (Chatbot → Settings → Models, lab 1.17.0; before 1.17.0 the door's
+built-in table), in place of the choices on this drawer; each call's notes say which step the
+door saw. So a change to the lab's Models settings is tried here before it is saved for the real
+bot. The chat's info says "Runs as the real bot's door: On".
+
 **Photos** are made smaller in the browser before they are sent (a JPEG of at most 1,280
 pixels, stepped down until it fits the 256 KiB a server-console change may carry). **Voice notes
 are not offered**: the lab has no Whisper yet.
@@ -238,6 +246,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-06 | claude | §1's Run as the real bot's door (`ChatModels.tsx` Options, `ChatInfo.tsx` row, `draftSetup` in `format.ts`, `Setup.door` in `lab-api.ts`; `test/whatsapp-lab-pages.test.ts`), read from cf-vps `apps/whatsapp-lab/src/` at a8ab434 (`lab.ts`: the setup's `door`; `gateway.ts` `asSetUp` and `doorPlans`: the lab's own settings in place of `DOOR_PLAN`) | The switch against lab 1.17.0 on the server (not installed); the rest of the document not re-read |
 | 2026-11-06 | claude | §1's Usage row: the Models page's step-by-model comparison (`BotInsights.tsx` `ModelsPart`, cf-vps lab 1.14.0 `record/models`), and that this page stays until that package is installed; `test/whatsapp-bot-sections.test.ts` | The rest of the document not re-read |
 | 2026-11-05 | claude | Lab 1.4.0's settings in Change models and the chat's info (`ChatModels.tsx`, `ChatInfo.tsx`, `draftSetup` and the summary in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`), read from cf-vps `apps/whatsapp-lab/src/` at 4b8ebca (`lab.ts`: the setup's `facts`, `effort`, `cacheTtl` and the status's `keys.workersAi`; `gateway.ts` and `facts.ts`: what each does; `models.ts`: which Claude models take effort); the drawer at 390 and 1,440 pixels in a local preview on sample data, never committed, with Save off until a setting changes and the cache lifetime shown only while caching is on | The settings against lab 1.4.0 on the server (installed 2026-11-05 07:07Z by the cost work, not read back here); a test chat with each one on (the owner's phone test) |
 | 2026-11-05 | claude | One row of tabs (the owner's "2 layer tabs are bad looking"): §1 against `RegistryTabs.astro` (`expand`), `ChatbotLayout.astro`, the three pages' `.astro` files and islands (`LabChat.tsx`, `LabUsage.tsx`, `LabSetup.tsx` on a plain `PageBar`), `PageBar.tsx` (`SubNav` removed) and the `--tab-group` tint in `chatbot.css`; `test/chatbot-look.test.ts`, `test/whatsapp-lab-look.test.ts` and `test/whatsapp-lab-ssr.test.ts` (each page renders in workerd with its name in the bar and no second row) | The row in a phone browser (the owner's phone test); the rest of the document not re-read |

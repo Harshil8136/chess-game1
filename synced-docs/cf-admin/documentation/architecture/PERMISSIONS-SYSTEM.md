@@ -363,7 +363,8 @@ the Chatbot section's eighth tab, `/dashboard/chatbot/settings` (migration `0097
 `owner`, so the Owner and Vendor support by default). `denyBotPart` asks for the section's key and
 this one, each by exact key, in the page and in `POST /api/whatsapp-bot/settings` (the month's AI
 allowance and the urgent flags email). Changing the AI checks' share and cap on the server
-(`record/ai`, `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts`) passes the console gateway only when
+(`record/ai`) or, since cf-vps lab 1.17.0, the bot's models (`record/settings/save`; both in
+`BOT_AI_CHANGES`, `src/lib/vps-proxy.ts`) passes the console gateway only when
 `denyBotPart` admits this tab too (the gateway's `bot_settings` refusal), on top of the console,
 the server notice and cf-vps's `apps.bridge.operate` ([`CHATBOT.md`](../features/CHATBOT.md) §0.5).
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
@@ -1523,6 +1524,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's Settings note**: read `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (`record/settings/save` added) and the gateway's `bot_settings` refusal; `test/vps-gateway.test.ts` passes | Matches the code. `last_verified` left as it was |
 | 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's Settings note**: read `migrations/0097_chatbot_settings_page.sql`, `BOT_SETTINGS_PAGE`, `denyBotPart`, `src/pages/dashboard/chatbot/settings.astro`, `src/pages/api/whatsapp-bot/settings.ts`, `API_PAGE_MAPPING`, `changesBotAi` and the console gateway; `test/whatsapp-bot-settings.test.ts` and `test/vps-gateway.test.ts` pass (the route's 401 and 403s, `record/ai` held without the tab) | The rest of the document not re-read |
 | 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's 2026-11-06 note**: read `readsChatWords` and `CHAT_WORDS_PATHS` in `src/lib/vps-proxy.ts`, the console gateway `src/pages/dashboard/vps/app/[...path].ts` and `denyBotPart`; `test/vps-gateway.test.ts` passes (each words read refused without the Chats tab, a second `path` caught, other reads unchanged) | The rest of the document not re-read |
 | 2026-11-05 | claude | **Scope-limited to the Chatbot tabs paragraph**: read `migrations/0096_chatbot_bot_sections.sql`, `denyBotPart` and `CHATBOT_PAGE` in `src/lib/auth/surface-guards.ts`, `src/pages/dashboard/chatbot/[part].astro`, `src/pages/api/whatsapp-bot/part.ts` and `API_PAGE_MAPPING`; `test/whatsapp-bot-sections.test.ts` passes (a tab refused without its own key, the route's 403) | The rest of the document not re-read |
