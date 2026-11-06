@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: [src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/lib/posthog/bot-words.ts, src/pages/dashboard/chatbot/settings.astro, src/pages/api/whatsapp-bot/settings.ts, src/components/admin/chatbot/insights/BotSettings.tsx, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/insights/BotRules.tsx, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
+related_code: [src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/lib/posthog/bot-words.ts, src/pages/dashboard/chatbot/settings.astro, src/pages/api/whatsapp-bot/settings.ts, src/components/admin/chatbot/insights/BotSettings.tsx, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/insights/BotRules.tsx, src/components/admin/chatbot/insights/BotData.tsx, src/components/admin/chatbot/insights/BotN8n.tsx, src/components/admin/chatbot/insights/record-data.ts, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
@@ -16,7 +16,7 @@ tags: [chatbot, whatsapp, n8n, ai, analytics]
 > **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-11-06 — Settings gains AI checks, Flags and PostHog: each record's AI judges, chat insight step and their model, the flags' wait, opening hours and kinds, the lab's PostHog sending, and the pages' own PostHog reads (§0.5). The weekly report by email, built and switched off (§0.6). The Overview's server parts are one line that opens System, and a lab reply on Chats shows PostHog's AI summary (§0.3). The Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
+> **Last Updated:** 2026-11-06 — Settings gains Timings, n8n and Data (§0.5): the lab's workflow timings, written into its copy of the bot at once, beside the real bot's (read only); each bot's n8n workflows, runs and failures, with a switch; what each record keeps, its download by days, removing a range of days and the months kept, behind a typed count and a recent sign-in. Chats downloads one real customer's chat, and erases it for who has Settings (§0.3). Earlier that day Settings gained AI checks, Flags and PostHog: each record's AI judges, chat insight step and their model, the flags' wait, opening hours and kinds, the lab's PostHog sending, and the pages' own PostHog reads (§0.5). The weekly report by email, built and switched off (§0.6). The Overview's server parts are one line that opens System, and a lab reply on Chats shows PostHog's AI summary (§0.3). The Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
@@ -186,11 +186,25 @@ behind its own permission, Owner and Vendor support by default."*
   (two questions, kept a minute); the record's copy of the checks still comes first. Before lab 1.8.0 neither record answers, so the
   list is the lab's own chats, as before, and the line under the head says why.
 - **Customers' words have their own permission.** The record's reads that carry them
-  (`record/conversations`, `record/conversation`, `record/questions`: `CHAT_WORDS_PATHS` in
-  `src/lib/vps-proxy.ts`) pass the console gateway only for who holds the Chats page as well as the
+  (`record/conversations`, `record/conversation`, `record/questions`, and since cf-vps lab 1.19.0
+  one chat's download `record/data/chat`: `CHAT_WORDS_PATHS` in `src/lib/vps-proxy.ts`; and an
+  export of messages, chats or chat insights, `record/data/export` with one of `CHAT_WORDS_TABLES`)
+  pass the console gateway only for who holds the Chats page as well as the
   Server page (`denyBotPart`, the gateway's `chat_words` refusal), so server access alone does not
   open them. The Chats page is Owner and Vendor support by default (migration `0096`), and anyone
   else needs it given on the Access page.
+- **One chat downloaded or erased** (since 2026-11-06, cf-vps lab 1.19.0; `ChatActions` in
+  `insights/Conversations.tsx`). A real customer's chat has **Download this chat**: the chat, its
+  insight forms, flags and AI checks and every message, as one JSON file (`chatAll`, the record's
+  `record/data/chat` a page at a time), for a customer who asks what the hotel keeps. Who also holds
+  the Settings page (`settingsOpen` from `[part].astro`) has **Erase this chat**: the record counts
+  what it would remove (`record/data/forget-count`), the person types that number in the portal's
+  dialog, and `record/data/forget` removes its messages, the chat, its insight forms, AI checks and
+  flags only while the count is still that one (else `count_changed`, nothing removed). Its AI
+  calls and replies stay in the totals without the chat. It is an admin call: the gateway holds it
+  for the Settings page (`BOT_AI_CHANGES`), and cf-vps asks for `apps.bridge.admin` and a sign-in
+  from the last 10 minutes, which the "Confirm it's you" dialog's emailed code gives. The record's
+  log names the chat by its last 4 digits only.
 - **Flags** (`insights/FlagInbox.tsx`): once a record keeps its flags (`items`, lab 1.10.0), the
   page is an inbox, open ones first, with what each is and what to do. **Right** and **Wrong** say
   whether the flag was correct (a check's marks measure its AI judge on Quality), **Done** says it
@@ -247,9 +261,11 @@ the monthly AI allowance and the judge share" ("today the allowance is only a da
 section's Settings tab (`/dashboard/chatbot/settings`, `settings.astro` and
 `insights/BotSettings.tsx`, migration `0097`) is Owner and Vendor support by default; anyone else
 needs it given on the Access page. Since the owner's ask of 6 November ("REAL CONFIG for
-production", a default model and one per feature) it has five sections in a row that scrolls
-sideways on a phone, **Models**, **AI checks**, **Flags**, **PostHog** and **Emails** (a link with
-`#models`, `#checks`, `#flags`, `#posthog` or `#emails` opens one), and ten panels:
+production", a default model and one per feature, "data storage view, delete/export by date
+range" and the n8n setup) it has eight sections in a row that scrolls sideways on a phone,
+**Models**, **AI checks**, **Flags**, **Timings**, **n8n**, **Data**, **PostHog** and **Emails** (a
+link with `#models`, `#checks`, `#flags`, `#timings`, `#n8n`, `#data`, `#posthog` or `#emails`
+opens one):
 
 | Panel | What it changes | Where it is kept | Saved through |
 |---|---|---|---|
@@ -263,6 +279,10 @@ sideways on a phone, **Models**, **AI checks**, **Flags**, **PostHog** and **Ema
 | The lab's PostHog (PostHog) | Whether the lab sends its test turns to PostHog (off: what it makes meanwhile is marked as not sent, so on again sends only what comes after), and the English copy with them (one Claude Haiku 4.5 call per turn). The real bot sends nothing to PostHog from the server | The lab's bot settings, the `posthog` part | The console bridge, `record/settings/save` with `part: posthog` |
 | PostHog reads for these pages (PostHog) | On or off: off, `GET /api/whatsapp-bot/insights` and `/part` ask PostHog nothing and answer that the reads are off here, so the pages read only the records on the server and a test chat shows no PostHog summaries | `admin_portal_settings` `chatbot-posthog-reads` (on with no row; `POSTHOG_READS_KEY` in `src/lib/posthog/bot.ts`) | `POST /api/whatsapp-bot/settings` |
 | Weekly report by email | Off, Test with the lab, or On, and up to five addresses (none: the alert inbox) | `admin_portal_settings` `chatbot-weekly-email`, as the job reads it (§0.6) | `POST /api/whatsapp-bot/settings` |
+| The lab's timings (Timings) | The six numbers in the bot's n8n workflow that decide how it feels: the wait for more messages, the typing pause (shortest and longest), the wait before checking for a person, the hours quiet after a person writes, the messages the payment check reads, the longest photo description; each within the server's limits, with the lab copy's, the real bot's and the built-in value beside it | The lab's bot settings, the `workflow` part (cf-vps lab 1.19.0), written into the lab's copy of the bot at once | The console bridge, `record/settings/save` with `part: workflow`, the lab only |
+| The real bot's timings (Timings) | Nothing: the same six numbers read from the live n8n's bot workflow | | Read only (`record/workflow`) |
+| n8n workflows (n8n) | For the real bot or the lab: switch a workflow off or on (the live one asks for the word typed); its runs and failures this week, n8n's latest runs and the week's failed ones are shown | n8n itself; each switch in the record's log (`n8n_log`) | The console bridge, `record/n8n/switch` at the admin level |
+| What the record keeps, Download, Remove a range of days, How long it keeps (Data) | For the real bot or the lab: nothing, a download of one table for a range of days (CSV or JSON), the removal of a group (conversations, activity, AI checks, everything) for a range of days, and the months kept (1 to 12) | Each record on the server; each removal in its log (`data_log`) | Reads at the view level; `record/data/remove` and `record/data/keep` at the admin level |
 
 - **The route** (`src/pages/api/whatsapp-bot/settings.ts`) asks for the section's key and the
   page's (`denyBotPart`), checks each value, and writes one audit row per changed row with the old
@@ -303,6 +323,34 @@ sideways on a phone, **Models**, **AI checks**, **Flags**, **PostHog** and **Ema
   each panel says it needs the 1.18.0 update. Which judges are on, the flags' wait and hours, and
   the lab's PostHog sending are cf-vps's `documentation/features/WHATSAPP-LAB.md`, "The record's
   own work".
+- **Timings** (`TimingsSection` in `insights/BotN8n.tsx`, cf-vps lab 1.19.0) reads both records'
+  `record/workflow` at once: what the bot's workflow runs now (null where its node is not found),
+  and in the lab what is saved, the built-in values (the real bot's export of 2 November) and each
+  number's limits, which the form checks against. **Save for the lab** saves the `workflow` part
+  (`saveTimings`); the lab writes it into its copy of the bot through n8n's API at once and answers
+  how that went, which the panel says (written, nothing to change, or why not). **Undo changes**,
+  **Built-in timings** and **Copy the real bot's** fill the form in; each still needs a save. The
+  real bot's recorder only reads its workflow and refuses the part: its timings change on the
+  server, with the owner, after trying them in the lab.
+- **n8n** (`N8nSection` in `insights/BotN8n.tsx`) reads one record's `record/n8n`: n8n's
+  workflows (names, on or off, size and when they changed, never a node's settings or a
+  credential), n8n's 20 latest runs, and from the record the week's runs and failures per workflow
+  and the failed runs with their error. **Switch off** and **Switch on** name the workflow as shown
+  (`switchN8n`), so a list that changed meanwhile switches nothing; for the real bot the dialog asks
+  for "off" or "on" typed, since a second workflow on would answer customers twice.
+- **Data** (`DataSection` in `insights/BotData.tsx`) reads one record's `record/data`: each
+  table's rows, size, oldest and newest, the database's size, the months kept and the last nightly
+  tidy, and the log of removals. **Download** joins `record/data/export` pages (1,000 rows, about
+  1.4 MB each) in the browser into one file; messages, chats and chat insights are offered only
+  with the Chats page (`chatsOpen` from `settings.astro`), which the gateway checks again.
+  **Remove a range of days** counts first (`record/data/count`: each table's rows and the moment of
+  the count), then removes only those rows after the person types the total (`record/data/remove`
+  with `asOf` and `expect`; a count that moved is refused with `count_changed` and counted again).
+  **How long it keeps** counts what a shorter time removes at once (`record/data/keep-count`) and
+  saves with the same typed count. The removals and the months are admin calls, held by the gateway
+  for this page (`BOT_AI_CHANGES`) and by cf-vps for `apps.bridge.admin` and a sign-in from the
+  last 10 minutes. What each group takes is cf-vps's `documentation/features/WHATSAPP-LAB.md`,
+  "The record's data, n8n and the workflow's timings".
 - **The wait is a setting**, so the Flags inbox, the urgent flags email and its job's description
   say a customer waited without an answer, not "10 minutes".
 
@@ -683,6 +731,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | §0.5's eight sections and its new rows (Timings, n8n, Data) and §0.3's download and erasure against `insights/BotData.tsx`, `insights/BotN8n.tsx`, `insights/Conversations.tsx` (`ChatActions`), `insights/BotSettings.tsx` (`SECTIONS`), `insights/record-data.ts` (the data, n8n and timings calls), `lab-api.ts` (`memberAdmin`, the `fresh_sign_in` reading), `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES`, `BOT_AI_CHANGES`), `settings.astro` and `[part].astro`, and cf-vps `apps/whatsapp-lab/src/data.ts`, `workflows.ts`, `timings.ts` and `admin.ts` at `7c7c411` (lab 1.19.0); `test/whatsapp-bot-data.test.ts` and `test/vps-gateway.test.ts` pass | The panels against lab 1.19.0 (not installed) and on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.5's five sections and its four new panels against `insights/BotRules.tsx` (`ChecksForm`, `FlagsForm`, `LabPostHogForm`, `spansOf`, `minutesOf`), `insights/BotSettings.tsx` (`SECTIONS`, `PostHogReads`, the lab's share), `insights/record.ts` (`saveBotSettings` with `part`), `src/lib/posthog/bot.ts` (`POSTHOG_READS_KEY`, `READS_OFF`), `src/pages/api/whatsapp-bot/{settings,insights,part}.ts`, and cf-vps `apps/whatsapp-lab/src/settings.ts` (`SETTINGS_PARTS`, `withPart`, `settingsView`), `judges.ts`, `flags.ts` and `posthog.ts` at `bb01388` (lab 1.18.0); `test/whatsapp-bot-rules.test.ts`, `test/whatsapp-bot-settings.test.ts`, `test/whatsapp-bot-models.test.ts`, `test/bot-flags-email.test.ts`, `test/whatsapp-bot-sections.test.ts` and `test/whatsapp-bot-overview.test.ts` pass | The panels against lab 1.18.0 (not installed) and on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.5's sections and Models row against `insights/BotSettings.tsx` (`SECTIONS`, `sectionOf`), `insights/BotModels.tsx` (`ModelsForm`, `ModelsPanel`, `doorSay`, `priceSay`), `insights/record.ts` (`readBotSettings`, `saveBotSettings`), `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts`, and cf-vps `apps/whatsapp-lab/src/settings.ts` and `admin.ts` at `a8ab434` (lab 1.17.0); `test/whatsapp-bot-models.test.ts`, `test/whatsapp-bot-settings.test.ts` and `test/vps-gateway.test.ts` pass | The panel against lab 1.17.0 (not installed) and on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.6 (new) and §0.5's fifth row against `src/workers/scheduled-bot-weekly.ts`, `src/lib/jobs/registry.ts` (`bot-weekly`, its gate), `src/pages/api/whatsapp-bot/settings.ts` (`weeklyEmail`), `insights/BotSettings.tsx` (`EmailSwitch`, `WEEKLY_SAY`), `src/lib/posthog/bot-words.ts`, and cf-vps `apps/whatsapp-lab/src/record.ts` (`week`), `admin.ts` (`SYSTEM_PATHS`) and `contract/capabilities.ts` (`SYSTEM_JOB_BRIDGE`) at `88717cf` (lab 1.16.0); `test/bot-weekly-email.test.ts`, `test/whatsapp-bot-settings.test.ts` and `test/jobs-budget.test.ts` pass | Nothing live: the job is off and lab 1.16.0 is not installed; an email in a real mailbox; the page on a phone; `last_verified` left as it was |
