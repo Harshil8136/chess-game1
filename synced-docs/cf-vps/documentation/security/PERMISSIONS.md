@@ -91,7 +91,12 @@ their grant would count. The console's role matrix shows the role as holding eve
 1. An unknown capability id is refused. A system actor holds nothing, apart from the one read
    `SYSTEM_JOB_READS` (`contract/capabilities.ts`) names for its job and route: since 2026-10-17
    cf-admin's System health job (`health-checks`) may read `diagnostics` with `host.view`, for its
-   "Server's site checks" check (`systemCapabilities`, used by the router).
+   "Server's site checks" check (`systemCapabilities`, used by the router). Since 2026-11-06
+   cf-admin's urgent flags by email (`bot-flags`) may read `apps/bridge/view` with
+   `apps.bridge.view`, and only for the app, member and path `SYSTEM_JOB_BRIDGE` names: the
+   WhatsApp records' `record/urgent` (the live bot's recorder and the lab's phone). Any other
+   bridge read is refused as if it held nothing, and the app refuses a system actor every other
+   path too.
 2. **Vendor support** holds every capability: yes, whatever follows.
 3. A floor capability is refused unless the role is owner or vendor support.
 4. A per-person **deny** wins over everything else.
