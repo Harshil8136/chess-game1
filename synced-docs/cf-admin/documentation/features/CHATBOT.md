@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: [src/workers/scheduled-bot-flags.ts, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
+related_code: [src/workers/scheduled-bot-flags.ts, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
@@ -16,7 +16,7 @@ tags: [chatbot, whatsapp, n8n, ai, analytics]
 > **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-11-06 — urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
+> **Last Updated:** 2026-11-06 — the Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
@@ -79,7 +79,7 @@ and all of them, with the Overview, are drawn with the PostHog page's kit in the
 
 | Tab | Path | Default holders |
 |---|---|---|
-| Chats | `/dashboard/chatbot/chats` | Owner (it shows the lab chats' words) |
+| Chats | `/dashboard/chatbot/chats` | Owner and Vendor support (it shows customers' words, §0.3) |
 | Quality | `/dashboard/chatbot/quality` | Admin |
 | Flags | `/dashboard/chatbot/flags` | Admin |
 | Money | `/dashboard/chatbot/money` | Admin |
@@ -154,6 +154,41 @@ the five-minute tick, [CRON-CONTROL](CRON-CONTROL.md) §3g) emails them as they 
 Before move night the real bot's recorder is not installed, so with the switch on the job finds
 no record and looks again every half hour. Its D1 cost is its budget's: nothing while off or with
 nothing new, one row written when it emails (change record (private)).
+
+### 0.3 Conversations and the flag inbox (since 2026-11-06)
+
+*Phase 3 of the [analytics design](../specs/2026-11-05-chatbot-analytics.md): "Conversations:
+every chat, newest first … search by word; open one to see it as a WhatsApp thread", "Flags: one
+inbox of what needs a person … mark each as right, wrong or done", and "Chat text in the portal:
+behind its own permission, Owner and Vendor support by default."*
+
+- **Chats** (`insights/Conversations.tsx`) asks both records for `record/conversations?days=&q=`
+  (cf-vps lab 1.8.0): each chat with its messages by side, the typical wait for an answer, the
+  customer's questions left unanswered and its last message, newest first, Real customers and Lab
+  tests apart. The search box takes a word (Spanish or English, the record's full-text search),
+  the last 4 digits of a phone, or a whole number (matched through the record's keyed hash; no
+  phone number is kept or shown). A WhatsApp chat opens from `record/conversation?chat=` as a
+  thread: every message, staff's from the hotel phone marked, and WhatsApp's ticks under what the
+  hotel sent (sent, delivered, read, played, not delivered). A lab test chat opens as before, each
+  reply with its model, time, cost and AI checks. Before lab 1.8.0 neither record answers, so the
+  list is the lab's own chats, as before, and the line under the head says why.
+- **Customers' words have their own permission.** The record's reads that carry them
+  (`record/conversations`, `record/conversation`, `record/questions`: `CHAT_WORDS_PATHS` in
+  `src/lib/vps-proxy.ts`) pass the console gateway only for who holds the Chats page as well as the
+  Server page (`denyBotPart`, the gateway's `chat_words` refusal), so server access alone does not
+  open them. The Chats page is Owner and Vendor support by default (migration `0096`), and anyone
+  else needs it given on the Access page.
+- **Flags** (`insights/FlagInbox.tsx`): once a record keeps its flags (`items`, lab 1.10.0), the
+  page is an inbox, open ones first, with what each is and what to do. **Right** and **Wrong** say
+  whether the flag was correct (a check's marks measure its AI judge on Quality), **Done** says it
+  was handled, and **Open again** undoes a tap; a wrong flag is done too. Each mark is a change on
+  the server, `record/flag` through the console bridge at the operate level (`memberChange` in
+  `lab-api.ts`), so the gateway records it and cf-vps and the record check it. A flag carries no
+  customer's words; **Open the chat** shows only for who may open Chats (`chatsOpen` from
+  `[part].astro`). Before lab 1.10.0 the page lists the failed checks and AI errors as before.
+
+Nothing new on this side: no route, table, setting or key; the pages read and change the record
+through the console gateway the lab's pages already use.
 
 ---
 
@@ -492,6 +527,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | §0.3 (new) and §0.1's Chats row against `insights/Conversations.tsx`, `insights/FlagInbox.tsx`, `insights/record.ts` (`readConversations`, `readThread`, `mergeConversations`, `mergeFlags`, `reviewFlag`), `lab-api.ts` (`memberChange`), `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`), the console gateway and `[part].astro`, and cf-vps `apps/whatsapp-lab/src/messages.ts` (`list`, `chat`), `flags.ts` (`reviewFlag`) and `record.ts` (`flagOf`); `test/whatsapp-bot-conversations.test.ts` and `test/vps-gateway.test.ts` pass | The pages against the installed lab 1.8.0 to 1.12.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.2 (new) against `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (`bot-flags`, its gate), `src/lib/vps-proxy.ts` (`vpsSystemRead` with a query), and cf-vps `apps/whatsapp-lab/src/record.ts` (`urgent`), `admin.ts` (`SYSTEM_PATHS`) and `contract/capabilities.ts` (`SYSTEM_JOB_BRIDGE`); `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass | Nothing live: the job is off, and the record is not installed on the server; an email in a real mailbox; `last_verified` left as it was |
 | 2026-11-05 | §0's record sentence and §0.1's AI-checks paragraph against `insights/record.ts` (`CHECK_PARTS`, `whyOf`, `fromLine`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx`, `dashboard.astro` and cf-vps `apps/whatsapp-lab/src/record.ts`, `admin.ts` (`checks_off`) and `agent/src/server.ts` (the bridge passes a member's answer through unchanged); `test/whatsapp-bot-record.test.ts` and `test/chatbot-look.test.ts` pass | The pages against the installed lab 1.7.0 (not on the server yet, and it needs the owner's read key); §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |
 | 2026-11-05 | §0.1's server-record paragraph against `insights/record.ts`, `insights/BotInsights.tsx`, `insights/kit.tsx`, `lab-api.ts`, `[part].astro` and cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` and `test/chatbot-look.test.ts` pass | The pages against the installed record (not on the server yet); §1 and §3 to §10; `last_verified` left as it was; the pages on the owner's phone |

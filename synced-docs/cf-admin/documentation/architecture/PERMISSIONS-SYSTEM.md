@@ -350,6 +350,14 @@ Chatbot section has seven tabs about the WhatsApp bot, migration `0096`: `/dashb
 tab's own, each by exact key, in the page and in `GET /api/whatsapp-bot/part`, so holding the
 section or one tab opens no other tab; the owner and vendor support pass as on every key. The
 Overview links a panel to a tab only for someone that rule admits ([`CHATBOT.md`](../features/CHATBOT.md) §0.1).
+*Changed 2026-11-06 (phase 3 of the Chatbot analytics plan, "chat text in the portal: behind its
+own permission"):* the Chats tab is that permission. The bot record's reads that carry customers'
+words (`record/conversations`, `record/conversation`, `record/questions`, `CHAT_WORDS_PATHS` in
+`src/lib/vps-proxy.ts`) pass the console gateway only when `denyBotPart` admits the Chats tab too,
+so the `/dashboard/vps` key and cf-vps's `apps.bridge.view` alone no longer open them (the
+gateway's `chat_words` refusal). Marking a flag right, wrong or done is an operate call through the
+same gateway, so it needs the console and cf-vps's `apps.bridge.operate`, as the lab's changes do
+([`CHATBOT.md`](../features/CHATBOT.md) §0.3).
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
 its route will allow it. Until then it decided from the role: any admin saw the block
 controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
@@ -1507,6 +1515,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's 2026-11-06 note**: read `readsChatWords` and `CHAT_WORDS_PATHS` in `src/lib/vps-proxy.ts`, the console gateway `src/pages/dashboard/vps/app/[...path].ts` and `denyBotPart`; `test/vps-gateway.test.ts` passes (each words read refused without the Chats tab, a second `path` caught, other reads unchanged) | The rest of the document not re-read |
 | 2026-11-05 | claude | **Scope-limited to the Chatbot tabs paragraph**: read `migrations/0096_chatbot_bot_sections.sql`, `denyBotPart` and `CHATBOT_PAGE` in `src/lib/auth/surface-guards.ts`, `src/pages/dashboard/chatbot/[part].astro`, `src/pages/api/whatsapp-bot/part.ts` and `API_PAGE_MAPPING`; `test/whatsapp-bot-sections.test.ts` passes (a tab refused without its own key, the route's 403) | The rest of the document not re-read |
 | 2026-11-05 | claude | **Scope-limited to the WhatsApp lab paragraph** (after Developer Tools' of 2026-10-31): read `migrations/0093_whatsapp_lab_pages.sql`, `mayUseConsole` in `src/lib/vps-proxy.ts`, the notice check in `src/pages/dashboard/vps/app/[...path].ts` and cf-vps's `DEFAULT_ROLE_CAPABILITIES` (`contract/capabilities.ts`: the Owner holds every capability); `test/whatsapp-lab-look.test.ts` passes | The rest of the document not re-read |
 | 2026-11-04 | claude | **Scope-limited to §10.5's Email code paragraph and its limits**, for the one-hour confirmation. Read `src/lib/auth/fresh-sign-in.ts` (`CODE_CONFIRMED_MS`, `codeConfirmedActive`, `confirmedAt`), `src/pages/api/settings/confirm-code.ts`, `src/lib/fresh-sign-in-client.ts` and the three actor builders; in `cf-vps/contract/signing.ts` and `cf-backup/src/lib/fresh.ts` (their own 10-minute checks, unchanged); `test/confirm-code.test.ts` passes | The rest of §10.5 and the document not re-read |
