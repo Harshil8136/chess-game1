@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: [src/workers/scheduled-bot-flags.ts, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
+related_code: [src/workers/scheduled-bot-flags.ts, src/pages/dashboard/chatbot/settings.astro, src/pages/api/whatsapp-bot/settings.ts, src/components/admin/chatbot/insights/BotSettings.tsx, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
@@ -52,7 +52,7 @@ the server's records helper.
 | By day, Busiest hours | `$ai_trace` | Replies per day and per hour of day, the hotel's time (America/Mexico_City) |
 | Errors | failed `$ai_generation` | The five most frequent error texts, with their count and when last seen |
 
-**The monthly AI allowance** (the owner, 2026-11-05): one limit in US dollars for everything that uses AI in a month (the bot, PostHog AI and the portal's AI), which the client sets each month. It is the `admin_portal_settings` row `ai_monthly_allowance_usd` (migration `0094`); with no row it is 5, and Vendor support set it at 50 on 2026-11-05. The page compares it with the AI spend PostHog was told about, which today is the bot's (lab) calls only; no screen changes it yet.
+**The monthly AI allowance** (the owner, 2026-11-05): one limit in US dollars for everything that uses AI in a month (the bot, PostHog AI and the portal's AI), which the client sets each month. It is the `admin_portal_settings` row `ai_monthly_allowance_usd` (migration `0094`); with no row it is 5, and Vendor support set it at 50 on 2026-11-05. The page compares it with the AI spend PostHog was told about, which today is the bot's (lab) calls only. Since 2026-11-06 the Chatbot Settings page changes it (§0.5).
 
 The numbers come from `GET /api/whatsapp-bot/insights?days=7|30|90` (`src/lib/posthog/bot.ts`:
 nine fixed HogQL questions through the PostHog page's client, kept 10 minutes; the page's
@@ -72,8 +72,8 @@ record does not carry it.
 analytics from collected data, trends, any flags by ai, confidence rate"; phase 1 of the
 [analytics design](../specs/2026-11-05-chatbot-analytics.md), which owns what each tab shows and
 why.* The section's tab row now runs Overview, Chats, Quality, Flags, Money, Trends, Models and
-steps, System, then the WhatsApp lab. Each tab is a page of its own (`[part].astro`, migration
-`0096`), read through `GET /api/whatsapp-bot/part?part=…&days=7|30|90` (`src/lib/posthog/bot-parts.ts`),
+steps, System, Settings (since 2026-11-06, §0.5), then the WhatsApp lab. Each tab is a page of
+its own (`[part].astro`, migration `0096`), read through `GET /api/whatsapp-bot/part?part=…&days=7|30|90` (`src/lib/posthog/bot-parts.ts`),
 and all of them, with the Overview, are drawn with the PostHog page's kit in the bot's teal
 (`ChatbotLayout scene`, `src/styles/pages/chatbot-insights.css`).
 
@@ -86,6 +86,7 @@ and all of them, with the Overview, are drawn with the PostHog page's kit in the
 | Trends | `/dashboard/chatbot/trends` | Admin |
 | Models and steps | `/dashboard/chatbot/steps` | Admin |
 | System | `/dashboard/chatbot/system` | Admin |
+| Settings | `/dashboard/chatbot/settings` | Owner and Vendor support (since 2026-11-06, §0.5; its own page, `settings.astro`) |
 
 A tab needs the Chatbot section's key and its own, each by exact key (`denyBotPart`), in the page
 and in the route, so it can be given or kept back alone on the Access page. Every pass rate shows
@@ -148,8 +149,7 @@ the five-minute tick, [CRON-CONTROL](CRON-CONTROL.md) §3g) emails them as they 
   dispatcher's gate skips the job without a query. `on` reads the real bot's recorder; `lab`
   reads the lab's record instead, for a test on the testing number, and marks the email as a
   test. `to` takes up to five addresses; with none, the email goes to the alert inbox
-  (`ADMIN_EMAIL`). Until the Chatbot settings screen exists (next in phase 3), the row is written
-  for the owner.
+  (`ADMIN_EMAIL`). Since 2026-11-06 the Chatbot Settings page writes the row (§0.5).
 
 Before move night the real bot's recorder is not installed, so with the switch on the job finds
 no record and looks again every half hour. Its D1 cost is its budget's: nothing while off or with
@@ -223,6 +223,38 @@ bot sends nothing yet. There is no PostHog fallback: PostHog never had these for
 (cf-vps): the price check against the price list and returning customers
 (`MAINTENANCE.md` (private) BI-1).
 
+### 0.5 Settings (since 2026-11-06)
+
+*Phase 3 of the [analytics design](../specs/2026-11-05-chatbot-analytics.md): "A screen to change
+the monthly AI allowance and the judge share" ("today the allowance is only a database row").* The
+section's Settings tab (`/dashboard/chatbot/settings`, `settings.astro` and
+`insights/BotSettings.tsx`, migration `0097`) is Owner and Vendor support by default; anyone else
+needs it given on the Access page. It has four panels:
+
+| Panel | What it changes | Where it is kept | Saved through |
+|---|---|---|---|
+| Monthly AI allowance | The month's one limit for all AI, from US$1 to US$1,000 to the cent | `admin_portal_settings` `ai_monthly_allowance_usd` (§0) | `POST /api/whatsapp-bot/settings` |
+| Urgent flags by email | Off, Test with the lab, or On, and up to five addresses (none: the alert inbox) | `admin_portal_settings` `chatbot-urgent-email`, as the job reads it (§0.2) | `POST /api/whatsapp-bot/settings` |
+| AI checks for real customers | The share of replies every AI judge reads beyond those always judged (None, 1 in 10, 1 in 5, Half, All), and the month's cap of the judges and the chat insight step together (US$0 stops them) | The real bot's recorder's own record on the server (cf-vps lab 1.13.0 `judge_share`, `judge_month_usd`) | The console bridge, `record/ai` at the operate level |
+| The lab's own AI | The month's cap of the lab's chat insight step (PostHog checks the lab's replies, so the lab runs no judges) | The lab's record | The same |
+
+- **The route** (`src/pages/api/whatsapp-bot/settings.ts`) asks for the section's key and the
+  page's (`denyBotPart`), checks each value, and writes one audit row per changed row with the old
+  and the new value ([SECURITY](../security/SECURITY.md) §6a).
+- **The record's own AI** is read from each record's `record/status` (`ai`: the share, the cap and
+  this month's spend of the record's own AI; `readRecordAi` in `insights/record.ts`) and changed
+  with `changeRecordAi`. The console gateway lets `record/ai` through only for who also holds this
+  page (`changesBotAi` in `src/lib/vps-proxy.ts`, the `bot_settings` refusal,
+  [VPS-CONSOLE](VPS-CONSOLE.md) §2), and cf-vps records each change as `app.bridge`. The real
+  bot's panel also says whether its AI judges are on: they stay off until the recorder has its own
+  Anthropic key, added on move night.
+- **Before lab 1.13.0** a record answers without `ai`, and its panel says it needs its 1.13.0
+  update; until move night, the real bot's panel says it sends nothing yet. The two portal rows
+  can be changed at any time.
+
+The Configuration page lists this page among the settings kept elsewhere
+(`SETTINGS_ELSEWHERE` in `src/lib/configuration.ts`).
+
 ---
 
 ## 1. The connection to charlar (removed 2026-11-05)
@@ -249,6 +281,7 @@ The section's pages are Preact islands in `src/components/admin/chatbot/` (the O
 | Component | File | Purpose |
 |-----------|------|---------|
 | **BotInsights** | `insights/BotInsights.tsx`, `insights/kit.tsx` | The seven tabs of §0.1 (since 2026-11-05 evening), one component per tab, and the words, figures, choices, likely-range bars, allowance meter and server list they share with the Overview |
+| **BotSettings** | `insights/BotSettings.tsx` | The Settings tab of §0.5 (since 2026-11-06): the allowance, the urgent flags email and each record's own AI, each panel saved on its own |
 | **BotOverview** | `BotOverview.tsx` | The Overview page (`/dashboard/chatbot/dashboard`) since 2026-11-05: the n8n WhatsApp bot, §0; rebuilt the same evening on the PostHog page's kit, its panels linking to the tabs of §0.1. It replaced `ChatbotDashboard.tsx`, charlar's overview; charlar's other seven pages (`AnalyticsDashboard`, `BotConfig`, `ModelsCatalog`, `KnowledgeBase`, `ConversationsBrowser`, `PromptsEditor`, `UsageAnalytics`) and their hook `useChatbotApi.ts` were deleted the same day |
 | **Shared pieces** | `parts.tsx` | The Refresh button (`RefreshIcon`, for the page bar), the 7/30/90-day chips ("7d", announced "7 days"), a panel and bar rows (largest first, or as given with `inOrder`, for days); `Head` retired 2026-11-05, when the last page moved onto the page bar; the empty, failed and loading states and the badge come from the Sessions console's parts |
 | **Page bar** | `PageBar.tsx` | The slim bar each page opens on (2026-11-05): a small hue icon, the name, one line cut to fit, the actions, an optional row of `Figure` pills. Every page opens on it since 2026-11-05; `parts.tsx` `Head` is retired. Its segmented row of sub-pages (`SubNav`) was removed the same evening, when the WhatsApp lab's pages joined the tab row |
@@ -560,6 +593,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | §0.5 (new), §0's allowance line, §0.1's Settings row and §0.2's switch line against `src/pages/dashboard/chatbot/settings.astro`, `src/pages/api/whatsapp-bot/settings.ts`, `insights/BotSettings.tsx`, `insights/record.ts` (`readRecordAi`, `changeRecordAi`), `changesBotAi` in `src/lib/vps-proxy.ts`, `migrations/0097_chatbot_settings_page.sql`, and cf-vps `apps/whatsapp-lab/src/judges.ts` (`ownAiOf`, `setOwnAi`, the share's use) and `admin.ts` (`record/status`, `record/ai`); `test/whatsapp-bot-settings.test.ts` and `test/vps-gateway.test.ts` pass | Nothing live: the page on a phone, and lab 1.13.0 is not installed, so no record answers its settings yet; `last_verified` left as it was |
 | 2026-11-06 | §0.4 (new) against `insights/Business.tsx` (`bookingPath`, `outsideHours`, `aheadDays`, `noForms`, `Bookings`, `Demand`), `insights/record.ts` (`readInsights`, `readQuestions`, `useInsights`), `insights/BotInsights.tsx` (Money and Trends), and cf-vps `apps/whatsapp-lab/src/record.ts` (`insights`, `questions`), `insights.ts` (the form's fields) and `flags.ts` (`OPEN_HOURS`); `test/whatsapp-bot-business.test.ts` passes | The pages against the installed lab 1.11.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.3 (new) and §0.1's Chats row against `insights/Conversations.tsx`, `insights/FlagInbox.tsx`, `insights/record.ts` (`readConversations`, `readThread`, `mergeConversations`, `mergeFlags`, `reviewFlag`), `lab-api.ts` (`memberChange`), `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`), the console gateway and `[part].astro`, and cf-vps `apps/whatsapp-lab/src/messages.ts` (`list`, `chat`), `flags.ts` (`reviewFlag`) and `record.ts` (`flagOf`); `test/whatsapp-bot-conversations.test.ts` and `test/vps-gateway.test.ts` pass | The pages against the installed lab 1.8.0 to 1.12.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.2 (new) against `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (`bot-flags`, its gate), `src/lib/vps-proxy.ts` (`vpsSystemRead` with a query), and cf-vps `apps/whatsapp-lab/src/record.ts` (`urgent`), `admin.ts` (`SYSTEM_PATHS`) and `contract/capabilities.ts` (`SYSTEM_JOB_BRIDGE`); `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass | Nothing live: the job is off, and the record is not installed on the server; an email in a real mailbox; `last_verified` left as it was |

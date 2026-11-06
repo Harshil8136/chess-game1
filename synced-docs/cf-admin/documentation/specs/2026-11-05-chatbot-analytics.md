@@ -168,6 +168,11 @@ ask for the Chatbot section's key and then the tab's own (`denyBotPart`), by exa
 holding one tab opens no other. The Overview links a panel to its tab only when the person may
 open that tab, and reads the Flags panel only then.
 
+Since 2026-11-06 (phase 3) an eighth tab, Settings (migration `0097`), Owner by default: the
+monthly AI allowance, the urgent flags email and each record's own AI, the AI checks' share and
+cap ([CHATBOT](../features/CHATBOT.md) §0.5). The console gateway lets a change of a record's own
+AI through only for its holders.
+
 ## 5. The look
 
 The tabs sit in the section's one underlined tab row ([frame design](2026-11-05-chatbot-section-frame.md)),
@@ -195,6 +200,7 @@ light, rendered from the real lab numbers read live from PostHog on 2026-11-05.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | §4's Settings paragraph against `migrations/0097_chatbot_settings_page.sql`, `src/pages/dashboard/chatbot/settings.astro` and `changesBotAi` in `src/lib/vps-proxy.ts`; `test/whatsapp-bot-settings.test.ts` passes | The rest of the design |
 | 2026-11-05 | Phase 2's AI-checks part: `insights/record.ts` (`CHECK_PARTS`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx` and `dashboard.astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`VIEWS`, `shapeView`), `checks.ts` and `admin.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/checks.test.ts` ran against a real Postgres 16 | The pages against the installed lab 1.7.0 (not on the server yet; it needs the owner's read key); the pages on the owner's phone |
 | 2026-11-05 | Phase 2: `insights/record.ts`, `insights/BotInsights.tsx`, `lab-api.ts` and `[part].astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`shapeView`, `VIEWS`) and `recorder.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/record.test.ts` ran against a real Postgres 16 | The pages against the installed records (not on the server yet); the pages on the owner's phone |
 | 2026-11-05 | Every question in `partQueries` run live against the PostHog project (lab events only); the parsers and the confidence math in `test/whatsapp-bot-sections.test.ts`; the route's 401, 400 and 403; the look in `test/chatbot-look.test.ts`; screenshots at 390 px and 1,280 px in both themes from those live numbers | The pages on the owner's phone; the live bot's events (it sends none until move night) |
