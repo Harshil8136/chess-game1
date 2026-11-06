@@ -166,7 +166,7 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **18 registered jobs** (`src/lib/jobs/registry.ts`): 16 on the
+There are **19 registered jobs** (`src/lib/jobs/registry.ts`): 17 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
@@ -176,14 +176,14 @@ job, was removed on 2026-10-04 when cf-admin stopped using Upstash
 `email-api-sweep`, the twelfth, on 2026-10-10 (§3b); `access-change-summary`, the
 thirteenth, on 2026-10-15 (§3c); `audit-seal`, the fourteenth, on 2026-10-16 (§3d);
 `health-checks`, the fifteenth, on 2026-10-17 (§3e); `log-scan`, the sixteenth, on
-2026-10-24 (§3f).
+2026-10-24 (§3f); `bot-flags`, the seventeenth, on 2026-11-06 (§3g).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
 
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
-| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog`, `email-api-sweep`, `health-checks` | never |
+| `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog`, `email-api-sweep`, `health-checks`, `bot-flags` | never |
 | `deferrable` | `storage-notifications`, `access-change-summary`, `audit-seal`, `log-scan`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
@@ -487,6 +487,28 @@ It is deferrable: a scan an hour late reads the same logs, since it starts where
 one ended, and Cloudflare keeps them three days. It takes no lease: two scans at once ask
 the same questions and the second write of the row loses its compare-and-swap.
 
+## 3g. The WhatsApp bot's urgent flags by email (2026-11-06)
+
+`bot-flags` (`src/workers/scheduled-bot-flags.ts`) emails the WhatsApp bot's new urgent flags.
+What it reads and sends is owned by [`CHATBOT.md`](CHATBOT.md) §0.2; this section says how the
+job runs.
+
+Its gate keys are its settings row, `chatbot-urgent-email` in `admin_portal_settings`, and its
+state row, `chatbot-urgent-email-sent`. Its gate is the settings row's mode: with no row, or
+`off`, the dispatcher skips it, so an off tick costs the gate-key query it already makes. On, a
+run reads the server once, as its own system actor (`vpsSystemRead`, job `bot-flags`), and with
+nothing new writes nothing; a run that emails writes the state row once, compare-and-swap, after
+the email is queued, so an email that could not be queued is tried again at the next tick. When
+the record does not answer because it is not installed yet, or has no database, it sleeps half
+an hour; with no connection to the server console at all, an hour. Any other failed read writes its
+streak row (`reportIfPersistent`, key `bot-flags:read`) and reaches Sentry once it has lasted half
+an hour, then at most once an hour.
+
+It is essential: a customer who says they paid, or waits for an answer, should not wait for D1
+to recover, and it reads no D1 rows beyond its gate keys. It takes no lease: two runs at once
+read the same flags, and the second write of the state row loses its compare-and-swap, so at
+worst the same email is sent twice.
+
 ## 4a. When a job runs: intervals, next due times and wakes (2026-10-04)
 
 Being on the five-minute tick does not mean running every five minutes. After
@@ -510,7 +532,8 @@ threshold from the start of a run, so it sleeps an hour after each run (§3a).
 `audit-seal` (2026-10-16) does the same once it has caught up (§3d). `health-checks`
 (2026-10-17) also reports a due time, but with its five-minute checks it is always the
 next tick, so it runs on every tick (§3e). `log-scan` (2026-10-24) reports its next scan,
-an hour after the last by default (§3f). The page shows a
+an hour after the last by default (§3f). `bot-flags` (2026-11-06) runs on every tick while it
+is on, and sleeps half an hour while the bot's record is not installed (§3g). The page shows a
 sleeping job as **Sleeping until HH:MM**, and gives the time it wakes as its next run (§7).
 Until 2026-10-09 a seeded catalog row (`scripts/lib/cron-catalog.mjs`, now deleted) said this
 in prose, which had to be re-seeded whenever it changed.
@@ -947,6 +970,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-06 | claude | `bot-flags` added: `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass (off: skipped, no query; a run that emails 1 query, 1 read, 1 written); jobs counted in `registry.ts` (19) | §3's count and tier table, §3g (new), §4a's sleeping jobs. Not re-checked: the rest of the document; not checked live (not deployed when written, and switched off) |
 | 2026-10-24 | claude | `log-scan` added: `src/workers/scheduled-log-scan.ts`, `src/lib/health/logscan.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/log-scan.test.ts` and `test/jobs-budget.test.ts` pass (idle 0 queries; a scan 1 query, 2 read, 3 written); jobs counted in `registry.ts` (18) | §3's count and tier table, §3f (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written, and Cloudflare refuses the scan until the token has its permission) |
 | 2026-10-24 | claude | §3b's log level against `src/workers/scheduled-email-api-sweep.ts`; `test/email-api-sweep.test.ts` passes (a passing failure logs a warning, the reporting run an error) | The one sentence. Not checked live (not deployed when written) |
 | 2026-10-23 | claude | §3b's failure reporting against `src/workers/scheduled-email-api-sweep.ts` and `reportIfPersistent` in `src/lib/observability.ts`; §3c's last sign-in read against `src/workers/scheduled-unused-accounts.ts` and `src/lib/dal/LoginLogRepository.ts`; `test/email-api-sweep.test.ts`, `test/observability-cooldown.test.ts` and `test/hot-query-plans.test.ts` pass; the query plan and its 7 rows for 7 accounts read through the D1 connector | The two paragraphs. The rest of the document not re-read; not checked live (not deployed when written) |
