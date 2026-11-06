@@ -180,8 +180,14 @@ The recommendation is the first: at this traffic, topics plus shared words find 
 chat, and pgvector can be added when the real chats number in the thousands. Anthropic offers no
 embeddings of its own.
 
-**The weekly report** comes once the choice is made: the week's chats, bookings, cost, topics and
-open flags by email, off until the owner turns it on, as the urgent email is.
+**The weekly report (built, cf-vps lab 1.16.0 and the portal's `bot-weekly` job, switched off).**
+Every way of finding similar chats leaves it the same, so it did not wait for the choice: the
+record's last 7 days in numbers (`record/week`: chats, replies, AI cost and checks, what the
+conversations became, prices, topics, services, lost reasons, open flags), emailed on Monday at
+9:00 in Mexico City, off until the owner turns it on in Settings, as the urgent email is
+([CHATBOT](../features/CHATBOT.md) §0.6). It reads the bot's own record rather than PostHog, so it
+covers real customers too, whose replies PostHog never sees; PostHog's own email reports stay
+available for the lab's numbers, as the approved plan keeps them.
 
 ## 4. Who may open what
 
@@ -224,6 +230,7 @@ light, rendered from the real lab numbers read live from PostHog on 2026-11-05.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | Phase 4's weekly report paragraph against `src/workers/scheduled-bot-weekly.ts` and cf-vps `apps/whatsapp-lab/src/record.ts` (`week`) at `88717cf`; `test/bot-weekly-email.test.ts` passes | The email in a real mailbox; lab 1.16.0 is not installed |
 | 2026-11-06 | Phase 4's section: the topics against cf-vps `apps/whatsapp-lab/src/insights.ts` and `record.ts` at `c6f4e8b`; pgvector's package against cf-vps `host/57-postgres/apply.sh` (the PostgreSQL apt repository, PostgreSQL 18) and the lab's Workers AI key names against `apps/whatsapp-lab/whatsapp-lab.toml`; the bge-m3 price against Cloudflare's Workers AI pricing page, read 2026-11-06 | pgvector on the server (not installed); the embeddings' quality on the hotel's chats |
 | 2026-11-06 | §4's Settings paragraph against `migrations/0097_chatbot_settings_page.sql`, `src/pages/dashboard/chatbot/settings.astro` and `changesBotAi` in `src/lib/vps-proxy.ts`; `test/whatsapp-bot-settings.test.ts` passes | The rest of the design |
 | 2026-11-05 | Phase 2's AI-checks part: `insights/record.ts` (`CHECK_PARTS`, the four merges, `useBotPart`, `useChatChecks`), `insights/BotInsights.tsx`, `BotOverview.tsx` and `dashboard.astro` against cf-vps `apps/whatsapp-lab/src/record.ts` (`VIEWS`, `shapeView`), `checks.ts` and `admin.ts`; `test/whatsapp-bot-record.test.ts` passes; `cf-vps/test/lab/checks.test.ts` ran against a real Postgres 16 | The pages against the installed lab 1.7.0 (not on the server yet; it needs the owner's read key); the pages on the owner's phone |

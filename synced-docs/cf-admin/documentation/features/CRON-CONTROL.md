@@ -6,7 +6,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/lib/blog/publish-scheduled.ts]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/lib/blog/publish-scheduled.ts]
 related_docs: [../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
@@ -166,7 +166,7 @@ than a gap in it.
 
 ## 3. Tiers
 
-There are **19 registered jobs** (`src/lib/jobs/registry.ts`): 17 on the
+There are **20 registered jobs** (`src/lib/jobs/registry.ts`): 18 on the
 `*/5 * * * *` tick and 2 more on the Sunday `0 2 * * SUN` tick (`asset-cleanup`
 and `staff-storage-reconcile`, both dispatched through the same `dispatchCronJobs`,
 each due job in its own invocation — §5). `redis-ttl-hygiene`, the third Sunday
@@ -176,7 +176,8 @@ job, was removed on 2026-10-04 when cf-admin stopped using Upstash
 `email-api-sweep`, the twelfth, on 2026-10-10 (§3b); `access-change-summary`, the
 thirteenth, on 2026-10-15 (§3c); `audit-seal`, the fourteenth, on 2026-10-16 (§3d);
 `health-checks`, the fifteenth, on 2026-10-17 (§3e); `log-scan`, the sixteenth, on
-2026-10-24 (§3f); `bot-flags`, the seventeenth, on 2026-11-06 (§3g).
+2026-10-24 (§3f); `bot-flags`, the seventeenth, on 2026-11-06 (§3g); `bot-weekly`, the
+eighteenth, the same day (§3h).
 
 Tiers live in **code** (`src/lib/jobs/tiers.ts`), not in the control document, so
 a corrupt or hand-edited row cannot mark a security job as sheddable.
@@ -184,7 +185,7 @@ a corrupt or hand-edited row cannot mark a security job as sheddable.
 | Tier | Jobs | Automatic shedding |
 |---|---|---|
 | `essential` | `cf-access-audit-poll`, `cf-access-reconcile`, `booking-email-retry`, `booking-outbox-poke`, `cron-usage-probe`, `backup-tick`, `heartbeat-watchdog`, `email-api-sweep`, `health-checks`, `bot-flags` | never |
-| `deferrable` | `storage-notifications`, `access-change-summary`, `audit-seal`, `log-scan`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
+| `deferrable` | `storage-notifications`, `access-change-summary`, `audit-seal`, `log-scan`, `bot-weekly`, `blog-scheduled-publish`, `asset-cleanup`, `staff-storage-reconcile` | yes |
 | `idle` | `gsc-sync`, `pagespeed-sync` | yes |
 
 > **A missing tier is not a compile error.** `JobDefinition.id` is typed `string`,
@@ -509,6 +510,28 @@ to recover, and it reads no D1 rows beyond its gate keys. It takes no lease: two
 read the same flags, and the second write of the state row loses its compare-and-swap, so at
 worst the same email is sent twice.
 
+## 3h. The WhatsApp bot's weekly report by email (2026-11-06)
+
+`bot-weekly` (`src/workers/scheduled-bot-weekly.ts`) emails the WhatsApp bot's week in numbers.
+What it reads and sends is owned by [`CHATBOT.md`](CHATBOT.md) §0.6; this section says how the
+job runs.
+
+Its gate keys are its settings row, `chatbot-weekly-email` in `admin_portal_settings`, and its
+state row, `chatbot-weekly-email-sent`. Its gate is the settings row's mode, as `bot-flags`'s: with
+no row, or `off`, the dispatcher skips it. On, a run whose week was already sent reads nothing
+and reports the next Monday at 15:00 UTC as its due time, so it sleeps the hour cap until then. A
+due run reads the server once, as its own system actor (`vpsSystemRead`, job `bot-weekly`),
+queues one email, and then writes the state row once, compare-and-swap, so an email that could
+not be queued is tried again an hour later. When the record does not answer because it is not
+installed yet, or has no database, it sleeps six hours; with no connection to the server console
+at all, an hour. Any other failed read is tried again within an hour, writes its streak row
+(`reportIfPersistent`, key `bot-weekly:read`) and reaches Sentry once it has lasted two hours,
+then at most every six.
+
+It is deferrable: a Monday summary that arrives an hour late loses nothing, and the week it sends
+is the record's last 7 days whenever it reads them. It takes no lease: two runs at once would
+both send the week, and the second write of the state row loses its compare-and-swap.
+
 ## 4a. When a job runs: intervals, next due times and wakes (2026-10-04)
 
 Being on the five-minute tick does not mean running every five minutes. After
@@ -533,7 +556,9 @@ threshold from the start of a run, so it sleeps an hour after each run (§3a).
 (2026-10-17) also reports a due time, but with its five-minute checks it is always the
 next tick, so it runs on every tick (§3e). `log-scan` (2026-10-24) reports its next scan,
 an hour after the last by default (§3f). `bot-flags` (2026-11-06) runs on every tick while it
-is on, and sleeps half an hour while the bot's record is not installed (§3g). The page shows a
+is on, and sleeps half an hour while the bot's record is not installed (§3g). `bot-weekly`
+(2026-11-06) reports the next Monday at 15:00 UTC once its week is sent, so it sleeps the hour
+cap until then, and six hours while the bot's record is not installed (§3h). The page shows a
 sleeping job as **Sleeping until HH:MM**, and gives the time it wakes as its next run (§7).
 Until 2026-10-09 a seeded catalog row (`scripts/lib/cron-catalog.mjs`, now deleted) said this
 in prose, which had to be re-seeded whenever it changed.
@@ -970,6 +995,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-06 | claude | `bot-weekly` added: `src/workers/scheduled-bot-weekly.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-weekly-email.test.ts` and `test/jobs-budget.test.ts` pass | §3's count and tier table, §3h (new) and §4a's sleeping jobs; `last_verified` left as it was |
 | 2026-11-06 | claude | `bot-flags` added: `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass (off: skipped, no query; a run that emails 1 query, 1 read, 1 written); jobs counted in `registry.ts` (19) | §3's count and tier table, §3g (new), §4a's sleeping jobs. Not re-checked: the rest of the document; not checked live (not deployed when written, and switched off) |
 | 2026-10-24 | claude | `log-scan` added: `src/workers/scheduled-log-scan.ts`, `src/lib/health/logscan.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/log-scan.test.ts` and `test/jobs-budget.test.ts` pass (idle 0 queries; a scan 1 query, 2 read, 3 written); jobs counted in `registry.ts` (18) | §3's count and tier table, §3f (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written, and Cloudflare refuses the scan until the token has its permission) |
 | 2026-10-24 | claude | §3b's log level against `src/workers/scheduled-email-api-sweep.ts`; `test/email-api-sweep.test.ts` passes (a passing failure logs a warning, the reporting run an error) | The one sentence. Not checked live (not deployed when written) |
