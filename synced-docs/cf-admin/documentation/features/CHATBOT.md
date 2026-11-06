@@ -6,7 +6,7 @@ audience: [ai, technical]
 last_verified: 2026-10-17
 verified_against: [code]
 owner: harshil
-related_code: [src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/lib/posthog/bot-words.ts, src/pages/dashboard/chatbot/settings.astro, src/pages/api/whatsapp-bot/settings.ts, src/components/admin/chatbot/insights/BotSettings.tsx, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/insights/BotRules.tsx, src/components/admin/chatbot/insights/BotData.tsx, src/components/admin/chatbot/insights/BotN8n.tsx, src/components/admin/chatbot/insights/record-data.ts, src/components/admin/chatbot/insights/DayChart.tsx, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
+related_code: [src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/lib/posthog/bot-words.ts, src/pages/dashboard/chatbot/settings.astro, src/pages/api/whatsapp-bot/settings.ts, src/components/admin/chatbot/insights/BotSettings.tsx, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/insights/BotRules.tsx, src/components/admin/chatbot/insights/BotData.tsx, src/components/admin/chatbot/insights/BotN8n.tsx, src/components/admin/chatbot/insights/record-data.ts, src/components/admin/chatbot/insights/DayChart.tsx, src/components/admin/chatbot/BotOverview.tsx, src/components/admin/chatbot/insights/BotInsights.tsx, src/components/admin/chatbot/insights/Conversations.tsx, src/components/admin/chatbot/insights/FlagInbox.tsx, src/components/admin/chatbot/insights/Business.tsx, src/components/admin/chatbot/insights/record.ts, src/components/admin/chatbot/insights/compare.ts, src/components/admin/chatbot/insights/BotCompare.tsx, src/lib/vps-proxy.ts, src/lib/posthog/bot.ts, src/lib/posthog/bot-parts.ts, src/pages/api/whatsapp-bot/insights.ts, src/pages/api/whatsapp-bot/part.ts, src/layouts/ChatbotLayout.astro, src/lib/ai-knowledge.ts, src/lib/auth/routes.ts]
 related_docs: [AI-HEALTH.md, WHATSAPP-LAB.md, ../security/SECURITY.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-08-31-ai-system-overhaul.md]
 tags: [chatbot, whatsapp, n8n, ai, analytics]
 ---
@@ -16,7 +16,7 @@ tags: [chatbot, whatsapp, n8n, ai, analytics]
 > **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-11-06 — the daily charts draw every day of the window, the whole-chat score as a dot a day with its pass mark, the Overview's models dearest first, panel heads wrap on a phone, and Settings' line says what the open section is for (§0.1, §0.5). Settings gains Timings, n8n and Data (§0.5): the lab's workflow timings, written into its copy of the bot at once, beside the real bot's (read only); each bot's n8n workflows, runs and failures, with a switch; what each record keeps, its download by days, removing a range of days and the months kept, behind a typed count and a recent sign-in. Chats downloads one real customer's chat, and erases it for who has Settings (§0.3). Earlier that day Settings gained AI checks, Flags and PostHog: each record's AI judges, chat insight step and their model, the flags' wait, opening hours and kinds, the lab's PostHog sending, and the pages' own PostHog reads (§0.5). The weekly report by email, built and switched off (§0.6). The Overview's server parts are one line that opens System, and a lab reply on Chats shows PostHog's AI summary (§0.3). The Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
+> **Last Updated:** 2026-11-06 — Models shows two models or two lab test setups side by side in every measure, printable for a client, with the lab's test run in one press under it (§0.7). The daily charts draw every day of the window, the whole-chat score as a dot a day with its pass mark, the Overview's models dearest first, panel heads wrap on a phone, and Settings' line says what the open section is for (§0.1, §0.5). Settings gains Timings, n8n and Data (§0.5): the lab's workflow timings, written into its copy of the bot at once, beside the real bot's (read only); each bot's n8n workflows, runs and failures, with a switch; what each record keeps, its download by days, removing a range of days and the months kept, behind a typed count and a recent sign-in. Chats downloads one real customer's chat, and erases it for who has Settings (§0.3). Earlier that day Settings gained AI checks, Flags and PostHog: each record's AI judges, chat insight step and their model, the flags' wait, opening hours and kinds, the lab's PostHog sending, and the pages' own PostHog reads (§0.5). The weekly report by email, built and switched off (§0.6). The Overview's server parts are one line that opens System, and a lab reply on Chats shows PostHog's AI summary (§0.3). The Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
@@ -407,6 +407,50 @@ record and looks again every six hours. Its D1 cost is its budget's: nothing whi
 Mondays, one row written when it emails
 (change record (private)).
 
+### 0.7 Two models side by side, and a test run in one press (since 2026-11-06)
+
+*The owner's ask of 2026-11-06: a Sonnet 4.6 and Haiku 5.5 comparison "in all metrics" to show
+the client, made automatically; his pick "Compare page, then test runs".* The Models page
+(`/dashboard/chatbot/steps`) gains a **Show** choice in its toolbar: *Each model* is the page of
+§0.1, *Side by side* is the new view (`insights/BotCompare.tsx`, its words and sums in
+`insights/compare.ts`). `?view=compare` opens it, so a link can point at it. It needs nothing
+beyond the Models tab's own key.
+
+- **It reads** `record/compare?days=` of both records (`readCompare` in `insights/record.ts`,
+  cf-vps lab 1.20.0): for each model that wrote the bot's replies, and each lab test setup (the
+  last part of a test chat's name), the replies, failed replies, the typical and slowest-1-in-10
+  AI time, the cost of the reply step and of each whole customer message, the reply length, the
+  words written, the fallbacks and how each automatic check went. Numbers only, never a
+  customer's words. A record older than 1.20.0 says so in the line under the choices.
+- **Which two.** Two rows of choices, *First* and *Second*, each model and setup with its count of
+  replies. It starts on today's bot against the busiest named test on another model
+  (`defaultPair`). A sentence at the top says how the second differs (`headline`): "costs 12×
+  less per customer message, takes 1.2 s longer typically, passed 97% of the checks against 88%".
+- **Every measure** is one row each: both figures, the difference in words (`timesSay`,
+  `secsSay`, `pointsSay`) and "✓ better" on the side that did better, where better has a
+  meaning (reply length has none). A cost under ten cents shows four decimals, so US$0.0107 is
+  not rounded to US$0.01. **Each automatic check** pairs every check either side ran, with its
+  pass rate and 95% range, or "Not checked".
+- **Print.** The Print button prints only the comparison, with a heading that names both sides,
+  the days and the date; the choices, the tabs and the test run are left off, so the page goes
+  straight into a client deck as a PDF. It prints in the light theme whatever the screen's
+  (`lightForPrint`: the theme changes for the print alone, the saved choice is not touched).
+- **Run a test.** The panel under it reads the lab's `compare/plan` every 5 seconds while a run
+  goes. Choose one to three setups (*Today's bot*, *Saved settings*, or any Claude model in the
+  setup Haiku 5.5 was tested with; today's bot and Haiku 5.5 are chosen first) and *Once*, *2
+  times* or *3 times*; the panel counts the test messages that makes. The button asks once in
+  the portal's dialog, then calls `compare/start` through the console bridge as an operate call
+  (`labChange`), so the gateway checks the person and the server the bridge's operate capability,
+  as for any lab test chat. The lab sends its six test conversations, one run at a time, and
+  stops a run at US$1; the panel shows its progress, then each setup's totals, and the five
+  latest runs. When a run ends the comparison reads again, and the new setups appear in it. A
+  refusal (a run already going, the lab not set up) shows in the lab's own words.
+
+What the lab does with a run (its six conversations, their dates, which move with the calendar,
+and the cap) is cf-vps's, in its lab guide's "A test run in one press". No new table, setting,
+key or route in the portal
+(change record (private)).
+
 ---
 
 ## 1. The connection to charlar (removed 2026-11-05)
@@ -745,6 +789,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-06 | §0.7 (new) against `insights/BotCompare.tsx` (`SideBySide`, `TestRun`, `BotCompare`, `lightForPrint`), `insights/compare.ts` (`sidesOf`, `defaultPair`, `measures`, `headline`, `checkPairs`, `readTestPlan`, `startTestRun`, `defaultTestSetups`, `runSay`), `insights/record.ts` (`readCompare`), `insights/BotInsights.tsx` (`ModelsPart`, the Show choice, `?view=compare`), the print rules in `src/styles/pages/chatbot-insights.css`, and cf-vps `apps/whatsapp-lab/src/record.ts` (`compare`), `testrun.ts` and `admin.ts` (`compare/plan`, `compare/start`) at `26a9c40` (lab 1.20.0); `test/whatsapp-bot-compare.test.ts`, `test/whatsapp-bot-record.test.ts` and `test/whatsapp-bot-sections.test.ts` pass | The view against lab 1.20.0 (not installed), a real test run against the Anthropic API, a printed page, and the page on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.1's "Each day drawn" and §0.5's line per section against `insights/DayChart.tsx` (`windowDays`, `perDay`, `DayChart`, `ScoreDays`), `insights/BotInsights.tsx` (Money, Trends, System, `dollarTick`), `BotOverview.tsx` (replies each day, Models' order), `insights/BotSettings.tsx` (`SECTION_SAY`), `insights/BotData.tsx`, `insights/BotN8n.tsx` and `src/styles/pages/chatbot-insights.css`; `test/chatbot-day-chart.test.ts` and `test/whatsapp-bot-data.test.ts` pass; each page drawn at phone width, dark and light, from the lab's real numbers in a local build | The pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.5's eight sections and its new rows (Timings, n8n, Data) and §0.3's download and erasure against `insights/BotData.tsx`, `insights/BotN8n.tsx`, `insights/Conversations.tsx` (`ChatActions`), `insights/BotSettings.tsx` (`SECTIONS`), `insights/record-data.ts` (the data, n8n and timings calls), `lab-api.ts` (`memberAdmin`, the `fresh_sign_in` reading), `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES`, `BOT_AI_CHANGES`), `settings.astro` and `[part].astro`, and cf-vps `apps/whatsapp-lab/src/data.ts`, `workflows.ts`, `timings.ts` and `admin.ts` at `7c7c411` (lab 1.19.0); `test/whatsapp-bot-data.test.ts` and `test/vps-gateway.test.ts` pass | The panels against lab 1.19.0 (not installed) and on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.5's five sections and its four new panels against `insights/BotRules.tsx` (`ChecksForm`, `FlagsForm`, `LabPostHogForm`, `spansOf`, `minutesOf`), `insights/BotSettings.tsx` (`SECTIONS`, `PostHogReads`, the lab's share), `insights/record.ts` (`saveBotSettings` with `part`), `src/lib/posthog/bot.ts` (`POSTHOG_READS_KEY`, `READS_OFF`), `src/pages/api/whatsapp-bot/{settings,insights,part}.ts`, and cf-vps `apps/whatsapp-lab/src/settings.ts` (`SETTINGS_PARTS`, `withPart`, `settingsView`), `judges.ts`, `flags.ts` and `posthog.ts` at `bb01388` (lab 1.18.0); `test/whatsapp-bot-rules.test.ts`, `test/whatsapp-bot-settings.test.ts`, `test/whatsapp-bot-models.test.ts`, `test/bot-flags-email.test.ts`, `test/whatsapp-bot-sections.test.ts` and `test/whatsapp-bot-overview.test.ts` pass | The panels against lab 1.18.0 (not installed) and on the owner's phone; `last_verified` left as it was |
