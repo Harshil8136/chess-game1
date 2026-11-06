@@ -106,6 +106,16 @@ as before. A line under each page's choices says which it shows and why a record
 Money's allowance comes from the page (`[part].astro`), since the record does not carry it
 (change record (private)).
 
+**Models takes over the lab's Usage page (since 2026-11-06).** The plan's "one way to read cost
+and models, for lab and real bot alike": the table **Each step of the bot** has a row for each
+step on each model, so one step on two models compares side by side, with its tokens per call
+(read, then written, over every call) and its cost per call (over the answered calls), and each
+model's card adds the same two figures (`perCallOf`, `tokensSay`). PostHog's question groups the
+same way. The record sends the tokens and the step-by-model rows from cf-vps lab 1.14.0; an
+older record's rows show a step with its most used model and "—" for the tokens. The lab's
+Usage page stays until that package is installed and the owner has seen Models show the same
+comparison; then its tab comes off.
+
 **The AI checks from the record (lab 1.7.0, since 2026-11-05 night).** The owner asked on
 2026-11-05 to stop waiting on PostHog for every page. The lab now copies PostHog's AI checks
 (each verdict, graded by the check's own pass rule) and every reply into its record
@@ -599,6 +609,7 @@ a low sample count as low confidence, not as absence.*
 | 2026-11-06 | §0's On the server row against `BotOverview.tsx` (`downLine`, the minute's read, the tile's link to System); `test/whatsapp-bot-overview.test.ts` passes | The page on a phone; `last_verified` left as it was |
 | 2026-11-06 | §0.5 (new), §0's allowance line, §0.1's Settings row and §0.2's switch line against `src/pages/dashboard/chatbot/settings.astro`, `src/pages/api/whatsapp-bot/settings.ts`, `insights/BotSettings.tsx`, `insights/record.ts` (`readRecordAi`, `changeRecordAi`), `changesBotAi` in `src/lib/vps-proxy.ts`, `migrations/0097_chatbot_settings_page.sql`, and cf-vps `apps/whatsapp-lab/src/judges.ts` (`ownAiOf`, `setOwnAi`, the share's use) and `admin.ts` (`record/status`, `record/ai`); `test/whatsapp-bot-settings.test.ts` and `test/vps-gateway.test.ts` pass | Nothing live: the page on a phone, and lab 1.13.0 is not installed, so no record answers its settings yet; `last_verified` left as it was |
 | 2026-11-06 | §0.4 (new) against `insights/Business.tsx` (`bookingPath`, `outsideHours`, `aheadDays`, `noForms`, `Bookings`, `Demand`), `insights/record.ts` (`readInsights`, `readQuestions`, `useInsights`), `insights/BotInsights.tsx` (Money and Trends), and cf-vps `apps/whatsapp-lab/src/record.ts` (`insights`, `questions`), `insights.ts` (the form's fields) and `flags.ts` (`OPEN_HOURS`); `test/whatsapp-bot-business.test.ts` passes | The pages against the installed lab 1.11.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
+| 2026-11-06 | §0.1's Models paragraph against `BotInsights.tsx` (`ModelsPart`, `perCallOf`, `tokensSay`), `src/lib/posthog/bot-parts.ts` (the `models` part's `byStep`, `StepRow`) and cf-vps `apps/whatsapp-lab/src/record.ts` at `84fac8a` (lab 1.14.0's `record/models`); `test/whatsapp-bot-sections.test.ts` passes | The page against lab 1.14.0 (not installed); on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.3's lab chat line against `insights/Conversations.tsx` (`RunSummary`), `insights/record.ts` (`useChatChecks`) and `src/lib/posthog/bot-parts.ts` (the `chats` part's `summaries` question, `pointsOf`); `test/whatsapp-bot-sections.test.ts` passes | The summaries against PostHog's live events and on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.3 (new) and §0.1's Chats row against `insights/Conversations.tsx`, `insights/FlagInbox.tsx`, `insights/record.ts` (`readConversations`, `readThread`, `mergeConversations`, `mergeFlags`, `reviewFlag`), `lab-api.ts` (`memberChange`), `src/lib/vps-proxy.ts` (`CHAT_WORDS_PATHS`), the console gateway and `[part].astro`, and cf-vps `apps/whatsapp-lab/src/messages.ts` (`list`, `chat`), `flags.ts` (`reviewFlag`) and `record.ts` (`flagOf`); `test/whatsapp-bot-conversations.test.ts` and `test/vps-gateway.test.ts` pass | The pages against the installed lab 1.8.0 to 1.12.0 (not on the server yet); the pages on the owner's phone; `last_verified` left as it was |
 | 2026-11-06 | §0.2 (new) against `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (`bot-flags`, its gate), `src/lib/vps-proxy.ts` (`vpsSystemRead` with a query), and cf-vps `apps/whatsapp-lab/src/record.ts` (`urgent`), `admin.ts` (`SYSTEM_PATHS`) and `contract/capabilities.ts` (`SYSTEM_JOB_BRIDGE`); `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass | Nothing live: the job is off, and the record is not installed on the server; an email in a real mailbox; `last_verified` left as it was |
