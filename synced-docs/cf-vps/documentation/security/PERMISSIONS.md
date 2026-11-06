@@ -94,9 +94,10 @@ their grant would count. The console's role matrix shows the role as holding eve
    "Server's site checks" check (`systemCapabilities`, used by the router). Since 2026-11-06
    cf-admin's urgent flags by email (`bot-flags`) may read `apps/bridge/view` with
    `apps.bridge.view`, and only for the app, member and path `SYSTEM_JOB_BRIDGE` names: the
-   WhatsApp records' `record/urgent` (the live bot's recorder and the lab's phone). Any other
-   bridge read is refused as if it held nothing, and the app refuses a system actor every other
-   path too.
+   WhatsApp records' `record/urgent` (the live bot's recorder and the lab's phone). Since lab
+   1.16.0 cf-admin's weekly report by email (`bot-weekly`) holds the same read for the same two
+   members' `record/week` only. Any other bridge read is refused as if it held nothing, each job
+   only its own path, and the app refuses a system actor every path but those two.
 2. **Vendor support** holds every capability: yes, whatever follows.
 3. A floor capability is refused unless the role is owner or vendor support.
 4. A per-person **deny** wins over everything else.

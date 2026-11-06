@@ -161,7 +161,7 @@ body. The app verifies the Worker's signature itself, so it trusts nobody on the
 
 | Route | Type | Capability | Wait | Audited |
 |---|---|---|---|---|
-| `apps/bridge/view` | GET | `apps.bridge.view` (also cf-admin's `bot-flags` job, for the WhatsApp records' `record/urgent` only: `SYSTEM_JOB_BRIDGE`) | 60 s | no |
+| `apps/bridge/view` | GET | `apps.bridge.view` (also cf-admin's `bot-flags` job, for the WhatsApp records' `record/urgent` only, and its `bot-weekly` job for their `record/week` only: `SYSTEM_JOB_BRIDGE`) | 60 s | no |
 | `apps/bridge` | POST | `apps.bridge.operate`, or `apps.bridge.admin` and a fresh sign-in for level `admin` | 60 s | yes |
 
 - The view query is `app`, an optional `member` and `path`; any other parameter is the app's.
