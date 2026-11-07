@@ -563,6 +563,13 @@ the compare-and-swap on `starting` lets only one of two runs at once start an in
 read is tried again on the next tick, writes its streak row (`reportIfPersistent`, key
 `lab-update:read`) and reaches Sentry once it has lasted two hours, then at most every six.
 
+**First live install (2026-11-07).** Its first tick after the server's new agent went in (05:45 UTC)
+found the lab already on 1.24.2 and wrote `skipped`. Lab 1.24.3 reached the console with cf-vps
+`e5cbe0e`; the job started it at 06:00:41, the server installed it in 18 seconds ("whatsapp-lab runs
+1.24.3 and phone is healthy (it was 1.24.2)"), and the next tick, at 06:05:40, wrote `succeeded`
+and the second activity-log row. Read back through the Cloudflare D1 connector: the state row and
+the two `vps_app_deploy` rows by `system`.
+
 ## 4a. When a job runs: intervals, next due times and wakes (2026-10-04)
 
 Being on the five-minute tick does not mean running every five minutes. After
@@ -1039,6 +1046,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 |---|---|---|---|
 | 2026-11-07 | claude | `audit-seal` (Sentry CF-ADMIN-25, written 16 against 13 on 2026-11-05): live seals and the day counts read through the Cloudflare D1 connector (two windows a day since 2026-11-04, 8 rows written a seal from `admin_audit_log`'s indexes in `sqlite_master`); `WINDOW_LOOKAHEAD_ROWS` in `src/lib/audit-seal/seal.ts` pinned by `test/audit-seal.test.ts` (every window placed the same as from 501 rows); the budget in `budgets.ts` measured by `test/jobs-budget.test.ts` | §5's audit-seal paragraph; `last_verified` left as it was |
 | 2026-11-07 | claude | `lab-update` added: `src/workers/scheduled-lab-update.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/lab-update.test.ts` passes | §3's count and tier table, §3i (new) and §4a's sleeping jobs; `last_verified` left as it was |
+| 2026-11-07 | claude | `lab-update`'s first live install: the `vps-lab-update` row (`skipped` at 05:45, `running` at 06:00, `succeeded` at 06:05 UTC) and its two `vps_app_deploy` rows by `system`, read through the Cloudflare D1 connector; the server's own log of the install read by the server session. The rest of §3i not re-read | §3i, "First live install"; `last_verified` left as it was |
 | 2026-11-06 | claude | `bot-weekly` added: `src/workers/scheduled-bot-weekly.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-weekly-email.test.ts` and `test/jobs-budget.test.ts` pass | §3's count and tier table, §3h (new) and §4a's sleeping jobs; `last_verified` left as it was |
 | 2026-11-06 | claude | `bot-flags` added: `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass (off: skipped, no query; a run that emails 1 query, 1 read, 1 written); jobs counted in `registry.ts` (19) | §3's count and tier table, §3g (new), §4a's sleeping jobs. Not re-checked: the rest of the document; not checked live (not deployed when written, and switched off) |
 | 2026-10-24 | claude | `log-scan` added: `src/workers/scheduled-log-scan.ts`, `src/lib/health/logscan.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/log-scan.test.ts` and `test/jobs-budget.test.ts` pass (idle 0 queries; a scan 1 query, 2 read, 3 written); jobs counted in `registry.ts` (18) | §3's count and tier table, §3f (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written, and Cloudflare refuses the scan until the token has its permission) |
