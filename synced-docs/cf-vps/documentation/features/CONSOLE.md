@@ -163,7 +163,8 @@ Every page has the same three layers (see the design system, `documentation/refe
   sign-in, no typed word). The server builds it, starts it and checks it, and the running
   version comes back by itself when it is not healthy
   ([ACTIONS](ACTIONS.md#installing-an-update-apprelease-2026-11-07)). The panel goes once the
-  member runs that version.
+  member runs that version. Its job dialog is titled with the app and version ("Install update
+  whatsapp-lab 1.24.1"); the unit name with the sum and stage is the subtitle, wrapped.
 - About: how to add an app (the deploy guide), what the status words mean, limits, public and
   private access, the busy rule, and who can do what.
 
