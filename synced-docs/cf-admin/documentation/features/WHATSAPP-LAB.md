@@ -205,8 +205,13 @@ from the lab's `record/settings` when the drawer opens (`settingsModel` in `form
 and a door set to `pass` included), under "From the bot's settings". Picking a model for one step
 starts the chat's own choices from the settings (`setupFromSettings`: each step's model, the cache
 for an hour, the payment check's lean for every side step, the reply's checked dates and effort)
-with only that step changed, and turns the switch off. The chat's info and its one-line summary
-say "The bot's settings".
+with only that step changed, and turns the switch off. The chat's one-line summary says "The
+bot's settings". The chat's info shows, for each step, the model the settings give it and under it
+every switch they apply (`settingsSwitches`: the reply's thinking effort, checked dates and the
+price calculator, lean on a side step, the cache for an hour; "as the bot sends it" when none),
+then when the settings were saved and the month's brake; the chat's own cache, lean, dates and
+effort rows, which such a chat does not use, are left out (the owner's screenshot of 2026-11-07
+showed them as "Off, as the live bot" while the settings had them on).
 
 **Photos** are made smaller in the browser before they are sent (a JPEG of at most 1,280
 pixels, stepped down until it fits the 256 KiB a server-console change may carry). **Voice notes
@@ -263,6 +268,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-07 | claude | §1's chat info on the bot's settings: `ChatInfo.tsx` (each step's model and `settingsSwitches`, the version and the brake, the chat's own switches hidden), the switches in `ChatModels.tsx`'s step lines, `.wl-steps` in `chatbot.css`; `test/whatsapp-lab-pages.test.ts` | The panel on a phone (the owner's test) |
 | 2026-11-07 | claude | §1's new chats on the bot's settings: `ChatModels.tsx` (Every step at once's first choice, each step's model from `readBotSettings('lab')`, a step's pick starting from the settings), `ChatInfo.tsx`, `modelsSummary`, `stepKind`, `settingsModel` and `setupFromSettings` in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), read against cf-vps `apps/whatsapp-lab/src/` at 1c28c0c (`store.ts` NEW_CHAT_SETUP, `settings.ts` `planOf` and DEFAULT_SETTINGS, `transform.ts` step names) | The drawer on a phone against lab 1.24.4 on the server (the owner's test); the rest of the document not re-read |
 | 2026-11-07 | claude | The paused chat: `pausedByStaff` in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), its use in `ChatThread.tsx` and both top bars of `LabChat.tsx`; the bot's own silence while paused read from lab chat 134 (turn 363) on the server: a staff text at 03:17:54, two customer texts with no seen, typing or reply, the staff 👍 at 03:19:01 and the reply at 03:19:06 | The page on a phone (the owner's test); the chat list's row still says "The bot is writing…" while a turn is open, paused or not (it has no messages to tell) |
 | 2026-11-06 | claude | §1's Run as the real bot's door (`ChatModels.tsx` Options, `ChatInfo.tsx` row, `draftSetup` in `format.ts`, `Setup.door` in `lab-api.ts`; `test/whatsapp-lab-pages.test.ts`), read from cf-vps `apps/whatsapp-lab/src/` at a8ab434 (`lab.ts`: the setup's `door`; `gateway.ts` `asSetUp` and `doorPlans`: the lab's own settings in place of `DOOR_PLAN`) | The switch against lab 1.17.0 on the server (not installed); the rest of the document not re-read |
