@@ -231,7 +231,10 @@ from outside, or with the console answering but no recent pass, it stays a failu
 applies to *Email queue*, which reads Cloudflare's own Queues API over the internet: a reading
 that only timed out is a warning while the queue last read fine within the hour (2026-10-22, 15:36
 to 16:01 UTC, during a Cloudflare outage, it could not be read three times while it held nothing
-before and after, and filed a critical problem). So does *Email service: stuck and failed
+before and after, and filed a critical problem). Since 2026-11-07 so is a reading the Queues API
+answered with a 5xx, Cloudflare saying it could not serve the question (2026-11-06, 09:25 to 09:35
+UTC, it answered 503 to two runs and their retries and filed a critical problem, Sentry
+CF-ADMIN-28); a refusal such as a 403 stays a failure. So does *Email service: stuck and failed
 mail*, read through the portal's private connection to it, which stalls for minutes at a time
 (MAINTENANCE SH-10): on 2026-10-23 it and *Website chat assistant* (a check that left with
 charlar on 2026-11-05) timed out in the same runs and passed the run after, and each filed a
@@ -488,6 +491,7 @@ heartbeat (§3).
 
 | Date | What was checked | What was not |
 |---|---|---|
+| 2026-11-07 | §3's hour of grace for *Email queue* now also for a 5xx from Cloudflare's Queues API: `askQueue` in `src/lib/health/probes.ts` (`UnavailableError` in `src/lib/health/readings.ts`), the check in `src/lib/health/catalog.ts` and `runChecks`/`READ_TIMEOUT_GRACE` in `src/lib/health/run.ts`, pinned by `test/system-health-checks.test.ts`; the case read live through the Cloudflare D1 connector (`system_test_results`, 2026-11-06 09:00 to 10:00 UTC) and Sentry CF-ADMIN-28 | Why the Queues API answered 503; the rest of the page |
 | 2026-11-05 | The *Website chat assistant* check removed with charlar's connection: §3's table, the grace and private-wait paragraphs and the counts (28 checks, 3 calls to our other Workers) against `src/lib/health/catalog.ts`, `READ_TIMEOUT_GRACE` in `src/lib/health/run.ts` and `test/system-health-checks.test.ts` | The rows-a-day and state-size figures are scaled from 29 checks, not measured; the rest of the page |
 | 2026-10-28 | §3a's permission sentence corrected to "Workers Observability: Edit" against Cloudflare's API reference for the telemetry query (Workers Observability Write is its only permission), with the refusal note in `src/lib/health/logscan.ts` and the Logs tab's token steps in `src/components/admin/health/LogsPanel.tsx`; `test/log-scan.test.ts` passes | The rest of the page; the permission not yet seen working live (MAINTENANCE LS-1) |
 | 2026-10-27 | §3's table row for *Website and booking pages*, the limits, the private connections and the new paragraph on the day after, against `openPage` in `src/lib/health/probes.ts` and the check in `src/lib/health/catalog.ts`, pinned by `test/system-health-checks.test.ts` (the public address asked, never the private connection; 28 outside requests and 4 calls to our other Workers for Check everything now); the day's results read through the Cloudflare D1 connector (`system_test_results` and `platform_alerts`, 2026-10-26 12:40 to 2026-10-27 12:40 UTC) | Whether the public reads stay clear of the stalls: read from the days after the push. The rest of the document not re-read |

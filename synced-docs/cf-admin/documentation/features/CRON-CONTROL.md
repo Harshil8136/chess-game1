@@ -760,6 +760,15 @@ usual day a few dozen rows read and one row written. Its CPU is bounded by bytes
 hashed, about 20 µs a KB, at most 256 KB a run (about 5 ms). These are counts from
 the code, not a measurement of a live run.
 
+*Updated 2026-11-07.* Since 2026-11-04 a hotel day holds 157 to 210 activity-log rows,
+more than one window's 64 KB, so the morning run seals two windows (Sentry
+CF-ADMIN-25). Each seal is one activity-log row, 8 rows written with its index
+entries; a run starts no window past 128 KB hashed, so it seals at most three (24
+written, the budget). Each window reads at most 164 rows ahead to place its end
+(`WINDOW_LOOKAHEAD_ROWS`), not 501: a day of 400 rows sealed in three windows read
+1,618 rows instead of 2,409 (`test/jobs-budget.test.ts`, "audit-seal on a busy
+morning"). The windows themselves are unchanged.
+
 *Added 2026-10-17.* `health-checks` adds **288 invocations a day**, through the
 `JobRunner` binding, which is not billed as a request. A usual run (the four
 five-minute checks, nothing changed) makes 2 queries and reads and writes the state
@@ -995,6 +1004,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-07 | claude | `audit-seal` (Sentry CF-ADMIN-25, written 16 against 13 on 2026-11-05): live seals and the day counts read through the Cloudflare D1 connector (two windows a day since 2026-11-04, 8 rows written a seal from `admin_audit_log`'s indexes in `sqlite_master`); `WINDOW_LOOKAHEAD_ROWS` in `src/lib/audit-seal/seal.ts` pinned by `test/audit-seal.test.ts` (every window placed the same as from 501 rows); the budget in `budgets.ts` measured by `test/jobs-budget.test.ts` | §5's audit-seal paragraph; `last_verified` left as it was |
 | 2026-11-06 | claude | `bot-weekly` added: `src/workers/scheduled-bot-weekly.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-weekly-email.test.ts` and `test/jobs-budget.test.ts` pass | §3's count and tier table, §3h (new) and §4a's sleeping jobs; `last_verified` left as it was |
 | 2026-11-06 | claude | `bot-flags` added: `src/workers/scheduled-bot-flags.ts`, `src/lib/jobs/registry.ts` (its about and gate), `tiers.ts`, `budgets.ts`; `test/bot-flags-email.test.ts` and `test/jobs-budget.test.ts` pass (off: skipped, no query; a run that emails 1 query, 1 read, 1 written); jobs counted in `registry.ts` (19) | §3's count and tier table, §3g (new), §4a's sleeping jobs. Not re-checked: the rest of the document; not checked live (not deployed when written, and switched off) |
 | 2026-10-24 | claude | `log-scan` added: `src/workers/scheduled-log-scan.ts`, `src/lib/health/logscan.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/log-scan.test.ts` and `test/jobs-budget.test.ts` pass (idle 0 queries; a scan 1 query, 2 read, 3 written); jobs counted in `registry.ts` (18) | §3's count and tier table, §3f (new), §4a's sleeping jobs, §5's line and §7's lease note. Not re-checked: the rest of the document; not checked live (not deployed when written, and Cloudflare refuses the scan until the token has its permission) |
