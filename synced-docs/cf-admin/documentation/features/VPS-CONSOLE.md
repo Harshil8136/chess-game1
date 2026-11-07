@@ -287,7 +287,7 @@ action onto a cf-admin verb, module `vps`, target type `vps_console`
 | `service.restart`, `service.start`, `service.stop` | `vps_service_control` |
 | `packages.update`, `packages.upgrade` | `vps_package_update` |
 | `host.reboot` | `vps_host_reboot` |
-| `app.deploy`, `app.restart`, `app.rollback`, `app.image` (target `<app>[.<member>]:<sha256 digest>`) | `vps_app_deploy` |
+| `app.deploy`, `app.restart`, `app.rollback`, `app.image` (target `<app>[.<member>]:<sha256 digest>`), `app.release` (target `<app>:<version>:<sha256 of the package>:<stage>`: a new version from cf-vps's repository, installed by the Install button) | `vps_app_deploy` |
 | `app.start`, `app.stop`, `app.pause`, `app.resume` | `vps_app_control` |
 | `app.block`, `app.unblock` | `vps_app_block` |
 | `app.resources` (target `<app>[.<member>]:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
@@ -395,6 +395,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-07 | claude | §6's verb table against `src/lib/vps-audit.ts` after adding `app.release` (43 actions; `test/vps-audit.test.ts` passes), for cf-vps's Install button (cf-vps `documentation/features/ACTIONS.md`) | §6's table matches. Not re-checked: every other section |
 | 2026-11-06 | claude | §2's Customers' words and The bot's own AI rows against `CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES` and `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (lab 1.19.0's paths added); the new cases in `test/vps-gateway.test.ts` pass | The two rows. The rest of the document not re-read; `last_verified` left as it was |
 | 2026-11-06 | claude | §2's The bot's own AI row against `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (`record/settings/save` added) and the gateway's `bot_settings` refusal; `test/vps-gateway.test.ts` passes | Matches the code. `last_verified` left as it was |
 | 2026-11-06 | claude | §2's new The bot's own AI row against `changesBotAi` in `src/lib/vps-proxy.ts` and the gateway (`src/pages/dashboard/vps/app/[...path].ts`, `denyBotPart` on `BOT_SETTINGS_PAGE`); the new cases in `test/vps-gateway.test.ts` pass (held without the Settings tab, a padded path held, `record/flag` passes) | The row. The rest of the document not re-read; cf-vps did not change in this commit |
