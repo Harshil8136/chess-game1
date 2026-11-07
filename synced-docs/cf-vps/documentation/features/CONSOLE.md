@@ -132,19 +132,31 @@ Every page has the same three layers (see the design system, `documentation/refe
 
 **Apps**
 
-- Status: how many apps run, whether any has issues, how the rest stand (paused, blocked,
-  stopped), a job that needs attention, and the busy rule's verdict for jobs.
-- Main: filter chips (All, Running, Issues, Public, Private, Jobs) with counts, and a search
-  box. The Apps panel lists status, name, address, health, memory against its cap, CPU,
-  restarts and the first problem, apps with issues first. The Jobs panel shows a card per job
-  with the same controls as the Jobs page. A row opens the inspector sheet: controls, banners,
-  unit, network, health check, resources and the allocation form.
+- Header (one row from 1024 px, since 2026-11-07): the title with its status sentence under it
+  (how many apps run, whether any has issues, how the rest stand (paused, blocked, stopped), a
+  job that needs attention, and the busy rule's verdict for jobs), then the filter chips (All,
+  Running, Issues, Public, Private, Jobs) with counts in a sideways-scrolling row, the search
+  box, Refresh and About. On a phone the chips and search take the second row.
+- The Apps panel names the memory every app uses together ("1.65 GiB in use") and lists apps
+  with issues first, every cell left-aligned. A row is a state dot and the name; a state other
+  than running also shows its word as a badge (blocked with a lock, in a calm grey: a block is
+  someone's choice, not a fault). Under the name, in small text: the address (or the loopback
+  port), the health result, the version from the image tag (or the first 12 digits of a pinned
+  digest) and how long it has been up. Then memory against its cap with its bar, CPU (grey when
+  idle) and restarts. Below 768 px the figures go on a line under the name. The Jobs panel shows
+  a card per job with the same controls as the Jobs page. A row opens the inspector sheet: four
+  tiles (memory, CPU now, up for, version), controls, banners, unit, network, health check,
+  resources and the allocation form.
 - Controls follow the state. Start, Restart, Pause, Resume and Stop need `apps.control`; Block,
   Unblock and the inspector's Change allocation form (memory cap, CPU cap, CPU weight) need
   `apps.manage`; Deploy needs `apps.deploy`. Buttons the person does not hold stay visible but
   locked. A job card has the controls listed under Jobs.
 - App groups (since 2026-11-04): a group is one row with the runtime "group" and a row for each
-  member named `<group>.<member>`, each with its own controls. A member has no Deploy (it deploys
+  member named `<group>.<member>`, each with its own controls. Since 2026-11-07 the list folds
+  them: the group's line shows how its parts stand ("3 parts, all running", "3 of 4 parts
+  running, 1 blocked") and their memory, caps, CPU and restarts added up, and a tap opens it to
+  the pod (named "pod", the group's shared network) and each member by its own name. A group
+  opens by itself under a filter or a search, or when a part has issues. A member has no Deploy (it deploys
   with its group), and a group has no allocation form (each member has its own). A member's row
   opens that member's own inspector, with its Keys; the page finds the row by its name, since a
   group and its members share one manifest file.
