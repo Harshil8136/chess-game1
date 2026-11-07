@@ -2,7 +2,7 @@
 title: "WhatsApp lab — testing the hotel's WhatsApp bot from the Chatbot section"
 status: active
 audience: [owner, operator, ai, technical]
-last_verified: 2026-11-05
+last_verified: 2026-11-07
 verified_against: [code]
 owner: harshil
 related_code: [src/components/admin/chatbot/whatsapp/, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/PageBar.tsx, src/lib/auth/registry-tabs.ts, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
@@ -69,7 +69,11 @@ its info. Since the second pass of 2026-11-05 every part is drawn as WhatsApp dr
   tick when sent, two once the bot has read them; the bot's and the hotel's phone's on the left,
   the first bubble of a run with its corner squared toward the sender. A reaction shows on the
   bubble it answers, and as a line ("The hotel's phone reacted 👍 to …"). Three moving dots
-  while the bot is writing (still for people who ask their phone for less motion). Under each
+  while the bot is writing (still for people who ask their phone for less motion). Since
+  2026-11-07, while a person has the chat (the hotel's phone wrote after the bot's last answer
+  and nobody has reacted 👍 since) there are no dots and no "the bot is writing…": a line says
+  the bot is paused, because the bot really stays silent then, with no ticks and no typing, as
+  on a real phone (the owner's tester saw endless dots in chat 232). Under each
   answer one row of small figures: the models, the time to the first answer, tokens read and
   written, cost, and any failed call; then 👍 and 👎 and **Details**. 👎 asks at once what was
   wrong (optional); either verdict can carry a note, and a second press takes it back. Tapping a
@@ -246,6 +250,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-07 | claude | The paused chat: `pausedByStaff` in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), its use in `ChatThread.tsx` and both top bars of `LabChat.tsx`; the bot's own silence while paused read from lab chat 134 (turn 363) on the server: a staff text at 03:17:54, two customer texts with no seen, typing or reply, the staff 👍 at 03:19:01 and the reply at 03:19:06 | The page on a phone (the owner's test); the chat list's row still says "The bot is writing…" while a turn is open, paused or not (it has no messages to tell) |
 | 2026-11-06 | claude | §1's Run as the real bot's door (`ChatModels.tsx` Options, `ChatInfo.tsx` row, `draftSetup` in `format.ts`, `Setup.door` in `lab-api.ts`; `test/whatsapp-lab-pages.test.ts`), read from cf-vps `apps/whatsapp-lab/src/` at a8ab434 (`lab.ts`: the setup's `door`; `gateway.ts` `asSetUp` and `doorPlans`: the lab's own settings in place of `DOOR_PLAN`) | The switch against lab 1.17.0 on the server (not installed); the rest of the document not re-read |
 | 2026-11-06 | claude | §1's Usage row: the Models page's step-by-model comparison (`BotInsights.tsx` `ModelsPart`, cf-vps lab 1.14.0 `record/models`), and that this page stays until that package is installed; `test/whatsapp-bot-sections.test.ts` | The rest of the document not re-read |
 | 2026-11-05 | claude | Lab 1.4.0's settings in Change models and the chat's info (`ChatModels.tsx`, `ChatInfo.tsx`, `draftSetup` and the summary in `format.ts`, tested in `test/whatsapp-lab-pages.test.ts`), read from cf-vps `apps/whatsapp-lab/src/` at 4b8ebca (`lab.ts`: the setup's `facts`, `effort`, `cacheTtl` and the status's `keys.workersAi`; `gateway.ts` and `facts.ts`: what each does; `models.ts`: which Claude models take effort); the drawer at 390 and 1,440 pixels in a local preview on sample data, never committed, with Save off until a setting changes and the cache lifetime shown only while caching is on | The settings against lab 1.4.0 on the server (installed 2026-11-05 07:07Z by the cost work, not read back here); a test chat with each one on (the owner's phone test) |
