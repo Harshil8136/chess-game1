@@ -135,6 +135,15 @@ cf-vps grants a job only the reads its contract lists for it, here `host.view`
 on that one route (`SYSTEM_JOB_READS` in `cf-vps/contract/capabilities.ts`), and
 refuses it every other route.
 
+One system job also makes a change (since 2026-11-07): `lab-update` installs the
+WhatsApp lab's new versions by itself ([CRON-CONTROL](CRON-CONTROL.md) §3i). It
+reads `releases`, `apps` and `actions/job`, and POSTs `app.release` to
+`actions/run` (`vpsSystemPost` in `src/lib/vps-proxy.ts`, the same signed binding
+as `vpsSystemRead`). cf-vps lets that job start that one action and no other,
+with no fresh sign-in since no person presses it (`SYSTEM_JOB_ACTIONS` in
+`cf-vps/contract/capabilities.ts`). The gateway does not see these calls, so the
+job writes its own activity-log rows (§6).
+
 ## 4. Permissions and the page row
 
 Migration `migrations/0059_vps_console_page.sql` adds the registry row:
@@ -287,7 +296,7 @@ action onto a cf-admin verb, module `vps`, target type `vps_console`
 | `service.restart`, `service.start`, `service.stop` | `vps_service_control` |
 | `packages.update`, `packages.upgrade` | `vps_package_update` |
 | `host.reboot` | `vps_host_reboot` |
-| `app.deploy`, `app.restart`, `app.rollback`, `app.image` (target `<app>[.<member>]:<sha256 digest>`), `app.release` (target `<app>:<version>:<sha256 of the package>:<stage>`: a new version from cf-vps's repository, installed by the Install button) | `vps_app_deploy` |
+| `app.deploy`, `app.restart`, `app.rollback`, `app.image` (target `<app>[.<member>]:<sha256 digest>`), `app.release` (target `<app>:<version>:<sha256 of the package>:<stage>`: a new version from cf-vps's repository, installed by the Install button, or by the `lab-update` job, which writes its own rows by the system: one at the start, one with the result) | `vps_app_deploy` |
 | `app.start`, `app.stop`, `app.pause`, `app.resume` | `vps_app_control` |
 | `app.block`, `app.unblock` | `vps_app_block` |
 | `app.resources` (target `<app>[.<member>]:<memory>:<cpu %>:<weight>`) | `vps_app_resources` |
@@ -395,6 +404,7 @@ hourly); the owner and vendor support see it at once.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-07 | claude | §3's system callers and §6's `app.release` row against `src/workers/scheduled-lab-update.ts`, `vpsSystemPost` in `src/lib/vps-proxy.ts` and cf-vps `67b70b2` (`SYSTEM_JOB_ACTIONS`); `test/lab-update.test.ts` and `test/vps-proxy.test.ts` pass | The two paragraphs. Not re-checked: every other section |
 | 2026-11-07 | claude | §6's verb table against `src/lib/vps-audit.ts` after adding `app.release` (43 actions; `test/vps-audit.test.ts` passes), for cf-vps's Install button (cf-vps `documentation/features/ACTIONS.md`) | §6's table matches. Not re-checked: every other section |
 | 2026-11-06 | claude | §2's Customers' words and The bot's own AI rows against `CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES` and `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (lab 1.19.0's paths added); the new cases in `test/vps-gateway.test.ts` pass | The two rows. The rest of the document not re-read; `last_verified` left as it was |
 | 2026-11-06 | claude | §2's The bot's own AI row against `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (`record/settings/save` added) and the gateway's `bot_settings` refusal; `test/vps-gateway.test.ts` passes | Matches the code. `last_verified` left as it was |
