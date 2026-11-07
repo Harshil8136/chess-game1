@@ -61,7 +61,7 @@ and the console. A route is reached in two forms:
 | `packages/installed` | GET | `host.view` | 60 s |
 | `packages/info` | GET | `host.view` | 60 s |
 | `processes` | GET | `host.view` | 15 s |
-| `apps` | GET | `host.view` | 15 s |
+| `apps` | GET | `host.view` (also cf-admin's `lab-update` job: `SYSTEM_JOB_READS`) | 15 s |
 | `jobs` | GET | `host.view` | 60 s |
 | `jobs/log` | GET | `logs.view` | 60 s |
 | `jobs/progress` | GET | `host.view` | 15 s |
@@ -187,8 +187,8 @@ The route needs only `host.view`; the request body then decides the real capabil
 
 | Route | Type | Route capability | Also needs |
 |---|---|---|---|
-| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`, `app.image`, `app.secret`, `app.release`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
-| `actions/job` | GET | `host.view` | Nothing more; only `vps-act-*` units can be read |
+| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`, `app.image`, `app.secret`, `app.release`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent). A cf-admin system job may start only the actions `SYSTEM_JOB_ACTIONS` lists for it (`lab-update`: `app.release`), with no fresh sign-in; the Worker and the agent refuse it any other |
+| `actions/job` | GET | `host.view` (also cf-admin's `lab-update` job) | Nothing more; only `vps-act-*` units can be read |
 | `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in, and (checked by the agent) the owner or vendor support role and the hourly limit |
 | `terminal/socket` | stream (WebSocket) | `host.view` | `terminal.ops` or `terminal.admin` (Worker and agent); own session only; a GET with `Upgrade: websocket`, else 400 at the Worker and 426 at the agent |
 | `terminal/stream` | stream | `host.view` | `terminal.ops` or `terminal.admin` (checked by the agent); own session only |
@@ -215,7 +215,7 @@ These are under the same `/dashboard/vps/app/api/` prefix and never reach the ag
 | Route | Method | Capability | What it does |
 |---|---|---|---|
 | `me` | GET | none | The person's email and role, `caps` (what the console shows) and `agentCaps` (what the agent will accept; the same outside the local preview), `preview`, `policyStored`, the catalog, whether signing and the agent are configured, and `routes` (`ROUTE_TABLE_ID`) |
-| `releases` | GET | `apps.manage` | The app packages this Worker was built with, read from its own assets (`/_releases/index.json`): `{ app, version, sha256, chars }` for each, `[]` when there are none. For `app.release`, the Worker also reads the package itself and adds it to the action's body ([ACTIONS](../features/ACTIONS.md#installing-an-update-apprelease-2026-11-07)) |
+| `releases` | GET | `apps.manage` (also cf-admin's `lab-update` job) | The app packages this Worker was built with, read from its own assets (`/_releases/index.json`): `{ app, version, sha256, chars }` for each, `[]` when there are none. For `app.release`, the Worker also reads the package itself and adds it to the action's body ([ACTIONS](../features/ACTIONS.md#installing-an-update-apprelease-2026-11-07)) |
 | `access` | GET | `access.view` | The whole access policy and whether it is stored |
 | `access` | POST | `access.manage` | Save the policy (compare-and-swap on its revision; up to 64 KiB) |
 | `access/person` | GET | `access.view`, or `access.delegate` for a person cf-admin names in `x-vps-target` whom the caller outranks | One person's role defaults, grant and effective capabilities, and what the caller may change |

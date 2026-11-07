@@ -265,6 +265,27 @@ install that had worked showed as failed, or one stopped at its first step
 ([incident 2026-11-07](../records/incidents/2026-11-07-install-button-epipe.md)). A failed
 Install before the build has changed nothing and can simply be pressed again.
 
+### Installing by themselves (cf-admin's `lab-update` job, 2026-11-07)
+
+The owner chose that lab updates install with no press. cf-admin's `lab-update` job does what
+the button does, as its own system actor (`x-vps-actor` with `kind: 'system'`, signed by
+cf-admin), on the five-minute tick: it reads `releases`, reads `apps` for the version the
+member runs, and starts `app.release` for a newer package, once per package; then it reads the
+run's result with `actions/job` and records it. The server allows that job exactly this
+(`SYSTEM_JOB_READS` and `SYSTEM_JOB_ACTIONS` in `contract/capabilities.ts`):
+
+- **Its reads** are `apps` and `actions/job`, signed with `host.view`, and `releases`.
+- **Its one action** is `app.release`. On `actions/run` it holds `host.view` and
+  `apps.manage`, and the Worker and the agent both refuse it every other action, including the
+  other `apps.manage` ones. Every other job starts nothing.
+- **No sign-in is asked for**, since no person presses it; `app.release` stays `fresh` for a
+  person. The agent skips the check only when the signed role is `system` and the signed name
+  is a job `SYSTEM_JOB_ACTIONS` lists for the action. Needs the agent from the same day.
+- **The ticket** names the job as `lab-update@system` (the root check wants an address), with
+  cf-admin's request id, so the journal says which job asked.
+- Everything else is the button's path: the Worker's own package, the root unit's checks
+  (never an older version), the health check and the rollback. `RELEASE_APPS` is the lab only.
+
 ## Not in this list
 
 File changes (`files.write`), the terminal (`terminal.ops`, `terminal.admin`) and the admin

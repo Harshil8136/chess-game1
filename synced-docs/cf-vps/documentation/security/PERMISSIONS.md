@@ -97,7 +97,12 @@ their grant would count. The console's role matrix shows the role as holding eve
    WhatsApp records' `record/urgent` (the live bot's recorder and the lab's phone). Since lab
    1.16.0 cf-admin's weekly report by email (`bot-weekly`) holds the same read for the same two
    members' `record/week` only. Any other bridge read is refused as if it held nothing, each job
-   only its own path, and the app refuses a system actor every path but those two.
+   only its own path, and the app refuses a system actor every path but those two. Since
+   2026-11-07 cf-admin's `lab-update` job may read `apps` and `actions/job` with `host.view`,
+   read `releases`, and start one action, `app.release` (`SYSTEM_JOB_ACTIONS`): on
+   `actions/run` it holds `host.view` and `apps.manage`, the Worker and the agent refuse it any
+   other action, and no fresh sign-in is asked for, since no person presses it
+   ([ACTIONS](../features/ACTIONS.md)). No other job starts any action.
 2. **Vendor support** holds every capability: yes, whatever follows.
 3. A floor capability is refused unless the role is owner or vendor support.
 4. A per-person **deny** wins over everything else.
