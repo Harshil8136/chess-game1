@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [contract/actions.ts, contract/releases.ts, agent/src/cli/commands.ts, agent/src/cli/release.ts, scripts/pack-releases.mjs, src/agent/releases.ts, agent/src/collectors/bridge.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
+related_code: [contract/actions.ts, contract/releases.ts, agent/src/cli/commands.ts, agent/src/cli/release.ts, agent/src/cli/run.ts, scripts/pack-releases.mjs, src/agent/releases.ts, agent/src/collectors/bridge.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
 related_docs: [../security/PERMISSIONS.md, LOG-STORAGE.md, JOBS.md, RESTORE-TESTS.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md]
 tags: [feature, actions, polkit, systemd, enforcement]
 ---
@@ -249,10 +249,21 @@ carries it:
 7. When the member it built answers its health check, `src.next` replaces `src`. When it does
    not, the previous manifest is written back and applied, so the old version runs again, and
    `src` is left as it was.
+8. Once the version runs and is healthy (or was already running), the failed marks of the same
+   app's earlier install runs are cleared (`systemctl reset-failed` on exactly those
+   `vps-act-app@release:<app>:…` units), so Services and Needs attention do not keep a red the
+   app no longer has. Their logs stay in the journal. Nothing is cleared after a rollback.
 
 The whole run is the job the button opens, recorded in cf-admin's activity log as
 `vps_app_deploy`. Installing needs the agent from 2026-11-07 or later; an older agent refuses
 the action as unknown.
+
+`vps` gives a program it runs no input unless it has some to give, and a program that exits
+before reading its input is not an error (`agent/src/cli/run.ts`). The first agent with the
+button lacked this: a fast helper that finished first made `vps` stop with `write EPIPE`, so an
+install that had worked showed as failed, or one stopped at its first step
+([incident 2026-11-07](../records/incidents/2026-11-07-install-button-epipe.md)). A failed
+Install before the build has changed nothing and can simply be pressed again.
 
 ## Not in this list
 
