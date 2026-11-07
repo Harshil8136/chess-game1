@@ -298,8 +298,11 @@ Every page has the same three layers (see the design system, `documentation/refe
 
 - Status: Live with the account and how long ago it opened, reconnecting, opening, ended, or
   no session open. People without a terminal capability see a note instead.
-- Main: Open session or End session in the header; the account choice under it when the person
-  holds more than one; the dark terminal in a framed panel; open sessions to reattach
+- Main: one compact header row (since 2026-11-07): the title and status, the account choice as
+  a sideways segmented row when the person holds more than one (it was a dropdown), Open session
+  or End session, and About; the sudo account's note under it when that account is picked. Then
+  the dark terminal in a framed panel, which before the first session shows a terminal mark, a
+  line naming the account and its own Open session button; open sessions to reattach
   (reattaching clears the screen first, and ending is guarded while the session runs). The
   sudo-capable account needs `terminal.admin` (Owner or Vendor support) and a sign-in from the
   last 10 minutes; when it is older, opening it brings up cf-admin's "Confirm it's you" dialog,
@@ -312,8 +315,8 @@ Every page has the same three layers (see the design system, `documentation/refe
   in all, and taking the capability away does not end one already open
   ([Stored policy](../security/PERMISSIONS.md#stored-policy-and-per-person-grants)).
 - Claude on the server (since 2026-11-04, `src/ui/components/claude.tsx`): while no session is
-  open, a panel in a warm clay colour above the account choice, only for someone who holds
-  `terminal.admin`. It says On (with the time left and when it stops itself), Starting, Off
+  open, a compact card in a warm clay colour under the header, only for someone who holds
+  `terminal.admin`, with a thin bar of the hours left while Claude runs. It says On (with the time left and when it stops itself), Starting, Off
   (and why), or Not set up on the server yet, from `services/detail` every 30 seconds; Start
   Claude, or Restart for 24 more hours and Stop while it runs. What it starts and every rule
   that guards it: private `features/CLAUDE.md`.
