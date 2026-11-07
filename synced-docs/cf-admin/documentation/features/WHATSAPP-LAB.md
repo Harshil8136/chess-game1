@@ -211,7 +211,13 @@ every switch they apply (`settingsSwitches`: the reply's thinking effort, checke
 price calculator, lean on a side step, the cache for an hour; "as the bot sends it" when none),
 then when the settings were saved and the month's brake; the chat's own cache, lean, dates and
 effort rows, which such a chat does not use, are left out (the owner's screenshot of 2026-11-07
-showed them as "Off, as the live bot" while the settings had them on).
+showed them as "Off, as the live bot" while the settings had them on). Under the models, **Safety
+and hours** lists what such a chat's replies follow besides them (`rulesRows` in `ChatInfo.tsx`,
+cf-vps lab 1.26.0): the hand-over to a person and its words, after hours, the longest reply, the
+backup model, the opening days and hours, and the Mexican holidays with the days closed or open
+besides, each changed under Chatbot → Settings with Lab picked. A chat on its own choices, which
+follows none of them, says it copies the live bot and to turn on Run as the real bot's door in
+Change models (the owner's "I dont see additional configs in it", 2026-11-07).
 
 **Photos** are made smaller in the browser before they are sent (a JPEG of at most 1,280
 pixels, stepped down until it fits the 256 KiB a server-console change may carry). **Voice notes
@@ -268,6 +274,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-07 | claude | §1's Safety and hours in a chat's info (`rulesRows` and the older chat's note in `ChatInfo.tsx`), against cf-vps lab 1.26.1's `record/settings` shapes; `test/whatsapp-bot-hotel.test.ts` | The panel on a phone (the owner's test) |
 | 2026-11-07 | claude | §1's chat info on the bot's settings: `ChatInfo.tsx` (each step's model and `settingsSwitches`, the version and the brake, the chat's own switches hidden), the switches in `ChatModels.tsx`'s step lines, `.wl-steps` in `chatbot.css`; `test/whatsapp-lab-pages.test.ts` | The panel on a phone (the owner's test) |
 | 2026-11-07 | claude | §1's new chats on the bot's settings: `ChatModels.tsx` (Every step at once's first choice, each step's model from `readBotSettings('lab')`, a step's pick starting from the settings), `ChatInfo.tsx`, `modelsSummary`, `stepKind`, `settingsModel` and `setupFromSettings` in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), read against cf-vps `apps/whatsapp-lab/src/` at 1c28c0c (`store.ts` NEW_CHAT_SETUP, `settings.ts` `planOf` and DEFAULT_SETTINGS, `transform.ts` step names) | The drawer on a phone against lab 1.24.4 on the server (the owner's test); the rest of the document not re-read |
 | 2026-11-07 | claude | The paused chat: `pausedByStaff` in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), its use in `ChatThread.tsx` and both top bars of `LabChat.tsx`; the bot's own silence while paused read from lab chat 134 (turn 363) on the server: a staff text at 03:17:54, two customer texts with no seen, typing or reply, the staff 👍 at 03:19:01 and the reply at 03:19:06 | The page on a phone (the owner's test); the chat list's row still says "The bot is writing…" while a turn is open, paused or not (it has no messages to tell) |
