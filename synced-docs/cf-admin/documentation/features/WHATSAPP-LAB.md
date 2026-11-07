@@ -1,20 +1,20 @@
 ---
-title: "WhatsApp lab — testing the hotel's WhatsApp bot from the Chatbot section"
+title: "Test bot (the WhatsApp lab) — testing the hotel's WhatsApp bot from the Chatbot section"
 status: active
 audience: [owner, operator, ai, technical]
 last_verified: 2026-11-07
 verified_against: [code]
 owner: harshil
 related_code: [src/components/admin/chatbot/whatsapp/, src/components/admin/chatbot/insights/BotModels.tsx, src/components/admin/chatbot/PageBar.tsx, src/lib/auth/registry-tabs.ts, src/pages/dashboard/chatbot/whatsapp/, src/layouts/ChatbotLayout.astro, src/styles/pages/chatbot.css, migrations/0093_whatsapp_lab_pages.sql, "src/pages/dashboard/vps/app/[...path].ts", src/lib/vps-proxy.ts, test/whatsapp-lab-pages.test.ts, test/whatsapp-lab-look.test.ts, test/whatsapp-lab-ssr.test.ts]
-related_docs: [CHATBOT.md, ../records/reports/2026-11-06-bot-models-settings.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-makeover.md]
+related_docs: [CHATBOT.md, ../specs/2026-11-07-chatbot-plain-words-and-settings.md, ../records/reports/2026-11-07-chatbot-plain-words-and-settings.md, ../records/reports/2026-11-06-bot-models-settings.md, VPS-CONSOLE.md, ../architecture/PERMISSIONS-SYSTEM.md, ../records/reports/2026-11-05-whatsapp-lab-pages.md, ../specs/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-test-chat.md, ../records/reports/2026-11-05-whatsapp-lab-makeover.md]
 tags: [chatbot, whatsapp, lab, testing, models, n8n]
 ---
 
-# WhatsApp lab — testing the hotel's WhatsApp bot from the Chatbot section
+# Test bot (the WhatsApp lab) — testing the hotel's WhatsApp bot from the Chatbot section
 
-> **TL;DR (non-technical):** The WhatsApp lab is a private copy of the hotel's WhatsApp bot that
+> **TL;DR (non-technical):** The Test bot (called the WhatsApp lab until 2026-11-07) is a private copy of the hotel's WhatsApp bot that
 > runs on our server beside the real one and can never reach WhatsApp or a real customer. In the
-> Chatbot section, **WhatsApp lab** lets you write to it as a customer would and watch it
+> Chatbot section, **Test bot** lets you write to it as a customer would and watch it
 > answer, see under each answer which AI models it used, how many tokens, how long it took and
 > what it cost, open every step it took, and switch any of its AI steps to another Claude or
 > Gemini model for one chat to compare them. Nothing here changes the real bot.
@@ -24,9 +24,14 @@ lab. The lab itself (its test WhatsApp, its model gateway, how a copy of the bot
 record) is cf-vps's, and its guide is `documentation/features/WHATSAPP-LAB.md` in the cf-vps
 repository; where the two disagree, the cf-vps code wins.
 
+**The words on screen** (since 2026-11-07, the owner's "difficult for me to understand: Lab, door"):
+the pages say **test bot** for the lab and **live bot** for the real one; this document and the code
+keep "lab" (the `whatsapp-lab` app, the `lab` source, the `door` setting). The whole list of old and
+new words is in the [plain-words spec](../specs/2026-11-07-chatbot-plain-words-and-settings.md).
+
 ## 1. The pages
 
-**Chatbot → WhatsApp lab**, the last group in the Chatbot section's row of tabs, set apart
+**Chatbot → Test bot**, the last group in the Chatbot section's row of tabs, set apart
 from the website chatbot's tabs by a short divider and shown in WhatsApp's green, has three
 pages:
 
@@ -34,14 +39,14 @@ pages:
 |---|---|---|
 | Test chat | `/dashboard/chatbot/whatsapp` | Laid out as WhatsApp is (remade 2026-11-05, below): the test chats, one chat with its answers, ratings and figures, and the chat's info with its tools and models |
 | Usage | `/dashboard/chatbot/whatsapp/usage` | What the tests spent, turns, model calls and failures, tokens and ratings as small figures in the page's bar; the comparison **by model** and **by step and model** (each model with its maker: calls, failures, average time, average tokens read and written, cost, cost per call), the average time and the cost per call each with a bar against the slowest and the dearest row; the last 100 turns, each with Details. The Chatbot section's Models page draws the same comparison for the lab and the real bot (CHATBOT.md §0.1, since 2026-11-06); this page's tab comes off once lab 1.14.0 is installed and the owner has seen it there |
-| Set-up | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready, as a checklist where each line says its state in words as well as its mark (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys, PostHog), the PostHog panel (below), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with each model's maker and the sources, and the last 50 changes made in the lab and by whom, as a timeline |
+| Setup | `/dashboard/chatbot/whatsapp/setup` | Whether the lab is ready, as a checklist where each line says its state in words as well as its mark (its copy of the bot, its n8n, the copy switched on, the Anthropic and Gemini keys, PostHog), the PostHog panel (below), what the copy holds (the bot's AI steps with their live models and temperatures, what was replaced to keep it inside the lab), the price list every cost comes from with each model's maker and the sources, and the last 50 changes made in the lab and by whom, as a timeline |
 
 The three pages are tabs in the section's one row (since the evening of 2026-11-05, the
-owner's "2 layer tabs are bad looking"): after the divider a small green **WhatsApp lab**
-caption, then **Test chat**, **Usage** and **Set-up**, each in the lab's green whichever page is
+owner's "2 layer tabs are bad looking"): after the divider a small green **Test bot**
+caption, then **Test chat**, **Usage** and **Setup**, each in the lab's green whichever page is
 on screen (`RegistryTabs.astro` `expand`, set in `src/layouts/ChatbotLayout.astro`). Only the
 pages the person may open are shown, by the sidebar's rule (`src/lib/auth/registry-tabs.ts`);
-if they may open just one, the single **WhatsApp lab** tab stays. Each page then opens on the
+if they may open just one, the single **Test bot** tab stays. Each page then opens on the
 section's slim page bar ([frame design](../specs/2026-11-05-chatbot-section-frame.md)): the
 page's icon and name, one line on what it shows (hidden on a phone), and its buttons on the
 right (`src/components/admin/chatbot/PageBar.tsx`). There is no second row of tabs.
@@ -104,10 +109,10 @@ its info. Since the second pass of 2026-11-05 every part is drawn as WhatsApp dr
   with its own ≈ a call and its price in and out per million tokens; the live bot's model is
   marked Live, and a press picks it and closes the line. **Every step at once** heads the list
   and puts the whole chat on one model (or back on the live bot's models). Under the list, **How
-  the bot is sent**, each setting with what it does and its choices in view: caching of the bot's
-  instructions (Off or On); from the lab's 1.3.0, **Lean side steps** (Off or On); from 1.4.0,
-  **Keep the cache for** (5 minutes or 1 hour, while caching is on), **Checked dates** (Off or
-  On) and **How hard the reply thinks** (Default, Low, Medium or High). A setting shows only when
+  the bot is sent**, each setting with what it does and its choices in view: **Prompt caching**
+  (Off or On); from the lab's 1.3.0, **Short prompt and low reasoning** (Off or On); from 1.4.0,
+  **Cache length** (5 minutes or 1 hour, while caching is on), **Date and price checks** (Off or
+  On) and **Reasoning level** (Default, Low, Medium or High). A setting shows only when
   the lab's answer for the chat carries it, and **Save models** sends back only those.
 - **Reset** (after a confirm) starts the chat again as a new customer: the lab gives it the next
   testing number, never one used before, so the bot has no memory of it, and the chat starts empty.
@@ -165,8 +170,8 @@ those the lab has a price for. Gemini models are offered once a Gemini key is se
 newer Claude model that refuses sampling settings, or thinks before it answers, is adapted by
 the lab, and the call's notes say what was changed.
 
-**Lean side steps and Workers AI** (lab 1.3.0, on the server since 2026-11-05). **Lean side
-steps** tries on one test chat the cost clean-ups planned for the live bot: the payment check is
+**Short prompt and low reasoning, and Workers AI** (lab 1.3.0, on the server since 2026-11-05;
+called Lean side steps until 2026-11-07). **Short prompt and low reasoning** tries on one test chat the cost clean-ups planned for the live bot: the payment check is
 sent a few lines of instructions instead of a long copy of an old bot prompt, and a Claude 5.x
 model on a side step thinks at low effort. What the customer reads is never changed, and each
 change is noted on the call; cf-vps's guide, "Choosing models", has the detail. The switch shows
@@ -177,23 +182,24 @@ Workers AI keys are set: with both, their cards are offered as any other; withou
 greyed and their group says it needs the lab's two Workers AI keys. A lab before 1.4.0 does not
 say, so their cards stay offered with that line (a call without the keys fails and says so).
 
-**Checked dates, reply effort and a 1-hour cache** (lab 1.4.0). **Checked dates** adds to the
+**Date and price checks, reasoning level and a 1-hour cache** (lab 1.4.0; called Checked dates,
+How hard the reply thinks and Keep the cache for until 2026-11-07). **Date and price checks** adds to the
 reply step's message one checked line for each date the customer writes, looked up in the
 calendar the bot already sends, so a wrong day name ("domingo 23" when the 23rd is a Monday) is
-caught. **How hard the reply thinks** sets the reply step's thinking effort on a Claude 5.x model
+caught. **Reasoning level** sets the reply step's thinking effort on a Claude 5.x model
 or a Cloudflare model; any other model is sent as it is, and the call's notes say so.
-**Keep the cache for** an hour writes the cached instructions at twice the input price instead of
+A **Cache length** of an hour writes the cached instructions at twice the input price instead of
 1.25 times, and pays when the next message usually comes 5 to 60 minutes later. Each change is
 noted on the call; cf-vps's guide, "Choosing models", has the detail. The chat's info and its
 one-line summary show them (for example "cached for an hour, dates checked, low effort").
 
-**Run as the real bot's door** (the lab's `door`, lab 1.5.0; shown only when the lab sends it).
-On, the chat runs as the model door runs the real bot: the door sorts each call into its step
+**Use bot settings** (the lab's `door`, lab 1.5.0; shown only when the lab sends it; called Run as
+the real bot's door until 2026-11-07). On, the chat runs as the AI gateway runs the live bot: the gateway sorts each call into its step
 by the request's words and sends it on the model, cache, effort and lean side steps the lab's
-**Models** settings give (Chatbot → Settings → Models, lab 1.17.0; before 1.17.0 the door's
-built-in table), in place of the choices on this drawer; each call's notes say which step the
-door saw. So a change to the lab's Models settings is tried here before it is saved for the real
-bot. The chat's info says "Runs as the real bot's door: On".
+**AI models** settings give (Chatbot → Settings → AI models, lab 1.17.0; before 1.17.0 the
+gateway's built-in table), in place of the choices on this drawer; each call's notes say which step
+the gateway saw. So a change to the test bot's AI models settings is tried here before it is saved
+to the live bot. The chat's info says "Uses the bot settings: On: the test bot's AI models settings".
 
 **New chats start on the bot's settings** (lab 1.24.4, the owner's ask of 2026-11-07: a new chat
 started on the live bot's Sonnet 4.6, about US$0.061 a reply). The lab gives a new chat `door`
@@ -209,15 +215,15 @@ with only that step changed, and turns the switch off. The chat's one-line summa
 bot's settings". The chat's info shows, for each step, the model the settings give it and under it
 every switch they apply (`settingsSwitches`: the reply's thinking effort, checked dates and the
 price calculator, lean on a side step, the cache for an hour; "as the bot sends it" when none),
-then when the settings were saved and the month's brake; the chat's own cache, lean, dates and
+then when the settings were saved and the month's spending limit; the chat's own cache, lean, dates and
 effort rows, which such a chat does not use, are left out (the owner's screenshot of 2026-11-07
-showed them as "Off, as the live bot" while the settings had them on). Under the models, **Safety
-and hours** lists what such a chat's replies follow besides them (`rulesRows` in `ChatInfo.tsx`,
-cf-vps lab 1.26.0): the hand-over to a person and its words, after hours, the longest reply, the
-backup model, the opening days and hours, and the Mexican holidays with the days closed or open
-besides, each changed under Chatbot → Settings with Lab picked. A chat on its own choices, which
-follows none of them, says it copies the live bot and to turn on Run as the real bot's door in
-Change models (the owner's "I dont see additional configs in it", 2026-11-07).
+showed them as "Off, as the live bot" while the settings had them on). Under the models, **Reply
+safety and opening hours** lists what such a chat's replies follow besides them (`rulesRows` in `ChatInfo.tsx`,
+cf-vps lab 1.26.0): **Transfer to staff** and its words, **Outside opening hours**, **Maximum reply
+length**, the **Fallback model**, the opening days and hours, and the Mexican holidays with the days closed or open
+besides, each changed under Chatbot → Settings → Reply safety and Opening hours with Test bot
+picked. A chat on its own choices, which follows none of them, says it copies the live bot and to
+turn on Use bot settings in Change models (the owner's "I dont see additional configs in it", 2026-11-07).
 
 **Photos** are made smaller in the browser before they are sent (a JPEG of at most 1,280
 pixels, stepped down until it fits the 256 KiB a server-console change may carry). **Voice notes
@@ -237,7 +243,7 @@ missing ([PERMISSIONS-SYSTEM](../architecture/PERMISSIONS-SYSTEM.md)).
 
 ```mermaid
 flowchart LR
-    P["A WhatsApp lab page (browser)"] -->|"/dashboard/vps/app/api/apps/bridge…"| G["The server console's gateway (cf-admin)"]
+    P["A Test bot page (browser)"] -->|"/dashboard/vps/app/api/apps/bridge…"| G["The server console's gateway (cf-admin)"]
     G -->|"VPS binding, signed actor"| W["cf-vps Worker"]
     W -->|"signed call, via the tunnel"| A["The server's agent"]
     A -->|"loopback"| L["The lab (phone member)"]
@@ -274,6 +280,7 @@ beyond the audit row per change.
 
 | Date | Who | What was checked | Not checked |
 |---|---|---|---|
+| 2026-11-07 | claude | The words on screen (the owner's "difficult for me to understand: Lab, door"): the title, TL;DR, §1's tabs (Test bot, Setup, from migration `0098`), How the bot is sent's names, Use bot settings, the Short prompt and Date and price checks paragraphs and the reply safety list, against `ChatModels.tsx`, `ChatInfo.tsx` and `LabChat.tsx` after the rename; `test/whatsapp-lab-pages.test.ts`, `test/whatsapp-lab-look.test.ts` | The pages on a phone (the owner's test); §2 and §3 not re-read beyond the diagram's label |
 | 2026-11-07 | claude | §1's Safety and hours in a chat's info (`rulesRows` and the older chat's note in `ChatInfo.tsx`), against cf-vps lab 1.26.1's `record/settings` shapes; `test/whatsapp-bot-hotel.test.ts` | The panel on a phone (the owner's test) |
 | 2026-11-07 | claude | §1's chat info on the bot's settings: `ChatInfo.tsx` (each step's model and `settingsSwitches`, the version and the brake, the chat's own switches hidden), the switches in `ChatModels.tsx`'s step lines, `.wl-steps` in `chatbot.css`; `test/whatsapp-lab-pages.test.ts` | The panel on a phone (the owner's test) |
 | 2026-11-07 | claude | §1's new chats on the bot's settings: `ChatModels.tsx` (Every step at once's first choice, each step's model from `readBotSettings('lab')`, a step's pick starting from the settings), `ChatInfo.tsx`, `modelsSummary`, `stepKind`, `settingsModel` and `setupFromSettings` in `format.ts` (tested in `test/whatsapp-lab-pages.test.ts`), read against cf-vps `apps/whatsapp-lab/src/` at 1c28c0c (`store.ts` NEW_CHAT_SETUP, `settings.ts` `planOf` and DEFAULT_SETTINGS, `transform.ts` step names) | The drawer on a phone against lab 1.24.4 on the server (the owner's test); the rest of the document not re-read |

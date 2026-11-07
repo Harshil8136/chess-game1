@@ -13,15 +13,17 @@ tags: [chatbot, whatsapp, n8n, ai, analytics]
 
 # The Chatbot section: the WhatsApp bot on n8n — CF-Admin
 
-> **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the month's allowance, how well it answers, and its test lab. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
+> **TL;DR (non-technical):** Since 2026-11-05 the Chatbot section shows the hotel's one chatbot, the WhatsApp bot that runs on n8n on the server: whether it runs, what its AI costs against the monthly AI budget, how well it answers, and its test bot. The old website chatbot (charlar, `cf-chatbot`) is retired: its pages, its connection and its health check left the portal on 2026-11-05.
 
 > **Status:** ✅ Deployed
-> **Last Updated:** 2026-11-07 — Settings gains Safety, Hours and Prices (§0.5, with cf-vps lab 1.25.0 and 1.26.0): the replies' hand-over to a person, after-hours rule, longest reply and backup model; the hotel's opening days and hours, holidays and days closed or open besides, which the flags now follow; and the prices the bot's calculator quotes, read only, with any typo named. The Flags inbox and the urgent email name a hand-over. Earlier that day: the numbers say what they count (§0.8): failed AI calls with why they failed, apart from the replies a customer never got; the typical AI step beside the average; the allowance meter's marks called marks, with what each record's brake really does; the weekly email names failed calls as calls. Settings → PostHog gains one switch, "PostHog, all of it", that stops the lab sending and the pages reading (§0.5). 2026-11-06 — Models and steps remade (one table of models, a map of speed against cost, each step's models together) and every other Chatbot page checked for blank gaps: Money's rows paired and one row per model, long lists in two columns, the Flags figures across the page, the Chats reading side listing the chats waiting for an answer, Settings' allowance above the models and Data's panels three across, and the tables no longer cut short in production (§0.1, §0.3, §0.5). Earlier, the Overview laid out again: figures with their days, a Worth knowing panel, rows of panels of a like height, the models as one table (§0, §0.1). Models shows two models or two lab test setups side by side in every measure, printable for a client, with the lab's test run in one press under it (§0.7). The daily charts draw every day of the window, the whole-chat score as a dot a day with its pass mark, the Overview's models dearest first, panel heads wrap on a phone, and Settings' line says what the open section is for (§0.1, §0.5). Settings gains Timings, n8n and Data (§0.5): the lab's workflow timings, written into its copy of the bot at once, beside the real bot's (read only); each bot's n8n workflows, runs and failures, with a switch; what each record keeps, its download by days, removing a range of days and the months kept, behind a typed count and a recent sign-in. Chats downloads one real customer's chat, and erases it for who has Settings (§0.3). Earlier that day Settings gained AI checks, Flags and PostHog: each record's AI judges, chat insight step and their model, the flags' wait, opening hours and kinds, the lab's PostHog sending, and the pages' own PostHog reads (§0.5). The weekly report by email, built and switched off (§0.6). The Overview's server parts are one line that opens System, and a lab reply on Chats shows PostHog's AI summary (§0.3). The Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
+> **Last Updated:** 2026-11-07 night — plain words across the section and Settings redesigned (§0.5, the owner: "change terms ... Lab, door, monthly break" and "completely change visual settings"): the lab is the **Test bot**, the real bot the **Live bot**, the model door the **AI gateway**, the brake the **spending limit**, the allowance the **monthly AI budget**, a judge an **AI check**; Settings has a menu of twelve sections in four groups, At a glance, one Test bot / Live bot switch, one row per setting with switches and tags, and a save bar that stays in sight ([spec](../specs/2026-11-07-chatbot-plain-words-and-settings.md), change record (private)). Earlier that day Settings gained Safety, Hours and Prices (§0.5, with cf-vps lab 1.25.0 and 1.26.0): the replies' hand-over to a person, after-hours rule, longest reply and backup model; the hotel's opening days and hours, holidays and days closed or open besides, which the flags now follow; and the prices the bot's calculator quotes, read only, with any typo named. The Flags inbox and the urgent email name a hand-over. Earlier that day: the numbers say what they count (§0.8): failed AI calls with why they failed, apart from the replies a customer never got; the typical AI step beside the average; the allowance meter's marks called marks, with what each record's brake really does; the weekly email names failed calls as calls. Settings → PostHog gains one switch, "PostHog, all of it", that stops the lab sending and the pages reading (§0.5). 2026-11-06 — Models and steps remade (one table of models, a map of speed against cost, each step's models together) and every other Chatbot page checked for blank gaps: Money's rows paired and one row per model, long lists in two columns, the Flags figures across the page, the Chats reading side listing the chats waiting for an answer, Settings' allowance above the models and Data's panels three across, and the tables no longer cut short in production (§0.1, §0.3, §0.5). Earlier, the Overview laid out again: figures with their days, a Worth knowing panel, rows of panels of a like height, the models as one table (§0, §0.1). Models shows two models or two lab test setups side by side in every measure, printable for a client, with the lab's test run in one press under it (§0.7). The daily charts draw every day of the window, the whole-chat score as a dot a day with its pass mark, the Overview's models dearest first, panel heads wrap on a phone, and Settings' line says what the open section is for (§0.1, §0.5). Settings gains Timings, n8n and Data (§0.5): the lab's workflow timings, written into its copy of the bot at once, beside the real bot's (read only); each bot's n8n workflows, runs and failures, with a switch; what each record keeps, its download by days, removing a range of days and the months kept, behind a typed count and a recent sign-in. Chats downloads one real customer's chat, and erases it for who has Settings (§0.3). Earlier that day Settings gained AI checks, Flags and PostHog: each record's AI judges, chat insight step and their model, the flags' wait, opening hours and kinds, the lab's PostHog sending, and the pages' own PostHog reads (§0.5). The weekly report by email, built and switched off (§0.6). The Overview's server parts are one line that opens System, and a lab reply on Chats shows PostHog's AI summary (§0.3). The Chats page reads every conversation from the bot's record, with a search, and customers' words need the Chats page even with server access; the Flags page is an inbox marked right, wrong or done (§0.3). Urgent flags by email, built and switched off (§0.2). 2026-11-05 — the section moved to the n8n WhatsApp bot (§0); charlar left the portal (§1, §2); seven analytics tabs and a new Overview (§0.1); Money, Models and steps, and System read the server's record first (§0.1); the Overview, Quality, Flags, Trends and a chat's checks too, once the lab copies PostHog's AI checks (lab 1.7.0, §0.1). §3 to §10 are history (below).
 > **RLS Policy:** RLS is enabled on every chatbot table in the shared Supabase project — `chat_analytics`, `contacts`, `conversations`, `messages`, plus `intent_events`, `kb_gaps`, `conversation_metrics`, `feedback_events` and `tool_call_events`, which this note used to omit. Policy *content* has not been re-read; only that RLS is on. See [SECURITY.md](../security/SECURITY.md). *Corrected 2026-09-19.*
 >
 > **Scope note.** This document is cf-admin's view of the Chatbot section. The WhatsApp bot itself lives on the server (cf-vps, the `whatsapp` app group); its test lab is [WHATSAPP-LAB.md](WHATSAPP-LAB.md).
 >
-> **The WhatsApp lab** (since 2026-11-05) is the section's other tab group: it tests the hotel's n8n WhatsApp bot on the server, and [WHATSAPP-LAB.md](WHATSAPP-LAB.md) owns it.
+> **The Test bot** (since 2026-11-05; called the WhatsApp lab until 2026-11-07) is the section's other tab group: it tests the hotel's n8n WhatsApp bot on the server, and [WHATSAPP-LAB.md](WHATSAPP-LAB.md) owns it.
+>
+> **The words on screen** (since 2026-11-07): the pages say *Test bot* for the lab, *Live bot* for the real bot, *server* or *database* for a bot's record, *AI gateway* for the model door, *spending limit* for the brake, *monthly AI budget* for the allowance and *AI check* for a judge. The code, the routes, the stored keys and the server's names keep the old ones (`lab`, `live`, `record/*`, `door`, `brake`, `judges`, `ai_monthly_allowance_usd`), and so do the sections of this document written before that day. The [plain words and settings spec](../specs/2026-11-07-chatbot-plain-words-and-settings.md) owns the full glossary.
 >
 > **The server access notice** (since 2026-11-05, the owner's ask): every Chatbot page shows the Server page's access notice, the same words from `src/lib/vps-notice.ts`, until the sign-in has accepted it; one acceptance covers both places ([design §7](../specs/2026-10-11-server-access-notice.md)).
 >
@@ -303,122 +305,131 @@ bot sends nothing yet. There is no PostHog fallback: PostHog never had these for
 (cf-vps): the price check against the price list and returning customers
 (`MAINTENANCE.md` (private) BI-1).
 
-### 0.5 Settings (since 2026-11-06)
+### 0.5 Settings (since 2026-11-06; redesigned 2026-11-07)
 
 *Phase 3 of the [analytics design](../specs/2026-11-05-chatbot-analytics.md): "A screen to change
-the monthly AI allowance and the judge share" ("today the allowance is only a database row").* The
-section's Settings tab (`/dashboard/chatbot/settings`, `settings.astro` and
-`insights/BotSettings.tsx`, migration `0097`) is Owner and Vendor support by default; anyone else
-needs it given on the Access page. Since the owner's ask of 6 November ("REAL CONFIG for
-production", a default model and one per feature, "data storage view, delete/export by date
-range" and the n8n setup) and of 7 November ("That, plus 4 safety settings") it has eleven sections
-in a row that scrolls sideways on a phone, **Models**, **Safety**, **Hours**, **Prices**, **AI
-checks**, **Flags**, **Timings**, **n8n**, **Data**, **PostHog** and **Emails** (a link with
-`#models`, `#safety`, `#hours`, `#prices`, `#checks`, `#flags`, `#timings`, `#n8n`, `#data`,
-`#posthog` or `#emails` opens one). The line under the page's title says what the open section is
-for, one sentence each (`SECTION_SAY`), instead of listing them all:
+the monthly AI allowance and the judge share".* The section's Settings tab
+(`/dashboard/chatbot/settings`, `settings.astro` and `insights/BotSettings.tsx`, migration `0097`)
+is Owner and Vendor support by default; anyone else needs it given on the Access page.
 
-| Panel | What it changes | Where it is kept | Saved through |
+**How the page is laid out** (since 2026-11-07, the owner: "completely change visual settings ...
+as each page inside is difficult to use and understand"; the design rules and the glossary of the
+words on screen are the [plain words and settings spec](../specs/2026-11-07-chatbot-plain-words-and-settings.md)):
+
+- **A menu of twelve sections in four groups**, beside the page on a wide screen and one row that
+  scrolls sideways on a phone, the open one kept in sight (`GROUPS` and `SECTIONS` in
+  `insights/BotGlance.tsx`, `Menu`): *Start here*: **At a glance**; *How the bot answers*: **AI models**, **Reply safety**,
+  **Opening hours**, **Prices**; *Watching the chats*: **AI checks**, **Flags**, **Emails**;
+  *Behind the scenes*: **Timing**, **Workflows (n8n)**, **Stored data**, **Analytics (PostHog)**.
+  A link with `#glance`, `#models`, `#safety`, `#hours`, `#prices`, `#checks`, `#flags`,
+  `#emails`, `#timings`, `#n8n`, `#data` or `#posthog` opens one; any other opens At a glance
+  (`sectionOf`). The line under the page's title says what the open section is for (`SECTION_SAY`).
+- **One switch for the bot**, above every section that has a setting for each bot: **Test bot**
+  (test chats only) or **Live bot** (real customers, in amber), with what a save does to it
+  (`BotSwitch` in `insights/SettingsKit.tsx`). The test bot is picked first. Prices, Emails,
+  Timing and Analytics have no switch: they are for both bots, or the test bot only.
+- **At a glance** draws one tile per section from the picked bot's settings (`glanceOf` in
+  `BotGlance.tsx`): the reply's model and the spending limit, the transfer to staff and the
+  fallback model, the opening hours and holidays, how many AI checks are on, the flags' wait and kinds; then a "For both bots"
+  row (the monthly AI budget, the emails, the pages' PostHog reads, the prices). A tile opens its
+  section.
+- **One setting is one row** (`Row`): its name and a plain line on what it does on the left, its
+  control on the right (under them on a phone), and a tag where it helps decide: *Recommended* on
+  the advised value, *Saves money* or *Costs more* where the bill changes. Yes-or-no settings are
+  switches that say On or Off (`Switch`); a few choices are a row of buttons that scrolls sideways,
+  each with its price where it has one, and the one in force kept in sight (`Choices`). Each
+  model card names the model and its price in and out per million tokens; the dearer models sit
+  behind "More models".
+- **Each box ends in a save bar** (`SaveBar`) that stays at the bottom of the screen while the box
+  has changes not saved: *Changes not saved yet*, *Fix the line in amber to save* or *Saved*, then
+  **Reset to recommended**, **Discard changes** and **Save to test bot** or **Save to live bot**.
+  Each still needs the save; a save to the live bot asks first in the portal's dialog.
+- **Colours** (`.bs-*` in `chatbot-insights.css`): neutrals carry the page; blue marks what is
+  chosen and the main button; green is a switch that is on; amber is the live bot, a cost or a line
+  to look at; red is kept for removing data. Each colour has a word beside it.
+
+| Section, box | What it changes | Where it is kept | Saved through |
 |---|---|---|---|
-| Models (Models) | For the real bot or the lab: the door on or passing everything, a default model, each step's model (as the bot asks, the default, or a Claude model with a price on file) with its switches (the reply's thinking effort and checked dates, the cache, the payment check's short instructions, the extracts' low effort), and a monthly brake that moves every step to one model from a spend; each model's price per million tokens beside it | Each record on the server, with its last 20 versions and who saved each (cf-vps lab 1.17.0 `bot_settings`) | The console bridge, `record/settings/save` at the operate level |
-| Monthly AI allowance | The month's one limit for all AI, from US$1 to US$1,000 to the cent | `admin_portal_settings` `ai_monthly_allowance_usd` (§0) | `POST /api/whatsapp-bot/settings` |
-| Urgent flags by email | Off, Test with the lab, or On, and up to five addresses (none: the alert inbox) | `admin_portal_settings` `chatbot-urgent-email`, as the job reads it (§0.2) | `POST /api/whatsapp-bot/settings` |
-| What checks the replies (AI checks) | For the real bot or the lab: each of the five AI judges on or off (a judge off is never asked; the four code checks always run), the chat insight step on or off, and their Claude model with its price; in the lab also who checks the test replies: PostHog's evaluations (copied, as before), the lab's own judges on the lab's key from the moment it is saved, or nobody | Each record's bot settings, the `checks` part (cf-vps lab 1.18.0) | The console bridge, `record/settings/save` with `part: checks` |
-| AI checks for real customers | The share of replies every AI judge reads beyond those always judged (None, 1 in 10, 1 in 5, Half, All), and the month's cap of the judges and the chat insight step together (US$0 stops them) | The real bot's recorder's own record on the server (cf-vps lab 1.13.0 `judge_share`, `judge_month_usd`) | The console bridge, `record/ai` at the operate level |
-| The lab's own AI | The same share, used while the lab's own judges check the test replies, and the month's cap of the lab's judges and chat insight step | The lab's record | The same as above |
-| When a chat is flagged (Flags) | For the real bot or the lab: how many whole minutes (1 to 120) a customer may wait in opening hours before the chat is flagged; which kinds are raised (failed checks, payments, waiting, bot failures). The opening hours are shown, set under Hours since lab 1.26.0 (the flags follow them); a record before it still takes them here | Each record's bot settings, the `flags` part | The console bridge, `record/settings/save` with `part: flags` |
-| The replies' safety (Safety, since 2026-11-07) | For the real bot or the lab: the hand-over to a person on or off and its words (up to 40, letters only, compared whole without accents or capitals), which make the reply apologise, say a person of the team will write soon and raise an urgent `handover` flag; the after-hours rule (outside opening hours the bot quotes but confirms no booking as final); a longest reply (none, or 30 to 400 words); the backup model tried once when a step's model fails, or none, with its price | Each record's bot settings, the `safety` part (cf-vps lab 1.26.0) | The console bridge, `record/settings/save` with `part: safety` |
-| The hotel's hours and holidays (Hours, since 2026-11-07) | For the real bot or the lab: the open days and up to four spans of hours (Mexico City); Closed or Open on the Mexican holidays, and the coming holidays it works anyway; up to 60 days closed besides, each with the reason the customer is told (Spanish, no quotes, up to 60 characters); up to 60 days open besides. The model door's checked dates and price tool, the flags and the lab copy's date checks follow it; the lab's save says when it could not write its copy | Each record's bot settings, the `hours` part (cf-vps lab 1.26.0) | The console bridge, `record/settings/save` with `part: hours` |
-| Prices the lab quotes, Prices the real bot quotes (Prices, since 2026-11-07) | Nothing: the price per day of each pet in Básico, Todo Incluido and daycare, the extras, what looks like a typo (a price of $0 or over $20,000 a day, Todo Incluido under Básico, a bigger dog under a smaller one) and the other steps with their own copy, read from each bot's instructions | The bot's n8n workflow (the reply step's instructions) | Read only (`record/workflow` `prices`, cf-vps lab 1.25.0) |
-| The lab's PostHog (PostHog) | Whether the lab sends its test turns to PostHog (off: what it makes meanwhile is marked as not sent, so on again sends only what comes after), and the English copy with them (one Claude Haiku 4.5 call per turn). The real bot sends nothing to PostHog from the server | The lab's bot settings, the `posthog` part | The console bridge, `record/settings/save` with `part: posthog` |
-| PostHog, all of it (PostHog, since 2026-11-07) | One switch, On or Off, above the two below. Off saves the lab's `posthog` part as not sending and no English copies (so no Claude call for them), moves a lab whose test replies PostHog checked to the lab's own judges (the `checks` part; PostHog has nothing to check once nothing is sent), and turns the pages' PostHog reads off. On sends and reads again and leaves the checker and the English copies as they were. "Now partly on" when the two below disagree (`postHogAllOf`, `postHogAllPlan`) | The two places below | The two routes below, in that order |
-| PostHog reads for these pages (PostHog) | On or off: off, `GET /api/whatsapp-bot/insights` and `/part` ask PostHog nothing and answer that the reads are off here, so the pages read only the records on the server and a test chat shows no PostHog summaries | `admin_portal_settings` `chatbot-posthog-reads` (on with no row; `POSTHOG_READS_KEY` in `src/lib/posthog/bot.ts`) | `POST /api/whatsapp-bot/settings` |
-| Weekly report by email | Off, Test with the lab, or On, and up to five addresses (none: the alert inbox) | `admin_portal_settings` `chatbot-weekly-email`, as the job reads it (§0.6) | `POST /api/whatsapp-bot/settings` |
-| The lab's timings (Timings) | The six numbers in the bot's n8n workflow that decide how it feels: the wait for more messages, the typing pause (shortest and longest), the wait before checking for a person, the hours quiet after a person writes, the messages the payment check reads, the longest photo description; each within the server's limits, with the lab copy's, the real bot's and the built-in value beside it | The lab's bot settings, the `workflow` part (cf-vps lab 1.19.0), written into the lab's copy of the bot at once | The console bridge, `record/settings/save` with `part: workflow`, the lab only |
-| The real bot's timings (Timings) | Nothing: the same six numbers read from the live n8n's bot workflow | | Read only (`record/workflow`) |
-| n8n workflows (n8n) | For the real bot or the lab: switch a workflow off or on (the live one asks for the word typed); its runs and failures this week, n8n's latest runs and the week's failed ones are shown | n8n itself; each switch in the record's log (`n8n_log`) | The console bridge, `record/n8n/switch` at the admin level |
-| What the record keeps, Download, Remove a range of days, How long it keeps (Data) | For the real bot or the lab: nothing, a download of one table for a range of days (CSV or JSON), the removal of a group (conversations, activity, AI checks, everything) for a range of days, and the months kept (1 to 12) | Each record on the server; each removal in its log (`data_log`) | Reads at the view level; `record/data/remove` and `record/data/keep` at the admin level |
+| AI models: **AI models** | For the test bot or the live bot: **Use these settings** (off: every call goes to the model the workflow asks for, unchanged); each step (Customer replies, Payment check, Booking details, Photos, Other AI calls) on the workflow's model, the default model or a Claude model with a price on file, with its options (the reply's **Reasoning level** and **Date and price checks**, **Prompt caching**, the payment check's **Short prompt**, the booking details' **Low reasoning**); the **Spending limit**, which moves every step to one model once the month's AI cost of the bot's own steps reaches a figure; under *Advanced*, the default model | Each bot's server, with its last 20 versions and who saved each (cf-vps lab 1.17.0 `bot_settings`), under **Change history** | The console bridge, `record/settings/save` at the operate level, `part: models` |
+| AI models: **Monthly AI budget** | The month's one figure for all AI, from US$1 to US$1,000 to the cent; it is compared with the month's AI cost and stops nothing | `admin_portal_settings` `ai_monthly_allowance_usd` (§0) | `POST /api/whatsapp-bot/settings` |
+| Reply safety: **Reply safety** (since 2026-11-07) | For either bot: **Transfer to staff** on or off and its trigger words (up to 40, letters only, compared whole without accents or capitals), which make the reply apologise, say a person of the team will write soon and raise an urgent `handover` flag; **Outside opening hours** (the bot quotes but confirms no booking as final); **Maximum reply length** (off, or 30 to 400 words); the **Fallback model** tried once when a step's model fails, or none, with its price | Each bot's settings, the `safety` part (cf-vps lab 1.26.0) | `record/settings/save` with `part: safety` |
+| Opening hours: **The hotel's opening hours and holidays** (since 2026-11-07) | For either bot: the open days and up to four spans of hours (Mexico City); **Closed on Mexican holidays**, and the coming holidays it opens anyway; up to 60 extra closed days, each with the reason the customer is told (Spanish, no quotes, up to 60 characters); up to 60 extra open days. The AI gateway's date and price checks, the flags and the test bot's workflow follow it; the test bot's save says when it could not write its workflow | Each bot's settings, the `hours` part (cf-vps lab 1.26.0) | `record/settings/save` with `part: hours` |
+| Prices: **Prices the test bot quotes**, **Prices the live bot quotes** (since 2026-11-07) | Nothing: the price per day of each pet in Básico, Todo Incluido and daycare, the extras, what looks like a typo (a price of $0 or over $20,000 a day, Todo Incluido under Básico, a bigger dog under a smaller one) and the other steps with their own copy, read from each bot's instructions | The bot's n8n workflow (the reply step's instructions) | Read only (`record/workflow` `prices`, cf-vps lab 1.25.0) |
+| AI checks: **AI checks on the replies** | For either bot: each of the five AI checks on or off (one off is never asked; the four code checks always run), the **Chat summary** on or off, and their Claude model with its price; for the test bot also **Who checks the test replies**: PostHog (its evaluations, copied as before), **Our AI checks** on the test bot's key from the moment it is saved, or nobody | Each bot's settings, the `checks` part (cf-vps lab 1.18.0) | `record/settings/save` with `part: checks` |
+| AI checks: **How much the AI checks read, live chats** or **test chats** | The share of replies every AI check reads beyond those always checked (None, 1 in 10, 1 in 5, Half, All), and the month's cap of the AI checks and chat summaries together (US$0 stops them) | Each bot's server (cf-vps lab 1.13.0 `judge_share`, `judge_month_usd`) | The console bridge, `record/ai` at the operate level |
+| Flags: **When staff are alerted** | For either bot: how many whole minutes (1 to 120) a customer may wait in opening hours before the chat is flagged; which kinds are raised (Failed checks, Payments, Waiting customers, Bot errors). The opening hours are shown, set under Opening hours since lab 1.26.0 (the flags follow them); a bot before it still takes them here | Each bot's settings, the `flags` part | `record/settings/save` with `part: flags` |
+| Emails: **Urgent flags by email**, **Weekly report by email** | Off, **Test only** (the test bot's, each email marked as a test) or On (the live bot's), and up to five addresses (none: the alert inbox) | `admin_portal_settings` `chatbot-urgent-email` (§0.2) and `chatbot-weekly-email` (§0.6), as the jobs read them | `POST /api/whatsapp-bot/settings` |
+| Timing: **Test bot timing** | The six numbers in the bot's n8n workflow that decide how it feels: the wait for more messages, the typing pause (shortest and longest), the wait before checking for a person, the hours quiet after a person writes, the messages the payment check reads, the longest photo description; each within the server's limits, with the test bot's value now, the recommended one (the live bot's export of 2 November) and the live bot's beside it | The test bot's settings, the `workflow` part (cf-vps lab 1.19.0), written into its workflow at once | `record/settings/save` with `part: workflow`, the test bot only |
+| Timing: **Live bot timing** | Nothing: the same six numbers read from the live n8n's bot workflow | | Read only (`record/workflow`) |
+| Workflows (n8n): **n8n workflows** | For either bot: switch a workflow off or on (the live one asks for the word typed); its runs and failures this week, n8n's latest runs and the week's failed ones are shown | n8n itself; each switch in the bot's log (`n8n_log`) | The console bridge, `record/n8n/switch` at the admin level |
+| Stored data: **What is stored**, **Download**, **Remove a range of days**, **How long it keeps** | For either bot: nothing, a download of one table for a range of days (CSV or JSON), the removal of a group (conversations, activity, AI checks, everything) for a range of days, and the months kept (1 to 12) | Each bot's database on the server; each removal in its log (`data_log`) | Reads at the view level; `record/data/remove` and `record/data/keep` at the admin level |
+| Analytics (PostHog): **PostHog for the chatbot** (since 2026-11-07) | One switch above the two below. Off saves the test bot's `posthog` part as not sending and no English copies (so no Claude call for them), moves a test bot whose test replies PostHog checked to our own AI checks (the `checks` part; PostHog has nothing to check once nothing is sent), and turns the pages' PostHog reads off. On sends and reads again and leaves the checker and the English copies as they were. *Partly on* when the two below disagree (`postHogAllOf`, `postHogAllPlan`) | The two places below | The two routes below, in that order |
+| Analytics (PostHog): **Test bot's PostHog** | Whether the test bot sends its test turns to PostHog (off: what it makes meanwhile is marked as not sent, so on again sends only what comes after), and the English copy with them (one Claude Haiku 4.5 call per turn). The live bot sends nothing to PostHog from the server | The test bot's settings, the `posthog` part | `record/settings/save` with `part: posthog` |
+| Analytics (PostHog): **Chatbot pages read PostHog** | On or off: off, `GET /api/whatsapp-bot/insights` and `/part` ask PostHog nothing and answer that the reads are off here, so the pages read only the bots' servers and a test chat shows no PostHog summaries | `admin_portal_settings` `chatbot-posthog-reads` (on with no row; `POSTHOG_READS_KEY` in `src/lib/posthog/bot.ts`) | `POST /api/whatsapp-bot/settings` |
 
-On a wide screen the Models section puts the allowance across the top, above the models (alone
-under them it left half a row blank), and the Data section's download, removal and months kept
-stand three across (since 2026-11-06 night, change record (private)).
+On a wide screen the AI models section puts the models first and the monthly AI budget across the
+row under them, and the Stored data section's download, removal and months kept stand three across.
 
 - **The route** (`src/pages/api/whatsapp-bot/settings.ts`) asks for the section's key and the
   page's (`denyBotPart`), checks each value, and writes one audit row per changed row with the old
   and the new value ([SECURITY](../security/SECURITY.md) §6a).
-- **The record's own AI** is read from each record's `record/status` (`ai`: the share, the cap and
-  this month's spend of the record's own AI; `readRecordAi` in `insights/record.ts`) and changed
-  with `changeRecordAi`. The console gateway lets `record/ai` through only for who also holds this
-  page (`changesBotAi` in `src/lib/vps-proxy.ts`, the `bot_settings` refusal,
-  [VPS-CONSOLE](VPS-CONSOLE.md) §2), and cf-vps records each change as `app.bridge`. The real
-  bot's panel also says whether its AI judges are on: they stay off until the recorder has its own
-  Anthropic key, added on move night.
-- **Before lab 1.13.0** a record answers without `ai`, and its panel says it needs its 1.13.0
-  update; until move night, the real bot's panel says it sends nothing yet. The three portal rows
-  can be changed at any time.
-- **Models** (`insights/BotModels.tsx`) reads one record's `record/settings` (`readBotSettings`
-  in `insights/record.ts`): the settings in force, the versions, the built-in settings, the models
-  with their prices, this month's spend, whether the brake is on, and how the model door applies
-  them. It saves them whole as a new version with `saveBotSettings` (`record/settings/save`),
-  which the gateway holds the same way as `record/ai` (`BOT_AI_CHANGES`, the `bot_settings`
-  refusal). A save for the real bot asks first, in the portal's dialog; the door uses it within
-  30 seconds, from the next customer message, and the lab's test chats set up with the door at
-  once. **Undo changes** goes back to the settings in force, **Built-in settings** fills in the
-  model door's own (the reply and the payment check on Claude Haiku 5.5), **Copy the lab's** fills
-  in the lab's, and **Use this version** an earlier one; each still needs a save. A step left as
-  the bot asks is sent unchanged, on the model the live workflow names. Until lab 1.17.0 is
-  installed the panel says the record needs its 1.17.0 update; until move night the real bot's
-  says it sends nothing yet. How the door reads and applies them is cf-vps's
-  `documentation/features/WHATSAPP-LAB.md`, "The bot's settings".
-- **Each panel saves its own part** (cf-vps lab 1.18.0): Models sends `part: models`, and the AI
-  checks', Flags' and the lab's PostHog panels (`insights/BotRules.tsx`) send `checks`, `flags` or
-  `posthog`, so the record takes only that part and keeps the rest as in force; two panels opened
-  at different times never undo each other. Each new version still holds the whole set, so
-  **Use this version** on Models brings back that version's models only. Each panel has
-  **Undo changes** and **Built-in settings** (every judge on, the insight step on, Claude Haiku 5.5;
-  a 10-minute wait, Monday to Saturday 9:00 to 14:00 and 15:00 to 18:00, every kind; the lab
-  sending with English), and a save for the real bot asks first. The recorder follows a save
-  within 30 seconds, the lab at once. A record before lab 1.18.0 answers without these parts, and
-  each panel says it needs the 1.18.0 update. Which judges are on, the flags' wait and hours, and
-  the lab's PostHog sending are cf-vps's `documentation/features/WHATSAPP-LAB.md`, "The record's
-  own work".
-- **Timings** (`TimingsSection` in `insights/BotN8n.tsx`, cf-vps lab 1.19.0) reads both records'
-  `record/workflow` at once: what the bot's workflow runs now (null where its node is not found),
-  and in the lab what is saved, the built-in values (the real bot's export of 2 November) and each
-  number's limits, which the form checks against. **Save for the lab** saves the `workflow` part
-  (`saveTimings`); the lab writes it into its copy of the bot through n8n's API at once and answers
-  how that went, which the panel says (written, nothing to change, or why not). **Undo changes**,
-  **Built-in timings** and **Copy the real bot's** fill the form in; each still needs a save. The
-  real bot's recorder only reads its workflow and refuses the part: its timings change on the
-  server, with the owner, after trying them in the lab.
-- **n8n** (`N8nSection` in `insights/BotN8n.tsx`) reads one record's `record/n8n`: n8n's
+- **Each bot's own AI checks** are read from its `record/status` (`ai`: the share, the cap and
+  this month's spend; `readRecordAi` in `insights/record.ts`) and changed with `changeRecordAi`.
+  The console gateway lets `record/ai` through only for who also holds this page (`changesBotAi`
+  in `src/lib/vps-proxy.ts`, the `bot_settings` refusal, [VPS-CONSOLE](VPS-CONSOLE.md) §2), and
+  cf-vps records each change as `app.bridge`. The live bot's box also says whether its AI checks
+  are on: they stay off until its server has its own Anthropic key, added on move night.
+- **A bot before an update** answers without the part a box needs, and the box says which update
+  it needs (1.13.0 for the share and cap, 1.17.0 for the models, 1.18.0 for the checks, flags and
+  PostHog, 1.26.0 for safety and hours); until move night the live bot's boxes say it sends nothing
+  yet. The three portal rows can be changed at any time.
+- **AI models** (`insights/BotModels.tsx`) reads one bot's `record/settings` (`readBotSettings` in
+  `insights/record.ts`): the settings in force, the versions, the recommended settings, the models
+  with their prices, this month's spend, whether the spending limit is reached, and how the AI
+  gateway applies them. A save to the live bot asks first; the AI gateway uses it within 30
+  seconds, from the next customer message, and the test bot's chats that use the bot settings at
+  once. **Reset to recommended** fills in the gateway's own (the reply and the payment check on
+  Claude Haiku 5.5), **Copy from test bot** the test bot's, and **Restore this version** an earlier
+  one, models only. A step on the workflow's model is sent unchanged. How the gateway reads and
+  applies them is cf-vps's `documentation/features/WHATSAPP-LAB.md`, "The bot's settings".
+- **Each box saves its own part** (cf-vps lab 1.18.0), so the server takes only that part and
+  keeps the rest as in force; two boxes opened at different times never undo each other. Each
+  new version still holds the whole set. **Reset to recommended** is every AI check on, the chat
+  summary on, Claude Haiku 5.5; a 10-minute wait, Monday to Saturday 9:00 to 14:00 and 15:00 to
+  18:00, every kind; the test bot sending with English; Monday to Saturday hours with the holidays
+  closed; the transfer to staff and the outside-hours rule on, no maximum length, Claude Sonnet 5.5
+  as the fallback. The live bot's server follows a save within 30 seconds, the test bot at once.
+- **Timing** (`TimingsSection` in `insights/BotN8n.tsx`, cf-vps lab 1.19.0) reads both bots'
+  `record/workflow` at once. **Save to test bot** saves the `workflow` part (`saveTimings`); the
+  test bot writes it into its workflow through n8n's API at once and answers how that went, which
+  the box says (written, nothing to change, or why not). The live bot's server only reads its
+  workflow and refuses the part: its timing changes on the server, with the owner, after trying it
+  on the test bot.
+- **Workflows (n8n)** (`N8nSection` in `insights/BotN8n.tsx`) reads one bot's `record/n8n`: n8n's
   workflows (names, on or off, size and when they changed, never a node's settings or a
-  credential), n8n's 20 latest runs, and from the record the week's runs and failures per workflow
-  and the failed runs with their error. **Switch off** and **Switch on** name the workflow as shown
-  (`switchN8n`), so a list that changed meanwhile switches nothing; for the real bot the dialog asks
-  for "off" or "on" typed, since a second workflow on would answer customers twice.
-- **Data** (`DataSection` in `insights/BotData.tsx`) reads one record's `record/data`: each
-  table's rows, size, oldest and newest, the database's size, the months kept and the last nightly
-  tidy, and the log of removals. **Download** joins `record/data/export` pages (1,000 rows, about
-  1.4 MB each) in the browser into one file; messages, chats and chat insights are offered only
+  credential), n8n's 20 latest runs, and the week's runs and failures per workflow. **Switch off**
+  and **Switch on** name the workflow as shown (`switchN8n`), so a list that changed meanwhile
+  switches nothing; for the live bot the dialog asks for "off" or "on" typed, since a second
+  workflow on would answer customers twice.
+- **Stored data** (`DataSection` in `insights/BotData.tsx`) reads one bot's `record/data`: each
+  table's rows, size, oldest and newest, the database's size, the months kept, the last nightly
+  tidy and the log of removals. **Download** joins `record/data/export` pages (1,000 rows, about
+  1.4 MB each) in the browser into one file; messages, chats and chat summaries are offered only
   with the Chats page (`chatsOpen` from `settings.astro`), which the gateway checks again.
-  **Remove a range of days** counts first (`record/data/count`: each table's rows and the moment of
-  the count), then removes only those rows after the person types the total (`record/data/remove`
-  with `asOf` and `expect`; a count that moved is refused with `count_changed` and counted again).
-  **How long it keeps** counts what a shorter time removes at once (`record/data/keep-count`) and
-  saves with the same typed count. The removals and the months are admin calls, held by the gateway
-  for this page (`BOT_AI_CHANGES`) and by cf-vps for `apps.bridge.admin` and a sign-in from the
-  last 10 minutes. What each group takes is cf-vps's `documentation/features/WHATSAPP-LAB.md`,
-  "The record's data, n8n and the workflow's timings".
-- **Safety, Hours and Prices** (`insights/BotHotel.tsx`, cf-vps lab 1.25.0 and 1.26.0) read and
-  save like the boxes above (`PartLoader`, `usePartSave` in `insights/BotRules.tsx`); a record
-  before 1.26.0 says it needs its 1.26.0 update. The forms check each line as the server does
-  (`calendarOf`, `wordsOf`) and name the one that is wrong before a save. **Built-in settings** is
-  Monday to Saturday, 9:00 to 14:00 and 15:00 to 18:00 with the holidays closed, and the hand-over
-  and after-hours rule on, no longest reply, Claude Sonnet 5.5 as the backup. Prices reads both
-  records' `record/workflow` and never saves: a price changes in the bot's instructions. What the
-  server does with each is cf-vps's `documentation/features/WHATSAPP-LAB.md`, "Hours, holidays and
-  safety (1.26.0)" and "The prices (1.25.0)" (change record (private)).
+  **Remove a range of days** counts first (`record/data/count`), then removes only those rows after
+  the person types the total (`record/data/remove` with `asOf` and `expect`; a count that moved is
+  refused with `count_changed` and counted again). **How long it keeps** counts what a shorter time
+  removes at once (`record/data/keep-count`) and saves with the same typed count. The removals and
+  the months are admin calls, held by the gateway for this page (`BOT_AI_CHANGES`) and by cf-vps for
+  `apps.bridge.admin` and a sign-in from the last 10 minutes. What each group takes is cf-vps's
+  `documentation/features/WHATSAPP-LAB.md`, "The record's data, n8n and the workflow's timings".
+- **Reply safety, Opening hours and Prices** (`insights/BotHotel.tsx`, cf-vps lab 1.25.0 and 1.26.0)
+  read and save like the boxes above (`PartLoader`, `usePartSave` in `insights/BotRules.tsx`). The
+  forms check each line as the server does (`calendarOf`, `wordsOf`) and name the one that is wrong
+  before a save. Prices reads both bots' `record/workflow` and never saves: a price changes in the
+  bot's instructions. What the server does with each is cf-vps's
+  `documentation/features/WHATSAPP-LAB.md`, "Hours, holidays and safety (1.26.0)" and "The prices
+  (1.25.0)" (change record (private)).
 - **A hand-over flag** (`handover`, urgent) is named in the Flags inbox ("A customer asked for a
   person or has a complaint", with the word that matched) and in the urgent email, whose subject
   for one is "A customer asked for a person"; the email never carries the word or the message.
@@ -883,6 +894,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-07 | §0.5 rewritten for the redesign (the menu's groups and twelve sections, the bot switch, At a glance, the rows, tags, save bar and colours, every box's name and its words) against `insights/SettingsKit.tsx`, `insights/BotSettings.tsx` (`Menu`) and `insights/BotGlance.tsx` (`GROUPS`, `SECTIONS`, `SECTION_SAY`, `sectionOf`, `glanceOf`), `insights/BotModels.tsx`, `insights/BotRules.tsx`, `insights/BotHotel.tsx`, `insights/BotN8n.tsx`, `insights/BotData.tsx` and `chatbot-insights.css`; the header's words note and the Test bot line against migration `0098` and the live `admin_pages` rows read through the Cloudflare D1 connector | §0 to §0.4 and §0.6 to §0.8 keep the words of the day they were written (the words note says so); the pages were not opened in a browser, only rendered in tests |
 | 2026-11-07 | §0.5's Safety, Hours and Prices rows, the Flags row and the hand-over line against `insights/BotHotel.tsx`, `insights/BotRules.tsx` (`PartLoader`, `usePartSave`, `WeekFields`, `FlagsForm`), `insights/BotSettings.tsx` (`SECTIONS`, `SECTION_SAY`), `insights/record.ts`, `insights/record-data.ts`, `insights/FlagInbox.tsx`, `src/workers/scheduled-bot-flags.ts` and cf-vps `apps/whatsapp-lab/src/settings.ts`, `rules.ts`, `flags.ts` and `workflows.ts` at `5a1ee1e` (lab 1.26.0); `test/whatsapp-bot-hotel.test.ts`, `test/whatsapp-bot-rules.test.ts` and `test/bot-flags-email.test.ts` pass | The boxes against the installed lab 1.26.0 and on the owner's phone; `last_verified` left as it was |
 | 2026-11-07 | §0.8 (new), §0's figures, Worth knowing, AI spend and allowance lines, §0.5's "PostHog, all of it" row and §0.6's failed line against `BotOverview.tsx` (`bothOf`, `notesOf`), `src/lib/posthog/bot.ts` (`FAILED_CAUSES`, `causesSay`), `insights/kit.tsx` (`brakeSay`, `Meter`), `insights/record.ts` (`mergeOverview`), `insights/brakes.ts` (`useBrakes`), `insights/BotSettings.tsx` (`postHogAllOf`, `postHogAllPlan`, `PostHogAllPanel`), `src/workers/scheduled-bot-weekly.ts` and cf-vps `apps/whatsapp-lab/src/record.ts` at `49ab4c2` (lab 1.22.0); the owner's AI bill against PostHog's evaluation and generation events of 4 to 6 November; that no `$ai_generation` without `lab_chat` reached PostHog in the last 30 days; the five PostHog AI evaluations read back disabled; `test/whatsapp-bot-overview.test.ts`, `test/whatsapp-bot-sections.test.ts`, `test/whatsapp-bot-record.test.ts`, `test/whatsapp-bot-settings.test.ts` and `test/bot-weekly-email.test.ts` pass | The pages against lab 1.22.0 (not installed yet) and on the owner's phone; the switch saved against the live lab; `last_verified` left as it was |
 | 2026-11-06 | §0.1's "Models and steps remade", §0.3's reading side and §0.5's layout line against `insights/ModelStats.tsx` (`modelRows`, `bestOf`, `stepGroups`, `modelNotes`, `costRows`, `ModelTable`, `StepTable`, `CostTable`, `ModelMap`, `logTicks`), `insights/BotInsights.tsx` (Models, Money, Trends, System, Quality, Flags), `insights/Business.tsx`, `insights/FlagInbox.tsx`, `insights/Conversations.tsx` (`ChatLine`, `ChatPick`, `waitingOf`), `insights/BotSettings.tsx` and `src/styles/pages/chatbot-insights.css`; `test/chatbot-pages-layout.test.ts`, `test/chatbot-look.test.ts` and `test/whatsapp-bot-sections.test.ts` pass; every Chatbot page drawn locally in production's stylesheet order at 1,440 px and 390 px (Models also light), from PostHog's numbers of 5 and 6 November and, for Flags, Chats and Settings, the record's shapes from lab 1.20.0's source with testing numbers | The pages on the owner's phone and against the live record; `last_verified` left as it was |
