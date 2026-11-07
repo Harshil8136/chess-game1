@@ -157,6 +157,13 @@ Every page has the same three layers (see the design system, `documentation/refe
   password box. Set key (`app.secret`, a fresh sign-in, `apps.manage`) writes the value to the
   app's root-only key file and restarts the app if it runs. The value is write-only: it is never
   shown again, and the box is cleared the moment the action starts.
+- **Updates** (since 2026-11-07), for `apps.manage`: when this console was built with a newer
+  version of an app it can install (only `whatsapp-lab`) than the one its member's image names,
+  a panel above the apps says so with an **Install `<version>`** button (`app.release`, a fresh
+  sign-in, no typed word). The server builds it, starts it and checks it, and the running
+  version comes back by itself when it is not healthy
+  ([ACTIONS](ACTIONS.md#installing-an-update-apprelease-2026-11-07)). The panel goes once the
+  member runs that version.
 - About: how to add an app (the deploy guide), what the status words mean, limits, public and
   private access, the busy rule, and who can do what.
 

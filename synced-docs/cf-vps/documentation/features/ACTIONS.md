@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-16
 verified_against: [code]
 owner: harshil
-related_code: [contract/actions.ts, agent/src/cli/commands.ts, agent/src/collectors/bridge.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
+related_code: [contract/actions.ts, contract/releases.ts, agent/src/cli/commands.ts, agent/src/cli/release.ts, scripts/pack-releases.mjs, src/agent/releases.ts, agent/src/collectors/bridge.ts, contract/signing.ts, contract/logstore.ts, contract/jobs.ts, src/agent/proxy.ts, agent/src/server.ts, agent/src/actions.ts, agent/src/limits.ts, host/65-actions, src/ui/components/actions.tsx]
 related_docs: [../security/PERMISSIONS.md, LOG-STORAGE.md, JOBS.md, RESTORE-TESTS.md, ../architecture/OVERVIEW.md, ../operations/HOST-MODULES.md]
 tags: [feature, actions, polkit, systemd, enforcement]
 ---
@@ -44,6 +44,7 @@ Worker and again by the agent ([PERMISSIONS](../security/PERMISSIONS.md#fresh-si
 | `app.resources` | `apps.manage` | `<app>[.<member>]:<memory>:<cpu %>:<weight>` | none | no | New memory cap, CPU cap (a share of the whole server) and CPU weight; applied live without a restart, and written to the manifest and unit. A group's members take their own; the members together stay within 6G |
 | `app.image` | `apps.manage` | `<app>[.<member>]:<64 hex digits>` | `upgrade` | yes | Pin the app or member to an exact version of its image by its sha256 digest, in the same repository. It pulls first and changes nothing if the pull fails or takes too long; then it switches, health-checks, and puts the old manifest and unit back at once if the new version is not healthy. A pinned version never updates on its own |
 | `app.secret` | `apps.manage` | `<app>[.<member>]:<KEY>:<stage id>` | none | yes | Write one key the manifest lists in `secrets` into the app's root-only key file, then restart it if it runs. The value is in the request body only (below) |
+| `app.release` | `apps.manage` | `<app>:<version>:<sha256>:<stage id>` | none | yes | The Install button: install the newer version of an app this console was built with (only `whatsapp-lab`). Builds its image on the server, applies the group, health-checks the member it built, and applies the old manifest again at once if it is not healthy (below) |
 | `logs.purge` | `logs.purge` | Dates and kinds | `delete` | yes | Delete stored log files for past days |
 | `logs.vacuum` | `logs.purge` | Days | `delete` | yes | Delete journal files (and recordings in them) older than N days |
 | `retention.set` | `retention.manage` | Key and days | none | yes | Change how long one kind of log is kept |
@@ -77,7 +78,10 @@ CPU cap 5 to 100 percent of the whole server where 100 is no cap, weight 1 to 10
 `app.image` is the ref and 64 lowercase hex digits (`parseAppImageTarget`); `app.secret` is the
 ref, a key name of capitals, digits and underscores (at most 64, never `DATABASE_URL`, which
 `vps db create` owns) and a 16-hex stage id (`parseAppSecretTarget`), and its body carries
-`value`, one line of 1 to 8192 characters (`isSecretValue`); any other action refuses a value;
+`value`, one line of 1 to 8192 characters (`isSecretValue`); `app.release` is an app in
+`RELEASE_APPS`, an `x.y.z` version, the package's 64-hex sha256 and a 16-hex stage id
+(`parseAppReleaseTarget`, `contract/releases.ts`), and its `value` is the package in base64, up
+to 1 MiB (`isReleaseValue`), which the Worker adds itself; any other action refuses a value;
 `logs.purge` is `YYYYMMDD:YYYYMMDD:kind.kind` (real dates, from before to, never today, at
 most 400 days, known kinds without repeats); `logs.vacuum` is 1 to 3650 days; `retention.set`
 is `<key>:<days>` within that key's limits. An action that takes no target refuses one.
@@ -206,6 +210,49 @@ letters, digits and `._/:=@+,-` only, so systemd has nothing to split or expand)
 
 The ticket proves who asked for which key, not the value itself: the value's integrity rests
 on the agent, as a file upload's does. The person can always set the key again.
+
+## Installing an update (`app.release`, 2026-11-07)
+
+The owner asked for lab updates without uploads or commands. The source of every app the
+console can install sits in this repository (`RELEASE_APPS` in `contract/releases.ts`: only
+`whatsapp-lab`, so the live bot's group is never changed by a button), so each Worker build
+carries it:
+
+1. **The build packs it.** `npm run build` runs `scripts/pack-releases.mjs` first: each app's
+   folder becomes one package, base64 of gzip of `{ app, version, files }` (every file as text,
+   in a fixed order), written to `public/_releases/<app>-<version>.b64` with an `index.json` of
+   `{ app, version, sha256, chars }`. Vite copies them into the Worker's assets at
+   `/_releases/`, outside the console's path, so outside requests get 404 and only the Worker
+   reads them.
+2. **The Apps page offers it.** `GET releases` (the Worker answers it from its assets, for
+   `apps.manage`) lists the packages. When one is newer than the version in the member's image
+   tag (`localhost/whatsapp-lab-phone:<version>`), an **Updates** panel shows "Install
+   `<version>`". The first install of an app is still by hand.
+3. **The Worker adds the package.** The button sends only the target, with a new random stage id.
+   The Worker reads its own index and package, checks the version and sum match the target and
+   the length matches the index, and puts the package in the body as `value`, whatever the
+   browser sent; a page from before a deploy gets "Reload the page". Then the usual checks and
+   ticket: the ticket binds the unit, which names the version and the sum.
+4. **The agent stages it** like a key: `/var/lib/vps/jobs-stage/app_release/<stage>`, created
+   new, 0600, deleted if the unit does not start, swept after two hours.
+5. **Root installs it** in `vps-act-app@release:<app>:<version>:<sha256>:<stage>` (`vps act
+   release`, `agent/src/cli/commands.ts` and `release.ts`). It reads the stage once and deletes
+   it, then checks before changing anything: the sum is the one the ticket names; the package
+   unpacks to at most 8 MiB and 500 files with plain relative paths (no `..`, no leading dot or
+   slash) and text only; `package.json` names the version; `<app>.toml` is the group with the
+   member on `localhost/<image>:<version>`; no member gains or loses an address. It refuses a
+   version that is not newer than the one running (the same one is "already runs"), an app not
+   installed as a group yet, and a blocked app.
+6. It writes the package to `/srv/apps/<app>/src.next/`, builds the image in the tools slice
+   (`podman build -t localhost/<image>:<version>`, 1 GB memory cap; a failed build switches
+   nothing), writes the new manifest with the group's loopback ports kept, and applies the group.
+7. When the member it built answers its health check, `src.next` replaces `src`. When it does
+   not, the previous manifest is written back and applied, so the old version runs again, and
+   `src` is left as it was.
+
+The whole run is the job the button opens, recorded in cf-admin's activity log as
+`vps_app_deploy`. Installing needs the agent from 2026-11-07 or later; an older agent refuses
+the action as unknown.
 
 ## Not in this list
 

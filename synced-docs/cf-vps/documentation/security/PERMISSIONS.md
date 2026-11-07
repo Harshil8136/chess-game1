@@ -46,7 +46,7 @@ support can hold.
 | `packages.update` | operate | Refresh package lists and install updates (no removals); installing needs a fresh sign-in | owner, vendor | no |
 | `apps.deploy` | operate | Deploy hosted apps from their manifests (regenerate the unit and site, restart, health-check) | owner, vendor | no |
 | `apps.control` | operate | Start, stop, restart, pause and resume hosted apps, app groups and a group's members | owner, vendor | no |
-| `apps.manage` | admin | Block or unblock a hosted app, change its memory cap, CPU cap and CPU weight within the server's limits, pin its version (put back at once if it is not healthy) and set its keys (write-only); a version or a key needs a fresh sign-in | owner, vendor | no |
+| `apps.manage` | admin | Block or unblock a hosted app, change its memory cap, CPU cap and CPU weight within the server's limits, pin its version (put back at once if it is not healthy), set its keys (write-only) and install the update this console was built with (put back at once if it is not healthy); a version, a key or an install needs a fresh sign-in | owner, vendor | no |
 | `apps.bridge.view` | read | Read a private app's own panels through the admin bridge ([API-ROUTES](../reference/API-ROUTES.md#the-admin-bridge)): its status, settings and records, as the app decides; not audited | owner, vendor | no |
 | `apps.bridge.operate` | operate | Everyday changes in a private app's own panels through the bridge (with view); every change is recorded | owner, vendor | no |
 | `apps.bridge.admin` | admin | What the app marks as admin through the bridge (with view), such as relinking or its command list; a fresh sign-in; recorded | owner, vendor | no |
@@ -224,7 +224,7 @@ needs a sign-in from the last 10 minutes."). It applies to:
 | Delete logs, delete old journal (`logs.purge`, `logs.vacuum`) | `logs.purge` | `ACTIONS` (`fresh`) |
 | Set retention (`retention.set`) | `retention.manage` | `ACTIONS` (`fresh`) |
 | Start a restore test (`restore.start`) | `restore.test` | `ACTIONS` (`fresh`) |
-| Change an app's version, set an app's key (`app.image`, `app.secret`) | `apps.manage` | `ACTIONS` (`fresh`) |
+| Change an app's version, set an app's key, install an update (`app.image`, `app.secret`, `app.release`) | `apps.manage` | `ACTIONS` (`fresh`) |
 | An admin call through the bridge (`apps/bridge`, level `admin`) | `apps.bridge.admin` | `src/agent/proxy.ts` and the agent (`BRIDGE_LEVEL_CAPS`) |
 | Delete a file or folder (`files/delete`) | `files.write` | `FRESH_SIGN_IN_ROUTES` |
 | Stage a backup copy (`restore/stage`) | `restore.test` | `FRESH_SIGN_IN_ROUTES` |

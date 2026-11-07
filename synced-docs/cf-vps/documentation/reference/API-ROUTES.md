@@ -28,7 +28,8 @@ and the console. A route is reached in two forms:
 
 - **GET** routes read. **POST** routes (`CHANGE_ROUTES`) change something and carry a signed
   body hash; the body is limited to 16 KiB, or 1 MiB for `files/upload` and `restore/stage`,
-  or 257 KiB for `apps/bridge`.
+  257 KiB for `apps/bridge`, and 1 MiB and 16 KiB for `actions/run`, which may carry an app's
+  package for `app.release` (`contract/releases.ts`).
   Anything else is 405.
 - **Stream** routes stay open (`STREAM_ROUTES`); every other route is a bounded request.
 - **Wait** is how long the Worker waits for the agent's response headers (`timeoutFor`): 60
@@ -186,7 +187,7 @@ The route needs only `host.view`; the request body then decides the real capabil
 
 | Route | Type | Route capability | Also needs |
 |---|---|---|---|
-| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`, `app.image`, `app.secret`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
+| `actions/run` | POST | `host.view` | The action's own capability, from `ACTIONS`; a fresh sign-in for the actions marked `fresh` (`host.reboot`, `packages.upgrade`, `service.stop`, `logs.purge`, `logs.vacuum`, `retention.set`, `restore.start`, `app.image`, `app.secret`, `app.release`); for `host.reboot`, the owner or vendor support role and the hourly limit (checked by the agent) |
 | `actions/job` | GET | `host.view` | Nothing more; only `vps-act-*` units can be read |
 | `terminal/open` | POST | `host.view` | `terminal.ops` or `terminal.admin` for the requested account; admin also needs a fresh sign-in, and (checked by the agent) the owner or vendor support role and the hourly limit |
 | `terminal/socket` | stream (WebSocket) | `host.view` | `terminal.ops` or `terminal.admin` (Worker and agent); own session only; a GET with `Upgrade: websocket`, else 400 at the Worker and 426 at the agent |
@@ -214,6 +215,7 @@ These are under the same `/dashboard/vps/app/api/` prefix and never reach the ag
 | Route | Method | Capability | What it does |
 |---|---|---|---|
 | `me` | GET | none | The person's email and role, `caps` (what the console shows) and `agentCaps` (what the agent will accept; the same outside the local preview), `preview`, `policyStored`, the catalog, whether signing and the agent are configured, and `routes` (`ROUTE_TABLE_ID`) |
+| `releases` | GET | `apps.manage` | The app packages this Worker was built with, read from its own assets (`/_releases/index.json`): `{ app, version, sha256, chars }` for each, `[]` when there are none. For `app.release`, the Worker also reads the package itself and adds it to the action's body ([ACTIONS](../features/ACTIONS.md#installing-an-update-apprelease-2026-11-07)) |
 | `access` | GET | `access.view` | The whole access policy and whether it is stored |
 | `access` | POST | `access.manage` | Save the policy (compare-and-swap on its revision; up to 64 KiB) |
 | `access/person` | GET | `access.view`, or `access.delegate` for a person cf-admin names in `x-vps-target` whom the caller outranks | One person's role defaults, grant and effective capabilities, and what the caller may change |

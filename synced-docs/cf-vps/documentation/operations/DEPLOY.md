@@ -64,7 +64,12 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
 
 ## The Worker
 
-- `main` is `src/worker.ts`; static assets are the built console (`vite build`).
+- `main` is `src/worker.ts`; static assets are the built console (`vite build`). `npm run build`
+  first packs every app the console can install (`scripts/pack-releases.mjs`: today only the
+  WhatsApp lab, from `apps/whatsapp-lab/`) into `public/_releases/`, so a push to `main` that
+  changes the lab ships its package with the Worker, and the Apps page offers **Install** for it
+  ([ACTIONS](../features/ACTIONS.md#installing-an-update-apprelease-2026-11-07)). Nothing more
+  goes to the server by hand for a lab update.
 - Workers Builds settings: root `/`, branch `main`, build command `npm run verify`, deploy
   command `npx wrangler deploy`. A push therefore runs the tests, then deploys.
 - `npm run verify` runs, in order: `typecheck` (Worker, Node tests, UI, agent, agent tests),
