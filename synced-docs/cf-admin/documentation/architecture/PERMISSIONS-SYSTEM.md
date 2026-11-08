@@ -372,6 +372,15 @@ Since cf-vps lab 1.19.0 the same list holds the record's admin calls (removing a
 erasing one chat, the months kept, switching an n8n workflow: `record/data/remove`,
 `record/data/forget`, `record/data/keep`, `record/n8n/switch`), which cf-vps also holds to
 `apps.bridge.admin` and a sign-in from the last 10 minutes.
+*Added 2026-11-08 (the owner's ask for colour themes, [spec](../specs/2026-11-08-colour-themes.md)):*
+two Settings actions, migration `0099`, both under `/dashboard/settings` and checked by exact key
+through `placRequireGrant`, in the page and in their route. `/dashboard/settings#themes` (stored
+role `owner`, so the Owner and Vendor support by default) adds, changes and deletes the shared
+colour themes (`POST /api/settings/themes`). `/dashboard/settings#colours` (stored role
+`super_admin`, the Admin tier) sets another person's colour theme through
+`POST /api/settings/user`, only for someone below the caller's own role (Vendor support: anyone),
+as `#others` does for names; light or dark stays each person's own. Picking a theme or making
+your own colours needs only the Settings page.
 *Changed 2026-10-10 (the Sessions rebuild):* the Sessions page offers each action exactly when
 its route will allow it. Until then it decided from the role: any admin saw the block
 controls (`isSuperAdmin`) and the owner and vendor support saw Flush, whatever `#revoke`,
@@ -1135,6 +1144,15 @@ still counts for 10 minutes only. The limits:
   `need: fresh_sign_in`) or their *Confirm it's you* button they post
   `cf-admin:confirm-it-is-you` to this page, which opens the dialog, and it answers
   `cf-admin:confirmed` once a code is entered (`isConfirmAsk`, from this origin only).
+- *Since 2026-11-08 (the owner's "OTP Verification V2" look)* the code goes in six boxes
+  (`src/components/ui/CodeDialog.tsx`, state `codeDialog` in `src/lib/fresh-sign-in-client.ts`):
+  one real field under them, so paste and the phone's offer of the code from the email
+  (`autocomplete="one-time-code"`) work; it is checked by itself once the sixth digit is in, with
+  the dialog open and unclosable while it checks. A wrong code shakes and clears the boxes and
+  says why (the tries left); the right one draws them into a green tick with "Verified
+  successfully", tells the console frames, and closes by itself after 2.4 seconds; a code that ran
+  out offers a new one; *Send a new code* is in the dialog. Under `prefers-reduced-motion` the
+  states change in place. The rules above are unchanged.
 
 A code proves the person as far as their mailbox does; the testing pass still starts only from a
 real sign-in.
@@ -1529,6 +1547,8 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-08 | claude | **Scope-limited to §10.5's 2026-11-08 note on the code boxes**: read `src/components/ui/CodeDialog.tsx`, `src/lib/fresh-sign-in-client.ts` (`codeDialog`, `submitCode`, `resendCode`) and Dialog.css's code boxes; `test/code-dialog.test.ts` and `test/confirm-code.test.ts` pass | The rest of the document not re-read |
+| 2026-11-08 | claude | **Scope-limited to the 2026-11-08 note on `#themes` and `#colours`**: read `migrations/0099_colour_themes.sql` (and both rows read back live through the Cloudflare D1 connector), `src/pages/api/settings/themes.ts`, `src/pages/api/settings/user.ts` and `src/pages/dashboard/settings/index.astro`; `test/api-settings-themes.test.ts` and `test/api-settings-user.test.ts` pass (both keys refused without a grant, the role ceiling) | The rest of the document not re-read |
 | 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's Chats and Settings notes**: read `CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES` and `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (lab 1.19.0's paths added); `test/vps-gateway.test.ts` passes | Matches the code. `last_verified` left as it was |
 | 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's Settings note**: read `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (`record/settings/save` added) and the gateway's `bot_settings` refusal; `test/vps-gateway.test.ts` passes | Matches the code. `last_verified` left as it was |
 | 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's Settings note**: read `migrations/0097_chatbot_settings_page.sql`, `BOT_SETTINGS_PAGE`, `denyBotPart`, `src/pages/dashboard/chatbot/settings.astro`, `src/pages/api/whatsapp-bot/settings.ts`, `API_PAGE_MAPPING`, `changesBotAi` and the console gateway; `test/whatsapp-bot-settings.test.ts` and `test/vps-gateway.test.ts` pass (the route's 401 and 403s, `record/ai` held without the tab) | The rest of the document not re-read |

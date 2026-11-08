@@ -382,6 +382,35 @@ Lives in its own file `src/components/navigation/ThemeToggle.tsx` (the top bar's
 
 **The phone browser's bar** (2026-10-27) takes the top bar's colour, `--nav-bar` (the theme's `--theme-bg`): `AdminLayout.astro` writes `<meta name="theme-color">` from the cookie (`THEME_COLOR` in `theme-client.ts`), and `theme-init.js` keeps it in step with every later change of `data-theme`, with the same two values (`test/shell-look.test.ts`). Until then the bar stayed white over the dark portal.
 
+### 4.4 Colour themes (palettes)
+
+Since 2026-11-08 ([spec](../specs/2026-11-08-colour-themes.md)) a second attribute rides beside
+`data-theme`: `data-palette` on `<html>` names the colour theme. Slate is the default and has no
+attribute: its tokens are the hand-made ones in `dark.css` and `light.css`. Every other theme is
+nine seed colours per mode (`src/lib/themes/catalog.ts`), and `deriveTokens`
+(`src/lib/themes/derive.ts`) works out every `--theme-*` and `--nav-*` token from them.
+`AdminLayout.astro` writes that theme's CSS for both modes into `<style id="cf-look">` from the
+`cf_admin_look` cookie, as `:root[data-palette="x"][data-theme="dark|light"]` rules, which outrank
+the stylesheets, and `data-bar-light`/`data-bar-dark` give `theme-init.js` the browser bar's
+colour. `showLook` in `theme-client.ts` swaps them in place when someone picks a theme on Settings.
+
+What this means for a component:
+
+- **Paint with tokens only.** A colour from a token follows every theme. An old Tailwind colour
+  class (`text-slate-400`, `bg-blue-500`) follows it through `src/styles/themes/bridge.css`, which
+  points Tailwind's colour variables at the tokens under a colour theme or the light mode; a hex
+  value in a stylesheet does not (the backlog is in MAINTENANCE (private)).
+- **Words on a filled accent or danger button** use `--theme-on-accent` and `--theme-on-danger`,
+  black or white by contrast, never a fixed `#fff`. The second chart colour is `--theme-accent-2`.
+- **The sidebar's group colours** (`--nav-hue-*`, the section hues) stay Slate's in every theme so
+  a group is found by its colour; only the colour-blind safe theme sets its own.
+- **Motion:** a theme change and the light/dark switch run in `document.startViewTransition`
+  when the browser has it, and at once under `prefers-reduced-motion`. A press on the light/dark
+  button or a theme chip spreads the new colours out from the press as a growing circle
+  (`switchTheme(next, tapPoint(e))`); any other change cross-fades.
+- **Contrast:** every built-in theme passes WCAG 2.1 AA in both modes (`src/lib/themes/contrast.ts`,
+  `test/theme-engine.test.ts`); a new built-in theme is one entry in `PALETTES` and must pass too.
+
 ---
 
 ## 5. Page Layouts
@@ -788,7 +817,11 @@ height with the space below its content empty (the owner's report of 2026-10-10)
 
 Built on it: `ConfirmDialog.tsx` (with `showConfirm`, `showAlert` and `showPrompt` in
 `src/stores/dialogStore.ts`, including the typed word for a destructive step),
-`SlideDrawer.tsx` and `BottomSheet.tsx` (their old props, now thin wrappers). Buttons and
+`SlideDrawer.tsx` and `BottomSheet.tsx` (their old props, now thin wrappers), and since
+2026-11-08 `CodeDialog.tsx`, the emailed code's six boxes (`.ui-otp*` in Dialog.css: one real
+field under six boxes, the next one ringed, a shake on a wrong code, the boxes drawn into a green
+tick with a glow on the right one, nothing moving under reduced motion;
+[PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)). Buttons and
 fields inside a dialog, and on the kit pages, are `.ui-btn` (`data-variant` `primary`,
 `danger`, `danger-soft`, `ghost`; `data-size="sm"`; 44 px tall on a touch screen) and
 `.ui-input`.
@@ -887,6 +920,8 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-08 | **Scope-limited to §9.8's sentence on `CodeDialog.tsx`** against the component and Dialog.css's code boxes; `test/code-dialog.test.ts` and `test/dialog-look.test.ts` pass | The rest of the document; `last_verified` left as it was |
+| 2026-11-08 | **Scope-limited to the new §4.4** against `src/lib/themes/`, `AdminLayout.astro`, `theme-client.ts`, `theme-init.js`, `dark.css`, `light.css` and `Dialog.css`; `test/theme-engine.test.ts` and `test/shell-look.test.ts` pass | The rest of the document; `last_verified` left as it was |
 | 2026-11-05 | §3's `pages/chatbot-insights.css` line and §9.9's note on the bot's scene, against `ChatbotLayout.astro` (`scene`), `src/styles/pages/chatbot-insights.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone (local screenshots at 390 px and 1,280 px were looked at) |
 | 2026-11-05 | §9.9's Chatbot paragraph (the frame: `hue`, `fill`, the line tab row, `PageBar`, `Figure`, `SubNav`), against `ChatbotLayout.astro`, `RegistryTabs.astro`, `PageBar.tsx`, `src/styles/pages/chatbot.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-04 | §3's `pages/chatbot.css` line and the removed `components/chatbot/` folder, §4's badge-token usage note, §9.9's Chatbot paragraph, against `src/layouts/ChatbotLayout.astro`, `src/styles/pages/chatbot.css`, `src/components/admin/chatbot/` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |

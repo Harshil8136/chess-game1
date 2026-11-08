@@ -5,7 +5,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-28
 verified_against: [code, local-test]
 owner: harshil
-related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/configuration/WebsiteLimits.tsx, src/components/admin/configuration/CloudflareSection.tsx, src/lib/control-plane/website-limits.ts, src/pages/api/configuration/limits.ts, src/pages/api/configuration/cloudflare.ts, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/AskForPermission.tsx, src/components/admin/settings/TestingPassPanel.tsx, src/pages/api/settings/testing-pass.ts, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql, migrations/0083_configuration_cloudflare.sql]
+related_code: [src/pages/dashboard/settings/index.astro, src/pages/dashboard/configuration.astro, src/lib/configuration.ts, src/pages/api/configuration.ts, src/pages/api/settings/user.ts, src/components/admin/configuration/ConfigurationPanel.tsx, src/components/admin/configuration/WebsiteLimits.tsx, src/components/admin/configuration/CloudflareSection.tsx, src/lib/control-plane/website-limits.ts, src/pages/api/configuration/limits.ts, src/pages/api/configuration/cloudflare.ts, src/components/admin/settings/UserSettingsPanel.tsx, src/components/admin/settings/OtherProfilesPanel.tsx, src/components/admin/settings/SettingsHeader.tsx, src/components/admin/settings/AccessPanel.tsx, src/components/admin/settings/AskForPermission.tsx, src/components/admin/settings/TestingPassPanel.tsx, src/pages/api/settings/testing-pass.ts, src/components/admin/settings/settingsView.ts, src/styles/pages/settings.css, src/styles/components/console.css, src/lib/access-center/your-access.ts, src/lib/access-center/your-consoles.ts, public/scripts/theme-init.js, migrations/0068_configuration_page.sql, migrations/0069_settings_cleanup.sql, migrations/0083_configuration_cloudflare.sql, src/components/admin/settings/ColourThemesPanel.tsx, src/pages/api/settings/themes.ts, src/lib/themes/shared.ts, migrations/0099_colour_themes.sql]
 related_docs: [../architecture/PERMISSIONS-SYSTEM.md, ../security/SECURITY.md, CONTROL-PLANE.md, EMAIL-PORTAL.md, USER-MANAGEMENT.md, ../architecture/GLOBAL-CONFIG.md, ../MAINTENANCE.md]
 tags: [settings, configuration, plac, theme, profile]
 ---
@@ -48,6 +48,25 @@ profile, Testing pass, Other people and Your access's **Ask for a permission** b
   there is no flash. Your theme is a row in D1 `admin_user_settings`, copied to the
   `cf_admin_theme` cookie; your name is `display_name` in Supabase `admin_authorized_users`, and
   your session shows the new name at once.
+- **Colours** (since 2026-11-08, the [colour themes spec](../specs/2026-11-08-colour-themes.md)).
+  A row of theme chips, each with its swatches: the seven built-in themes (Slate, the default,
+  Forest, Ocean, Sunset, Lavender, Graphite and Colour-blind safe), every shared theme, and
+  **Your own**. A chip goes on screen at once with one cross-fade (none when the device asks for
+  less motion) and is saved; a failed save puts the previous theme back. Every theme has a light
+  and a dark version, so the light and dark choice above still works. **Your own** opens an
+  editor with Light and Dark tabs and nine colours each (background, cards, text, accent, chart
+  accent, good, warning, bad, information), each a colour well and a hex field that repaints the
+  page as you type; pairs below WCAG 2.1 AA are listed as warnings and you may still save. With
+  `/dashboard/settings#themes` (default: Owner; Vendor support always) the editor also offers
+  **Share these colours** and **Save for everyone**, which needs a name and no failing pair, and
+  the shared themes list each with change and delete (anyone on a deleted theme goes back to
+  Slate). With `/dashboard/settings#colours` (default: Admin and above) **Someone else's
+  colours** lists the people below your own role as chips, then the themes, and **Save their
+  colours**; that person's panel says who chose them. Your choice is `preferences.look` in your
+  D1 `admin_user_settings` row, copied to the `cf_admin_look` cookie so every page paints it
+  before it shows; once a tab the page checks for a change made on another device or by a
+  manager. Shared themes are the `admin_portal_settings` row `themes:shared` (at most 24),
+  saved through `POST /api/settings/themes`.
 - **Testing pass**, Vendor support only (since 2026-10-17, the owner's choice). Dangerous
   changes ask for a sign-in from the last 10 minutes ("Confirm it's you",
   [PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)), which stops someone testing
@@ -89,9 +108,11 @@ profile, Testing pass, Other people and Your access's **Ask for a permission** b
   their theme stays theirs. Their sessions show the new name on their next click, because the
   change writes an `authz-changed` mark ([PERMISSIONS-SYSTEM §11](../architecture/PERMISSIONS-SYSTEM.md)).
 
-Your name, your theme and other people's names go to `POST /api/settings/user`. A change to someone else is checked twice: the
-`#others` key by exact match (`placRequireGrant`), and the target's role below the caller's. It
-is audited with the old and new name.
+Your name, your theme, your colours, other people's names and other people's colours go to
+`POST /api/settings/user`. A change to someone else is checked twice: the key by exact match
+(`placRequireGrant`: `#others` for a name, `#colours` for colours), and the target's role below
+the caller's. Light or dark is never set for someone else. It is audited with the old and new
+name, or the theme chosen.
 
 ## Configuration (`/dashboard/configuration`)
 
@@ -204,6 +225,7 @@ is named.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-08 | **Scope-limited to the new Colours bullet and the paragraph on `POST /api/settings/user`.** Against `ColourThemesPanel.tsx`, `index.astro`, `src/pages/api/settings/user.ts`, `src/pages/api/settings/themes.ts`, `src/lib/themes/` and migration `0099`; `test/theme-engine.test.ts`, `test/api-settings-user.test.ts` and `test/api-settings-themes.test.ts` pass | The other bullets and the Configuration section; the panel on a phone, which Harshil tests after the deploy |
 | 2026-10-28 | The Cloudflare section's sentence on Control Plane's two Cloudflare rows, against migration `0084` and the rows read back | The rest of the document; `last_verified` left as it was |
 | 2026-10-28 | **Scope-limited to the Configuration section** (the keys, the request limits, Cloudflare, the list of settings kept elsewhere) against `configuration.astro`, `WebsiteLimits.tsx`, `CloudflareSection.tsx`, `website-limits.ts`, `settings-routes.ts`, the two routes and `0083`; `cf-astro/src/lib/rate-limit.ts` (`RATE_LIMIT_BINDING_LIMITS`) and `cf-astro/src/lib/isr-cache-key.ts` (`pageCacheTag`) read on its main (53b1bd7); the `0083` row read back live (D1 connector); `test/configuration-limits-cloudflare.test.ts`, `test/overview.test.ts` and `test/action-keys-enforced.test.ts` pass | The Settings section; the Cloudflare reads against the live account; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-17 | **Scope-limited to the Testing pass bullet.** Against `TestingPassPanel.tsx`, `settingsView.ts` (`testingPassState`, `durationWords`), `index.astro`, `src/pages/api/settings/testing-pass.ts` and `src/lib/auth/fresh-sign-in.ts` (`testingPassInfo`); `test/testing-pass.test.ts` passes | The other bullets and the Configuration section; the panel on a phone, which Harshil tests after the deploy |
