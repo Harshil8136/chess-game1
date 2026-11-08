@@ -38,6 +38,10 @@ sources: [vendor/mail/oltrem-mail.json; packages/screens/src/layout.tsx; package
 - **Email settings.** Connecting a service, Addresses, Integrations, Mail setup and Forwarding
   are the tabs of one sidebar entry, Email settings. The errors staff read most often no longer
   use the words of the code.
+- **Gmail-like inbox.** The inbox is laid out like Gmail, using the kit's `MailShell` and
+  `ConversationRow`. On a computer it shows the folders with Compose on top, the list, and the
+  open conversation beside it. On a phone the folders are a row of chips, Compose is a round
+  button, and a conversation fills the screen, with a way back to the same list.
 - **Size.** The client Worker's budget went from 520 KiB to 1024 KiB gzip, with the owner's yes
   on 2026-11-08. The Worker was at 519.9 KiB after this work.
 
@@ -75,6 +79,6 @@ attachments, so a campaign with files sends one message per call.
 - The kit: `packages/providers` (attachments for Brevo and Resend, refused elsewhere),
   `packages/screens/test/frame.test.ts` (a file box sends straight to its route), and the
   template's worker and screens tests (the `email.files` job, the migrations).
-- Not verified: these on a phone (P69 and P70); Sent still shows only the first copy of an
+- Not verified: these on a phone (P69, P70 and P75); Sent still shows only the first copy of an
   email sent to several people.
 - `pnpm verify`: see each commit.

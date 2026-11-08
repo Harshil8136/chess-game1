@@ -184,15 +184,21 @@ the messages from an address.
 ## Pages
 
 Inbox (`/email/inbox`), first in the module's pages and second in the Email tabs after Write (since
-2026-11-08 Email in the sidebar opens Write, the client's ask), with its unread count:
-a row of mailboxes, a row of Inbox, Updates, Snoozed, Archived, Spam and All, a search with chips
+2026-11-08 Email in the sidebar opens Write, the client's ask), with its unread count.
+Since 2026-11-08 it is drawn as Gmail draws mail (the kit's `MailShell` and `ConversationRow`, the
+client's point 7): on a computer the folders with Compose on top (Inbox, Updates, Snoozed,
+Archived, Spam, All, then Email's Drafts and Sent), the list, and the open conversation beside it;
+on a phone the folders are a sideways row of chips, Compose is the round button in the corner,
+and an open conversation takes the screen with a way back to the same list. Each row shows who,
+when (08:15 today, 2 Nov this year, on the UTC clock), the subject, and its state and first words.
+The list has a row of mailboxes, a search with chips
 for unread, attachments and archived, and the conversations with a box each to tick and a row of
 commands for the ticked ones (archive, read, unread, three snoozes, Move to Updates or Inbox, mute,
 archive all from sender, spam, block). Each change says what it did, with an Undo that sends the
 same conversations back (but sweep and block, taken back on Mailboxes). On a phone a conversation
 swiped left is archived and swiped right is marked read, through the same commands. Updates lists
 the subscriptions with Unsubscribe. A conversation waiting three days for an answer shows "No answer yet". A conversation
-(`/email/inbox/:id`) is marked read when opened; it has the same commands, says when it is
+(`/email/inbox/:id`) opens beside the list it came from (its view rides on each row's link) and is marked read when opened; it has the same commands, says when it is
 snoozed, muted or waiting for an answer, and offers Unsubscribe for list mail; above the reply
 box, **Saved replies** are the person's letters from Write (no design, no code), each added
 under what is already typed with the person's name filled in; older messages fold and are fetched only when opened; the reply form
