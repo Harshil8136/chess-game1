@@ -154,9 +154,10 @@ A central schema is the **single source of truth** for every writable knob. Each
 | read-only     | Surfaced for visibility but never writable (e.g. deploy-time knobs) |
 | description    | Human-readable explanation shown in the UI                         |
 
-Values are stored as text and **coerced** to their declared type on read. A `buildDefaults()` helper
-produces an in-memory fallback map so the apps always have safe values even if the store is empty or
-unreachable.
+Values are stored as text and **coerced** to their declared type on read. Each key's declared
+default in `CONFIG_SPECS` is the value shown and used when the store has no row for it
+(`src/lib/control-plane/settings-rows.ts`). *Corrected 2026-11-08:* this paragraph named a
+`buildDefaults()` helper; it had no caller and was removed in the dead-code pass of that day.
 
 **Parity invariant** — every default must match (1) the seed migration and (2) the hardcoded baseline
 in each app's source. This three-way agreement is what makes the "fail back to hardcoded defaults"
@@ -405,3 +406,4 @@ The pieces the new pages share stayed in `src/components/admin/control-plane/`:
 | 2026-10-17 | Every route under `src/pages/api/control-plane/` again (role floor, PLAC fragment, `withETag` / `jsonFresh` / `jsonOk`), matching §7; `sentry.cf_admin.*` still read by nothing but `config-schema.ts`, and `tracesSampleRate: 0.1` still hardcoded in `cf-entry.ts` and `sentry.client.config.ts` (§4.5 stands); the schema's types, scopes, categories, services and route-policy caps; the env names each connector reads; every component and page in §8; cf-astro's `MEM_TTL_MS` (10 s) and `route-policy.ts` matching. No corrections needed | The live secret list and `admin_pages` rows (no connector used in this pass); provider API behaviour |
 | 2026-09-19 | `grep -rn "sentry.cf_admin\|error_sample_rate" src` → only `config-schema.ts`; the hardcoded `tracesSampleRate: 0.1` in `src/workers/cf-entry.ts` and `sentry.client.config.ts`; `src/lib/auth/decide-access.ts` (owner / vendor_support bypass, exact-then-ancestor resolution); `src/lib/auth/routes.ts` + `stages/decide.ts` (central API→page mapping, `API_DENY_MODE`); `src/pages/api/control-plane/cloudflare.ts` GET (no deny helper); the audit targets in `sentry.ts` / `cloudflare.ts` / `posthog.ts`; `src/lib/control-plane/preflight.ts`; live `wrangler secret list` (25 names — no `SUPABASE_ACCESS_TOKEN`, no `POSTHOG_ORG_ID`) | Whether the unconfigured cards are *intended* to stay unconfigured; Cloudflare Observability behaviour; provider API behaviour |
 | 2026-09-14 | Every route under `src/pages/api/control-plane/` (role floor, PLAC fragment, response helper); the six-tier RBAC ladder in `src/lib/auth/rbac.ts`; the three PLAC anchors in routes and UI; the config schema (`config-schema.ts`: value types, categories, scopes, services, caps, route-policy validation); optimistic concurrency + history + audit + best-effort flush in `config.ts` / `ServiceConfigRepository.ts`; cf-astro's `route-policy.ts` matching and `service-config.ts` caching; every component under `src/components/admin/control-plane/`; the cross-reference targets. Ten corrections above, one of which was a code defect (PATCH config lacked its role floor and fragment; fixed). | Live `admin_pages` rows (the seed is in `database/legacy_migrations/0030_seed_control_plane_pages.sql`; the baseline migration carries no data); Cloudflare Observability behaviour; the pre-redesign "hardcoded in source" history |
+| 2026-11-08 | The defaults paragraph against `src/lib/control-plane/config-schema.ts` and `settings-rows.ts` (`buildDefaults` had no caller and was removed) | Every other section |

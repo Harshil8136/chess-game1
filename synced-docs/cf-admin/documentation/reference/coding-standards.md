@@ -101,7 +101,7 @@ When a component grows too large, follow this three-step extraction pattern:
 
 ```
 bookings/
-├── types.ts                     ← BookingRow, BookingPet, SERVICE_LABELS, ...
+├── types.ts                     ← BookingRow, BookingPet, SERVICE_CATEGORIES, ...
 ├── BookingDossierTab.tsx        ← the dossier tab
 ├── BookingOperationsSection.tsx ← service, dates, status
 ├── BookingAuditSection.tsx      ← email log

@@ -328,13 +328,13 @@ src/styles/
 ├── utilities.css           ← Custom utility classes (.sr-only, etc.)
 ├── bookings.css            ← Bookings dashboard styles
 ├── components/             ← Component-scoped CSS (2026-09-14 listing)
-│   ├── blog-studio.css (three button styles since 2026-10-30), seo-patterns.css
+│   ├── seo-patterns.css  (blog-studio.css, its three unused button styles, was removed 2026-11-08)
 │   ├── console.css      ← the console kit, `.ck-*` (§9.9, 2026-10-10)
 │   └── shell.css        ← the frame, `.sh-*` on the `--nav-*` colours: sidebar, top bar, phone menu, page search, toasts (§5, 2026-10-27)
 │                          (the old `chatbot/` folder of nine stylesheets was deleted 2026-11-04: the Chatbot pages are on the kit)
 └── pages/                  ← Page-level overrides
     ├── chatbot-insights.css  ← the WhatsApp bot's Overview and seven tabs on the PostHog page's scene (`ph-scene[data-part='chatbot']`): a teal accent per theme, then `bt-` pieces: status strip, likely-range bars, flag cards, allowance meter, server parts, chat thread (2026-11-05)
-    ├── chatbot.css  ← the Chatbot section's frame (`ch-`: hues `chat` and `whatsapp`, the page bar, figures, segmented sub-pages; 2026-11-05) and its `cb-` pieces on the kit: bar rows, the daily token chart, the conversation thread, prompt previews, the form grid, the save bar (2026-11-04)
+    ├── chatbot.css  ← the Chatbot section's frame (`ch-`: hues `chat` and `whatsapp`, the page bar, figures, segmented sub-pages; 2026-11-05) and its `cb-` pieces on the kit: the daily token chart, the conversation thread, prompt previews, the form grid, the save bar (2026-11-04)
     ├── audit.css, cron.css  (diagnostics.css was removed 2026-10-17 with Diagnostics)
     ├── github.css, settings.css  ← the GitHub and Settings pages' own rules on the console kit (2026-10-10)
     ├── health.css  ← System health's own look on the kit's frame: hue `pulse`, monitor band, pulse line, triage board (2026-10-17)
@@ -347,7 +347,7 @@ src/styles/
 cron control plane on 2026-09-16. Run `find src/styles -type f` rather than
 trusting this tree if the two disagree.)*
 
-Component and page CSS are **NOT** imported in `global.css` (one exception: `blog-studio.css`). Each component/page imports its own CSS — Astro handles per-route code splitting automatically. *(A "67–86% per-page payload reduction" has been claimed for this since the split; no measurement of it exists in the repo, so treat the direction as right and the number as unverified.)*
+Component and page CSS are **NOT** imported in `global.css` (exceptions: `access-editor.css` and `skeleton.css`). Each component/page imports its own CSS — Astro handles per-route code splitting automatically. *(A "67–86% per-page payload reduction" has been claimed for this since the split; no measurement of it exists in the repo, so treat the direction as right and the number as unverified.)*
 
 **Note on widget shared utilities:** The canonical shared widget file is `src/components/dashboard/widgets/WidgetShared.tsx`. The former `WidgetSharedV2.tsx` was merged into it and deleted (Phase 3B). All imports must reference `WidgetShared`, never `WidgetSharedV2`.
 
@@ -723,6 +723,10 @@ Modifiers: `.bento-card.primary-gradient`, `.bento-card--full`, `.bento-card--co
 
 ### 9.3 Button Variants
 
+*Corrected 2026-11-08:* none of the classes below exists in `src/styles/` any more; the last three
+(`.btn-primary`, `.btn-secondary`, `.btn-ghost` in `blog-studio.css`) had no user and were removed.
+Buttons on the console kit are `.ui-btn` (§9.9).
+
 | Class | Style |
 |-------|-------|
 | `.btn-primary` | Accent-filled, white text |
@@ -888,6 +892,7 @@ body) a basis is a height, and it made a tall empty box around the field
 | 2026-11-04 | §3's `pages/chatbot.css` line and the removed `components/chatbot/` folder, §4's badge-token usage note, §9.9's Chatbot paragraph, against `src/layouts/ChatbotLayout.astro`, `src/styles/pages/chatbot.css`, `src/components/admin/chatbot/` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-11-03 | §1's tracked-debt counts re-measured (626 `style={` lines in 76 files, the ratchet's A6; 251 raw-hex lines in 45 component files) and the `window.location.reload()` sites re-listed (5: `TopBar.tsx` and `ConfigEditor.tsx` no longer have one, `RequestAccess.tsx` does); §5's sidebar colour source corrected (`SECTION_ACCENT` is gone; `--nav-hue-*` and `[data-nav-hue]` in `shell.css`); every other component name the document gives exists (`ActivityCenter.tsx`, `ApiAccessView.tsx`, `SlideDrawer.tsx`, `BottomSheet.tsx`, the sessions panels), and `useFocusTrap` still does not | Every token value, size and colour against the stylesheets; the pages in a browser |
 | 2026-11-03 | §6.5 (new) against `src/styles/components/skeleton.css`, `src/styles/global.css`, the placeholders in `posthog/frame.tsx`, `sentry/frame.tsx`, `Analytics.tsx` and `Overview.tsx`, and `test/loading-screens-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
+| 2026-11-08 | §3's tree and import note and §9.3 against `find src/styles -type f`, the `@import` lines of `src/styles/global.css` and a search for `.btn` rules in `src/styles/` (none); the `cb-` sentence against `src/styles/pages/chatbot.css` | Every other section; the look in a browser |
 | 2026-10-27 (fourth) | §5 Sidebar States (Hidden) and §8.1's phone row, against the phone menu's width in `shell.css` (`.ui-dialog.sh-drawer[data-layout='side']`) and `test/sidebar-look.test.ts` | Every other section; the width on a phone, which Harshil checks |
 | 2026-10-27 (third) | §5 "Its look since 2026-10-27", against the group colours as built: `shell.css` (`--nav-hue-*`, `--nav-tint`, `[data-nav-hue]`), `categories.ts` (`hue`), `SidebarMenu.tsx`, `CommandPalette.tsx`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
 | 2026-10-27 (second) | §3 tree, §4.3 (the browser bar), §5 (shell diagram and text, Sidebar States, its look, the breakpoint table), §6.4's comment and the Login Portal note, against the edge-to-edge frame: `shell.css` (`--nav-*`), `AdminLayout.astro`/`.css`, `Sidebar/index.tsx` (64px), `SidebarHeader.tsx`, `SidebarMenu.tsx`, `config.ts`, `CommandPalette.tsx`, `RegistryTabs.astro`, `categories.ts`, `theme-client.ts`; contrast from the tokens by `test/shell-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |
