@@ -225,7 +225,7 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   (`scrollbar-gutter: stable`), so a short page and a long one start at the same place; before
   2026-11-01 a classic scrollbar (Windows) came and went between pages and moved the centred page
   by half its width. A page with no entry of its own sits under the module's entry its
-  path starts with (`/email/sent/7` under Sent). With every kit module on, the sidebar holds 18
+  path starts with (`/email/sent/7` under Sent). With every kit module on, the sidebar holds 19
   entries besides Home:
 
   | Group | Entries (tabs) |
@@ -233,7 +233,7 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   | Work | Records, Forms, Bookings, Tasks, Files, Approvals, Announcements, Analytics, Automations |
   | Company | Team (Shifts, Time clock, Time off, Expenses, Equipment), Sales (Quotes, Invoices) |
   | Users & access | Users (its pages share one row of chips: Users, Roles, Groups, Locations, Access requests, Access reviews, Vendor access), Customers (Customers, Privacy) ||
-  | Messages | Email (Write, Drafts, Sent, Activity, Addresses, Templates, Integrations), Campaigns (Campaigns, Lists) ||
+  | Messages | Email (Write, Drafts, Sent, Activity, Templates), Email settings (Email settings, Addresses, Integrations; with Mail, also Mail setup and Forwarding), Campaigns (Campaigns, Lists) ||
   | System | System status (System status, Backups, Deployments, Alerts), Settings (Settings, Modules, Audit log), Developer ||
 - **Closed to icons.** The arrow closes the sidebar to a 64 px rail and opens it again. Only the
   words fade: no icon moves. A section's name shows beside the rail while the pointer or the

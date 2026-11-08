@@ -51,7 +51,7 @@ template reads the two settings below.
 
 | Name | Layer, editor | What it is |
 |---|---|---|
-| `email.from_address` | system, an Owner; empty by default | the address the portal's messages come from, one the active provider may send from; while it is empty they come from the company's sender address for everyday mail (Email, Addresses; since 2026-10-30), and with neither a message fails as `from: there is no address to send from yet` and is never sent |
+| `email.from_address` | system, an Owner; empty by default | the address the portal's messages come from, one the active provider may send from; while it is empty they come from the company's sender address for everyday mail (Email settings, Addresses; since 2026-10-30), and with neither a message fails as `from: there is no address to send from yet` and is never sent |
 | `email.from_name` | system, an Owner; empty by default | the name they come from; the client template uses the client's name while it is empty |
 | `email.undo_seconds` | system, an Owner; 10 by default | how long a sent email waits before it leaves, so Undo can take it back: 5 to 30 seconds, as Gmail offers; the client hands it in the `undoSeconds` option, and any other value, or none, is the 10 seconds |
 
@@ -185,7 +185,7 @@ starts from the company's saved templates for Write (see [Saved templates](#save
 | Save draft | Keeps what is typed, even half done, as the person's draft (`POST /written`); the page Email, Drafts lists them, opens one into the form and deletes one |
 | Files | Since 2026-11-08 (the client's point 8): under the message, **Attach a file** saves the email as a draft and attaches the file to it (`?intent=attach`; with the script, choosing the file is enough), and each file shows as a chip with its size and a button that takes it off (`?intent=detach&file=`). Ten files and 10 MB attached together at most (`FILES_MAX`, `FILES_MAX_BYTES`); a file over 10 MB, up to 95 MB (`DOWNLOAD_MAX_BYTES`), is not attached but listed at the end of the email as a link to download that works for 30 days (`DOWNLOAD_DAYS`, `withDownloads`), so it goes through any provider; anyone the email reaches can open that link until then. With the script and a saved draft, a chosen file goes straight to the draft's route (`data-upload`, the kit's frame script), so a large file never passes through the page's form; of the kinds an email may carry (`FILE_TYPES`: PDF, Word, Excel, PowerPoint, OpenDocument, RTF, CSV, text, calendar, JPG, PNG, GIF and ZIP; anything else is refused with `KIT-E-1512`). Every person's own email carries the files. They are kept in the client's one bucket under `mail/attachments/`, and each email sent gets a link of its own per file, good for a day (`FILE_LINK_HOURS`), from which the provider downloads it during the call (`GET /hooks/email/files/<token>`, a download that runs nothing), so the Worker never reads a file. Only Brevo and Resend fetch files from a link (the kit's `attachmentBytes`): Write offers files only when one of them sends, an email with files goes only through one of them, never through the Cloudflare route, and Send is refused in words when none could take them. A file whose email is deleted goes within the hour (`email.files`) |
 | Sent | The page Email, Sent lists the emails the person sent from Write, newest first, from the moment Send is pressed (since 2026-11-01: `GET /written?state=sent` lists `queued` rows as well as `sent` ones, each with `undoUntil` while its Undo wait lasts): the subject and first words, to whom, when, and what became of each in a word (Undo window, Queued, Waiting, Retrying, Sending, Failed, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One held for want of an email service says so in plain words, and the list looks again by itself (`data-live`) every five seconds while one is in its Undo window or being handed over, every thirty while one waits, and not at all when nothing moves. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
-| Signature | Each sender address keeps one (Email, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
+| Signature | Each sender address keeps one (Email settings, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
 | Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
 
 Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
@@ -274,7 +274,7 @@ Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain
 `email.domain-remove`, `email.domains-discover`, `email.sender-add`, `email.sender-update`, `email.sender-remove`,
 `email.sender-default`, `email.kinds`.
 
-The page is Email, Addresses (`/email/senders`, from `@oltrem/email/pages`). Since 2026-11-01 it
+The page is Email settings, Addresses (`/email/senders`, from `@oltrem/email/pages`). Since 2026-11-01 it
 is one path: connect an email service, then the portal reads its domains and addresses (on its
 own when no domain is here yet, or with **Look at my provider**) to add all or one by one. Each
 domain is a pane with its state and **Check again**, its addresses as rows with Edit and Remove,
@@ -393,7 +393,7 @@ Nothing sends a person to another page when the portal can do the step itself (2
 owner's ask). With a service connected, a missing From address and a domain never checked carry
 `read` (`[]` for every address, or the domain's name), and Write's **Check again** reads them from
 the service (`POST /domains/discover`, which keeps its own capability) and checks again in the
-same press. A missing service, or a missing address with no service, links to Set up email
+same press. A missing service, or a missing address with no service, links to Email settings
 (`/email/connect`), the one card that sets the service, domain and address together.
 
 ## Routes
@@ -622,7 +622,7 @@ deleting a list removes the list's.
 | `KIT-E-1501` | `NO_PROVIDER` | 503 | the tenant has no active or failover email instance |
 | `KIT-E-1502` | `LEASED` | 409 | another delivery of the message holds its lease |
 | `KIT-E-1503` | `UNKNOWN_TEMPLATE` | 422 | no template the Worker was built with has that id |
-| `KIT-E-1504` | `ALL_FAILED` | 502 | the active instance and every failover refused the message |
+| `KIT-E-1504` | `ALL_FAILED` | 502 | your email service and any backup service refused the message |
 | `KIT-E-1505` | `BAD_TEMPLATE_DATA` | 422 | the data does not match the template's schema |
 | `KIT-E-1506` | `IN_USE` | 409 | a domain with addresses, or a default address while others remain, is removed or narrowed |
 | `KIT-E-1507` | `ALREADY_ADDED` | 409 | the domain or the address is there already |

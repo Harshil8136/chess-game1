@@ -200,7 +200,7 @@ sends from the mailbox, and Undo puts the words back in it. Mailboxes and rules
 (`/email/mailboxes`): each mailbox with its state and what stands in its way, add, change, switch
 off and delete, its automatic reply, the rules, the blocked senders, and the room used against the free plan.
 
-Forwarding (`/email/forwarding`), in the Email tabs: the domains, each with where its mail goes,
+Forwarding (`/email/forwarding`), in the Email settings tabs: the domains, each with where its mail goes,
 what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
 with its people and whether each pressed Cloudflare's link, Change, Switch off and Delete; a form
 to add one; and Import from ImprovMX, which reads the account with its API key in one press (the
@@ -209,7 +209,7 @@ Mailboxes also show **Send a test** (`src/try-here.tsx`): a message to an alias 
 handed to the Worker as Email Routing would, and what became of it. Someone who may only read sees
 it all and nothing to change.
 
-Mail setup (`/email/mail`), in the Email tabs: the route's line, the steps as a checklist, the
+Mail setup (`/email/mail`), in the Email settings tabs: the route's line, the steps as a checklist, the
 form that turns Email Routing on, the sending domains with records missing and **Write them**,
 the staff addresses with their state, the test, and Stop. A step that is not ready says whether
 Mail is to be ticked at setup or only turned on, on the Modules page.

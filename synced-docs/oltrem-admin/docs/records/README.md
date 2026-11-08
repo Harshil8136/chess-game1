@@ -162,6 +162,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The door with no key](2026-11-05-no-key-door.md) | the deploy sets Cloudflare Access once with Cloudflare's own sign-in; anyone may ask for a code, the portal lets in only its own people |
 | [First run: named people get in](2026-11-08-first-run-sign-in.md) | people named at setup get their account at the first sign-in; Cloudflare's sign-in shows its link and code and tries again 10 seconds after a failure |
 | [Several Vendor accounts](2026-11-08-vendor-accounts.md) | setup names Another Vendor; a Vendor adds and switches Vendor accounts on Vendor access; never your own, never the last one |
+| [Email reworked for the client](2026-11-08-email-for-the-client.md) | one email per person; Email opens on Write; files attached up to 10 MB and larger ones as 30-day links; campaigns in four steps; Email settings in one entry |
 | [Easier setup](2026-11-03-easier-setup.md) | email in one step from Home and Integrations, delivery reports registered by themselves, the first backup without waiting for the night |
 | [Look 2, step 3](2026-11-03-look-2-step-3.md) | one empty box everywhere, settings side by side, an Owner's look for everyone |
 | [Look 2, step 2](2026-11-03-look-2-step-2.md) | each page's button beside its heading or filters, smaller empty boxes, shown-once results as toasts, a switch grid for notifications, Look tiles |

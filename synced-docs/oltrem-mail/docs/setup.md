@@ -174,7 +174,7 @@ instead of trusting this list):
 ## 5. Forwarding, as ImprovMX does it
 
 Built in bundle F ([its record](records/2026-11-02-forwarding.md)), on its own page, Forwarding
-(`/email/forwarding`), in the Email tabs. An **alias** forwards one address of a domain
+(`/email/forwarding`), in the Email settings tabs. An **alias** forwards one address of a domain
 (`info@example.com`), or every address of it that has no alias or mailbox of its own (the
 catch-all, written `*@example.com`), to one person or up to ten, and keeps nothing. A **mailbox**
 of [the inbox](inbox.md) keeps the mail in the portal; an address is one or the other.
