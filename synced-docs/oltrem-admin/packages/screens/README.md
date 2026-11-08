@@ -288,8 +288,9 @@ marked `data-fold` with an empty input folds behind the button whose `data-unfol
 button with `data-mark` (`strong`, `em`, `list`, `link`) puts that mark around the selection in
 the box its `aria-controls` names; a block with `data-marks-of` draws that box's words with
 their marks as they are typed (a list takes `data-list-class`). Ctrl or Cmd with Enter in a form
-with `data-send-key` presses its `data-send` button, and a select with `data-submit-with`
-presses the button it names when it changes, that button hidden. Without the script each is a
+with `data-send-key` presses its `data-send` button, and a select or a file input with
+`data-submit-with` presses the button it names when it changes, that button hidden (a file input:
+since 2026-11-08, Write's Attach a file). Without the script each is a
 plain box, line, select and button.
 
 **The composer** (Oltrem Mail's Write page, 2026-11-08). A block with `data-rich` naming a

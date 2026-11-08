@@ -172,6 +172,14 @@ email module never names a provider.
   the config, present only for a bulk message). A definition's `send.bulkNeeds` lists the config
   fields bulk mail needs; while one is empty a bulk message is refused before any call
   (`KIT-E-1408`), so it never goes out the everyday way.
+- **Files sent with a message** (2026-11-08): `attachments`, at most `ATTACHMENTS_MAX` (10), each
+  a one-line `name`, an `https` `url` and its `size` in bytes. The provider downloads each file
+  from its link during the call, so the Worker never reads the file and its CPU time does not grow
+  with it. A definition says it can with `send.attachments: { maxBytes }`: Brevo (`attachment`,
+  each `{ url, name }`, 20 MB in all) and Resend (`attachments`, each `{ path, filename }`, 25 MB
+  kept under its 40 MB after encoding). Any other definition, the SMTP client, a batch call, or
+  more bytes than `maxBytes` is refused before any call (`KIT-E-1408`); `attachmentBytes(definition)`
+  tells a module which providers take files, so it offers them only there.
 - **The auth schemes**: `bearer`, `basic` (the definition's user, else the `user` field),
   `api-key-header` and `none`, a line each; `sigv4`, the AWS signature, computed with WebCrypto
   over every header sent and checked against AWS's published vector. `oauth2-client-credentials`
