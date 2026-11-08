@@ -38,7 +38,7 @@ them from the Vite dev server by URL.
 
 Intermittent by nature: it depends on what else held the cache open at that moment.
 
-## Which of the four failures is this?
+## Which of the five failures is this?
 
 Four distinct causes wear almost the same message. Identify which before
 changing anything — the fixes are unrelated, and the fix for one makes another
@@ -212,6 +212,21 @@ The Upstash packages themselves left cf-admin on 2026-10-04, when the rate limit
 moved to Cloudflare's own binding and D1 (`src/lib/ratelimit.ts`); the rule stays,
 because the next CommonJS package fails the same way.
 
+## Failure 5 — `astro check` during `npm run dev` (2026-11-08)
+
+Same message, any file (`astro_virtual-modules_middleware__js.js` that day), right after the
+dev server logged "Re-optimizing dependencies because vite config has changed" with no edit.
+`astro check` (the typecheck in `npm run verify`) runs `astro sync`, which starts a temporary
+Vite server with a build-mode config (`createTempViteServer` in
+`astro/dist/core/sync/index.js`). Its optimizer config hash differs from the dev server's, so on
+the shared `node_modules/.vite` each one rewrote `deps_ssr` under the other.
+
+**Fixed 2026-11-08:** `astro.config.ts` gives `check` and `sync` their own
+`cacheDir: 'node_modules/.vite-check'` (`isSyncCommand`); the dev server keeps the default.
+Proved by timestamps: a full `npm run typecheck` beside a running dev server wrote only
+`.vite-check/` and left `.vite/deps` and `.vite/deps_ssr` untouched.
+`test/vite-optimize-deps-contract.test.ts` pins it.
+
 ## Verifying a fix
 
 `astro dev` daemonizes in Astro 7, so check it is actually serving rather than
@@ -255,5 +270,6 @@ Two traps when verifying:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-08 | Failure 5 against `astro/dist/core/sync/index.js` (`createTempViteServer`), `astro.config.ts` (`isSyncCommand`) and `.vite`/`.vite-check` timestamps around a live `npm run typecheck` beside a running dev server | Failure 5 added. Not re-checked: the other four failures |
 | 2026-11-03 | `astro.config.ts` (`optimizeDeps.exclude` only `@astrojs/cloudflare`, `ssr.optimizeDeps` with `noDiscovery: true` and `include` naming `lucide-preact`, `@astrojs/preact/server.js`, `astro/logger/console`, `astro/assets/services/noop`), `vitest.config.ts` `cacheDir`, the `predev` and `dev` scripts, `scripts/predev-guard.mjs`, `test/vite-optimize-deps-contract.test.ts`, Astro's `noDiscovery === false` branch in `astro/dist/vite-plugin-environment/index.js`; `grep -rln "lib/ratelimit" src/pages/api` (53) | Every configuration claim holds. One line added: Upstash left cf-admin on 2026-10-04 (`src/lib/ratelimit.ts`), the CommonJS rule stays. Not re-checked: the dev server itself (`npm run dev` not run in this pass) |
 | 2026-09-19 | `astro.config.ts` `ssr.optimizeDeps`, `vitest.config.ts` `cacheDir`, the `predev`/`dev` scripts and `test/vite-optimize-deps-contract.test.ts` re-checked; `grep -rln "lib/ratelimit" src/pages/api` | Every configuration claim still holds exactly as written. Two corrections: the blast-radius figure (28 → ~50 routes, now derived rather than stated) and a shell note on the POSIX-only verification block. **Not re-checked:** the dev-server behaviour itself — running `npm run dev` was out of scope for this pass |

@@ -13,7 +13,7 @@ related_code:
 - src/components/dashboard/analytics/AnalyticsBlocks.tsx
 - src/components/dashboard/analytics/AnalyticsCharts.tsx
 - src/components/dashboard/analytics/Experience.tsx
-- src/components/dashboard/analytics/experience.ts
+- src/components/dashboard/analytics/experience-model.ts
 - src/components/dashboard/analytics/format.ts
 - src/styles/pages/analytics.css
 - src/lib/analytics/report/load.ts
@@ -258,6 +258,7 @@ Visitors, and the place split on Google search.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-08 | `related_code` after `experience.ts` was renamed `experience-model.ts`: beside `Experience.tsx` the two names differ only in case, so on Windows `./Experience` resolved to the `.ts` file and broke typecheck and ESLint. Imports in `Experience.tsx` and `test/analytics-experience.test.ts` updated; `npm run typecheck` and the test pass | Every section's content; the page in a phone browser; `last_verified` left as it was |
 | 2026-11-03 | §2's summary-side-by-side and loading bullets against `Analytics.tsx`, `AnalyticsCharts.tsx` (`usePack`), `load.ts` and `src/pages/api/analytics/[part].ts`; the times quoted read live through the Sentry connector (`/api/analytics/summary` p50 4,990 ms and p95 13,931 ms over 50 requests, `visitors` p50 31 ms and p95 2,013 ms, `traffic` 32 ms, `search` 20 ms, `email` 12 ms, 30 days); `test/loading-screens.test.ts` and `test/loading-screens-look.test.ts` pass | The summary's time after the change (LS-1); the page in a phone browser; `last_verified` left as it was |
 | 2026-10-26 | Written with the code: every section against the files in `related_code`; the PostHog events and properties against the live project (PostHog connector), the D1 `gsc_index_log`, `booking_attempts` and `admin_pages` rows and the Supabase `bookings`, `booking_pets`, `contact_messages` and `consent_records` columns against the live databases (Cloudflare and Supabase connectors); `test/analytics.test.ts` passes | The portal's PostHog key's Query: Read scope, the Cloudflare `httpRequests1dGroups` answer for this zone and Search Console's search analytics for the service account: none can be called with the portal's own keys from here |
 | 2026-10-26 | Round 2 against the code: §1's Visitors, Booking journey, Google search, Website traffic, Email and Reliability rows, §2's retry, cache key and subrequests, §3's keys after `0078`, §4's account and Sentry rows. Live: `$pageleave` with the page, scroll and time properties and `$autocapture` link taps exist in the last 30 days (124 and 80, PostHog connector); `email_audit_logs` rows carry `delivery_events` arrays of `event`, `timestamp` and `reason` only, with `delivered`, `unique_opened`, `unique_proxy_open` and bounce events (Supabase connector); the `health-state` row and its `worker_errors` check passing every day since 2026-10-17 (D1 connector); `test/analytics.test.ts` and `test/analytics-round2.test.ts` pass (56) | The `date` dimension and CPU quantiles of `workersInvocationsAdaptive`, Sentry's daily error counts over 14, 60 and 90 days, and `httpRequests1dGroups`' newer fields with the portal's keys (MAINTENANCE AN-4 to AN-6); the page in a phone browser |

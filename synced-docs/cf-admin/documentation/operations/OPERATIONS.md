@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-11-08 | §5's local-development note against `scripts/predev-guard.mjs`, `wrangler.toml` (`account_id`, `[ai] remote = true`) and a live `npx wrangler whoami --json` on the owner's PC, which reached only another account | Sign-in check in `predev` documented. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-07 | §1's five-minute row against `FIVE_MIN_JOBS` in `src/lib/jobs/registry.ts` (19 jobs) after `lab-update` was added | `lab-update` added. No binding, secret, variable or cron trigger added: it rides the existing `*/5` tick and the `VPS` binding. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-06 | §1's five-minute row against `FIVE_MIN_JOBS` in `src/lib/jobs/registry.ts` (18 jobs) after `bot-weekly` was added | `bot-weekly` added. No binding, secret, variable or cron trigger added: it rides the existing `*/5` tick, the `VPS` binding and `EMAIL_QUEUE`. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-06 | §1's scheduled-trigger table against `FIVE_MIN_JOBS` in `src/lib/jobs/registry.ts` (17 jobs) and `wrangler.toml`'s `[triggers]` | The five-minute row said 15 and lacked `log-scan` (2026-10-24) and the new `bot-flags`; both added. No binding, secret, variable or cron trigger added: `bot-flags` rides the existing `*/5` tick, the `VPS` binding and `EMAIL_QUEUE`. Nothing else re-checked; `last_verified` left as it was |
@@ -639,6 +640,15 @@ Removed and gone: `PUBLIC_SUPABASE_ANON_KEY`, `TURNSTILE_SECRET_KEY` (GoTrue and
 
 Local development: copy `.dev.vars.example` to `.dev.vars` and fill the values; with
 `[secrets] required` declared, `wrangler dev` loads only the listed secret names.
+
+`npm run dev` also needs a Cloudflare sign-in that reaches the `account_id` in `wrangler.toml`:
+the `[ai]` binding is `remote = true`, so even local dev opens a remote session on that account.
+`wrangler login` is global to the PC, and this PC also signs in to another project's account;
+on the wrong one the dev server dies with "the remote session could not be authenticated".
+`predev` (`scripts/predev-guard.mjs`) runs `wrangler whoami --json` first, under the same auth
+`dotenv -e .dev.vars` gives wrangler (a `CLOUDFLARE_API_TOKEN` there beats the login), and stops
+with the fix: `npx wrangler logout`, then `npx wrangler login` as the Madagascar account. It warns
+when `.dev.vars` is missing, and starts anyway when it cannot tell (offline, no account list).
 
 ## 6. Cloudflare API Token Registry
 

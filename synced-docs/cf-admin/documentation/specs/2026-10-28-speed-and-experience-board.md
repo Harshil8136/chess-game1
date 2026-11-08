@@ -5,7 +5,7 @@ audience: [owner, ai, technical]
 last_verified: 2026-10-28
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/components/dashboard/analytics/Experience.tsx, src/components/dashboard/analytics/experience.ts, src/components/dashboard/analytics/AnalyticsBlocks.tsx, src/components/dashboard/analytics/AnalyticsCharts.tsx, src/components/dashboard/analytics/Analytics.tsx, src/styles/pages/analytics.css, src/lib/analytics/report/parts.ts, src/lib/analytics/report/names.ts, test/analytics-experience.test.ts, test/experience-look.test.ts]
+related_code: [src/components/dashboard/analytics/Experience.tsx, src/components/dashboard/analytics/experience-model.ts, src/components/dashboard/analytics/AnalyticsBlocks.tsx, src/components/dashboard/analytics/AnalyticsCharts.tsx, src/components/dashboard/analytics/Analytics.tsx, src/styles/pages/analytics.css, src/lib/analytics/report/parts.ts, src/lib/analytics/report/names.ts, test/analytics-experience.test.ts, test/experience-look.test.ts]
 related_docs: [2026-10-26-analytics-page.md, 2026-10-26-analytics-colours-and-layout.md, ../features/ANALYTICS.md, ../reference/DESIGN-SYSTEM.md, ../records/reports/2026-10-28-speed-and-experience-board.md]
 tags: [analytics, design, ui, accessibility, layout, dataviz, web-vitals]
 ---
