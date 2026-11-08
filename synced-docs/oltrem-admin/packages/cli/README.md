@@ -218,12 +218,14 @@ not hand a Worker with static assets the Access sign-in:
    **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
    in step 6.
-   **Who else will use the portal**: addresses, each as Owner, Staff or Your team (a row with no
-   role is Staff, the least power), written in step 6 to `iam.setup_people`. A whole domain
-   (`@example.com`) is refused: the door lets anyone ask for a code, and the portal lets in only
-   the people it invited. Once the company exists, the Users page invites them all in one press
-   (Owner as Owner, Staff as Standard user, Your team as Full admin), with no email: each signs in
-   at the door and presses Accept on the page they land on. The run's last lines say so.
+   **Who else will use the portal**: addresses, each as Owner, Staff or Your team, written in
+   step 6 to `iam.setup_people`. In the terminal a role's word follows its address
+   (`name@example.com owner`); a row with no role keeps the role the person has, and someone new
+   is Staff, the least power. A whole domain (`@example.com`) is refused: the door lets anyone ask
+   for a code, and the portal lets in only its own people. Once the Vendor has made the company,
+   each one gets in the first time they sign in at the door, with that role (Owner as Owner, Staff
+   as Standard user, Your team as Full admin; `@oltrem/iam`, "The people named at setup"). The
+   run's last lines say who signs in first.
 3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When
    the sign-in can read the account's active domains (`wrangler auth token`, then Cloudflare's
    zones list), they are offered as choices beside the free address, and a domain is followed by
@@ -276,8 +278,13 @@ not hand a Worker with static assets the Access sign-in:
    to `iam.setup_people`; then **the door**, once the deploy has made the Worker (an empty account
    has nothing to protect). It is set with Cloudflare's own command line, `cf` (pinned in the
    template), because wrangler's sign-in cannot reach Zero Trust and a key kept for it would be
-   upkeep on every client: `cf auth whoami`, and when cf is not signed in, `cf auth login
-   --no-device` opens the browser once on this computer, as wrangler's sign-in does. cf is told the
+   upkeep on every client: `cf auth whoami`, and when cf is not signed in, `cf auth login`, cf's
+   device flow: it prints a short link and a code, shown as printed (the look's `QUESTION` lets
+   them through, and the setup page shows the link as a button), and opens the browser on them;
+   the link works on any device, a phone too, and nothing listens on this computer. One try waits
+   at most `CF_SIGN_IN_MS` (5.5 minutes; cf's code lasts 5); a try that fails or runs out starts
+   again by itself 10 seconds later with a new link and code, three tries in a row, then the
+   person chooses **Try the sign-in again** or **Skip it** (the steps by hand). cf is told the
    account (`CLOUDFLARE_ACCOUNT_ID`). Then `setDoor` reads each part and writes only what differs:
    Zero Trust set up, the One-time PIN login, one policy that lets everyone ask for a code, and the
    Access application on the Worker with the open paths (`/hooks/*`, `/healthz`, `/account`,
@@ -783,7 +790,7 @@ since 2026-11-05: `OPS_TOKEN_PERMISSIONS` is `d1` edit and `account_analytics` r
 | Export | What it does |
 |---|---|
 | `cfRunner(dir, log?)` | Runs the repository's own cf as `node <its script>` (`toolArgv`), as wrangler is: its JSON on success, its error when it fails; a labelled call with `log` shows the kit's look |
-| `cfSignedIn(cf)`, `cfSignIn(cf, { again? })` | `cf auth whoami`, and `cf auth login --no-device` (the browser, as wrangler's sign-in; `--force` with `again`) |
+| `cfSignedIn(cf)`, `cfSignIn(cf, { again? })` | `cf auth whoami`, and `cf auth login` (cf's device flow: a link and a code, the browser opened on them; `--force` with `again`), stopped after `CF_SIGN_IN_MS`; the deploy tries it again 10 seconds after a failure |
 | `setDoor(cf, workerId, host?)` | Reads each part and writes only what differs: the Zero Trust organization (`no-zero-trust` without one), the One-time PIN login (`DOOR_LOGIN_NAME`), the reusable policy `DOOR_POLICY_NAME` that includes everyone, and the application whose destination is this Worker: only that login, straight to it, only that policy, `DOOR_OPEN_PATHS` public. An application the dashboard made is edited, never replaced, so its audience stays. Never throws: `ok`, `signed-out`, `no-zero-trust`, `refused` (403) or `cloudflare`, each said in `DOOR_ANSWERS`, with what changed and any other application on `host` |
 | `zeroTrustReady(cf)` | Whether the account has a Zero Trust organization (a team name) |
 | `doorFromOutside(fetch, url)` | `{ on, open }`: the address sends people to the Access sign-in, and `/healthz` answers 200 without one |

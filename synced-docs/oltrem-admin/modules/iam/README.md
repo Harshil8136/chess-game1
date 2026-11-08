@@ -320,7 +320,8 @@ everyone), and leaves the customers' pages, the webhooks, the health check and t
 
 Who gets in is this module's own list. A sign-in whose email has no active account here is refused
 with `KIT-E-2005` ("No account here"), except on the routes that make one: accepting an invitation
-(`POST /invitations/accept`, `POST /invitations/mine`). So people come and go on the Users page
+(`POST /invitations/accept`, `POST /invitations/mine`), and a person named at setup on their first
+sign-in (below). So people come and go on the Users page
 alone, and the door never needs changing. A Zero Trust organization made since June 2026 has only
 the "Cloudflare" login, which admits members of the Cloudflare account and no one else; the door the
 deploy sets uses only the One-time PIN login instead. The cost: anyone may ask for a code and so
@@ -328,22 +329,34 @@ take one of the 50 free Zero Trust seats for a month, while they still see nothi
 
 ```ts
 createIam({ ...,
-  settings: (env) => settingsFor(env), // iam.setup_people, for the Users page's one-press invite
+  settings: (env) => settingsFor(env), // iam.setup_people: in at the first sign-in, or one press
 });
 ```
 
 **The people named at setup.** Step 2 of `npm run deploy` ("Who signs in") writes each person
 it names, with what they are, to `iam.setup_people` (`SETUP_PEOPLE_SETTING`: lines
-`address owner|staff|team`, lower case, set by the Vendor). Being named is not an account. So the
-module lists the ones still without an account or a pending invitation (`GET /setup-people`), Home's
-Get started names them ("Invite the 3 people named at setup", `iam.bindings.manage`), and the
-Users page invites them all in one press, each at the company to its role: the Owner as Owner,
-Staff as Standard user, Your team as Full admin (each made from its ready set when missing). No
-email is sent: each person signs in at the door with their address and presses Accept on the page
-they land on (`POST /invitations/mine`, then `/invitations/accept` without a token). An Owner after
-the handover still needs a second person, as every Owner invitation does, and the press says so by
-name (`templates/client/test/setup-people.test.ts`). Without `settings` the Users page offers no
-one.
+`address owner|staff|team`, lower case, set by the Vendor). Since 2026-11-08 (the owner's
+decision) each one **gets in at their first sign-in**, with nothing pressed: the session hook asks
+`handover.admitNamed` when a signed-in address has no account at all, and it makes the account at
+the whole company with the role setup gave: the Owner as Owner, Staff as Standard user, Your team
+as Full admin (each made from its ready set when missing: View and Edit, or View, Edit and Admin,
+special permissions left out). The binding is the Vendor's (`granted_by`), its reason "named at
+setup", and the audit row `iam.setup-admit`. Its limits, each refused with "No account here" and
+why in words (`modules/iam/test/setup-admit.test.ts`):
+
+- No company yet: the detail names the Vendor, who signs in first and makes it.
+- An Owner comes in this way only before the handover, as the first Owner (the handover is
+  stamped); after it, only an Owner adds another Owner.
+- After the handover, anyone else only while the Vendor may enter at any time (`always`).
+- An invitation already waiting for the address is accepted as any other, and a switched-off
+  account stays off.
+
+The Users page can still invite them all in one press, each to that role (`GET /setup-people`
+lists the ones without an account or a pending invitation; Home's Get started says "The 3 people
+named at setup sign in"); each then presses Accept on the page they land on (`POST
+/invitations/mine`, then `/invitations/accept` without a token). An Owner invited after the
+handover still needs a second person, and the press says so by name
+(`templates/client/test/setup-people.test.ts`). Without `settings` nobody is named.
 
 ## The routes
 
