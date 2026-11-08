@@ -78,7 +78,8 @@ download fails, it says where to install it by hand and the portal keeps running
 The first run:
 
 1. Sign in as `vendor@example.com` and create the company: its name, and the first Owner's
-   address (`owner@example.com`, from `oltrem.config.ts`).
+   address (the Owner named at setup when there is one, else `owner@example.com`, from
+   `oltrem.config.ts`).
 2. Copy the invitation link the page shows, then sign out (top right).
 3. Sign in as the Owner's address, open the link and accept.
 4. Home shows a card per module; the row at the top opens each page.
