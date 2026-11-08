@@ -408,6 +408,16 @@ What this means for a component:
   when the browser has it, and at once under `prefers-reduced-motion`. A press on the light/dark
   button or a theme chip spreads the new colours out from the press as a growing circle
   (`switchTheme(next, tapPoint(e))`); any other change cross-fades.
+- **The account menu** at the foot of the sidebar holds the built-in themes too: a sideways row
+  of dots (`.sh-theme`, shell.css), each the theme's background and accent in the mode on screen,
+  the one shown ringed; a tap puts the theme on and keeps it (`pickPalette`), spreading out from
+  the dot. Your own colours and shared themes stay on Settings.
+- **Page motion** (`src/styles/components/motion.css`): on every page the content area rises in
+  from a light blur on the first load and after each page change, and on the console-kit pages the
+  header and sections arrive one after another (60 ms apart, up to four steps). Only without
+  `prefers-reduced-motion`, and never on the Sentry console, Analytics or PostHog, whose own
+  motion rules decide when a part arrives
+  ([loading screens](../specs/2026-11-03-loading-screens.md)).
 - **Contrast:** every built-in theme passes WCAG 2.1 AA in both modes (`src/lib/themes/contrast.ts`,
   `test/theme-engine.test.ts`); a new built-in theme is one entry in `PALETTES` and must pass too.
 
@@ -818,10 +828,12 @@ height with the space below its content empty (the owner's report of 2026-10-10)
 Built on it: `ConfirmDialog.tsx` (with `showConfirm`, `showAlert` and `showPrompt` in
 `src/stores/dialogStore.ts`, including the typed word for a destructive step),
 `SlideDrawer.tsx` and `BottomSheet.tsx` (their old props, now thin wrappers), and since
-2026-11-08 `CodeDialog.tsx`, the emailed code's six boxes (`.ui-otp*` in Dialog.css: one real
-field under six boxes, the next one ringed, a shake on a wrong code, the boxes drawn into a green
-tick with a glow on the right one, nothing moving under reduced motion;
-[PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)). Buttons and
+2026-11-08 `CodeDialog.tsx`, "Confirm it's you" as one centred screen (`.ui-verify*`: a glowing
+badge in the dialog's tone, the title, where the code went, the boxes, a live *Send a new code*
+countdown; [PERMISSIONS-SYSTEM §10.5](../architecture/PERMISSIONS-SYSTEM.md)). Any code a screen
+asks for goes in `OtpInput.tsx` (`.ui-otp*`): one real field under the boxes, the next box ringed
+with a caret, a shake on a wrong code, the boxes drawn into a green tick with a glow on the right
+one, nothing moving under reduced motion. Buttons and
 fields inside a dialog, and on the kit pages, are `.ui-btn` (`data-variant` `primary`,
 `danger`, `danger-soft`, `ghost`; `data-size="sm"`; 44 px tall on a touch screen) and
 `.ui-input`.
@@ -920,7 +932,7 @@ body) a basis is a height, and it made a tall empty box around the field
 
 | Date | Checked | Not checked |
 |---|---|---|
-| 2026-11-08 | **Scope-limited to §9.8's sentence on `CodeDialog.tsx`** against the component and Dialog.css's code boxes; `test/code-dialog.test.ts` and `test/dialog-look.test.ts` pass | The rest of the document; `last_verified` left as it was |
+| 2026-11-08 | **Scope-limited to §9.8's sentence on `CodeDialog.tsx` and `OtpInput.tsx`, and §4.4's account menu and page motion** against the components, Dialog.css's code boxes and verify screen, `SidebarProfile.tsx`, shell.css's `.sh-theme*` and `src/styles/components/motion.css`; `test/code-dialog.test.ts`, `test/dialog-look.test.ts` and `test/theme-engine.test.ts` pass | The rest of the document; `last_verified` left as it was |
 | 2026-11-08 | **Scope-limited to the new §4.4** against `src/lib/themes/`, `AdminLayout.astro`, `theme-client.ts`, `theme-init.js`, `dark.css`, `light.css` and `Dialog.css`; `test/theme-engine.test.ts` and `test/shell-look.test.ts` pass | The rest of the document; `last_verified` left as it was |
 | 2026-11-05 | §3's `pages/chatbot-insights.css` line and §9.9's note on the bot's scene, against `ChatbotLayout.astro` (`scene`), `src/styles/pages/chatbot-insights.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone (local screenshots at 390 px and 1,280 px were looked at) |
 | 2026-11-05 | §9.9's Chatbot paragraph (the frame: `hue`, `fill`, the line tab row, `PageBar`, `Figure`, `SubNav`), against `ChatbotLayout.astro`, `RegistryTabs.astro`, `PageBar.tsx`, `src/styles/pages/chatbot.css` and `test/chatbot-look.test.ts` | Every other section; the look in a browser, which Harshil checks on his phone |

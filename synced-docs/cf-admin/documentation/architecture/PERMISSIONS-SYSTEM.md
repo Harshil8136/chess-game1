@@ -1118,7 +1118,7 @@ limits:
   module `auth`, in the Audit Log.
 
 **Email code** (*added 2026-10-25, the owner's choice: signing out and in again to confirm was the
-pain*). **Confirm it's you** now offers *Email me a code* first: `POST /api/settings/confirm-code
+pain*). **Confirm it's you** offers an emailed code first (sent as it opens since 2026-11-08): `POST /api/settings/confirm-code
 { action: 'send' }` emails a 6-digit code to the person's own address through the email queue, and
 `{ action: 'check', code }` with the right code writes `codeConfirmedAt` into the session. For an
 hour after that (`CODE_CONFIRMED_MS`; 10 minutes until 2026-11-04, when the owner asked for the
@@ -1144,15 +1144,23 @@ still counts for 10 minutes only. The limits:
   `need: fresh_sign_in`) or their *Confirm it's you* button they post
   `cf-admin:confirm-it-is-you` to this page, which opens the dialog, and it answers
   `cf-admin:confirmed` once a code is entered (`isConfirmAsk`, from this origin only).
-- *Since 2026-11-08 (the owner's "OTP Verification V2" look)* the code goes in six boxes
-  (`src/components/ui/CodeDialog.tsx`, state `codeDialog` in `src/lib/fresh-sign-in-client.ts`):
-  one real field under them, so paste and the phone's offer of the code from the email
-  (`autocomplete="one-time-code"`) work; it is checked by itself once the sixth digit is in, with
-  the dialog open and unclosable while it checks. A wrong code shakes and clears the boxes and
-  says why (the tries left); the right one draws them into a green tick with "Verified
-  successfully", tells the console frames, and closes by itself after 2.4 seconds; a code that ran
-  out offers a new one; *Send a new code* is in the dialog. Under `prefers-reduced-motion` the
-  states change in place. The rules above are unchanged.
+- *Since 2026-11-08 (the owner's "OTP Verification V2" look, remade the same night after his
+  review)* **Confirm it's you** is one screen (`src/components/ui/CodeDialog.tsx`, state
+  `codeDialog` in `src/lib/fresh-sign-in-client.ts`). The code is emailed as it opens, with no
+  *Email me a code* press, unless this tab asked for a code that still works (kept in
+  `sessionStorage`, `cf-admin:confirm-code`: the masked address, when a new code may be asked for
+  and when the code runs out, never the code), which stays the one to enter. The six boxes
+  (`src/components/ui/OtpInput.tsx`, the portal's one code input) are one real field, so paste and
+  the phone's offer of the code from the email (`autocomplete="one-time-code"`) work; the code is
+  checked by itself once the sixth digit is in, with the dialog open and unclosable while it
+  checks. A wrong code shakes the boxes and says why (the tries left); the right one draws them
+  into a green tick, "Verified", tells the console frames and closes after 2.4 seconds; a code
+  that ran out says so in the same screen. *Send a new code* counts down from the route's own wait
+  (`resendInMs` on a send, `Retry-After` on a 429), read from the clock against a stored time, so
+  closing the dialog, a locked phone or a sleeping tab cannot stop or reset it (the owner's report:
+  the seconds stopped once he closed the dialog and came back). When no code can be sent, the same
+  screen offers *Try again* and *Sign in again*. Under `prefers-reduced-motion` the states change
+  in place. The rules above are unchanged.
 
 A code proves the person as far as their mailbox does; the testing pass still starts only from a
 real sign-in.
