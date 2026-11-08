@@ -292,6 +292,18 @@ with `data-send-key` presses its `data-send` button, and a select with `data-sub
 presses the button it names when it changes, that button hidden. Without the script each is a
 plain box, line, select and button.
 
+**The composer** (Oltrem Mail's Write page, 2026-11-08). A block with `data-rich` naming a
+textarea shows (it starts `hidden`) and the textarea hides. Its `[contenteditable]` takes the
+textarea's words with their marks made HTML, or its HTML when the block has `data-rich-html`.
+Buttons, selects and colour inputs with `data-rich-cmd` run the browser's editing command of that
+name (`quote` toggles a blockquote; `link` opens the block's `data-rich-link` line, whose
+`data-rich-link-add` and `data-rich-link-close` buttons add the link or close it; Ctrl or Cmd K
+opens it too). A paste keeps only the composer's tags and looks. The textarea holds the
+composer's HTML and the form gains a hidden `editor=rich`. Nodes marked `data-rich-hide` hide and
+those marked `data-rich-show` show; a `format` radio set to `html` hands the textarea back as code,
+and another choice takes it into the composer again. The server cleans the HTML again; without the
+script the textarea works as before.
+
 What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,
 `/ui/*`, the local door and the invitation link (`NATIVE` in the script), and an answer that is
 not a page. When the sidebar itself changed (a section given or taken away, another account: the

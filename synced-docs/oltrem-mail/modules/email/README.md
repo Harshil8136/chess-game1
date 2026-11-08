@@ -148,6 +148,18 @@ address** in the From line opens a dialog to send from an address not added yet 
 [Senders](#senders-and-sending-domains)), for someone who holds `email.senders.add` or
 `email.senders.manage`: the address is checked and saved and picked in From, the words typed kept.
 
+Since 2026-11-08 (the client's feedback) the message is written in a **composer**, as in Gmail:
+a toolbar with text size, text colour, bold, italic, underline, strikethrough, bulleted and
+numbered lists, quote, alignment, link (Ctrl or Cmd K opens a line for the address), remove
+formatting, undo and redo, over a box that shows the email as it will look. A paste from Word,
+Google Docs or a web page keeps only the composer's tags. The frame's script (`data-rich` in the
+kit's `frame.js`) shows it and hides the plain box, which it fills with the composer's HTML, posted
+with `editor=rich` and cleaned again by `cleanRich` (see [The composer's HTML](#write) below);
+words already in the box come in with their marks made HTML, and a draft written in the composer
+opens in it again. Preview shows the email exactly as it will be sent. Without the script the plain
+box and its marks still work. For someone allowed to use code, the Words or HTML choice still hands
+the box over as code; pasted code (a whole email, a table or a style block) opens as code.
+
 Since 2026-10-31 (the kit's record `docs/records/2026-10-31-write-templates-and-code.md` in oltrem-admin) Write
 starts from the company's saved templates for Write (see [Saved templates](#saved-templates)):
 
@@ -157,7 +169,8 @@ starts from the company's saved templates for Write (see [Saved templates](#save
 | A letter | Its subject and words go in the form to be changed: into an empty box, or in place of the last letter's words when they were not changed; words the person wrote are kept, with the letter's under them. **No template** takes unchanged letter words away again |
 | A design | The message goes in its message place, with the address's signature; a design with no message place shows no box and goes as it is |
 | Fields | `{{first_name}}`, `{{last_name}}`, `{{name}}` and `{{email}}` come from the person each email goes to (the first person in To before 2026-11-08); each other field the template names is a line to fill in (`field.<name>`, 300 characters, 30 at most), and a field it does not name is dropped. A value is escaped before it goes into markup |
-| Write in HTML | For someone who holds `email.write.code` at the company: a Words or HTML choice. HTML is cleaned by `sanitizeEmailHtml` before it is kept or sent, and its text copy is read out of it |
+| Write in HTML | For someone who holds `email.write.code` at the company: a Words or HTML choice. HTML is cleaned by `sanitizeEmailHtml` before it is kept or sent, and its text copy is read out of it. Since 2026-11-08 its `<style>` rules are also written onto each tag they reach (`inlineStyles`: the tag's own style wins, a later rule beats an earlier one, `@media` stays in the head), because many mail apps read only a tag's own style; and a whole pasted email (its own `<html>` or `<body>`, `isDocument`) is sent as its own page with the signature at the foot of its body, never inside the plain letter, which is what broke pasted emails in Gmail and Outlook |
+| The composer's HTML | Since 2026-11-08 `POST /write` and `POST /written` take `editor: 'rich'` with `format: 'html'`: HTML made by Write's composer, which anyone who may send everyday mail may write. `cleanRich` keeps only the composer's tags (lines, bold, italic, underline, strike, lists, quotes, three headings, links, pictures, a rule) and a few chosen looks (colour, background colour, size, weight, style, decoration, alignment), and writes each tag's look on the tag itself; everything else goes |
 | Preview | Words with no template: the pane beside the card draws them with their marks as they are typed (`data-marks-of`), from the server's copy at first. With a template or HTML, **Preview** saves the draft and shows it framed, as `GET /written/:id/preview` renders it: the template at the version written with, the fields and the signature filled in, under a policy that runs nothing. A sent email written with a template or in HTML opens the same way |
 | Address suggestions | The browser offers the addresses the person wrote to lately (the last forty emails sent) as they type To, Cc or Bcc |
 | Save as template | For someone who may build templates: the subject and words become a new letter named after the subject, and the email is kept as a draft. Only words, never HTML |
