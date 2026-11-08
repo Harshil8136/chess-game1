@@ -53,7 +53,7 @@ holds (plan 12.1); a test renders every one and checks.
 | `Dialog`, `DialogButton`, `DialogClose`, `ConfirmDialog` | `<dialog>` with `closedby="any"`, opened and closed by the browser's `command` attributes | a bottom sheet on a phone, centred from 640 px; one system, never a dialog in a dialog; the confirm dialog names the object and the consequence, focuses cancel, puts the red button last, and can demand a typed word |
 | `Popover` | the popover API, anchored to its trigger | dismissed by a tap outside; no script |
 | `Tabs`, `Pagination` | `<nav>` with links | the current page marked; tabs on an underline (`ui-tabs`), the marked one in its group's colour (`hue`) and never bold, a `count` beside a tab when given, sideways on a phone, arrow keys with the frame script; `rel="prev"` and `rel="next"`; the ends disabled |
-| `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows; a data column with no header (a command) sits below the named ones on a card, full width; with `select`, a named 44 px tick on each row and card for a `BulkBar`, and one in the header for every row on the page |
+| `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows, in a calm box with its words centred; a data column with no header (a command) sits below the named ones on a card, full width; with `select`, a named 44 px tick on each row and card for a `BulkBar`, and one in the header for every row on the page |
 | `BulkBar` | a `<form>` posting to the screens' `/ui/bulk`, with a `Dialog` for each destructive action | the ticks of a `Table` with `select` join it by its id wherever they sit; it says how many are ticked and its buttons wait for one (frame script); a destructive action asks first and is red; without the script every part still posts |
 | `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word; the pill is a soft tint of the state's colour with the word in the text colour, so it reads in both themes |
 | `Checklist` | `<ul>` with a label | checks one under another, each an icon and its state in words for a screen reader, what was found, and for one that did not pass, what to do, linked where it is done |
@@ -96,7 +96,7 @@ them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
 | `Toolbar`, `Segmented` | a `role="group"` row; a `<nav>` of links | the page's options in one sideways row on a phone, wrapping on a wide page; the current option marked for the browser, each with its count |
 | `PaneGrid`, `Pane` | a grid; a `<section>` with a heading, a line, an icon on a group's hue and its own tools | one column on a phone, two from 44 rem of page, three when asked from 60 rem; `span="all"` takes the row; a pane is a size container too |
 | `Figures` | a `<dl>` strip on hairlines | a label, a value and a note; a tone draws a bar on top; an `href` makes the whole figure the link |
-| `Rows`, `Row` | a `<ul>` under an optional heading; each row a link or a block | a lead (an avatar or a badge), a title on one line, a line under it, an aside, a tone bar at the edge; a row's own buttons sit outside its link |
+| `Rows`, `Row` | a `<ul>` under an optional heading; each row a link or a block | a lead (an avatar or a badge), a title on one line, a line under it, an aside, a tone bar at the edge; a row's own buttons sit outside its link; rows standing on the page rather than in a pane sit on a card of their own (Look 3) |
 | `Avatar`, `initialsOf`, `hueFor` | `<span aria-hidden>` | two letters from the name or the address, on the hue the address always picks |
 | `Timeline` | `<ol>` | each step an icon and its state, its time and its detail |
 | `Meter` | the browser's own `<meter>` | green under 70 %, amber to 90 %, red above; the figures in words beside it, so the bar is never the only telling |
@@ -110,7 +110,7 @@ Since 2026-11-08 (the owner's choice, [the record](../../docs/records/2026-11-08
 the stylesheet also carries a few of daisyUI's components as a Tailwind plugin, run only when
 the stylesheet is built: no script reaches the browser. `theme.css` names the ones taken
 (buttons, checkbox, radio, toggle, the text fields, badge, kbd, skeleton, loading, dock,
-indicator, join, swap, tooltip) and fills daisyUI's one theme, `oltrem`, from the kit's own
+indicator, join, swap, tooltip, progress) and fills daisyUI's one theme, `oltrem`, from the kit's own
 tokens, so `looks.ts` stays the one colour list and every look and dark mode reach daisyUI too:
 `base-100` is the surface, `base-200` the page, `base-300` the border, `primary` the fill.
 `Switch` is daisyUI's `toggle`, `Checkbox` and `Radio` its `checkbox` and `radio`, and the text
