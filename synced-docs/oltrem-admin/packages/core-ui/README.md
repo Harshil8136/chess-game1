@@ -20,7 +20,7 @@ does not exist here, and a test proves it.
 | Shadows | `sm`, `md` | `shadow-md` |
 | Motion | `fast` 120 ms, `base` 200 ms, one `ease-out`; enter and exit through `@starting-style`; from page to page a view transition | `duration-(--duration-fast)` |
 | Group colours | `--ui-hue-blue`, `green`, `amber`, `rose`, `cyan`, `violet`, `teal`, `slate`: one per group of sections, each at 3:1 or better on the page and the surface in both themes; `data-hue="green"` makes one the element's `--hue` | `data-hue`, `ui-hue-tile` |
-| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves, and a size container, so `@xl:` and `@3xl:` follow the page's width rather than the window's; since 2026-11-01 it also lays the page out: up to 96 rem with gutters that grow at 1024, 1280 and 1536 px, `data-kind="form"` keeping the content to 56 rem under a full-width head, `data-kind="door"` a 40 rem column), `ui-head` and its parts (`-row`, `-text`, `-tools`, `-tile`, `-set`) and `ui-crumbs`: the page's head, drawn by `@oltrem/screens`; below 1024 px a head marked `data-bar` (the phone's bar already names it) keeps only its actions, its heading kept for screen readers, and the page starts 12 px under the bar with 16 px between its parts. The document keeps the scrollbar's room (`scrollbar-gutter: stable`), so pages of any height start at the same place | classes |
+| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves, and a size container, so `@xl:` and `@3xl:` follow the page's width rather than the window's; since 2026-11-01 it also lays the page out: up to 96 rem with gutters that grow at 1024, 1280 and 1536 px, `data-kind="form"` keeping the content to 56 rem under a full-width head, `data-kind="door"` a 40 rem column), `ui-head` and its parts (`-row`, `-text`, `-tools`, `-tile`, `-set`) and `ui-crumbs`: the page's head, drawn by `@oltrem/screens`; below 1024 px a head marked `data-bar` keeps its heading and actions but drops its icon tile and line, and the page leaves room under it for the phone's bottom bar (Look 3, 2026-11-08), with 16 px between its parts. The document keeps the scrollbar's room (`scrollbar-gutter: stable`), so pages of any height start at the same place | classes |
 | The frame | `ui-frame` (with `data-side` open or closed), `ui-side` and its parts (`-head`, `-search`, `-nav`, `-group`, `-row`, `-foot`, `-me`, `-menu`, `-themes`, `-tip`), `ui-side-drawer`, `ui-progress`: the portal's sidebar, drawn by `@oltrem/screens` | classes |
 
 Light and dark are the same names with different values; dark follows the system
@@ -33,7 +33,7 @@ rail and the loading line) carries a z-index.
 From one page to the next, the frame's script (`@oltrem/screens`) swaps only the page's content
 and fades it in with a view transition; with no script, the browser does the same across a load
 (`@view-transition`, a cross-document view transition), and a browser without either just shows
-the page. None of it runs under reduced motion. Buttons press in a little when tapped.
+the page. None of it runs under reduced motion. Buttons press in a little when tapped (to 96 %, since 2026-11-08).
 
 ## The primitives
 
@@ -104,6 +104,36 @@ them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
 | `Facts` | `<dl>` | label above value on a narrow pane, side by side from 26 rem |
 | `ColumnChart` | an SVG whose sizes are attributes, a key, a caption and a table for a screen reader | stacked columns by series, each column named on hover, each series keyed with its total; no inline style |
 
+## daisyUI and the Email pieces (Look 3)
+
+Since 2026-11-08 (the owner's choice, [the record](../../docs/records/2026-11-08-look-3-foundation.md))
+the stylesheet also carries a few of daisyUI's components as a Tailwind plugin, run only when
+the stylesheet is built: no script reaches the browser. `theme.css` names the ones taken
+(buttons, checkbox, radio, toggle, the text fields, badge, kbd, skeleton, loading, dock,
+indicator, join, swap, tooltip) and fills daisyUI's one theme, `oltrem`, from the kit's own
+tokens, so `looks.ts` stays the one colour list and every look and dark mode reach daisyUI too:
+`base-100` is the surface, `base-200` the page, `base-300` the border, `primary` the fill.
+`Switch` is daisyUI's `toggle`, `Checkbox` and `Radio` its `checkbox` and `radio`, and the text
+fields carry `input`, `select` and `textarea` beside the kit's own classes.
+
+Two rules keep the two apart. daisyUI's rules sit in a layer inside Tailwind's `utilities`
+layer, so a kit rule that must beat one goes in `@layer utilities` (the Look 3 block at the end
+of `theme.css`), never in `components`. And daisyUI owns the class names it ships: a kit piece
+never takes a name such as `hero`, `fab` or `filter`.
+
+`src/mail.tsx` draws the pieces Email's screens are built from, the way Gmail and Outlook draw
+theirs; what each one does is the page's.
+
+| Piece | What it draws |
+|---|---|
+| `MailShell` | the folders with Compose on top and their counts, the list, and the open conversation beside it from 1024 px; on a phone the folders are a sideways row of chips, Compose the round button above the bottom bar, and an open conversation the whole screen with Back |
+| `ConversationRow` | who, when, the subject and the first words, bold while unread; a tick for the page's bulk form, a star as a small form, buttons over the row's end under a mouse |
+| `ComposeSheet` | a dialog docked to the bottom-right corner from 640 px and the whole screen on a phone; the body is the page's own; `mode="page"` the same card in the flow |
+| `SidePanel` | a drawer `Dialog` from the side |
+| `ProblemCard` | what stops the work, calmly, with the one thing to do; an alert only with `tone="danger"` |
+| `SaveBar` | Save and Discard for a form named by id, rising once the form has changes (the frame's script), always showing without it |
+| `UndoToast` | what a change did with Undo as a small form of its own, inside `Toasts` |
+
 ## The three widgets
 
 Three controls are too hard to build well on native elements alone: a filtered list, a menu with
@@ -155,4 +185,4 @@ On Node: every primitive rendered to HTML with `preact-render-to-string` and its
 back (roles, ids, the command attributes, the order of buttons, the card list and the table);
 the theme compiled with Tailwind's Node API (the semantic utilities exist, the defaults do
 not); the contrast of every text-on-colour pair in light and in dark; and the three widgets
-rendered closed (no inline style, the roles, the hidden values, the locale's date format).
+rendered closed (no inline style, the roles, the hidden values, the locale's date format); and the Email pieces (`test/mail.test.tsx`).

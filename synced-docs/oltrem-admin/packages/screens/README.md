@@ -175,8 +175,8 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
-- **Notifications** (since 2026-11-03): a bell under the search box in the sidebar, and beside
-  Search in the phone's bar, with the unread figure (to "99+"), read with `/api/iam/me` on every
+- **Notifications** (since 2026-11-03): a bell under the search box in the sidebar, and Alerts in the
+  phone's bottom bar, with the unread figure (to "99+"), read with `/api/iam/me` on every
   page (one indexed read more; none without the users module). It opens `/notifications`: All or
   Unread as chips, Mark all read, each notification a row (unread ones bold) that opens through
   `/notifications/:id`, which marks it read and goes to its page (a path inside the portal, else
@@ -245,13 +245,16 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   the choice in the `oltrem_theme` cookie (cleared for system); the frame then sets `data-theme`
   on the page. Both switches return to `back` when it is a path on the portal, Home otherwise, and
   refuse a form posted from another site.
-- **On a phone**, a top bar with a Menu button that opens the same parts as a drawer from the left
-  (a `dialog` opened by the browser's `commandfor`; a tap outside closes it); the phone's bar also
-  has a search button. Since 2026-11-04 the bar names where you are, the section's coloured icon
-  and the set's or section's name (the portal's name is in the drawer), and a page head that would
-  say the same again (`data-bar`) keeps only its actions on a phone: its heading stays for screen
-  readers, its icon and line go, so the content starts about 150 px higher. The document names the phone browser's bar colour (light, dark, or both for
-  the device's own).
+- **On a phone** (Look 3, 2026-11-08), a bar along the bottom within reach of the thumb: Home,
+  Email (when the portal has it), Search, Alerts with the unread figure, and Menu, which opens the
+  same parts as a drawer from the left (a `dialog` opened by the browser's `commandfor`; a tap
+  outside closes it). The page's own head names where you are, so a head marked `data-bar` keeps
+  its heading and actions and drops only its icon and line. The document names the phone
+  browser's bar colour (light, dark, or both for the device's own).
+- **Colours in the account menu** (2026-11-08): six coloured dots (`DOTS`) above the theme icons
+  post `palette` and `back` to `POST /ui/look`, which keeps the pattern the cookie already holds.
+  With the script, the new colours and a change of theme spread from the button pressed as a
+  circle (a view transition, 450 ms); without it, or under reduced motion, the page just changes.
 
 **No reloads.** The frame's script (`src/client/frame.js`, served at `/ui/app.js` under its
 version) opens a link to one of the portal's pages, a search, a filter or a form's change in
