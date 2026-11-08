@@ -132,7 +132,16 @@ and its own Delete or Take back. Sent is cut into days (Today, Yesterday, then t
 company's clock), filtered from a row (all, opened, on the way, problems) with the counts, each
 email a row with what became of it and a mark at its edge when it went wrong. An email sent opens
 with its people and its words as the email shows them, and **What became of it** as a timeline.
-Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
+Since 2026-11-08 (the client's point 7) Email is drawn as Gmail draws mail, with core-ui's
+`MailShell`, `ConversationRow` and `ComposeSheet`: Drafts, Sent and one sent email sit in the
+mail screen, the folders on the left with Compose on top (the mail add-on's Inbox and boxes
+first when it is in the Worker, then Drafts, Sent, and set apart the Delivery log and Templates;
+`mailFolders` and `addMailFolders` from `@oltrem/email/pages`), the list, and an open sent email
+beside its list; on a phone the folders are a row of chips and Compose a round button. These
+pages draw their own folders, so the frame draws no tabs row over them. Drafts and Sent rows are
+mail rows: whom, a short time, the subject, then what became of it (Sent) or the first words.
+Drafts' Delete and Scheduled's Take back act on the ticked rows. Write is named Compose (its tab and its title) and
+is a compose card (`ComposeSheet` in the page). Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
 domain a pane with every check and every record, each value with its own Copy button.
 
 Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact

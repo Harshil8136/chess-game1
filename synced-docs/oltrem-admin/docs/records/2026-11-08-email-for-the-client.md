@@ -42,6 +42,8 @@ sources: [vendor/mail/oltrem-mail.json; packages/screens/src/layout.tsx; package
   `ConversationRow`. On a computer it shows the folders with Compose on top, the list, and the
   open conversation beside it. On a phone the folders are a row of chips, Compose is a round
   button, and a conversation fills the screen, with a way back to the same list.
+  Drafts, Sent and a sent email use the same screen and folders, set apart Delivery log and
+  Templates, with no second row of tabs; Write is named Compose and drawn as a compose card.
 - **Size.** The client Worker's budget went from 520 KiB to 1024 KiB gzip, with the owner's yes
   on 2026-11-08. The Worker was at 519.9 KiB after this work.
 
@@ -79,6 +81,6 @@ attachments, so a campaign with files sends one message per call.
 - The kit: `packages/providers` (attachments for Brevo and Resend, refused elsewhere),
   `packages/screens/test/frame.test.ts` (a file box sends straight to its route), and the
   template's worker and screens tests (the `email.files` job, the migrations).
-- Not verified: these on a phone (P69, P70 and P75); Sent still shows only the first copy of an
+- Not verified: these on a phone (P69, P70, P75 and P80); Sent still shows only the first copy of an
   email sent to several people.
 - `pnpm verify`: see each commit.
