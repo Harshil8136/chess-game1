@@ -120,7 +120,8 @@ With no address to send from, the page is the setup, in two steps: connect the e
 (Email, Providers; connecting checks the key, makes it the one that sends when none does and reads
 its addresses, then comes back here), and read the addresses from it (`?intent=discover`, the
 route `POST /domains/discover`) or add one by hand. Above it all, [Ready to send](#ready-to-send):
-when a check stops every email, a red notice says so first and lists what to do, with Check again
+when a check stops every email, a problem card says so first, with a button to the page that
+fixes the first one, and lists what to do, with Check again
 (`?intent=recheck`); otherwise one line that opens to every check.
 
 Since 2026-10-31 (the kit's record `docs/records/2026-10-31-email-console-remake.md` in oltrem-admin) the email
@@ -141,7 +142,8 @@ beside its list; on a phone the folders are a row of chips and Compose a round b
 pages draw their own folders, so the frame draws no tabs row over them. Drafts and Sent rows are
 mail rows: whom, a short time, the subject, then what became of it (Sent) or the first words.
 Drafts' Delete and Scheduled's Take back act on the ticked rows. Write is named Compose (its tab and its title) and
-is a compose card (`ComposeSheet` in the page). Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
+is a compose card (`ComposeSheet` in the page) beside the folders (`MailShell wide`: no list, no
+tabs row; on a phone the whole screen, with Back to the first folder). Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
 domain a pane with every check and every record, each value with its own Copy button.
 
 Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
