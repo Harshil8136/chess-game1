@@ -71,6 +71,22 @@ The frontend follows Astro's **island architecture** model to deliver near-zero 
 | `ArcoForm`            | `client:load`    | `/es/legal/arco/`, `/en/legal/arco/` (Turnstile)                 |
 | `FranchiseClient`     | `client:load`    | `/es/franchise/`, `/en/franchise/`                               |
 
+### 2.2 Booking calendar: which days can be picked
+
+The wizard's calendar (`src/components/booking/DateRangePicker.tsx`) greys out a day for two
+reasons only, decided by `getDayBlock` in `src/components/booking/calendarRules.ts`:
+
+- **Past days.** The first bookable day is today, or tomorrow once it is 18:00 on the guest's
+  device (the same cut-off the step 1 check in `bookingSchema.ts` applies).
+- **Sundays.** No check-in or check-out on a Sunday; a Sunday in the middle of a stay is fine.
+  The server repeats this check (`src/lib/schemas/booking.ts`).
+
+A note under the calendar says so in both languages, because a phone shows no hover tooltip.
+Since 2026-11-08, the days before the chosen arrival stay pickable while the guest chooses the
+departure: tapping one starts the stay again from that day. Before that, every day before the
+arrival was greyed out, which looked like most of the month was blocked and left no way to move
+the arrival earlier except "Limpiar Fechas". `test/booking-calendar.test.ts` guards both rules.
+
 ---
 
 ## 3. Interaction, Motion & PWAs
