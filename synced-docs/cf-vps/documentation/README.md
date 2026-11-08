@@ -179,6 +179,7 @@ Rulings, change records and the superseded first draft, oldest first.
 |---|---|
 | [`records/incidents/2026-10-02-reboot-terminal-502s.md`](records/incidents/2026-10-02-reboot-terminal-502s.md) | Incident: 502s on terminal input and health during the planned kernel reboot; the agent now ends terminals with a reason on shutdown |
 | [`records/incidents/2026-11-07-install-button-epipe.md`](records/incidents/2026-11-07-install-button-epipe.md) | Incident: the Install button showed Failed after the first three lab installs (two had worked) because `vps` stopped on an unhandled `write EPIPE` when a fast helper exited first; programs now get no input unless they need one, and a good install clears the earlier failed tries |
+| [`records/incidents/2026-11-08-n8n-editor-429.md`](records/incidents/2026-11-08-n8n-editor-429.md) | Incident: the n8n editor would not open after signing in, because nginx's flood limit (20 requests a second per visitor) refused 559 of the 726 files its first load fetches; a static file is now counted per visitor and per file, and pages, sign-ins, the API and webhooks keep the limit |
 
 ### Executed plans
 
