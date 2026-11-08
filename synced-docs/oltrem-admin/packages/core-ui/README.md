@@ -126,7 +126,7 @@ theirs; what each one does is the page's.
 
 | Piece | What it draws |
 |---|---|
-| `MailShell` | the folders with Compose on top and their counts, the list, and the open conversation beside it from 1024 px; on a phone the folders are a sideways row of chips, Compose the round button above the bottom bar, and an open conversation the whole screen with Back |
+| `MailShell` | the folders with Compose on top and their counts, the list, and the open conversation beside it from 1024 px; on a phone the folders are a sideways row of chips, Compose the round button above the bottom bar, and an open conversation the whole screen with Back; a folder with `apart` sits after a line; `ownTabs` leaves out the page's tabs row when the folders hold the whole set |
 | `ConversationRow` | who, when, the subject and the first words, bold while unread; a tick for the page's bulk form, a star as a small form, buttons over the row's end under a mouse |
 | `ComposeSheet` | a dialog docked to the bottom-right corner from 640 px and the whole screen on a phone; the body is the page's own; `mode="page"` the same card in the flow |
 | `SidePanel` | a drawer `Dialog` from the side |

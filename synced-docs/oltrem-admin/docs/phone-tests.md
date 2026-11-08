@@ -25,6 +25,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P79 | Email in the sidebar, then its tabs row | The page that lists every email sent is called Delivery log, in the tabs row and as its heading (no Activity) | [record](records/2026-11-08-look-3-pages.md) |
 | P78 | System status, Alerts, with nothing open; then Roles | An empty list shows a calm box with its sentence centred, not a thin strip; the roles sit on a white card | [record](records/2026-11-08-look-3-pages.md) |
 | P77 | Settings: change one value (a time zone, or a switch), then press Save changes in the dark bar that rises at the foot; then change one and press Discard | No Save on each row; the bar appears only once something changed, says "Your changes were saved" after Save, and Discard puts the value back | [record](records/2026-11-08-look-3-pages.md) |
 | P76 | Home, then any other page from the bottom bar | Home opens with a coloured Welcome back band saying what waits, with a chip to Get started; Get started has a bar of the steps done; each page's parts come in one after another, quickly; with reduce motion on, nothing moves | [record](records/2026-11-08-look-3-pages.md) |
