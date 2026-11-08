@@ -290,8 +290,12 @@ the box its `aria-controls` names; a block with `data-marks-of` draws that box's
 their marks as they are typed (a list takes `data-list-class`). Ctrl or Cmd with Enter in a form
 with `data-send-key` presses its `data-send` button, and a select or a file input with
 `data-submit-with` presses the button it names when it changes, that button hidden (a file input:
-since 2026-11-08, Write's Attach a file). Without the script each is a
-plain box, line, select and button.
+since 2026-11-08, Write's Attach a file). A file input with `data-upload` (2026-11-08) sends each
+file chosen straight to that address as the body, with its `name` and the values of the form's
+fields named in `data-upload-with` added to the address, then opens `data-upload-done`; a
+refusal's words show on the input itself. A large file so never passes through a page's form
+(Mail's files over 10 MB, up to 95 MB). Without the script each is a plain box, line, select and
+button, and the form posts the file.
 
 **The composer** (Oltrem Mail's Write page, 2026-11-08). A block with `data-rich` naming a
 textarea shows (it starts `hidden`) and the textarea hides. Its `[contenteditable]` takes the
