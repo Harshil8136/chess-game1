@@ -3,8 +3,8 @@
 Written by the verify workflow of oltrem-admin from the Oltrem Mail pack it keeps; do not edit.
 
 - source_repository: oltrem-mail, through Harshil8136/oltrem-admin vendor/mail/
-- source_commit: 79969199955dbde814934442d6994cea0e7e396a
-- kit_commit: 3e06e2631e661e2158704b2734d742057df33ccd
-- synced_at: 2026-11-08T19:57:08Z
+- source_commit: 34f0316a075a6ded55f8f5574f83f469003af694
+- kit_commit: 2905dd803cbab650b417918a9cfb44c915ea5dc2
+- synced_at: 2026-11-08T20:05:25Z
 - files_copied: 27
 - what: every document of oltrem-mail, from vendor/mail/published/

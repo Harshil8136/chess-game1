@@ -78,6 +78,7 @@ starts it needs that too. The do-not-mail list is the company's, so reading it a
 | A test                | Sent to the signed-in person's own address, as the first person would receive it, its subject marked `[Test]`.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Template              | Instead of plain text, a saved template of the email module (Email, Templates) made for campaigns, which the person may read; one made for the Write page alone is refused. A draft sends the template's version current when it starts; the version is fixed from then on. |
 | Saved list            | Instead of a file, a saved list of the email module (Campaigns, Lists), its people ranked by address. |
+| Files                 | PDF, Office, picture, text or ZIP files a draft sends (since 2026-11-08), kept by the email module in the client's bucket: up to 1,000 of 1 GB together, 10 MB in each email. A file is for **everyone**, or for **each person**: it goes to the one person whose address its name carries (`Invoice ann@example.com (October).pdf`), or to whoever's list row names it in a `file`, `files`, `attachment`, `attachments` or `archivo` column (several split by `;`). While the campaign has a file for each person, who has none of their own is skipped with why, and the page counts them before it starts. Each email is then its own call, through Brevo or Resend (which download each file from a link that lasts a day); a sender on another provider waits and says so. Only a draft takes or loses files; deleting it removes them. |
 | Approval              | A send to more people than `campaigns.approval_over` (1,000 by default; 0 for none) is not started but asked for: an alert says so, and someone else holding `campaigns.approve` says yes (it starts at once, or at its time) or no with a note (it stays a draft, the note on its page). A change to the message, the sender or the list withdraws the ask. |
 | Pace                  | Its own messages a run (1 to 1,000), its own cap a day, and its sending hours (from, to, the days) in the company's time zone, the alerts module's `alerts.time_zone`; an end before the start runs overnight. Empty uses the settings. Changed while it runs too. |
 | Start                 | Now, or in one, three or 24 hours (any time within 90 days through the API). It needs a subject, a message, someone to send to, merge fields the list has, the footer setting and a sender address on a passing domain; what is missing is named on the page. The portal's address at that moment is where the unsubscribe links point.                                                                                                                                                                                                                                                                 |
@@ -160,7 +161,9 @@ the places the person may see, with their state.
 For a privacy request (`personal`, read by the privacy module) the module answers each campaign
 the address was on, with the name and merge fields it
 was sent with, its state and when it was sent; the email module answers the address's row on the
-do-not-mail list. The Campaigns page is linked.
+do-not-mail list. The Campaigns page is linked. A campaign's files (an invoice, a statement) are
+personal data too: they stay with the campaign in the client's bucket, reached only by a link
+that lasts a day, and go when the draft is deleted.
 
 ## The routes
 
@@ -169,6 +172,7 @@ do-not-mail list. The Campaigns page is linked.
 | `GET /places`                                                                                                              | `campaigns.write`               | the places where the person may start a campaign                                                                  |
 | `GET /campaigns` (`status`), `GET /campaigns/:id`, `GET /campaigns/:id/recipients` (`status`)                              | `campaigns.read`                | the campaigns; one with its counts, today's sending, the preview and what is missing; its first hundred people    |
 | `POST /campaigns`, `PATCH /campaigns/:id`, `DELETE /campaigns/:id`, `POST /campaigns/:id/list`, `POST /campaigns/:id/test` | `campaigns.write`               | a draft; its name, subject and message, and its sender (until it is sent, with `campaigns.send` once it is sending); deleting it; its list (the CSV file as the body, a `bytes` route); a test |
+| `POST /campaigns/:id/files` (the file as the body, `name`, `mode` `everyone` or `each`), `DELETE /campaigns/:id/files/:fileId` | `campaigns.write` | a draft's files; the campaign's page lists them with whom each goes to, and `GET /campaigns/:id` answers `files` and `withoutFile` |
 | `POST /campaigns/:id/list/add` (CSV body), `POST /campaigns/:id/use-list` (`listId`, `add`), `POST /campaigns/:id/remove-people` (`emails`) | `campaigns.write`               | people added from a file or a saved list, a draft's list replaced by a saved one, waiting people taken off         |
 | `POST /campaigns/:id/pace` (`perRun`, `dailyCap`, `hours`)                                                                 | `campaigns.write` (`campaigns.send` once it runs) | its pace and sending hours                                                                     |
 | `GET /campaigns/:id/live`, `GET /room`, `GET /campaigns/:id/report`                                                        | `campaigns.read`                | the progress from the campaign's own row; what may still go out today; its results by mailbox provider             |
@@ -179,7 +183,7 @@ do-not-mail list. The Campaigns page is linked.
 
 The hooks `GET` and `POST /hooks/campaigns/u/:token` are the unsubscribe link. Every change is
 audited by the module (`campaigns.create`, `.update`, `.delete`, `.import` with its counts and
-columns but no address, `.use-list`, `.add-people`, `.remove-people`, `.pace`, `.test`, `.start`,
+columns but no address, `.attach` with the file's name, `.detach`, `.use-list`, `.add-people`, `.remove-people`, `.pace`, `.test`, `.start`,
 `.approve`, `.refuse`, `.decide`, `.pause`, `.resume`, `.cancel`, `.download`, `.suppress`,
 `.unsuppress`; the system's `campaigns.run` with what each run did, `campaigns.run-failed` with
 the reason and how many in a row, `campaigns.protect` with the figures it paused on,
@@ -265,6 +269,8 @@ unsubscribed or complained stays on the list.
   automations.
 - The mailbox provider is read from the address's domain only; a company domain hosted by Google
   or Microsoft counts under the others.
+- A sent campaign keeps its files; nothing removes them yet after a time.
+- A file over 10 MB is refused; a download link for a larger one comes next.
 - The watch reads its figures at the start of a run, so it pauses at most one run (50 messages
   on the free plan) after the limit is crossed.
 
@@ -288,7 +294,9 @@ half way settled by what the email module wrote; the provider's stops and the pa
 refusals, resolved on resume; pace, daily cap and sending hours, overnight and in a time zone;
 people added from a file and a saved list and taken off while it runs; the room today; the plan's
 run size and database writes; a template's version fixed at the start and a new wording version
-while paused. The watch: a run that fails said on its page, tried again and paused at the
+while paused. Files: one for everyone and each person's own by the address in its name or the
+list's file column, the page's count of who has none, each person sent only theirs and who has
+none skipped, none added once it is sent, one taken off and all removed with the draft. The watch: a run that fails said on its page, tried again and paused at the
 third, then resumed and sent; a campaign pausing itself above 0.3% spam reports over 220
 reported messages, its alert and audit, and resumed without reading them again; the summary sent
 once to the person who started it; the results by mailbox provider; the download refused to a
