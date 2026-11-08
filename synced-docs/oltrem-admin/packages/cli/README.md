@@ -218,13 +218,14 @@ not hand a Worker with static assets the Access sign-in:
    **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
    in step 6.
-   **Who else will use the portal**: addresses, each as Owner, Staff or Your team, written in
+   **Who else will use the portal**: addresses, each as Owner, Staff, Your team or Another Vendor, written in
    step 6 to `iam.setup_people`. In the terminal a role's word follows its address
    (`name@example.com owner`); a row with no role keeps the role the person has, and someone new
    is Staff, the least power. A whole domain (`@example.com`) is refused: the door lets anyone ask
    for a code, and the portal lets in only its own people. Once the Vendor has made the company,
    each one gets in the first time they sign in at the door, with that role (Owner as Owner, Staff
-   as Standard user, Your team as Full admin; `@oltrem/iam`, "The people named at setup"). The
+   as Standard user, Your team as Full admin, Another Vendor as a Vendor account holding everything
+   the Vendor holds; `@oltrem/iam`, "The people named at setup"). The
    run's last lines say who signs in first.
 3. **The address.** Asked once, while `vars.PUBLIC_HOST` is empty and `workers_dev` is off. When
    the sign-in can read the account's active domains (`wrangler auth token`, then Cloudflare's

@@ -260,6 +260,17 @@ one per portal (`KIT-E-2014` for a second), with its root scope, its **Owner rol
 Vendor holds no role, group or override of the company's, before or after: its access is its
 kind, and the company sets how it may enter.
 
+**Several Vendor accounts** (the owner's decision of 2026-11-08). Any account of kind `vendor` is
+a Vendor, so a portal may have more than the one setup made: each signs in with its own address
+and shows under it in the audit log, and the company's choice of how the Vendor may enter covers
+them all. Another one is made two ways: named at setup as `vendor` (it gets its account at its
+first sign-in, before the company too, below), or added by a Vendor on Vendor access
+(`addVendor`, `POST /vendors`; an address that has an account already is refused). A Vendor
+switches another off or on (`setVendorActive`): its session ends from the next request, its row
+stays for the record, and neither its own account nor the last one on is ever switched off. Audit
+rows: `iam.vendor-add`, `iam.vendor-on`, `iam.vendor-off`
+(`modules/iam/test/setup-admit.test.ts`).
+
 An **invitation** gives one role at one scope to one email address: single use, a week, under
 the grant rules of the governance (`invite`, `revokeInvitation`), and the token travels once in
 the link while the row keeps its hash. `acceptInvitation` runs on the identity alone, since the
@@ -335,12 +346,13 @@ createIam({ ...,
 
 **The people named at setup.** Step 2 of `npm run deploy` ("Who signs in") writes each person
 it names, with what they are, to `iam.setup_people` (`SETUP_PEOPLE_SETTING`: lines
-`address owner|staff|team`, lower case, set by the Vendor). Since 2026-11-08 (the owner's
+`address owner|staff|team|vendor`, lower case, set by the Vendor). Since 2026-11-08 (the owner's
 decision) each one **gets in at their first sign-in**, with nothing pressed: the session hook asks
 `handover.admitNamed` when a signed-in address has no account at all, and it makes the account at
 the whole company with the role setup gave: the Owner as Owner, Staff as Standard user, Your team
 as Full admin (each made from its ready set when missing: View and Edit, or View, Edit and Admin,
-special permissions left out). The binding is the Vendor's (`granted_by`), its reason "named at
+special permissions left out). Another Vendor gets a Vendor account, with no role and no company
+needed; the Users page offers nothing to invite for it. The binding is the Vendor's (`granted_by`), its reason "named at
 setup", and the audit row `iam.setup-admit`. Its limits, each refused with "No account here" and
 why in words (`modules/iam/test/setup-admit.test.ts`):
 
@@ -417,7 +429,8 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `PUT /tenant/vendor-access`, `POST /tenant/vendor-window` | `iam.tenant.manage` | how the Vendor may enter; the window an Owner opens |
 | `POST /tenant/incident`, `DELETE /tenant/vendor-window` | `iam.self` | the Vendor declares an incident (the handler lets only the Vendor through); the Vendor or an Owner closes a window early |
 | `POST /tenant` | `iam.vendor.manage` | the Vendor creates the one company and invites its first Owner |
-| `GET /setup-people` | `iam.bindings.manage` | the people setup step 2 named (`iam.setup_people`) who are not users and hold no pending invitation, each with what they are (`owner`, `staff`, `team`) |
+| `GET /vendors`, `POST /vendors`, `PUT /vendors/:id/active` | `iam.vendor.manage` | the Vendor accounts, on or off; add one by its address; switch one off or on, never your own or the last one on |
+| `GET /setup-people` | `iam.bindings.manage` | the people setup step 2 named (`iam.setup_people`) who are not users and hold no pending invitation, each with what they are (`owner`, `staff`, `team`); a named `vendor` is left out, since it needs no invitation |
 | `POST /invitations/accept` | open to any identity | the invited person, signed in at the door with no account yet, takes the grant: with the token from the link, or without one the newest invitation waiting for the signed-in address |
 | `POST /invitations/mine` | open to any identity | the newest invitation waiting for the signed-in address: the company, the role and the place, never the token (`{ invitation: null }` when none) |
 
