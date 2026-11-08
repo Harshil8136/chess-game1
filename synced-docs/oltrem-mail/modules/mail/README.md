@@ -183,7 +183,8 @@ the messages from an address.
 
 ## Pages
 
-Inbox (`/email/inbox`), first in the module's pages and in the Email tabs, with its unread count:
+Inbox (`/email/inbox`), first in the module's pages and second in the Email tabs after Write (since
+2026-11-08 Email in the sidebar opens Write, the client's ask), with its unread count:
 a row of mailboxes, a row of Inbox, Updates, Snoozed, Archived, Spam and All, a search with chips
 for unread, attachments and archived, and the conversations with a box each to tick and a row of
 commands for the ticked ones (archive, read, unread, three snoozes, Move to Updates or Inbox, mute,

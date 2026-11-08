@@ -59,7 +59,7 @@ sign-in. Both are read at the company itself: an automation acts on what happens
 
 | Action | Fields | What it does |
 |---|---|---|
-| `email`, Send an email | To (up to twenty addresses), Subject, Message (plain text) | through the email module, under the run's key, so a run never sends twice; the email module's failover and delivery reports apply |
+| `email`, Send an email | To (up to twenty addresses), Subject, Message (plain text) | through the email module, one email per address so nobody sees who else it went to (since 2026-11-08), under the run's key (`<key>.<n>` for the second address on), so a run never sends twice; the email module's failover and delivery reports apply |
 | `alert`, Raise an alert | Title, How serious (warning or critical), Detail | through the alerts module, under the key `automations.<automation>`, so a second run while it is open counts on the same alert; emailed to the alerts' recipients as any alert is |
 | `task`, Make a task | What is to be done, Given to (one address), Due in days (0 to 365), Notes | through the tasks module, at the company itself, given to someone who may see the tasks there and told by email; once per run, under the run's key |
 | `announce`, Post an announcement | Title, What it says, Each person confirms (no, or yes with "I have read it"), Shown for days (1 to 365) | through the announcements module, at the company itself, so everyone who may see the company's announcements finds it on Home; once per run, the run's key its id. On a schedule, it is a reminder that comes back: every Monday, the week's safety check |
