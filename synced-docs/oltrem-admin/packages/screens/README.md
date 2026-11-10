@@ -45,6 +45,11 @@ for an upload route. The stylesheet's build reads the kit modules' `src/pages.ts
 their classes are in it. `navWith` is how the sidebar is built from the kit's sections and the
 modules' own.
 
+`createScreens({ frames })` (2026-11-10) draws one of the kit's own pages inside a module's
+frame, by its address: the function takes the page as drawn and the page's API and returns what
+the frame shows. The client template hands `{ '/email': emailFrame }` from `@oltrem/email/pages`,
+so the delivery log sits beside Email's folders like every other Email page.
+
 ## The pages
 
 | Path | Shows | Reads |

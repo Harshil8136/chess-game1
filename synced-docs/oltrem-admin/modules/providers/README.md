@@ -227,6 +227,11 @@ email module never names a provider.
   is left. The kit's definitions read Resend's `/usage`, Brevo's account, SendGrid's credits and
   SES's 24-hour quota and SMTP2GO's monthly cycle; Postmark, Mailgun, Mailjet, Mailtrap, Sender
   and SMTP say nothing.
+- **A test inbox** (2026-11-10): a definition's optional `testInbox` is an address the provider
+  keeps for tests, which takes an email and delivers it to no one (Resend's `delivered@resend.dev`).
+  Where the key may only send and so cannot read a domain's state, `@oltrem/email`'s domain check
+  sends one test to it to learn whether the provider sends from the domain; each test counts
+  against the account's allowance, so the check sends one only while the domain is unproven.
 - **The domain client**, `createDomainClient({ fetch?, now? })`, speaks the `domains` block:
   `supports`, `create`, `read` and `verify`, each answering the provider's id, whether it is
   verified, its status word and its records with full host names (`hostOf`; `@` is the domain

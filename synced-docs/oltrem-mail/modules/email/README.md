@@ -146,6 +146,18 @@ is a compose card (`ComposeSheet` in the page) beside the folders (`MailShell wi
 tabs row; on a phone the whole screen, with Back to the first folder). Addresses are cards (an avatar, the domain's state, what each is for, the signature) and each
 domain a pane with every check and every record, each value with its own Copy button.
 
+Since 2026-11-10 (the owner's ask: the same sidebar on every Email page) every Email page draws
+the same folders: Compose, the inbox's boxes, Drafts, Sent, the delivery log and the templates,
+then what an add-on keeps last (`last: true`; the mail add-on's Mailboxes and rules). A page of
+the set that is not a list (the templates, the mailboxes, the kit's delivery log) sits beside the
+folders in place of the list and the conversation (`MailShell`'s `page`; `besideFolders` from
+`@oltrem/email/pages`). The delivery log is the kit's own page, so the client hands
+`emailFrame` to its screens (`createScreens({ frames: { '/email': emailFrame } })`). An add-on's
+counts show beside its folders on every page (`addMailFolderCounts`; the inbox's unread), each
+asked once a page, and one that fails shows none. The page's head is one slim row there, and
+moving between Email pages keeps the folders and the list still while the marked folder glides
+and an opened email slides in (core-ui's mail rules, the kit's record of 2026-11-10).
+
 Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
 compose card in the manner of Gmail and Resend, and every part still works without the script.
 From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, with the browser's
@@ -234,7 +246,7 @@ yet, as Mail setup and Forwarding do in `@oltrem/mail`.
 |---|---|
 | A sending domain | Added by someone who holds `email.senders.manage` for the whole company, with the email instance it sends through. Where the provider's definition has a `domains` block (Resend and Brevo, `@oltrem/providers`), the portal adds the domain there and shows the DNS records the provider asks for, each with a Copy button |
 | The check | Live from the page, then by itself (the job `email.domains`, every five minutes, four domains a run): a domain that has never passed is checked every five minutes in its first hour and hourly in its first day, the provider asked each time to look at its records again; after that, and once it passes, daily (`RECHECK_SOON`, `RECHECK_MS`). One line per finding, in plain words: the provider says the domain is verified; each of its records is found in public DNS (DKIM by its key, SPF by its `include`); a DMARC policy covers the domain, which Gmail, Yahoo and Microsoft require of bulk senders: its own record, or else the nearest one above it (`mail.example.com` is covered by `example.com`'s, with its `sp=` policy when it has one), as receivers look it up; it has one SPF record, not two. A provider or DNS that does not answer leaves the state as it was and says so |
-| Passing | The provider verified the domain and a DMARC policy covers it, with no broken SPF. Where the portal cannot ask the provider (no `domains` block, or a key that may only send, which Resend refuses with 401), a person confirms the dashboard shows it verified, and the confirmation is audited |
+| Passing | The provider verified the domain and a DMARC policy covers it, with no broken SPF. Where the key may only send (Resend refuses a sending key's domain read with 401), the portal learns it from the emails the provider takes (2026-11-10): a real email from the domain that the provider took proves it, and one it refused as from an unverified domain fails it (`proven`, kept as the domain's `send_proof`, written at most hourly while it holds; a change sends the domain to the job's next run). With nothing known yet, the check sends one email from the domain to the provider's test address (the definition's `testInbox`, Resend's `delivered@resend.dev`, which delivers to no one and counts against the allowance), again only after 15 minutes in the first hour since the first refusal, an hour in its first day, then daily (`PROBE_GAPS`), and never once proven. Where nothing can tell (no `domains` block, no test address), a person confirms the dashboard shows it verified, and the confirmation is audited; a refusal after that confirmation wins over it |
 | Ready for Gmail, Yahoo and Outlook | A line on each domain (`inboxes` on the domain, `inboxesOf`): ready when the provider verified it (it signs with DKIM and may send by SPF) and a DMARC policy covers it, the sender rules Gmail and Yahoo set in 2024 and Microsoft in 2025; otherwise what is missing. Campaigns add the one-click unsubscribe those rules ask for, and their complaint rate is watched on System health |
 | Read from the provider | **Look at my provider** on the page (`GET /domains/found`) lists what each email instance with a key may send from, each marked as here or not, with **Add all** and a per-item **Add** (`POST /domains/discover`, all, or `names` for the ones named). Discovering asks every email instance with a key for the domains and single addresses its account may send from (the definition's `identities` lists, `@oltrem/providers`). A domain new here is added with that instance and checked at once; an address new here is added at the company, for both kinds of mail, with the name the provider keeps or its local part, and becomes the domain's default where it has none. An address whose domain is not here is not added. What could not be read (a key that may only send, a provider that did not answer, a list that needs a second key) is said in words. For a definition with lists but no `domains` block, the check's provider line reads the domain's state from its lists |
 | Another address, from Write | `POST /senders/own` (`email`, `name`), for someone who holds `email.senders.add` or `email.senders.manage` at the company: the address is added at the company for everyday mail. Its domain must be here, or listed by an email provider, as a domain or as that very address (the discover logic), and is then added with its check; otherwise it is refused (`KIT-E-1508`) with what to do: add and verify the domain at the provider. Audited as `email.sender-add` with `from: write` |
@@ -396,7 +408,12 @@ pages show it first, and `email.ready` raises it in System status.
 
 The last check of each key is fresh: the job `email.ready` asks each service that may send every
 hour, and **Check again** (`POST /ready/check`) asks them now and checks the From address's
-domain. A provider's definition says what its answer must also hold for the account to send
+domain. Since 2026-11-10 (the owner's point 3) it also checks itself: while a check has not passed
+and the facts it stands on (the service's last answer, the domain's last check: `checkedAt`) are
+over two minutes old (`SELF_CHECK_MS`), `GET /ready` and `GET /write` ask the services and check
+the domain again after their answer has gone (`checking: true`), and the Write page's panel is a
+live block that reads it again every 30 seconds, every 6 while it checks, so the answer shows
+without a press. A provider's definition says what its answer must also hold for the account to send
 (`probe.ready` in `@oltrem/providers`; Brevo's `relay.enabled`), so an account the provider has
 not switched on fails the check with what to do, even though its key works.
 
@@ -437,7 +454,7 @@ with a template that holds code.
 | `DELETE /written/:id/files/:fileId` | `email.senders.use` | Take one file off the person's draft, from the bucket too |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
-| `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href, read? }] }`, read from what the portal knows, no call to a provider beyond its kept allowance |
+| `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href, read? }], checkedAt, checking? }`, read from what the portal knows; while a check has not passed and its facts are over two minutes old, the services and the domain are asked again after the answer (`checking: true`) |
 | `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
 | `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Integrations page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
@@ -584,8 +601,10 @@ page is linked.
   not built yet.
 - The domain calls are written from Resend's and Brevo's API references and tested against
   their documented answers, not yet against live accounts. Resend's sending-only keys cannot
-  read domains, so with one the domain is confirmed by hand; the instance's own probe (`GET
-  /domains`) may also refuse such a key.
+  read domains, so with one the domain is proven by the emails Resend takes (a test to its test
+  address when nothing else is known); Resend's refusal words ("The x domain is not verified")
+  are matched as its documentation gives them, not yet seen from a live account. The instance's
+  own probe (`GET /domains`) may also refuse such a key.
 - The generated Modules page of a client lists routes, not public hooks.
 
 ## The tables and the error codes
@@ -600,7 +619,8 @@ put it there, who and when) and `email_softbounces` (temporary bounces per addre
 window). Migration `0045_email_senders.sql` makes `email_domains` (the domain, its instance and
 the provider's id for it, the records and check lines as JSON, the state `new`, `failing` or
 `passing`, who confirmed it, when it was checked and first passed, and its two default
-addresses) and `email_senders` (the address, its name and reply-to, its place, its purpose and
+addresses; migration `1013_email_send_proof.sql` adds `send_proof`, what the last email through
+its provider showed) and `email_senders` (the address, its name and reply-to, its place, its purpose and
 its domain). Migration `0047_email_templates.sql` makes `email_templates` (the name, the kind,
 the current version's subject, preview line, accent and body, the blocks as JSON or the cleaned
 HTML, what the last cleaning took out, the version last tested, by whom and when, and when it was

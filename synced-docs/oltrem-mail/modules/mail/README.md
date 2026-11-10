@@ -202,8 +202,10 @@ the subscriptions with Unsubscribe. A conversation waiting three days for an ans
 snoozed, muted or waiting for an answer, and offers Unsubscribe for list mail; above the reply
 box, **Saved replies** are the person's letters from Write (no design, no code), each added
 under what is already typed with the person's name filled in; older messages fold and are fetched only when opened; the reply form
-sends from the mailbox, and Undo puts the words back in it. Mailboxes and rules
-(`/email/mailboxes`): each mailbox with its state and what stands in its way, add, change, switch
+sends from the mailbox, and Undo puts the words back in it. Since 2026-11-10 the inbox with no
+mailbox yet, or with a setup step still to do, says so beside the same folders, and the inbox's
+unread count shows beside Inbox on every Email page (`addMailFolderCounts`). Mailboxes and rules
+(`/email/mailboxes`), the last of Email's folders and beside them: each mailbox with its state and what stands in its way, add, change, switch
 off and delete, its automatic reply, the rules, the blocked senders, and the room used against the free plan.
 
 Forwarding (`/email/forwarding`), in the Email settings tabs: the domains, each with where its mail goes,
