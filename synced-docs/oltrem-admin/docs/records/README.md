@@ -172,5 +172,6 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The start page as a dashboard](2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
 | [Generated module pages](2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |
+| [Email settings made easy to start](2026-11-10-email-easy-start.md) | three numbered steps, a full example sender address to tap, info notes behind round buttons, a provider's domain added and checked by itself |
 | [Email's panes, and Ready to send that checks itself](2026-11-10-email-panes.md) | one slim head and the same folders on every Email page, the delivery log too (`frames`); panes that slide; Ready to send re-checks by itself; a send-only key's domain proven by real sends or a test email |
 | [Database reads, the timer's CPU, and the newest campaigns](2026-11-10-reads-cpu-and-campaigns.md) | why the campaign pages read so many rows and the server-side fix; why browser storage, tokens and KV would not help; the tick every minute with three jobs a run; Oltrem Mail's campaign steps and Run now taken in |

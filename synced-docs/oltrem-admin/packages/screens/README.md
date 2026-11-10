@@ -275,7 +275,9 @@ change that comes back to the same page keeps its scroll and brings its outcome 
 or an error) into view. Focus moves to the new page's heading, or to a form's errors. The page
 under the pointer is fetched a moment ahead, so the click opens it at once. The arrow and the
 theme switch act at once and save behind the scenes. A button with `data-copy` copies that value
-to the clipboard and says "Copied", aloud too, for two seconds. A thin line at the top shows a page that is
+to the clipboard and says "Copied", aloud too, for two seconds. A button with `data-fill` (a
+field's id) and `data-value` puts that example in the field and moves there (2026-11-10: the
+example sender address on Email settings). A thin line at the top shows a page that is
 still loading. A link to a section of the page on screen (`#invite`) is the browser's own: it
 scrolls there, and the popstate it fires is not taken for Back (until 2026-10-31 it fetched the
 page again and put it back at the top, which looked like a reload). Lists of boxes to tick: a

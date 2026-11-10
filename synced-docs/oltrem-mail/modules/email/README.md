@@ -278,6 +278,19 @@ the address mail comes from, an optional sending subdomain and name, and the pro
 | The sender | The address becomes a sender at the company for both kinds of mail; the page also sets `email.from_address` and `email.from_name` to it |
 | Reports and a test | Delivery reports registered by API (below), then a test message to the person who pressed |
 
+**Made easy to start (2026-11-10, the owner's ask).** The form opens with three numbered steps
+(your address, your provider's key, Connect). It starts from what the portal knows, from
+`GET /connect` (`email.manage`): the From address and name already set, and a full example
+address on the company's own domain (`exampleDomain`: the signed-in person's domain unless it
+is a personal mail service such as Gmail, else the portal's address without its first part,
+else example.com), shown as the field's placeholder and as a chip in its hint that a tap puts in
+the field (the kit's `data-fill`). Each field has a round info button (core-ui `FormField`
+`info`) whose tinted note says what it is and where to find it. When a provider can send but no
+domain is added yet (one added on Integrations), opening the page takes in the domains and
+addresses the provider lists (`POST /domains/discover`), else adds the From address's domain
+(`POST /domains`), and checks it at once; the page says what it added, and nothing happens for
+a person who may not add domains. Each line of the result arrives a little after the one above.
+
 Below it, **Where does it land?** sends one test to a Gmail and one to an Outlook address through
 the provider picked (`POST /canary` with `to`), so staff see whether it lands in the Inbox or in
 Spam before a campaign.
@@ -454,6 +467,7 @@ with a template that holds code.
 | `DELETE /written/:id/files/:fileId` | `email.senders.use` | Take one file off the person's draft, from the bucket too |
 | `POST /written/:id/undo` | `email.senders.use` | Take back a scheduled email, or a sent one still in the queue: it becomes a draft (`KIT-E-1511` when too late) |
 | `DELETE /written/:id` | `email.senders.use` | Delete one of the person's drafts |
+| `GET /connect` | `email.manage` | What Email settings starts from: `{ from, name, example, providers, domains }`, the From address and name as set, a full example address on the company's own domain, how many providers can send and how many sending domains are added |
 | `GET /ready` | `email.read` | [Ready to send](#ready-to-send): `{ ready, checks: [{ id, title, state, detail, fix, href, read? }], checkedAt, checking? }`, read from what the portal knows; while a check has not passed and its facts are over two minutes old, the services and the domain are asked again after the answer (`checking: true`) |
 | `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
 | `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Integrations page calls it when a provider is made the one that sends |
