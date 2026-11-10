@@ -97,7 +97,7 @@ so comments are allowed.
   },
   "queues": ["client-oltrem-events", "client-oltrem-events-dlq"],
   "durableObjectClasses": ["KitCoordinator"],
-  "crons": ["*/5 * * * *"],
+  "crons": ["* * * * *"],
   "vars": ["CLIENT_ID", "PUBLIC_HOST", "ENVIRONMENT"],
   "secrets": ["SESSION_KEY", "KEK", "KIT_OPS_TOKEN", "ACCESS_AUD"],
   "exceptions": []

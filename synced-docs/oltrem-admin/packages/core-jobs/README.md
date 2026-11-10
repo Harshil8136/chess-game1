@@ -21,7 +21,7 @@ export const notes = defineModule({
 | Field | Rule |
 |---|---|
 | `id` | `<module>.<name>`, stable: the key of its row |
-| `every` | a count and a unit, `15m`, `6h`, `1d`; a minute at least. The tick's own cron (five minutes in the client template) is the floor: a job runs on the first tick after its time |
+| `every` | a count and a unit, `15m`, `6h`, `1d`; a minute at least. The tick's own cron (every minute in the client template, since 2026-11-10) is the floor: a job runs on the first tick after its time, or soon after when the tick is full (below) |
 | `summary` | a few words the jobs page shows |
 | `run(env, ctx)` | the work; it throws to fail |
 
@@ -75,15 +75,19 @@ jobs an env whose databases count each query (`countQueries`, exported for a cli
 nothing else about them changes),
 keeps what each run made (`last_queries`), and starts a job only when the queries so far, what its
 last run made (ten before its first) and the tick's last batch stay within `queryBudget`: 45 by
-default, the 50 less a few for the cron's other work. A job due every tick (every five minutes or
-less, the cron's own period) runs on every tick: a longer job starts only when it also leaves room
+default, the 50 less a few for the cron's other work. A job due every five minutes or less
+(`EVERY_TICK_SECONDS`, the portal's steady work) runs whenever it is due: a longer job starts only when it also leaves room
 for the ones due every tick that are still to run. The first job of a tick starts whatever it
 costs. A job that does not fit is `deferred`: it stays due, so it is the longest waiting on the
 next tick and goes first. So every tick after a new portal's first starts at least one job that
 had not run, and its jobs have all run within one tick per job not due every tick, plus one: the
 client template's tick test holds that bound, reading the period from `EVERY_TICK_SECONDS`
-(exported). In the client template a day of ticks runs every five-minute job on
-every tick, each tick within 45 queries (`templates/client/test/worker.test.ts`). `queryBudget` may also be a function of the env,
+(exported). A tick also runs at most `MAX_JOBS_PER_TICK`
+(3) jobs, the longest waiting first, so the jobs due every five minutes spread over the one-minute
+ticks instead of all landing on one: each run stays within the free plan's 10 ms of CPU (measured
+2026-11-10 at 1 to 3 ms a job; the [record](../../docs/records/2026-11-10-reads-cpu-and-campaigns.md)).
+`maxJobsPerTick` changes it. In the client template a day of one-minute ticks runs every five-minute job
+about every five minutes, never more than six apart, each tick within 45 queries (`templates/client/test/worker.test.ts`). `queryBudget` may also be a function of the env,
 asked once a tick, so it follows the client's Cloudflare plan: the client template hands in
 `PLAN_LIMITS[plan].jobQueries` from `@oltrem/core-health` (45 on the free plan, 900 on Workers
 Paid, of 1,000 an invocation). A function that throws is reported and the default is used.

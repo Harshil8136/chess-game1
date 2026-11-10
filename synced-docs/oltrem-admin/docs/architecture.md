@@ -43,7 +43,7 @@ flowchart TB
   subgraph worker [The one Worker]
     pipe["core-http pipeline<br/>/api/&lt;module&gt;/..."]
     pages["screens<br/>every other path"]
-    tick["scheduled: the five-minute tick"]
+    tick["scheduled: the tick, every minute"]
     queue["queue consumer"]
     wf["KitJobs: the one Workflow"]
   end

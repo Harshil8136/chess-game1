@@ -12,7 +12,7 @@ client's own configuration. Everything an agent or a person needs to know is in
 | Who may sign in | the IAM module: the Vendor, then the people the company invites; anyone else who passes the door reads "No account here". `ACCESS_AUD` names the client's Access application |
 | Who its messages come from | `email.from_address` and `email.from_name` in the `settings` of `oltrem.config.ts`, set at onboarding, or by an Owner on the Settings page; the email providers are connected, checked and switched on the Integrations page |
 | Oltrem Mail | the add-on that also sends through Cloudflare, with a Mail setup page; without it the portal sends through its providers. It is in when `src/mail.ts` wires it in, which only `pnpm exec oltrem mail add` (from `kit/`, no download) and `pnpm exec oltrem mail remove --confirm remove` write; the first deploy asks, and `pnpm exec oltrem mail status` says where it stands. With it, the portal also keeps mail sent to its mailboxes (the Inbox page): the Worker's `email` handler hands each message to Mail, which keeps it whole in the bucket under `mail/inbox/`; without it every address is refused. `npm run dev` shows the Mail setup page, the Inbox and Forwarding, what it would send through Cloudflare is logged by wrangler, never sent, and **Send a test** on Forwarding or Mailboxes (or `pnpm exec oltrem mail try`) mails the portal on this computer. `npm run dev -- --mail` (or `--no-mail`) puts Mail in (or takes it out) before the portal starts: the kit's start page sends it from its **With Oltrem Mail** tick |
-| What runs on its own | the five-minute tick (jobs and System status, with the free plan's budgets) and the one Workflow, `KitJobs` on the `JOBS` binding, which the tick starts for the nightly backup |
+| What runs on its own | the tick, every minute, at most three jobs a run (jobs and System status, with the free plan's budgets) and the one Workflow, `KitJobs` on the `JOBS` binding, which the tick starts for the nightly backup |
 | Who hears of a problem | a System status problem that lasts is an alert, emailed to the people `alerts.recipients` names, held in `alerts.quiet_hours`; an Owner sets both on the Settings page |
 | This client's own modules | `modules/`, each made by `oltrem new module` and listed in `src/modules.ts`, which the Worker mounts; `oltrem check modules` keeps each within its walls and its migrations adding only |
 | The kit's own files | the two workflows, `src/index.ts`, the kit's tests and configuration, `ai.md`: never edited here, which `oltrem check files` checks on every verify and deploy |
@@ -85,7 +85,7 @@ The first run:
 4. Home shows a card per module; the row at the top opens each page.
 
 The local data is kept in `.wrangler/` in this folder: stop the server and delete that folder to
-start again. wrangler never runs the five-minute tick by itself, so `npm run dev` runs it every
-minute through wrangler's test route (`--test-scheduled`, `/__scheduled`; since 2026-10-30): email
+start again. wrangler never runs the tick by itself, so `npm run dev` runs it every
+minute, as Cloudflare does, through wrangler's test route (`--test-scheduled`, `/__scheduled`; since 2026-10-30): email
 held until a provider sends, Send later, campaigns and the other jobs go on this computer too, each
 at its own pace.

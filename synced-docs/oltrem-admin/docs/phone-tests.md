@@ -114,6 +114,10 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P15 | Email, Write | From, To as chips (red when not an address), Cc and Bcc under More, template buttons in a row | [record](records/2026-11-01-email-remake.md) |
 | P16 | Email, Sent, then Addresses | the console pages fit; a domain's records with Copy buttons | [record](records/2026-10-31-email-console-remake.md) |
 | P56 | Integrations: connect Resend or Brevo from a tile under Email in one step, then open the provider's own webhooks page | Email in one step with Set up email on top; at the provider, the portal's address is already registered there, nothing copied by hand | [record](records/2026-11-03-easier-setup.md) |
+| P92 | Campaigns, open a campaign, then press each step: Who, What, Check, Send | the four steps in a row, a tick on the finished ones; each step shows only its part, with a Next link at its foot | [record](records/2026-11-10-reads-cpu-and-campaigns.md) |
+| P93 | A campaign whose Check step says it needs the footer: press Write the footer | it opens step 3 at the Footer box; save who sends it, why and a postal address, and the blocker is gone | [record](records/2026-11-10-reads-cpu-and-campaigns.md) |
+| P94 | A campaign that is sending: press Run now, then watch Progress | one run happens at once; the Run log under Progress shows its line (how many sent, in how many calls), newest first; pressed twice quickly, it says a run is already going | [record](records/2026-11-10-reads-cpu-and-campaigns.md) |
+| P95 | Tasks (the jobs page), a few minutes after the deploy | the five-minute jobs have run at different minutes, and each last ran within the past five minutes | [record](records/2026-11-10-reads-cpu-and-campaigns.md) |
 | P17 | Email, a bulk run | the results card readable without overflow | [record](records/2026-10-28-bulk-mail-watch.md) |
 
 ### Work modules
