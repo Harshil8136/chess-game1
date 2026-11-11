@@ -324,7 +324,14 @@ block (`data-stale`) until one works. A campaign's progress is the first such bl
 
 **Compose boxes** (the email Write page, 2026-11-01). An input with `data-chips` turns each
 address typed into a chip (its class is the attribute's value; a chip that is not an address gets
-`data-bad`), while a hidden input of the same name posts them comma-separated as before. A line
+`data-bad`), while a hidden input of the same name posts them comma-separated as before. Since
+2026-11-11 the box reads addresses out of whatever it is given, typed or pasted: a list split by
+commas, semicolons, tabs or lines, `Name <address>`, `Name (address)`, `mailto:` links, a name
+and an address on one line; an address already there is not added again, and a bare address the
+box's suggestions know (its `list`) takes their name. A form with `data-keep-typed` (Email's
+Write), once typed in, is not left by a link or a closed tab without the browser asking first;
+sending it, or saving it, leaves freely; `data-keep-typed="unsaved"` counts it as typed from the
+start (a page drawn again with what was typed). A line
 marked `data-fold` with an empty input folds behind the button whose `data-unfold` names it. A
 button with `data-mark` (`strong`, `em`, `list`, `link`) puts that mark around the selection in
 the box its `aria-controls` names; a block with `data-marks-of` draws that box's words with
