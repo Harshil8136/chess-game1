@@ -125,6 +125,16 @@ default, leaves the client file's `brand.look`. Owner-editable, immediate, in th
 section of the Settings page too. The settings module always registers it. The template reads it
 from memory with the parts on every request, so a change costs no read of its own.
 
+## The portal's name and icon
+
+`settings.portal_name` (`NAME_SETTING`) and `settings.portal_mark` (`MARK_SETTING`), since
+2026-11-11, are what the sidebar, the phone's bar and the browser tab show for the portal: a name
+of at most 40 characters (empty leaves the client file's `name`), and the tile beside it, empty
+for the portal's initials, `icon:<name>` for one of the screens' icons, or
+`picture:<file>` for a small picture the screens keep in the bucket under `ui/mark/`. Both are
+Owner-editable and immediate, set on the Settings page's Name and icon card, and always
+registered by the settings module; the template reads them from memory with the parts.
+
 ## The parts switches
 
 Given `parts: { modules }`, the settings module also keeps the portal's parts (its modules)

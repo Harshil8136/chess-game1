@@ -54,6 +54,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [Versions and release notes](release.md) | how packages are versioned and how a change's note is written | living |
 | [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Phone tests owed](phone-tests.md) | every phone test still owed, by page, with what to see; passed and failed ones | living |
+| [Phone tests owed: Email and Mail](phone-tests-email.md) | the phone tests owed on the Email pages and the Mail setup, split from the list above | living |
 | [Token registry](reference/tokens.md) | every credential by name, its scopes, where it is stored and why it exists | generated from `tokens.registry.json` |
 | [What verify runs](reference/verify.md) | the gates, their order and what each refuses | generated from `scripts/lib/gates.mjs` |
 | [Open-source ideas](reference/open-source-ideas.md) | 30 ranked open-source ideas | proposed |

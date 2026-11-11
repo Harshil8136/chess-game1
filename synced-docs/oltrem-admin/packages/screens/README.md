@@ -22,7 +22,7 @@ import { createScreens } from '@oltrem/screens';
 const screens = createScreens({ portal: client.name, owner: client.owner, modules });
 const app = createApp<Env>({
   modules,
-  publicRoutes: screens.publicRoutes, // /ui/app.css and /ui/app.js, before the door
+  publicRoutes: screens.publicRoutes, // /ui/app.css, /ui/app.js, the font and the icon, before the door
   localDoor: { enabled: (env) => !env.ACCESS_AUD, page: screens.signInPage },
   // ...the session hook, the authorizer and the rest, as in @oltrem/core-http
 });
@@ -49,6 +49,15 @@ modules' own.
 frame, by its address: the function takes the page as drawn and the page's API and returns what
 the frame shows. The client template hands `{ '/email': emailFrame }` from `@oltrem/email/pages`,
 so the delivery log sits beside Email's folders like every other Email page.
+
+`createScreens({ brand, files })` (2026-11-11) give the portal its own name and icon:
+`brand()` returns the `settings.portal_name` and `settings.portal_mark` values (the template's
+reads them from the settings snapshot), and `files(env)` the portal's one bucket, where a picture
+icon is kept under `ui/mark/`. Without `brand` the name is `portal` and the tile its initials;
+without `files` a picture cannot be the icon. The name and icon show in the sidebar, on a phone's
+top bar, on the sign-in and customer pages, and as the tab's icon: the picture itself, or the
+initials or icon drawn on the look's colours as a small SVG written into the page (`faviconOf`,
+`src/marks.tsx`), so no page asks for `/favicon.ico`.
 
 ## The pages
 
@@ -93,7 +102,7 @@ so the delivery log sits beside Email's folders like every other Email page.
 | `/backup` | the backup runs | `/api/backup/runs` |
 | `/github` | the kit version, a newer release, the deploy runs | `/api/github/status`, `runs` |
 | `/health` | each health check with its state, and the free plan's budgets; how many measured ones are close to their line (one not measured yet is not counted) | `/api/health/checks`, `budgets` |
-| `/settings?show=changed&q=` | the settings in sections with plain names, in a fixed order (Company, Email, Money, Users & access, Security; System for the Vendor alone), each a chip in a sideways row and an anchor; All and Changed (n) chips and a search box (at once with the frame script, by `?q=` without it). Each row: its title, one line, its value in a control of its type (a box, a number with its unit, a switch, a choice as chips, a list one item per line); since Look 3 (2026-11-08) one Save bar rises at the foot once anything changed, with Discard, instead of a Save on every row (always showing without the page script); Changed with the default and Reset to default when it is not the default, and who changed it last and when. An Owner, or anyone but the Vendor, sees only the rows they may change, and one line counting the rest; the Vendor also sees each key, small and muted. Settings that share a name across modules (the currencies, the time zones) get one form above them that sets them all. Since 2026-11-11 (the owner's ask for icons, colour palettes and a better arrangement): the page opens with its figures (settings, changed, sections, after a deploy); each section has its icon and colour (the sidebar's group colours) and a line on what it holds, with its count and how many are changed; on a wide screen the sections are a list down the left that stays in view, on a phone a sideways row of the same chips with icons; a changed row is marked along its left edge, and its default and last change are small tags; whoever may change `settings.look` (an Owner, the Vendor) gets **Colours for everyone** first: the 24 palettes and the 7 backgrounds of `looks.ts` as tiles in two sideways rows, saved with the page's one form | `/api/settings/values` |
+| `/settings?show=changed&q=` | the settings in sections with plain names, in a fixed order (Company, Email, Money, Users & access, Security; System for the Vendor alone), each a chip in a sideways row and an anchor; All and Changed (n) chips and a search box (at once with the frame script, by `?q=` without it). Each row: its title, one line, its value in a control of its type (a box, a number with its unit, a switch, a choice as chips, a list one item per line); since Look 3 (2026-11-08) one Save bar rises at the foot once anything changed, with Discard, instead of a Save on every row (always showing without the page script); Changed with the default and Reset to default when it is not the default, and who changed it last and when. An Owner, or anyone but the Vendor, sees only the rows they may change, and one line counting the rest; the Vendor also sees each key, small and muted. Settings that share a name across modules (the currencies, the time zones) get one form above them that sets them all. Since 2026-11-11 (the owner's ask for icons, colour palettes and a better arrangement): the page opens with its figures (settings, changed, sections, after a deploy); each section has its icon and colour (the sidebar's group colours) and a line on what it holds, with its count and how many are changed; on a wide screen the sections are a list down the left that stays in view, on a phone a sideways row of the same chips with icons; a changed row is marked along its left edge, and its default and last change are small tags; whoever may change `settings.look` (an Owner, the Vendor) gets **Colours for everyone** first: the 24 palettes and the 7 backgrounds of `looks.ts` as tiles in two sideways rows, saved with the page's one form; and (2026-11-11) **Name and icon** for an Owner and the Vendor: the portal's name (up to 40 letters, empty for the client file's) and its tile as a sideways row: Initials, the 32 icons of `MARK_ICONS` (Lucide, each named for what it draws) and Picture, with Upload a picture. The frame script draws the picked file on a 128 px canvas and sends it as WebP (PNG where the browser cannot) in `brand:picture`; `POST /settings` takes it only as WebP, PNG or JPEG read from its own bytes, at most 48 KB (`pictureOf`), keeps it in the bucket under the first 16 hex digits of its SHA-256 and saves `picture:<file>`; `brand:name` and `brand:mark` save `settings.portal_name` and `settings.portal_mark` with the rest of the form | `/api/settings/values` |
 | `/alerts` | the open alerts with what became of their email and who is on each, then the ones resolved lately | `/api/alerts/items` |
 | `/audit?outcome=&module=&actor=&before=` | the audit log, newest first, narrowed from two rows (everything, refused, failed; every section or one) and to one person by tapping their address, paged by Older; each change with how it arrived (method, route, status, code) and, on a computer, where from; the daily seals and whether each holds; the export form | `/api/audit/entries`, `seals` |
 
@@ -284,7 +293,7 @@ still loading, and after 150 ms the page dims (`data-loading`), so a press is se
 tab, segment and section carry a mark (`.ui-mark`) the script adds and names alike on both pages
 of a change, so it glides; a filter on the same page moves the mark alone (`data-vt="mark"`). A
 page that arrives counts its plain figures up and fills its meters, keeping the real figure for a
-screen reader (2026-11-11, the owner's V22 and V30 clips). A link to a section of the page on screen (`#invite`) is the browser's own: it
+screen reader (2026-11-11, the owner's V22 and V30 clips); a figure a live block brings changed glides from the old value to the new in 400 ms (none under reduced motion). A link to a section of the page on screen (`#invite`) is the browser's own: it
 scrolls there, and the popstate it fires is not taken for Back (until 2026-10-31 it fetched the
 page again and put it back at the top, which looked like a reload). Lists of boxes to tick: a
 group's ticks are counted (`data-check-group` with `data-count`, the form's in
@@ -293,6 +302,13 @@ hides the `data-filter-item` rows (and emptied `data-filter-group`s) of the elem
 those controls start `hidden` with `data-enhance` and appear with the script. A switch whose
 `data-needed-by` names the values of other switches of its name (the Modules page) shows the
 element its `aria-describedby` names while it is off and one of them is on.
+
+**The page alone.** Each page carries a key of its frame (`data-frame`: the portal's name and
+icon, the person, the sidebar's rows, the unread count). The script sends it as `x-ui-frame` on
+every page it fetches; when the server's key for the new page is the same, the answer is only
+`<div class="ui-frame" data-here="…"><main>…</main></div>`, 40 to 80 percent smaller and 1 to
+2.5 ms less CPU (2026-11-11, [the record](../../docs/records/2026-11-11-portal-name-icon-font.md)),
+and `data-here` names the sidebar row to mark. A page whose key differs is opened whole.
 
 **Live blocks.** A block marked `data-live="name"` with `data-refresh="seconds"` (at least five)
 is kept up to date: the script fetches the page again, or the lighter page `data-refresh-from`
@@ -359,7 +375,15 @@ script, copied from `src/client/frame.js` with its comment lines and indents lef
 28 KiB (39 KiB as written). The build refuses a string or template that spans lines, the one case
 where that is not safe, and checks that the result compiles.
 
-**Served by the Worker, never as static assets.** Both files are strings in
+**The font** (2026-11-11): Inter Variable, Latin letters only (English first, Spanish's accents
+ready), 47 KiB, from `@fontsource-variable/inter` at build time (SIL Open Font License 1.1, its
+notice in the generated file). The build puts its `@font-face` at the top of `/ui/app.css`, and
+the Worker serves it at `/ui/inter.woff2` under its version (`APP_FONT_VERSION`), kept for good
+and preloaded by every page; the device's own font shows until it arrives (`font-display: swap`).
+A brand font (`--brand-font`) still comes first. **The icon** is served at `/ui/mark/:file`, a
+name made of its contents, kept for good, with its own type and `nosniff`; anything else is 404.
+
+**Served by the Worker, never as static assets.** The stylesheet, the script and the font are strings in
 `src/generated/assets.ts`, served by `publicRoutes` before the door, cached for good under the
 version every page links (`src/generated/versions.ts`) and `no-cache` without it. From 2026-11-03
 to 2026-11-04 they were Cloudflare static assets: a Worker with static assets runs behind
@@ -385,7 +409,7 @@ edit them by hand (R-06).
 
 ## Tests
 
-`test/css.test.ts` holds the committed stylesheet to its build; `test/module-pages.test.ts` mounts a module's pages on Node: the sidebar entry in its group, the page in the frame, a form back by its redirect and another site's refused; `test/people-access.test.ts` holds the invitation to the roles the person may give and the Users & access row to the pages each person may use. The client template's
+`test/css.test.ts` holds the committed stylesheet to its build; `test/marks.test.ts` holds what a mark setting names, a picture icon read from its own bytes and never large, and the tab's icon; `test/frame.test.ts` the frame script's moves, the page alone with its frame key among them; `test/module-pages.test.ts` mounts a module's pages on Node: the sidebar entry in its group, the page in the frame, a form back by its redirect and another site's refused; `test/people-access.test.ts` holds the invitation to the roles the person may give and the Users & access row to the pages each person may use. The client template's
 `test/screens.test.ts` runs the whole first run inside the Workers runtime: the Vendor signs in on
 this computer, creates the company, the Owner accepts, every page answers with its words and
 Home shows every module's card; a
