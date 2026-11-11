@@ -17,6 +17,7 @@ sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the reco
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P131 | A portal with Brevo and Resend both connected: Email, Compose, send yourself a short email; then open it in Gmail | Ready to send has no amber Everyday email line; the email arrives from Resend (Show original: no sendibt or Brevo links, no List-Unsubscribe) and, from a sender you have replied to before, in Primary | [record](records/2026-11-11-gmail-primary.md) |
 | P69 | Email settings in the sidebar | Its tabs in a row: Email settings (connect a service), Addresses, Integrations, Mail setup, Forwarding; Email itself shows Write, Inbox, Drafts, Sent, Templates | [record](records/2026-11-08-email-for-the-client.md) |
 | P70 | Email, Write: attach a file over 10 MB, send it to yourself | The email ends with Files to download, the file's name, size and a link; the link downloads it | [record](records/2026-11-08-email-for-the-client.md) |
 | P75 | A portal with Mail and a mailbox: Email, Inbox, then open a conversation; on a computer too | Phone: folder chips (Inbox, Updates, Snoozed, Archived, Spam, All, Drafts, Sent) over the list, a round Compose button at the bottom right; a conversation fills the screen with Back to the same list. Computer: folders with Compose on the left, the list, the conversation beside it | [record](records/2026-11-08-email-for-the-client.md) |

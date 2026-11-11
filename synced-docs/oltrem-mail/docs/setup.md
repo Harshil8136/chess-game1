@@ -241,3 +241,30 @@ the computer. Read from ImprovMX works there too, since it only reads.
 Every Cloudflare and DNS call is counted: 35 a press and 8 a run of the five-minute job, inside
 Workers Free's 50 an invocation; what is left over is done by the next run. Each move, move back
 and import is on the audit log, a refused one too.
+
+## 6. Landing in Gmail's Primary tab, not Promotions
+
+Added 2026-11-11, after the owner found every portal email in Promotions. No header or setting
+makes Gmail put a message in Primary: it decides for each recipient from who sends, what the
+message looks like, and how that person treated mail from the sender before (replies, moving a
+message to Primary, adding the sender to contacts). What the portal controls is that its everyday
+mail carries none of the signs of marketing mail.
+
+| Sign of marketing mail | What the portal does |
+|---|---|
+| An open-tracking pixel, and links sent through the provider's own address | Everyday mail (Write, replies, automated notices) asks the provider not to track it, where the provider takes that for one message (Postmark, SendGrid, Mailgun, Mailjet). Resend tracks only when tracking is switched on for the domain in its dashboard, and it starts off. |
+| A provider that tracks every message and adds a `List-Unsubscribe` header to each (Brevo; Sender tracks every message too) | Everyday mail goes through another connected provider first, and the tracking one stays the backup. With no other provider, Ready to send says "Everyday email lands in the inbox" and names the fix: add one, such as Resend. |
+| `List-Unsubscribe` and an unsubscribe footer | Only on campaigns, which need both by law and by Gmail's bulk-sender rules. A campaign is marketing, and Gmail mostly files it under Promotions, which is not spam. |
+
+What only the client can do, outside the portal:
+
+1. Send everyday mail through a provider that does not track it (Resend, Postmark, Mailgun), and
+   keep a tracking provider such as Brevo for campaigns.
+2. Send campaigns from their own address on their own subdomain (`news.example.com`), so Gmail
+   learns the everyday address as a person's: Google's sender guidelines ask for a separate
+   address for each kind of mail.
+3. Write everyday mail like a letter: plain words, a few links, from a person's name, with a reply
+   address someone reads.
+4. Once DMARC reports show every provider passing, move DMARC from `p=none` to `p=quarantine`.
+5. Ask a few regular customers to reply once, or to move one email to Primary: Gmail then keeps
+   that sender in Primary for them.

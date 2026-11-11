@@ -19,7 +19,7 @@ So everything here is written as public (R-04), and is public once the kit takes
 | Document | What it holds | Status |
 |---|---|---|
 | [The plan](plan.md) | the owner's questions answered, the two routes, where the code lives, records, features, limits, costs, deliverability, risks, build order, the owner's decisions | approved |
-| [The setup page](setup.md) | the provider card (two fields), the Cloudflare card (Free and Paid modes), delivery reports, the backup provider and the SPF count | approved |
+| [The setup page](setup.md) | the provider card (two fields), the Cloudflare card (Free and Paid modes), delivery reports, the backup provider, the SPF count, and landing in Primary rather than Promotions | approved |
 | [The inbox](inbox.md) | arrival with the 128 KB rule, what D1 and R2 keep, reading on the phone, the reading frame, threads, mailboxes, and where the build differs | approved |
 | [The agreement with the kit](kit-contract.md) | what mail takes from the kit, what it gives back, the numbers each side holds, how a change crosses | living |
 | [The tokens](reference/tokens.md) | every credential this repository names, from `tokens.registry.json` | generated |

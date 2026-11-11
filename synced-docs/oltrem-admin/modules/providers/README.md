@@ -166,7 +166,11 @@ email module never names a provider.
   SendGrid's categories, Mailgun's `o:tag`, Mailjet's `CustomCampaign`, Mailtrap's `category`.
   `tracking: false` asks the provider not to track opens and clicks, in its own words: Postmark
   `TrackOpens` and `TrackLinks`, SendGrid `tracking_settings`, Mailgun `o:tracking`, Mailjet
-  `TrackOpens` and `TrackClicks`; the others track by their account setting. `bulk: true` sends
+  `TrackOpens` and `TrackClicks`; the others track by their account setting. A definition that
+  tracks every message with no way to stop it says `alwaysTracks: true` (Brevo, Sender and Sender
+  SMTP, 2026-11-11): Gmail reads an open pixel and links sent through the provider's own address
+  as signs of marketing mail, so the email module sends everyday mail through another route first
+  when there is one. `bulk: true` sends
   bulk mail the provider's bulk way: Postmark's broadcast stream, the instance's
   `broadcastStream` field, read in the template as `{{bulk.broadcastStream}}` (the `bulk` scope is
   the config, present only for a bulk message). A definition's `send.bulkNeeds` lists the config
