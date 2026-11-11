@@ -66,7 +66,7 @@ flowchart TD
    migrations only add, so the version before runs on it.
 6. **Says how it went.** The build's log has a line per portal: `updated`, `unchanged`, `off`,
    `held` or `failed`, with the steps under it. The build is red when any portal failed or was
-   held. With the GitHub token, each portal that did not update gets an issue named
+   held, or when the key found no portal at all. With the GitHub token, each portal that did not update gets an issue named
    `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
    closed by the first run that updates it.
 
@@ -89,7 +89,9 @@ but Cloudflare's build secrets.
      Queues Edit, Account Settings Read.
    - Zone: Workers Routes Edit (a portal on its own address).
    - User: Memberships Read, User Details Read.
-   - Account Resources: All accounts. Zone Resources: All zones. TTL: no shorter than a year.
+   - Account Resources: the accounts that hold portals, your own and each client's. All accounts
+     works too: the fleet only ever acts on an Oltrem portal, and only reads the lists of any
+     other account. Zone Resources: All zones. TTL: no shorter than a year.
 4. **Connect the kit once.** In the Vendor's account: Workers and Pages, Create, Import a
    repository, pick the kit repository, name the project `oltrem-fleet`, with these build
    settings (all of it works from a phone):
@@ -105,7 +107,7 @@ but Cloudflare's build secrets.
        and write on the kit repository only.
      - `OLTREM_FLEET_REPO` (variable, optional): the kit repository as `owner/name`, for the issues.
 5. **Try it.** Run the build once from the dashboard (Deployments, Retry). The log lists every
-   portal found. `npm run oltrem -- fleet --check`, with `OLTREM_FLEET_TOKEN` set, says the same
+   portal found. A key that finds no portal at all turns the build red. `npm run oltrem -- fleet --check`, with `OLTREM_FLEET_TOKEN` set, says the same
    from a computer without changing anything.
 
 ## The key
