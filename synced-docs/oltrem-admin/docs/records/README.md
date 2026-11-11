@@ -172,6 +172,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The start page as a dashboard](2026-10-29-start-dashboard.md) | each start takes the newest kit, installs and checks; the page runs the portal |
 | [Email allowance, and code kept once](2026-10-28-email-allowance-and-shared-code.md) | what each provider has left; bulk mail never past it; four helpers kept once |
 | [Generated module pages](2026-10-27-module-generator-pages.md) | a client's new module has permissions and a sidebar page from its first deploy |
+| [Compose as one window, and the phone's bar back at the top](2026-11-11-compose-and-phone-bar.md) | Compose's tinted head with the pen and a Ready to send chip, the fields flush, the message to the foot of the screen; on a phone a bar along the top opens the sidebar, nothing along the bottom |
 | [The sidebar tidied](2026-11-11-sidebar-tidy.md) | every row on one column, the bell inset, 18 px icons on the closed rail's centre line, the portal's mark at its top, no scroll bar and a soft fade |
 | [Pages that move like the owner's clips](2026-11-11-page-motion.md) | panes and figures that sharpen in turn, numbers that count up, meters that fill, columns that grow, a marked tab, filter or section that glides, a slow page that dims |
 | [Email settings made easy to start](2026-11-10-email-easy-start.md) | three numbered steps, a full example sender address to tap, info notes behind round buttons, a provider's domain added and checked by itself |
