@@ -64,7 +64,8 @@ flowchart TD
    writes the choices in, and runs `oltrem release`: the restore point, the migrations, the
    deploy, the health check and the step back. The database is never stepped back: the kit's
    migrations only add, so the version before runs on it.
-6. **Says how it went.** The build's log has a line per portal: `updated`, `unchanged`, `off`,
+6. **Says how it went.** The build's log first names the accounts the key reaches and any
+   database named like a portal's that it passed over, with the reason. Then it has a line per portal: `updated`, `unchanged`, `off`,
    `held` or `failed`, with the steps under it. The build is red when any portal failed or was
    held, or when the key found no portal at all. With the GitHub token, each portal that did not update gets an issue named
    `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
