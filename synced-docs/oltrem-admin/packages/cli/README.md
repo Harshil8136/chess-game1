@@ -217,7 +217,10 @@ not hand a Worker with static assets the Access sign-in:
    second Worker and lose the address.
    **The sign-in email.** The Vendor's address, read from the database when it has one ("you sign
    in as …"), asked first while it has none or before the first deploy has made it. It is written
-   in step 6.
+   in step 6. Once it is set, "Is that the right Vendor?" offers **Keep**, **Add another Vendor**
+   (since 2026-11-11: it asks the other Vendor's address, refuses the Vendor's own or one that is
+   not an address, and puts it in the next question's list with the role Another Vendor, where it
+   can still be taken out) and **Change the Vendor**.
    **Who else will use the portal**: addresses, each as Owner, Staff, Your team or Another Vendor, written in
    step 6 to `iam.setup_people`. In the terminal a role's word follows its address
    (`name@example.com owner`); a row with no role keeps the role the person has, and someone new
@@ -330,7 +333,12 @@ differ), light and dark, as an app shell since 2026-10-31: on a computer (960 px
 sidebar of sections, the seven steps under **Put it on Cloudflare** each with its state (waiting,
 in progress, needs you, done, stopped), and a main area up to 1200 px; on a phone the sidebar is a
 sideways row of chips under the top bar. All seven steps show from the start (their names are the
-deploy's own titles; a test compares them with `deploy.ts`), with a bar of seven for the progress.
+deploy's own titles; a test compares them with `deploy.ts`), with a band over them: a ring of the
+steps done (blue while running, amber when it needs you, green when done, red when stopped), the
+step's name and a bar of seven. Since 2026-11-11 it has the portal's Look 3 feel: a translucent
+top bar, an icon on each section, the steps joined by a line with the running step's number
+pulsing softly, questions in a soft amber card, answers in a soft green one, and what appears
+rising 6 px out of a 4 px blur in 320 ms (nothing moves with reduce motion on).
 
 A `Step n of 7: …` title line starts a step, and every later line, question and tool run belongs
 to it, sorted into parts: what it is (`text` lines), **What to do** (`do` lines, a numbered
@@ -376,7 +384,8 @@ A question with choices (the account, the domain) is a grid of cards, label and 
 given before (`value`) or the first chosen already, arrow keys between them; a question may carry
 `value` (the answer filled in) and `help` (more lines under it). A question with `list`
 (`{ placeholder?, min?, roles?: { value, label }[] }`) takes several entries: one row each, with a
-role to pick per row when it has `roles`, a remove button and **Add another**; Enter adds a row and
+role to pick per row when it has `roles` (a row of chips under the address, wrapping on a computer
+and scrolling sideways on a phone, never a dropdown), a remove button and **Add another**; Enter adds a row and
 Enter on an empty row sends it, pasted lines become one row each, and it is not sent with fewer than
 `min` entries or one entry twice. It starts from `value` (one entry per line, `entry<TAB>role`) and
 answers the same way: the filled rows, one per line, the role after a tab when there are roles.
@@ -393,7 +402,10 @@ port, a refused socket), the same deploy runs in the terminal instead.
 update brought in or why it was held, Node, the doctor's checks, where the portal is set up to
 live), sent first to every page that connects, before the choices; a `status` event from a run
 (**Check again**, `run.mjs check`) replaces it. Its sections: **Overview** (what runs now, with a
-way to it, and a tile each for this computer, the portal here and Cloudflare), **This computer**
+way to it; while nothing runs, a band with the one next move from what the start found: what to
+fix first on this computer, **Put it live** with **Try it here first**, or the live address with
+**Open the portal** and **Update it**; then a tile each, with its icon, for this computer, the
+portal here and Cloudflare), **This computer**
 (the kit: its state, commit, day, latest change, Node, what an update brought in; beside it the
 checks: each one that needs a look with its title, summary and fix, a fix that is a command, or a
 few joined by "or", a box with **Copy**; **Check again** in the section's corner), **Try it here**

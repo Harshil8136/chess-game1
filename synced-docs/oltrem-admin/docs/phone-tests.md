@@ -25,6 +25,8 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P125 | On the PC: the start page (`npm start`), Overview and Put it on Cloudflare; narrow and dark too | A band names the next move; tiles have icons; a ring shows the steps done; the steps sit on one line | [record](records/2026-11-11-setup-page-look.md) |
+| P124 | On the PC: `npm run setup`; at step 2 pick Add another Vendor, type a second address of yours | The next list has it with the Another Vendor chip; after the deploy it signs in as a Vendor | [record](records/2026-11-11-setup-page-look.md) |
 | P90 | Email settings, Integrations, before email is set up: Ready to send | Each check that stops email says what to do in a soft coloured box you can press, not a long underlined line; the letters on the service tiles are easy to read | [record](records/2026-11-08-look-3-pages.md) |
 | P79 | Email in the sidebar, then its tabs row | The page that lists every email sent is called Delivery log, in the tabs row and as its heading (no Activity) | [record](records/2026-11-08-look-3-pages.md) |
 | P78 | System status, Alerts, with nothing open; then Roles | An empty list shows a calm box with its sentence centred, not a thin strip; the roles sit on a white card | [record](records/2026-11-08-look-3-pages.md) |
