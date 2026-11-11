@@ -346,7 +346,7 @@ textarea's words with their marks made HTML, or its HTML when the block has `dat
 Buttons, selects and colour inputs with `data-rich-cmd` run the browser's editing command of that
 name (`quote` toggles a blockquote; `link` opens the block's `data-rich-link` line, whose
 `data-rich-link-add` and `data-rich-link-close` buttons add the link or close it; Ctrl or Cmd K
-opens it too). A paste keeps only the composer's tags and looks. The textarea holds the
+opens it too). A paste keeps only the composer's tags and looks; a paste whose plain text is HTML code (it opens with a tag, ends with one and closes one) instead checks the form's `format` radio set to `html` and puts the code in the textarea as it is, when the block has `data-rich-code`, with an info notice; without `data-rich-code` it goes in as words from the plain text, and the notice says why (2026-11-11). The composer writes its HTML into the textarea on a send only while it is on, so code in the textarea is what goes. The textarea holds the
 composer's HTML and the form gains a hidden `editor=rich`. Nodes marked `data-rich-hide` hide and
 those marked `data-rich-show` show; a `format` radio set to `html` hands the textarea back as code,
 and another choice takes it into the composer again. The server cleans the HTML again; without the

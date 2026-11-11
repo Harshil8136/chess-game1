@@ -26,6 +26,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P132 | On the live portal, after `git pull` and `npm run deploy` in templates/client: the account menu, tap a colour dot; then a theme icon, and close and open the sidebar | The colours change at once and stay after a reload; no "Not signed in" (KIT-E-0401) page | [cli README](../packages/cli/README.md) |
 | P130 | Home, then leave it open a minute while an email goes out or a task changes | A figure that changes glides to its new number instead of jumping | [record](records/2026-11-11-portal-name-icon-font.md) |
 | P129 | Tap from Home to People, Settings and Email | The sidebar stays where it was scrolled and marks the new page; pages open a little quicker; the letters are the new font, Inter | [record](records/2026-11-11-portal-name-icon-font.md) |
 | P128 | Settings, Name and icon: Upload a picture, pick a logo from the phone, Save | The picture shows in the tile, the sidebar, the top bar and the tab; it stays after a reload; a file that is not a picture is refused in words | [record](records/2026-11-11-portal-name-icon-font.md) |
