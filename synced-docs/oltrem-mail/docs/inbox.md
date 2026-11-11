@@ -2,7 +2,7 @@
 title: 'Oltrem Mail: the inbox'
 status: approved
 owner: vendor
-last_verified: 2026-11-02
+last_verified: 2026-11-11
 sources: [Cloudflare docs read 2026-11-02 (email handler, Email Routing, subdomains, headers, limits; D1 limits), postal-mime and DOMPurify documentation, oltrem-admin packages/core-http, the owner's decisions of 2026-11-02]
 ---
 
@@ -206,3 +206,28 @@ Bundle B of [the same research](research/2026-11-02-easier-mail.md)
   comes back to the top of its box once, marked "No answer yet", as Gmail's nudges. An answer
   clears it; a muted, snoozed or spam conversation is left alone.
 - **Undo send** lasts 5 to 30 seconds, as the Owner sets it (`email.undo_seconds`, 10 by default).
+
+## 9. Gmail's stars, labels, keys and pane (as built, 2026-11-11)
+
+From [the research on making Email feel like Gmail](research/2026-11-11-gmail-style.md)
+([the record](records/2026-11-11-gmail-style-email.md)):
+
+- **Stars.** A star on each row and on the open conversation, kept on the conversation for the
+  whole team (`mail_threads.starred`), with a Starred folder and `is:starred` in search.
+- **Labels.** Anyone who reads the inbox puts a label on ticked conversations or the open one from
+  the Label menu, or types a new one there; Undo takes it off. A label's name is kept lower-case
+  with its spaces as dashes, 30 characters at most, as the rules always kept them. Each label has
+  one of core-ui's colours (`mail_labels`) and its own folder; Labels (`/email/inbox/labels`)
+  renames and recolours them for anyone who reads the inbox, and removes one, from every
+  conversation and rule, for those who manage it. `label:` searches by one.
+- **The top bar.** A search box, then the tick-all box and, once a row is ticked, Archive, Spam,
+  Mark read and unread, and the Snooze, Label and More menus; on a phone the menus open as a sheet
+  from the bottom.
+- **Quick settings**, behind the cog: Split (the conversation beside the list) or Full, Default or
+  Compact rows. Kept in two cookies on that browser for a year, never in the database or KV.
+- **Keyboard shortcuts** on a computer, Gmail's own keys (the `?` sheet lists them), run in the
+  browser by `src/reader/keys.js`, served with the reader's scripts; they wait while a box is being
+  typed in, and the sheet switches them off for that browser.
+- **The room used.** Each mailbox keeps a running total of its stored copies' bytes
+  (`mail_mailboxes.stored_bytes`), added to on arrival and taken from by retention, so the left
+  pane's Mail storage gauge reads one row a mailbox, against the bucket's 10 GB free.

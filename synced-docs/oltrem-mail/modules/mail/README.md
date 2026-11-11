@@ -155,10 +155,11 @@ The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 | Automatic reply | per mailbox (`PUT .../mailboxes/:id/auto-reply`, `mail.inbox.manage`): on or off, a subject (empty answers `Re:` and theirs, in their conversation), its words, and a first and last day on the company's clock; turning it on makes the mailbox's address a sender, as the first reply does. Sent through email (`email.send`, message key `mail.auto.<tenant>.<message>`, so a message delivered twice is answered once) once the message is kept, at most once a sender in four days (`mail_senders.auto_replied_at`), never to a list or machine, a no-reply, mailer-daemon or notifications address, the mailbox itself, spam, or a sender whose SPF, DKIM and DMARC all failed; a reply that does not go is recorded on the mailbox (and System health) and never fails the delivery. It goes through the provider's route and its daily allowance, not Cloudflare's `message.reply()` (unconfirmed on the free plan), and carries no `Auto-Submitted` header (email has no header option yet) |
 | No answer yet | a reply from the portal starts a wait (`waiting_since`); their answer ends it; three days without one, the hourly `mail.inbox` job brings the conversation back to the top of its box once (`nudged`), marked "No answer yet"; never spam, muted or snoozed ones |
 | Snooze, mute, sweep | snooze: in three hours, tomorrow at 8 or Monday at 8 on the company's clock (`email.timeZone`), then back at the top of its box, unread; new mail wakes it early. Mute: archived, and new replies stay archived until Unmute. Archive all from sender: every conversation of that sender archived, and, where the person manages the mailbox, an archive rule for their next mail (once, within the 200 rules) |
-| Search | an FTS5 index without content over the first 8 KB of each message's text, accents folded; each word matched as a prefix; Gmail's words read first, across every box: `from:`, `to:`, `subject:` (a quoted phrase too), `has:attachment`, `is:unread`, `is:read`, `before:` and `after:` a day (`2026-10-31`), `in:` a box (`inbox`, `updates`, `snoozed`, `archived`, `spam`, `anywhere`) |
-| Reading | the Worker passes the stored copy along without reading it (the first 256 KB, all of it with `whole=1`, always as a download); the phone reads it with the reader script, served by the hook `GET /hooks/mail/reader/<version>/<file>` (postal-mime, DOMPurify, `src/reader/reader.js` and the list's `src/reader/swipe.js`, built into `src/generated/reader.ts` by `pnpm docs:build`) into a frame that never runs a script (docs/inbox.md section 4) |
+| Search | an FTS5 index without content over the first 8 KB of each message's text, accents folded; each word matched as a prefix; Gmail's words read first, across every box: `from:`, `to:`, `subject:` (a quoted phrase too), `has:attachment`, `is:unread`, `is:read`, `before:` and `after:` a day (`2026-10-31`), `in:` a box (`inbox`, `updates`, `snoozed`, `archived`, `spam`, `starred`, `anywhere`), and since 2026-11-11 `label:` a label and `is:starred` |
+| Reading | the Worker passes the stored copy along without reading it (the first 256 KB, all of it with `whole=1`, always as a download); the phone reads it with the reader script, served by the hook `GET /hooks/mail/reader/<version>/<file>` (postal-mime, DOMPurify, `src/reader/reader.js`, and the list's `src/reader/swipe.js` and `src/reader/keys.js`, built into `src/generated/reader.ts` by `pnpm docs:build`) into a frame that never runs a script (docs/inbox.md section 4) |
 | Replying | `POST .../reply` writes through email's Write (its checks, its Undo, the Sent page) from the mailbox's own address, added as a sender by itself the first time at the mailbox's own location (since 2026-11-03; before, at the company), so the people who may reply there are the ones who may send from it, with In-Reply-To and References so the reply and the customer's answer stay in the conversation; a reply taken back with Undo leaves the conversation |
-| Room | `GET /api/mail/inbox/usage`: messages, stored bytes, an estimate of the rows; the retention setting keeps both inside the free plan |
+| Stars and labels | since 2026-11-11 (migration 1016): a star on a conversation for the whole team (`mail_threads.starred`); labels put on by a person as well as by a rule, kept on the conversation space-separated, lower-case with spaces as dashes (`labelName`), each with a colour from core-ui's `LABEL_COLORS` in `mail_labels`; a rename follows onto every conversation and rule, a removal takes it off them all |
+| Room | `GET /api/mail/inbox/usage`: messages, stored bytes, an estimate of the rows; the retention setting keeps both inside the free plan. `GET /api/mail/inbox/room` (2026-11-11) reads each mailbox's running total (`stored_bytes`, added to on arrival, taken from by retention) for the left pane's Mail storage gauge, without reading a message |
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -167,16 +168,20 @@ The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 | `PATCH /api/mail/inbox/mailboxes/:id` | `mail.inbox.manage` | its name, location, forwarding address, or `live` |
 | `PUT /api/mail/inbox/mailboxes/:id/auto-reply` | `mail.inbox.manage` | its automatic reply (`on`, `subject`, `body`, `from`, `until` as `2026-12-24`) |
 | `DELETE /api/mail/inbox/mailboxes/:id` | `mail.inbox.manage` | delete an empty one and its rule |
-| `GET /api/mail/inbox` | `mail.inbox.read` | conversations, 50 a page (`mailbox`, `box` of inbox, updates, snoozed, archived, spam or all, `q`, `before`) |
+| `GET /api/mail/inbox` | `mail.inbox.read` | conversations, 50 a page (`mailbox`, `box` of inbox, updates, snoozed, archived, spam, all or starred, `label`, `q`, `before`) |
 | `GET /api/mail/inbox/threads/:id` | `mail.inbox.read` | one conversation, its messages, and how its sender lets a person leave their list (`sender.unsubscribe`: one-click, page, email or none) |
 | `GET /api/mail/inbox/messages/:id/raw` | `mail.inbox.read` | the stored copy (`whole=1` for all of it) |
-| `POST /api/mail/inbox/actions` | `mail.inbox.read` | read, unread, archive, inbox, spam, not spam, snooze (`until`: later, tomorrow, week) and unsnooze, mute and unmute, updates and people (their senders, remembered), sweep, or block (manage) for up to 100 conversations |
+| `POST /api/mail/inbox/actions` | `mail.inbox.read` | read, unread, archive, inbox, spam, not spam, snooze (`until`: later, tomorrow, week) and unsnooze, mute and unmute, updates and people (their senders, remembered), sweep, star and unstar, label and unlabel (`label`, made when new), or block (manage) for up to 100 conversations |
 | `GET /api/mail/inbox/subscriptions` | `mail.inbox.read` | the senders whose list mail is here, busiest first (100), each with whether one press unsubscribes |
 | `POST /api/mail/inbox/unsubscribe` | `mail.inbox.read` | unsubscribe from a sender's list (`email`): `done`, or the sender's own `https` or `mailto` way with why |
 | `POST /api/mail/inbox/threads/:id/reply` | `mail.inbox.reply` | answer the latest message (`body`, `all`) |
 | `GET`, `POST /api/mail/inbox/rules`, `DELETE .../rules/:id` | read; manage | the rules and blocked senders; add and remove a rule |
 | `POST`, `DELETE /api/mail/inbox/blocked` | `mail.inbox.manage` | block or unblock an address or `@domain` |
 | `GET /api/mail/inbox/usage` | `mail.inbox.read` | the inbox's room |
+| `GET /api/mail/inbox/room` | `mail.inbox.read` | `{ bytes }`: what the stored copies take, from the mailboxes' running totals |
+| `GET /api/mail/inbox/labels` | `mail.inbox.read` | the team's labels with their colours: those made, then those only a rule puts on |
+| `POST /api/mail/inbox/labels` | `mail.inbox.read` | make a label (`name`, `color`), or rename and recolour one (`was`) |
+| `DELETE /api/mail/inbox/labels/:name` | `mail.inbox.manage` | remove a label from every conversation and rule |
 
 Home shows the unread conversations, search finds mail by its words, and a privacy search lists
 the messages from an address.
@@ -207,6 +212,16 @@ mailbox yet, or with a setup step still to do, says so beside the same folders, 
 unread count shows beside Inbox on every Email page (`addMailFolderCounts`). Mailboxes and rules
 (`/email/mailboxes`), the last of Email's folders and beside them: each mailbox with its state and what stands in its way, add, change, switch
 off and delete, its automatic reply, the rules, the blocked senders, and the room used against the free plan.
+
+Since 2026-11-11 the inbox works as Gmail does (docs/records/2026-11-11-gmail-style-email.md):
+the folders in Gmail's groups (Inbox, Starred, Snoozed with Email's Sent and Drafts; Updates,
+Archived, Spam and All under More), the labels with their colours and a + to make one, and the
+Mail storage gauge under them (`addMailPane`); a top bar with the search, the tick-all box, the
+commands once a row is ticked and the Snooze, Label and More menus; on each row the star, the
+labels' chips, a paperclip for a file and, on a computer, Archive, Mark read and Snooze on hover;
+Quick settings behind the cog (Split or Full, Default or Compact, kept in cookies); Gmail's
+keyboard shortcuts (`src/reader/keys.js`, the `?` sheet lists them); and Labels
+(`/email/inbox/labels`), to make, rename, recolour and remove labels.
 
 Forwarding (`/email/forwarding`), in the Email settings tabs: the domains, each with where its mail goes,
 what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
@@ -245,4 +260,7 @@ rule and whether Cloudflare says what the row says, its counts), and `mail_cloud
 gains `asked_at`, NULL while an address waits its turn to be asked about. Migration
 `1008_mail_test_again.sql`: `mail_cloudflare` gains `test_to` and `test_asked_at`, the address a
 test refused for a domain not onboarded went to and when it was pressed, cleared when a test
-passes. Never KV (mail law M-3).
+passes. Migration `1016_mail_gmail.sql` (2026-11-11): `mail_threads` gains `starred` (with a
+partial index), `mail_labels` holds the team's labels and their colours, and `mail_mailboxes`
+gains `stored_bytes`, the running total of its stored copies, started from what was stored.
+Never KV (mail law M-3).

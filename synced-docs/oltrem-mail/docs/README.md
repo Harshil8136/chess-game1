@@ -2,7 +2,7 @@
 title: "Documentation index"
 status: living
 owner: vendor
-last_verified: 2026-11-02
+last_verified: 2026-11-11
 sources: [this repository]
 ---
 
@@ -36,6 +36,8 @@ So everything here is written as public (R-04), and is public once the kit takes
 | [Bundle L: cleaner lists](records/2026-11-02-cleaner-lists.md) | misspellings put right on import, shared and no-reply inboxes, mail servers looked up, campaigns leaving out what no mail reaches, how it was checked | record |
 | [Bundle F: forwarding, as ImprovMX does it](records/2026-11-02-forwarding.md) | aliases to one or several people, the catch-all, links confirmed by themselves, the ImprovMX import, the guided move and Move back, how it was checked | record |
 | [Campaigns: rows read, the footer, steps, Run now](records/2026-11-10-campaigns-reads-and-run-now.md) | a campaign's page reading its counters and a kept tally instead of its whole list, the footer written in step 3, the steps one at a time, Run now and the Run log, how it was checked | record |
+| [Email made to work like Gmail](records/2026-11-11-gmail-style-email.md) | stars, labels with colours and their folders, Gmail's keyboard shortcuts, the top bar and its menus, Quick settings, the left pane in groups with the Sending and Mail storage gauges, the Usage and limits page, what was left and why, how it was checked | record |
 | [Making mail easier](research/2026-11-02-easier-mail.md) | what to copy from Gmail, Outlook and Yahoo, what to confirm, retry and check by itself, using Gmail or Outlook alongside, what not to do, and an order to build it in | proposal |
 | [Every step by hand, and by itself](research/2026-11-03-hand-steps.md) | each Mail step from a computer to a live portal: what runs by itself, what still needs a person and why, what would let more run by itself | living |
 | [Mail settings set once](research/2026-11-03-mail-settings-once.md) | one domain, one address mail comes from, which address each module's mail uses, and who may send from what, asked once and used by every page | built 2026-11-03 |
+| [Making Email feel like Gmail](research/2026-11-11-gmail-style.md) | Gmail's layout and keyboard map, the features a Gmail user expects, which open-source projects and libraries may be reused under their licences, how big products show storage and quotas, the free plans' limits as published on 2026-11-11 | built 2026-11-11 |

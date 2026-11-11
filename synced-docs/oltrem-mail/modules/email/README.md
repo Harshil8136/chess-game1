@@ -164,6 +164,22 @@ asked once a page, and one that fails shows none. The page's head is one slim ro
 moving between Email pages keeps the folders and the list still while the marked folder glides
 and an opened email slides in (core-ui's mail rules, the kit's record of 2026-11-10).
 
+Since 2026-11-11 the left pane is grouped as Gmail's (docs/records/2026-11-11-gmail-style-email.md):
+the add-on's everyday folders with Sent and Drafts, those it marks `group: 'more'` under More
+(open by itself when one of them is the current page), the labels, then the pages that manage
+mail (Delivery log, Templates, what an add-on keeps last, **Usage and limits** at `/email/usage`).
+At its foot are gauges, each a link to Usage and limits: Email's own **Sending**, every
+provider's tightest allowance as last kept, added up, with no provider asked (`GET /usage/brief`),
+and an add-on's own (the mail add-on's Mail storage). An add-on gives its labels, the + to make
+one and its gauges with `addMailPane`; `paneExtras` asks every source together, Email's first,
+and one that fails adds nothing; `shellPane(api, current)` is one page's whole pane for
+`MailShell`. **Usage and limits** (`src/usage-page.tsx`) says in plain words, for a client who is
+not technical: each provider's emails used and left today, this month or on the plan, when that
+resets and what the portal sent itself (`GET /usage`), the gauges of the add-ons, how the
+allowance is protected, and the Cloudflare plan's figures from the kit's budgets
+(`GET /api/health/budgets`, for those who may read System health) under plain names such as
+Database reads and Time per request, or why they are not measured yet.
+
 Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
 compose card in the manner of Gmail and Resend, and every part still works without the script.
 From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, with the browser's
@@ -469,6 +485,7 @@ with a template that holds code.
 |---|---|---|
 | `GET /messages?status=` | `email.read` | The tenant's newest fifty messages: to whom, through which instance, what became of each |
 | `GET /stats` | `email.read` | The last 14 days (UTC), a row each, every day there even when nothing was sent: the messages that left, those still on the way, the problems (failed, bounced, refused, marked as spam), and of those that left, how many were delivered, opened and clicked. Read through the tenant's index on its last change, so it costs one read per message of the fortnight; the Activity page draws its figures and chart from it |
+| `GET /usage/brief` | `email.read` | The left pane's Sending gauge: `{ used, limit, window }`, every instance's tightest allowance as last kept on it, added up, with no provider asked and no message counted; null when none has a limit |
 | `GET /usage` | `email.read` | Each instance that may send: what its provider says is used and left today, this month or on the plan, the tightest window left, and what the portal sent through it today, this week (from Monday) and this month, by its own record (see Allowance) |
 | `GET /instances/:id/hook` | `email.manage` | The address to paste into the provider's dashboard for its delivery reports; it carries the instance's secret token, so it needs a sign-in within ten minutes (`KIT-E-2004`) and reading it is audited as `email.hook` |
 | `GET /write` | `email.senders.use` | What the Write page needs: the addresses the person may send everyday mail from, whether they may add another (`addFrom`), the company's time zone and today on its clock, [Ready to send](#ready-to-send), the templates for Write (each with its fields, whether it has a message place, a letter's words, and `locked` with why when the person may not use it), whether they may use code (`code`) and save a template (`saveTemplate`), the addresses they wrote to lately (`recent`), and `files: { maxBytes, max }`, the bytes an email's files may be together (0 without the bucket or a provider that takes files) |
