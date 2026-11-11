@@ -178,7 +178,8 @@ not technical: each provider's emails used and left today, this month or on the 
 resets and what the portal sent itself (`GET /usage`), the gauges of the add-ons, how the
 allowance is protected, and the Cloudflare plan's figures from the kit's budgets
 (`GET /api/health/budgets`, for those who may read System health) under plain names such as
-Database reads and Time per request, or why they are not measured yet.
+Database reads and Time per request: a meter for each figure measured, and since 2026-11-11 the
+ones not measured yet named in one line under the reason, instead of a row of empty bars each.
 
 Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
 compose card in the manner of Gmail and Resend, and every part still works without the script.
@@ -280,7 +281,7 @@ yet, as Mail setup and Forwarding do in `@oltrem/mail`.
 | The check | Live from the page, then by itself (the job `email.domains`, every five minutes, four domains a run): a domain that has never passed is checked every five minutes in its first hour and hourly in its first day, the provider asked each time to look at its records again; after that, and once it passes, daily (`RECHECK_SOON`, `RECHECK_MS`). One line per finding, in plain words: the provider says the domain is verified; each of its records is found in public DNS (DKIM by its key, SPF by its `include`); a DMARC policy covers the domain, which Gmail, Yahoo and Microsoft require of bulk senders: its own record, or else the nearest one above it (`mail.example.com` is covered by `example.com`'s, with its `sp=` policy when it has one), as receivers look it up; it has one SPF record, not two. A provider or DNS that does not answer leaves the state as it was and says so |
 | Passing | The provider verified the domain and a DMARC policy covers it, with no broken SPF. Where the key may only send (Resend refuses a sending key's domain read with 401), the portal learns it from the emails the provider takes (2026-11-10): a real email from the domain that the provider took proves it, and one it refused as from an unverified domain fails it (`proven`, kept as the domain's `send_proof`, written at most hourly while it holds; a change sends the domain to the job's next run). With nothing known yet, the check sends one email from the domain to the provider's test address (the definition's `testInbox`, Resend's `delivered@resend.dev`, which delivers to no one and counts against the allowance), again only after 15 minutes in the first hour since the first refusal, an hour in its first day, then daily (`PROBE_GAPS`), and never once proven. Where nothing can tell (no `domains` block, no test address), a person confirms the dashboard shows it verified, and the confirmation is audited; a refusal after that confirmation wins over it |
 | Ready for Gmail, Yahoo and Outlook | A line on each domain (`inboxes` on the domain, `inboxesOf`): ready when the provider verified it (it signs with DKIM and may send by SPF) and a DMARC policy covers it, the sender rules Gmail and Yahoo set in 2024 and Microsoft in 2025; otherwise what is missing. Campaigns add the one-click unsubscribe those rules ask for, and their complaint rate is watched on System health |
-| Read from the provider | **Look at my provider** on the page (`GET /domains/found`) lists what each email instance with a key may send from, each marked as here or not, with **Add all** and a per-item **Add** (`POST /domains/discover`, all, or `names` for the ones named). Discovering asks every email instance with a key for the domains and single addresses its account may send from (the definition's `identities` lists, `@oltrem/providers`). A domain new here is added with that instance and checked at once; an address new here is added at the company, for both kinds of mail, with the name the provider keeps or its local part, and becomes the domain's default where it has none. An address whose domain is not here is not added. What could not be read (a key that may only send, a provider that did not answer, a list that needs a second key) is said in words. For a definition with lists but no `domains` block, the check's provider line reads the domain's state from its lists |
+| Read from the provider | **Sync with provider** on the page (`GET /domains/found`) lists what each email instance with a key may send from, each marked as here or not, with **Add all** and a per-item **Add** (`POST /domains/discover`, all, or `names` for the ones named). Discovering asks every email instance with a key for the domains and single addresses its account may send from (the definition's `identities` lists, `@oltrem/providers`). A domain new here is added with that instance and checked at once; an address new here is added at the company, for both kinds of mail, with the name the provider keeps or its local part, and becomes the domain's default where it has none. An address whose domain is not here is not added. What could not be read (a key that may only send, a provider that did not answer, a list that needs a second key) is said in words. For a definition with lists but no `domains` block, the check's provider line reads the domain's state from its lists |
 | Another address, from Write | `POST /senders/own` (`email`, `name`), for someone who holds `email.senders.add` or `email.senders.manage` at the company: the address is added at the company for everyday mail. Its domain must be here, or listed by an email provider, as a domain or as that very address (the discover logic), and is then added with its check; otherwise it is refused (`KIT-E-1508`) with what to do: add and verify the domain at the provider. Audited as `email.sender-add` with `from: write` |
 | A sender address | An address on an added domain, the name people see, an optional reply-to, the place of the company whose `email.senders.use` holders may send from it, and what it is for: bulk, everyday or both. The first address of a domain for each kind becomes its default; a default is changed, never left empty while the domain has addresses |
 | A send | `compose` reads the sender: one that was removed, or is for the other kind of mail, refuses the message (`KIT-E-1508`); bulk mail asked for from a domain that does not pass is refused the same way, before it is queued |
@@ -296,7 +297,8 @@ past either limit, or an include the provider asks for that would take the domai
 
 ### The simple provider card
 
-Email, Set up (`/email/connect`, `src/connect-page.tsx`) is docs/setup.md section 1 in one press:
+Email settings, Setup (`/email/connect`, `src/connect-page.tsx`; its three steps a tight numbered
+list since 2026-11-11, the form starting higher on a phone) is docs/setup.md section 1 in one press:
 the address mail comes from, an optional sending subdomain and name, and the provider's key.
 `POST /connect` (`email.manage`, and `providers.manage` at the company; audited as
 `email.connect`) then does every step itself and answers each in words (`src/card.ts`):
@@ -344,11 +346,22 @@ Every change is audited: `email.domain-add`, `email.domain-check`, `email.domain
 
 The page is Email settings, Addresses (`/email/senders`, from `@oltrem/email/pages`). Since 2026-11-01 it
 is one path: connect an email service, then the portal reads its domains and addresses (on its
-own when no domain is here yet, or with **Look at my provider**) to add all or one by one. Each
+own when no domain is here yet, or with **Sync with provider**) to add all or one by one. Each
 domain is a pane with its state and **Check again**, its addresses as rows with Edit and Remove,
 the defaults picked inline where two addresses could serve, **Add an address** and the checks and
 DNS records folded (open while the domain does not pass). With nothing yet, the empty state names
 the one next step. Someone who may only send from addresses sees them as a plain list.
+
+Since 2026-11-11 (the owner's phone screenshot: a domain name broken in two, dots between facts)
+it reads on a phone as a list does: a domain's state is a tag under its name (**Verified**, **Not
+verified yet**, **Not checked yet**) beside "Through Resend, checked 2 hours ago", so its head
+keeps only **Check again** beside the name; an address is its name and address, with what it
+sends and what it is the default for as tags (**Default for all mail** when both); **Add an
+address** sits under the list; **Gmail, Yahoo and Outlook rules** is a labelled line with its own
+tag; the checks' count is in **Checks and DNS records: 2 of 3 pass**. The head's two actions,
+**Sync with provider** and **Add a domain**, are the same kind of button. The set's first tab is
+**Setup** (`/email/connect`), so the heading Email settings is not said twice; it still opens
+first.
 
 ## Saved templates
 
