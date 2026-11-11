@@ -85,7 +85,8 @@ but Cloudflare's build secrets.
    `npm run deploy`, from the kit's `templates/client`. A bad push then breaks this portal and no
    client's.
 3. **Make the fleet key.** In the Vendor's Cloudflare profile: My Profile, API Tokens, Create
-   Token, Custom token, with these permissions:
+   Token, Custom token. Not an account's own API Tokens page: a token made there reaches that one
+   account only, and the first real run found no portal for that reason. These permissions:
    - Account: Workers Scripts Edit, D1 Edit, Workers KV Storage Edit, Workers R2 Storage Edit,
      Queues Edit, Account Settings Read.
    - Zone: Workers Routes Edit (a portal on its own address).
