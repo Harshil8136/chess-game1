@@ -214,8 +214,11 @@ The rules, each refused with its own code:
   and it may start later; an override has the same window. An *eligible* grant is held but not in
   force until its holder activates it, for one to twelve hours (four unless said) with a reason;
   the activation is a grant of its own, linked back to the eligible one.
-- **An Owner is made or unmade only with a second person.** The actor asks for an approval that
-  names the capability, the scope, the action and the exact change (hashed); another holder of
+- **An Owner is made or unmade with a second person only when the client wants it.** The
+  setting `iam.owner_second_person` (Settings, Security, the Vendor's to change) is off by
+  default, so whoever may make, invite or end an Owner does it alone; the Vendor is never asked
+  either way (the owner's decisions of 2026-11-08 and 2026-11-11). When it is on, the actor asks
+  for an approval that names the capability, the scope, the action and the exact change (hashed); another holder of
   the capability approves within the hour; the change spends the approval, once, and refuses one
   that is pending, someone else's, expired, spent or for another change (`KIT-E-2011` when none
   is given, `KIT-E-2012` otherwise). Modules use the same approvals for their own `secondPerson`
@@ -280,7 +283,8 @@ pending and in date (`KIT-E-2015`); it creates the account (or finds the one wit
 makes the grant in the inviter's name and records the acceptance. The first Owner's acceptance is
 the **handover**, stamped on the tenant: before it the Vendor alone invites Owners, since nobody
 else could approve, and the record says so; from then on an Owner is made, invited or unmade
-only with a second person, and the last one stays.
+with a second person only when `iam.owner_second_person` is on and the actor is not the Vendor,
+and the last one stays.
 
 An invitation can be **emailed**. The client hands `createIam` a `mail(env, message)` (the client
 template sends it through the email module, as the plain template `iam.message`);
@@ -367,8 +371,8 @@ why in words (`modules/iam/test/setup-admit.test.ts`):
 The Users page can still invite them all in one press, each to that role (`GET /setup-people`
 lists the ones without an account or a pending invitation; Home's Get started says "The 3 people
 named at setup sign in"); each then presses Accept on the page they land on (`POST
-/invitations/mine`, then `/invitations/accept` without a token). An Owner invited after the
-handover still needs a second person, and the press says so by name
+/invitations/mine`, then `/invitations/accept` without a token). An Owner named after the
+handover is invited by the same press: the Vendor is never asked for a second person
 (`templates/client/test/setup-people.test.ts`). Without `settings` nobody is named.
 
 ## The routes
