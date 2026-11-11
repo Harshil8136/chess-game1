@@ -314,7 +314,14 @@ since 2026-11-08, Write's Attach a file). A file input with `data-upload` (2026-
 file chosen straight to that address as the body, with its `name` and the values of the form's
 fields named in `data-upload-with` added to the address, then opens `data-upload-done`; a
 refusal's words show on the input itself. A large file so never passes through a page's form
-(Mail's files over 10 MB, up to 95 MB). Without the script each is a plain box, line, select and
+(Mail's files over 10 MB, up to 95 MB). A file input with `data-csv` (2026-11-11) reads a CSV
+list of any size in the browser: past 30 columns it keeps the address, the name, the files and
+the columns named in `data-csv-need`, then the rest in order; it sends the rows in parts of about
+600,000 characters, each with its heading, the first to `data-csv` and the rest to
+`data-csv-more`, with the form's fields named in `data-csv-with` on the address (and `total`,
+the people of the whole file, on the first), says which part
+goes in the element `data-csv-progress` names, then opens `data-csv-done` with `added` (the
+people taken in). Campaigns' list upload uses it. Without the script each is a plain box, line, select and
 button, and the form posts the file.
 
 **The composer** (Oltrem Mail's Write page, 2026-11-08). A block with `data-rich` naming a
