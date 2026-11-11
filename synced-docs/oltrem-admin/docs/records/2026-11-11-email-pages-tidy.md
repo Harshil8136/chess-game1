@@ -53,3 +53,14 @@ than two buttons need, so even "Email" pushed them down. Now it asks for 8 rem.
 - The stylesheet stays under its 144 KiB cap: the font weights are written as numbers rather
   than variables, which freed about 1 KB.
 - `pnpm verify` green before the push.
+
+## Later the same day: a dropdown for Write's From
+
+The owner asked for Write's From to be a dropdown like the first client's. The kit gains
+`details.ui-drop` with `data-pick`: radios under the line in a card (`ui-menu-pop`, under the line
+on a phone too rather than a sheet), each option 48 px, tinted with a tick when chosen. The
+frame script shows the chosen option's face in the line, closes the card on a press (the
+option already chosen too), on Enter (which would otherwise send the form) and on Escape or a
+click elsewhere; the arrow keys only move the choice. `test/frame.test.ts` holds those moves.
+To pay for the rules within the 144 KiB cap, the two text sizes are written as pixels rather
+than variables, as the weights were.

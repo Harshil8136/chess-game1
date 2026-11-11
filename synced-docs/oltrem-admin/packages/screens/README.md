@@ -331,7 +331,11 @@ and an address on one line; an address already there is not added again, and a b
 box's suggestions know (its `list`) takes their name. A form with `data-keep-typed` (Email's
 Write), once typed in, is not left by a link or a closed tab without the browser asking first;
 sending it, or saving it, leaves freely; `data-keep-typed="unsaved"` counts it as typed from the
-start (a page drawn again with what was typed). A line
+start (a page drawn again with what was typed). A `details[data-pick]` (Write's From,
+2026-11-11) is a dropdown of radios: a change shows the chosen option's `[data-pick-face]` in
+its summary's, a press on an option (the one already chosen too) closes it, the arrow keys only
+move the choice, Enter closes it instead of sending the form, and a click elsewhere or Escape
+closes it. A line
 marked `data-fold` with an empty input folds behind the button whose `data-unfold` names it. A
 button with `data-mark` (`strong`, `em`, `list`, `link`) puts that mark around the selection in
 the box its `aria-controls` names; a block with `data-marks-of` draws that box's words with

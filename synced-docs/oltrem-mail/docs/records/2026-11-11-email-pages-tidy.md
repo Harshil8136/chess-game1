@@ -69,3 +69,13 @@ holds the name and one button, and the status line wraps under it on its own.
 - **The inbox's snippet line** keeps its dot between sender and time: that is the layout Gmail
   users know.
 - **The Users page** is reworked in its own thread.
+
+## Later the same day: From as a dropdown
+
+The owner sent the first client's From picker as the example and asked for the same on Write.
+From was the browser's own list, which on a phone shows a plain wheel of `Name <address>`
+lines. It is now a dropdown under its line: the address picked, the part before the @ stronger;
+pressed, a card of every address the person may send from, each with its name, **Default** on
+the default and a tick on the one picked, and **Another address…** at the foot for one who may
+add one. The choices are radios, so the form posts without a script; the kit's frame script
+shows the pick in the line and closes the card. Tested in `test/from-pick.test.ts`.
