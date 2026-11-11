@@ -12,7 +12,7 @@ sources: [tokens.registry.json]
 
 > **In plain words.** This page lists every token, key and secret the system uses, by name only; a value never appears here or anywhere in the repository. Before anyone creates a credential, they read this page: if a row already covers the need, it is reused; if a row is close, it is widened and the row says so; only then is a new one created, with its row in the same commit. `pnpm verify` refuses a secret name without a row.
 
-**Where things stand:** 1 active, 8 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
+**Where things stand:** 1 active, 10 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
@@ -24,6 +24,8 @@ sources: [tokens.registry.json]
 | GITHUB_TOKEN | provided | GitHub | nowhere: GitHub issues it for each run and expires it after |
 | KEK | planned | none: generated locally | a Worker secret, set with wrangler secret put |
 | KIT_OPS_TOKEN | planned | Cloudflare | a Worker secret, set with wrangler secret put |
+| OLTREM_FLEET_GITHUB_TOKEN | planned | GitHub | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account; optional |
+| OLTREM_FLEET_TOKEN | planned | Cloudflare | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account (Settings, Build, Variables and secrets) |
 | PERSONAL_PAT | active | GitHub | an Actions secret of this repository (Settings, Secrets and variables, Actions) |
 | SESSION_KEY | planned | none: generated locally | a Worker secret, set with wrangler secret put |
 
@@ -154,6 +156,38 @@ sources: [tokens.registry.json]
 | Rotation | make a new token with the same two scopes (the form npm run deploy shows), set it with wrangler secret put, delete the old one; yearly |
 | Why it exists | The nightly export calls the database export API, which needs an account token. It is the only token that lives inside a Worker. Widened on 2026-10-21 with Account Analytics Read for System status's budgets. The two Access groups added on 2026-10-31 for the door were taken out on 2026-11-05: the door is set once by the deploy and lets anyone ask for a code, and the portal's own list decides who gets in, so the Worker keeps nothing in step with Access. |
 | Plan section | 9.3 |
+
+## OLTREM_FLEET_GITHUB_TOKEN
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | GitHub; the Vendor's own GitHub account |
+| What it may do | Issues: read and write, on the kit repository only (a fine-grained token) |
+| Used by | oltrem fleet: an issue for each portal that did not update, closed when a later run updates it |
+| Stored in | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account; optional |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | make a new fine-grained token with the same access, replace the build secret, delete the old one |
+| Why it exists | The owner asked that a failed update send a message somewhere to investigate; an issue emails the Vendor and can be read by the agents working on the kit. The builder's own access cannot write to GitHub. |
+| Plan section | 14.4 |
+
+## OLTREM_FLEET_TOKEN
+
+| Field | Value |
+|---|---|
+| Status | planned |
+| Provider and account | Cloudflare; the Vendor's own Cloudflare login (a user token), which is a member of every client's account |
+| What it may do | Account, on all accounts: Workers Scripts: Edit, D1: Edit, Workers KV Storage: Edit, Workers R2 Storage: Edit, Queues: Edit, Account Settings: Read; Zone, on all zones: Workers Routes: Edit; User: Memberships: Read, User Details: Read |
+| Used by | oltrem fleet, the deploy command of the kit's one Workers Builds connection in the Vendor's account: finds every portal and releases each one (docs/reference/fleet.md) |
+| Stored in | a build secret of the oltrem-fleet Worker in the Vendor's Cloudflare account (Settings, Build, Variables and secrets) |
+| Owner | vendor |
+| Created | not yet |
+| Expires | not set |
+| Rotation | make a new token with the same permissions in the Vendor's profile, replace the build secret, delete the old token; yearly, or at once if exposed |
+| Why it exists | The owner chose on 2026-11-11 that every push to the kit updates every client's portal. Cloudflare's builder can be connected to the kit repository from one Cloudflare account only, so one key reaches the clients' accounts from there. It replaces the per-client CLOUDFLARE_API_TOKEN of the client repositories' deploy workflow for portals the fleet updates. |
+| Plan section | 14.4 |
 
 ## PERSONAL_PAT
 

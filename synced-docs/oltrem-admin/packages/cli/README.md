@@ -16,7 +16,8 @@ and, since phase 6, **`upgrade`**, the step after a new kit version (plan 14.3),
 **`check budgets`**, which keep a client's code out of the kit's files, inside its own modules,
 on the kit's packages, free of keys and within the Worker's limits (research 18), and
 **`release`**, the deploy workflow's release on `main` with its health check and step back, and
-**`operate`**, the jobs of the operations menu (research 18 §3.5).
+**`operate`**, the jobs of the operations menu (research 18 §3.5), and **`fleet`**, which brings
+every client's portal up to date after each push to the kit (2026-11-11).
 The tool runs on Node and has no runtime dependency.
 
 ## The look in a terminal
@@ -700,6 +701,33 @@ or a `cf-mitigated` header), the release cannot see the Worker: it keeps the new
 how to let `/healthz` through. The token is the workflow's `CLOUDFLARE_API_TOKEN`, whose Workers
 Scripts and D1 permissions cover every step. Exit `0` when the release is live (or could not be
 seen), `1` when it stopped or stepped back, `3` when there is no wrangler configuration.
+
+## `oltrem fleet [--check]`
+
+The deploy command of the kit's one Workers Builds connection, in the Vendor's own Cloudflare
+account ([the fleet](../../docs/reference/fleet.md) has the why and the one-time setup). It runs
+in the kit repository, with the key in `OLTREM_FLEET_TOKEN` (or `CLOUDFLARE_API_TOKEN`):
+
+1. **The portals:** every account the key opens is read for a D1 database `<worker>-db` whose
+   Worker has `CLIENT_ID` `<worker>`.
+2. **Their choices** (`src/choices.ts`): the `build_choices` row of the portal's `oltrem_meta`,
+   which `oltrem deploy` writes after its health check; without it, the running Worker's
+   `PUBLIC_HOST` and Oltrem Mail's `send_email` binding. A choice never made is the default.
+3. **The order:** the Workers in `OLTREM_FLEET_FIRST` first; one of them failing, or missing,
+   holds every other portal.
+4. **Each portal:** skipped when its `fleet_fingerprint` (the kit folders' git trees and the
+   choices) is current, or its `autoUpdate` is false; otherwise the client template is copied to
+   `.fleet/<worker>` beside `templates/` (its packages linked in), the choices written in, and
+   `oltrem release` run on the portal's account, without Workers Builds' own `WRANGLER_CI_*`
+   variables (they would point wrangler at the Vendor's Worker). A good release records the
+   choices and the fingerprint.
+5. **The report:** a line per portal; with `OLTREM_FLEET_GITHUB_TOKEN` and `OLTREM_FLEET_REPO`, an
+   issue `Fleet: <worker> did not update` per portal that failed or was held, closed once it
+   updates.
+
+`--check` finds the portals and says what it would do, changing nothing. Exit `0` when every
+portal is current or updated, `1` when one failed or was held or an account could not be read,
+`3` without a key or outside the kit.
 
 ## `oltrem operate <operation> [dir] [--target X] [--confirm X]`
 

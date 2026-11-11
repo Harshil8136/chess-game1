@@ -52,6 +52,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [rules.md](../rules.md) | every rule in full: reason, scope and enforcement | written |
 | [The licence in plain words](licence.md) | what the Oltrem Licence allows, what needs permission, and how to ask | written |
 | [Versions and release notes](release.md) | how packages are versioned and how a change's note is written | living |
+| [The fleet](reference/fleet.md) | every push to the kit updates every client's portal: how, the one-time setup, the key | living |
 | [Verification log](verification-log.md) | one row per change: what was checked before the push and what was not | living |
 | [Phone tests owed](phone-tests.md) | every phone test still owed, by page, with what to see; passed and failed ones | living |
 | [Phone tests owed: Email and Mail](phone-tests-email.md) | the phone tests owed on the Email pages and the Mail setup, split from the list above | living |
