@@ -278,7 +278,11 @@ theme switch act at once and save behind the scenes. A button with `data-copy` c
 to the clipboard and says "Copied", aloud too, for two seconds. A button with `data-fill` (a
 field's id) and `data-value` puts that example in the field and moves there (2026-11-10: the
 example sender address on Email settings). A thin line at the top shows a page that is
-still loading. A link to a section of the page on screen (`#invite`) is the browser's own: it
+still loading, and after 150 ms the page dims (`data-loading`), so a press is seen. The marked
+tab, segment and section carry a mark (`.ui-mark`) the script adds and names alike on both pages
+of a change, so it glides; a filter on the same page moves the mark alone (`data-vt="mark"`). A
+page that arrives counts its plain figures up and fills its meters, keeping the real figure for a
+screen reader (2026-11-11, the owner's V22 and V30 clips). A link to a section of the page on screen (`#invite`) is the browser's own: it
 scrolls there, and the popstate it fires is not taken for Back (until 2026-10-31 it fetched the
 page again and put it back at the top, which looked like a reload). Lists of boxes to tick: a
 group's ticks are counted (`data-check-group` with `data-count`, the form's in

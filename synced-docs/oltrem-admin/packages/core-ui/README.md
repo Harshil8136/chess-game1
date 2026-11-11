@@ -33,7 +33,10 @@ rail and the loading line) carries a z-index.
 From one page to the next, the frame's script (`@oltrem/screens`) swaps only the page's content
 and fades it in with a view transition; with no script, the browser does the same across a load
 (`@view-transition`, a cross-document view transition), and a browser without either just shows
-the page. None of it runs under reduced motion. Buttons press in a little when tapped (to 96 %, since 2026-11-08).
+the page. Inside a page that arrives, a `PaneGrid`'s panes and each figure's words sharpen in turn
+from a light blur (`ui-sharpen`), and a `ColumnChart`'s columns grow from their base (`ui-grow`);
+the marked tab, segment and section draw their look on a `ui-mark` the frame's script adds, so it
+can glide (2026-11-11). None of it runs under reduced motion. Buttons press in a little when tapped (to 96 %, since 2026-11-08).
 
 ## The primitives
 
