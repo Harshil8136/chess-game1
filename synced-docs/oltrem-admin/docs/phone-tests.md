@@ -100,7 +100,12 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P11 | People, Invite | the form, the invitation made, its link copyable | [record](records/2026-10-27-access-screens.md) |
+| P137 | As an Owner (not the Vendor): change a role or give a permission override | It is done at once; no "sign in again" page | [record](records/2026-11-11-users-pages.md) |
+| P136 | Users: type part of a name in the search box; tap a role chip, then Deactivated | The list narrows as you type; each chip shows its count; the page never scrolls sideways | [record](records/2026-11-11-users-pages.md) |
+| P135 | A user, Sessions: End one sign-in, then Sign out everywhere | Each asks first; the browser is signed out; Sign-in history lists their sign-ins with the browser in words | [record](records/2026-11-11-users-pages.md) |
+| P134 | A user's page: give another role with Access ends 1 day; then Change it to another role | The row says "until" tomorrow; the change dialog offers Keep first; the grid of modules shows their level in colour | [record](records/2026-11-11-users-pages.md) |
+| P133 | Users, Invite people: pick a role card, leave No end date, send | Each card says what the role does and how many have it; the invitation is made; its row says the role | [record](records/2026-11-11-users-pages.md) |
+| P11 | Users, Invite people | the form, the invitation made, its link copyable | [record](records/2026-10-27-access-screens.md) |
 | P12 | A person, View what they can do | the person's access by place, in words | [record](records/2026-10-21-see-it-as.md) |
 | P126 | As the Vendor, invite an Owner | Invited; no second person asked | [iam](../modules/iam/README.md) |
 

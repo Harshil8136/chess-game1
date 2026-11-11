@@ -144,15 +144,25 @@ again, so a change made in the request shows in the rest of it.
 A **device** is one sign-in at the door, keyed by the sign-in's issue time (`iat`), which stays the same
 for the whole of that sign-in and differs between browsers. The first request of a sign-in adds
 it to the record (one write; the ten most recent are kept); `revokeDevice` ends one, and that
-sign-in is refused from then on (`KIT-E-2006`) until the person signs in again.
+sign-in is refused from then on (`KIT-E-2006`) until the person signs in again; `revokeAll`
+ends every open one in the same single write (the Users page's "Sign out everywhere"). Since
+2026-11-11 a new device is also **recorded**, after the answer (`waitUntil`), in one D1 batch:
+`iam_principals.last_signed_in_at` (migration `0058`, the Users list's "Last sign-in") and an
+audit row `iam.sign-in` whose target is the account id and whose details hold the device and the
+browser's own description (the person's Sign-in history). Once per sign-in on a browser, never
+per request.
 
 The **authorizer** refuses when the hook did not run (no session: fail closed), then asks
 `holdsAnywhere`: the capability at the root or at any scope with a grant, since a route is the
 widest question and the handler narrows to the scope at hand. On a route whose capability is
 flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
 recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. An
-allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes` (ten), else
-`KIT-E-2004`, of everyone but the Vendor, who is never asked (the owner's ruling of 2026-11-08,
+allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes`, else
+`KIT-E-2004`, of everyone but the Vendor. The window is the setting `iam.fresh_sign_in_minutes`
+(`FRESH_SIGN_IN_SETTING`, Settings, Security, the Vendor's to change: 0 to 1,440 minutes), and
+**0, its default, asks nobody**: the owner's ruling of 2026-11-11, "disable it by default
+everywhere" (before, ten minutes for everyone). A number passed as `freshMinutes` still wins, for
+tests and a client that wants it fixed. The Vendor is never asked either way (the owner's ruling of 2026-11-08,
 in `can` since 2026-11-11); the second-person gate is the governance step's, with the approvals it needs. A
 fresh sign-in is for what reveals or replaces a secret, or hands out people's data, never for
 everyday work: a capability that also covers everyday routes leaves the flag off, and the one
@@ -210,8 +220,13 @@ The rules, each refused with its own code:
 - **No role twice at one place.** A grant of a role the person or group already holds at that
   place, in force and held the same way (both eligible or both not), is refused in plain words
   (`KIT-E-2010`): change or end the one in force instead.
-- **Every grant but the Owner's expires**: ninety days unless an expiry is given, a year at most,
-  and it may start later; an override has the same window. An *eligible* grant is held but not in
+- **A grant lasts until it is ended, unless an end is given** (since 2026-11-11, the owner's ask
+  to make giving access simple; before, every grant but the Owner's ended after ninety days). The
+  setting `iam.grant_days` (`GRANT_DAYS_SETTING`, Settings, Users & access, an Owner's to change)
+  sets an end of its own, 1 to 366 days, for a grant or override given without one; 0, its
+  default, sets none. An end that is given is at most a year away, and `expiresAt: null` asks for
+  no end for any role; the grant may start later; an override has the same window. Access reviews
+  still look at every grant. An *eligible* grant is held but not in
   force until its holder activates it, for one to twelve hours (four unless said) with a reason;
   the activation is a grant of its own, linked back to the eligible one.
 - **An Owner is made or unmade with a second person only when the client wants it.** The

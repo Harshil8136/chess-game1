@@ -61,7 +61,7 @@ isolate, the request ids a row was asked for (`takeRecorded`), the newest 512.
 
 ## Reading and checking
 
-`list({ actor, action, module, outcome, since, until, before, limit })` pages newest first (`module` reads every action of one module); the
+`list({ actor, action, target, module, outcome, since, until, before, limit })` pages newest first (`module` reads every action of one module); the
 `before` it returns is the cursor for the next page. `range(since, until, limit)` returns the
 rows of a time range oldest first, for the export. `verify({ from, to })` recomputes the hash
 of every row in the range and names the rows whose content no longer matches (it also returns
@@ -86,7 +86,7 @@ const audit = createAuditModule<Env>({
 
 | Route | Capability | What it answers |
 |---|---|---|
-| `GET /entries?outcome=&module=&actor=&before=` | `audit.read` | 50 rows, newest first, narrowed by outcome, module or person, and the cursor for the next page |
+| `GET /entries?outcome=&module=&actor=&target=&action=&before=` | `audit.read` | 50 rows, newest first, narrowed by outcome, module, person, what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
 | `GET /seals` | `audit.read` | the newest 30 daily seals and whether each still holds |
 | `GET /export?since=&until=` | `audit.export` (admin class) | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
 | `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands |

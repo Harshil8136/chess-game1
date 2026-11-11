@@ -51,10 +51,21 @@ and leaves its grants, its groups and its history in place for when it is switch
 The rules, in order: never yourself (`KIT-E-2008`); never an Owner (`KIT-E-2102`: end the Owner
 grant first, with a second person, as the governance requires); only a person whose every allow
 grant, direct or through a group, is below your standing at that scope (`KIT-E-2007`), so that
-nobody switches off a person they could not have granted; a reason is needed to switch off; and
-an account already in the state asked for is nothing to change (`KIT-E-2101`). The Vendor stands
+nobody switches off a person they could not have granted; and an account already in the state
+asked for is nothing to change (`KIT-E-2101`). A reason is kept when one is given, and is no
+longer required (2026-11-11, the owner's ask to make the Users pages easier). The Vendor stands
 above everyone but an Owner. Every switch and every profile change is audited (`users.deactivate`,
 `users.reactivate`, `users.profile`), the refusals as much as the successes.
+
+**Sign-ins** (2026-11-11, the owner's ask to see and end a person's sessions). Someone with
+`users.manage` sees another person's remembered sign-ins (each browser's sign-in time, its own
+description and whether it was ended), ends one, or ends them all at once ("Sign out
+everywhere"), through the access module's session store (`Sessions.devices`, `revokeDevice`,
+`revokeAll`). Never their own, here (`KIT-E-2008`: their own sign-ins are their account menu's);
+an Owner or the Vendor may end anyone's, anyone else only a person below their standing
+(`KIT-E-2007`). Each is audited, `users.session-end` (with the device) and `users.sign-out` (with
+how many ended). A directory row carries `lastSignedInAt`, the last sign-in on a new browser
+(the access module records it).
 
 ## Search
 
@@ -91,7 +102,10 @@ audited.
 | Routes | Capability | What they do |
 |---|---|---|
 | `GET /people`, `GET /people/:id` | `users.read` | the directory, searchable (`q`), filtered (`kind`, `active`), paged; one person |
-| `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason |
+| `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason if one is given |
+| `GET /people/:id/sessions` | `users.manage` | the person's remembered sign-ins, newest first |
+| `DELETE /people/:id/sessions/:device` | `users.manage` | end one of them: that browser must sign in again |
+| `POST /people/:id/sign-out` | `users.manage` | end every open one at once; answers `{ ended }` |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
 | `GET /me/views?path=`, `POST /me/views`, `DELETE /me/views/:id` | `users.self` | my saved views of one page: list, save under a name (the same name replaces), remove; another person's id removes nothing |
