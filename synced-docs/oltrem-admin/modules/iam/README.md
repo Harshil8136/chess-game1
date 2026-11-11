@@ -152,7 +152,8 @@ widest question and the handler narrows to the scope at hand. On a route whose c
 flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
 recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. An
 allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes` (ten), else
-`KIT-E-2004`; the second-person gate is the governance step's, with the approvals it needs. A
+`KIT-E-2004`, of everyone but the Vendor, who is never asked (the owner's ruling of 2026-11-08,
+in `can` since 2026-11-11); the second-person gate is the governance step's, with the approvals it needs. A
 fresh sign-in is for what reveals or replaces a secret, or hands out people's data, never for
 everyday work: a capability that also covers everyday routes leaves the flag off, and the one
 route that reveals a secret asks itself, refusing with `IAM_ERRORS.FRESH_SIGN_IN_NEEDED` when
