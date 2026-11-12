@@ -91,11 +91,22 @@ page's own content starts within the top fifth of the screen. Everything else ta
 `Stats` draws its figures with `Figures` (below), so every page's numbers look the same; a `Stat`
 takes a `tone`.
 
+**The bold look and even lists (2026-11-12).** A page's `main.ui-page` carries its sidebar
+group's `data-hue`: a soft wash at its top, its picked chips, table heads and row hovers take the
+colour. `EmptyState` draws `ui-empty-icon` in a ring of the colour and `ui-empty-title`; `Table`
+is `ui-table`, its phone cards `ui-table-card`. Scrollbars are slim and in the element's `--hue`
+(or the brand) mixed with the border, set on every element. `ui-rlist` with `ui-rrow` is an even
+list of rows (a role: `-name`, `-perms` with a meter, `-held`, `-go`); `ui-presets` a slim line
+of start buttons; `ui-spec` with `ui-spec-group`, `-head`, `-row` and `-needs` a list of
+permissions with tags and a box; `ui-role-top`, `ui-role-note` and `ui-role-tools` the role
+editor's band. In `ui-parts` a `ui-chip-row` is one segmented control, and each card is as tall as
+its own content. A sidebar group's heading is a button with `data-fold`; `data-folded` on the
+group hides its rows, except in a sidebar closed to icons.
+
 **Colour cards (2026-11-12).** `ui-tgrid` lays out as many 16.5 rem columns as fit. `ui-tcard` is
 a card on a soft gradient of one hue (`data-hue` sets `--hue`): a 40 px tile (`ui-hue-tile` or
-`ui-logo`), `ui-tcard-title` (with `ui-tcard-go` the whole card is its link), `ui-tcard-sub`,
-`ui-tcard-end` and `ui-tcard-foot` for a `<meter class="ui-meter">` in the hue and `ui-tag`
-pills; `ui-tcard-link` is a second link on the card, above the card's own. `ui-tint` tints a box
+`ui-logo`), `ui-tcard-title` (with `ui-tcard-go` the whole card is its link), `ui-tcard-sub`
+and `ui-tcard-foot` for `ui-tag` pills; `ui-tcard-link` is a second link on the card, above the card's own. `ui-tint` tints a box
 laid out by its own classes and goes quiet when the switch inside is off; `ui-scard` with
 `ui-scard-head` is a settings section; `ui-parts` a list of module cards, two columns on a wide
 page; `ui-settings-cols` two columns of sections from 84 rem; `ui-footbar` a full-width save bar
