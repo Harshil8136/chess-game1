@@ -378,6 +378,29 @@ tag; the checks' count is in **Checks and DNS records: 2 of 3 pass**. The head's
 **Setup** (`/email/connect`), so the heading Email settings is not said twice; it still opens
 first.
 
+Since 2026-11-12 (the owner: hard to find a way around, and the Edit dialog hard to read) the page
+is two figures (**Addresses**, with how many domains, and **Domains verified**, "1 of 2" marked
+amber until every domain passes, a link to the Domains view) over a sideways row of three views,
+`?view=` in the address:
+
+| View | What it holds |
+|---|---|
+| **Addresses** (the first) | A pane per domain: its state tag, then how many addresses (or **See its DNS records** while it does not pass); its addresses as rows with Edit and Remove; under them **Defaults**, the addresses Write and campaigns start from, where two could serve. The head's **Add an address** opens one dialog for every domain (the domain picked as chips when there are several), with **Everyday** chosen first |
+| **Domains** | A pane per domain with **Check again**, the inbox rules line, and the checks and DNS records folded (open while it does not pass); **Remove the domain** once it has no address. The head's button is **Add a domain** |
+| **Kinds of mail** | Which address each kind of mail comes from; its line says how many kinds have an address of their own, and the main address, so its chip is only **Main address** |
+
+What an address sends is a tag in its colour on every row and in the dialogs: **Everyday mail**
+green, **Bulk mail** purple, **Bulk and everyday** amber (one address for both is what put a test
+letter in Gmail's Promotions tab, `docs/records/2026-11-12-promotions-tab-cause.md`), and the
+default it is in blue. **Edit** opens on a card of the address in its avatar's colour (its name,
+address and tags), then three parts each with its icon: **Who it is from** (the name people see,
+and what it sends, now chosen here: Everyday, Bulk or Both; while it is a default the words say
+to make another address the default first, and the API refuses the change otherwise), **Replies**
+(empty sends replies to the address itself, shown greyed in the box; one on the same domain is
+best) and **Signature** (the composer in a bordered box whose toolbar shows no scroll bar).
+**Cancel** and **Save** stay at the dialog's foot while the parts scroll. Every change goes back to
+the view its form is on, its words or its refusal shown there.
+
 ## Saved templates
 
 The letters and designs the company writes with, kept in D1 as the company's (stage 3 of the
