@@ -111,7 +111,10 @@ error codes; Cloudflare's delivery events are not wired yet.
 | `POST`, `PATCH`, `DELETE /api/mail/forwarding/improvmx/domains/:domain/aliases[/:id]` | `mail.manage` | add an alias (`alias`, `*` for every other address; `forwardTo`, 1 to 10), change its people, delete it, at ImprovMX; each audited by its address, never the key, and none wakes the five-minute job |
 
 Each step answers `{ ok, words, dashboard? }`: what happened in plain words, and the dashboard
-step when the portal's key may not do it.
+step when the portal's key may not do it. When Cloudflare does not accept the key at all (a 401,
+or its codes 6003, 6111, 9106, 9109, 10000 or 10001, which come on a 400 as often), the words say
+so and name the fix, a new `KIT_OPS_TOKEN` or forwarding through ImprovMX, instead of only
+Cloudflare's "Invalid request headers" (2026-11-12).
 
 ## Capabilities, settings, jobs, health
 

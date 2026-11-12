@@ -80,8 +80,9 @@ goes on.
 
 `run(env, ctx)` runs every declared check at once, whatever its pace, and returns the ids by
 status and the ids opened and closed on that run. `list(env)`
-returns every row by lane then id, with `declared` false for the row of a check no mounted module
-declares any more; the row is kept.
+returns the declared checks' rows by lane then id. The row of a check no mounted module declares
+any more is kept in the table but left out of `list`, so of the page, the report and Home's card:
+before 2026-11-12 a check taken out of the kit (`iam.door`) showed its last answer for ever.
 
 Given `off` (the parts switched off on the Modules page, `@oltrem/core-config`), a switched-off
 module's checks are not run and its rows are left out of `list`, so of the page, Home's card and
@@ -147,7 +148,9 @@ Given `budgets`, the module adds a job, a check and a key recipe (plan 10). On t
   API with `KIT_OPS_TOKEN`: the account's totals since midnight UTC, which are the client's, since
   each client has its own account. One batch writes a row per budget; a budget it cannot measure
   keeps its last figure and records why (the token or the account not set, the call's error,
-  never the token).
+  never the token). A key Cloudflare cannot read or does not know (a 401, or Cloudflare's codes
+  6003, 6111, 9106, 9109, 10000 or 10001, which come on a 400 as often) is named with its fix:
+  make a new token with Account Analytics Read and set it as `KIT_OPS_TOKEN` (2026-11-12).
 - **`health.budgets`**, lane `budget`, fails when a budget is at or past 90% of its limit and
   warns from its warning line, or when a figure is missing or could not be refreshed. A daily
   figure counts only on the UTC day it was taken, since the limits reset at midnight UTC. The
@@ -209,14 +212,15 @@ Inside the Workers runtime against migrations 0008 and 0009: two checks run and 
 written; a problem opened on the second failure in a row and not the first, `onOpen` called once,
 closed on the next pass with `onClose`, the failure count reset by a warning; a check that throws,
 one that does not answer in time and one that answers nonsense recorded as failures with the
-reason; the rows listed by lane with an undeclared one kept; the tick running the checks through
+reason; the rows listed by lane with an undeclared one left out; the tick running the checks through
 the health job beside the scheduler; the job running the checks whose time has come, writing a
 row only when a result changed, sleeping unless a failure waits to be confirmed, and taking twelve
 checks at most a run; and the contract's refusals of a bad check, migration, setting or error. The budgets, with a stand-in for Cloudflare's API: nothing added without the
 option; one call with the token and the UTC day, every figure read, only KV writes counted, the
 CPU time in milliseconds and the size from D1; the check warning at 75% and failing at 95%; the
 other jobs paused through the scheduler while the health jobs run, and running again after
-midnight UTC; a 403 keeping the last figure with the reason; a missing token named once for the
+midnight UTC; a 403 keeping the last figure with the reason; a key Cloudflare refuses on a 400
+named with its fix; a missing token named once for the
 budgets it leaves unmeasured; the token in no reading; and the analytics errors named. Workers
 Paid: the month asked from the 1st, the budgets it includes, 96% failing without a pause, the
 month's figures not counting once back on the free plan; a plan that cannot be read taken as

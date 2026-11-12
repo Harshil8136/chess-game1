@@ -86,8 +86,9 @@ Every change is audited by the module: `developer.job-run`, `.job-pause`, `.job-
 ## Health
 
 In the `jobs` lane: `developer.jobs` **warns** naming the jobs whose last run failed and the ones
-paused by hand; `developer.webhooks` **warns** while a webhook fails or was switched off by its
-failures.
+paused by hand, passing by a job the Modules page switched off (the `off` option, since
+2026-11-12), which does not run anyway; `developer.webhooks` **warns** while a webhook fails or
+was switched off by its failures.
 
 ## Tables
 

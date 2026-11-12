@@ -44,7 +44,10 @@ never throws: a failure to keep the error goes to the module's own `report`.
 
 The client template's `report`, which every module and the request pipeline call, prints the
 error with its stack and hands it to `reportError` under `waitUntil` from `cloudflare:workers`.
-Errors are emailed like any warning (once, then counted) and listed on the Alerts page.
+Errors are emailed like any warning (once, then counted) and listed on the Alerts page. No check
+passes to close an error, so the release job resolves one not seen again for a day (2026-11-12:
+a live portal had kept 274 open for a week after its email service's key was fixed); seen again,
+it opens anew.
 
 ## What becomes of the email
 
