@@ -239,7 +239,8 @@ key is kept, then the account with Disconnect and Add a domain, and a pane for e
 state, its aliases (Change, Delete), Add the alias, Check its records and Recent mail
 (`?view=improvmx&mail=<domain>`). A visit opens on ImprovMX unless Cloudflare already forwards a
 domain and ImprovMX is not connected; ImprovMX is asked only on its own view. Cloudflare, which
-rests while ImprovMX is connected (the five-minute job and `mail.forwarding` pass the company by):
+rests while ImprovMX is connected (the five-minute job, its asking Cloudflare about forwarding
+addresses included, and `mail.forwarding` pass the company by):
 the domains, each with where its mail goes,
 what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
 with its people and whether each pressed Cloudflare's link, Change, Switch off and Delete; a form

@@ -50,6 +50,17 @@ flowchart TD
    (and D1 Edit, for when backups go back on), then in Workers and Pages, the portal's Worker,
    Settings, Variables and Secrets, set `KIT_OPS_TOKEN` to it.
 
+## Later the same day: the hourly forwarding alert
+
+With ImprovMX connected, the owner still had an alert email: "Forwarding addresses not all asked
+about", Cloudflare refusing the key. The five-minute job passed a company on ImprovMX by when it
+settled aliases and read domains back, but its first step, asking Cloudflare to email the link to
+forwarding addresses still waiting, still ran for it and failed every hour. The reworded refusal
+above changed the error's fingerprint, so it opened a new alert, and that alert sent the email.
+oltrem-mail f76212d makes the asking step pass resting companies by too
+(`modules/mail/test/improvmx.test.ts` checks no Cloudflare call and no report); the alert left
+open resolves itself after a day without it.
+
 ## How it was checked
 
 - The live portal's database read through the Cloudflare connector, read only: the alert rows by
