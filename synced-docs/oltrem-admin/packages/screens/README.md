@@ -335,13 +335,15 @@ start (a page drawn again with what was typed). A `details[data-pick]` (Write's 
 2026-11-11) is a dropdown of radios: a change shows the chosen option's `[data-pick-face]` in
 its summary's, a press on an option (the one already chosen too) closes it, the arrow keys only
 move the choice, Enter closes it instead of sending the form, and a click elsewhere or Escape
-closes it. A line
-marked `data-fold` with an empty input folds behind the button whose `data-unfold` names it. A
+closes it; core-ui's `Dropdown` draws it (2026-11-12). A line
+marked `data-fold` with an empty input folds behind the button whose `data-unfold` names it; since
+2026-11-12 `data-unfold` may list several ids (Write's one Cc/Bcc button), shown while all are
+empty. A
 button with `data-mark` (`strong`, `em`, `list`, `link`) puts that mark around the selection in
 the box its `aria-controls` names; a block with `data-marks-of` draws that box's words with
 their marks as they are typed (a list takes `data-list-class`). Ctrl or Cmd with Enter in a form
-with `data-send-key` presses its `data-send` button, and a select or a file input with
-`data-submit-with` presses the button it names when it changes, that button hidden (a file input:
+with `data-send-key` presses its `data-send` button, and a select, a file input or (since
+2026-11-12) a radio with `data-submit-with` presses the button it names when it changes, that button hidden (a file input:
 since 2026-11-08, Write's Attach a file). A file input with `data-upload` (2026-11-08) sends each
 file chosen straight to that address as the body, with its `name` and the values of the form's
 fields named in `data-upload-with` added to the address, then opens `data-upload-done`; a
@@ -365,8 +367,14 @@ name (`quote` toggles a blockquote; `link` opens the block's `data-rich-link` li
 opens it too). A paste keeps only the composer's tags and looks; a paste whose plain text is HTML code (it opens with a tag, ends with one and closes one) instead checks the form's `format` radio set to `html` and puts the code in the textarea as it is, when the block has `data-rich-code`, with an info notice; without `data-rich-code` it goes in as words from the plain text, and the notice says why (2026-11-11). The composer writes its HTML into the textarea on a send only while it is on, so code in the textarea is what goes. The textarea holds the
 composer's HTML and the form gains a hidden `editor=rich`. Nodes marked `data-rich-hide` hide and
 those marked `data-rich-show` show; a `format` radio set to `html` hands the textarea back as code,
-and another choice takes it into the composer again. The server cleans the HTML again; without the
-script the textarea works as before.
+and another choice takes it into the composer again. Since 2026-11-12 (a coded email went as its
+own code shown as words) the code is read wherever it comes from: a chat's answer with words and a
+fenced html block (the code alone is taken), a long run put in at once without a paste (a phone
+keyboard's clipboard); choosing `html` with code in the composer hands the textarea the code itself,
+not the composer's lines of it; going back with code in the textarea shows it as the composer's
+lines, which the server reads as the code. A block with no `format` radios (an address's
+signature) gives pasted code the textarea as it is and steps aside. The server cleans the HTML
+again; without the script the textarea works as before.
 
 What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,
 `/ui/*`, the local door and the invitation link (`NATIVE` in the script), and an answer that is

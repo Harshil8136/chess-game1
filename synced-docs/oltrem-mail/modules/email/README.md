@@ -184,18 +184,24 @@ ones not measured yet named in one line under the reason, instead of a row of em
 Since 2026-11-01 (the kit's record `docs/records/2026-11-01-email-remake.md` in oltrem-admin) Write is a compact
 compose card in the manner of Gmail and Resend, and every part still works without the script.
 From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, with the browser's
-suggestions; an empty Cc or Bcc folds behind a small button on the To line. One tools row holds
-the template picker (a select, posted with its Use button, which the script presses for it), the
-bold, italic, list and link buttons, the Words or HTML choice (only for `email.write.code`) and a
-**Formatting** popover with the marks. Beside the card on a wide page, under it on a phone, a
+suggestions; empty Cc and Bcc fold behind one **Cc/Bcc** button on the To line (since
+2026-11-12; a line of chips keeps room above and below, its label and buttons level with the first
+row of chips, and no arrow shows beside a box with suggestions). One tools row holds the template
+picker (the kit's `Dropdown`: a card of templates, each with its kind, posted with its Use button,
+which the script presses for it), the bold, italic, list and link buttons without the script, and a
+**More** menu (⋮) with the Words or HTML choice (only for `email.write.code`; since 2026-11-12 it
+is no longer on the page itself, as code pasted anywhere is found by itself) and the marks. Beside the card on a wide page, under it on a phone, a
 preview draws the words with their marks as they are typed. Readiness folds to one line when every
-check passes. The bar holds Send (Ctrl or Cmd with Enter), Send later and Save draft. **Another
+check passes. The bar holds Send (Ctrl or Cmd with Enter), Send later and Save draft; on a phone
+(since 2026-11-12) Send takes the room the row has left, Send later reads **Schedule**, Save
+draft, Preview and Save as template are icons with their names, and the portal's own bar is
+hidden while an email is written, so the compose head is the screen's only bar. **Another
 address** in the From line opens a dialog to send from an address not added yet (see
 [Senders](#senders-and-sending-domains)), for someone who holds `email.senders.add` or
 `email.senders.manage`: the address is checked and saved and picked in From, the words typed kept.
 
 Since 2026-11-08 (the client's feedback) the message is written in a **composer**, as in Gmail:
-a toolbar with text size, text colour, bold, italic, underline, strikethrough, bulleted and
+a toolbar with text size (the kit's `Dropdown`, its card spanning the toolbar, since 2026-11-12), text colour, bold, italic, underline, strikethrough, bulleted and
 numbered lists, quote, alignment, link (Ctrl or Cmd K opens a line for the address), remove
 formatting, undo and redo, over a box that shows the email as it will look. A paste from Word,
 Google Docs or a web page keeps only the composer's tags. The frame's script (`data-rich` in the
@@ -212,6 +218,15 @@ plain box, without the script) goes as HTML too for someone allowed to use code:
 with a tag, end with one and close one (`isHtmlCode`). The server reads the composer's lines the
 same way (`composedCode`): code that reached it as words, its tags written `&lt;…&gt;`, goes as
 HTML for someone allowed to use code, so a paste the page did not turn still goes as the email.
+Since 2026-11-12 (the owner's coded email was sent as its own code shown as words) the code is
+found wherever it comes from and whatever was chosen: in a chat's answer (words, a fenced html
+block, words again: the code alone, `codeIn`), with a byte-order mark or zero-width spaces, put in
+by a phone keyboard's clipboard without a paste (a long run that came in at once), and when HTML is
+chosen after the code went into the composer (the box gets the code itself, not the composer's
+lines of it; and the server reads lines and nothing else whose text is code back into that code, so
+a draft saved that way mends itself on its next save or preview). Going back to Words with code in
+the box shows the code as the composer's lines, which go as the code again. The composer is shared
+(`RichBox`, `rich-box.tsx`) with an address's signature.
 
 Since 2026-10-31 (the kit's record `docs/records/2026-10-31-write-templates-and-code.md` in oltrem-admin) Write
 starts from the company's saved templates for Write (see [Saved templates](#saved-templates)):
@@ -241,7 +256,7 @@ starts from the company's saved templates for Write (see [Saved templates](#save
 | The To box | Since 2026-11-11 (the kit's frame script): a list pasted from a spreadsheet, a signature or another email becomes one chip per address (commas, semicolons, tabs, new lines, or spaces between bare addresses part them; `Name <address>` and `Name address` stay whole; `mailto:` and quotes go); the same address twice is one chip; a bare address the person wrote to before gets the name it was sent with. The suggestions under To, Cc and Bcc are the people the person wrote to in their last 100 emails sent, the most often first, then the newest (`written.recent`) |
 | Leaving with words typed | Since 2026-11-11 the form is `data-keep-typed`: once something is typed, a link out opens the page in full so the browser asks before the page goes; a form drawn again after a refusal counts as typed. Sending or saving asks nothing |
 | Sent | The page Email, Sent lists the emails the person sent from Write, newest first, from the moment Send is pressed (since 2026-11-01: `GET /written?state=sent` lists `queued` rows as well as `sent` ones, each with `undoUntil` while its Undo wait lasts): the subject and first words, to whom, when, and what became of each in a word (Undo window, Queued, Waiting, Retrying, Sending, Failed, Sent, Delivered, Opened, Clicked, Delayed, Bounced, Refused, Marked as spam), read from its message's row and the provider's reports. One held for want of an email service says so in plain words, and the list looks again by itself (`data-live`) every five seconds while one is in its Undo window or being handed over, every thirty while one waits, and not at all when nothing moves. One opens with its people, its words and its timeline (sending started, the delivery outcome, first open, first click, a spam report, the provider's words when it failed), and **Forward** (subject `Fwd:`, the email quoted below, To empty) and **Send again** (the same people and words), each a new email in the form |
-| Signature | Each sender address keeps one (Email settings, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks, a thousand characters at most. An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
+| Signature | Each sender address keeps one (Email settings, Addresses, Edit; migration `0053`), set by whoever manages the address: plain words with the same marks; since 2026-11-12 written in Write's composer, with its formatting, or a designed signature pasted as HTML code (from an AI chat too: the code alone is taken), cleaned (`sanitizeEmailHtml`, `inlineStyles`) and kept as HTML behind the mark `SIGNATURE_HTML`, which only the server writes (`keptSignature`); a designed one opens as code to paste over. 20,000 characters at most once cleaned (1,000 until then). An email written from the address carries it under the message, in grey in the HTML and after `-- ` in the text, taken as it is when the email is queued; the email's own words, and so Forward and Send again, stay without it |
 | Send later | A day and a time on the company's clock (the client's `timeZone`, the bookings time zone in the template; UTC when none), at least a minute ahead and within a year. The job `email.written` queues each one within fifteen minutes of its time, with the queue's own wait for the rest, so it goes on time. Drafts, Scheduled lists them; Take back makes one a draft again |
 
 Each email written is a row of `email_written` (migration `0052`) that belongs to its writer: only
@@ -495,7 +510,10 @@ company itself: `email.templates.read` to see and preview, `email.templates.writ
 blocks and send oneself a test, `email.templates.html` as well to paste HTML or change a pasted
 body or a code block. So are the lists': `email.lists.read`, `email.lists.write`, and
 `email.lists.export` to download one, and `email.write.code`, to write in HTML on Write and send
-with a template that holds code.
+with a template that holds code. Since 2026-11-12 (the owner's choice: everyone who sends)
+`email.write.code` is an `operate` capability, migration `1017_email_code_for_senders.sql` gives it
+to every role that holds `email.senders.use`, and it counts wherever the person holds it, a branch
+too (`holdsAnywhere`): code is how an email looks, not whose data it reaches.
 
 | Route | Capability | What it does |
 |---|---|---|
@@ -693,7 +711,8 @@ JSON, the reason, who added them and when). Migration `0052_email_written.sql` m
 `email_written` (the writer, the sender, the addresses as JSON, the subject and the words, the
 state, the time it goes for one scheduled, the message key once queued and why it was last not
 queued; see Write). Migration `0053_email_signatures.sql` adds each sender address's
-`signature`. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
+`signature`. Migration `1017_email_code_for_senders.sql` gives `email.write.code` to every role
+that may send (2026-11-12) and bumps each company's access version. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
 route a message with no clear answer stays on. Migration `1003_email_consent.sql` makes
 `email_list_left` (who left which saved list from an unsubscribe link, the message and when) and
 adds `email_domains.bulk_since`, the first day a domain sent bulk mail, which `@oltrem/campaigns`

@@ -2,7 +2,7 @@
 title: "Phone tests owed: Email and Mail"
 status: living
 owner: vendor
-last_verified: 2026-11-11
+last_verified: 2026-11-12
 sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the records each line links]
 ---
 
@@ -24,6 +24,10 @@ sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the reco
 | P142 | Email settings, Addresses on a phone | The domain's name is whole on its line, its status and "checked" line under it, only Check again beside it; each address shows word tags for its use; Sync with provider and Add a domain look alike; the first tab is Setup | [record](records/2026-11-11-email-pages-tidy.md) |
 | P143 | Email on a phone: Write, Usage and limits, Templates, Campaigns | Write's labels are narrow and no scrollbar shows under the toolbar or Send bar; Usage names the unmeasured figures in one line; chips are bordered pills; Campaigns lists campaigns first; the folder row fades at its edges | [record](records/2026-11-11-email-pages-tidy.md) |
 | P144 | Email, Write on a phone with two or more addresses: press From, pick another, then press From and Enter on a keyboard if you have one | A card of addresses opens under From, each with its name, Default on the default and a tick on the one picked; a press picks it and closes the card; the email goes from that address | [record](records/2026-11-11-email-pages-tidy.md) |
+| P145 | Email, Write on a phone: paste a whole coded email (HTML and CSS from ChatGPT, Gemini or Claude, with or without its words and fences) into the message; or paste it, then open ⋮ and choose HTML code; then Preview | A note says it is HTML code; Preview shows the designed email, not its code; a draft saved before this fix shows designed after its next save or Preview | [record](records/2026-11-12-coded-email-and-dropdowns.md) |
+| P146 | Email, Write on a phone | The portal's own bar is hidden: the compose head is the only bar. Add an address in To: it has room above and below, To and Cc/Bcc sit level with it, an × shows on it, no arrow beside the box. One Cc/Bcc press opens both lines. Words or HTML is under ⋮. Send fills the bar's spare room; Schedule, then icons | [record](records/2026-11-12-coded-email-and-dropdowns.md) |
+| P147 | Email, Write: press From, the template picker, and Text size in the formatting bar; then Email settings, Addresses, a domain's default address | Each opens the same card under its line, From's across the whole line, Text size's across the toolbar; a press picks and closes it; the default address saves on its own | [record](records/2026-11-12-coded-email-and-dropdowns.md) |
+| P148 | Email settings, Addresses, Edit an address: write a signature with bold and a colour, Save; then paste a designed signature (HTML code), Save; then send yourself an email from that address | The signature box has Write's formatting bar; pasted code takes the box as code; the email arrives with the signature designed | [record](records/2026-11-12-coded-email-and-dropdowns.md) |
 | P131 | A portal with Brevo and Resend both connected: Email, Compose, send yourself a short email; then open it in Gmail | Ready to send has no amber Everyday email line; the email arrives from Resend (Show original: no sendibt or Brevo links, no List-Unsubscribe) and, from a sender you have replied to before, in Primary | [record](records/2026-11-11-gmail-primary.md) |
 | P69 | Email settings in the sidebar | Its tabs in a row: Email settings (connect a service), Addresses, Integrations, Mail setup, Forwarding; Email itself shows Write, Inbox, Drafts, Sent, Templates | [record](records/2026-11-08-email-for-the-client.md) |
 | P70 | Email, Write: attach a file over 10 MB, send it to yourself | The email ends with Files to download, the file's name, size and a link; the link downloads it | [record](records/2026-11-08-email-for-the-client.md) |
