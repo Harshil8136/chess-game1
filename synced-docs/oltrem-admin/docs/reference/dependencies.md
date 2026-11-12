@@ -12,7 +12,7 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 
 > **In plain words.** This page lists every outside package the kit depends on, the one version it is pinned to, which part uses it and why it exists. A new dependency needs a reason and the owner's yes; `pnpm verify` refuses one without a row here, one not pinned in the catalog, and a row nothing uses.
 
-**Where things stand:** 19 tools (used only to build, check or test) and 9 runtime packages (shipped inside a Worker).
+**Where things stand:** 19 tools (used only to build, check or test) and 11 runtime packages (shipped inside a Worker).
 
 | Package | Version | Kind | Used by | Why it exists | Plan |
 |---|---|---|---|---|---|
@@ -30,6 +30,8 @@ sources: [dependencies.registry.json, pnpm-workspace.yaml]
 | @zag-js/menu | 1.46.0 | runtime | @oltrem/core-ui | The menu state machine with submenus and typeahead, the second of the three widgets. | 12.3 |
 | @zag-js/preact | 1.46.0 | runtime | @oltrem/core-ui | Zag.js's official Preact adapter: useMachine and normalizeProps, so the three hard widgets run as state machines inside Preact islands (the owner's choice, card 25). | 12.3 |
 | cf | 1.0.0-beta.19 | tool | oltrem-client | Cloudflare's own newer command line, pinned to a version from before it asked for a newer Node 22: npm run deploy signs in with it once per client, in the browser like wrangler, because wrangler's sign-in cannot reach Zero Trust, and sets Cloudflare Access in front of the portal with it (the one-time code login, a policy that lets anyone ask for a code, the paths left open). No key is made or kept. | 14.1 |
+| class-variance-authority | 0.7.1 | runtime | @oltrem/core-ui | Typed variants for the primitives (a button's look and size as named options checked by TypeScript), the owner's ask of 2026-11-12; about 0.5 KB with clsx. A variant replaces passing classes that set the same property twice, so the kit needs no class merger. | 12.3 |
+| clsx | 2.1.1 | runtime | @oltrem/core-ui | Joins conditional class names (strings, arrays, objects) for cn() in @oltrem/core-ui, and is what class-variance-authority itself uses; a few hundred bytes. tailwind-merge was measured and left out (2026-11-12): 8.4 KB and about 18 ms of CPU on a first page, past the free plan's 10 ms. | 12.3 |
 | daisyui | 5.7.50 | tool | @oltrem/core-ui | The owner's choice (2026-11-08, Look 3): ready components (button, field, toggle, dock, toast, skeleton and others) as a Tailwind plugin, run only when the stylesheet is built. Zero dependencies, CSS only, no script reaches the browser; its theme variables are filled from the kit's own tokens, so looks.ts stays the one colour list. | 12.2 |
 | eslint | 10.13.0 | tool | oltrem-tools | The linter; the module-boundary rules run inside it while editing. | 15.6 |
 | eslint-plugin-boundaries | 7.2.0 | tool | oltrem-tools | Refuses a module importing another module's internals, or a core package importing a module; its rule file is the architecture diagram. | 15.6 |

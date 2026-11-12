@@ -187,6 +187,14 @@ import { Button, ChipRow, FormField, Input } from '@oltrem/core-ui';
 Labels, words and sentences are the caller's, in the page's language; the primitives carry no
 text of their own.
 
+**Class names (2026-11-12).** `cn()` joins class names and drops what is false (`clsx`); `cx` is
+the same function under its first name. There is no class merger: tailwind-merge cost 8.4 KB and
+about 18 ms of CPU on a first page, past the free plan's 10 ms, so a caller never passes a class
+that fights one a primitive sets. A primitive's looks are a `cva` table instead, such as
+`buttonVariants({ variant, size })` for a link or label in a button's look. The rules for a new
+screen are the repository's skills, `.claude/skills/ui-design-system` and
+`.claude/skills/preact-ui`.
+
 ## Tests
 
 On Node: every primitive rendered to HTML with `preact-render-to-string` and its markup read

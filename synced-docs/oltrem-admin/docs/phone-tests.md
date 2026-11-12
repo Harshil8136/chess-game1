@@ -27,6 +27,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | # | Open | You should see | From |
 |---|---|---|---|
 | P153 | Open Users, then Settings, then press Back; open Settings again from the sidebar | Back shows Users at once, with no loading line; Settings opens at once the second time. Remove someone's access on another device and press Back on theirs: the page shows, then the refusal replaces it | [record](records/2026-11-12-instant-pages.md) |
+| P157 | Home, light and dark; then the setup page (`oltrem deploy --page`) | The sidebar mark, Home's welcome band and the setup page's mark and main button are one solid colour, with no glow under them; buttons look as before | [record](records/2026-11-12-ui-foundation.md) |
 | P149 | After the deploy, move between Home, Users, Settings, Email and back, a few times | Each page opens sooner than before; the bell still shows its number and every tab is there | [record](records/2026-11-12-quiet-portal.md) |
 | P132 | On the live portal, once the fleet has updated it (no deploy needed): Look and colours, tap a palette; the account menu, tap a colour dot; then a theme icon, and close and open the sidebar | The colours change at once and stay after a reload; no "Not signed in" (KIT-E-0401) page | [record](records/2026-11-12-screen-actions-behind-the-door.md) |
 | P130 | Home, then leave it open a minute while an email goes out or a task changes | A figure that changes glides to its new number instead of jumping | [record](records/2026-11-11-portal-name-icon-font.md) |
