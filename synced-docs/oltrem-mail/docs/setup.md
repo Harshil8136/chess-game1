@@ -255,6 +255,8 @@ mail carries none of the signs of marketing mail.
 | An open-tracking pixel, and links sent through the provider's own address | Everyday mail (Write, replies, automated notices) asks the provider not to track it, where the provider takes that for one message (Postmark, SendGrid, Mailgun, Mailjet). Resend tracks only when tracking is switched on for the domain in its dashboard, and it starts off. |
 | A provider that tracks every message and adds a `List-Unsubscribe` header to each (Brevo; Sender tracks every message too) | Everyday mail goes through another connected provider first, and the tracking one stays the backup. With no other provider, Ready to send says "Everyday email lands in the inbox" and names the fix: add one, such as Resend. |
 | `List-Unsubscribe` and an unsubscribe footer | Only on campaigns, which need both by law and by Gmail's bulk-sender rules. A campaign is marketing, and Gmail mostly files it under Promotions, which is not spam. |
+| The email itself reads as an offer: an offer in the subject or the hidden preview line, a newsletter build (pictures, buttons, a hidden preview line), Unsubscribe or View in browser links, many links | Write asks once before it goes (since 2026-11-12), naming each sign and the way to Primary, and names any link that goes nowhere (`#`, a template's yourwebsite.com). Gmail's own help files "deals, offers, and other promotional emails" under Promotions, so a designed offer lands there from any provider and any setup. |
+| One address for campaigns and everyday mail | The campaign page says so when its From address also sends everyday email (since 2026-11-12): Gmail learns an address from its campaigns and then files its letters under Promotions too. |
 
 What only the client can do, outside the portal:
 
@@ -263,8 +265,18 @@ What only the client can do, outside the portal:
 2. Send campaigns from their own address on their own subdomain (`news.example.com`), so Gmail
    learns the everyday address as a person's: Google's sender guidelines ask for a separate
    address for each kind of mail.
-3. Write everyday mail like a letter: plain words, a few links, from a person's name, with a reply
-   address someone reads.
+3. Write everyday mail like a letter: plain words, a few links, from a person's name ("Ana from
+   Example Co" rather than the business name alone), with a reply address on the same domain
+   that someone reads.
 4. Once DMARC reports show every provider passing, move DMARC from `p=none` to `p=quarantine`.
 5. Ask a few regular customers to reply once, or to move one email to Primary: Gmail then keeps
-   that sender in Primary for them.
+   that sender in Primary for them. Gmail learns for each reader: someone who was sent designed
+   offers from an address may see even its plain letters in Promotions until they move one.
+
+What 2026-11-12 showed, from the owner's own test: the client's domain passed SPF (through the
+provider's return-path subdomain), DKIM and TLS, and the provider added no tracking, yet the
+email landed in Promotions. It was a newsletter design with "Deal" in its subject, a hidden
+preview line, a hero picture, a button and Unsubscribe and View in browser links that went
+nowhere, sent from the one address that also sent the client's campaign. That is what Gmail calls
+a promotion; the record says what was checked
+([2026-11-12](records/2026-11-12-promotions-tab-cause.md)).
