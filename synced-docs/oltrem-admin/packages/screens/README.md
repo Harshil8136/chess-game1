@@ -297,7 +297,20 @@ rise one after another, 60 ms apart; a page that comes back to itself or follows
 stays still); a
 change that comes back to the same page keeps its scroll and brings its outcome (a `Done` notice
 or an error) into view. Focus moves to the new page's heading, or to a form's errors. The page
-under the pointer is fetched a moment ahead, so the click opens it at once. The arrow and the
+under the pointer is fetched a moment ahead, so the click opens it at once. **Pages kept in
+memory** (2026-11-12, the owner: no waiting for a page, Back included): each page opened is kept
+in the tab's memory for 15 minutes, 40 at most, and never on disk. Back, Forward and a link to a
+kept page show it at once; when the copy is older than 15 seconds the portal is asked for the page
+again with every check, and a page that changed is put in place unless the person has already
+tapped, typed or opened a dialog (then it is kept for the next time). An answer that is not the
+page (a session that ended) opens as the browser would, and a failure forgets every copy. Any
+change sent (a form's POST, a module script's own `fetch` other than the frame's sidebar and
+theme switches, `/do/side` and `/do/theme`)
+forgets them all, since it may change any page. A part of a page marked `data-preload` (Email's
+folders) has its links fetched one at a time when the browser is idle, 16 at most, and kept, so
+moving between them is instant; a link with `data-preload-skip` (Compose, which checks the senders
+when it opens, and the + of Labels) is not, nor anything while the tab is hidden or the phone
+saves data. The arrow and the
 theme switch act at once and save behind the scenes. A button with `data-copy` copies that value
 to the clipboard and says "Copied", aloud too, for two seconds. A button with `data-fill` (a
 field's id) and `data-value` puts that example in the field and moves there (2026-11-10: the

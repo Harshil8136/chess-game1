@@ -33,7 +33,10 @@ health problem when it opens (a check failed twice in a row), resolved when the 
 `alerts.reportError(env, { error, area, ref })` keeps a server error as a warning, so none is
 lost to Workers Logs' sampling. Its key is `error.<area>.<fingerprint>`: the fingerprint is the
 error's name and message with numbers, long ids and quoted values taken out, hashed to seven
-characters, so the same failure counts up on one alert. An id inside the area (a queue message's)
+characters, so the same failure counts up on one alert. A word of eight characters or more with a
+digit in it counts as an id, such as the runtime's `reference = …` on a network error: before
+2026-11-12 each one opened a new alert, and an alert's own email failing the same way opened
+another, without end. An id inside the area (a queue message's)
 moves to the reference. The detail keeps the message, the reference, when it was last seen and
 the first fifteen lines of the stack. One isolate writes a key at most once a minute and adds the
 occurrences between to the next write, so a failing loop cannot spend the day's D1 writes. It
