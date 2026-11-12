@@ -216,7 +216,7 @@ the owner's call.
 
 **Enforced by.** The owner. No gate can enforce this rule, and this file says so.
 
-## R-12 Phone first
+## R-12 Phone first, no wasted room
 
 **Rule.** Every screen is designed for a phone first: every option in a page visible in a
 sideways-scrolling row rather than hidden in a dropdown, the portal's sections in its sidebar (on
@@ -224,7 +224,19 @@ a phone a menu button opens it; the owner's choice of 2026-10-22), every dialog 
 dialog system, every tap target comfortably large, nothing that needs a mouse. Documentation
 reads well on a phone too: a ten-line summary first, short tables, no wide tables.
 
-**Why.** The owner tests only on a phone, and the clients' staff work from one.
+No room is wasted, on a phone or a computer (the owner's golden rule of 2026-11-12):
+
+- **The sides.** A page uses the full width beside the sidebar; nothing is held to a narrow column
+  with empty space beside it. Wide screens get more columns, never wider margins.
+- **The top.** The page's title, its search, filters and main action share as few lines as fit,
+  so the page's own content starts within the top fifth of the screen. Compact, never cramped.
+- **No big boxes for small facts.** A count is a slim pill in a row, never a tall box of its own.
+- **Colour that helps.** Logos, icons and the system's own colours, as soft one-colour gradients,
+  so a person tells things apart at a glance. Never a two-colour purple-into-blue gradient or a
+  coloured glow.
+
+**Why.** The owner tests only on a phone, and the clients' staff work from one. On 2026-11-12 he
+found pages wasting about 40% of the width and much of the top on empty space and tall boxes.
 
 **Scope.** Every screen of the kit and every document.
 

@@ -20,7 +20,7 @@ does not exist here, and a test proves it.
 | Shadows | `sm`, `md` | `shadow-md` |
 | Motion | `fast` 120 ms, `base` 200 ms, one `ease-out`; enter and exit through `@starting-style`; from page to page a view transition | `duration-(--duration-fast)` |
 | Group colours | `--ui-hue-blue`, `green`, `amber`, `rose`, `cyan`, `violet`, `teal`, `slate`: one per group of sections, each at 3:1 or better on the page and the surface in both themes; `data-hue="green"` makes one the element's `--hue` | `data-hue`, `ui-hue-tile`, `ui-hue-card` (a bordered card on one flat tint of its hue, 2026-11-12) |
-| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves, and a size container, so `@xl:` and `@3xl:` follow the page's width rather than the window's; since 2026-11-01 it also lays the page out: up to 96 rem with gutters that grow at 1024, 1280 and 1536 px, `data-kind="form"` keeping the content to 56 rem under a full-width head, `data-kind="door"` a 40 rem column), `ui-head` and its parts (`-row`, `-text`, `-tools`, `-tile`, `-set`) and `ui-crumbs`: the page's head, drawn by `@oltrem/screens` (since 2026-11-11 the row centres the heading and its actions, which stay beside a short heading and go under a long one); below 1024 px a head marked `data-bar` keeps its heading and actions but drops its icon tile and line, under the phone's bar along the top (`ui-phone-bar`, 2026-11-11; Look 3's bottom bar is gone), with 16 px between its parts and nothing along the foot. The document keeps the scrollbar's room (`scrollbar-gutter: stable`), so pages of any height start at the same place | classes |
+| Surfaces | `ui-canvas` (the background with two soft washes of the brand's colours), `ui-glass` (a bar over the canvas, blurred behind), `ui-page` (the content a page change moves, and a size container, so `@xl:` and `@3xl:` follow the page's width rather than the window's; since 2026-11-01 it also lays the page out; since 2026-11-12, the owner's no-wasted-room rule, it runs the full width beside the sidebar with a 16 px gutter on a phone, 24 px from 1024 px and 32 px from 1536 px, `data-kind="form"` keeping the content to 64 rem under a full-width head, `data-kind="door"` a 40 rem column), `ui-head` and its parts (`-row`, `-text`, `-tools`, `-tile`, `-set`) and `ui-crumbs`: the page's head, drawn by `@oltrem/screens` (since 2026-11-11 the row centres the heading and its actions, which stay beside a short heading and go under a long one); below 1024 px a head marked `data-bar` keeps its heading and actions but drops its icon tile and line, under the phone's bar along the top (`ui-phone-bar`, 2026-11-11; Look 3's bottom bar is gone), with 16 px between its parts and nothing along the foot. The document keeps the scrollbar's room (`scrollbar-gutter: stable`), so pages of any height start at the same place | classes |
 | The frame | `ui-frame` (with `data-side` open or closed), `ui-side` and its parts (`-head`, `-search`, `-nav`, `-group`, `-row`, `-foot`, `-me`, `-menu`, `-themes`, `-tip`), `ui-side-drawer`, `ui-progress`: the portal's sidebar, drawn by `@oltrem/screens`. Every row, the bell's too, sits on one column with 18 px icons; closed to a 64 px rail, the icons are on its centre line, the portal's mark stays at the top with the open button over it on hover, the unread count is a badge on the bell, and the list has no scroll bar but fades where more is hidden (2026-11-11) | classes |
 
 Light and dark are the same names with different values; dark follows the system
@@ -83,11 +83,25 @@ secret shown once) stays until closed too. A `Notice` placed in a page is a
 quiet callout tinted by its tone (`.ui-note`), for a state of things rather than an outcome. The
 popover `Toast` and `ToastRegion`, which nothing used, are gone.
 
-**A page's toolbar (look 2, step 2).** `ChipRow` marks its `<nav>` `ui-filters`; `CommandRow` and
-`ActionRow` mark theirs `ui-cmds`. The page is a grid: from 640 px a command row that follows the
-page's heading sits at its right, and one that follows a row of filters sits at the end of that
-row, so filters and the page's button share one line. On a phone each keeps its own row. `Stats` draws its figures with `Figures`
-(below), so every page's numbers look the same.
+**A page's toolbar (look 2, step 2; one wrapping row since 2026-11-12).** `ChipRow` marks its
+`<nav>` `ui-filters`; `CommandRow` and `ActionRow` mark theirs `ui-cmds`. The page is a wrapping
+flex row: the head and the command row after it share the first line (on a phone too, when they
+fit), and a search (`form[role=search]`) and each row of filters sit side by side under it, so the
+page's own content starts within the top fifth of the screen. Everything else takes a full line.
+`Stats` draws its figures with `Figures` (below), so every page's numbers look the same; a `Stat`
+takes a `tone`.
+
+**Colour cards (2026-11-12).** `ui-tgrid` lays out as many 16.5 rem columns as fit. `ui-tcard` is
+a card on a soft gradient of one hue (`data-hue` sets `--hue`): a 40 px tile (`ui-hue-tile` or
+`ui-logo`), `ui-tcard-title` (with `ui-tcard-go` the whole card is its link), `ui-tcard-sub`,
+`ui-tcard-end` and `ui-tcard-foot` for a `<meter class="ui-meter">` in the hue and `ui-tag`
+pills; `ui-tcard-link` is a second link on the card, above the card's own. `ui-tint` tints a box
+laid out by its own classes and goes quiet when the switch inside is off; `ui-scard` with
+`ui-scard-head` is a settings section; `ui-parts` a list of module cards, two columns on a wide
+page; `ui-settings-cols` two columns of sections from 84 rem; `ui-footbar` a full-width save bar
+stuck to the foot; `ui-tgroup` a group heading with a dot in its hue. `ui-logo` is a white 40 px
+tile for a brand's mark. An open `Dropdown` lifts the clipping of every box around it on the
+page or in a dialog, so its list is never cut at a card's edge.
 
 ## The console pieces
 
@@ -101,7 +115,7 @@ them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
 |---|---|---|
 | `Toolbar`, `Segmented` | a `role="group"` row; a `<nav>` of links | the page's options in one sideways row on a phone, wrapping on a wide page; the current option marked for the browser, each with its count |
 | `PaneGrid`, `Pane` | a grid; a `<section>` with a heading, a line, an icon on a group's hue and its own tools | one column on a phone, two from 44 rem of page, three when asked from 60 rem; `span="all"` takes the row; a pane is a size container too; its head wraps (2026-11-11), so a long title keeps whole words and its tools go under it |
-| `Figures` | a `<dl>` strip on hairlines | a label, a value and a note; a tone draws a bar on top; an `href` makes the whole figure the link |
+| `Figures` | a `<dl>` of slim pills in a row (2026-11-12) | the number first in its colour, then the label and the note (the note is left out on a phone); a tone tints the pill in its state's colour, and untoned figures take the portal's colours in turn; an `href` makes the whole figure the link |
 | `Rows`, `Row` | a `<ul>` under an optional heading; each row a link or a block | a lead (an avatar or a badge), a title on one line, a line under it, an aside, a tone bar at the edge; a row's own buttons sit outside its link; rows standing on the page rather than in a pane sit on a card of their own (Look 3) |
 | `Avatar`, `initialsOf`, `hueFor` | `<span aria-hidden>` | two letters from the name or the address, on the hue the address always picks |
 | `Timeline` | `<ol>` | each step an icon and its state, its time and its detail |
