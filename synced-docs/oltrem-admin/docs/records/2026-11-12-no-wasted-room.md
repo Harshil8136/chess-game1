@@ -80,3 +80,17 @@ The stylesheet grew from 144 to 149 KiB; its cap is 156 KiB (it was 148), with t
   Settings, Modules, System status, Email settings.
 - `pnpm verify` green before the push.
 - Not verified: the look on a real phone (P164 to P168 in the phone tests).
+
+## Follow-up the same morning: a tab kept open showed the old look
+
+At 07:33Z the owner said almost everything still looked the same, though his portal was on this
+update (its recorded fingerprint matched the commit). The cause: the frame script opens every page
+in place and kept the stylesheet the tab first loaded, so a phone tab open since before the update
+drew the new pages with the old styles. Now a page built by a newer portal (its stylesheet or
+script has another version) opens whole, with its own styles. A tab still running the old script
+needs one reload to get this fix; every later update arrives by itself.
+
+He also asked that a dropdown open upward when there is no room under it: the frame script now
+marks a dropdown whose choices would run past the foot of the screen, when there is more room
+above, and its card opens over the line instead (P169).
+
