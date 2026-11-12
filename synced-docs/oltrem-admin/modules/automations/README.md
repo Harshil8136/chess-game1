@@ -71,7 +71,13 @@ What `run` returns is the run's note; a throw is a failed run.
 
 ## How it runs
 
-The job `automations.run`, every five minutes:
+While no automation is on the job sleeps (2026-11-12): it reads no audit row, moves its place to
+the end of the log in one write, answers `'idle'` and looks again every hour. Switching an
+automation on, or changing one that is on, wakes it in the same batch; when it is the only one on,
+the place moves to the end of the log first, so what was audited while nothing was on sets
+nothing off, and what is audited from then on does.
+
+The job `automations.run`, every five minutes while one is on:
 
 1. Reads the audit rows written since its last run, a hundred at most, from where it stopped
    (`oltrem_meta` key `automations.seq`); its first run starts from that moment, so the past sets

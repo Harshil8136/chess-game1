@@ -91,16 +91,18 @@ const audit = createAuditModule<Env>({
 | `GET /export?since=&until=` | `audit.export` (admin class) | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
 | `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands |
 
-**The daily seal** is optional: the Modules page switches it off (`audit.seal`, an extra of the
-audit part in `@oltrem/core-config`), which stops `audit.seal`, `audit.recheck` and the check
-`audit.sealed`; the log itself keeps every row. While on, the job `audit.seal` runs once a day. It closes the UTC day before today:
+**The daily seal** is optional: the Modules page switches it (`audit.seal`, an extra of the
+audit part in `@oltrem/core-config`), and a new portal starts with it off (since 2026-11-12); off,
+`audit.seal`, `audit.recheck` and the check `audit.sealed` stop, and the log itself keeps every
+row. While on, the job `audit.seal` runs once a day. It closes the UTC day before today:
 the hash of the previous seal and of every row of that day, in order, hashed together
 (`chainHash`), so each seal depends on all before it. A day with no row is sealed too, which
 keeps the chain unbroken. The seal goes into `oltrem_audit_seals` (migration `0016`) and a copy
 with every row's hash goes into the bucket at `logs/audit/<day>.json`, where the backup's
 lifecycle rules keep it.
 
-**The recheck.** The job `audit.recheck` runs every 15 minutes and checks again the newest 7
+**The recheck.** The job `audit.recheck` runs every 15 minutes while it has seals to check, and
+every six hours once a run finds none left for the day (it answers `'idle'`). It checks again the newest 7
 seals (`RECHECK_SEALS`) not yet checked since today's UTC midnight, the one never checked or
 checked longest ago first: a row changed since (its hash no longer matches), a row removed or
 added (the chain no longer adds up) or a bucket copy that differs marks the seal broken and names

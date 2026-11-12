@@ -54,9 +54,13 @@ Errors are emailed like any warning (once, then counted) and listed on the Alert
 | `failed` | email refused it (no sending address, no company yet): the job tries again every five minutes |
 | `none` | nobody is named in `alerts.recipients`: it is only listed |
 
-The job `alerts.release` runs every five minutes on the tick: out of the quiet hours it sends
-every open alert that is held or failed as one message. A held alert that is resolved before the
-quiet hours end is never sent.
+The job `alerts.release` runs every five minutes on the tick while an alert waits: out of the
+quiet hours it sends every open alert that is held or failed as one message. A held alert that is
+resolved before the quiet hours end is never sent. While none waits the job sleeps (it answers
+`'idle'` and looks again every six hours): an alert left held or failed when it is raised wakes
+it in the same write (`wakeJobsStatement` of `@oltrem/core-module`). The waiting alerts are found
+through a partial index (migration `0060`), so the job reads the waiting rows only, where it read
+every alert ever raised on each run.
 
 ## Settings
 

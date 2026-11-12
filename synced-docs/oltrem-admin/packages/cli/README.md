@@ -868,7 +868,7 @@ Deployments and the core (Backups among it: always on), `preset everything` swit
 | `PART_PRESETS` | `{ id: 'everything' \| 'email', label, off: string[] }` |
 | `PARTS_KEY` | `'settings.parts_off'` |
 | `partsRefusal(off)` | why a list cannot be written (a bad name, a core part, a part one left on needs), or null |
-| `readParts(dir, run)` | `{ off?: string[], problem?: string }`, through `wrangler d1 execute --remote --json`; `[]` before anything is written |
+| `readParts(dir, run)` | `{ off?: string[], problem?: string }`, through `wrangler d1 execute --remote --json`; before anything is written, the extras a new portal starts with switched off (`EXTRAS_OFF_AT_FIRST`, the kit's default for the setting), so the first list written keeps them off |
 | `writeParts(dir, off, run, now?)` | `{ ran, written, off, steps, problems }`: refused before any read when the rule says no; the optional extras already stored (ids with a dot) are kept; nothing written when the list is already stored; otherwise `writeSetting` (above: the version moves up, a history row, the cached settings cleared) |
 | `partsLines(off)` | the lines `list` prints |
 | `partsQuestion(off)` | the deploy's question: `{ items, off, presets }`, each item the catalogue's row with its sidebar `group` (`partGroup(id)`, kept here since the catalogue is held equal to core-config's and has none; a client's own part that is off shows under `OWN_GROUP`), the presets `everything`, `email` and `core` |

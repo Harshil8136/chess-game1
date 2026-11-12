@@ -154,6 +154,13 @@ the one tick (`@oltrem/core-jobs`) runs them when due under a lease and records 
 `everySeconds(every)` is the parser both share. The `scheduled` hook stays for a module that
 needs the raw tick; work that should be seen, counted and retried is a job.
 
+A job that mostly finds nothing to do declares `idle`, a slower pace longer than `every`, and its
+`run` answers `'idle'` (`JobAnswer`) when nothing waits: the tick then runs it at that pace.
+`wakeJobs(db, ids)` makes sleeping jobs due now, and `wakeJobsStatement(db, ids)` is the same
+write for a batch, so the change that gives a job work wakes it in one transaction. Both live
+here, not in `@oltrem/core-jobs`, so a module wakes a job without depending on the scheduler; the
+table is the scheduler's (`oltrem_jobs`). `@oltrem/core-jobs`' README has the reasons.
+
 ## Flows
 
 Work too long or too many-stepped for the tick is a flow: a stable id, a summary, a `run` and,

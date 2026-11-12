@@ -25,7 +25,7 @@ Mail never builds its own version of any of these.
 | Permissions | `@oltrem/iam` | each module declares its capabilities on its own bit plane, checked by the kit's check; the Owner and Vendor floors, roles, grants and fresh sign-in are the kit's |
 | Audit trail and logs | `@oltrem/core-audit`, the kit's alerts | every change is audited through the kit's wrapper; mail keeps no log store of its own |
 | Settings | `@oltrem/core-config` | settings are rows in the client's database, never new variables (R-09) |
-| Sending and jobs | `@oltrem/core-outbox`, `@oltrem/core-module` | a message leaves through the outbox, with the kit's lease per message key; scheduled work is a job the kit's tick runs |
+| Sending and jobs | `@oltrem/core-outbox`, `@oltrem/core-module` | a message leaves through the outbox, with the kit's lease per message key; scheduled work is a job the kit's tick runs. A job that polls declares `idle` and answers `'idle'` when it found nothing, so it runs at that slower pace, and the write that gives it work calls `wakeJobs` (2026-11-12); the tests take `@oltrem/core-jobs` for the jobs' table |
 | Providers | `@oltrem/providers` | provider instances, their sealed keys, adapters and failover order |
 | Errors | `@oltrem/core-errors` | codes in the blocks mail holds (below) |
 | The look | `@oltrem/core-ui`, `@oltrem/core-module/pages` | the kit's tokens and primitives, pages in the sidebar's Messages group, phone first (R-12); what a press did (done, refused, imported, sent with Undo) inside the kit's `Toasts`, at the bottom right, while a state of things stays in the page; the kit's stylesheet is built from mail's packed pages; Email's pages are drawn in the kit's `MailShell`, and the kit's delivery log page joins them through the screens' `frames` option, which the client fills with `emailFrame` from `@oltrem/email/pages` (2026-11-10) |
@@ -96,7 +96,7 @@ dashboard step and the `mail.soon` job tries again.
 
 The inbox gives the kit three things to show: a Home figure (unread conversations), a search
 section (mail by its words) and a privacy search (messages from an address). Its health check
-and its hourly job are both `mail.inbox`; a second job, `mail.soon`, runs every five minutes
+and its hourly job are both `mail.inbox`; a second job, `mail.soon`, runs every five minutes while any of this is on a short clock, hourly otherwise
 (snoozed conversations whose time came, addresses waiting for their verify link, rules not made
 yet, and forwarding's waiting addresses, rules and one domain a run). Forwarding (bundle F) adds the
 health check `mail.forwarding`, the page `/email/forwarding` and nothing the kit wires: aliases to

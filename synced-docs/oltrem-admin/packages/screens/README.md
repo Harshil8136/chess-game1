@@ -187,6 +187,14 @@ request) is gone for that request: no sidebar entry or tab, no Home card or Need
 the search; its pages, a module's own by their pattern and a kit section by its address, answer
 the portal's Not found page. Switched back on, all of it is there on the next request.
 
+**A page's reads go together** (2026-11-12). Each read is a trip to the database, tens to a few
+hundred milliseconds from where the Worker runs, and a page that makes them one after another
+waits for their sum. So a page first learns who is signed in (the session, which every read needs
+and which costs no trip of its own), then starts everything else at once: the bell's count, the
+tabs the person may open (`probe`), the saved views and the page's own reads (`beside` in
+`src/screens.tsx`). The count, the tabs and the reads used to wait for each other, three or four
+trips before a page's own first read; now a page waits for its slowest read.
+
 - **Saved views** (since 2026-11-03), above a list page that keeps them (`views` on a module's
   page; a records list, a form's inbox and the audit log): the person's views as a sideways row of
   chips, All first and the one on screen marked, then a field to name the filters on screen and
@@ -195,8 +203,8 @@ the portal's Not found page. Switched back on, all of it is there on the next re
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
 - **Notifications** (since 2026-11-03): a bell under the search box in the sidebar, and on the
-  phone's bar along the top (2026-11-11), with the unread figure (to "99+"), read with `/api/iam/me` on every
-  page (one indexed read more; none without the users module). It opens `/notifications`: All or
+  phone's bar along the top (2026-11-11), with the unread figure (to "99+"), read on every
+  page beside the page's own reads (one indexed read more; none without the users module). It opens `/notifications`: All or
   Unread as chips, Mark all read, each notification a row (unread ones bold) that opens through
   `/notifications/:id`, which marks it read and goes to its page (a path inside the portal, else
   the list); thirty a page with Older; under them "How you are told", a grid of two switches per

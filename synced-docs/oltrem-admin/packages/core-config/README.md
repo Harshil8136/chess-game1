@@ -156,12 +156,17 @@ the snapshot's list changes, so a request pays one comparison and no I/O.
 **Optional extras** (since 2026-11-03, the owner's ask): a part, a core one included, may list
 `features`, each an extra the portal works without, with the ids of the jobs and health checks
 it stops. The kit's: `audit.seal` (the daily seal, its recheck and its check), `iam.expiring`
-(the emails about access ending), `iam.reviews` (the overdue-review warning) and `backup.drill`
-(the restore-drill warning; the nightly copy itself stays on), and `settings.get-started` (Home's
-Get started card; it stops no job). An extra switched off is kept in
+(the emails about access ending), `iam.reviews` (the overdue-review warning), `backup.nightly`
+(the nightly copy's schedule, a new portal's first copy and the check of the newest copy's age; a
+copy by hand still runs), `backup.drill` (the restore-drill warning), and `settings.get-started`
+(Home's Get started card; it stops no job). An extra switched off is kept in
 the same list by its id, so no new setting; `featuresOff(stored, mounted)` gives the jobs and
 checks it stops, and the reader's set holds them beside the parts (ids with a dot never name a
-part). All are on until switched off; nothing they wrote is deleted.
+part). Nothing they wrote is deleted. An extra marked `startsOff` (the daily seal, the nightly
+backup and the drill reminder, since 2026-11-12: work on the timer that costs database rows every
+day) is off on a new portal until someone switches it on: `EXTRAS_OFF_AT_FIRST` is the setting's
+default, so a portal whose list was already saved keeps what it saved. The others are on until
+switched off.
 
 | Route | Capability | What it does |
 |---|---|---|

@@ -28,7 +28,8 @@ itself, since the counts are the whole company's; someone who holds it only at a
 
 ## How it counts
 
-The job `analytics.rollup`, every five minutes, adds the audit rows written since its last run
+The job `analytics.rollup`, every five minutes while the log grows and every fifteen while a run
+finds nothing new (it answers `'idle'`), adds the audit rows written since its last run
 (`oltrem_meta` key `analytics.seq`) to two tables of daily counts, in SQL, so the Worker spends no
 CPU time on them however many there are: 5000 rows a statement, four statements a run. Its first
 run starts from the log's first row, so a portal sees its history from the day the module is

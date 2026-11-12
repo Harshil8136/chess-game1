@@ -26,6 +26,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P149 | After the deploy, move between Home, Users, Settings, Email and back, a few times | Each page opens sooner than before; the bell still shows its number and every tab is there | [record](records/2026-11-12-quiet-portal.md) |
 | P132 | On the live portal, after `git pull` and `npm run deploy` in templates/client: the account menu, tap a colour dot; then a theme icon, and close and open the sidebar | The colours change at once and stay after a reload; no "Not signed in" (KIT-E-0401) page | [cli README](../packages/cli/README.md) |
 | P130 | Home, then leave it open a minute while an email goes out or a task changes | A figure that changes glides to its new number instead of jumping | [record](records/2026-11-11-portal-name-icon-font.md) |
 | P129 | Tap from Home to People, Settings and Email | The sidebar stays where it was scrolled and marks the new page; pages open a little quicker; the letters are the new font, Inter | [record](records/2026-11-11-portal-name-icon-font.md) |
@@ -92,6 +93,8 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P150 | Settings, Modules, as the Vendor: the Backups and Audit log rows. On the live portal switch **Nightly backup**, **Restore drill reminder** and **Daily seal** off and save | Backups has two switches and Audit log one; saved, System status no longer lists the backup or seal checks and no backup alert comes back. Backups, "Make a copy now" still works once backups are set up | [record](records/2026-11-12-quiet-portal.md) |
+| P151 | Developer, Jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](records/2026-11-12-quiet-portal.md) |
 | P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](records/2026-11-03-optional-extras.md) |
 | P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](records/2026-11-03-get-started.md) |
 | P10 | Access, Roles, a role | the redesign at phone width: its permissions in groups, Save at the foot | [record](records/2026-10-31-access-settings-redesign.md) |

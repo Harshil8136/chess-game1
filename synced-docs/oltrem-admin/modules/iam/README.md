@@ -139,7 +139,11 @@ does a page read the record more than once: the screens call the API several tim
 the page's ExecutionContext, and the record read for the first call serves the others (KV allows
 100,000 reads a day; Home made 24 before, one now). A write or removal of the record in that
 isolate (a new sign-in, `invalidate`, `revokeDevice`, a recompile) makes the next call read it
-again, so a change made in the request shows in the rest of it.
+again, so a change made in the request shows in the rest of it. A page starts its reads
+together (2026-11-12), so the calls that arrive while the first is still reading share its work:
+one read, and a stale record compiled once, not once per call. When the policy check is due (so
+on the first request of a new isolate), the version is asked for beside the record's read, not
+after it: one wait for the two.
 
 A **device** is one sign-in at the door, keyed by the sign-in's issue time (`iat`), which stays the same
 for the whole of that sign-in and differs between browsers. The first request of a sign-in adds

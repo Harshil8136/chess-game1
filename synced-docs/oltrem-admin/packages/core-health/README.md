@@ -53,20 +53,26 @@ budget's reading as `items`, an empty list when the budgets are not measured, wi
 what one run may do on it as `limits`, and the events queue's backlog asked live as `queue`), and the Home card's
 `GET /api/health/home` (how many checks fail or need a look). The tick runs the job like
 any other job, so a client gets system health by mounting the module, with no cron of its own.
-Each run of the job takes a share of the checks, so it fits in the tick's 45 queries (the
-Free plan's 50 an invocation) beside the other five-minute jobs: every check that failed last
-time or is due every five minutes, and of the others whose time has come (never run, or their
-`every` since the last run, less half a run of slack), the ones never run first, then the longest
-overdue, as many as the run's share of them (each check's runs per job run, added up and rounded
-up: a third of the fifteen-minute checks). So the checks spread over the runs, each about at its
-own pace, a fresh portal's first run makes no more queries than any other, and a failure is
-confirmed on the next run, five minutes later. In the client template with every module mounted
-a run makes about nine queries; it made 43 when every check ran on every run and wrote its row
-alone (measured 2026-11-01).
+Each run of the job takes the checks whose time has come, so it fits in the tick's 45 queries
+(the Free plan's 50 an invocation) beside the other jobs: a check never run, one that failed last
+time and waits to be confirmed, and one whose `every` has passed since it last ran (five minutes
+at least, less half a run of slack); the ones to confirm first, then the ones never run, then the
+longest overdue, twelve at most a run (`CHECKS_PER_RUN`), and the job comes back five minutes
+later for the rest.
 
-The checks taken run in manifest order, each with the time it took, and their rows are written in
-one batch: the status, the message (its first 400 characters), when, how many failures in a row,
-and since when the problem is open. The count of failures in a row resets on any pass or
+The job sleeps while all is well (2026-11-12): a run that leaves no failure to confirm and no
+check waiting answers `'idle'`, and the next run is half an hour away (`HEALTH_IDLE`) instead of
+five minutes. A first failure brings the job back five minutes later to confirm it, so a problem
+opens within about 35 minutes of starting, where it was 10; a run by hand (the jobs page's Run
+now) checks at once. A run used to cost a row written per check, every five minutes, whatever it
+found: about 1,600 rows a day on a portal with nothing wrong. Now a check's row is written only
+when its status, message or count of failures changed, and when each check last ran, with the
+time it took, is kept together in one row of the same table (id `~checked`, never listed), one
+write a run.
+
+The checks taken run in manifest order, each with the time it took, and the rows that changed are
+written in one batch with the row of last runs: the status, the message (its first 400
+characters), how many failures in a row, and since when the problem is open. The count of failures in a row resets on any pass or
 warning. From the second failure in a row the problem is open: `onOpen(row, env)` is called
 once, when it opens, and `onClose(row, env)` once, when the check passes again, after the rows
 are written; a failure of either hook is reported through `report(error, checkId)` and the run
@@ -190,7 +196,9 @@ Cloudflare's documentation.
 ## Table
 
 Migration `0009`, `oltrem_health`: `id`, `module_id`, `lane`, `status`, `message`, `checked_at`,
-`ms`, `failures`, `open_since`. One row per check, written by the job; nothing else writes it.
+`ms`, `failures`, `open_since`. One row per check, written by the job when the check's result
+changes, and the row `~checked`, whose `message` holds when each check last ran and the time it
+took, as JSON; `list` answers each check with those two. Nothing else writes the table.
 
 Migration `0014`, `oltrem_budgets`: `id`, `used`, `day`, `measured_at`, `tried_at`, `problem`. One
 row per budget, written by `health.measure`; nothing else writes it.
@@ -202,8 +210,9 @@ written; a problem opened on the second failure in a row and not the first, `onO
 closed on the next pass with `onClose`, the failure count reset by a warning; a check that throws,
 one that does not answer in time and one that answers nonsense recorded as failures with the
 reason; the rows listed by lane with an undeclared one kept; the tick running the checks through
-the health job beside the scheduler; and the contract's refusals of a bad check, migration,
-setting or error. The budgets, with a stand-in for Cloudflare's API: nothing added without the
+the health job beside the scheduler; the job running the checks whose time has come, writing a
+row only when a result changed, sleeping unless a failure waits to be confirmed, and taking twelve
+checks at most a run; and the contract's refusals of a bad check, migration, setting or error. The budgets, with a stand-in for Cloudflare's API: nothing added without the
 option; one call with the token and the UTC day, every figure read, only KV writes counted, the
 CPU time in milliseconds and the size from D1; the check warning at 75% and failing at 95%; the
 other jobs paused through the scheduler while the health jobs run, and running again after

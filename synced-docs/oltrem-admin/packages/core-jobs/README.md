@@ -22,10 +22,35 @@ export const notes = defineModule({
 |---|---|
 | `id` | `<module>.<name>`, stable: the key of its row |
 | `every` | a count and a unit, `15m`, `6h`, `1d`; a minute at least. The tick's own cron (every minute in the client template, since 2026-11-10) is the floor: a job runs on the first tick after its time, or soon after when the tick is full (below) |
+| `idle` | optional: a slower pace, longer than `every`, for a job that mostly finds nothing to do (below) |
 | `summary` | a few words the jobs page shows |
-| `run(env, ctx)` | the work; it throws to fail |
+| `run(env, ctx)` | the work; it throws to fail, and may answer `'idle'` |
 
-The contract (`@oltrem/core-module`) refuses a bad id, interval or summary when the module loads.
+The contract (`@oltrem/core-module`) refuses a bad id, interval or summary when the module loads,
+and an `idle` that is not longer than `every`.
+
+### A job that sleeps until there is work
+
+Every run costs three rows written (the lease, and the outcome with its place in the index),
+whether it found work or not, and D1's free plan gives 100,000 a day. So a job that mostly finds
+nothing declares `idle` and answers `'idle'` when nothing waits for it: its next run is then
+`idle` away instead of `every`. Whatever gives it work wakes it, in the same write where it can:
+
+```ts
+import { wakeJobs, wakeJobsStatement } from '@oltrem/core-module';
+
+{ id: 'notes.send', every: '5m', idle: '6h', summary: 'Send what waits', run: async (env) =>
+    (await sendWaiting(env)) ? undefined : 'idle' }
+
+// where a note is left waiting:
+await db.batch([insertNote, wakeJobsStatement(db, ['notes.send'])]);
+```
+
+`wakeJobs(db, ids)` makes those jobs due now; it writes nothing for a job already due, and a wake
+made while the job runs is kept, so the job runs again on the next tick. A job must not wake
+itself from its own run. The slow pace is the safety net: a wake that was lost is found within
+`idle`. A job that keeps answering nothing (`void`) runs at `every`, as before.
+
 
 ## Running the tick
 
@@ -34,15 +59,19 @@ const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), mo
 export default createWorker({ app, modules, tick: scheduler.tick });
 ```
 
-On each tick: one read of `oltrem_jobs`; a row is made for every declared job without one (its
-first run is this tick), and a changed interval is written, the next run brought forward when the
-new interval makes it sooner. Then the declared jobs whose time has passed, the longest waiting
+On each tick: one read of the rows of `oltrem_jobs` whose time has come, through the index on
+`next_run_at`, so a tick with nothing due reads no row and writes none. On a scheduler's first
+tick, and once an hour after (`SETTLE_EVERY_SECONDS`), every row is read instead: a row is made
+for every declared job without one (its first run is this tick), and a changed interval is
+written, the next run brought forward when the new interval makes it sooner. So a job added by a
+deploy has its row on the new Worker's first tick. Then the declared jobs whose time has passed, the longest waiting
 first (in manifest order when they wait as long), are leased in one batch of conditional writes
 (`lease_until`, ten minutes by default); a job whose lease another tick holds is `held`. The
 leased jobs run one after another, and a last batch records every outcome (`ok`, or `failed` with
 the error's first 400 characters), the time each took, the database queries it made, the counts,
-and the next run at the tick's time plus the interval, and gives back the lease of a job that did
-not fit (below). So a tick makes three queries of its own, not two a job. A failure is reported
+and the next run at the tick's time plus the interval (the `idle` one when the job answered
+`'idle'`; a time set while it ran, by a wake or Run now, is kept), and gives back the lease of a
+job that did not fit (below). So a tick makes three queries of its own, not two a job. A failure is reported
 through `report(error, jobId)` and the other jobs still run; the job runs again at its next time,
 never in a tight loop. A lease that lapses without a write (a job that died with its isolate, or a
 tick that died before its last batch) is taken by the next tick.
@@ -132,7 +161,9 @@ the first tick after the module is back on; an instance of the Workflow skips th
 (a flow's module is its id's first segment), and `startDue(workflow, at, off)` starts no instance
 for a schedule whose every flow is off (`test/parts.test.ts`). A job whose own id is in the set (an
 optional extra switched off, such as `audit.seal`) waits the same way while its module's other
-jobs run.
+jobs run. A flow whose own id is in the set (the nightly backup's `backup.export`) no longer
+starts on its schedule, and an instance its schedule started before the switch does nothing;
+started by hand (`startFlow`), it still runs.
 
 ## Table
 
@@ -153,7 +184,9 @@ not asked when nothing is due; a pause that cannot be read reported once and the
 paused by hand stopped until it is resumed, one made due now run on the next tick, and a pause
 before the first tick; the queries a run makes counted through a batch, a job that does not fit
 left for the next tick where it goes first, and more jobs fitting once their queries are known;
-and the contract's refusals. The client template's worker test ticks a fresh portal until every
+a job that answers `'idle'` run at its idle pace, woken by `wakeJobs`, a wake made while it ran
+kept; a tick reading only the due rows through the index, every row on the first tick and once an
+hour; and the contract's refusals. The client template's worker test ticks a fresh portal until every
 job has run, which takes more than one tick, each run's queries recorded. With a stand-in step: a schedule running its flows in
 module order with their steps named after them, a start by hand with its params, a failed flow
 reported while the other runs, and an instance no flow matches.

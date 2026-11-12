@@ -45,7 +45,16 @@ tick's own cron trigger. The Worker needs the `nodejs_compat` flag for the age f
 | `record` | The row is `ok`, with the object key, the size before and after encryption, the export's bookmark and the recipient |
 | `record the failure` | The row is `failed`, with the code and the detail; the error is reported and the instance fails |
 
-A new portal does not wait for the night: the job `backup.first` (every fifteen minutes) starts
+**The nightly backup is an extra** (`backup.nightly` on the Modules page, since 2026-11-12), and a
+new portal starts with it switched off, with the restore drill reminder (`backup.drill`): the
+owner's decision that work on the timer is switched on, not found running. While it is off the
+schedule starts no copy, `backup.first` waits and `backup.fresh` is not run; the page, a copy by
+hand (`POST /runs`), the drill and a restore all work. `nightly(env)`, which the client hands in,
+tells Home's card and step to say so. A portal whose list of modules was saved before keeps its
+nightly copy.
+
+With the nightly backup on, a new portal does not wait for the night: the job `backup.first`
+(every fifteen minutes until the first copy exists, then every six hours, answering `'idle'`) starts
 the first copy as soon as the settings and both keys are there, once. The instance is named
 `backup-first-copy` (`FIRST_COPY`), so Workflows refuses a second start under it, and its run keeps
 the name, so a start after Workflows forgot it finds the run and stops; once any export is in
