@@ -268,7 +268,7 @@ invocation's 50 database calls it reads the rows in one query (`json_each(?1)` w
 JSON, never one bind per id) and writes the changes and one audit row per record in one
 `db.batch`: `auditStatements` from `@oltrem/iam` (or `statements` of `@oltrem/core-audit`) makes
 the rows for that batch. The screens draw the bar (`BulkBar` in `@oltrem/core-ui`) and post to it
-through `/ui/bulk`. The kit's: Mark done and Remove on the tasks.
+through `/do/bulk`. The kit's: Mark done and Remove on the tasks.
 
 ```ts
 bulk: [
@@ -345,7 +345,7 @@ on the head's right, `tools`, a count beside a tab of its set by the tab's path,
 (a label, a group, a summary, and optionally `before`: the path of the section it goes just
 before) that gives it a section in the sidebar. A page reads and writes
 only through `api`, the portal's own API called inside the same request, so it can never show
-or change more than its routes allow. A path under `/api`, `/hooks`, `/ui` or `/local`, a path
+or change more than its routes allow. A path under `/api`, `/hooks`, `/ui`, `/do` or `/local`, a path
 taken twice, a page with no `get` and a sidebar entry missing a word are refused when the module
 is defined.
 

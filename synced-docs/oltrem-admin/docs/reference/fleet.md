@@ -123,6 +123,10 @@ permissions, replace the build secret, delete the old one. Its row is in the
 
 ## Not done yet
 
+- **The door.** An update keeps the portal's Access as it is, since the key cannot change
+  Access. A door change (such as the open paths of 2026-11-11) reaches a portal only with
+  `npm run deploy`; so nothing the screens need signed in may sit on a path an older door opened
+  (the actions moved to `/do/` on 2026-11-12 for that reason).
 - **Client modules.** A client's own modules (`oltrem new module`) live in a client repository,
   which the fleet does not build. A portal with modules of its own stays on its repository's
   deploy until the fleet learns to take them.

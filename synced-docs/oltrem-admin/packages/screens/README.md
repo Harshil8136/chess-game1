@@ -63,9 +63,9 @@ initials or icon drawn on the look's colours as a small SVG written into the pag
 
 | Path | Shows | Reads |
 |---|---|---|
-| `/` | a Vendor with no company yet: the company form, its first Owner the one setup named as Owner (`GET /api/iam/setup-people`), the client file's address only when setup named none (2026-11-08: the placeholder was invited instead of the named Owner); anyone else (Look 3, 2026-11-08): a welcome band saying how much waits, with a chip to Needs you and to Get started when either has something; then Get started, with a bar of the steps done, while a step of setting the portal up is open (each step ticked by what is stored, an open one a row to its page, or with a button when one press does it, `POST /ui/get-started`; with email on, the email step leads to the one-step setup, `/email/connect`; the Modules page can switch the card off), then Needs you (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits), then the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me` (and `/api/iam/setup-people` for the company form), then each `/api/<module>/onboarding`, `/api/<module>/todo` and `/api/<module>/home`, together |
+| `/` | a Vendor with no company yet: the company form, its first Owner the one setup named as Owner (`GET /api/iam/setup-people`), the client file's address only when setup named none (2026-11-08: the placeholder was invited instead of the named Owner); anyone else (Look 3, 2026-11-08): a welcome band saying how much waits, with a chip to Needs you and to Get started when either has something; then Get started, with a bar of the steps done, while a step of setting the portal up is open (each step ticked by what is stored, an open one a row to its page, or with a button when one press does it, `POST /do/get-started`; with email on, the email step leads to the one-step setup, `/email/connect`; the Modules page can switch the card off), then Needs you (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits), then the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me` (and `/api/iam/setup-people` for the company form), then each `/api/<module>/onboarding`, `/api/<module>/todo` and `/api/<module>/home`, together |
 | `/search?q=` | the search box, then what matches two letters or more: the sections by name and line, then each module that searches, as the person (a module that refuses them is left out); nothing found says so | each `/api/<module>/search` |
-| `/look` | Look and colours (2026-11-03): the 24 palettes of `looks.ts` (a primary, an accent and greys leaning to its hue, both themes) as tiles showing their gradient, and the backgrounds (Soft wash, Plain, Aurora, Sunrise, Dots, Grid, Lines) as tiles showing a piece of each (`preview`); a press saves at once (`data-autosave`), Save only for a page without its script, Back to the portal's own. An Owner or the Vendor also has Make it everyone's look: `POST /ui/look/everyone` saves the look on the form as the `settings.look` setting through `PUT /api/settings/values/settings.look` and clears their own cookie (a refusal shows as a toast). `POST /ui/look` keeps `<palette>.<pattern>` in the `oltrem_look` cookie (an id not in the lists is the kit's own; reset clears it); every page then carries the look's CSS in `<style id="ui-look">` in its head, about a kilobyte, none for the kit's own look; the frame's script swaps it with the page. `createScreens({ look })` is the portal's look until a person picks one: a string, or a function read on each page (the template's returns `settings.look`, else the client file's `brand.look`) | `/api/iam/me`; `PUT /api/settings/values/settings.look` |
+| `/look` | Look and colours (2026-11-03): the 24 palettes of `looks.ts` (a primary, an accent and greys leaning to its hue, both themes) as tiles showing their gradient, and the backgrounds (Soft wash, Plain, Aurora, Sunrise, Dots, Grid, Lines) as tiles showing a piece of each (`preview`); a press saves at once (`data-autosave`), Save only for a page without its script, Back to the portal's own. An Owner or the Vendor also has Make it everyone's look: `POST /do/look/everyone` saves the look on the form as the `settings.look` setting through `PUT /api/settings/values/settings.look` and clears their own cookie (a refusal shows as a toast). `POST /do/look` keeps `<palette>.<pattern>` in the `oltrem_look` cookie (an id not in the lists is the kit's own; reset clears it); every page then carries the look's CSS in `<style id="ui-look">` in its head, about a kilobyte, none for the kit's own look; the frame's script swaps it with the page. `createScreens({ look })` is the portal's look until a person picks one: a string, or a function read on each page (the template's returns `settings.look`, else the client file's `brand.look`) | `/api/iam/me`; `PUT /api/settings/values/settings.look` |
 | `/notifications?show=&before=` | the person's notifications, All or Unread, Mark all read, thirty a page, and how each module tells them; `/notifications/:id` marks one read and opens its page | `/api/users/me/notifications`, `/api/users/me/notifications/choices` |
 | `/settings/parts?show=&q=&preset=` | whoever holds `settings.parts` (every Owner and the Vendor at first, anyone a role gives it to; the tab shows to them alone, asked of the API when the Settings tabs are on screen, and anyone else at the address reads "You need the permission to switch modules"): the Modules page, a dashboard. How many modules are on; All, On (n) and Off (n) chips and a search box (at once with the frame script, by `?q=` without it); the presets as "Start from" chips (Everything, Email only, Nothing optional, and the set saved now) that fill the switches without saving; then a section per sidebar group (Work, Company, Users & access, Messages, System), each module a tile in one column on a phone and two on a wide screen with the sidebar's icon, its name, one line, On or Off and its switch, Always on for the core, what it needs and what needs it, and a warning when it is off while a module that needs it is on (kept in step by the frame script before Save); under a module's line, its optional extras (the daily audit seal, the emails about access ending, the review and restore-drill reminders), each with its own switch, a core module's too, kept as they are saved when a preset fills the module switches; one Save bar at the bottom sends the whole set, and a refusal names the module that still needs another | `/api/settings/parts`, `PUT /api/settings/parts` |
 | `/setup/company` | the invitation link for the first Owner, after the form is sent | `POST /api/iam/tenant` |
@@ -138,7 +138,7 @@ The forms, each posting to the screen's own route, which calls the API as the si
 | Give the group a role, end one | `POST /api/iam/bindings` (subject the group), `DELETE /api/iam/bindings/:id` | `?done=group-granted`, `group-grant-ended` |
 | The Vendor's access (`/access/vendor/mode`), open a window, close it | `PUT /api/iam/tenant/vendor-access`, `POST`, `DELETE /api/iam/tenant/vendor-window` | `?done=vendor-mode`, `window-opened`, `window-closed` |
 | Add a Vendor account (`/access/vendor/accounts`), switch one off or on (`/access/vendor/accounts/:id/off`, `/on`) | `POST /api/iam/vendors`, `PUT /api/iam/vendors/:id/active` | `?done=vendor-added`, `vendor-off`, `vendor-on` |
-| Do a Get started step on Home (`/ui/get-started`: the module and the step's place) | the module's steps read again (`GET /api/<module>/onboarding`), then only that step's own `action.path` (POST, empty body); a step without one, or a module with no steps, calls nothing | `/?done=step-started`; a refusal shows Home again with the reason as a toast |
+| Do a Get started step on Home (`/do/get-started`: the module and the step's place) | the module's steps read again (`GET /api/<module>/onboarding`), then only that step's own `action.path` (POST, empty body); a step without one, or a module with no steps, calls nothing | `/?done=step-started`; a refusal shows Home again with the reason as a toast |
 | Look up a domain (`/providers/detect`) | `POST /api/providers/detect` | what was found, on the page |
 | Connect a provider (`/providers/add/:definition`): a name and its fields; one step since 2026-10-29: the key is checked at once, and a working email key becomes the one that sends when none does, has its addresses read and (since 2026-11-03) its delivery reports registered at the provider by API | `POST /api/providers/instances`, then `.../probe`; for email `.../activate`, `POST /api/email/domains/discover` and `POST /api/email/instances/:id/reports` (Resend, Brevo, Mailjet; another provider answers that it is set up by hand, and the address stays on its page) | Write with `?done=connected`; a refused key its provider with `?done=connected-refused`; another kind `?done=checked` |
 | Check again, under Ready to send (`/providers/ready`, back to the page it was pressed on) | `POST /api/email/ready/check` | `?done=rechecked` |
@@ -169,7 +169,7 @@ its actions (`ActionRow`, links to the page's own forms), a strip of figures cou
 API answers the page already reads (`Stats`; no extra request), and its sections, a form in a
 panel. The pages remade on 2026-10-31 use the console pieces of `@oltrem/core-ui` instead.
 Empty lists say so in a dashed box, and a list picked down to nothing says nothing matches. The theme
-switch posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, which keeps the choice
+switch posts `theme` (light, dark or system) and `back` to `POST /do/theme`, which keeps the choice
 in the `oltrem_theme` cookie (cleared for system) and returns to `back` when it is a path on the
 portal, Home otherwise; the frame then sets `data-theme` on the page. A form posted from another
 site is refused.
@@ -198,7 +198,7 @@ trips before a page's own first read; now a page waits for its slowest read.
 - **Saved views** (since 2026-11-03), above a list page that keeps them (`views` on a module's
   page; a records list, a form's inbox and the audit log): the person's views as a sideways row of
   chips, All first and the one on screen marked, then a field to name the filters on screen and
-  Save view, or Remove on a saved one. Both post to `/ui/views` and `/ui/views/remove`, which
+  Save view, or Remove on a saved one. Both post to `/do/views` and `/do/views/remove`, which
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
@@ -214,7 +214,7 @@ trips before a page's own first read; now a page waits for its slowest read.
   tick on each row and card, one in the header for the whole page, and the bar (`BulkBar`) above
   the list with the module's actions. The frame script counts the ticks ("3 tasks chosen"), keeps
   a row's two ticks alike and holds the buttons until one is ticked; a destructive action asks in
-  a dialog. A press posts to `/ui/bulk`, which calls `POST /api/<module>/bulk/<action>` once and
+  a dialog. A press posts to `/do/bulk`, which calls `POST /api/<module>/bulk/<action>` once and
   returns to the list with `?bulk=<module>.<action>.<done>.<refused>`; the list shows how many
   were done and how many refused, in the kit's own words, never words from the address.
 - **The sidebar**, from 1024 px wide, down the left edge in the page's own colour with one line
@@ -265,11 +265,11 @@ trips before a page's own first read; now a page waits for its slowest read.
   | System | System status (System status, Backups, Deployments, Alerts), Settings (Settings, Modules, Audit log), Developer ||
 - **Closed to icons.** The arrow closes the sidebar to a 64 px rail and opens it again. Only the
   words fade: no icon moves. A section's name shows beside the rail while the pointer or the
-  keyboard is on it. The choice posts `side` (`closed` or `open`) and `back` to `POST /ui/side`,
+  keyboard is on it. The choice posts `side` (`closed` or `open`) and `back` to `POST /do/side`,
   which keeps it in the `oltrem_side` cookie, so the next page is drawn the same with no jump.
 - **Your account**, at the foot: pressed, a small menu opens above it (to the right of the closed
   rail) with your address, My access, Look and colours (`/look`), the colour theme as three
-  icons and, on this computer, Sign out. The theme posts `theme` (light, dark or system) and `back` to `POST /ui/theme`, which keeps
+  icons and, on this computer, Sign out. The theme posts `theme` (light, dark or system) and `back` to `POST /do/theme`, which keeps
   the choice in the `oltrem_theme` cookie (cleared for system); the frame then sets `data-theme`
   on the page. Both switches return to `back` when it is a path on the portal, Home otherwise, and
   refuse a form posted from another site.
@@ -282,7 +282,7 @@ trips before a page's own first read; now a page waits for its slowest read.
   keeps its heading and actions and drops only its icon and line. The document names the phone
   browser's bar colour (light, dark, or both for the device's own).
 - **Colours in the account menu** (2026-11-08): six coloured dots (`DOTS`) above the theme icons
-  post `palette` and `back` to `POST /ui/look`, which keeps the pattern the cookie already holds.
+  post `palette` and `back` to `POST /do/look`, which keeps the pattern the cookie already holds.
   With the script, the new colours and a change of theme spread from the button pressed as a
   circle (a view transition, 450 ms); without it, or under reduced motion, the page just changes.
 
@@ -385,11 +385,18 @@ signature) gives pasted code the textarea as it is and steps aside. The server c
 again; without the script the textarea works as before.
 
 What the script leaves to the browser: another site, a new tab, a download, the API, the hooks,
-`/ui/*`, the local door and the invitation link (`NATIVE` in the script), and an answer that is
+`/ui/*` (the frame's public files), `/do/*` (the screens' own actions), the local door and the invitation link (`NATIVE` in the script), and an answer that is
 not a page. When the sidebar itself changed (a section given or taken away, another account: the
 frame's `data-frame` key), it draws the new sidebar and keeps where it was scrolled. When a form's
 change gets no answer, it says so on the page instead of sending it twice. With no script at all,
 every link and form works as a plain load.
+
+The screens' own actions (the colour, the theme, the sidebar, saved views, bulk, Get started) sit
+under `/do/`, and only the public files sit under `/ui/`, which answers GET alone
+(`test/paths.test.ts`). Until 2026-11-12 the actions sat under `/ui/` too: a portal whose Access
+was set before 2026-11-11 still leaves all of `/ui/*` open, so they reached the Worker with no one
+signed in and were refused with KIT-E-0401, and the fleet, which cannot change Access, never closed
+it. Under `/do/` they are behind the door on every portal, whatever its Access says.
 
 An address that answers nothing, opened in a browser (a `GET` that accepts HTML, outside
 `/api/`), is the **Not found** page in the frame, with a way to the home page, still with the 404

@@ -296,7 +296,9 @@ not hand a Worker with static assets the Access sign-in:
    `/account/*`, and the screens' public files `/ui/app.css`, `/ui/app.js`, `/ui/inter.woff2` and
    `/ui/mark/*`). Until 2026-11-11 it opened all of `/ui/*`, which let the screens' own actions
    (`/ui/look`, `/ui/theme`, `/ui/side`) reach the Worker with no one signed in, refused with
-   KIT-E-0401; the next deploy closes `/ui/*` again (`DOOR_CLOSED_PATHS`). Zero Trust not set up yet shows its one step (a team name and the Free
+   KIT-E-0401; the next deploy closes `/ui/*` again (`DOOR_CLOSED_PATHS`). The fleet cannot change
+   Access, so a portal it updates keeps the door it had; since 2026-11-12 the actions sit under
+   `/do/`, which no door opens, and work behind either. Zero Trust not set up yet shows its one step (a team name and the Free
    plan) and waits for Enter, checking by itself; a sign-in Cloudflare refuses (403) or one that
    lapsed is asked again (`cf auth login --force`), as someone who may change Access. Another
    Access application on the portal's address, which Cloudflare runs first, is named. Last the
