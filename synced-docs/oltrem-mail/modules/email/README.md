@@ -379,9 +379,9 @@ tag; the checks' count is in **Checks and DNS records: 2 of 3 pass**. The head's
 first.
 
 Since 2026-11-12 (the owner: hard to find a way around, and the Edit dialog hard to read) the page
-is two figures (**Addresses**, with how many domains, and **Domains verified**, "1 of 2" marked
-amber until every domain passes, a link to the Domains view) over a sideways row of three views,
-`?view=` in the address:
+is a sideways row of three views, `?view=` in the address, each with its count: the addresses, and
+the domains, written "1 of 2" until every domain is verified. (The two boxes of figures first put
+over them were taken out the same night, the owner: boxes that waste the page go.)
 
 | View | What it holds |
 |---|---|

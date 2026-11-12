@@ -102,6 +102,13 @@ error codes; Cloudflare's delivery events are not wired yet.
 | `GET /api/mail/try` | `mail.read` | `{ local }`: whether Send a test is offered, true only on the builder's own computer |
 | `POST /api/mail/try` | `mail.manage` | on the builder's own computer only (404 elsewhere): a test message to `to` (from `from`, or someone@example.org) handed to the Worker as Email Routing would; `went` is `forwarded` (with `forwardedTo`), `kept` or `refused`, with words. Nothing leaves the computer |
 | `POST /api/mail/forwarding/import/improvmx` | `mail.manage` | read every alias of the ImprovMX account (`key`, used for this press only and never kept; `domain` for one only), 12 ImprovMX calls a press, and take them as the paste does |
+| `GET /api/mail/forwarding/improvmx` | `mail.read` | since 2026-11-12 (`src/improvmx.ts`): `{ connected: false, offered }` before a key, else the account (`email`, `plan`, `premium`), its domains (`forwarding`, `rules`, `aliases` with `forwardTo` and `webhooks`, `more`, `problem`), the domains past the 8 read (`more`) and `problem`, read from ImprovMX in 10 calls at most; and `may.manage` |
+| `POST /api/mail/forwarding/improvmx` | `mail.manage` | keep the account's key (`key`): tried on the account first, kept sealed by the providers registry (`improvmx`, kind `forwarding`) only when ImprovMX takes it; a new key replaces the one kept |
+| `DELETE /api/mail/forwarding/improvmx` | `mail.manage` | forget the key; the aliases stay at ImprovMX |
+| `POST /api/mail/forwarding/improvmx/domains` | `mail.manage` | add a domain (`domain`) to the ImprovMX account |
+| `POST /api/mail/forwarding/improvmx/domains/:domain/records` | `mail.manage` | ImprovMX checks the domain's records now: `{ domain, valid, lines: [{ record, expected, found, valid }], words }` |
+| `GET /api/mail/forwarding/improvmx/domains/:domain/logs` | `mail.read` | the newest 20 messages ImprovMX forwarded or tried: `at`, `from`, `to`, `forward`, `subject`, `status`, `words` |
+| `POST`, `PATCH`, `DELETE /api/mail/forwarding/improvmx/domains/:domain/aliases[/:id]` | `mail.manage` | add an alias (`alias`, `*` for every other address; `forwardTo`, 1 to 10), change its people, delete it, at ImprovMX; each audited by its address, never the key, and none wakes the five-minute job |
 
 Each step answers `{ ok, words, dashboard? }`: what happened in plain words, and the dashboard
 step when the portal's key may not do it.
@@ -223,7 +230,14 @@ Quick settings behind the cog (Split or Full, Default or Compact, kept in cookie
 keyboard shortcuts (`src/reader/keys.js`, the `?` sheet lists them); and Labels
 (`/email/inbox/labels`), to make, rename, recolour and remove labels.
 
-Forwarding (`/email/forwarding`), in the Email settings tabs: the domains, each with where its mail goes,
+Forwarding (`/email/forwarding`), in the Email settings tabs, in two views since 2026-11-12:
+**ImprovMX** (first) and **Cloudflare**. ImprovMX shows Connect ImprovMX with its one field until a
+key is kept, then the account with Disconnect and Add a domain, and a pane for each domain with its
+state, its aliases (Change, Delete), Add the alias, Check its records and Recent mail
+(`?view=improvmx&mail=<domain>`). A visit opens on ImprovMX unless Cloudflare already forwards a
+domain and ImprovMX is not connected; ImprovMX is asked only on its own view. Cloudflare, which
+rests while ImprovMX is connected (the five-minute job and `mail.forwarding` pass the company by):
+the domains, each with where its mail goes,
 what stands before its move, and Move from ImprovMX, Move back and Check again; the aliases, each
 with its people and whether each pressed Cloudflare's link, Change, Switch off and Delete; a form
 to add one; and Import from ImprovMX, which reads the account with its API key in one press (the

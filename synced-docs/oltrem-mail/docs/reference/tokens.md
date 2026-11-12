@@ -16,20 +16,20 @@ sources: [tokens.registry.json]
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
-| IMPROVMX_API_KEY | provided | ImprovMX | nowhere: typed into the Forwarding page for one press, sent to ImprovMX in that press's requests only, and never stored, logged, audited or shown again |
+| IMPROVMX_API_KEY | provided | ImprovMX | once connected: sealed in the client's database by the kit's providers module (kind forwarding, definition improvmx), opened only inside a request that calls ImprovMX, never logged, audited or shown again; for the one-press import: nowhere |
 
 ## IMPROVMX_API_KEY
 
 | Field | Value |
 |---|---|
 | Status | provided |
-| Provider and account | ImprovMX; the client's own ImprovMX account, the one its domains forward through before they move to Cloudflare |
-| What it may do | read the account's domains and their aliases (GET /domains and GET /domains/:domain/aliases of ImprovMX's API v4); the portal makes no other call with it, though ImprovMX's key itself is not narrower than the account |
-| Used by | Read from ImprovMX on the Forwarding page (POST /api/mail/forwarding/import/improvmx), for that one press only |
-| Stored in | nowhere: typed into the Forwarding page for one press, sent to ImprovMX in that press's requests only, and never stored, logged, audited or shown again |
+| Provider and account | ImprovMX; the client's own ImprovMX account, the one its domains forward through |
+| What it may do | the whole account, as ImprovMX's keys are: the portal reads the account and its domains, adds domains, adds, changes and deletes aliases, asks ImprovMX to check a domain's records and reads the forwarding logs (ImprovMX's API v4); it makes no other call with it |
+| Used by | Connect ImprovMX on the Forwarding page (POST /api/mail/forwarding/improvmx) and every ImprovMX press there after it (the /api/mail/forwarding/improvmx routes); Read from ImprovMX on the Forwarding page's Cloudflare view (POST /api/mail/forwarding/import/improvmx), for that one press only |
+| Stored in | once connected: sealed in the client's database by the kit's providers module (kind forwarding, definition improvmx), opened only inside a request that calls ImprovMX, never logged, audited or shown again; for the one-press import: nowhere |
 | Owner | the client |
 | Created | not yet |
-| Expires | at the end of the press; the key itself lasts until the client changes it at ImprovMX |
-| Rotation | none needed here; the client may make a new key on ImprovMX's API page after the import, which ends the old one |
-| Why it exists | ImprovMX lists aliases only to its account's key, and a pasted export loses no less work than one press; the owner said yes on 2026-11-03 to a key typed once and never kept. |
+| Expires | when the client disconnects ImprovMX on Forwarding (the sealed key is deleted); the key itself lasts until the client changes it at ImprovMX |
+| Rotation | generate a new key on ImprovMX's API page, paste it on Forwarding (it replaces the one kept), then delete the old key at ImprovMX |
+| Why it exists | ImprovMX manages aliases and shows its forwarding logs only to its account's key. The owner said yes on 2026-11-03 to a key typed once for the import, and on 2026-11-12 (Forwarding through ImprovMX) to the key kept locked so the portal manages the aliases. |
 | Plan section | docs/setup.md section 5 |

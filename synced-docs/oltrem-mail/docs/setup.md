@@ -123,6 +123,10 @@ attachments })` (with `cc`, `bcc` and `replyTo` when needed), never the older ra
 The binding in the client template is `"send_email": [{ "name": "EMAIL" }]` ([decision
 4](plan.md#14-the-owners-decisions)).
 
+Since 2026-11-12 the page leads with **the next step**: the first of the four that has not
+passed, what was found and what to do, or "Everything is ready" once all four have; the four
+steps stay under **All four steps**, with how many are done.
+
 ## 3. Delivery reports, registered by themselves
 
 The Sent timeline, the do-not-mail list and the bulk self-pause (0.3% complaints, 5% bounces) all
@@ -174,7 +178,42 @@ instead of trusting this list):
 ## 5. Forwarding, as ImprovMX does it
 
 Built in bundle F ([its record](records/2026-11-02-forwarding.md)), on its own page, Forwarding
-(`/email/forwarding`), in the Email settings tabs. An **alias** forwards one address of a domain
+(`/email/forwarding`), in the Email settings tabs. Since 2026-11-12
+([its record](records/2026-11-12-forwarding-through-improvmx.md)) the page has two views:
+**ImprovMX** and **Cloudflare**. A visit opens on ImprovMX, unless Cloudflare already forwards a
+domain and ImprovMX is not connected.
+
+### 5.1 Through ImprovMX, with its key
+
+The owner's pick of 2026-11-12: **Connect ImprovMX** takes the account's API key once (the API
+page of ImprovMX's dashboard). It is tried on the account first, and a key ImprovMX refuses is
+never kept; the right one is kept sealed by the kit's providers module, as an instance of the
+`improvmx` definition (kind `forwarding`), and is never logged, audited or shown again (its row,
+`IMPROVMX_API_KEY`, is in the [token registry](reference/tokens.md)). From then on the view reads
+ImprovMX itself, nothing of it kept here:
+
+| What it shows | From ImprovMX |
+|---|---|
+| The account, its plan | `GET /account` |
+| Each domain, whether its mail is forwarded, whether it follows ImprovMX's rules | `GET /domains` (the first 8 read, the rest named) |
+| Each domain's aliases, with their people and how many webhooks | `GET /domains/:domain/aliases`, 200 a domain |
+| Check its records: MX, SPF, DKIM and DMARC, each found or missing with the value it expects | `POST /domains/:domain/verify` |
+| Recent mail: the newest 20 messages forwarded, or tried, with their last step | `GET /domains/:domain/logs` |
+
+A view makes at most 10 calls. **Add a domain**, **Add the alias** (`*` for every other address),
+**Change** and **Delete** are made at ImprovMX at once, each on the audit log by its address,
+never the key; people are checked before any call (addresses only, ten at most), and ImprovMX's
+own refusal is shown in its words, as are a wrong key, a paid-plan wall and a wait. Webhooks among
+an alias's destinations are counted and changed in ImprovMX only. **Disconnect** forgets the key;
+the aliases stay at ImprovMX and keep forwarding.
+
+While ImprovMX is connected the Cloudflare view rests: the five-minute job and the health check
+pass the company's Cloudflare domains and aliases by, nothing of them is deleted, and
+disconnecting picks them up again.
+
+### 5.2 Through Cloudflare
+
+An **alias** forwards one address of a domain
 (`info@example.com`), or every address of it that has no alias or mailbox of its own (the
 catch-all, written `*@example.com`), to one person or up to ten, and keeps nothing. A **mailbox**
 of [the inbox](inbox.md) keeps the mail in the portal; an address is one or the other.

@@ -68,6 +68,13 @@ A fingerprint (SPF includes, DKIM selectors or
 CNAME suffix, a verification TXT prefix) is written only where the research confirmed the
 pattern; the rest is left for the sandbox to confirm, never guessed.
 
+Since 2026-11-12 the kit also ships one definition of the kind `forwarding`, in
+`src/definitions/forwarding.ts`: ImprovMX, which forwards the mail sent to a domain's addresses
+on to people's own inboxes. Its key (basic auth, user `api`) manages ImprovMX's aliases and reads
+its forwarding logs; nothing is sent through it, so it has no send, no reports and no fingerprint
+(a domain whose MX is ImprovMX's is never suggested as an email provider). Oltrem Mail's
+Forwarding page keeps the key here, sealed like any other, and speaks to ImprovMX itself.
+
 Sender (2026-10-28) takes one recipient a message: its send says `oneRecipient`, and a message
 to more, or with a Cc or Bcc, is refused before any call (`KIT-E-1408`), so it goes through the failover, or through
 Sender's SMTP relay, which takes many. It has no reply-to field, so `{{message.headersWithReplyTo}}`
