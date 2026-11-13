@@ -352,7 +352,13 @@ and an address on one line; an address already there is not added again, and a b
 box's suggestions know (its `list`) takes their name. A form with `data-keep-typed` (Email's
 Write), once typed in, is not left by a link or a closed tab without the browser asking first;
 sending it, or saving it, leaves freely; `data-keep-typed="unsaved"` counts it as typed from the
-start (a page drawn again with what was typed). A `details[data-pick]` (Write's From,
+start (a page drawn again with what was typed). A form with `data-keep-draft="<address>"`
+(Write, 2026-11-13) saves itself there three seconds after the last change and before the page
+is left in place or the tab hidden: the JSON answer `{ id, url }` fills its `draft` field and the
+address bar, drops the kept copies of the page and of `data-keep-draft-forget`'s pages, and its
+`[data-keep-draft-state]` says Saving, Saved or Not saved yet; `data-keep-draft-hide` nodes hide.
+Such a form, once saved, leaves freely; one whose save failed asks first, and a Send waits for a
+save under way. A `details[data-pick]` (Write's From,
 2026-11-11) is a dropdown of radios: a change shows the chosen option's `[data-pick-face]` in
 its summary's, a press on an option (the one already chosen too) closes it, the arrow keys only
 move the choice, Enter closes it instead of sending the form, and a click elsewhere or Escape
