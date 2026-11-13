@@ -58,7 +58,7 @@ holds (plan 12.1); a test renders every one and checks.
 | `Dialog`, `DialogButton`, `DialogClose`, `ConfirmDialog` | `<dialog>` with `closedby="any"`, opened and closed by the browser's `command` attributes | a bottom sheet on a phone, centred from 640 px; one system, never a dialog in a dialog; the confirm dialog names the object and the consequence, focuses cancel, puts the red button last, and can demand a typed word |
 | `Popover` | the popover API, anchored to its trigger | dismissed by a tap outside; no script |
 | `Tabs`, `Pagination` | `<nav>` with links | the current page marked; tabs on an underline (`ui-tabs`), the marked one in its group's colour (`hue`) and never bold, a `count` beside a tab when given, sideways on a phone, arrow keys with the frame script; `rel="prev"` and `rel="next"`; the ends disabled |
-| `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows, in a calm box with its words centred; a data column with no header (a command) sits below the named ones on a card, full width; with `select`, a named 44 px tick on each row and card for a `BulkBar`, and one in the header for every row on the page |
+| `Table` | `<table>` from 640 px, a card list under it, from one column definition | one title, at most three data points and one status on a card; numbers right-aligned in tabular figures; the empty state in place of no rows, in a calm box with its words centred, one line high since 2026-11-13 (`ui-table-empty`); a data column with no header (a command) sits below the named ones on a card, full width; with `select`, a named 44 px tick on each row and card for a `BulkBar`, and one in the header for every row on the page |
 | `BulkBar` | a `<form>` posting to the screens' `/do/bulk`, with a `Dialog` for each destructive action | the ticks of a `Table` with `select` join it by its id wherever they sit; it says how many are ticked and its buttons wait for one (frame script); a destructive action asks first and is red; without the script every part still posts |
 | `Badge`, `StatusPill` | `<span>` | four health states only, always an icon and a word; the pill is a soft tint of the state's colour with the word in the text colour, so it reads in both themes |
 | `Checklist` | `<ul>` with a label | checks one under another, each an icon and its state in words for a screen reader, what was found, and for one that did not pass, what to do, a soft box to press where it is done (Look 3) |
@@ -93,7 +93,7 @@ takes a `tone`.
 
 **The bold look and even lists (2026-11-12).** A page's `main.ui-page` carries its sidebar
 group's `data-hue`: a soft wash at its top, its picked chips, table heads and row hovers take the
-colour. `EmptyState` draws `ui-empty-icon` on a flat tile of the colour (no ring or glow since 2026-11-13) and `ui-empty-title`; `Table`
+colour. `ui-go` with `ui-go-head` and `ui-go-row` is the search box's list of pages, in the top layer; `ui-recent` Home's Jump back in row. `EmptyState` draws `ui-empty-icon` on a flat tile of the colour (no ring or glow since 2026-11-13) and `ui-empty-title`; `Table`
 is `ui-table`, its phone cards `ui-table-card`. Scrollbars are slim and in the element's `--hue`
 (or the brand) mixed with the border, set on every element. `ui-rlist` with `ui-rrow` is an even
 list of rows (a role: `-name`, `-perms` with a meter, `-held`, `-go`); `ui-presets` a slim line
