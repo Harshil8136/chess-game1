@@ -36,7 +36,12 @@ and fades it in with a view transition; with no script, the browser does the sam
 the page. Inside a page that arrives, a `PaneGrid`'s panes and each figure's words sharpen in turn
 from a light blur (`ui-sharpen`), and a `ColumnChart`'s columns grow from their base (`ui-grow`);
 the marked tab, segment and section draw their look on a `ui-mark` the frame's script adds, so it
-can glide (2026-11-11). None of it runs under reduced motion. Buttons press in a little when tapped (to 96 %, since 2026-11-08).
+can glide (2026-11-11). Since 2026-11-13 the content slides sideways when the frame's script says
+which way a page went (`html[data-dir='next' | 'back']`), a sidebar group's rows glide shut and
+open (a grid track to `0fr`, then hidden), the phone's folders and section drawer slide out as they
+came, a dialog's shade fades both ways (`@starting-style` and `allow-discrete`), a fold's contents
+drop in (`ui-unfold`) and a sidebar row gives to 98 % under a press. None of it runs under reduced
+motion. Buttons press in a little when tapped (to 96 %, since 2026-11-08).
 
 ## The primitives
 
