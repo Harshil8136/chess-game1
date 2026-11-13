@@ -93,7 +93,7 @@ takes a `tone`.
 
 **The bold look and even lists (2026-11-12).** A page's `main.ui-page` carries its sidebar
 group's `data-hue`: a soft wash at its top, its picked chips, table heads and row hovers take the
-colour. `EmptyState` draws `ui-empty-icon` in a ring of the colour and `ui-empty-title`; `Table`
+colour. `EmptyState` draws `ui-empty-icon` on a flat tile of the colour (no ring or glow since 2026-11-13) and `ui-empty-title`; `Table`
 is `ui-table`, its phone cards `ui-table-card`. Scrollbars are slim and in the element's `--hue`
 (or the brand) mixed with the border, set on every element. `ui-rlist` with `ui-rrow` is an even
 list of rows (a role: `-name`, `-perms` with a meter, `-held`, `-go`); `ui-presets` a slim line
@@ -104,10 +104,11 @@ its own content. A sidebar group's heading is a button with `data-fold`; `data-f
 group hides its rows, except in a sidebar closed to icons.
 
 **Colour cards (2026-11-12).** `ui-tgrid` lays out as many 16.5 rem columns as fit. `ui-tcard` is
-a card on a soft gradient of one hue (`data-hue` sets `--hue`): a 40 px tile (`ui-hue-tile` or
+a plain card whose hue (`data-hue` sets `--hue`) shows only in its tile (2026-11-13): a 40 px tile (`ui-hue-tile` or
 `ui-logo`), `ui-tcard-title` (with `ui-tcard-go` the whole card is its link), `ui-tcard-sub`
-and `ui-tcard-foot` for `ui-tag` pills; `ui-tcard-link` is a second link on the card, above the card's own. `ui-tint` tints a box
-laid out by its own classes and goes quiet when the switch inside is off; `ui-scard` with
+and `ui-tcard-foot` for `ui-tag` pills; `ui-tcard-link` is a second link on the card, above the card's own. `ui-mlist` with
+`ui-mrow` (`-name`, `-text`, `-needs`, `-box`, extras `ui-mrow-sub`, `ui-mrow-warn`) is the even
+list of modules, its columns lined up from 52 rem, an unticked row's tile grey; `ui-scard` with
 `ui-scard-head` is a settings section; `ui-parts` a list of module cards, two columns on a wide
 page; `ui-settings-cols` two columns of sections from 84 rem; `ui-footbar` a full-width save bar
 stuck to the foot; `ui-tgroup` a group heading with a dot in its hue. `ui-logo` is a white 40 px
