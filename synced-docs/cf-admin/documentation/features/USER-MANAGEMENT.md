@@ -138,6 +138,8 @@ All server-side authorization gates (API routes and Astro SSR pages) **must** us
 | `src/pages/dashboard/logs/index.astro` | `isOwnerOrDev` (deprecated alias for `isOwnerOrVendor`), `isOwnerOrVendor`, `isAdminOrAbove` | Feature flag computation (export, delete, the security tab, the seals, the AI tab) | (page-level — uses middleware PLAC) |
 | `src/pages/dashboard/users/[id]/access.astro` | `isVendorSupport`, `isOwnerOrVendor`, `canManageUser` | Hidden account visibility, privilege gate | (page-level — uses middleware PLAC) |
 
+> **2026-11-13:** `session-status` reads the person's session records in one KV bulk read (`readSessionRecords`), `GET /api/users` lists the KV session counts beside its other reads instead of before them, and the sidebar's pending-requests badge on Users is held in the isolate for up to a minute (`getPendingBadgeCount`), cleared at once when a request is made or decided there. Record (private).
+
 > **The Sessions rows.** The three `src/pages/api/sessions/` rows and `session-status.ts` gate
 > on `/dashboard/sessions` since 2026-09-16 (gaps **D-3** and **D-4** in
 > `../MAINTENANCE.md` (private)), and the mutating routes also check their action
@@ -830,6 +832,7 @@ CREATE INDEX IF NOT EXISTS idx_authorized_users_cf_sub_id
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-13 | The 2026-11-13 note under the route table against `session-status.ts`, `src/pages/api/users/index.ts`, `src/lib/auth/session.ts` (`readSessionRecords`), `AccessRequestRepository.getPendingBadgeCount` and `AdminLayout.astro`; `test/pending-badge-cache.test.ts` | The rest of the page |
 | 2026-10-26 | §5.1's invitation email, against `src/lib/email/templates/invite-template.ts`, `manage.ts` and `resend-invite.ts`, with `test/email-layout.test.ts` and `test/system-mail-queue.test.ts` (the role label, the Google steps, the inviter; a Manager refused when re-inviting an Admin stored as `super_admin`); the live stored role names in `admin_authorized_users` (Supabase connector, read only) | The rest of the document; the email in a phone's mail app (the owner's test) |
 | 2026-10-26 | **§5.2's third step and the pages screen**, against `InviteUserModal.tsx`, `invite/InvitePages.tsx`, `invite-pages.ts` and `invite.css`, with `test/invite-pages.test.ts` (the arrangement on paths shaped like the live registry's) and `test/invite-look.test.ts`; the arrangement rendered with the 117 active `admin_pages` rows (D1 connector, read that day): 7 groups of 1 to 8 pages | The pop-up in a phone browser (the owner's test) |
 | 2026-10-26 | §5.2's dialog size, classes and glass look, against `InviteUserModal.tsx` and `invite.css` | The look in a phone browser (the owner's test) |

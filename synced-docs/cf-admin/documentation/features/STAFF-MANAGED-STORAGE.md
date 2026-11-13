@@ -112,6 +112,8 @@ This is the feature most likely to touch someone outside the company, so it's wo
 
 **Creating a request.** A Manager or higher (PLAC `#request-create`) opens the "File Requests" panel on their drive and fills in: who it's for (name + email), a title/note explaining what's needed, how many files are allowed (default 1), a per-file size ceiling, which file extensions are accepted, an expiry, and optionally a passcode. The system generates a locked upload link and can email it directly, the same way a share link can.
 
+**Listing requests.** The list marks every lapsed request expired in one statement (`StorageFileRequestRepository.markExpired`, 2026-11-13), where it used to read and update each one by itself; the nightly quota warning reads every person's override in one query (`listStorageUserOverrides`). Record (private).
+
 **What the recipient sees.** The link opens an unauthenticated upload page — no CF Access login, no portal account. They see the title/note, drag in a file (or files, up to the allowed count), and submit. Every upload is checked against the request's own extension allowlist and size ceiling (not the requester's personal drive settings), and the file's actual bytes are verified against its claimed extension exactly like a normal upload (§5) — a mismatch is rejected and nothing is stored.
 
 **Where received files land.** Confirmed uploads are written straight into the *requesting staff member's* drive, in the folder the request specified (`/Requests` by default), tagged internally as coming from that request. They count against the staff member's own quota, not a separate pool.
@@ -271,6 +273,7 @@ No database schema here by design — see the migration files themselves (`migra
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-13 | §6a's listing paragraph against `src/pages/api/storage/requests/index.ts`, `StorageFileRequestRepository.markExpired`, `src/workers/scheduled-storage-notifications.ts` and `src/lib/storage/config.ts` | The rest of the page; the live tables (no file requests exist on 2026-11-13) |
 | 2026-10-26 | The three storage emails and the share-link email against `src/lib/storage/notify.ts`, `share-email.ts`, `src/workers/scheduled-storage-notifications.ts` and `src/pages/api/storage/request/[token]/confirm.ts` after they moved to `src/lib/email/layout.ts`; pinned by `test/system-mail-queue.test.ts` and `test/email-layout.test.ts` | Everything else in this document; `last_verified` left as it was |
 | 2026-10-17 | The live `storage_config` row again (D1 connector: quotas, the 16 extensions, 5 GiB upload, 7 GiB pool, share lifetimes, `auto_delete`), all unchanged since 2026-09-06; `scheduled-asset-cleanup.ts` (180-day share-log purge), `leaseSeconds` (two jobs), `storage-notify-interval-minutes` (60), `TRASH_RETENTION_DAYS` (30), the components named in §11. Closed MAINTENANCE S-1, which §10 said should be closed | Vendor pricing in §9a; live share-log volume |
 | 2026-10-10 | The notifications job, the share email and the request confirmation's sending path, against `src/lib/storage/notify.ts`, `share-email.ts`, `src/workers/scheduled-storage-notifications.ts`, `src/pages/api/storage/[id]/share/email.ts`, `src/pages/api/storage/request/[token]/confirm.ts`; pinned by `test/system-mail-queue.test.ts` | Everything else in this document |

@@ -211,6 +211,8 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 #### EF-5. Take the pending-requests badge off the page path
 
+> **Done differently, 2026-11-13** (record (private)): the count stays on the page path but is held in the isolate for up to a minute per set of roles (`AccessRequestRepository.getPendingBadgeCount`) and cleared when a request is made or decided through that isolate, so most admin pages make no D1 query for it.
+
 - **Issue.** Step 4 above: one D1 round trip on every page load for admins, to
   show a number that is usually 0 (0 pending on 2026-09-23).
 - **Fix.** Load the count once per tab after the page renders (one small API
@@ -412,6 +414,7 @@ never who *decides*.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-13 | claude | `src/layouts/AdminLayout.astro`, `src/lib/dal/AccessRequestRepository.ts`, `test/pending-badge-cache.test.ts` | EF-5 done differently (an isolate cache). Not re-checked: the other items |
 | 2026-10-17 | claude | `src/lib/health/run.ts`, `src/lib/health/catalog.ts`, `src/lib/dal/HealthResultsRepository.ts`, the five `src/pages/api/system-health/` routes; `test/system-health.test.ts` | EF-1 marked done: Diagnostics replaced by System health. No other item re-checked |
 | 2026-10-10 | claude | `src/layouts/AdminLayout.astro`, `src/lib/shell-state.ts`, `NativeNavigationState.astro`, `astro.config.ts`, the built router script after `npm run build`; `test/client-navigation.test.ts` | §1's opening and EF-9: the router is mounted. §1's step costs not re-derived (unchanged: every click is still one server render) |
 | 2026-10-10 | claude | `src/lib/auth/page-registry.ts`, `computeNavItems` in `src/lib/auth/plac.ts`, `src/layouts/AdminLayout.astro`; `test/page-registry.test.ts` | Step 3 and EF-4: the sidebar's KV copy is gone, replaced by a D1 read at most once a minute per isolate. The rest of §1 and §3 not re-derived |

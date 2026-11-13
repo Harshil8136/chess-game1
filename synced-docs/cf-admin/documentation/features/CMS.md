@@ -104,6 +104,7 @@ rename can never send its visitors away.
 
 **Components:** `src/components/admin/bookings/BookingDashboard.tsx` + `BookingSlideDrawer.tsx`  
 **API:** `src/pages/api/bookings/index.ts`  
+**Status changes (2026-11-13):** the status buttons and the check-in / check-out bar change the cards at once and put them back if the server refuses (optimistic UI, `src/lib/optimistic.ts`); the bar's `POST /api/bookings/batch` writes every booking in one D1 batch. Record (private).  
 **Data Source:** Supabase PostgreSQL (`bookings` + `booking_pets` tables)  
 **Access:** **Staff and above**, then PLAC. The live `admin_pages` row for `/dashboard/bookings` carries `required_role = 'staff'`, and `src/pages/api/bookings/index.ts` calls `requireAuth(context)` with **no** role floor plus `placDenyResponse(actor, '/dashboard/bookings')`. Only the single-booking detail route, `src/pages/api/bookings/[id].ts`, requires canonical admin. *Corrected 2026-09-19 — this said "Manager or above", which would have led an operator to assume staff could not read booking data.* The model is owned by [`../architecture/PERMISSIONS-SYSTEM.md`](../architecture/PERMISSIONS-SYSTEM.md).
 
@@ -493,6 +494,7 @@ Direct answers from the writer, from the visibility audit and on every save pass
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-13 | The bookings status paragraph against `BookingDashboard.tsx` (`showStatus`, `optimistic`), `src/pages/api/bookings/batch.ts` and `BookingStateRepository` (`softDeleteMany`, `upsertStateMany`) | The rest of the page |
 | 2026-11-05 | The AI generator's grounding sentence against `src/lib/ai-knowledge.ts` (the website's facts only), `src/pages/api/content/ai-generate-stream.ts` and the assistant's banner in `src/components/admin/content/BlogAiCopilotModal.tsx`; `test/ai-knowledge.test.ts` passes | The rest of the page |
 | 2026-10-31 | §1's purge paragraph and §3.4's views, needs table, Write, Cover and "Who may do what" sentences against `src/lib/blog/revalidation-paths.ts`, `link-ideas.ts`, `photo-alt.ts`, `studio.ts`, `src/pages/api/content/blog/describe-photo.ts`, `studio.ts` (route), `Blog.tsx`, `BlogGaps.tsx`, `BlogEditor.tsx` and `ArticleText.tsx`, with `test/blog-articles-found.test.ts`, `test/blog-publish-effects.test.ts` and `test/content-blog-studio.test.ts` | A live photo description (no article has a cover yet); the pages on a phone (the owner's test); the rest of the page |
 | 2026-10-30 | §3.4's Cover sentence against `cf-astro/src/components/blog/WordCover.astro` (`2376e62`) | The rest |
