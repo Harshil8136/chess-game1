@@ -21,7 +21,7 @@ sources: [packages/core-health/src/budgets.ts; packages/core-health/src/health.t
 
 | Where | Before | Now |
 |---|---|---|
-| System status, key refused | the budgets line: "Cloudflare does not accept KIT_OPS_TOKEN ... set it as the Worker secret" | a box above the checks: 1. Open the key form, 2. Open Workers and Pages (the Worker named, then Settings, Variables and Secrets), 3. Check again now |
+| System status, key refused | the budgets line: "Cloudflare does not accept KIT_OPS_TOKEN ... set it as the Worker secret" | a box above the checks, each step saying where it happens: 1. in Cloudflare, Open the key form; 2. in Cloudflare, Open Workers and Pages (the Worker named, then Settings, Variables and Secrets); 3. back here, Check again now |
 | The key form | the owner picked two permissions by hand | the form opens with Account, D1, Edit and Account, Account Analytics, Read chosen, and DNS, Edit too while Oltrem Mail is in the portal (Cloudflare's "API token template URLs") |
 | Check again now | ran the checks; the plan's use was measured hourly when quiet | measures the plan's use first, then runs the checks |
 | `audit.sealed` when the seal stopped | Fix opened Audit log, which has no switch | the message says where to switch Daily seal off or resume the job, and Fix opens Modules |
