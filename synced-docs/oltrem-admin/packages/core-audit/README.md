@@ -119,8 +119,9 @@ change it rechecked all 7 seals in one run, which took most of a tick's CPU on i
 (`docs/records/2026-11-01-cpu-budget.md`).
 
 **The check.** `audit.sealed`, in the audit lane of System status: failing when a seal is
-broken, a warning before the first seal and when the last seal is more than two days old, ok
-otherwise.
+broken, a warning before the first seal and when the last seal is more than two days old (its
+message says where to switch Daily seal off, or to resume the job, and System status's Fix button
+opens Modules), ok otherwise.
 
 ## Tests
 

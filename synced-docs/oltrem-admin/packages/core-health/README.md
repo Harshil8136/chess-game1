@@ -50,7 +50,8 @@ const scheduler = createScheduler<Env>({ bindings: (env) => ({ db: env.DB }), mo
 five minutes, and two routes for System status, each checked against `health.read` (bit plane 6,
 a read): `GET /api/health/checks` (every row `list` returns) and `GET /api/health/budgets` (each
 budget's reading as `items`, an empty list when the budgets are not measured, with the `plan`,
-what one run may do on it as `limits`, and the events queue's backlog asked live as `queue`), and the Home card's
+what one run may do on it as `limits`, the events queue's backlog asked live as `queue`, and, while
+the key is why the budgets go unmeasured, the steps to fix it as `key`), and the Home card's
 `GET /api/health/home` (how many checks fail or need a look). The tick runs the job like
 any other job, so a client gets system health by mounting the module, with no cron of its own.
 Each run of the job takes the checks whose time has come, so it fits in the tick's 45 queries
@@ -103,6 +104,9 @@ const health = createHealth<Env>({
     token: (env) => env.KIT_OPS_TOKEN,
     plan: async (env) => (await settingsFor(env)).get<CloudflarePlan>('health.cloudflare_plan'),
     queue: (env) => env.EVENTS,
+    // Named in the key's steps, and what the key needs beyond the recipe's two permissions.
+    worker: () => 'acme-portal',
+    permissions: addon ? [{ key: 'dns', type: 'edit' }] : [],
   },
 });
 const scheduler = createScheduler<Env>({
@@ -163,6 +167,15 @@ Given `budgets`, the module adds a job, a check and a key recipe (plan 10). On t
   problem, for the page.
 - **`OPS_TOKEN_RECIPE`** lives here and the backup module declares the same one: the token needs
   Account, D1, Edit for the backup and Account, Account Analytics, Read for the budgets.
+- **The key's steps** (2026-11-13), for an owner who only has a phone: when the last measure
+  found no key, a key Cloudflare refuses or one without Account Analytics Read (`keyStateOf`),
+  `GET /api/health/budgets` adds `key`: its `state` (`missing`, `refused` or `lacks`), `form`
+  (Cloudflare's account-token form opened with `OPS_TOKEN_PERMISSIONS` and the client's
+  `permissions` chosen, `opsTokenForm`, the URL the command-line tool's deploy prints),
+  `workers` (the dashboard's Workers and Pages, `WORKERS_PAGE`) and `worker` (the name the client
+  gives). System status shows them above its checks as three steps: make the key, set it in the
+  Worker's Variables and Secrets, press Check again now, which measures the budgets before it runs
+  the checks. Once a measure succeeds, `key` is null and the steps go.
 
 ### Workers Paid
 
@@ -221,7 +234,9 @@ CPU time in milliseconds and the size from D1; the check warning at 75% and fail
 other jobs paused through the scheduler while the health jobs run, and running again after
 midnight UTC; a 403 keeping the last figure with the reason; a key Cloudflare refuses on a 400
 named with its fix; a missing token named once for the
-budgets it leaves unmeasured; the token in no reading; and the analytics errors named. Workers
+budgets it leaves unmeasured; the token in no reading; the analytics errors named; and the key's
+steps for a refused, narrow or missing key, the form with the recipe's permissions and the
+client's, gone once Cloudflare takes the key. Workers
 Paid: the month asked from the 1st, the budgets it includes, 96% failing without a pause, the
 month's figures not counting once back on the free plan; a plan that cannot be read taken as
 free; and the queue's backlog read live, warning at 20 minutes, failing at 90, and a backlog that
