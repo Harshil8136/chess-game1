@@ -212,6 +212,9 @@ sent, its tries and when it was used) and `customers_sessions` (each sign-in, by
 token: how, the browser, when it was made, last used, expires and ended). Migration
 `0037_customers_services.sql` adds `customers_services`: each sign-in service, its issuer and
 client id, its secret sealed with its own wrapped data key, on or off, and when it was last used.
+Migration `0061_customers_by_name.sql` (2026-11-13) indexes the customers by name whatever its
+case, the order the page lists them in, so a page of them stops at its last row instead of
+sorting every customer.
 
 ## Errors
 

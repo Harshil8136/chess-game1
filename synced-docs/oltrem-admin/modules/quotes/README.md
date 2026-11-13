@@ -115,7 +115,9 @@ state and dates.
 Migration `0041_quotes.sql`, additive and idempotent: `quotes_quotes`, one row a quote, with its
 lines as JSON (a quote is read and written whole, and its lines are never searched apart from it),
 its total in the currency's smallest unit, and when it was made, sent and answered. The number is
-unique in the company.
+unique in the company. Migration `0063_quotes_recent.sql` (2026-11-13) indexes them newest first,
+the order the page lists them in, so a page of them stops at its last row instead of sorting every
+quote.
 
 ## Errors
 

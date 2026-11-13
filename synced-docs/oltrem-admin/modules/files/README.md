@@ -56,8 +56,9 @@ belongs to the company.
 A name is trimmed to one line of at most 120 characters, with no slashes or control characters;
 names are unique in a folder whatever their case, among the items not in the trash. Folders go
 eight deep at most, and nothing moves into itself or out of its place. An upload whose name is
-taken is kept beside the other, numbered (`report (2).pdf`); a folder whose name is taken is
-refused.
+taken is kept beside the other, numbered (`report (2).pdf`); the numbers it could take are asked
+about in one query (2026-11-13; before, one query a number, up to 50). A folder whose name is
+taken is refused.
 
 `POST /uploads` takes the file itself as the body (a `bytes` route), its type from the request's
 content type and its name, place and folder from the query. A body of known length streams

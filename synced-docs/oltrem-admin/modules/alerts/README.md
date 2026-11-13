@@ -66,7 +66,8 @@ resolved before the quiet hours end is never sent. While none waits the job slee
 `'idle'` and looks again every six hours): an alert left held or failed when it is raised wakes
 it in the same write (`wakeJobsStatement` of `@oltrem/core-module`). The waiting alerts are found
 through a partial index (migration `0060`), so the job reads the waiting rows only, where it read
-every alert ever raised on each run.
+every alert ever raised on each run. System status's last resolved alerts are read the same way
+(migration `0064`, 2026-11-13), newest first from an index of the resolved ones.
 
 ## Settings
 

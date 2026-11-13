@@ -134,7 +134,7 @@ Cloudflare's "Invalid request headers" (2026-11-12).
 | Job | `mail.soon` | every five minutes while something it serves is on a short clock (a snoozed conversation, a mailbox in its first hour, an address whose verify link went out in the last day, a test being sent again, an alias or a forwarding domain not settled in its first day); otherwise it sleeps (an hour a run, which is the pace of everything else it retries), woken by a snooze or by any press that changes the route, a mailbox or forwarding (2026-11-12); brings back the snoozed conversations whose time came (one write for all); reads back the addresses Cloudflare emailed a verify link in the last day until each is pressed (one listing for all); sends again, for a day after the press, a route test refused only because the domain is not onboarded for Email Sending, 4 companies a run (one binding call each), so the route turns ready by itself once the dashboard step is taken; makes again the routing rules that failed and asks Cloudflare about forwarding addresses it was never asked about, 5 mailboxes a run, every five minutes in a mailbox's first hour and hourly after; then forwarding, 8 Cloudflare calls at most: the people waiting their turn asked about, the aliases' rules made once a link is pressed, and one domain read back (new, moving, or not read for a day) with its people's links |
 | Job | `mail.inbox` | hourly; brings back once the conversations answered three days ago and not since (one write); removes mail past `keep_days` (100 messages a run), and the senders kept only for their list's unsubscribe once their mail is gone |
 | Health | `mail.forwarding` | `warn` for a forwarding domain or a switched-on alias with a problem (a rule Cloudflare refused, a forward that did not go), with what to do; an alias waiting for a link is not a problem |
-| Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), for a forwarding address whose link has not been pressed a day after Cloudflare emailed it, and past 250 MB of rows or 8 GB of stored copies |
+| Health | `mail.inbox` | `fail` without the bucket; `warn` while Mail is off with mailboxes, for a mailbox's problem (a rule, a copy not forwarded, a message not kept), for a forwarding address whose link has not been pressed a day after Cloudflare emailed it, and past 250 MB of rows or 8 GB of stored copies; the stored bytes are the mailboxes' running totals, and the rows are counted only once the highest message number passes the 250 MB line (below it the count cannot be past it), so an hourly check reads two rows, not every message |
 
 The add-on holds the `4000`s of the error codes (`src/errors.ts`):
 
@@ -233,6 +233,13 @@ Quick settings behind the cog (Split or Full, Default or Compact, kept in cookie
 keyboard shortcuts (`src/reader/keys.js`, the `?` sheet lists them); and Labels
 (`/email/inbox/labels`), to make, rename, recolour and remove labels.
 
+Since 2026-11-13 the list changes before the portal answers, as Gmail's does (the kit frame's
+`data-optimistic`): Archive, Snooze, Spam, Not spam, Back to inbox and the moves between Inbox
+and Updates take the row away at once in the box it leaves; Mark read and unread change its
+weight at once; the star fills at once. The portal's answer then replaces the list, so a change
+it refused comes back as it was; with no answer at all the row comes back and the page says so.
+Starred and All mail, which an archived conversation does not leave, wait for the answer.
+
 Forwarding (`/email/forwarding`), in the Email settings tabs, in two views since 2026-11-12:
 **ImprovMX** (first) and **Cloudflare**. ImprovMX shows Connect ImprovMX with its one field until a
 key is kept, then the account with Disconnect and Add a domain, and a pane for each domain with its
@@ -281,4 +288,7 @@ test refused for a domain not onboarded went to and when it was pressed, cleared
 passes. Migration `1016_mail_gmail.sql` (2026-11-11): `mail_threads` gains `starred` (with a
 partial index), `mail_labels` holds the team's labels and their colours, and `mail_mailboxes`
 gains `stored_bytes`, the running total of its stored copies, started from what was stored.
-Never KV (mail law M-3).
+Migration `1019_mail_unread_and_age.sql` (2026-11-13) adds two indexes: `mail_threads_unread`,
+only the unread conversations of the inbox, which Home's Unread mail card counts, and
+`mail_messages_received`, the messages by arrival, through which the hourly removal finds the
+oldest. Never KV (mail law M-3).

@@ -336,7 +336,14 @@ theme switch act at once and save behind the scenes. A button with `data-copy` c
 to the clipboard and says "Copied", aloud too, for two seconds. A button with `data-fill` (a
 field's id) and `data-value` puts that example in the field and moves there (2026-11-10: the
 example sender address on Email settings). A thin line at the top shows a page that is
-still loading, and after 150 ms the page dims (`data-loading`), so a press is seen. The marked
+still loading, and after 150 ms the page dims (`data-loading`), so a press is seen. **A change
+shown at once** (2026-11-13, the owner: the screen changes before the server answers): a form or
+its button marked `data-optimistic` changes its row (`data-optimistic-row`), or for a list's command
+the rows ticked for it, before it is sent. `hide` takes the row away, `set:<name>` and
+`unset:<name>` put or take the row's `data-<name>`, and `toggle:<name>` flips it with the button's
+`aria-pressed` and its `data-optimistic-label` for the other label. Such a send neither dims the
+page nor shows the line; the portal's answer puts the true page in place, and with no answer at all
+every row is put back as it was and the page says the change may not have been saved. The marked
 tab, segment and section carry a mark (`.ui-mark`) the script adds and names alike on both pages
 of a change, so it glides; a filter on the same page moves the mark alone (`data-vt="mark"`). A
 page that arrives counts its plain figures up and fills its meters, keeping the real figure for a

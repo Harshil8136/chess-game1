@@ -160,7 +160,9 @@ The **authorizer** refuses when the hook did not run (no session: fail closed), 
 `holdsAnywhere`: the capability at the root or at any scope with a grant, since a route is the
 widest question and the handler narrows to the scope at hand. On a route whose capability is
 flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
-recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. An
+recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. The
+calls of one request share that read (2026-11-13: Home asked three times), and the next request
+reads it again, so nothing is kept between requests. An
 allow on a `freshSignIn` capability then needs a sign-in within `freshMinutes`, else
 `KIT-E-2004`, of everyone but the Vendor. The window is the setting `iam.fresh_sign_in_minutes`
 (`FRESH_SIGN_IN_SETTING`, Settings, Security, the Vendor's to change: 0 to 1,440 minutes), and

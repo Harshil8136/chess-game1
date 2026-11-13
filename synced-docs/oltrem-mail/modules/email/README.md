@@ -560,7 +560,7 @@ too (`holdsAnywhere`): code is how an email looks, not whose data it reaches.
 | `POST /ready/check` | `email.manage` | Check again: each service that may send asked with its key and the answer kept, the From address's domain checked, then the readiness |
 | `POST /release` | `email.manage` | The messages held because no provider was ready, sent now that one is, without waiting for `email.release`; the Integrations page calls it when a provider is made the one that sends |
 | `POST /canary` | `email.manage` | A test message through one instance (`instanceId`) to the address given (`to`) or the signed-in person's own, from the company's sender address on that provider's own domain when there is one (the client's address otherwise), before it is made the one that sends; the result is kept on the instance as its last probe, and the canary is audited as `email.canary` |
-| `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed |
+| `GET /home` | `email.read` | The Home card: the messages of the last 24 hours, how many were sent, wait and failed; read through `email_messages_created` (migration `1018`), so only the day's rows |
 | `GET /domains` | `email.senders.manage` | The sending domains with their records, check lines and defaults |
 | `POST /domains` | `email.senders.manage` | Add a domain (`domain`, `instanceId`), through the provider where it can, and check it |
 | `POST /domains/discover` | `email.senders.manage` | Read the domains and addresses each email provider lists, and add the new ones, or only those in `names` (see Senders) |
@@ -735,7 +735,9 @@ JSON, the reason, who added them and when). Migration `0052_email_written.sql` m
 state, the time it goes for one scheduled, the message key once queued and why it was last not
 queued; see Write). Migration `0053_email_signatures.sql` adds each sender address's
 `signature`. Migration `1017_email_code_for_senders.sql` gives `email.write.code` to every role
-that may send (2026-11-12) and bumps each company's access version. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
+that may send (2026-11-12) and bumps each company's access version. Migration
+`1018_email_messages_recent.sql` (2026-11-13) indexes `email_messages` by `created_at` and
+`status`, for Home's card. Migration `1000_email_pinned_route.sql` adds `email_messages.pinned_route`, the
 route a message with no clear answer stays on. Migration `1003_email_consent.sql` makes
 `email_list_left` (who left which saved list from an unsubscribe link, the message and when) and
 adds `email_domains.bulk_since`, the first day a domain sent bulk mail, which `@oltrem/campaigns`

@@ -209,3 +209,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Email's menu on a phone](2026-11-13-email-menu-on-a-phone.md) | Menu works on every phone and opens Email's own menu; P185 to P187 |
 | [Find any page as you type, and jump back to recent ones](2026-11-13-find-pages-and-jump-back.md) | search lists pages; Jump back in; P188, P189 |
 | [Users as one page, and motion that says where you went](2026-11-13-users-page-and-motion.md) | the seven Users & access pages as tabs of Users; pages slide by direction, folds glide, drawers leave as they came; P190 to P192 |
+| [Fewer database reads, indexes for growing lists, and changes shown at once](2026-11-13-reads-and-changes-at-once.md) | repeated queries fixed, seven indexes, copies kept per request, rows that change before the answer; P193 to P195 |

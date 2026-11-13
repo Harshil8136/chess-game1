@@ -134,7 +134,9 @@ state, dates and how it was paid.
 Migration `0042_invoices.sql`, additive and idempotent: `invoices_invoices`, one row an invoice,
 with its lines as JSON (an invoice is read and written whole), its total in the currency's smallest
 unit, the day it is due, and when it was made, sent and paid and how. The number is unique in the
-company; an index on the state and the day serves Needs you.
+company; an index on the state and the day serves Needs you. Migration `0062_invoices_recent.sql`
+(2026-11-13) indexes them newest first, the order the page lists them in, so a page of them stops at
+its last row instead of sorting every invoice.
 
 ## Errors
 
