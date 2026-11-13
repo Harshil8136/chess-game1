@@ -205,4 +205,5 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [A live portal's System status report, fixed](2026-11-12-system-status-report-fixes.md) | a refused key named with its fix; quiet errors resolve; gone checks hidden; switched-off jobs not counted; P175 to P177 |
 | [A person's permissions on one page: tick what they should have](2026-11-12-change-permissions-page.md) | Change permissions lists every permission ticked as the person has it, with why, a Reset, and one Save that works out the allow or the deny; P178 |
 | [Modules as one even list, and plain cards and empty states everywhere](2026-11-13-plain-cards-and-module-list.md) | Modules in lined-up rows with checkboxes; plain cards on Integrations and Home; flat, shorter empty states; P180, P181 |
-| [The Cloudflare key fixed from a phone](2026-11-13-cloudflare-key-from-the-phone.md) | System status leads through a new key; Check again now measures first; P182, P183 |
+| [The Cloudflare key fixed from a phone](2026-11-13-cloudflare-key-from-the-phone.md) | System status leads through a new key; P182, P183 |
+| [Email's menu on a phone](2026-11-13-email-menu-on-a-phone.md) | Menu works on every phone and opens Email's own menu; P185 to P187 |

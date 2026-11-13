@@ -281,6 +281,16 @@ trips before a page's own first read; now a page waits for its slowest read.
   screen. The page's own head names where you are under the bar, so a head marked `data-bar`
   keeps its heading and actions and drops only its icon and line. The document names the phone
   browser's bar colour (light, dark, or both for the device's own).
+- **Menu opens where you are** (2026-11-13, the owner: Email's sidebar and options could not be
+  reached on a phone). A page that is one of a set of tabs carries a section menu
+  (`SectionMenu`, `#section-menu`, a popover inside the page): every page of its sidebar group,
+  set by set, the page on screen marked, and **All sections** (core-ui's `AllSections`) at its
+  head. The script opens the page's `data-section-menu` from Menu (Email's folders first, see
+  core-ui's `MailShell`, which take in the section menu's other sets from the script), and All
+  sections closes it and opens the portal's menu; the portal's menu opens scrolled to the page on
+  screen. Where the browser has no command buttons (`commandfor`: Safari before 26.2, Samsung
+  Internet, Firefox before 144) the script does what the button asks, and closes a
+  `closedby="any"` dialog on a press outside it. Without the script Menu opens the portal's menu.
 - **Colours in the account menu** (2026-11-08): six coloured dots (`DOTS`) above the theme icons
   post `palette` and `back` to `POST /do/look`, which keeps the pattern the cookie already holds.
   With the script, the new colours and a change of theme spread from the button pressed as a
