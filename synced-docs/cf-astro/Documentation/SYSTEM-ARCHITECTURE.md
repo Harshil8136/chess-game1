@@ -141,7 +141,8 @@ Supabase is down (`src/pages/api/booking.ts`, `src/lib/booking-service.ts`):
                ├─► 0. Size bound + per-IP burst guard
                ├─► 1. D1 `booking_attempts` row (audit-first, PII redacted in the raw body)
                ├─► 2. Origin check → rate limit → JSON parse → Zod
-               ├─► 3. Idempotency key in SESSION KV (a retry gets the first answer)
+               ├─► 3. Idempotency key in SESSION KV (a retry gets the first answer),
+               │        read while the D1 row is filled in, not after it (2026-11-13)
                ├─► 4. D1 replay outbox: the whole transaction + email payload, before Postgres
                ├─► 5. Supabase transaction: bookings, consent_records, booking_pets,
                │        booking_quality_metadata, email_audit_logs
@@ -222,7 +223,7 @@ An isolated, lightweight worker sidecar consumes the queue on behalf of **both**
 
 - **Webhook Endpoint**: `POST /api/webhooks/brevo` (cf-astro) captures delivery, bounces, and complaints from the primary provider. This lives in cf-astro itself, not the consumer worker — `cf-astro-email-consumer` is queue-only (no `fetch()` handler), so it cannot receive inbound HTTP webhooks at all.
 - **Security**: Brevo does not sign webhook payloads by default, so this is **not** signature/HMAC verification — it's a constant-time shared-secret comparison (`timingSafeEq`, `src/lib/security.ts`) against `BREVO_WEBHOOK_SECRET` (a cf-astro secret), checked from the `Authorization` header, the `x-brevo-secret` header, or a `?secret=`/`?token=` query param. Never log the raw query string unredacted.
-- **Audit Log**: Verified webhook events are pushed into the `email_audit_logs` Supabase table inside a JSONB `delivery_events` array for auditing.
+- **Audit Log**: Verified webhook events are pushed into the `email_audit_logs` Supabase table inside a JSONB `delivery_events` array for auditing. Since 2026-11-13 the event is appended by one `UPDATE … RETURNING` (`appendDeliveryEvent`, `src/lib/delivery-events.ts`), not a read followed by a write of the whole list, so two events for one email arriving together both land; an event without a `tracking_id` tag is matched on `resend_id`, which the partial index `idx_email_audit_logs_resend_id` serves (Supabase migration `email_audit_logs_resend_id_index`, [record](records/2026-11-13-fewer-database-round-trips.md)).
 - **Email API messages** (2026-10-10): an event whose tags carry `api_msg_<message id>` belongs to the email API, whose messages live in the email service's own D1 database. The webhook forwards it to `EMAIL_QUEUE` as purpose `api_delivery`, and `cf-astro-email-consumer` records the verdict, feeds the do-not-mail list and calls the client's webhook. A failed queue send answers `500` so Brevo retries.
 
 ---

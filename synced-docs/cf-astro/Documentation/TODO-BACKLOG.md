@@ -6,6 +6,33 @@
 > 2026-05-29 (moved here from the repository root on 2026-09-15); their open items are leads,
 > not facts, except where a 2026-10-17 note says otherwise.
 
+## 0f. ⚡ Database waits, found in the speed pass (2026-11-13)
+
+> Found while cutting database round trips
+> ([record](records/2026-11-13-fewer-database-round-trips.md)). Checked against the code and,
+> where it says so, the live D1 and Supabase databases through their connectors.
+
+- [ ] 🟢 **The booking's Postgres transaction waits once per insert.** `insertBookingTransaction`
+      (`src/lib/booking/booking-outbox.ts`) sends five inserts between `BEGIN` and `COMMIT`, each
+      waiting for the one before. Issuing them together inside Drizzle's transaction was measured
+      on a local Postgres 16 with 40 ms added each way: 653 ms one after another, 648 ms together,
+      so Drizzle still waits for each. One round trip would need the five inserts as one SQL
+      statement, a rewrite of the booking path's write that the replay outbox also uses; not
+      done without the owner's yes.
+- [ ] 🟢 **The contact form's two inserts are separate and not one transaction.**
+      `src/pages/api/contact.ts` saves the consent row, then the message, as two statements with
+      no transaction: two waits, and a consent row can be saved without its message if the second
+      fails. A transaction would make it all or nothing; it would not save a wait.
+- [ ] ⚪ **The blog list sorts by `datetime(pub_date)`, which the index cannot order.** Live D1,
+      2026-11-13: `pub_date` is written in two shapes (16 to 20 characters, with and without
+      seconds and `Z`), which is why the sort parses it; `idx_posts_status_date` still finds the
+      rows and SQLite sorts the 23 of them in memory. Worth a stored, uniform date only if the
+      blog grows to hundreds of articles.
+- [x] **Optimistic screens.** The cookie banner already closes before the server answers and
+      retries from a local queue. The booking, contact and ARCO forms keep waiting for the server
+      on purpose: showing "booked" or "sent" first would tell a pet owner something that may not
+      be true. Their waits were shortened instead (2026-11-13).
+
 ## 0e. 🇲🇽 Visibility beyond Aguascalientes (2026-10-29)
 
 > The owner's multi-phase program; the approach and its rules are

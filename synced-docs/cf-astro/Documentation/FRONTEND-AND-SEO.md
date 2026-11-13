@@ -194,6 +194,14 @@ drawn from its own words (`WordCover`: its first topic and title on one of six t
 its address), on the list and among related articles; the site ships no stock photos. A topic's
 page is headed by its topic. [Record](records/2026-10-30-blog-pages-remade.md).
 
+**Fewer waits on D1 (2026-11-13).** The index asks for its page of posts, their total and the
+topics row at the same time instead of one after the other. A post page asks for its related
+articles and its translation together, and the translation (published in the other language,
+and whether D1 decides for that slug at all) is one query, `[SUPABASE_PROJECT_REF]`
+(`src/lib/blog.ts`), where it was two and the second read every slug of the language. A topic's
+page still asks for its topics only after its posts, so a 404 for an unknown topic costs one
+query. [Record](records/2026-11-13-fewer-database-round-trips.md).
+
 ### 4.5 "From our blog" on the home page and the service pages (2026-10-31)
 
 Until this date the blog was reached only from the menu and the footer. The home page (after the
