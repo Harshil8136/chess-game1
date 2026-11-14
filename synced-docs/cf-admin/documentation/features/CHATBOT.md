@@ -193,7 +193,7 @@ the five-minute tick, [CRON-CONTROL](CRON-CONTROL.md) §3g) emails them as they 
 - **It reads** the record's `record/urgent` (cf-vps lab 1.12.0): the open urgent flags of the last
   24 hours, each one's kind, name and time, and the chat's last 4 digits; never a message's words.
   It reads as its own scheduled job through the server console (`vpsSystemRead`), and the server
-  allows that job this one read and nothing else.
+  allows that job this read and its list of apps (since 2026-11-14), and nothing else.
 - **It emails** the flags it has not emailed before, all in one email (subject "A customer says
   they paid", or "3 things in WhatsApp need a person"), each with what happened, what to do, the
   time in Mexico City and the chat's last 4 digits, and a button to the Flags tab. It goes
@@ -213,7 +213,10 @@ the five-minute tick, [CRON-CONTROL](CRON-CONTROL.md) §3g) emails them as they 
   (`ADMIN_EMAIL`). Since 2026-11-06 the Chatbot Settings page writes the row (§0.5).
 
 Before move night the real bot's recorder is not installed, so with the switch on the job finds
-no record and looks again every half hour. Its D1 cost is its budget's: nothing while off or with
+no record and looks again every half hour. Since 2026-11-14, until a record has answered once, the
+job first reads the server's list of apps (`apps`) and asks the record only when the list shows it
+with its admin port: asking a recorder that is not there was answered 404 `no_bridge` each time,
+which Cloudflare's logs counted as a failed request (`recordInstalled`). Its D1 cost is its budget's: nothing while off or with
 nothing new, one row written when it emails (change record (private)).
 
 ### 0.3 Conversations and the flag inbox (since 2026-11-06)
@@ -456,7 +459,7 @@ so it covers real customers too, whose replies PostHog never sees. The
   booking, how many left a question, the top five topics and services asked for, the top three
   reasons for not booking, and the flags still open. Never a customer's words, a question or a
   phone. It reads as its own scheduled job through the server console (`vpsSystemRead`), and the
-  server allows that job this one read and nothing else.
+  server allows that job this read and its list of apps (since 2026-11-14), and nothing else.
 - **It emails** them once a week, on Monday at 9:00 in Mexico City (15:00 UTC; Mexico keeps no
   summer time), subject "The WhatsApp bot's week: 63 chats, 12 booked", with the insight step's
   fixed names in the portal's words (`src/lib/posthog/bot-words.ts`, the same words as Money and
@@ -473,7 +476,9 @@ so it covers real customers too, whose replies PostHog never sees. The
   writes it (§0.5).
 
 Before move night the real bot's recorder is not installed, so with the switch on the job finds no
-record and looks again every six hours. Its D1 cost is its budget's: nothing while off or between
+record and looks again every six hours. Since 2026-11-14 a due run reads the server's list of apps
+(`apps`) first and asks the record only when the list shows it, as the urgent email does (§0.2).
+Its D1 cost is its budget's: nothing while off or between
 Mondays, one row written when it emails
 (change record (private)).
 
@@ -894,6 +899,7 @@ a low sample count as low confidence, not as absence.*
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-14 | §0.2's and §0.6's move-night paragraphs against `recordInstalled` in `src/workers/scheduled-bot-flags.ts` and its two callers; both jobs' rows read through the Cloudflare D1 connector (`chatbot-urgent-email` and `chatbot-weekly-email` both `on` for the real bot, no state row yet); `test/bot-flags-email.test.ts` and `test/bot-weekly-email.test.ts` pass | The rest of §0.2 and §0.6; the app list against the live server (a cloud session cannot reach it); `last_verified` left as it was |
 | 2026-11-13 | `POST /api/whatsapp-bot/settings` reads the old values in one `readSettings` and saves every changed setting in one D1 batch (`updateSettings`), all or none, instead of a read and a write per setting (record (private)) | The rest of the page |
 | 2026-11-07 | §0.5 rewritten for the redesign (the menu's groups and twelve sections, the bot switch, At a glance, the rows, tags, save bar and colours, every box's name and its words) against `insights/SettingsKit.tsx`, `insights/BotSettings.tsx` (`Menu`) and `insights/BotGlance.tsx` (`GROUPS`, `SECTIONS`, `SECTION_SAY`, `sectionOf`, `glanceOf`), `insights/BotModels.tsx`, `insights/BotRules.tsx`, `insights/BotHotel.tsx`, `insights/BotN8n.tsx`, `insights/BotData.tsx` and `chatbot-insights.css`; the header's words note and the Test bot line against migration `0098` and the live `admin_pages` rows read through the Cloudflare D1 connector | §0 to §0.4 and §0.6 to §0.8 keep the words of the day they were written (the words note says so); the pages were not opened in a browser, only rendered in tests |
 | 2026-11-07 | §0.5's Safety, Hours and Prices rows, the Flags row and the hand-over line against `insights/BotHotel.tsx`, `insights/BotRules.tsx` (`PartLoader`, `usePartSave`, `WeekFields`, `FlagsForm`), `insights/BotSettings.tsx` (`SECTIONS`, `SECTION_SAY`), `insights/record.ts`, `insights/record-data.ts`, `insights/FlagInbox.tsx`, `src/workers/scheduled-bot-flags.ts` and cf-vps `apps/whatsapp-lab/src/settings.ts`, `rules.ts`, `flags.ts` and `workflows.ts` at `5a1ee1e` (lab 1.26.0); `test/whatsapp-bot-hotel.test.ts`, `test/whatsapp-bot-rules.test.ts` and `test/bot-flags-email.test.ts` pass | The boxes against the installed lab 1.26.0 and on the owner's phone; `last_verified` left as it was |

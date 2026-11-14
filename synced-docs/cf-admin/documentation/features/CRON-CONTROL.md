@@ -499,9 +499,11 @@ state row, `chatbot-urgent-email-sent`. Its gate is the settings row's mode: wit
 `off`, the dispatcher skips it, so an off tick costs the gate-key query it already makes. On, a
 run reads the server once, as its own system actor (`vpsSystemRead`, job `bot-flags`), and with
 nothing new writes nothing; a run that emails writes the state row once, compare-and-swap, after
-the email is queued, so an email that could not be queued is tried again at the next tick. When
-the record does not answer because it is not installed yet, or has no database, it sleeps half
-an hour; with no connection to the server console at all, an hour. Any other failed read writes its
+the email is queued, so an email that could not be queued is tried again at the next tick. Until
+the record has answered once (no state row for it), a run first reads the server's list of apps
+(`apps`, the job's second read) and sleeps half an hour without asking the record when the list
+lacks it (2026-11-14). When the record does not answer because it is not installed yet, or has no
+database, it sleeps half an hour; with no connection to the server console at all, an hour. Any other failed read writes its
 streak row (`reportIfPersistent`, key `bot-flags:read`) and reaches Sentry once it has lasted half
 an hour, then at most once an hour.
 
@@ -522,8 +524,9 @@ no row, or `off`, the dispatcher skips it. On, a run whose week was already sent
 and reports the next Monday at 15:00 UTC as its due time, so it sleeps the hour cap until then. A
 due run reads the server once, as its own system actor (`vpsSystemRead`, job `bot-weekly`),
 queues one email, and then writes the state row once, compare-and-swap, so an email that could
-not be queued is tried again an hour later. When the record does not answer because it is not
-installed yet, or has no database, it sleeps six hours; with no connection to the server console
+not be queued is tried again an hour later. Since 2026-11-14 a due run reads the server's list of
+apps first and sleeps six hours without asking the record when the list lacks it. When the record
+does not answer because it is not installed yet, or has no database, it sleeps six hours; with no connection to the server console
 at all, an hour. Any other failed read is tried again within an hour, writes its streak row
 (`reportIfPersistent`, key `bot-weekly:read`) and reaches Sentry once it has lasted two hours,
 then at most every six.
@@ -1044,6 +1047,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-14 | claude | `bot-flags` and `bot-weekly` (Cloudflare logs: a 404 from cf-vps on each try while the real bot's recorder is not installed): both rows read through the Cloudflare D1 connector (both `on` for the real bot, no state rows); the new app-list check in `src/workers/scheduled-bot-flags.ts` (`recordInstalled`) proved by `test/bot-flags-email.test.ts` and `test/bot-weekly-email.test.ts`; no D1 query added, so the budgets stand | §3g's and §3h's not-installed lines; `last_verified` left as it was |
 | 2026-11-07 | claude | `audit-seal` (Sentry CF-ADMIN-25, written 16 against 13 on 2026-11-05): live seals and the day counts read through the Cloudflare D1 connector (two windows a day since 2026-11-04, 8 rows written a seal from `admin_audit_log`'s indexes in `sqlite_master`); `WINDOW_LOOKAHEAD_ROWS` in `src/lib/audit-seal/seal.ts` pinned by `test/audit-seal.test.ts` (every window placed the same as from 501 rows); the budget in `budgets.ts` measured by `test/jobs-budget.test.ts` | §5's audit-seal paragraph; `last_verified` left as it was |
 | 2026-11-07 | claude | `lab-update` added: `src/workers/scheduled-lab-update.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/lab-update.test.ts` passes | §3's count and tier table, §3i (new) and §4a's sleeping jobs; `last_verified` left as it was |
 | 2026-11-07 | claude | `lab-update`'s first live install: the `vps-lab-update` row (`skipped` at 05:45, `running` at 06:00, `succeeded` at 06:05 UTC) and its two `vps_app_deploy` rows by `system`, read through the Cloudflare D1 connector; the server's own log of the install read by the server session. The rest of §3i not re-read | §3i, "First live install"; `last_verified` left as it was |
