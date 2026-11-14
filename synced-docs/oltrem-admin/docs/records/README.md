@@ -194,7 +194,7 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The Email pages tidied for a phone](2026-11-11-email-pages-tidy.md) | a page head that keeps a short title's buttons beside it, pane heads that wrap, no box in a box, one chip look, faded folder row, tabs showing the one before, Write's narrower labels, no empty chart |
 | [Coded emails found anywhere, one dropdown, Write without the portal's bar](2026-11-12-coded-email-and-dropdowns.md) | why a pasted coded email showed as text and the fix, the core-ui Dropdown, a radio posting its form, one Cc/Bcc, a line of chips with room, the compose head as a phone's only bar, the 148 KiB cap |
 | [A quiet portal costs almost nothing, and a page waits for one trip less](2026-11-12-quiet-portal.md) | where 202,000 reads and 10,000 writes a day went; idle jobs sleep; nightly extras off until switched on; a page's reads together |
-| [The screens' actions moved behind the door on every portal](2026-11-12-screen-actions-behind-the-door.md) | why changing the colour said Not signed in again after the fleet updated the portal (a door set before 2026-11-11 leaves `/ui/*` open, and the fleet cannot change Access); the actions moved to `/do/`; the console's ViewTransition line explained |
+| [The screens' actions moved behind the door on every portal](2026-11-12-screen-actions-behind-the-door.md) | why the colour change said Not signed in after a fleet update (an old door leaves `/ui/*` open); the actions moved to `/do/` |
 | [Pages kept in the tab's memory, and Email's folders in a drawer on a phone](2026-11-12-instant-pages.md) | pages seen again shown at once from the tab's memory, then checked; Email fetched ahead; a folders drawer on a phone |
 | [Why the test email landed in Promotions](2026-11-12-promotions-tab.md) | Oltrem Mail cc48720 taken in: the test email's sending was right and the email itself was a designed offer; Write asks once about a promotion and dead links, a campaign's page warns about a shared address; phone tests P155 and P156 |
 | [Class names, button looks and the two design skills](2026-11-12-ui-foundation.md) | the four-step overhaul: the audit, `cn()` and `cva`, the skills `ui-design-system` and `preact-ui`, gradients and glows taken off |
@@ -214,3 +214,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Quiet Off, switches](2026-11-14-quiet-off-and-switches.md) | P199-P201 |
 | [Loading orb](2026-11-14-loading-orb-and-status-list.md) | P202-P204 |
 | [Sidebar rail, notifications panel](2026-11-14-sidebar-rail-and-notifications-panel.md) | P205-P206 |
+| [Heads on a band](2026-11-14-page-heads-on-a-band.md) | P210-P212 |
