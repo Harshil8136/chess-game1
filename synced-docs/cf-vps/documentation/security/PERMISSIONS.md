@@ -98,6 +98,9 @@ their grant would count. The console's role matrix shows the role as holding eve
    1.16.0 cf-admin's weekly report by email (`bot-weekly`) holds the same read for the same two
    members' `record/week` only. Any other bridge read is refused as if it held nothing, each job
    only its own path, and the app refuses a system actor every path but those two. Since
+   2026-11-14 both jobs may also read `apps` with `host.view`, to see whether the record is
+   installed before they ask its bridge (before move night the real bot's recorder is not, and
+   its bridge answers 404 `no_bridge` on every try). Since
    2026-11-07 cf-admin's `lab-update` job may read `apps` and `actions/job` with `host.view`,
    read `releases`, and start one action, `app.release` (`SYSTEM_JOB_ACTIONS`): on
    `actions/run` it holds `host.view` and `apps.manage`, the Worker and the agent refuse it any

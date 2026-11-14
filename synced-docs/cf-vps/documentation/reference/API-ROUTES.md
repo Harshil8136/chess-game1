@@ -61,7 +61,7 @@ and the console. A route is reached in two forms:
 | `packages/installed` | GET | `host.view` | 60 s |
 | `packages/info` | GET | `host.view` | 60 s |
 | `processes` | GET | `host.view` | 15 s |
-| `apps` | GET | `host.view` (also cf-admin's `lab-update` job: `SYSTEM_JOB_READS`) | 15 s |
+| `apps` | GET | `host.view` (also cf-admin's `lab-update`, `bot-flags` and `bot-weekly` jobs: `SYSTEM_JOB_READS`) | 15 s |
 | `jobs` | GET | `host.view` | 60 s |
 | `jobs/log` | GET | `logs.view` | 60 s |
 | `jobs/progress` | GET | `host.view` | 15 s |
