@@ -210,5 +210,6 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Find any page as you type, and jump back to recent ones](2026-11-13-find-pages-and-jump-back.md) | search lists pages; Jump back in; P188, P189 |
 | [Users as one page, and motion that says where you went](2026-11-13-users-page-and-motion.md) | the seven Users & access pages as tabs of Users; pages slide by direction, folds glide, drawers leave as they came; P190 to P192 |
 | [Fewer database reads, indexes for growing lists, and changes shown at once](2026-11-13-reads-and-changes-at-once.md) | repeated queries fixed, seven indexes, copies kept per request, rows that change before the answer; P193 to P195 |
-| [A new Home, and the bell in the head](2026-11-14-home-makeover-and-header-bell.md) | dials, At a glance list, motion; P196 to P198 |
-| [Quiet Off, and switches beside the work](2026-11-14-quiet-off-and-switches.md) | P199 to P201 |
+| [New Home, bell in the head](2026-11-14-home-makeover-and-header-bell.md) | P196-P198 |
+| [Quiet Off, switches](2026-11-14-quiet-off-and-switches.md) | P199-P201 |
+| [Loading orb](2026-11-14-loading-orb-and-status-list.md) | P202-P204 |
