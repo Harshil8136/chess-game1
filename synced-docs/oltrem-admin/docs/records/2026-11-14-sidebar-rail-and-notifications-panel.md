@@ -72,3 +72,21 @@ message. The frame closes any such menu on a press elsewhere or Escape, as it do
 inbox's menus close that way too. Tests: `write-composer.test.ts` in Oltrem Mail, `frame.test.ts`.
 Looked at in a browser at 1500 px dark and 390 px light (a sheet from the bottom on a phone, as
 every such menu). Not verified on a real phone (P207).
+
+## Then: Write's Send bar and Sent
+
+The owner's next screenshot of Write, with "fix the scroll bar" and "Sent is broken on so many
+levels". In Oltrem Mail (taken into `vendor/mail`):
+
+| Part | Before | Now |
+|---|---|---|
+| The page | A scrollbar on the right on a computer (the card asked 6rem less than the screen, the frame needs 7rem) and 20 px on a phone (the mail grid's empty rows kept their gaps) | No page scroll on either |
+| The bars | Template and More in a row above the toolbar, Attach a file in a row of its own, Send in a third | One bar at the foot: Send, a paper clip, the template, Send later, Preview, Save as template, More; the toolbar right under Subject |
+| Attach | Pick a file only | Also drop a file anywhere on the email or paste a screenshot (`data-drop-file`); the chips show once there is a file |
+| Phone bar | One row that scrolled sideways, so a card opened from it was cut off or opened off screen | One row that fits: icons, Preview and Save as template in More, each card a sheet from the foot |
+| Sent | A word under every row; an open email had no subject or Forward; the filters had their own label | A coloured tag only when it says something (red failed, with why; amber waiting; green opened); Forward and Send again over the subject, the list and filters kept beside it |
+
+Tests: `write-composer.test.ts` and `mail-screen.test.ts` in Oltrem Mail; drop, paste and the
+menu's flip in `frame.test.ts`; the bar's rules in `theme.test.ts`. Looked at in a browser at
+1850 px dark and 390 px light: no page scroll, More and the template open whole. Not verified on a
+real phone (P208, P209).

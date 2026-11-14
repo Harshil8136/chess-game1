@@ -26,7 +26,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P153 | Open Users, then Settings, then press Back; open Settings again from the sidebar | Back shows Users at once, with no loading line; Settings opens at once the second time. Remove someone's access on another device and press Back on theirs: the page shows, then the refusal replaces it | [record](records/2026-11-12-instant-pages.md) |
+| P153 | Open Users, then Settings, then press Back; open Settings again from the sidebar | Back shows Users at once; Settings opens at once the second time. Remove someone's access on another device and press Back on theirs: the page shows, then the refusal replaces it | [record](records/2026-11-12-instant-pages.md) |
 | P157 | Home, light and dark; then the setup page (`oltrem deploy --page`) | The sidebar mark, Home's welcome band and the setup page's mark and main button are one solid colour, with no glow under them; buttons look as before | [record](records/2026-11-12-ui-foundation.md) |
 | P164 | Users, Roles and Settings on the phone, then on a computer | The page's title and its main button share the top line; the search and the filters sit right under them; the page's own content starts within the top fifth; on a computer no empty band at either side | [record](records/2026-11-12-no-wasted-room.md) |
 | P165 | Roles; then Create role | Each role is a card in its own colour (the Owner amber), with a bar of its permissions and who holds it; in Create role the modules are coloured cards (two columns on a computer) and the save bar runs the full width at the foot | [record](records/2026-11-12-no-wasted-room.md) |
@@ -69,6 +69,8 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P205 | Sidebar closed: tap rows in each group | Icons stay put; the tint glides to the row tapped, never wider than the rail | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
 | P206 | Bell on any page; Unread; close | A panel over the page; Unread stays in it; X, Escape or outside closes it | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
 | P207 | Write on a computer: ⋮ More | A card over the message, not in the bar; a tap outside closes it | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
+| P208 | Write: drop or paste a file; ⋮ and template | No page scroll; file attached; one bar, cards whole | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
+| P209 | Sent: open one | Coloured tags; subject with Forward, Send again | [record](records/2026-11-14-sidebar-rail-and-notifications-panel.md) |
 | P149 | After the deploy, move between Home, Users, Settings, Email and back, a few times | Each page opens sooner than before; the bell still shows its number and every tab is there | [record](records/2026-11-12-quiet-portal.md) |
 | P132 | On the live portal, once the fleet has updated it (no deploy needed): Look and colours, tap a palette; the account menu, tap a colour dot; then a theme icon, and close and open the sidebar | The colours change at once and stay after a reload; no "Not signed in" (KIT-E-0401) page | [record](records/2026-11-12-screen-actions-behind-the-door.md) |
 | P130 | Home, then leave it open a minute while an email goes out or a task changes | A figure that changes glides to its new number instead of jumping | [record](records/2026-11-11-portal-name-icon-font.md) |
@@ -136,7 +138,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P150 | Settings, Modules, as the Vendor: the Backups and Audit log rows. On the live portal switch **Nightly backup**, **Restore drill reminder** and **Daily seal** off and save | Backups has two switches and Audit log one; saved, System status no longer lists the backup or seal checks and no backup alert comes back. Backups, "Make a copy now" still works once backups are set up | [record](records/2026-11-12-quiet-portal.md) |
+| P150 | Settings, Modules, as the Vendor: switch **Nightly backup**, **Restore drill reminder** and **Daily seal** off and save | Saved; System status lists no backup or seal checks and no backup alert comes back; "Make a copy now" still works | [record](records/2026-11-12-quiet-portal.md) |
 | P151 | Developer, Jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](records/2026-11-12-quiet-portal.md) |
 | P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](records/2026-11-03-optional-extras.md) |
 | P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](records/2026-11-03-get-started.md) |

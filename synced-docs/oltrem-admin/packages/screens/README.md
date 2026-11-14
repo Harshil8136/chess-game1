@@ -410,7 +410,9 @@ since 2026-11-08, Write's Attach a file). A file input with `data-upload` (2026-
 file chosen straight to that address as the body, with its `name` and the values of the form's
 fields named in `data-upload-with` added to the address, then opens `data-upload-done`; a
 refusal's words show on the input itself. A large file so never passes through a page's form
-(Mail's files over 10 MB, up to 95 MB). A file input with `data-csv` (2026-11-11) reads a CSV
+(Mail's files over 10 MB, up to 95 MB). A file input with `data-drop-file` (2026-11-14, Write's
+paper clip) takes a file dropped anywhere on its form, which is outlined while one is over it, or
+pasted into it with no words (a screenshot), and sends it as a choice would. A file input with `data-csv` (2026-11-11) reads a CSV
 list of any size in the browser: past 30 columns it keeps the address, the name, the files and
 the columns named in `data-csv-need`, then the rest in order; it sends the rows in parts of about
 600,000 characters, each with its heading, the first to `data-csv` and the rest to

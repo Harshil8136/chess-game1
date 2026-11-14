@@ -137,8 +137,11 @@ later in a bar at its foot, and how the marks look beside it on a wide page. Dra
 are one page with a row to pick, each email a row with its avatar, its subject, to whom and when,
 and its own Delete or Take back. Sent is cut into days (Today, Yesterday, then the date, on the
 company's clock), filtered from a row (all, opened, on the way, problems) with the counts, each
-email a row with what became of it and a mark at its edge when it went wrong. An email sent opens
-with its people and its words as the email shows them, and **What became of it** as a timeline.
+email a row with what became of it as a coloured tag when it says something (since 2026-11-14:
+red for a failure, with its reason as the row's words; amber while it waits; green once opened;
+none for a plain delivery). An email sent opens as the inbox opens a conversation: **Forward** and
+**Send again** over its subject and the word for what became of it, its people and its words as
+the email shows them, and **What became of it** as a timeline, the list and its filters beside it.
 Since 2026-11-08 (the client's point 7) Email is drawn as Gmail draws mail, with core-ui's
 `MailShell`, `ConversationRow` and `ComposeSheet`: Drafts, Sent and one sent email sit in the
 mail screen, the folders on the left with Compose on top (the mail add-on's Inbox and boxes
@@ -186,15 +189,19 @@ compose card in the manner of Gmail and Resend, and every part still works witho
 From, To, Cc and Bcc are short lines, each address in To a chip as it is typed, with the browser's
 suggestions; empty Cc and Bcc fold behind one **Cc/Bcc** button on the To line (since
 2026-11-12; a line of chips keeps room above and below, its label and buttons level with the first
-row of chips, and no arrow shows beside a box with suggestions). One tools row holds the template
-picker (the kit's `Dropdown`: a card of templates, each with its kind, posted with its Use button,
-which the script presses for it), the bold, italic, list and link buttons without the script, and a
-**More** menu (⋮) with the Words or HTML choice (only for `email.write.code`; since 2026-11-12 it
+row of chips, and no arrow shows beside a box with suggestions). Since 2026-11-14 the message sits
+right under Subject and everything else is in the one bar at its foot: Send, a paper clip to attach
+(its tip says how much may go; a file dropped on the email or pasted into it is attached too, the
+kit's `data-drop-file`), the template picker (the kit's `Dropdown`: a card of templates, each with
+its kind, posted with its Use button, which the script presses for it), Send later, Preview, Save
+as template, and at its end a **More** menu (⋮, a card that opens over the message) with the Words
+or HTML choice (only for `email.write.code`; since 2026-11-12 it
 is no longer on the page itself, as code pasted anywhere is found by itself) and the marks. Beside the card on a wide page, under it on a phone, a
 preview draws the words with their marks as they are typed. Readiness folds to one line when every
-check passes. The bar holds Send (Ctrl or Cmd with Enter), Send later and Save draft; on a phone
-(since 2026-11-12) Send takes the room the row has left, Send later reads **Schedule**, Save
-draft, Preview and Save as template are icons with their names, and the portal's own bar is
+check passes. Send goes with Ctrl or Cmd with Enter; on a phone the bar is one row that fits
+(since 2026-11-14): Send takes the room left, the clip, the template and Send later are icons with
+their names, Preview and Save as template move into More, and each card rises from the foot of the
+screen; and the portal's own bar is
 hidden while an email is written, so the compose head is the screen's only bar. **Another
 address** in the From line opens a dialog to send from an address not added yet (see
 [Senders](#senders-and-sending-domains)), for someone who holds `email.senders.add` or
