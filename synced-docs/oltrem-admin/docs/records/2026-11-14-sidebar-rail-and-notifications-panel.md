@@ -3,7 +3,7 @@ title: 'The closed sidebar holds still, and notifications open in a panel (2026-
 status: record
 owner: vendor
 last_verified: 2026-11-14
-sources: [packages/core-ui/src/theme.css; packages/screens/src/layout.tsx; packages/screens/src/pages.tsx; packages/screens/src/client/frame.js; packages/core-ui/test/theme.test.ts; packages/screens/test/frame.test.ts; packages/screens/test/home.test.ts]
+sources: [vendor/mail/oltrem-mail.json; packages/core-ui/src/theme.css; packages/screens/src/layout.tsx; packages/screens/src/pages.tsx; packages/screens/src/client/frame.js; packages/core-ui/test/theme.test.ts; packages/screens/test/frame.test.ts; packages/screens/test/home.test.ts]
 ---
 
 # The closed sidebar holds still, and notifications open in a panel
@@ -62,3 +62,13 @@ flowchart LR
   close it, the page beneath unchanged.
 - `pnpm verify` green before the push.
 - Not verified: on a real phone (P205, P206).
+
+## Later the same day: Write's More
+
+The owner's screenshot of Write on a computer: opening More (the three dots) laid Words or HTML
+code and its note inside the template bar. In Oltrem Mail (f35cd0c, taken into `vendor/mail`)
+More is now a menu under its icon (`details.ui-menu`, `data-end`): its card opens over the
+message. The frame closes any such menu on a press elsewhere or Escape, as it does a pick, so the
+inbox's menus close that way too. Tests: `write-composer.test.ts` in Oltrem Mail, `frame.test.ts`.
+Looked at in a browser at 1500 px dark and 390 px light (a sheet from the bottom on a phone, as
+every such menu). Not verified on a real phone (P207).
