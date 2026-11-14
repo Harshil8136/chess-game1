@@ -32,7 +32,8 @@ account holds, here `users.self` (any `<module>.self` is read that way by the au
 ## Capabilities
 
 Two, declared on the manifest on bit plane `1`: `users.read`, the directory; `users.manage`,
-switching accounts off and on and editing profiles, with a fresh sign-in. The IAM module's
+switching accounts off and on, blocking sign-in, managing sessions and editing profiles, with a
+fresh sign-in. The IAM module's
 startup hook registers them when the Worker starts, and both join every Owner role.
 
 ## The directory and the profile
@@ -66,6 +67,22 @@ an Owner or the Vendor may end anyone's, anyone else only a person below their s
 (`KIT-E-2007`). Each is audited, `users.session-end` (with the device) and `users.sign-out` (with
 how many ended). A directory row carries `lastSignedInAt`, the last sign-in on a new browser
 (the access module records it).
+
+**Blocking and session ends** (2026-11-14, the owner's ask to block a user for a while or for
+good, and to change an active session). A **block** with a time (`until`, a year at most) writes
+`iam_principals.blocked_until` (migration `0065`, the IAM module's) and ends every session: the
+door refuses them with `KIT-E-2017` and the time until it passes. Ending every session writes
+`signed_out_at` and moves the tenant's policy version before the stored sessions are removed, so
+one that outlives the removal is refused within one recheck; a removal that fails goes to
+`report`, which the client wires to the audit alert. A block without a time switches
+the account off, as deactivating does. The rules are the switch's: never yourself, never an
+Owner (`KIT-E-2102`), only below your standing, and nothing to change for an account switched off
+already (`KIT-E-2101`). **Unblock** lifts either kind (`KIT-E-2101` when there is no block):
+the sign-ins the block ended stay ended, and one made during the block works now; reactivating
+does the same after a switch off. A directory row carries `blockedUntil`: blocked while it is ahead.
+A session's **end time** (`PATCH /people/:id/sessions/:device`, thirty days at most, `null`
+clears it) signs that browser out when it passes. Audited as `users.block` (with the time and
+the reason), `users.unblock` and `users.session-change` (with the device and the time).
 
 ## Search
 
@@ -105,6 +122,8 @@ audited.
 | `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason if one is given |
 | `GET /people/:id/sessions` | `users.manage` | the person's remembered sign-ins, newest first |
 | `DELETE /people/:id/sessions/:device` | `users.manage` | end one of them: that browser must sign in again |
+| `PATCH /people/:id/sessions/:device` | `users.manage` | give one an end time (`endsAt`, thirty days at most), or clear it with `null` |
+| `POST /people/:id/block`, `POST /people/:id/unblock` | `users.manage` | block sign-in until a time, or for good without one, with a reason if one is given; lift either |
 | `POST /people/:id/sign-out` | `users.manage` | end every open one at once; answers `{ ended }` |
 | `PATCH /people/:id/profile` | `users.manage` | another person's display name or locale |
 | `GET /me/profile`, `PATCH /me/profile` | `users.self` | my own |
@@ -144,7 +163,7 @@ person) with indexes for the newest first, the unread and the age; `users_notify
 ## Errors
 
 The module owns the `2100` to `2199` block: `KIT-E-2101` nothing to change (the account is in
-that state already), `KIT-E-2102` an Owner cannot be deactivated, `KIT-E-2103` too many saved
+that state already), `KIT-E-2102` an Owner cannot be deactivated or blocked, `KIT-E-2103` too many saved
 views on one page. What the permission model names
 keeps its codes: `KIT-E-2007` beyond your standing, `KIT-E-2008` your own account, `KIT-E-2010`
 a bad profile or a missing reason, and the core's `KIT-E-0404` for a person who does not exist.
@@ -158,7 +177,9 @@ Vendor left out, a person without `users.read` refused; profiles edited by onese
 switch refused to a clerk, done by a manager over a clerk at her scope and refused over a group
 grant at the root, refused for oneself and for an Owner, needing a reason, done once and nothing
 to change the second time, the sessions following each switch, and the Vendor standing above a
-manager; the audit rows with their actors, reasons and refusals; saved views; notifications kept
+manager; blocking for an hour and for good, refused to a clerk, for oneself, for an Owner and for
+a time past, the door's refusal with the time, unblocking with the ended sign-in staying ended,
+and a session's end time set, refused below standing or past, and cleared; the audit rows with their actors, reasons and refusals; saved views; notifications kept
 and emailed as each person chose (an inactive account and an address of nobody emailed only, a
 key kept once, off keeps and sends nothing), the link taken from the text and never another
 site's, opened by its owner only, all read, the privacy rows, pages of thirty by a cursor that

@@ -89,15 +89,23 @@ to a few kilobytes.
    `incident_only` and no window is open (below, the handover). The Vendor holds by its kind,
    not by bits, so it holds every capability the index knows, a module registered after the
    company was made included, the moment the registry has it, with no grant and no recompile.
-4. A capability on the vendor floor, for anyone else: `vendor_floor`.
-5. An Owner (the Owner role at the root, in force): `owner` (allow).
-6. Otherwise walk from the scope up to the root: a deny bit on any node is `deny`; an allow bit on
-   any node is `allow`; nothing found is `not_granted`.
+4. An Owner (the Owner role at the root, in force) with no deny of their own, for a capability
+   not on the vendor floor: `owner` (allow) at once, with no walk. The compile marks an Owner
+   that has one (`narrowed`).
+5. Walk from the scope up to the root once: a deny bit on any node is `deny`, for an Owner too
+   (since 2026-11-14, the owner's ask for "a specific owner with less permission").
+6. A capability on the vendor floor is held only through an allow bit the Vendor gave: `allow`,
+   else `vendor_floor`.
+7. An Owner: `owner` (allow).
+8. Anyone else: an allow bit found on the walk is `allow`; nothing found is `not_granted`.
 
-Floors are applied at compile time: a capability with `floor: owner` enters the bits only from
-the Owner role (position `0`), never from another role or an override; a vendor-floor capability
-never enters a map. An *eligible* binding, an expired one and one not yet started grant nothing;
-`refreshAt` says when to compile again.
+Floors are applied at compile time: a capability with `floor: owner` enters the allow bits only
+from the Owner role (position `0`), never from another role or an override; a vendor-floor
+capability enters them only from an override the Vendor gave (the join to the granter's kind is
+in the one override query, so the check stays a few hash lookups). A deny override enters the
+bits at any floor, so the Vendor or another Owner can take one permission away from one Owner;
+a role's deny binding still never reaches an Owner. An *eligible* binding, an expired one and one
+not yet started grant nothing; `refreshAt` says when to compile again.
 
 ## Sessions and the authorizer
 
@@ -149,7 +157,17 @@ A **device** is one sign-in at the door, keyed by the sign-in's issue time (`iat
 for the whole of that sign-in and differs between browsers. The first request of a sign-in adds
 it to the record (one write; the ten most recent are kept); `revokeDevice` ends one, and that
 sign-in is refused from then on (`KIT-E-2006`) until the person signs in again; `revokeAll`
-ends every open one in the same single write (the Users page's "Sign out everywhere"). Since
+ends every open one in the same single write (the Users page's "Sign out everywhere");
+`setDeviceEnd` gives one an end time, or clears it (`endsAt`, thirty days at most, set by the
+Users module): past it, that sign-in is refused like an ended one. A **blocked** account
+(`iam_principals.blocked_until` still ahead, or `is_active = 0`) is refused at the door with
+`KIT-E-2017` and the time. A block or a switch off writes `iam_principals.signed_out_at`, moves
+the tenant's policy version and removes the record; the next compile keeps that time as
+`notBefore`, so a sign-in made before it stays ended (`KIT-E-2006`) until the person signs in
+again, while one made during a block works once the block is over (the cut-off is in whole
+seconds, like `iat`). A recompile reads the account again and refuses one blocked or switched off
+since, removing its record: a record that outlived its removal (a KV failure, or a request under
+way that wrote it back) is refused within one recheck. No query is added to a request. Since
 2026-11-11 a new device is also **recorded**, after the answer (`waitUntil`), in one D1 batch:
 `iam_principals.last_signed_in_at` (migration `0058`, the Users list's "Last sign-in") and an
 audit row `iam.sign-in` whose target is the account id and whose details hold the device and the
@@ -223,6 +241,15 @@ The rules, each refused with its own code:
   ("you do not hold “View the user directory” yourself") and a location by its name, not by id.
 - **Never for yourself.** Nobody changes their own grants, overrides or group membership, nor the
   grants of a group they belong to (`KIT-E-2008`); they request access instead.
+- **Overrides by floor** (2026-11-14). A permission with no floor is allowed or denied by whoever
+  may give at that place and holds it themselves. An Owner-floor permission is never allowed by
+  an override (it comes with the Owner role only) and is denied only to an Owner. A Vendor-floor
+  permission is allowed by the Vendor alone, and never denied (no one else holds it to take away);
+  only the Vendor ends such an allow. An override on an Owner is made or ended by the Vendor or
+  another Owner; on anyone else, by someone whose standing there is above every role the person
+  holds (`KIT-E-2007` otherwise). An Owner's People and access permissions (`iam.*`) are denied by
+  the Vendor alone, so that two Owners can never strip each other of the means to undo it; the
+  compile ignores such a deny written by anyone else.
 - **No role twice at one place.** A grant of a role the person or group already holds at that
   place, in force and held the same way (both eligible or both not), is refused in plain words
   (`KIT-E-2010`): change or end the one in force instead.
@@ -499,12 +526,14 @@ The module owns the `2000` to `2099` block: `KIT-E-2001` a bad capability list, 
 unknown or inactive account, `KIT-E-2003` a bad scope tree (deeper than four levels, a loop, or
 more than one root), `KIT-E-2004` a dangerous action without a fresh sign-in, `KIT-E-2005` an
 email the door let in that has no active account here, `KIT-E-2006` a sign-in that was ended
-from the devices list, `KIT-E-2007` a change beyond the actor's standing, `KIT-E-2008` a change
+(from the sessions list, by its end time, or by a block or a switch off), `KIT-E-2007` a change beyond the actor's standing, `KIT-E-2008` a change
 to one's own access, `KIT-E-2009` the last Owner, `KIT-E-2010` a grant that does not fit the
 rules, `KIT-E-2011` a second person's approval missing, `KIT-E-2012` an approval that does not
 fit, `KIT-E-2013` a review closed with grants undecided, `KIT-E-2014` a second company,
 `KIT-E-2015` an invitation that cannot be used (unknown, used, withdrawn, a week old),
-`KIT-E-2016` an invitation taken with another address. A sign-in at another Access application
+`KIT-E-2016` an invitation taken with another address, `KIT-E-2017` a sign-in while the account
+is blocked, with the time it ends (`iam_principals.blocked_until`, migration `0065`, written by
+the Users module). A sign-in at another Access application
 answers with the core's `KIT-E-0401`; a grant, request, approval, review or invitation that does
 not exist with the core's `KIT-E-0404`.
 
