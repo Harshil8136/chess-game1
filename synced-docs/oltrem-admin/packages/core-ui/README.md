@@ -98,7 +98,7 @@ takes a `tone`.
 
 **The bold look and even lists (2026-11-12).** A page's `main.ui-page` carries its sidebar
 group's `data-hue`: a soft wash at its top, its picked chips, table heads and row hovers take the
-colour. `ui-go` with `ui-go-head` and `ui-go-row` is the search box's list of pages, in the top layer; `ui-recent` Home's Jump back in row. `EmptyState` draws `ui-empty-icon` on a flat tile of the colour (no ring or glow since 2026-11-13) and `ui-empty-title`; `Table`
+colour. `ui-go` with `ui-go-head` and `ui-go-row` is the search box's list of pages, in the top layer; `ui-recent` Home's Jump back in row. Home (2026-11-14): `ui-welcome` is the band (one hue, light to deep), `ui-dials` > `ui-dial` its links with a `ui-dial-ring` (`ui-ring`, `ui-ring-fill` drawn by `ui-ring` on arrival), `ui-home-grid` and `ui-home-col` its columns, `ui-home-row` a row of Needs you or Get started, `ui-glance` > `ui-glance-row` At a glance's lined-up rows (a subgrid); `ui-head-bell` is the bell at the right of a page's head. `EmptyState` draws `ui-empty-icon` on a flat tile of the colour (no ring or glow since 2026-11-13) and `ui-empty-title`; `Table`
 is `ui-table`, its phone cards `ui-table-card`. Scrollbars are slim and in the element's `--hue`
 (or the brand) mixed with the border, set on every element. `ui-rlist` with `ui-rrow` is an even
 list of rows (a role: `-name`, `-perms` with a meter, `-held`, `-go`); `ui-presets` a slim line

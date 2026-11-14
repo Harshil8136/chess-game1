@@ -63,7 +63,7 @@ initials or icon drawn on the look's colours as a small SVG written into the pag
 
 | Path | Shows | Reads |
 |---|---|---|
-| `/` | a Vendor with no company yet: the company form, its first Owner the one setup named as Owner (`GET /api/iam/setup-people`), the client file's address only when setup named none (2026-11-08: the placeholder was invited instead of the named Owner); anyone else (Look 3, 2026-11-08): a welcome band saying how much waits, with a chip to Needs you and to Get started when either has something; then Jump back in (2026-11-13), a row of chips to the pages opened last that the frame script fills from the browser (`HomeRecent`, hidden while empty); then Get started, with a bar of the steps done, while a step of setting the portal up is open (each step ticked by what is stored, an open one a row to its page, or with a button when one press does it, `POST /do/get-started`; with email on, the email step leads to the one-step setup, `/email/connect`; the Modules page can switch the card off), then Needs you (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits), then the Home card of each mounted module that has one and that they may read (a figure, a line, a state), in the row's order | `/api/iam/me` (and `/api/iam/setup-people` for the company form), then each `/api/<module>/onboarding`, `/api/<module>/todo` and `/api/<module>/home`, together |
+| `/` | a Vendor with no company yet: the company form, its first Owner the one setup named as Owner (`GET /api/iam/setup-people`), the client file's address only when setup named none (2026-11-08: the placeholder was invited instead of the named Owner); anyone else (redesigned 2026-11-14): a band with a greeting for the time of day and the date (the frame script writes both in the person's clock), a line on what waits and how many parts need a look, and dials with rings to Needs you, Get started (while a step is open) and At a glance (`HomeWelcome`); then Jump back in (2026-11-13), a row of chips to the pages opened last that the frame script fills from the browser (`HomeRecent`, hidden while empty); then, side by side from a page 60rem wide, Needs you (what waits for them from each module that answers it, each a row to the page that acts on it, or a line saying nothing waits) over Get started, with a bar of the steps done, while a step of setting the portal up is open (each step ticked by what is stored, an open one a row to its page, or with a button when one press does it, `POST /do/get-started`; with email on, the email step leads to the one-step setup, `/email/connect`; the Modules page can switch the card off), and At a glance: the Home figure of each mounted module that has one and that they may read, one row each with lined-up columns (tile, name and line, figure, state), failing and needing a look first | `/api/iam/me` (and `/api/iam/setup-people` for the company form), then each `/api/<module>/onboarding`, `/api/<module>/todo` and `/api/<module>/home`, together |
 | `/search?q=` | the search box, then what matches two letters or more: the sections by name and line, then each module that searches, as the person (a module that refuses them is left out); nothing found says so | each `/api/<module>/search` |
 | `/look` | Look and colours (2026-11-03): the 24 palettes of `looks.ts` (a primary, an accent and greys leaning to its hue, both themes) as tiles showing their gradient, and the backgrounds (Soft wash, Plain, Aurora, Sunrise, Dots, Grid, Lines) as tiles showing a piece of each (`preview`); a press saves at once (`data-autosave`), Save only for a page without its script, Back to the portal's own. An Owner or the Vendor also has Make it everyone's look: `POST /do/look/everyone` saves the look on the form as the `settings.look` setting through `PUT /api/settings/values/settings.look` and clears their own cookie (a refusal shows as a toast). `POST /do/look` keeps `<palette>.<pattern>` in the `oltrem_look` cookie (an id not in the lists is the kit's own; reset clears it); every page then carries the look's CSS in `<style id="ui-look">` in its head, about a kilobyte, none for the kit's own look; the frame's script swaps it with the page. `createScreens({ look })` is the portal's look until a person picks one: a string, or a function read on each page (the template's returns `settings.look`, else the client file's `brand.look`) | `/api/iam/me`; `PUT /api/settings/values/settings.look` |
 | `/notifications?show=&before=` | the person's notifications, All or Unread, Mark all read, thirty a page, and how each module tells them; `/notifications/:id` marks one read and opens its page | `/api/users/me/notifications`, `/api/users/me/notifications/choices` |
@@ -202,14 +202,15 @@ trips before a page's own first read; now a page waits for its slowest read.
   call `@oltrem/users`'s `/api/users/me/views` and return to the list; a refusal (twelve views on
   the page already) is shown with the way back. One D1 read per such page; nothing when users is
   off.
-- **Notifications** (since 2026-11-03): a bell under the search box in the sidebar, and on the
-  phone's bar along the top (2026-11-11), with the unread figure (to "99+"), read on every
+- **Notifications** (since 2026-11-03): a bell at the right of the page's head from 1024 px
+  (since 2026-11-14; it was a sidebar row), and on the phone's bar along the top (2026-11-11), with
+  the unread figure (to "99+"), read on every
   page beside the page's own reads (one indexed read more; none without the users module). It opens `/notifications`: All or
   Unread as chips, Mark all read, each notification a row (unread ones bold) that opens through
   `/notifications/:id`, which marks it read and goes to its page (a path inside the portal, else
   the list); thirty a page with Older; under them "How you are told", a grid of two switches per
   module, In the portal and By email (both on is `both`, neither is `off`), saved as one flips
-  (a Save button only without the page script); only what changed is sent. With the sidebar closed to icons the figure is hidden.
+  (a Save button only without the page script); only what changed is sent.
 - **Bulk actions** (since 2026-11-03), on a list whose module declares `bulk` (the tasks): a
   tick on each row and card, one in the header for the whole page, and the bar (`BulkBar`) above
   the list with the module's actions. The frame script counts the ticks ("3 tasks chosen"), keeps
@@ -229,8 +230,8 @@ trips before a page's own first read; now a page waits for its slowest read.
   few entries, sub-pages as tabs). A module's page joins its group wherever the module
   is listed; a group the kit does not know sits before System (`groupRank` in `src/layout.tsx`).
   Each group has a colour (`hueOf`): its dot, its icons, and the tint and edge marker of the
-  section on screen, which is also bold, so it never rests on colour alone. Home's cards use the
-  same colours.
+  section on screen, which is also bold, so it never rests on colour alone. Home's At a glance
+  rows use the same colours.
 - **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
   that name, at the first one's place, leading to the first tab and marked on any of them (`tabSet`
   and `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest
