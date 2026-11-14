@@ -215,3 +215,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Loading orb](2026-11-14-loading-orb-and-status-list.md) | P202-P204 |
 | [Sidebar rail, notifications panel](2026-11-14-sidebar-rail-and-notifications-panel.md) | P205-P206 |
 | [Heads on a band](2026-11-14-page-heads-on-a-band.md) | P210-P212 |
+| [ECC agents](2026-11-14-review-agents-from-ecc.md) | 2 taken, rest left out |
