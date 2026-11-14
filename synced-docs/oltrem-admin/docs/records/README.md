@@ -217,3 +217,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Heads on a band](2026-11-14-page-heads-on-a-band.md) | P210-P212 |
 | [ECC agents](2026-11-14-review-agents-from-ecc.md) | 2 taken, rest left out |
 | [Users list, sessions, blocking, Owner overrides](2026-11-14-users-sessions-blocking-owner-overrides.md) | P213-P219 |
+| [Lists made plain, no blank fields](2026-11-14-lists-add-contacts.md) | Mail 7d8f1ff, file preview; P220-P224 |

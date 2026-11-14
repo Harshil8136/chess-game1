@@ -412,7 +412,7 @@ fields named in `data-upload-with` added to the address, then opens `data-upload
 refusal's words show on the input itself. A large file so never passes through a page's form
 (Mail's files over 10 MB, up to 95 MB). A file input with `data-drop-file` (2026-11-14, Write's
 paper clip) takes a file dropped anywhere on its form, which is outlined while one is over it, or
-pasted into it with no words (a screenshot), and sends it as a choice would. A file input with `data-csv` (2026-11-11) reads a CSV
+pasted into it with no words (a screenshot), and sends it as a choice would. A file input with `data-file-peek` (2026-11-14, Lists' Add contacts) shows the chosen CSV in the block it names before anything is sent: the name and size, how many rows (`data-rows`, `{n}`), the headings (`data-cols`, `{list}`), and one warning line: `data-no-email` when no heading or column holds addresses, `data-big` (the file unread) when it is over `data-max` bytes, `data-unread` when it cannot be read as text. Only the first 51 rows are read cell by cell; the rest are counted by their lines. A file input with `data-csv` (2026-11-11) reads a CSV
 list of any size in the browser: past 30 columns it keeps the address, the name, the files and
 the columns named in `data-csv-need`, then the rest in order; it sends the rows in parts of about
 600,000 characters, each with its heading, the first to `data-csv` and the rest to

@@ -2,7 +2,7 @@
 title: "Phone tests owed: Email and Mail"
 status: living
 owner: vendor
-last_verified: 2026-11-12
+last_verified: 2026-11-14
 sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the records each line links]
 ---
 
@@ -17,6 +17,11 @@ sources: [docs/phone-tests.md, which held these lines until 2026-11-11; the reco
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P220 | Campaigns, Lists, then a list | One title and one line of counts; Send email and a ⋮ menu (Download CSV, Edit, Archive, Delete); Contacts and Add contacts as two tabs; no paragraphs of instructions | [record](records/2026-11-14-lists-add-contacts.md) |
+| P221 | A list, Add contacts, Upload a file: choose a CSV | Three coloured cards (Upload a file, Paste addresses, From your email); the drop zone shows the file's name and size, how many contacts and its columns; a file with no email column is warned about before Import | [record](records/2026-11-14-lists-add-contacts.md) |
+| P222 | Add contacts, Paste addresses: paste `ana@example.com, Sam Lee <sam@example.org>`, leave the permission, tick the confirmation, Add contacts | Two contacts added, Sam with his name; the Contacts tab opens with what was added | [record](records/2026-11-14-lists-add-contacts.md) |
+| P223 | Add contacts, From your email | The people you emailed from Compose, most emailed first, minus anyone already on the list; tick two (or Select all), Add selected, and they are on the list | [record](records/2026-11-14-lists-add-contacts.md) |
+| P224 | A list, Send email: Create draft, pick a template that uses `{{first_name}}`, then Personalization | The draft opens on its message step; each variable shows where its value comes from; one some contacts lack says "N would be blank" until you type a Default value; Start is refused until then | [record](records/2026-11-14-lists-add-contacts.md) |
 | P138 | A portal with Mail and a mailbox, on a computer: Email, Inbox; tick a conversation, open Label, type a new label, Add; then press its star, open the cog and choose Split and Compact; then press ? | The folders in groups (Inbox, Starred, Snoozed, Sent, Drafts; More holding Updates, Archived, Spam, All; Labels with the new one in its colour; Delivery log, Templates, Mailboxes and rules, Usage and limits), Sending and Mail storage bars at the foot; the label's chip on the row with Undo in the Done line; the star stays after a reload; the conversation opens beside the list; ? lists the shortcuts, and j, k and e move and archive | [record](records/2026-11-11-gmail-style-email.md) |
 | P139 | Email on a phone: Inbox, tick a conversation, open Label and More; then the Usage and limits chip | The menus open as a sheet from the bottom; Usage and limits says in plain words how many emails each service has left today and when that resets, the mail storage used of 10 GB, how sending is protected, and the Cloudflare plan's figures or why they are not measured yet | [record](records/2026-11-11-gmail-style-email.md) |
 | P140 | Email, Write on a phone | No page title band: the Write card meets the top bar and both screen edges, Back sits in the card's head, Ready to send is a small tick, and Send, Schedule and Save stay in one row at the foot while the message scrolls | [record](records/2026-11-11-write-smarter.md) |
