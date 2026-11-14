@@ -206,7 +206,10 @@ trips before a page's own first read; now a page waits for its slowest read.
 - **Notifications** (since 2026-11-03): a bell at the right of the page's head from 1024 px
   (since 2026-11-14; it was a sidebar row), and on the phone's bar along the top (2026-11-11), with
   the unread figure (to "99+"), read on every
-  page beside the page's own reads (one indexed read more; none without the users module). It opens `/notifications`: All or
+  page beside the page's own reads (one indexed read more; none without the users module). Since
+  2026-11-14 a bell opens a panel over the page (`notify-panel`, closed by X, Escape or a tap
+  outside) filled from `/notifications`, whose list works inside it; without the script it opens
+  `/notifications`: All or
   Unread as chips, Mark all read, each notification a row (unread ones bold) that opens through
   `/notifications/:id`, which marks it read and goes to its page (a path inside the portal, else
   the list); thirty a page with Older; under them "How you are told", a grid of two switches per

@@ -208,8 +208,9 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [The Cloudflare key fixed from a phone](2026-11-13-cloudflare-key-from-the-phone.md) | System status leads through a new key; P182, P183 |
 | [Email's menu on a phone](2026-11-13-email-menu-on-a-phone.md) | Menu works on every phone and opens Email's own menu; P185 to P187 |
 | [Find any page as you type, and jump back to recent ones](2026-11-13-find-pages-and-jump-back.md) | search lists pages; Jump back in; P188, P189 |
-| [Users as one page, and motion that says where you went](2026-11-13-users-page-and-motion.md) | the seven Users & access pages as tabs of Users; pages slide by direction, folds glide, drawers leave as they came; P190 to P192 |
-| [Fewer database reads, indexes for growing lists, and changes shown at once](2026-11-13-reads-and-changes-at-once.md) | repeated queries fixed, seven indexes, copies kept per request, rows that change before the answer; P193 to P195 |
+| [Users as one page, and motion that says where you went](2026-11-13-users-page-and-motion.md) | Users & access as tabs of Users; motion by direction; P190-P192 |
+| [Fewer database reads, indexes for growing lists, and changes shown at once](2026-11-13-reads-and-changes-at-once.md) | fewer reads, seven indexes, changes at once; P193-P195 |
 | [New Home, bell in the head](2026-11-14-home-makeover-and-header-bell.md) | P196-P198 |
 | [Quiet Off, switches](2026-11-14-quiet-off-and-switches.md) | P199-P201 |
 | [Loading orb](2026-11-14-loading-orb-and-status-list.md) | P202-P204 |
+| [Sidebar rail, notifications panel](2026-11-14-sidebar-rail-and-notifications-panel.md) | P205-P206 |
