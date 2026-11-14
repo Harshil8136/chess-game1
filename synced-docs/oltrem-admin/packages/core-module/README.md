@@ -183,7 +183,9 @@ check and opens a problem after two failures in a row.
 
 A module's card on Home is declared as `home`: a title, one of the module's own capabilities,
 and a `read` that answers one short figure (`value`), an optional line under it (`note`) and a
-state, `ok`, `attention`, `failing` or `unknown`. `defineModule` adds the route
+state, `ok`, `attention`, `failing` or `unknown`, or `off` for work someone switched off on the
+Modules page (a quiet "Off" on Home, never a warning, and left out of the band's count).
+`defineModule` adds the route
 `GET /api/<module>/home` under that capability, so the card is checked like any other read; the
 screens ask every mounted module that has one and leave out the cards a person may not read. A
 module whose routes already include `GET /home` is refused (`KIT-E-1005`).

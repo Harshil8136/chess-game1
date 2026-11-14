@@ -89,7 +89,7 @@ const audit = createAuditModule<Env>({
 | `GET /entries?outcome=&module=&actor=&target=&action=&before=` | `audit.read` | 50 rows, newest first, narrowed by outcome, module, person, what it was done to (`target`, such as an account id: the Users page's "Changes to their account") or one action (`iam.sign-in`: a person's Sign-in history), and the cursor for the next page; `oltrem_audit_log_target` (migration `0059`) keeps the target read to an index |
 | `GET /seals` | `audit.read` | the newest 30 daily seals and whether each still holds |
 | `GET /export?since=&until=` | `audit.export` (admin class) | whole UTC days as a CSV file, at most 10,000 rows, every cell quoted and a target or detail a spreadsheet would run as a formula defused (`csvFile` of `@oltrem/core-module`); the export is itself recorded as `audit.export` |
-| `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands |
+| `GET /home` | `audit.read` | the Home card: the rows of the last 24 hours and how the seal stands; nothing about the seal when `sealing` answers false (the Daily seal switched off) |
 
 **The daily seal** is optional: the Modules page switches it (`audit.seal`, an extra of the
 audit part in `@oltrem/core-config`), and a new portal starts with it off (since 2026-11-12); off,
@@ -133,4 +133,4 @@ its sequence number. The module's own tests: the seal chained and copied, sealed
 empty day sealed; a row changed and a row removed after the seal, each found by the next run
 and failing the check; a large seal checked over three runs from its kept place, a change late
 in it still found, and a row removed from it found by its first run; the entries paged; the CSV export, its quoting, a typed formula defused and its own audit row;
-the Home card.
+the Home card, and the card with the seal switched off.

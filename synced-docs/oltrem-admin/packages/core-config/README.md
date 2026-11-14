@@ -170,8 +170,8 @@ switched off.
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off; the list off, extras included; the presets with the parts each switches off |
-| `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }` (parts and extras): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on |
+| `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off with what each stops (`skips`, so the screens can offer the switch beside a warning of one of them, 2026-11-14); the list off, extras included; the presets with the parts each switches off |
+| `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }` (parts and extras): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes System status so a check switched off closes its alert within minutes |
 
 The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
 health and the IAM module as their `off` option; each says what it does with it. A switched-off
