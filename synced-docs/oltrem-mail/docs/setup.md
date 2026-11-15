@@ -294,6 +294,7 @@ mail carries none of the signs of marketing mail.
 | An open-tracking pixel, and links sent through the provider's own address | Everyday mail (Write, replies, automated notices) asks the provider not to track it, where the provider takes that for one message (Postmark, SendGrid, Mailgun, Mailjet). Resend tracks only when tracking is switched on for the domain in its dashboard, and it starts off. |
 | A provider that tracks every message and adds a `List-Unsubscribe` header to each (Brevo; Sender tracks every message too) | Everyday mail goes through another connected provider first, and the tracking one stays the backup. With no other provider, Ready to send says "Everyday email lands in the inbox" and names the fix: add one, such as Resend. |
 | `List-Unsubscribe` and an unsubscribe footer | Only on campaigns, which need both by law and by Gmail's bulk-sender rules. A campaign is marketing, and Gmail mostly files it under Promotions, which is not spam. |
+| A campaign that looks or reads like an advertisement | Since 2026-11-15 a campaign's plain message goes as a plain letter, as Write sends one: no coloured page, no card, the footer a small line under the words. Over its preview the page says which tab it will most likely reach: it names each sign (an offer in the subject, shouting in capital letters or rows of exclamation marks, many links, a design, a From name that says newsletter) and what to change, or says it reads like a letter. For a few people it points to Compose, where each gets their own copy from the everyday address. |
 | The email itself reads as an offer: an offer in the subject or the hidden preview line, a newsletter build (pictures, buttons, a hidden preview line), Unsubscribe or View in browser links, many links | Write asks once before it goes (since 2026-11-12), naming each sign and the way to Primary, and names any link that goes nowhere (`#`, a template's yourwebsite.com). Gmail's own help files "deals, offers, and other promotional emails" under Promotions, so a designed offer lands there from any provider and any setup. |
 | One address for campaigns and everyday mail | The campaign page says so when its From address also sends everyday email (since 2026-11-12): Gmail learns an address from its campaigns and then files its letters under Promotions too. |
 
@@ -319,3 +320,11 @@ preview line, a hero picture, a button and Unsubscribe and View in browser links
 nowhere, sent from the one address that also sent the client's campaign. That is what Gmail calls
 a promotion; the record says what was checked
 ([2026-11-12](records/2026-11-12-promotions-tab-cause.md)).
+
+What 2026-11-15 showed: the owner's first campaign reached its four people, in Promotions. Its
+sending was right; it was a sales letter with package offers, lines in capital letters, rows of
+exclamation marks and a From name beginning "News Email from", inside the grey card every plain
+campaign then went out in. The card is gone and the page now names the rest before a campaign
+goes ([the record](records/2026-11-15-campaigns-as-letters.md)). Nothing makes Gmail put a
+campaign in Primary: a letter that reads as one person writing to another has the best chance,
+and an offer belongs in Promotions by Gmail's own definition.
