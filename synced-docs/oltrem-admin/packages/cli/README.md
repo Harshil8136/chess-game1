@@ -279,7 +279,9 @@ not hand a Worker with static assets the Access sign-in:
    then, while `alerts.recipients` (@oltrem/alerts) is empty, alerts are sent to the Vendor and to
    the client's Owner from `oltrem.config.ts` when that is a real address (not one at
    `example.com`, `.org` or `.net`), written as the portal's Settings would and said in one line; a
-   list someone wrote is never changed. Then `backup setup`; then the people from step 2, written
+   list someone wrote is never changed. Then `backup setup`: a problem there is a line to do (fix
+   it, then `npm run deploy` again) and the run carries on, so the door and the modules are still
+   set; then the people from step 2, written
    to `iam.setup_people`; then **the door**, once the deploy has made the Worker (an empty account
    has nothing to protect). It is set with Cloudflare's own command line, `cf` (pinned in the
    template), because wrangler's sign-in cannot reach Zero Trust and a key kept for it would be
@@ -325,7 +327,10 @@ not hand a Worker with static assets the Access sign-in:
    portal's Modules page switches them later, with no deploy. New keys leave
    `.oltrem/keys-reminder` (git ignores the folder), and while it is there each run, even after
    one that stopped, ends with "Have you put a copy of oltrem-keys.txt somewhere safe?": **I saved
-   a copy** removes it, **Remind me next time** keeps it for the next run.
+   a copy** removes it, **Remind me next time** keeps it for the next run. Last, when the
+   repository is a git repository with changes (`git status`, which leaves out the ignored keys
+   file), a line to do names the changed files and the git commands that keep them (`git add -A`,
+   `git commit`, `git push` once the repository has its Cloudflare secrets).
 
 Exit `0` when it is deployed and set up, `1` when a step failed or an answer was refused, `3`
 when it could not start (not signed in, no `wrangler.jsonc`, an unreadable secrets list).
@@ -497,7 +502,9 @@ installs with no registry and no token, on a computer and in GitHub Actions alik
 - **`--git`** runs `git init -b main`.
 
 It prints the next steps: `pnpm install` (commit `pnpm-lock.yaml` with the rest), `pnpm verify`,
-a private GitHub repository pushed from `main`, then `npm run deploy`. `--json` prints
+`npm run deploy` first (it ends with the files it changed), a commit of everything, then a private
+GitHub repository with its `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets added before
+the first push, since every push to `main` deploys; a push before the portal exists ended red. `--json` prints
 `{ ok, exitCode, dir, ran, written, problems, notes, worker }`. Exit `0` when written, `1` on a
 problem (a package missing from the kit, one that did not pack), `3` when the folder is not empty
 or the name is not one.
@@ -718,7 +725,9 @@ in the kit repository, with the key in `OLTREM_FLEET_TOKEN` (or `CLOUDFLARE_API_
 3. **The order:** the Workers in `OLTREM_FLEET_FIRST` first; one of them failing, or missing,
    holds every other portal.
 4. **Each portal:** skipped when its `fleet_fingerprint` (the kit folders' git trees and the
-   choices) is current, or its `autoUpdate` is false; otherwise the client template is copied to
+   choices) is current, or its `autoUpdate` is false (a deploy records it false, with
+   `ownModules`, when the repository has modules of its own, which the template the fleet builds
+   from does not have; the report names them); otherwise the client template is copied to
    `.fleet/<worker>` beside `templates/` (its packages linked in), the choices written in, and
    `oltrem release` run on the portal's account, without Workers Builds' own `WRANGLER_CI_*`
    variables (they would point wrangler at the Vendor's Worker). A good release records the
@@ -807,6 +816,12 @@ the branch, the outcome and the link to the run, read from GitHub's own variable
 `GITHUB_SERVER_URL`); the kit version installed in `node_modules` (`@oltrem/core-http`); and the
 newest published one, from `pnpm view @oltrem/core-http version`. A version it cannot learn is
 recorded as unknown.
+
+`oltrem deploy` and `oltrem fleet` write a row of the same shape after their health check
+(`deployRunSql`), so Deployments shows what production runs however it was put up: its ref is
+`npm run deploy` or `fleet`, its repository and link are empty, its commit is the repository's
+`HEAD` (empty for the fleet), and the newest published kit is not asked. A portal without the
+GitHub module has no such table; the write fails quietly.
 
 Exit `0` when the row is written, `1` when the write failed, `3` when it could not start: an
 outcome it does not know, a run outside GitHub Actions, or a configuration without exactly one

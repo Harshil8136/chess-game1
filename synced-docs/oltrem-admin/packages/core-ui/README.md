@@ -81,8 +81,9 @@ and 36 under a finger, tinted with the primary when it is the current one or its
 ticked, in place of the outlined pills; since 2026-11-11 a bordered pill on the surface, the
 same look as the mail folders, so a chip that is not chosen never reads as switched off. Every outcome is a toast: `Done` and `ProblemNotice`
 render their notice inside `Toasts`, a region fixed to the bottom-right corner of a computer and
-the foot of a phone, over the page and never in its flow, and the screens put a page's flash
-there too. A notice there is a card with its tone on its edge and a close button; the frame
+the foot of a phone (a refusal at the top of a phone, clear of the form's buttons), over the page
+and never in its flow, and the screens put a page's flash there too. `ProblemNotice` marks its
+region `data-refused` (`Toasts refused`), by which the page script refills the refused form. A notice there is a card with its tone on its edge and a close button; the frame
 script takes one that went well (ok, info) away after six seconds, waiting while the pointer or
 the focus is on it, and leaves a refusal until it is closed; a notice with `keep` (a link or a
 secret shown once) stays until closed too. A `Notice` placed in a page is a

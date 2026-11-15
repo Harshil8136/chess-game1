@@ -50,7 +50,7 @@ it by removing the cursor and the two tables' rows.
 
 | Path | Shows |
 |---|---|
-| `/analytics` | a row of periods (7, 30 or 90 days, today included); the four figures (actions, people active, done automatically, refused or failed), each against the period before; a bar chart of the actions and one of the people active each day, every bar's day and figure on hover; the days as a table; the busiest areas with a bar each; the ten most frequent actions; when the newest change counted was made |
+| `/analytics` | a row of periods (7, 30 or 90 days, today included); the four figures (actions, people active, done automatically, refused or failed), each against the period before; a bar chart of the actions and one of the people active each day, every bar's day and figure on hover; the days as a table; the busiest areas with a bar each, by their names; the ten most frequent actions in words (`Tasks: create`), never their codes; when the newest change counted was made. The refused or failed figure opens the audit log narrowed to them |
 | `/analytics/csv` | the period's days as a CSV file: day, actions, automatic, people, refused, failed; numbers and dates only |
 
 The charts are SVG drawn on the server: one hue, the busiest day as the top of the scale, nothing
@@ -89,3 +89,5 @@ each row once, the people by day; a period with its quiet days at zero, the peri
 areas and the most frequent actions, the rows waiting and then counted; the capability read at the
 company and another period refused; pruning. The client template's screens test opens the page
 before any count, then after a tick reads its figures, charts and areas, and downloads the CSV.
+The page, against answers of the API (`test/pages.test.ts`): every area and action in words, and
+the refused or failed figure linked to the audit log.

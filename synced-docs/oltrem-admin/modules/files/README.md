@@ -72,7 +72,7 @@ A file is served as a download under its own name, an image in place with `inlin
 ## Links that end
 
 A link hands one file to anyone who has it, for one to thirty days, and optionally for a number
-of downloads; it is shown once, and the database keeps only its SHA-256. It opens at
+of downloads; it is shown once, with a Copy button, and the database keeps only its SHA-256. It opens at
 `/hooks/files/s/<token>`, past the door, and ends when its day passes, its downloads are used
 (one statement counts a download only while the link is good), someone ends it by hand, or its
 file goes to the trash. An ended link answers `410` with a line of text. Each download is
@@ -88,8 +88,14 @@ each download is counted and audited as `files.share-download` by `customers.doo
 address. It ends like a link: by hand ("Stop sharing"), at its day, or when the file or a folder
 above it goes to the trash (it is back if they are restored before the day). "Email them that it
 is there", ticked at first, emails the customer the file's name, where to sign in and until when,
-through the `send` option (the client template sends it with email); without `send`, or when the
-email fails, the share stands and the page says nobody was emailed.
+through the `send` option (the client template queues it with email, so the page says it is
+queued, not sent); without `send`, or when the email fails, the share stands and the page says
+nobody was emailed. The page shares only with a customer of the company: before it shares, it
+reads the customers' own list as the person (`GET /api/customers/people`) and refuses an address
+that is not there, with a link to Customers, and says so in a portal without Customers. A person
+who may not see the customers is left to the share's own checks. The share route itself does not
+check the address against the customers (that needs the customers module's own check passed in by
+the client: not here yet).
 
 ## The trash
 
@@ -104,7 +110,7 @@ that ended a month ago.
 
 | Path | Shows |
 |---|---|
-| `/files` | a row of the places the person may see (when more than one), a row for Files and Trash, the folder's path, its folders and files, and for a writer the **Upload a file** and **New folder** sheets |
+| `/files` | a row of the places the person may see (when more than one, each with its count of files), a row for Files and Trash, the folder's path, its folders and files, and for a writer the **Upload a file** and **New folder** sheets; after a move to the trash, a notice with **Undo** and the days it stays there; the trash says those days |
 | `/files/:id` | one item: download or open, its details, an image's preview, rename, move to another folder of its place, its links with their downloads and end, make a link, the customers it is shared with and "Share with the customer" (an address and 30 days, 90 days or a year), trash, restore, and delete for good behind a confirmation |
 
 ## Search
@@ -118,8 +124,8 @@ file holds.
 | Routes | Capability | What they do |
 |---|---|---|
 | `GET /places` | `files.read` | the places the person may see, with each one's files and bytes |
-| `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there |
-| `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links and the folders it may move to; the file itself |
+| `GET /items` (`scope`, `folder`, `trash=1`) | `files.read` | a folder or the trash of a place, with what the person may do there and the days the trash keeps an item |
+| `GET /items/:id`, `GET /items/:id/content` (`inline=1`) | `files.read` | one item with its path, links, the folders it may move to and the days the trash keeps it; the file itself |
 | `POST /folders`, `POST /uploads`, `PATCH /items/:id`, `POST /items/:id/trash`, `POST /items/:id/restore` | `files.write` | make a folder; upload; rename or move; trash; restore |
 | `POST /items/:id/shares`, `DELETE /shares/:id` | `files.share` | make a link (`days` up to 30, `maxDownloads`), or with `email` share it with that customer (`days` up to 365, no link; `tell: true` emails them, and `told` says whether it went); end one |
 | `DELETE /items/:id` | `files.purge` | delete from the trash for good |
@@ -170,7 +176,10 @@ the storage check; a file shared with a customer for a year without a link, a li
 and a bad address refused, listed and opened for that address only and in that company only, hidden
 while its folder is in the trash and back when restored, gone when ended by hand or at its day,
 the newest twenty with more, the download audited without the address; the email only when asked,
-and the share kept when the email fails. The client template's
+and the share kept when the email fails; the trash's days answered with a folder. The pages,
+against answers of the API (`test/pages.test.ts`): a share refused for an address that is not a
+customer and in a portal without Customers, the email said to be queued, the Copy button, Undo
+after the trash and the trash's days, one file and many files. The client template's
 screens test runs the pages: an upload from the form, a folder, a move, a link opened and ended by
 the trash, and a file shared with a customer, who is emailed and downloads it from their account
 page.

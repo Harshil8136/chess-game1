@@ -6,8 +6,9 @@ happen, and the portal's API described from the code that runs it. Three parts b
 section of the sidebar, **Developer**:
 
 - **Jobs**: every job the mounted modules declare, with its schedule, its last run, how long it
-  took, how many database queries it made and what went wrong; **Run soon** makes one due now and **Pause** keeps it off its
-  schedule until it is resumed. The flows of the client's one Workflow are listed beside them.
+  took, how many database queries it made and what went wrong; **Run soon** makes one due now (the next tick, within a minute or two) and **Pause** keeps it off its
+  schedule until it is resumed. A job whose part is switched off in Settings, Modules shows
+  **Switched off** with no Run soon, and the API refuses to run it (`KIT-E-2605`). The flows of the client's one Workflow are listed beside them.
 - **Webhooks**: an https address of the company's is sent each change it asks for, signed as
   [Standard Webhooks](https://www.standardwebhooks.com/) sign them, tried again on a ladder when
   it fails, with a log of every delivery.
@@ -48,7 +49,7 @@ works for the whole company.
 
 | Part | What it does |
 |---|---|
-| The address | https, a public name (not an IP address, not `localhost`, `.local`, `.internal` or another private name), no user or password in it, 500 characters at most. Ten webhooks a company. |
+| The address | https, a public name (not an IP address, not `localhost`, `.local`, `.internal` or another private name), no user or password in it, 500 characters at most. Ten webhooks a company. The same address with the same events made again within a minute is refused (`KIT-E-2604`): a double tap or a refresh of the page that showed the secret makes one webhook, not two. |
 | Events | Separated by spaces: `*` for every change, `forms.*` for one module's, or one action such as `forms.answer`; twenty at most. An event is an audited action that went through; a refused or failed one is not sent. |
 | Where events come from | The audit log. Every change through the API is a row of it (the module's own or the pipeline's automatic one), and so is every system action a module records, so a new module's changes can be sent with no code of its own. The job `developer.webhooks` reads the rows written since its last run, 200 at most a run, from where it stopped (`oltrem_meta` key `developer.webhooks_seq`); its first run starts from that moment, so the past is not sent to a new address. A webhook is sent only what was audited after it was made. While no webhook is on the job reads no audit row: it moves its place to the end of the log in one write, answers `'idle'` and sleeps (it looks again every six hours); making a webhook, or switching one on, moves the place to the end of the log first when it is the only one on, and wakes the job, in one batch. |
 | The body | `{"type": "<action>", "timestamp": "<when it was audited>", "data": {"seq", "actor", "actorKind", "target", "details"}}`: the audit row as it is, so it carries who made the change; the company sends it to its own services. |
@@ -102,7 +103,8 @@ migration `0021_jobs_pause.sql`.
 ## Errors
 
 The module owns the `2600` to `2699` block: `KIT-E-2601` the address cannot take webhooks,
-`KIT-E-2602` the company has ten webhooks, `KIT-E-2603` the KEK secret is missing.
+`KIT-E-2602` the company has ten webhooks, `KIT-E-2603` the KEK secret is missing, `KIT-E-2604`
+the same webhook was just added (within a minute), `KIT-E-2605` the job is switched off.
 
 ## Not here yet
 

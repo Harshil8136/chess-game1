@@ -2,7 +2,8 @@
 
 Time off: people ask for days off, and someone else says yes or no. Vacation, sick leave, personal
 time. A request belongs to a place, so the roles held there decide who may ask and who answers.
-Nobody answers their own request, an answer is final, and a no says why. One person never has two
+Nobody answers their own request while someone else decides at its place; an answer is final, and
+a no says why. One person never has two
 requests waiting or approved on the same day. When the company sets its vacation days a year, each
 person sees what they took, asked for and have left, and so do the people who decide. Colleagues see
 who is off in the next two weeks and when, never why. The person who asked is told the answer by
@@ -43,11 +44,19 @@ place above it) decides:
 | Capability | Lets them |
 |---|---|
 | `timeoff.ask` | ask for time off at the place, and see who is off there and when |
-| `timeoff.decide` | see what is asked at the place, with its kind and note, and approve or decline it, never their own |
+| `timeoff.decide` | see what is asked at the place, with its kind and note, and approve or decline it; their own only as below |
 
 The person who asked always sees their own requests and may withdraw one, whatever they hold later
 (`timeoff.self`, which every account holds). Someone who neither asked nor decides at the place
 cannot open a request.
+
+An Owner or the Vendor answers their own request when no other person who is on may decide at its
+place, so a company of one is never stuck waiting for a second person. At most ten people who
+could decide are checked; with more, someone is taken to decide, and it waits for them. The audit row records the
+answer by the person who asked, with `self: true`, and nobody is emailed about an answer they gave
+themselves. As soon as someone else decides at that place, their own request waits for that person
+(`KIT-E-3201`). Who else decides is worked out from each person's compiled access, so a deny or an
+override counts as the check counts it.
 
 Why someone is off is private. In who is off, a colleague sees the person and the days; the kind,
 the note and the reason are shown only to the person and the people who decide at the place.
@@ -81,7 +90,7 @@ cancel a holiday that has not started. Days count in UTC; a request asked for to
 
 | Path | Shows |
 |---|---|
-| `/timeoff` | a row of For you (what waits for the person's answer, with the count; to whoever decides somewhere), Yours (with how many still wait) and Who is off (the next 14 days at the places the person asks or decides); "Ask for time off" in a dialog, the place and the kind as rows of choices; the person's vacation this year when it is counted; the requests |
+| `/timeoff` | a row of For you (what waits for the person's answer, with the count; to whoever decides somewhere), Yours (with how many still wait) and Who is off (the next 14 days at the places the person asks or decides); "Ask for time off" in a dialog, the place and the kind as rows of choices; the person's vacation this year when it is counted; the requests. Days already asked for are refused with a link to open the request that has them |
 | `/timeoff/:id` | the request, its state, place, who asked and the days; the vacation of the person who asked in that year; a row with "Approve" and "Decline" (with the reason, in a dialog) to whoever may answer it, "All time off", and "Withdraw it" (after a confirmation) to the person who asked while they may; the note and the history |
 
 ## The routes
@@ -91,7 +100,7 @@ cancel a holiday that has not started. Days count in UTC; a request asked for to
 | `GET /requests` (`view` mine, waiting or off) | `timeoff.self` | the list, at most 100, with the places, the counts, the person's vacation this year and the window of who is off; left out, waiting for whoever decides somewhere, else their own |
 | `POST /requests` | `timeoff.ask` at the place | asks; refused when the person already has some of those days |
 | `GET /requests/:id` | `timeoff.self`, and asked it or decides at its place | one request, with the vacation of the person who asked and what the reader may do |
-| `POST /requests/:id/answer` | `timeoff.decide` at its place, not one's own | approves or declines it, a no with its reason; the person who asked is emailed |
+| `POST /requests/:id/answer` | `timeoff.decide` at its place, one's own only as an Owner or the Vendor with nobody else deciding there | approves or declines it, a no with its reason; the person who asked is emailed, unless they answered it themselves |
 | `POST /requests/:id/withdraw` | `timeoff.self`, and asked it | withdraws it while it waits, or once approved until it begins |
 | `GET /todo` | `timeoff.decide` | Needs you: how many requests wait for the person's answer, and the day the soonest begins |
 
@@ -110,7 +119,7 @@ when and why).
 
 ## Errors
 
-The `32xx` block: `KIT-E-3201` nobody answers their own time off, `KIT-E-3202` those days are
+The `32xx` block: `KIT-E-3201` nobody answers their own time off while someone else decides there, `KIT-E-3202` those days are
 already asked for, `KIT-E-3203` the request can no longer change. A day, a kind or a note out of
 bounds, and a no without its reason, are the core's `KIT-E-0422`; a person without the capability
 at the place is `KIT-E-0403`.
@@ -130,7 +139,8 @@ refusal audited; what waits for each person who decides (never their own), soone
 own requests, their vacation this year and Needs you; one request seen only by the person who asked
 and the people who decide at its place; approved or declined once, never one's own, a no only with
 its reason, the person who asked emailed; who is off with the kind hidden from colleagues; withdrawn
-only by the person who asked, until it begins; the privacy answer. The days are tested on their
+only by the person who asked, until it begins; the privacy answer; an Owner answers their own where
+nobody else decides, recorded with `self: true` and not emailed, and is refused where someone else
+does. The days are tested on their
 own: real dates only, Monday to Friday whatever the week's start, and split by year. The client
-template's screens test asks for time off as the Owner, finds no Approve on their own request and
-withdraws it.
+template's screens test asks for time off as the Owner and withdraws it.

@@ -57,7 +57,8 @@ holds). Someone who neither holds it nor sees its place cannot open it.
 | Retired | when, with the reason in its moves; a retired item no longer moves |
 | Moves | added, given (to whom, with a note), returned (from whom), retired (why), each with who did it and when; the last 50 shown, the newest first |
 
-An item is only handed to a person of the company whose account is on (`KIT-E-3402`). Handing it to
+An item is only handed to a person of the company whose account is on, or to the person signed in,
+the Vendor included (`KIT-E-3402`, whose notice links the People page to invite someone first). Handing it to
 someone while another person holds it records both moves: returned from the first, given to the
 second. Two people moving the same item at once move it once: it changes hands only from the holder
 the page showed (`KIT-E-3403`). An item is retired only when nobody holds it, so nothing in someone's
@@ -67,8 +68,8 @@ hands goes missing from the list.
 
 | Path | Shows |
 |---|---|
-| `/assets` | a row of In service, Yours and Retired, with their counts; "Add equipment" in a dialog (the place as a row of choices, the name, the tag, the notes) to whoever manages somewhere; the items, each with its state (Available, In use, To collect when the holder's account is off, Retired), who holds it since when, its tag and place |
-| `/assets/:id` | the item and who holds it; a row with "Hand it over" or "Hand it to someone else" (the address and a note, in a dialog), "Take it back" (after a confirmation) and "Retire it" (with the reason, in a dialog) to whoever manages it, and "All equipment"; the notes; the moves |
+| `/assets` | a row of In service, Yours and Retired, with their counts; a tag already used is refused with a link to the item that has it; "Add equipment" in a dialog (the place as a row of choices, the name, the tag, the notes) to whoever manages somewhere; the items, each with its state (Available, In use, To collect when the holder's account is off, Retired), who holds it since when, its tag and place |
+| `/assets/:id` | the item and who holds it; a row with "Hand it over" or "Hand it to someone else" (the address, offered from the company's people with the reader first, and a note, in a dialog), "Take it back" (after a confirmation) and "Retire it" (with the reason, in a dialog) to whoever manages it, and "All equipment"; the notes; the moves |
 
 ## The routes
 
@@ -77,7 +78,8 @@ hands goes missing from the list.
 | `GET /items` (`view` all, mine or retired) | `assets.self` | the list, at most 200, with the places the person sees, whether they manage each, and the counts |
 | `POST /items` | `assets.manage` at the place | adds an item; a tag already used is `KIT-E-3401` |
 | `GET /items/:id` | `assets.self`, and holds it or sees its place | one item with its moves and whether the reader manages it |
-| `POST /items/:id/give` | `assets.manage` at its place | hands it to a person of the company by their address, with a note; they are emailed |
+| `POST /items/:id/give` | `assets.manage` at its place | hands it to a person of the company, or the person signed in, by their address, with a note; they are emailed |
+| `GET /people` | `assets.manage` somewhere | the people of the company whose account is on, the reader first, at most 200, for the address field's choices |
 | `POST /items/:id/return` | `assets.manage` at its place | takes it back from whoever holds it, with a note |
 | `POST /items/:id/retire` | `assets.manage` at its place | retires an item nobody holds, with the reason |
 | `GET /search?q=` | `assets.self` | items by name or tag, where the person sees or what they hold |
@@ -118,6 +120,7 @@ only where the person manages, a tag naming one item, every refusal audited; wha
 the holder always and nobody else; handed only to a person of the company whose account is on, who
 is emailed with the note and the link; handed straight on with both moves kept, taken back, retired
 only when nobody holds it and never moved after; the search by name or tag; Needs you with what a
-person whose account is off still holds, only where the reader manages; the privacy answer. The
+person whose account is off still holds, only where the reader manages; the privacy answer; the
+people offered to a manager, the reader first, and an item handed to the person signed in. The
 client template's screens journey adds an item as the Owner, hands it to themselves, finds it under
 Yours, takes it back and retires it.

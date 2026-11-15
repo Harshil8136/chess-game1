@@ -71,7 +71,8 @@ flowchart TD
    `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
    closed by the first run that updates it.
 
-A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row.
+A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row. A portal
+whose repository has modules of its own is kept out by its own deploy (see Not done yet).
 
 ## The one-time setup
 
@@ -128,8 +129,10 @@ permissions, replace the build secret, delete the old one. Its row is in the
   `npm run deploy`; so nothing the screens need signed in may sit on a path an older door opened
   (the actions moved to `/do/` on 2026-11-12 for that reason).
 - **Client modules.** A client's own modules (`oltrem new module`) live in a client repository,
-  which the fleet does not build. A portal with modules of its own stays on its repository's
-  deploy until the fleet learns to take them.
+  which the fleet does not build. So every `npm run deploy` of a repository with modules of its
+  own records them in `build_choices` (`ownModules`) with `autoUpdate` false, and the fleet lists
+  that portal as kept out of updates with that reason: it stays on `npm run deploy` from its
+  repository until the fleet learns to build its modules.
 - **Checked on a real account.** Everything above runs against stand-ins in
   `packages/cli/test/fleet.test.ts`, and a real build of a client's portal from `.fleet/` was
   bundled by wrangler. The first run in Workers Builds is the owner's setup above.

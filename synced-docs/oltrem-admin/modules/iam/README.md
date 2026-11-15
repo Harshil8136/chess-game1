@@ -271,7 +271,8 @@ The rules, each refused with its own code:
   that is pending, someone else's, expired, spent or for another change (`KIT-E-2011` when none
   is given, `KIT-E-2012` otherwise). Modules use the same approvals for their own `secondPerson`
   capabilities through `requestApproval`, `decideApproval` and `useApproval`. The last Owner at
-  the root is never ended (`KIT-E-2009`).
+  the root is never ended (`KIT-E-2009`), except by the Vendor before the handover: an Owner the
+  Vendor made while setting the company up can be taken back (2026-11-15).
 - **Access requests.** A person asks for a role at a scope with a reason; the request waits a
   week; whoever could have made the grant decides it, and an approval makes the grant in the
   decider's name. The requester may withdraw it.
@@ -328,7 +329,14 @@ the grant rules of the governance (`invite`, `revokeInvitation`), and the token 
 the link while the row keeps its hash. `acceptInvitation` runs on the identity alone, since the
 person has no account yet: the address must be the invited one (`KIT-E-2016`), the invitation
 pending and in date (`KIT-E-2015`); it creates the account (or finds the one with that address),
-makes the grant in the inviter's name and records the acceptance. The first Owner's acceptance is
+makes the grant in the inviter's name and records the acceptance, and closes any other invitation
+still waiting for that address. Since 2026-11-15 one invitation waits per address: an address that
+has an account here is refused (`KIT-E-2010`, "give them the role on their page", with
+`details.principalId`), and so is one with an invitation waiting (`KIT-E-2010`, the day it was
+made, with `details.invitationId`); `POST /invitations/many` passes these on as `personId` and
+`invitationId` in `refused`. **Send again** (`inviteAgain`, `POST /invitations/:id/again`) gives a
+pending invitation a new link and a new week, so the old link stops working (`iam.invite-again` in
+the audit log); with `send` the new link is emailed under its own message key. The first Owner's acceptance is
 the **handover**, stamped on the tenant: before it the Vendor alone invites Owners, since nobody
 else could approve, and the record says so; from then on an Owner is made, invited or unmade
 with a second person only when `iam.owner_second_person` is on and the actor is not the Vendor,
@@ -338,7 +346,8 @@ An invitation can be **emailed**. The client hands `createIam` a `mail(env, mess
 template sends it through the email module, as the plain template `iam.message`);
 when the inviter asks (`send: true`), the module writes the message, naming who invited, the
 company, the role, the place, the link and its last day, keyed `iam.invitation:<id>` so it goes
-once. The link is then held by the email module's outbox until it is delivered, as any message
+once (a link sent again is keyed `iam.invitation:<id>:<new last day>`, so it is not taken for the
+first). The link is then held by the email module's outbox until it is delivered, as any message
 is. Without a sender, or when it refuses (no sending address yet), the invitation stands, the
 answer says `sent: false`, and the screens show the link to pass on by hand.
 
@@ -455,7 +464,7 @@ database was made before a pull would otherwise refuse the new capabilities to e
 Vendor included. The IAM module declares its own eight on plane `0` the same way, so the registry fills
 itself on the first request of a new client.
 
-The manifest: fifty-eight JSON routes under `/api/iam` (the Home card's `GET /home`, under
+The manifest: sixty-seven JSON routes under `/api/iam` (the Home card's `GET /home`, under
 `iam.read`, counts the roles and the places), each naming the
 capability the pipeline checks before the handler runs, with the function behind it enforcing
 the rest (your standing, your own grants, the second person, a fresh sign-in where the capability
@@ -476,11 +485,11 @@ booleans, never a hash. A create answers `201` with the ids, a change or an end 
 | `GET /tenant`, `/capabilities`, `/people`, `/people/:id`, `/groups`, `/groups/:id`, `/roles`, `/roles/:id`, `/scopes`, `/bindings`, `/overrides`, `/invitations`, `/requests`, `/approvals`, `/reviews`, `/reviews/:id` | `iam.read` | the company, the registry and every list the screens show, filtered by status, scope, role, subject or person; `/bindings?inForce=true` for the grants in force now |
 | `GET /people/:id/access?scopeId=` | `iam.read` | "See it as" (plan 7.3): every capability with whether the person may use it at the place (the company when none is named) and the check's reason (`owner`, `allow`, `deny`, `not_granted`, a floor), compiled from the rows as their next request would be, and `sources`: the grants behind it at that place or above it (`kind` `role` with the role's and the group's name, or `exception`; `effect`, `scopeId`, `expiresAt`), by the compiler's own rules (`sourcesOf`); `active: false` and no items for an account switched off. Read only: it makes no session and touches none, so nothing can be done as them |
 | `POST /bindings`, `DELETE /bindings/:id`, `POST /overrides`, `DELETE /overrides/:id` | `iam.bindings.manage` | grant and end, under the grant rules; one-capability exceptions |
-| `POST /invitations`, `POST /invitations/many`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), or up to fifty addresses at once, each under the same rules and a refusal stopping none (`made` and `refused`); with `send`, each link is emailed; withdraw |
+| `POST /invitations`, `POST /invitations/many`, `POST /invitations/:id/again`, `DELETE /invitations/:id` | `iam.bindings.manage` | invite an address to a role at a scope (the token is answered once, here), or up to fifty addresses at once, each under the same rules and a refusal stopping none (`made` and `refused`, a refusal naming the account or the waiting invitation as `personId` or `invitationId`); with `send`, each link is emailed; send a pending invitation again with a new link; withdraw |
 | `POST /requests/:id/decision`, `POST /reviews`, `POST /reviews/:id/items/:bindingId`, `POST /reviews/:id/close` | `iam.bindings.manage` | decide a request; open a review of a scope, decide each grant, close it |
 | `POST /roles`, `PATCH /roles/:id`, `DELETE /roles/:id` | `iam.roles.manage` | roles below your standing, with capabilities you hold |
 | `POST /groups`, `PATCH /groups/:id`, `DELETE /groups/:id`, `POST /groups/:id/members`, `DELETE /groups/:id/members/:principalId` | `iam.groups.manage` | groups and their members, never yourself |
-| `POST /scopes`, `PATCH /scopes/:id`, `DELETE /scopes/:id` | `iam.scopes.manage` | the tree, four levels at most |
+| `POST /scopes`, `PATCH /scopes/:id`, `DELETE /scopes/:id` | `iam.scopes.manage` | the tree, four levels at most; two locations of one name (whatever its case) under the same parent are refused (`KIT-E-2010`, since 2026-11-15) |
 | `PUT /tenant/vendor-access`, `POST /tenant/vendor-window` | `iam.tenant.manage` | how the Vendor may enter; the window an Owner opens |
 | `POST /tenant/incident`, `DELETE /tenant/vendor-window` | `iam.self` | the Vendor declares an incident (the handler lets only the Vendor through); the Vendor or an Owner closes a window early |
 | `POST /tenant` | `iam.vendor.manage` | the Vendor creates the one company and invites its first Owner |

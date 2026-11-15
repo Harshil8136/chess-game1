@@ -56,7 +56,7 @@ booked from now on (`KIT-E-3102`), and its past bookings are kept.
 | Path | Shows |
 |---|---|
 | `/bookings` | "Add something to book" in a dialog where the person manages bookings, the place as a row of choices when there is more than one; their own bookings to come; what they may book, by place; the clock the times are on |
-| `/bookings/:id` | a row of the week's days (Today, Tomorrow, then each day); a row with "Book it" (a dialog: from, for how long as a row of choices, what for), "All bookings" and "Remove it" (after a confirmation) where they manage; the day's bookings, each with "Cancel it" (after a confirmation) to whoever may |
+| `/bookings/:id` | a row of the week's days (Today, Tomorrow, then each day), and "Another day", a date up to 365 days ahead, shown as a chip of its own; a row with "Book it" (a dialog: from, for how long as a row of choices, what for), "All bookings" and "Remove it" (after a confirmation) where they manage; the day's bookings, each with "Cancel it" (after a confirmation) to whoever may. A refused booking, cancel or removal draws the same day again, never today |
 
 ## The routes
 
@@ -64,7 +64,7 @@ booked from now on (`KIT-E-3102`), and its past bookings are kept.
 |---|---|---|
 | `GET /resources` | `bookings.book` | what the person may book, by place, and their own bookings to come, 50 at most |
 | `POST /resources` | `bookings.manage` at the place | adds something to book |
-| `GET /resources/:id` (`day`) | `bookings.book` at its place | its bookings on a day (today when left out), 100 at most, with the week's days |
+| `GET /resources/:id` (`day`) | `bookings.book` at its place | its bookings on a day (today when left out), 100 at most, with the week's days, how many days ahead a booking may start and the last day that allows |
 | `DELETE /resources/:id` | `bookings.manage` at its place | removes it, once nothing is booked from now on |
 | `POST /bookings` | `bookings.book` at the resource's place | books it on a day, from a time, for a number of minutes |
 | `DELETE /bookings/:id` | `bookings.book`, and booked it or manages the place | cancels a booking that has not ended |
@@ -102,5 +102,6 @@ UTC, refused over another, allowed right after it, and refused with a bad length
 past, at a place the person may not book, every refusal audited; a resource's day with the week's
 days, who may cancel which, and the person's own bookings; cancelled by the person who booked or a
 manager and by nobody else, once; a resource with a booking to come kept, then removed with its
-past bookings kept; the search. The client template's screens test adds a room, books it tomorrow,
+past bookings kept; the search. The pages, against answers of the API (`test/pages.test.ts`): a
+refused booking draws its own day again, and a day past the week is asked for with a date. The client template's screens test adds a room, books it tomorrow,
 is refused the same time again, cancels the booking and removes the room.

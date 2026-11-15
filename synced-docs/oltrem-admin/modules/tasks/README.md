@@ -55,7 +55,7 @@ see a task but neither manages it nor has it given to them cannot mark it done.
 |---|---|
 | What is to be done | a title, 200 characters at most |
 | Place | where it belongs; fixed once made |
-| Given to | one person, or nobody yet |
+| Given to | one person who may see the tasks at its place, or nobody yet. The person making or changing it may always give it to themselves, the Vendor included, who has no account of the company; nobody else gives a task to the Vendor |
 | Due on | a day, or none. "Past due" and "Due today" are read in UTC, as every time the portal keeps |
 | Notes | 4000 characters at most |
 | Done | by whom and when; it can be opened again |
@@ -70,7 +70,7 @@ task, never to the person who wrote it.
 
 | Path | Shows |
 |---|---|
-| `/tasks` | a row of Mine (the person's own open tasks at every place, with the count), Open and Done; for Open and Done, a row of the places they may see with their open counts; "New task" in a dialog where they manage the tasks; the tasks, open ones by due day; with two or more, a tick on each and the bar: Mark done (not on Done), Remove where they manage or on Done (after a dialog) |
+| `/tasks` | a row of Mine (the person's own open tasks at every place, with the count), Open and Done; for Open and Done, a row of the places they may see with their open counts; "New task" in a dialog where they manage the tasks: on Mine at any place they manage, the place a row of choices when there are several, on Open and Done at the place shown. Its "Given to" offers the person themselves first, as Me, and "Give it to me" fills in their own address; the tasks, open ones by due day; with two or more, a tick on each and the bar: Mark done (not on Done), Remove where they manage or on Done (after a dialog) |
 | `/tasks/:id` | the task, its state and place; a row with "Mark done" or "Open it again", "Change it", "All tasks" and "Remove it" (after a confirmation), each shown only to whoever may; its notes, its comments with a box to add one, and its history |
 
 ## The routes
@@ -79,7 +79,7 @@ task, never to the person who wrote it.
 |---|---|---|
 | `GET /tasks` (`view` mine, open or done; `place`) | `tasks.read` | the list, at most 100, with the places and their open counts |
 | `POST /tasks` | `tasks.manage` at the place | makes a task |
-| `GET /people` | `tasks.manage` somewhere | the people with an account that is on, 200 at most, for the form |
+| `GET /people` | `tasks.manage` somewhere | the person themselves first (`me`), then the people with an account that is on, 200 at most, for the form |
 | `GET /tasks/:id` | `tasks.read` at its place | one task, with what the person may do to it |
 | `PATCH /tasks/:id` | `tasks.manage` at its place | changes its title, notes, due day or the person it is given to |
 | `POST /tasks/:id/done` | `tasks.read`, and manages it or has it given to them | marks it done, or open again |
@@ -127,6 +127,6 @@ account, the email to the person it is given to and none to oneself, every refus
 person's places and their own list, Needs you; done by the person it is given to or a manager and
 by nobody else; comments by anyone who may see it, with the people on it told and never the
 writer; changed, given to another (who is told) and to nobody, removed with its title kept
-in the log; many at once, each by its one-task rule, the refused ones named and every row audited in one batch; the automations' task made once per key; the search. The automations tests cover the
+in the log; many at once, each by its one-task rule, the refused ones named and every row audited in one batch; the automations' task made once per key; the search; a task given to oneself, the Vendor included, and never to the Vendor by someone else. The pages, against answers of the API (`test/pages.test.ts`): New task on Mine, with the place to choose, and Me first in "Given to". The automations tests cover the
 task action's fields. The client template's screens test makes a task for today, sees it on Home,
 marks it done, opens it again, comments on it, changes it and removes it.

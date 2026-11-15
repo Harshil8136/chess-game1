@@ -3,8 +3,8 @@
 Automations (the owner's request of 2026-10-27 for "an auto run system"): the portal does
 something on its own, when something happens or on a schedule. "When a website form is answered,
 email the sales team"; "when a file is shared, raise an alert"; "every Monday at 08:00, send the
-team a reminder". Each automation is one trigger and one action, made switched off, switched on
-once its action has what it needs, and every time it acts is a run in its log.
+team a reminder". Each automation is one trigger and one action, switched on as it is made or
+later, only once its action has what it needs, and every time it acts is a run in its log.
 
 ## Using it
 
@@ -49,10 +49,10 @@ sign-in. Both are read at the company itself: an automation acts on what happens
 
 | Part | What it is |
 |---|---|
-| When something happens | Audited actions that went through, by their names separated by spaces: `forms.answer` (a website form's answer), `files.*` (anything in Files), `*` (every change). The Developer page's API reference and the audit page name them. One optional condition: a value of the event (`name`, `target`, `actor`, or a detail such as `form`) equals a text, without regard to case. |
+| When something happens | Audited actions that went through. The pages offer the common ones as chips by plain names (a website form is answered, a file is shared, anything in Files, a task is made, someone asks for a yes, a request is approved or declined, something is booked, any change at all), and any other by its name under "Other events", separated by spaces: `customers.add`, or `<part>.*` for anything in a part. The API takes the names: `forms.answer`, `files.*`, `*`. The Developer page's API reference and the audit page name them. One optional condition: a value of the event (`name`, `target`, `actor`, or a detail such as `form`) equals a text, without regard to case. |
 | On a schedule | Every hour at a minute, every day at a time, or one day of the week at a time, in UTC. The tick runs every five minutes, so a run starts within five minutes of its time; a time missed while the portal was down runs once on the next tick. |
 | Then | One action, with the values of its form. A text value may name the event: `{{target}}`, `{{actor}}`, `{{at}}`, `{{type}}`, `{{automation}}`, `{{details.<name>}}` (or `{{<name>}}` for a detail). A schedule's event has the automation's name as its detail. |
-| Switched on | Only when the action's required fields are filled in and valid (`KIT-E-2702` names what is not). It is made switched off. Switching it back on starts its count of failures again and works out a schedule's next time from then. |
+| Switched on | Only when the action's required fields are filled in and valid (`KIT-E-2702` names what is not). It is made switched off unless it is asked to be on (`on`), which is refused the same way while a value is missing; the page's dialog ticks "Switch it on now" by default. Switching it back on starts its count of failures again and works out a schedule's next time from then. |
 | Run now | Runs it at once: an event automation on the newest audited action it matches among the last three hundred, or a stand-in `automations.test` event; a schedule as if its time had come, its next time kept. |
 
 ## The actions the kit ships
@@ -98,8 +98,8 @@ state and what set it off. The job `automations.prune` removes runs older than t
 
 | Path | Shows |
 |---|---|
-| `/automations` | a row of All, On, Off and Failing; the automations with their state, when, then and last run; for a manager **When something happens** and **On a schedule**, each a dialog with a name, the trigger and a row of actions |
-| `/automations/:id` | the state and the trigger in words; what is missing before it can be switched on; **Run now**, **Switch on** or **off**, **Delete**; the form of its name, trigger, condition and the action's own fields; the newest fifty runs |
+| `/automations` | a row of All, On, Off and Failing; the automations with their state, when (in words), then and last run; for a manager a command for each action (**Send an email**, **Raise an alert**, ...), each a dialog with a name, when it runs (**When something happens**, with the events as chips, or **On a schedule**), the action's own fields and **Switch it on now**; it lands on the new automation with a done notice |
+| `/automations/:id` | titled by its name; the state and the trigger in words; what is missing before it can be switched on; **Run now** (held while something is missing), **Switch on** or **off**, **Delete**; the form of its name, trigger, condition and the action's own fields; the newest fifty runs, what set each off in words |
 
 ## Search
 
@@ -111,7 +111,7 @@ name, for someone who holds the capability at the company; anyone else finds non
 | Routes | Capability | What they do |
 |---|---|---|
 | `GET /actions`, `GET /automations`, `GET /automations/:id` | `automations.read` | the actions with their fields; the automations; one with what it still needs and its runs |
-| `POST /automations` (`name`, `trigger`, `events` or `schedule`, `condition`, `action`, `input`), `PATCH /automations/:id` (those and `on`), `DELETE /automations/:id`, `POST /automations/:id/run` | `automations.manage` | the automations |
+| `POST /automations` (`name`, `trigger`, `events` or `schedule`, `condition`, `action`, `input`, `on`), `PATCH /automations/:id` (those and `on`), `DELETE /automations/:id`, `POST /automations/:id/run` | `automations.manage` | the automations |
 
 Every change is audited by the module: `automations.create`, `.update` (the fields changed, never
 the values), `.delete`, `.run-now`; and the system's `automations.run`.
@@ -148,9 +148,11 @@ Inside the Workers runtime, through the pipeline beside the IAM module, with the
 modules stood in for: the manifest; schedules (the next hour, day and weekday, in words, bad ones
 refused); the event's values filled in and an action's missing fields named; both capabilities
 read at the company; an unknown action and bad events refused; made off and switched on only when
-ready; the tick acting on new matching rows and not on the past, a refusal, its own rows or a
+ready, or made on at once only when ready; the tick acting on new matching rows and not on the past, a refusal, its own rows or a
 condition that differs; twenty runs a tick with a row taken whole; the hourly cap; a schedule run
 when due and moved on, a run by hand keeping it, failures counted and the check; an alert raised
 with the event's values; a run by hand on the newest matching row; changes checked; the audit;
-pruning. The client template's screens test makes an automation from the pages, fills in its
+pruning. The pages, against answers of the API (`test/pages.test.ts`): a dialog for each action
+with its fields, the events by name and the tick; what it sends and the done notice; one automation
+titled by its name, its events and runs in words, Run now held. The client template's screens test makes an automation from the pages, fills in its
 email, switches it on and runs it on the forms journey's website answer.

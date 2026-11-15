@@ -5,7 +5,9 @@ people the settings name. A problem raised again while it is open counts up and 
 again. In the quiet hours a warning is held and sent with the others in one message when they
 end; a critical alert is sent at once. People see the open alerts and the recent ones on the
 Alerts page and say they are on one by acknowledging it; the check or the code that raised it
-resolves it.
+resolves it, and a server error can be marked resolved by hand once it is fixed (2026-11-15).
+Every alert email ends with the address of the portal's Alerts page: `address` when given, else
+`https://` and the Worker's `PUBLIC_HOST`, else no address (a portal on its workers.dev name).
 
 ## Using it
 
@@ -37,7 +39,11 @@ characters, so the same failure counts up on one alert. A word of eight characte
 digit in it counts as an id, such as the runtime's `reference = …` on a network error: before
 2026-11-12 each one opened a new alert, and an alert's own email failing the same way opened
 another, without end. An id inside the area (a queue message's)
-moves to the reference. The detail keeps the message, the reference, when it was last seen and
+moves to the reference. Its title is plain words a person reads on Home's Needs you, with no class
+name, code or setting key (2026-11-15): a kit error gives its definition's title, any other "An
+unexpected error", then the area's name in brackets (a module by its name, `request` as "a page or
+a call", a `job`, a `flow` or a `queue` by kind). The detail keeps the message (with its code), a
+kit error's action as "What to do", the reference, when it was last seen and
 the first fifteen lines of the stack. One isolate writes a key at most once a minute and adds the
 occurrences between to the next write, so a failing loop cannot spend the day's D1 writes. It
 never throws: a failure to keep the error goes to the module's own `report`.
@@ -92,6 +98,7 @@ Under `/api/alerts`, through the IAM module's sessions and check. Capabilities a
 | `GET /home` | `alerts.read` | the Home card: how many are open, and how many of those are critical |
 | `GET /todo` | `alerts.manage` | Home's Needs you: how many open alerts nobody has acknowledged, and the worst of them |
 | `POST /items/:id/acknowledge` | `alerts.manage` | keeps the caller's address and the time on an open alert not yet acknowledged; audited as `alerts.acknowledge`; another alert is 404 |
+| `POST /items/:id/resolve` | `alerts.manage` | marks an open server error (`error.*`) resolved by hand, once it is fixed, keeping the caller as who took it when nobody had; audited as `alerts.resolve`; any other alert is 404, since a check resolves its own and would open it again while the problem lasts |
 
 ## The table
 

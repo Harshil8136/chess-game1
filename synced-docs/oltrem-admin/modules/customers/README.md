@@ -164,14 +164,14 @@ A customer holds no capability: the door is the only place they reach.
 
 | Path | Shows |
 |---|---|
-| `/customers` | where customers sign in (this portal's `/account`); how many customers there are and how many are on; to whoever manages them "Add a customer" in a dialog (address, name, a note only staff see, and "Email them the link to sign in", ticked); a search by name or address; the customers by name with their state, address and last sign-in |
+| `/customers` | where customers sign in (this portal's `/account`); how many customers there are and how many are on; to whoever manages them "Add a customer" in a dialog (address, name, a note only staff see, and "Email them the link to sign in", ticked); a search by name or address; the customers by name with their state, address and last sign-in. An address that is a customer already is refused with a link to open that customer |
 | `/customers/sign-in` | how customers sign in: the emailed code always; the sign-in services with their state, issuer and last use; to whoever may set them up "Connect a service" in a dialog (the name on the button, the issuer address, the client id, the client secret) and, in each row, "Stop offering" or "Offer again" and "Remove", confirmed in a dialog; the return address to give the service |
-| `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; to whoever manages them a row with "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; the sign-ins, the newest first, with the browser, how and when |
+| `/customers/:id` | one customer: on or off, the address, who added them and when, the last sign-in; a row with "Make a quote for them" and "Make an invoice" (to whoever makes them somewhere, while the customer is on, with the address filled in), and to whoever manages them "Email the sign-in link", "Change", "End their sign-ins (n)", "Switch back on" and "Switch off", each confirmed in a dialog; the note; their quotes and their invoices, the newest five of each with "All of them" (read through those modules' own APIs, so a portal without one, or a person who does not see them, gets no section); the sign-ins, the newest first, with the browser, how and when. The notice after an add or an email of the link says the email is queued; one that no email service took links Email settings |
 | `/account/sign-in` | the customer's door: their address and "Email me a code", and "Continue with" each service that is on |
 | `/account/code` | the code from the email, with the phone's one-time-code keyboard, and a link to ask for a new one |
 | `/account/open/<module>/<id>` | one thing a module showed the customer, a file to download, say; the module checks again that it is theirs; anything else returns to `/account` with "That is no longer open to you" |
 | `/account/act/<module>/<id>/<action>` | a button on the account page, accept a quote, say: posted by the signed-in customer, the module checks again that the item is theirs and still takes that answer, then back to `/account` with "Thank you: we have your answer", or "That is no longer open to you" |
-| `/account` | the customer's account: their name and address, Sign out; a section for each module that shows the customer their own things (the newest 20, each with its state, its date and any replies; "Nothing yet"; a section that could not be read says so and the rest still shows); where they are signed in (this device marked) and "Sign out on the other devices" |
+| `/account` | the customer's account: their name and address, Sign out; a section for each module that shows the customer their own things (the newest 20, each with its state, its date and any replies; "Nothing yet"; a section that could not be read says so and the rest still shows); an item's first button posts at once, and any other, Decline say, opens below to ask "Are you sure? Your answer is final." before "Yes, decline" posts it (a disclosure, so the door needs no script); where they are signed in (this device marked) and "Sign out on the other devices" |
 
 The door's pages use the portal's look, without the staff sidebar; the mark at the top leads to
 `/account`.
@@ -256,4 +256,6 @@ account, a visitor with no sign-in sent to sign in; an action posted by its cust
 thanked, one the module refuses or a broken path returned with "no longer open". The client template's screens journey adds a customer on the page, signs them
 in at `/account` with the code from the outbox, and shows their account with "Your messages", the
 file shared with them and a quote, which they accept there, then the invoice made from it, owed and
-then paid.
+then paid. The page tests (`test/pages.test.ts`) render a customer's quotes and invoices with
+"Make a quote for them", the link to an existing customer after a refused add, the notice when no
+email service took the link, and the door's Decline asked once more.

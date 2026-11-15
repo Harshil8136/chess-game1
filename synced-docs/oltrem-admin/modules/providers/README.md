@@ -150,7 +150,8 @@ instances and pastes their keys.
 | `POST /detect` | manage | reads a domain's public DNS for the providers it already uses; each new one becomes a `suggested` instance with its evidence, audited as `providers.detect` |
 | `DELETE /instances/:id` | manage | removes it with its credential; the active one is refused (`KIT-E-1405`) |
 | `POST /keys/rewrap` | manage | after the KEK secret changed: every tenant's data key wrapped again under the current key |
-| `GET /home` | read | the Home card: how many connected instances are active |
+| `GET /home` | read | the Home card: how many connected instances are active and working; one active whose last check failed is not counted and the card says so (2026-11-15) |
+| `GET /onboarding` | manage | Home's Get started: "Connect an email service", done while an email instance is active and its last check did not fail |
 
 Instances belong to a tenant; the Vendor, who has none, is refused. A field the definition does
 not list, or an empty one, is `422`; a listed field that is missing is `KIT-E-1403` naming it.

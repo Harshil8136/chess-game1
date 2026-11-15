@@ -77,22 +77,27 @@ Everyone sees their own published shifts, whatever else they hold.
 
 | Path | Shows |
 |---|---|
-| `/shifts` | in a sideways row, Mine or Schedule (to whoever sees a place); the week before, this week, the week after; to whoever plans, "Plan a shift", "Copy the week before" and "Publish the week (n)" in dialogs; Mine: the person's shifts of the week and the open shifts they can take, each with "Take it"; Schedule: every shift of the week at the places they see, drafts marked to whoever plans |
+| `/shifts` | in a sideways row, Mine or Schedule (to whoever sees a place); the week before, this week, the week after; to whoever plans, "Plan a shift" (the person's address offered from the company's people, the planner first), "Copy the week before" and "Publish the week (n)" in dialogs, the publish dialog offering only the places with drafts that week, the one with the most first; Mine: the person's shifts of the week and the open shifts they can take, each with "Take it"; Schedule: every shift of the week at the places they see, drafts marked to whoever plans |
 | `/shifts/:id` | one shift: when, how long, where, who or open, a draft or not, the note; "Take it", "Change it" and "Remove it", each in a dialog |
 
-The places to plan at are a row of choices when there is more than one.
+The places to plan at are a row of choices when there is more than one. A shift planned goes back to
+that week's schedule, where it shows as a draft beside the button to publish the week. A publish
+where nothing waited says "Nothing to publish there" instead of claiming it worked, and a published
+week's emails are said to be queued. An address that is nobody of the company is refused with a
+link to invite them on the People page.
 
 ## The routes
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /shifts` (`view`, `week`) | everyone | a week on the company's clock (`week` is any day in it): the person's shifts and the open ones they may take (`mine`), or the schedule of the places they see (`schedule`), with the drafts waiting |
-| `POST /shifts` | `shifts.plan` at the place | plans a draft: the place, a day, two times, an address or none, a label and a note |
+| `GET /shifts` (`view`, `week`) | everyone | a week on the company's clock (`week` is any day in it): the person's shifts and the open ones they may take (`mine`), or the schedule of the places they see (`schedule`), with the drafts waiting and the places that have them (`draftPlaces`, the most first) |
+| `POST /shifts` | `shifts.plan` at the place | plans a draft: the place, a day, two times, an address or none (the planner's own included), a label and a note |
+| `GET /people` | `shifts.plan` somewhere | the people of the company whose account is on, the reader first, at most 200, for the address field's choices |
 | `GET /shifts/:id` | everyone | one shift, to whoever works it or sees its place once published, or plans its place |
 | `POST /shifts/:id` | `shifts.plan` at its place | changes its times, person, label and note |
 | `POST /shifts/:id/remove` | `shifts.plan` at its place | removes it |
 | `POST /shifts/:id/take` | `shifts.view` at its place | takes an open shift |
-| `POST /publish` | `shifts.plan` at the place | publishes the week's drafts there and emails each person their shifts |
+| `POST /publish` | `shifts.plan` at the place | publishes the week's drafts there and emails each person their shifts; `published` says how many, 0 when none waited there |
 | `POST /copy` | `shifts.plan` at the place | copies the week before's shifts there into the week as drafts, and says how many were copied and left out |
 | `GET /todo` | `shifts.plan` | Needs you: drafts and open shifts in the next 14 days at the places the person plans |
 
@@ -133,6 +138,8 @@ the person's week and the open shift they may take, the schedule to someone who 
 nothing to someone who holds nothing; another week; an open shift refused to someone busy then,
 taken once, and no longer taken once started; a published shift changed and removed, the people on
 it emailed, a draft removed quietly; the week before copied, a busy person left out, twice copying
-nothing, and the times kept across New York's change of daylight saving; the privacy answer; each step audited. The client template's
+nothing, and the times kept across New York's change of daylight saving; the places with drafts,
+and a publish at another place publishing none; the people offered to a planner, the planner's own
+shift planned; the privacy answer; each step audited. The client template's
 screens journey plans a shift on the page, is refused a second at the same time, publishes the
 week, finds the shift and the email, and copies the week into the next.

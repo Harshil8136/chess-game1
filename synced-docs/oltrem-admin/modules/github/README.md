@@ -36,7 +36,10 @@ One row per run attempt in `github_runs`: the repository, the commit, the branch
 `@oltrem/core-http`; the core packages are released together), the newest kit version the
 package registry published, the link to the run, and when it was reported. A version the run
 could not learn is kept as unknown, never guessed. A run re-run with the same attempt replaces
-its row.
+its row. `npm run deploy` (from a computer) and the fleet write a row of the same shape after
+their health check, so Deployments shows what production runs whichever way it was put up: its
+ref is `npm run deploy` or `fleet`, its repository and link are empty, its commit is the
+repository's (empty for the fleet), and it does not ask the registry for the newest kit.
 
 ## Routes
 
@@ -53,7 +56,9 @@ Under `/api/github`, through the IAM module's sessions and check.
 `github.deploy`, in the `release` lane: **fail** when the newest run did not succeed, since
 production may then be behind the code, with the run's link; **warn** when a newer kit is
 published than production runs, and before any run is reported; **ok** otherwise, with the kit
-version and the commit.
+version and the commit (or, for a deploy from a computer or the fleet, the way it was put up).
+A newer kit says how it arrives: the fleet brings it, or `pnpm exec oltrem upgrade` and
+`npm run deploy` in the repository of a portal kept out of the fleet.
 
 ## Not here yet
 

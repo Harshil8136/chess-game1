@@ -53,7 +53,7 @@ it.
 ```json
 {
   "type": "/docs/errors#kit-e-0422",
-  "title": "Invalid input",
+  "title": "Check what you entered",
   "status": 422,
   "detail": "name: too short",
   "code": "KIT-E-0422",

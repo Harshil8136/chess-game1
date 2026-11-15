@@ -225,3 +225,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Campaigns as plain letters](2026-11-15-campaigns-as-letters.md) | Gmail's tab named on Check it; P246-P247 |
 | [First-request CPU](2026-11-15-cpu-first-request.md) | load-time warm-up; `pnpm cpu` fixed |
 | [Review team, CPU check, first run](2026-11-15-review-team-cpu-and-first-run.md) | twelve reviewers; CPU judged by the median and stopped requests; company form on module pages; P248-P250 |
+| [Every journey walked and fixed](2026-11-15-flows-fixed.md) | refused forms keep what was typed; one person answers their own; queued, not emailed; P251-P294 |

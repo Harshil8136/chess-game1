@@ -56,13 +56,19 @@ law was not checked. Sources: [GDPR deadlines](https://gdprlocal.com/dsar-rules-
 2. **Find their data**: every mounted module that declares `personal` (core-module, "Personal
    data") is asked for its rows under the address, at most `PERSONAL_ROWS` (200) each, and the
    audit log for what the address did in the portal. The page shows each part with its row count
-   and a link to its page. The search is audited with the parts it found.
+   and a link to its page; the quotes and invoices link their lists filtered to the address, the
+   customers module the customer's own page. The search is audited with the parts it found.
 3. **Check who asks**: their data goes only to them. Whoever answers writes down how the identity
-   was checked; until then the copy is refused (`KIT-E-2801`).
+   was checked; until then the copy is refused (`KIT-E-2801`). Checked after a search, the search
+   is made again (and audited again), so where their data is stays on the page.
 4. **Download a copy**: one JSON file with the request and every part's rows. It is not cached,
    and each download is audited.
 5. **Correct or delete** in the module that holds the data, through the link: that module's own
-   rules, checks and audit apply. Nothing is deleted from here, by design.
+   rules, checks and audit apply. Nothing is deleted from here, by design. For a request to delete,
+   the page says plainly that the portal cannot erase a person's rows: no module deletes them yet.
+   It names what can be stopped (a quote withdrawn, a customer switched off, a shift not yet
+   published removed) and what is kept for the record (sent quotes and invoices, answered requests,
+   the audit log), so the answer tells the person both.
 6. **Close it**: answered or refused, with what the person was told. A closed request is kept as
    it was; a new request is logged if they ask again (`KIT-E-2802`).
 
@@ -117,7 +123,10 @@ already closed. An address, a day or a text out of bounds is the core's `KIT-E-0
 
 ## Not here yet
 
-- Deleting or correcting from the request page across modules at once: each module keeps that.
+- Erasing a person's rows: no module offers an erase hook yet, so a request to delete is carried
+  out by stopping what each module can stop and saying what is kept. A hook in `personal` (beside
+  `find`) would let each module erase or anonymise its own rows from here; it is a design change
+  across the modules.
 - A public form for people to make a request themselves: logged by staff for now, from email or
   a website form answer.
 - Business days for the due day.
@@ -129,6 +138,8 @@ contract's refusal of a `personal` without a title; a request logged at the comp
 address in lower case, its due day, and the refusals audited; the search across modules (a part
 with more rows than a search answers, an address outside the portal dropped) and the audit log;
 the copy refused before the check, then given as one file, audited; Needs you and the health check
-for a request past due; a closed request kept as it was. Each kit module's `personal` is tested in
+for a request past due; a closed request kept as it was. The page tests (`test/pages.test.ts`)
+render a request: one to delete says what cannot be erased and links each part's rows, one to see
+offers the copy instead, and checking who asks after a search keeps their data on the page. Each kit module's `personal` is tested in
 its own package. The client template's screens test logs a request for an address a campaign was
 sent to, finds it, checks who asks, downloads the copy and closes it.

@@ -132,7 +132,7 @@ audited.
 | `GET /me/notifications/unread` | `users.self` | how many are unread, up to 100: the bell |
 | `POST /me/notifications/:id/read`, `POST /me/notifications/read` | `users.self` | mark one read (answers its page; another person's id is 404) or all |
 | `GET /me/notifications/choices`, `PUT /me/notifications/choices` | `users.self` | how each module that tells people things tells me; a module that tells nobody, or another channel, is 422 |
-| `GET /onboarding` | `users.manage` | Home's Get started: invite a second person |
+| `GET /onboarding` | `users.manage` | Home's Get started: invite a second person, done once a second person is active or an invitation still in date waits; the handover's invitation (an Owner invited before the company is handed over) does not count, so the step no longer ticks and unticks around the handover (2026-11-15) |
 | `GET /home` | `users.read` | the Home card, Users: the active users, and how many are deactivated |
 
 ## Later

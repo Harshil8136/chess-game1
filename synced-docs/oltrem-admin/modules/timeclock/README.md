@@ -3,7 +3,8 @@
 Time clock: people clock in when they start work and out when they stop, from their phone, at a
 place. The time between is theirs for the week, shown on the company's clock with the week's
 total. Whoever manages the place sees everyone's hours there, adds the time someone forgot to clock
-and fixes a missed clock-out, always saying why and never for themselves, and downloads the hours as
+and fixes a missed clock-out, always saying why and for themselves only when nobody else manages
+the place, and downloads the hours as
 a spreadsheet for payroll. Who is still clocked in after a long day shows on Home, and every step is
 in the audit log.
 
@@ -34,7 +35,7 @@ place above it) decides:
 | Capability | Lets them |
 |---|---|
 | `timeclock.clock` | clock in and out at the place |
-| `timeclock.manage` | see everyone's hours at the place, add the time someone forgot, fix a stretch's times (which clocks out one still open), download the hours; never their own |
+| `timeclock.manage` | see everyone's hours at the place, add the time someone forgot, fix a stretch's times (which clocks out one still open), download the hours; their own only as below |
 
 A person always sees their own hours and clocks out, whatever they hold later
 (`timeclock.self`, which every account holds). Someone who neither worked a stretch nor manages
@@ -55,13 +56,17 @@ a second, and a unique index refuses it when two taps arrive at once. Clocking o
 in is `KIT-E-3502`. A manager types a stretch as a day and two times on the company's clock; an end
 before the start is the next day, so a stretch lasts under 24 hours. It must have ended already,
 must not overlap another of the same person (`KIT-E-3504`), and says why. Nobody adds or fixes their
-own hours (`KIT-E-3503`).
+own hours while someone else manages the place (`KIT-E-3503`). An Owner or the Vendor adds and
+fixes their own when no other person who is on may manage that place, so a company of one is never
+stuck; the audit row records it by them with `self: true`. Who else manages is worked out from each
+person's compiled access, so a deny or an override counts as the check counts it. At most ten people
+who could manage are checked; with more, someone is taken to manage, and it waits for them.
 
 ## The pages
 
 | Path | Shows |
 |---|---|
-| `/timeclock` | the clock: "Clocked in" with the time so far, where and since when, and Clock out (a note folded away); or Clock in, the place as a row of choices when there is more than one; a row of Mine and Team to whoever manages somewhere; a row with the week before and after, This week, and to managers "Add hours" and "Download hours" in dialogs; which week and clock it is; the week's figures (hours and days, or hours, people and who is clocked in now); the team's hours by person; each stretch by day with its hours, place and whether it was fixed |
+| `/timeclock` | the clock: "Clocked in" with the time so far, where and since when, and Clock out (a note folded away); or Clock in, the place as a row of choices when there is more than one; a row of Mine and Team to whoever manages somewhere; a row with the week before and after, This week, and to managers "Add hours" (the person's address offered from the company's people, the manager first) and "Download hours" in dialogs; which week and clock it is; the week's figures (hours and days, or hours, people and who is clocked in now); the team's hours by person; each stretch by day with its hours, place and whether it was fixed |
 | `/timeclock/:id` | one stretch: who, where, the day and times, the hours; "Fix the times" (or "Clock them out" while open) in a dialog to whoever manages its place and did not work it; the note; who fixed it, when and why |
 
 ## The routes
@@ -71,9 +76,10 @@ own hours (`KIT-E-3503`).
 | `GET /entries` (`view` mine or team, `week` any day in it) | `timeclock.self`; the team needs `timeclock.manage` somewhere | the week from Monday on the company's clock, at most 500 stretches, with the totals by person, the places and the person's open stretch |
 | `POST /in` | `timeclock.clock` at the place | clocks in, with a note |
 | `POST /out` | `timeclock.self` | clocks out, with a note |
-| `POST /entries` | `timeclock.manage` at the place | adds a stretch for a person of the company whose account is on, with why |
+| `POST /entries` | `timeclock.manage` at the place | adds a stretch for a person of the company whose account is on, with why; their own only as an Owner or the Vendor with nobody else managing there |
+| `GET /people` | `timeclock.manage` somewhere | the people of the company whose account is on, the reader first, at most 200, for the address field's choices |
 | `GET /entries/:id` | `timeclock.self`, and worked it or manages its place | one stretch, with whether the reader may fix it |
-| `POST /entries/:id/fix` | `timeclock.manage` at its place, not one's own | sets its day and times with why, which closes one still open |
+| `POST /entries/:id/fix` | `timeclock.manage` at its place, one's own as for adding | sets its day and times with why, which closes one still open |
 | `GET /export?from=&to=` | `timeclock.manage` | the stretches that started between the two days at the places the person manages, by person, as a CSV file (hours as decimals, text a spreadsheet would run as a formula defused); 62 days and 5000 rows at most |
 | `GET /todo` | `timeclock.manage` | Needs you: who is still clocked in after 12 hours at the places the person manages |
 
@@ -93,7 +99,7 @@ open stretch a person.
 ## Errors
 
 The `35xx` block: `KIT-E-3501` clocked in already, `KIT-E-3502` not clocked in, `KIT-E-3503`
-nobody adds or fixes their own hours, `KIT-E-3504` the times do not work (ahead of now, or
+nobody adds or fixes their own hours while someone else manages there, `KIT-E-3504` the times do not work (ahead of now, or
 overlapping). A day, a time or a text out of bounds, an unknown address and a fix without its
 reason are the core's `KIT-E-0422`; a person without the capability at the place is `KIT-E-0403`.
 
@@ -115,5 +121,7 @@ before and after; Needs you after 12 hours; a stretch fixed by another manager w
 refused without one, ahead of now, by someone who does not manage the place; hours added refused
 when they overlap, for oneself, for an unknown address and at a place the manager does not manage,
 and an end before the start read as the next morning; the download at the places the person
-manages, refused without the capability and over 62 days, audited; the privacy answer. The client
+manages, refused without the capability and over 62 days, audited; the privacy answer; the
+people offered to a manager, the reader first, refused to someone who manages nowhere; an Owner
+adds and fixes their own hours where nobody else manages, recorded with `self: true`. The client
 template's screens journey clocks the Owner in and out through the page.

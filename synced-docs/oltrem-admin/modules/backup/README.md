@@ -187,7 +187,7 @@ out (`files_after`), and when it last said where it is (`beat`).
 
 | Code | Name | Status | When |
 |---|---|---|---|
-| `KIT-E-1601` | `NOT_SET_UP` | 503 | a setting or a secret the export needs is missing; the detail names it |
+| `KIT-E-1601` | `NOT_SET_UP` | 409 | a setting or a secret the export needs is missing; the detail names it. A state to fix, not a fault, so no alert opens for a press of Back up now; the Backups page lists each with its fix |
 | `KIT-E-1602` | `CLOUDFLARE_REFUSED` | 502 | Cloudflare's database API answered with an error, or the export did not finish |
 | `KIT-E-1603` | `RUNNING` | 409 | an export started less than half an hour ago still runs |
 | `KIT-E-1604` | `COPY_FAILED` | 502 | the dump could not be downloaded or stored |
