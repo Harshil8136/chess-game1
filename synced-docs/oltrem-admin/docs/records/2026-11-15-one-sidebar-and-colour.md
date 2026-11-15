@@ -61,7 +61,7 @@ flowchart TD
 | core-ui `mail.tsx` | `SideMenu` (a Preact context holding a slot) and `SideMenuList`. `MailShell` inside the frame hands Compose, folders, More, Labels, tools, meters and foot to the slot and draws no pane; its folder button over the list opens the portal's drawer. Outside a frame it draws its own pane as before, now headed by its name; `AllSections` is gone. |
 | screens `layout.tsx` | `Frame` renders the page once with `renderToString` inside the context, then draws the sidebar with the menu under the current row (`aria-current="true"` on the row, `"page"` on the folder). The folders, counts, bold folders, labels and meters are in the frame key, so a change sends the sidebar again. A menu with no row to hang under is drawn at the top of the sidebar rather than nowhere. `SectionMenu` is gone. |
 | screens `frame.js` | Every `commandfor="portal-menu"` button scrolls the drawer to the page on screen (the folder, else its section's row). On a computer the sidebar scrolls so the nested folders show (`showNest`). A kept frame marks its row with `data-here-as`. |
-| `theme.css` | `--ui-side`, a 4% (light) or 8% (dark) tint of the portal's colour; the sidebar 16 rem (was 15), the phone drawer up to 20 rem (was 17); each icon a 16 px glyph on a tile of `--hue-tint`, solid `--hue` for the page on screen; group names in their colour; the nested menu on a line of the group's colour, rows 32 px (44 px on touch); on the closed rail the folders show as icons; Email's grid inside the frame drops the pane column. |
+| `theme.css` | `--ui-side`, a 4% (light) or 8% (dark) tint of the portal's colour; the sidebar 16 rem (was 15), the phone drawer 16 rem too (was 17; the first push gave it 20 rem, which the owner found too wide an hour later, so it now matches the computer's); each icon a 16 px glyph on a tile of `--hue-tint`, solid `--hue` for the page on screen; group names in their colour; the nested menu on a line of the group's colour, rows 32 px (44 px on touch); on the closed rail the folders show as icons; Email's grid inside the frame drops the pane column. |
 
 ## How it was verified
 
@@ -80,5 +80,5 @@ flowchart TD
   hang under and fields missing from the frame key; both fixed here, with tests.
 - `pnpm verify` before the push.
 
-Not verified: a real phone (phone tests P237 to P241), and Mail's inbox pages on the local portal
+Not verified: a real phone (phone tests P237 to P242), and Mail's inbox pages on the local portal
 (Mail was off there; they use the same `MailShell`).

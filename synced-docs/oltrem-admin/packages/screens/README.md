@@ -240,7 +240,7 @@ trips before a page's own first read; now a page waits for its slowest read.
   Each group has a colour (`hueOf`): its heading, its dot, and since 2026-11-15 each section's icon
   on a small tile of that colour (solid for the section on screen, whose row is tinted and bold,
   so it never rests on colour alone). The sidebar itself is tinted with the portal's colour
-  (`--ui-side`) and is 16 rem wide. Home's At a glance rows use the same colours.
+  (`--ui-side`) and is 16 rem wide, on a computer and as the phone's drawer. Home's At a glance rows use the same colours.
 - **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
   that name, at the first one's place, leading to the first tab and marked on any of them (`tabSet`
   and `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest

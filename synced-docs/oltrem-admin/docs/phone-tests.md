@@ -130,6 +130,7 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P52 | As an Owner: Look and colours, pick Forest and Grid, press Make it everyone's look; then sign in as another user | "saved for everyone"; the other user sees green and the grid without picking anything; their own pick still wins on their phone | [record](records/2026-11-03-look-2-step-3.md) |
 | P45 | Records → a list → a record → Remove the record | the notice in the corner says it was removed and has Undo; Undo brings the record back with its values; leave it and it stays removed | [record](records/2026-11-03-undo.md) |
 | P240 | Home, Users and Settings, press Menu; light and dark | The sidebar tinted with the portal's colour, each icon on a tile of its group's colour, the page on screen a solid tile and bold | [record](records/2026-11-15-one-sidebar-and-colour.md) |
+| P242 | Any page, press Menu | The drawer as narrow as the computer's sidebar, no wide blank strip beside the names; a long address ends in … | [record](records/2026-11-15-one-sidebar-and-colour.md) |
 
 ### Lists, saved views and bulk actions
 
