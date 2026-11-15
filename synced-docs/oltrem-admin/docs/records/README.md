@@ -221,4 +221,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Off pages, head menus](2026-11-14-switched-off-pages-and-head-menus.md) | P225-P226 |
 | [Backups](2026-11-14-backups-complete.md) | P227-P231 |
 | [Backup alerts, budgets at midnight](2026-11-15-backup-alerts-and-budgets-at-midnight.md) | P232-P233 |
-| [One sidebar, more colour](2026-11-15-one-sidebar-and-colour.md) | P237-P242 |
+| [One sidebar, more colour](2026-11-15-one-sidebar-and-colour.md) | P237-P245 |

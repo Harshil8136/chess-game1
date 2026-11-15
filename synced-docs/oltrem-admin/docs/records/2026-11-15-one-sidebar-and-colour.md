@@ -80,5 +80,20 @@ flowchart TD
   hang under and fields missing from the frame key; both fixed here, with tests.
 - `pnpm verify` before the push.
 
-Not verified: a real phone (phone tests P237 to P242), and Mail's inbox pages on the local portal
-(Mail was off there; they use the same `MailShell`).
+## Later the same day: Menu on Compose, a shorter Email menu
+
+The owner's phone review an hour after the push: the Compose page had no Menu at its top left,
+and Email's part of the sidebar was too long ("it shouldn't give all options").
+
+| Part | Now |
+|---|---|
+| Compose on a phone | The compose head, still the screen's only bar, opens with **Menu** (the portal's drawer, as every page) and ends with **Close** (back to the folder) instead of a Back arrow at its start. The draft is kept as it is typed. |
+| Email's menu | The everyday folders (Inbox, Starred, Snoozed, Sent, Drafts) and the labels stay in sight; **More** folds the rest: the other folders, the pages apart (Delivery log, Templates, Usage and limits), New label while there is no label, and the meters. It opens by itself when it holds the page on screen. The phone's drawer leaves Compose to the round button. |
+| Campaigns (Oltrem Mail) | A sent campaign with no delivery report back after ten minutes says the email service took the messages but the portal cannot tell whether they arrived, with Set up delivery reports. The live portal's campaign had four messages taken by its provider and no report has ever come back to that portal. |
+
+Checked at 390 px with Mail on: Email's drawer is six rows (five folders and More) instead of
+fourteen; Menu on Compose opens the drawer at Email; no page errors. Tests in `mail.test.tsx`
+(the head's Menu and Close, More folding the rest, New label inside it) and Oltrem Mail's
+`unheard.test.ts`.
+
+Not verified: a real phone (phone tests P237 to P245).
