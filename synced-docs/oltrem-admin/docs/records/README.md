@@ -223,3 +223,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Backup alerts, budgets at midnight](2026-11-15-backup-alerts-and-budgets-at-midnight.md) | P232-P233 |
 | [One sidebar, more colour](2026-11-15-one-sidebar-and-colour.md) | P237-P245 |
 | [Campaigns as plain letters](2026-11-15-campaigns-as-letters.md) | Gmail's tab named on Check it; P246-P247 |
+| [First-request CPU](2026-11-15-cpu-first-request.md) | load-time warm-up; `pnpm cpu` fixed |

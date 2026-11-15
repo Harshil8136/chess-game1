@@ -309,6 +309,10 @@ trips before a page's own first read; now a page waits for its slowest read.
   the folders are icons too. Where the browser has no command buttons (`commandfor`: Safari before
   26.2, Samsung Internet, Firefox before 144) the script does what the button asks, and closes a
   `closedby="any"` dialog on a press outside it.
+- **The first page of a fresh copy** (2026-11-15): `createScreens` draws the frame once while
+  the Worker loads, into nothing (`warmFrame`), so the renderer, the frame, the sidebar and its
+  icons are compiled before the first request, whose CPU the Free plan counts; a fault there is
+  printed and the Worker starts as before ([record](../../docs/records/2026-11-15-cpu-first-request.md)).
 - **Colours in the account menu** (2026-11-08): six coloured dots (`DOTS`) above the theme icons
   post `palette` and `back` to `POST /do/look`, which keeps the pattern the cookie already holds.
   With the script, the new colours and a change of theme spread from the button pressed as a

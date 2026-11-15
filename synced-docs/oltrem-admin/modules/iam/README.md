@@ -445,7 +445,9 @@ const app = createApp<Env>({
 returns them with the startup hook and the module manifest. `iam.startup` runs once per isolate,
 on the first request past the door: it reads the registry's module marks and registers the
 capabilities of every mounted module whose declaration it has not seen (a new module, an upgrade,
-a pull of the kit that added a capability under the same version):
+a pull of the kit that added a capability under the same version). The marks of the mounted
+modules are worked out while the Worker loads (`iam.startup.prepare`, run by `createApp`), not in
+the first request:
 the new ones join every Owner role, each tenant's policy version moves so the sessions recompile
 on their next request, and the index the check reads is replaced. A version already seen costs
 one read. A change to the capabilities under the same version is seen too: a copy whose

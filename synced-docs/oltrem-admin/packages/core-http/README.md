@@ -116,7 +116,9 @@ policy the handler set when it set one: a file served for download keeps its san
 hook, with the mounted modules: the IAM module's `startup` registers the capabilities they declare.
 Requests that arrive while it runs wait on the same run; when it fails, that request is answered
 with the error, reported as every 5xx is, and the next request runs it again. `/healthz` and a
-request without an identity never start it.
+request without an identity never start it. A hook may carry `prepare(modules)`, the part that
+reads nothing: `createApp` runs it once while the Worker loads, which the Free plan does not count
+against a request's CPU, and leaves a fault in it for the hook to meet on the first request.
 
 `session` and `authorize` are the two places the permission model plugs in. The session hook
 runs once per request after the identity is read and before the capability check; whatever it
