@@ -145,12 +145,27 @@ Given `budgets`, the module adds a job, a check and a key recipe (plan 10). On t
 | KV writes today | 1,000 | 70% | from 90% |
 | Queue operations today | 10,000 | 70% | from 90% |
 | Worker requests today | 100,000 | 70% | from 90% |
-| Worker CPU time per request, 95th percentile today | 10 ms | 70% | never: no job spends it |
+| Worker CPU time of a typical request today (median) | 10 ms | 70% | never: no job spends it |
+| Worker CPU time per request, 95th percentile today | shown, not judged | never | never |
+| Requests Cloudflare stopped today for going over a limit | 10 | the first one | never |
+
+**CPU time is judged by what Cloudflare does with it** (2026-11-15). Cloudflare's limits page says
+an isolate has some flexibility for a Worker that runs over the 10 ms now and then, and that one
+which hits the limit consistently is stopped. A portal has little traffic, so its slowest
+requests are the first ones of a fresh copy of the Worker, which run several times over a warm
+one's time (measured on this computer: Home 56 ms cold, 8 ms warm); a live portal failed this
+check at 434% for days with nothing stopped. So the typical request (`workers.cpu_p50`) is held
+to the 10 ms, the requests Cloudflare stopped (`workers.stopped`: the invocations whose status
+begins `exceeded`, for CPU time or memory) warn from the first and fail from nine, and the 95th
+percentile (`informs` on its definition) keeps its row with the figure alone and a note when it
+is over, so a rise is still seen. `health.budgets` says a stopped request in words: "Cloudflare
+stopped 3 requests today for going over a limit (CPU time or memory)".
 
 - **`health.measure`**, every fifteen minutes, runs before `health.run`. The size is the one D1
   reports after any query. Everything else comes from one call to Cloudflare's GraphQL Analytics
   API with `KIT_OPS_TOKEN`: the account's totals since midnight UTC, which are the client's, since
-  each client has its own account. One batch writes a row per budget; a budget it cannot measure
+  each client has its own account (the invocations asked for twice in that one call: whole, and
+  split by how each ended). One batch writes a row per budget; a budget it cannot measure
   keeps its last figure and records why (the token or the account not set, the call's error,
   never the token). A key Cloudflare cannot read or does not know (a 401, or Cloudflare's codes
   6003, 6111, 9106, 9109, 10000 or 10001, which come on a 400 as often) is named with its fix:

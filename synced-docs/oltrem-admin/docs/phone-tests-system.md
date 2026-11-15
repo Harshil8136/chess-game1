@@ -27,3 +27,5 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-15; the 
 | P231 | Backups: untick both, Back up now | Refused: Tick Database, Files or both | [record](records/2026-11-14-backups-complete.md) |
 | P232 | System status between 00:00 and 01:00 UTC (7 to 8 PM in Toronto) | Each daily budget's note says a new day began and its first figure comes within the hour; State OK; no Needs a look for the budgets | [record](records/2026-11-15-backup-alerts-and-budgets-at-midnight.md) |
 | P233 | Backups: Back up now with Database ticked, then Alerts once it ends ok | The "Error in flow backup.export" alert is resolved (the other backup alert closes itself after a day) | [record](records/2026-11-15-backup-alerts-and-budgets-at-midnight.md) |
+| P248 | System status on the live portal | Requests Cloudflare stopped today reads 0, and neither CPU row makes State Failing | [record](records/2026-11-15-review-team-cpu-and-first-run.md) |
+| P250 | System status: Worker CPU time per request, 95th percentile | Its figure alone, with a note about the first requests after a quiet spell | [record](records/2026-11-15-review-team-cpu-and-first-run.md) |
