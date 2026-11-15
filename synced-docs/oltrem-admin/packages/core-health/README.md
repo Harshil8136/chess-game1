@@ -157,7 +157,12 @@ Given `budgets`, the module adds a job, a check and a key recipe (plan 10). On t
   make a new token with Account Analytics Read and set it as `KIT_OPS_TOKEN` (2026-11-12).
 - **`health.budgets`**, lane `budget`, fails when a budget is at or past 90% of its limit and
   warns from its warning line, or when a figure is missing or could not be refreshed. A daily
-  figure counts only on the UTC day it was taken, since the limits reset at midnight UTC. The
+  figure counts only on the UTC day it was taken, since the limits reset at midnight UTC. A
+  budget measured without a problem late the day before, under 75 minutes ago
+  (`NEW_PERIOD_GRACE_MS`: the measure's idle hour and a tick), is not a warning while it waits for
+  the day's first figure: its `note` says so (2026-11-15: a report taken at 00:16 UTC warned of
+  every daily budget, with the measure due at 00:41). Missing past that, it warns again: the
+  measure has stopped. A measure that failed keeps its problem and warns at once. The
   message names each budget past its line with its figure, then each problem once with the
   budgets it left unmeasured.
 - **`pause`**, for the scheduler: while a budget the jobs spend is at or past 90%, every job but

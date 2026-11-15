@@ -14,7 +14,8 @@ sources: [the records under docs/records/ from 2026-10-21 to 2026-11-03, their "
 > and it moves to "Passed" with the date; when it fails, say what you saw and it becomes a fix.
 > Each line links the record that owes it. A new change adds its line here in the same commit
 > (an Email or Mail page's line in [their own list](phone-tests-email.md), a Users or access
-> page's in [theirs](phone-tests-users.md)).
+> page's in [theirs](phone-tests-users.md), a backup or System status line in
+> [theirs](phone-tests-system.md)).
 
 **How to run them.** Use one portal you can sign in to (your local start page, or the sandbox
 once it exists). Open each page on the phone, in both light and dark if you have time. A test
@@ -63,7 +64,6 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P198 | Home, At a glance | One lined-up list, what needs a look first; a tap opens the page | [record](records/2026-11-14-home-makeover-and-header-bell.md) |
 | P199 | Backups, then Audit log | Switches under the title; a flip saves at once and says Switched | [record](records/2026-11-14-quiet-off-and-switches.md) |
 | P200 | System status: press Turn off beside a warning | The warning goes; its alert closes within minutes | [record](records/2026-11-14-quiet-off-and-switches.md) |
-| P201 | Nightly backup off, then Home | Last backup reads Off, last, not counted; Get started has Hide | [record](records/2026-11-14-quiet-off-and-switches.md) |
 | P202 | Open a page on a slow connection | An orb of dots in a chip at the top, no line | [record](records/2026-11-14-loading-orb-and-status-list.md) |
 | P203 | Press Save on a setting | The orb turns inside the button until the answer | [record](records/2026-11-14-loading-orb-and-status-list.md) |
 | P204 | System status | Only problems listed, buttons on their row; "N checks pass" opens the rest | [record](records/2026-11-14-loading-orb-and-status-list.md) |
@@ -77,11 +77,6 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P212 | System status, Settings | Tabs with icons; each section heading with a colour mark | [record](records/2026-11-14-page-heads-on-a-band.md) |
 | P225 | Bulk mail off in Modules; a list with contacts: Send email, then Switch on Bulk mail | "This page is part of Bulk mail"; the press opens New campaign to that list, saying Switched on | [record](records/2026-11-14-switched-off-pages-and-head-menus.md) |
 | P226 | A list's ⋮ (with Bulk mail on and off); then Edit name and description | The menu rises from the foot each time; the edit window opens | [record](records/2026-11-14-switched-off-pages-and-head-menus.md) |
-| P227 | Nightly backup off, no copy yet: Home | Get started says Switch on backups, opening Backups; no Make it now, no drill step | [record](records/2026-11-14-backups-complete.md) |
-| P228 | Backups | Database and Files as ticked rows, one Back up now; anything missing listed with its fix | [record](records/2026-11-14-backups-complete.md) |
-| P229 | Backups: Database ticked, Back up now | Steps tick themselves every 5 s; the run ends "checksum matches what was sent" | [record](records/2026-11-14-backups-complete.md) |
-| P230 | Backups: tick Files, Back up now, twice | "Copying files: N checked"; the second run copies only new files | [record](records/2026-11-14-backups-complete.md) |
-| P231 | Backups: untick both, Back up now | Refused: Tick Database, Files or both | [record](records/2026-11-14-backups-complete.md) |
 | P149 | After the deploy, move between Home, Users, Settings, Email and back, a few times | Each page opens sooner than before; the bell still shows its number and every tab is there | [record](records/2026-11-12-quiet-portal.md) |
 | P132 | On the live portal, once the fleet has updated it (no deploy needed): Look and colours, tap a palette; the account menu, tap a colour dot; then a theme icon, and close and open the sidebar | The colours change at once and stay after a reload; no "Not signed in" (KIT-E-0401) page | [record](records/2026-11-12-screen-actions-behind-the-door.md) |
 | P130 | Home, then leave it open a minute while an email goes out or a task changes | A figure that changes glides to its new number instead of jumping | [record](records/2026-11-11-portal-name-icon-font.md) |
@@ -132,7 +127,6 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 | P50 | Bookings, Notifications, Tasks with nothing in them | the same dashed box on each, never a box inside a box | [record](records/2026-11-03-look-2-step-3.md) |
 | P51 | Settings on a computer, then on the phone | on the computer each setting's name and words on the left, its box and Save on the right; on the phone one under the other | [record](records/2026-11-03-look-2-step-3.md) |
 | P54 | Home on a new portal, as the Owner: tap Connect an email service | the one-step email setup opens straight away, not the list of integrations | [record](records/2026-11-03-easier-setup.md) |
-| P55 | Home on a portal whose backups are set up but have no copy yet: press Make it now | "Started" at the bottom right; within minutes Backups lists the copy and the step is ticked (left alone, it starts by itself within a quarter of an hour) | [record](records/2026-11-03-easier-setup.md) |
 | P52 | As an Owner: Look and colours, pick Forest and Grid, press Make it everyone's look; then sign in as another user | "saved for everyone"; the other user sees green and the grid without picking anything; their own pick still wins on their phone | [record](records/2026-11-03-look-2-step-3.md) |
 | P45 | Records → a list → a record → Remove the record | the notice in the corner says it was removed and has Undo; Undo brings the record back with its values; leave it and it stays removed | [record](records/2026-11-03-undo.md) |
 
@@ -149,7 +143,6 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 | # | Open | You should see | From |
 |---|---|---|---|
-| P150 | Settings, Modules, as the Vendor: switch **Nightly backup**, **Restore drill reminder** and **Daily seal** off and save | Saved; System status lists no backup or seal checks and no backup alert comes back; "Make a copy now" still works | [record](records/2026-11-12-quiet-portal.md) |
 | P151 | Developer, Jobs, a day after the deploy | Jobs with nothing to do (alerts, webhooks, automations, usage) show a next run hours away, not minutes; **Run now** on one still runs it within a minute | [record](records/2026-11-12-quiet-portal.md) |
 | P8 | Settings, then the Modules page | each module a tile with its switch; the extras (daily audit seal, reminders, Get started) as smaller switches inside their tile | [record](records/2026-11-03-optional-extras.md) |
 | P9 | Settings, switch Get started off and save | Home without the card; on again, it is back | [record](records/2026-11-03-get-started.md) |
@@ -159,6 +152,11 @@ sideways scroll of the whole page (a row of chips scrolling sideways is meant to
 
 Owed in their own list, [Phone tests owed: Users and access](phone-tests-users.md), split on
 2026-11-14 like the Email list.
+
+### Backups and System status
+
+Owed in their own list, [Phone tests owed: Backups and System status](phone-tests-system.md),
+split on 2026-11-15 like the Email list.
 
 ### Alerts, audit and errors
 

@@ -47,7 +47,10 @@ error with its stack and hands it to `reportError` under `waitUntil` from `cloud
 Errors are emailed like any warning (once, then counted) and listed on the Alerts page. No check
 passes to close an error, so the release job resolves one not seen again for a day (2026-11-12:
 a live portal had kept 274 open for a week after its email service's key was fixed); seen again,
-it opens anew.
+it opens anew. A part that knows when it works again closes its errors at once with
+`resolveErrors(env, area)`, the area as `reportError` was given it: every open error of exactly
+that area (its key built as `reportError` builds it), never one of a longer area that starts the same (2026-11-15: a good backup copy closes
+the alerts its failed runs opened).
 
 ## What becomes of the email
 
