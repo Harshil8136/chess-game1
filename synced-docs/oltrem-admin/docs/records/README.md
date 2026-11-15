@@ -19,15 +19,15 @@ The records, each dated and frozen once written, with its decisions and how it w
 |---|---|
 | [Phase 0: the repository basics](2026-10-19-phase-0-repository-basics.md) | what the first commit set up, why |
 | [Phase 1: the toolchain and the configuration layers](2026-10-19-phase-1-toolchain-and-core-config.md) | what the toolchain and the first core package are |
-| [The licence change](2026-10-20-licence-change.md) | why Apache-2.0 was replaced by the Oltrem Licence, the terms chosen, and what still needs a lawyer |
+| [The licence change](2026-10-20-licence-change.md) | why the Oltrem Licence, and what needs a lawyer |
 | [Phase 1: the command-line tool](2026-10-20-cli-manifest-check-and-doctor.md) | what the manifest check and the doctor are |
 | [Phase 1: the core runtime](2026-10-20-core-runtime-packages.md) | what the five runtime packages are |
 | [Phase 1: the design kit](2026-10-20-core-ui-tokens-and-primitives.md) | what the theme and the primitives are |
-| [Phase 1: the client template and the setup command](2026-10-20-client-template-and-setup.md) | what the template and the migration and setup commands are |
-| [Phase 1: the three widgets](2026-10-20-core-ui-widgets.md) | what the combobox, the menu and the date range are |
+| [Phase 1: the client template and the setup command](2026-10-20-client-template-and-setup.md) | the template, migration and setup commands |
+| [Phase 1: the three widgets](2026-10-20-core-ui-widgets.md) | combobox, menu, date range |
 | [Phase 1: the generated reference](2026-10-20-cli-docs-command.md) | what `oltrem docs` writes in a client repository |
-| [Phase 1: the two check commands](2026-10-20-cli-check-commands.md) | what `oltrem check agents` and `check tokens` refuse in a client repository |
-| [Phase 2: the permission model and the check](2026-10-20-iam-model-and-check.md) | what the IAM module's tables, registry, compiler and check are |
+| [Phase 1: the two check commands](2026-10-20-cli-check-commands.md) | `check agents` and `check tokens` |
+| [Phase 2: the permission model and the check](2026-10-20-iam-model-and-check.md) | IAM tables, registry, compiler, check |
 | [Phase 2: sessions and the authorizer](2026-10-20-iam-sessions-and-authorizer.md) | how the compiled map travels in one KV record per person, the pipeline's session hook and authorizer |
 | [Phase 2: governance](2026-10-20-iam-governance.md) | who may change access, and the second person |
 | [Phase 2: the Vendor and the handover](2026-10-20-iam-vendor-and-handover.md) | the one company, its first Owner, the handover |
@@ -219,3 +219,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Users list, sessions, blocking, Owner overrides](2026-11-14-users-sessions-blocking-owner-overrides.md) | P213-P219 |
 | [Lists made plain, no blank fields](2026-11-14-lists-add-contacts.md) | Mail 7d8f1ff, file preview; P220-P224 |
 | [Off pages, head menus](2026-11-14-switched-off-pages-and-head-menus.md) | P225-P226 |
+| [Backups](2026-11-14-backups-complete.md) | P227-P231 |

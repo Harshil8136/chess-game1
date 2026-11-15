@@ -783,6 +783,7 @@ client's database:
 |---|---|
 | The newest copy | read from `backup_runs` in the database `wrangler.jsonc` declares: the newest export that finished ok |
 | Download and open | `wrangler r2 object get` from the one bucket into a private temporary folder, then `age -d` with the key; each size must be the one the run recorded |
+| Prepare | a copy in the SQLite tool's format (the export of a database with a search index, since 2026-11-14) is made loadable first: its transaction, its writes straight into the schema and the tables the index keeps itself in are left out, and each virtual table is made again from its `CREATE VIRTUAL TABLE` line at the end, empty, and the steps say which; a copy in D1's own format loads as it is |
 | Read the copy | its tables and the rows it inserts into each; the migrations table and `backup_runs` must be there, or it is not this client's database |
 | Load | a scratch database, `<database>-drill-<date>-<time>`, made with `wrangler d1 create` and loaded with `wrangler d1 execute --file` |
 | Check | every table of the copy has exactly its rows in the scratch database |
@@ -994,5 +995,6 @@ as its `manifest` gate. The tool is typed against Node (`tsconfig.json` here ext
 `test/fixtures/client-ok/` that has exactly one of each resource, with fake installed kit
 packages for the migration commands and a fake wrangler for `migrations apply`. The drill's
 tests run wrangler's D1 commands against SQLite databases in memory (Node's own `node:sqlite`)
-and a copy written in the format `wrangler d1 export` writes; the run report's tests run its D1
+and a copy written in the format `wrangler d1 export` writes, and in the SQLite tool's format
+with an FTS5 table; the run report's tests run its D1
 command against the GitHub module's real migration the same way.
