@@ -226,7 +226,7 @@ trips before a page's own first read; now a page waits for its slowest read.
   a dialog. A press posts to `/do/bulk`, which calls `POST /api/<module>/bulk/<action>` once and
   returns to the list with `?bulk=<module>.<action>.<done>.<refused>`; the list shows how many
   were done and how many refused, in the kit's own words, never words from the address.
-- **The sidebar**, from 1024 px wide, down the left edge in the page's own colour with one line
+- **The sidebar**, from 1024 px wide, down the left edge in a tint of the portal's colour with one line
   beside it. From the top: an arrow that closes it, the portal's mark, a search box (a plain form
   to `/search`, `Ctrl K`, `⌘K` or "/" from anywhere; with the frame script, since 2026-11-13, it
   lists the pages that match as you type, from the sidebar's `template[data-go]` (`GoList`: every
@@ -237,9 +237,10 @@ trips before a page's own first read; now a page waits for its slowest read.
 - **Groups**, in this order: Work, Company, Users & access, Messages, System (since 2026-10-29, the owner's ask:
   few entries, sub-pages as tabs). A module's page joins its group wherever the module
   is listed; a group the kit does not know sits before System (`groupRank` in `src/layout.tsx`).
-  Each group has a colour (`hueOf`): its dot, its icons, and the tint and edge marker of the
-  section on screen, which is also bold, so it never rests on colour alone. Home's At a glance
-  rows use the same colours.
+  Each group has a colour (`hueOf`): its heading, its dot, and since 2026-11-15 each section's icon
+  on a small tile of that colour (solid for the section on screen, whose row is tinted and bold,
+  so it never rests on colour alone). The sidebar itself is tinted with the portal's colour
+  (`--ui-side`) and is 16 rem wide. Home's At a glance rows use the same colours.
 - **Tabs.** Sections that name the same `tabs` (`PageNav.tabs`) fold into one sidebar entry under
   that name, at the first one's place, leading to the first tab and marked on any of them (`tabSet`
   and `sideEntries` in `src/layout.tsx`). The section labelled as the set is the first tab, the rest
@@ -294,16 +295,20 @@ trips before a page's own first read; now a page waits for its slowest read.
   screen. The page's own head names where you are under the bar, so a head marked `data-bar`
   keeps its heading and actions and drops only its icon and line. The document names the phone
   browser's bar colour (light, dark, or both for the device's own).
-- **Menu opens where you are** (2026-11-13, the owner: Email's sidebar and options could not be
-  reached on a phone). A page that is one of a set of tabs carries a section menu
-  (`SectionMenu`, `#section-menu`, a popover inside the page): every page of its sidebar group,
-  set by set, the page on screen marked, and **All sections** (core-ui's `AllSections`) at its
-  head. The script opens the page's `data-section-menu` from Menu (Email's folders first, see
-  core-ui's `MailShell`, which take in the section menu's other sets from the script), and All
-  sections closes it and opens the portal's menu; the portal's menu opens scrolled to the page on
-  screen. Where the browser has no command buttons (`commandfor`: Safari before 26.2, Samsung
-  Internet, Firefox before 144) the script does what the button asks, and closes a
-  `closedby="any"` dialog on a press outside it. Without the script Menu opens the portal's menu.
+- **One sidebar, everywhere** (2026-11-15, the owner: "the double sidebar is not something I am
+  a fan of ... sidebar should be universal"). A page with a menu of its own
+  (Email's folders, from core-ui's `MailShell`) puts it in the sidebar, under its own row, on a
+  computer and in the phone's drawer alike: there is no second pane beside the sidebar and no
+  phone section menu. `Frame` renders the page head and content first inside core-ui's
+  `SideMenu` context; `MailShell` leaves its folders in that slot (`SideMenuData`) instead of
+  drawing them, and `SideNav` draws them with `SideMenuList` under the marked row (the row is
+  `aria-current="true"`, the folder on screen `"page"`). The folders, their counts and the meters
+  are part of the frame's key, so a change sends the sidebar again. Menu on a phone, and Email's
+  folder button over its list, both open the portal's drawer, scrolled so the page on screen is in
+  view; on a computer the script scrolls the sidebar so the nested menu shows. On the closed rail
+  the folders are icons too. Where the browser has no command buttons (`commandfor`: Safari before
+  26.2, Samsung Internet, Firefox before 144) the script does what the button asks, and closes a
+  `closedby="any"` dialog on a press outside it.
 - **Colours in the account menu** (2026-11-08): six coloured dots (`DOTS`) above the theme icons
   post `palette` and `back` to `POST /do/look`, which keeps the pattern the cookie already holds.
   With the script, the new colours and a change of theme spread from the button pressed as a
@@ -369,11 +374,12 @@ those controls start `hidden` with `data-enhance` and appear with the script. A 
 element its `aria-describedby` names while it is off and one of them is on.
 
 **The page alone.** Each page carries a key of its frame (`data-frame`: the portal's name and
-icon, the person, the sidebar's rows, the unread count). The script sends it as `x-ui-frame` on
+icon, the person, the sidebar's rows, the unread count, a page's own menu in the sidebar). The script sends it as `x-ui-frame` on
 every page it fetches; when the server's key for the new page is the same, the answer is only
 `<div class="ui-frame" data-here="…"><main>…</main></div>`, 40 to 80 percent smaller and 1 to
 2.5 ms less CPU (2026-11-11, [the record](../../docs/records/2026-11-11-portal-name-icon-font.md)),
-and `data-here` names the sidebar row to mark. A page whose key differs is opened whole.
+and `data-here` names the sidebar row to mark (`data-here-as="true"` when the row holds the
+page's own menu). A page whose key differs is opened whole.
 
 **Live blocks.** A block marked `data-live="name"` with `data-refresh="seconds"` (at least five)
 is kept up to date: the script fetches the page again, or the lighter page `data-refresh-from`
