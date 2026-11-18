@@ -324,6 +324,18 @@ changes a minute per person); [SECURITY.md](../security/SECURITY.md) §6a holds 
   a few questions a minute however many people watch. A recording played asks for its list once
   and then a run at a time, the runs growing to 20 blocks and only up to three minutes ahead, well
   inside PostHog's 240 a minute and 1,200 an hour for recordings.
+- **Shown at once while a new answer is asked for (2026-11-18).** The Overview, its board and
+  the product checks are kept a day when the answer is whole (the board answered; the month's
+  numbers answered and the billing answered or needs a setting or plan only its owner can change;
+  every check answered). Past their ten minutes (an hour for the checks), such a copy is answered
+  at once with `stale: true` while the Worker asks PostHog again behind it (`waitUntil`) and keeps
+  the new answer only when it is whole too; the page asks again quietly 12 seconds later, at most
+  twice, without dimming what it shows (`kept` in `cache.ts`, `STALE_RECHECK_MS` in
+  `shared.tsx`). Before this, the board's two questions made every look after ten minutes wait 3
+  to 15 seconds (Sentry traces: p95 9.1 s, the slowest 14.7 s over 14 days). An Overview whose
+  billing needs a paid plan or a permission is now kept its ten minutes too, instead of asked again
+  every 20 seconds (`settled` in `overview.ts`). Right now, the lists and one recording or error
+  are never shown stale.
 - **CPU.** The Worker only checks values, builds the question text and reshapes at most 501 rows;
   the counting is PostHog's. A recording's blocks are passed from PostHog to the browser
   untouched, their encoding kept, so the Worker never unpacks or reads them; the browser unpacks
@@ -399,6 +411,7 @@ legend or table for every chart, and the player's library loaded only on Play.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-18 | §5's copies against `src/lib/posthog/cache.ts` (`kept`, `STALE_KEEP`), `board.ts`, `overview.ts` (`settled`), `src/pages/api/posthog/[part].ts` and `src/components/dashboard/posthog/shared.tsx` (`useRead`); the times quoted read live through the Sentry connector (`/api/posthog/overview` over 14 days: 960 requests, p50 143 ms, p95 9,064 ms) and PostHog's `query_log` through the PostHog connector (board p95 6.3 s and 26 million rows a look, paths p95 3.4 s); `test/posthog.test.ts` passes | The page in a phone browser; the board's own question, still one breakdown per list (MAINTENANCE LS-2); `last_verified` left as it was |
 | 2026-11-18 | §4's Overview row: the billing address in `src/lib/posthog/overview.ts` moved to `/api/billing/?organization_id=`, after the old one answered 404 in the Worker's logs; PostHog's API docs name the new one, with the same answer shape. A 402 (the Activity log check on the free plan) is now a setup answer in `refusal` (`src/lib/posthog/client.ts`), so the key check is kept an hour instead of re-asked every 20 seconds; `test/posthog.test.ts` passes | The new billing answer from the portal's own key; the rest of the document; `last_verified` left as it was |
 | 2026-11-03 | §3's loading paragraph against `src/components/dashboard/posthog/shared.tsx` (`useAddress`, `AddressProvider`), `frame.tsx` (`Loading`, `Pending`), the parts' call sites and `src/styles/pages/posthog.css`; `test/loading-screens-look.test.ts` and `test/posthog-lab-look.test.ts` pass | The rest of the document; the parts in a phone browser; `last_verified` left as it was |
 | 2026-10-30 | The other parts in plain words: §3's Recordings, Errors and Events and people, §4's Events and people row and §7's lab test, against the files in `related_code`; the states' meanings against PostHog's "Manage and resolve issues" page (through the PostHog connector's documentation search); the visitor totals question run live (counts only); `test/posthog.test.ts` and `test/posthog-lab.test.ts` pass | The parts in a phone browser; the rest of the document |

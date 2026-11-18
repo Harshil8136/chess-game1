@@ -152,12 +152,21 @@ side (below).
   reason a retry can fix, says so in a line under the heading and reads the part again with
   `retry=1` after 8 seconds, at most twice (`RETRY_MS`, `RETRIES` in `Analytics.tsx`). Pressing
   Try again starts the count over.
-- **Kept ten minutes.** Each answer is stored in the Worker's edge cache (the Cache API,
-  `caches.default`, no binding) for 600 seconds, keyed by part, range and time zone
-  (`https://analytics.cache.invalid/v2/…`); one with a failed source is kept only 60 seconds so
-  the next look retries. The copy holds counts, page addresses and link addresses only.
-  `fresh=1` (the Refresh button) skips it; `retry=1` skips only a kept answer in which a source
-  failed for a reason a retry can fix, so it needs no permission of its own.
+- **Fresh ten minutes, shown at once for a day (2026-11-18).** Each answer is stored in the
+  Worker's edge cache (the Cache API, `caches.default`, no binding), keyed by part, range and time
+  zone (`https://analytics.cache.invalid/v2/…`), with the time it stays fresh in an
+  `X-Fresh-Until` header: 600 seconds (`CACHE_SECONDS`). After that, for up to a day
+  (`STALE_SECONDS`), a copy in which every source answered is still answered at once, marked
+  `stale`, while the Worker reads the sources again behind it (`waitUntil`) and keeps the new
+  copy only if every source answered again, so a slow or failing source never replaces good
+  numbers. The page then asks again quietly 12 seconds later, at most twice (`STALE_RECHECK_MS`,
+  `STALE_RECHECKS` in `Analytics.tsx`), without dimming the board; the new numbers count on in
+  place and "Where these numbers come from" says newer numbers are on their way. Before this,
+  every look after ten minutes waited for the sources, which took 3 to 15 seconds and with the
+  retries up to about a minute. One with a failed source is kept only 60 seconds and never shown
+  stale, so the next look retries. The copy holds counts, page addresses and link addresses
+  only. `fresh=1` (the Refresh button) skips it; `retry=1` skips only a kept answer in which a
+  source failed for a reason a retry can fix, so it needs no permission of its own.
 - **Download.** `?format=csv` answers the same part as a spreadsheet file: header rows, the
   figures with the period before, the sentences, the day-by-day lines and every card (rings with
   their shares, columns with one row per label, reading with the scroll share, time and views).
@@ -169,23 +178,34 @@ side (below).
 - **The summary's parts, side by side (2026-11-03).** Inside its one request the summary's
   questions waited six at a time: 5 s at the middle and 14 s at the slowest over 50 requests in
   October (Sentry traces), while a part asked alone answered in 12 to 32 ms at the middle from its
-  copy. So the page first asks for every part the person may open, one request each, at the same
-  time, and then the summary, which reads the copies they leave (`warmParts` and `shouldWarm` in
-  `Analytics.tsx`). Not again within nine minutes in the same tab for the same range and zone
-  (`WARM_MS`, kept in `sessionStorage`); Refresh now asks the parts with `fresh=1` and then the
-  summary from their copies, unless a part did not answer; a retry asks the summary alone. The
+  copy. So on Refresh now the page first asks for every part the person may open with `fresh=1`,
+  one request each, at the same time, and then the summary, which reads the copies they leave,
+  unless a part did not answer (`warmParts` and `shouldWarm` in `Analytics.tsx`); a retry asks
+  the summary alone. An ordinary look asks the summary straight away and gets the parts' copies,
+  fresh or stale, at once (checked against the code 2026-11-18: `warmParts` runs only with
+  `fresh`, so `WARM_MS` changes nothing today; MAINTENANCE (private) LS-4). The
   page reads only whether each part answered, and every request checks its own keys
   ([loading screens](../specs/2026-11-03-loading-screens.md) §3).
 - **On screen while it loads.** The header and the range are drawn at once (the range and
-  Download held hidden in their places until the browser knows the range), grey cards stand in
-  for the board after a quarter of a second, the cards are packed before the first paint, and a
+  Download held hidden in their places until the browser knows the range), a placeholder in the
+  board's own shape stands in after a quarter of a second (since 2026-11-18 the strip of figures,
+  the line and what stands out as wide as the board draws them, then cards of grey bars, the way
+  the PostHog and Sentry pages draw theirs; it was four plain glass blocks with a light sweeping
+  across), the cards are packed before the first paint, and a
   new answer changes the board in place: the numbers count on from the old ones and nothing rises
   in again (2026-11-03).
 - **Nothing a person typed reaches a query.** The range is one of three values, the time zone is
   checked by `safeTimeZone` (no quote or space) and times are built from dates.
 
 The HogQL queries are in `queries.ts`: each part is one call, a `UNION ALL` of small breakdowns
-with the same six columns, every number cast to `Float`. The booking funnel uses PostHog's
+with the same six columns, every number cast to `Float`. Visitors and Speed and experience read
+their events once (2026-11-18): each event becomes the (breakdown, label) rows it counts in
+(`ARRAY JOIN`), and each list is cut after it is counted (`row_number()`, `VISITOR_TOPS`,
+`EXPERIENCE_TOPS`). Asked as one breakdown per list, Visitors read about 26 million rows in
+PostHog for under 200 page views and took 3 to 15 seconds, often past its time limit; its one pass
+reads about 2 million, and with how far people read and who came back (other events and another
+period, still breakdowns of their own) about 10 million (PostHog's `query_log`, read through the
+PostHog connector on 2026-11-18, with the same numbers as before). The booking funnel uses PostHog's
 `windowFunnel` over a week; a returning visitor is one seen in the 365 days before the period
 (`RETURN_LOOKBACK_DAYS`). Supabase reads use the service-role client with a 4-second timeout and
 select no names, emails or phone numbers; the email ledger is read for its source, kind, status,
@@ -258,6 +278,7 @@ Visitors, and the place split on Google search.
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-18 | §2's caching, retry, loading and summary bullets and the queries paragraph against `load.ts`, `queries.ts`, `Analytics.tsx` and `src/pages/api/analytics/[part].ts`. Live through the PostHog connector: `query_log` for the portal's questions over 7 days (Visitors p50 6.4 s, p95 12.3 s, 5 of 18 past PostHog's time limit; Speed p95 7.5 s; Booking journey p95 6.5 s); the old and new Visitors and Speed questions run on the same 30 days give the same numbers (only the order of ties at a list's last place differs), Visitors 25.9 million rows and 1.8 GB of memory before, 2.0 million rows and 137 MB for the one pass; through the Sentry connector `/api/analytics/summary` p50 1.7 s and p95 7.6 s over 14 days. `test/analytics.test.ts` and `test/loading-screens-look.test.ts` pass | The page in a phone browser; PostHog's timings for the new questions under load (only quiet-hour runs); `last_verified` left as it was (only §2 re-checked) |
 | 2026-11-08 | `related_code` after `experience.ts` was renamed `experience-model.ts`: beside `Experience.tsx` the two names differ only in case, so on Windows `./Experience` resolved to the `.ts` file and broke typecheck and ESLint. Imports in `Experience.tsx` and `test/analytics-experience.test.ts` updated; `npm run typecheck` and the test pass | Every section's content; the page in a phone browser; `last_verified` left as it was |
 | 2026-11-03 | §2's summary-side-by-side and loading bullets against `Analytics.tsx`, `AnalyticsCharts.tsx` (`usePack`), `load.ts` and `src/pages/api/analytics/[part].ts`; the times quoted read live through the Sentry connector (`/api/analytics/summary` p50 4,990 ms and p95 13,931 ms over 50 requests, `visitors` p50 31 ms and p95 2,013 ms, `traffic` 32 ms, `search` 20 ms, `email` 12 ms, 30 days); `test/loading-screens.test.ts` and `test/loading-screens-look.test.ts` pass | The summary's time after the change (LS-1); the page in a phone browser; `last_verified` left as it was |
 | 2026-10-26 | Written with the code: every section against the files in `related_code`; the PostHog events and properties against the live project (PostHog connector), the D1 `gsc_index_log`, `booking_attempts` and `admin_pages` rows and the Supabase `bookings`, `booking_pets`, `contact_messages` and `consent_records` columns against the live databases (Cloudflare and Supabase connectors); `test/analytics.test.ts` passes | The portal's PostHog key's Query: Read scope, the Cloudflare `httpRequests1dGroups` answer for this zone and Search Console's search analytics for the service account: none can be called with the portal's own keys from here |
