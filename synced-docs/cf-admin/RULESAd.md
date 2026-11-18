@@ -361,7 +361,7 @@ model without structural changes before it's written, not after.
 |----------|-------|
 | **Name** | cf-admin (Madagascar Pet Hotel — Admin Portal) |
 | **Purpose** | Cloudflare-native admin portal equivalent to admin-app |
-| **Framework** | Astro **7.3.2** with `@astrojs/cloudflare` **14.3.1** and `@astrojs/preact` **6.0.5** (resolved versions, 2026-09-18 — `package.json` is the machine-readable source; this row said 7.1.6/14.1.7/6.0.2) |
+| **Framework** | Astro **7.4.12** with `@astrojs/cloudflare` **14.3.1** and `@astrojs/preact` **6.0.5** (resolved versions; Astro moved from 7.3.2 on 2026-11-18 for three security advisories — `package.json` is the machine-readable source) |
 | **Rendering** | Full SSR (`output: 'server'`) — every route requires auth |
 | **UI Islands** | Preact (3KB, React-compatible) for interactive components |
 | **Hosting** | Cloudflare Workers |
@@ -503,7 +503,7 @@ bug — nothing compares them automatically (see the enforcement note below).
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `astro` | `7.3.2` | Framework (SSR, Workers adapter) |
+| `astro` | `7.4.12` | Framework (SSR, Workers adapter); 7.3.2 until 2026-11-18 |
 | `@astrojs/cloudflare` | `14.3.1` | Cloudflare adapter — binding access |
 | `@astrojs/preact` | `6.0.5` | Preact island integration |
 | `preact` | `10.29.7` | UI islands |

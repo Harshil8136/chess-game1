@@ -431,8 +431,10 @@ the same way around the checks already running and writes that first, compare-an
 Every run then runs the checks that are due, at most eight (the five-minute checks
 first, then the most overdue), and writes the row back by compare-and-swap, so a Test
 again pressed during the run keeps its results too. Each run moves a check's next due
-time on by whole intervals, so a check that waited a run keeps its place. On its first
-run after 03:00 UTC it also deletes check results older than 30 days.
+time on by whole intervals, so a check that waited a run keeps its place. Every run also
+deletes the check results that have turned 30 days old since the last run, a few rows (until
+2026-11-18 only the first run after 03:00 UTC did, about 700 rows at once, which overran the
+job's D1 budget: Sentry CF-ADMIN-2Z).
 
 It reports when the next check is due. With the five-minute checks that is always the
 next tick, which the dispatcher treats as "every tick" (§4a), so it never sleeps. It
@@ -1047,6 +1049,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-18 | claude | `health-checks` (Sentry CF-ADMIN-2Z: over its D1 budget on the 03:00 UTC run of 16, 17 and 18 November, the once-a-day clean-up of about 700 results): the clean-up now runs every run, measured by `test/jobs-budget.test.ts` (costliest run with ten results to delete: read 437, written 53, inside 612 and 57) and `test/health-checks-job.test.ts` | The health-checks paragraph of §3; `last_verified` left as it was |
 | 2026-11-14 | claude | `bot-flags` and `bot-weekly` (Cloudflare logs: a 404 from cf-vps on each try while the real bot's recorder is not installed): both rows read through the Cloudflare D1 connector (both `on` for the real bot, no state rows); the new app-list check in `src/workers/scheduled-bot-flags.ts` (`recordInstalled`) proved by `test/bot-flags-email.test.ts` and `test/bot-weekly-email.test.ts`; no D1 query added, so the budgets stand | §3g's and §3h's not-installed lines; `last_verified` left as it was |
 | 2026-11-07 | claude | `audit-seal` (Sentry CF-ADMIN-25, written 16 against 13 on 2026-11-05): live seals and the day counts read through the Cloudflare D1 connector (two windows a day since 2026-11-04, 8 rows written a seal from `admin_audit_log`'s indexes in `sqlite_master`); `WINDOW_LOOKAHEAD_ROWS` in `src/lib/audit-seal/seal.ts` pinned by `test/audit-seal.test.ts` (every window placed the same as from 501 rows); the budget in `budgets.ts` measured by `test/jobs-budget.test.ts` | §5's audit-seal paragraph; `last_verified` left as it was |
 | 2026-11-07 | claude | `lab-update` added: `src/workers/scheduled-lab-update.ts`, `src/lib/jobs/registry.ts` (its about), `tiers.ts`, `budgets.ts`; `test/lab-update.test.ts` passes | §3's count and tier table, §3i (new) and §4a's sleeping jobs; `last_verified` left as it was |

@@ -99,12 +99,13 @@ MAINTENANCE.md (private) GH-1.
 | "GitHub refused the token" | Expired or revoked | Create a new token and set it again |
 | A card: "GitHub did not return this repository: …" | Not in the token, renamed, deleted, or a permission is missing | Read GitHub's reason on the card; fix the token or `github_repos` |
 | A card: "Actions history unavailable" | That repository's Actions call failed | Refresh later |
-| "Showing what was read N ago" | GitHub failed; this is the last good read | Nothing; it tries again after 10 minutes, or tap Refresh after 1 minute. A failure is reported at most once an hour |
+| "Showing what was read N ago" | GitHub failed; this is the last good read | Nothing; it tries again after 10 minutes, or tap Refresh after 1 minute. A failure is reported at most once an hour, and a GitHub that did not answer only when the refresh before it failed too |
 
 ## Verification log
 
 | Date | Who | Checked | Not checked |
 |---|---|---|---|
+| 2026-11-18 | claude | The failure row of the states table against `cache.ts` (`refresh`, `afterFailure`): a lone timeout is no longer reported (Sentry CF-ADMIN-2P, two 8-second timeouts on 26 October and 9 November); `test/github-cache-report.test.ts` and `test/github-cache.test.ts` pass | The rest of the document; the live page |
 | 2026-10-17 | claude | "Who can open it", "How it reads GitHub" and the limits against `canViewGitHub`, `src/lib/github/config.ts` (`MAX_REPOS` 12, five defaults), `cache.ts` (`github:snapshot:v1`, 10 minutes fresh, kept 7 days), `snapshot.ts` (100 commits, 2,000-character notes) | No changes needed. The live token and page not checked |
 | 2026-10-10 | claude | **Scope-limited to "What it shows".** The page after its rebuild on the console kit: `github.astro`, `RepoCard.astro`, `ActivityBars.astro`, `LanguageBar.astro`, `Icon.astro` and `display.ts` read against this section; `test/github-display.test.ts` (every badge, the tiles, a card's facts, the links) and the existing `test/github-*.test.ts` pass | "How it reads GitHub" and "When something is wrong", unchanged and not re-read; the page in a phone browser, which Harshil tests after the deploy |
 | 2026-10-07 | claude | Unit and source-contract tests (`test/github-*.test.ts`, 99 cases), `astro check`, `npm run build` | Production render with the real token, CPU per view (recorded here once the token is set) |

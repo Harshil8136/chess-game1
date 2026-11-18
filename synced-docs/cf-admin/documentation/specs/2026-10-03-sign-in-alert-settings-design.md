@@ -1,6 +1,6 @@
 ---
 title: "Sign-in alert settings: pause, trusted areas, and a throttle on failures"
-status: active
+status: historical
 audience: [owner, technical, ai, operator]
 last_verified: 2026-10-03
 verified_against: [code, infra]

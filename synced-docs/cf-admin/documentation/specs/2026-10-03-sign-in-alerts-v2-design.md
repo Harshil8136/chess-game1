@@ -1,6 +1,6 @@
 ---
 title: "Sign-in alerts v2: one email per sign-in, a policy, and a record of every email"
-status: active
+status: historical
 audience: [owner, technical, ai, operator]
 last_verified: 2026-10-03
 verified_against: [code, infra]

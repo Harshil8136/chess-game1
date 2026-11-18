@@ -1,6 +1,6 @@
 ---
 title: "Access Center v2: one editor per person, and console features in the page registry"
-status: active
+status: historical
 audience: [owner, technical, ai, operator]
 last_verified: 2026-10-03
 verified_against: [code, infra]
