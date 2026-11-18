@@ -75,13 +75,21 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
 - `npm run verify` runs, in order: `typecheck` (Worker, Node tests, UI, agent, agent tests),
   `types:check` (`wrangler types --check`), `test` (unit and agent projects), `build`,
   `test:build` (the built output, including that no dev-only code remains), and `audit`
-  (`npm audit --audit-level=high`). Run it locally before every push.
+  (`scripts/audit-gate.mjs`: `npm audit --audit-level=high`, less the advisories listed in
+  `.audit-exceptions.json`). Run it locally before every push.
 - A new advisory turns `audit` red with no code change (it did on 2026-10-06), and then every
   push is refused until it is fixed. When the direct packages do not carry the fixed version
   yet, pin it under `overrides` in `package.json` and remove the pin once they do. Never lower
   the audit level, and never take `npm audit fix --force` when it offers a downgrade. Current
   pin: `sharp` 0.35.5, which miniflare (under wrangler and the Vite plugin) still holds at
   0.35.4 (GHSA-wq5f-xc86-pv6w).
+- When no fixed version exists at all, the owner may allow a dated exception: an entry in
+  `.audit-exceptions.json` naming the one advisory by its GHSA id, with evidence someone can
+  re-check and an expiry date. An expired entry turns `audit` red again, and a different
+  advisory is never excused (`test/audit-gate.test.ts`). Current exception: picomatch
+  GHSA-fc5q-39xc-vjpf until 2026-12-18 (owner's choice, 2026-11-18): a ReDoS through a crafted
+  glob pattern, reached here only by the build and test tools on this repository's own
+  patterns, and absent from `dist/`.
 - Bindings: the shared D1 database (`DB`), the VPC service binding to the server, the assets binding.
   The required secret `VPS_SIGNING_KEY` must exist or `wrangler deploy` is refused. The
   optional secret `CONSOLE_SIGNING_KEY` is not required, so a deploy never waits for it.

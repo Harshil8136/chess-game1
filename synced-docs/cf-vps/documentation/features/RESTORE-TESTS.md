@@ -206,7 +206,9 @@ unlocked size three times over, plus 512 MiB for PostgreSQL and the checker:
 corrected over time; there is no estimate before Start yet. A peak under the estimate passes (the
 safe side: the first real test peaked at 161 MiB against 527 MiB estimated); a peak above it is a
 warning, since the room check before Start would then let in a test the server cannot hold
-(`memoryEstimateCheck`).
+(`memoryEstimateCheck`). The peak is read from the container's cgroup only inside a job run (the
+agent sets `JOB_RUN`); the checker run anywhere else, as by the test suite on a build machine,
+reports no peak, since that machine's cgroup says nothing about the test (2026-11-18).
 
 ## The container
 
