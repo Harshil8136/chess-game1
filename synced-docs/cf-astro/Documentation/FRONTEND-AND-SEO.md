@@ -71,6 +71,13 @@ The frontend follows Astro's **island architecture** model to deliver near-zero 
 | `ArcoForm`            | `client:load`    | `/es/legal/arco/`, `/en/legal/arco/` (Turnstile)                 |
 | `FranchiseClient`     | `client:load`    | `/es/franchise/`, `/en/franchise/`                               |
 
+The gallery's photo viewer (`ImageLightbox`, inside `InfiniteGallery`) moves between photos with
+a view transition where the browser has one (`withViewTransition` in
+`src/components/ui/view-transition.ts`). A transition the browser skips, for example because a
+phone's toolbar changed the viewport mid-way, still shows the next photo; its rejected `ready`
+promise is handled there, so it no longer reaches Sentry as an unhandled rejection (CF-ASTRO-G,
+iPhone Safari, 2026-11-15; `test/view-transition.test.ts`).
+
 ### 2.2 Booking calendar: which days can be picked
 
 The wizard's calendar (`src/components/booking/DateRangePicker.tsx`) greys out a day for two
