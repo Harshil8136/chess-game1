@@ -138,7 +138,10 @@ as a stale canary (`heartbeat_list_answered`, 2026-10-23). Only a whole listing 
 answer: one that curl's 20-second limit cut short is tried once more and otherwise reported the
 same way, and its dates are never read (2026-10-30). It reports to a
 Sentry cron monitor, and sends a Sentry event only when the set of problems changes, with a
-reminder every 6 hours while it lasts.
+reminder every 6 hours while it lasts. An R2 listing problem (refused or unreachable) counts for
+that event only once the heartbeat before had it too, so one that R2 clears by the next run five
+minutes later is not sent (`heartbeat_settled`, 2026-11-18: on 2026-11-17 R2 refused twice, 3
+seconds apart, and the next run was clean).
 
 ## Who can read it
 
