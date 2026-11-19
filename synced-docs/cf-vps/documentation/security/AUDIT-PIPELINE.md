@@ -104,7 +104,7 @@ record and, for the leaving classes, in R2. The Sentry sink has a 256 MB disk bu
 the newest events when full. Every alert also appears on the console's Alerts page.
 
 Who is told (since 2026-11-19): Sentry's alert rule **Security alerts: email at once** emails
-the organisation's members on every event whose `alert` tag is `auth_failure`, `config_change`,
+the hotel's own Sentry account (the hotel's Gmail, the owner's choice) on every event whose `alert` tag is `auth_failure`, `config_change`,
 `audit_change`, `security`, `terminal_admin` or `log_purge`, at most once per issue every 10
 minutes. `integrity` is left out: AIDE moves its snapshot forward each night, so its summary is
 the day's normal change on a server that gets installs and updates most days (49 to 5,678
