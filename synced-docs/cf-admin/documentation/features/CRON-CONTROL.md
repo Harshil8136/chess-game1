@@ -6,7 +6,7 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/components/admin/cron/run-log.ts, src/components/admin/cron/DrawerOverview.tsx, src/components/admin/cron/DrawerHow.tsx, src/components/admin/cron/RunTrace.tsx, src/components/admin/cron/CheckResult.tsx, src/lib/jobs/run-steps.ts, src/lib/jobs/telemetry.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/workers/scheduled-lab-update.ts, src/lib/blog/publish-scheduled.ts]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobRow.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/components/admin/cron/run-log.ts, src/components/admin/cron/DrawerOverview.tsx, src/components/admin/cron/DrawerHow.tsx, src/components/admin/cron/RunTrace.tsx, src/components/admin/cron/CheckResult.tsx, src/lib/jobs/run-steps.ts, src/lib/jobs/telemetry.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/workers/scheduled-lab-update.ts, src/lib/blog/publish-scheduled.ts]
 related_docs: [../records/reports/2026-11-19-scheduled-jobs-details-and-run-log.md, ../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
@@ -893,6 +893,18 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 *Reworked 2026-11-19* (the details panel's four tabs, Check as steps, the run
 log, the settings, the halt confirmation):
 `../records/reports/2026-11-19-scheduled-jobs-details-and-run-log.md` (private).
+Later the same day the job cards became a list, one row per job, because the
+owner saw little change on the page itself (that record's §9).
+
+- **Each job is one row of a list** (`src/components/admin/cron/JobRow.tsx`,
+  *since 2026-11-19*; until then a card of six or seven blocks, so the 21 jobs
+  filled about ten phone screens). A row shows the job's area icon, its name,
+  its status pill, one line with when it runs next and what it last did (red
+  when its last work failed), a paused note with its reason and end when
+  paused, its hour-by-hour strip, and three icon buttons: Check, Run (only with
+  `#trigger`) and Details. The status colour runs down the row's left edge. On a
+  phone the strip sits under the text. What the job does, what it touches and
+  its settings are in Details. `test/cron-job-row.test.ts` pins what a row says.
 
 - **Nothing about a job is stored as prose any more.** Its name, what it does,
   what happens if it is switched off, its area and what it touches (sends
@@ -922,7 +934,7 @@ log, the settings, the halt confirmation):
   …", because an invocation of it is not work. `test/cron-schedule.test.ts`
   checks the projection against `decideJobRun` itself.
 - **"Last" keeps work apart from looking.** Analytics Engine's last time of each
-  outcome is kept separately (`lastAt` in `src/lib/jobs/health.ts`), so a card
+  outcome is kept separately (`lastAt` in `src/lib/jobs/health.ts`), so a row
   reads "Last did its work 2h ago, looked 3m ago". Until 2026-10-09 one "last
   seen" covered every outcome, and the dispatcher records a held job on every
   tick, so a paused or sleeping five-minute job always read "last 3m ago".
@@ -930,15 +942,15 @@ log, the settings, the halt confirmation):
   `YYYY-MM-DD HH:MM:SS`, which is UTC and which a browser reads as local time;
   they now leave as epoch milliseconds, and the page shows them in the viewer's
   clock.
-- **Each card has an hour-by-hour strip of its last 24 hours.** One cell per
+- **Each job has an hour-by-hour strip of its last 24 hours.** One cell per
   UTC hour, coloured by the most important thing in it: a failure, then work
   done, then a look that found nothing, then a held tick. Beside it the day in
   words ("12 worked", "276 looked", "1 failed"). The strip comes from the same
   single query as the totals, grouped by hour as well. Should that form ever be
   refused, the page falls back to the 24-hour totals it read before (reported
   once to Sentry) and leaves the strip out rather than drawing it empty.
-- **When the history cannot be read, the page says so.** The card reads "Run
-  history could not be read just now" and the overview says unavailable; it
+- **When the history cannot be read, the page says so.** The row reads "History
+  could not be read" and the overview says unavailable; it
   never shows a zero, because a zero reads as "this job has stopped" (RULE
   #0.5). `runBreakdown` (`src/components/admin/cron/status.ts`) still separates
   what ran from what the control plane stopped, so a paused job no longer
@@ -959,9 +971,9 @@ log, the settings, the halt confirmation):
 - **Needs a look** filters to the jobs that failed in the last 24 hours, are
   held back for the database or are halted; a job a person paused is not flagged. **Paused**
   and **Active** filter the rest, and a search box matches names, ids,
-  descriptions and areas. Cards are grouped by trigger, each with its schedule in words
+  descriptions and areas. Rows are grouped by trigger, each with its schedule in words
   and a countdown to its next tick.
-- **Check** asks what would happen if the job ran now. The card shows the
+- **Check** asks what would happen if the job ran now. The row shows the
   headline and the one step that decides it, with **Every step** opening the
   details; the details and the run console show every step (§1), each with a
   pass, stop, warning or note mark, and end "Checked at HH:MM. Nothing was run
@@ -985,7 +997,7 @@ log, the settings, the halt confirmation):
   (`about.settingsAt`), what a run can do, and the facts (schedule, throttle,
   whether it looks first, whether it runs one at a time, priority, quiet-tick
   budget, and its id with **Copy a link to this job**). `?job=<id>` opens the
-  panel on that job and highlights its card; `&tab=overview|activity|settings|how`
+  panel on that job and highlights its row; `&tab=overview|activity|settings|how`
   opens a tab (the old `about` and `history` still work).
 - **What you may not do is said in words, once**, naming the key that would
   grant it, rather than rendered as a row of disabled buttons on every job. The
@@ -1078,6 +1090,7 @@ log, the settings, the halt confirmation):
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-19 | claude | The job cards replaced by a list after Harshil saw little change: `src/components/admin/cron/JobRow.tsx` (was `JobCard.tsx`), `CronDashboard.tsx`, `DrawerOverview.tsx` (the shared `cron-note`), `src/styles/pages/cron.css`; `test/cron-job-row.test.ts` (new) passes; `npm run verify` | §7: the new first bullet and "card" read "row" where it meant the job. Not checked: the page in a browser (the owner checks on his phone). Not re-checked: the rest of the document |
 | 2026-11-19 | claude | The page reworked at Harshil's ask: §1 (Check, Activity, Manage, Run on the next tick, Run, halt) and §2's audit table against `src/pages/api/cron/state.ts`, `src/lib/jobs/check.ts`, `runJob.ts`, `run-steps.ts`, `telemetry.ts`, `history.ts`, `registry.ts` and the components under `src/components/admin/cron/`; §7's overview, filter, Check, Details and run-console bullets against the same; `test/cron-run-log.test.ts` (new), `test/cron-api.test.ts`, `test/jobs-run-job.test.ts`, `test/cron-status-view.test.ts` and `test/jobs-telemetry.test.ts` pass. Live: Analytics Engine read for job failures over three days (none), the `cron-control` row read through the Cloudflare D1 connector | §1, §2's audit table and §7; `last_verified` left as it was, because §3 to §6 were not re-read. Not checked: the page in a browser, which Harshil checks on his phone |
 | 2026-11-18 | claude | `health-checks` (Sentry CF-ADMIN-2Z: over its D1 budget on the 03:00 UTC run of 16, 17 and 18 November, the once-a-day clean-up of about 700 results): the clean-up now runs every run, measured by `test/jobs-budget.test.ts` (costliest run with ten results to delete: read 437, written 53, inside 612 and 57) and `test/health-checks-job.test.ts` | The health-checks paragraph of §3; `last_verified` left as it was |
 | 2026-11-14 | claude | `bot-flags` and `bot-weekly` (Cloudflare logs: a 404 from cf-vps on each try while the real bot's recorder is not installed): both rows read through the Cloudflare D1 connector (both `on` for the real bot, no state rows); the new app-list check in `src/workers/scheduled-bot-flags.ts` (`recordInstalled`) proved by `test/bot-flags-email.test.ts` and `test/bot-weekly-email.test.ts`; no D1 query added, so the budgets stand | §3g's and §3h's not-installed lines; `last_verified` left as it was |
