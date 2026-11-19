@@ -116,6 +116,11 @@ BetterStack first: errors a route captures reach Sentry unsampled, and
 investigation, set `head_sampling_rate = 1` in `[observability.logs]` and deploy;
 put it back afterwards (the free plan allows 200,000 log events a day).
 
+**Workers Issues** (`[observability.issues]`, since 2026-11-19): Cloudflare groups uncaught
+exceptions, failed invocations, `5xx` answers and `console.error` lines into issues on the
+Worker's **Issues** tab, without an SDK. Free during its beta; details kept 7 days. Sentry
+and the alert gate (§8) stay the paths that tell someone.
+
 ## 8. Alerts (since 2026-10-17)
 
 When something goes wrong (a Brevo webhook that fails its check, a database

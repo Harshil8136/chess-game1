@@ -164,10 +164,13 @@
       `DATABASE_URL_ADMIN` → Delete. While there, also delete `UPSTASH_REDIS_REST_TOKEN`,
       `SENTRY_DSN` and `SUPABASE_SERVICE_ROLE_KEY` if listed (none is read). Changing the
       `postgres` password afterwards is the owner's call.
-- [ ] 🟢 **Preview URLs.** `wrangler.toml` sets neither `workers_dev` nor `preview_urls`, so
-      both are on, and the form origin check keeps accepting this Worker's own version URLs
-      (`<prefix>-cf-astro.mascotasmadagascar.workers.dev`). Nothing uses them (main-only
-      deploys). Turning previews off would let that rule go: an owner decision.
+- [x] ~~🟢 **Preview URLs.**~~ **Done 2026-11-19** (the owner approved batch 1 of the security
+      plan; [record](./records/2026-11-19-one-address-npm-12-workers-issues.md)):
+      `workers_dev = false` and `preview_urls = false` in `wrangler.toml`.
+- [ ] 🟢 **Drop the workers.dev origin rules.** Since 2026-11-19 nothing is served on the
+      `workers.dev` address or the version URLs, so `ALLOWED_ORIGINS`' workers.dev entry and
+      `OWN_VERSION_HOST` in `src/lib/security.ts` accept only hosts that answer nothing.
+      Remove both with their tests in a later code change (SECURITY.md §2).
 
 ## 0b. 🔎 Blog SEO / GEO audit follow-ups (2026-10-10)
 
