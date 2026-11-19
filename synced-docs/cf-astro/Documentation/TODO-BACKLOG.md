@@ -260,12 +260,17 @@
 - [x] ~~🟢 **Skip the ISR KV read for paths with a file extension.**~~ Done 2026-10-10:
       `isIsrEligiblePath` (`src/lib/isr-response.ts`) skips any dotted path before the
       middleware reads KV.
-- [ ] 🟢 **A free WAF rule for scanner paths** (`.env`, `.git`, `wp-`,
+- [x] 🟢 **A free WAF rule for scanner paths** (`.env`, `.git`, `wp-`,
       `phpmyadmin`) would stop them before the Worker runs. A dashboard change, so
       it needs the owner. On 2026-10-29 the owner chose to widen the Worker's own
       filter instead (`src/lib/probe-filter.ts`) and leave Cloudflare's rules as
       they are; the portal's Sentry page, Threats, shows what still reaches the
-      Worker, so this can be weighed again from there.
+      Worker, so this can be weighed again from there. On 2026-11-19 Sentry still
+      kept 60 such requests in 30 days past the filter (it skips `/api/` and only
+      matches the start of a path); the owner asked for the best option, and the
+      recommendation is the rule for the whole zone. Done the same day through
+      Cloudflare's API connector: the zone's custom rule **Block scanner paths**
+      (Block), read back. The Worker's own filter stays as the second layer.
 - [ ] 🟢 **cf-graph still says rate limiting is "Redis-backed".** Its public
       Systems view (`data/platform-facts.source.ts` in cf-graph) should name
       Cloudflare's built-in rate limiting once this site and cf-admin are deployed
