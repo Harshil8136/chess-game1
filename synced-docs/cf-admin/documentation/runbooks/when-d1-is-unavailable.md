@@ -3,7 +3,7 @@
 title: "When D1 Is Unavailable — What Degrades and What Fires"
 status: active
 audience: [operator, owner, technical, ai]
-last_verified: 2026-10-04
+last_verified: 2026-11-19
 verified_against: [code, live-mcp]
 owner: harshil
 related_code: [src/lib/observability.ts, src/lib/jobs/runJob.ts, src/lib/jobs/registry.ts, src/lib/jobs/budgets.ts, src/workers/cf-entry.ts, src/lib/auth/cf-access-sync-log.ts, src/workers/scheduled-log-sync.ts]
@@ -88,8 +88,10 @@ isolated by `allSettled`, so one failure cannot starve another.
 > **Do not trust a job count in prose — derive it.** The list is
 > `src/lib/jobs/registry.ts` (`FIVE_MIN_JOBS` + `SUNDAY_JOBS`), the tiers are
 > in `src/lib/jobs/tiers.ts`, and the outcomes are in
-> `src/lib/jobs/telemetry.ts`. On 2026-10-16 the registry held **16 jobs: 14 on
-> `*/5`, 2 on Sunday**, and the table below has a row for each.
+> `src/lib/jobs/telemetry.ts`. On 2026-11-19 the registry held **21 jobs: 19 on
+> `*/5`, 2 on Sunday**. The table below has a row for the 16 of 2026-10-16; the five
+> added since (`health-checks`, `log-scan`, `bot-flags`, `bot-weekly`, `lab-update`)
+> have none yet (`MAINTENANCE.md` (private)).
 >
 > **Possible outcomes an operator will see**, since the 2026-09-16 control
 > plane: `ran`, `failed`, `skipped` (the job's own gate said no), `disabled`
@@ -228,6 +230,7 @@ blog for this to hold (cf-astro `AGENTS.md` invariant 7).
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-19 | claude: `src/lib/jobs/registry.ts` (21 jobs, 19 + 2); the live `cron-control` row through the D1 connector (`cf-access-reconcile` on, every 60 minutes; `gsc-sync` and `pagespeed-sync` off) | The job count corrected; the five jobs without a row named and logged in MAINTENANCE. Not re-checked: the rows themselves, §1, §2, §4 to §6 |
 | 2026-10-16 | claude: cf-backup `.github/workflows/secondary-pipeline.yml` and `scripts/secondary-pipeline/schedule-guard.ts` (the daily fallback backs up when it cannot read the schedule) | The `backup-tick` row named a weekly Monday safety net (the retired engine's fallback); it now names the engine's daily one. Not re-checked: the other rows |
 | 2026-10-16 | claude: `src/lib/jobs/registry.ts` (16 jobs, 14 + 2), `dispatch.ts`, `src/lib/auth/cf-access-reconcile.ts`, `cf-access-sync-log.ts`, `src/lib/dal/PortalSettingsRepository.ts` (`readSettings`, `writeSetting`, `getScopedSetting` return or swallow on a failed query), `src/lib/dal/LoginLogRepository.ts` (`getLastSuccessByEmail` throws), `src/workers/scheduled-email-api-sweep.ts`, `scheduled-access-summary.ts`, `scheduled-unused-accounts.ts`, `scheduled-access-review.ts`, `scheduled-audit-seal.ts`, `src/lib/login-alerts/policy.ts` (defaults); cf-email-consumer `wrangler.toml` (the API's database); the live `cron-control` row through the D1 connector (`cf-access-reconcile` every 60 minutes) | §3: the `cf-access-reconcile` row corrected (hourly, not five-minute; the Supabase stamp does not fail; it pushes the whole list while the gate is unreadable); rows added for `email-api-sweep`, `access-change-summary` and `audit-seal`; the lapse paragraph names the six jobs that sleep; the source paths written as paths. Not re-checked: the other rows, §1, §2, §4 to §6 |
 | 2026-10-10 | cf-astro's `consent-heartbeat.yml` (by hand only since 2026-10-10) | §3: the `booking-outbox-poke` row's "recovered by" no longer names GitHub Actions. Not re-checked: every other row |

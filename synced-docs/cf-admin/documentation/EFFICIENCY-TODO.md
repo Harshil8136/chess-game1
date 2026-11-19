@@ -2,7 +2,7 @@
 title: "Efficiency To-Do — KV per Click, Background Polling, Sidebar and Session Cost"
 status: active
 audience: [ai, technical, owner]
-last_verified: 2026-10-04
+last_verified: 2026-11-19
 verified_against: [code, infra]
 owner: harshil
 related_code: [src/lib/auth/pipeline.ts, src/lib/auth/stages/session-stage.ts, src/lib/auth/stages/access-map.ts, src/lib/auth/stages/refresh-role.ts, src/lib/auth/session.ts, src/lib/auth/plac.ts, src/layouts/AdminLayout.astro, src/components/dashboard/overview/Overview.tsx, src/lib/analytics/providers/index.ts, src/lib/auth/cf-access-reconcile.ts, src/lib/jobs/registry.ts, src/lib/dal/HealthResultsRepository.ts]
@@ -339,8 +339,8 @@ Session creation writes KV, so **exhausting KV writes blocks every new sign-in**
 
 > **Done 2026-10-04 through Cron Control, not code:** `cf-access-reconcile`
 > carries a 60-minute interval in the live control document (read-only D1
-> query, 2026-10-04), so it runs about 24 times a day. The `shouldRun` gate
-> suggested below was not needed.
+> query, 2026-10-04, read again 2026-11-19), so it runs about 24 times a day. The
+> `shouldRun` gate suggested below was not needed.
 
 - **Issue.** `src/lib/auth/cf-access-reconcile.ts` fetches every active user from
   Supabase on each 5-minute tick to hash the list, and usually finds nothing
@@ -414,6 +414,7 @@ never who *decides*.
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-19 | claude | read-only D1 query of the live `cron-control` row | EF-11 still holds (`cf-access-reconcile` on, every 60 minutes). Not re-checked: §1's per-click costs, EF-1 to EF-10, EF-12 |
 | 2026-11-13 | claude | `src/layouts/AdminLayout.astro`, `src/lib/dal/AccessRequestRepository.ts`, `test/pending-badge-cache.test.ts` | EF-5 done differently (an isolate cache). Not re-checked: the other items |
 | 2026-10-17 | claude | `src/lib/health/run.ts`, `src/lib/health/catalog.ts`, `src/lib/dal/HealthResultsRepository.ts`, the five `src/pages/api/system-health/` routes; `test/system-health.test.ts` | EF-1 marked done: Diagnostics replaced by System health. No other item re-checked |
 | 2026-10-10 | claude | `src/layouts/AdminLayout.astro`, `src/lib/shell-state.ts`, `NativeNavigationState.astro`, `astro.config.ts`, the built router script after `npm run build`; `test/client-navigation.test.ts` | §1's opening and EF-9: the router is mounted. §1's step costs not re-derived (unchanged: every click is still one server render) |
