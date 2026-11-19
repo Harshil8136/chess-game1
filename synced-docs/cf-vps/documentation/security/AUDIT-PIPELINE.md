@@ -57,9 +57,11 @@ Vector (`25-logship`) normalises everything to one schema (`ts`, `host`, `source
    past days with zstd level 19 (files quiet for an hour; today's stay plain) and expires each
    class after its own retention. See [LOG-STORAGE](../features/LOG-STORAGE.md).
 3. **Off-server copy.** The six leaving classes are redacted, then written to one outbox
-   file per minute. `vps-r2-upload` runs every minute, compresses each finished file, uploads
-   it with a unique key, and deletes it locally only after R2 answers 200. A failed upload
-   stays and is retried. Vector holds no R2 credentials; only the uploader does, through
+   file per minute. `vps-r2-upload` runs every 15 minutes (every minute until 2026-11-19),
+   gathers the finished files into one gzip object per UTC day (the canaries into one of their
+   own), uploads it with a unique key, and deletes the files locally only after R2 answers 200.
+   A failed batch stays whole and is retried. So an event's off-server copy can be up to about
+   15 minutes behind it; the Sentry alerts below do not wait for it. Vector holds no R2 credentials; only the uploader does, through
    systemd credentials. The bucket is locked for 90 days, so nothing can be overwritten or
    deleted in that window, including by the console.
 4. **Redaction.** Before leaving, text matching password, secret, token, API-key,
@@ -127,9 +129,10 @@ unpacking a release or pruning an old one is recorded and not alerted.
 
 ## The heartbeat
 
-`vps-heartbeat` runs every 5 minutes. It checks that auditd is enabled, Laurel and Vector are
+`vps-heartbeat` runs every 15 minutes (every 5 until 2026-11-19). It checks that auditd is enabled, Laurel and Vector are
 running, the audit disk is not filling and the clock is in sync. It then proves delivery end
-to end: the canary it emitted last time must be in R2 and under 15 minutes old. A listing that
+to end: the newest canary in R2 must be under 40 minutes old (a canary waits for the uploader's next
+15-minute run, and sometimes the one after). A listing that
 R2 refuses with a passing server error (`InternalError`, `ServiceUnavailable`, `SlowDown`), or
 that never answers, is tried once more 3 seconds later before it counts as a problem
 (`heartbeat_list_retryable`, 2026-10-23). It reads yesterday's canaries, just after midnight,
@@ -139,8 +142,8 @@ answer: one that curl's 20-second limit cut short is tried once more and otherwi
 same way, and its dates are never read (2026-10-30). It reports to a
 Sentry cron monitor, and sends a Sentry event only when the set of problems changes, with a
 reminder every 6 hours while it lasts. An R2 listing problem (refused or unreachable) counts for
-that event only once the heartbeat before had it too, so one that R2 clears by the next run five
-minutes later is not sent (`heartbeat_settled`, 2026-11-18: on 2026-11-17 R2 refused twice, 3
+that event only once the heartbeat before had it too, so one that R2 clears by the next run
+is not sent (`heartbeat_settled`, 2026-11-18: on 2026-11-17 R2 refused twice, 3
 seconds apart, and the next run was clean).
 
 ## Who can read it
