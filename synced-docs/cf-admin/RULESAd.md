@@ -222,15 +222,16 @@ The number space is owned:
 
 ## 🛡️ RULE #0.8 — ENV VAR CAP & DYNAMIC CONFIG FIRST (HARD STOP, WE ARE NOT ADDING MORE)
 
-cf-admin's production Worker carries **42 env entries** (17 `[vars]` + 25 secrets),
-live-counted on 2026-09-18 against the deployed Worker. The platform limit is
+cf-admin's production Worker carries **38 env entries** (17 `[vars]` + 21 secrets),
+live-counted on 2026-11-19 through Cloudflare's API connector, after five secrets nothing read were
+deleted on the owner's yes (it was 42, 17 + 25, on 2026-09-18). The platform limit is
 **64 per Worker on Workers Free** (128 on Paid) — this rule's cap is a *policy*
 choice about where configuration belongs, not a platform ceiling, and it used
 to be stated as if it were one. Re-derive with:
 
 ```bash
 grep -cE '^[A-Z0-9_]+ = ' wrangler.toml   # the [vars] block (17)
-wrangler secret list                       # the authoritative secret count (25)
+wrangler secret list                       # the authoritative secret count (21)
 ```
 
 > *Corrected 2026-09-19.* This rule read "**40** (15 `[vars]` + 25 secrets)" and
