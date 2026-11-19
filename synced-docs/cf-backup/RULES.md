@@ -59,6 +59,11 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    is not in `secrets.required`: without it the Worker trusts the binding, as before.
 4. **Dependencies are a whitelist.** `package.json` is the approved list, with exact pins.
    A new package needs the owner's approval first (plan doc 01 §6).
+   Since 2026-11-19 `packageManager` pins npm 12, which Workers Builds installs before
+   `npm ci`, and npm 12 runs no dependency's install script unless `allowScripts` in
+   `package.json` allows it: `esbuild` and `workerd` are denied (their binaries come from
+   platform packages). `.npmrc` sets `min-release-age=7`, so `npm install` only picks
+   versions public for 7 days.
 5. **`npm run verify` before every push.** Workers Builds runs the same command as its
    build step, before it deploys; a red verify is a blocked deploy. In the workspace
    checkout, also run `python .agents/scripts/checklist.py cf-backup --skip-runtime` from
