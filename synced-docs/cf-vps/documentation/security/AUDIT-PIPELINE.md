@@ -103,6 +103,15 @@ and at most 30 alerts an hour overall. Anything dropped by a limit is still in t
 record and, for the leaving classes, in R2. The Sentry sink has a 256 MB disk buffer and drops
 the newest events when full. Every alert also appears on the console's Alerts page.
 
+Who is told (since 2026-11-19): Sentry's alert rule **Security alerts: email at once** emails
+the organisation's members on every event whose `alert` tag is `auth_failure`, `config_change`,
+`audit_change`, `security`, `terminal_admin`, `integrity` or `log_purge`, at most once per
+issue every 10 minutes. Before it, these were warnings that only Sentry's default rule (high
+priority issues) could email, and it had last fired on 2026-10-08. The same rule also emails
+cf-admin's sign-in alerts. The other classes still reach email only through that default
+rule; every class stays on the console's Alerts page. Checked live through the Sentry
+connector on 2026-11-19.
+
 A backup restore test is a server job, so it alerts the same way: `job_failed` when it fails,
 including a run whose cleanup could not be proven (`CLEANUP FAILED`), and `job_missed` when it
 waited too long. Its output stays in the run's folder on the server, not in the journal: the

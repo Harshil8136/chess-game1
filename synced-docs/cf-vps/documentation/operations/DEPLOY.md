@@ -95,6 +95,18 @@ compares the table's fingerprint (`ROUTE_TABLE_ID`) with the Worker's and says w
   optional secret `CONSOLE_SIGNING_KEY` is not required, so a deploy never waits for it.
 - The build token needs permission to edit Worker scripts, read D1 and bind to the
   connectivity directory. Build secrets are visible to install scripts, so keep none there.
+- npm is pinned and install scripts are off (2026-11-19,
+  [record](../records/2026-11-19-npm-12-and-workers-issues.md)). `"packageManager":
+  "npm@12.2.2"` in `package.json` makes Workers Builds install npm 12 before `npm ci` (its
+  default npm 10 runs every dependency's install script). npm 12 runs one only when
+  `allowScripts` in `package.json` allows it; `esbuild` and `workerd` are denied, since their
+  binaries come from platform packages and verify passes without the scripts. A new dependency
+  with a script is skipped with a warning until `npm install-scripts approve <name>`.
+  `.npmrc` sets `min-release-age=7` for `npm install` and `npm update`; `npm ci` installs the
+  lockfile as it is. npm 12 needs Node 22.22.2 or later; `.nvmrc` asks for 24.
+- Workers Issues is on (`observability.issues` in `wrangler.json`): Cloudflare groups the
+  Worker's uncaught exceptions, failed invocations, 5xx answers and `console.error` lines on
+  its **Issues** tab, free during the beta. A deploy without the line switches it off.
 - The Worker has no public route. After a deploy, check the console through the portal.
 
 ## The agent
