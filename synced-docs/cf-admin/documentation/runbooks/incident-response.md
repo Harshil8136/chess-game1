@@ -88,7 +88,7 @@ Detection sources, in the order they usually fire:
 | **Sign-in alert email** | The sign-in alert list (Security → Sessions → Alert policy; the business inbox when the policy names nobody) | Two kinds are emailed as urgent whatever the account's own alert settings say: **"SIGN-IN WITHOUT GOOGLE"**, every sign-in made any way but Google, which is the emergency way in, unless the rule for GitHub or the one-time PIN (Sessions → Your alerts → Ways you sign in, or Alert policy → Ways in) keeps it quiet, and **"SIGN-IN MOVED"**, a sign-in first seen on one device and country now used on another, which is what a copied cookie looks like. Other sign-ins and failed sign-ins are emailed as the policy says (`src/lib/login-alerts/decide.ts`; the rules: [`../security/login-forensics.md`](../security/login-forensics.md)) |
 | **Access-change email** | The same list | Every change that widens or reshapes who can do what: a role changed; a person added, suspended, restored or deleted; an Owner-level page given; a page's or a console permission's default role moved; Backups or Server permissions changed. One email per save, one summary a day at 08:00 in Aguascalientes, or off, as the alert policy's "Access changes emailed" says (`src/lib/access-changes/notify.ts`). A change nobody on the team made is an incident |
 | **Audit log seal email** | The same list, each morning at 08:00 in Aguascalientes (14:00 UTC) | The fingerprint of the previous day of `admin_audit_log`, and the past week checked again; every morning, or only when a sealed day changed, as the alert policy says. **A "Warning: … of the audit log changed" email is the tamper signal:** sealed entries were changed or removed outside the portal, for example straight in the database. Check any day on Logs → Check seals (Owner and Vendor support). Engine `src/lib/audit-seal/`; what a seal proves: [`../architecture/plac-and-audit.md`](../architecture/plac-and-audit.md) §3.6 |
-| Sentry alert | `cf-admin` project | `[SECURITY ALERT]` messages, emitted **only** by `src/pages/api/retention/purge.ts` (an unauthorized, PLAC-denied or deactivated-actor purge) |
+| Sentry alert email | `cf-admin` and `cf-vps` projects, emailed by Sentry's rule **Security alerts: email at once** (since 2026-11-19, at most once per issue every 10 minutes) | `[SECURITY ALERT]` messages, emitted **only** by `src/pages/api/retention/purge.ts` (an unauthorized, PLAC-denied or deactivated-actor purge), and the server's security alerts (failed SSH sign-ins, changed keys, sudo or audit rules, changed files, log purges). New or returning cf-admin errors are emailed by **New or returning errors: email** ([`../operations/OPERATIONS.md`](../operations/OPERATIONS.md) §4.0) |
 | Audit log | D1 `admin_audit_log` | `api_authz_deny`, `api_mutation_attempt`; `view` rows for who opened someone's sign-in history, a consent record's details or an email message's body. The portal cannot delete an entry younger than 180 days |
 | **Login logs** | D1 `admin_login_logs` | **Failed logins live here, not in the audit log.** `event_type` is one of `LOGIN_SUCCESS` / `LOGIN_FAILED` / `LOGIN_BLOCKED`, with a `failure_reason`; `cf_identity_provider` says how a sign-in was made, and `alert` what became of its alert email. There is no `login_failed` audit action anywhere in `src/`: querying the audit log for one returns nothing and looks like "no brute force" |
 | CF Access logs | Zero Trust dashboard | Failed auth, unexpected geography |
@@ -231,6 +231,19 @@ delay containment to gather more.
      value in cf-admin first, then in each console, in one sitting, because a
      console whose key differs refuses every request.
 
+6. **The lockdown switches.** When the scope is unclear, pull these in order; each one can be
+   undone in a minute, and none of them stops the public site taking bookings.
+
+   | # | Switch | Where | Undo |
+   |---|---|---|---|
+   | 1 | Under Attack for the admin site only | Cloudflare → the zone → Rules → Configuration Rules → the rule for the admin hostname with "I'm Under Attack: On", saved switched off in advance; switch it on. Never the zone-wide setting of step 4 while the public site is fine: it would put a challenge page in front of booking | switch the rule off |
+   | 2 | Everyone signed out | Security → Sessions → flush every session (Owner), then Cloudflare Zero Trust → Access → Applications → the admin portal → Revoke existing tokens. Then suspend the accounts in question (steps 1 and 2) | people sign in again |
+   | 3 | Keys rolled | step 3's order: the Supabase service key first, then the Cloudflare tokens; each outside service's own page for the rest | none needed |
+   | 4 | Email API off | the Email API page (`/dashboard/email-api`) → Settings → the API's on/off switch (or pause one token: every token is refused while it is off). The hotel's own booking emails keep flowing: they use the queue, not the API | switch it on |
+   | 5 | Server console offline | Cloudflare Zero Trust → Networks → Tunnels → the server's tunnel → delete its connectors, as cf-vps's compromise runbook says. The server keeps running; only the way in closes | reconnect the tunnel from the server |
+
+   Write the time of each switch in the incident log.
+
 ## 5. Phase 3 — Assess (runs in parallel; must conclude before hour 60)
 
 Answer, in writing:
@@ -275,6 +288,26 @@ consequences, and measures taken or proposed.
 **A partial notification on time beats a complete one late.** Art. 33(4)
 explicitly permits notifying in phases.
 
+### The breach register
+
+Every suspected breach gets an entry, **notified or not** (GDPR Art. 33(5); PIPEDA keeps
+each record 24 months; Mexico's LFPDPPP expects you to tell affected people at once, so the
+register is also the evidence of when that happened). One entry per incident:
+
+| Field | What to write |
+|---|---|
+| Found | the UTC time someone first had reason to believe data was exposed (§3) |
+| Started and ended | when it began and when it was contained, as far as known |
+| What happened | plain words: what was reached, by whom if known, how |
+| Data and people | the categories ([`../security/RoPA.md`](../security/RoPA.md)), roughly how many records and people, which countries |
+| Decision | notify or not, and why, with the §6 reasoning |
+| Who was told | each authority and group of people, with the time |
+| What was done | containment, keys rolled, fixes, and the follow-ups in `../MAINTENANCE.md` (private) |
+
+**Entries never go in this repository:** `documentation/` is copied to a public mirror, and an
+entry names people and data. The owner keeps the register in a private document outside
+GitHub; a quarter with no incident gets one line saying so (the access review below).
+
 ## 7. Notification targets & deadlines
 
 | Regime | Trigger | Deadline | Notes |
@@ -310,12 +343,29 @@ Until the first tabletop is complete, the honest external statement is *"we
 have a documented incident-response plan; our first drill is scheduled"* — not
 *"we have a tested plan."*
 
+### Quarterly access review (January, April, July, October)
+
+Fifteen minutes, from a phone. Anything nobody can explain is removed, and the date goes in
+the breach register's quarter line:
+
+1. **The portal:** Users, everyone listed still works here; Security → Sessions, no device
+   or country nobody recognises.
+2. **Cloudflare:** Manage Account → Members, and My Profile → API Tokens (every token named,
+   scoped to what it does, with an expiry); Zero Trust → Access → the admin portal's policy.
+3. **Supabase:** the organisation's members and the project's API keys.
+4. **GitHub:** each repository's collaborators, deploy keys and Actions secrets; personal
+   access tokens under the owner's settings.
+5. **Sentry, PostHog, Brevo, Resend, Google:** members and keys.
+6. **The server console:** its Access page (personal grants and powers given for a while).
+7. **Passkeys or two-step sign-in** still on every account above.
+
 ## 9. What we cannot currently do
 
 Stated plainly, because an assessor will find these anyway:
 
 - **No 24/7 on-call.** Out-of-hours SEV-1 detection depends on the operator
-  seeing an alert.
+  seeing an alert. Since 2026-11-19 security alerts are emailed (§3), but nothing
+  pages a phone.
 - **No SIEM.** Correlation is manual across Sentry, D1 and CF Access logs.
 - **No forensic snapshot capability.** D1 Time Travel provides point-in-time
   recovery, not an evidentiary image.
@@ -326,6 +376,7 @@ Stated plainly, because an assessor will find these anyway:
 
 | Date | Method | Result |
 |---|---|---|
+| 2026-11-19 | claude: §3's Sentry row against the two Sentry rules read back through the Sentry connector; §4 step 6 against `src/pages/api/sessions/flush-sessions.ts` (Owner only), `src/pages/api/emails/api-settings.ts` (the API on/off switch), cf-vps's compromise runbook (the tunnel) and Cloudflare's configuration-rule and Under Attack pages; the breach register's retention figures (PIPEDA 24 months, LFPDPPP 'immediately') from the security plan's research, not a legal review | §3's Sentry row now says who is emailed; §4 gains the five lockdown switches; §6 gains the breach register's format (entries kept outside the public mirror); §8 gains the quarterly access review; §9's on-call line notes the emails. Not re-checked: the rest; `last_verified` left as it was |
 | 2026-11-03 | claude: §1 and §3 against the code (`[SECURITY ALERT]` sent only by `src/pages/api/retention/purge.ts`; no `login_failed` action in `src/`), the gates' row against `scripts/verify.mjs` and `.github/workflows/quality.yml`, step 3's rotation list against `wrangler.toml` `[secrets] required`, §8's restore row against `disaster-recovery.md` §8 and cf-backup's `15-restore-tests.md` §13 | The CI row now names the local gate (`quality.yml` no longer runs on every push); step 3 points to the credentials it left out (R2 keys, the outside services' tokens, the webhook, revalidation and health-check secrets); §8's stale 'in short' line replaced by a link to the restore tests. Not re-checked: the `IP_HASH_SECRET` caveat, §2, §6, §7's legal deadlines (not a legal review), §9 |
 | 2026-10-28 | claude: step 4 against `src/pages/api/configuration/cloudflare.ts` (the route moved from Control Plane) and the Configuration page's Cloudflare section | Scope-limited to step 4 |
 | 2026-10-23 | claude: the sign-in alert email row again, for the per-way rules (evening), against `src/lib/login-alerts/decide.ts` (`wayRule`) | Scope-limited to that row |

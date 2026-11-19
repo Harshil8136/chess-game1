@@ -46,6 +46,7 @@ tags: [release, deploy, rollback, workers-builds, migrations, runbook]
 git push origin main
   ├─ before the push (workstation): npm run verify   ← the only check that runs before the code is live
   ├─ Cloudflare Workers Builds (dashboard-side GitHub connection)
+  │    ├─ install         npm 12.2.2 ("packageManager"), then npm ci: no dependency install script runs unless allowScripts allows it (2026-11-19)
   │    ├─ build command   npm run build:ci   →  node scripts/release.mjs build --ci
   │    │      npm run build   (astro build; verify is NOT repeated here since 2026-10-10)
   │    └─ deploy command  npm run deploy:ci  →  node scripts/release.mjs deploy --ci
@@ -56,6 +57,17 @@ git push origin main
   └─ GitHub Actions `quality` (weekly, on pull requests and by hand since 2026-10-18; does not stop the deploy)
          the verify chain, types:check, build, SBOM; documentation-only pull requests skip the code steps
 ```
+
+**The install step (2026-11-19).** `"packageManager": "npm@12.2.2"` in `package.json` makes
+Workers Builds install npm 12 before `npm ci`; its default, npm 10, runs every dependency's
+install script, which is where a hijacked package steals a build's keys. npm 12 runs one only
+when `allowScripts` in `package.json` allows it: `esbuild`, `workerd` and `@sentry/cli` are
+denied, because their binaries arrive as platform packages and the build, tests and
+source-map upload work without the scripts. A new dependency with a script is skipped with a
+warning until someone runs `npm install-scripts approve <name>`. `.npmrc` sets
+`min-release-age=7`, so `npm install` and `npm update` only pick versions public for 7 days;
+`npm ci` installs the lockfile as it is. npm 12 needs Node 22.22.2 or later; `.nvmrc` asks
+for 22, which the build image serves as 22.23.4.
 
 `npm run verify` (`scripts/verify.mjs`, since 2026-10-11) runs the quick gates
 first, `test:gates`, `rules_check.py`, `docs_check.py`, `lint:md`, `a11y_check.py`,
@@ -163,6 +175,7 @@ and somebody has to actually run them.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-19 | claude | the install step: `npm ci` under npm 12.2.2 on Node 22.23 blocked only `esbuild`, `workerd` and `@sentry/cli`, and `npm run verify` and `npm run build` passed with all three denied (`sentry-cli --version` answers from `@sentry/cli-linux-x64`); Cloudflare's build image page read the same day (npm 10.9.2 default, `packageManager` honoured, Node 22.23.4 preinstalled). Not checked: a Builds log (not readable from here) | pass |
 | 2026-09-02 | claude | `node scripts/release.mjs preflight` (refuses a dirty tree; `--allow-dirty` passes), `node scripts/release.mjs migrate` against production (drift check clean, nothing pending), `test/release-guards.test.ts` (12), `test/api-health.test.ts` (4) | pass; Builds commands not yet switched (owner step §3) |
 | 2026-09-19 | claude | `package.json` `verify`/`build:ci`/`deploy:ci` read; `.github/workflows/quality.yml` lines 9-16; Workers Builds vs `quality` check-run durations on `a9dd974` and `67a5cf6`; `d1_migrations` applied-at vs commit author times for `0052`/`0053`/`0054`; repository Actions secrets listed | **Builds still on its default command** — §1 rewritten with a banner and a target-state diagram; the `verify` chain, the Python-gate count, the `--ci` env triggers and the §5 snapshot row corrected. Not readable from here: the Build settings in the Cloudflare dashboard (the three lines above are inference from observable behaviour) |
 | 2026-10-10 | claude | Workers Builds check-run completion vs push time on `4b166d6` (6 m 44 s), `42e421f` (8 m 04 s, docs only) and `ab6b0c7` (10 m 10 s); GitHub `quality` run durations on the same pushes (4-6.5 min, 25-35 s docs only); `scripts/release.mjs` build stage; `test/release-guards.test.ts` (14) | Build command is `build:ci` (inferred from durations and the owner's report of tests in the build log; the dashboard is not readable from here); `build --ci` made build-only; §1 banner and diagram rewritten. Not re-checked: the deploy command, the build token's D1 grant, the smoke token |

@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-11-19 | §4.0 against `wrangler.toml` `[observability.issues]`, Cloudflare's Issues page (signals, retention, free in beta) and the two Sentry rules read back through the Sentry connector | Workers Issues and the Sentry email rules documented. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-08 | §5's local-development note against `scripts/predev-guard.mjs`, `wrangler.toml` (`account_id`, `[ai] remote = true`) and a live `npx wrangler whoami --json` on the owner's PC, which reached only another account | Sign-in check in `predev` documented. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-07 | §1's five-minute row against `FIVE_MIN_JOBS` in `src/lib/jobs/registry.ts` (19 jobs) after `lab-update` was added | `lab-update` added. No binding, secret, variable or cron trigger added: it rides the existing `*/5` tick and the `VPS` binding. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-06 | §1's five-minute row against `FIVE_MIN_JOBS` in `src/lib/jobs/registry.ts` (18 jobs) after `bot-weekly` was added | `bot-weekly` added. No binding, secret, variable or cron trigger added: it rides the existing `*/5` tick, the `VPS` binding and `EMAIL_QUEUE`. Nothing else re-checked; `last_verified` left as it was |
@@ -496,6 +497,20 @@ Set in `wrangler.toml` `[observability]`, separate from Sentry:
 Source: Cloudflare's Traces, Workers Logs and Observability pricing pages, read
 through the documentation search on 2026-10-04 (the sampling defaults of `1` and
 the 2026-12-01 allowance are quoted from them).
+
+**Workers Issues** (`[observability.issues]`, since 2026-11-19): Cloudflare groups uncaught
+exceptions, failed invocations, `5xx` answers and `console.error` lines into issues on the
+Worker's **Issues** tab, without an SDK. Free during its beta; occurrence details are kept
+7 days. It overlaps Sentry on purpose, as a second view that needs no SDK; Sentry stays the
+error path that emails. Every Worker of the platform with a script has it on (cf-graph has
+no script).
+
+**Who is emailed (since 2026-11-19).** Sentry's rule **New or returning errors: email** emails
+the organisation's members when a cf-admin error (level error or worse) is seen for the first
+time, regresses or comes back, at most once per issue every 30 minutes; **Security alerts:
+email at once** emails every `[SECURITY ALERT]` event here and the server's security alert
+classes in cf-vps, at most once per issue every 10 minutes. Before them this project had no
+email rule at all. Checked live through the Sentry connector on 2026-11-19.
 
 ### 4.1 Architecture
 
