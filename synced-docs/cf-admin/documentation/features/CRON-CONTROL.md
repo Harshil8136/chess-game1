@@ -6,8 +6,8 @@ audience: [owner, operator, ai, technical]
 last_verified: 2026-10-17
 verified_against: [code, infra]
 owner: harshil
-related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/workers/scheduled-lab-update.ts, src/lib/blog/publish-scheduled.ts]
-related_docs: [../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
+related_code: [src/lib/jobs/dispatch.ts, src/workers/job-runner.ts, src/lib/jobs/control.ts, src/lib/jobs/job-log.ts, src/lib/jobs/tiers.ts, src/lib/jobs/registry.ts, src/lib/jobs/runJob.ts, src/lib/jobs/read-model.ts, src/lib/jobs/cron-expr.ts, src/lib/jobs/schedule.ts, src/lib/jobs/check.ts, src/lib/jobs/health.ts, src/lib/jobs/history.ts, src/lib/dal/CronControlRepository.ts, src/workers/scheduled-usage-probe.ts, src/lib/auth/surface-guards.ts, src/lib/auth/guard.ts, src/pages/api/cron/index.ts, src/pages/api/cron/state.ts, src/pages/api/cron/config.ts, src/pages/api/cron/sync.ts, src/pages/api/cron/jobs/[id]/check.ts, src/pages/api/cron/jobs/[id]/history.ts, src/pages/api/cron/jobs/[id]/stream.ts, src/components/admin/cron/CronDashboard.tsx, src/components/admin/cron/Overview.tsx, src/components/admin/cron/JobCard.tsx, src/components/admin/cron/JobDrawer.tsx, src/components/admin/cron/JobHistory.tsx, src/components/admin/cron/ManageForm.tsx, src/components/admin/cron/RunPrecheck.tsx, src/components/admin/cron/AccessSummary.tsx, src/components/admin/cron/JobFilter.tsx, src/components/admin/cron/RunConsole.tsx, src/components/admin/cron/status.ts, src/components/admin/cron/run-log.ts, src/components/admin/cron/DrawerOverview.tsx, src/components/admin/cron/DrawerHow.tsx, src/components/admin/cron/RunTrace.tsx, src/components/admin/cron/CheckResult.tsx, src/lib/jobs/run-steps.ts, src/lib/jobs/telemetry.ts, src/pages/dashboard/cron/index.astro, migrations/0056_cron_action_roles.sql, src/workers/scheduled-backup-tick.ts, src/workers/scheduled-heartbeat-watchdog.ts, src/workers/scheduled-email-api-sweep.ts, src/workers/scheduled-access-summary.ts, src/workers/scheduled-health-checks.ts, src/workers/scheduled-log-scan.ts, src/workers/scheduled-bot-flags.ts, src/workers/scheduled-bot-weekly.ts, src/workers/scheduled-lab-update.ts, src/lib/blog/publish-scheduled.ts]
+related_docs: [../records/reports/2026-11-19-scheduled-jobs-details-and-run-log.md, ../records/reports/2026-10-09-scheduled-jobs-page-rebuild.md, ../operations/OPERATIONS.md, ../operations/incidents/2026-09-26-cron-exceeded-cpu.md, ../architecture/PERMISSIONS-SYSTEM.md, ../MAINTENANCE.md, ../specs/2026-09-16-cron-control-plane-design.md, ../specs/2026-09-20-cron-control-improvement-plan.md, ../records/reports/2026-10-04-resource-usage-optimisation.md, ../records/reports/2026-10-07-heartbeat-watchdog.md]
 tags: [cron, jobs, control-plane, plac, operations]
 ---
 
@@ -33,14 +33,15 @@ restating them — one fact, one home.
 
 | Control | What it does | Permission |
 |---|---|---|
-| **Check** | Asks, without running anything, what would happen if the job ran now: whether the scheduler would let it, whether its own check finds work, and whether a run already holds its lock. `GET /api/cron/jobs/[id]/check`. It only reads (the control document, the job's own check, its lock row) and writes nothing, not even an audit row. *Added 2026-10-09.* | *page access only* |
-| **History** | The job's last seven days, day by day, and its newest runs one by one. `GET /api/cron/jobs/[id]/history`: two Analytics Engine statements, fetched only when the History tab is opened. *Added 2026-10-09.* | *page access only* |
-| **Manage** (pause, resume, throttle) | The Settings tab of a job's details, with one **Save**. Pausing needs a reason and may take an expiry; the throttle runs a job at most every N minutes, from "every time" (the reset) to 24 hours. Nothing commits until you save. | `#pause` |
-| **Run** | Opens the run console, which checks the job first (the same read-only Check) and lists what the job touches. **Start run** executes: it streams telemetry and a per-query trace, takes an optional reason, and bypasses the control document but not the job's own gate. | `#trigger` |
+| **Check** | Asks, without running anything, what would happen if the job ran now, and answers step by step in the order the dispatcher takes them: **Schedule** (its next run), **Switches** (paused, halted, throttled, asleep or held for the database), **Its own check** (whether its check finds work, or, for a job with no check, the registry's sentence on how it finds work inside its run, `about.decides`), **Lock**, and **Settings** (how many stored settings it reads, and how many are not stored so a default applies). `GET /api/cron/jobs/[id]/check`. It only reads (the control document, the job's settings, its own check, its lock row) and writes nothing, not even an audit row. *Added 2026-10-09; steps, the job's own sentence and the settings line 2026-11-19.* | *page access only* |
+| **Activity** | The job's last seven days, day by day, and its newest runs one by one, with the one-line error of a failed run (scheduled or by hand, kept in Analytics Engine `blob4` since 2026-11-19). `GET /api/cron/jobs/[id]/history`: two Analytics Engine statements, fetched only when the tab is opened. *Added 2026-10-09 as History.* | *page access only* |
+| **Manage** (pause, resume, throttle) | The Settings tab of a job's details, with one **Save**. The throttle runs a job at most every N minutes: presets from "every time" (the reset) to 24 hours, or a typed number of minutes from 1 to 1,440. A pause needs a reason (quick reasons offered) and ends after 1 hour, 4 hours, 1 day, 1 week, at a picked date up to 30 days ahead, or never; a paused job can keep its end or be given a new one. The panel lists what Save will change, and pausing an essential job asks for confirmation first. The route refuses a throttle outside 0 to 1,440 and a pause end outside 1 minute to 30 days. *Typed throttle, dates, change list and confirmation 2026-11-19.* | `#pause` |
+| **Run on the next tick** | For a job asleep because its last run said nothing is due yet: clears that sleep so the next tick runs it under its usual rules. `POST /api/cron/state` with `action: "wake"` (`CronControlRepository` `wakeJob`); it bumps `clockRev`, not `rev`, so an open page stays valid. *Added 2026-11-19.* | `#trigger` |
+| **Run** | Opens the run console, which checks the job first (the same read-only Check, with the job's own sentence) and lists what the job touches. **Start run** executes and streams a log of the run: each step the dispatcher takes (its check, its lock, the work starting and ending), every D1 statement (its shape, never its values), every line the job logs, every call it makes to `ASTRO_SERVICE`, `BACKUP`, `VPS` or `EMAIL_CONSOLE` (path and status, never the query or body), and, when the work throws, the error with up to three causes and eight stack lines, scrubbed of emails, query strings and token-shaped values. Each line carries its time since the start; the log filters to steps, database or problems, and copies as plain text. It takes an optional reason, and bypasses the control document but not the job's own gate. *Steps, errors, timing, filters and Copy 2026-11-19 (`src/lib/jobs/run-steps.ts`).* | `#trigger` |
 | **Measure now** | Forces a live probe of Cloudflare's D1 analytics instead of waiting for the hourly one. Refused within 60 s of the last reading. Called **Sync telemetry** until 2026-10-09. | `#trigger` |
 | **Refresh** and **Live** | Refresh re-reads this page's own data: one D1 row and one Analytics Engine query, side by side (a second query only if the first is refused, §7); it probes nothing. Until 2026-10-09 it read a second D1 row, the job catalog. Live, on by default since 2026-10-09 and remembered per browser, does the same once just after each tick, only while the tab is in view and not while a run is being watched: about 12 times an hour. | *page access only* |
 | **Limits and halt**: thresholds | The D1 usage figures above which deferrable jobs stand down. | `#configure` |
-| **Limits and halt**: halt | Stops every job, essential ones included. Requires a reason, and may be given an expiry. | `#configure` |
+| **Limits and halt**: halt | Stops every job, essential ones included. Requires a reason, may be given an expiry, and since 2026-11-19 asks for confirmation with HALT typed. | `#configure` |
 
 > **The throttle is a first-class control as of 2026-09-20.** Each row has a
 > **Throttle** button behind `#pause`, and `POST /api/cron/state` accepts an
@@ -146,6 +147,7 @@ Every mutation writes a Ghost Audit row naming the actor:
 | `cron_pause` / `cron_resume` | `POST /api/cron/state` with a `state` | the reason (required on a pause) and the expiry |
 | `config_change` | `POST /api/cron/config`, and `POST /api/cron/state` for a throttle-only change | the mode, the halt expiry and the thresholds, or the new interval |
 | `cron_trigger` | `POST /api/cron/jobs/:id/stream` | an optional free-text reason, since 2026-09-20 |
+| `cron_wake` | `POST /api/cron/state` with `action: "wake"` (2026-11-19) | what the wake did: `woken` or `no-document` |
 | `cron_sync` | `POST /api/cron/sync`, only when a probe actually happened | the previous and new `checkedAt` |
 
 *Corrected 2026-09-19, and again 2026-09-20.* Two gaps named here are closed:
@@ -888,6 +890,9 @@ data. The change record,
 has the before and after. The bullets below describe the page as it is; the
 older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 "Standby" and "Paused (Quota)" labels) are in this section's history in git.
+*Reworked 2026-11-19* (the details panel's four tabs, Check as steps, the run
+log, the settings, the halt confirmation):
+`../records/reports/2026-11-19-scheduled-jobs-details-and-run-log.md` (private).
 
 - **Nothing about a job is stored as prose any more.** Its name, what it does,
   what happens if it is switched off, its area and what it touches (sends
@@ -945,31 +950,43 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   **Throttled** (at most once every N minutes), **Sleeping until HH:MM**, and
   **Active**. `jobStatus` decides it and `test/cron-status-view.test.ts` pins
   the order.
-- **The overview** has four tiles: how many jobs are running, paused or need a
-  look; the last 24 hours across all jobs (work done, looks, failures, runs by
+- **The overview** has four tiles: how many jobs are active (will run on their
+  schedule; the tile and the filter said "running" until 2026-11-19, which read
+  as "running right now"), paused or need a look; the last 24 hours across all jobs (work done, looks, failures, runs by
   hand); the next tick with a live countdown; and database use today against the
   account's free daily allowance, with the shedding limits in words. **Measure
   now** sits in that last tile for those with `#trigger`.
 - **Needs a look** filters to the jobs that failed in the last 24 hours, are
   held back for the database or are halted; a job a person paused is not flagged. **Paused**
-  and **Running** filter the rest, and a search box matches names, ids,
+  and **Active** filter the rest, and a search box matches names, ids,
   descriptions and areas. Cards are grouped by trigger, each with its schedule in words
   and a countdown to its next tick.
-- **Check** asks what would happen if the job ran now, and shows the answer on
-  the card: what the scheduler would decide and why, what the job's own check
-  found and how many rows it read, and whether its lock is held. It ends "Nothing
-  was run or changed." (`src/lib/jobs/check.ts`, `checkVerdict` in
-  `status.ts`). It is offered to anyone who can open the page, because it only
+- **Check** asks what would happen if the job ran now. The card shows the
+  headline and the one step that decides it, with **Every step** opening the
+  details; the details and the run console show every step (§1), each with a
+  pass, stop, warning or note mark, and end "Checked at HH:MM. Nothing was run
+  or changed." (`src/lib/jobs/check.ts`, `checkVerdict` in `status.ts`). Before
+  2026-11-19 a job with no check of its own, most of them, could only be told
+  "Ready to run": the step now quotes the job's own sentence on how it finds
+  work (`about.decides`). It is offered to anyone who can open the page, because it only
   reads; `test/cron-api.test.ts` shows a check on a paused job writes no audit
   row and leaves the document's revision unchanged.
-- **Details** opens a side panel with three tabs. **About**: what the job does,
-  a Check, what happens if it is switched off, what it touches, how it is
-  scheduled (schedule, next, throttle, whether it looks first, whether it runs
-  one at a time, priority, its quiet-tick database budget and its id) and its
-  last 24 hours. **History**: the last seven days as a stacked bar per day, and
-  the newest runs that did something (work, a failure, a held lock or a run by
-  hand), fetched only when the tab is opened. **Settings**: pause, resume and
-  throttle. `?job=<id>` opens the panel on that job and highlights its card.
+- **Details** opens a side panel with four tabs (*reworked 2026-11-19*; it had
+  About, History and Settings). The header shows the status and why.
+  **Overview**: a paused note when paused, six figures (next run, last work or
+  last failure, runs in 24 hours, failures, average time, database rows), the
+  hour-by-hour strip with a key, a Check, and what happens if it is switched
+  off. **Activity**: the last seven days as a stacked bar per day, and the
+  newest runs that did something (work, a failure, a held lock or a run by
+  hand), each failure with its error, fetched only when the tab is opened.
+  **Settings**: throttle, pause and its end, and **Run on the next tick** for a
+  sleeping job (§1). **How it works**: what it does, how it decides there is
+  work with a link to its own settings page where it has one
+  (`about.settingsAt`), what a run can do, and the facts (schedule, throttle,
+  whether it looks first, whether it runs one at a time, priority, quiet-tick
+  budget, and its id with **Copy a link to this job**). `?job=<id>` opens the
+  panel on that job and highlights its card; `&tab=overview|activity|settings|how`
+  opens a tab (the old `about` and `history` still work).
 - **What you may not do is said in words, once**, naming the key that would
   grant it, rather than rendered as a row of disabled buttons on every job. The
   header line appears only when something **is** missing — four ticks shown to
@@ -990,7 +1007,7 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   into view after a minute or more catches up at once. Each reload costs what
   Refresh costs (§5). The page allows for the viewer's clock being off by
   using the server's time from each load.
-- **The run console shows a trace only once there is a run.** Before that it is
+- **The run console shows a log only once there is a run.** Before that it is
   the confirm panel and nothing else. *Fixed 2026-09-21: the trace section
   rendered unconditionally and its "streaming" state keyed off the absence of
   data, so an open dialog claimed to be streaming from the worker indefinitely,
@@ -1025,10 +1042,19 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
   same claim. Leases added and that comment corrected 2026-09-20.*
 
 > **The run dialog shows what the job said, as well as what it read.** A
-> handler's own output is streamed into the trace, interleaved with the D1
+> handler's own output is streamed into the log, interleaved with the D1
 > statements in the order they happened, and labelled `INFO` / `WARN` / `ERROR`
 > in text as well as colour. *Added 2026-09-21, closing the gap this section
 > recorded from 2026-09-19.*
+>
+> **Since 2026-11-19 it is a log of the whole run** (§1 Run): the dispatcher's
+> steps are in it as `STEP` lines, every line has its time since the start, a
+> statement opens to its shape, a failed run puts what it threw above the log
+> (name, message, causes) with the stack under the step, and **Copy log** gives
+> the same lines as text. The outcome card takes the outcome's colour; it
+> looked for tone names no outcome had, so a failed run's card stayed green.
+> The steps are built only when someone watches (`onStep`); a scheduled tick
+> builds none and its traced bindings are not wrapped.
 >
 > Jobs narrate through `JobContext.log` (`src/lib/jobs/job-log.ts`), never
 > `console.*`. That is a security boundary, not a style preference: patching the
@@ -1043,12 +1069,16 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 > page: they live in `wrangler.toml` and changing one is a deploy. A handler that
 > still calls `console.*` directly is invisible here — the six scheduled job
 > files carry none, and ratchet metric **A4** holds the line at the count they
-> left behind.
+> left behind. The run log times calls to our own four Workers only; a call to
+> an outside service (Cloudflare's API, Google, PostHog), KV or R2 shows only if
+> the job logs it. A failed run's error is in Activity only for runs since
+> 2026-11-19, when `blob4` began to carry it.
 
 ## 8. Verification log
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-19 | claude | The page reworked at Harshil's ask: §1 (Check, Activity, Manage, Run on the next tick, Run, halt) and §2's audit table against `src/pages/api/cron/state.ts`, `src/lib/jobs/check.ts`, `runJob.ts`, `run-steps.ts`, `telemetry.ts`, `history.ts`, `registry.ts` and the components under `src/components/admin/cron/`; §7's overview, filter, Check, Details and run-console bullets against the same; `test/cron-run-log.test.ts` (new), `test/cron-api.test.ts`, `test/jobs-run-job.test.ts`, `test/cron-status-view.test.ts` and `test/jobs-telemetry.test.ts` pass. Live: Analytics Engine read for job failures over three days (none), the `cron-control` row read through the Cloudflare D1 connector | §1, §2's audit table and §7; `last_verified` left as it was, because §3 to §6 were not re-read. Not checked: the page in a browser, which Harshil checks on his phone |
 | 2026-11-18 | claude | `health-checks` (Sentry CF-ADMIN-2Z: over its D1 budget on the 03:00 UTC run of 16, 17 and 18 November, the once-a-day clean-up of about 700 results): the clean-up now runs every run, measured by `test/jobs-budget.test.ts` (costliest run with ten results to delete: read 437, written 53, inside 612 and 57) and `test/health-checks-job.test.ts` | The health-checks paragraph of §3; `last_verified` left as it was |
 | 2026-11-14 | claude | `bot-flags` and `bot-weekly` (Cloudflare logs: a 404 from cf-vps on each try while the real bot's recorder is not installed): both rows read through the Cloudflare D1 connector (both `on` for the real bot, no state rows); the new app-list check in `src/workers/scheduled-bot-flags.ts` (`recordInstalled`) proved by `test/bot-flags-email.test.ts` and `test/bot-weekly-email.test.ts`; no D1 query added, so the budgets stand | §3g's and §3h's not-installed lines; `last_verified` left as it was |
 | 2026-11-07 | claude | `audit-seal` (Sentry CF-ADMIN-25, written 16 against 13 on 2026-11-05): live seals and the day counts read through the Cloudflare D1 connector (two windows a day since 2026-11-04, 8 rows written a seal from `admin_audit_log`'s indexes in `sqlite_master`); `WINDOW_LOOKAHEAD_ROWS` in `src/lib/audit-seal/seal.ts` pinned by `test/audit-seal.test.ts` (every window placed the same as from 501 rows); the budget in `budgets.ts` measured by `test/jobs-budget.test.ts` | §5's audit-seal paragraph; `last_verified` left as it was |

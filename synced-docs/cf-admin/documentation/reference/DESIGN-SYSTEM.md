@@ -504,7 +504,7 @@ icon (Harshil's report, 2026-10-10).
 a sidebar system on the `--nav-*` colours, the way IBM Carbon's UI shell and shadcn's
 `--sidebar-*` keep their own set. The sidebar (`.sh-pane`) draws its dividing line as a shadow,
 so the closed rail's 64px leave a 40px row and `ROW`'s 11px padding centres the icon. The
-hotel's round badge sits beside "Madagascar" over "Admin portal". Page names are `--nav-fg-2`.
+portal's mark (a white paw on a cyan-to-blue tile, drawn inline since 2026-11-19, `--nav-mark-*`) sits beside "Madagascar" over "Admin portal". Page names are `--nav-fg-2`.
 Each group of pages has a colour of the frame's set (`hue` in
 `src/lib/access-center/categories.ts`, a `data-nav-hue` that picks a `--nav-hue-*` token, the
 400 step in the dark theme and the 600 in the light one, 700 for amber): its icons, a dot before
