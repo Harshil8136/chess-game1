@@ -27,6 +27,7 @@ tags: [operations, bindings, cloudflare]
 
 | Date | Method | Result |
 |------|--------|--------|
+| 2026-11-19 | §4.0's "Who is emailed" against both Sentry rules, read back through the Sentry connector after their email action was pointed at the hotel's Sentry account instead of issue owners falling back to all active members | Wording changed to one recipient. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-19 | §4.0 against `wrangler.toml` `[observability.issues]`, Cloudflare's Issues page (signals, retention, free in beta) and the two Sentry rules read back through the Sentry connector | Workers Issues and the Sentry email rules documented. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-08 | §5's local-development note against `scripts/predev-guard.mjs`, `wrangler.toml` (`account_id`, `[ai] remote = true`) and a live `npx wrangler whoami --json` on the owner's PC, which reached only another account | Sign-in check in `predev` documented. No binding, secret, variable or cron added. Nothing else re-checked; `last_verified` left as it was |
 | 2026-11-07 | §1's five-minute row against `FIVE_MIN_JOBS` in `src/lib/jobs/registry.ts` (19 jobs) after `lab-update` was added | `lab-update` added. No binding, secret, variable or cron trigger added: it rides the existing `*/5` tick and the `VPS` binding. Nothing else re-checked; `last_verified` left as it was |
@@ -505,8 +506,9 @@ Worker's **Issues** tab, without an SDK. Free during its beta; occurrence detail
 error path that emails. Every Worker of the platform with a script has it on (cf-graph has
 no script).
 
-**Who is emailed (since 2026-11-19).** Sentry's rule **New or returning errors: email** emails
-the organisation's members when a cf-admin error (level error or worse) is seen for the first
+**Who is emailed (since 2026-11-19).** Both rules email one person: the hotel's own Sentry
+account, whose address is the hotel's Gmail (the owner's choice, 2026-11-19). Sentry's rule
+**New or returning errors: email** emails it when a cf-admin error (level error or worse) is seen for the first
 time, regresses or comes back, at most once per issue every 30 minutes; **Security alerts:
 email at once** emails every `[SECURITY ALERT]` event here and the server's security alert
 classes in cf-vps, at most once per issue every 10 minutes. Before them this project had no
