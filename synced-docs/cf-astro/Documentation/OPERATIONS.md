@@ -101,8 +101,8 @@ limits ([change record](./records/2026-10-04-resource-usage.md),
 
 1. After the first deploy, read the Workers Builds log: wrangler must accept the
    `[[ratelimits]]` bindings, and a form post on the live site must still work.
-2. Delete the retired secret from this Worker:
-   `npx wrangler secret delete UPSTASH_REDIS_REST_TOKEN`.
+2. ~~Delete the retired secret from this Worker.~~ Done 2026-11-19 on the owner's yes,
+   through Cloudflare's API connector, and read back.
 3. Do **not** delete the Upstash database from here: cf-admin and cf-chatbot
    still use it. It goes once they stop.
 

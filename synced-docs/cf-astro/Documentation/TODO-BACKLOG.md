@@ -158,12 +158,14 @@
       Then update `db/postgres-cf-astro-writer-grants.sql` and SECURITY.md §12.
 
 - [ ] 🟢 **Delete the unused superuser secret.** No code reads `DATABASE_URL_ADMIN`, and a
-      Worker secret cannot be read back, so it serves no emergency. Whether it is set could
-      not be checked (the connector lists Workers without their secrets). On the phone:
-      Cloudflare dashboard → Workers & Pages → `cf-astro` → Settings → Variables and Secrets →
-      `DATABASE_URL_ADMIN` → Delete. While there, also delete `UPSTASH_REDIS_REST_TOKEN`,
-      `SENTRY_DSN` and `SUPABASE_SERVICE_ROLE_KEY` if listed (none is read). Changing the
-      `postgres` password afterwards is the owner's call.
+      Worker secret cannot be read back, so it serves no emergency. **2026-11-19:** the
+      Worker's secret names, read through Cloudflare's API connector, show `DATABASE_URL_ADMIN`
+      is not set. On the owner's yes the same day, six secrets nothing in `src/` reads were
+      deleted and read back: `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_REST_TOKEN`,
+      `BREVO_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_API` and `RESEND_WEBHOOK_SECRET` (the
+      send keys live on `cf-astro-email-consumer`). Left: `SENTRY_DSN` (SECURITY.md §13 says
+      nothing reads it; not part of that yes) and whether to change the `postgres` password,
+      both the owner's call.
 - [x] ~~🟢 **Preview URLs.**~~ **Done 2026-11-19** (the owner approved batch 1 of the security
       plan; [record](./records/2026-11-19-one-address-npm-12-workers-issues.md)):
       `workers_dev = false` and `preview_urls = false` in `wrangler.toml`.
