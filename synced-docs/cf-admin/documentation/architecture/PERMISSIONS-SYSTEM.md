@@ -567,6 +567,13 @@ with `action: 'note'` asks `denySentry(user, 'issues', 'triage')` as Resolve doe
 renamed `#triage` to Resolve, archive and add notes (only where it still held its `0080` name)
 ([`SENTRY.md`](../features/SENTRY.md) §1, §4 and §11).
 
+*Added 2026-11-20 (Sentry Security, migration `0101`):* one more Sentry sub-page,
+`/dashboard/sentry/security`, Security (`owner`, sharing Settings' sort order), the owner's one
+place to review the security work. It only reads, so no action key: `GET /api/sentry/security`
+asks `denySentry(user, 'security')`, the page and the part, each exactly. Owner by default because
+it names the steps still open; the owner can give it to anyone on the Access page
+([`SENTRY.md`](../features/SENTRY.md) §1 and §16).
+
 *Added 2026-10-30 (Website Content, migration `0090`, no new key):* each of the six website
 sections is its own page key, checked exactly: `denyContent(user, section?)` in
 `surface-guards.ts` asks `placRequireGrant` for the section's page (`/dashboard/content/hero`,
@@ -1555,6 +1562,7 @@ mismatches, closed on 2026-09-16.
 
 | Date | Checked by | Method | Result |
 |------------|-----------|-------------------------------|------------------------|
+| 2026-11-20 | claude | **Scope-limited to the 2026-11-20 note on the Sentry Security part**: read `migrations/0101_sentry_security.sql` (its row read back live through the Cloudflare D1 connector), `SENTRY_PARTS` and `denySentry` in `src/lib/auth/surface-guards.ts` and `src/pages/api/sentry/[part].ts`; `test/sentry-security.test.ts` passes (the part refused without its own key, given alone) | The rest of the document not re-read |
 | 2026-11-08 | claude | **Scope-limited to §10.5's 2026-11-08 note on the code boxes**: read `src/components/ui/CodeDialog.tsx`, `src/lib/fresh-sign-in-client.ts` (`codeDialog`, `submitCode`, `resendCode`) and Dialog.css's code boxes; `test/code-dialog.test.ts` and `test/confirm-code.test.ts` pass | The rest of the document not re-read |
 | 2026-11-08 | claude | **Scope-limited to the 2026-11-08 note on `#themes` and `#colours`**: read `migrations/0099_colour_themes.sql` (and both rows read back live through the Cloudflare D1 connector), `src/pages/api/settings/themes.ts`, `src/pages/api/settings/user.ts` and `src/pages/dashboard/settings/index.astro`; `test/api-settings-themes.test.ts` and `test/api-settings-user.test.ts` pass (both keys refused without a grant, the role ceiling) | The rest of the document not re-read |
 | 2026-11-06 | claude | **Scope-limited to the Chatbot tabs paragraph's Chats and Settings notes**: read `CHAT_WORDS_PATHS`, `CHAT_WORDS_TABLES` and `BOT_AI_CHANGES` in `src/lib/vps-proxy.ts` (lab 1.19.0's paths added); `test/vps-gateway.test.ts` passes | Matches the code. `last_verified` left as it was |

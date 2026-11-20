@@ -18,6 +18,9 @@ related_code:
 - src/components/dashboard/sentry/Monitors.tsx
 - src/components/dashboard/sentry/Releases.tsx
 - src/components/dashboard/sentry/Threats.tsx
+- src/components/dashboard/sentry/Security.tsx
+- src/lib/sentry/security.ts
+- src/lib/sentry/security-record.ts
 - src/components/dashboard/sentry/frame.tsx
 - src/components/admin/control-plane/useConfigEdit.ts
 - src/components/admin/control-plane/SettingRows.tsx
@@ -109,7 +112,10 @@ tags: [feature, sentry, errors, issues, logs, speed, trends, monitors, alerts, r
 > happened and its thread in Sentry, where an Admin can add a note; a new part, **Threats**, shows
 > the robots that scan our sites for open doors (such as `/_profiler/phpinfo`), how each site
 > answered them, what Cloudflare blocked, the browser security reports and what Sentry set aside;
-> and Speed no longer shows a request that never waited on anything as "0 ms".
+> and Speed no longer shows a request that never waited on anything as "0 ms". Since 2026-11-20 a
+> part named **Security** (owner by default) gathers the security work in one place: the owner's
+> steps still open with their dates, what each of Cloudflare's protections stopped this week, the
+> alert emails, and the keys and open doors closed on 2026-11-19 (§16).
 
 Asked for by Harshil on 2026-10-28: "completely scrap `/dashboard/control-plane` and put sentry
 systems there! for logs, analytics, trends, info, errors, permission based config changes and
@@ -158,6 +164,7 @@ read as each issue's thread in Sentry (what Sentry found, what was done, and the
 | `/dashboard/sentry/speed` | Speed | Admin | the Speed part |
 | `/dashboard/sentry/threats` | Threats | Admin | the Threats part (it only reads) |
 | `/dashboard/sentry/trends` | Trends | Admin | the Trends part |
+| `/dashboard/sentry/security` | Security | Owner | the Security part (it only reads; §16) |
 | `/dashboard/sentry/settings` | Settings | Admin | the Settings part: every setting shown, none changed |
 | `/dashboard/sentry#triage` | Resolve, archive and add notes | Admin | the Resolve, Reopen and Archive buttons on an issue, and adding a note to its thread in Sentry (needs the Issues part too) |
 | `/dashboard/sentry#refresh` | Refresh Sentry now | Admin | the Refresh button: ask Sentry and Cloudflare again instead of the kept copy |
@@ -171,9 +178,10 @@ part, then the action, each exactly with `placRequireGrant` (fail-closed: a key 
 map is refused, never inherited). The pages check it before any HTML is made, and the route
 checks it again. `sentryCan(user)` tells the page which parts and buttons to offer, so it never
 shows one the route would refuse. The rows are migrations `0080`, `0081` (Settings), `0085`
-(Speed, Trends, Monitors and alerts), `0086` (Releases and updates) and `0089` (Threats, and
-`#triage`'s name now that it adds notes); the parts share Logs' sort order, so the tabs read
-Issues, Logs, Monitors and alerts, Releases and updates, Speed, Threats, Trends, Settings; the
+(Speed, Trends, Monitors and alerts), `0086` (Releases and updates), `0089` (Threats, and
+`#triage`'s name now that it adds notes) and `0101` (Security, 2026-11-20, owner by default,
+sharing Settings' sort order); the parts share Logs' sort order, so the tabs read Issues, Logs,
+Monitors and alerts, Releases and updates, Speed, Threats, Trends, Security, Settings; the
 [permissions model](../architecture/PERMISSIONS-SYSTEM.md) owns the rules.
 
 ## 2. Setting it up
@@ -530,7 +538,7 @@ name and a blocked address are masked like any other text without See full detai
 ## 12. Where each part reads from, and staying inside the limits
 
 The route is `GET /api/sentry/{part}` (`overview`, `issues`, `logs`, `speed`, `trends`,
-`monitors`, `releases`, `threats`), with `fresh=1` for Refresh now, `POST /api/sentry/issues` for a change to or a note on an issue
+`monitors`, `releases`, `threats`, `security`), with `fresh=1` for Refresh now, `POST /api/sentry/issues` for a change to or a note on an issue
 and `POST /api/sentry/monitors` for a switch; [SECURITY.md](../security/SECURITY.md) §6a holds
 their rows.
 
@@ -544,6 +552,7 @@ their rows.
 | Monitors and alerts | Sentry's `/organizations/{org}/uptime/`, `uptime-summary/` (both periods, every check in one question each), each check's `checks/`, `/organizations/{org}/monitors/` and `/organizations/{org}/workflows/` |
 | Releases and updates | Sentry's `/organizations/{org}/releases/` (every project, newest 30) and `/organizations/{org}/sdk-updates/` (every project), with the project list to name a project by its id |
 | Threats | Cloudflare's GraphQL for the zone (`httpRequestsAdaptiveGroups` filtered by path patterns, by address and by country, and by day; `firewallEventsAdaptiveGroups` by action and protection, by address, by country and by day: four questions, each answering at most 30 days, which Cloudflare keeps on every plan); Sentry's spans, its `event.type:csp` errors and `stats_v2` filtered by reason |
+| Security | Cloudflare's GraphQL for the zone (`httpRequestsAdaptiveGroups` by `securitySource` and `securityAction`, seven days: one question); the portal's own Supabase key by its first characters; the rest from `src/lib/sentry/security-record.ts` |
 
 - **One way to Sentry** (`src/lib/sentry/client.ts`). Every call has 9 seconds. A 5xx, a dropped
   connection, or a 429 asking for at most 2 seconds is asked once more in the Worker (a `POST`,
@@ -669,13 +678,59 @@ before any question, every source read with no IP asked and only `GET`s to Sentr
 period falling back, Cloudflare not connected said, the site's plan leaving out Security Events
 said on their panels and figure while the scanners still show (2026-10-30), a note sent once, its length audited without
 its words, refused without `#triage`, and never sent twice when Sentry fails).
+`test/sentry-security.test.ts` (2026-11-20): the record (each protection once, its day or none,
+a Cloudflare protection for each counted row, the steps once each with the dated ones first, no
+key, address or id in its words); this week's stops by protection (blocks and challenges added up,
+what is only noted or skipped left out, an answer in another shape said to be one, no IP address
+asked); the key's kind by its first characters; the page's words; the Security key, exactly; and
+the route with a fetch stub (401 and 403 before any question, one Cloudflare question, the key
+never in the answer, Cloudflare's plan refusal said while the record still shows).
 `test/action-keys-enforced.test.ts` checks that
 `#triage`, `#refresh`, `#details`, `#sampling` and `#provider-write` are enforced.
+
+## 16. Security
+
+`/dashboard/sentry/security`, 2026-11-20 (Harshil, of the security work of 2026-11-19: "can I
+review all this somewhere in cf-admin?", then his choice on the decision card of a small read-only
+tab next to Threats). It only reads, and it is owner by default because it names the steps still
+open. One read of `/api/sentry/security`, kept ten minutes:
+
+- **Four figures:** what Cloudflare stopped this week (blocked or challenged), what the scanner
+  rule Block scanner paths blocked, how many protections are on, and how many steps are open with
+  the next one due. A figure Cloudflare could not answer keeps its place with a dash and why.
+- **Your steps:** the owner's steps still open, the dated one first, each with when it is due
+  ("15 Dec, in 25 days", "past due", or Later) and about how long it takes. Above them, whether the
+  portal's own Supabase key is already one of Supabase's new secret keys
+  (MAINTENANCE.md (private) SP-5), told by its first characters only: the key is never
+  passed on, logged or kept. The email service's key cannot be checked from the portal, and the
+  line says so.
+- **Blocked at Cloudflare:** each protection (our own rule Block scanner paths, Cloudflare's managed
+  rules, Bot Fight Mode, Browser Integrity Check, DDoS protection) with what it stopped in the last
+  seven days and since when. A protection Cloudflare used that the record does not name still gets
+  a row, so the rows add up. The counts come from the zone's HTTP request records
+  (`httpRequestsAdaptiveGroups` by `securitySource` and `securityAction`), which answer on the
+  site's free plan where Security Events do not (MAINTENANCE SE-11; read live 2026-11-20 through
+  Cloudflare's API connector: 12,930 blocked by the managed rules, 4,713 challenged by Bot Fight
+  Mode, 1,028 blocked by our own rule, 4 by Browser Integrity Check). Our own rules count as one,
+  and Block scanner paths is the zone's only rule switched on (the other, Allow Meta Webhooks Only,
+  is off; read the same day). A request only noted, skipped or let through is not counted.
+- **Alert emails** and **Keys and doors closed:** the changes of 2026-11-19, each with its day:
+  the two Sentry email rules, the four Cloudflare notifications, sign-in alerts, the portal's
+  Cloudflare key cut to 10 permissions, the unused keys and tokens removed, the old database's
+  functions locked, the image address on TLS 1.2, the spare Worker addresses closed and the
+  install guard in every repository. "Earlier" means it was on before the plan.
+
+Only the counts and the key's kind are read live. Every other row is the record in
+`src/lib/sentry/security-record.ts`, each read back in its own service the day it was made (the
+batch 1 record (private), [OPERATIONS.md](../operations/OPERATIONS.md)
+§5 for the keys). When a step is done or a protection changes, that file changes in the same
+commit as the document that owns the fact.
 
 ## Verification log
 
 | Date | Checked | Not checked |
 |---|---|---|
+| 2026-11-20 | The TL;DR's last sentence, §1's Security row and paragraph, §12's route list and Security row, §15's new test and the new §16, against `Security.tsx`, `security.ts`, `security-record.ts`, `[part].ts`, `surface-guards.ts` and migration `0101` (applied and read back through the D1 connector). Live through Cloudflare's API connector (this session's own sign-in, not the portal's token): the zone's request records by `securitySource` and `securityAction` for seven days, the figures quoted in §16, and the zone's custom rules. `test/sentry-security.test.ts` passes | The part in a phone browser; the portal's own token against that question (it holds Zone Analytics: Read, which Threats' scanner panels already use on the same dataset); the rest of the document; `last_verified` left as it was |
 | 2026-11-13 | The "Changing an issue" paragraph against `Issues.tsx` (`Triage`, `optimistic`) and `src/lib/sentry/types.ts` (`TRIAGE_BODY`, re-exported by `issues.ts`) | The rest of the page; not rendered on a phone |
 | 2026-11-03 | §3's loading paragraph against `src/components/dashboard/sentry/Sentry.tsx` (`AddressProvider`), `frame.tsx` (`Loading`), every part's call site and `src/styles/pages/sentry.css`; `test/loading-screens-look.test.ts` and `test/sentry-console-look.test.ts` pass | The rest of the document; the parts in a phone browser; `last_verified` left as it was |
 | 2026-10-30 | §11's figures and "What Cloudflare stopped" against `sources.ts`, `Threats.tsx` and `test/sentry-threats.test.ts`. Live through the Sentry connector: the portal's log lines "Cloudflare GraphQL refused a question" ("zone … does not have access to the path"), two in each of five looks between 20:44 and 20:49 UTC on 2026-10-29, the first hour after Threats shipped, and no other such line among the platform's log lines back to 2026-10-26 16:49 UTC (the 50 most recent). Which two is inferred, not read: the four questions run three at a time, the two refusals came one Cloudflare round trip apart, as the Security Events pair would, and Cloudflare's docs list `firewallEventsAdaptive` from Pro up and give the free plan's Security Events "sampled logs only" | The refused path itself (the old log line did not carry it; the new one does); the part in a phone browser; `last_verified` left as it was |
