@@ -725,9 +725,9 @@ in the kit repository, with the key in `OLTREM_FLEET_TOKEN` (or `CLOUDFLARE_API_
 3. **The order:** the Workers in `OLTREM_FLEET_FIRST` first; one of them failing, or missing,
    holds every other portal.
 4. **Each portal:** skipped when its `fleet_fingerprint` (the kit folders' git trees and the
-   choices) is current, or its `autoUpdate` is false (a deploy records it false, with
-   `ownModules`, when the repository has modules of its own, which the template the fleet builds
-   from does not have; the report names them); otherwise the client template is copied to
+   choices) is current, or its `autoUpdate` is false (set by hand in the row, which a deploy
+   keeps until it is set back to true there; or recorded false by a deploy, with `ownModules`, when the repository has modules of its
+   own, which the template the fleet builds from does not have; the report names them); otherwise the client template is copied to
    `.fleet/<worker>` beside `templates/` (its packages linked in), the choices written in, and
    `oltrem release` run on the portal's account, without Workers Builds' own `WRANGLER_CI_*`
    variables (they would point wrangler at the Vendor's Worker). A good release records the

@@ -89,6 +89,15 @@ sources: [docs/records/2026-11-15-flows-fixed.md]
 | P293 | Lists, Contacts: Remove | A dialog asks first | [record](records/2026-11-15-flows-fixed.md) |
 | P294 | A broken unsubscribe link | A small page saying the link is no longer known and what to do | [record](records/2026-11-15-flows-fixed.md) |
 
+### Finished on 20 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P295 | As the only Owner: Approvals, Ask for a yes, then For you, and Home | Your own request is in For you, counted, and Home's Needs you says 1 request waits for your answer | [record](records/2026-11-20-left-items-finished.md) |
+| P296 | Alerts, signed in as someone who may only read them | No I am on it and no Mark resolved; an alert nobody took says Nobody yet | [record](records/2026-11-20-left-items-finished.md) |
+| P297 | Settings, Company: a time zone (as America/Mexico_City), then Automations, New automation, On a schedule | The time field reads At (America/Mexico_City); a made automation says every day at 08:00 America/Mexico_City, and its next run is 08:00 there | [record](records/2026-11-20-left-items-finished.md) |
+| P298 | The same time zone, then a campaign's Pace | The sending hours name America/Mexico_City | [record](records/2026-11-20-left-items-finished.md) |
+
 ## Passed
 
 None yet.

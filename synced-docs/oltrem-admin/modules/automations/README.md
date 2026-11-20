@@ -29,6 +29,7 @@ const automations = createAutomations<Env>({
     announceAction(announcements.store),
     // a client's own: defineAction({ id, title, summary, fields, run })
   ],
+  timeZone: async (env) => 'America/Mexico_City', // the company's clock (optional: UTC)
 });
 const modules = [iam.module, /* ... */ withPages(automations.module, automationsPages)];
 ```
@@ -50,7 +51,7 @@ sign-in. Both are read at the company itself: an automation acts on what happens
 | Part | What it is |
 |---|---|
 | When something happens | Audited actions that went through. The pages offer the common ones as chips by plain names (a website form is answered, a file is shared, anything in Files, a task is made, someone asks for a yes, a request is approved or declined, something is booked, any change at all), and any other by its name under "Other events", separated by spaces: `customers.add`, or `<part>.*` for anything in a part. The API takes the names: `forms.answer`, `files.*`, `*`. The Developer page's API reference and the audit page name them. One optional condition: a value of the event (`name`, `target`, `actor`, or a detail such as `form`) equals a text, without regard to case. |
-| On a schedule | Every hour at a minute, every day at a time, or one day of the week at a time, in UTC. The tick runs every five minutes, so a run starts within five minutes of its time; a time missed while the portal was down runs once on the next tick. |
+| On a schedule | Every hour at a minute, every day at a time, or one day of the week at a time, on the company's clock: the time zone the client hands in (`timeZone`; the kit's client template gives the company's, `bookings.time_zone`, since 2026-11-20, where it was UTC). The form names the zone on its time field ("At (America/Mexico_City)") and the page says it after the time; a time the clocks skip runs an hour later, one they repeat runs the first time. A schedule made before keeps its hour and minute, now read on that clock from its next run. The tick runs every five minutes, so a run starts within five minutes of its time; a time missed while the portal was down runs once on the next tick. |
 | Then | One action, with the values of its form. A text value may name the event: `{{target}}`, `{{actor}}`, `{{at}}`, `{{type}}`, `{{automation}}`, `{{details.<name>}}` (or `{{<name>}}` for a detail). A schedule's event has the automation's name as its detail. |
 | Switched on | Only when the action's required fields are filled in and valid (`KIT-E-2702` names what is not). It is made switched off unless it is asked to be on (`on`), which is refused the same way while a value is missing; the page's dialog ticks "Switch it on now" by default. Switching it back on starts its count of failures again and works out a schedule's next time from then. |
 | Run now | Runs it at once: an event automation on the newest audited action it matches among the last three hundred, or a stand-in `automations.test` event; a schedule as if its time had come, its next time kept. |
@@ -110,7 +111,7 @@ name, for someone who holds the capability at the company; anyone else finds non
 
 | Routes | Capability | What they do |
 |---|---|---|
-| `GET /actions`, `GET /automations`, `GET /automations/:id` | `automations.read` | the actions with their fields; the automations; one with what it still needs and its runs |
+| `GET /actions`, `GET /automations`, `GET /automations/:id` | `automations.read` | the actions with their fields; the automations; one with what it still needs and its runs; both with `timeZone`, the clock schedules are read on |
 | `POST /automations` (`name`, `trigger`, `events` or `schedule`, `condition`, `action`, `input`, `on`), `PATCH /automations/:id` (those and `on`), `DELETE /automations/:id`, `POST /automations/:id/run` | `automations.manage` | the automations |
 
 Every change is audited by the module: `automations.create`, `.update` (the fields changed, never
@@ -140,13 +141,12 @@ automations.
   and comes later.
 - Actions on the company's own data (add a record, move a form answer) wait for those modules to
   offer a function an action can call without a person's session.
-- Times in the company's own time zone: schedules are in UTC.
 
 ## Tests
 
 Inside the Workers runtime, through the pipeline beside the IAM module, with the email and alerts
 modules stood in for: the manifest; schedules (the next hour, day and weekday, in words, bad ones
-refused); the event's values filled in and an action's missing fields named; both capabilities
+refused), on the company's clock in Mexico City, India and across a change to summer time, made through the route and named on the form; the event's values filled in and an action's missing fields named; both capabilities
 read at the company; an unknown action and bad events refused; made off and switched on only when
 ready, or made on at once only when ready; the tick acting on new matching rows and not on the past, a refusal, its own rows or a
 condition that differs; twenty runs a tick with a row taken whole; the hourly cap; a schedule run

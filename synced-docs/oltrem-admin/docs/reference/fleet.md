@@ -71,8 +71,10 @@ flowchart TD
    `Fleet: <worker> did not update` (a comment is added when it is already open), and the issue is
    closed by the first run that updates it.
 
-A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row. A portal
-whose repository has modules of its own is kept out by its own deploy (see Not done yet).
+A portal can be kept out: set `autoUpdate` to `false` in its `build_choices` row; a later
+`npm run deploy` from the client's computer keeps that false (since 2026-11-20; it used to write it
+back to true). To put it back in the updates, set it to `true` in the row again. A portal whose repository has modules of its own is kept out by its own deploy (see
+Not done yet).
 
 ## The one-time setup
 

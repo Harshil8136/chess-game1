@@ -96,7 +96,7 @@ Under `/api/alerts`, through the IAM module's sessions and check. Capabilities a
 
 | Route | Capability | What it does |
 |---|---|---|
-| `GET /items` | `alerts.read` | the open alerts, newest first, and the thirty latest resolved ones |
+| `GET /items` | `alerts.read` | the open alerts, newest first, and the thirty latest resolved ones, with `manage`: whether the caller holds `alerts.manage`, so the page offers "I am on it" and "Mark resolved" only to them (a reader sees "Nobody yet") |
 | `GET /home` | `alerts.read` | the Home card: how many are open, and how many of those are critical |
 | `GET /todo` | `alerts.manage` | Home's Needs you: how many open alerts nobody has acknowledged, and the worst of them |
 | `POST /items/:id/acknowledge` | `alerts.manage` | keeps the caller's address and the time on an open alert not yet acknowledged; audited as `alerts.acknowledge`; another alert is 404 |
