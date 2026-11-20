@@ -119,7 +119,9 @@ Each step answers `{ ok, words, dashboard? }`: what happened in plain words, and
 step when the portal's key may not do it. When Cloudflare does not accept the key at all (a 401,
 or its codes 6003, 6111, 9106, 9109, 10000 or 10001, which come on a 400 as often), the words say
 so and name the fix, a new `KIT_OPS_TOKEN` or forwarding through ImprovMX, instead of only
-Cloudflare's "Invalid request headers" (2026-11-12).
+Cloudflare's "Invalid request headers" (2026-11-12). Every call to Cloudflare's API or ImprovMX's is waited
+for 15 seconds at most (`CALL_MS`, 2026-11-20): one that hangs answers that the service did not
+answer, instead of holding the page.
 
 ## Capabilities, settings, jobs, health
 

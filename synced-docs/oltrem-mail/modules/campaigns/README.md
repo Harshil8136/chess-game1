@@ -206,7 +206,9 @@ the reason and how many in a row, `campaigns.protect` with the figures it paused
 `campaigns.reputation`, in the `email` lane, reads the campaign messages of the last seven days
 with their outcomes: **warn** above 0.3% spam reports (Gmail's limit) or 5% bounces for good once
 at least 100 were sent, **ok** otherwise, with the figures. The two limits are the ones a
-campaign pauses itself at (`PAUSE_SPAM`, `PAUSE_BOUNCES`).
+campaign pauses itself at (`PAUSE_SPAM`, `PAUSE_BOUNCES`). It runs every six hours (`every: '6h'`,
+2026-11-20), since each run reads every campaign message of the seven days; a first failure is
+checked again at the next health run, as for every check.
 
 `campaigns.timer`, in the `email` lane, **fails** when a campaign has been due to send for over
 20 minutes (`STALLED_MS`) while no campaign had a run at all: the five-minute job is not running

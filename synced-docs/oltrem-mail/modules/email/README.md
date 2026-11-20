@@ -697,8 +697,8 @@ Two failures in a row open a problem (`@oltrem/core-health`).
 provider says its plan allows (a provider that says only what is left warns at none), **fail**
 when one says none are left, naming the instance and the window; **ok** otherwise, or "no provider
 says what is left". It runs hourly (`every: '1h'`, 2026-11-20), since each run asks every provider
-whose kept count is older than 15 minutes; while it fails it runs on every health run. Sending
-does not wait for it: it asks for itself before it sends.
+whose kept count is older than 15 minutes; a first failure is checked again at the next health
+run, as for every check. Sending does not wait for it: it asks for itself before it sends.
 
 `email.domains`: **warn** while a sending domain that passed its check fails it now, or one
 added over a day ago has never passed, naming the domain and what is wrong; **ok** otherwise.

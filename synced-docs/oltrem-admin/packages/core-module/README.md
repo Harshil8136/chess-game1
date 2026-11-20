@@ -410,6 +410,16 @@ given. `paperResponse(html)` answers it as `text/html` with its own `default-src
 `no-store`. The invoices and the quotes use them, on a staff route and as their customer part's
 `open`.
 
+## Amounts
+
+An amount is kept in its currency's smallest unit. `parseAmount(text, currency)` reads what a
+person typed (`12.50` or `12,50`, no thousands separator) or answers null; `money(units, currency)`
+writes it for people with the code (`USD 1,234.50`), `plain(units, currency)` for a spreadsheet;
+`decimals(currency)` and `isCurrency(code)` answer what they say. They name no Workers or DOM type,
+so a store imports them from `@oltrem/core-module` and its pages from `@oltrem/core-module/pages`.
+Expenses, invoices and quotes use them (one copy since 2026-11-20; each had its own) and still
+export them under the same names.
+
 ## Migrations, settings and errors
 
 The manifest also names what the module owns elsewhere, so one file says everything a reviewer

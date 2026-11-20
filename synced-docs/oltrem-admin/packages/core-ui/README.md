@@ -148,8 +148,9 @@ them ([the record](../../docs/records/2026-10-31-email-console-remake.md)).
 Since 2026-11-08 (the owner's choice, [the record](../../docs/records/2026-11-08-look-3-foundation.md))
 the stylesheet also carries a few of daisyUI's components as a Tailwind plugin, run only when
 the stylesheet is built: no script reaches the browser. `theme.css` names the ones taken
-(buttons, checkbox, radio, toggle, the text fields, badge, kbd, skeleton, loading, join,
-swap, tooltip, progress) and fills daisyUI's one theme, `oltrem`, from the kit's own
+(checkbox, radio, toggle, the text fields and progress; buttons, badge, kbd, skeleton, loading,
+join and tooltip, which no piece wears, left the list on 2026-11-20: with two rules for
+attributes nothing sets, 820 bytes of stylesheet) and fills daisyUI's one theme, `oltrem`, from the kit's own
 tokens, so `looks.ts` stays the one colour list and every look and dark mode reach daisyUI too:
 `base-100` is the surface, `base-200` the page, `base-300` the border, `primary` the fill.
 `Switch` is daisyUI's `toggle`, `Checkbox` and `Radio` its `checkbox` and `radio`, and the text

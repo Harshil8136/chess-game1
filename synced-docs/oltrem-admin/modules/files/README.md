@@ -139,7 +139,7 @@ The module has no card on Home: Home reads a card without the person, and a coun
 would tell someone about places their roles do not reach. Its check `files.storage` counts the
 files and bytes kept and warns past 8 GB of the free plan's 10 GB bucket, which the backups share.
 It runs every six hours (`every: '6h'`, 2026-11-20), since each run counts every file row and the
-bucket fills slowly; while it warns it runs on every health run.
+bucket fills slowly; a first failure is checked again at the next health run, as for every check.
 
 ## Tables
 
