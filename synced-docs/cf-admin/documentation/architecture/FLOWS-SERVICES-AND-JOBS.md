@@ -170,7 +170,7 @@ sequenceDiagram
     B-->>J: Scheduled, reconciled, chores, alerts, awaitingDelivery, nextTickAt
     loop Each alert offered
         J->>SB: Write its email_audit_logs row (queued)
-        J->>Q: template_email or custom_email
+        J->>Q: custom_email in the portal's layout
     end
     J->>B: POST /internal/alerts/ack with the ids queued
     opt Alerts waiting for news
@@ -245,6 +245,7 @@ predate that rule and are deploy-time on purpose.
 
 | Date | Who | What was checked | Result |
 |---|---|---|---|
+| 2026-11-20 | claude | The backup-tick arrow to the email queue against `alertToEmail` in `scheduled-backup-tick.ts` (every alert a `custom_email` since the portal-design emails) | The other diagrams not re-read |
 | 2026-11-05 | claude | The services diagram against `wrangler.toml`: the `CHATBOT_SERVICE` arrow removed with charlar's proxy | The other diagrams not re-read |
 | 2026-11-04 | claude | The `signedInAt` sentence under the actor diagram, for the one-hour email code, against `confirmedAt` and `codeConfirmedActive` in `src/lib/auth/fresh-sign-in.ts`; `test/confirm-code.test.ts` passes | The rest of the document not re-read |
 | 2026-10-25 | claude | Every diagram against the code named in it: `wrangler.toml` bindings, queues and crons; `backup-proxy.ts`, `vps-proxy.ts`, `email-console.ts`, `console-signature.ts`; both gateway routes' rule lists; `jobs/dispatch.ts`, `jobs/control.ts` `decideJobRun`, `jobs/runJob.ts`; `scheduled-backup-tick.ts`; `sync-revalidate-consumer.ts`; `configuration.ts`, `approvals/store.ts`, `CronControlRepository.ts`; the email path against cf-email-consumer's `main.md`. Every mermaid block parsed with mermaid 11.4.1. Not checked: GitHub's own renderer, the live settings rows | pass |

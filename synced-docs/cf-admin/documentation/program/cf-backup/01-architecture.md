@@ -171,7 +171,7 @@ section), `http/` (responses and the router), `notify/`, `report/`, `restore-tes
 `secondary/` (reading the Secondary Pipeline's runs), `targets/` (which databases are backed up)
 and `types/`; `scripts/` holds `secondary-pipeline/`, `full-export/` and `setup/` beside
 `backup/`; and `.github/workflows/` holds `secondary-pipeline.yml` (the engine since 2026-09-27),
-`tick-deadman.yml` (the daily dead-man's check) and `sync-docs.yml` (the public docs mirror).
+`tick-deadman.yml` (the dead-man's check: daily until 2026-11-20, since then on the backup days, Sundays and Wednesdays) and `sync-docs.yml` (the public docs mirror).
 
 **As built (full build, 2026-09-23):** there is **no `evidence/` directory and no queue
 client in `lib/`** — evidence writing is the runner's job (`scripts/backup/lib/`, Track R),

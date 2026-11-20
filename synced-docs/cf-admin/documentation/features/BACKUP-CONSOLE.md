@@ -236,7 +236,12 @@ runs:
    is not acknowledged is offered again on the next tick, and the email
    consumer drops a repeat, so a warning is sent at least once and not twice.
    The sender is cf-backup's configured alert sender (an address on
-   madagascarhotelags.com, checked again here) or the consumer's default;
+   madagascarhotelags.com, checked again here) or the consumer's default.
+   Since 2026-11-20 each email uses the portal's own design (`renderEmail`, the
+   sign-in emails' layout): red for a failure, amber for a warning, green for a
+   success, the run's facts in a table, numbered "What to do" steps and one
+   button into the Backups page, all from the layout cf-backup sends with the
+   alert (`mail`, checked again here: a button only under `/dashboard/backup`);
 4. on a later tick, for the acknowledged alerts cf-backup asks about, the job
    reads their `email_audit_logs` rows and reports each delivery back
    (`POST /internal/alerts/delivery`), so the console's Alerts section shows
