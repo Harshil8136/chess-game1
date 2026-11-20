@@ -138,18 +138,18 @@ instances and pastes their keys.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /definitions` | read | every definition, the kit's and the client's, with its fields and recipe |
-| `PUT /definitions/:id` | definitions | the client's own definition, or its change to the kit's; checked, then a row |
-| `DELETE /definitions/:id` | definitions | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
+| `PUT /definitions/:id` | definitions, at the company | the client's own definition, or its change to the kit's; checked, then a row |
+| `DELETE /definitions/:id` | definitions, at the company | removes the client's row; the kit's definition, if any, is back (`KIT-E-1406` when there is no row to remove) |
 | `GET /instances?kind=` | read | the tenant's instances with status, failover order, config and whether a credential is set |
 | `GET /instances/:id` | read | one instance; never its credential |
-| `POST /instances` | manage | sets one up: the definition, a label, every field the definition lists; `201` |
-| `POST /instances/:id/credential` | manage | the fields again (a new key, a changed domain); a secret left out keeps the one stored, so a webhook secret is added without the key being pasted again; a suggestion becomes confirmed |
-| `POST /instances/:id/activate` | manage | this instance sends; the one that was active becomes the first failover |
-| `POST /instances/:id/disable` | manage | out of the failover order |
-| `POST /instances/:id/probe` | manage | reaches the provider with the sealed credential; the result (ok, when, how long, the provider's words) is kept on the row and audited as `providers.probe` |
-| `POST /detect` | manage | reads a domain's public DNS for the providers it already uses; each new one becomes a `suggested` instance with its evidence, audited as `providers.detect` |
-| `DELETE /instances/:id` | manage | removes it with its credential; the active one is refused (`KIT-E-1405`) |
-| `POST /keys/rewrap` | manage | after the KEK secret changed: every tenant's data key wrapped again under the current key |
+| `POST /instances` | manage, at the company | sets one up: the definition, a label, every field the definition lists; `201` |
+| `POST /instances/:id/credential` | manage, at the company | the fields again (a new key, a changed domain); a secret left out keeps the one stored, so a webhook secret is added without the key being pasted again; a suggestion becomes confirmed |
+| `POST /instances/:id/activate` | manage, at the company | this instance sends; the one that was active becomes the first failover |
+| `POST /instances/:id/disable` | manage, at the company | out of the failover order |
+| `POST /instances/:id/probe` | manage, at the company | reaches the provider with the sealed credential; the result (ok, when, how long, the provider's words) is kept on the row and audited as `providers.probe` |
+| `POST /detect` | manage, at the company | reads a domain's public DNS for the providers it already uses; each new one becomes a `suggested` instance with its evidence, audited as `providers.detect` |
+| `DELETE /instances/:id` | manage, at the company | removes it with its credential; the active one is refused (`KIT-E-1405`) |
+| `POST /keys/rewrap` | manage, at the company | after the KEK secret changed: every tenant's data key wrapped again under the current key |
 | `GET /home` | read | the Home card: how many connected instances are active and working; one active whose last check failed is not counted and the card says so (2026-11-15) |
 | `GET /onboarding` | manage | Home's Get started: "Connect an email service", done while an email instance is active and its last check did not fail |
 
@@ -213,7 +213,7 @@ email module never names a provider.
   (`From`, `Bcc` and the like).
 - **A refusal** is `KIT-E-1407` with the provider's status and its answer cut to one line, every
   secret value of the instance blanked; its `details` carry the status (`null` when no answer
-  came) and the seconds of a `Retry-After`. A send waits 20 seconds for the answer, a batch 30.
+  came) and the seconds of a `Retry-After`. A send or a probe waits 20 seconds for the answer, a batch 30.
   `failureOf(error)` sorts it for the bulk engine: `network` (no answer: it may have been sent),
   `speed` (429), `allowance` (402, or a 429 that names a quota or credits), `account` (401, 403:
   the key, the account or the sending domain), `message` (another 4xx), `provider` (5xx) or

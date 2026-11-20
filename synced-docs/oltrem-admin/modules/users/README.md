@@ -118,7 +118,7 @@ audited.
 
 | Routes | Capability | What they do |
 |---|---|---|
-| `GET /people`, `GET /people/:id` | `users.read` | the directory, searchable (`q`), filtered (`kind`, `active`), paged; one person |
+| `GET /people`, `GET /people/:id` | `users.read` | the directory, searchable (`q`: part of a name or address, `%` and `_` taken as typed), filtered (`kind`, `active`), paged; one person |
 | `POST /people/:id/deactivate`, `POST /people/:id/reactivate` | `users.manage` | the switch, with a reason if one is given |
 | `GET /people/:id/sessions` | `users.manage` | the person's remembered sign-ins, newest first |
 | `DELETE /people/:id/sessions/:device` | `users.manage` | end one of them: that browser must sign in again |

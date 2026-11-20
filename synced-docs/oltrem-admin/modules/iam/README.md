@@ -159,7 +159,10 @@ it to the record (one write; the ten most recent are kept); `revokeDevice` ends 
 sign-in is refused from then on (`KIT-E-2006`) until the person signs in again; `revokeAll`
 ends every open one in the same single write (the Users page's "Sign out everywhere");
 `setDeviceEnd` gives one an end time, or clears it (`endsAt`, thirty days at most, set by the
-Users module): past it, that sign-in is refused like an ended one. A **blocked** account
+Users module): past it, that sign-in is refused like an ended one. An ended sign-in is written
+only in the record, so a record that holds one is kept until a day after that sign-in began,
+when the door's own sign-in has ended too, even past the record's own day (2026-11-20: gone
+sooner, a new record knew none of them and let the ended sign-in back in). A **blocked** account
 (`iam_principals.blocked_until` still ahead, or `is_active = 0`) is refused at the door with
 `KIT-E-2017` and the time. A block or a switch off writes `iam_principals.signed_out_at`, moves
 the tenant's policy version and removes the record; the next compile keeps that time as
@@ -176,7 +179,8 @@ per request.
 
 The **authorizer** refuses when the hook did not run (no session: fail closed), then asks
 `holdsAnywhere`: the capability at the root or at any scope with a grant, since a route is the
-widest question and the handler narrows to the scope at hand. On a route whose capability is
+widest question and the handler narrows to the scope at hand. A route held to the company
+(`company: true` in `@oltrem/core-module`) is asked at the root alone (2026-11-20). On a route whose capability is
 flagged `freshSignIn` or `secondPerson` it first re-reads the tenant's policy version and
 recompiles if it moved (plan 7.2, step 6), so a revoke reaches a dangerous action at once. The
 calls of one request share that read (2026-11-13: Home asked three times), and the next request
@@ -330,7 +334,10 @@ the link while the row keeps its hash. `acceptInvitation` runs on the identity a
 person has no account yet: the address must be the invited one (`KIT-E-2016`), the invitation
 pending and in date (`KIT-E-2015`); it creates the account (or finds the one with that address),
 makes the grant in the inviter's name and records the acceptance, and closes any other invitation
-still waiting for that address. Since 2026-11-15 one invitation waits per address: an address that
+still waiting for that address. The invitation is taken first, and only while it still waits: of
+two sign-ins taking it at once (a double tap, two tabs), or one withdrawn meanwhile, the second is
+refused with `KIT-E-2015` and makes no second grant; a grant that fails leaves it waiting again
+(2026-11-20). Since 2026-11-15 one invitation waits per address: an address that
 has an account here is refused (`KIT-E-2010`, "give them the role on their page", with
 `details.principalId`), and so is one with an invitation waiting (`KIT-E-2010`, the day it was
 made, with `details.invitationId`); `POST /invitations/many` passes these on as `personId` and

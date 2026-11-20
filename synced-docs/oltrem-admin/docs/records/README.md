@@ -2,7 +2,7 @@
 title: "Records: the index of dated records"
 status: living
 owner: vendor
-last_verified: 2026-11-17
+last_verified: 2026-11-20
 sources: [the records in this folder]
 ---
 
@@ -113,3 +113,4 @@ The records, each dated and frozen once written, with its decisions and how it w
 | [Every journey walked and fixed](2026-11-15-flows-fixed.md) | refused forms keep what was typed; one person answers their own; queued, not emailed; P251-P294 |
 | [What did not land is sent again](2026-11-17-outbox-replay.md) | the outbox replay wired to a job, with an end; queue retries wait; two events an invocation |
 | [Four left items finished](2026-11-20-left-items-finished.md) | own request in For you; Alerts buttons; company clock; autoUpdate kept; P295-P298 |
+| [Security and access](2026-11-20-security-and-access.md) | company pages for the company alone; ended sign-ins stay ended; bodies read to their cap; time limits; P299-P301 |

@@ -107,7 +107,9 @@ setting keeps both in bounds.
   links carry it) and strips `<form>` and every
   form control. A click opens a new tab and never navigates the frame to a portal address.
 - **Images:** remote images are blocked by default, by the policy and by DOMPurify moving their
-  addresses aside; "Show images" brings them back for that message. Inline pictures (`cid:`) are
+  addresses aside; "Show images" brings them back for that message, those on another site only:
+  a relative address, or one on the portal's own host, would be fetched as the reader with the
+  portal's cookies (2026-11-20). Inline pictures (`cid:`) are
   shown from the parsed message, flat picture types only (PNG, JPEG, GIF, WebP, AVIF, BMP): an
   SVG is a document, and opened on its own from the address the portal gives it, it would run its
   script as the portal (2026-11-17). `<meta name="referrer" content="no-referrer">` keeps senders from
@@ -175,7 +177,8 @@ so the inbox works the way Gmail, Outlook and Yahoo taught everyone
   the inbox and its unread count, as Gmail's Promotions and Outlook's Other. Move to Inbox or Move
   to Updates moves all of that sender's conversations and is remembered for their next mail.
 - **Unsubscribe in one press.** When a list's message offers RFC 8058's one-click unsubscribe
-  and Cloudflare's DKIM check passed (so the header is the sender's own), the portal makes the
+  and Cloudflare's DMARC check passed (so the header is the From's own; a DKIM signature of
+  any domain was enough until 2026-11-20), the portal makes the
   POST for the person and moves the sender to Updates; otherwise the sender's own page or address
   is offered. Updates lists every subscription with its button, as Gmail's Manage subscriptions.
 - **Snooze:** in three hours, tomorrow at 8 or Monday at 8, on the company's clock. The

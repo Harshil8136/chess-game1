@@ -71,7 +71,10 @@ it reads any Access identity:
 - the door reads only its own cookie, so a staff sign-in never opens a customer's page;
 - every other path still needs Access, so a customer's cookie opens no staff page or route;
 - the door's forms are refused unless they come from the portal's own page (their `Origin`, or a
-  browser's `Sec-Fetch-Site: same-origin`), and every answer is `no-store`.
+  browser's `Sec-Fetch-Site: same-origin`), and every answer is `no-store`;
+- a form's body is read only up to 4 KB (an address or a six-digit code needs far less), so a long
+  one is never held whole, and a link whose path is not valid percent-encoding leads back to the
+  account page or the sign-in, never to an error (2026-11-20).
 
 Until the Bypass is added, a customer who opens `/account` meets the Access sign-in, which lets in
 only the addresses it allows.
@@ -140,6 +143,7 @@ sequenceDiagram
 | The ID token comes straight from the service's token endpoint over HTTPS, as OpenID Connect Core 3.1.3.7 allows, and its issuer, audience (and `azp`), nonce and times (two minutes' skew) are checked | The token is the service's answer to this sign-in and no other |
 | The token must say the address was verified (`email_verified`), and the address must be a customer the company added who is on | A service proves an address; the company still decides who its customers are |
 | A sign-in made this way is the same `__Host-` sign-in as the code's, marked with the service's name, and audited as `customers.sign-in` | Ending sign-ins, switching off and signing out work the same |
+| Each call to the service (its details, the token) gives up after ten seconds (`SERVICE_LIMITS.callSeconds`) | A service that hangs fails the sign-in with a reason instead of holding the customer's page |
 
 Services that fit: any OpenID Connect provider that publishes its details at the issuer and puts
 `email_verified` in its ID tokens, such as Auth0, Okta, Keycloak and Google. Supabase's OAuth 2.1
@@ -189,10 +193,10 @@ The door's pages use the portal's look, without the staff sidebar; the mark at t
 | `POST /people/:id/end-sign-ins` | `customers.manage` | ends every sign-in, and says how many |
 | `POST /people/:id/invite` | `customers.manage` | emails a customer who is on the link to sign in |
 | `GET /services` | `customers.view` | the sign-in services, never their secrets, and whether the reader may set them up |
-| `POST /services` | `customers.services` | connects a service by its issuer address, client id and client secret, after reading its published details |
-| `POST /services/:id/on` | `customers.services` | offers it at the door again |
-| `POST /services/:id/off` | `customers.services` | stops offering it; sign-ins made with it stay |
-| `POST /services/:id/remove` | `customers.services` | removes it and its sealed secret |
+| `POST /services` | `customers.services` at the company | connects a service by its issuer address, client id and client secret, after reading its published details |
+| `POST /services/:id/on` | `customers.services` at the company | offers it at the door again |
+| `POST /services/:id/off` | `customers.services` at the company | stops offering it; sign-ins made with it stay |
+| `POST /services/:id/remove` | `customers.services` at the company | removes it and its sealed secret |
 | `GET /search?q=` | `customers.view` | the portal's search: customers by name or address |
 
 Every change is audited: `customers.add` (with whether the link went), `customers.change`,

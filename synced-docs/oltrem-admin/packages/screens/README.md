@@ -496,6 +496,8 @@ ready), 47 KiB, from `@fontsource-variable/inter` at build time (SIL Open Font L
 notice in the generated file). The build puts its `@font-face` at the top of `/ui/app.css`, and
 the Worker serves it at `/ui/inter.woff2` under its version (`APP_FONT_VERSION`), kept for good
 and preloaded by every page; the device's own font shows until it arrives (`font-display: swap`).
+It is decoded once per copy of the Worker with a plain loop (2026-11-20: a callback per character
+took about 4 ms of that first request).
 A brand font (`--brand-font`) still comes first. **The icon** is served at `/ui/mark/:file`, a
 name made of its contents, kept for good, with its own type and `nosniff`; anything else is 404.
 

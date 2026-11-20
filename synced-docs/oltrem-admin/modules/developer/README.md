@@ -55,7 +55,7 @@ works for the whole company.
 | The body | `{"type": "<action>", "timestamp": "<when it was audited>", "data": {"seq", "actor", "actorKind", "target", "details"}}`: the audit row as it is, so it carries who made the change; the company sends it to its own services. |
 | Signing | `webhook-id` (`msg_<delivery>`, the same on every attempt, so a receiver drops a repeat), `webhook-timestamp` (seconds) and `webhook-signature: v1,<base64 HMAC-SHA256 of id.timestamp.body>`, keyed with the base64 after `whsec_`. The Standard Webhooks libraries check it as they are. |
 | The secret | 24 random bytes as `whsec_…`, answered once when the webhook is made or given a new secret, and stored sealed under a data key of its own wrapped by the KEK secret (`@oltrem/core-crypto`), so the database never holds a usable secret. A new secret signs from that moment. Without the KEK secret no webhook is made (`KIT-E-2603`). |
-| Sending | Every five minutes, ten deliveries at most a run, five at a time (the free plan allows six connections), each with ten seconds to answer and no redirect followed. A 2xx delivers it. |
+| Sending | Every five minutes, ten deliveries at most a run, five at a time (the free plan allows six connections), each with ten seconds to answer and no redirect followed. A 2xx delivers it; of any other answer only the start of its body is read and kept (200 characters), never the whole. |
 | Retries | After 5 minutes, 30 minutes, 2, 8 and 24 hours; after the sixth attempt it has failed for good. **Try again** on the page sends one now, its attempts counted afresh. |
 | Switched off | Ten deliveries in a row that failed for good switch the webhook off, audited as the system's `developer.webhook-off`; switching it on starts the count again. A switched-off webhook is sent nothing. |
 | Kept | Deliveries thirty days, removed daily by `developer.prune`; one still waiting is kept. |
@@ -80,7 +80,8 @@ works for the whole company.
 | `GET /reference` | `developer.read` | the API as the mounted modules declare it |
 
 Every change is audited by the module: `developer.job-run`, `.job-pause`, `.job-resume`,
-`.webhook-create` (with its address), `.webhook-update` (the fields changed), `.webhook-delete`,
+`.webhook-create` (with its address's host only: a path or query often carries the receiver's own
+secret, 2026-11-20), `.webhook-update` (the fields changed), `.webhook-delete`,
 `.webhook-rotate`, `.webhook-test` (what came back) and `.delivery-retry`; the system's
 `developer.webhook-off`.
 

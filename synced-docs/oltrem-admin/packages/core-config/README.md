@@ -110,7 +110,7 @@ routes; the Settings page of `@oltrem/screens` reads and writes through them.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /api/settings/values` | `settings.read` | `{ items, standing, sections }`: every defined setting with its title and description, its section, its live value and its default (both left out for a sensitive one), where it comes from (`default`, `client`, `system`), who changed it last and when, the control it takes (`text`, `number` with `min`, `max` and `unit`, `switch`, `choice` with its `options`, `list` of words, or `other`), read once from its schema while the Worker loads (a setting defined later, on the first list that shows it), and whether the caller may change it; how the caller stands (`vendor`, `owner`, `admin`); the sections in their order with their names. Read from D1, the truth, not the snapshot |
-| `PUT /api/settings/values/:key` | `settings.manage` | `{ value, reason? }`: refused when the key is unknown (`KIT-E-0404`), set in the client file (`KIT-E-0422`), above the caller (`KIT-E-0403`) or rejected by its schema (`KIT-E-0422`); otherwise saved through `Config.save` and audited as `settings.update` |
+| `PUT /api/settings/values/:key` | `settings.manage` at the company | `{ value, reason? }`: refused when the key is unknown (`KIT-E-0404`), set in the client file (`KIT-E-0422`), above the caller (`KIT-E-0403`) or rejected by its schema (`KIT-E-0422`); otherwise saved through `Config.save` and audited as `settings.update` |
 
 Who may change a setting is its `editableBy` read against the caller's standing, which the client
 hands in as `standing` from its session: the Vendor may change every live setting, an Owner the
@@ -171,7 +171,7 @@ switched off.
 | Route | Capability | What it does |
 |---|---|---|
 | `GET /api/settings/parts` | `settings.parts` (no floor, fresh sign-in) | every mounted part: on or off, always on, what it needs and what needs it, its extras each on or off with what each stops (`skips`, so the screens can offer the switch beside a warning of one of them, 2026-11-14); the list off, extras included; the presets with the parts each switches off |
-| `PUT /api/settings/parts` | `settings.parts` | `{ off, reason? }` (parts and extras): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes System status so a check switched off closes its alert within minutes |
+| `PUT /api/settings/parts` | `settings.parts` at the company | `{ off, reason? }` (parts and extras): refused (`KIT-E-0422`) for an unknown part or extra, a core part, or one another part left on needs, naming them; otherwise saved through `Config.save` (the saver sees it at once, every Worker within the snapshot's minute) and audited as `settings.parts` with what was switched off and on; then `parts.changed`, where the template wakes System status so a check switched off closes its alert within minutes |
 
 The client template hands the set to `createApp`, `createWorker`, the scheduler, the flows, System
 health and the IAM module as their `off` option; each says what it does with it. A switched-off

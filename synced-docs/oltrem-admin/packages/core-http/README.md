@@ -100,7 +100,9 @@ A module's public hooks (`hooks` in `@oltrem/core-module`) are mounted at
 `POST /hooks/<module><path>` (or `GET`, for a link a person opens, such as a shared file) before
 the identity is read, so an outside service such as an email provider can post its reports with
 no sign-in. The body is read once, as text, at most
-`HOOK_BODY_MAX` (512 KiB), and handed to the handler with the path's parameters; the answer is
+`HOOK_BODY_MAX` (512 KiB): through `readCapped`, so a body sent in pieces without a declared length
+is still refused at the first byte past it rather than read whole (2026-11-20). It is handed to the
+handler with the path's parameters; the answer is
 `no-store`, except a successful answer to a GET that asks to be kept for ever (`immutable`), as a
 script whose address changes with any byte of it does (Oltrem Mail's reader), and a `KitError` the
 handler throws is a problem response like any other. No session,
@@ -122,7 +124,9 @@ against a request's CPU, and leaves a fault in it for the hook to meet on the fi
 
 `session` and `authorize` are the two places the permission model plugs in. The session hook
 runs once per request after the identity is read and before the capability check; whatever it
-returns reaches the authorizer as its fourth argument and the handler as `ctx.session`. It is
+returns reaches the authorizer as its fourth argument and the handler as `ctx.session`; the fifth
+is `company` on a route held to the company itself (`company: true`), and a refusal there says
+"for the whole company". It is
 given the request's `executionCtx` when the request came with one: the calls a screen makes to the
 API inside one page share it, so the hook may keep what it read for the rest of them. Either may
 throw a `KitError` to answer with a reason of its own. The IAM module provides both, with the

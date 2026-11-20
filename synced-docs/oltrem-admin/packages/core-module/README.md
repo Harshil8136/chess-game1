@@ -123,6 +123,12 @@ loads no session and checks no capability, so the route names none, and it is PO
 body is validated and the same-origin check applies. It is the one way past the capability check,
 and it is written in the manifest where a reviewer reads it.
 
+`company: true` holds a route to the company itself: the capability counts only where it is held
+at the root, never at a place below it. It is for a route that reads or changes what belongs to
+the whole company: the audit log, settings and modules, providers and their keys, a backup, the
+customers' sign-in services (2026-11-20; until then a grant at one location was enough, since the
+check asks whether the capability is held anywhere and those handlers never narrowed).
+
 ## Capabilities
 
 A module declares what its routes check as data on the manifest: `bitPlane`, the permission bit
@@ -382,7 +388,10 @@ Its schema then checks the query. `route(def)` holds a route written with its ow
 doubled quotes, line breaks inside quotes; a comma or a semicolon between fields, whichever the
 first line uses most; a byte order mark ignored; empty lines left out). `decodeText(bytes)` reads
 an upload as UTF-8 when it is, otherwise as Windows-1252. The campaigns' list and the records'
-import use both. `csvFile(head, rows)` writes one, every cell through `csvCell`: quoted with
+import use both. `readCapped(request, max)` reads a request's body only as far as `max` bytes and
+answers `null` past it: the declared length is checked first, and a body sent in pieces, which
+declares none, is counted while it is read, so a long one is never held whole (2026-11-20). The
+public hooks, the records' import, the customers' door and Oltrem Mail's uploads read through it. `csvFile(head, rows)` writes one, every cell through `csvCell`: quoted with
 its quotes doubled, a yes or no as `Yes` or `No`, and text a spreadsheet would run as a formula
 (starting with `=`, `+`, `-`, `@`, a tab or a carriage return) given a leading apostrophe, so what
 someone typed never runs on the computer of whoever opens the download. Every download of the kit

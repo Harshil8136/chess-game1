@@ -17,6 +17,9 @@ sources: [docs/phone-tests.md, which held the older lines until 2026-11-14; the 
 
 | # | Open | You should see | From |
 |---|---|---|---|
+| P299 | As someone whose role was given at one location only, open Settings or Integrations | Refused, saying it is needed for the whole company; as the Owner, the same page works | [record](records/2026-11-20-security-and-access.md) |
+| P300 | An invitation link, opened in two tabs: press Accept in both | One account and one role; the other tab says the invitation was used or withdrawn | [record](records/2026-11-20-security-and-access.md) |
+| P301 | Developer, make a webhook whose address has a path; then Activity log | The log names only the host of the address | [record](records/2026-11-20-security-and-access.md) |
 | P249 | A new portal, as the Vendor, before the company is named: open Tasks, Invoices, Campaigns, Analytics from the sidebar | Each shows First, name the company with the form; never Invalid input or You do not have access | [record](records/2026-11-15-review-team-cpu-and-first-run.md) |
 | P219 | As the Vendor: anyone's Overrides | Vendor-level permissions listed, marked Vendor level; ticking one and Save gives it; an Owner never sees them | [record](records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
 | P218 | As the Vendor or another Owner: an Owner's Overrides; untick one, Save | It reads Denied for them; that Owner loses it from their next request; Reset gives it back | [record](records/2026-11-14-users-sessions-blocking-owner-overrides.md) |
