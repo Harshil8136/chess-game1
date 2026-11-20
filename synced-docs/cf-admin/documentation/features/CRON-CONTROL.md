@@ -906,8 +906,9 @@ with no capsules or boxes, when he still saw cards (that record's §9 and §10).
   (only with `#trigger`) and Details. A thin heading row names each schedule in
   words with its job count and a countdown. Tapping a row anywhere opens
   Details. When the table is narrower than about 54rem (a phone, or a computer
-  with the sidebar open on a small screen) the headings go and status, last run
-  and next run become one labelled line under the name. Holding the pointer on
+  with the sidebar open on a small screen) the headings go, status, last run
+  and next run become one line under the name, and the strip, Check and Run
+  are left to Details, so a row is two lines. Holding the pointer on
   a cell shows the full sentence. `lastCell` and `nextCell` (`status.ts`) word
   the cells; `test/cron-job-row.test.ts` and `test/cron-status-view.test.ts`
   pin them.
@@ -992,9 +993,12 @@ with no capsules or boxes, when he still saw cards (that record's §9 and §10).
   row and leaves the document's revision unchanged.
 - **Details** opens a side panel with four tabs (*reworked 2026-11-19*; it had
   About, History and Settings). The tabs are words with an underline under the
-  open one, and the panel's sections are divided by a line rather than boxed
-  (*2026-11-20*; the shared capsule tabs and boxed sections before). The header
-  shows the status, as a dot and a word, and why.
+  open one, run the panel's full width and fit a phone without scrolling;
+  opening the panel focuses the open tab. The panel's sections, Settings
+  included, are divided by a line rather than boxed, and Settings' choices are
+  square-cornered buttons (*2026-11-20*; the shared capsule tabs, boxed
+  sections and capsule choices before). The header shows the status, as a dot
+  and a word, and why.
   **Overview**: a paused note when paused, six figures (next run, last work or
   last failure, runs in 24 hours, failures, average time, database rows), the
   hour-by-hour strip with a key, a Check, and what happens if it is switched
@@ -1100,6 +1104,7 @@ with no capsules or boxes, when he still saw cards (that record's §9 and §10).
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-20 | claude | **Drawn and looked at, with Harshil's yes (01:52Z) to a local headless browser:** the real components bundled with sample data built from the registry, the production stylesheets from `npm run build`, at 390 px and 1280 px, dark and light, main page, Details' Overview, How it works and Settings | Found and fixed: phone rows four lines tall with the strip and three buttons crowding the name (now two lines), Details' fourth tab cut off on a phone and a focus ring drawn round the whole tab row on opening (the browser focused the scrolling row; it now focuses the open tab), a gap under the overview figures, Settings still boxed with capsule choices. Not checked: Activity and Check against live answers (the harness has none) |
 | 2026-11-20 | claude | The job list made a plain table after Harshil still saw cards and called the Details tabs capsules: `src/components/admin/cron/JobRow.tsx`, `CronDashboard.tsx`, `JobFilter.tsx`, `JobDrawer.tsx` (own tabs, the shared `Tabs` list no longer used here), `status.ts` (`lastCell`, `nextCell`), `src/styles/pages/cron.css`; `test/cron-job-row.test.ts` and `test/cron-status-view.test.ts` pass; deploy of `d92cec4` confirmed live through the Cloudflare API (version of 15:19 UTC, 2026-11-19); `npm run verify` | §7: the table bullet, the overview, the filter and the Details look. Not checked: the page in a browser. Not re-checked: the rest of the document |
 | 2026-11-19 | claude | The job cards replaced by a list after Harshil saw little change: `src/components/admin/cron/JobRow.tsx` (was `JobCard.tsx`), `CronDashboard.tsx`, `DrawerOverview.tsx` (the shared `cron-note`), `src/styles/pages/cron.css`; `test/cron-job-row.test.ts` (new) passes; `npm run verify` | §7: the new first bullet and "card" read "row" where it meant the job. Not checked: the page in a browser (the owner checks on his phone). Not re-checked: the rest of the document |
 | 2026-11-19 | claude | The page reworked at Harshil's ask: §1 (Check, Activity, Manage, Run on the next tick, Run, halt) and §2's audit table against `src/pages/api/cron/state.ts`, `src/lib/jobs/check.ts`, `runJob.ts`, `run-steps.ts`, `telemetry.ts`, `history.ts`, `registry.ts` and the components under `src/components/admin/cron/`; §7's overview, filter, Check, Details and run-console bullets against the same; `test/cron-run-log.test.ts` (new), `test/cron-api.test.ts`, `test/jobs-run-job.test.ts`, `test/cron-status-view.test.ts` and `test/jobs-telemetry.test.ts` pass. Live: Analytics Engine read for job failures over three days (none), the `cron-control` row read through the Cloudflare D1 connector | §1, §2's audit table and §7; `last_verified` left as it was, because §3 to §6 were not re-read. Not checked: the page in a browser, which Harshil checks on his phone |
