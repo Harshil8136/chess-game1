@@ -4,8 +4,8 @@ The module contract of the kit (plan section 4.3): one manifest per feature, che
 defined so a bad one fails the build. So far: the id and the version, the capabilities on their
 bit plane, the API routes with their capability and schema, the event types a module handles, its
 jobs, its flows, its health checks, the migrations it ships, the settings and errors it owns, and
-the scheduled hook. Pages, i18n and docs join the manifest with the rest of the module system
-(phase 3).
+the scheduled hook, its pages, Home cards and public hooks (`pages`, `home`, `hooks`). Words
+in other languages and per-module docs are not on the manifest.
 
 ## Defining a module
 

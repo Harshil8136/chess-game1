@@ -4,8 +4,7 @@ The people of a client Worker (plan section 4.4): the directory with each person
 switching an account off and on under the permission model's standing rules. An account is the
 IAM module's principal row; this module adds what a person is called and how they read the
 portal, and the rules of the switch. Invitations and group membership are the governance's, in
-`@oltrem/iam`, because they are grants; service accounts and the sync of the door's groups come
-later (below).
+`@oltrem/iam`, because they are grants; service accounts come later (below).
 
 ## Using it
 
@@ -139,9 +138,8 @@ audited.
 
 Service accounts (kind `service`) need the door's service-token identity, which carries no email,
 so the pipeline's identity reader and the session key must learn a second shape; that waits for
-the sandbox, where a real service token can be tried. The sync of the door's groups into kit
-groups (`source = 'access'`, read-only in the screens) needs the Cloudflare API through the
-providers module of phase 4.
+the sandbox, where a real service token can be tried. Since 2026-11-05 the Worker keeps nothing
+in step with Access, so the door's groups are not synced; `iam_groups.source` has no reader.
 
 ## Tables
 

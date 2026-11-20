@@ -76,7 +76,10 @@ after one was added.
 
 The route keeps its id, `cloudflare`, on each message's row where a provider instance's id would
 go, so Sent and the counts show it. It reads Cloudflare's answer only through the binding's
-error codes; Cloudflare's delivery events are not wired yet.
+error codes (`CLOUDFLARE_CODES` in `src/routes.ts`, read against Cloudflare's list again on
+2026-11-20: a domain whose Email Sending is not configured or not ready, and an account plan that
+sends to verified addresses only, are setup answers, so the next route sends); Cloudflare's
+delivery events are not wired yet.
 
 ## Routes
 

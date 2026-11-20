@@ -2,7 +2,7 @@
 title: "Where things stand, phase by phase"
 status: living
 owner: vendor
-last_verified: 2026-11-03
+last_verified: 2026-11-20
 sources: [this repository, its records]
 ---
 
@@ -26,7 +26,7 @@ and measure, has these parts:
 |---|---|
 | This repository, with the contract every agent reads first (ai.md, rules.md, the generated pointer files) | **done** 2026-10-19 |
 | The token registry with reuse before create, and the gate that enforces it | **done** 2026-10-19: nine names from the plan, none created yet |
-| The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates then ([what verify runs](reference/verify.md)), run locally and on every push |
+| The verify chain skeleton with the scan for copied names and identifier shapes | **done** 2026-10-19: five gates then ([what verify runs](reference/verify.md)), run locally before every push (GitHub runs it on pull requests, weekly and by hand, not on a push since 2026-10-25) |
 | The public docs mirror, described below | **done** 2026-10-19 |
 | A client template repository and a sandbox client repository | **template done** 2026-10-20, as `templates/client` in this repository ([the record](records/2026-10-20-client-template-and-setup.md)); the sandbox repository waits on the owner |
 | A fresh Cloudflare account for the sandbox client | not started: the owner creates it |
@@ -44,7 +44,7 @@ Phase 1, the core runtime, has these parts so far:
 | `@oltrem/core-config`: the settings registry, the four configuration layers and the fast read path (memory, one KV snapshot, D1 as the truth) | **done** 2026-10-19: the client template's Worker reads its settings through it |
 | `@oltrem/cli`, the command-line tool: `manifest check`, `migrations sync` and `apply`, `setup`, `docs`, `check agents`, `check tokens`, `doctor` | **done** 2026-10-20: records [one](records/2026-10-20-cli-manifest-check-and-doctor.md), [two](records/2026-10-20-client-template-and-setup.md), [three](records/2026-10-20-cli-docs-command.md), [four](records/2026-10-20-cli-check-commands.md) |
 | The core runtime: `@oltrem/core-errors`, `core-module`, `core-http`, `core-outbox` and `core-audit` (errors as data, the module contract, the one pipeline and the three Worker handlers, the outbox with replay, the hashed audit log) | **done** 2026-10-20: [the record](records/2026-10-20-core-runtime-packages.md); the client template's Worker is built from them |
-| `@oltrem/core-ui`: the token list as a Tailwind theme, the phone-first primitives on native elements, and the three widgets on Zag.js | **done** 2026-10-20: [the primitives record](records/2026-10-20-core-ui-tokens-and-primitives.md) and [the widgets record](records/2026-10-20-core-ui-widgets.md); the gallery page and the screen gates wait on an Astro app |
+| `@oltrem/core-ui`: the token list as a Tailwind theme, the phone-first primitives on native elements, and the three widgets on Zag.js | **done** 2026-10-20: [the primitives record](records/2026-10-20-core-ui-tokens-and-primitives.md) and [the widgets record](records/2026-10-20-core-ui-widgets.md); the gallery page is not built; the screens are rendered with Preact by the screens package, and every page's names, labels and viewport are checked on each verify |
 | The client template and `oltrem setup`: the model of a client repository, resources by name, the kit's migrations copied with checksums, the one deploy workflow | **done** 2026-10-20: [the record](records/2026-10-20-client-template-and-setup.md); `npm run deploy` [built](records/2026-10-21-one-command-deploy.md), first run on the sandbox |
 | `oltrem docs`: a client repository's generated reference, checked on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-docs-command.md); the template carries its five pages |
 | `oltrem check agents` and `check tokens`: a client repository's instruction files and token registry, checked on every verify | **done** 2026-10-20: [the record](records/2026-10-20-cli-check-commands.md) |
@@ -68,12 +68,12 @@ Phase 3, the module system, has these parts so far:
 | Part | State |
 |---|---|
 | The manifest declares a module's capabilities on its bit plane; the Worker registers them at its start, once per module version, and the check reads the new ones at once | **done** 2026-10-21: [the record](records/2026-10-21-module-capabilities.md); the template runs it |
-| Jobs on the manifest and the one tick (`@oltrem/core-jobs`): each run leased, recorded, and tried again at its next time | **done** 2026-10-21: [the record](records/2026-10-21-jobs-and-the-tick.md); the template runs it on its five-minute cron; no module declares a job yet |
+| Jobs on the manifest and the one tick (`@oltrem/core-jobs`): each run leased, recorded, and tried again at its next time | **done** 2026-10-21: [the record](records/2026-10-21-jobs-and-the-tick.md); the template runs it on its minute cron; most modules declare jobs now |
 | Health on the manifest and its runner (`@oltrem/core-health`), run as a job on the tick; migrations, settings and errors declared on the manifest | **done** 2026-10-21: [the record](records/2026-10-21-health-and-manifest-fields.md); the client template mounts it |
-| The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module that a client's verify passes unedited | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); no page, no capabilities and the setting read as its default until the kit has them |
+| The generator `oltrem new module` and the module template it copies, proven on every verify: a complete module that a client's verify passes unedited | **done** 2026-10-21: [the record](records/2026-10-21-the-module-generator.md); the template has its capabilities and a page since |
 | The generated reference of a client reads its modules: `oltrem docs` writes a Modules page that a client's verify holds current | **done** 2026-10-21: [the record](records/2026-10-21-generated-references.md); the kit's own modules are documented in the kit |
 | The capability version gate: a client's `oltrem docs` keeps `capabilities.json`, each module's capabilities under its version, and refuses a change made under the same version, since the Worker registers them once per version | **done** 2026-10-21: [the record](records/2026-10-21-capability-version-gate.md) |
-| The page fields of the manifest (pages, i18n, docs) and the contract tests generated from manifests | wait on the renderer, after the sandbox measurement |
+| The page fields of the manifest (pages, i18n, docs) and the contract tests generated from manifests | pages **done** (`pages`, `home`, `hooks` on the manifest); words in other languages, per-module docs and generated contract tests not started |
 | Alerts, the key recipes, the audit page and seal | **done** 2026-10-21: [key recipes](records/2026-10-21-key-recipes.md), [alerts](records/2026-10-21-alerts.md), [audit](records/2026-10-21-audit-seal-and-export.md) |
 | The migration ledger check at the Worker's start | not started |
 
@@ -104,8 +104,9 @@ Phase 5, backup, GitHub, home and health, has these parts so far:
 | The home module | a home screen with a card per module **done** 2026-10-21 ([the record](records/2026-10-21-screens-and-npm.md)); the module itself is not built |
 | The phase's acceptance: a nightly export of the sandbox under the bucket lock, a restore drill, the kit version, every budget on System status | not started: needs the sandbox |
 
-Anything deployed, measured or connected to an account is still to come: the sandbox client needs
-the fresh Cloudflare account, the owner's step.
+Live portals run since 2026-11-04. Since 2026-11-11 every push to `main` updates every client's
+portal by itself through [the fleet](reference/fleet.md), with no verify of its own: the local
+`pnpm verify` is the only gate before it (the codebase review of 2026-11-20 proposes one).
 
 Phase 6 has these parts so far:
 

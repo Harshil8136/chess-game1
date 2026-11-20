@@ -21,7 +21,7 @@ sources: [this repository's code, ai.md, the package and module READMEs]
 | `packages/core-*` | the runtime every client gets: errors, the module contract, the request pipeline, settings, outbox, audit, jobs, health, encryption, the design kit | core packages only |
 | `packages/screens` | the portal's pages, rendered on the server with Preact inside the client's Worker | core packages and the modules whose API it reads |
 | `packages/cli` | the `oltrem` command: manifest check, migrations, setup, deploy, docs, doctor, upgrade | core packages |
-| `modules/*` | one feature each, as a package: `iam`, `users`, `records`, `forms`, `providers`, `email`, `backup`, `github`, `alerts` | core packages, the `iam` module (and `email` on `providers`) |
+| `modules/*` | one feature each, as a package (the index in [docs/README.md](README.md) lists them); `email`, `campaigns` and `mail` come from Oltrem Mail, packed in `vendor/mail/` | core packages, the `iam` module (and `email` on `providers`) |
 | `templates/client` | what a client repository is: one Worker that mounts the modules, its manifest, migrations, workflow | core packages and modules |
 | `templates/module` | the module `oltrem new module` copies into a client repository | core packages |
 | `scripts/` | the verify chain and its gates, the install and dev runners | Node only |

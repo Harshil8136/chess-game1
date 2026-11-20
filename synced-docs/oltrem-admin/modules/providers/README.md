@@ -355,9 +355,8 @@ cannot do, a delivery report that failed its check, a provider that refused a do
 
 ## Not here yet
 
-The screens, with the Setup page that tests a provider's key from its recipe. No adapter has spoken
-to a real provider yet: the request shapes stand on the public references until the sandbox
-sends through two of them. A batch for Postmark (500 a call, on a broadcast message stream),
+The Integrations page exists and live portals send through it; a definition no portal has sent
+through yet stands on the provider's public reference. A batch for Postmark (500 a call, on a broadcast message stream),
 SendGrid, Mailgun and Amazon SES: until then they send bulk mail one message a call.
 
 ## Tests

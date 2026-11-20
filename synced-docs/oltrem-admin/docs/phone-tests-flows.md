@@ -105,3 +105,14 @@ None yet.
 ## Failed, to fix
 
 None yet.
+
+### The codebase review, 20 November
+
+| # | Open | You should see | From |
+|---|---|---|---|
+| P302 | Mail setup: press Send test | An answer within about 15 seconds: ready, or the next step to take | [record](records/2026-11-20-codebase-review.md) |
+| P303 | Expenses, Invoices and Quotes: open one with an amount in a currency other than yours | Amounts and currencies as before | [record](records/2026-11-20-codebase-review.md) |
+| P304 | Users, the Roles and Access tabs, then one role | Every list and button as before | [record](records/2026-11-20-codebase-review.md) |
+| P305 | Settings and System status: switches, check boxes, a select and a progress bar | They look as before | [record](records/2026-11-20-codebase-review.md) |
+| P306 | System status | Files storage, Campaign reputation and the email allowance checks are listed and green | [record](records/2026-11-20-codebase-review.md) |
+| P307 | Email's inbox: archive or delete every message of one conversation, then come back after an hour | The conversation is gone from every box | [record](records/2026-11-20-codebase-review.md) |

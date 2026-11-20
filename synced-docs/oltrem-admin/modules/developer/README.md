@@ -109,9 +109,10 @@ the same webhook was just added (within a minute), `KIT-E-2605` the job is switc
 
 ## Not here yet
 
-- API keys for machines. The portal is behind the Access door, which lets in people; a service
-  calls the API with a Cloudflare Access service token instead, which the client's Access
-  application allows. Setting one up from this page comes later.
+- API keys for machines. The portal is behind the Access door, which lets in people only: the
+  door `npm run deploy` makes has no rule for a service token, and the pipeline refuses an
+  identity with no email, so no other system can call the API today. Keys made on this page are
+  planned ([the roadmap](../../docs/roadmap.md)).
 - Events from a module's own domain (a booking confirmed, say) beyond what is audited; a module
   that wants one records it as a system action.
 - A webhook per place: every webhook is the company's.

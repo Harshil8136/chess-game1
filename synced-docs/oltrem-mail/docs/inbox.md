@@ -156,9 +156,9 @@ setting keeps both in bounds.
   label, or file as spam, for one mailbox or every one (forwarding is per mailbox). A spam score
   is recorded, nothing is hidden until a manager sets a threshold; a sender block list.
 - **Quick actions:** several at once go in one request and one `db.batch()`. As built they are
-  forms the server answers (one round trip, no script on the portal's page); the on-screen change
-  within one frame needs a script of the portal's and is left for later. Opening a conversation
-  marks it read by itself.
+  forms the server answers; since 2026-11-13 the kit's frame shows the change at once
+  (`data-optimistic`): a conversation that leaves the box goes from the list, and the server's
+  answer then replaces the list. Opening a conversation marks it read by itself.
 - **Undo Send:** the same Undo that Write has. A reply taken back leaves the conversation and its
   words go back into the reply form.
 - **Room:** mail is kept until the Owner sets how many days to keep it (`mail.inbox.keep_days`,

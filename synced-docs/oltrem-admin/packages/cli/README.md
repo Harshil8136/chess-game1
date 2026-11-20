@@ -1003,9 +1003,9 @@ Packed (`pnpm pack`, which `pnpm kit:pack` runs for every package), the tool car
 `bin/`, `look/`, `kit-files.json` and the two templates, which its prepack places beside it and its
 postpack removes again (`scripts/package.mjs`); npm leaves a `.gitignore` out of a package, so the
 client template's travels as `_gitignore` and `oltrem new client` gives it its name back.
-`pnpm verify` builds it and runs `oltrem manifest check` on the client template and the three
-packages that declare a test Worker with a binding (`core-config`, `core-outbox`, `core-audit`)
-as its `manifest` gate. The tool is typed against Node (`tsconfig.json` here extends the shared
+`pnpm verify` builds it and runs `oltrem manifest check` as its `manifest` gate on the client
+template, the module template, the core packages that declare a test Worker with a binding, and
+every module folder with a manifest, read from the disk (`scripts/lib/gates.mjs`). The tool is typed against Node (`tsconfig.json` here extends the shared
 `tsconfig.base.json`) and its tests run on Node with Vitest, against a sample client Worker in
 `test/fixtures/client-ok/` that has exactly one of each resource, with fake installed kit
 packages for the migration commands and a fake wrangler for `migrations apply`. The drill's

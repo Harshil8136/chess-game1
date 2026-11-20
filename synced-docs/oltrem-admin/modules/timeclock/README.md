@@ -105,7 +105,7 @@ reason are the core's `KIT-E-0422`; a person without the capability at the place
 
 ## Not here yet
 
-- Shifts planned ahead, and hours compared with them.
+- Hours compared with the planned shifts ([`@oltrem/shifts`](../shifts/README.md) plans them).
 - Breaks inside a stretch, overtime rules and rounding.
 - Where the person was when they clocked in: the pages run without a script, and a phone's
   location needs one.

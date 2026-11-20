@@ -2,7 +2,7 @@
 title: "Token registry: every credential by name"
 status: generated
 owner: vendor
-last_verified: 2026-11-03
+last_verified: 2026-11-20
 sources: [tokens.registry.json]
 ---
 
@@ -12,17 +12,17 @@ sources: [tokens.registry.json]
 
 > **In plain words.** This page lists every token, key and secret the system uses, by name only; a value never appears here or anywhere in the repository. Before anyone creates a credential, they read this page: if a row already covers the need, it is reused; if a row is close, it is widened and the row says so; only then is a new one created, with its row in the same commit. `pnpm verify` refuses a secret name without a row.
 
-**Where things stand:** 0 active, 0 planned (named in the plan, nothing created yet), 1 provided by a platform for each run (nothing stored), 0 retired.
+**Where things stand:** 1 active, 0 planned (named in the plan, nothing created yet), 0 provided by a platform for each run (nothing stored), 0 retired.
 
 | Name | Status | Provider | Stored in |
 |---|---|---|---|
-| IMPROVMX_API_KEY | provided | ImprovMX | once connected: sealed in the client's database by the kit's providers module (kind forwarding, definition improvmx), opened only inside a request that calls ImprovMX, never logged, audited or shown again; for the one-press import: nowhere |
+| IMPROVMX_API_KEY | active | ImprovMX | once connected: sealed in the client's database by the kit's providers module (kind forwarding, definition improvmx), opened only inside a request that calls ImprovMX, never logged, audited or shown again; for the one-press import: nowhere |
 
 ## IMPROVMX_API_KEY
 
 | Field | Value |
 |---|---|
-| Status | provided |
+| Status | active |
 | Provider and account | ImprovMX; the client's own ImprovMX account, the one its domains forward through |
 | What it may do | the whole account, as ImprovMX's keys are: the portal reads the account and its domains, adds domains, adds, changes and deletes aliases, asks ImprovMX to check a domain's records and reads the forwarding logs (ImprovMX's API v4); it makes no other call with it |
 | Used by | Connect ImprovMX on the Forwarding page (POST /api/mail/forwarding/improvmx) and every ImprovMX press there after it (the /api/mail/forwarding/improvmx routes); Read from ImprovMX on the Forwarding page's Cloudflare view (POST /api/mail/forwarding/import/improvmx), for that one press only |

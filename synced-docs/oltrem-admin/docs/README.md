@@ -83,6 +83,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [@oltrem/iam](../modules/iam/README.md) | the permission model: capabilities, roles, scopes, groups, bindings, overrides, the check, sessions, governance, the Vendor and the handover, the door, tables, errors | written, beside the code |
 | [@oltrem/users](../modules/users/README.md) | the people: the directory and the profile, the rules of switching an account off and on, the routes, the table and the error codes | written, beside the code |
 | [@oltrem/records](../modules/records/README.md) | the company's own lists: places and the four capabilities, the kinds of field, search, the CSV, routes, tables, errors | written, beside the code |
+| [@oltrem/forms](../modules/forms/README.md) | forms for the company's website, built with no code, and the inbox where answers are taken and tracked | written, beside the code |
 | [@oltrem/files](../modules/files/README.md) | the company's files: a drive per place opened by the roles held there, folders, uploads, links that end, the trash, pages, routes, tables, settings, errors | written, beside the code |
 | [@oltrem/automations](../modules/automations/README.md) | automations: an event or a schedule, one action, run within the tick's budget, the kit's two actions and how to add one, the pages, routes, tables, errors | written, beside the code |
 | [@oltrem/analytics](../modules/analytics/README.md) | analytics: the audit log counted by day in SQL, the figures against the period before, the charts, the CSV, the route and the tables | written, beside the code |
@@ -106,7 +107,7 @@ is the scanner, and all of it is written as if public (R-04). It signs in with
 | [@oltrem/github](../modules/github/README.md) | the repository as the portal sees it: the run report the deploy workflow writes, the status and runs routes, the deploy check, the table | written, beside the code |
 | [@oltrem/alerts](../modules/alerts/README.md) | platform alerts: raised once per key, the quiet hours, what became of the email, the settings, the routes, the table | written, beside the code |
 | [@oltrem/screens](../packages/screens/README.md) | the portal's screens: the frame and its row, each page and the API it reads, the first run, the stylesheet | written, beside the code |
-| [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the one workflow, the two secret names | written, beside the code |
+| [The client template](../templates/client/README.md) | what a client repository is made of: the client file, the manifest, the kit's migrations, the two workflows, the two secret names | written, beside the code |
 | [The module template](../templates/module/README.md) | the `sample-notes` module `oltrem new module` copies, written as the client's how-to | written, beside the code; copied by the generator |
 
 The records, each dated and frozen once written, with what changed and how it was verified, are

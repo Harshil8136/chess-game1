@@ -148,7 +148,7 @@ underneath; the page hides their differences.
 
 1. Oltrem Mail builds and tests against the kit's packed packages, kept in its own committed
    `kit/` folder, exactly as a client repository does.
-2. Oltrem Mail packs its two packages the same way, and the kit keeps a copy of them, so its client
+2. Oltrem Mail packs its packages (three since the Mail add-on) the same way, and the kit keeps a copy of them, so its client
    template and its tests still have email.
 3. `oltrem new client` and `oltrem upgrade` copy both sets into the client's `kit/` folder.
 4. Each Oltrem Mail pack names the kit commit it was tested against (`kit/kit.json`, copied into

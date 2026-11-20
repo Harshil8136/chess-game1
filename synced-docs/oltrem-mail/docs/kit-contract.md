@@ -107,9 +107,9 @@ the bucket.
 
 The reader script is served by the public hook `GET /hooks/mail/reader/<version>/<file>`. Its
 answer asks to be kept for ever (`public, max-age=31536000, immutable`), since its address changes
-with any byte of it; the kit's HTTP layer sets `no-store` on every hook today, so the phone
-fetches it again on each new page load (about 365 KB before compression). Mail has asked the
-kit's thread to let a hook's own `immutable` answer stand.
+with any byte of it. The kit's HTTP layer sets `no-store` on a hook's answer unless it is a GET
+file that asks to be kept for ever (`immutable`), so the phone keeps the script until its address
+changes (checked 2026-11-20 against the kit's `packages/core-http/src/app.ts`).
 
 The route taker the add-on hands back also writes a sending domain's missing records on
 Cloudflare (`records`, optional on `RouteTaker`), which email's provider card calls in the same
@@ -124,9 +124,9 @@ fingerprint in the kit would place it by the domain's DNS instead.
 
 | Kind | Mail holds | A new one |
 |---|---|---|
-| Migrations | `0011`, `0020`, `0043` to `0050`, `0052` to `0054`, in the kit's one series; `1000` (email: the route a message is pinned to), `1001` (mail: the Cloudflare route), `1002` (mail: the inbox), `1003` (email: who left a saved list, and the warm-up's first day of a domain), `1004` (mail: Updates, snooze, mute and the senders a person moved), `1005` (mail: automatic replies and "No answer yet"), `1006` (email: each list domain's mail servers), `1007` (mail: forwarding domains and aliases), `1008` (mail: the route test sent again by itself) `1009` (email: which address each kind of mail comes from), `1010` (email: files attached on Write, and the providers' links to them), `1011` (email: who a file belongs to), `1012` (campaigns: the kept tally, the Run log, the list's order index) and `1013` (email: what the last email through a domain's provider showed), `1018` (email: the messages by the day they were made, for Home's card) and `1019` (mail: the unread conversations, and the messages by arrival) | mail's new migrations number from `1000` up; the kit keeps its own series below; a client's own start at `5000` |
+| Migrations | `0011`, `0020`, `0043` to `0050`, `0052` to `0054`, in the kit's one series; `1000` (email: the route a message is pinned to), `1001` (mail: the Cloudflare route), `1002` (mail: the inbox), `1003` (email: who left a saved list, and the warm-up's first day of a domain), `1004` (mail: Updates, snooze, mute and the senders a person moved), `1005` (mail: automatic replies and "No answer yet"), `1006` (email: each list domain's mail servers), `1007` (mail: forwarding domains and aliases), `1008` (mail: the route test sent again by itself) `1009` (email: which address each kind of mail comes from), `1010` (email: files attached on Write, and the providers' links to them), `1011` (email: who a file belongs to), `1012` (campaigns: the kept tally, the Run log, the list's order index) and `1013` (email: what the last email through a domain's provider showed), `1014` (campaigns: archived campaigns), `1015` (campaigns: their extra fields), `1016` (mail: stars, labels and the other Gmail-style marks), `1017` (email: the emailed code that proves a sender), `1018` (email: the messages by the day they were made, for Home's card) and `1019` (mail: the unread conversations, and the messages by arrival) | mail's new migrations number from `1000` up; the kit keeps its own series below; a client's own start at `5000` |
 | Permission bit planes | `3` email, `13` campaigns, `30` mail | the kit's thread reserves the next free plane in the kit's architecture table first |
-| Error codes | the `1500`s email, the `2500`s campaigns, the `4000`s mail (`4001` to `4007` used) | the kit's thread reserves a block the same way |
+| Error codes | the `1500`s email, the `2500`s campaigns, the `4000`s mail (`4001` to `4009` used) | the kit's thread reserves a block the same way |
 
 ## How a change crosses
 

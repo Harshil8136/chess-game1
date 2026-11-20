@@ -63,9 +63,9 @@ A newer kit says how it arrives: the fleet brings it, or `pnpm exec oltrem upgra
 ## Not here yet
 
 - The docs mirror's status, for a client that keeps a mirror.
-- The page comes with the screens.
-- The newest published version needs the packages on GitHub Packages (phase 6); until then a
-  run records it as unknown.
+- The newest kit: a run asks the public npm registry (`pnpm view`) for a package the kit does not
+  publish there, so it records the newest version as unknown. Taking that lookup out is proposed
+  in [the codebase review](../../docs/records/2026-11-20-codebase-review.md).
 
 ## The table
 

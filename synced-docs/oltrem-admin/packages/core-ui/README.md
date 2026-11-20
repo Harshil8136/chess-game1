@@ -45,7 +45,7 @@ motion. Buttons press in a little when tapped (to 96 %, since 2026-11-08).
 
 ## The primitives
 
-All on native elements, server-rendered by Astro, with a script only where the browser has
+All on native elements, server-rendered with Preact by the screens package, with a script only where the browser has
 no built-in behaviour. None emits a `style` attribute, so the hash-based content security policy
 holds (plan 12.1); a test renders every one and checks.
 
@@ -198,9 +198,9 @@ Words are the caller's, as everywhere in the kit: the combobox takes `triggerLab
 `clear`, `chooseMonth`, `chooseYear`); the menu's `label` is both the trigger's text and the
 menu's accessible name. The day cells are announced with the date in the locale.
 
-Still to come from the plan's list: the primitives gallery page and the quality gates of plan
-12.6 (axe, screenshots at 390 px, the sideways-scroll and target-size check, the CSP smoke test)
-once there is an Astro app to run them against.
+Still to come from the plan's list: the primitives gallery page, and of the quality gates of plan
+12.6 axe, screenshots at 390 px and the CSP smoke test. Every page's names, labels and viewport
+are checked on each verify ([the phone and accessibility check](../../docs/records/2026-11-03-phone-a11y-check.md)).
 
 ## Using it
 

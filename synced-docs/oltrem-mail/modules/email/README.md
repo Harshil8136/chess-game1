@@ -728,9 +728,9 @@ page is linked.
 
 ## Not here yet
 
-- A screen of the do-not-mail list in this module and a daily cap come with the later bulk
-  sending stages (docs/records/2026-10-28-senders-and-domains.md); until then the list is seen
-  and changed on the Campaigns pages. Since stage 5 a campaign picks a saved template and a saved
+- A screen of the do-not-mail list in this module comes with the later bulk sending stages
+  (docs/records/2026-10-28-senders-and-domains.md); until then the list is seen and changed on
+  the Campaigns pages. (The daily cap exists: `campaigns.daily_limit`.) Since stage 5 a campaign picks a saved template and a saved
   list, and the campaigns module's engine is what calls `bulk.route` and `bulk.send`.
 - A list is filled from a file or typed addresses; filling one from the customers module is
   not built yet.
