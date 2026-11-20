@@ -894,17 +894,23 @@ older layouts they replaced (the grid row of 2026-09-21, the catalog prose, the
 log, the settings, the halt confirmation):
 `../records/reports/2026-11-19-scheduled-jobs-details-and-run-log.md` (private).
 Later the same day the job cards became a list, one row per job, because the
-owner saw little change on the page itself (that record's §9).
+owner saw little change on the page itself, and on 2026-11-20 a plain table,
+with no capsules or boxes, when he still saw cards (that record's §9 and §10).
 
-- **Each job is one row of a list** (`src/components/admin/cron/JobRow.tsx`,
-  *since 2026-11-19*; until then a card of six or seven blocks, so the 21 jobs
-  filled about ten phone screens). A row shows the job's area icon, its name,
-  its status pill, one line with when it runs next and what it last did (red
-  when its last work failed), a paused note with its reason and end when
-  paused, its hour-by-hour strip, and three icon buttons: Check, Run (only with
-  `#trigger`) and Details. The status colour runs down the row's left edge. On a
-  phone the strip sits under the text. What the job does, what it touches and
-  its settings are in Details. `test/cron-job-row.test.ts` pins what a row says.
+- **Every job is one row of one table** (`src/components/admin/cron/JobRow.tsx`,
+  *since 2026-11-20*; a card of six or seven blocks until 2026-11-19, so the 21
+  jobs filled about ten phone screens). The columns are Job (its name and area,
+  or "Paused:" with the reason and end), Status (a dot and a word), Last run
+  ("Worked 3m ago", "Failed 2h ago" in red, "Looked 4m ago"), Next run ("in
+  5m", or what it waits for) and Last 24 hours (the strip), then Check, Run
+  (only with `#trigger`) and Details. A thin heading row names each schedule in
+  words with its job count and a countdown. Tapping a row anywhere opens
+  Details. When the table is narrower than about 54rem (a phone, or a computer
+  with the sidebar open on a small screen) the headings go and status, last run
+  and next run become one labelled line under the name. Holding the pointer on
+  a cell shows the full sentence. `lastCell` and `nextCell` (`status.ts`) word
+  the cells; `test/cron-job-row.test.ts` and `test/cron-status-view.test.ts`
+  pin them.
 
 - **Nothing about a job is stored as prose any more.** Its name, what it does,
   what happens if it is switched off, its area and what it touches (sends
@@ -962,17 +968,18 @@ owner saw little change on the page itself (that record's §9).
   **Throttled** (at most once every N minutes), **Sleeping until HH:MM**, and
   **Active**. `jobStatus` decides it and `test/cron-status-view.test.ts` pins
   the order.
-- **The overview** has four tiles: how many jobs are active (will run on their
+- **The overview** is one flat strip of four figures (four tinted tiles until
+  2026-11-20; on a phone two by two, without the last line of each): how many jobs are active (will run on their
   schedule; the tile and the filter said "running" until 2026-11-19, which read
   as "running right now"), paused or need a look; the last 24 hours across all jobs (work done, looks, failures, runs by
   hand); the next tick with a live countdown; and database use today against the
   account's free daily allowance, with the shedding limits in words. **Measure
   now** sits in that last tile for those with `#trigger`.
-- **Needs a look** filters to the jobs that failed in the last 24 hours, are
+- **Needs a look** (one of four filter words with an underline under the chosen
+  one, capsules until 2026-11-20) filters to the jobs that failed in the last 24 hours, are
   held back for the database or are halted; a job a person paused is not flagged. **Paused**
   and **Active** filter the rest, and a search box matches names, ids,
-  descriptions and areas. Rows are grouped by trigger, each with its schedule in words
-  and a countdown to its next tick.
+  descriptions and areas.
 - **Check** asks what would happen if the job ran now. The row shows the
   headline and the one step that decides it, with **Every step** opening the
   details; the details and the run console show every step (§1), each with a
@@ -984,7 +991,10 @@ owner saw little change on the page itself (that record's §9).
   reads; `test/cron-api.test.ts` shows a check on a paused job writes no audit
   row and leaves the document's revision unchanged.
 - **Details** opens a side panel with four tabs (*reworked 2026-11-19*; it had
-  About, History and Settings). The header shows the status and why.
+  About, History and Settings). The tabs are words with an underline under the
+  open one, and the panel's sections are divided by a line rather than boxed
+  (*2026-11-20*; the shared capsule tabs and boxed sections before). The header
+  shows the status, as a dot and a word, and why.
   **Overview**: a paused note when paused, six figures (next run, last work or
   last failure, runs in 24 hours, failures, average time, database rows), the
   hour-by-hour strip with a key, a Check, and what happens if it is switched
@@ -1090,6 +1100,7 @@ owner saw little change on the page itself (that record's §9).
 
 | Date | Checked by | Method | Result |
 |---|---|---|---|
+| 2026-11-20 | claude | The job list made a plain table after Harshil still saw cards and called the Details tabs capsules: `src/components/admin/cron/JobRow.tsx`, `CronDashboard.tsx`, `JobFilter.tsx`, `JobDrawer.tsx` (own tabs, the shared `Tabs` list no longer used here), `status.ts` (`lastCell`, `nextCell`), `src/styles/pages/cron.css`; `test/cron-job-row.test.ts` and `test/cron-status-view.test.ts` pass; deploy of `d92cec4` confirmed live through the Cloudflare API (version of 15:19 UTC, 2026-11-19); `npm run verify` | §7: the table bullet, the overview, the filter and the Details look. Not checked: the page in a browser. Not re-checked: the rest of the document |
 | 2026-11-19 | claude | The job cards replaced by a list after Harshil saw little change: `src/components/admin/cron/JobRow.tsx` (was `JobCard.tsx`), `CronDashboard.tsx`, `DrawerOverview.tsx` (the shared `cron-note`), `src/styles/pages/cron.css`; `test/cron-job-row.test.ts` (new) passes; `npm run verify` | §7: the new first bullet and "card" read "row" where it meant the job. Not checked: the page in a browser (the owner checks on his phone). Not re-checked: the rest of the document |
 | 2026-11-19 | claude | The page reworked at Harshil's ask: §1 (Check, Activity, Manage, Run on the next tick, Run, halt) and §2's audit table against `src/pages/api/cron/state.ts`, `src/lib/jobs/check.ts`, `runJob.ts`, `run-steps.ts`, `telemetry.ts`, `history.ts`, `registry.ts` and the components under `src/components/admin/cron/`; §7's overview, filter, Check, Details and run-console bullets against the same; `test/cron-run-log.test.ts` (new), `test/cron-api.test.ts`, `test/jobs-run-job.test.ts`, `test/cron-status-view.test.ts` and `test/jobs-telemetry.test.ts` pass. Live: Analytics Engine read for job failures over three days (none), the `cron-control` row read through the Cloudflare D1 connector | §1, §2's audit table and §7; `last_verified` left as it was, because §3 to §6 were not re-read. Not checked: the page in a browser, which Harshil checks on his phone |
 | 2026-11-18 | claude | `health-checks` (Sentry CF-ADMIN-2Z: over its D1 budget on the 03:00 UTC run of 16, 17 and 18 November, the once-a-day clean-up of about 700 results): the clean-up now runs every run, measured by `test/jobs-budget.test.ts` (costliest run with ten results to delete: read 437, written 53, inside 612 and 57) and `test/health-checks-job.test.ts` | The health-checks paragraph of §3; `last_verified` left as it was |
