@@ -737,8 +737,11 @@ because it names the steps still open. One read of `/api/sentry/security`, kept 
   sign-ins this week, and actions the permission check refused this week (`api_authz_deny` rows of
   the activity log). A check whose scheduled job is switched off in Scheduled Jobs (today the
   activity log seal: its job `audit-seal` is off, last run 2026-11-10, and the newest seal covers
-  8 November; read 2026-11-20 through the D1 connector) shows Switched off and links to Scheduled Jobs instead of asking for a look: the
-  health check itself cannot tell a job switched off from one that stopped.
+  8 November; read 2026-11-20 through the D1 connector) shows Switched off and links to Scheduled Jobs instead of asking for a look,
+  read from the `cron-control` row on each load, so it is right even before System health's daily
+  seal check runs again. A sealed day that changed still shows as failing. Since the owner's choice
+  of 2026-11-20, System health's own seal check stops warning about a late seal while the job is off
+  too ([SYSTEM-HEALTH.md](SYSTEM-HEALTH.md)).
 - **Alert emails:** each email rule with its state. The two Sentry rules are read live (On, with
   when it last emailed, Off or Not found); the four Cloudflare notifications and sign-in alerts are
   the record's, with the day they were set.
