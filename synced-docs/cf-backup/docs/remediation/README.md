@@ -112,7 +112,7 @@ replaced by the steps of [13](13-engine-consolidation-plan.md) (RD-15, option B)
 | Authentication record coverage | **done** in the Secondary Pipeline | RD-1 applied on 2026-09-26; 6 users and 12 identities restored in every run since |
 | Decisions | **all settled** 2026-09-27 | [07](07-decision-log.md) §0 |
 | B1 Run records, B2 reading | **built and live** 2026-09-27: the console records every Secondary Pipeline run, shows its per-store verification, accepts a restore proof for it, and Diagnostics reports on it | [13](13-engine-consolidation-plan.md) §3 B1, B2 |
-| B3 Dispatch | **built and live** 2026-09-27: the Scheduler starts the engine on the days Settings → Schedule names (daily at 09:17 UTC when set up), "Run now" starts it on demand, GitHub's schedule (11:41 UTC) is the fallback; cf-admin's `backups.yml` deleted (RD-8) | [13](13-engine-consolidation-plan.md) §3 B3, §8 |
+| B3 Dispatch | **built and live** 2026-09-27: the Scheduler starts the engine on the days Settings → Schedule names (daily at 09:17 UTC when set up), "Run now" starts it on demand, GitHub's schedule (11:41 UTC; on the backup days only since 2026-11-20) is the fallback; cf-admin's `backups.yml` deleted (RD-8) | [13](13-engine-consolidation-plan.md) §3 B3, §8 |
 | B4 Acceptance | **not met** (2026-10-17) | [13](13-engine-consolidation-plan.md) §8 |
 | B5 | not started | [13](13-engine-consolidation-plan.md) §8 |
 

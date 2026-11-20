@@ -77,16 +77,21 @@ disagree, the plan wins and this file is the bug. Plan doc 12 §7 describes key 
    there is work, at least hourly: design C3, Contract A): from `docs/remediation/13` B3 it
    dispatches the backup engine, `secondary-pipeline.yml`, on the days and at the time
    Settings → Schedule names (09:17 UTC unless changed there). The workflow's own `schedule:`
-   line (11:41 UTC, daily) is the fallback. It stands down once a run has succeeded that UTC
+   line (11:41 UTC on Sundays and Wednesdays, the backup days: owner, 2026-11-20, to spend no
+   GitHub minutes on the other days) is the fallback. It stands down once a run has succeeded that UTC
    day (RD-12, permanent), and on a day the schedule names no backup for or whose run was
    skipped (the schedule guard, `scripts/secondary-pipeline/schedule-guard.ts`; any doubt backs
    up). A scheduled backup that fails, is lost or cannot start gets one automatic second try
    30 minutes after it ended, and its alert waits for that try: only a second try that fails
    too, or one that could not start within 6 hours, alerts (`src/tick/retry.ts`, the owner's
    decision of 2026-10-25). `db-backup.yml` keeps its fallback line until B5 deletes it, and
-   is disabled on GitHub (D-4, D-5, RD-5). A daily `tick-deadman.yml` fails when the tick has stopped, so GitHub's own
+   is disabled on GitHub (D-4, D-5, RD-5). `tick-deadman.yml` (on the same two days since
+   2026-11-20) fails when the tick has stopped, so GitHub's own
    failed-workflow email warns through a path the tick does not own. cf-backup sends no mail
-   itself: its alerts leave through that job and cf-admin's `EMAIL_QUEUE` (D-11).
+   itself: its alerts leave through that job and cf-admin's `EMAIL_QUEUE` (D-11), each with
+   the layout of its email (`src/notify/alert-mail.ts`), which cf-admin renders on the portal's
+   own email design. When Settings → Schedule names a day outside the two crons, Health's
+   `schedule.next` check warns: add the day to both crons and `FALLBACK_CRON_UTC`, or move it.
 8. **Standalone repo.** Do not add cf-backup to the workspace root's npm `workspaces`;
    it must build from a clean clone.
 9. **The public docs mirror publishes an allow-list, nothing else.**
