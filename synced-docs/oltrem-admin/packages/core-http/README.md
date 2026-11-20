@@ -175,7 +175,7 @@ before the door, such as the screens' stylesheet.
 |---|---|
 | `fetch` | the pipeline above |
 | `scheduled` | runs the `tick` it was given (the jobs' scheduler of `@oltrem/core-jobs`), then every module's `scheduled` hook, on the one cron; an error in one is reported and the others still run |
-| `queue` | reads each message as an envelope, dispatches on `type` to the module that declares it, calls `onHandled` (the outbox marks its row done), acknowledges; a handler that throws retries the message; an unknown type is reported and retried, so it reaches the dead-letter queue |
+| `queue` | reads each message as an envelope, dispatches on `type` to the module that declares it, calls `onHandled` (the outbox marks its row done), acknowledges; a handler that throws retries the message; an unknown type is reported and retried, so it reaches the dead-letter queue; each retry waits (`retryDelay`: 30 seconds, doubling, an hour at most), so five tries span about a quarter of an hour |
 
 With `off` (the parts switched off, `@oltrem/core-config`), read once per request before the
 hooks: a switched-off module's `/api/<id>/` and `/hooks/<id>/` answer Not found (`KIT-E-0404`),

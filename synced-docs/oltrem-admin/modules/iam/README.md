@@ -371,7 +371,7 @@ The module keeps two rules without anyone having to remember them (`src/care.ts`
 
 | Kind | Id | What it does |
 |---|---|---|
-| Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, and the next run sends what is missing. Without `mail`, it does nothing. |
+| Job, daily | `iam.expiring` | Emails each active person whose own grant ends within 7 days (`EXPIRY_NOTICE_DAYS`): the company, the role, the place and the date, keyed `iam.expiring:<grant>:<end>`, so it goes once for each end date and again if the grant is renewed to a new one. Activations and grants through a group are not noticed. 200 a run at most; a message the sender refuses fails the run after the others are tried, with the count and the first cause in its words (since 2026-11-17; the count alone hid why), and the next run sends what is missing. Without `mail`, it does nothing. |
 | Health check, lane `access` | `iam.reviews` | Warns when an open access review is past its due date, or when none was opened for 90 days (`REVIEW_EVERY_DAYS`), counted from the company's creation until the first one. |
 
 Both only read the rows. The notice goes through the same `mail` as an invitation, and the

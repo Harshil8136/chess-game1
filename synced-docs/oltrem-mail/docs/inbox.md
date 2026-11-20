@@ -103,11 +103,14 @@ setting keeps both in bounds.
   `frame-ancestors 'self'`.)
 - **Links never move the frame:** a `<base target="_blank">` is always injected and any base the
   message carries is removed; DOMPurify forces `target="_blank" rel="noopener noreferrer"` on every
-  `<a>` (a `<base>` element takes no `rel`, so the links carry it) and strips `<form>` and every
+  link, an `<a>`, an SVG `<a>` or a map's `<area>` (a `<base>` element takes no `rel`, so the
+  links carry it) and strips `<form>` and every
   form control. A click opens a new tab and never navigates the frame to a portal address.
 - **Images:** remote images are blocked by default, by the policy and by DOMPurify moving their
   addresses aside; "Show images" brings them back for that message. Inline pictures (`cid:`) are
-  shown from the parsed message. `<meta name="referrer" content="no-referrer">` keeps senders from
+  shown from the parsed message, flat picture types only (PNG, JPEG, GIF, WebP, AVIF, BMP): an
+  SVG is a document, and opened on its own from the address the portal gives it, it would run its
+  script as the portal (2026-11-17). `<meta name="referrer" content="no-referrer">` keeps senders from
   learning the portal's address.
 - **Height:** a `ResizeObserver` on the frame's body sets the frame's height, so there is one
   scrollbar on a phone, and the frame grows smoothly as images load after "Show images". Images and

@@ -46,7 +46,9 @@ a call", a `job`, a `flow` or a `queue` by kind). The detail keeps the message (
 kit error's action as "What to do", the reference, when it was last seen and
 the first fifteen lines of the stack. One isolate writes a key at most once a minute and adds the
 occurrences between to the next write, so a failing loop cannot spend the day's D1 writes. It
-never throws: a failure to keep the error goes to the module's own `report`.
+never throws: a failure to keep the error goes to the module's own `report`, and the minute's
+mark comes off, so the next occurrence writes the alert with both counted (2026-11-17; before,
+it was held back behind the write that failed and the alert never appeared).
 
 The client template's `report`, which every module and the request pipeline call, prints the
 error with its stack and hands it to `reportError` under `waitUntil` from `cloudflare:workers`.

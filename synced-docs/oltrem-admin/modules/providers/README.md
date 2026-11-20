@@ -167,7 +167,14 @@ email module never names a provider.
   provider's message id from the answer (`messageIdPath`, a JSONPath, or `messageIdHeader`). A
   placeholder alone takes its value as it is; one with no value removes its key, and an object
   or a list entry left empty goes with it, so a message without HTML sends no empty HTML part. A
-  URL or a header with a missing value is refused, naming the field (`KIT-E-1403`).
+  URL or a header with a missing value is refused, naming the field (`KIT-E-1403`). In a form
+  body, an object under a key that ends in `*` is one field for each entry (`'h:*'` gives
+  Mailgun its `h:<header>` fields).
+- **The message's own headers** (the unsubscribe pair of bulk mail, a reply's `In-Reply-To` and
+  `References`) are named by every HTTP definition that sends, and a test refuses one that
+  forgets them. Mailgun and Amazon SES left them out until 2026-11-17, so a campaign through
+  either went without one-click unsubscribe: Mailgun now gets `h:<name>` fields and SES
+  `Content.Simple.Headers` (fifteen at most, its limit).
 - **Each provider's own features**, from three optional fields of the message. A `tag` (made by
   `tagOf(text)`: letters, digits, `_` and `-`, at most 64) groups the message in the provider's
   own reports: Resend's and SES's tags (as `category`), Brevo's tags, Postmark's `Tag`,
@@ -261,7 +268,10 @@ report against the instance's definition and returns `{ deliveryId, payload, sub
 event name, message id, recipient, ISO time, reason; `permanent`, true, false or null when the
 provider did not say, for a bounce or a refusal only; `automatic` for a machine's open or click)
 and lists the event names the map does not
-name as `ignored`. The body is the raw text: a signature covers the bytes as they came.
+name as `ignored`. The body is the raw text: a signature covers the bytes as they came. Where a
+provider's report names only the message's recipients (Resend's `data.to`, SES's
+`mail.destination`), the recipient is null when there are several: which one bounced is not
+said, and the first is not assumed (2026-11-17).
 
 | Scheme | Provider | What is checked | Key field |
 |---|---|---|---|
